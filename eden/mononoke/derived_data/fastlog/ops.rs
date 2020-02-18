@@ -340,7 +340,7 @@ mod test {
     use maplit::btreemap;
     use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
     use std::collections::{HashMap, HashSet, VecDeque};
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
     fn test_list_linear_history(fb: FacebookInit) {
@@ -358,11 +358,11 @@ mod test {
         for i in 1..300 {
             let file = if i % 2 == 1 { "2" } else { filename };
             let content = format!("{}", i);
-            let stored_files = store_files(
+            let stored_files = rt.block_on_std(store_files(
                 ctx.clone(),
                 btreemap! { file => Some(content.as_str()) },
                 repo.clone(),
-            );
+            ));
 
             let bcs = create_bonsai_changeset_with_files(parents, stored_files);
             let bcs_id = bcs.get_changeset_id();
@@ -435,11 +435,11 @@ mod test {
         let mut create_branch = |branch, number, mut parents: Vec<_>| {
             for i in 0..number {
                 let content = format!("{} - {}", branch, i);
-                let stored_files = store_files(
+                let stored_files = rt.block_on_std(store_files(
                     ctx.clone(),
                     btreemap! { filename => Some(content.as_str()) },
                     repo.clone(),
-                );
+                ));
 
                 let bcs = create_bonsai_changeset_with_files(parents.clone(), stored_files);
                 let bcs_id = bcs.get_changeset_id();
@@ -520,44 +520,52 @@ mod test {
         let filepath = path(filename);
 
         let create_changeset = |content: String, parents: Vec<_>| {
-            let stored_files = store_files(
-                ctx.clone(),
-                btreemap! { filename => Some(content.as_str()) },
-                repo.clone(),
-            );
+            let ctx = &ctx;
+            let repo = &repo;
+            async move {
+                let stored_files = store_files(
+                    ctx.clone(),
+                    btreemap! { filename => Some(content.as_str()) },
+                    repo.clone(),
+                )
+                .await;
 
-            create_bonsai_changeset_with_files(parents, stored_files)
+                create_bonsai_changeset_with_files(parents, stored_files)
+            }
         };
 
         let mut bonsais = vec![];
         let mut expected = vec![];
 
-        let root = create_changeset("root".to_string(), vec![]);
+        let root = rt.block_on_std(create_changeset("root".to_string(), vec![]));
         let root_id = root.get_changeset_id();
         bonsais.push(root);
         expected.push(root_id.clone());
 
         let mut create_diamond = |number, parents: Vec<_>| {
             // bottom
-            let bcs = create_changeset(format!("B - {}", number), parents.clone());
+            let bcs = rt.block_on_std(create_changeset(format!("B - {}", number), parents.clone()));
             let bottom_id = bcs.get_changeset_id();
             bonsais.push(bcs);
             expected.push(bottom_id.clone());
 
             // right
-            let bcs = create_changeset(format!("R - {}", number), vec![bottom_id]);
+            let bcs = rt.block_on_std(create_changeset(format!("R - {}", number), vec![bottom_id]));
             let right_id = bcs.get_changeset_id();
             bonsais.push(bcs);
             expected.push(right_id.clone());
 
             // left
-            let bcs = create_changeset(format!("L - {}", number), vec![bottom_id]);
+            let bcs = rt.block_on_std(create_changeset(format!("L - {}", number), vec![bottom_id]));
             let left_id = bcs.get_changeset_id();
             bonsais.push(bcs);
             expected.push(left_id.clone());
 
             // up
-            let bcs = create_changeset(format!("U - {}", number), vec![left_id, right_id]);
+            let bcs = rt.block_on_std(create_changeset(
+                format!("U - {}", number),
+                vec![left_id, right_id],
+            ));
             let up_id = bcs.get_changeset_id();
             bonsais.push(bcs);
             expected.push(up_id.clone());

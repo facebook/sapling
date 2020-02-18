@@ -602,8 +602,8 @@ mod tests {
 
     #[fbinit::test]
     fn many_file_dirs_test(fb: FacebookInit) {
-        let repo = many_files_dirs::getrepo(fb);
         let mut runtime = Runtime::new().unwrap();
+        let repo = runtime.block_on_std(many_files_dirs::getrepo(fb));
         let ctx = CoreContext::test_mock(fb);
 
         let mf_id_1 = {
@@ -699,13 +699,10 @@ mod tests {
             .collect::<Vec<_>>();
         let parent_mf_ids = parent_ids.into_iter().map(|(_, mf)| mf).collect::<Vec<_>>();
 
-        let bcs = create_bonsai_changeset(
-            ctx.fb,
-            repo.clone(),
-            &mut runtime,
-            store_files(ctx.clone(), file_changes, repo.clone()),
-            parent_bcs_ids,
-        );
+        let files = runtime.block_on_std(store_files(ctx.clone(), file_changes, repo.clone()));
+
+        let bcs =
+            create_bonsai_changeset(ctx.fb, repo.clone(), &mut runtime, files, parent_bcs_ids);
 
         derive_manifest(ctx.clone(), repo.clone(), &mut runtime, bcs, parent_mf_ids)
     }

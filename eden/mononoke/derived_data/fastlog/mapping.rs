@@ -210,12 +210,12 @@ mod tests {
     use revset::AncestorsNodeStream;
     use std::collections::{BTreeMap, HashSet, VecDeque};
     use std::str::FromStr;
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
     fn test_derive_single_empty_commit_no_parents(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo(fb);
+        let repo = rt.block_on_std(linear::getrepo(fb));
         let ctx = CoreContext::test_mock(fb);
         let bcs = create_bonsai_changeset(vec![]);
         let bcs_id = bcs.get_changeset_id();
@@ -237,7 +237,7 @@ mod tests {
     #[fbinit::test]
     fn test_derive_single_commit_no_parents(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo(fb);
+        let repo = rt.block_on_std(linear::getrepo(fb));
         let ctx = CoreContext::test_mock(fb);
 
         // This is the initial diff with no parents
@@ -289,7 +289,7 @@ mod tests {
     #[fbinit::test]
     fn test_derive_linear(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo(fb);
+        let repo = rt.block_on_std(linear::getrepo(fb));
         let ctx = CoreContext::test_mock(fb);
 
         let hg_cs_id = HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb").unwrap();
@@ -319,7 +319,7 @@ mod tests {
     #[fbinit::test]
     fn test_derive_overflow(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo(fb);
+        let repo = rt.block_on_std(linear::getrepo(fb));
         let ctx = CoreContext::test_mock(fb);
 
         let mut bonsais = vec![];
@@ -327,11 +327,11 @@ mod tests {
         for i in 1..max_entries_in_fastlog_batch() {
             let filename = String::from("1");
             let content = format!("{}", i);
-            let stored_files = store_files(
+            let stored_files = rt.block_on_std(store_files(
                 ctx.clone(),
                 btreemap! { filename.as_str() => Some(content.as_str()) },
                 repo.clone(),
-            );
+            ));
 
             let bcs = create_bonsai_changeset_with_files(parents, stored_files);
             let bcs_id = bcs.get_changeset_id();
@@ -349,7 +349,7 @@ mod tests {
     #[fbinit::test]
     fn test_random_repo(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo(fb);
+        let repo = rt.block_on_std(linear::getrepo(fb));
         let ctx = CoreContext::test_mock(fb);
 
         let mut rng = XorShiftRng::seed_from_u64(0); // reproducable Rng
@@ -373,7 +373,7 @@ mod tests {
     #[fbinit::test]
     fn test_derive_empty_commits(fb: FacebookInit) {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo(fb);
+        let repo = rt.block_on_std(linear::getrepo(fb));
         let ctx = CoreContext::test_mock(fb);
 
         let mut bonsais = vec![];
@@ -395,7 +395,7 @@ mod tests {
     #[fbinit::test]
     fn test_find_intersection_of_diffs_unodes_linear(fb: FacebookInit) -> Result<(), Error> {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo(fb);
+        let repo = rt.block_on_std(linear::getrepo(fb));
         let ctx = CoreContext::test_mock(fb);
 
         // This commit creates file "1" and "files"
@@ -447,7 +447,7 @@ mod tests {
             expected: Vec<String>,
         ) -> Result<(), Error> {
             let mut rt = Runtime::new().unwrap();
-            let repo = linear::getrepo(fb);
+            let repo = rt.block_on_std(linear::getrepo(fb));
             let ctx = CoreContext::test_mock(fb);
 
             let mut bonsais = vec![];
@@ -455,14 +455,15 @@ mod tests {
 
             for (i, p) in parent_files.into_iter().enumerate() {
                 println!("parent {}, {:?} ", i, p);
-                let stored_files = store_files(ctx.clone(), p, repo.clone());
+                let stored_files = rt.block_on_std(store_files(ctx.clone(), p, repo.clone()));
                 let bcs = create_bonsai_changeset_with_files(vec![], stored_files);
                 parents.push(bcs.get_changeset_id());
                 bonsais.push(bcs);
             }
 
             println!("merge {:?} ", merge_files);
-            let merge_stored_files = store_files(ctx.clone(), merge_files, repo.clone());
+            let merge_stored_files =
+                rt.block_on_std(store_files(ctx.clone(), merge_files, repo.clone()));
             let bcs = create_bonsai_changeset_with_files(parents.clone(), merge_stored_files);
             let merge_bcs_id = bcs.get_changeset_id();
 
@@ -573,7 +574,7 @@ mod tests {
         let ctx = CoreContext::test_mock(fb);
 
         {
-            let repo = merge_uneven::getrepo(fb);
+            let repo = rt.block_on_std(merge_uneven::getrepo(fb));
             let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -582,7 +583,7 @@ mod tests {
         }
 
         {
-            let repo = merge_even::getrepo(fb);
+            let repo = rt.block_on_std(merge_even::getrepo(fb));
             let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -591,7 +592,7 @@ mod tests {
         }
 
         {
-            let repo = unshared_merge_even::getrepo(fb);
+            let repo = rt.block_on_std(unshared_merge_even::getrepo(fb));
             let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -600,7 +601,7 @@ mod tests {
         }
 
         {
-            let repo = unshared_merge_uneven::getrepo(fb);
+            let repo = rt.block_on_std(unshared_merge_uneven::getrepo(fb));
             let all_commits = rt.block_on(all_commits(ctx.clone(), repo.clone()).collect())?;
 
             for (bcs_id, _hg_cs_id) in all_commits {
@@ -614,7 +615,7 @@ mod tests {
     #[fbinit::test]
     fn test_bfs_order(fb: FacebookInit) -> Result<(), Error> {
         let mut rt = Runtime::new().unwrap();
-        let repo = linear::getrepo(fb);
+        let repo = rt.block_on_std(linear::getrepo(fb));
         let ctx = CoreContext::test_mock(fb);
 
         //            E
@@ -644,20 +645,29 @@ mod tests {
         println!("g = {}", g.get_changeset_id());
         bonsais.push(g.clone());
 
-        let stored_files =
-            store_files(ctx.clone(), btreemap! { "file" => Some("f") }, repo.clone());
+        let stored_files = rt.block_on_std(store_files(
+            ctx.clone(),
+            btreemap! { "file" => Some("f") },
+            repo.clone(),
+        ));
         let f = create_bonsai_changeset_with_files(vec![g.get_changeset_id()], stored_files);
         println!("f = {}", f.get_changeset_id());
         bonsais.push(f.clone());
 
-        let stored_files =
-            store_files(ctx.clone(), btreemap! { "file" => Some("d") }, repo.clone());
+        let stored_files = rt.block_on_std(store_files(
+            ctx.clone(),
+            btreemap! { "file" => Some("d") },
+            repo.clone(),
+        ));
         let d = create_bonsai_changeset_with_files(vec![f.get_changeset_id()], stored_files);
         println!("d = {}", d.get_changeset_id());
         bonsais.push(d.clone());
 
-        let stored_files =
-            store_files(ctx.clone(), btreemap! { "file" => Some("e") }, repo.clone());
+        let stored_files = rt.block_on_std(store_files(
+            ctx.clone(),
+            btreemap! { "file" => Some("e") },
+            repo.clone(),
+        ));
         let e = create_bonsai_changeset_with_files(
             vec![d.get_changeset_id(), c.get_changeset_id()],
             stored_files,

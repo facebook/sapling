@@ -6,6 +6,7 @@
  */
 
 #![deny(warnings)]
+#![type_length_limit = "1430018"]
 
 mod derived;
 pub use derived::{fetch_file_full_content, BlameRoot, BlameRootMapping};

@@ -634,8 +634,8 @@ mod test {
         direction: CommitSyncDirection,
     ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
         let ctx = CoreContext::test_mock(fb);
-        let small_repo = linear::getrepo_with_id(fb, RepositoryId::new(0));
-        let large_repo = linear::getrepo_with_id(fb, RepositoryId::new(1));
+        let small_repo = linear::getrepo_with_id(fb, RepositoryId::new(0)).await;
+        let large_repo = linear::getrepo_with_id(fb, RepositoryId::new(1)).await;
 
         let master = BookmarkName::new("master")?;
         let maybe_master_val = small_repo

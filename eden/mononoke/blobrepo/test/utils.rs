@@ -11,8 +11,6 @@ use anyhow::Error;
 use ascii::AsAsciiStr;
 use bytes::Bytes;
 use fbinit::FacebookInit;
-use futures::executor::spawn;
-use futures::future::Future;
 use futures::stream::futures_unordered;
 use futures_ext::{BoxFuture, StreamExt};
 use scuba_ext::ScubaSampleBuilder;
@@ -44,15 +42,15 @@ macro_rules! test_both_repotypes {
     ($impl_name:ident, $lazy_test:ident, $eager_test:ident) => {
         #[fbinit::test]
         fn $lazy_test(fb: FacebookInit) {
-            async_unit::tokio_unit_test(move || {
-                $impl_name(fb, get_empty_lazy_repo());
+            async_unit::tokio_unit_test(async move {
+                $impl_name(fb, get_empty_lazy_repo()).await;
             })
         }
 
         #[fbinit::test]
         fn $eager_test(fb: FacebookInit) {
-            async_unit::tokio_unit_test(move || {
-                $impl_name(fb, get_empty_eager_repo());
+            async_unit::tokio_unit_test(async move {
+                $impl_name(fb, get_empty_eager_repo()).await;
             })
         }
     };
@@ -60,16 +58,16 @@ macro_rules! test_both_repotypes {
         #[fbinit::test]
         #[should_panic]
         fn $lazy_test(fb: FacebookInit) {
-            async_unit::tokio_unit_test(move || {
-                $impl_name(fb, get_empty_lazy_repo());
+            async_unit::tokio_unit_test(async move {
+                $impl_name(fb, get_empty_lazy_repo()).await;
             })
         }
 
         #[fbinit::test]
         #[should_panic]
         fn $eager_test(fb: FacebookInit) {
-            async_unit::tokio_unit_test(move || {
-                $impl_name(fb, get_empty_eager_repo());
+            async_unit::tokio_unit_test(async move {
+                $impl_name(fb, get_empty_eager_repo()).await;
             })
         }
     };
@@ -251,13 +249,6 @@ pub fn create_changeset_one_parent(
 
 pub fn string_to_nodehash(hash: &str) -> HgNodeHash {
     HgNodeHash::from_ascii_str(hash.as_ascii_str().unwrap()).unwrap()
-}
-
-pub fn run_future<F>(future: F) -> Result<F::Item, F::Error>
-where
-    F: Future,
-{
-    spawn(future).wait_future()
 }
 
 pub fn to_mpath(path: RepoPath) -> Result<MPath, Error> {

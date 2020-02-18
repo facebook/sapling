@@ -10,7 +10,7 @@ use anyhow::Error;
 use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::Future;
+use futures_preview::compat::Future01CompatExt;
 use maplit::{btreemap, hashmap};
 use mononoke_types::{Blame, ChangesetId, MPath};
 use std::collections::HashMap;
@@ -137,7 +137,7 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
     //  \ /
     //   4
     //
-    async_unit::tokio_unit_test(move || {
+    async_unit::tokio_unit_test(async move {
         let ctx = CoreContext::test_mock(fb);
         let repo = blobrepo_factory::new_memblob_empty(None)?;
 
@@ -153,27 +153,31 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
                     "_f2" => Some(F2[0]),
                 },
                 repo.clone(),
-            ),
-        );
+            )
+            .await,
+        )
+        .await;
 
         let mut c1_changes =
-            store_files(ctx.clone(), btreemap! {"f0" => Some(F0[1])}, repo.clone());
+            store_files(ctx.clone(), btreemap! {"f0" => Some(F0[1])}, repo.clone()).await;
         let (f2_path, f2_change) = store_rename(
             ctx.clone(),
             (MPath::new("_f2")?, c0),
             "f2",
             F2[1],
             repo.clone(),
-        );
+        )
+        .await;
         c1_changes.insert(f2_path, f2_change);
-        let c1 = create_commit(ctx.clone(), repo.clone(), vec![c0], c1_changes);
+        let c1 = create_commit(ctx.clone(), repo.clone(), vec![c0], c1_changes).await;
 
         let c2 = create_commit(
             ctx.clone(),
             repo.clone(),
             vec![c1],
-            store_files(ctx.clone(), btreemap! {"f0" => Some(F0[2])}, repo.clone()),
-        );
+            store_files(ctx.clone(), btreemap! {"f0" => Some(F0[2])}, repo.clone()).await,
+        )
+        .await;
 
         let c3 = create_commit(
             ctx.clone(),
@@ -187,8 +191,10 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
                     "f2" => Some(F2[2]),
                 },
                 repo.clone(),
-            ),
-        );
+            )
+            .await,
+        )
+        .await;
 
         let c4 = create_commit(
             ctx.clone(),
@@ -202,8 +208,10 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
                     "f2" => Some(F2[3]),
                 },
                 repo.clone(),
-            ),
-        );
+            )
+            .await,
+        )
+        .await;
 
         let names = hashmap! {
             c0 => "c0",
@@ -213,16 +221,19 @@ fn test_blame(fb: FacebookInit) -> Result<(), Error> {
             c4 => "c4",
         };
 
-        let (content, blame) =
-            fetch_blame(ctx.clone(), repo.clone(), c4, MPath::new("f0")?).wait()?;
+        let (content, blame) = fetch_blame(ctx.clone(), repo.clone(), c4, MPath::new("f0")?)
+            .compat()
+            .await?;
         assert_eq!(annotate(content, blame, &names)?, F0_AT_C4);
 
-        let (content, blame) =
-            fetch_blame(ctx.clone(), repo.clone(), c4, MPath::new("f1")?).wait()?;
+        let (content, blame) = fetch_blame(ctx.clone(), repo.clone(), c4, MPath::new("f1")?)
+            .compat()
+            .await?;
         assert_eq!(annotate(content, blame, &names)?, F1_AT_C4);
 
-        let (content, blame) =
-            fetch_blame(ctx.clone(), repo.clone(), c4, MPath::new("f2")?).wait()?;
+        let (content, blame) = fetch_blame(ctx.clone(), repo.clone(), c4, MPath::new("f2")?)
+            .compat()
+            .await?;
         assert_eq!(annotate(content, blame, &names)?, F2_AT_C4);
 
         Ok(())

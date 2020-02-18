@@ -293,8 +293,8 @@ mod tests {
 
     #[fbinit::test]
     fn linear_test(fb: FacebookInit) -> Result<(), Error> {
-        let repo = linear::getrepo(fb);
         let mut runtime = Runtime::new().unwrap();
+        let repo = runtime.block_on_std(linear::getrepo(fb));
         let ctx = CoreContext::test_mock(fb);
 
         // Derive filenodes because they are going to be used in this test
@@ -400,8 +400,8 @@ mod tests {
 
     #[fbinit::test]
     fn test_same_content_different_paths(fb: FacebookInit) {
-        let repo = linear::getrepo(fb);
         let mut runtime = Runtime::new().unwrap();
+        let repo = runtime.block_on_std(linear::getrepo(fb));
         let ctx = CoreContext::test_mock(fb);
 
         fn check_unode_uniqeness(
@@ -451,8 +451,8 @@ mod tests {
 
     #[fbinit::test]
     fn test_same_content_no_change(fb: FacebookInit) {
-        let repo = linear::getrepo(fb);
         let mut runtime = Runtime::new().unwrap();
+        let repo = runtime.block_on_std(linear::getrepo(fb));
         let ctx = CoreContext::test_mock(fb);
 
         assert!(build_diamond_graph(

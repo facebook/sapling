@@ -523,7 +523,6 @@ mod test {
     };
     use futures_ext::BoxFuture;
     use futures_preview::compat::Future01CompatExt;
-    use futures_util::future::{FutureExt as NewFutureExt, TryFutureExt};
     use lazy_static::lazy_static;
     use lock_ext::LockExt;
     use maplit::hashmap;
@@ -673,13 +672,15 @@ mod test {
             .unwrap();
     }
 
-    fn init_linear(fb: FacebookInit) -> BlobRepo {
-        linear::getrepo(fb).dangerous_override(|mut derived_data_config: DerivedDataConfig| {
-            derived_data_config
-                .derived_data_types
-                .insert(TestGenNum::NAME.to_string());
-            derived_data_config
-        })
+    async fn init_linear(fb: FacebookInit) -> BlobRepo {
+        linear::getrepo(fb).await.dangerous_override(
+            |mut derived_data_config: DerivedDataConfig| {
+                derived_data_config
+                    .derived_data_types
+                    .insert(TestGenNum::NAME.to_string());
+                derived_data_config
+            },
+        )
     }
 
     #[fbinit::test]
@@ -687,41 +688,38 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let mut runtime = Runtime::new()?;
 
-        let repo = init_linear(fb);
-        runtime.block_on(
-            async move {
-                // This is the parent of the root commit
-                // ...
-                //  O <- 3e0e761030db6e479a7fb58b12881883f9f8c63f
-                //  |
-                //  O <- 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
-                let after_root_cs_id =
-                    resolve_cs_id(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
-                let root_cs_id =
-                    resolve_cs_id(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
+        runtime.block_on_std(async move {
+            let repo = init_linear(fb).await;
 
-                TestGenNum::derive(ctx.clone(), repo.clone(), after_root_cs_id)
-                    .compat()
-                    .await?;
+            // This is the parent of the root commit
+            // ...
+            //  O <- 3e0e761030db6e479a7fb58b12881883f9f8c63f
+            //  |
+            //  O <- 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
+            let after_root_cs_id =
+                resolve_cs_id(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
+            let root_cs_id =
+                resolve_cs_id(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
 
-                // Delete root entry, and derive descendant of after_root changeset, make sure
-                // it doesn't fail
-                TestGenNum::mapping(&ctx, &repo).remove(&root_cs_id);
-                TestGenNum::derive(ctx.clone(), repo.clone(), after_root_cs_id)
-                    .compat()
-                    .await?;
+            TestGenNum::derive(ctx.clone(), repo.clone(), after_root_cs_id)
+                .compat()
+                .await?;
 
-                let third_cs_id =
-                    resolve_cs_id(&ctx, &repo, "607314ef579bd2407752361ba1b0c1729d08b281").await?;
-                TestGenNum::derive(ctx.clone(), repo.clone(), third_cs_id)
-                    .compat()
-                    .await?;
+            // Delete root entry, and derive descendant of after_root changeset, make sure
+            // it doesn't fail
+            TestGenNum::mapping(&ctx, &repo).remove(&root_cs_id);
+            TestGenNum::derive(ctx.clone(), repo.clone(), after_root_cs_id)
+                .compat()
+                .await?;
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            let third_cs_id =
+                resolve_cs_id(&ctx, &repo, "607314ef579bd2407752361ba1b0c1729d08b281").await?;
+            TestGenNum::derive(ctx.clone(), repo.clone(), third_cs_id)
+                .compat()
+                .await?;
+
+            Ok(())
+        })
     }
 
     #[fbinit::test]
@@ -729,45 +727,42 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let mut runtime = Runtime::new()?;
 
-        let repo = init_linear(fb);
-        runtime.block_on(
-            async move {
-                // This is the parent of the root commit
-                // ...
-                //  O <- 3e0e761030db6e479a7fb58b12881883f9f8c63f
-                //  |
-                //  O <- 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
-                let after_root_cs_id =
-                    resolve_cs_id(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
-                let root_cs_id =
-                    resolve_cs_id(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
+        runtime.block_on_std(async move {
+            let repo = init_linear(fb).await;
 
-                let underived = TestGenNum::count_underived(&ctx, &repo, &after_root_cs_id, 100)
-                    .compat()
-                    .await?;
-                assert_eq!(underived, 2);
+            // This is the parent of the root commit
+            // ...
+            //  O <- 3e0e761030db6e479a7fb58b12881883f9f8c63f
+            //  |
+            //  O <- 2d7d4ba9ce0a6ffd222de7785b249ead9c51c536
+            let after_root_cs_id =
+                resolve_cs_id(&ctx, &repo, "3e0e761030db6e479a7fb58b12881883f9f8c63f").await?;
+            let root_cs_id =
+                resolve_cs_id(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
 
-                let underived = TestGenNum::count_underived(&ctx, &repo, &root_cs_id, 100)
-                    .compat()
-                    .await?;
-                assert_eq!(underived, 1);
+            let underived = TestGenNum::count_underived(&ctx, &repo, &after_root_cs_id, 100)
+                .compat()
+                .await?;
+            assert_eq!(underived, 2);
 
-                let underived = TestGenNum::count_underived(&ctx, &repo, &after_root_cs_id, 1)
-                    .compat()
-                    .await?;
-                assert_eq!(underived, 2);
+            let underived = TestGenNum::count_underived(&ctx, &repo, &root_cs_id, 100)
+                .compat()
+                .await?;
+            assert_eq!(underived, 1);
 
-                let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-                let underived = TestGenNum::count_underived(&ctx, &repo, &master_cs_id, 100)
-                    .compat()
-                    .await?;
-                assert_eq!(underived, 11);
+            let underived = TestGenNum::count_underived(&ctx, &repo, &after_root_cs_id, 1)
+                .compat()
+                .await?;
+            assert_eq!(underived, 2);
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+            let underived = TestGenNum::count_underived(&ctx, &repo, &master_cs_id, 100)
+                .compat()
+                .await?;
+            assert_eq!(underived, 11);
+
+            Ok(())
+        })
     }
 
     #[fbinit::test]
@@ -775,34 +770,34 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let mut runtime = Runtime::new()?;
 
-        let repo = branch_even::getrepo(fb);
+        let repo = runtime.block_on_std(branch_even::getrepo(fb));
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = branch_uneven::getrepo(fb);
+        let repo = runtime.block_on_std(branch_uneven::getrepo(fb));
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = branch_wide::getrepo(fb);
+        let repo = runtime.block_on_std(branch_wide::getrepo(fb));
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = linear::getrepo(fb);
+        let repo = runtime.block_on_std(linear::getrepo(fb));
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = many_files_dirs::getrepo(fb);
+        let repo = runtime.block_on_std(many_files_dirs::getrepo(fb));
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = merge_even::getrepo(fb);
+        let repo = runtime.block_on_std(merge_even::getrepo(fb));
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = merge_uneven::getrepo(fb);
+        let repo = runtime.block_on_std(merge_uneven::getrepo(fb));
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = unshared_merge_even::getrepo(fb);
+        let repo = runtime.block_on_std(unshared_merge_even::getrepo(fb));
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = unshared_merge_uneven::getrepo(fb);
+        let repo = runtime.block_on_std(unshared_merge_uneven::getrepo(fb));
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
-        let repo = many_diamonds::getrepo(fb, &mut runtime);
+        let repo = runtime.block_on_std(many_diamonds::getrepo(fb));
         derive_for_master(&mut runtime, ctx.clone(), repo.clone());
 
         Ok(())
@@ -812,7 +807,7 @@ mod test {
     fn test_leases(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let mut runtime = Runtime::new()?;
-        let repo = init_linear(fb);
+        let repo = runtime.block_on_std(init_linear(fb));
         let mapping = TestGenNum::mapping(&ctx, &repo);
 
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
@@ -905,11 +900,13 @@ mod test {
 
     #[fbinit::test]
     fn test_always_failing_lease(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let repo =
-            init_linear(fb).dangerous_override(|_| Arc::new(FailingLease) as Arc<dyn LeaseOps>);
-        let mapping = TestGenNum::mapping(&ctx, &repo);
         let mut runtime = Runtime::new()?;
+
+        let ctx = CoreContext::test_mock(fb);
+        let repo = runtime
+            .block_on_std(init_linear(fb))
+            .dangerous_override(|_| Arc::new(FailingLease) as Arc<dyn LeaseOps>);
+        let mapping = TestGenNum::mapping(&ctx, &repo);
 
         let hg_csid = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
         let csid = runtime

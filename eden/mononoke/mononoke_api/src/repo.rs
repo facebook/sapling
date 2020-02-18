@@ -862,64 +862,55 @@ impl RepoContext {
 mod tests {
     use super::*;
     use fixtures::{linear, merge_even};
-    use futures_preview::{FutureExt as NewFutureExt, TryFutureExt};
 
     #[fbinit::test]
     fn test_try_find_child(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = Repo::new_test(ctx.clone(), linear::getrepo(fb)).await?;
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Repo::new_test(ctx.clone(), linear::getrepo(fb).await).await?;
 
-                let ancestor = ChangesetId::from_str(
-                    "c9f9a2a39195a583d523a4e5f6973443caeb0c66a315d5bf7db1b5775c725310",
-                )?;
-                let descendant = ChangesetId::from_str(
-                    "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6",
-                )?;
+            let ancestor = ChangesetId::from_str(
+                "c9f9a2a39195a583d523a4e5f6973443caeb0c66a315d5bf7db1b5775c725310",
+            )?;
+            let descendant = ChangesetId::from_str(
+                "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6",
+            )?;
 
-                let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 100).await?;
-                let child = maybe_child.ok_or(format_err!("didn't find child"))?;
-                assert_eq!(
-                    child,
-                    ChangesetId::from_str(
-                        "98ef3234c2f1acdbb272715e8cfef4a6378e5443120677e0d87d113571280f79"
-                    )?
-                );
+            let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 100).await?;
+            let child = maybe_child.ok_or(format_err!("didn't find child"))?;
+            assert_eq!(
+                child,
+                ChangesetId::from_str(
+                    "98ef3234c2f1acdbb272715e8cfef4a6378e5443120677e0d87d113571280f79"
+                )?
+            );
 
-                let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 1).await?;
-                assert!(maybe_child.is_none());
+            let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 1).await?;
+            assert!(maybe_child.is_none());
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn test_try_find_child_merge(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = Repo::new_test(ctx.clone(), merge_even::getrepo(fb)).await?;
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = Repo::new_test(ctx.clone(), merge_even::getrepo(fb).await).await?;
 
-                let ancestor = ChangesetId::from_str(
-                    "35fb4e0fb3747b7ca4d18281d059be0860d12407dc5dce5e02fb99d1f6a79d2a",
-                )?;
-                let descendant = ChangesetId::from_str(
-                    "567a25d453cafaef6550de955c52b91bf9295faf38d67b6421d5d2e532e5adef",
-                )?;
+            let ancestor = ChangesetId::from_str(
+                "35fb4e0fb3747b7ca4d18281d059be0860d12407dc5dce5e02fb99d1f6a79d2a",
+            )?;
+            let descendant = ChangesetId::from_str(
+                "567a25d453cafaef6550de955c52b91bf9295faf38d67b6421d5d2e532e5adef",
+            )?;
 
-                let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 100).await?;
-                let child = maybe_child.ok_or(format_err!("didn't find child"))?;
-                assert_eq!(child, descendant);
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            let maybe_child = repo.try_find_child(&ctx, ancestor, descendant, 100).await?;
+            let child = maybe_child.ok_or(format_err!("didn't find child"))?;
+            assert_eq!(child, descendant);
+            Ok(())
+        })
     }
 }

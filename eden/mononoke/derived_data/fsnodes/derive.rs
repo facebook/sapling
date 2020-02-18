@@ -405,8 +405,8 @@ mod test {
 
     #[fbinit::test]
     fn flat_linear_test(fb: FacebookInit) {
-        let repo = linear::getrepo(fb);
         let mut runtime = Runtime::new().unwrap();
+        let repo = runtime.block_on_std(linear::getrepo(fb));
 
         let ctx = CoreContext::test_mock(fb);
         let parent_fsnode_id = {
@@ -521,8 +521,8 @@ mod test {
 
     #[fbinit::test]
     fn nested_directories_test(fb: FacebookInit) {
-        let repo = many_files_dirs::getrepo(fb);
         let mut runtime = Runtime::new().unwrap();
+        let repo = runtime.block_on_std(many_files_dirs::getrepo(fb));
 
         let ctx = CoreContext::test_mock(fb);
 

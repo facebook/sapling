@@ -240,23 +240,29 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use futures_ext::StreamExt;
+    use futures_preview::compat::Future01CompatExt;
     use mercurial_types::HgChangesetId;
     use revset_test_helper::assert_changesets_sequence;
     use revset_test_helper::string_to_nodehash;
 
-    fn string_to_bonsai(ctx: CoreContext, repo: &Arc<BlobRepo>, s: &'static str) -> ChangesetId {
+    async fn string_to_bonsai(
+        ctx: CoreContext,
+        repo: &Arc<BlobRepo>,
+        s: &'static str,
+    ) -> ChangesetId {
         let node = string_to_nodehash(s);
         repo.get_bonsai_from_hg(ctx, HgChangesetId::new(node))
-            .wait()
+            .compat()
+            .await
             .unwrap()
             .unwrap()
     }
 
     #[fbinit::test]
     fn linear_range(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
@@ -265,12 +271,14 @@ mod test {
                     ctx.clone(),
                     &repo,
                     "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-                ),
+                )
+                .await,
                 string_to_bonsai(
                     ctx.clone(),
                     &repo,
                     "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-                ),
+                )
+                .await,
             )
             .boxify();
 
@@ -282,34 +290,39 @@ mod test {
                         ctx.clone(),
                         &repo,
                         "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-                    ),
+                    )
+                    .await,
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
                         "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
-                    ),
+                    )
+                    .await,
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
                         "eed3a8c0ec67b6a6fe2eb3543334df3f0b4f202b",
-                    ),
+                    )
+                    .await,
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
                         "cb15ca4a43a59acff5388cea9648c162afde8372",
-                    ),
-                    string_to_bonsai(ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                    )
+                    .await,
+                    string_to_bonsai(ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await,
                 ],
                 nodestream,
-            );
+            )
+            .await;
         })
     }
 
     #[fbinit::test]
     fn linear_direct_parent_range(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
@@ -318,12 +331,14 @@ mod test {
                     ctx.clone(),
                     &repo,
                     "0ed509bf086fadcb8a8a5384dc3b550729b0fc17",
-                ),
+                )
+                .await,
                 string_to_bonsai(
                     ctx.clone(),
                     &repo,
                     "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-                ),
+                )
+                .await,
             )
             .boxify();
 
@@ -335,19 +350,21 @@ mod test {
                         ctx.clone(),
                         &repo,
                         "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-                    ),
-                    string_to_bonsai(ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17"),
+                    )
+                    .await,
+                    string_to_bonsai(ctx, &repo, "0ed509bf086fadcb8a8a5384dc3b550729b0fc17").await,
                 ],
                 nodestream,
-            );
+            )
+            .await;
         })
     }
 
     #[fbinit::test]
     fn linear_single_node_range(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
@@ -356,33 +373,34 @@ mod test {
                     ctx.clone(),
                     &repo,
                     "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-                ),
+                )
+                .await,
                 string_to_bonsai(
                     ctx.clone(),
                     &repo,
                     "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-                ),
+                )
+                .await,
             )
             .boxify();
 
             assert_changesets_sequence(
                 ctx.clone(),
                 &repo,
-                vec![string_to_bonsai(
-                    ctx,
-                    &repo,
-                    "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-                )],
+                vec![
+                    string_to_bonsai(ctx, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await,
+                ],
                 nodestream,
-            );
+            )
+            .await;
         })
     }
 
     #[fbinit::test]
     fn linear_empty_range(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
 
             // These are swapped, so won't find anything
             let nodestream = RangeNodeStream::new(
@@ -392,24 +410,26 @@ mod test {
                     ctx.clone(),
                     &repo,
                     "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
-                ),
+                )
+                .await,
                 string_to_bonsai(
                     ctx.clone(),
                     &repo,
                     "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-                ),
+                )
+                .await,
             )
             .boxify();
 
-            assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
+            assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream).await;
         })
     }
 
     #[fbinit::test]
     fn merge_range_from_merge(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(merge_uneven::getrepo(fb));
+            let repo = Arc::new(merge_uneven::getrepo(fb).await);
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
@@ -418,12 +438,14 @@ mod test {
                     ctx.clone(),
                     &repo,
                     "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5",
-                ),
+                )
+                .await,
                 string_to_bonsai(
                     ctx.clone(),
                     &repo,
                     "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
-                ),
+                )
+                .await,
             )
             .boxify();
 
@@ -435,24 +457,27 @@ mod test {
                         ctx.clone(),
                         &repo,
                         "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
-                    ),
+                    )
+                    .await,
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
                         "16839021e338500b3cf7c9b871c8a07351697d68",
-                    ),
-                    string_to_bonsai(ctx, &repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5"),
+                    )
+                    .await,
+                    string_to_bonsai(ctx, &repo, "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5").await,
                 ],
                 nodestream,
-            );
+            )
+            .await;
         })
     }
 
     #[fbinit::test]
     fn merge_range_everything(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(merge_uneven::getrepo(fb));
+            let repo = Arc::new(merge_uneven::getrepo(fb).await);
 
             let nodestream = RangeNodeStream::new(
                 ctx.clone(),
@@ -461,12 +486,14 @@ mod test {
                     ctx.clone(),
                     &repo,
                     "15c40d0abc36d47fb51c8eaec51ac7aad31f669c",
-                ),
+                )
+                .await,
                 string_to_bonsai(
                     ctx.clone(),
                     &repo,
                     "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
-                ),
+                )
+                .await,
             )
             .boxify();
 
@@ -478,66 +505,79 @@ mod test {
                         ctx.clone(),
                         &repo,
                         "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b",
-                    ),
+                    )
+                    .await,
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
                         "264f01429683b3dd8042cb3979e8bf37007118bc",
-                    ),
+                    )
+                    .await,
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
                         "5d43888a3c972fe68c224f93d41b30e9f888df7c",
-                    ),
+                    )
+                    .await,
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
                         "fc2cef43395ff3a7b28159007f63d6529d2f41ca",
-                    ),
+                    )
+                    .await,
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
                         "bc7b4d0f858c19e2474b03e442b8495fd7aeef33",
-                    ),
+                    )
+                    .await,
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
                         "795b8133cf375f6d68d27c6c23db24cd5d0cd00f",
-                    ),
+                    )
+                    .await,
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
                         "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
-                    ),
+                    )
+                    .await,
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
                         "16839021e338500b3cf7c9b871c8a07351697d68",
-                    ),
+                    )
+                    .await,
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
                         "1d8a907f7b4bf50c6a09c16361e2205047ecc5e5",
-                    ),
+                    )
+                    .await,
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
                         "b65231269f651cfe784fd1d97ef02a049a37b8a0",
-                    ),
+                    )
+                    .await,
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
                         "d7542c9db7f4c77dab4b315edd328edf1514952f",
-                    ),
+                    )
+                    .await,
                     string_to_bonsai(
                         ctx.clone(),
                         &repo,
                         "3cda5c78aa35f0f5b09780d971197b51cad4613a",
-                    ),
-                    string_to_bonsai(ctx, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c"),
+                    )
+                    .await,
+                    string_to_bonsai(ctx, &repo, "15c40d0abc36d47fb51c8eaec51ac7aad31f669c").await,
                 ],
                 nodestream,
-            );
+            )
+            .await;
         })
     }
 }

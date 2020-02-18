@@ -797,9 +797,10 @@ mod tests {
 
     #[fbinit::test]
     fn test_backfill_data_latest(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb);
         let mut runtime = Runtime::new()?;
+
+        let ctx = CoreContext::test_mock(fb);
+        let repo = runtime.block_on_std(linear::getrepo(fb));
 
         let hg_cs_id = HgChangesetId::from_str("79a13814c5ce7330173ec04d279bf95ab3f652fb")?;
         let maybe_bcs_id = runtime.block_on(repo.get_bonsai_from_hg(ctx.clone(), hg_cs_id))?;
@@ -813,9 +814,10 @@ mod tests {
 
     #[fbinit::test]
     fn test_backfill_data_batch(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb);
         let mut runtime = Runtime::new()?;
+
+        let ctx = CoreContext::test_mock(fb);
+        let repo = runtime.block_on_std(linear::getrepo(fb));
 
         let mut batch = vec![];
         let hg_cs_ids = vec![
@@ -846,10 +848,10 @@ mod tests {
         // The test exercises that derived data mapping entries are written only after
         // all other blobstore writes were successful i.e. mapping entry shouldn't exist
         // if any of the corresponding blobs weren't successfully saved
+        let mut runtime = Runtime::new()?;
 
         let ctx = CoreContext::test_mock(fb);
-        let origrepo = linear::getrepo(fb);
-        let mut runtime = Runtime::new()?;
+        let origrepo = runtime.block_on_std(linear::getrepo(fb));
 
         let repo = origrepo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
             Arc::new(FailingBlobstore::new("manifest".to_string(), blobstore))

@@ -205,7 +205,7 @@ fn test_pushredirect_config() {
 #[fbinit::test]
 async fn get_changed_manifests_stream_test(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo = many_files_dirs::getrepo(fb);
+    let repo = many_files_dirs::getrepo(fb).await;
 
     // Commit that has only dir2 directory
     let root_mf_id = HgChangesetId::from_str("051946ed218061e925fb120dac02634f9ad40ae2")?
@@ -271,7 +271,7 @@ async fn get_changed_manifests_stream_test(fb: FacebookInit) -> Result<(), Error
 #[fbinit::test]
 async fn get_changed_manifests_stream_test_depth(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo = many_files_dirs::getrepo(fb);
+    let repo = many_files_dirs::getrepo(fb).await;
 
     let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
         .load(ctx.clone(), &repo.get_blobstore())
@@ -328,7 +328,7 @@ async fn get_changed_manifests_stream_test_depth(fb: FacebookInit) -> Result<(),
 #[fbinit::test]
 async fn get_changed_manifests_stream_test_base_path(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
-    let repo = many_files_dirs::getrepo(fb);
+    let repo = many_files_dirs::getrepo(fb).await;
 
     let root_mf_id = HgChangesetId::from_str("d261bc7900818dea7c86935b3fb17a33b2e3a6b4")?
         .load(ctx.clone(), &repo.get_blobstore())

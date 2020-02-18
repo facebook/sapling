@@ -54,17 +54,24 @@ use tokio_compat::runtime::Runtime;
 use tracing_blobstore::TracingBlobstore;
 use utils::{
     create_changeset_no_parents, create_changeset_one_parent, get_empty_eager_repo,
-    get_empty_lazy_repo, run_future, string_to_nodehash, to_mpath, upload_file_no_parents,
+    get_empty_lazy_repo, string_to_nodehash, to_mpath, upload_file_no_parents,
     upload_file_one_parent, upload_manifest_no_parents, upload_manifest_one_parent,
 };
 
-fn get_content(ctx: CoreContext, repo: &BlobRepo, id: HgFileNodeId) -> Result<bytes::Bytes, Error> {
-    let content_id = run_future(id.load(ctx.clone(), repo.blobstore()))?.content_id();
+async fn get_content(
+    ctx: CoreContext,
+    repo: &BlobRepo,
+    id: HgFileNodeId,
+) -> Result<bytes::Bytes, Error> {
+    let content_id = (id.load(ctx.clone(), repo.blobstore()))
+        .compat()
+        .await?
+        .content_id();
     let content = filestore::fetch_stream(repo.blobstore(), ctx.clone(), content_id).concat2();
-    run_future(content)
+    (content).compat().await
 }
 
-fn upload_blob_no_parents(fb: FacebookInit, repo: BlobRepo) {
+async fn upload_blob_no_parents(fb: FacebookInit, repo: BlobRepo) {
     let ctx = CoreContext::test_mock(fb);
     let expected_hash = HgFileNodeId::new(string_to_nodehash(
         "c3127cdbf2eae0f09653f9237d85c8436425b246",
@@ -72,14 +79,16 @@ fn upload_blob_no_parents(fb: FacebookInit, repo: BlobRepo) {
     let fake_path = RepoPath::file("fake/file").expect("Can't generate fake RepoPath");
 
     // The blob does not exist...
-    assert!(get_content(ctx.clone(), &repo, expected_hash).is_err());
+    assert!(get_content(ctx.clone(), &repo, expected_hash)
+        .await
+        .is_err());
 
     // We upload it...
     let (hash, future) = upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_path);
     assert!(hash == expected_hash);
 
     // The entry we're given is correct...
-    let (entry, path) = run_future(future).unwrap();
+    let (entry, path) = future.compat().await.unwrap();
     assert!(path == fake_path);
     assert!(HgFileNodeId::new(entry.get_hash().into_nodehash()) == expected_hash);
     assert!(entry.get_type() == manifest::Type::File(FileType::Regular));
@@ -87,16 +96,16 @@ fn upload_blob_no_parents(fb: FacebookInit, repo: BlobRepo) {
         entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
     );
 
-    let content = run_future(entry.get_content(ctx.clone())).unwrap();
+    let content = entry.get_content(ctx.clone()).compat().await.unwrap();
     let stream = match content {
         manifest::Content::File(stream) => stream,
         _ => panic!(),
     };
-    let bytes = run_future(stream.concat2()).unwrap();
+    let bytes = stream.concat2().compat().await.unwrap();
     assert_eq!(bytes.into_bytes().as_ref(), &b"blob"[..]);
 
     // And the blob now exists
-    let bytes = get_content(ctx, &repo, expected_hash).unwrap();
+    let bytes = get_content(ctx, &repo, expected_hash).await.unwrap();
     assert!(bytes.as_ref() == &b"blob"[..]);
 }
 
@@ -106,7 +115,7 @@ test_both_repotypes!(
     upload_blob_no_parents_eager
 );
 
-fn upload_blob_one_parent(fb: FacebookInit, repo: BlobRepo) {
+async fn upload_blob_one_parent(fb: FacebookInit, repo: BlobRepo) {
     let ctx = CoreContext::test_mock(fb);
     let expected_hash = HgFileNodeId::new(string_to_nodehash(
         "c2d60b35a8e7e034042a9467783bbdac88a0d219",
@@ -116,14 +125,21 @@ fn upload_blob_one_parent(fb: FacebookInit, repo: BlobRepo) {
     let (p1, future) = upload_file_no_parents(ctx.clone(), &repo, "blob", &fake_path);
 
     // The blob does not exist...
-    let _ = get_content(ctx.clone(), &repo, expected_hash).unwrap_err();
+    let _ = get_content(ctx.clone(), &repo, expected_hash)
+        .await
+        .unwrap_err();
 
     // We upload it...
     let (hash, future2) = upload_file_one_parent(ctx.clone(), &repo, "blob", &fake_path, p1);
     assert!(hash == expected_hash);
 
     // The entry we're given is correct...
-    let (entry, path) = run_future(future2.join(future).map(|(item, _)| item)).unwrap();
+    let (entry, path) = future2
+        .join(future)
+        .map(|(item, _)| item)
+        .compat()
+        .await
+        .unwrap();
 
     assert!(path == fake_path);
     assert!(HgFileNodeId::new(entry.get_hash().into_nodehash()) == expected_hash);
@@ -132,16 +148,18 @@ fn upload_blob_one_parent(fb: FacebookInit, repo: BlobRepo) {
         entry.get_name() == Some(&MPathElement::new("file".into()).expect("valid MPathElement"))
     );
 
-    let content = run_future(entry.get_content(ctx.clone())).unwrap();
+    let content = entry.get_content(ctx.clone()).compat().await.unwrap();
     let stream = match content {
         manifest::Content::File(stream) => stream,
         _ => panic!(),
     };
-    let bytes = run_future(stream.concat2()).unwrap();
+    let bytes = stream.concat2().compat().await.unwrap();
     assert_eq!(bytes.into_bytes().as_ref(), &b"blob"[..]);
 
     // And the blob now exists
-    let bytes = get_content(ctx.clone(), &repo, expected_hash).unwrap();
+    let bytes = get_content(ctx.clone(), &repo, expected_hash)
+        .await
+        .unwrap();
     assert!(bytes.as_ref() == &b"blob"[..]);
 }
 
@@ -151,7 +169,7 @@ test_both_repotypes!(
     upload_blob_one_parent_eager
 );
 
-fn create_one_changeset(fb: FacebookInit, repo: BlobRepo) {
+async fn create_one_changeset(fb: FacebookInit, repo: BlobRepo) {
     let ctx = CoreContext::test_mock(fb);
     let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
@@ -186,7 +204,7 @@ fn create_one_changeset(fb: FacebookInit, repo: BlobRepo) {
         vec![file_future, manifest_dir_future],
     );
 
-    let bonsai_hg = run_future(commit.get_completed_changeset()).unwrap();
+    let bonsai_hg = commit.get_completed_changeset().compat().await.unwrap();
     let cs = &bonsai_hg.1;
     assert!(cs.manifestid() == HgManifestId::new(roothash));
     assert!(cs.user() == author.as_bytes());
@@ -198,7 +216,7 @@ fn create_one_changeset(fb: FacebookInit, repo: BlobRepo) {
     );
 
     // And check the file blob is present
-    let bytes = get_content(ctx.clone(), &repo, filehash).unwrap();
+    let bytes = get_content(ctx.clone(), &repo, filehash).await.unwrap();
     assert!(bytes.as_ref() == &b"blob"[..]);
 }
 
@@ -208,7 +226,7 @@ test_both_repotypes!(
     create_one_changeset_eager
 );
 
-fn create_two_changesets(fb: FacebookInit, repo: BlobRepo) {
+async fn create_two_changesets(fb: FacebookInit, repo: BlobRepo) {
     let ctx = CoreContext::test_mock(fb);
     let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
@@ -257,11 +275,11 @@ fn create_two_changesets(fb: FacebookInit, repo: BlobRepo) {
         commit1.clone(),
     );
 
-    let (commit1, commit2) = run_future(
-        commit1
-            .get_completed_changeset()
-            .join(commit2.get_completed_changeset()),
-    )
+    let (commit1, commit2) = (commit1
+        .get_completed_changeset()
+        .join(commit2.get_completed_changeset()))
+    .compat()
+    .await
     .unwrap();
 
     let commit1 = &commit1.1;
@@ -287,7 +305,7 @@ test_both_repotypes!(
     create_two_changesets_eager
 );
 
-fn check_bonsai_creation(fb: FacebookInit, repo: BlobRepo) {
+async fn check_bonsai_creation(fb: FacebookInit, repo: BlobRepo) {
     let ctx = CoreContext::test_mock(fb);
     let fake_file_path = RepoPath::file("dir/file").expect("Can't generate fake RepoPath");
     let fake_dir_path = RepoPath::dir("dir").expect("Can't generate fake RepoPath");
@@ -316,12 +334,20 @@ fn check_bonsai_creation(fb: FacebookInit, repo: BlobRepo) {
         vec![file_future, manifest_dir_future],
     );
 
-    let commit = run_future(commit.get_completed_changeset()).unwrap();
+    let commit = commit.get_completed_changeset().compat().await.unwrap();
     let commit = &commit.1;
-    let bonsai_cs_id =
-        run_future(repo.get_bonsai_from_hg(ctx.clone(), commit.get_changeset_id())).unwrap();
+    let bonsai_cs_id = repo
+        .get_bonsai_from_hg(ctx.clone(), commit.get_changeset_id())
+        .compat()
+        .await
+        .unwrap();
     assert!(bonsai_cs_id.is_some());
-    let bonsai = run_future(bonsai_cs_id.unwrap().load(ctx.clone(), repo.blobstore())).unwrap();
+    let bonsai = bonsai_cs_id
+        .unwrap()
+        .load(ctx.clone(), repo.blobstore())
+        .compat()
+        .await
+        .unwrap();
     assert_eq!(
         bonsai
             .file_changes()
@@ -337,7 +363,7 @@ test_both_repotypes!(
     check_bonsai_creation_eager
 );
 
-fn check_bonsai_creation_with_rename(fb: FacebookInit, repo: BlobRepo) {
+async fn check_bonsai_creation_with_rename(fb: FacebookInit, repo: BlobRepo) {
     let ctx = CoreContext::test_mock(fb);
     let parent = {
         let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
@@ -387,19 +413,29 @@ fn check_bonsai_creation_with_rename(fb: FacebookInit, repo: BlobRepo) {
         )
     };
 
-    let parent_cs = run_future(parent.get_completed_changeset()).unwrap();
+    let parent_cs = parent.get_completed_changeset().compat().await.unwrap();
     let parent_cs = &parent_cs.1;
-    let child_cs = run_future(child.get_completed_changeset()).unwrap();
+    let child_cs = child.get_completed_changeset().compat().await.unwrap();
     let child_cs = &child_cs.1;
 
-    let parent_bonsai_cs_id =
-        run_future(repo.get_bonsai_from_hg(ctx.clone(), parent_cs.get_changeset_id()))
-            .unwrap()
-            .unwrap();
+    let parent_bonsai_cs_id = repo
+        .get_bonsai_from_hg(ctx.clone(), parent_cs.get_changeset_id())
+        .compat()
+        .await
+        .unwrap()
+        .unwrap();
 
-    let bonsai_cs_id =
-        run_future(repo.get_bonsai_from_hg(ctx.clone(), child_cs.get_changeset_id())).unwrap();
-    let bonsai = run_future(bonsai_cs_id.unwrap().load(ctx.clone(), repo.blobstore())).unwrap();
+    let bonsai_cs_id = repo
+        .get_bonsai_from_hg(ctx.clone(), child_cs.get_changeset_id())
+        .compat()
+        .await
+        .unwrap();
+    let bonsai = bonsai_cs_id
+        .unwrap()
+        .load(ctx.clone(), repo.blobstore())
+        .compat()
+        .await
+        .unwrap();
     let fc = bonsai.file_changes().collect::<BTreeMap<_, _>>();
     let file = MPath::new("file").unwrap();
     assert!(!fc[&file].is_some());
@@ -417,7 +453,7 @@ test_both_repotypes!(
     check_bonsai_creation_with_rename_eager
 );
 
-fn create_bad_changeset(fb: FacebookInit, repo: BlobRepo) {
+async fn create_bad_changeset(fb: FacebookInit, repo: BlobRepo) {
     let ctx = CoreContext::test_mock(fb);
     let dirhash = string_to_nodehash("c2d60b35a8e7e034042a9467783bbdac88a0d219");
 
@@ -431,7 +467,7 @@ fn create_bad_changeset(fb: FacebookInit, repo: BlobRepo) {
     let commit =
         create_changeset_no_parents(fb, &repo, root_manifest_future.map(Some).boxify(), vec![]);
 
-    run_future(commit.get_completed_changeset()).unwrap();
+    commit.get_completed_changeset().compat().await.unwrap();
 }
 
 test_both_repotypes!(
@@ -441,7 +477,7 @@ test_both_repotypes!(
     create_bad_changeset_eager
 );
 
-fn upload_entries_finalize_success(fb: FacebookInit, repo: BlobRepo) {
+async fn upload_entries_finalize_success(fb: FacebookInit, repo: BlobRepo) {
     let ctx = CoreContext::test_mock(fb);
 
     let fake_file_path = RepoPath::file("file").expect("Can't generate fake RepoPath");
@@ -456,16 +492,25 @@ fn upload_entries_finalize_success(fb: FacebookInit, repo: BlobRepo) {
         &RepoPath::root(),
     );
 
-    let (file_blob, _) = run_future(file_future).unwrap();
-    let (root_mf_blob, _) = run_future(root_manifest_future).unwrap();
+    let (file_blob, _) = file_future.compat().await.unwrap();
+    let (root_mf_blob, _) = root_manifest_future.compat().await.unwrap();
 
     let entries = UploadEntries::new(repo.get_blobstore(), ScubaSampleBuilder::with_discard());
 
-    run_future(entries.process_root_manifest(ctx.clone(), &root_mf_blob)).unwrap();
+    (entries.process_root_manifest(ctx.clone(), &root_mf_blob))
+        .compat()
+        .await
+        .unwrap();
 
-    run_future(entries.process_one_entry(ctx.clone(), &file_blob, fake_file_path)).unwrap();
+    (entries.process_one_entry(ctx.clone(), &file_blob, fake_file_path))
+        .compat()
+        .await
+        .unwrap();
 
-    run_future(entries.finalize(ctx.clone(), HgManifestId::new(roothash), vec![])).unwrap();
+    (entries.finalize(ctx.clone(), HgManifestId::new(roothash), vec![]))
+        .compat()
+        .await
+        .unwrap();
 }
 
 test_both_repotypes!(
@@ -474,7 +519,7 @@ test_both_repotypes!(
     upload_entries_finalize_success_eager
 );
 
-fn upload_entries_finalize_fail(fb: FacebookInit, repo: BlobRepo) {
+async fn upload_entries_finalize_fail(fb: FacebookInit, repo: BlobRepo) {
     let entries = UploadEntries::new(repo.get_blobstore(), ScubaSampleBuilder::with_discard());
 
     let ctx = CoreContext::test_mock(fb);
@@ -486,15 +531,20 @@ fn upload_entries_finalize_fail(fb: FacebookInit, repo: BlobRepo) {
         format!("dir\0{}t\n", dirhash),
         &RepoPath::root(),
     );
-    let (root_mf_blob, _) = run_future(root_manifest_future).unwrap();
+    let (root_mf_blob, _) = (root_manifest_future).compat().await.unwrap();
 
-    run_future(entries.process_root_manifest(ctx.clone(), &root_mf_blob)).unwrap();
+    (entries.process_root_manifest(ctx.clone(), &root_mf_blob))
+        .compat()
+        .await
+        .unwrap();
 
-    let res = run_future(entries.finalize(
+    let res = (entries.finalize(
         ctx.clone(),
         HgManifestId::new(root_mf_blob.get_hash().into_nodehash()),
         vec![],
-    ));
+    ))
+    .compat()
+    .await;
 
     assert!(res.is_err());
 }
@@ -507,9 +557,9 @@ test_both_repotypes!(
 
 #[fbinit::test]
 fn test_compute_changed_files_no_parents(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || {
+    async_unit::tokio_unit_test(async move {
         let ctx = CoreContext::test_mock(fb);
-        let repo = many_files_dirs::getrepo(fb);
+        let repo = many_files_dirs::getrepo(fb).await;
         let nodehash = string_to_nodehash("051946ed218061e925fb120dac02634f9ad40ae2");
         let expected = vec![
             MPath::new(b"1").unwrap(),
@@ -518,17 +568,15 @@ fn test_compute_changed_files_no_parents(fb: FacebookInit) {
             MPath::new(b"dir2/file_1_in_dir2").unwrap(),
         ];
 
-        let cs =
-            run_future(HgChangesetId::new(nodehash).load(ctx.clone(), repo.blobstore())).unwrap();
+        let cs = (HgChangesetId::new(nodehash).load(ctx.clone(), repo.blobstore()))
+            .compat()
+            .await
+            .unwrap();
 
-        let diff = run_future(compute_changed_files(
-            ctx.clone(),
-            repo.clone(),
-            cs.manifestid(),
-            None,
-            None,
-        ))
-        .unwrap();
+        let diff = (compute_changed_files(ctx.clone(), repo.clone(), cs.manifestid(), None, None))
+            .compat()
+            .await
+            .unwrap();
         assert!(
             diff == expected,
             "Got {:?}, expected {:?}\n",
@@ -540,12 +588,12 @@ fn test_compute_changed_files_no_parents(fb: FacebookInit) {
 
 #[fbinit::test]
 fn test_compute_changed_files_one_parent(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || {
+    async_unit::tokio_unit_test(async move {
         let ctx = CoreContext::test_mock(fb);
         // Note that this is a commit and its parent commit, so you can use:
         // hg log -T"{node}\n{files % '    MPath::new(b\"{file}\").unwrap(),\\n'}\\n" -r $HASH
         // to see how Mercurial would compute the files list and confirm that it's the same
-        let repo = many_files_dirs::getrepo(fb);
+        let repo = many_files_dirs::getrepo(fb).await;
         let nodehash = string_to_nodehash("051946ed218061e925fb120dac02634f9ad40ae2");
         let parenthash = string_to_nodehash("d261bc7900818dea7c86935b3fb17a33b2e3a6b4");
         let expected = vec![
@@ -558,19 +606,25 @@ fn test_compute_changed_files_one_parent(fb: FacebookInit) {
             MPath::new(b"dir1/subdir1/subsubdir2/file_2").unwrap(),
         ];
 
-        let cs =
-            run_future(HgChangesetId::new(nodehash).load(ctx.clone(), repo.blobstore())).unwrap();
+        let cs = (HgChangesetId::new(nodehash).load(ctx.clone(), repo.blobstore()))
+            .compat()
+            .await
+            .unwrap();
 
-        let parent_cs =
-            run_future(HgChangesetId::new(parenthash).load(ctx.clone(), repo.blobstore())).unwrap();
+        let parent_cs = (HgChangesetId::new(parenthash).load(ctx.clone(), repo.blobstore()))
+            .compat()
+            .await
+            .unwrap();
 
-        let diff = run_future(compute_changed_files(
+        let diff = (compute_changed_files(
             ctx.clone(),
             repo.clone(),
             cs.manifestid(),
             Some(parent_cs.manifestid()),
             None,
         ))
+        .compat()
+        .await
         .unwrap();
         assert!(
             diff == expected,
@@ -618,20 +672,9 @@ fn make_file_change(
 
 #[fbinit::test]
 fn test_get_manifest_from_bonsai(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || {
+    async_unit::tokio_unit_test(async move {
         let ctx = CoreContext::test_mock(fb);
-        let repo = merge_uneven::getrepo(fb);
-        let get_manifest_for_changeset = {
-            cloned!(ctx, repo);
-            move |cs_nodehash: &str| -> HgManifestId {
-                run_future(
-                    HgChangesetId::new(string_to_nodehash(cs_nodehash))
-                        .load(ctx.clone(), repo.blobstore()),
-                )
-                .unwrap()
-                .manifestid()
-            }
-        };
+        let repo = merge_uneven::getrepo(fb).await;
         let get_entries = {
             cloned!(ctx, repo);
             move |ms_hash: HgManifestId| -> BoxFuture<HashMap<String, Box<dyn HgEntry + Sync>>, Error> {
@@ -657,20 +700,36 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         // 5: 5
         // base: branch1
         // branch: 4
-        let ms1 = get_manifest_for_changeset("264f01429683b3dd8042cb3979e8bf37007118bc");
+        let ms1 = HgChangesetId::new(string_to_nodehash(
+            "264f01429683b3dd8042cb3979e8bf37007118bc",
+        ))
+        .load(ctx.clone(), repo.blobstore())
+        .compat()
+        .await
+        .unwrap()
+        .manifestid();
 
         // #CONTENT
         // base: base
         // branch: 4
-        let ms2 = get_manifest_for_changeset("16839021e338500b3cf7c9b871c8a07351697d68");
+        let ms2 = HgChangesetId::new(string_to_nodehash(
+            "16839021e338500b3cf7c9b871c8a07351697d68",
+        ))
+        .load(ctx.clone(), repo.blobstore())
+        .compat()
+        .await
+        .unwrap()
+        .manifestid();
 
         // fails with conflict
         {
-            let ms_hash = run_future(repo.get_manifest_from_bonsai(
+            let ms_hash = (repo.get_manifest_from_bonsai(
                 ctx.clone(),
                 make_bonsai_changeset(None, None, vec![]),
                 vec![ms1, ms2],
-            ));
+            ))
+            .compat()
+            .await;
             assert!(ms_hash
                 .expect_err("should have failed")
                 .to_string()
@@ -679,13 +738,15 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
 
         // resolves same content different parents for `branch` file
         {
-            let ms_hash = run_future(repo.get_manifest_from_bonsai(
+            let ms_hash = (repo.get_manifest_from_bonsai(
                 ctx.clone(),
                 make_bonsai_changeset(None, None, vec![("base", None)]),
                 vec![ms1, ms2],
             ))
+            .compat()
+            .await
             .expect("merge should have succeeded");
-            let entries = run_future(get_entries(ms_hash)).unwrap();
+            let entries = (get_entries(ms_hash)).compat().await.unwrap();
 
             assert!(entries.get("1").is_some());
             assert!(entries.get("2").is_some());
@@ -695,8 +756,10 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             assert!(entries.get("base").is_none());
 
             // check trivial merge parents
-            let (ms1_entries, ms2_entries) =
-                run_future(get_entries(ms1).join(get_entries(ms2))).unwrap();
+            let (ms1_entries, ms2_entries) = (get_entries(ms1).join(get_entries(ms2)))
+                .compat()
+                .await
+                .unwrap();
             let mut br_expected_parents = HashSet::new();
             br_expected_parents.insert(
                 ms1_entries
@@ -714,7 +777,9 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
             );
 
             let br = entries.get("branch").expect("trivial merge should succeed");
-            let br_parents = run_future(br.get_parents(ctx.clone()))
+            let br_parents = (br.get_parents(ctx.clone()))
+                .compat()
+                .await
                 .unwrap()
                 .into_iter()
                 .collect::<HashSet<_>>();
@@ -724,21 +789,25 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
         // add file
         {
             let content_expected = &b"some awesome content"[..];
-            let fc = run_future(make_file_change(ctx.clone(), content_expected, &repo)).unwrap();
+            let fc = (make_file_change(ctx.clone(), content_expected, &repo))
+                .compat()
+                .await
+                .unwrap();
             let bcs = make_bonsai_changeset(None, None, vec![("base", None), ("new", Some(fc))]);
-            let ms_hash =
-                run_future(repo.get_manifest_from_bonsai(ctx.clone(), bcs, vec![ms1, ms2]))
-                    .expect("adding new file should not produce coflict");
-            let entries = run_future(get_entries(ms_hash)).unwrap();
+            let ms_hash = (repo.get_manifest_from_bonsai(ctx.clone(), bcs, vec![ms1, ms2]))
+                .compat()
+                .await
+                .expect("adding new file should not produce coflict");
+            let entries = (get_entries(ms_hash)).compat().await.unwrap();
             let new = entries.get("new").expect("new file should be in entries");
-            let stream = match run_future(new.get_content(ctx.clone())).unwrap() {
+            let stream = match (new.get_content(ctx.clone())).compat().await.unwrap() {
                 manifest::Content::File(stream) => stream,
                 _ => panic!("content type mismatch"),
             };
-            let bytes = run_future(stream.concat2()).unwrap();
+            let bytes = (stream.concat2()).compat().await.unwrap();
             assert_eq!(bytes.into_bytes().as_ref(), content_expected.as_ref());
 
-            let new_parents = run_future(new.get_parents(ctx.clone())).unwrap();
+            let new_parents = (new.get_parents(ctx.clone())).compat().await.unwrap();
             assert_eq!(new_parents, HgParents::None);
         }
     });
@@ -746,21 +815,22 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
 
 #[fbinit::test]
 fn test_case_conflict_in_manifest(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || {
+    async_unit::tokio_unit_test(async move {
         let ctx = CoreContext::test_mock(fb);
-        let repo = many_files_dirs::getrepo(fb);
-        let get_manifest_for_changeset = |cs_id: HgChangesetId| -> HgManifestId {
-            run_future(cs_id.load(ctx.clone(), repo.blobstore()))
-                .unwrap()
-                .manifestid()
-        };
-
+        let repo = many_files_dirs::getrepo(fb).await;
         let hg_cs = HgChangesetId::new(string_to_nodehash(
             "2f866e7e549760934e31bf0420a873f65100ad63",
         ));
-        let mf = get_manifest_for_changeset(hg_cs);
 
-        let bonsai_parent = run_future(repo.get_bonsai_from_hg(ctx.clone(), hg_cs))
+        let mf = (hg_cs.load(ctx.clone(), repo.blobstore()))
+            .compat()
+            .await
+            .unwrap()
+            .manifestid();
+
+        let bonsai_parent = (repo.get_bonsai_from_hg(ctx.clone(), hg_cs))
+            .compat()
+            .await
             .unwrap()
             .unwrap();
 
@@ -778,19 +848,29 @@ fn test_case_conflict_in_manifest(fb: FacebookInit) {
                     ctx.clone(),
                     btreemap! {*path => Some("caseconflicttest")},
                     repo.clone(),
-                ),
-            );
+                )
+                .await,
+            )
+            .await;
 
-            let child_hg_cs =
-                run_future(repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id.clone())).unwrap();
-            let child_mf = get_manifest_for_changeset(child_hg_cs);
+            let child_hg_cs = (repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id.clone()))
+                .compat()
+                .await
+                .unwrap();
+            let child_mf = (child_hg_cs.load(ctx.clone(), repo.blobstore()))
+                .compat()
+                .await
+                .unwrap()
+                .manifestid();
             assert_eq!(
-                run_future(repo.check_case_conflict_in_manifest(
+                (repo.check_case_conflict_in_manifest(
                     ctx.clone(),
                     mf,
                     child_mf,
                     MPath::new(path).unwrap()
                 ))
+                .compat()
+                .await
                 .unwrap(),
                 *result,
                 "{} expected to {} cause conflict",
@@ -803,7 +883,7 @@ fn test_case_conflict_in_manifest(fb: FacebookInit) {
 
 #[fbinit::test]
 fn test_case_conflict_two_changeset(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || {
+    async_unit::tokio_unit_test(async move {
         let ctx = CoreContext::test_mock(fb);
         let repo = get_empty_lazy_repo();
 
@@ -845,18 +925,18 @@ fn test_case_conflict_two_changeset(fb: FacebookInit) {
             )
         };
 
-        assert!(run_future(
-            commit1
-                .get_completed_changeset()
-                .join(commit2.get_completed_changeset()),
-        )
-        .is_err());
+        assert!(commit1
+            .get_completed_changeset()
+            .join(commit2.get_completed_changeset())
+            .compat()
+            .await
+            .is_err());
     });
 }
 
 #[fbinit::test]
 fn test_case_conflict_inside_one_changeset(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || {
+    async_unit::tokio_unit_test(async move {
         let ctx = CoreContext::test_mock(fb);
         let repo = get_empty_lazy_repo();
         let fake_file_path_1 = RepoPath::file("file").expect("Can't generate fake RepoPath");
@@ -881,13 +961,13 @@ fn test_case_conflict_inside_one_changeset(fb: FacebookInit) {
             vec![file_future_1, file_future_2],
         );
 
-        assert!(run_future(commit1.get_completed_changeset()).is_err());
+        assert!((commit1.get_completed_changeset()).compat().await.is_err());
     });
 }
 
 #[fbinit::test]
 fn test_no_case_conflict_removal(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || {
+    async_unit::tokio_unit_test(async move {
         let ctx = CoreContext::test_mock(fb);
         let repo = get_empty_lazy_repo();
 
@@ -929,18 +1009,18 @@ fn test_no_case_conflict_removal(fb: FacebookInit) {
             )
         };
 
-        assert!(run_future(
-            commit1
-                .get_completed_changeset()
-                .join(commit2.get_completed_changeset()),
-        )
+        assert!((commit1
+            .get_completed_changeset()
+            .join(commit2.get_completed_changeset()))
+        .compat()
+        .await
         .is_ok());
     });
 }
 
 #[fbinit::test]
 fn test_no_case_conflict_removal_dir(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || {
+    async_unit::tokio_unit_test(async move {
         let ctx = CoreContext::test_mock(fb);
         let repo = get_empty_lazy_repo();
 
@@ -1001,24 +1081,25 @@ fn test_no_case_conflict_removal_dir(fb: FacebookInit) {
             )
         };
 
-        assert!(run_future(
-            commit1
-                .get_completed_changeset()
-                .join(commit2.get_completed_changeset()),
-        )
+        assert!((commit1
+            .get_completed_changeset()
+            .join(commit2.get_completed_changeset()))
+        .compat()
+        .await
         .is_ok());
     });
 }
 
 #[fbinit::test]
 fn test_hg_commit_generation_simple(fb: FacebookInit) {
-    let repo = fixtures::linear::getrepo(fb);
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
+
+    let repo = runtime.block_on_std(fixtures::linear::getrepo(fb));
     let bcs = create_bonsai_changeset(vec![]);
 
     let bcs_id = bcs.get_changeset_id();
     let ctx = CoreContext::test_mock(fb);
 
-    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime
         .block_on(blobrepo::save_bonsai_changesets(
             vec![bcs],
@@ -1034,7 +1115,9 @@ fn test_hg_commit_generation_simple(fb: FacebookInit) {
 
 #[fbinit::test]
 fn test_hg_commit_generation_stack(fb: FacebookInit) {
-    let repo = fixtures::linear::getrepo(fb);
+    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
+
+    let repo = runtime.block_on_std(fixtures::linear::getrepo(fb));
     let mut changesets = vec![];
     let bcs = create_bonsai_changeset(vec![]);
 
@@ -1051,7 +1134,6 @@ fn test_hg_commit_generation_stack(fb: FacebookInit) {
 
     let top_of_stack = changesets.last().unwrap().clone().get_changeset_id();
     let ctx = CoreContext::test_mock(fb);
-    let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
     runtime
         .block_on(blobrepo::save_bonsai_changesets(
             changesets,
@@ -1069,7 +1151,7 @@ fn test_hg_commit_generation_stack(fb: FacebookInit) {
 fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-    let repo = fixtures::linear::getrepo(fb);
+    let repo = runtime.block_on_std(fixtures::linear::getrepo(fb));
 
     let first_bcs = create_bonsai_changeset(vec![]);
     let first_bcs_id = first_bcs.get_changeset_id();
@@ -1100,7 +1182,7 @@ fn test_hg_commit_generation_one_after_another(fb: FacebookInit) {
 fn test_hg_commit_generation_diamond(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-    let repo = fixtures::linear::getrepo(fb);
+    let repo = runtime.block_on_std(fixtures::linear::getrepo(fb));
 
     let last_bcs_id = runtime
         .block_on(fixtures::save_diamond_commits(
@@ -1120,7 +1202,7 @@ fn test_hg_commit_generation_diamond(fb: FacebookInit) {
 fn test_hg_commit_generation_many_diamond(fb: FacebookInit) {
     let ctx = CoreContext::test_mock(fb);
     let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-    let repo = fixtures::many_diamonds::getrepo(fb, &mut runtime);
+    let repo = runtime.block_on_std(fixtures::many_diamonds::getrepo(fb));
     let book = bookmarks::BookmarkName::new("master").unwrap();
     let bcs_id = runtime
         .block_on(repo.get_bonsai_bookmark(ctx.clone(), &book))

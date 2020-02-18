@@ -1207,8 +1207,10 @@ mod tests {
     use mononoke_types::{BonsaiChangesetMut, RepositoryId};
     use mononoke_types_mocks::hash::AS;
     use mutable_counters::{MutableCounters, SqlMutableCounters};
+    use rand::Rng;
     use sql::{rusqlite::Connection as SqliteConnection, Connection, Transaction};
     use sql_ext::{SqlConstructors, TransactionResult};
+    use std::time::Duration;
     use std::{collections::BTreeMap, str::FromStr};
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
 
@@ -1350,42 +1352,38 @@ mod tests {
     #[fbinit::test]
     fn pushrebase_one_commit(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                // Bottom commit of the repo
-                let parents = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"];
-                let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
-                    .add_file("file", "content")
-                    .commit()
-                    .await?;
-
-                let hg_cs = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                    .compat()
-                    .await?;
-
-                let book = master_bookmark();
-                bookmark(&ctx, &repo, book.bookmark.clone())
-                    .set_to("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")
-                    .await?;
-
-                do_pushrebase(
-                    &ctx,
-                    &repo,
-                    &Default::default(),
-                    &book,
-                    &hashset![hg_cs],
-                    &None,
-                )
-                .map_err(|err| format_err!("{:?}", err))
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            // Bottom commit of the repo
+            let parents = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"];
+            let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
+                .add_file("file", "content")
+                .commit()
                 .await?;
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+
+            let hg_cs = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                .compat()
+                .await?;
+
+            let book = master_bookmark();
+            bookmark(&ctx, &repo, book.bookmark.clone())
+                .set_to("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")
+                .await?;
+
+            do_pushrebase(
+                &ctx,
+                &repo,
+                &Default::default(),
+                &book,
+                &hashset![hg_cs],
+                &None,
+            )
+            .map_err(|err| format_err!("{:?}", err))
+            .await?;
+            Ok(())
+        })
     }
 
     // Initializes bookmarks and mutable_counters on the "same db" i.e. on the same
@@ -1468,207 +1466,195 @@ mod tests {
         }
 
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                // Bottom commit of the repo
-                let parents = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"];
-                let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
-                    .add_file("file", "content")
-                    .commit()
-                    .await?;
-
-                let (bookmarks, mutable_counters) = init_bookmarks_mutable_counters().await?;
-                let repo = repo.dangerous_override(|_| bookmarks);
-
-                let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
-
-                let repoid = repo.get_repoid();
-                let mut book = master_bookmark();
-
-                bookmark(&ctx, &repo, book.bookmark.clone())
-                    .set_to("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")
-                    .await?;
-
-                let hook: Box<dyn PushrebaseHook> = Box::new(Hook(repo.get_repoid()));
-                let hooks = vec![hook];
-
-                do_pushrebase_bonsai(
-                    &ctx,
-                    &repo,
-                    &Default::default(),
-                    &book,
-                    &hashset![bcs.clone()],
-                    &None,
-                    &hooks[..],
-                )
-                .map_err(|err| format_err!("{:?}", err))
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            // Bottom commit of the repo
+            let parents = vec!["2d7d4ba9ce0a6ffd222de7785b249ead9c51c536"];
+            let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
+                .add_file("file", "content")
+                .commit()
                 .await?;
 
-                let master_val = resolve_cs_id(&ctx, &repo, "master").await?;
-                let key = format!("{}", master_val);
-                assert_eq!(
-                    mutable_counters
-                        .get_counter(ctx.clone(), repoid, &key)
-                        .compat()
-                        .await?,
-                    Some(1),
-                );
+            let (bookmarks, mutable_counters) = init_bookmarks_mutable_counters().await?;
+            let repo = repo.dangerous_override(|_| bookmarks);
 
-                // Now do the same with another non-existent bookmark,
-                // make sure cs id is created.
-                book.bookmark = BookmarkName::new("newbook")?;
-                do_pushrebase_bonsai(
-                    &ctx,
-                    &repo,
-                    &Default::default(),
-                    &book,
-                    &hashset![bcs],
-                    &None,
-                    &hooks[..],
-                )
-                .map_err(|err| format_err!("{:?}", err))
+            let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
+
+            let repoid = repo.get_repoid();
+            let mut book = master_bookmark();
+
+            bookmark(&ctx, &repo, book.bookmark.clone())
+                .set_to("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")
                 .await?;
 
-                let key = format!("{}", resolve_cs_id(&ctx, &repo, "newbook").await?);
-                assert_eq!(
-                    mutable_counters
-                        .get_counter(ctx.clone(), repoid, &key)
-                        .compat()
-                        .await?,
-                    Some(1),
-                );
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            let hook: Box<dyn PushrebaseHook> = Box::new(Hook(repo.get_repoid()));
+            let hooks = vec![hook];
+
+            do_pushrebase_bonsai(
+                &ctx,
+                &repo,
+                &Default::default(),
+                &book,
+                &hashset![bcs.clone()],
+                &None,
+                &hooks[..],
+            )
+            .map_err(|err| format_err!("{:?}", err))
+            .await?;
+
+            let master_val = resolve_cs_id(&ctx, &repo, "master").await?;
+            let key = format!("{}", master_val);
+            assert_eq!(
+                mutable_counters
+                    .get_counter(ctx.clone(), repoid, &key)
+                    .compat()
+                    .await?,
+                Some(1),
+            );
+
+            // Now do the same with another non-existent bookmark,
+            // make sure cs id is created.
+            book.bookmark = BookmarkName::new("newbook")?;
+            do_pushrebase_bonsai(
+                &ctx,
+                &repo,
+                &Default::default(),
+                &book,
+                &hashset![bcs],
+                &None,
+                &hooks[..],
+            )
+            .map_err(|err| format_err!("{:?}", err))
+            .await?;
+
+            let key = format!("{}", resolve_cs_id(&ctx, &repo, "newbook").await?);
+            assert_eq!(
+                mutable_counters
+                    .get_counter(ctx.clone(), repoid, &key)
+                    .compat()
+                    .await?,
+                Some(1),
+            );
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_stack(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
 
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                // Bottom commit of the repo
-                let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-                let p = repo
-                    .get_bonsai_from_hg(ctx.clone(), root)
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("Root is missing"))?;
-                let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![p])
-                    .add_file("file", "content")
-                    .commit()
-                    .await?;
-                let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
-                    .add_file("file2", "content")
-                    .commit()
-                    .await?;
-
-                assert_eq!(
-                    find_changed_files(&ctx, &repo, p, bcs_id_2).await?,
-                    make_paths(&["file", "file2"]),
-                );
-
-                let book = master_bookmark();
-                set_bookmark(
-                    ctx.clone(),
-                    repo.clone(),
-                    &book.bookmark,
-                    "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-                )
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            // Bottom commit of the repo
+            let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
+            let p = repo
+                .get_bonsai_from_hg(ctx.clone(), root)
+                .compat()
+                .await?
+                .ok_or(Error::msg("Root is missing"))?;
+            let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![p])
+                .add_file("file", "content")
+                .commit()
+                .await?;
+            let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
+                .add_file("file2", "content")
+                .commit()
                 .await?;
 
-                let hg_cs_1 = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                    .compat()
-                    .await?;
-                let hg_cs_2 = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                    .compat()
-                    .await?;
-                do_pushrebase(
-                    &ctx,
-                    &repo,
-                    &Default::default(),
-                    &book,
-                    &hashset![hg_cs_1, hg_cs_2],
-                    &None,
-                )
+            assert_eq!(
+                find_changed_files(&ctx, &repo, p, bcs_id_2).await?,
+                make_paths(&["file", "file2"]),
+            );
+
+            let book = master_bookmark();
+            set_bookmark(
+                ctx.clone(),
+                repo.clone(),
+                &book.bookmark,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            )
+            .await?;
+
+            let hg_cs_1 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
+                .compat()
                 .await?;
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            let hg_cs_2 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
+                .compat()
+                .await?;
+            do_pushrebase(
+                &ctx,
+                &repo,
+                &Default::default(),
+                &book,
+                &hashset![hg_cs_1, hg_cs_2],
+                &None,
+            )
+            .await?;
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_stack_with_renames(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
 
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                // Bottom commit of the repo
-                let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-                let p = repo
-                    .get_bonsai_from_hg(ctx.clone(), root)
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("p is missing"))?;
-                let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![p])
-                    .add_file("file", "content")
-                    .commit()
-                    .await?;
-                let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
-                    .add_file_with_copy_info("file_renamed", "content", (bcs_id_1, "file"))?
-                    .commit()
-                    .await?;
-
-                assert_eq!(
-                    find_changed_files(&ctx, &repo, p, bcs_id_2).await?,
-                    make_paths(&["file", "file_renamed"]),
-                );
-
-                let book = master_bookmark();
-                set_bookmark(
-                    ctx.clone(),
-                    repo.clone(),
-                    &book.bookmark,
-                    "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-                )
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            // Bottom commit of the repo
+            let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
+            let p = repo
+                .get_bonsai_from_hg(ctx.clone(), root)
+                .compat()
+                .await?
+                .ok_or(Error::msg("p is missing"))?;
+            let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![p])
+                .add_file("file", "content")
+                .commit()
+                .await?;
+            let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
+                .add_file_with_copy_info("file_renamed", "content", (bcs_id_1, "file"))?
+                .commit()
                 .await?;
 
-                let hg_cs_1 = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                    .compat()
-                    .await?;
-                let hg_cs_2 = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                    .compat()
-                    .await?;
-                do_pushrebase(
-                    &ctx,
-                    &repo,
-                    &Default::default(),
-                    &book,
-                    &hashset![hg_cs_1, hg_cs_2],
-                    &None,
-                )
-                .await?;
+            assert_eq!(
+                find_changed_files(&ctx, &repo, p, bcs_id_2).await?,
+                make_paths(&["file", "file_renamed"]),
+            );
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            let book = master_bookmark();
+            set_bookmark(
+                ctx.clone(),
+                repo.clone(),
+                &book.bookmark,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            )
+            .await?;
+
+            let hg_cs_1 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
+                .compat()
+                .await?;
+            let hg_cs_2 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
+                .compat()
+                .await?;
+            do_pushrebase(
+                &ctx,
+                &repo,
+                &Default::default(),
+                &book,
+                &hashset![hg_cs_1, hg_cs_2],
+                &None,
+            )
+            .await?;
+
+            Ok(())
+        })
     }
 
     #[fbinit::test]
@@ -1689,550 +1675,520 @@ mod tests {
         //
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
 
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                let config = PushrebaseFlags::default();
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            let config = PushrebaseFlags::default();
 
-                let root0 = repo
-                    .get_bonsai_from_hg(
-                        ctx.clone(),
-                        HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
-                    )
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("root0 is missing"))?;
-
-                let root1 = repo
-                    .get_bonsai_from_hg(
-                        ctx.clone(),
-                        HgChangesetId::from_str("607314ef579bd2407752361ba1b0c1729d08b281")?,
-                    )
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("root0 is missing"))?;
-
-                let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root0])
-                    .add_file("f0", "f0")
-                    .delete_file("files")
-                    .commit()
-                    .await?;
-                let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![root1, bcs_id_1])
-                    .add_file("f1", "f1")
-                    .commit()
-                    .await?;
-                let bcs_id_3 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_2])
-                    .add_file("f2", "f2")
-                    .commit()
-                    .await?;
-
-                let book = master_bookmark();
-                set_bookmark(
+            let root0 = repo
+                .get_bonsai_from_hg(
                     ctx.clone(),
-                    repo.clone(),
-                    &book.bookmark,
-                    "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+                    HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
+                .compat()
+                .await?
+                .ok_or(Error::msg("root0 is missing"))?;
+
+            let root1 = repo
+                .get_bonsai_from_hg(
+                    ctx.clone(),
+                    HgChangesetId::from_str("607314ef579bd2407752361ba1b0c1729d08b281")?,
+                )
+                .compat()
+                .await?
+                .ok_or(Error::msg("root0 is missing"))?;
+
+            let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root0])
+                .add_file("f0", "f0")
+                .delete_file("files")
+                .commit()
                 .await?;
-                let bcs_id_master = repo
-                    .get_bonsai_from_hg(
-                        ctx.clone(),
-                        HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")?,
-                    )
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("bcs_id_master is missing"))?;
+            let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![root1, bcs_id_1])
+                .add_file("f1", "f1")
+                .commit()
+                .await?;
+            let bcs_id_3 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_2])
+                .add_file("f2", "f2")
+                .commit()
+                .await?;
 
-                let root = root1;
-                assert_eq!(
-                    find_closest_root(
-                        &ctx,
-                        &repo,
-                        &config,
-                        &book,
-                        &hashmap! {root0 => ChildIndex(0), root1 => ChildIndex(0) },
-                    )
-                    .await?,
-                    root,
-                );
+            let book = master_bookmark();
+            set_bookmark(
+                ctx.clone(),
+                repo.clone(),
+                &book.bookmark,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            )
+            .await?;
+            let bcs_id_master = repo
+                .get_bonsai_from_hg(
+                    ctx.clone(),
+                    HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")?,
+                )
+                .compat()
+                .await?
+                .ok_or(Error::msg("bcs_id_master is missing"))?;
 
-                assert_eq!(
-                    find_changed_files(&ctx, &repo, root, bcs_id_3).await?,
-                    make_paths(&["f0", "f1", "f2"]),
-                );
-
-                let hg_cs_1 = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                    .compat()
-                    .await?;
-                let hg_cs_2 = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                    .compat()
-                    .await?;
-                let hg_cs_3 = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
-                    .compat()
-                    .await?;
-                let bcs_id_rebased = do_pushrebase(
+            let root = root1;
+            assert_eq!(
+                find_closest_root(
                     &ctx,
                     &repo,
                     &config,
                     &book,
-                    &hashset![hg_cs_1, hg_cs_2, hg_cs_3],
-                    &None,
+                    &hashmap! {root0 => ChildIndex(0), root1 => ChildIndex(0) },
                 )
+                .await?,
+                root,
+            );
+
+            assert_eq!(
+                find_changed_files(&ctx, &repo, root, bcs_id_3).await?,
+                make_paths(&["f0", "f1", "f2"]),
+            );
+
+            let hg_cs_1 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
+                .compat()
                 .await?;
+            let hg_cs_2 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
+                .compat()
+                .await?;
+            let hg_cs_3 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
+                .compat()
+                .await?;
+            let bcs_id_rebased = do_pushrebase(
+                &ctx,
+                &repo,
+                &config,
+                &book,
+                &hashset![hg_cs_1, hg_cs_2, hg_cs_3],
+                &None,
+            )
+            .await?;
 
-                // should only rebase {bcs2, bcs3}
-                let rebased =
-                    find_rebased_set(&ctx, &repo, bcs_id_master, bcs_id_rebased.head).await?;
-                assert_eq!(rebased.len(), 2);
-                let bcs2 = &rebased[0];
-                let bcs3 = &rebased[1];
+            // should only rebase {bcs2, bcs3}
+            let rebased = find_rebased_set(&ctx, &repo, bcs_id_master, bcs_id_rebased.head).await?;
+            assert_eq!(rebased.len(), 2);
+            let bcs2 = &rebased[0];
+            let bcs3 = &rebased[1];
 
-                // bcs3 parent correctly updated and contains only {bcs2}
-                assert_eq!(
-                    bcs3.parents().collect::<Vec<_>>(),
-                    vec![bcs2.get_changeset_id()]
-                );
+            // bcs3 parent correctly updated and contains only {bcs2}
+            assert_eq!(
+                bcs3.parents().collect::<Vec<_>>(),
+                vec![bcs2.get_changeset_id()]
+            );
 
-                // bcs2 parents cotains old bcs1 and old master bookmark
-                assert_eq!(
-                    bcs2.parents().collect::<HashSet<_>>(),
-                    hashset! { bcs_id_1, bcs_id_master },
-                );
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            // bcs2 parents cotains old bcs1 and old master bookmark
+            assert_eq!(
+                bcs2.parents().collect::<HashSet<_>>(),
+                hashset! { bcs_id_1, bcs_id_master },
+            );
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_conflict(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
 
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                let root = repo
-                    .get_bonsai_from_hg(
-                        ctx.clone(),
-                        HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
-                    )
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("Root is missing"))?;
-
-                let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root])
-                    .add_file("f0", "f0")
-                    .commit()
-                    .await?;
-                let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
-                    .add_file("9/file", "file")
-                    .commit()
-                    .await?;
-                let bcs_id_3 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_2])
-                    .add_file("f1", "f1")
-                    .commit()
-                    .await?;
-
-                let book = master_bookmark();
-                set_bookmark(
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            let root = repo
+                .get_bonsai_from_hg(
                     ctx.clone(),
-                    repo.clone(),
-                    &book.bookmark,
-                    "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+                    HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
+                .compat()
+                .await?
+                .ok_or(Error::msg("Root is missing"))?;
+
+            let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root])
+                .add_file("f0", "f0")
+                .commit()
+                .await?;
+            let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
+                .add_file("9/file", "file")
+                .commit()
+                .await?;
+            let bcs_id_3 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_2])
+                .add_file("f1", "f1")
+                .commit()
                 .await?;
 
-                let hg_cs_1 = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                    .compat()
-                    .await?;
-                let hg_cs_2 = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                    .compat()
-                    .await?;
-                let hg_cs_3 = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
-                    .compat()
-                    .await?;
-                let result = do_pushrebase(
-                    &ctx,
-                    &repo,
-                    &Default::default(),
-                    &book,
-                    &hashset![hg_cs_1, hg_cs_2, hg_cs_3],
-                    &None,
-                )
-                .await;
-                match result {
-                    Err(PushrebaseError::Conflicts(conflicts)) => {
-                        assert_eq!(
-                            conflicts,
-                            vec![PushrebaseConflict {
-                                left: MPath::new("9")?,
-                                right: MPath::new("9/file")?,
-                            },],
-                        );
-                    }
-                    _ => panic!("push-rebase should have failed with conflict"),
+            let book = master_bookmark();
+            set_bookmark(
+                ctx.clone(),
+                repo.clone(),
+                &book.bookmark,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            )
+            .await?;
+
+            let hg_cs_1 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
+                .compat()
+                .await?;
+            let hg_cs_2 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
+                .compat()
+                .await?;
+            let hg_cs_3 = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
+                .compat()
+                .await?;
+            let result = do_pushrebase(
+                &ctx,
+                &repo,
+                &Default::default(),
+                &book,
+                &hashset![hg_cs_1, hg_cs_2, hg_cs_3],
+                &None,
+            )
+            .await;
+            match result {
+                Err(PushrebaseError::Conflicts(conflicts)) => {
+                    assert_eq!(
+                        conflicts,
+                        vec![PushrebaseConflict {
+                            left: MPath::new("9")?,
+                            right: MPath::new("9/file")?,
+                        },],
+                    );
                 }
-                Ok(())
+                _ => panic!("push-rebase should have failed with conflict"),
             }
-            .boxed()
-            .compat(),
-        )
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_caseconflicting_rename(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                let root = repo
-                    .get_bonsai_from_hg(
-                        ctx.clone(),
-                        HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
-                    )
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("Root is missing"))?;
-
-                let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root])
-                    .add_file("FILE", "file")
-                    .commit()
-                    .await?;
-                let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
-                    .delete_file("FILE")
-                    .commit()
-                    .await?;
-                let bcs_id_3 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_2])
-                    .add_file("file", "file")
-                    .commit()
-                    .await?;
-
-                let hgcss = hashset![
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                        .compat()
-                        .await?,
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                        .compat()
-                        .await?,
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
-                        .compat()
-                        .await?,
-                ];
-
-                let book = master_bookmark();
-                set_bookmark(
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            let root = repo
+                .get_bonsai_from_hg(
                     ctx.clone(),
-                    repo.clone(),
-                    &book.bookmark,
-                    "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+                    HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
+                .compat()
+                .await?
+                .ok_or(Error::msg("Root is missing"))?;
+
+            let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root])
+                .add_file("FILE", "file")
+                .commit()
+                .await?;
+            let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
+                .delete_file("FILE")
+                .commit()
+                .await?;
+            let bcs_id_3 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_2])
+                .add_file("file", "file")
+                .commit()
                 .await?;
 
-                do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, &None).await?;
+            let hgcss = hashset![
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
+                    .compat()
+                    .await?,
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
+                    .compat()
+                    .await?,
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_3)
+                    .compat()
+                    .await?,
+            ];
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            let book = master_bookmark();
+            set_bookmark(
+                ctx.clone(),
+                repo.clone(),
+                &book.bookmark,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            )
+            .await?;
+
+            do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, &None).await?;
+
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_caseconflicting_dirs(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                let root = repo
-                    .get_bonsai_from_hg(
-                        ctx.clone(),
-                        HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
-                    )
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("Root is missing"))?;
-
-                let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root])
-                    .add_file("DIR/a", "a")
-                    .add_file("DIR/b", "b")
-                    .commit()
-                    .await?;
-                let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
-                    .add_file("dir/a", "a")
-                    .delete_file("DIR/a")
-                    .delete_file("DIR/b")
-                    .commit()
-                    .await?;
-                let hgcss = hashset![
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                        .compat()
-                        .await?,
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
-                        .compat()
-                        .await?,
-                ];
-
-                let book = master_bookmark();
-                set_bookmark(
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            let root = repo
+                .get_bonsai_from_hg(
                     ctx.clone(),
-                    repo.clone(),
-                    &book.bookmark,
-                    "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+                    HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
+                .compat()
+                .await?
+                .ok_or(Error::msg("Root is missing"))?;
+
+            let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![root])
+                .add_file("DIR/a", "a")
+                .add_file("DIR/b", "b")
+                .commit()
                 .await?;
+            let bcs_id_2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_1])
+                .add_file("dir/a", "a")
+                .delete_file("DIR/a")
+                .delete_file("DIR/b")
+                .commit()
+                .await?;
+            let hgcss = hashset![
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
+                    .compat()
+                    .await?,
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_2)
+                    .compat()
+                    .await?,
+            ];
 
-                do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, &None).await?;
+            let book = master_bookmark();
+            set_bookmark(
+                ctx.clone(),
+                repo.clone(),
+                &book.bookmark,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            )
+            .await?;
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, &None).await?;
+
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_recursion_limit(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                let root = repo
-                    .get_bonsai_from_hg(
-                        ctx.clone(),
-                        HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
-                    )
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            let root = repo
+                .get_bonsai_from_hg(
+                    ctx.clone(),
+                    HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
+                )
+                .compat()
+                .await?
+                .ok_or(Error::msg("Root is missing"))?;
+
+            // create a lot of commits
+            let (_, bcss) = stream::iter((0..128usize).map(Ok))
+                .try_fold((root, vec![]), |(head, mut bcss), index| {
+                    let ctx = &ctx;
+                    let repo = &repo;
+                    async move {
+                        let file = format!("f{}", index);
+                        let content = format!("{}", index);
+                        let bcs = CreateCommitContext::new(&ctx, &repo, vec![head])
+                            .add_file(&file, content)
+                            .commit()
+                            .await?;
+                        bcss.push(bcs);
+                        Result::<_, Error>::Ok((bcs, bcss))
+                    }
+                })
+                .await?;
+
+            let hgcss = try_join_all(bcss.iter().map(|bcs| {
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), *bcs)
+                    .compat()
+            }))
+            .await?;
+            let book = master_bookmark();
+            set_bookmark(
+                ctx.clone(),
+                repo.clone(),
+                &book.bookmark,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            )
+            .await?;
+            do_pushrebase(
+                &ctx,
+                &repo,
+                &Default::default(),
+                &book.clone(),
+                &hgcss.into_iter().collect(),
+                &None,
+            )
+            .await?;
+
+            let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
+                .add_file("file", "data")
+                .commit()
+                .await?;
+
+            let hgcss = hashset![
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
                     .compat()
                     .await?
-                    .ok_or(Error::msg("Root is missing"))?;
+            ];
 
-                // create a lot of commits
-                let (_, bcss) = stream::iter((0..128usize).map(Ok))
-                    .try_fold((root, vec![]), |(head, mut bcss), index| {
-                        let ctx = &ctx;
-                        let repo = &repo;
-                        async move {
-                            let file = format!("f{}", index);
-                            let content = format!("{}", index);
-                            let bcs = CreateCommitContext::new(&ctx, &repo, vec![head])
-                                .add_file(&file, content)
-                                .commit()
-                                .await?;
-                            bcss.push(bcs);
-                            Result::<_, Error>::Ok((bcs, bcss))
-                        }
-                    })
-                    .await?;
-
-                let hgcss = try_join_all(bcss.iter().map(|bcs| {
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), *bcs)
-                        .compat()
-                }))
-                .await?;
-                let book = master_bookmark();
-                set_bookmark(
-                    ctx.clone(),
-                    repo.clone(),
-                    &book.bookmark,
-                    "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-                )
-                .await?;
-                do_pushrebase(
-                    &ctx,
-                    &repo,
-                    &Default::default(),
-                    &book.clone(),
-                    &hgcss.into_iter().collect(),
-                    &None,
-                )
-                .await?;
-
-                let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
-                    .add_file("file", "data")
-                    .commit()
-                    .await?;
-
-                let hgcss = hashset![
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
-                        .compat()
-                        .await?
-                ];
-
-                // try rebase with small recursion limit
-                let config = PushrebaseFlags {
-                    recursion_limit: Some(128),
-                    ..Default::default()
-                };
-                let result = do_pushrebase(&ctx, &repo, &config, &book, &hgcss, &None).await;
-                match result {
-                    Err(PushrebaseError::RootTooFarBehind) => (),
-                    _ => panic!("push-rebase should have failed because root too far behind"),
-                }
-
-                let config = PushrebaseFlags {
-                    recursion_limit: Some(256),
-                    ..Default::default()
-                };
-                do_pushrebase(&ctx, &repo, &config, &book, &hgcss, &None).await?;
-
-                Ok(())
+            // try rebase with small recursion limit
+            let config = PushrebaseFlags {
+                recursion_limit: Some(128),
+                ..Default::default()
+            };
+            let result = do_pushrebase(&ctx, &repo, &config, &book, &hgcss, &None).await;
+            match result {
+                Err(PushrebaseError::RootTooFarBehind) => (),
+                _ => panic!("push-rebase should have failed because root too far behind"),
             }
-            .boxed()
-            .compat(),
-        )
+
+            let config = PushrebaseFlags {
+                recursion_limit: Some(256),
+                ..Default::default()
+            };
+            do_pushrebase(&ctx, &repo, &config, &book, &hgcss, &None).await?;
+
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_rewritedates(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                let root = repo
-                    .get_bonsai_from_hg(
-                        ctx.clone(),
-                        HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
-                    )
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            let root = repo
+                .get_bonsai_from_hg(
+                    ctx.clone(),
+                    HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
+                )
+                .compat()
+                .await?
+                .ok_or(Error::msg("Root is missing"))?;
+            let book = master_bookmark();
+            let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
+                .add_file("file", "data")
+                .commit()
+                .await?;
+            let hgcss = hashset![
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
                     .compat()
                     .await?
-                    .ok_or(Error::msg("Root is missing"))?;
-                let book = master_bookmark();
-                let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
-                    .add_file("file", "data")
-                    .commit()
-                    .await?;
-                let hgcss = hashset![
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
-                        .compat()
-                        .await?
-                ];
+            ];
 
-                set_bookmark(
-                    ctx.clone(),
-                    repo.clone(),
-                    &book.bookmark,
-                    "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-                )
+            set_bookmark(
+                ctx.clone(),
+                repo.clone(),
+                &book.bookmark,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            )
+            .await?;
+            let config = PushrebaseFlags {
+                rewritedates: false,
+                ..Default::default()
+            };
+            let bcs_keep_date = do_pushrebase(&ctx, &repo, &config, &book, &hgcss, &None).await?;
+
+            set_bookmark(
+                ctx.clone(),
+                repo.clone(),
+                &book.bookmark,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            )
+            .await?;
+            let config = PushrebaseFlags {
+                rewritedates: true,
+                ..Default::default()
+            };
+            let bcs_rewrite_date =
+                do_pushrebase(&ctx, &repo, &config, &book, &hgcss, &None).await?;
+
+            let bcs = bcs.load(ctx.clone(), repo.blobstore()).compat().await?;
+            let bcs_keep_date = bcs_keep_date
+                .head
+                .load(ctx.clone(), repo.blobstore())
+                .compat()
                 .await?;
-                let config = PushrebaseFlags {
-                    rewritedates: false,
-                    ..Default::default()
-                };
-                let bcs_keep_date =
-                    do_pushrebase(&ctx, &repo, &config, &book, &hgcss, &None).await?;
-
-                set_bookmark(
-                    ctx.clone(),
-                    repo.clone(),
-                    &book.bookmark,
-                    "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-                )
+            let bcs_rewrite_date = bcs_rewrite_date
+                .head
+                .load(ctx.clone(), repo.blobstore())
+                .compat()
                 .await?;
-                let config = PushrebaseFlags {
-                    rewritedates: true,
-                    ..Default::default()
-                };
-                let bcs_rewrite_date =
-                    do_pushrebase(&ctx, &repo, &config, &book, &hgcss, &None).await?;
 
-                let bcs = bcs.load(ctx.clone(), repo.blobstore()).compat().await?;
-                let bcs_keep_date = bcs_keep_date
-                    .head
-                    .load(ctx.clone(), repo.blobstore())
-                    .compat()
-                    .await?;
-                let bcs_rewrite_date = bcs_rewrite_date
-                    .head
-                    .load(ctx.clone(), repo.blobstore())
-                    .compat()
-                    .await?;
+            assert_eq!(bcs.author_date(), bcs_keep_date.author_date());
+            assert!(bcs.author_date() < bcs_rewrite_date.author_date());
 
-                assert_eq!(bcs.author_date(), bcs_keep_date.author_date());
-                assert!(bcs.author_date() < bcs_rewrite_date.author_date());
-
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_case_conflict(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = many_files_dirs::getrepo(fb);
-                let root = repo
-                    .get_bonsai_from_hg(
-                        ctx.clone(),
-                        HgChangesetId::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8")?,
-                    )
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = many_files_dirs::getrepo(fb).await;
+            let root = repo
+                .get_bonsai_from_hg(
+                    ctx.clone(),
+                    HgChangesetId::from_str("5a28e25f924a5d209b82ce0713d8d83e68982bc8")?,
+                )
+                .compat()
+                .await?
+                .ok_or(Error::msg("Root is missing"))?;
+
+            let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
+                .add_file("Dir1/file_1_in_dir1", "data")
+                .commit()
+                .await?;
+
+            let hgcss = hashset![
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
                     .compat()
                     .await?
-                    .ok_or(Error::msg("Root is missing"))?;
+            ];
 
-                let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
-                    .add_file("Dir1/file_1_in_dir1", "data")
-                    .commit()
-                    .await?;
+            let book = master_bookmark();
+            set_bookmark(
+                ctx.clone(),
+                repo.clone(),
+                &book.bookmark,
+                "2f866e7e549760934e31bf0420a873f65100ad63",
+            )
+            .await?;
 
-                let hgcss = hashset![
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
-                        .compat()
-                        .await?
-                ];
+            let result =
+                do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, &None).await;
+            match result {
+                Err(PushrebaseError::PotentialCaseConflict(conflict)) => {
+                    assert_eq!(conflict, MPath::new("Dir1/file_1_in_dir1")?)
+                }
+                _ => panic!("push-rebase should have failed with case conflict"),
+            };
 
-                let book = master_bookmark();
-                set_bookmark(
-                    ctx.clone(),
-                    repo.clone(),
-                    &book.bookmark,
-                    "2f866e7e549760934e31bf0420a873f65100ad63",
-                )
-                .await?;
+            // make sure that it is succeeds with disabled casefolding
+            do_pushrebase(
+                &ctx,
+                &repo,
+                &PushrebaseFlags {
+                    casefolding_check: false,
+                    ..Default::default()
+                },
+                &book,
+                &hgcss,
+                &None,
+            )
+            .await?;
 
-                let result =
-                    do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, &None).await;
-                match result {
-                    Err(PushrebaseError::PotentialCaseConflict(conflict)) => {
-                        assert_eq!(conflict, MPath::new("Dir1/file_1_in_dir1")?)
-                    }
-                    _ => panic!("push-rebase should have failed with case conflict"),
-                };
-
-                // make sure that it is succeeds with disabled casefolding
-                do_pushrebase(
-                    &ctx,
-                    &repo,
-                    &PushrebaseFlags {
-                        casefolding_check: false,
-                        ..Default::default()
-                    },
-                    &book,
-                    &hgcss,
-                    &None,
-                )
-                .await?;
-
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            Ok(())
+        })
     }
 
     #[test]
@@ -2267,105 +2223,101 @@ mod tests {
     #[fbinit::test]
     fn pushrebase_executable_bit_change(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                let path_1 = MPath::new("1")?;
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            let path_1 = MPath::new("1")?;
 
-                let root_hg = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-                let root_cs = root_hg.load(ctx.clone(), repo.blobstore()).compat().await?;
+            let root_hg = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
+            let root_cs = root_hg.load(ctx.clone(), repo.blobstore()).compat().await?;
 
-                let root_1_id = root_cs
-                    .manifestid()
-                    .find_entry(ctx.clone(), repo.get_blobstore(), Some(path_1.clone()))
-                    .compat()
-                    .await?
-                    .and_then(|entry| Some(entry.into_leaf()?.1))
-                    .ok_or(Error::msg("path_1 missing in manifest"))?;
+            let root_1_id = root_cs
+                .manifestid()
+                .find_entry(ctx.clone(), repo.get_blobstore(), Some(path_1.clone()))
+                .compat()
+                .await?
+                .and_then(|entry| Some(entry.into_leaf()?.1))
+                .ok_or(Error::msg("path_1 missing in manifest"))?;
 
-                // crate filechange with with same content as "1" but set executable bit
-                let root = repo
-                    .get_bonsai_from_hg(ctx.clone(), root_hg)
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("Root missing"))?;
-                let root_bcs = root.load(ctx.clone(), repo.blobstore()).compat().await?;
-                let file_1 = root_bcs
-                    .file_changes()
-                    .find(|(path, _)| path == &&path_1)
-                    .ok_or(Error::msg("path_1 missing in file_changes"))?
-                    .1
-                    .ok_or(Error::msg("path_1 change info missing"))?
-                    .clone();
-                assert_eq!(file_1.file_type(), FileType::Regular);
-                let file_1_exec = FileChange::new(
-                    file_1.content_id(),
-                    FileType::Executable,
-                    file_1.size(),
-                    /* copy_from */ None,
-                );
+            // crate filechange with with same content as "1" but set executable bit
+            let root = repo
+                .get_bonsai_from_hg(ctx.clone(), root_hg)
+                .compat()
+                .await?
+                .ok_or(Error::msg("Root missing"))?;
+            let root_bcs = root.load(ctx.clone(), repo.blobstore()).compat().await?;
+            let file_1 = root_bcs
+                .file_changes()
+                .find(|(path, _)| path == &&path_1)
+                .ok_or(Error::msg("path_1 missing in file_changes"))?
+                .1
+                .ok_or(Error::msg("path_1 change info missing"))?
+                .clone();
+            assert_eq!(file_1.file_type(), FileType::Regular);
+            let file_1_exec = FileChange::new(
+                file_1.content_id(),
+                FileType::Executable,
+                file_1.size(),
+                /* copy_from */ None,
+            );
 
-                let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
-                    .add_file_change(path_1.to_string(), file_1_exec.clone())
-                    .commit()
-                    .await?;
-
-                let hgcss = hashset![
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
-                        .compat()
-                        .await?
-                ];
-
-                let book = master_bookmark();
-                set_bookmark(
-                    ctx.clone(),
-                    repo.clone(),
-                    &book.bookmark,
-                    "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-                )
+            let bcs = CreateCommitContext::new(&ctx, &repo, vec![root])
+                .add_file_change(path_1.to_string(), file_1_exec.clone())
+                .commit()
                 .await?;
 
-                let result =
-                    do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, &None).await?;
-                let result_bcs = result
-                    .head
-                    .load(ctx.clone(), repo.blobstore())
-                    .compat()
-                    .await?;
-                let file_1_result = result_bcs
-                    .file_changes()
-                    .find(|(path, _)| path == &&path_1)
-                    .ok_or(Error::msg("path_1 missing in file_changes"))?
-                    .1
-                    .ok_or(Error::msg("path_1 change info missing"))?;
-                assert_eq!(file_1_result, &file_1_exec);
-
-                let result_hg = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), result.head)
-                    .compat()
-                    .await?;
-                let result_cs = result_hg
-                    .load(ctx.clone(), repo.blobstore())
-                    .compat()
-                    .await?;
-                let result_1_id = result_cs
-                    .manifestid()
-                    .find_entry(ctx.clone(), repo.get_blobstore(), Some(path_1.clone()))
+            let hgcss = hashset![
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs)
                     .compat()
                     .await?
-                    .and_then(|entry| Some(entry.into_leaf()?.1))
-                    .ok_or(Error::msg("path_1 missing in manifest"))?;
+            ];
 
-                // `result_1_id` should be equal to `root_1_id`, because executable flag
-                // is not a part of file envelope
-                assert_eq!(root_1_id, result_1_id);
+            let book = master_bookmark();
+            set_bookmark(
+                ctx.clone(),
+                repo.clone(),
+                &book.bookmark,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            )
+            .await?;
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            let result =
+                do_pushrebase(&ctx, &repo, &Default::default(), &book, &hgcss, &None).await?;
+            let result_bcs = result
+                .head
+                .load(ctx.clone(), repo.blobstore())
+                .compat()
+                .await?;
+            let file_1_result = result_bcs
+                .file_changes()
+                .find(|(path, _)| path == &&path_1)
+                .ok_or(Error::msg("path_1 missing in file_changes"))?
+                .1
+                .ok_or(Error::msg("path_1 change info missing"))?;
+            assert_eq!(file_1_result, &file_1_exec);
+
+            let result_hg = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), result.head)
+                .compat()
+                .await?;
+            let result_cs = result_hg
+                .load(ctx.clone(), repo.blobstore())
+                .compat()
+                .await?;
+            let result_1_id = result_cs
+                .manifestid()
+                .find_entry(ctx.clone(), repo.get_blobstore(), Some(path_1.clone()))
+                .compat()
+                .await?
+                .and_then(|entry| Some(entry.into_leaf()?.1))
+                .ok_or(Error::msg("path_1 missing in manifest"))?;
+
+            // `result_1_id` should be equal to `root_1_id`, because executable flag
+            // is not a part of file envelope
+            assert_eq!(root_1_id, result_1_id);
+
+            Ok(())
+        })
     }
 
     async fn count_commits_between(
@@ -2401,258 +2353,280 @@ mod tests {
         Ok(n)
     }
 
+    #[derive(Copy, Clone)]
+    struct SleepHook;
+
+    #[async_trait]
+    impl PushrebaseHook for SleepHook {
+        async fn prepushrebase(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error> {
+            let us = rand::thread_rng().gen_range(0, 100);
+            tokio::time::delay_for(Duration::from_micros(us)).await;
+            Ok(Box::new(*self) as Box<dyn PushrebaseCommitHook>)
+        }
+    }
+
+    impl PushrebaseCommitHook for SleepHook {
+        fn post_rebase_changeset(
+            &mut self,
+            _bcs_old: ChangesetId,
+            _bcs_new: &mut BonsaiChangesetMut,
+        ) -> Result<(), Error> {
+            Ok(())
+        }
+
+        fn into_transaction_hook(
+            self: Box<Self>,
+            _changesets: &RebasedChangesets,
+        ) -> Result<Box<dyn PushrebaseTransactionHook>, Error> {
+            Ok(Box::new(*self) as Box<dyn PushrebaseTransactionHook>)
+        }
+    }
+
+    #[async_trait]
+    impl PushrebaseTransactionHook for SleepHook {
+        async fn populate_transaction(
+            &self,
+            _ctx: &CoreContext,
+            txn: Transaction,
+        ) -> Result<Transaction, BookmarkTransactionError> {
+            Ok(txn)
+        }
+    }
+
     #[fbinit::test]
     fn pushrebase_simultaneously(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
 
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                // Bottom commit of the repo
-                let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-                let p = repo
-                    .get_bonsai_from_hg(ctx.clone(), root)
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("Root is missing"))?;
-                let parents = vec![p];
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            // Bottom commit of the repo
+            let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
+            let p = repo
+                .get_bonsai_from_hg(ctx.clone(), root)
+                .compat()
+                .await?
+                .ok_or(Error::msg("Root is missing"))?;
+            let parents = vec![p];
 
-                let book = master_bookmark();
-                set_bookmark(
-                    ctx.clone(),
-                    repo.clone(),
-                    &book.bookmark,
-                    "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-                )
-                .await?;
+            let book = master_bookmark();
+            set_bookmark(
+                ctx.clone(),
+                repo.clone(),
+                &book.bookmark,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            )
+            .await?;
 
-                let num_pushes = 10;
-                let mut futs = vec![];
-                for i in 0..num_pushes {
-                    let f = format!("file{}", i);
-                    let bcs_id = CreateCommitContext::new(&ctx, &repo, parents.clone())
-                        .add_file(&f, "content")
-                        .commit()
-                        .await?;
-                    let hg_cs = repo
-                        .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                        .compat()
-                        .await?;
+            let num_pushes = 10;
+            let mut futs = vec![];
+            for i in 0..num_pushes {
+                cloned!(ctx, repo, book);
 
-                    let fut = tokio::task::spawn({
-                        cloned!(ctx, repo, book, hg_cs);
-                        async move {
-                            do_pushrebase(
-                                &ctx,
-                                &repo,
-                                &Default::default(),
-                                &book,
-                                &hashset![hg_cs],
-                                &None,
-                            )
-                            .await
-                        }
-                        .boxed()
-                    });
+                let hooks = [Box::new(SleepHook) as Box<dyn PushrebaseHook>];
 
-                    futs.push(fut);
-                }
+                let f = format!("file{}", i);
+                let bcs_id = CreateCommitContext::new(&ctx, &repo, parents.clone())
+                    .add_file(&f, "content")
+                    .commit()
+                    .await?;
 
-                let res = try_join_all(futs).await?;
-                let mut has_retry_num_bigger_1 = false;
-                for r in res {
-                    if r?.retry_num > 1 {
-                        has_retry_num_bigger_1 = true;
-                    }
-                }
+                let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
 
-                assert!(has_retry_num_bigger_1);
+                let fut = async move {
+                    do_pushrebase_bonsai(
+                        &ctx,
+                        &repo,
+                        &Default::default(),
+                        &book,
+                        &hashset![bcs],
+                        &None,
+                        &hooks,
+                    )
+                    .await
+                };
 
-                let previous_master =
-                    HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")?;
-                let commits_between =
-                    count_commits_between(ctx, repo, previous_master, book.bookmark).await?;
-
-                // `- 1` because RangeNodeStream is inclusive
-                assert_eq!(commits_between - 1, num_pushes);
-
-                Ok(())
+                futs.push(fut);
             }
-            .boxed()
-            .compat(),
-        )
+
+            let res = try_join_all(futs).await?;
+            let mut has_retry_num_bigger_1 = false;
+            for r in res {
+                if r.retry_num > 1 {
+                    has_retry_num_bigger_1 = true;
+                }
+            }
+
+            assert!(has_retry_num_bigger_1);
+
+            let previous_master =
+                HgChangesetId::from_str("a5ffa77602a066db7d5cfb9fb5823a0895717c5a")?;
+            let commits_between =
+                count_commits_between(ctx, repo, previous_master, book.bookmark).await?;
+
+            // `- 1` because RangeNodeStream is inclusive
+            assert_eq!(commits_between - 1, num_pushes);
+
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_create_new_bookmark(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                // Bottom commit of the repo
-                let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-                let p = repo
-                    .get_bonsai_from_hg(ctx.clone(), root)
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("Root is missing"))?;
-                let parents = vec![p];
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            // Bottom commit of the repo
+            let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
+            let p = repo
+                .get_bonsai_from_hg(ctx.clone(), root)
+                .compat()
+                .await?
+                .ok_or(Error::msg("Root is missing"))?;
+            let parents = vec![p];
 
-                let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
-                    .add_file("file", "content")
-                    .commit()
-                    .await?;
-
-                let hg_cs = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                    .compat()
-                    .await?;
-
-                let book = BookmarkName::new("newbook")?;
-                let book = OntoBookmarkParams::new(book);
-                do_pushrebase(
-                    &ctx,
-                    &repo,
-                    &Default::default(),
-                    &book,
-                    &hashset![hg_cs],
-                    &None,
-                )
+            let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
+                .add_file("file", "content")
+                .commit()
                 .await?;
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+
+            let hg_cs = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                .compat()
+                .await?;
+
+            let book = BookmarkName::new("newbook")?;
+            let book = OntoBookmarkParams::new(book);
+            do_pushrebase(
+                &ctx,
+                &repo,
+                &Default::default(),
+                &book,
+                &hashset![hg_cs],
+                &None,
+            )
+            .await?;
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_simultaneously_and_create_new(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                // Bottom commit of the repo
-                let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-                let p = repo
-                    .get_bonsai_from_hg(ctx.clone(), root)
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("Root is missing"))?;
-                let parents = vec![p];
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            // Bottom commit of the repo
+            let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
+            let p = repo
+                .get_bonsai_from_hg(ctx.clone(), root)
+                .compat()
+                .await?
+                .ok_or(Error::msg("Root is missing"))?;
+            let parents = vec![p];
 
-                let book = BookmarkName::new("newbook")?;
-                let book = OntoBookmarkParams::new(book);
+            let book = BookmarkName::new("newbook")?;
+            let book = OntoBookmarkParams::new(book);
 
-                let num_pushes = 10;
-                let mut futs = vec![];
-                for i in 0..num_pushes {
-                    let f = format!("file{}", i);
-                    let bcs_id = CreateCommitContext::new(&ctx, &repo, parents.clone())
-                        .add_file(&f, "content")
-                        .commit()
-                        .await?;
-                    let hg_cs = repo
-                        .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                        .compat()
-                        .await?;
+            let num_pushes = 10;
+            let mut futs = vec![];
+            for i in 0..num_pushes {
+                cloned!(ctx, repo, book);
 
-                    let fut = {
-                        cloned!(ctx, repo, book, hg_cs);
-                        async move {
-                            do_pushrebase(
-                                &ctx,
-                                &repo,
-                                &Default::default(),
-                                &book,
-                                &hashset![hg_cs],
-                                &None,
-                            )
-                            .await
-                        }
-                        .boxed()
-                    };
+                let hooks = [Box::new(SleepHook) as Box<dyn PushrebaseHook>];
 
-                    futs.push(fut);
-                }
+                let f = format!("file{}", i);
+                let bcs_id = CreateCommitContext::new(&ctx, &repo, parents.clone())
+                    .add_file(&f, "content")
+                    .commit()
+                    .await?;
 
-                let res = try_join_all(futs.into_iter().map(tokio::task::spawn)).await?;
-                let mut has_retry_num_bigger_1 = false;
-                for r in res {
-                    if r?.retry_num > 1 {
-                        has_retry_num_bigger_1 = true;
-                    }
-                }
+                let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
 
-                assert!(has_retry_num_bigger_1);
+                let fut = async move {
+                    do_pushrebase_bonsai(
+                        &ctx,
+                        &repo,
+                        &Default::default(),
+                        &book,
+                        &hashset![bcs],
+                        &None,
+                        &hooks,
+                    )
+                    .await
+                };
 
-                let commits_between = count_commits_between(ctx, repo, root, book.bookmark).await?;
-                // `- 1` because RangeNodeStream is inclusive
-                assert_eq!(commits_between - 1, num_pushes);
-
-                Ok(())
+                futs.push(fut);
             }
-            .boxed()
-            .compat(),
-        )
+
+            let res = try_join_all(futs).await?;
+            let mut has_retry_num_bigger_1 = false;
+            for r in res {
+                if r.retry_num > 1 {
+                    has_retry_num_bigger_1 = true;
+                }
+            }
+
+            assert!(has_retry_num_bigger_1);
+
+            let commits_between = count_commits_between(ctx, repo, root, book.bookmark).await?;
+            // `- 1` because RangeNodeStream is inclusive
+            assert_eq!(commits_between - 1, num_pushes);
+
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_one_commit_with_bundle_id(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                // Bottom commit of the repo
-                let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-                let p = repo
-                    .get_bonsai_from_hg(ctx.clone(), root)
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("Root is missing"))?;
-                let parents = vec![p];
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            // Bottom commit of the repo
+            let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
+            let p = repo
+                .get_bonsai_from_hg(ctx.clone(), root)
+                .compat()
+                .await?
+                .ok_or(Error::msg("Root is missing"))?;
+            let parents = vec![p];
 
-                let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
-                    .add_file("file", "content")
-                    .commit()
-                    .await?;
-                let hg_cs = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                    .compat()
-                    .await?;
+            let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
+                .add_file("file", "content")
+                .commit()
+                .await?;
+            let hg_cs = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                .compat()
+                .await?;
 
-                let book = master_bookmark();
-                set_bookmark(
+            let book = master_bookmark();
+            set_bookmark(
+                ctx.clone(),
+                repo.clone(),
+                &book.bookmark,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            )
+            .await?;
+
+            do_pushrebase(
+                &ctx,
+                &repo,
+                &Default::default(),
+                &book,
+                &hashset![hg_cs],
+                &Some(HgReplayData::new_with_simple_convertor(
                     ctx.clone(),
+                    RawBundle2Id::new(AS),
                     repo.clone(),
-                    &book.bookmark,
-                    "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-                )
-                .await?;
+                )),
+            )
+            .await?;
 
-                do_pushrebase(
-                    &ctx,
-                    &repo,
-                    &Default::default(),
-                    &book,
-                    &hashset![hg_cs],
-                    &Some(HgReplayData::new_with_simple_convertor(
-                        ctx.clone(),
-                        RawBundle2Id::new(AS),
-                        repo.clone(),
-                    )),
-                )
-                .await?;
-
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            Ok(())
+        })
     }
 
     #[fbinit::test]
@@ -2660,614 +2634,579 @@ mod tests {
         // We shouldn't change timezone even if timestamp changes
 
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
-                // Bottom commit of the repo
-                let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-                let p = repo
-                    .get_bonsai_from_hg(ctx.clone(), root)
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("Root is missing"))?;
-                let parents = vec![p];
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
+            // Bottom commit of the repo
+            let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
+            let p = repo
+                .get_bonsai_from_hg(ctx.clone(), root)
+                .compat()
+                .await?
+                .ok_or(Error::msg("Root is missing"))?;
+            let parents = vec![p];
 
-                let tz_offset_secs = 100;
-                let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
-                    .add_file("file", "content")
-                    .set_author_date(DateTime::from_timestamp(0, 100)?)
-                    .commit()
-                    .await?;
-                let hg_cs = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
-                    .compat()
-                    .await?;
+            let tz_offset_secs = 100;
+            let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
+                .add_file("file", "content")
+                .set_author_date(DateTime::from_timestamp(0, 100)?)
+                .commit()
+                .await?;
+            let hg_cs = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                .compat()
+                .await?;
 
-                let book = master_bookmark();
-                set_bookmark(
+            let book = master_bookmark();
+            set_bookmark(
+                ctx.clone(),
+                repo.clone(),
+                &book.bookmark,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            )
+            .await?;
+
+            let config = PushrebaseFlags {
+                rewritedates: true,
+                ..Default::default()
+            };
+            let bcs_rewrite_date = do_pushrebase(
+                &ctx,
+                &repo,
+                &config,
+                &book,
+                &hashset![hg_cs],
+                &Some(HgReplayData::new_with_simple_convertor(
                     ctx.clone(),
+                    RawBundle2Id::new(AS),
                     repo.clone(),
-                    &book.bookmark,
-                    "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
-                )
+                )),
+            )
+            .await?;
+
+            let bcs_rewrite_date = bcs_rewrite_date
+                .head
+                .load(ctx.clone(), repo.blobstore())
+                .compat()
                 .await?;
 
-                let config = PushrebaseFlags {
-                    rewritedates: true,
-                    ..Default::default()
-                };
-                let bcs_rewrite_date = do_pushrebase(
-                    &ctx,
-                    &repo,
-                    &config,
-                    &book,
-                    &hashset![hg_cs],
-                    &Some(HgReplayData::new_with_simple_convertor(
-                        ctx.clone(),
-                        RawBundle2Id::new(AS),
-                        repo.clone(),
-                    )),
-                )
-                .await?;
+            assert_eq!(
+                bcs_rewrite_date.author_date().tz_offset_secs(),
+                tz_offset_secs
+            );
 
-                let bcs_rewrite_date = bcs_rewrite_date
-                    .head
-                    .load(ctx.clone(), repo.blobstore())
-                    .compat()
-                    .await?;
-
-                assert_eq!(
-                    bcs_rewrite_date.author_date().tz_offset_secs(),
-                    tz_offset_secs
-                );
-
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn forbid_p2_root_rebases(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
 
-                let root = repo
-                    .get_bonsai_from_hg(
-                        ctx.clone(),
-                        HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
-                    )
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("Root is missing"))?;
-
-                let bcs_id_0 = CreateCommitContext::new_root(&ctx, &repo)
-                    .add_file("merge_file", "merge content")
-                    .commit()
-                    .await?;
-                let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_0, root])
-                    .add_file("file", "content")
-                    .commit()
-                    .await?;
-                let hgcss = hashset![
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_0)
-                        .compat()
-                        .await?,
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
-                        .compat()
-                        .await?,
-                ];
-
-                let book = master_bookmark();
-                set_bookmark(
+            let root = repo
+                .get_bonsai_from_hg(
                     ctx.clone(),
-                    repo.clone(),
-                    &book.bookmark,
-                    "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+                    HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?,
                 )
+                .compat()
+                .await?
+                .ok_or(Error::msg("Root is missing"))?;
+
+            let bcs_id_0 = CreateCommitContext::new_root(&ctx, &repo)
+                .add_file("merge_file", "merge content")
+                .commit()
                 .await?;
+            let bcs_id_1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_0, root])
+                .add_file("file", "content")
+                .commit()
+                .await?;
+            let hgcss = hashset![
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_0)
+                    .compat()
+                    .await?,
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_1)
+                    .compat()
+                    .await?,
+            ];
 
-                let config_forbid_p2 = PushrebaseFlags {
-                    forbid_p2_root_rebases: true,
-                    ..Default::default()
-                };
+            let book = master_bookmark();
+            set_bookmark(
+                ctx.clone(),
+                repo.clone(),
+                &book.bookmark,
+                "a5ffa77602a066db7d5cfb9fb5823a0895717c5a",
+            )
+            .await?;
 
-                assert!(
-                    do_pushrebase(&ctx, &repo, &config_forbid_p2, &book, &hgcss, &None,)
-                        .await
-                        .is_err()
-                );
+            let config_forbid_p2 = PushrebaseFlags {
+                forbid_p2_root_rebases: true,
+                ..Default::default()
+            };
 
-                let config_allow_p2 = PushrebaseFlags {
-                    forbid_p2_root_rebases: false,
-                    ..Default::default()
-                };
+            assert!(
+                do_pushrebase(&ctx, &repo, &config_forbid_p2, &book, &hgcss, &None,)
+                    .await
+                    .is_err()
+            );
 
-                do_pushrebase(&ctx, &repo, &config_allow_p2, &book, &hgcss, &None).await?;
+            let config_allow_p2 = PushrebaseFlags {
+                forbid_p2_root_rebases: false,
+                ..Default::default()
+            };
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            do_pushrebase(&ctx, &repo, &config_allow_p2, &book, &hgcss, &None).await?;
+
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_over_merge(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = blobrepo_factory::new_memblob_empty(None)?;
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = blobrepo_factory::new_memblob_empty(None)?;
 
-                let p1 = CreateCommitContext::new_root(&ctx, &repo)
-                    .add_file("p1", "some content")
-                    .commit()
-                    .await?;
-
-                let p2 = CreateCommitContext::new_root(&ctx, &repo)
-                    .add_file("p2", "some content")
-                    .commit()
-                    .await?;
-
-                let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
-                    .add_file("merge", "some content")
-                    .commit()
-                    .await?;
-
-                let book = master_bookmark();
-
-                let merge_hg_cs_id = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), merge)
-                    .compat()
-                    .await?;
-
-                set_bookmark(ctx.clone(), repo.clone(), &book.bookmark, &{
-                    // https://github.com/rust-lang/rust/pull/64856
-                    let r = format!("{}", merge_hg_cs_id);
-                    r
-                })
+            let p1 = CreateCommitContext::new_root(&ctx, &repo)
+                .add_file("p1", "some content")
+                .commit()
                 .await?;
 
-                // Modify a file touched in another branch - should fail
-                push_and_verify(
-                    &ctx,
-                    &repo,
-                    p1,
-                    &book,
-                    btreemap! {"p2" => Some("some content")},
-                    false,
-                )
+            let p2 = CreateCommitContext::new_root(&ctx, &repo)
+                .add_file("p2", "some content")
+                .commit()
                 .await?;
 
-                // Modify a file modified in th merge commit - should fail
-                push_and_verify(
-                    &ctx,
-                    &repo,
-                    p1,
-                    &book,
-                    btreemap! {"merge" => Some("some content")},
-                    false,
-                )
+            let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
+                .add_file("merge", "some content")
+                .commit()
                 .await?;
 
-                // Any other files should succeed
-                push_and_verify(
-                    &ctx,
-                    &repo,
-                    p1,
-                    &book,
-                    btreemap! {"p1" => Some("some content")},
-                    true,
-                )
+            let book = master_bookmark();
+
+            let merge_hg_cs_id = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), merge)
+                .compat()
                 .await?;
 
-                push_and_verify(
-                    &ctx,
-                    &repo,
-                    p1,
-                    &book,
-                    btreemap! {"otherfile" => Some("some content")},
-                    true,
-                )
-                .await?;
+            set_bookmark(ctx.clone(), repo.clone(), &book.bookmark, &{
+                // https://github.com/rust-lang/rust/pull/64856
+                let r = format!("{}", merge_hg_cs_id);
+                r
+            })
+            .await?;
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            // Modify a file touched in another branch - should fail
+            push_and_verify(
+                &ctx,
+                &repo,
+                p1,
+                &book,
+                btreemap! {"p2" => Some("some content")},
+                false,
+            )
+            .await?;
+
+            // Modify a file modified in th merge commit - should fail
+            push_and_verify(
+                &ctx,
+                &repo,
+                p1,
+                &book,
+                btreemap! {"merge" => Some("some content")},
+                false,
+            )
+            .await?;
+
+            // Any other files should succeed
+            push_and_verify(
+                &ctx,
+                &repo,
+                p1,
+                &book,
+                btreemap! {"p1" => Some("some content")},
+                true,
+            )
+            .await?;
+
+            push_and_verify(
+                &ctx,
+                &repo,
+                p1,
+                &book,
+                btreemap! {"otherfile" => Some("some content")},
+                true,
+            )
+            .await?;
+
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_over_merge_even(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = merge_even::getrepo(fb);
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = merge_even::getrepo(fb).await;
 
-                // 4dcf230cd2f20577cb3e88ba52b73b376a2b3f69 - is a merge commit,
-                // 3cda5c78aa35f0f5b09780d971197b51cad4613a is one of the ancestors
-                let root = repo
-                    .get_bonsai_from_hg(
-                        ctx.clone(),
-                        HgChangesetId::from_str("3cda5c78aa35f0f5b09780d971197b51cad4613a")?,
-                    )
-                    .compat()
-                    .await?
-                    .ok_or(Error::msg("Root is missing"))?;
-
-                // Modifies the same file "branch" - pushrebase should fail because of conflicts
-                let bcs_id_should_fail = CreateCommitContext::new(&ctx, &repo, vec![root])
-                    .add_file("branch", "some content")
-                    .commit()
-                    .await?;
-
-                let bcs_id_should_succeed = CreateCommitContext::new(&ctx, &repo, vec![root])
-                    .add_file("randomfile", "some content")
-                    .commit()
-                    .await?;
-
-                let book = master_bookmark();
-
-                let hgcss = hashset![
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_should_fail)
-                        .compat()
-                        .await?
-                ];
-
-                let res = do_pushrebase(
-                    &ctx,
-                    &repo,
-                    &PushrebaseFlags::default(),
-                    &book,
-                    &hgcss,
-                    &None,
+            // 4dcf230cd2f20577cb3e88ba52b73b376a2b3f69 - is a merge commit,
+            // 3cda5c78aa35f0f5b09780d971197b51cad4613a is one of the ancestors
+            let root = repo
+                .get_bonsai_from_hg(
+                    ctx.clone(),
+                    HgChangesetId::from_str("3cda5c78aa35f0f5b09780d971197b51cad4613a")?,
                 )
-                .await;
+                .compat()
+                .await?
+                .ok_or(Error::msg("Root is missing"))?;
 
-                should_have_conflicts(res);
-                let hgcss = hashset![
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_should_succeed)
-                        .compat()
-                        .await?,
-                ];
-
-                do_pushrebase(
-                    &ctx,
-                    &repo,
-                    &PushrebaseFlags::default(),
-                    &book,
-                    &hgcss,
-                    &None,
-                )
+            // Modifies the same file "branch" - pushrebase should fail because of conflicts
+            let bcs_id_should_fail = CreateCommitContext::new(&ctx, &repo, vec![root])
+                .add_file("branch", "some content")
+                .commit()
                 .await?;
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            let bcs_id_should_succeed = CreateCommitContext::new(&ctx, &repo, vec![root])
+                .add_file("randomfile", "some content")
+                .commit()
+                .await?;
+
+            let book = master_bookmark();
+
+            let hgcss = hashset![
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_should_fail)
+                    .compat()
+                    .await?
+            ];
+
+            let res = do_pushrebase(
+                &ctx,
+                &repo,
+                &PushrebaseFlags::default(),
+                &book,
+                &hgcss,
+                &None,
+            )
+            .await;
+
+            should_have_conflicts(res);
+            let hgcss = hashset![
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_should_succeed)
+                    .compat()
+                    .await?,
+            ];
+
+            do_pushrebase(
+                &ctx,
+                &repo,
+                &PushrebaseFlags::default(),
+                &book,
+                &hgcss,
+                &None,
+            )
+            .await?;
+
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_of_branch_merge(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = blobrepo_factory::new_memblob_empty(None)?;
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = blobrepo_factory::new_memblob_empty(None)?;
 
-                // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
-                // on top of master
-                let bcs_id_base = CreateCommitContext::new_root(&ctx, &repo)
-                    .add_file("base", "base")
+            // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
+            // on top of master
+            let bcs_id_base = CreateCommitContext::new_root(&ctx, &repo)
+                .add_file("base", "base")
+                .commit()
+                .await?;
+
+            let bcs_id_p1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
+                .add_file("p1", "p1")
+                .commit()
+                .await?;
+
+            let bcs_id_p2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
+                .add_file("p2", "p2")
+                .commit()
+                .await?;
+
+            let bcs_id_first_merge =
+                CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1, bcs_id_p2])
+                    .add_file("merge", "merge")
                     .commit()
                     .await?;
 
-                let bcs_id_p1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
-                    .add_file("p1", "p1")
+            let bcs_id_second_merge =
+                CreateCommitContext::new(&ctx, &repo, vec![bcs_id_first_merge, bcs_id_p2])
+                    .add_file("merge2", "merge")
                     .commit()
                     .await?;
 
-                let bcs_id_p2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
-                    .add_file("p2", "p2")
-                    .commit()
-                    .await?;
+            // Modify base file again
+            let bcs_id_master = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1])
+                .add_file("base", "base2")
+                .commit()
+                .await?;
 
-                let bcs_id_first_merge =
-                    CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1, bcs_id_p2])
-                        .add_file("merge", "merge")
-                        .commit()
-                        .await?;
+            let hg_cs = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
+                .compat()
+                .await?;
 
-                let bcs_id_second_merge =
-                    CreateCommitContext::new(&ctx, &repo, vec![bcs_id_first_merge, bcs_id_p2])
-                        .add_file("merge2", "merge")
-                        .commit()
-                        .await?;
+            let book = master_bookmark();
+            set_bookmark(ctx.clone(), repo.clone(), &book.bookmark, &{
+                // https://github.com/rust-lang/rust/pull/64856
+                let r = format!("{}", hg_cs);
+                r
+            })
+            .await?;
 
-                // Modify base file again
-                let bcs_id_master = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1])
-                    .add_file("base", "base2")
-                    .commit()
-                    .await?;
-
-                let hg_cs = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
+            let hgcss = hashset![
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_first_merge)
                     .compat()
-                    .await?;
-
-                let book = master_bookmark();
-                set_bookmark(ctx.clone(), repo.clone(), &book.bookmark, &{
-                    // https://github.com/rust-lang/rust/pull/64856
-                    let r = format!("{}", hg_cs);
-                    r
-                })
-                .await?;
-
-                let hgcss = hashset![
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_first_merge)
-                        .compat()
-                        .await?,
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_second_merge)
-                        .compat()
-                        .await?,
-                ];
-
-                do_pushrebase(
-                    &ctx,
-                    &repo,
-                    &PushrebaseFlags::default(),
-                    &book,
-                    &hgcss,
-                    &None,
-                )
-                .await?;
-
-                let new_master = get_bookmark_value(&ctx, &repo, &BookmarkName::new("master")?)
-                    .await?
-                    .ok_or(Error::msg("master not set"))?;
-
-                let master_hg = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
+                    .await?,
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_second_merge)
                     .compat()
-                    .await?;
+                    .await?,
+            ];
 
-                ensure_content(
-                    &ctx,
-                    master_hg,
-                    &repo,
-                    btreemap! {
-                            "base".to_string()=> "base2".to_string(),
-                            "merge".to_string()=> "merge".to_string(),
-                            "merge2".to_string()=> "merge".to_string(),
-                            "p1".to_string()=> "p1".to_string(),
-                            "p2".to_string()=> "p2".to_string(),
-                    },
-                )
+            do_pushrebase(
+                &ctx,
+                &repo,
+                &PushrebaseFlags::default(),
+                &book,
+                &hgcss,
+                &None,
+            )
+            .await?;
+
+            let new_master = get_bookmark_value(&ctx, &repo, &BookmarkName::new("master")?)
+                .await?
+                .ok_or(Error::msg("master not set"))?;
+
+            let master_hg = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
+                .compat()
                 .await?;
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            ensure_content(
+                &ctx,
+                master_hg,
+                &repo,
+                btreemap! {
+                        "base".to_string()=> "base2".to_string(),
+                        "merge".to_string()=> "merge".to_string(),
+                        "merge2".to_string()=> "merge".to_string(),
+                        "p1".to_string()=> "p1".to_string(),
+                        "p2".to_string()=> "p2".to_string(),
+                },
+            )
+            .await?;
+
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_of_branch_merge_with_removal(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = blobrepo_factory::new_memblob_empty(None)?;
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = blobrepo_factory::new_memblob_empty(None)?;
 
-                // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
-                // on top of master
-                let bcs_id_base = CreateCommitContext::new_root(&ctx, &repo)
-                    .add_file("base", "base")
-                    .commit()
-                    .await?;
+            // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
+            // on top of master
+            let bcs_id_base = CreateCommitContext::new_root(&ctx, &repo)
+                .add_file("base", "base")
+                .commit()
+                .await?;
 
-                let bcs_id_p1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
-                    .add_file("p1", "p1")
-                    .commit()
-                    .await?;
+            let bcs_id_p1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
+                .add_file("p1", "p1")
+                .commit()
+                .await?;
 
-                let bcs_id_p2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
-                    .add_file("p2", "p2")
-                    .commit()
-                    .await?;
+            let bcs_id_p2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
+                .add_file("p2", "p2")
+                .commit()
+                .await?;
 
-                let bcs_id_merge =
-                    CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1, bcs_id_p2])
-                        .add_file("merge", "merge")
-                        .commit()
-                        .await?;
+            let bcs_id_merge = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1, bcs_id_p2])
+                .add_file("merge", "merge")
+                .commit()
+                .await?;
 
-                // Modify base file again
-                let bcs_id_master = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1])
-                    .delete_file("base")
-                    .add_file("anotherfile", "anotherfile")
-                    .commit()
-                    .await?;
+            // Modify base file again
+            let bcs_id_master = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1])
+                .delete_file("base")
+                .add_file("anotherfile", "anotherfile")
+                .commit()
+                .await?;
 
-                let hg_cs = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
+            let hg_cs = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
+                .compat()
+                .await?;
+
+            let book = master_bookmark();
+            set_bookmark(ctx.clone(), repo.clone(), &book.bookmark, &{
+                // https://github.com/rust-lang/rust/pull/64856
+                let r = format!("{}", hg_cs);
+                r
+            })
+            .await?;
+
+            let hgcss = hashset![
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_merge)
                     .compat()
-                    .await?;
+                    .await?,
+            ];
 
-                let book = master_bookmark();
-                set_bookmark(ctx.clone(), repo.clone(), &book.bookmark, &{
-                    // https://github.com/rust-lang/rust/pull/64856
-                    let r = format!("{}", hg_cs);
-                    r
-                })
+            do_pushrebase(
+                &ctx,
+                &repo,
+                &PushrebaseFlags::default(),
+                &book,
+                &hgcss,
+                &None,
+            )
+            .await?;
+
+            let new_master = get_bookmark_value(&ctx, &repo, &BookmarkName::new("master")?)
+                .await?
+                .ok_or(Error::msg("master not set"))?;
+
+            let master_hg = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
+                .compat()
                 .await?;
 
-                let hgcss = hashset![
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_merge)
-                        .compat()
-                        .await?,
-                ];
+            ensure_content(
+                &ctx,
+                master_hg,
+                &repo,
+                btreemap! {
+                        "anotherfile".to_string() => "anotherfile".to_string(),
+                        "merge".to_string()=> "merge".to_string(),
+                        "p1".to_string()=> "p1".to_string(),
+                        "p2".to_string()=> "p2".to_string(),
+                },
+            )
+            .await?;
 
-                do_pushrebase(
-                    &ctx,
-                    &repo,
-                    &PushrebaseFlags::default(),
-                    &book,
-                    &hgcss,
-                    &None,
-                )
-                .await?;
-
-                let new_master = get_bookmark_value(&ctx, &repo, &BookmarkName::new("master")?)
-                    .await?
-                    .ok_or(Error::msg("master not set"))?;
-
-                let master_hg = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
-                    .compat()
-                    .await?;
-
-                ensure_content(
-                    &ctx,
-                    master_hg,
-                    &repo,
-                    btreemap! {
-                            "anotherfile".to_string() => "anotherfile".to_string(),
-                            "merge".to_string()=> "merge".to_string(),
-                            "p1".to_string()=> "p1".to_string(),
-                            "p2".to_string()=> "p2".to_string(),
-                    },
-                )
-                .await?;
-
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn pushrebase_of_branch_merge_with_rename(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = blobrepo_factory::new_memblob_empty(None)?;
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = blobrepo_factory::new_memblob_empty(None)?;
 
-                // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
-                // on top of master
-                let bcs_id_base = CreateCommitContext::new_root(&ctx, &repo)
-                    .add_file("base", "base")
+            // Pushrebase two branch merges (bcs_id_first_merge and bcs_id_second_merge)
+            // on top of master
+            let bcs_id_base = CreateCommitContext::new_root(&ctx, &repo)
+                .add_file("base", "base")
+                .commit()
+                .await?;
+
+            let bcs_id_p1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
+                .add_file("p1", "p1")
+                .commit()
+                .await?;
+
+            let bcs_id_p2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
+                .add_file("p2", "p2")
+                .commit()
+                .await?;
+
+            let bcs_id_merge = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1, bcs_id_p2])
+                .add_file("merge", "merge")
+                .commit()
+                .await?;
+
+            // Remove base file
+            let bcs_id_pre_pre_master = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1])
+                .delete_file("base")
+                .commit()
+                .await?;
+
+            // Move to base file
+            let bcs_id_pre_master =
+                CreateCommitContext::new(&ctx, &repo, vec![bcs_id_pre_pre_master])
+                    .add_file_with_copy_info("base", "somecontent", (bcs_id_pre_pre_master, "p1"))?
                     .commit()
                     .await?;
 
-                let bcs_id_p1 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
-                    .add_file("p1", "p1")
-                    .commit()
-                    .await?;
+            let bcs_id_master = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_pre_master])
+                .add_file("somefile", "somecontent")
+                .commit()
+                .await?;
 
-                let bcs_id_p2 = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_base])
-                    .add_file("p2", "p2")
-                    .commit()
-                    .await?;
+            let hg_cs = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
+                .compat()
+                .await?;
 
-                let bcs_id_merge =
-                    CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1, bcs_id_p2])
-                        .add_file("merge", "merge")
-                        .commit()
-                        .await?;
+            let book = master_bookmark();
+            set_bookmark(ctx.clone(), repo.clone(), &book.bookmark, &{
+                // https://github.com/rust-lang/rust/pull/64856
+                let r = format!("{}", hg_cs);
+                r
+            })
+            .await?;
 
-                // Remove base file
-                let bcs_id_pre_pre_master = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_p1])
-                    .delete_file("base")
-                    .commit()
-                    .await?;
-
-                // Move to base file
-                let bcs_id_pre_master =
-                    CreateCommitContext::new(&ctx, &repo, vec![bcs_id_pre_pre_master])
-                        .add_file_with_copy_info(
-                            "base",
-                            "somecontent",
-                            (bcs_id_pre_pre_master, "p1"),
-                        )?
-                        .commit()
-                        .await?;
-
-                let bcs_id_master = CreateCommitContext::new(&ctx, &repo, vec![bcs_id_pre_master])
-                    .add_file("somefile", "somecontent")
-                    .commit()
-                    .await?;
-
-                let hg_cs = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_master)
+            let hgcss = hashset![
+                repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_merge)
                     .compat()
-                    .await?;
+                    .await?
+            ];
 
-                let book = master_bookmark();
-                set_bookmark(ctx.clone(), repo.clone(), &book.bookmark, &{
-                    // https://github.com/rust-lang/rust/pull/64856
-                    let r = format!("{}", hg_cs);
-                    r
-                })
+            do_pushrebase(
+                &ctx,
+                &repo,
+                &PushrebaseFlags::default(),
+                &book,
+                &hgcss,
+                &None,
+            )
+            .await?;
+
+            let new_master = get_bookmark_value(&ctx, &repo.clone(), &BookmarkName::new("master")?)
+                .await?
+                .ok_or(Error::msg("master is not set"))?;
+
+            let master_hg = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
+                .compat()
                 .await?;
 
-                let hgcss = hashset![
-                    repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id_merge)
-                        .compat()
-                        .await?
-                ];
+            ensure_content(
+                &ctx,
+                master_hg,
+                &repo,
+                btreemap! {
+                        "base".to_string() => "somecontent".to_string(),
+                        "somefile".to_string() => "somecontent".to_string(),
+                        "merge".to_string()=> "merge".to_string(),
+                        "p1".to_string()=> "p1".to_string(),
+                        "p2".to_string()=> "p2".to_string(),
+                },
+            )
+            .await?;
 
-                do_pushrebase(
-                    &ctx,
-                    &repo,
-                    &PushrebaseFlags::default(),
-                    &book,
-                    &hgcss,
-                    &None,
-                )
-                .await?;
-
-                let new_master =
-                    get_bookmark_value(&ctx, &repo.clone(), &BookmarkName::new("master")?)
-                        .await?
-                        .ok_or(Error::msg("master is not set"))?;
-
-                let master_hg = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), new_master)
-                    .compat()
-                    .await?;
-
-                ensure_content(
-                    &ctx,
-                    master_hg,
-                    &repo,
-                    btreemap! {
-                            "base".to_string() => "somecontent".to_string(),
-                            "somefile".to_string() => "somecontent".to_string(),
-                            "merge".to_string()=> "merge".to_string(),
-                            "p1".to_string()=> "p1".to_string(),
-                            "p2".to_string()=> "p2".to_string(),
-                    },
-                )
-                .await?;
-
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            Ok(())
+        })
     }
 
     async fn ensure_content(

@@ -242,9 +242,9 @@ mod test {
 
     #[fbinit::test]
     fn fetch_flattened_simple(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb);
         let mut rt = Runtime::new().unwrap();
+        let ctx = CoreContext::test_mock(fb);
+        let repo = rt.block_on_std(linear::getrepo(fb));
         let mut d = VecDeque::new();
         d.push_back((ONES_CSID, vec![]));
         let blobstore = Arc::new(repo.get_blobstore());
@@ -264,9 +264,9 @@ mod test {
 
     #[fbinit::test]
     fn fetch_flattened_prepend(fb: FacebookInit) -> Result<(), Error> {
-        let ctx = CoreContext::test_mock(fb);
-        let repo = linear::getrepo(fb);
         let mut rt = Runtime::new().unwrap();
+        let ctx = CoreContext::test_mock(fb);
+        let repo = rt.block_on_std(linear::getrepo(fb));
         let mut d = VecDeque::new();
         d.push_back((ONES_CSID, vec![]));
         let blobstore = Arc::new(repo.get_blobstore());

@@ -137,14 +137,14 @@ mod test {
 
     #[fbinit::test]
     fn difference_identical_node(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
-            let changeset = string_to_bonsai(fb, &repo, hash);
+            let changeset = string_to_bonsai(fb, &repo, hash).await;
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
@@ -152,20 +152,20 @@ mod test {
                 single_changeset_id(ctx.clone(), changeset.clone(), &repo).boxify(),
             )
             .boxify();
-            assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
+            assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream).await;
         });
     }
 
     #[fbinit::test]
     fn difference_node_and_empty(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
-            let changeset = string_to_bonsai(fb, &repo, hash);
+            let changeset = string_to_bonsai(fb, &repo, hash).await;
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
@@ -173,19 +173,20 @@ mod test {
                 NotReadyEmptyStream::new(0).boxify(),
             )
             .boxify();
-            assert_changesets_sequence(ctx.clone(), &repo, vec![changeset], nodestream);
+            assert_changesets_sequence(ctx.clone(), &repo, vec![changeset], nodestream).await;
         });
     }
 
     #[fbinit::test]
     fn difference_empty_and_node(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-            let bcs_id = string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
+            let bcs_id =
+                string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await;
 
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
@@ -195,15 +196,15 @@ mod test {
             )
             .boxify();
 
-            assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
+            assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream).await;
         });
     }
 
     #[fbinit::test]
     fn difference_two_nodes(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -211,12 +212,14 @@ mod test {
                 fb,
                 &repo.clone(),
                 "d0a361e9022d226ae52f689667bd7d212a19cfe0",
-            );
+            )
+            .await;
             let bcs_id_2 = string_to_bonsai(
                 fb,
                 &repo.clone(),
                 "3c15267ebf11807f3d772eb891272b911ec68759",
-            );
+            )
+            .await;
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
@@ -225,20 +228,20 @@ mod test {
             )
             .boxify();
 
-            assert_changesets_sequence(ctx.clone(), &repo, vec![bcs_id_1], nodestream);
+            assert_changesets_sequence(ctx.clone(), &repo, vec![bcs_id_1], nodestream).await;
         });
     }
 
     #[fbinit::test]
     fn difference_error_node(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
-            let changeset = string_to_bonsai(fb, &repo, hash);
+            let changeset = string_to_bonsai(fb, &repo, hash).await;
             let mut nodestream = spawn(
                 SetDifferenceNodeStream::new(
                     ctx.clone(),
@@ -266,11 +269,11 @@ mod test {
 
     #[fbinit::test]
     fn slow_ready_difference_nothing(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             // Tests that we handle an input staying at NotReady for a while without panicing
             let repeats = 10;
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
             let mut nodestream = SetDifferenceNodeStream::new(
@@ -298,9 +301,9 @@ mod test {
 
     #[fbinit::test]
     fn difference_union_with_single_node(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -312,7 +315,8 @@ mod test {
                     "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
                     "d0a361e9022d226ae52f689667bd7d212a19cfe0",
                 ],
-            );
+            )
+            .await;
 
             let nodestream =
                 UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
@@ -321,7 +325,8 @@ mod test {
                 fb,
                 &repo.clone(),
                 "3c15267ebf11807f3d772eb891272b911ec68759",
-            );
+            )
+            .await;
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
@@ -334,19 +339,20 @@ mod test {
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(fb, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157"),
-                    string_to_bonsai(fb, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                    string_to_bonsai(fb, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await,
+                    string_to_bonsai(fb, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await,
                 ],
                 nodestream,
-            );
+            )
+            .await;
         });
     }
 
     #[fbinit::test]
     fn difference_single_node_with_union(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -358,7 +364,8 @@ mod test {
                     "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157",
                     "d0a361e9022d226ae52f689667bd7d212a19cfe0",
                 ],
-            );
+            )
+            .await;
             let nodestream =
                 UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
@@ -366,7 +373,8 @@ mod test {
                 fb,
                 &repo.clone(),
                 "3c15267ebf11807f3d772eb891272b911ec68759",
-            );
+            )
+            .await;
             let nodestream = SetDifferenceNodeStream::new(
                 ctx.clone(),
                 &changeset_fetcher,
@@ -375,15 +383,15 @@ mod test {
             )
             .boxify();
 
-            assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream);
+            assert_changesets_sequence(ctx.clone(), &repo, vec![], nodestream).await;
         });
     }
 
     #[fbinit::test]
     fn difference_merge_even(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(merge_even::getrepo(fb));
+            let repo = Arc::new(merge_even::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -396,7 +404,8 @@ mod test {
                     "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
                     "16839021e338500b3cf7c9b871c8a07351697d68",
                 ],
-            );
+            )
+            .await;
 
             let left_nodestream =
                 UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
@@ -411,7 +420,8 @@ mod test {
                     "d7542c9db7f4c77dab4b315edd328edf1514952f",
                     "15c40d0abc36d47fb51c8eaec51ac7aad31f669c",
                 ],
-            );
+            )
+            .await;
             let right_nodestream =
                 UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
@@ -427,19 +437,20 @@ mod test {
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(fb, &repo, "4dcf230cd2f20577cb3e88ba52b73b376a2b3f69"),
-                    string_to_bonsai(fb, &repo, "16839021e338500b3cf7c9b871c8a07351697d68"),
+                    string_to_bonsai(fb, &repo, "4dcf230cd2f20577cb3e88ba52b73b376a2b3f69").await,
+                    string_to_bonsai(fb, &repo, "16839021e338500b3cf7c9b871c8a07351697d68").await,
                 ],
                 nodestream,
-            );
+            )
+            .await;
         });
     }
 
     #[fbinit::test]
     fn difference_merge_uneven(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(merge_uneven::getrepo(fb));
+            let repo = Arc::new(merge_uneven::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -452,7 +463,8 @@ mod test {
                     "4f7f3fd428bec1a48f9314414b063c706d9c1aed",
                     "16839021e338500b3cf7c9b871c8a07351697d68",
                 ],
-            );
+            )
+            .await;
             let left_nodestream =
                 UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
@@ -466,7 +478,8 @@ mod test {
                     "3cda5c78aa35f0f5b09780d971197b51cad4613a",
                     "15c40d0abc36d47fb51c8eaec51ac7aad31f669c",
                 ],
-            );
+            )
+            .await;
             let right_nodestream =
                 UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
@@ -482,11 +495,12 @@ mod test {
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(fb, &repo, "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b"),
-                    string_to_bonsai(fb, &repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed"),
+                    string_to_bonsai(fb, &repo, "7221fa26c85f147db37c2b5f4dbcd5fe52e7645b").await,
+                    string_to_bonsai(fb, &repo, "4f7f3fd428bec1a48f9314414b063c706d9c1aed").await,
                 ],
                 nodestream,
-            );
+            )
+            .await;
         });
     }
 }

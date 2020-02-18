@@ -13,7 +13,6 @@ use blobstore::Storable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use bytes::Bytes;
 use context::CoreContext;
-use futures::future::Future;
 use futures_util::{compat::Future01CompatExt, future};
 use maplit::btreemap;
 use mercurial_types::HgChangesetId;
@@ -360,7 +359,7 @@ impl From<BookmarkName> for BookmarkIdentifier {
     }
 }
 
-pub fn store_files<T: AsRef<str>>(
+pub async fn store_files<T: AsRef<str>>(
     ctx: CoreContext,
     files: BTreeMap<&str, Option<T>>,
     repo: BlobRepo,
@@ -377,7 +376,8 @@ pub fn store_files<T: AsRef<str>>(
                 let content_id = content
                     .into_blob()
                     .store(ctx.clone(), repo.blobstore())
-                    .wait()
+                    .compat()
+                    .await
                     .unwrap();
 
                 let file_change = FileChange::new(content_id, FileType::Regular, size as u64, None);
@@ -391,7 +391,7 @@ pub fn store_files<T: AsRef<str>>(
     res
 }
 
-pub fn store_rename(
+pub async fn store_rename(
     ctx: CoreContext,
     copy_src: (MPath, ChangesetId),
     path: &str,
@@ -404,7 +404,8 @@ pub fn store_rename(
     let content_id = content
         .into_blob()
         .store(ctx, repo.blobstore())
-        .wait()
+        .compat()
+        .await
         .unwrap();
 
     let file_change = FileChange::new(content_id, FileType::Regular, size as u64, Some(copy_src));
@@ -462,7 +463,7 @@ pub async fn resolve_cs_id(
     }
 }
 
-pub fn create_commit(
+pub async fn create_commit(
     ctx: CoreContext,
     repo: BlobRepo,
     parents: Vec<ChangesetId>,
@@ -483,12 +484,13 @@ pub fn create_commit(
 
     let bcs_id = bcs.get_changeset_id();
     save_bonsai_changesets(vec![bcs], ctx, repo.clone())
-        .wait()
+        .compat()
+        .await
         .unwrap();
     bcs_id
 }
 
-pub fn create_commit_with_date(
+pub async fn create_commit_with_date(
     ctx: CoreContext,
     repo: BlobRepo,
     parents: Vec<ChangesetId>,
@@ -510,7 +512,8 @@ pub fn create_commit_with_date(
 
     let bcs_id = bcs.get_changeset_id();
     save_bonsai_changesets(vec![bcs], ctx, repo.clone())
-        .wait()
+        .compat()
+        .await
         .unwrap();
     bcs_id
 }

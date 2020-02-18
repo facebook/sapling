@@ -54,20 +54,22 @@ impl ChangesetFetcher for TestChangesetFetcher {
         HashMap::new()
     }
 }
-pub fn get_single_bonsai_streams(
+pub async fn get_single_bonsai_streams(
     ctx: CoreContext,
     repo: &Arc<BlobRepo>,
     hashes: &[&str],
 ) -> Vec<BonsaiNodeStream> {
-    hashes
-        .iter()
-        .map(|hash| {
-            single_changeset_id(
-                ctx.clone(),
-                string_to_bonsai(ctx.fb, &repo.clone(), hash),
-                &repo,
-            )
-            .boxify()
-        })
-        .collect()
+    let mut ret = vec![];
+
+    for hash in hashes {
+        let stream = single_changeset_id(
+            ctx.clone(),
+            string_to_bonsai(ctx.fb, &repo.clone(), hash).await,
+            &repo,
+        )
+        .boxify();
+        ret.push(stream)
+    }
+
+    ret
 }

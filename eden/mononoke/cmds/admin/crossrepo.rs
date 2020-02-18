@@ -474,7 +474,7 @@ mod test {
 
         // Move bookmark to another changeset
         let another_hash = "607314ef579bd2407752361ba1b0c1729d08b281";
-        set_bookmark(fb, small_repo.clone(), another_hash, master.clone());
+        set_bookmark(fb, small_repo.clone(), another_hash, master.clone()).await;
         let another_bcs_id =
             helpers::csid_resolve(ctx.clone(), small_repo.clone(), another_hash.to_string())
                 .compat()
@@ -497,7 +497,7 @@ mod test {
 
         // Create another bookmark
         let another_book = BookmarkName::new("newbook")?;
-        set_bookmark(fb, small_repo.clone(), another_hash, another_book.clone());
+        set_bookmark(fb, small_repo.clone(), another_hash, another_book.clone()).await;
 
         let actual_diff = find_bookmark_diff(ctx.clone(), &commit_syncer).await?;
 
@@ -575,8 +575,8 @@ mod test {
         direction: CommitSyncDirection,
     ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
         let ctx = CoreContext::test_mock(fb);
-        let small_repo = linear::getrepo_with_id(fb, RepositoryId::new(0));
-        let large_repo = linear::getrepo_with_id(fb, RepositoryId::new(1));
+        let small_repo = linear::getrepo_with_id(fb, RepositoryId::new(0)).await;
+        let large_repo = linear::getrepo_with_id(fb, RepositoryId::new(1)).await;
 
         let master = BookmarkName::new("master")?;
         let maybe_master_val = small_repo

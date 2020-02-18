@@ -17,7 +17,6 @@ use context::CoreContext;
 use cross_repo_sync::{
     rewrite_commit, update_mapping, upload_commits, CommitSyncRepos, CommitSyncer, Syncers,
 };
-use futures::Future;
 use futures_preview::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use maplit::hashmap;
 use megarepolib::{common::ChangesetArgs, perform_move};
@@ -37,7 +36,7 @@ use tests_utils::{bookmark, CreateCommitContext};
 
 // Helper function that takes a root commit from source repo and rebases it on master bookmark
 // in target repo
-pub fn rebase_root_on_master<M>(
+pub async fn rebase_root_on_master<M>(
     ctx: CoreContext,
     commit_syncer: &CommitSyncer<M>,
     source_bcs_id: ChangesetId,
@@ -48,7 +47,8 @@ where
     let bookmark_name = BookmarkName::new("master").unwrap();
     let source_bcs = source_bcs_id
         .load(ctx.clone(), commit_syncer.get_source_repo().blobstore())
-        .wait()
+        .compat()
+        .await
         .unwrap();
     if !source_bcs.parents().collect::<Vec<_>>().is_empty() {
         return Err(format_err!("not a root commit"));
@@ -57,7 +57,8 @@ where
     let maybe_bookmark_val = commit_syncer
         .get_target_repo()
         .get_bonsai_bookmark(ctx.clone(), &bookmark_name)
-        .wait()?;
+        .compat()
+        .await?;
 
     let source_repo = commit_syncer.get_source_repo();
     let target_repo = commit_syncer.get_target_repo();
@@ -80,7 +81,8 @@ where
     }
     .boxed()
     .compat()
-    .wait()?;
+    .compat()
+    .await?;
     let mut target_bcs_mut = maybe_rewritten.unwrap();
     target_bcs_mut.parents = vec![bookmark_val];
 
@@ -99,7 +101,8 @@ where
     }
     .boxed()
     .compat()
-    .wait()?;
+    .compat()
+    .await?;
 
     let mut txn = target_repo.update_bookmark_transaction(ctx.clone());
     txn.force_set(
@@ -110,7 +113,7 @@ where
         },
     )
     .unwrap();
-    txn.commit().wait().unwrap();
+    txn.commit().compat().await.unwrap();
 
     let entry = SyncedCommitMappingEntry::new(
         target_repo.get_repoid(),
@@ -118,7 +121,11 @@ where
         source_repo.get_repoid(),
         source_bcs_id,
     );
-    commit_syncer.get_mapping().add(ctx.clone(), entry).wait()?;
+    commit_syncer
+        .get_mapping()
+        .add(ctx.clone(), entry)
+        .compat()
+        .await?;
 
     Ok(target_bcs.get_changeset_id())
 }

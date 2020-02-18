@@ -155,6 +155,7 @@ mod test {
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
+    use futures_preview::future::Future as NewFuture;
     use manifest::Entry;
     use mercurial_types::{HgChangesetId, HgManifestId};
     use revset::AncestorsNodeStream;
@@ -231,8 +232,12 @@ mod test {
             .flatten_stream()
     }
 
-    fn verify_repo(fb: FacebookInit, repo: BlobRepo, runtime: &mut Runtime) {
+    fn verify_repo<F>(fb: FacebookInit, repo: F, runtime: &mut Runtime)
+    where
+        F: NewFuture<Output = BlobRepo>,
+    {
         let ctx = CoreContext::test_mock(fb);
+        let repo = runtime.block_on_std(repo);
 
         runtime
             .block_on(
@@ -252,8 +257,7 @@ mod test {
         verify_repo(fb, branch_even::getrepo(fb), &mut runtime);
         verify_repo(fb, branch_uneven::getrepo(fb), &mut runtime);
         verify_repo(fb, branch_wide::getrepo(fb), &mut runtime);
-        let repo = many_diamonds::getrepo(fb, &mut runtime);
-        verify_repo(fb, repo, &mut runtime);
+        verify_repo(fb, many_diamonds::getrepo(fb), &mut runtime);
         verify_repo(fb, many_files_dirs::getrepo(fb), &mut runtime);
         verify_repo(fb, merge_even::getrepo(fb), &mut runtime);
         verify_repo(fb, merge_uneven::getrepo(fb), &mut runtime);

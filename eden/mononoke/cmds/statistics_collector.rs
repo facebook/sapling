@@ -711,151 +711,194 @@ mod tests {
 
     #[fbinit::test]
     fn linear_test_get_statistics_from_changeset(fb: FacebookInit) {
-        let repo = linear::getrepo(fb);
         let mut runtime = Runtime::new().unwrap();
-        let ctx = CoreContext::test_mock(fb);
-        let blobstore = repo.get_blobstore();
+        runtime.block_on_std(async move {
+            let repo = linear::getrepo(fb).await;
 
-        // Commit consists two files (name => content):
-        //     "1" => "1\n"
-        //     "files" => "1\n"
-        // */
-        let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
-        let p = repo.get_bonsai_from_hg(ctx.clone(), root);
-        let p = runtime.block_on(p).unwrap().unwrap();
-        let parents = vec![p];
+            let ctx = CoreContext::test_mock(fb);
+            let blobstore = repo.get_blobstore();
 
-        let bcs_id = create_commit(
-            ctx.clone(),
-            repo.clone(),
-            parents,
-            store_files(
+            // Commit consists two files (name => content):
+            //     "1" => "1\n"
+            //     "files" => "1\n"
+            // */
+            let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+            let p = repo
+                .get_bonsai_from_hg(ctx.clone(), root)
+                .compat()
+                .await
+                .unwrap()
+                .unwrap();
+            let parents = vec![p];
+
+            let bcs_id = create_commit(
                 ctx.clone(),
-                btreemap! {
-                    "dir1/dir2/file1" => Some("first line\nsecond line\n"),
-                    "dir1/dir3/file2" => Some("first line\n"),
-                },
                 repo.clone(),
-            ),
-        );
+                parents,
+                store_files(
+                    ctx.clone(),
+                    btreemap! {
+                        "dir1/dir2/file1" => Some("first line\nsecond line\n"),
+                        "dir1/dir3/file2" => Some("first line\n"),
+                    },
+                    repo.clone(),
+                )
+                .await,
+            )
+            .await;
 
-        let hg_cs_id = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id);
-        let hg_cs_id = runtime.block_on(hg_cs_id).unwrap();
+            let hg_cs_id = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                .compat()
+                .await
+                .unwrap();
 
-        let stats = get_statistics_from_changeset(
-            ctx.clone(),
-            repo.clone(),
-            blobstore.clone(),
-            hg_cs_id.clone(),
-        );
-        let stats = runtime.block_on(stats).unwrap();
+            let stats = get_statistics_from_changeset(
+                ctx.clone(),
+                repo.clone(),
+                blobstore.clone(),
+                hg_cs_id.clone(),
+            )
+            .compat()
+            .await
+            .unwrap();
 
-        // (num_files, total_file_size, num_lines)
-        assert_eq!(stats, RepoStatistics::new(4, 38, 5));
+            // (num_files, total_file_size, num_lines)
+            assert_eq!(stats, RepoStatistics::new(4, 38, 5));
+        });
     }
 
     #[fbinit::test]
     fn linear_test_get_statistics_from_entry_tree(fb: FacebookInit) {
-        let repo = linear::getrepo(fb);
         let mut runtime = Runtime::new().unwrap();
-        let ctx = CoreContext::test_mock(fb);
-        let blobstore = repo.get_blobstore();
+        runtime.block_on_std(async move {
+            let repo = linear::getrepo(fb).await;
 
-        // Commit consists two files (name => content):
-        //     "1" => "1\n"
-        //     "files" => "1\n"
-        // */
-        let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
-        let p = repo.get_bonsai_from_hg(ctx.clone(), root);
-        let p = runtime.block_on(p).unwrap().unwrap();
-        let parents = vec![p];
+            let ctx = CoreContext::test_mock(fb);
+            let blobstore = repo.get_blobstore();
 
-        let bcs_id = create_commit(
-            ctx.clone(),
-            repo.clone(),
-            parents,
-            store_files(
+            // Commit consists two files (name => content):
+            //     "1" => "1\n"
+            //     "files" => "1\n"
+            // */
+            let root = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+            let p = repo
+                .get_bonsai_from_hg(ctx.clone(), root)
+                .compat()
+                .await
+                .unwrap()
+                .unwrap();
+            let parents = vec![p];
+
+            let bcs_id = create_commit(
                 ctx.clone(),
-                btreemap! {
-                    "dir1/dir2/file1" => Some("first line\nsecond line\n"),
-                    "dir1/dir3/file2" => Some("first line\n"),
-                },
                 repo.clone(),
-            ),
-        );
+                parents,
+                store_files(
+                    ctx.clone(),
+                    btreemap! {
+                        "dir1/dir2/file1" => Some("first line\nsecond line\n"),
+                        "dir1/dir3/file2" => Some("first line\n"),
+                    },
+                    repo.clone(),
+                )
+                .await,
+            )
+            .await;
 
-        let hg_cs_id = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id);
-        let hg_cs_id = runtime.block_on(hg_cs_id).unwrap();
+            let hg_cs_id = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
+                .compat()
+                .await
+                .unwrap();
 
-        let tree_entries = get_manifest_from_changeset(ctx.clone(), repo.clone(), hg_cs_id.clone())
-            .and_then({
-                cloned!(ctx);
-                move |manifest| {
-                    manifest
-                        .list_all_entries(ctx.clone(), blobstore.clone())
-                        .filter_map(|(_, entry)| match entry {
-                            Entry::Tree(_) => Some(entry),
-                            _ => None,
-                        })
-                        .collect()
-                }
-            });
-        let mut tree_entries = runtime.block_on(tree_entries).unwrap();
+            let mut tree_entries =
+                get_manifest_from_changeset(ctx.clone(), repo.clone(), hg_cs_id.clone())
+                    .and_then({
+                        cloned!(ctx);
+                        move |manifest| {
+                            manifest
+                                .list_all_entries(ctx.clone(), blobstore.clone())
+                                .filter_map(|(_, entry)| match entry {
+                                    Entry::Tree(_) => Some(entry),
+                                    _ => None,
+                                })
+                                .collect()
+                        }
+                    })
+                    .compat()
+                    .await
+                    .unwrap();
 
-        let stats =
-            get_statistics_from_entry(ctx.clone(), repo.clone(), tree_entries.pop().unwrap());
-        let stats = runtime.block_on(stats).unwrap();
+            let stats =
+                get_statistics_from_entry(ctx.clone(), repo.clone(), tree_entries.pop().unwrap())
+                    .compat()
+                    .await
+                    .unwrap();
 
-        // For Entry::Tree we expect repository with all statistics equal 0
-        // (num_files, total_file_size, num_lines)
-        assert_eq!(stats, RepoStatistics::default());
+            // For Entry::Tree we expect repository with all statistics equal 0
+            // (num_files, total_file_size, num_lines)
+            assert_eq!(stats, RepoStatistics::default());
+        });
     }
 
     #[fbinit::test]
     fn linear_test_update_statistics(fb: FacebookInit) {
-        let repo = linear::getrepo(fb);
         let mut runtime = Runtime::new().unwrap();
-        let ctx = CoreContext::test_mock(fb);
-        let blobstore = repo.get_blobstore();
+        runtime.block_on_std(async move {
+            let repo = linear::getrepo(fb).await;
 
-        /*
-        Commit consists two files (name => content):
-            "1" => "1\n"
-            "files" => "1\n"
-        */
-        let prev_hg_cs_id =
-            HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
-        /*
-        Commit consists two files (name => content):
-            "2" => "2\n"
-            "files" => "1\n2\n"
-        */
-        let cur_hg_cs_id =
-            HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap();
+            let ctx = CoreContext::test_mock(fb);
+            let blobstore = repo.get_blobstore();
 
-        let stats = get_statistics_from_changeset(
-            ctx.clone(),
-            repo.clone(),
-            blobstore.clone(),
-            prev_hg_cs_id.clone(),
-        );
-        let stats = runtime.block_on(stats).unwrap();
+            /*
+            Commit consists two files (name => content):
+                "1" => "1\n"
+                "files" => "1\n"
+            */
+            let prev_hg_cs_id =
+                HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").unwrap();
+            /*
+            Commit consists two files (name => content):
+                "2" => "2\n"
+                "files" => "1\n2\n"
+            */
+            let cur_hg_cs_id =
+                HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap();
 
-        let manifests =
-            get_manifest_from_changeset(ctx.clone(), repo.clone(), prev_hg_cs_id.clone()).join(
-                get_manifest_from_changeset(ctx.clone(), repo.clone(), cur_hg_cs_id.clone()),
-            );
-        let (prev_manifest, cur_manifest) = runtime.block_on(manifests).unwrap();
+            let stats = get_statistics_from_changeset(
+                ctx.clone(),
+                repo.clone(),
+                blobstore.clone(),
+                prev_hg_cs_id.clone(),
+            )
+            .compat()
+            .await
+            .unwrap();
 
-        let new_stats = update_statistics(
-            ctx.clone(),
-            repo.clone(),
-            stats.clone(),
-            prev_manifest.diff(ctx.clone(), blobstore.clone(), cur_manifest.clone()),
-        );
-        let new_stats = runtime.block_on(new_stats).unwrap();
+            let (prev_manifest, cur_manifest) =
+                get_manifest_from_changeset(ctx.clone(), repo.clone(), prev_hg_cs_id.clone())
+                    .join(get_manifest_from_changeset(
+                        ctx.clone(),
+                        repo.clone(),
+                        cur_hg_cs_id.clone(),
+                    ))
+                    .compat()
+                    .await
+                    .unwrap();
 
-        // (num_files, total_file_size, num_lines)
-        assert_eq!(new_stats, RepoStatistics::new(3, 8, 4));
+            let new_stats = update_statistics(
+                ctx.clone(),
+                repo.clone(),
+                stats.clone(),
+                prev_manifest.diff(ctx.clone(), blobstore.clone(), cur_manifest.clone()),
+            )
+            .compat()
+            .await
+            .unwrap();
+
+            // (num_files, total_file_size, num_lines)
+            assert_eq!(new_stats, RepoStatistics::new(3, 8, 4));
+        });
     }
 }

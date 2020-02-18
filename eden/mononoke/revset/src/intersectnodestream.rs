@@ -187,14 +187,14 @@ mod test {
 
     #[fbinit::test]
     fn intersect_identical_node(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
-            let head_csid = string_to_bonsai(fb, &repo, hash);
+            let head_csid = string_to_bonsai(fb, &repo, hash).await;
 
             let inputs: Vec<BonsaiNodeStream> = vec![
                 single_changeset_id(ctx.clone(), head_csid.clone(), &repo).boxify(),
@@ -205,21 +205,24 @@ mod test {
                 IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter())
                     .boxify();
 
-            assert_changesets_sequence(ctx, &repo, vec![head_csid], nodestream);
+            assert_changesets_sequence(ctx, &repo, vec![head_csid], nodestream).await;
         });
     }
 
     #[fbinit::test]
     fn intersect_three_different_nodes(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-            let bcs_a947 = string_to_bonsai(fb, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157");
-            let bcs_3c15 = string_to_bonsai(fb, &repo, "3c15267ebf11807f3d772eb891272b911ec68759");
-            let bcs_d0a = string_to_bonsai(fb, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0");
+            let bcs_a947 =
+                string_to_bonsai(fb, &repo, "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157").await;
+            let bcs_3c15 =
+                string_to_bonsai(fb, &repo, "3c15267ebf11807f3d772eb891272b911ec68759").await;
+            let bcs_d0a =
+                string_to_bonsai(fb, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await;
             // Note that these are *not* in generation order deliberately.
             let inputs: Vec<BonsaiNodeStream> = vec![
                 single_changeset_id(ctx.clone(), bcs_a947, &repo).boxify(),
@@ -231,19 +234,20 @@ mod test {
                 IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter())
                     .boxify();
 
-            assert_changesets_sequence(ctx, &repo, vec![], nodestream);
+            assert_changesets_sequence(ctx, &repo, vec![], nodestream).await;
         });
     }
 
     #[fbinit::test]
     fn intersect_three_identical_nodes(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-            let bcs_d0a = string_to_bonsai(fb, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0");
+            let bcs_d0a =
+                string_to_bonsai(fb, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await;
             let inputs: Vec<BonsaiNodeStream> = vec![
                 single_changeset_id(ctx.clone(), bcs_d0a, &repo).boxify(),
                 single_changeset_id(ctx.clone(), bcs_d0a, &repo).boxify(),
@@ -253,19 +257,20 @@ mod test {
                 IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter())
                     .boxify();
 
-            assert_changesets_sequence(ctx.clone(), &repo, vec![bcs_d0a], nodestream);
+            assert_changesets_sequence(ctx.clone(), &repo, vec![bcs_d0a], nodestream).await;
         });
     }
 
     #[fbinit::test]
     fn intersect_nesting(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-            let bcs_3c15 = string_to_bonsai(fb, &repo, "3c15267ebf11807f3d772eb891272b911ec68759");
+            let bcs_3c15 =
+                string_to_bonsai(fb, &repo, "3c15267ebf11807f3d772eb891272b911ec68759").await;
             let inputs: Vec<BonsaiNodeStream> = vec![
                 single_changeset_id(ctx.clone(), bcs_3c15.clone(), &repo).boxify(),
                 single_changeset_id(ctx.clone(), bcs_3c15.clone(), &repo).boxify(),
@@ -283,15 +288,16 @@ mod test {
                 IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter())
                     .boxify();
 
-            assert_changesets_sequence(ctx.clone(), &repo, vec![bcs_3c15.clone()], nodestream);
+            assert_changesets_sequence(ctx.clone(), &repo, vec![bcs_3c15.clone()], nodestream)
+                .await;
         });
     }
 
     #[fbinit::test]
     fn intersection_of_unions(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -299,13 +305,14 @@ mod test {
             let hash2 = "3c15267ebf11807f3d772eb891272b911ec68759";
             let hash3 = "a9473beb2eb03ddb1cccc3fbaeb8a4820f9cd157";
 
-            let inputs = get_single_bonsai_streams(ctx.clone(), &repo, &vec![hash1, hash2]);
+            let inputs = get_single_bonsai_streams(ctx.clone(), &repo, &vec![hash1, hash2]).await;
             let nodestream =
                 UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
             // This set has a different node sequence, so that we can demonstrate that we skip nodes
             // when they're not going to contribute.
-            let inputs = get_single_bonsai_streams(ctx.clone(), &repo, &[hash3, hash2, hash1]);
+            let inputs =
+                get_single_bonsai_streams(ctx.clone(), &repo, &[hash3, hash2, hash1]).await;
             let nodestream2 =
                 UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
@@ -318,24 +325,25 @@ mod test {
                 ctx.clone(),
                 &repo,
                 vec![
-                    string_to_bonsai(fb, &repo, "3c15267ebf11807f3d772eb891272b911ec68759"),
-                    string_to_bonsai(fb, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0"),
+                    string_to_bonsai(fb, &repo, "3c15267ebf11807f3d772eb891272b911ec68759").await,
+                    string_to_bonsai(fb, &repo, "d0a361e9022d226ae52f689667bd7d212a19cfe0").await,
                 ],
                 nodestream,
-            );
+            )
+            .await;
         });
     }
 
     #[fbinit::test]
     fn intersect_error_node(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let hash = "a5ffa77602a066db7d5cfb9fb5823a0895717c5a";
-            let changeset = string_to_bonsai(fb, &repo, hash);
+            let changeset = string_to_bonsai(fb, &repo, hash).await;
 
             let inputs: Vec<BonsaiNodeStream> = vec![
                 RepoErrorStream { item: changeset }.boxify(),
@@ -360,26 +368,26 @@ mod test {
 
     #[fbinit::test]
     fn intersect_nothing(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
             let inputs: Vec<BonsaiNodeStream> = vec![];
             let nodestream =
                 IntersectNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter());
-            assert_changesets_sequence(ctx, &repo, vec![], nodestream.boxify());
+            assert_changesets_sequence(ctx, &repo, vec![], nodestream.boxify()).await;
         });
     }
 
     #[fbinit::test]
     fn slow_ready_intersect_nothing(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             // Tests that we handle an input staying at NotReady for a while without panicing
             let repeats = 10;
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = Arc::new(linear::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
             let inputs: Vec<BonsaiNodeStream> = vec![NotReadyEmptyStream::new(repeats).boxify()];
@@ -404,9 +412,9 @@ mod test {
 
     #[fbinit::test]
     fn intersect_unshared_merge_even(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(unshared_merge_even::getrepo(fb));
+            let repo = Arc::new(unshared_merge_even::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -420,7 +428,8 @@ mod test {
                     "33fb49d8a47b29290f5163e30b294339c89505a2",
                     "03b0589d9788870817d03ce7b87516648ed5b33a",
                 ],
-            );
+            )
+            .await;
 
             let left_nodestream =
                 UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
@@ -435,7 +444,8 @@ mod test {
                     "0b94a2881dda90f0d64db5fae3ee5695a38e7c8f",
                     "f61fdc0ddafd63503dcd8eed8994ec685bfc8941",
                 ],
-            );
+            )
+            .await;
             let right_nodestream =
                 UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
@@ -446,21 +456,18 @@ mod test {
             assert_changesets_sequence(
                 ctx.clone(),
                 &repo,
-                vec![string_to_bonsai(
-                    fb,
-                    &repo,
-                    "03b0589d9788870817d03ce7b87516648ed5b33a",
-                )],
+                vec![string_to_bonsai(fb, &repo, "03b0589d9788870817d03ce7b87516648ed5b33a").await],
                 nodestream.boxify(),
-            );
+            )
+            .await;
         });
     }
 
     #[fbinit::test]
     fn intersect_unshared_merge_uneven(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(unshared_merge_uneven::getrepo(fb));
+            let repo = Arc::new(unshared_merge_uneven::getrepo(fb).await);
             let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                 Arc::new(TestChangesetFetcher::new(repo.clone()));
 
@@ -474,7 +481,8 @@ mod test {
                     "64011f64aaf9c2ad2e674f57c033987da4016f51",
                     "03b0589d9788870817d03ce7b87516648ed5b33a",
                 ],
-            );
+            )
+            .await;
 
             let left_nodestream =
                 UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
@@ -489,7 +497,8 @@ mod test {
                     "0b94a2881dda90f0d64db5fae3ee5695a38e7c8f",
                     "f61fdc0ddafd63503dcd8eed8994ec685bfc8941",
                 ],
-            );
+            )
+            .await;
             let right_nodestream =
                 UnionNodeStream::new(ctx.clone(), &changeset_fetcher, inputs.into_iter()).boxify();
 
@@ -501,13 +510,10 @@ mod test {
             assert_changesets_sequence(
                 ctx.clone(),
                 &repo,
-                vec![string_to_bonsai(
-                    fb,
-                    &repo,
-                    "03b0589d9788870817d03ce7b87516648ed5b33a",
-                )],
+                vec![string_to_bonsai(fb, &repo, "03b0589d9788870817d03ce7b87516648ed5b33a").await],
                 nodestream,
-            );
+            )
+            .await;
         });
     }
 }

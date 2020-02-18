@@ -12,8 +12,8 @@
 
 use context::CoreContext;
 use filenodes::{FilenodeInfo, Filenodes};
-use futures::future::Future;
 use futures_ext::StreamExt;
+use futures_preview::compat::Future01CompatExt;
 use mercurial_types::{HgFileNodeId, RepoPath};
 use mercurial_types_mocks::nodehash::{
     ONES_CSID, ONES_FNID, THREES_CSID, THREES_FNID, TWOS_CSID, TWOS_FNID,
@@ -99,7 +99,7 @@ fn copied_filenode() -> FilenodeInfo {
     }
 }
 
-fn do_add_filenodes(
+async fn do_add_filenodes(
     ctx: CoreContext,
     filenodes: &dyn Filenodes,
     to_insert: Vec<FilenodeInfo>,
@@ -108,20 +108,21 @@ fn do_add_filenodes(
     let stream = futures::stream::iter_ok(to_insert.into_iter()).boxify();
     filenodes
         .add_filenodes(ctx, stream, repo_id)
-        .wait()
+        .compat()
+        .await
         .unwrap();
 }
 
-fn do_add_filenode(
+async fn do_add_filenode(
     ctx: CoreContext,
     filenodes: &dyn Filenodes,
     node: FilenodeInfo,
     repo_id: RepositoryId,
 ) {
-    do_add_filenodes(ctx, filenodes, vec![node], repo_id);
+    do_add_filenodes(ctx, filenodes, vec![node], repo_id).await;
 }
 
-fn assert_no_filenode(
+async fn assert_no_filenode(
     ctx: CoreContext,
     filenodes: &dyn Filenodes,
     path: &RepoPath,
@@ -130,12 +131,13 @@ fn assert_no_filenode(
 ) {
     let res = filenodes
         .get_filenode(ctx, path, hash, repo_id)
-        .wait()
+        .compat()
+        .await
         .expect("error while fetching filenode");
     assert!(res.is_none());
 }
 
-fn assert_filenode(
+async fn assert_filenode(
     ctx: CoreContext,
     filenodes: &dyn Filenodes,
     path: &RepoPath,
@@ -145,13 +147,14 @@ fn assert_filenode(
 ) {
     let res = filenodes
         .get_filenode(ctx, path, hash, repo_id)
-        .wait()
+        .compat()
+        .await
         .expect("error while fetching filenode")
         .expect(&format!("not found: {}", hash));
     assert_eq!(res, expected);
 }
 
-fn assert_all_filenodes(
+async fn assert_all_filenodes(
     ctx: CoreContext,
     filenodes: &dyn Filenodes,
     path: &RepoPath,
@@ -160,7 +163,8 @@ fn assert_all_filenodes(
 ) {
     let res = filenodes
         .get_all_filenodes_maybe_stale(ctx, path, repo_id)
-        .wait()
+        .compat()
+        .await
         .expect("error while fetching filenode");
     assert_eq!(&res, expected);
 }
@@ -181,11 +185,11 @@ macro_rules! filenodes_tests {
 
             #[fbinit::test]
             fn test_simple_filenode_insert_and_get(fb: FacebookInit) {
-                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                async_unit::tokio_unit_test(async move {
                     let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
 
-                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO);
+                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO).await;
                     assert_filenode(
                         ctx.clone(),
                         filenodes,
@@ -193,7 +197,8 @@ macro_rules! filenodes_tests {
                         ONES_FNID,
                         REPO_ZERO,
                         root_first_filenode(),
-                    );
+                    )
+                    .await;
 
                     assert_no_filenode(
                         ctx.clone(),
@@ -201,22 +206,22 @@ macro_rules! filenodes_tests {
                         &RepoPath::root(),
                         TWOS_FNID,
                         REPO_ZERO,
-                    );
+                    )
+                    .await;
                     assert_no_filenode(
                         ctx.clone(),
                         filenodes,
                         &RepoPath::root(),
                         ONES_FNID,
                         REPO_ONE,
-                    );
-                    Ok(())
-                })
-                .expect("test failed");
+                    )
+                    .await;
+                });
             }
 
             #[fbinit::test]
             fn test_insert_identical_in_batch(fb: FacebookInit) {
-                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                async_unit::tokio_unit_test(async move {
                     let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
                     do_add_filenodes(
@@ -224,31 +229,29 @@ macro_rules! filenodes_tests {
                         filenodes,
                         vec![root_first_filenode(), root_first_filenode()],
                         REPO_ZERO,
-                    );
-                    Ok(())
-                })
-                .expect("test failed");
+                    )
+                    .await;
+                });
             }
 
             #[fbinit::test]
             fn test_filenode_insert_twice(fb: FacebookInit) {
-                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                async_unit::tokio_unit_test(async move {
                     let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
-                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO);
-                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO);
-                    Ok(())
-                })
-                .expect("test failed");
+                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO).await;
+                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO).await;
+                });
             }
 
             #[fbinit::test]
             fn test_insert_filenode_with_parent(fb: FacebookInit) {
-                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                async_unit::tokio_unit_test(async move {
                     let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
-                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO);
-                    do_add_filenode(ctx.clone(), filenodes, root_second_filenode(), REPO_ZERO);
+                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO).await;
+                    do_add_filenode(ctx.clone(), filenodes, root_second_filenode(), REPO_ZERO)
+                        .await;
                     assert_filenode(
                         ctx.clone(),
                         filenodes,
@@ -256,7 +259,8 @@ macro_rules! filenodes_tests {
                         ONES_FNID,
                         REPO_ZERO,
                         root_first_filenode(),
-                    );
+                    )
+                    .await;
                     assert_filenode(
                         ctx.clone(),
                         filenodes,
@@ -264,20 +268,20 @@ macro_rules! filenodes_tests {
                         TWOS_FNID,
                         REPO_ZERO,
                         root_second_filenode(),
-                    );
-                    Ok(())
-                })
-                .expect("test failed");
+                    )
+                    .await;
+                });
             }
 
             #[fbinit::test]
             fn test_insert_root_filenode_with_two_parents(fb: FacebookInit) {
-                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                async_unit::tokio_unit_test(async move {
                     let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
-                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO);
-                    do_add_filenode(ctx.clone(), filenodes, root_second_filenode(), REPO_ZERO);
-                    do_add_filenode(ctx.clone(), filenodes, root_merge_filenode(), REPO_ZERO);
+                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO).await;
+                    do_add_filenode(ctx.clone(), filenodes, root_second_filenode(), REPO_ZERO)
+                        .await;
+                    do_add_filenode(ctx.clone(), filenodes, root_merge_filenode(), REPO_ZERO).await;
 
                     assert_filenode(
                         ctx.clone(),
@@ -286,19 +290,20 @@ macro_rules! filenodes_tests {
                         THREES_FNID,
                         REPO_ZERO,
                         root_merge_filenode(),
-                    );
-                    Ok(())
-                })
-                .expect("test failed");
+                    )
+                    .await;
+                });
             }
 
             #[fbinit::test]
             fn test_insert_file_filenode(fb: FacebookInit) {
-                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                async_unit::tokio_unit_test(async move {
                     let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
-                    do_add_filenode(ctx.clone(), filenodes, file_a_first_filenode(), REPO_ZERO);
-                    do_add_filenode(ctx.clone(), filenodes, file_b_first_filenode(), REPO_ZERO);
+                    do_add_filenode(ctx.clone(), filenodes, file_a_first_filenode(), REPO_ZERO)
+                        .await;
+                    do_add_filenode(ctx.clone(), filenodes, file_b_first_filenode(), REPO_ZERO)
+                        .await;
 
                     assert_no_filenode(
                         ctx.clone(),
@@ -306,7 +311,8 @@ macro_rules! filenodes_tests {
                         &RepoPath::file("non-existent").unwrap(),
                         ONES_FNID,
                         REPO_ZERO,
-                    );
+                    )
+                    .await;
                     assert_filenode(
                         ctx.clone(),
                         filenodes,
@@ -314,7 +320,8 @@ macro_rules! filenodes_tests {
                         ONES_FNID,
                         REPO_ZERO,
                         file_a_first_filenode(),
-                    );
+                    )
+                    .await;
                     assert_filenode(
                         ctx.clone(),
                         filenodes,
@@ -322,19 +329,18 @@ macro_rules! filenodes_tests {
                         TWOS_FNID,
                         REPO_ZERO,
                         file_b_first_filenode(),
-                    );
-                    Ok(())
-                })
-                .expect("test failed");
+                    )
+                    .await;
+                });
             }
 
             #[fbinit::test]
             fn test_insert_different_repo(fb: FacebookInit) {
-                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                async_unit::tokio_unit_test(async move {
                     let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
-                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO);
-                    do_add_filenode(ctx.clone(), filenodes, root_second_filenode(), REPO_ONE);
+                    do_add_filenode(ctx.clone(), filenodes, root_first_filenode(), REPO_ZERO).await;
+                    do_add_filenode(ctx.clone(), filenodes, root_second_filenode(), REPO_ONE).await;
 
                     assert_filenode(
                         ctx.clone(),
@@ -343,7 +349,8 @@ macro_rules! filenodes_tests {
                         ONES_FNID,
                         REPO_ZERO,
                         root_first_filenode(),
-                    );
+                    )
+                    .await;
 
                     assert_no_filenode(
                         ctx.clone(),
@@ -351,7 +358,8 @@ macro_rules! filenodes_tests {
                         &RepoPath::root(),
                         ONES_FNID,
                         REPO_ONE,
-                    );
+                    )
+                    .await;
 
                     assert_filenode(
                         ctx.clone(),
@@ -360,15 +368,14 @@ macro_rules! filenodes_tests {
                         TWOS_FNID,
                         REPO_ONE,
                         root_second_filenode(),
-                    );
-                    Ok(())
-                })
-                .expect("test failed");
+                    )
+                    .await;
+                });
             }
 
             #[fbinit::test]
             fn test_insert_parent_and_child_in_same_batch(fb: FacebookInit) {
-                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                async_unit::tokio_unit_test(async move {
                     let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
 
@@ -377,7 +384,8 @@ macro_rules! filenodes_tests {
                         filenodes,
                         vec![root_first_filenode(), root_second_filenode()],
                         REPO_ZERO,
-                    );
+                    )
+                    .await;
 
                     assert_filenode(
                         ctx.clone(),
@@ -386,7 +394,8 @@ macro_rules! filenodes_tests {
                         ONES_FNID,
                         REPO_ZERO,
                         root_first_filenode(),
-                    );
+                    )
+                    .await;
 
                     assert_filenode(
                         ctx.clone(),
@@ -395,15 +404,14 @@ macro_rules! filenodes_tests {
                         TWOS_FNID,
                         REPO_ZERO,
                         root_second_filenode(),
-                    );
-                    Ok(())
-                })
-                .expect("test failed");
+                    )
+                    .await;
+                });
             }
 
             #[fbinit::test]
             fn insert_copied_file(fb: FacebookInit) {
-                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                async_unit::tokio_unit_test(async move {
                     let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
 
@@ -412,7 +420,8 @@ macro_rules! filenodes_tests {
                         filenodes,
                         vec![copied_from_filenode(), copied_filenode()],
                         REPO_ZERO,
-                    );
+                    )
+                    .await;
                     assert_filenode(
                         ctx.clone(),
                         filenodes,
@@ -420,15 +429,14 @@ macro_rules! filenodes_tests {
                         TWOS_FNID,
                         REPO_ZERO,
                         copied_filenode(),
-                    );
-                    Ok(())
-                })
-                .expect("test failed");
+                    )
+                    .await;
+                });
             }
 
             #[fbinit::test]
             fn insert_same_copied_file(fb: FacebookInit) {
-                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                async_unit::tokio_unit_test(async move {
                     let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
 
@@ -437,21 +445,21 @@ macro_rules! filenodes_tests {
                         filenodes,
                         vec![copied_from_filenode()],
                         REPO_ZERO,
-                    );
+                    )
+                    .await;
                     do_add_filenodes(
                         ctx.clone(),
                         filenodes,
                         vec![copied_filenode(), copied_filenode()],
                         REPO_ZERO,
-                    );
-                    Ok(())
-                })
-                .expect("test failed");
+                    )
+                    .await;
+                });
             }
 
             #[fbinit::test]
             fn insert_copied_file_to_different_repo(fb: FacebookInit) {
-                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                async_unit::tokio_unit_test(async move {
                     let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
 
@@ -478,8 +486,10 @@ macro_rules! filenodes_tests {
                         filenodes,
                         vec![copied_from_filenode(), copied.clone()],
                         REPO_ZERO,
-                    );
-                    do_add_filenodes(ctx.clone(), filenodes, vec![notcopied.clone()], REPO_ONE);
+                    )
+                    .await;
+                    do_add_filenodes(ctx.clone(), filenodes, vec![notcopied.clone()], REPO_ONE)
+                        .await;
                     assert_filenode(
                         ctx.clone(),
                         filenodes,
@@ -487,7 +497,8 @@ macro_rules! filenodes_tests {
                         TWOS_FNID,
                         REPO_ZERO,
                         copied,
-                    );
+                    )
+                    .await;
 
                     assert_filenode(
                         ctx.clone(),
@@ -496,15 +507,14 @@ macro_rules! filenodes_tests {
                         TWOS_FNID,
                         REPO_ONE,
                         notcopied,
-                    );
-                    Ok(())
-                })
-                .expect("test failed");
+                    )
+                    .await;
+                });
             }
 
             #[fbinit::test]
             fn get_all_filenodes_maybe_stale(fb: FacebookInit) {
-                async_unit::tokio_unit_test(move || -> Result<_, !> {
+                async_unit::tokio_unit_test(async move {
                     let ctx = CoreContext::test_mock(fb);
                     let filenodes = &$create_db();
                     let root_filenodes = vec![
@@ -521,13 +531,15 @@ macro_rules! filenodes_tests {
                             root_merge_filenode(),
                         ],
                         REPO_ZERO,
-                    );
+                    )
+                    .await;
                     do_add_filenodes(
                         ctx.clone(),
                         filenodes,
                         vec![file_a_first_filenode(), file_b_first_filenode()],
                         REPO_ZERO,
-                    );
+                    )
+                    .await;
 
                     assert_all_filenodes(
                         ctx.clone(),
@@ -535,7 +547,8 @@ macro_rules! filenodes_tests {
                         &RepoPath::RootPath,
                         REPO_ZERO,
                         &root_filenodes,
-                    );
+                    )
+                    .await;
 
                     assert_all_filenodes(
                         ctx.clone(),
@@ -543,7 +556,8 @@ macro_rules! filenodes_tests {
                         &RepoPath::file("a").unwrap(),
                         REPO_ZERO,
                         &vec![file_a_first_filenode()],
-                    );
+                    )
+                    .await;
 
                     assert_all_filenodes(
                         ctx.clone(),
@@ -551,10 +565,9 @@ macro_rules! filenodes_tests {
                         &RepoPath::file("b").unwrap(),
                         REPO_ZERO,
                         &vec![file_b_first_filenode()],
-                    );
-                    Ok(())
-                })
-                .expect("test failed");
+                    )
+                    .await;
+                });
             }
         }
     };

@@ -94,7 +94,6 @@ mod tests {
     use fbinit::FacebookInit;
     use futures::stream::{self, Stream};
     use futures_preview::StreamExt;
-    use futures_preview::{FutureExt as NewFutureExt, TryFutureExt};
     use futures_util::compat::Stream01CompatExt;
     use revset::AncestorsNodeStream;
 
@@ -129,63 +128,51 @@ mod tests {
     #[fbinit::test]
     fn test_build_idmap_linear(fb: FacebookInit) -> Result<()> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = linear::getrepo(fb);
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = linear::getrepo(fb).await;
 
-                let head = ChangesetId::from_str(
-                    "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6",
-                )?;
-                let idmap = build_idmap(&ctx, &repo, head).await?;
-                assert_topologic_sorted(&ctx, &repo, head, idmap).await?;
+            let head = ChangesetId::from_str(
+                "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6",
+            )?;
+            let idmap = build_idmap(&ctx, &repo, head).await?;
+            assert_topologic_sorted(&ctx, &repo, head, idmap).await?;
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn test_build_idmap_merge_even(fb: FacebookInit) -> Result<()> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = merge_even::getrepo(fb);
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = merge_even::getrepo(fb).await;
 
-                let head = ChangesetId::from_str(
-                    "567a25d453cafaef6550de955c52b91bf9295faf38d67b6421d5d2e532e5adef",
-                )?;
-                let idmap = build_idmap(&ctx, &repo, head).await?;
-                assert_topologic_sorted(&ctx, &repo, head, idmap).await?;
+            let head = ChangesetId::from_str(
+                "567a25d453cafaef6550de955c52b91bf9295faf38d67b6421d5d2e532e5adef",
+            )?;
+            let idmap = build_idmap(&ctx, &repo, head).await?;
+            assert_topologic_sorted(&ctx, &repo, head, idmap).await?;
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            Ok(())
+        })
     }
 
     #[fbinit::test]
     fn test_build_idmap_merge_uneven(fb: FacebookInit) -> Result<()> {
         let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = merge_uneven::getrepo(fb);
+        runtime.block_on_std(async move {
+            let ctx = CoreContext::test_mock(fb);
+            let repo = merge_uneven::getrepo(fb).await;
 
-                let head = ChangesetId::from_str(
-                    "288d72de7fd26ebcd19f5e4f1b41542f22f4a9f7e2f6845fa04e8fd70064973d",
-                )?;
-                let idmap = build_idmap(&ctx, &repo, head).await?;
-                assert_topologic_sorted(&ctx, &repo, head, idmap).await?;
+            let head = ChangesetId::from_str(
+                "288d72de7fd26ebcd19f5e4f1b41542f22f4a9f7e2f6845fa04e8fd70064973d",
+            )?;
+            let idmap = build_idmap(&ctx, &repo, head).await?;
+            assert_topologic_sorted(&ctx, &repo, head, idmap).await?;
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+            Ok(())
+        })
     }
 }

@@ -409,7 +409,7 @@ mod test {
     use bookmarks::BookmarkName;
     use failure_ext::err_downcast;
     use fbinit::FacebookInit;
-    use futures::Future;
+    use futures_preview::compat::Future01CompatExt;
     use hooks_content_stores::{InMemoryFileContentStore, InMemoryFileText};
     use mercurial_types::{HgChangesetId, MPath};
     use std::str::FromStr;
@@ -417,7 +417,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_simple_rejected(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -426,7 +426,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Rejected(_))
             );
         });
@@ -434,7 +434,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_simple_fails_on_deleted_read(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -447,13 +447,15 @@ mod test {
                  return true\n\
                  end",
             );
-            assert!(run_changeset_hook(ctx.clone(), code, changeset).is_err());
+            assert!(run_changeset_hook(ctx.clone(), code, changeset)
+                .await
+                .is_err());
         });
     }
 
     #[fbinit::test]
     fn test_cs_hook_reviewers(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -463,7 +465,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
 
@@ -487,7 +489,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, hcs),
+                run_changeset_hook(ctx.clone(), code, hcs).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -495,7 +497,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_test_plan(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -505,7 +507,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
 
@@ -529,7 +531,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, hcs),
+                run_changeset_hook(ctx.clone(), code, hcs).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -537,7 +539,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_author_unixname(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -546,7 +548,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
 
@@ -569,7 +571,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, hcs),
+                run_changeset_hook(ctx.clone(), code, hcs).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -577,7 +579,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_not_valid_reviewer(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -586,7 +588,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -594,7 +596,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_valid_reviewer(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -603,7 +605,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -611,7 +613,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_valid_reviewer_other(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -620,7 +622,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -628,7 +630,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_rejected_short_and_long_desc(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -637,7 +639,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Rejected(HookRejectionInfo{ref description,
                     ref long_description}))
                     if description==&"emus" && long_description==&"ostriches"
@@ -647,7 +649,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_author(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -656,7 +658,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -664,7 +666,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_file_paths(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             // Arrays passed from rust -> lua appear to be 1 indexed in Lua land
@@ -676,7 +678,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -684,7 +686,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_path_regex_match(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -695,7 +697,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -703,7 +705,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_regex_match(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -714,7 +716,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -722,7 +724,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_file_text_match(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -734,7 +736,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -742,7 +744,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_other_file_text_match(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -753,7 +755,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -761,7 +763,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_text_not_found_returns_nil(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -770,7 +772,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -778,7 +780,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_not_text(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let added = vec![("file1".into(), ONES_FNID, 123.into())];
             let changeset = create_hook_changeset(fb, added, vec![], vec![]);
@@ -791,7 +793,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -799,7 +801,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_check_type(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -820,7 +822,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -828,7 +830,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_deleted(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -842,7 +844,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -850,7 +852,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_file_len(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -862,7 +864,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -870,7 +872,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_comments(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -879,7 +881,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -887,7 +889,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_one_parent(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -897,7 +899,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -905,7 +907,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_two_parents(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let mut changeset = default_changeset(fb);
             changeset.parents = HookChangesetParents::Two("p1-hash".into(), "p2-hash".into());
@@ -916,7 +918,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -924,7 +926,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_no_parents(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let mut changeset = default_changeset(fb);
             changeset.parents = HookChangesetParents::None;
@@ -935,7 +937,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -943,7 +945,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_no_hook_func(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -952,7 +954,7 @@ mod test {
                  end",
             );
             assert_matches!(
-               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).await.unwrap_err(), err: ErrorKind => err),
                Ok(ErrorKind::HookRuntimeError(ref msg)) if msg.contains("no hook function")
             );
         });
@@ -960,12 +962,12 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_invalid_hook(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from("invalid code");
             assert_matches!(
-               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).await.unwrap_err(), err: ErrorKind => err),
                Ok(ErrorKind::HookParseError(ref err_msg))
                    if err_msg.starts_with("Syntax error:")
             );
@@ -974,7 +976,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_exception(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -986,7 +988,7 @@ mod test {
                  end",
             );
             assert_matches!(
-               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).await.unwrap_err(), err: ErrorKind => err),
                Ok(ErrorKind::HookRuntimeError(ref err_msg))
                    if err_msg.starts_with("LuaError")
             );
@@ -995,7 +997,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_invalid_return_val(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -1004,7 +1006,7 @@ mod test {
                  end",
             );
             assert_matches!(
-               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).await.unwrap_err(), err: ErrorKind => err),
                Ok(ErrorKind::HookRuntimeError(ref err_msg))
                    if err_msg.contains("invalid hook return type")
             );
@@ -1013,7 +1015,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_no_short_desc(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -1022,7 +1024,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).await.unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("No description")
             );
@@ -1031,7 +1033,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_invalid_short_desc(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -1040,7 +1042,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).await.unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook failure short description type")
             );
@@ -1049,7 +1051,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_invalid_long_desc(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -1058,7 +1060,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).await.unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook failure long description type")
             );
@@ -1067,7 +1069,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_desc_when_hooks_is_accepted(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -1076,7 +1078,7 @@ mod test {
                  end",
             );
             assert_matches!(
-               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).await.unwrap_err(), err: ErrorKind => err),
                Ok(ErrorKind::HookRuntimeError(ref err_msg))
                    if err_msg.contains("failure description must only be set if hook fails")
             );
@@ -1085,7 +1087,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_long_desc_when_hooks_is_accepted(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -1094,7 +1096,7 @@ mod test {
                  end",
             );
             assert_matches!(
-               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).unwrap_err(), err: ErrorKind => err),
+               err_downcast!(run_changeset_hook(ctx.clone(), code, changeset).await.unwrap_err(), err: ErrorKind => err),
                Ok(ErrorKind::HookRuntimeError(ref err_msg))
                    if err_msg.contains("failure long description must only be set if hook fails")
             );
@@ -1103,7 +1105,7 @@ mod test {
 
     #[fbinit::test]
     fn test_cs_hook_no_io_nor_os(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let changeset = default_changeset(fb);
             let code = String::from(
@@ -1112,7 +1114,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_changeset_hook(ctx.clone(), code, changeset),
+                run_changeset_hook(ctx.clone(), code, changeset).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1120,7 +1122,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_path(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1129,7 +1131,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1137,7 +1139,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_path_regex_match_no_matches(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1146,7 +1148,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file).await,
                 Ok(HookExecution::Rejected(_))
             );
         });
@@ -1154,7 +1156,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_regex_match_no_matches(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1163,7 +1165,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file).await,
                 Ok(HookExecution::Rejected(_))
             );
         });
@@ -1171,7 +1173,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_path_regex_match_matches(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1180,7 +1182,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1188,7 +1190,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_regex_match_matches(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1197,7 +1199,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1205,7 +1207,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_path_regex_match_invalid_regex(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1214,7 +1216,7 @@ mod test {
                  end",
             );
             assert_matches!(
-               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).await.unwrap_err(), err: ErrorKind => err),
                Ok(ErrorKind::HookRuntimeError(ref err_msg))
                    if err_msg.contains("invalid regex")
             );
@@ -1223,7 +1225,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_regex_match_invalid_regex(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1232,7 +1234,7 @@ mod test {
                  end",
             );
             assert_matches!(
-               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).await.unwrap_err(), err: ErrorKind => err),
                Ok(ErrorKind::HookRuntimeError(ref err_msg))
                    if err_msg.contains("invalid regex")
             );
@@ -1241,7 +1243,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_text_matches(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1250,7 +1252,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1258,7 +1260,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_not_text(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_nontext_file();
             let code = String::from(
@@ -1267,7 +1269,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1275,7 +1277,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_is_symlink(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_symlink_file();
             let code = String::from(
@@ -1284,7 +1286,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1292,7 +1294,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_is_not_symlink(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1301,7 +1303,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file).await,
                 Ok(HookExecution::Rejected(_))
             );
         });
@@ -1309,7 +1311,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_removed(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_removed_file();
             let code = String::from(
@@ -1318,7 +1320,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1326,7 +1328,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_len_matches(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1335,7 +1337,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1343,7 +1345,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_len_no_matches(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1352,7 +1354,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file).await,
                 Ok(HookExecution::Rejected(_))
             );
         });
@@ -1360,7 +1362,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_rejected(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1369,7 +1371,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file).await,
                 Ok(HookExecution::Rejected(_))
             );
         });
@@ -1377,7 +1379,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_no_hook_func(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1386,7 +1388,7 @@ mod test {
                  end",
             );
             assert_matches!(
-               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).await.unwrap_err(), err: ErrorKind => err),
                Ok(ErrorKind::HookRuntimeError(ref err_msg)) if err_msg.contains("no hook function")
             );
         });
@@ -1394,12 +1396,12 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_invalid_hook(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from("invalid code");
             assert_matches!(
-               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).await.unwrap_err(), err: ErrorKind => err),
                Ok(ErrorKind::HookParseError(ref err_msg))
                    if err_msg.starts_with("Syntax error:")
             );
@@ -1408,7 +1410,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_exception(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1420,7 +1422,7 @@ mod test {
                  end",
             );
             assert_matches!(
-               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).await.unwrap_err(), err: ErrorKind => err),
                Ok(ErrorKind::HookRuntimeError(ref err_msg))
                    if err_msg.starts_with("LuaError")
             );
@@ -1429,7 +1431,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_invalid_return_val(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1438,7 +1440,7 @@ mod test {
                  end",
             );
             assert_matches!(
-               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+               err_downcast!(run_file_hook(ctx.clone(),code, hook_file).await.unwrap_err(), err: ErrorKind => err),
                Ok(ErrorKind::HookRuntimeError(ref err_msg))
                    if err_msg.contains("invalid hook return type")
             );
@@ -1447,7 +1449,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_no_short_desc(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1456,7 +1458,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).await.unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("No description")
             );
@@ -1465,7 +1467,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_invalid_short_desc(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1474,7 +1476,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).await.unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook failure short description type")
             );
@@ -1483,7 +1485,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_invalid_long_desc(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1492,7 +1494,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).unwrap_err(), err: ErrorKind => err),
+                err_downcast!(run_file_hook(ctx.clone(),code, hook_file).await.unwrap_err(), err: ErrorKind => err),
                 Ok(ErrorKind::HookRuntimeError(ref err_msg))
                     if err_msg.contains("invalid hook failure long description type")
             );
@@ -1501,7 +1503,7 @@ mod test {
 
     #[fbinit::test]
     fn test_file_hook_no_io_nor_os(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let hook_file = default_hook_added_file();
             let code = String::from(
@@ -1510,7 +1512,7 @@ mod test {
                  end",
             );
             assert_matches!(
-                run_file_hook(ctx.clone(), code, hook_file),
+                run_file_hook(ctx.clone(), code, hook_file).await,
                 Ok(HookExecution::Accepted)
             );
         });
@@ -1537,7 +1539,7 @@ hook = function (ctx)
     return true, nil, nil
 end"#;
 
-    fn run_test_for_config_reading<T: Clone>(
+    async fn run_test_for_config_reading<T: Clone>(
         ctx: CoreContext,
         context_construct: impl Fn(HookConfig) -> HookContext<T>,
     ) where
@@ -1559,7 +1561,7 @@ end"#;
             ints: hashmap! { "test".to_string() => 44 },
         });
         assert_matches!(
-            hook.run(ctx.clone(), context).wait(),
+            hook.run(ctx.clone(), context).compat().await,
             Ok(HookExecution::Accepted)
         );
 
@@ -1569,7 +1571,7 @@ end"#;
             ints: hashmap! {},
         });
         assert_rejected(
-            hook.run(ctx.clone(), context).wait(),
+            hook.run(ctx.clone(), context).compat().await,
             "missing strings config",
         );
 
@@ -1582,7 +1584,7 @@ end"#;
             ints: hashmap! {},
         });
         assert_rejected(
-            hook.run(ctx.clone(), context).wait(),
+            hook.run(ctx.clone(), context).compat().await,
             "existing strings config",
         );
 
@@ -1591,7 +1593,10 @@ end"#;
             strings: hashmap! { "test".to_string() => "val".to_string() },
             ints: hashmap! {},
         });
-        assert_rejected(hook.run(ctx.clone(), context).wait(), "missing ints config");
+        assert_rejected(
+            hook.run(ctx.clone(), context).compat().await,
+            "missing ints config",
+        );
 
         let context = context_construct(HookConfig {
             bypass: None,
@@ -1602,14 +1607,14 @@ end"#;
             },
         });
         assert_rejected(
-            hook.run(ctx.clone(), context).wait(),
+            hook.run(ctx.clone(), context).compat().await,
             "existing ints config",
         );
     }
 
     #[fbinit::test]
     fn test_cs_hook_config_reading(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
 
             run_test_for_config_reading(ctx, |conf| {
@@ -1619,13 +1624,14 @@ end"#;
                     default_changeset(fb),
                     BookmarkName::new("book").unwrap(),
                 )
-            });
+            })
+            .await;
         });
     }
 
     #[fbinit::test]
     fn test_file_hook_config_reading(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
 
             run_test_for_config_reading(ctx, |conf| {
@@ -1635,11 +1641,12 @@ end"#;
                     default_hook_added_file(),
                     BookmarkName::new("book").unwrap(),
                 )
-            });
+            })
+            .await;
         });
     }
 
-    fn run_changeset_hook(
+    async fn run_changeset_hook(
         ctx: CoreContext,
         code: String,
         changeset: HookChangeset,
@@ -1651,10 +1658,10 @@ end"#;
             changeset,
             BookmarkName::new("book").unwrap(),
         );
-        hook.run(ctx, context).wait()
+        hook.run(ctx, context).compat().await
     }
 
-    fn run_file_hook(
+    async fn run_file_hook(
         ctx: CoreContext,
         code: String,
         hook_file: HookFile,
@@ -1666,7 +1673,7 @@ end"#;
             hook_file,
             BookmarkName::new("book").unwrap(),
         );
-        hook.run(ctx, context).wait()
+        hook.run(ctx, context).compat().await
     }
 
     use mercurial_types::HgFileNodeId;

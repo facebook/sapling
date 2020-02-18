@@ -187,7 +187,7 @@ mod tests {
         BonsaiChangeset, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, MPath,
     };
     use std::collections::BTreeMap;
-    use tokio::runtime::Runtime;
+    use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
     fn test_find_entries(fb: FacebookInit) {
@@ -208,13 +208,8 @@ mod tests {
                 "dir-2/f-4" => Some("6\n"),
                 "dir-2/f-5" => Some("7\n"),
             };
-            let bcs = create_bonsai_changeset(
-                ctx.fb,
-                repo.clone(),
-                &mut runtime,
-                store_files(ctx.clone(), file_changes, repo.clone()),
-                vec![],
-            );
+            let files = runtime.block_on_std(store_files(ctx.clone(), file_changes, repo.clone()));
+            let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), &mut runtime, files, vec![]);
 
             let bcs_id = bcs.get_changeset_id();
             let mf_id = derive_manifest(ctx.clone(), repo.clone(), &mut runtime, bcs, vec![]);
@@ -231,13 +226,9 @@ mod tests {
                 "dir-2/sub/f-3" => None,
                 "dir-2/f-4" => None,
             };
-            let bcs = create_bonsai_changeset(
-                ctx.fb,
-                repo.clone(),
-                &mut runtime,
-                store_files(ctx.clone(), file_changes, repo.clone()),
-                vec![bcs_id_1],
-            );
+            let files = runtime.block_on_std(store_files(ctx.clone(), file_changes, repo.clone()));
+            let bcs =
+                create_bonsai_changeset(ctx.fb, repo.clone(), &mut runtime, files, vec![bcs_id_1]);
 
             let _bcs_id = bcs.get_changeset_id();
             let mf_id =
@@ -335,13 +326,8 @@ mod tests {
                 "dir/sub/f-3" => Some("3\n"),
                 "dir/f-2" => Some("4\n"),
             };
-            let bcs = create_bonsai_changeset(
-                ctx.fb,
-                repo.clone(),
-                &mut runtime,
-                store_files(ctx.clone(), file_changes, repo.clone()),
-                vec![],
-            );
+            let files = runtime.block_on_std(store_files(ctx.clone(), file_changes, repo.clone()));
+            let bcs = create_bonsai_changeset(ctx.fb, repo.clone(), &mut runtime, files, vec![]);
 
             let bcs_id = bcs.get_changeset_id();
             let mf_id = derive_manifest(ctx.clone(), repo.clone(), &mut runtime, bcs, vec![]);
@@ -354,13 +340,9 @@ mod tests {
                 "dir/sub/f-1" => None,
                 "dir/sub/f-3" => None,
             };
-            let bcs = create_bonsai_changeset(
-                ctx.fb,
-                repo.clone(),
-                &mut runtime,
-                store_files(ctx.clone(), file_changes, repo.clone()),
-                vec![bcs_id_1],
-            );
+            let files = runtime.block_on_std(store_files(ctx.clone(), file_changes, repo.clone()));
+            let bcs =
+                create_bonsai_changeset(ctx.fb, repo.clone(), &mut runtime, files, vec![bcs_id_1]);
 
             let _bcs_id = bcs.get_changeset_id();
             let mf_id =

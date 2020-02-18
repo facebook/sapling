@@ -293,12 +293,13 @@ impl HgEntry for MockEntry {
 mod test {
     use super::*;
     use fbinit::FacebookInit;
-    use futures::{Future, Stream};
+    use futures::Stream;
+    use futures_preview::compat::Future01CompatExt;
     use maplit::btreemap;
 
     #[fbinit::test]
     fn lookup(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
             let paths = btreemap! {
                 "foo/bar1" => (FileType::Regular, "bar1"),
@@ -319,7 +320,8 @@ mod test {
                 .expect("foo should be present");
             let foo_content = foo_entry
                 .get_content(ctx.clone())
-                .wait()
+                .compat()
+                .await
                 .expect("content fetch should work");
             let foo_manifest = match foo_content {
                 Content::Tree(manifest) => manifest,
@@ -331,7 +333,8 @@ mod test {
                 .expect("bar1 should be present");
             let bar1_content = bar1_entry
                 .get_content(ctx.clone())
-                .wait()
+                .compat()
+                .await
                 .expect("content fetch should work");
             let bar1_stream = match bar1_content {
                 Content::File(stream) => stream,
@@ -339,7 +342,8 @@ mod test {
             };
             let bar1_bytes = bar1_stream
                 .concat2()
-                .wait()
+                .compat()
+                .await
                 .expect("content stream should work");
             assert_eq!(bar1_bytes.into_bytes().as_ref(), &b"bar1"[..]);
 
@@ -348,7 +352,8 @@ mod test {
                 .expect("bar2 should be present");
             let bar2_content = bar2_entry
                 .get_content(ctx.clone())
-                .wait()
+                .compat()
+                .await
                 .expect("content fetch should work");
             let bar2_stream = match bar2_content {
                 Content::Symlink(stream) => stream,
@@ -356,7 +361,8 @@ mod test {
             };
             let bar2_bytes = bar2_stream
                 .concat2()
-                .wait()
+                .compat()
+                .await
                 .expect("content stream should work");
             assert_eq!(bar2_bytes.into_bytes().as_ref(), &b"bar2"[..]);
         })

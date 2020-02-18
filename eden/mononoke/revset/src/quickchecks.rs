@@ -32,12 +32,12 @@ mod test {
     use cloned::cloned;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use futures::executor::spawn;
     use futures::{
         future::{join_all, ok},
         Stream,
     };
     use futures_ext::{BoxFuture, BoxStream, StreamExt};
+    use futures_preview::{compat::Stream01CompatExt, stream::StreamExt as _};
     use mononoke_types::ChangesetId;
     use quickcheck::{quickcheck, Arbitrary, Gen};
     use rand::{seq::SliceRandom, thread_rng, Rng};
@@ -60,20 +60,20 @@ mod test {
         rp_entries: Vec<RevsetEntry>,
     }
 
-    fn get_changesets_from_repo(ctx: CoreContext, repo: &BlobRepo) -> Vec<ChangesetId> {
+    async fn get_changesets_from_repo(ctx: CoreContext, repo: &BlobRepo) -> Vec<ChangesetId> {
         let changeset_fetcher = repo.get_changeset_fetcher();
-        let mut all_changesets_executor = spawn(
-            repo.get_bonsai_heads_maybe_stale(ctx.clone())
-                .map({
-                    cloned!(ctx);
-                    move |head| AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, head)
-                })
-                .flatten(),
-        );
+        let mut all_changesets_stream = repo
+            .get_bonsai_heads_maybe_stale(ctx.clone())
+            .map({
+                cloned!(ctx);
+                move |head| AncestorsNodeStream::new(ctx.clone(), &changeset_fetcher, head)
+            })
+            .flatten()
+            .compat();
 
         let mut all_changesets: Vec<ChangesetId> = Vec::new();
         loop {
-            all_changesets.push(match all_changesets_executor.wait_stream() {
+            all_changesets.push(match all_changesets_stream.next().await {
                 None => break,
                 Some(changeset) => changeset.expect("Failed to get changesets from repo"),
             });
@@ -84,11 +84,11 @@ mod test {
     }
 
     impl RevsetSpec {
-        pub fn add_hashes<G>(&mut self, ctx: CoreContext, repo: &BlobRepo, random: &mut G)
+        pub async fn add_hashes<G>(&mut self, ctx: CoreContext, repo: &BlobRepo, random: &mut G)
         where
             G: Rng,
         {
-            let all_changesets = get_changesets_from_repo(ctx, repo);
+            let all_changesets = get_changesets_from_repo(ctx, repo).await;
             for elem in self.rp_entries.iter_mut() {
                 if let &mut RevsetEntry::SingleNode(None) = elem {
                     *elem =
@@ -254,16 +254,16 @@ mod test {
         // is a SetDifference by pure chance.
     }
 
-    fn match_streams(
+    async fn match_streams(
         expected: BoxStream<ChangesetId, Error>,
         actual: BoxStream<ChangesetId, Error>,
     ) -> bool {
         let mut expected = {
-            let mut nodestream = spawn(expected);
+            let mut nodestream = expected.compat();
 
             let mut expected = HashSet::new();
             loop {
-                let hash = nodestream.wait_stream();
+                let hash = nodestream.next().await;
                 match hash {
                     Some(hash) => {
                         let hash = hash.expect("unexpected error");
@@ -277,10 +277,10 @@ mod test {
             expected
         };
 
-        let mut nodestream = spawn(actual);
+        let mut nodestream = actual.compat();
 
         while !expected.is_empty() {
-            match nodestream.wait_stream() {
+            match nodestream.next().await {
                 Some(hash) => {
                     let hash = hash.expect("unexpected error");
                     if !expected.remove(&hash) {
@@ -292,24 +292,29 @@ mod test {
                 }
             }
         }
-        nodestream.wait_stream().is_none() && expected.is_empty()
+        nodestream.next().await.is_none() && expected.is_empty()
     }
 
-    fn match_hashset_to_revset(ctx: CoreContext, repo: Arc<BlobRepo>, mut set: RevsetSpec) -> bool {
-        set.add_hashes(ctx.clone(), &*repo, &mut thread_rng());
+    async fn match_hashset_to_revset(
+        ctx: CoreContext,
+        repo: Arc<BlobRepo>,
+        mut set: RevsetSpec,
+    ) -> bool {
+        set.add_hashes(ctx.clone(), &*repo, &mut thread_rng()).await;
         let mut hashes = set.as_hashes();
-        let mut nodestream = spawn(set.as_revset(ctx, repo));
+        let mut nodestream = set.as_revset(ctx, repo).compat();
 
         while !hashes.is_empty() {
             let hash = nodestream
-                .wait_stream()
+                .next()
+                .await
                 .expect("Unexpected end of stream")
                 .expect("Unexpected error");
             if !hashes.remove(&hash) {
                 return false;
             }
         }
-        nodestream.wait_stream().is_none() && hashes.is_empty()
+        nodestream.next().await.is_none() && hashes.is_empty()
     }
 
     // This is slightly icky. I would like to construct $test_name as setops_$repo, but concat_idents!
@@ -319,10 +324,10 @@ mod test {
             #[test]
             fn $test_name() {
                 fn prop(fb: FacebookInit, set: RevsetSpec) -> bool {
-                    async_unit::tokio_unit_test(move || {
+                    async_unit::tokio_unit_test(async move {
                         let ctx = CoreContext::test_mock(fb);
-                        let repo = Arc::new($repo::getrepo(fb));
-                        match_hashset_to_revset(ctx, repo, set)
+                        let repo = Arc::new($repo::getrepo(fb).await);
+                        match_hashset_to_revset(ctx, repo, set).await
                     })
                 }
 
@@ -397,14 +402,14 @@ mod test {
         ($test_name:ident, $repo:ident) => {
             #[fbinit::test]
             fn $test_name(fb: FacebookInit) {
-                async_unit::tokio_unit_test(move || {
+                async_unit::tokio_unit_test(async move {
                     let ctx = CoreContext::test_mock(fb);
 
-                    let repo = Arc::new($repo::getrepo(fb));
+                    let repo = Arc::new($repo::getrepo(fb).await);
                     let changeset_fetcher: Arc<dyn ChangesetFetcher> =
                         Arc::new(TestChangesetFetcher::new(repo.clone()));
 
-                    let all_changesets = get_changesets_from_repo(ctx.clone(), &*repo);
+                    let all_changesets = get_changesets_from_repo(ctx.clone(), &*repo).await;
 
                     // Limit the number of changesets, otherwise tests take too much time
                     let max_changesets = 7;
@@ -464,7 +469,7 @@ mod test {
                         .boxify();
 
                         assert!(
-                            match_streams(expected, actual.boxify()),
+                            match_streams(expected, actual.boxify()).await,
                             "streams do not match for {:?} {:?}",
                             include,
                             exclude

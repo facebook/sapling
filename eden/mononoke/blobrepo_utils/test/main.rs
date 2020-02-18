@@ -26,10 +26,10 @@ mod test {
 
                 #[fbinit::test]
                 fn test(fb: FacebookInit) {
-                    async_unit::tokio_unit_test(move || {
+                    async_unit::tokio_unit_test(async move {
                         let ctx = CoreContext::test_mock(fb);
 
-                        let repo = $repo::getrepo(fb);
+                        let repo = $repo::getrepo(fb).await;
                         let heads = repo.get_heads_maybe_stale(ctx.clone()).collect();
 
                         let verify = BonsaiMFVerify {

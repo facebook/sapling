@@ -187,12 +187,11 @@ mod test {
 
     /// This function creates a new Git tree from the fixture's master Bonsai bookmark,
     /// materializes it to disk, then verifies that libgit produces the same Git tree for it.
-    async fn run_tree_derivation_for_fixture<F>(fb: FacebookInit, fixture: F) -> Result<(), Error>
-    where
-        F: FnOnce(FacebookInit) -> BlobRepo,
-    {
+    async fn run_tree_derivation_for_fixture(
+        fb: FacebookInit,
+        repo: BlobRepo,
+    ) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = fixture(fb);
 
         let bcs_id = repo
             .get_bonsai_bookmark(ctx.clone(), &("master".try_into()?))
@@ -248,7 +247,8 @@ mod test {
         ($fixture:ident) => {
             #[fbinit::test]
             async fn $fixture(fb: FacebookInit) -> Result<(), Error> {
-                run_tree_derivation_for_fixture(fb, fixtures::$fixture::getrepo).await
+                let repo = fixtures::$fixture::getrepo(fb).await;
+                run_tree_derivation_for_fixture(fb, repo).await
             }
         };
     }
@@ -262,11 +262,5 @@ mod test {
     impl_test!(merge_uneven);
     impl_test!(unshared_merge_even);
     impl_test!(unshared_merge_uneven);
-
-    #[fbinit::test]
-    fn many_diamonds(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = ::tokio_compat::runtime::Runtime::new().unwrap();
-        let repo = fixtures::many_diamonds::getrepo(fb, &mut runtime);
-        runtime.block_on_std(run_tree_derivation_for_fixture(fb, move |_| repo))
-    }
+    impl_test!(many_diamonds);
 }

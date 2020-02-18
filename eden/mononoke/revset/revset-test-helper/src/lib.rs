@@ -9,10 +9,13 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::executor::spawn;
 use futures::future::Future;
 use futures::stream::Stream;
 use futures_ext::BoxStream;
+use futures_preview::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    stream::StreamExt,
+};
 use mercurial_types::nodehash::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::ChangesetId;
@@ -36,16 +39,17 @@ pub fn string_to_nodehash(hash: &str) -> HgNodeHash {
     HgNodeHash::from_str(hash).expect("Can't turn string to HgNodeHash")
 }
 
-pub fn string_to_bonsai(fb: FacebookInit, repo: &Arc<BlobRepo>, s: &str) -> ChangesetId {
+pub async fn string_to_bonsai(fb: FacebookInit, repo: &Arc<BlobRepo>, s: &str) -> ChangesetId {
     let ctx = CoreContext::test_mock(fb);
     let node = string_to_nodehash(s);
     repo.get_bonsai_from_hg(ctx, HgChangesetId::new(node))
-        .wait()
+        .compat()
+        .await
         .unwrap()
         .unwrap()
 }
 
-pub fn assert_changesets_sequence<I>(
+pub async fn assert_changesets_sequence<I>(
     ctx: CoreContext,
     repo: &Arc<BlobRepo>,
     hashes: I,
@@ -53,7 +57,7 @@ pub fn assert_changesets_sequence<I>(
 ) where
     I: IntoIterator<Item = ChangesetId>,
 {
-    let mut nodestream = spawn(stream);
+    let mut nodestream = stream.compat();
     let mut received_hashes = HashSet::new();
     for expected in hashes {
         // If we pulled it in earlier, we've found it.
@@ -64,13 +68,15 @@ pub fn assert_changesets_sequence<I>(
         let expected_generation = repo
             .clone()
             .get_generation_number_by_bonsai(ctx.clone(), expected)
-            .wait()
+            .compat()
+            .await
             .expect("Unexpected error");
 
         // Keep pulling in hashes until we either find this one, or move on to a new generation
         loop {
             let hash = nodestream
-                .wait_stream()
+                .next()
+                .await
                 .expect("Unexpected end of stream")
                 .expect("Unexpected error");
 
@@ -81,7 +87,8 @@ pub fn assert_changesets_sequence<I>(
             let node_generation = repo
                 .clone()
                 .get_generation_number_by_bonsai(ctx.clone(), expected)
-                .wait()
+                .compat()
+                .await
                 .expect("Unexpected error");
 
             assert!(
@@ -102,7 +109,7 @@ pub fn assert_changesets_sequence<I>(
         received_hashes
     );
 
-    let next_node = nodestream.wait_stream();
+    let next_node = nodestream.next().await;
     assert!(
         next_node.is_none(),
         "Too many nodes received: {:?}",
@@ -121,10 +128,12 @@ mod test {
 
     #[fbinit::test]
     fn valid_changeset(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
-            let bcs_id = string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a");
+            let repo = linear::getrepo(fb).await;
+            let repo = Arc::new(repo);
+            let bcs_id =
+                string_to_bonsai(fb, &repo, "a5ffa77602a066db7d5cfb9fb5823a0895717c5a").await;
             let changeset_stream = single_changeset_id(ctx.clone(), bcs_id.clone(), &repo);
 
             assert_changesets_sequence(
@@ -132,19 +141,22 @@ mod test {
                 &repo,
                 vec![bcs_id].into_iter(),
                 changeset_stream.boxify(),
-            );
+            )
+            .await;
         });
     }
 
     #[fbinit::test]
     fn invalid_changeset(fb: FacebookInit) {
-        async_unit::tokio_unit_test(move || {
+        async_unit::tokio_unit_test(async move {
             let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(linear::getrepo(fb));
+            let repo = linear::getrepo(fb).await;
+            let repo = Arc::new(repo);
             let cs_id = ONES_CSID;
             let changeset_stream = single_changeset_id(ctx.clone(), cs_id, &repo.clone());
 
-            assert_changesets_sequence(ctx, &repo, vec![].into_iter(), changeset_stream.boxify());
+            assert_changesets_sequence(ctx, &repo, vec![].into_iter(), changeset_stream.boxify())
+                .await;
         });
     }
 }

@@ -10,7 +10,6 @@
 #![deny(warnings)]
 
 use anyhow::Error;
-use futures::Future;
 
 use assert_matches::assert_matches;
 use bonsai_hg_mapping::{
@@ -20,6 +19,7 @@ use bonsai_hg_mapping::{
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures_ext::BoxFuture;
+use futures_preview::compat::Future01CompatExt;
 use mercurial_types::{HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
 use mercurial_types_mocks::nodehash as hg;
 use mononoke_types::RepositoryId;
@@ -32,7 +32,7 @@ use std::sync::{
     Arc,
 };
 
-fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
+async fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     let ctx = CoreContext::test_mock(fb);
     let entry = BonsaiHgMappingEntry {
         repo_id: REPO_ZERO,
@@ -43,30 +43,35 @@ fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
         true,
         mapping
             .add(ctx.clone(), entry.clone())
-            .wait()
+            .compat()
+            .await
             .expect("Adding new entry failed")
     );
     assert_eq!(
         false,
         mapping
             .add(ctx.clone(), entry.clone())
-            .wait()
+            .compat()
+            .await
             .expect("Adding same entry failed")
     );
 
     let result = mapping
         .get(ctx.clone(), REPO_ZERO, hg::ONES_CSID.into())
-        .wait()
+        .compat()
+        .await
         .expect("Get failed");
     assert_eq!(result, vec![entry.clone()]);
     let result = mapping
         .get_hg_from_bonsai(ctx.clone(), REPO_ZERO, bonsai::ONES_CSID)
-        .wait()
+        .compat()
+        .await
         .expect("Failed to get hg changeset by its bonsai counterpart");
     assert_eq!(result, Some(hg::ONES_CSID));
     let result = mapping
         .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::ONES_CSID)
-        .wait()
+        .compat()
+        .await
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, Some(bonsai::ONES_CSID));
 
@@ -77,7 +82,8 @@ fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     };
     let result = mapping
         .add(ctx.clone(), same_bc_entry.clone())
-        .wait()
+        .compat()
+        .await
         .expect_err("Conflicting entries should haved produced an error");
     assert_matches!(
         result.downcast::<ErrorKind>(),
@@ -91,7 +97,8 @@ fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     };
     let result = mapping
         .add(ctx.clone(), same_hg_entry.clone())
-        .wait()
+        .compat()
+        .await
         .expect_err("Conflicting entries should haved produced an error");
     assert_matches!(
         result.downcast::<ErrorKind>(),
@@ -99,16 +106,17 @@ fn add_and_get<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     );
 }
 
-fn missing<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
+async fn missing<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     let ctx = CoreContext::test_mock(fb);
     let result = mapping
         .get(ctx.clone(), REPO_ZERO, bonsai::ONES_CSID.into())
-        .wait()
+        .compat()
+        .await
         .expect("Failed to fetch missing changeset (should succeed with None instead)");
     assert_eq!(result, vec![]);
 }
 
-fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
+async fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
     let ctx = CoreContext::test_mock(fb);
 
     let entry1 = BonsaiHgMappingEntry {
@@ -136,28 +144,32 @@ fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
         true,
         mapping
             .add(ctx.clone(), entry1.clone())
-            .wait()
+            .compat()
+            .await
             .expect("Adding entry1 failed")
     );
     assert_eq!(
         true,
         mapping
             .add(ctx.clone(), entry2.clone())
-            .wait()
+            .compat()
+            .await
             .expect("Adding entry2 failed")
     );
     assert_eq!(
         true,
         mapping
             .add(ctx.clone(), entry3.clone())
-            .wait()
+            .compat()
+            .await
             .expect("Adding entry3 failed")
     );
     assert_eq!(
         true,
         mapping
             .add(ctx.clone(), entry4.clone())
-            .wait()
+            .compat()
+            .await
             .expect("Adding entry4 failed")
     );
 
@@ -169,7 +181,8 @@ fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
             HgChangesetIdPrefix::from_bytes(&hg::ONES_CSID.as_ref()[0..8]).unwrap(),
             10,
         )
-        .wait()
+        .compat()
+        .await
         .expect("Failed to get hg changeset by its prefix");
 
     assert_eq!(
@@ -185,7 +198,8 @@ fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
             HgChangesetIdPrefix::from_bytes(&hg::TWOS_CSID.as_ref()[0..10]).unwrap(),
             1,
         )
-        .wait()
+        .compat()
+        .await
         .expect("Failed to get hg changeset by its prefix");
 
     assert_eq!(
@@ -201,7 +215,8 @@ fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
             HgChangesetIdPrefix::from_bytes(&hg::FS_CSID.as_ref()[0..8]).unwrap(),
             10,
         )
-        .wait()
+        .compat()
+        .await
         .expect("Failed to get hg changeset by its prefix");
 
     assert_eq!(
@@ -217,7 +232,8 @@ fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
             HgChangesetIdPrefix::from_str(&"fff").unwrap(),
             10,
         )
-        .wait()
+        .compat()
+        .await
         .expect("Failed to get hg changeset by its prefix");
 
     assert_eq!(
@@ -233,7 +249,8 @@ fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
             HgChangesetIdPrefix::from_bytes(&hg::FS_CSID.as_ref()[0..8]).unwrap(),
             1,
         )
-        .wait()
+        .compat()
+        .await
         .expect("Failed to get hg changeset by its prefix");
 
     assert_eq!(
@@ -249,7 +266,8 @@ fn get_many_hg_by_prefix<M: BonsaiHgMapping>(fb: FacebookInit, mapping: M) {
             HgChangesetIdPrefix::from_bytes(&hg::THREES_CSID.as_ref()[0..16]).unwrap(),
             10,
         )
-        .wait()
+        .compat()
+        .await
         .expect("Failed to get hg changeset by its prefix");
 
     assert_eq!(result, HgChangesetIdsResolvedFromPrefix::NoMatch);
@@ -307,7 +325,7 @@ impl BonsaiHgMapping for CountedBonsaiHgMapping {
     }
 }
 
-fn caching<M: BonsaiHgMapping + 'static>(fb: FacebookInit, mapping: M) {
+async fn caching<M: BonsaiHgMapping + 'static>(fb: FacebookInit, mapping: M) {
     let ctx = CoreContext::test_mock(fb);
     let gets = Arc::new(AtomicUsize::new(0));
     let adds = Arc::new(AtomicUsize::new(0));
@@ -329,27 +347,31 @@ fn caching<M: BonsaiHgMapping + 'static>(fb: FacebookInit, mapping: M) {
         true,
         mapping
             .add(ctx.clone(), entry.clone())
-            .wait()
+            .compat()
+            .await
             .expect("Adding new entry failed")
     );
 
     let result = mapping
         .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::ONES_CSID)
-        .wait()
+        .compat()
+        .await
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, Some(bonsai::ONES_CSID));
     assert_eq!(gets.load(Ordering::Relaxed), 1);
 
     let result = mapping
         .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::ONES_CSID)
-        .wait()
+        .compat()
+        .await
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, Some(bonsai::ONES_CSID));
     assert_eq!(gets.load(Ordering::Relaxed), 1);
 
     let result = mapping
         .get_bonsai_from_hg(ctx.clone(), REPO_ZERO, hg::TWOS_CSID)
-        .wait()
+        .compat()
+        .await
         .expect("Failed to get bonsai changeset by its hg counterpart");
     assert_eq!(result, None);
     assert_eq!(gets.load(Ordering::Relaxed), 2);
@@ -357,28 +379,32 @@ fn caching<M: BonsaiHgMapping + 'static>(fb: FacebookInit, mapping: M) {
 
 #[fbinit::test]
 fn test_add_and_get(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || {
-        add_and_get(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
-    });
+    async_unit::tokio_unit_test(add_and_get(
+        fb,
+        SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap(),
+    ));
 }
 
 #[fbinit::test]
 fn test_missing(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || {
-        missing(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
-    });
+    async_unit::tokio_unit_test(missing(
+        fb,
+        SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap(),
+    ));
 }
 
 #[fbinit::test]
 fn test_caching(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || {
-        caching(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
-    });
+    async_unit::tokio_unit_test(caching(
+        fb,
+        SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap(),
+    ));
 }
 
 #[fbinit::test]
 fn test_get_many_hg_by_prefix(fb: FacebookInit) {
-    async_unit::tokio_unit_test(move || {
-        get_many_hg_by_prefix(fb, SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap());
-    });
+    async_unit::tokio_unit_test(get_many_hg_by_prefix(
+        fb,
+        SqlBonsaiHgMapping::with_sqlite_in_memory().unwrap(),
+    ));
 }
