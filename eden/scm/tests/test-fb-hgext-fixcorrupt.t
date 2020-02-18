@@ -54,8 +54,8 @@ Nothing wrong
 
   $ rebuildrepo
   $ hg debugfixcorrupt
-  changelog looks okay
-  manifest looks okay
+  changelog: looks okay
+  manifest: looks okay
   nothing to do
   [1]
 
@@ -83,7 +83,7 @@ Manifest corruption
   $ corrupt 00manifest.d 150
   $ cp -R .hg/store .hg/store.bak
   $ hg debugfixcorrupt --no-dryrun
-  changelog looks okay
+  changelog: looks okay
   manifest: corrupted at rev 2 (linkrev=2)
   changelog: will lose 3 revisions
   truncating 00changelog.d from 275 to 110 bytes
@@ -106,7 +106,7 @@ Verify backups
   > sys.stdout.write('%s' % s.hexdigest()[:8])
   > EOF
 
-  $ ls .hg/truncate-backups | sort
+  $ ls .hg/store/truncate-backups | sort
   *-00changelog.d.backup-byte-110-to-275 (glob)
   *-00changelog.i.backup-byte-128-to-320 (glob)
   *-00manifest.d.backup-byte-99-to-264 (glob)
@@ -123,7 +123,7 @@ Verify backups
   >   printf '%s: before fix: ' $i
   >   cat .hg/store.bak/$i | $PYTHON sha256.py
   >   printf ', restored from backup: '
-  >   cat .hg/store/$i .hg/truncate-backups/*-$i.backup* | $PYTHON sha256.py
+  >   cat .hg/store/$i .hg/store/truncate-backups/*-$i.backup* | $PYTHON sha256.py
   >   printf '\n'
   > done
   00changelog.i: before fix: cd8b27c9, restored from backup: cd8b27c9
@@ -137,7 +137,7 @@ Changelog.i ends with 0s
   ...     f.write(b'\0' * 128)
   $ hg debugfixcorrupt
   changelog: corrupted at rev 5 (linkrev=0)
-  manifest looks okay
+  manifest: looks okay
   changelog: will lose 2 revisions
   truncating 00changelog.i from 448 to 320 bytes
   re-run with --no-dryrun to fix.

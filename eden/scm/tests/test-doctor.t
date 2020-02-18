@@ -30,6 +30,7 @@ When everything looks okay:
   $ hg doctor
   checking internal storage
   mutation: looks okay
+  changelog: looks okay
   metalog: looks okay
   allheads: looks okay
   indexedlogdatastore: looks okay
@@ -54,6 +55,7 @@ Test that 'hg doctor' can fix them:
   $ hg doctor
   checking internal storage
   mutation: repaired
+  changelog: looks okay
   metalog: repaired
   allheads: repaired
   indexedlogdatastore: repaired
@@ -79,3 +81,31 @@ Check the repo is usable again:
      +A
      \ No newline at end of file
   
+#if py2
+Check changelog repiar:
+
+  $ newrepo
+  $ drawdag << 'EOS'
+  > C
+  > |
+  > B
+  > |
+  > A
+  > EOS
+  >>> with open(".hg/store/00changelog.i", "rb+") as f:
+  ...     filelen = len(f.read())
+  ...     f.seek(filelen - 64)
+  ...     f.write(b"x" * 64)
+  $ hg doctor
+  checking internal storage
+  mutation: looks okay
+  changelog: corrupted at rev 2 (linkrev=2021161080)
+  truncating 00changelog.i from 192 to 128 bytes
+  truncating 00changelog.d from 165 to 110 bytes
+  changelog: repaired
+  metalog: looks okay
+  allheads: looks okay
+  $ hg log -Gr 'all()' -T '{desc}'
+  abort: RevlogError!
+  [255]
+#endif

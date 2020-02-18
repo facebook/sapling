@@ -10,7 +10,7 @@ from __future__ import absolute_import
 import time
 
 from edenscm.mercurial import encoding, error, progress, registrar, revlog, util
-from edenscm.mercurial.commands.doctor import quickchecklog, truncate
+from edenscm.mercurial.commands.doctor import quickchecklog
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import nullid
 
@@ -19,6 +19,35 @@ testedwith = "ships-with-fb-hgext"
 
 cmdtable = {}
 command = registrar.command(cmdtable)
+
+
+def truncate(ui, svfs, path, size, dryrun=True, backupprefix=""):
+    oldsize = svfs.stat(path).st_size
+    if oldsize == size:
+        return
+    if oldsize < size:
+        ui.write(
+            _("%s: bad truncation request: %s to %s bytes\n") % (path, oldsize, size)
+        )
+        return
+    ui.write(_("truncating %s from %s to %s bytes\n") % (path, oldsize, size))
+    if dryrun:
+        return
+
+    svfs.makedirs("truncate-backups")
+    with svfs.open(path, "ab+") as f:
+        f.seek(size)
+        # backup the part being truncated
+        backuppart = f.read(oldsize - size)
+        if len(backuppart) != oldsize - size:
+            raise error.Abort(_("truncate: cannot backup confidently"))
+        with svfs.open(
+            "truncate-backups/%s%s.backup-byte-%s-to-%s"
+            % (backupprefix, svfs.basename(path), size, oldsize),
+            "w",
+        ) as bkf:
+            bkf.write(backuppart)
+        f.truncate(size)
 
 
 @command(
