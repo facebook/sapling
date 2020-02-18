@@ -40,7 +40,11 @@ shared_ptr<const Tree> WinStore::getTree(
   for (auto piece : relPath.components()) {
     auto entry = tree->getEntryPtr(piece);
     if (entry != nullptr && entry->isTree()) {
-      tree = getMount().getObjectStore()->getTree(entry->getHash()).get();
+      tree =
+          getMount()
+              .getObjectStore()
+              ->getTree(entry->getHash(), ObjectFetchContext::getNullContext())
+              .get();
     } else {
       return nullptr;
     }
@@ -74,7 +78,9 @@ bool WinStore::getAllEntries(
       } else {
         futures.emplace_back(getMount()
                                  .getObjectStore()
-                                 ->getBlobSize(treeEntries[i].getHash())
+                                 ->getBlobSize(
+                                     treeEntries[i].getHash(),
+                                     ObjectFetchContext::getNullContext())
                                  .thenValue([index = i](auto size) {
                                    return make_pair(size, index);
                                  }));
@@ -125,7 +131,11 @@ bool WinStore::getFileMetadata(
         fileMetadata.size = size.value();
       } else {
         auto size =
-            getMount().getObjectStore()->getBlobSize(entry->getHash()).get();
+            getMount()
+                .getObjectStore()
+                ->getBlobSize(
+                    entry->getHash(), ObjectFetchContext::getNullContext())
+                .get();
         fileMetadata.size = size;
       }
     }
@@ -158,7 +168,10 @@ std::shared_ptr<const Blob> WinStore::getBlob(
 
   auto file = tree->getEntryPtr(relPath.basename());
   if ((file) && (!file->isTree())) {
-    return (getMount().getObjectStore()->getBlob(file->getHash()).get());
+    return (getMount()
+                .getObjectStore()
+                ->getBlob(file->getHash(), ObjectFetchContext::getNullContext())
+                .get());
   }
   return nullptr;
 }

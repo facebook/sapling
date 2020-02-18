@@ -87,7 +87,7 @@ GenerateStatus::markAllScmSubEntriesRemoved(
     DiffCallback* callback,
     const TreeEntry& scmEntry) {
   return objectStore()
-      ->getTree(scmEntry.getHash())
+      ->getTree(scmEntry.getHash(), ObjectFetchContext::getNullContext())
       .thenValue(
           [this, currentPath, callback](std::shared_ptr<const Tree> tree) {
             const auto& scmEntries = tree->getTreeEntries();
@@ -118,7 +118,7 @@ FOLLY_NODISCARD folly::Future<bool> GenerateStatus::checkModified(
   Hash fileSha1 = getFileSha1(path.c_str());
 
   return objectStore()
-      ->getBlobSha1(scmEntry.getHash())
+      ->getBlobSha1(scmEntry.getHash(), ObjectFetchContext::getNullContext())
       .thenValue([fileSha1 = std::move(fileSha1)](auto sha1) {
         return (fileSha1 != sha1);
       });
@@ -146,7 +146,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> GenerateStatus::processBothPresent(
     bool compareBoth) {
   if ((scmEntry.isTree()) && (dirEntry.isDirectory())) {
     return objectStore()
-        ->getTree(scmEntry.getHash())
+        ->getTree(scmEntry.getHash(), ObjectFetchContext::getNullContext())
         .thenValue([this, currentPath, callback, compareBoth](
                        std::shared_ptr<const Tree> tree) {
           if (compareBoth) {

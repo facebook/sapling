@@ -86,7 +86,8 @@ const AbsolutePath& EdenMount::getPath() const {
 
 folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTree() const {
   auto commitHash = Hash{parentInfo_.rlock()->parents.parent1()};
-  return objectStore_->getTreeForCommit(commitHash);
+  return objectStore_->getTreeForCommit(
+      commitHash, ObjectFetchContext::getNullContext());
 }
 
 folly::Future<folly::Unit> EdenMount::diff(
@@ -122,7 +123,8 @@ folly::Future<folly::Unit> EdenMount::diff(
     // starting until we have finished computing this status call.
   }
 
-  return objectStore_->getTreeForCommit(commitHash)
+  return objectStore_
+      ->getTreeForCommit(commitHash, ObjectFetchContext::getNullContext())
       .thenValue(
           [this, callback, request](std::shared_ptr<const Tree>&& rootTree) {
             GenerateStatus generator(
