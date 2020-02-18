@@ -40,7 +40,6 @@ pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);
 pub struct HgNodeHash(pub(crate) Sha1);
 
 impl HgNodeHash {
-    #[deprecated(note = "This constructor is only used in creation of HgNodeHash mocks")]
     pub const fn new(sha1: Sha1) -> Self {
         HgNodeHash(sha1)
     }
@@ -338,6 +337,11 @@ impl HgChangesetIdPrefix {
     #[inline]
     pub fn max_as_ref(&self) -> &[u8] {
         self.0.max_as_ref()
+    }
+
+    #[inline]
+    pub fn into_hg_changeset_id(self) -> Option<HgChangesetId> {
+        self.0.into_sha1().map(HgNodeHash).map(HgChangesetId)
     }
 }
 

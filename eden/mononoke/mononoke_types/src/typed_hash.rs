@@ -461,6 +461,11 @@ impl ChangesetIdPrefix {
     pub fn max_as_ref(&self) -> &[u8] {
         self.0.max_as_ref()
     }
+
+    #[inline]
+    pub fn into_changeset_id(self) -> Option<ChangesetId> {
+        self.0.into_blake2().map(ChangesetId)
+    }
 }
 
 impl FromStr for ChangesetIdPrefix {

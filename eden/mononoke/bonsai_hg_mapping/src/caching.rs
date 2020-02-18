@@ -201,6 +201,7 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
             .boxify()
     }
 
+    /// Use caching for the full changeset ids and slower path otherwise.
     fn get_many_hg_by_prefix(
         &self,
         ctx: CoreContext,
@@ -208,6 +209,15 @@ impl BonsaiHgMapping for CachingBonsaiHgMapping {
         cs_prefix: HgChangesetIdPrefix,
         limit: usize,
     ) -> BoxFuture<HgChangesetIdsResolvedFromPrefix, Error> {
+        if let Some(id) = cs_prefix.into_hg_changeset_id() {
+            return self
+                .get(ctx, repo_id, id.into())
+                .map(move |result| match result.into_iter().next() {
+                    Some(_) if limit > 0 => HgChangesetIdsResolvedFromPrefix::Single(id),
+                    _ => HgChangesetIdsResolvedFromPrefix::NoMatch,
+                })
+                .boxify();
+        }
         self.mapping
             .get_many_hg_by_prefix(ctx, repo_id, cs_prefix, limit)
     }

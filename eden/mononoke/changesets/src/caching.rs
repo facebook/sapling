@@ -175,6 +175,7 @@ impl Changesets for CachingChangesets {
             .boxify()
     }
 
+    /// Use caching for the full changeset ids and slower path otherwise.
     fn get_many_by_prefix(
         &self,
         ctx: CoreContext,
@@ -182,6 +183,15 @@ impl Changesets for CachingChangesets {
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
     ) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error> {
+        if let Some(id) = cs_prefix.into_changeset_id() {
+            return self
+                .get(ctx, repo_id, id)
+                .map(move |res| match res {
+                    Some(_) if limit > 0 => ChangesetIdsResolvedFromPrefix::Single(id),
+                    _ => ChangesetIdsResolvedFromPrefix::NoMatch,
+                })
+                .boxify();
+        }
         self.changesets
             .get_many_by_prefix(ctx, repo_id, cs_prefix, limit)
             .boxify()

@@ -217,6 +217,16 @@ impl Sha1Prefix {
         self.1.as_ref()
     }
 
+    /// Convert into sha1 if it is the full prefix of the hash.
+    #[inline]
+    pub fn into_sha1(self) -> Option<Sha1> {
+        if self.0 == self.1 {
+            Some(self.0)
+        } else {
+            None
+        }
+    }
+
     pub fn to_hex(&self) -> AsciiString {
         let mut v_min_hex = vec![0; SHA1_HASH_LENGTH_HEX];
         hex_encode(self.0.as_ref(), &mut v_min_hex).expect("failed to hex encode");
