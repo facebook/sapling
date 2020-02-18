@@ -97,8 +97,8 @@ Check logging structure
   > EOF
   $ quiet fastreplay  --live-config "file:${live_config}" --debug --scuba-log-file "$fastreplay_log" < "$WIREPROTO_LOGGING_PATH"
   $ grep "Replay Succeeded" "$fastreplay_log" | jq .normal.command
-  "gettreepack"
   "getbundle"
+  "gettreepack"
   "getpackv1"
 
 # Check that replaying works with arguments

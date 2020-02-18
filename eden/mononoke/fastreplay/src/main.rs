@@ -388,7 +388,7 @@ async fn fastreplay<R: AsyncRead + Unpin>(
 
         let config = opts.config.get();
 
-        if load > config.max_concurrency()?.get() {
+        if load >= config.max_concurrency()?.get() {
             warn!(
                 &logger,
                 "Waiting for some requests to complete (load: {})...", load
