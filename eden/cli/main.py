@@ -1447,6 +1447,8 @@ class RestartCmd(Subcmd):
                 "TODO(T33122320): Implement 'eden restart --graceful'"
             )
         else:
+            sample = instance.build_sample("graceful_restart")
+            instance.log(sample)
             daemon.exec_daemon(
                 instance, daemon_binary=self.args.daemon_binary, takeover=True
             )
