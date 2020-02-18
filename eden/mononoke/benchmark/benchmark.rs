@@ -20,9 +20,9 @@ use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::Future;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
 use futures_preview::compat::Future01CompatExt;
-use futures_stats::Timed;
+use futures_stats::futures03::TimedFutureExt;
 use mononoke_types::ChangesetId;
 use rand::SeedableRng;
 use rand_xorshift::XorShiftRng;
@@ -35,40 +35,39 @@ const ARG_SEED: &'static str = "seed";
 const ARG_TYPE: &'static str = "type";
 const ARG_STACK_SIZE: &'static str = "stack-size";
 
-type DeriveFn = Arc<dyn Fn(ChangesetId) -> BoxFuture<String, Error> + Send + Sync + 'static>;
+type DeriveFn = Arc<dyn Fn(ChangesetId) -> OldBoxFuture<String, Error> + Send + Sync + 'static>;
 
-fn run(
+async fn run(
     ctx: CoreContext,
     repo: BlobRepo,
     rng_seed: u64,
     stack_size: usize,
     derive: DeriveFn,
-) -> impl Future<Item = (), Error = Error> {
+) -> Result<(), Error> {
     println!("rng seed: {}", rng_seed);
     let mut rng = XorShiftRng::seed_from_u64(rng_seed); // reproducable Rng
 
     let mut gen = GenManifest::new();
     let settings = Default::default();
-    gen.gen_stack(
-        ctx.clone(),
-        repo.clone(),
-        &mut rng,
-        &settings,
-        None,
-        std::iter::repeat(16).take(stack_size),
-    )
-    .timed(move |stats, _| {
-        println!("stack generated: {:?} {:?}", gen.size(), stats);
-        Ok(())
-    })
-    .and_then(move |csid| {
-        derive(csid).timed(move |stats, result| {
-            println!("bonsai conversion: {:?}", stats);
-            println!("{:?} -> {:?}", csid, result);
-            Ok(())
-        })
-    })
-    .map(|_| ())
+    let (stats, csidq) = gen
+        .gen_stack(
+            ctx,
+            repo,
+            &mut rng,
+            &settings,
+            None,
+            std::iter::repeat(16).take(stack_size),
+        )
+        .compat()
+        .timed()
+        .await;
+    println!("stack generated: {:?} {:?}", gen.size(), stats);
+
+    let csid = csidq?;
+    let (stats2, result) = derive(csid).compat().timed().await;
+    println!("bonsai conversion: {:?}", stats2);
+    println!("{:?} -> {:?}", csid.to_string(), result);
+    Ok(())
 }
 
 fn derive_fn(ctx: CoreContext, repo: BlobRepo, derive_type: Option<&str>) -> Result<DeriveFn> {
@@ -156,5 +155,5 @@ fn main(fb: FacebookInit) -> Result<()> {
     let derive = derive_fn(ctx.clone(), repo.clone(), matches.value_of(ARG_TYPE))?;
 
     let mut runtime = Runtime::new()?;
-    runtime.block_on_std(run(ctx, repo, seed, stack_size, derive).compat())
+    runtime.block_on_std(run(ctx, repo, seed, stack_size, derive))
 }
