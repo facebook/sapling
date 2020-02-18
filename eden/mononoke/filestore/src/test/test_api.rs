@@ -34,7 +34,7 @@ lazy_static! {
         0x72, 0x26, 0x12, 0x1c, 0x84
     ])
     .unwrap();
-    static ref HELLO_WORLD_GIT_SHA1: hash::GitSha1 = hash::GitSha1::from_bytes(
+    static ref HELLO_WORLD_GIT_SHA1: hash::RichGitSha1 = hash::RichGitSha1::from_bytes(
         [
             0x8c, 0x01, 0xd8, 0x9a, 0xe0, 0x63, 0x11, 0x83, 0x4e, 0xe4, 0xb1, 0xfa, 0xb2, 0xf0,
             0x41, 0x4d, 0x35, 0xf0, 0x11, 0x02
@@ -500,7 +500,7 @@ fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
     // Bad Content Id should fail
     let req = StoreRequest::with_git_sha1(
         HELLO_WORLD_LENGTH,
-        hash::GitSha1::from_byte_array([0x00; 20], "blob", HELLO_WORLD_LENGTH),
+        hash::RichGitSha1::from_byte_array([0x00; 20], "blob", HELLO_WORLD_LENGTH),
     );
     let res = rt.block_on(filestore::store(
         blob.clone(),

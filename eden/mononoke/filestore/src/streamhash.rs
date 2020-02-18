@@ -39,7 +39,7 @@ mod test {
     use crate::expected_size::ExpectedSize;
 
     use mononoke_types::{
-        hash::{GitSha1, Sha1, Sha256},
+        hash::{RichGitSha1, Sha1, Sha256},
         ContentId,
     };
 
@@ -94,7 +94,7 @@ mod test {
 
         let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
 
-        let res: GitSha1 = rt
+        let res: RichGitSha1 = rt
             .block_on(hash_stream(
                 GitSha1IncrementalHasher::new(ExpectedSize::new(12)),
                 s,
@@ -103,7 +103,7 @@ mod test {
 
         assert_eq!(
             res,
-            GitSha1::from_bytes(
+            RichGitSha1::from_bytes(
                 [
                     0x8c, 0x01, 0xd8, 0x9a, 0xe0, 0x63, 0x11, 0x83, 0x4e, 0xe4, 0xb1, 0xfa, 0xb2,
                     0xf0, 0x41, 0x4d, 0x35, 0xf0, 0x11, 0x02
@@ -124,7 +124,7 @@ mod test {
 
         let mut rt = tokio_compat::runtime::Runtime::new().unwrap();
 
-        let res: GitSha1 = rt
+        let res: RichGitSha1 = rt
             .block_on(hash_stream(
                 GitSha1IncrementalHasher::new(ExpectedSize::new(12)),
                 s,
@@ -133,7 +133,7 @@ mod test {
 
         assert_eq!(
             res,
-            GitSha1::from_bytes(
+            RichGitSha1::from_bytes(
                 [
                     0x8c, 0x01, 0xd8, 0x9a, 0xe0, 0x63, 0x11, 0x83, 0x4e, 0xe4, 0xb1, 0xfa, 0xb2,
                     0xf0, 0x41, 0x4d, 0x35, 0xf0, 0x11, 0x02

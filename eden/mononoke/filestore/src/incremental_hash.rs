@@ -101,20 +101,20 @@ impl GitSha1IncrementalHasher {
     pub fn new<A: AdvisorySize>(size: A) -> Self {
         let size = size.advise();
         let mut sha1 = Sha1::new();
-        let prototype = hash::GitSha1::from_byte_array([0; 20], "blob", size);
+        let prototype = hash::RichGitSha1::from_byte_array([0; 20], "blob", size);
         sha1.input(&prototype.prefix());
         Self(sha1, size)
     }
 }
 
-impl Hasher<hash::GitSha1> for GitSha1IncrementalHasher {
+impl Hasher<hash::RichGitSha1> for GitSha1IncrementalHasher {
     fn update<T: AsRef<[u8]>>(&mut self, bytes: T) {
         self.0.input(bytes.as_ref())
     }
 
-    fn finish(mut self) -> hash::GitSha1 {
+    fn finish(mut self) -> hash::RichGitSha1 {
         let mut hash = [0u8; 20];
         self.0.result(&mut hash);
-        hash::GitSha1::from_byte_array(hash, "blob", self.1)
+        hash::RichGitSha1::from_byte_array(hash, "blob", self.1)
     }
 }

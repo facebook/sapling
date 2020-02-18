@@ -34,7 +34,7 @@ use crate::streamhash::hash_stream;
 pub struct Prepared {
     pub sha1: hash::Sha1,
     pub sha256: hash::Sha256,
-    pub git_sha1: hash::GitSha1,
+    pub git_sha1: hash::RichGitSha1,
     pub contents: FileContents,
 }
 

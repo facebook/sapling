@@ -413,13 +413,13 @@ impl_hash!(Sha1, 20, InvalidSha1Input);
 /// can be shared with non-Git uses.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[derive(Serialize, Deserialize, HeapSizeOf)]
-pub struct GitSha1 {
+pub struct RichGitSha1 {
     sha1: Sha1,
     ty: &'static str,
     size: u64,
 }
 
-impl GitSha1 {
+impl RichGitSha1 {
     pub fn from_bytes(bytes: impl AsRef<[u8]>, ty: &'static str, size: u64) -> Result<Self> {
         Ok(Self::from_sha1(Sha1::from_bytes(bytes)?, ty, size))
     }
@@ -429,7 +429,7 @@ impl GitSha1 {
     }
 
     pub const fn from_sha1(sha1: Sha1, ty: &'static str, size: u64) -> Self {
-        GitSha1 { sha1, ty, size }
+        RichGitSha1 { sha1, ty, size }
     }
 
     pub fn ty(&self) -> &'static str {
@@ -454,13 +454,13 @@ impl GitSha1 {
     }
 }
 
-impl AsRef<[u8]> for GitSha1 {
+impl AsRef<[u8]> for RichGitSha1 {
     fn as_ref(&self) -> &[u8] {
         self.sha1.as_ref()
     }
 }
 
-impl Debug for GitSha1 {
+impl Debug for RichGitSha1 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         fmt.debug_struct("GitSha1")
             .field("sha1", &self.sha1.to_hex())
@@ -470,7 +470,7 @@ impl Debug for GitSha1 {
     }
 }
 
-impl Display for GitSha1 {
+impl Display for RichGitSha1 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.to_hex(), fmt)
     }

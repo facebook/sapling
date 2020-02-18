@@ -6,7 +6,7 @@
  */
 
 use crypto::{digest::Digest, sha1::Sha1};
-use mononoke_types::hash::GitSha1;
+use mononoke_types::hash::RichGitSha1;
 use std::convert::TryInto;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
@@ -33,7 +33,7 @@ impl ObjectKind {
         }
     }
 
-    pub fn create_oid(&self, object_buff: impl AsRef<[u8]>) -> GitSha1 {
+    pub fn create_oid(&self, object_buff: impl AsRef<[u8]>) -> RichGitSha1 {
         let object_buff = object_buff.as_ref();
         let size = object_buff
             .len()
@@ -48,6 +48,6 @@ impl ObjectKind {
         let mut hash = [0u8; 20];
         sha1.result(&mut hash);
 
-        GitSha1::from_byte_array(hash, self.as_str(), size)
+        RichGitSha1::from_byte_array(hash, self.as_str(), size)
     }
 }

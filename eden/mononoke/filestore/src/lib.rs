@@ -81,7 +81,7 @@ pub struct StoreRequest {
     pub canonical: Option<ContentId>,
     pub sha1: Option<hash::Sha1>,
     pub sha256: Option<hash::Sha256>,
-    pub git_sha1: Option<hash::GitSha1>,
+    pub git_sha1: Option<hash::RichGitSha1>,
 }
 
 impl StoreRequest {
@@ -133,7 +133,7 @@ impl StoreRequest {
         }
     }
 
-    pub fn with_git_sha1(size: u64, git_sha1: hash::GitSha1) -> Self {
+    pub fn with_git_sha1(size: u64, git_sha1: hash::RichGitSha1) -> Self {
         use expected_size::ExpectedSize;
 
         Self {

@@ -63,7 +63,7 @@ pub struct ContentMetadata {
     pub content_id: ContentId,
     pub sha1: hash::Sha1,
     pub sha256: hash::Sha256,
-    pub git_sha1: hash::GitSha1,
+    pub git_sha1: hash::RichGitSha1,
 }
 
 impl ContentMetadata {
@@ -76,7 +76,7 @@ impl ContentMetadata {
             content_id: ContentId::from_thrift(thrift_field!(ContentMetadata, cab, content_id)?)?,
             sha1: hash::Sha1::from_bytes(&thrift_field!(ContentMetadata, cab, sha1)?.0)?,
             sha256: hash::Sha256::from_bytes(&thrift_field!(ContentMetadata, cab, sha256)?.0)?,
-            git_sha1: hash::GitSha1::from_bytes(
+            git_sha1: hash::RichGitSha1::from_bytes(
                 &thrift_field!(ContentMetadata, cab, git_sha1)?.0,
                 "blob",
                 total_size,
@@ -106,7 +106,7 @@ impl Arbitrary for ContentMetadata {
             content_id: ContentId::arbitrary(g),
             sha1: hash::Sha1::arbitrary(g),
             sha256: hash::Sha256::arbitrary(g),
-            git_sha1: hash::GitSha1::from_sha1(hash::Sha1::arbitrary(g), "blob", total_size),
+            git_sha1: hash::RichGitSha1::from_sha1(hash::Sha1::arbitrary(g), "blob", total_size),
         }
     }
 }

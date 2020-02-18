@@ -14,7 +14,7 @@ use std::io::{self, Write};
 use std::iter::Iterator;
 
 use ::manifest::Entry;
-use mononoke_types::{hash::GitSha1, MPathElement};
+use mononoke_types::{hash::RichGitSha1, MPathElement};
 
 use crate::errors::ErrorKind;
 use crate::mode;
@@ -23,7 +23,7 @@ use crate::{BlobHandle, ObjectKind};
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 pub struct TreeHandle {
-    oid: GitSha1,
+    oid: RichGitSha1,
 }
 
 impl TreeHandle {
@@ -31,7 +31,7 @@ impl TreeHandle {
         mode::GIT_FILEMODE_TREE
     }
 
-    pub fn oid(&self) -> &GitSha1 {
+    pub fn oid(&self) -> &RichGitSha1 {
         &self.oid
     }
 
@@ -45,7 +45,7 @@ impl TryFrom<thrift::TreeHandle> for TreeHandle {
 
     fn try_from(t: thrift::TreeHandle) -> Result<Self, Error> {
         let size = t.size.try_into()?;
-        let oid = GitSha1::from_bytes(&t.oid.0, ObjectKind::Tree.as_str(), size)?;
+        let oid = RichGitSha1::from_bytes(&t.oid.0, ObjectKind::Tree.as_str(), size)?;
         Ok(Self { oid })
     }
 }
@@ -93,7 +93,7 @@ impl TreeMember {
         }
     }
 
-    pub fn oid(&self) -> &GitSha1 {
+    pub fn oid(&self) -> &RichGitSha1 {
         match self {
             Self::Blob(ref blob) => blob.oid(),
             Self::Tree(ref tree) => tree.oid(),

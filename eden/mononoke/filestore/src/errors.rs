@@ -10,7 +10,7 @@ use thiserror::Error;
 
 use crate::{expected_size::ExpectedSize, FetchKey};
 use mononoke_types::{
-    hash::{GitSha1, Sha1, Sha256},
+    hash::{RichGitSha1, Sha1, Sha256},
     ContentId,
 };
 
@@ -34,8 +34,8 @@ pub enum ErrorKind {
     #[error("Invalid Sha256: {0:?}")]
     InvalidSha256(InvalidHash<Sha256>),
 
-    #[error("Invalid GitSha1: {0:?}")]
-    InvalidGitSha1(InvalidHash<GitSha1>),
+    #[error("Invalid RichGitSha1: {0:?}")]
+    InvalidGitSha1(InvalidHash<RichGitSha1>),
 
     #[error("Missing content: {0:?}")]
     MissingContent(FetchKey),

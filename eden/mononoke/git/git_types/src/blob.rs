@@ -8,7 +8,7 @@
 use anyhow::Error;
 use std::convert::{TryFrom, TryInto};
 
-use mononoke_types::{hash::GitSha1, ContentMetadata, FileType};
+use mononoke_types::{hash::RichGitSha1, ContentMetadata, FileType};
 
 use crate::mode;
 use crate::thrift;
@@ -16,7 +16,7 @@ use crate::ObjectKind;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
 pub struct BlobHandle {
-    oid: GitSha1,
+    oid: RichGitSha1,
     file_type: FileType,
 }
 
@@ -36,7 +36,7 @@ impl BlobHandle {
         }
     }
 
-    pub fn oid(&self) -> &GitSha1 {
+    pub fn oid(&self) -> &RichGitSha1 {
         &self.oid
     }
 }
@@ -46,7 +46,7 @@ impl TryFrom<thrift::BlobHandle> for BlobHandle {
 
     fn try_from(t: thrift::BlobHandle) -> Result<Self, Error> {
         let size = t.size.try_into()?;
-        let oid = GitSha1::from_bytes(&t.oid.0, ObjectKind::Blob.as_str(), size)?;
+        let oid = RichGitSha1::from_bytes(&t.oid.0, ObjectKind::Blob.as_str(), size)?;
 
         Ok(Self {
             oid,

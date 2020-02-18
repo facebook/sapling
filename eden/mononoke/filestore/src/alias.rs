@@ -21,7 +21,7 @@ use crate::multiplexer::Multiplexer;
 use crate::spawn::SpawnError;
 use crate::streamhash::hash_stream;
 
-type Aliases = (hash::Sha1, hash::Sha256, hash::GitSha1);
+type Aliases = (hash::Sha1, hash::Sha256, hash::RichGitSha1);
 
 /// Hashes are dependent on the ExpectedSize we received, so we want to make sure callers verify
 /// that the size they gave us is actually the one they observed before giving them access to the

@@ -35,7 +35,7 @@ use filestore::{self, FilestoreConfig, StoreRequest};
 use git_types::{mode, TreeHandle};
 use manifest::{bonsai_diff, BonsaiDiffFileChange, Entry, Manifest, StoreLoadable};
 use mononoke_types::{
-    hash::GitSha1, BonsaiChangesetMut, ChangesetId, ContentMetadata, DateTime, FileChange,
+    hash::RichGitSha1, BonsaiChangesetMut, ChangesetId, ContentMetadata, DateTime, FileChange,
     FileType, MPath, MPathElement,
 };
 
@@ -122,7 +122,7 @@ fn do_upload(
     let bytes = blob.content();
     let size = bytes.len().try_into().unwrap();
 
-    let git_sha1 = try_boxfuture!(GitSha1::from_bytes(blob.id().as_bytes(), "blob", size));
+    let git_sha1 = try_boxfuture!(RichGitSha1::from_bytes(blob.id().as_bytes(), "blob", size));
     let req = StoreRequest::with_git_sha1(size, git_sha1);
     filestore::store(
         blobstore,
