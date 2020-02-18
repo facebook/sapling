@@ -82,8 +82,8 @@ Try to sync blobimport bookmark move, which should fail
   $ init_repo_lock_sqlite3_db
   $ sqlite3 "$TESTTMP/hgrepos/repo_lock" "select count(*) from repo_lock"
   1
-  $ mononoke_hg_sync_with_failure_handler repo-hg 0 2>&1 | grep 'caused by'
-  * caused by: unexpected bookmark move: blobimport (glob)
+  $ mononoke_hg_sync_with_failure_handler repo-hg 0 2>&1 | grep 'unexpected bookmark move'
+      unexpected bookmark move: blobimport
   $ sqlite3 "$TESTTMP/hgrepos/repo_lock" "select count(*) from repo_lock"
   1
 
@@ -142,7 +142,7 @@ Enable replay verification hooks
   replay failed: error:pushkey
   replay failed: error:pushkey
   replay failed: error:pushkey
-  replay failed: error:pushkey
+      replay failed: error:pushkey
 Oops, we allowed a wrong bookmark to be unbundlereplayed onto
   $ cat >> $TESTTMP/repo-hg-2/.hg/hgrc << CONFIG
   > [facebook]
@@ -152,7 +152,7 @@ Oops, we allowed a wrong bookmark to be unbundlereplayed onto
 Now bookmark is not blocked
   $ mononoke_hg_sync repo-hg-2 1 2>&1 | grep 'replay failed'
   replay failed: error:pushkey
-  replay failed: error:pushkey
+      replay failed: error:pushkey
 
 Set the correct timestamp back
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "update bundle_replay_data set commit_hashes_json = '{\"1e43292ffbb38fa183e7f21fb8e8a8450e61c890\":0}' where bookmark_update_log_id = 2"

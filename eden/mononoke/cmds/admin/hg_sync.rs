@@ -17,6 +17,7 @@ use fbinit::FacebookInit;
 use futures::future::{self, ok};
 use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_preview::future::{FutureExt as _, TryFutureExt};
 use mononoke_hg_sync_job_helper_lib::save_bundle_to_file;
 use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
@@ -351,13 +352,18 @@ pub fn subcommand_process_hg_sync(
 
                             repo_fut
                                 .and_then(move |repo| {
-                                    save_bundle_to_file(
-                                        ctx,
-                                        repo.get_blobstore(),
-                                        &bundle_handle,
-                                        output_file,
-                                        true, /* create */
-                                    )
+                                    async move {
+                                        save_bundle_to_file(
+                                            &ctx,
+                                            repo.blobstore(),
+                                            &bundle_handle,
+                                            output_file,
+                                            true, /* create */
+                                        )
+                                        .await
+                                    }
+                                    .boxed()
+                                    .compat()
                                 })
                                 .boxify()
                         })
