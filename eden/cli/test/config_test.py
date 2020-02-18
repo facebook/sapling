@@ -72,6 +72,17 @@ fbcode-buck-out = "fbcode/buck-out-override"
 ["repository git"]
 type = "git"
 path = "/home/${USER}/src/git/.git"
+
+["telemetry"]
+scribe-cat = "/usr/local/bin/scribe_cat"
+"""
+    return cfg_file
+
+
+def get_toml_test_file_system_rc():
+    cfg_file = """
+["telemetry"]
+scribe-cat = "/bad/path/to/scribe_cat"
 """
     return cfg_file
 
@@ -100,17 +111,17 @@ class TomlConfigTest(
         self.unset_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD")
 
     def copy_config_files(self) -> None:
-        path = os.path.join(self._config_d, "defaults.toml")
-        with open(path, "w") as text_file:
-            text_file.write(get_toml_test_file_defaults())
+        path = Path(self._config_d) / "defaults.toml"
+        path.write_text(get_toml_test_file_defaults())
 
-        path = os.path.join(self._config_d, "fbsource.repo.toml")
-        with open(path, "w") as text_file:
-            text_file.write(get_toml_test_file_fbsource_repo())
+        path = Path(self._config_d) / "fbsource.repo.toml"
+        path.write_text(get_toml_test_file_fbsource_repo())
 
-        path = os.path.join(self._home_dir, ".edenrc")
-        with open(path, "w") as text_file:
-            text_file.write(get_toml_test_file_user_rc())
+        path = Path(self._home_dir) / ".edenrc"
+        path.write_text(get_toml_test_file_user_rc())
+
+        path = Path(self._etc_eden_dir) / "edenfs.rc"
+        path.write_text(get_toml_test_file_system_rc())
 
     def assert_core_config(self, cfg: EdenInstance) -> None:
         self.assertEqual(
@@ -151,6 +162,12 @@ class TomlConfigTest(
         )
         self.assertEqual(cc.default_revision, "master")
 
+    def assert_config_precedence(self, cfg: EdenInstance) -> None:
+        self.assertEqual(
+            cfg.get_config_value("telemetry.scribe-cat", default=""),
+            "/usr/local/bin/scribe_cat",
+        )
+
     def test_load_config(self) -> None:
         self.copy_config_files()
         cfg = self.get_config()
@@ -161,11 +178,13 @@ class TomlConfigTest(
         self.assertEqual(cfg.get_repository_list(), exp_repos)
         self.assert_fbsource_repo_config(cfg)
         self.assert_git_repo_config(cfg)
+        self.assert_config_precedence(cfg)
 
         # Check if test is for toml or cfg by cfg._user_toml_cfg
         exp_rc_files = [
             Path(self._config_d) / "defaults.toml",
             Path(self._config_d) / "fbsource.repo.toml",
+            Path(self._etc_eden_dir) / "edenfs.rc",
             Path(self._home_dir) / ".edenrc",
         ]
         self.assertEqual(cfg.get_rc_files(), exp_rc_files)

@@ -9,12 +9,14 @@ import collections
 import datetime
 import errno
 import json
+import logging
 import os
 import shutil
 import stat
 import subprocess
 import sys
 import tempfile
+import time
 import types
 import typing
 from pathlib import Path
@@ -25,6 +27,7 @@ import facebook.eden.ttypes as eden_ttypes
 import toml
 
 from . import configinterpolator, configutil, util
+from .telemetry import TelemetryPayload, build_base_sample
 from .util import (
     EdenStartError,
     HealthStatus,
@@ -33,6 +36,8 @@ from .util import (
     write_file_atomically,
 )
 
+
+log = logging.getLogger(__name__)
 
 # On Linux we import fcntl for flock. The Windows LockFileEx is not semantically
 # same as flock. We will need to make some changes for LockFileEx to work.
@@ -56,6 +61,8 @@ else:
 CONFIG_DOT_D = "config.d"
 # USER_CONFIG is relative to the HOME dir for the user
 USER_CONFIG = ".edenrc"
+# SYSTEM_CONFIG is relative to the etc eden dir
+SYSTEM_CONFIG = "edenfs.rc"
 
 # These paths are relative to the user's client directory.
 CLIENTS_DIR = "clients"
@@ -142,6 +149,7 @@ class EdenInstance:
         self._etc_eden_dir = Path(etc_eden_dir or DEFAULT_ETC_EDEN_DIR)
         self._home_dir = Path(home_dir) if home_dir is not None else util.get_home_dir()
         self._user_config_path = self._home_dir / USER_CONFIG
+        self._system_config_path = self._etc_eden_dir / SYSTEM_CONFIG
         self._interpolate_dict = interpolate_dict
 
         # TODO: We should eventually read the default config_dir path from the config
@@ -225,8 +233,49 @@ class EdenInstance:
             if name.endswith(".toml"):
                 result.append(config_d / name)
         result.sort()
+        result.append(self._system_config_path)
         result.append(self._user_config_path)
         return result
+
+    def build_sample(
+        self, log_type: str, **kwargs: Union[bool, int, str, float]
+    ) -> TelemetryPayload:
+        sample = build_base_sample(log_type)
+        for name, value in kwargs.items():
+            if isinstance(value, bool):
+                sample.add_bool(name, value)
+            elif isinstance(value, str):
+                sample.add_string(name, value)
+            elif isinstance(value, int):
+                sample.add_int(name, value)
+            elif isinstance(value, float):
+                sample.add_double(name, value)
+            else:  # unsupported type
+                value_type = type(value)
+                log.error(
+                    f"unsupported log value type {value_type} passed to build sample"
+                )
+        return sample
+
+    def log(self, sample: TelemetryPayload) -> int:
+        sample.add_int("time", int(time.time()))
+
+        scribe_cat = self.get_config_value("telemetry.scribe-cat", default="")
+        scribe_category = self.get_config_value("telemetry.scribe-category", default="")
+
+        if scribe_cat == "" or scribe_category == "":
+            return 0
+
+        cmd = [scribe_cat, scribe_category, sample.get_json()]
+        close_fds = os.name == "posix"
+        try:
+            rc = subprocess.call(cmd, close_fds=close_fds)
+            if rc != 0:
+                log.warning(f"log call returned non-zero exit code {rc}")
+            return rc
+        except Exception as ex:
+            log.warning(f"error logging with exception {ex}")
+            return 1
 
     def get_repository_list(
         self, parser: Union[configutil.EdenConfigParser, "ConfigUpdater", None] = None
