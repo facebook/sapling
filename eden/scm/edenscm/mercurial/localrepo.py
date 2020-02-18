@@ -971,6 +971,7 @@ class localrepository(object):
 
     @repofilecache(localpaths=["dirstate"])
     def dirstate(self):
+        # type: () -> dirstate.dirstate
         if edenfs.requirement in self.requirements:
             return self._eden_dirstate
 
@@ -989,6 +990,7 @@ class localrepository(object):
 
     @util.propertycache
     def _eden_dirstate(self):
+        # type: () -> dirstate.dirstate
         # Disable demand import when pulling in the thrift runtime,
         # as it attempts to import missing modules and changes behavior
         # based on what it finds.  Demand import masks those and causes
@@ -1001,6 +1003,7 @@ class localrepository(object):
         return dirstate_reimplementation.eden_dirstate(self, self.ui, self.root)
 
     def _dirstatevalidate(self, node):
+        # type: (bytes) -> bytes
         self.changelog.rev(node)
         return node
 

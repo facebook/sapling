@@ -18,6 +18,11 @@ import errno
 import os
 import stat
 import weakref
+from typing import Callable
+
+# Using an absolute import here allows us to import localrepo even though it
+# circularly imports us.
+import edenscm.mercurial.localrepo
 
 from . import (
     encoding,
@@ -33,7 +38,9 @@ from . import (
     treedirstate,
     treestate,
     txnutil,
+    ui as ui_mod,
     util,
+    vfs,
 )
 from .i18n import _
 from .node import hex, nullid
@@ -81,15 +88,15 @@ def _getfsnow(vfs):
 class dirstate(object):
     def __init__(
         self,
-        opener,
-        ui,
-        root,
-        validate,
-        repo,
-        sparsematchfn=None,
-        istreestate=False,
-        istreedirstate=False,
+        opener,  # type: vfs.abstractvfs
+        ui,  # type: ui_mod.ui
+        root,  # type: str
+        validate,  # type: Callable[[bytes], bytes]
+        repo,  # type: edenscm.mercurial.localrepo.localrepository
+        istreestate=False,  # type: bool
+        istreedirstate=False,  # type: bool
     ):
+        # type: (...) -> None
         """Create a new dirstate object.
 
         opener is an open()-like callable that can be used to open the

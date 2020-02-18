@@ -14,11 +14,13 @@ from . import (
     eden_dirstate_fs,
     eden_dirstate_map,
     encoding,
+    localrepo,
     match as matchmod,
     perftrace,
     policy,
     pycompat,
     scmutil,
+    ui as ui_mod,
     util,
 )
 from .EdenThriftClient import ScmFileStatus
@@ -32,6 +34,7 @@ propertycache = util.propertycache
 
 class eden_dirstate(dirstate.dirstate):
     def __init__(self, repo, ui, root):
+        # type: (localrepo.localrepository, ui_mod.ui, str) -> None
         self.eden_client = thrift.EdenThriftClient(repo)
 
         # We should override any logic in dirstate that uses self._validate.
@@ -42,13 +45,7 @@ class eden_dirstate(dirstate.dirstate):
         except AttributeError:
             opener = repo.vfs
 
-        try:
-            super(eden_dirstate, self).__init__(opener, ui, root, validate, repo)
-        except TypeError:
-            sparsematchfn = None
-            super(eden_dirstate, self).__init__(
-                opener, ui, root, validate, repo, sparsematchfn
-            )
+        super(eden_dirstate, self).__init__(opener, ui, root, validate, repo)
 
         def create_eden_dirstate(ui, opener, root):
             return eden_dirstate_map.eden_dirstate_map(
