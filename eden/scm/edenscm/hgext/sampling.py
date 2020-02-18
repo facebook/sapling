@@ -14,11 +14,10 @@
 # - If the file cannot be created or accessed, fails silently
 #
 # The configuration details can be found in the documentation of ui.log below
-import json
 import os
 import weakref
 
-from edenscm.mercurial import encoding, localrepo, pycompat, registrar, util
+from edenscm.mercurial import encoding, json, localrepo, pycompat, registrar, util
 
 
 configtable = {}
