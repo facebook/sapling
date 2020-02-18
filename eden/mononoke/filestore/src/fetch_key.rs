@@ -41,7 +41,7 @@ impl From<hash::Sha256> for FetchKey {
 pub enum Alias {
     Sha1(hash::Sha1),
     Sha256(hash::Sha256),
-    GitSha1(hash::RichGitSha1),
+    GitSha1(hash::GitSha1),
 }
 
 impl Loadable for FetchKey {

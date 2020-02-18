@@ -168,7 +168,7 @@ pub fn execute_command(
                                 filestore::fetch(
                                     &blobstore,
                                     ctx.clone(),
-                                    &FetchKey::Aliased(GitSha1(metadata.git_sha1)),
+                                    &FetchKey::Aliased(GitSha1(metadata.git_sha1.sha1())),
                                 )
                                 .then(Ok),
                             )

@@ -406,6 +406,7 @@ macro_rules! impl_hash {
 
 impl_hash!(Sha256, 32, InvalidSha256Input);
 impl_hash!(Sha1, 20, InvalidSha1Input);
+impl_hash!(GitSha1, 20, InvalidGitSha1Input);
 
 /// Git-style content blob hashes. Same as SHA-1 but with "<type> NNNN\0" appended to the front,
 /// where <type> is the object type (blob, tree, etc), and NNNN is the blob size as a decimal
@@ -414,22 +415,26 @@ impl_hash!(Sha1, 20, InvalidSha1Input);
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
 #[derive(Serialize, Deserialize, HeapSizeOf)]
 pub struct RichGitSha1 {
-    sha1: Sha1,
+    sha1: GitSha1,
     ty: &'static str,
     size: u64,
 }
 
 impl RichGitSha1 {
     pub fn from_bytes(bytes: impl AsRef<[u8]>, ty: &'static str, size: u64) -> Result<Self> {
-        Ok(Self::from_sha1(Sha1::from_bytes(bytes)?, ty, size))
+        Ok(Self::from_sha1(GitSha1::from_bytes(bytes)?, ty, size))
     }
 
     pub const fn from_byte_array(bytes: [u8; 20], ty: &'static str, size: u64) -> Self {
-        Self::from_sha1(Sha1::from_byte_array(bytes), ty, size)
+        Self::from_sha1(GitSha1::from_byte_array(bytes), ty, size)
     }
 
-    pub const fn from_sha1(sha1: Sha1, ty: &'static str, size: u64) -> Self {
+    pub const fn from_sha1(sha1: GitSha1, ty: &'static str, size: u64) -> Self {
         RichGitSha1 { sha1, ty, size }
+    }
+
+    pub fn sha1(&self) -> GitSha1 {
+        self.sha1
     }
 
     pub fn ty(&self) -> &'static str {
@@ -473,6 +478,14 @@ impl Debug for RichGitSha1 {
 impl Display for RichGitSha1 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
         Display::fmt(&self.to_hex(), fmt)
+    }
+}
+
+impl Arbitrary for GitSha1 {
+    fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        let mut bytes = [0; 20];
+        g.fill_bytes(&mut bytes);
+        GitSha1(bytes)
     }
 }
 

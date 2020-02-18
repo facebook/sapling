@@ -219,7 +219,7 @@ fn file_content_metadata_step(
                     ),
                     OutgoingEdge::new(
                         EdgeType::FileContentMetadataToGitSha1Alias,
-                        Node::AliasContentMapping(Alias::GitSha1(metadata.git_sha1)),
+                        Node::AliasContentMapping(Alias::GitSha1(metadata.git_sha1.sha1())),
                     ),
                 ];
                 StepOutput(NodeData::FileContentMetadata(Some(metadata)), recurse)

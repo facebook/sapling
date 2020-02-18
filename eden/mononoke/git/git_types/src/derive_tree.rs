@@ -218,7 +218,7 @@ mod test {
             let blob = filestore::fetch(
                 &repo.get_blobstore(),
                 ctx.clone(),
-                &FetchKey::Aliased(Alias::GitSha1(*blob_handle.oid())),
+                &FetchKey::Aliased(Alias::GitSha1(blob_handle.oid().sha1())),
             )
             .compat()
             .await?

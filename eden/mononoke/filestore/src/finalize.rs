@@ -83,7 +83,7 @@ pub fn finalize<B: Blobstore + Clone>(
     let put_sha256 = AliasBlob(Alias::Sha256(sha256), alias.clone()).store(ctx.clone(), &blobstore);
 
     let put_git_sha1 =
-        AliasBlob(Alias::GitSha1(git_sha1), alias.clone()).store(ctx.clone(), &blobstore);
+        AliasBlob(Alias::GitSha1(git_sha1.sha1()), alias.clone()).store(ctx.clone(), &blobstore);
 
     let metadata = ContentMetadata {
         total_size,

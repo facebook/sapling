@@ -27,7 +27,7 @@ use crate::{
 };
 use cross_repo_sync_test_utils::init_small_large_repo;
 use mononoke_types::{
-    hash::{RichGitSha1, Sha1, Sha256},
+    hash::{GitSha1, RichGitSha1, Sha1, Sha256},
     MPath,
 };
 use slog::info;
@@ -506,7 +506,7 @@ fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
                 "47d741b6059c6d7e99be25ce46fb9ba099cfd6515de1ef7681f93479d25996a4",
             )?,
             git_sha1: RichGitSha1::from_sha1(
-                Sha1::from_str("ac3e272b72bbf89def8657766b855d0656630ed4")?,
+                GitSha1::from_str("ac3e272b72bbf89def8657766b855d0656630ed4")?,
                 "blob",
                 9,
             ),

@@ -54,7 +54,7 @@ fn check_consistency<B: Blobstore + Clone>(
         filestore::fetch(
             blobstore,
             ctx.clone(),
-            &FetchKey::Aliased(Alias::GitSha1(git_sha1)),
+            &FetchKey::Aliased(Alias::GitSha1(git_sha1.sha1())),
         ),
     ];
 

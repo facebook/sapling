@@ -176,7 +176,7 @@ fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
         filestore::fetch(
             &blob,
             ctx,
-            &FetchKey::Aliased(Alias::GitSha1(*HELLO_WORLD_GIT_SHA1)),
+            &FetchKey::Aliased(Alias::GitSha1(HELLO_WORLD_GIT_SHA1.sha1())),
         )
         .map(|maybe_str| maybe_str.map(|s| s.concat2()))
         .flatten(),
@@ -748,7 +748,7 @@ fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
     let res = rt.block_on(filestore::get_metadata(
         &blob,
         ctx.clone(),
-        &FetchKey::Aliased(Alias::GitSha1(*HELLO_WORLD_GIT_SHA1)),
+        &FetchKey::Aliased(Alias::GitSha1(HELLO_WORLD_GIT_SHA1.sha1())),
     ));
     println!("res = {:#?}", res);
     assert_eq!(res?, None);

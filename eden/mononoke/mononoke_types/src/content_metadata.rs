@@ -106,7 +106,7 @@ impl Arbitrary for ContentMetadata {
             content_id: ContentId::arbitrary(g),
             sha1: hash::Sha1::arbitrary(g),
             sha256: hash::Sha256::arbitrary(g),
-            git_sha1: hash::RichGitSha1::from_sha1(hash::Sha1::arbitrary(g), "blob", total_size),
+            git_sha1: hash::RichGitSha1::from_sha1(hash::GitSha1::arbitrary(g), "blob", total_size),
         }
     }
 }
