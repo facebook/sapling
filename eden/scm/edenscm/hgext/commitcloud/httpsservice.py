@@ -66,14 +66,14 @@ class HttpsCommitCloudService(baseservice.BaseService):
             raise ccerror.ConfigurationError(self.ui, _("'remote_host' is required"))
 
         if self.client_certs and not os.path.isfile(self.client_certs):
-            raise ccerror.ConfigurationError(
+            raise ccerror.TLSConfigurationError(
                 ui,
                 _("tls.ca_certs resolved to '%s' (no such file or is a directory)")
                 % self.client_certs,
             )
 
         if self.ca_certs and not os.path.isfile(self.ca_certs):
-            raise ccerror.ConfigurationError(
+            raise ccerror.TLSConfigurationError(
                 ui,
                 _("tls.ca_certs resolved to '%s' (no such file or is a directory)")
                 % self.ca_certs,

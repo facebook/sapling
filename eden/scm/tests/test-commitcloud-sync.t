@@ -73,9 +73,8 @@ Registration:
   $ hg cloud auth -t xxxxxx
   setting authentication token
   authentication successful
-  $ hg cloud auth -t xxxxxx --config "commitcloud.user_token_path=$TESTTMP/somedir" --config help.commitcloud-config-remediate="(please try foo bar to recover)"
+  $ hg cloud auth -t xxxxxx --config "commitcloud.user_token_path=$TESTTMP/somedir"
   abort: commitcloud: config error: invalid commitcloud.user_token_path '$TESTTMP/somedir'
-  (please try foo bar to recover)
   [255]
 Joining:
   $ hg cloud sync
