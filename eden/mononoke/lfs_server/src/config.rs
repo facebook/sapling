@@ -13,6 +13,7 @@ pub struct Limit {
     pub counter: String,
     pub limit: i64,
     pub sleep_ms: i64,
+    pub max_jitter_ms: i64,
 }
 
 /// Struct representing actual config data.

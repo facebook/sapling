@@ -11,6 +11,7 @@ use futures::future::Future;
 use futures_ext::FutureExt;
 use gotham::{handler::HandlerFuture, middleware::Middleware, state::State};
 use gotham_derive::NewMiddleware;
+use rand::Rng;
 use stats_facebook::service_data::{get_service_data_singleton, ServiceData, ServiceDataWrapper};
 use std::convert::TryInto;
 use std::time::Duration;
@@ -49,8 +50,18 @@ impl Middleware for ThrottleMiddleware {
         for limit in self.handle.get().throttle_limits.iter() {
             if let Some(err) = is_limit_exceeded(&service_data, &limit.counter, limit.limit) {
                 let err = HttpError::e429(err);
+
                 let sleep_ms: u64 = limit.sleep_ms.try_into().unwrap_or(0);
-                return tokio_timer::sleep(Duration::from_millis(sleep_ms))
+                let max_jitter_ms: u64 = limit.max_jitter_ms.try_into().unwrap_or(0);
+                let mut jitter: u64 = 0;
+
+                if max_jitter_ms > 0 {
+                    jitter = rand::thread_rng().gen_range(0, max_jitter_ms);
+                }
+
+                let total_sleep_ms = sleep_ms + jitter;
+
+                return tokio_timer::sleep(Duration::from_millis(total_sleep_ms))
                     .then(move |_| http_error_to_handler_error(err, state))
                     .boxify();
             }

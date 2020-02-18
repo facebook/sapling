@@ -16,7 +16,7 @@
   >   "enable_consistent_routing": false,
   >   "disable_hostname_logging": false,
   >   "throttle_limits": [
-  >     {"counter": "mononoke.lfs.download.size_bytes_sent.sum.5", "limit": 10, "sleep_ms": 1000 }
+  >     {"counter": "mononoke.lfs.download.size_bytes_sent.sum.5", "limit": 10, "sleep_ms": 1000, "max_jitter_ms": 100 }
   >   ],
   >   "acl_check": true,
   >   "enforce_acl_check": false
