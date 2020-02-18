@@ -38,7 +38,7 @@ use repo_client::gettreepack_entries;
 use slog::{debug, Logger};
 use sql_ext::MysqlOptions;
 use time_ext::DurationExt;
-use unodes::{derive_unodes, RootUnodeManifestId};
+use unodes::RootUnodeManifestId;
 
 use mercurial_types::{
     blobs::{HgBlobChangeset, HgBlobEntry},
@@ -55,7 +55,7 @@ use types::{
     api::{DataRequest, DataResponse, HistoryRequest, HistoryResponse, TreeRequest},
     DataEntry, Key, RepoPathBuf, WireHistoryEntry,
 };
-use warm_bookmarks_cache::{warm_hg_changeset, WarmBookmarksCache};
+use warm_bookmarks_cache::WarmBookmarksCache;
 
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
 use reachabilityindex::ReachabilityIndex;
@@ -159,11 +159,7 @@ impl MononokeRepo {
             config.derived_data_config,
         ))
         .map(move |(synced_commit_mapping, repo)| {
-            let warm_bookmarks_cache = WarmBookmarksCache::new(
-                ctx.clone(),
-                repo.clone(),
-                vec![Box::new(&warm_hg_changeset), Box::new(&derive_unodes)],
-            );
+            let warm_bookmarks_cache = WarmBookmarksCache::new(ctx.clone(), repo.clone());
 
             let skiplist_index = {
                 if !with_skiplist {

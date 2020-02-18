@@ -13,7 +13,6 @@ use std::{
 
 use aclchecker::AclChecker;
 use anyhow::{bail, format_err, Error};
-use blame::{derive_blame, BlameRoot};
 use blobrepo::BlobRepo;
 use blobrepo_factory::{open_blobrepo, BlobstoreOptions, Caching, ReadOnlyStorage};
 use blobstore::Loadable;
@@ -21,10 +20,8 @@ use blobstore_factory::make_sql_factory;
 use bookmarks::{BookmarkName, BookmarkPrefix};
 use context::CoreContext;
 use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
-use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
-use fsnodes::{derive_fsnodes, RootFsnodeId};
 use futures::stream::{self, Stream};
 use futures_ext::StreamExt;
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
@@ -48,8 +45,7 @@ use sql_ext::MysqlOptions;
 use sql_ext::SqlConstructors;
 use stats_facebook::service_data::{get_service_data_singleton, ServiceData};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
-use unodes::{derive_unodes, RootUnodeManifestId};
-use warm_bookmarks_cache::{warm_hg_changeset, WarmBookmarksCache, WarmerFn};
+use warm_bookmarks_cache::WarmBookmarksCache;
 
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
@@ -185,20 +181,8 @@ impl Repo {
         )
         .compat();
 
-        let derived_data_types = &blob_repo.get_derived_data_config().derived_data_types;
-        let mut derivers: Vec<Box<WarmerFn>> = Vec::new();
-        derivers.push(Box::new(&warm_hg_changeset));
-        if derived_data_types.contains(RootUnodeManifestId::NAME) {
-            derivers.push(Box::new(&derive_unodes));
-        }
-        if derived_data_types.contains(RootFsnodeId::NAME) {
-            derivers.push(Box::new(&derive_fsnodes));
-        }
-        if derived_data_types.contains(BlameRoot::NAME) {
-            derivers.push(Box::new(&derive_blame));
-        }
         let warm_bookmarks_cache = Arc::new(
-            WarmBookmarksCache::new(ctx.clone(), blob_repo.clone(), derivers)
+            WarmBookmarksCache::new(ctx.clone(), blob_repo.clone())
                 .compat()
                 .await?,
         );
@@ -281,17 +265,9 @@ impl Repo {
         synced_commit_mapping: Arc<dyn SyncedCommitMapping>,
     ) -> Result<Self, Error> {
         let warm_bookmarks_cache = Arc::new(
-            WarmBookmarksCache::new(
-                ctx.clone(),
-                blob_repo.clone(),
-                vec![
-                    Box::new(&warm_hg_changeset),
-                    Box::new(&derive_unodes),
-                    Box::new(&derive_blame),
-                ],
-            )
-            .compat()
-            .await?,
+            WarmBookmarksCache::new(ctx.clone(), blob_repo.clone())
+                .compat()
+                .await?,
         );
         Ok(Self {
             name: String::from("test"),

@@ -12,10 +12,13 @@ use std::sync::{Arc, RwLock};
 use std::time::{Duration, Instant};
 
 use anyhow::Error;
+use blame::{derive_blame, BlameRoot};
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
+use derived_data::BonsaiDerived;
+use fsnodes::{derive_fsnodes, RootFsnodeId};
 use futures::{future, stream, sync, Future, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt};
 use futures_stats::Timed;
@@ -24,6 +27,7 @@ use mononoke_types::ChangesetId;
 use slog::info;
 use stats::prelude::*;
 use time_ext::DurationExt;
+use unodes::{derive_unodes, RootUnodeManifestId};
 
 define_stats! {
     prefix = "mononoke.bookmarks.warm_bookmarks_cache";
@@ -39,11 +43,26 @@ pub type WarmerFn =
     dyn Fn(CoreContext, BlobRepo, ChangesetId) -> BoxFuture<(), Error> + Send + Sync + 'static;
 
 impl WarmBookmarksCache {
-    pub fn new(
-        ctx: CoreContext,
-        repo: BlobRepo,
-        warmers: Vec<Box<WarmerFn>>,
-    ) -> impl Future<Item = Self, Error = Error> {
+    pub fn new(ctx: CoreContext, repo: BlobRepo) -> impl Future<Item = Self, Error = Error> {
+        let derived_data_types = &repo.get_derived_data_config().derived_data_types;
+        let mut warmers: Vec<Box<WarmerFn>> = Vec::new();
+
+        info!(ctx.logger(), "Warming hg changesets");
+        warmers.push(Box::new(&warm_hg_changeset));
+
+        if derived_data_types.contains(RootUnodeManifestId::NAME) {
+            info!(ctx.logger(), "Warming {}", RootUnodeManifestId::NAME);
+            warmers.push(Box::new(&derive_unodes));
+        }
+        if derived_data_types.contains(RootFsnodeId::NAME) {
+            info!(ctx.logger(), "Warming {}", RootFsnodeId::NAME);
+            warmers.push(Box::new(&derive_fsnodes));
+        }
+        if derived_data_types.contains(BlameRoot::NAME) {
+            info!(ctx.logger(), "Warming {}", BlameRoot::NAME);
+            warmers.push(Box::new(&derive_blame));
+        }
+
         let warmers = Arc::new(warmers);
         let bookmarks = Arc::new(RwLock::new(HashMap::new()));
         let (sender, receiver) = sync::oneshot::channel();
