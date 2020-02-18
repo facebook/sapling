@@ -28,6 +28,7 @@ Make some commits
 When everything looks okay:
 
   $ hg doctor
+  checking internal storage
   mutation: looks okay
   metalog: looks okay
   allheads: looks okay
@@ -51,6 +52,7 @@ Check the repo is broken (exit code is non-zero):
 Test that 'hg doctor' can fix them:
 
   $ hg doctor
+  checking internal storage
   mutation: repaired
   metalog: repaired
   allheads: repaired

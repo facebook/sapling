@@ -11,7 +11,7 @@ import typing
 
 from bindings import metalog, mutationstore, nodemap, revisionstore, tracing
 
-from .. import error, hg, progress, util, vfs as vfsmod
+from .. import hg, progress, util, vfs as vfsmod
 from ..i18n import _
 from .cmdtable import command
 
@@ -32,12 +32,14 @@ def doctor(ui, **opts):
     # a real repo object.
     repopath, ui = dispatch._getlocal(ui, "")
     if not repopath:
-        raise error.Abort(_("doctor only works inside a repo"))
+        runedenfsdoctor(ui)
+        return
     repohgpath = os.path.join(repopath, ".hg")
     vfs = vfsmod.vfs(repohgpath)
     sharedhgpath = vfs.tryread("sharedpath") or repohgpath
     svfs = vfsmod.vfs(os.path.join(sharedhgpath, "store"))
 
+    ui.write(_("checking internal storage\n"))
     if ui.configbool("mutation", "enabled"):
         repairsvfs(ui, svfs, "mutation", mutationstore.mutationstore)
 
@@ -69,6 +71,10 @@ def doctor(ui, **opts):
                 path,
                 revisionstore.indexedloghistorystore.repair,
             )
+
+    # Run eden doctor on an edenfs repo.
+    if "eden" in repo.requirements:
+        runedenfsdoctor(ui)
 
 
 def repairsvfs(ui, svfs, name, fixobj):
@@ -117,3 +123,8 @@ def mtime(path):
 def indent(message):
     # type: (str) -> str
     return "".join(l and ("  %s" % l) or "\n" for l in message.splitlines(True)) + "\n"
+
+
+def runedenfsdoctor(ui):
+    ui.write(_("running 'edenfsctl doctor'\n"))
+    os.system("edenfsctl doctor")
