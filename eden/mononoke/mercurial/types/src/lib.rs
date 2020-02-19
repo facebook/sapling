@@ -100,15 +100,3 @@ mod thrift {
     pub use mercurial_thrift::*;
     pub use mononoke_types_thrift::*;
 }
-
-impl asyncmemo::Weight for HgChangesetId {
-    fn get_weight(&self) -> usize {
-        std::mem::size_of::<HgChangesetId>()
-    }
-}
-
-impl asyncmemo::Weight for HgFileNodeId {
-    fn get_weight(&self) -> usize {
-        std::mem::size_of::<HgFileNodeId>()
-    }
-}

@@ -16,7 +16,6 @@ use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use thiserror::Error;
 
-use asyncmemo::Weight;
 use context::CoreContext;
 
 mod counted_blobstore;
@@ -56,13 +55,6 @@ impl BlobstoreBytes {
     #[inline]
     pub fn as_bytes(&self) -> &Bytes {
         &self.0
-    }
-}
-
-impl Weight for BlobstoreBytes {
-    #[inline]
-    fn get_weight(&self) -> usize {
-        self.len()
     }
 }
 

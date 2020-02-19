@@ -52,12 +52,6 @@ impl RepositoryId {
     }
 }
 
-impl asyncmemo::Weight for RepositoryId {
-    fn get_weight(&self) -> usize {
-        std::mem::size_of::<RepositoryId>()
-    }
-}
-
 impl fmt::Display for RepositoryId {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(f, "{}", self.0)

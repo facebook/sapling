@@ -201,12 +201,6 @@ macro_rules! impl_typed_hash_no_context {
             }
         }
 
-        impl asyncmemo::Weight for $typed {
-            fn get_weight(&self) -> usize {
-                ::std::mem::size_of::<Blake2>()
-            }
-        }
-
         impl AsRef<[u8]> for $typed {
             fn as_ref(&self) -> &[u8] {
                 self.0.as_ref()

@@ -5,10 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use std::mem;
 use std::{u64, usize};
 
-use asyncmemo::Weight;
 use heapsize_derive::HeapSizeOf;
 use serde_derive::Serialize;
 
@@ -20,12 +18,6 @@ use serde_derive::Serialize;
     Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, HeapSizeOf, Serialize
 )]
 pub struct Generation(u64);
-
-impl Weight for Generation {
-    fn get_weight(&self) -> usize {
-        mem::size_of::<Self>()
-    }
-}
 
 impl Generation {
     /// Creates new generation number

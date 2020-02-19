@@ -12,12 +12,10 @@ use std::convert::{From, TryFrom, TryInto};
 use std::fmt::{self, Display};
 use std::io::{self, Write};
 use std::iter::{once, FromIterator, Once};
-use std::mem;
 use std::slice::Iter;
 
 use abomonation_derive::Abomonation;
 use anyhow::{bail, Error, Result};
-use asyncmemo::Weight;
 use bytes::Bytes;
 use failure_ext::chain::ChainExt;
 use heapsize::HeapSizeOf;
@@ -31,12 +29,6 @@ use crate::bonsai_changeset::BonsaiChangeset;
 use crate::errors::ErrorKind;
 use crate::hash::{Blake2, Context};
 use crate::thrift;
-
-impl Weight for RepoPath {
-    fn get_weight(&self) -> usize {
-        self.heap_size_of_children() + mem::size_of::<Self>()
-    }
-}
 
 /// A path or filename within Mononoke, with information about whether
 /// it's the root of the repo, a directory or a file.
