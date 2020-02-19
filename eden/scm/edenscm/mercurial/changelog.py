@@ -348,6 +348,8 @@ class changelog(revlog.revlog):
         """filtered version of revlog.tip"""
         for i in range(len(self) - 1, -2, -1):
             if i not in self.filteredrevs:
+                # pyre-fixme[7]: Expected `bytes` but got implicit return value of
+                #  `None`.
                 return self.node(i)
 
     def __contains__(self, rev):

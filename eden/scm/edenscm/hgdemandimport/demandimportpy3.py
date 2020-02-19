@@ -46,8 +46,6 @@ class _lazyloaderex(importlib.util.LazyLoader):
     the ignore list.
     """
 
-    # pyre-fixme[15]: `exec_module` overrides method defined in `LazyLoader`
-    #  inconsistently.
     def exec_module(self, module):
         """Make the module load lazily."""
         if _deactivated or module.__name__ in ignore:

@@ -36,7 +36,6 @@ class STARTTLS(smtplib.SMTP):
         self._ui = ui
         self._host = host
 
-    # pyre-fixme[15]: `starttls` overrides method defined in `SMTP` inconsistently.
     def starttls(self, keyfile=None, certfile=None):
         if not self.has_extn("starttls"):
             msg = "STARTTLS extension not supported by server"

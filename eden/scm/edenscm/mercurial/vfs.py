@@ -400,6 +400,8 @@ class abstractvfs(pycompat.ABC):
         with backgroundfilecloser(ui, expectedcount=expectedcount) as bfc:
             try:
                 vfs._backgroundfilecloser = bfc
+                # pyre-fixme[7]: Expected `ContextManager[backgroundfilecloser]` but
+                #  got `Generator[typing.Any, None, None]`.
                 yield bfc
             finally:
                 vfs._backgroundfilecloser = None

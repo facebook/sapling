@@ -335,8 +335,6 @@ class SnapshotTestBase(
             self.fail("\n".join(errors))
 
 
-# pyre-fixme[13]: Attribute `snapshot` is never initialized.
-# pyre-fixme[13]: Attribute `tmp_dir` is never initialized.
 class Basic20181121Test(SnapshotTestBase):
     def get_snapshot_path(self) -> Path:
         return Path("eden/test-data/snapshots/basic-20181121.tar.xz")
@@ -594,8 +592,6 @@ class Basic20181121Test(SnapshotTestBase):
     # TODO: replace untracked file with dir
 
 
-# pyre-fixme[13]: Attribute `snapshot` is never initialized.
-# pyre-fixme[13]: Attribute `tmp_dir` is never initialized.
 class Basic20190313Test(SnapshotTestBase):
     def get_snapshot_path(self) -> Path:
         return Path("eden/test-data/snapshots/basic-20190313.tar.xz")

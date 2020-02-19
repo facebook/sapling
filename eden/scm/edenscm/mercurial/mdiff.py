@@ -483,6 +483,8 @@ def _unidiff(t1, t2, opts=defaultopts):
             else:
                 if not has_hunks:
                     has_hunks = True
+                    # pyre-fixme[7]: Expected `Iterator[Tuple[Tuple[int, int, int,
+                    #  int], List[bytes]]]` but got `Generator[bool, None, None]`.
                     yield True
                 for x in yieldhunk(hunk):
                     yield x
@@ -502,10 +504,14 @@ def _unidiff(t1, t2, opts=defaultopts):
     if hunk:
         if not has_hunks:
             has_hunks = True
+            # pyre-fixme[7]: Expected `Iterator[Tuple[Tuple[int, int, int, int],
+            #  List[bytes]]]` but got `Generator[bool, None, None]`.
             yield True
         for x in yieldhunk(hunk):
             yield x
     elif not has_hunks:
+        # pyre-fixme[7]: Expected `Iterator[Tuple[Tuple[int, int, int, int],
+        #  List[bytes]]]` but got `Generator[bool, None, None]`.
         yield False
 
 
