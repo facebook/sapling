@@ -40,12 +40,12 @@ use mononoke_api::Mononoke;
 use secure_utils::SslConfig;
 
 mod context;
+mod handlers;
 mod middleware;
-mod router;
 
 use crate::context::EdenApiServerContext;
+use crate::handlers::build_router;
 use crate::middleware::RequestContextMiddleware;
-use crate::router::build_router;
 
 const ARG_LISTEN_HOST: &str = "listen-host";
 const ARG_LISTEN_PORT: &str = "listen-port";
