@@ -28,7 +28,6 @@ from __future__ import absolute_import
 
 import sre_constants
 
-# pyre-fixme[21]: Could not find `edenscmnative`.
 from edenscmnative import _re2
 
 

@@ -1370,6 +1370,7 @@ def fscasesensitive(path):
 try:
     from .thirdparty import pyre2 as re2
 
+    # pyre-fixme[16]: Module `edenscm.mercurial.thirdparty` has no attribute `pyre2`.
     re2._re2.escape  # the C module might be missing
     _re2 = None
 except ImportError:
