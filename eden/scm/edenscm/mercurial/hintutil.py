@@ -28,7 +28,7 @@ hinttable = {
         "Check fburl.com/why-no-named-branches for details."
     ),
     "revnum-deprecate": lambda rev: _(
-        "Local revision numbers (ex. %s) are being deprecated and will stop working by the end of 2019. "
+        "Local revision numbers (ex. %s) are being deprecated and will stop working in the future. "
         "Please use commit hashes instead."
     )
     % rev,
