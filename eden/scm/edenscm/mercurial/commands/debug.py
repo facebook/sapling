@@ -857,7 +857,7 @@ def debugstate(ui, repo, **opts):
         if opts.get("json"):
             data = {}
             for path, dirstate_tuple in repo.dirstate.edeniteritems():
-                status, mode, merge_state = dirstate_tuple
+                status, mode, merge_state, _dummymtime = dirstate_tuple
                 data[path] = {
                     "status": status,
                     "mode": mode,
@@ -870,7 +870,7 @@ def debugstate(ui, repo, **opts):
             return
 
         for path, dirstate_tuple in sorted(pycompat.iteritems(repo.dirstate._map._map)):
-            status, mode, merge_state = dirstate_tuple
+            status, mode, merge_state, _dummymtime = dirstate_tuple
             if mode & 0o20000:
                 display_mode = "lnk"
             else:

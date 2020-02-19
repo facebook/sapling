@@ -10,7 +10,7 @@ import stat
 
 import eden.dirstate as eden_dirstate_serializer
 
-from . import dirstate, pycompat, util
+from . import dirstate, policy, pycompat, util
 
 
 MERGE_STATE_NOT_APPLICABLE = eden_dirstate_serializer.MERGE_STATE_NOT_APPLICABLE
@@ -25,13 +25,13 @@ modefromflag = {
     "t": stat.S_IFDIR | 0o755,
 }
 
+parsers = policy.importmod(r"parsers")
+
 
 class eden_dirstate_map(dirstate.dirstatemap):
     def __init__(self, ui, opener, root, thrift_client, repo):
         # type(eden_dirstate_map, ui, opener, str, EdenThriftClient) -> None
         super(eden_dirstate_map, self).__init__(ui, opener, root)
-        # Unlike the default self._map, our values in self._map are tuples of
-        # the form: (status: char, mode: uint32, merge_state: int8).
         self._thrift_client = thrift_client
         self._repo = repo
 
@@ -39,16 +39,13 @@ class eden_dirstate_map(dirstate.dirstatemap):
         # type(eden_dirstate_map, IO[str], float)
         parents = self.parents()
 
-        # Remove all "clean" entries before writing. (It's possible we should
+        # Filter out all "clean" entries when writing. (It's possible we should
         # never allow these to be inserted into self._map in the first place.)
-        to_remove = []
-        for path, v in pycompat.iteritems(self._map):
-            if v[0] == "n" and v[2] == MERGE_STATE_NOT_APPLICABLE:
-                to_remove.append(path)
-        for path in to_remove:
-            self._map.pop(path)
-
-        m = {pycompat.encodeutf8(k): v for k, v in self._map.items()}
+        m = {
+            pycompat.encodeutf8(k): (v[0], v[1], v[2])
+            for k, v in self._map.items()
+            if not (v[0] == "n" and v[2] == MERGE_STATE_NOT_APPLICABLE)
+        }
         eden_dirstate_serializer.write(file, parents, m, self.copymap)
         file.close()
 
@@ -82,7 +79,10 @@ class eden_dirstate_map(dirstate.dirstatemap):
 
         if not self._dirtyparents:
             self.setparents(*parents)
-        self._map = dirstate_tuples
+        self._map = {
+            n: parsers.dirstatetuple(v[0], v[1], v[2], DUMMY_MTIME)
+            for n, v in dirstate_tuples.items()
+        }
         self.copymap = copymap
 
     def iteritems(self):
@@ -112,15 +112,14 @@ class eden_dirstate_map(dirstate.dirstatemap):
         # type(str) -> parsers.dirstatetuple
         entry = self._map.get(filename)
         if entry is not None:
-            status, mode, merge_state = entry
-            return (status, mode, merge_state, DUMMY_MTIME)
+            return entry
 
         # edenfs only tracks one parent
         commitctx = self._repo["."]
         node, flag = commitctx._fileinfo(filename)
 
         mode = modefromflag[flag]
-        return ["n", mode, MERGE_STATE_NOT_APPLICABLE, DUMMY_MTIME]
+        return parsers.dirstatetuple("n", mode, MERGE_STATE_NOT_APPLICABLE, DUMMY_MTIME)
 
     def hastrackeddir(self, d):  # override
         # TODO(mbolin): Unclear whether it is safe to hardcode this to False.
@@ -136,7 +135,9 @@ class eden_dirstate_map(dirstate.dirstatemap):
         else:
             merge_state = size
 
-        self._map[filename] = (state, mode, merge_state)
+        self._map[filename] = parsers.dirstatetuple(
+            state, mode, merge_state, DUMMY_MTIME
+        )
 
     def nonnormalentries(self):
         """Returns a set of filenames."""
