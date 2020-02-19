@@ -760,6 +760,7 @@ void EdenServer::performCleanup() {
   while (!shutdownFuture.isReady()) {
     mainEventBase_->loopOnce();
   }
+#ifndef _WIN32
   std::move(shutdownFuture)
       .thenTry([shutdown,
                 takeover,
@@ -771,6 +772,9 @@ void EdenServer::performCleanup() {
             shutdownTimeInSeconds, takeover, !result.hasException()});
       })
       .get();
+#else
+  std::move(shutdownFuture).get();
+#endif
 
   // Explicitly close the LocalStore
   // Since we have a shared_ptr to it, other parts of the code can theoretically
