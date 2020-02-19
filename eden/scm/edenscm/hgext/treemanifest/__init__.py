@@ -483,11 +483,15 @@ def wraprepo(repo):
             # If any draft commits were added, prefetch their public parents.
             # Note that shelve could've produced a hidden commit, so
             # we need an unfiltered repo to evaluate the revset
-            revset = "parents(%ld & draft() - hidden()) & public()"
-            draftparents = list(self.unfiltered().set(revset, revs))
+            try:
+                revset = "parents(%ld & draft() - hidden()) & public()"
+                draftparents = list(self.unfiltered().set(revset, revs))
 
-            if draftparents:
-                self.prefetchtrees([c.manifestnode() for c in draftparents])
+                if draftparents:
+                    self.prefetchtrees([c.manifestnode() for c in draftparents])
+            except Exception as ex:
+                # Errors are not fatal.
+                self.ui.warn(_("not prefetching trees for draft parents: %s\n") % ex)
 
         @perftrace.tracefunc("Prefetch Trees")
         def prefetchtrees(self, mfnodes, basemfnodes=None, depth=None):
