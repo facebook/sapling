@@ -1,7 +1,9 @@
 [workspace]
 
 members = [
+    "blobstore",
     "common/scuba_ext",
+    "server/context",
     "server/session_id",
     "sshrelay",
 ]

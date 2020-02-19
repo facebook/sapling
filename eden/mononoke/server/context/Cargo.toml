@@ -1,0 +1,29 @@
+[package]
+name = "context"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["benchmark/**/*.rs", "src/**/*.rs"]
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "benchmark"
+path = "benchmark/main.rs"
+
+[dependencies]
+scuba_ext = { path = "../../common/scuba_ext" }
+session_id = { path = "../session_id" }
+sshrelay = { path = "../../sshrelay" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+chrono = { version="0.4", features=["serde"] }
+futures = "0.1" # todo: rename to "futures-old"
+rand = { version = "0.7", features = ["small_rng"] }
+serde_json = "1.0"
+slog = { version="2.5", features=["max_level_debug"] }

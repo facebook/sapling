@@ -96,8 +96,8 @@ impl CoreContext {
     }
 
     #[cfg(not(fbcode_build))]
-    pub fn trace_upload(&self) -> impl Future<Item = (), Error = ::anyhow::Error> {
-        future::ok(())
+    pub fn trace_upload(&self) -> impl ::futures::Future<Item = (), Error = ::anyhow::Error> {
+        ::futures::future::ok(())
     }
 
     pub fn session(&self) -> &SessionContainer {
