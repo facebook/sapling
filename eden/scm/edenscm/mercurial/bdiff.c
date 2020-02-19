@@ -20,9 +20,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "bdiff.h"
-#include "bitmanipulation.h"
-#include "compat.h"
+#include "eden/scm/edenscm/mercurial/bdiff.h"
+#include "eden/scm/edenscm/mercurial/bitmanipulation.h"
+#include "eden/scm/edenscm/mercurial/compat.h"
 
 /* Hash implementation from diffutils */
 #define ROL(v, n) ((v) << (n) | (v) >> (sizeof(v) * CHAR_BIT - (n)))

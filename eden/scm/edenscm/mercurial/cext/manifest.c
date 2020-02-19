@@ -20,8 +20,8 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "charencode.h"
-#include "util.h"
+#include "eden/scm/edenscm/mercurial/cext/charencode.h"
+#include "eden/scm/edenscm/mercurial/cext/util.h"
 
 #define DEFAULT_LINES 100000
 

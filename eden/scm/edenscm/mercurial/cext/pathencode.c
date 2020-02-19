@@ -29,7 +29,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "util.h"
+#include "eden/scm/edenscm/mercurial/cext/util.h"
 
 /* state machine for the fast path */
 enum path_state {

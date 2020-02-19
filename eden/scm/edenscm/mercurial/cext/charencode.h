@@ -18,7 +18,7 @@
 #define _HG_CHARENCODE_H_
 
 #include <Python.h>
-#include "edenscm/mercurial/compat.h"
+#include "eden/scm/edenscm/mercurial/compat.h"
 
 /* This should be kept in sync with normcasespecs in encoding.py. */
 enum normcase_spec {

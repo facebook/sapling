@@ -19,7 +19,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-#include "util.h"
+#include "eden/scm/edenscm/mercurial/cext/util.h"
 
 static const char b85chars[] =
     "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ"

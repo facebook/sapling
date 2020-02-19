@@ -8,6 +8,6 @@
 fn main() {
     cc::Build::new()
         .file("../../edenscm/mercurial/mpatch.c")
-        .include("../../")
+        .include("../../../../")
         .compile("mpatch");
 }

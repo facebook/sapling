@@ -17,7 +17,7 @@
 
 #include <string.h>
 
-#include "compat.h"
+#include "eden/scm/edenscm/mercurial/compat.h"
 
 #if defined(_MSC_VER)
 /* Windows only supports little-endian platforms */

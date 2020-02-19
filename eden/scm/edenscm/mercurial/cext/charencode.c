@@ -18,9 +18,9 @@
 #include <Python.h>
 #include <assert.h>
 
-#include "charencode.h"
-#include "edenscm/mercurial/compat.h"
-#include "util.h"
+#include "eden/scm/edenscm/mercurial/cext/charencode.h"
+#include "eden/scm/edenscm/mercurial/cext/util.h"
+#include "eden/scm/edenscm/mercurial/compat.h"
 
 #ifdef IS_PY3K
 /* The mapping of Python types is meant to be temporary to get Python

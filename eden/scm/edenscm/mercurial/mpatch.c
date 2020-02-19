@@ -30,9 +30,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "bitmanipulation.h"
-#include "compat.h"
-#include "mpatch.h"
+#include "eden/scm/edenscm/mercurial/bitmanipulation.h"
+#include "eden/scm/edenscm/mercurial/compat.h"
+#include "eden/scm/edenscm/mercurial/mpatch.h"
 
 static struct mpatch_flist* lalloc(ssize_t size) {
   struct mpatch_flist* a = NULL;

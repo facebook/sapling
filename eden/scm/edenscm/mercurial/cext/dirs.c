@@ -17,7 +17,7 @@
 #define PY_SSIZE_T_CLEAN
 #include <Python.h>
 
-#include "util.h"
+#include "eden/scm/edenscm/mercurial/cext/util.h"
 
 #ifdef IS_PY3K
 #define PYLONG_VALUE(o) ((PyLongObject*)o)->ob_digit[1]

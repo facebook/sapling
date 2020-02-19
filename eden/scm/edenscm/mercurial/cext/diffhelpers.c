@@ -18,7 +18,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "util.h"
+#include "eden/scm/edenscm/mercurial/cext/util.h"
 
 static char diffhelpers_doc[] = "Efficient diff parsing";
 static PyObject* diffhelpers_Error;

@@ -17,7 +17,7 @@
 #define MPATCH_ERR_NO_MEM -3
 #define MPATCH_ERR_CANNOT_BE_DECODED -2
 #define MPATCH_ERR_INVALID_PATCH -1
-#include "edenscm/mercurial/compat.h"
+#include "eden/scm/edenscm/mercurial/compat.h"
 
 struct mpatch_frag {
   int start, end, len;

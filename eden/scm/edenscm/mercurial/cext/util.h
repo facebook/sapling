@@ -17,7 +17,7 @@
 #ifndef _HG_UTIL_H_
 #define _HG_UTIL_H_
 
-#include "edenscm/mercurial/compat.h"
+#include "eden/scm/edenscm/mercurial/compat.h"
 
 #if PY_MAJOR_VERSION >= 3
 #define IS_PY3K

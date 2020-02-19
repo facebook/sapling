@@ -48,7 +48,7 @@
 #include <sys/vnode.h>
 #endif
 
-#include "util.h"
+#include "eden/scm/edenscm/mercurial/cext/util.h"
 
 /* some platforms lack the PATH_MAX definition (eg. GNU/Hurd) */
 #ifndef PATH_MAX

@@ -15,7 +15,7 @@
 #ifndef _HG_BDIFF_H_
 #define _HG_BDIFF_H_
 
-#include "compat.h"
+#include "eden/scm/edenscm/mercurial/compat.h"
 
 struct bdiff_line {
   int hash, n, e;

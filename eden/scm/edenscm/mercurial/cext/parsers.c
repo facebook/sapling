@@ -20,9 +20,9 @@
 #include <stddef.h>
 #include <string.h>
 
-#include "edenscm/mercurial/bitmanipulation.h"
-#include "edenscm/mercurial/cext/charencode.h"
-#include "edenscm/mercurial/cext/util.h"
+#include "eden/scm/edenscm/mercurial/bitmanipulation.h"
+#include "eden/scm/edenscm/mercurial/cext/charencode.h"
+#include "eden/scm/edenscm/mercurial/cext/util.h"
 
 #ifdef IS_PY3K
 /* The mapping of Python types is meant to be temporary to get Python

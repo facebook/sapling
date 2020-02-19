@@ -22,9 +22,9 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "edenscm/mercurial/bdiff.h"
-#include "edenscm/mercurial/bitmanipulation.h"
-#include "util.h"
+#include "eden/scm/edenscm/mercurial/bdiff.h"
+#include "eden/scm/edenscm/mercurial/bitmanipulation.h"
+#include "eden/scm/edenscm/mercurial/cext/util.h"
 
 static PyObject* blocks(PyObject* self, PyObject* args) {
   PyObject *sa, *sb, *rl = NULL, *m;

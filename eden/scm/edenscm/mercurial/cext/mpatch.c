@@ -32,10 +32,10 @@
 #include <stdlib.h>
 #include <string.h>
 
-#include "edenscm/mercurial/bitmanipulation.h"
-#include "edenscm/mercurial/compat.h"
-#include "edenscm/mercurial/mpatch.h"
-#include "util.h"
+#include "eden/scm/edenscm/mercurial/bitmanipulation.h"
+#include "eden/scm/edenscm/mercurial/cext/util.h"
+#include "eden/scm/edenscm/mercurial/compat.h"
+#include "eden/scm/edenscm/mercurial/mpatch.h"
 
 static char mpatch_doc[] = "Efficient binary patching.";
 static PyObject* mpatch_Error;

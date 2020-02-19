@@ -1325,7 +1325,7 @@ if include_dirs is None:
         include_dirs = filter_existing_dirs(
             ["/usr/local/include", "/opt/local/include", "/opt/homebrew/include/"]
         )
-include_dirs = ["."] + include_dirs
+include_dirs = [".", "../.."] + include_dirs
 
 library_dirs = get_env_path_list("LIBRARY_DIRS")
 if library_dirs is None:

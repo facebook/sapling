@@ -15,7 +15,7 @@
 #include <memory>
 
 extern "C" {
-#include "edenscm/mercurial/mpatch.h"
+#include "eden/scm/edenscm/mercurial/mpatch.h"
 }
 
 UnionDatapackStore::UnionDatapackStore() {}
