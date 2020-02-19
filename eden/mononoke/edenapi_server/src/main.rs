@@ -40,9 +40,11 @@ use mononoke_api::Mononoke;
 use secure_utils::SslConfig;
 
 mod context;
+mod middleware;
 mod router;
 
 use crate::context::EdenApiServerContext;
+use crate::middleware::RequestContextMiddleware;
 use crate::router::build_router;
 
 const ARG_LISTEN_HOST: &str = "listen-host";
@@ -202,6 +204,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
             "edenapi_server",
         )))
+        .add(RequestContextMiddleware::new(fb, logger.clone()))
         .build(router);
 
     // Set up socket and TLS acceptor that this server will listen on.
