@@ -2762,15 +2762,6 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
         .thenValue([](folly::Unit) { return InvalidationRequired::No; });
   }
 
-  if (ctx->isDryRun()) {
-    // TODO(mbolin): As it stands, if this is a dry run, we will not report a
-    // DIRECTORY_NOT_EMPTY conflict if it exists. We need to do further
-    // investigation to determine whether this is acceptible behavior.
-    // Currently, the Hg extension ignores DIRECTORY_NOT_EMPTY conflicts, but
-    // that may not be the right thing to do.
-    return InvalidationRequired::No;
-  }
-
   // We need to remove this directory (and possibly replace it with a file).
   // First we have to recursively unlink everything inside the directory.
   // Fortunately, calling checkout() with an empty destination tree does
@@ -2796,6 +2787,12 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
               // checkout() will invalidate the parent inode if it removes a
               // child because it becomes an empty tree, so we don't need to
               // invalidate here.
+              return InvalidationRequired::No;
+            }
+
+            if (ctx->isDryRun()) {
+              // If this is a dry run, simply report conflicts and don't update
+              // or invalidate the inode.
               return InvalidationRequired::No;
             }
 

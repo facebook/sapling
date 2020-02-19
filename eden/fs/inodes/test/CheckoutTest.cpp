@@ -1224,6 +1224,51 @@ TEST(Checkout, diffFailsOnInProgressCheckout) {
   EXPECT_NO_THROW(std::move(diff2).get());
 }
 
+TEST(Checkout, conflict_when_directory_containing_modified_file_is_removed) {
+  auto builder1 = FakeTreeBuilder{};
+  builder1.setFile("d1/sub/one.txt", "one");
+  builder1.setFile("d2/two.txt", "two");
+  TestMount testMount{builder1};
+
+  // Prepare a second tree without one directory.
+  auto builder2 = FakeTreeBuilder{};
+  builder2.setFile("d2/two.txt", "two");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  testMount.getFileInode("d1/sub/one.txt")->write("new contents", 0).get(0ms);
+
+  auto executor = testMount.getServerExecutor().get();
+  auto checkoutResult = testMount.getEdenMount()
+                            ->checkout(makeTestHash("2"), CheckoutMode::DRY_RUN)
+                            .waitVia(executor);
+  ASSERT_TRUE(checkoutResult.isReady());
+  auto result = std::move(checkoutResult).get();
+  ASSERT_EQ(3, result.conflicts.size());
+
+  {
+    auto& conflict = result.conflicts[0];
+    EXPECT_EQ("d1/sub/one.txt", conflict.path);
+    EXPECT_EQ(ConflictType::MODIFIED_REMOVED, conflict.type);
+    EXPECT_EQ("", conflict.message);
+  }
+
+  {
+    auto& conflict = result.conflicts[1];
+    EXPECT_EQ("d1/sub", conflict.path);
+    EXPECT_EQ(ConflictType::DIRECTORY_NOT_EMPTY, conflict.type);
+    EXPECT_EQ("", conflict.message);
+  }
+
+  {
+    auto& conflict = result.conflicts[2];
+    EXPECT_EQ("d1", conflict.path);
+    EXPECT_EQ(ConflictType::DIRECTORY_NOT_EMPTY, conflict.type);
+    EXPECT_EQ("", conflict.message);
+  }
+}
+
 // TODO:
 // - remove subdirectory
 //   - with no untracked/ignored files, it should get removed entirely
