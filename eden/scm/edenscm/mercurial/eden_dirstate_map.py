@@ -7,10 +7,20 @@
 
 import errno
 import stat
+from typing import BinaryIO
 
 import eden.dirstate as eden_dirstate_serializer
 
-from . import dirstate, policy, pycompat, util
+from . import (
+    EdenThriftClient,
+    dirstate,
+    localrepo,
+    policy,
+    pycompat,
+    ui as ui_mod,
+    util,
+    vfs,
+)
 
 
 MERGE_STATE_NOT_APPLICABLE = eden_dirstate_serializer.MERGE_STATE_NOT_APPLICABLE
@@ -29,14 +39,21 @@ parsers = policy.importmod(r"parsers")
 
 
 class eden_dirstate_map(dirstate.dirstatemap):
-    def __init__(self, ui, opener, root, thrift_client, repo):
-        # type(eden_dirstate_map, ui, opener, str, EdenThriftClient) -> None
+    def __init__(
+        self,
+        ui,  # type: ui_mod.ui
+        opener,  # type: vfs.abstractvfs
+        root,  # type: str
+        thrift_client,  # type: EdenThriftClient.EdenThriftClient
+        repo,  # type: localrepo.localrepository
+    ):
+        # type: (...) -> None
         super(eden_dirstate_map, self).__init__(ui, opener, root)
         self._thrift_client = thrift_client
         self._repo = repo
 
-    def write(self, file, now):  # override
-        # type(eden_dirstate_map, IO[str], float)
+    def write(self, st, now):  # override
+        # type: (BinaryIO, int) -> None
         parents = self.parents()
 
         # Filter out all "clean" entries when writing. (It's possible we should
@@ -46,8 +63,8 @@ class eden_dirstate_map(dirstate.dirstatemap):
             for k, v in self._map.items()
             if not (v[0] == "n" and v[2] == MERGE_STATE_NOT_APPLICABLE)
         }
-        eden_dirstate_serializer.write(file, parents, m, self.copymap)
-        file.close()
+        eden_dirstate_serializer.write(st, parents, m, self.copymap)
+        st.close()
 
         # Inform the edenfs daemon about the parent change.
         # We do not need to flush any pending transaction state here--manifest
@@ -150,6 +167,3 @@ class eden_dirstate_map(dirstate.dirstatemap):
             elif entry[2] == MERGE_STATE_OTHER_PARENT:
                 otherparent.add(path)
         return nonnorm, otherparent
-
-    def create_clone_of_internal_map(self):
-        return dict(self._map)

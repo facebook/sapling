@@ -507,7 +507,7 @@ upstream_tips uptodate_annotated_tags url_scheme uuid_re version_info
 without_newline
 
 action_type added_files clean_files conflict_paths
-create_clone_of_internal_map create_eden_dirstate deleted_files display_mode
+create_eden_dirstate deleted_files display_mode
 eden_files explicit_matches get_merge_string get_merge_string ignored_files
 manifest_entry max_to_show merge_state merge_str modified_files
 non_removed_matches nonnormal_copy num_remaining orig_pack orig_unpack
