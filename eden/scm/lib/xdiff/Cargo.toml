@@ -1,8 +1,20 @@
+# @generated
+# @autocargo from //eden/scm/lib/xdiff:[diff,xdiff]
+# Signature<<2918b17d214ffa04c4c717c071db16ccd49a171f>>
 [package]
 name = "xdiff"
-version = "0.1.0"
 edition = "2018"
+version = "0.1.0"
+include = ["src/**/*.rs", "src/bin/diff.rs"]
+
+[lib]
+path = "src/lib.rs"
+
+[[bin]]
+name = "diff"
+path = "src/bin/diff.rs"
 
 [dependencies]
 xdiff-sys = { path = "../xdiff-sys" }
-structopt = "0.3.1"
+structopt = "0.3.7"
+# @end of Signature<<2918b17d214ffa04c4c717c071db16ccd49a171f>>
