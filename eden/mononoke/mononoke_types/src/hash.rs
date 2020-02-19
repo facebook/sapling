@@ -168,7 +168,7 @@ impl FromStr for Blake2 {
     fn from_str(s: &str) -> Result<Self> {
         if s.len() != BLAKE2_HASH_LENGTH_HEX {
             bail!(ErrorKind::InvalidBlake2Input(
-                "need exactly BLAKE2_HASH_LENGTH_HEX hex digits".into()
+                format!("need exactly {} hex digits", BLAKE2_HASH_LENGTH_HEX).into()
             ));
         }
 
