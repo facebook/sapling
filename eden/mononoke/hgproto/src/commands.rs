@@ -16,7 +16,7 @@ use std::str::FromStr;
 use std::sync::{Arc, Mutex};
 
 use anyhow::{bail, Error, Result};
-use bytes::{Buf, Bytes, BytesMut};
+use bytes_old::{Buf, Bytes, BytesMut};
 use failure_ext::FutureFailureErrorExt;
 use futures::future::{self, err, ok, Either, Future};
 use futures::stream::{self, futures_ordered, once, Stream};
@@ -739,7 +739,7 @@ pub trait HgCommands {
 mod test {
     use super::*;
 
-    use bytes::{BufMut, BytesMut};
+    use bytes_old::{BufMut, BytesMut};
     use futures::{future, stream};
     use slog::{o, Discard};
 

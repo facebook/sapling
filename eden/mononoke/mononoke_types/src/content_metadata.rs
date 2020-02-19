@@ -49,7 +49,9 @@ impl ContentAlias {
 
     pub fn into_blob(self) -> BlobstoreBytes {
         let alias = thrift::ContentAlias::ContentId(self.0.into_thrift());
-        BlobstoreBytes::from_bytes(compact_protocol::serialize(&alias))
+        let data = compact_protocol::serialize(&alias);
+        let data = bytes_ext::copy_from_new(data);
+        BlobstoreBytes::from_bytes(data)
     }
 
     pub fn content_id(&self) -> ContentId {
@@ -118,6 +120,7 @@ impl BlobstoreValue for ContentMetadata {
         let id = From::from(self.content_id.clone());
         let thrift = self.into_thrift();
         let data = compact_protocol::serialize(&thrift);
+        let data = bytes_ext::copy_from_new(data);
         Blob::new(id, data)
     }
 

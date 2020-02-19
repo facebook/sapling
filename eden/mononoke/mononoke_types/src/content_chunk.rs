@@ -72,6 +72,7 @@ impl BlobstoreValue for ContentChunk {
         };
 
         let data = compact_protocol::serialize(&self.into_thrift());
+        let data = bytes_ext::copy_from_new(data);
 
         Blob::new(id, data)
     }

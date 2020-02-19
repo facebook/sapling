@@ -26,7 +26,7 @@ use crate::part_inner::validate_header;
 use crate::types::StreamHeader;
 use crate::utils::{get_decompressor_type, BytesExt};
 
-pub fn outer_stream<R: AsyncRead + BufRead + Send>(
+pub fn outer_stream<R: AsyncRead + BufRead + Send + 'static>(
     logger: Logger,
     stream_header: &StreamHeader,
     r: R,

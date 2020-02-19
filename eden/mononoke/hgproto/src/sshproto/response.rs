@@ -8,7 +8,7 @@
 use std::fmt::Display;
 use std::io::{self, Write};
 
-use bytes::{Bytes, BytesMut};
+use bytes_old::{Bytes, BytesMut};
 use futures::{stream, Stream};
 use futures_ext::StreamExt;
 use itertools::Itertools;

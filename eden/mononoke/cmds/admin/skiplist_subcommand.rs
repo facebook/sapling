@@ -191,7 +191,7 @@ fn build_skiplist_index<S: ToString>(
 
                 thrift_merge_graph.insert(cs_id.into_thrift(), skiplist_node_type.to_thrift());
             }
-            compact_protocol::serialize(&thrift_merge_graph)
+            bytes_ext::copy_from_new(compact_protocol::serialize(&thrift_merge_graph))
         })
         .and_then({
             cloned!(ctx);

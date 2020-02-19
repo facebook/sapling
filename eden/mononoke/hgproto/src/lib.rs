@@ -13,7 +13,7 @@
 
 #![deny(warnings)]
 
-use bytes::Bytes;
+use bytes_old::Bytes;
 use mercurial_types::{HgChangesetId, HgManifestId};
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
 use std::fmt::{self, Debug};

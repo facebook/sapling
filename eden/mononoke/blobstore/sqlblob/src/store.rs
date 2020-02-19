@@ -175,7 +175,8 @@ impl DataSqlStore {
             DataEntry::Data(ref value) => (DataType::Data, value.clone()),
             DataEntry::InChunk(num_of_chunks) => {
                 let in_chunk_meta = InChunk::num_of_chunks(num_of_chunks.get() as i32);
-                let in_chunk_meta = compact_protocol::serialize(&in_chunk_meta);
+                let in_chunk_meta =
+                    bytes_ext::copy_from_new(compact_protocol::serialize(&in_chunk_meta));
                 (DataType::InChunk, BlobstoreBytes::from_bytes(in_chunk_meta))
             }
         };

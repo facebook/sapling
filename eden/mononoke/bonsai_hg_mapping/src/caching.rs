@@ -105,7 +105,7 @@ fn memcache_deserialize(buf: IOBuf) -> Result<BonsaiHgMappingEntry, ()> {
 }
 
 fn memcache_serialize(entry: &BonsaiHgMappingEntry) -> Bytes {
-    compact_protocol::serialize(&entry.clone().into_thrift())
+    bytes_ext::copy_from_new(compact_protocol::serialize(&entry.clone().into_thrift()))
 }
 
 impl BonsaiHgMapping for CachingBonsaiHgMapping {

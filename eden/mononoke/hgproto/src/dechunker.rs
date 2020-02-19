@@ -15,7 +15,7 @@
 //! 0-sized chunk is the indication of end of stream, so a proper stream of data should not
 //! contain empty chunks inside.
 
-use bytes::Bytes;
+use bytes_old::Bytes;
 use std::io::{self, BufRead, Read};
 use std::sync::{Arc, Mutex};
 

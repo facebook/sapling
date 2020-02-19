@@ -176,7 +176,8 @@ impl FastlogBatch {
     }
 
     pub fn into_bytes(self) -> Bytes {
-        compact_protocol::serialize(&self.into_thrift())
+        let bytes = compact_protocol::serialize(&self.into_thrift());
+        bytes_ext::copy_from_new(bytes)
     }
 
     pub fn into_thrift(self) -> thrift::FastlogBatch {
@@ -224,6 +225,7 @@ impl BlobstoreValue for FastlogBatch {
     fn into_blob(self) -> FastlogBatchBlob {
         let thrift = self.into_thrift();
         let data = compact_protocol::serialize(&thrift);
+        let data = bytes_ext::copy_from_new(data);
         let mut context = FastlogBatchIdContext::new();
         context.update(&data);
         let id = context.finish();

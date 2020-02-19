@@ -95,6 +95,7 @@ impl BlobstoreValue for FileContents {
 
         let thrift = self.into_thrift();
         let data = compact_protocol::serialize(&thrift);
+        let data = bytes_ext::copy_from_new(data);
 
         Blob::new(id, data)
     }

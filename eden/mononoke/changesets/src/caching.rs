@@ -207,7 +207,7 @@ fn deserialize_changeset_entry(buf: IOBuf) -> Result<ChangesetEntry, ()> {
 }
 
 fn serialize_changeset_entry(entry: &ChangesetEntry) -> Bytes {
-    compact_protocol::serialize(&entry.clone().into_thrift())
+    bytes_ext::copy_from_new(compact_protocol::serialize(&entry.clone().into_thrift()))
 }
 
 fn report_mc_result<T>(res: McResult<T>) {

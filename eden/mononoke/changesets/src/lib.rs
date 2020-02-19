@@ -90,7 +90,7 @@ pub fn serialize_cs_entries(cs_entries: Vec<ChangesetEntry>) -> Bytes {
         thrift_entries.push(thrift_entry);
     }
 
-    compact_protocol::serialize(&thrift_entries)
+    bytes_ext::copy_from_new(compact_protocol::serialize(&thrift_entries))
 }
 
 pub fn deserialize_cs_entries(blob: &Bytes) -> Result<Vec<ChangesetEntry>> {

@@ -44,7 +44,7 @@
 //! chunking.
 
 use anyhow::{Error, Result};
-use bytes::BytesMut;
+use bytes_old::BytesMut;
 use tokio_io::codec::Decoder;
 
 use crate::handler::{OutputStream, ResponseEncoder};

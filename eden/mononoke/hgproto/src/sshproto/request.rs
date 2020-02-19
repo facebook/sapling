@@ -9,7 +9,7 @@ use crate::batch;
 use crate::errors;
 use crate::{GetbundleArgs, GettreepackArgs, Request, SingleRequest};
 use anyhow::{bail, Error, Result};
-use bytes::{Bytes, BytesMut};
+use bytes_old::{Bytes, BytesMut};
 use hex::FromHex;
 use mercurial_types::{HgChangesetId, HgManifestId};
 use nom::{
