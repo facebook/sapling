@@ -96,7 +96,7 @@
 
   $ bonsai_verify round-trip "$hghash"
   * using repo "repo" repoid RepositoryId(0) (glob)
-  * 100.00% valid, summary: , total: 5, valid: 5, errors: 0, ignored: 0 (glob)
+  * 100.00% valid, summary: , total: *, valid: *, errors: 0, ignored: 0 (glob)
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "SELECT HEX(filenode), HEX(linknode) FROM filenodes ORDER BY filenode DESC;"
   DDAE7A95B6B0FB27DFACC4051C41AA9CFF30C1E2|C5FD128DF314BDAF4217A731D1FEA3FD190B72D3
