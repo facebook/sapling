@@ -97,6 +97,7 @@ where
     ) -> BoxFuture<String, Error> {
         <M::Value as BonsaiDerived>::derive_with_mode(ctx.clone(), repo, csid, self.mode)
             .map(|result| format!("{:?}", result))
+            .from_err()
             .boxify()
     }
 
@@ -137,6 +138,7 @@ where
                         DeriveMode::Unsafe,
                     )
                     .map(|_| ())
+                    .from_err()
                 }
             })
             .and_then({

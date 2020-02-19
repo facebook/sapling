@@ -179,6 +179,7 @@ mod test {
         hg_cs_id: HgChangesetId,
     ) -> impl Future<Item = (), Error = Error> {
         let fsnode_entries = RootFsnodeId::derive(ctx.clone(), repo.clone(), bcs_id)
+            .from_err()
             .map(|root_fsnode| root_fsnode.fsnode_id().clone())
             .and_then({
                 cloned!(ctx, repo);

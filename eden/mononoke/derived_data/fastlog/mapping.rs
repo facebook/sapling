@@ -62,6 +62,7 @@ impl BonsaiDerived for RootFastlog {
     ) -> BoxFuture<Self, Error> {
         let bcs_id = bonsai.get_changeset_id();
         RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id)
+            .from_err()
             .join(fetch_parent_root_unodes(ctx.clone(), repo.clone(), bonsai))
             .and_then(move |(root_unode_mf_id, parents)| {
                 let blobstore = repo.get_blobstore().boxed();
@@ -111,6 +112,7 @@ pub fn fetch_parent_root_unodes(
     let parents: Vec<_> = bonsai.parents().collect();
     future::join_all(parents.into_iter().map(move |p| {
         RootUnodeManifestId::derive(ctx.clone(), repo.clone(), p)
+            .from_err()
             .map(|root_unode_mf_id| root_unode_mf_id.manifest_unode_id().clone())
     }))
 }

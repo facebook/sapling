@@ -180,6 +180,7 @@ mod test {
         hg_cs_id: HgChangesetId,
     ) -> impl Future<Item = (), Error = Error> {
         let unode_entries = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id)
+            .from_err()
             .map(|root_mf_unode| root_mf_unode.manifest_unode_id().clone())
             .and_then({
                 cloned!(ctx, repo);

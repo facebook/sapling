@@ -69,7 +69,7 @@ pub fn list_file_history(
 ) -> impl Stream<Item = ChangesetId, Error = Error> {
     unode_entry
         .load(ctx.clone(), &repo.get_blobstore())
-        .map_err(Error::from)
+        .from_err()
         .map(move |unode| {
             let changeset_id = match unode {
                 Entry::Tree(mf_unode) => mf_unode.linknode().clone(),
@@ -273,6 +273,7 @@ fn prefetch_history_by_changeset(
     cloned!(ctx, repo);
     let blobstore = repo.get_blobstore();
     RootUnodeManifestId::derive(ctx.clone(), repo.clone(), changeset_id.clone())
+        .from_err()
         .and_then({
             cloned!(blobstore, ctx, path);
             move |root_unode_mf_id| {
@@ -303,6 +304,7 @@ fn prefetch_history_by_changeset(
                         // if there is no history, let's try to derive batched fastlog data
                         // and fetch history again
                         None => RootFastlog::derive(ctx.clone(), repo.clone(), changeset_id)
+                            .from_err()
                             .and_then({
                                 cloned!(ctx, repo);
                                 move |_| {

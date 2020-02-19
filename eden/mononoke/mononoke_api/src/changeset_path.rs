@@ -263,6 +263,7 @@ impl ChangesetPathContext {
                 BlameError::NoSuchPath(_)
                 | BlameError::IsDirectory(_)
                 | BlameError::Rejected(_) => MononokeError::InvalidRequest(error.to_string()),
+                BlameError::DeriveError(e) => MononokeError::from(e),
                 _ => MononokeError::from(Error::from(error)),
             })
             .compat()

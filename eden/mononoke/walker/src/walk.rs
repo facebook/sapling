@@ -244,6 +244,7 @@ fn bonsai_to_hg_mapping_step(
                 move |public| {
                     if public.contains(&bcs_id) {
                         FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), bcs_id)
+                            .from_err()
                             .map(|_| ())
                             .left_future()
                     } else {

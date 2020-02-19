@@ -6,7 +6,7 @@
  */
 
 #![deny(warnings)]
-#![type_length_limit = "1430018"]
+#![type_length_limit = "1441792"]
 
 mod derived;
 pub use derived::{fetch_file_full_content, BlameRoot, BlameRootMapping};
@@ -20,7 +20,7 @@ use blobstore::{Loadable, LoadableError};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
+use derived_data::{BonsaiDerived, DeriveError};
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
 use manifest::ManifestOps;
@@ -38,21 +38,11 @@ pub enum BlameError {
     #[error("Blame is not available for directories: {0}")]
     IsDirectory(MPath),
     #[error("{0}")]
-    Rejected(BlameRejected),
+    Rejected(#[from] BlameRejected),
     #[error("{0}")]
-    Error(Error),
-}
-
-impl From<Error> for BlameError {
-    fn from(error: Error) -> Self {
-        Self::Error(error)
-    }
-}
-
-impl From<BlameRejected> for BlameError {
-    fn from(rejected: BlameRejected) -> Self {
-        Self::Rejected(rejected)
-    }
+    DeriveError(#[from] DeriveError),
+    #[error("{0}")]
+    Error(#[from] Error),
 }
 
 /// Fetch content and blame for a file with specified file path
@@ -70,14 +60,15 @@ pub fn fetch_blame(
             move |result| match result {
                 Ok((blame_id, blame)) => future::ok((blame_id, blame)).left_future(),
                 Err(blame_id) => BlameRoot::derive(ctx.clone(), repo.clone(), csid)
+                    .from_err()
                     .and_then(move |_| {
                         blame_id
                             .load(ctx.clone(), repo.blobstore())
                             .from_err()
                             .and_then(|blame_maybe_rejected| blame_maybe_rejected.into_blame())
                             .map(move |blame| (blame_id, blame))
+                            .from_err()
                     })
-                    .from_err()
                     .right_future(),
             }
         })
@@ -97,6 +88,7 @@ fn fetch_blame_if_derived(
 ) -> impl Future<Item = Result<(BlameId, Blame), BlameId>, Error = BlameError> {
     let blobstore = repo.get_blobstore();
     RootUnodeManifestId::derive(ctx.clone(), repo, csid)
+        .from_err()
         .and_then({
             cloned!(ctx, blobstore, path);
             move |mf_root| {
@@ -133,5 +125,8 @@ fn fetch_blame_if_derived(
 }
 
 pub fn derive_blame(ctx: CoreContext, repo: BlobRepo, csid: ChangesetId) -> BoxFuture<(), Error> {
-    BlameRoot::derive(ctx, repo, csid).map(|_| ()).boxify()
+    BlameRoot::derive(ctx, repo, csid)
+        .map(|_| ())
+        .from_err()
+        .boxify()
 }

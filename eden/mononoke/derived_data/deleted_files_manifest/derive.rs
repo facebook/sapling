@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::{anyhow, Error};
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
@@ -22,16 +22,7 @@ use mononoke_types::{blob::BlobstoreValue, deleted_files_manifest::DeletedManife
 use mononoke_types::{BonsaiChangeset, ChangesetId, DeletedManifestId, MPathElement, MononokeId};
 use repo_blobstore::RepoBlobstore;
 use std::{collections::BTreeMap, iter::FromIterator};
-use thiserror::Error;
 use unodes::RootUnodeManifestId;
-
-#[derive(Debug, Error)]
-pub enum ErrorKind {
-    #[error("Failed to create deleted files manifest: {0}")]
-    InvalidDeletedManifest(String),
-    #[error("Deleted files manifest is not implemented for {0}")]
-    DeletedManifestNotImplemented(String),
-}
 
 /// Derives deleted files manifest for bonsai changeset `cs_id` given parent deleted files
 /// manifests and the changes associated with the changeset. Parent deleted manifests should be
@@ -111,10 +102,10 @@ pub(crate) fn derive_deleted_files_manifest(
                                 subentries.insert(path, mf_id);
                             }
                             Some((None, _)) => {
-                                return err(ErrorKind::InvalidDeletedManifest(
-                                    "subentry must have a path".to_string(),
-                                )
-                                .into())
+                                return err(anyhow!(concat!(
+                                    "Failed to create deleted files manifest: ",
+                                    "subentry must have a path"
+                                )))
                                 .boxify();
                             }
                             _ => {}
@@ -190,10 +181,12 @@ pub(crate) fn get_changes(
         cloned!(ctx, repo);
         move |cs_id| {
             RootUnodeManifestId::derive(ctx.clone(), repo.clone(), cs_id)
+                .from_err()
                 .map(|root_mf_id| root_mf_id.manifest_unode_id().clone())
         }
     });
     RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id)
+        .from_err()
         .join(join_all(parent_unodes))
         // compute diff between changeset's and its parents' manifests
         .and_then({
@@ -236,11 +229,9 @@ pub(crate) fn get_changes(
                             .boxify()
                     }
                     _ => {
-                        return err(ErrorKind::DeletedManifestNotImplemented(
-                                "non-linear history".to_string()
-                            )
-                            .into()
-                        )
+                        return err(anyhow!(
+                            "Deleted files manifest is not implemented for non-linear history"
+                        ))
                         .boxify();
                     }
                 }
@@ -274,9 +265,9 @@ fn do_derive_unfold(
     } = changes;
 
     if parents.len() > 1 {
-        return err(
-            ErrorKind::DeletedManifestNotImplemented("non-linear history".to_string()).into(),
-        )
+        return err(anyhow!(
+            "Deleted files manifest is not implemented for non-linear history"
+        ))
         .right_future();
     }
 
@@ -379,7 +370,7 @@ fn create_manifest(
         .unbounded_send(f)
         .into_future()
         .map(move |()| mf_id)
-        .map_err(|err| format_err!("failed to send manifest future {}", err))
+        .map_err(|err| anyhow!("failed to send manifest future {}", err))
         .boxify()
 }
 

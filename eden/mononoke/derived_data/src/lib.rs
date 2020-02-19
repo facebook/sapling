@@ -13,11 +13,12 @@ use context::CoreContext;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use lock_ext::LockExt;
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use std::{
     collections::{HashMap, HashSet},
     sync::{Arc, Mutex},
 };
+use thiserror::Error;
 
 pub mod derive_impl;
 
@@ -28,6 +29,14 @@ pub enum Mode {
     /// This mode should rarely be used, perhaps only for backfilling type of derived data
     /// which is not enabled in this repo yet
     Unsafe,
+}
+
+#[derive(Debug, Error)]
+pub enum DeriveError {
+    #[error("Derivation of {0} is not enabled for repo {1}")]
+    Disabled(&'static str, RepositoryId),
+    #[error("{0}")]
+    Error(#[from] Error),
 }
 
 /// Trait for the data that can be derived from bonsai changeset.
@@ -64,7 +73,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
     /// from csid -> BonsaiDerived in BonsaiDerivedMapping
     ///
     /// This function fails immediately if this type of derived data is not enabled for this repo.
-    fn derive(ctx: CoreContext, repo: BlobRepo, csid: ChangesetId) -> BoxFuture<Self, Error> {
+    fn derive(ctx: CoreContext, repo: BlobRepo, csid: ChangesetId) -> BoxFuture<Self, DeriveError> {
         let mapping = Self::mapping(&ctx, &repo);
         derive_impl::derive_impl::<Self, Self::Mapping>(
             ctx,
@@ -83,7 +92,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         repo: BlobRepo,
         csid: ChangesetId,
         mode: Mode,
-    ) -> BoxFuture<Self, Error> {
+    ) -> BoxFuture<Self, DeriveError> {
         let mapping = Self::mapping(&ctx, &repo);
         derive_impl::derive_impl::<Self, Self::Mapping>(ctx, repo, mapping, csid, mode).boxify()
     }
@@ -96,7 +105,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         repo: &BlobRepo,
         csid: &ChangesetId,
         limit: u64,
-    ) -> BoxFuture<u64, Error> {
+    ) -> BoxFuture<u64, DeriveError> {
         let mapping = Self::mapping(&ctx, &repo);
         derive_impl::find_underived::<Self, Self::Mapping>(
             ctx,

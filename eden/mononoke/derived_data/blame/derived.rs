@@ -44,6 +44,7 @@ impl BonsaiDerived for BlameRoot {
     ) -> BoxFuture<Self, Error> {
         let csid = bonsai.get_changeset_id();
         let root_manifest = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
+            .from_err()
             .map(|mf| mf.manifest_unode_id().clone());
         let parents_manifest = bonsai
             .parents()
@@ -53,6 +54,7 @@ impl BonsaiDerived for BlameRoot {
                 cloned!(ctx, repo);
                 move |csid| {
                     RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
+                        .from_err()
                         .map(|mf| mf.manifest_unode_id().clone())
                 }
             });

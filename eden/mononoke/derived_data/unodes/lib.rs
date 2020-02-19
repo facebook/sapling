@@ -33,6 +33,7 @@ pub enum ErrorKind {
 pub fn derive_unodes(ctx: CoreContext, repo: BlobRepo, cs_id: ChangesetId) -> BoxFuture<(), Error> {
     RootUnodeManifestId::derive(ctx, repo, cs_id)
         .map(|_| ())
+        .from_err()
         .boxify()
 }
 
@@ -57,26 +58,28 @@ pub fn find_unode_renames(
 
     let blobstore = repo.get_blobstore();
     let unodes = references.into_iter().map(move |(csid, mut paths)| {
-        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid).and_then({
-            cloned!(ctx, blobstore);
-            move |mf_root| {
-                let from_paths: Vec<_> = paths.keys().cloned().collect();
-                mf_root
-                    .manifest_unode_id()
-                    .clone()
-                    .find_entries(ctx, blobstore, from_paths)
-                    .filter_map(|(from_path, entry)| Some((from_path?, entry.into_leaf()?)))
-                    .collect()
-                    .map(move |unodes| {
-                        unodes
-                            .into_iter()
-                            .filter_map(|(from_path, unode_id)| {
-                                Some((paths.remove(&from_path)?, unode_id))
-                            })
-                            .collect::<HashMap<_, _>>()
-                    })
-            }
-        })
+        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
+            .from_err()
+            .and_then({
+                cloned!(ctx, blobstore);
+                move |mf_root| {
+                    let from_paths: Vec<_> = paths.keys().cloned().collect();
+                    mf_root
+                        .manifest_unode_id()
+                        .clone()
+                        .find_entries(ctx, blobstore, from_paths)
+                        .filter_map(|(from_path, entry)| Some((from_path?, entry.into_leaf()?)))
+                        .collect()
+                        .map(move |unodes| {
+                            unodes
+                                .into_iter()
+                                .filter_map(|(from_path, unode_id)| {
+                                    Some((paths.remove(&from_path)?, unode_id))
+                                })
+                                .collect::<HashMap<_, _>>()
+                        })
+                }
+            })
     });
 
     future::join_all(unodes).map(|unodes| unodes.into_iter().flatten().collect())

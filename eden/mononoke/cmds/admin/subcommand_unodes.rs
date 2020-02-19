@@ -139,23 +139,25 @@ fn subcommand_tree(
     csid: ChangesetId,
     path: Option<MPath>,
 ) -> impl Future<Item = (), Error = Error> {
-    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid).and_then(move |root| {
-        println!("ROOT: {:?}", root);
-        println!("PATH: {:?}", path);
-        root.manifest_unode_id()
-            .find_entries(ctx, repo.get_blobstore(), vec![PathOrPrefix::Prefix(path)])
-            .for_each(|(path, entry)| {
-                match entry {
-                    Entry::Tree(tree_id) => {
-                        println!("{}/ {:?}", MPath::display_opt(path.as_ref()), tree_id);
+    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
+        .from_err()
+        .and_then(move |root| {
+            println!("ROOT: {:?}", root);
+            println!("PATH: {:?}", path);
+            root.manifest_unode_id()
+                .find_entries(ctx, repo.get_blobstore(), vec![PathOrPrefix::Prefix(path)])
+                .for_each(|(path, entry)| {
+                    match entry {
+                        Entry::Tree(tree_id) => {
+                            println!("{}/ {:?}", MPath::display_opt(path.as_ref()), tree_id);
+                        }
+                        Entry::Leaf(leaf_id) => {
+                            println!("{} {:?}", MPath::display_opt(path.as_ref()), leaf_id);
+                        }
                     }
-                    Entry::Leaf(leaf_id) => {
-                        println!("{} {:?}", MPath::display_opt(path.as_ref()), leaf_id);
-                    }
-                }
-                Ok(())
-            })
-    })
+                    Ok(())
+                })
+        })
 }
 
 fn subcommand_verify(
@@ -194,8 +196,9 @@ fn single_verify(
             }
         });
 
-    let unode_paths =
-        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid).and_then(move |tree_id| {
+    let unode_paths = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
+        .from_err()
+        .and_then(move |tree_id| {
             tree_id
                 .manifest_unode_id()
                 .find_entries(ctx, repo.get_blobstore(), vec![PathOrPrefix::Prefix(None)])

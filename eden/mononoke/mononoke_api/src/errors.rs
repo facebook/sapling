@@ -6,6 +6,7 @@
  */
 
 use blobstore::LoadableError;
+use derived_data::DeriveError;
 use std::backtrace::Backtrace;
 use std::convert::Infallible;
 use std::error::Error as StdError;
@@ -49,6 +50,8 @@ pub enum MononokeError {
         mode: &'static str,
         identities: String,
     },
+    #[error("not available: {0}")]
+    NotAvailable(String),
     #[error("internal error: {0}")]
     InternalError(#[source] InternalError),
 }
@@ -68,5 +71,14 @@ impl From<Infallible> for MononokeError {
 impl From<LoadableError> for MononokeError {
     fn from(e: LoadableError) -> Self {
         MononokeError::InternalError(InternalError(Arc::new(e.into())))
+    }
+}
+
+impl From<DeriveError> for MononokeError {
+    fn from(e: DeriveError) -> Self {
+        match e {
+            e @ DeriveError::Disabled(_, _) => MononokeError::NotAvailable(e.to_string()),
+            DeriveError::Error(e) => MononokeError::from(e),
+        }
     }
 }

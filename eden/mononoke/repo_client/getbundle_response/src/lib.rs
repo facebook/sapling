@@ -129,13 +129,13 @@ async fn derive_filenodes_for_public_heads(
 
     let to_derive_filenodes_bonsai =
         hg_to_bonsai_stream(&ctx, &blobrepo, to_derive_filenodes).await?;
-    stream::iter(to_derive_filenodes_bonsai)
+    Ok(stream::iter(to_derive_filenodes_bonsai)
         .map(move |bcs_id| {
             FilenodesOnlyPublic::derive(ctx.clone(), blobrepo.clone(), bcs_id).compat()
         })
         .buffered(100)
         .try_for_each(|_derive| async { Ok(()) })
-        .await
+        .await?)
 }
 
 async fn find_commits_to_send(

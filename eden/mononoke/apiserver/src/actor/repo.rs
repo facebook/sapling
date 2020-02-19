@@ -264,6 +264,7 @@ impl MononokeRepo {
 
         let blobstore = repo.get_blobstore();
         RootUnodeManifestId::derive(ctx.clone(), repo, bcs_id)
+            .map_err(Error::from)
             .map_err(ErrorKind::InternalError)
             .and_then({
                 cloned!(blobstore, ctx, path);
@@ -486,6 +487,7 @@ impl MononokeRepo {
                                 // and fetch history again
                                 None => {
                                     RootFastlog::derive(ctx.clone(), repo.clone(), changeset_id)
+                                        .map_err(Error::from)
                                         .map_err(ErrorKind::InternalError)
                                         .and_then({
                                             cloned!(ctx, repo);

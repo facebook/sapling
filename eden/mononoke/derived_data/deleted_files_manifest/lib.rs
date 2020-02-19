@@ -29,5 +29,6 @@ pub fn derive_deleted_manifest(
 ) -> BoxFuture<(), Error> {
     RootDeletedManifestId::derive(ctx, repo, cs_id)
         .map(|_| ())
+        .from_err()
         .boxify()
 }

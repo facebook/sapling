@@ -50,7 +50,8 @@ fn blobstore_and_filenodes_warmup(
     // TODO(stash): Arbitrary number. Tweak somehow?
     let buffer_size = 100;
 
-    let derive_filenodes = FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), bcs_id);
+    let derive_filenodes =
+        FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), bcs_id).from_err();
 
     revision
         .load(ctx.clone(), repo.blobstore())

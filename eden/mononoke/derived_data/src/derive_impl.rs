@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use crate::{BonsaiDerived, BonsaiDerivedMapping, Mode};
-use anyhow::{format_err, Error};
+use crate::{BonsaiDerived, BonsaiDerivedMapping, DeriveError, Mode};
+use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use cloned::cloned;
@@ -77,7 +77,7 @@ pub fn derive_impl<
     derived_mapping: Mapping,
     start_csid: ChangesetId,
     mode: Mode,
-) -> impl Future<Item = Derived, Error = Error> {
+) -> impl Future<Item = Derived, Error = DeriveError> {
     find_underived(&ctx, &repo, &derived_mapping, &start_csid, None, mode)
         .map({
             cloned!(ctx);
@@ -170,21 +170,19 @@ pub fn derive_impl<
                 Ok(())
             }
         })
-        .and_then(move |_| fetch_derived_may_panic(ctx, start_csid, derived_mapping))
+        .and_then(move |_| {
+            fetch_derived_may_panic(ctx, start_csid, derived_mapping).map_err(DeriveError::from)
+        })
 }
 
-fn fail_if_disabled<Derived: BonsaiDerived>(repo: &BlobRepo) -> Result<(), Error> {
+fn fail_if_disabled<Derived: BonsaiDerived>(repo: &BlobRepo) -> Result<(), DeriveError> {
     if !repo
         .get_derived_data_config()
         .derived_data_types
         .contains(Derived::NAME)
     {
         STATS::derived_data_disabled.add_value(1, (repo.get_repoid().id(), Derived::NAME));
-        return Err(format_err!(
-            "{} is not enabled for repo {}",
-            Derived::NAME,
-            repo.get_repoid()
-        ));
+        return Err(DeriveError::Disabled(Derived::NAME, repo.get_repoid()));
     }
     Ok(())
 }
@@ -199,7 +197,7 @@ pub(crate) fn find_underived<
     start_csid: &ChangesetId,
     limit: Option<u64>,
     mode: Mode,
-) -> impl Future<Item = HashMap<ChangesetId, Vec<ChangesetId>>, Error = Error> {
+) -> impl Future<Item = HashMap<ChangesetId, Vec<ChangesetId>>, Error = DeriveError> {
     if mode == Mode::OnlyIfEnabled {
         try_boxfuture!(fail_if_disabled::<Derived>(repo));
     }
@@ -247,6 +245,7 @@ pub(crate) fn find_underived<
     .traced(&ctx.trace(), "derive::find_dependencies", None)
     .filter_map(|x| x)
     .collect_to()
+    .map_err(DeriveError::from)
     .boxify()
 }
 

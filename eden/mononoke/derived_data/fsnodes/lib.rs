@@ -39,5 +39,8 @@ pub fn derive_fsnodes(
     repo: BlobRepo,
     cs_id: ChangesetId,
 ) -> BoxFuture<(), Error> {
-    RootFsnodeId::derive(ctx, repo, cs_id).map(|_| ()).boxify()
+    RootFsnodeId::derive(ctx, repo, cs_id)
+        .map(|_| ())
+        .from_err()
+        .boxify()
 }

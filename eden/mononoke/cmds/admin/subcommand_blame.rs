@@ -155,6 +155,7 @@ fn find_leaf(
 ) -> impl Future<Item = FileUnodeId, Error = Error> {
     let blobstore = repo.get_blobstore();
     RootUnodeManifestId::derive(ctx.clone(), repo, csid)
+        .from_err()
         .and_then({
             cloned!(blobstore, path);
             move |mf_root| {

@@ -119,6 +119,7 @@ fn subcommand_manifest(
     prefix: Option<MPath>,
 ) -> impl Future<Item = (), Error = Error> {
     RootDeletedManifestId::derive(ctx.clone(), repo.clone(), cs_id)
+        .from_err()
         .and_then(move |root_manifest| {
             debug!(
                 ctx.logger(),
@@ -225,6 +226,7 @@ fn verify_single_commit(
 ) -> impl Future<Item = (), Error = Error> {
     let file_changes = get_file_changes(ctx.clone(), repo.clone(), cs_id.clone());
     let deleted_manifest_paths = RootDeletedManifestId::derive(ctx.clone(), repo.clone(), cs_id)
+        .from_err()
         .and_then({
             cloned!(ctx, repo);
             move |root_manifest| {
