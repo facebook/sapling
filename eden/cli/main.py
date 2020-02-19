@@ -1268,8 +1268,11 @@ class StartCmd(Subcmd):
     def start(self, args: argparse.Namespace, instance: EdenInstance) -> int:
         if os.name == "nt":
             winproc.start_process(instance, args.daemon_binary, args.edenfs_args)
+
+            # Return success if no is exception is raised
+            return 0
         else:
-            daemon.exec_daemon(
+            return daemon.exec_daemon(
                 instance,
                 args.daemon_binary,
                 args.edenfs_args,
@@ -1279,9 +1282,6 @@ class StartCmd(Subcmd):
                 strace_file=args.strace,
                 foreground=args.foreground,
             )
-
-        # Return success if no is exception is raised
-        return 0
 
     def start_using_systemd(
         self, args: argparse.Namespace, instance: EdenInstance
@@ -1398,7 +1398,11 @@ class RestartCmd(Subcmd):
         if health.is_healthy():
             assert health.pid is not None
             if self.args.restart_type == RESTART_MODE_GRACEFUL:
-                return self._graceful_restart(instance)
+                status = self._graceful_restart(instance)
+                success = True if status == 0 else False
+                sample = instance.build_sample("graceful_restart", success=success)
+                instance.log(sample)
+                return status
             else:
                 # pyre-fixme[6]: Expected `int` for 2nd param but got `Optional[int]`.
                 return self._full_restart(instance, health.pid)
@@ -1447,12 +1451,9 @@ class RestartCmd(Subcmd):
                 "TODO(T33122320): Implement 'eden restart --graceful'"
             )
         else:
-            sample = instance.build_sample("graceful_restart")
-            instance.log(sample)
-            daemon.exec_daemon(
+            return daemon.exec_daemon(
                 instance, daemon_binary=self.args.daemon_binary, takeover=True
             )
-            return 1  # never reached
 
     def _start(self, instance: EdenInstance) -> int:
         print("Eden is not currently running.  Starting it...")
@@ -1461,8 +1462,7 @@ class RestartCmd(Subcmd):
                 instance=instance, daemon_binary=self.args.daemon_binary
             )
         else:
-            daemon.exec_daemon(instance, daemon_binary=self.args.daemon_binary)
-        return 1  # never reached
+            return daemon.exec_daemon(instance, daemon_binary=self.args.daemon_binary)
 
     def _full_restart(self, instance: EdenInstance, old_pid: int) -> int:
         print(

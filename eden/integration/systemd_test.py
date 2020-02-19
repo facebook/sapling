@@ -6,6 +6,7 @@
 
 import pathlib
 import shutil
+import signal
 import subprocess
 import sys
 import typing
@@ -56,6 +57,8 @@ class SystemdTest(
                 )
                 start_process.expect_exact("Running in experimental systemd mode")
                 start_process.expect_exact("Started edenfs")
+                start_process.kill(signal.SIGINT)
+                start_process.wait()
 
         test(start_args=["--", "--allowRoot"])
         test(
@@ -86,6 +89,8 @@ class SystemdTest(
                 self.assertNotIn(
                     "Running in experimental systemd mode", start_process.before
                 )
+                start_process.kill(signal.SIGINT)
+                start_process.wait()
 
         test(start_args=["--", "--allowRoot"])
         test(
