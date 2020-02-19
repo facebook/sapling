@@ -285,7 +285,21 @@ replace-with = "vendored-sources"
             and distutils.util.get_platform().startswith("win-")
             and self.long_paths_support
         ):
-            self.set_long_paths_manifest(src)
+            retry = 0
+            while True:
+                try:
+                    self.set_long_paths_manifest(src)
+                except Exception:
+                    # mt.exe wants exclusive access to the exe. It can fail with
+                    # if Windows Anti-Virus scans the exe. Retry a few times.
+                    retry += 1
+                    if retry > 5:
+                        raise
+                    else:
+                        distutils.log.warn("Retrying setting long path on %s" % src)
+                        continue
+                else:
+                    break
 
         dest = self.get_output_filename(target)
         try:
@@ -343,20 +357,7 @@ replace-with = "vendored-sources"
                 "manifest of the binary %s",
                 fname,
             )
-            retry = 0
-            while retry < 10:
-                try:
-                    subprocess.check_output(command)
-                    break
-                except subprocess.CalledProcessError as e:
-                    # mt.exe wants exclusive access to the exe. It can fail with
-                    # exit code 31 when Windows Anti-Virus scans the exe. Retry
-                    # a few times.
-                    if e.returncode == 31:
-                        retry += 1
-                        distutils.log.debug("Retry after %d seconds", retry)
-                        time.sleep(retry)
-                        continue
+            subprocess.check_output(command)
             distutils.log.debug(
                 "LongPathsAware manifest successfully merged into %s", fname
             )
