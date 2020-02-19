@@ -74,7 +74,6 @@ target_link_libraries(
     eden_config
     eden_inodes
     eden_model
-    eden_notifications
     eden_store
     eden_telemetry
     ${EDEN_STORE_IMPLEMENTATIONS}
@@ -95,6 +94,7 @@ else()
     eden_service
     PUBLIC
       eden_fuse
+      eden_notifications
       eden_takeover
   )
 endif()
