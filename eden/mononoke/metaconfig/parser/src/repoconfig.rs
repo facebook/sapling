@@ -45,7 +45,6 @@ use repos::{
 
 const CONFIGERATOR_CRYPTO_PROJECT: &'static str = "SCM";
 const CONFIGERATOR_PREFIX: &'static str = "configerator://";
-const RELATIVE_PATH_PREFIX: &'static str = "./";
 const LIST_KEYS_PATTERNS_MAX_DEFAULT: u64 = 500_000;
 const HOOK_MAX_FILE_SIZE_DEFAULT: u64 = 8 * 1024 * 1024; // 8MiB
 const DEFAULT_ARG_SIZE_THRESHOLD: u64 = 500_000;
@@ -79,7 +78,6 @@ impl RepoConfigs {
                 raw_repo_config.clone(),
                 &storage,
                 &commit_sync,
-                reponame.to_owned(),
                 config_path,
             )?;
 
@@ -377,10 +375,42 @@ impl RepoConfigs {
         raw_config: RawRepoConfig,
         storage_config: &HashMap<String, RawStorageConfig>,
         commit_sync: &HashMap<String, CommitSyncConfig>,
-        reponame: String,
         config_root_path: &Path,
     ) -> Result<RepoConfig> {
         let hooks = raw_config.hooks.clone().unwrap_or_default();
+
+        let base_hook_loading_path = if config_root_path.starts_with(CONFIGERATOR_PREFIX) {
+            // When we load main config from configerator, we expect to find our
+            // configuration relative to the main folder where the Mononoke binary
+            // is executed from.
+            std::env::current_exe()?
+                .parent()
+                .expect("expected to get base dir of mononoke executable")
+                .to_path_buf()
+        } else if config_root_path.is_file() {
+            // JSON config directories are expected to look like:
+            // $ tree /tmp/mononoke_configs_4vUi2g
+            // └── config
+            //     ├── hooks
+            //     │   ├── block_cross_repo_commits.lua
+            //     │   ├── <snip>
+            //     └── tiers
+            //         ├── apiserver.json
+            //         ├── <snip>
+            //
+            // When invoking Mononoke, we expect the path to point directly
+            // at the JSON file and paths in JSON config files are expected
+            // to refer to hooks as 'config/hooks/...', so we need to go 3
+            // parents up to get to the right place.
+            config_root_path
+                .ancestors()
+                .skip(3)
+                .next()
+                .expect("invalid config path structure")
+                .to_path_buf()
+        } else {
+            config_root_path.to_path_buf()
+        };
 
         let mut all_hook_params = vec![];
         for raw_hook_config in hooks {
@@ -399,33 +429,16 @@ impl RepoConfigs {
                     config,
                 }
             } else {
-                let path = raw_hook_config.path.clone();
-                let path = match path {
-                    Some(path) => path,
+                let hook_path = raw_hook_config.path.clone();
+                let hook_path = match hook_path {
+                    Some(hook_path) => base_hook_loading_path.join(hook_path),
                     None => {
                         return Err(ErrorKind::MissingPath().into());
                     }
                 };
-                let path_adjusted = if config_root_path.starts_with(CONFIGERATOR_PREFIX)
-                    || config_root_path.is_file()
-                {
-                    // When we load main config from configerator or json configuration, we
-                    // expect to find our configuration relative to the main folder where
-                    // the Mononoke binary is executed from.
-                    std::env::current_exe()?
-                        .parent()
-                        .expect("expected to get base dir of mononoke executable")
-                        .to_path_buf()
-                        .join(path)
-                } else if path.starts_with(RELATIVE_PATH_PREFIX) {
-                    let s: String = path.chars().skip(RELATIVE_PATH_PREFIX.len()).collect();
-                    config_root_path.join("repos").join(&reponame).join(s)
-                } else {
-                    config_root_path.join(path)
-                };
 
-                let contents = fs::read(&path_adjusted)
-                    .chain_err(format_err!("while reading hook {:?}", path_adjusted))?;
+                let contents = fs::read(&hook_path)
+                    .chain_err(format_err!("while reading hook {:?}", hook_path))?;
                 let code = str::from_utf8(&contents)?;
                 let code = code.to_string();
                 HookParams {
@@ -1345,7 +1358,6 @@ mod test {
     #[fbinit::test]
     fn test_read_manifest(fb: FacebookInit) {
         let hook1_content = "this is hook1";
-        let hook2_content = "this is hook2";
         let fbsource_content = r#"
             write_lock_db_address="write_lock_db_address"
             generation_cache_size=1048576
@@ -1392,9 +1404,6 @@ mod test {
             hook_name="hook1"
 
             [[bookmarks.hooks]]
-            hook_name="hook2"
-
-            [[bookmarks.hooks]]
             hook_name="rust:rusthook"
 
             [[bookmarks]]
@@ -1405,13 +1414,6 @@ mod test {
             path="common/hooks/hook1.lua"
             hook_type="PerAddedOrModifiedFile"
             bypass_commit_string="@allow_hook1"
-
-            [[hooks]]
-            name="hook2"
-            path="./hooks/hook2.lua"
-            hook_type="PerChangeset"
-            bypass_pushvar="pushvar=pushval"
-            config_strings={ conf1 = "val1", conf2 = "val2" }
 
             [[hooks]]
             name="rust:rusthook"
@@ -1473,7 +1475,6 @@ mod test {
             "common/commitsyncmap.toml" => "",
             "common/hooks/hook1.lua" => hook1_content,
             "repos/fbsource/server.toml" => fbsource_content,
-            "repos/fbsource/hooks/hook2.lua" => hook2_content,
             "repos/www/server.toml" => www_content,
             "my_path/my_files" => "",
         };
@@ -1536,11 +1537,7 @@ mod test {
                 bookmarks: vec![
                     BookmarkParams {
                         bookmark: BookmarkName::new("master").unwrap().into(),
-                        hooks: vec![
-                            "hook1".to_string(),
-                            "hook2".to_string(),
-                            "rust:rusthook".to_string(),
-                        ],
+                        hooks: vec!["hook1".to_string(), "rust:rusthook".to_string()],
                         only_fast_forward: false,
                         allowed_users: Some(Regex::new("^(svcscm|twsvcscm)$").unwrap()),
                         rewrite_dates: None,
@@ -1561,22 +1558,6 @@ mod test {
                         config: HookConfig {
                             bypass: Some(HookBypass::CommitMessage("@allow_hook1".into())),
                             strings: hashmap! {},
-                            ints: hashmap! {},
-                        },
-                    },
-                    HookParams {
-                        name: "hook2".to_string(),
-                        code: Some("this is hook2".to_string()),
-                        hook_type: HookType::PerChangeset,
-                        config: HookConfig {
-                            bypass: Some(HookBypass::Pushvar {
-                                name: "pushvar".into(),
-                                value: "pushval".into(),
-                            }),
-                            strings: hashmap! {
-                                "conf1".into() => "val1".into(),
-                                "conf2".into() => "val2".into(),
-                            },
                             ints: hashmap! {},
                         },
                     },
