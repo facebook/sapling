@@ -1,10 +1,17 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 
-#include "lib/third-party/xdiff/xdiff.h"
+#include "eden/scm/lib/third-party/xdiff/xdiff.h"
 
 #define abort(...)                                                             \
 	{                                                                      \

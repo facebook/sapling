@@ -1589,7 +1589,7 @@ extmodules = [
             "lib/third-party/xdiff/xutils.c",
             "edenscm/mercurial/cext/xdiff.c",
         ],
-        include_dirs=include_dirs + ["lib/third-party/xdiff"],
+        include_dirs=include_dirs,
         depends=common_depends
         + [
             "lib/third-party/xdiff/xdiff.h",

@@ -10,7 +10,7 @@
  */
 
 #define PY_SSIZE_T_CLEAN
-#include "lib/third-party/xdiff/xdiff.h"
+#include "eden/scm/lib/third-party/xdiff/xdiff.h"
 #include "Python.h"
 
 #if PY_MAJOR_VERSION >= 3
