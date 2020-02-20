@@ -12,15 +12,21 @@
 use crate::errors::*;
 use crate::facebook::rust_hooks::check_unittests::CheckUnittestsHook;
 use crate::facebook::rust_hooks::ensure_valid_email::EnsureValidEmailHook;
+use crate::facebook::rust_hooks::limit_path_length::LimitPathLengthHook;
 use crate::facebook::rust_hooks::restrict_users::RestrictUsersHook;
 use crate::facebook::rust_hooks::verify_integrity::VerifyIntegrityHook;
 use crate::lua_hook::LuaHook;
-use crate::{Hook, HookChangeset, HookManager};
+use crate::{Hook, HookChangeset, HookFile, HookManager};
 use anyhow::Error;
 use fbinit::FacebookInit;
 use metaconfig_types::{HookType, RepoConfig};
 use std::collections::HashSet;
 use std::sync::Arc;
+
+enum LoadedRustHook {
+    ChangesetHook(Arc<dyn Hook<HookChangeset>>),
+    FileHook(Arc<dyn Hook<HookFile>>),
+}
 
 pub fn load_hooks(
     fb: FacebookInit,
@@ -40,16 +46,33 @@ pub fn load_hooks(
         }
 
         if name.starts_with("rust:") {
+            use LoadedRustHook::*;
+
             let rust_name = &name[5..];
             let rust_name = rust_name.to_string();
-            let rust_hook: Arc<dyn Hook<HookChangeset>> = match rust_name.as_ref() {
-                "check_unittests" => Arc::new(CheckUnittestsHook::new(&hook.config)?),
-                "verify_integrity" => Arc::new(VerifyIntegrityHook::new(&hook.config)?),
-                "ensure_valid_email" => Arc::new(EnsureValidEmailHook::new(fb, &hook.config)),
-                "restrict_users" => Arc::new(RestrictUsersHook::new(&hook.config)?),
+            let rust_hook = match rust_name.as_ref() {
+                "check_unittests" => {
+                    ChangesetHook(Arc::new(CheckUnittestsHook::new(&hook.config)?))
+                }
+                "verify_integrity" => {
+                    ChangesetHook(Arc::new(VerifyIntegrityHook::new(&hook.config)?))
+                }
+                "ensure_valid_email" => {
+                    ChangesetHook(Arc::new(EnsureValidEmailHook::new(fb, &hook.config)))
+                }
+                "restrict_users" => ChangesetHook(Arc::new(RestrictUsersHook::new(&hook.config)?)),
+                "limit_path_length" => FileHook(Arc::new(LimitPathLengthHook::new(&hook.config)?)),
                 _ => return Err(ErrorKind::InvalidRustHook(name.clone()).into()),
             };
-            hook_manager.register_changeset_hook(&name, rust_hook, hook.config)
+
+            match rust_hook {
+                FileHook(rust_hook) => {
+                    hook_manager.register_file_hook(&name, rust_hook, hook.config)
+                }
+                ChangesetHook(rust_hook) => {
+                    hook_manager.register_changeset_hook(&name, rust_hook, hook.config)
+                }
+            }
         } else {
             let lua_hook = LuaHook::new(name.clone(), hook.code.clone().unwrap());
             match hook.hook_type {
