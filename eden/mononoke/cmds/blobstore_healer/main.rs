@@ -10,6 +10,7 @@
 
 mod dummy;
 mod healer;
+mod replication_lag;
 
 use anyhow::{bail, format_err, Error, Result};
 use blobstore::Blobstore;
@@ -27,7 +28,7 @@ use context::{CoreContext, SessionContainer};
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
 use fbinit::FacebookInit;
 use futures::{
-    future::{self, join_all, loop_fn, ok, Loop},
+    future::{self, join_all},
     prelude::*,
 };
 use futures_ext::{BoxFuture, FutureExt};
@@ -37,16 +38,15 @@ use healer::Healer;
 use lazy_static::lazy_static;
 use metaconfig_types::{BlobConfig, MetadataDBConfig, StorageConfig};
 use mononoke_types::DateTime;
-use slog::{error, info, o, warn, Logger};
+use replication_lag::wait_for_replication;
+use slog::{error, info, o, warn};
 use sql::Connection;
 use sql_ext::{open_sqlite_path, MysqlOptions};
-use sql_facebook::{ext::ConnectionFbExt, myrouter, raw};
+use sql_facebook::{myrouter, raw};
 use std::collections::HashMap;
 use std::sync::Arc;
-use std::time::{Duration, Instant};
-use tokio_timer::Delay;
+use std::time::Duration;
 
-const MAX_ALLOWED_REPLICATION_LAG_SECS: usize = 5;
 const CONFIGERATOR_REGIONS_CONFIG: &str = "myrouter/regions.json";
 const QUIET_ARG: &'static str = "quiet";
 const ITER_LIMIT_ARG: &'static str = "iteration-limit";
@@ -260,6 +260,8 @@ fn maybe_schedule_healer_for_storage(
                 iter_limit,
                 heal_min_age,
             )
+            .boxed()
+            .compat()
         },
     );
 
@@ -267,174 +269,39 @@ fn maybe_schedule_healer_for_storage(
 }
 
 // Pass None as iter_limit for never ending run
-fn schedule_healing(
+async fn schedule_healing(
     ctx: CoreContext,
     multiplex_healer: Healer,
-    regional_conns: Vec<(String, Connection)>,
+    conns: Vec<(String, Connection)>,
     iter_limit: Option<u64>,
     heal_min_age: ChronoDuration,
-) -> BoxFuture<(), Error> {
-    async move {
-        let mut count = 0;
-        let mut last_batch_was_full_size = true;
+) -> Result<(), Error> {
+    let mut count = 0;
 
-        let regional_conns = Arc::new(regional_conns);
-
-        loop {
-            count += 1;
-            if let Some(iter_limit) = iter_limit {
-                if count > iter_limit {
-                    break Ok(());
-                }
+    loop {
+        count += 1;
+        if let Some(iter_limit) = iter_limit {
+            if count > iter_limit {
+                return Ok(());
             }
+        }
 
-            ensure_small_db_replication_lag(
-                ctx.logger().clone(),
-                max_replication_lag(regional_conns.clone()),
-                last_batch_was_full_size,
-            )
+        wait_for_replication(ctx.logger(), conns.as_ref()).await?;
+
+        let now = DateTime::now().into_chrono();
+        let healing_deadline = DateTime::new(now - heal_min_age);
+        let last_batch_was_full_size = multiplex_healer
+            .heal(ctx.clone(), healing_deadline)
             .compat()
             .await?;
 
-            let now = DateTime::now().into_chrono();
-            let healing_deadline = DateTime::new(now - heal_min_age);
-            last_batch_was_full_size = multiplex_healer
-                .heal(ctx.clone(), healing_deadline)
-                .compat()
-                .await?;
+        // if last batch read was not full,  wait at least 1 second, to avoid busy looping as don't
+        // want to hammer the database with thousands of reads a second.
+        if !last_batch_was_full_size {
+            info!(ctx.logger(), "The last batch was not full size, waiting...",);
+            tokio_preview::time::delay_for(Duration::from_secs(1)).await;
         }
     }
-    .boxed()
-    .compat()
-    .boxify()
-}
-
-fn max_replication_lag(
-    replication_lag_db_conns: Arc<Vec<(String, Connection)>>,
-) -> impl Fn() -> Box<dyn Future<Item = (String, usize), Error = Error> + Send> {
-    move || {
-        // Check what max replication lag on replicas
-        let lag_secs_futs: Vec<_> = replication_lag_db_conns
-            .iter()
-            .map(|(region, conn)| {
-                cloned!(region);
-                conn.show_replica_lag_secs()
-                    .or_else(|err| match err.downcast_ref::<sql::error::ServerError>() {
-                        Some(server_error) => {
-                            // 1918 is discovery failed (i.e. there is no server matching the
-                            // constraints). This is fine, that means we don't need to monitor it.
-                            if server_error.code == 1918 {
-                                Ok(Some(0))
-                            } else {
-                                Err(err)
-                            }
-                        }
-                        None => Err(err),
-                    })
-                    .and_then({
-                        cloned!(conn);
-                        move |maybe_secs| {
-                            match (&conn, maybe_secs) {
-                                (Connection::Sqlite(_), None) => Ok((region, 0)),
-                                (Connection::Sqlite(_), Some(x)) => Ok((region, x)),
-                                (_, Some(lag_secs)) =>  Ok((region, lag_secs)),
-                                (_, None) => Err(format_err!("Could not fetch db replication lag for {}. Failing to avoid overloading db", region)),
-                            }
-                        }
-                    })
-            })
-            .collect();
-
-        Box::new(join_all(lag_secs_futs).and_then(move |lags| {
-            let (region, max_lag_secs): (String, usize) = lags
-                .into_iter()
-                .max_by_key(|(_, lag)| *lag)
-                .unwrap_or(("".to_string(), 0));
-            ok((region, max_lag_secs))
-        }))
-    }
-}
-
-fn compute_delay(
-    logger: Logger,
-    max_lag_secs: usize,
-    last_batch_full_sized: bool,
-) -> Option<usize> {
-    // if there are items remaining (i.e. last batch read was full sized),
-    // and lag < bound, carry on without pause
-    if last_batch_full_sized && max_lag_secs < MAX_ALLOWED_REPLICATION_LAG_SECS {
-        info!(
-            logger,
-            "As there are items remaining and lag < bound, carry on without pause",
-        );
-        return None;
-    }
-
-    // if last batch read was not full,  wait at least 1 second,
-    // to avoid busy looping as don't want to hammer the database
-    // with thousands of reads a second.
-    let max_lag_secs = if !last_batch_full_sized {
-        info!(
-            logger,
-            "As the last batch was not full sized, wait at least one second",
-        );
-        std::cmp::max(1, max_lag_secs)
-    } else {
-        max_lag_secs
-    };
-
-    return Some(max_lag_secs);
-}
-
-fn ensure_small_db_replication_lag<F>(
-    logger: Logger,
-    compute_max_lag: F,
-    last_batch_full_sized: bool,
-) -> impl Future<Item = usize, Error = Error>
-where
-    F: Fn() -> Box<dyn Future<Item = (String, usize), Error = Error> + Send>,
-{
-    // Make sure we've slept at least once before continuing
-    let last_max_lag: Option<usize> = None;
-    let total_lag: usize = 0;
-
-    loop_fn(
-        (total_lag, last_max_lag),
-        move |(total_lag, last_max_lag)| {
-            if last_max_lag.is_some() && last_max_lag.unwrap() < MAX_ALLOWED_REPLICATION_LAG_SECS {
-                // No need check rep lag again, was ok on last loop
-                return ok(Loop::Break(total_lag)).left_future();
-            }
-
-            cloned!(logger);
-
-            // Check what max replication lag on replicas, and sleep for that long.
-            // This is done in order to avoid overloading the db.
-            compute_max_lag()
-                .and_then(move |(region, max_lag_secs)| {
-                    info!(
-                        logger,
-                        "Max replication lag is {}, {}s", region, max_lag_secs,
-                    );
-
-                    match compute_delay(logger, max_lag_secs, last_batch_full_sized) {
-                        None => return ok(Loop::Break(total_lag)).left_future(),
-                        Some(max_lag_secs) => {
-                            let max_lag = Duration::from_secs(max_lag_secs as u64);
-                            let start = Instant::now();
-                            let next_iter_deadline = start + max_lag;
-                            let total_lag = total_lag + max_lag_secs;
-
-                            Delay::new(next_iter_deadline)
-                                .map(move |()| Loop::Continue((total_lag, Some(max_lag_secs))))
-                                .from_err()
-                                .right_future()
-                        }
-                    }
-                })
-                .right_future()
-        },
-    )
 }
 
 fn setup_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
@@ -554,105 +421,4 @@ fn main(fb: FacebookInit) -> Result<()> {
         &matches,
         cmdlib::monitoring::AliveService,
     )
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-    use std::cell::RefCell;
-    use tokio::runtime::Runtime;
-
-    fn compute_delay_test(
-        fb: FacebookInit,
-        simulated_lag_secs: usize,
-        last_batch_full: bool,
-        expected_wait_time: Option<usize>,
-    ) {
-        let ctx = CoreContext::test_mock(fb);
-        let logger = ctx.logger();
-        cloned!(logger);
-
-        let delay = compute_delay(logger, simulated_lag_secs, last_batch_full);
-
-        assert!(
-            delay == expected_wait_time,
-            "compute_delay should have returned {:?}, but returned {:?}",
-            expected_wait_time,
-            delay,
-        );
-    }
-
-    #[fbinit::test]
-    fn compute_delay_test_suite(fb: FacebookInit) {
-        // max lag is 2, last batch is not full, we should wait at least 2 seconds
-        compute_delay_test(fb, 2, false, Some(2));
-        // max lag is 0, last batch is not full, we should wait at least 1 seconds
-        compute_delay_test(fb, 0, false, Some(1));
-        // max lag is 3, last batch is full, we should not wait
-        compute_delay_test(fb, 3, true, None)
-    }
-
-    fn simulated_constant_lag(
-        lag: usize,
-    ) -> impl Fn() -> Box<dyn Future<Item = (String, usize), Error = Error> + Send> {
-        move || Box::new(ok(("simulated_lag".to_string(), lag)))
-    }
-
-    fn simulated_decreasing_lag(
-        initial_lag: usize,
-        decrement: usize,
-    ) -> impl Fn() -> Box<dyn Future<Item = (String, usize), Error = Error> + Send> {
-        let lag = RefCell::new(initial_lag);
-        move || {
-            Box::new(ok((
-                "simulated_lag".to_string(),
-                lag.replace_with(|&mut old| if old < decrement { 0 } else { old - decrement }),
-            )))
-        }
-    }
-
-    fn ensure_small_db_replication_lag_test<F>(
-        fb: FacebookInit,
-        simulated_lag: F,
-        last_batch_full: bool,
-        expected_wait_time: usize,
-    ) where
-        F: Fn() -> Box<dyn Future<Item = (String, usize), Error = Error> + Send> + Send + 'static,
-    {
-        let ctx = CoreContext::test_mock(fb);
-        let logger = ctx.logger();
-        cloned!(logger);
-
-        let mut runtime = Runtime::new().unwrap();
-        let lag_future = ensure_small_db_replication_lag(logger, simulated_lag, last_batch_full);
-        let elapsed_delay = runtime.block_on(lag_future);
-
-        match elapsed_delay {
-            Ok(elapsed_delay) =>
-            assert!(elapsed_delay == expected_wait_time,
-                "ensure_small_db_replication_lag should have waited {} seconds, but waited {} seconds",
-                expected_wait_time, elapsed_delay),
-            Err(e) => assert!(false, "ensure_small_db_replication_lab returned an error: {:?}", e),
-        }
-    }
-
-    #[fbinit::test]
-    fn ensure_small_db_replication_lag_test_suite(fb: FacebookInit) {
-        // max lag is 2, last batch is not full, we should wait at least 2 seconds
-        ensure_small_db_replication_lag_test(fb, simulated_constant_lag(2), false, 2);
-        // max lag is 0, last batch is not full, we should wait at least 1 seconds
-        ensure_small_db_replication_lag_test(fb, simulated_constant_lag(0), false, 1);
-        // max lag is 3, last batch is full, we should not wait
-        ensure_small_db_replication_lag_test(fb, simulated_constant_lag(3), true, 0);
-
-        // max lag initially is 8, and decreases at every cycle by 2.
-        // lags are thus 8, 6, 4, ...  since the first two lags are > MAX_LAG, we wait 8 + 6
-        // the third lag is < MAX_LAG and last batch is full, so we don't wait anymore
-        ensure_small_db_replication_lag_test(fb, simulated_decreasing_lag(8, 2), true, 14);
-
-        // max lag initially is 8, and decreases at every cycle by 2.
-        // lags are thus 8, 6, 4, ...  since the first two lags are > MAX_LAG, we wait 8 + 6
-        // then lag is 4, but the last batch is not full, so we wait 4 more seconds
-        ensure_small_db_replication_lag_test(fb, simulated_decreasing_lag(8, 2), false, 18);
-    }
 }
