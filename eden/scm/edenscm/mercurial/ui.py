@@ -633,6 +633,10 @@ class ui(object):
             msgs = self._addprefixesandlabels(args, opts, bool(self._bufferapplylabels))
             self._buffers[-1].extend(msgs)
         else:
+            if self.formatted():
+                # Convert arguments from local encoding to output encoding
+                # if these encodings differ (e.g. Python 2.7 on Windows).
+                args = [encoding.localtooutput(arg) for arg in args]
             msgs = self._addprefixesandlabels(args, opts, bool(self._colormode))
             if self._colormode == "win32":
                 # windows color printing is its own can of crab

@@ -63,7 +63,7 @@ def hfsignoreclean(s):
 
 def setfromenviron():
     """Reset encoding states from environment variables"""
-    global encoding, encodingmode, environ, _wide
+    global encoding, outputencoding, encodingmode, environ, _wide
     environ = os.environ  # re-exports
     try:
         encoding = os.environ.get("HGENCODING")
@@ -80,6 +80,14 @@ def setfromenviron():
     # How to treat ambiguous-width characters. Set to 'wide' to treat as wide.
     _wide = os.environ.get("HGENCODINGAMBIGUOUS", "narrow") == "wide" and "WFA" or "WF"
 
+    outputencoding = os.environ.get("HGOUTPUTENCODING")
+
+    if outputencoding == "ascii":
+        outputencoding = "utf-8"
+
+    # On Windows the outputencoding will be set to the OEM code page by the
+    # windows module when it is loaded.
+
 
 _encodingfixers = {"646": lambda: "ascii", "ANSI_X3.4-1968": lambda: "ascii"}
 
@@ -89,7 +97,7 @@ _encodingfixers = {"646": lambda: "ascii", "ANSI_X3.4-1968": lambda: "ascii"}
 if pycompat.iswindows and sys.version_info[0] < 3:
     _encodingfixers["cp65001"] = lambda: "utf-8"
 
-environ = encoding = encodingmode = _wide = None
+environ = encoding = outputencoding = encodingmode = _wide = None
 setfromenviron()
 fallbackencoding = "ISO-8859-1"
 
@@ -645,3 +653,19 @@ else:
     tolocal = _tolocal
     tolocalstr = _tolocal  # Binary utf-8 to local byte string
     upper = _upper
+
+
+if sys.version_info[0] < 3:
+
+    def localtooutput(s):
+        # type: (bytes) -> bytes
+        if outputencoding is not None and outputencoding != encoding:
+            try:
+                return fromlocal(s).decode("utf-8").encode(outputencoding, "replace")
+            except Exception:
+                pass
+        return s
+
+
+else:
+    localtooutput = pycompat.identity

@@ -144,6 +144,13 @@ globalopts = cmdutil._typedflags(
             _("set the charset encoding mode"),
             _("MODE"),
         ),
+        (
+            "",
+            "outputencoding",
+            encoding.outputencoding or "same as encoding",
+            _("set the output encoding"),
+            _("ENCODE"),
+        ),
         ("", "traceback", False, _("always print a traceback on exception")),
         ("", "time", False, _("time how long the command takes")),
         ("", "profile", False, _("print command execution profile")),

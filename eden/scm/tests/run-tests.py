@@ -1486,6 +1486,7 @@ class Test(unittest.TestCase):
         env["HGUSER"] = "test"
         env["HGENCODING"] = "ascii"
         env["HGENCODINGMODE"] = "strict"
+        env["HGOUTPUTENCODING"] = "ascii"
         env["HGIPV6"] = str(int(self._useipv6))
 
         # LOCALIP could be ::1 or 127.0.0.1. Useful for tests that require raw

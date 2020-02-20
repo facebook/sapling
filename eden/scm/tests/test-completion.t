@@ -193,6 +193,7 @@ Show the global options
   --help
   --hidden
   --noninteractive
+  --outputencoding
   --pager
   --profile
   --quiet
@@ -229,6 +230,7 @@ Show the options for the "serve" command
   --ipv6
   --name
   --noninteractive
+  --outputencoding
   --pager
   --pid-file
   --port

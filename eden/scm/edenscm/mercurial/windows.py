@@ -653,3 +653,11 @@ def releaselock(_lockfd, pathname):
 
 def islocked(pathname):
     return os.path.exists(pathname)
+
+
+# Set outputencoding from the OEM code page.
+if not encoding.outputencoding:
+    encoding.outputencoding = win32.getoemcp()
+    encoding.outputencoding = encoding._encodingfixers.get(
+        encoding.outputencoding, lambda: encoding.outputencoding
+    )()

@@ -383,6 +383,9 @@ _kernel32.PeekNamedPipe.restype = _BOOL
 _kernel32.MoveFileExA.argtypes = [_LPCSTR, _LPCSTR, _DWORD]
 _kernel32.MoveFileExA.restype = _BOOL
 
+_kernel32.GetOEMCP.argtypes = []
+_kernel32.GetOEMCP.restype = _UINT
+
 
 def _raiseoserror(name):
     # Force the code to a signed int to avoid an 'int too large' error.
@@ -815,3 +818,9 @@ def getmaxmemoryusage():
     """
     # TODO(phillco): Implement via GetProcessMemoryInfo().
     raise NotImplementedError
+
+
+def getoemcp():
+    """Returns the OEM codepage, which is the codepage that should be used for
+    output to the console."""
+    return "cp%d" % _kernel32.GetOEMCP()
