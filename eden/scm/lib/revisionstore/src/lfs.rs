@@ -69,6 +69,17 @@ enum ContentHash {
     Sha256(Sha256),
 }
 
+impl ContentHash {
+    fn sha256(data: &Bytes) -> Result<Self> {
+        let mut hash = CryptoSha256::new();
+        hash.input(data);
+
+        let mut bytes = [0; Sha256::len()];
+        hash.result(&mut bytes);
+        Ok(ContentHash::Sha256(Sha256::from_slice(&bytes)?))
+    }
+}
+
 impl LfsPointersStore {
     fn open_options() -> StoreOpenOptions {
         StoreOpenOptions::new()
@@ -267,21 +278,18 @@ impl MutableDeltaStore for LfsStore {
     fn add(&self, delta: &Delta, _metadata: &Metadata) -> Result<()> {
         ensure!(delta.base.is_none(), "Deltas aren't supported.");
 
+        let content_hash = ContentHash::sha256(&delta.data)?;
+
         let mut inner = self.inner.write();
 
-        let mut hash = CryptoSha256::new();
-        hash.input(&delta.data);
-
-        let mut bytes = [0; Sha256::len()];
-        hash.result(&mut bytes);
-        let sha256 = Sha256::from_slice(&bytes)?;
-
-        inner.blobs.add(&sha256, delta.data.clone())?;
+        match content_hash {
+            ContentHash::Sha256(sha256) => inner.blobs.add(&sha256, delta.data.clone())?,
+        };
 
         let entry = LfsPointersEntry {
             hgid: delta.key.hgid.clone(),
             size: delta.data.len() as u64,
-            content_hash: ContentHash::Sha256(sha256),
+            content_hash,
         };
         inner.pointers.add(entry)
     }
