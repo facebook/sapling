@@ -225,8 +225,18 @@ def readcommitcloudstate(repo):
 
 
 def _makerage(ui, repo, **opts):
-    # Make graphlog shorter.
-    configoverrides = {("experimental", "graphshorten"): "1"}
+    # Make graphlog shorter, and force use of lines-square renderer, as the
+    # user's configuration may not render properly in a text file.
+    configoverrides = {
+        ("experimental", "graphshorten"): "1",
+        ("experimental", "graph.renderer"): "lines-square",
+    }
+
+    # Override the encoding to "UTF-8" to generate the rage in UTF-8.
+    oldencoding = encoding.encoding
+    oldencodingmode = encoding.encodingmode
+    encoding.encoding = "UTF-8"
+    encoding.encodingmode = "replace"
 
     def hgcmd(cmdname, *args, **additional_opts):
         cmd, opts = cmdutil.getcmdanddefaultopts(cmdname, commands.table)
@@ -458,6 +468,8 @@ def _makerage(ui, repo, **opts):
     msg = "".join(msg)
 
     ui._colormode = oldcolormode
+    encoding.encoding = oldencoding
+    encoding.encodingmode = oldencodingmode
     return msg
 
 
@@ -481,7 +493,7 @@ def rage(ui, repo, *pats, **opts):
 
     if opts.get("preview"):
         ui.pager("rage")
-        ui.write("%s\n" % msg)
+        ui.write("%s\n" % encoding.unitolocal(msg.decode("utf-8")))
         return
 
     with progress.spinner(ui, "saving paste"):
