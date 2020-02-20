@@ -68,6 +68,12 @@ Check logging structure
     }
   }
 
+Check repo client Scuba logging
+  $ grep "Gettreepack Params" "$fastreplay_log" | jq -r .int.gettreepack_mfnodes
+  1
+  $ grep "Getpack Params" "$fastreplay_log" | jq -r .int.getpack_paths
+  3
+
 # Check that replaying with admission rate = 0 does not replay
   $ truncate -s 0 "$fastreplay_log"
   $ live_config="$TESTTMP/live.json"

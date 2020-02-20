@@ -509,7 +509,16 @@ impl RepoClient {
             cloned!(ctx);
             let s = params
                 .collect()
-                .map(|v| stream::iter_ok(v.into_iter()))
+                .map({
+                    cloned!(ctx);
+                    move |params| {
+                        ctx.scuba()
+                            .clone()
+                            .add("getpack_paths", params.len())
+                            .log_with_msg("Getpack Params", None);
+                        stream::iter_ok(params.into_iter())
+                    }
+                })
                 .flatten_stream()
                 .map({
                     cloned!(ctx, getpack_params, repo);
@@ -1460,6 +1469,11 @@ impl HgCommands for RepoClient {
         });
         let args = json!(vec![args]);
         let (ctx, mut command_logger) = self.start_command(ops::GETTREEPACK);
+
+        ctx.scuba()
+            .clone()
+            .add("gettreepack_mfnodes", params.mfnodes.len())
+            .log_with_msg("Gettreepack Params", None);
 
         let s = self
             .gettreepack_untimed(ctx.clone(), params)
