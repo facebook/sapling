@@ -6,20 +6,22 @@
  */
 
 use std::{
+    convert::TryInto,
     fs::File,
     io::{ErrorKind, Read, Write},
     path::{Path, PathBuf},
+    str,
 };
 
-use anyhow::{ensure, Result};
-use bytes::Bytes;
+use anyhow::{bail, ensure, Result};
+use bytes::{Bytes, BytesMut};
 use crypto::{digest::Digest, sha2::Sha256 as CryptoSha256};
 use parking_lot::RwLock;
 use serde_derive::{Deserialize, Serialize};
 
 use indexedlog::log::IndexOutput;
 use mincode::{deserialize, serialize};
-use types::{HgId, Key, Sha256};
+use types::{HgId, Key, RepoPath, Sha256};
 use util::path::create_dir;
 
 use crate::{
@@ -59,6 +61,8 @@ pub struct LfsStore {
 struct LfsPointersEntry {
     hgid: HgId,
     size: u64,
+    is_binary: bool,
+    copy_from: Option<Key>,
     content_hash: ContentHash,
 }
 
@@ -229,6 +233,85 @@ impl LocalStore for LfsStore {
     }
 }
 
+/// Mercurial may embed the copy-from information into the blob itself, in which case, the `Delta`
+/// would look like:
+///
+///   \1
+///   copy: path
+///   copyrev: sha1
+///   \1
+///   blob
+///
+/// If the blob starts with \1\n too, it's escaped by adding \1\n\1\n at the beginning.
+fn strip_metadata(data: &Bytes) -> Result<(Bytes, Option<Key>)> {
+    let slice = data.as_ref();
+    if !slice.starts_with(b"\x01\n") {
+        return Ok((data.clone(), None));
+    }
+
+    let slice = &slice[2..];
+
+    if let Some(pos) = slice.windows(2).position(|needle| needle == b"\x01\n") {
+        let slice = &slice[..pos];
+
+        let mut path = None;
+        let mut hgid = None;
+        for line in slice.split(|c| c == &b'\n') {
+            if line.is_empty() {
+                continue;
+            }
+
+            if line.starts_with(b"copy: ") {
+                path = Some(RepoPath::from_str(str::from_utf8(&line[6..])?)?.to_owned());
+            } else if line.starts_with(b"copyrev: ") {
+                hgid = Some(HgId::from_str(str::from_utf8(&line[9..])?)?);
+            } else {
+                bail!("Unknown metadata in data: {:?}", line);
+            }
+        }
+
+        let key = match (path, hgid) {
+            (None, Some(_)) => bail!("missing 'copyrev' metadata"),
+            (Some(_), None) => bail!("missing 'copy' metadata"),
+
+            (None, None) => None,
+            (Some(path), Some(hgid)) => Some(Key::new(path, hgid)),
+        };
+
+        Ok((data.slice(2 + pos + 2, data.len()), key))
+    } else {
+        Ok((data.clone(), None))
+    }
+}
+
+/// When a file was copied, Mercurial expects the blob that the store returns to contain this copy
+/// information
+fn rebuild_metadata(data: Bytes, entry: &LfsPointersEntry) -> Bytes {
+    if let Some(copy_from) = &entry.copy_from {
+        let mut ret = BytesMut::new();
+
+        ret.extend_from_slice(&b"\x01\n"[..]);
+        ret.extend_from_slice(&b"copy: "[..]);
+        ret.extend_from_slice(copy_from.path.as_ref());
+        ret.extend_from_slice(&b"\n"[..]);
+        ret.extend_from_slice(&b"copyrev: "[..]);
+        ret.extend_from_slice(copy_from.hgid.to_hex().as_bytes());
+        ret.extend_from_slice(&b"\n"[..]);
+        ret.extend_from_slice(&b"\x01\n"[..]);
+        ret.extend_from_slice(data.as_ref());
+        ret.freeze()
+    } else {
+        if data.as_ref().starts_with(b"\x01\n") {
+            let mut ret = BytesMut::new();
+            ret.extend_from_slice(&b"\x01\n\x01\n"[..]);
+            ret.extend_from_slice(data.as_ref());
+            ret.freeze()
+        } else {
+            data
+        }
+    }
+}
+
 impl DataStore for LfsStore {
     fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         unreachable!()
@@ -243,6 +326,7 @@ impl DataStore for LfsStore {
                 ContentHash::Sha256(hash) => inner.blobs.get(&hash)?,
             };
             if let Some(content) = content {
+                let content = rebuild_metadata(content, &entry);
                 return Ok(Some(Delta {
                     data: content,
                     base: None,
@@ -265,7 +349,7 @@ impl DataStore for LfsStore {
         if let Some(entry) = entry {
             // XXX: add LFS flag?
             Ok(Some(Metadata {
-                size: Some(entry.size),
+                size: Some(entry.size.try_into()?),
                 flags: None,
             }))
         } else {
@@ -278,17 +362,20 @@ impl MutableDeltaStore for LfsStore {
     fn add(&self, delta: &Delta, _metadata: &Metadata) -> Result<()> {
         ensure!(delta.base.is_none(), "Deltas aren't supported.");
 
-        let content_hash = ContentHash::sha256(&delta.data)?;
+        let (data, copy_from) = strip_metadata(&delta.data)?;
+        let content_hash = ContentHash::sha256(&data)?;
 
         let mut inner = self.inner.write();
 
         match content_hash {
-            ContentHash::Sha256(sha256) => inner.blobs.add(&sha256, delta.data.clone())?,
+            ContentHash::Sha256(sha256) => inner.blobs.add(&sha256, data.clone())?,
         };
 
         let entry = LfsPointersEntry {
             hgid: delta.key.hgid.clone(),
-            size: delta.data.len() as u64,
+            size: data.len().try_into()?,
+            is_binary: data.as_ref().contains(&b'\0'),
+            copy_from,
             content_hash,
         };
         inner.pointers.add(entry)
@@ -304,6 +391,7 @@ impl MutableDeltaStore for LfsStore {
 mod tests {
     use super::*;
 
+    use quickcheck::quickcheck;
     use tempfile::TempDir;
 
     use types::testutil::*;
@@ -393,6 +481,76 @@ mod tests {
         let k1 = key("a", "2");
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: None,
+            key: k1.clone(),
+        };
+
+        store.add(&delta, &Default::default())?;
+        let get_delta = store.get_delta(&k1)?;
+        assert_eq!(Some(delta), get_delta);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_strip_metadata() -> Result<()> {
+        let key = key("foo/bar/baz", "1234");
+        let data = Bytes::from(
+            format!(
+                "\x01\ncopy: {}\ncopyrev: {}\n\x01\nthis is a blob",
+                key.path, key.hgid
+            )
+            .as_bytes(),
+        );
+        let (split_data, path) = strip_metadata(&data)?;
+        assert_eq!(split_data, Bytes::from(&b"this is a blob"[..]));
+        assert_eq!(path, Some(key));
+
+        let data = Bytes::from(&b"\x01\n\x01\nthis is a blob"[..]);
+        let (split_data, path) = strip_metadata(&data)?;
+        assert_eq!(split_data, Bytes::from(&b"this is a blob"[..]));
+        assert_eq!(path, None);
+
+        let data = Bytes::from(&b"\x01\nthis is a blob"[..]);
+        let (split_data, path) = strip_metadata(&data)?;
+        assert_eq!(split_data, data);
+        assert_eq!(path, None);
+
+        Ok(())
+    }
+
+    quickcheck! {
+        fn metadata_strip_rebuild(data: Vec<u8>, copy_from: Option<Key>) -> Result<bool> {
+            let data = Bytes::from(data);
+            let pointer = LfsPointersEntry {
+                hgid: hgid("1234"),
+                size: data.len().try_into()?,
+                is_binary: true,
+                copy_from: copy_from.clone(),
+                content_hash: ContentHash::sha256(&data)?,
+            };
+
+            let with_metadata = rebuild_metadata(data.clone(), &pointer);
+            let (without, copy) = strip_metadata(&with_metadata)?;
+
+            Ok(data == without && copy == copy_from)
+        }
+    }
+
+    #[test]
+    fn test_add_get_copyfrom() -> Result<()> {
+        let dir = TempDir::new()?;
+        let store = LfsStore::shared(&dir)?;
+
+        let k1 = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from(
+                format!(
+                    "\x01\ncopy: {}\ncopyrev: {}\n\x01\nthis is a blob",
+                    k1.path, k1.hgid
+                )
+                .as_bytes(),
+            ),
             base: None,
             key: k1.clone(),
         };
