@@ -18,6 +18,7 @@ use types::Key;
 use crate::{
     datastore::{DataStore, Delta, Metadata, MutableDeltaStore, RemoteDataStore},
     indexedlogdatastore::IndexedLogDataStore,
+    lfs::LfsStore,
     localstore::LocalStore,
     memcache::MemcacheStore,
     multiplexstore::MultiplexDeltaStore,
@@ -182,7 +183,7 @@ impl<'a> ContentStoreBuilder<'a> {
     }
 
     pub fn build(self) -> Result<ContentStore> {
-        let _local_path = get_local_path(&self.local_path, &self.suffix)?;
+        let local_path = get_local_path(&self.local_path, &self.suffix)?;
         let cache_path = get_cache_path(self.config, &self.suffix)?;
 
         let cache_packs_path = get_cache_packs_path(self.config, &self.suffix)?;
@@ -206,6 +207,7 @@ impl<'a> ContentStoreBuilder<'a> {
         // and the number of requests satisfied by the shared cache to be significantly higher than
         // ones in the local store.
         datastore.add(shared_pack_store.clone());
+        datastore.add(Box::new(LfsStore::shared(&cache_path)?));
 
         let local_mutabledatastore: Option<Box<dyn MutableDeltaStore>> =
             if let Some(local_path) = self.local_path {
@@ -224,6 +226,10 @@ impl<'a> ContentStoreBuilder<'a> {
                 }
                 None
             };
+
+        if let Some(local_path) = local_path {
+            datastore.add(Box::new(LfsStore::local(&local_path)?));
+        }
 
         let remote_store: Option<Arc<dyn RemoteDataStore>> =
             if let Some(remotestore) = self.remotestore {
@@ -293,6 +299,7 @@ mod tests {
     use tempfile::TempDir;
 
     use types::testutil::*;
+    use util::path::create_dir;
 
     use crate::testutil::FakeRemoteStore;
 
@@ -548,6 +555,51 @@ mod tests {
         let cachedir = TempDir::new()?;
         let config = make_config(&cachedir);
         assert!(ContentStoreBuilder::new(&config).build().is_err());
+        Ok(())
+    }
+
+    #[test]
+    fn test_lfs_local() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let config = make_config(&cachedir);
+
+        let lfs_store = LfsStore::local(&localdir)?;
+        let k1 = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: None,
+            key: k1.clone(),
+        };
+        lfs_store.add(&delta, &Default::default())?;
+        lfs_store.flush()?;
+
+        let store = ContentStore::new(&localdir, &config)?;
+        assert_eq!(store.get(&k1)?, Some(delta.data.as_ref().to_vec()));
+        Ok(())
+    }
+
+    #[test]
+    fn test_lfs_shared() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let config = make_config(&cachedir);
+
+        let mut lfs_cache_dir = cachedir.path().to_path_buf();
+        lfs_cache_dir.push("test");
+        create_dir(&lfs_cache_dir)?;
+        let lfs_store = LfsStore::shared(&lfs_cache_dir)?;
+        let k1 = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: None,
+            key: k1.clone(),
+        };
+        lfs_store.add(&delta, &Default::default())?;
+        lfs_store.flush()?;
+
+        let store = ContentStore::new(&localdir, &config)?;
+        assert_eq!(store.get(&k1)?, Some(delta.data.as_ref().to_vec()));
         Ok(())
     }
 
