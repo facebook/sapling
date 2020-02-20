@@ -30,8 +30,9 @@ use futures::{
     future::{self, join_all, loop_fn, ok, Loop},
     prelude::*,
 };
-use futures_ext::{spawn_future, BoxFuture, FutureExt};
+use futures_ext::{BoxFuture, FutureExt};
 use futures_preview::compat::Future01CompatExt;
+use futures_preview::future::{FutureExt as _, TryFutureExt};
 use healer::Healer;
 use lazy_static::lazy_static;
 use metaconfig_types::{BlobConfig, MetadataDBConfig, StorageConfig};
@@ -273,36 +274,39 @@ fn schedule_healing(
     iter_limit: Option<u64>,
     heal_min_age: ChronoDuration,
 ) -> BoxFuture<(), Error> {
-    let regional_conns = Arc::new(regional_conns);
-    let fut = loop_fn(0, move |count: u64| {
-        match iter_limit {
-            Some(limit) => {
-                if count >= limit {
-                    return future::ok(Loop::Break(())).left_future();
+    async move {
+        let mut count = 0;
+        let mut last_batch_was_full_size = true;
+
+        let regional_conns = Arc::new(regional_conns);
+
+        loop {
+            count += 1;
+            if let Some(iter_limit) = iter_limit {
+                if count > iter_limit {
+                    break Ok(());
                 }
             }
-            _ => (),
-        }
-        let max_replication_lag_fn = max_replication_lag(regional_conns.clone());
-        let now = DateTime::now().into_chrono();
-        let healing_deadline = DateTime::new(now - heal_min_age);
-        multiplex_healer
-            .heal(ctx.clone(), healing_deadline)
-            .and_then({
-                let logger = ctx.logger().clone();
-                move |last_batch_full_sized| {
-                    ensure_small_db_replication_lag(
-                        logger,
-                        max_replication_lag_fn,
-                        last_batch_full_sized,
-                    )
-                    .map(move |_lag| Loop::Continue(count + 1))
-                }
-            })
-            .right_future()
-    });
 
-    spawn_future(fut).boxify()
+            ensure_small_db_replication_lag(
+                ctx.logger().clone(),
+                max_replication_lag(regional_conns.clone()),
+                last_batch_was_full_size,
+            )
+            .compat()
+            .await?;
+
+            let now = DateTime::now().into_chrono();
+            let healing_deadline = DateTime::new(now - heal_min_age);
+            last_batch_was_full_size = multiplex_healer
+                .heal(ctx.clone(), healing_deadline)
+                .compat()
+                .await?;
+        }
+    }
+    .boxed()
+    .compat()
+    .boxify()
 }
 
 fn max_replication_lag(
