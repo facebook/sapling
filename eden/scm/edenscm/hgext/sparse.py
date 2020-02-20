@@ -108,6 +108,24 @@ It is also possible to show hints where dirstate size is too large.
     largecheckouthint = False
     # The number of files in the checkout that constitute a "large checkout".
     largecheckoutcount = 0
+
+The following option allows warning when a user is using a full checkout. It
+allows four values: hint, warn, softblock, hardblock.
+
+- "hint" shows a suppressable warning message.
+- "warn" shows a non-supressable warning message.
+- "softblock" throws an exception that can be bypassed via
+  sparse.bypassfullcheckoutwarn=True
+- "hardblock" throws an exception that cannot be bypassed.
+
+   [sparse]
+   warnfullcheckout = hint
+
+The following option can be used to bypass a softblock on fullcheckouts.
+
+   [sparse]
+   bypassfullcheckoutwarn = True
+
 """
 
 from __future__ import division
@@ -173,6 +191,8 @@ configitem(
     default=0,
     alias=[("perftweaks", "largecheckoutcount")],
 )
+configitem("sparse", "warnfullcheckout", default=None)
+configitem("sparse", "bypassfullcheckoutwarn", default=False)
 
 
 def uisetup(ui):
@@ -836,6 +856,7 @@ def _wraprepo(ui, repo):
             repo = self.unfiltered()
             if config is None:
                 if not self.localvfs.exists("sparse"):
+                    self._warnfullcheckout()
                     return SparseConfig(None, set(), set(), [])
 
                 raw = self.localvfs.read("sparse")
@@ -884,9 +905,47 @@ def _wraprepo(ui, repo):
 
             if includes:
                 includes.add(".hg*")
+
+            if not includes and not excludes and not profiles:
+                self._warnfullcheckout()
+
             return SparseConfig(
                 "<aggregated from %s>".format(config.path), includes, excludes, profiles
             )
+
+        def _warnfullcheckout(self):
+            # Only warn once per command
+            if self._warnedfullcheckout:
+                return
+            self._warnedfullcheckout = True
+
+            warnlevel = self.ui.config("sparse", "warnfullcheckout")
+            if warnlevel is None:
+                return
+
+            if warnlevel == "hardblock":
+                raise error.Abort(
+                    _("full checkouts are not supported for this repository"),
+                    hint=_("use EdenFS or hg sparse"),
+                )
+            if warnlevel == "softblock":
+                if self.ui.configbool("sparse", "bypassfullcheckoutwarn", False):
+                    warnlevel = "warn"
+                else:
+                    raise error.Abort(
+                        _("full checkouts are not supported for this repository"),
+                        hint=_("use EdenFS or hg sparse"),
+                    )
+            if warnlevel == "hint":
+                hintutil.trigger("sparse-fullcheckout")
+            else:
+                self.ui.warn(
+                    _(
+                        "warning: full checkouts will soon be disabled in "
+                        "this repository. Use EdenFS or hg sparse to get a "
+                        "smaller repository."
+                    )
+                )
 
         def getrawprofile(self, profile, changeid):
             repo = self.unfiltered()
@@ -1114,6 +1173,7 @@ def _wraprepo(ui, repo):
         repo.dirstate.repo = repo
     repo.sparsecache = {}
     repo.signaturecache = {}
+    repo._warnedfullcheckout = False
     repo.__class__ = SparseRepo
 
 
@@ -1357,6 +1417,15 @@ def hintlistverbose(profiles, filters, load_matcher):
         )
 
 
+@hint("sparse-fullcheckout")
+def hintwarnfullcheckout():
+    return _(
+        "warning: full checkouts will eventually be disabled in "
+        "this repository. Use EdenFS or hg sparse to get a "
+        "smaller repository."
+    )
+
+
 _deprecate = (
     lambda o, l=_("(DEPRECATED)"): (o[:3] + (" ".join([o[4], l]),) + o[4:])
     if l not in o[4]
@@ -1476,6 +1545,11 @@ def sparse(ui, repo, *pats, **opts):
     if count > 1:
         raise error.Abort(_("too many flags specified"))
 
+    # Disable sparse warnings when running sparse commands, so users can get
+    # sparse checkouts.
+    origwarnfull = repo.ui.config("sparse", "warnfullcheckout")
+    repo.ui.setconfig("sparse", "warnfullcheckout", None)
+
     if count == 0:
         if repo.localvfs.exists("sparse"):
             ui.status(pycompat.decodeutf8(repo.localvfs.read("sparse")) + "\n")
@@ -1508,6 +1582,8 @@ def sparse(ui, repo, *pats, **opts):
         _import(ui, repo, pats, opts, force=force)
 
     if clearrules:
+        # Put the check back in to warn people about full checkouts
+        repo.ui.setconfig("sparse", "warnfullcheckout", origwarnfull)
         _clear(ui, repo, pats, force=force)
 
     if refresh:
@@ -1544,6 +1620,9 @@ def show(ui, repo, **opts):
         if not ui.plain():
             ui.status(_("No sparse profile enabled\n"))
         return
+
+    # Disable fullcheckout warnings to allow users to sparse their fullcheckouts
+    repo.ui.setconfig("sparse", "warnfullcheckout", None)
 
     raw = repo.localvfs.read("sparse")
     include, exclude, profiles = list(map(set, repo.readsparseconfig(raw)))
@@ -1705,6 +1784,9 @@ def _listprofiles(ui, repo, *pats, **opts):
     """
     _checksparse(repo)
 
+    # Disable fullcheckout warnings to allow users to sparse their fullcheckouts
+    repo.ui.setconfig("sparse", "warnfullcheckout", None)
+
     rev = scmutil.revsingle(repo, opts.get("rev")).hex()
     tocanon = functools.partial(pathutil.canonpath, repo.root, repo.getcwd())
     filters = {
@@ -1795,6 +1877,9 @@ def _explainprofile(ui, repo, *profiles, **opts):
     If --verbose is given, calculates the file size impact of a profile (slow).
     """
     _checksparse(repo)
+
+    # Disable fullcheckout warnings to allow users to sparse their fullcheckouts
+    repo.ui.setconfig("sparse", "warnfullcheckout", None)
 
     if ui.plain() and not opts.get("template"):
         hint = _("invoke with -T/--template to control output format")
@@ -1922,6 +2007,10 @@ def _listfilessubcmd(ui, repo, profile, *files, **opts):
 
     """
     _checksparse(repo)
+
+    # Disable fullcheckout warnings to allow users to sparse their fullcheckouts
+    repo.ui.setconfig("sparse", "warnfullcheckout", None)
+
     try:
         raw = repo.getrawprofile(profile, ".")
     except KeyError:
@@ -2092,6 +2181,10 @@ def _config(
     force=False,
 ):
     _checksparse(repo)
+
+    if not reset:
+        # Disable fullcheckout warnings to allow users to sparse their fullcheckouts
+        repo.ui.setconfig("sparse", "warnfullcheckout", None)
 
     """
     Perform a sparse config update. Only one of the kwargs may be specified.
@@ -2271,6 +2364,8 @@ def _import(ui, repo, files, opts, force=False):
 
 def _clear(ui, repo, files, force=False):
     _checksparse(repo)
+
+    repo._warnfullcheckout()
 
     with repo.wlock():
         raw = ""
