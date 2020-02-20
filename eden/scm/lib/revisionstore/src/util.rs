@@ -80,3 +80,27 @@ pub fn get_local_packs_path(path: impl AsRef<Path>, suffix: Option<&Path>) -> Re
     create_dir(&path)?;
     Ok(path)
 }
+
+fn get_lfs_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
+    let mut path = store_path.as_ref().to_owned();
+    path.push("lfs");
+    create_dir(&path)?;
+
+    Ok(path)
+}
+
+pub fn get_lfs_pointers_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
+    let mut path = get_lfs_path(store_path)?;
+    path.push("pointers");
+    create_dir(&path)?;
+
+    Ok(path)
+}
+
+pub fn get_lfs_blobs_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
+    let mut path = get_lfs_path(store_path)?;
+    path.push("objects");
+    create_dir(&path)?;
+
+    Ok(path)
+}

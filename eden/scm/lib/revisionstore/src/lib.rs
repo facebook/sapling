@@ -17,6 +17,7 @@ mod fanouttable;
 mod historyindex;
 mod indexedloghistorystore;
 mod indexedlogutil;
+mod lfs;
 mod memcache;
 mod metadatastore;
 mod remotestore;
