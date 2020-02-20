@@ -37,6 +37,16 @@ pull a tag
      date:        Mon Jan 01 00:00:10 2007 +0000
      summary:     add alpha
   
+
+pull via ssh
+# dummyssh doesn't actually work with Git, but it gets far enough to prove that
+# the connection succeeded and git was invoked.
+  $ hg -R hgrepo pull --config paths.default=git+ssh://user@dummy/gitrepo --config ui.ssh=$TESTDIR/dummyssh
+  fatal: '/gitrepo' does not appear to be a git repository
+  pulling from git+ssh://user@dummy/gitrepo
+  abort: git remote error: The remote server unexpectedly closed the connection.
+  [255]
+
 no-op pull
   $ hg -R hgrepo pull -r t_alpha
   pulling from $TESTTMP/gitrepo
