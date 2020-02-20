@@ -17,37 +17,37 @@ use crate::localstore::LocalStore;
 
 /// A `MultiplexDeltaStore` is a store that will duplicate all the writes to all the
 /// delta stores that it is made of.
-pub struct MultiplexDeltaStore<'a> {
-    stores: Vec<Box<dyn MutableDeltaStore + Send + 'a>>,
+pub struct MultiplexDeltaStore<T: MutableDeltaStore> {
+    stores: Vec<T>,
 }
 
 /// A `MultiplexHistoryStore` is a store that will duplicate all the writes to all the
 /// history stores that it is made of.
-pub struct MultiplexHistoryStore<'a> {
-    stores: Vec<Box<dyn MutableHistoryStore + Send + 'a>>,
+pub struct MultiplexHistoryStore<T: MutableHistoryStore> {
+    stores: Vec<T>,
 }
 
-impl<'a> MultiplexDeltaStore<'a> {
+impl<T: MutableDeltaStore> MultiplexDeltaStore<T> {
     pub fn new() -> Self {
         Self { stores: Vec::new() }
     }
 
-    pub fn add_store(&mut self, store: Box<dyn MutableDeltaStore + Send + 'a>) {
+    pub fn add_store(&mut self, store: T) {
         self.stores.push(store)
     }
 }
 
-impl<'a> MultiplexHistoryStore<'a> {
+impl<T: MutableHistoryStore> MultiplexHistoryStore<T> {
     pub fn new() -> Self {
         Self { stores: Vec::new() }
     }
 
-    pub fn add_store(&mut self, store: Box<dyn MutableHistoryStore + Send + 'a>) {
+    pub fn add_store(&mut self, store: T) {
         self.stores.push(store)
     }
 }
 
-impl<'a> MutableDeltaStore for MultiplexDeltaStore<'a> {
+impl<T: MutableDeltaStore> MutableDeltaStore for MultiplexDeltaStore<T> {
     /// Write the `Delta` and `Metadata` to all the stores
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         for store in self.stores.iter() {
@@ -66,7 +66,7 @@ impl<'a> MutableDeltaStore for MultiplexDeltaStore<'a> {
     }
 }
 
-impl<'a> DataStore for MultiplexDeltaStore<'a> {
+impl<T: MutableDeltaStore> DataStore for MultiplexDeltaStore<T> {
     fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         Err(format_err!("MultiplexDeltaStore doesn't support raw get()"))
     }
@@ -102,7 +102,7 @@ impl<'a> DataStore for MultiplexDeltaStore<'a> {
     }
 }
 
-impl<'a> LocalStore for MultiplexDeltaStore<'a> {
+impl<T: MutableDeltaStore> LocalStore for MultiplexDeltaStore<T> {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let initial_keys = Ok(keys.iter().cloned().collect());
         self.stores
@@ -114,7 +114,7 @@ impl<'a> LocalStore for MultiplexDeltaStore<'a> {
     }
 }
 
-impl<'a> MutableHistoryStore for MultiplexHistoryStore<'a> {
+impl<T: MutableHistoryStore> MutableHistoryStore for MultiplexHistoryStore<T> {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
         for store in self.stores.iter() {
             store.add(key, info)?;
@@ -132,7 +132,7 @@ impl<'a> MutableHistoryStore for MultiplexHistoryStore<'a> {
     }
 }
 
-impl<'a> HistoryStore for MultiplexHistoryStore<'a> {
+impl<T: MutableHistoryStore> HistoryStore for MultiplexHistoryStore<T> {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         for store in self.stores.iter() {
             if let Some(nodeinfo) = store.get_node_info(key)? {
@@ -144,7 +144,7 @@ impl<'a> HistoryStore for MultiplexHistoryStore<'a> {
     }
 }
 
-impl<'a> LocalStore for MultiplexHistoryStore<'a> {
+impl<T: MutableHistoryStore> LocalStore for MultiplexHistoryStore<T> {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let initial_keys = Ok(keys.iter().cloned().collect());
         self.stores
@@ -200,7 +200,8 @@ mod tests {
         let tempdir = TempDir::new()?;
         let mut log = IndexedLogDataStore::new(&tempdir)?;
         let mut pack = MutableDataPack::new(&tempdir, DataPackVersion::One)?;
-        let mut multiplex = MultiplexDeltaStore::new();
+        let mut multiplex: MultiplexDeltaStore<Box<dyn MutableDeltaStore>> =
+            MultiplexDeltaStore::new();
         multiplex.add_store(Box::new(&mut log));
         multiplex.add_store(Box::new(&mut pack));
 

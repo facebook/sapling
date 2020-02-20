@@ -49,8 +49,8 @@ impl BackingStore {
 
         let (blobstore, treestore) = if use_edenapi {
             let edenapi_config = edenapi::Config::from_hg_config(&config)?;
-            let edenapi = Box::new(EdenApiCurlClient::new(edenapi_config)?);
-            let edenapi: Arc<Box<(dyn EdenApi)>> = Arc::new(edenapi);
+            let edenapi = EdenApiCurlClient::new(edenapi_config)?;
+            let edenapi: Arc<dyn EdenApi> = Arc::new(edenapi);
             let fileremotestore = Box::new(EdenApiRemoteStore::filestore(edenapi.clone()));
             let treeremotestore = Box::new(EdenApiRemoteStore::treestore(edenapi));
 

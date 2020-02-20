@@ -32,9 +32,9 @@ use crate::{
 };
 
 struct ContentStoreInner {
-    datastore: UnionDataStore<Box<dyn DataStore>>,
-    local_mutabledatastore: Option<Box<dyn MutableDeltaStore>>,
-    shared_mutabledatastore: Box<dyn MutableDeltaStore>,
+    datastore: UnionDataStore<Arc<dyn DataStore>>,
+    local_mutabledatastore: Option<Arc<dyn MutableDeltaStore>>,
+    shared_mutabledatastore: Arc<dyn MutableDeltaStore>,
     remote_store: Option<Arc<dyn RemoteDataStore>>,
 }
 
@@ -187,17 +187,17 @@ impl<'a> ContentStoreBuilder<'a> {
         let cache_path = get_cache_path(self.config, &self.suffix)?;
 
         let cache_packs_path = get_cache_packs_path(self.config, &self.suffix)?;
-        let shared_pack_store = Box::new(MutableDataPackStore::new(
+        let shared_pack_store = Arc::new(MutableDataPackStore::new(
             &cache_packs_path,
             CorruptionPolicy::REMOVE,
         )?);
-        let mut datastore: UnionDataStore<Box<dyn DataStore>> = UnionDataStore::new();
+        let mut datastore: UnionDataStore<Arc<dyn DataStore>> = UnionDataStore::new();
 
         if self
             .config
             .get_or_default::<bool>("remotefilelog", "indexedlogdatastore")?
         {
-            let shared_indexedlogdatastore = Box::new(IndexedLogDataStore::new(
+            let shared_indexedlogdatastore = Arc::new(IndexedLogDataStore::new(
                 get_indexedlogdatastore_path(&cache_path)?,
             )?);
             datastore.add(shared_indexedlogdatastore);
@@ -207,11 +207,11 @@ impl<'a> ContentStoreBuilder<'a> {
         // and the number of requests satisfied by the shared cache to be significantly higher than
         // ones in the local store.
         datastore.add(shared_pack_store.clone());
-        datastore.add(Box::new(LfsStore::shared(&cache_path)?));
+        datastore.add(Arc::new(LfsStore::shared(&cache_path)?));
 
-        let local_mutabledatastore: Option<Box<dyn MutableDeltaStore>> =
+        let local_mutabledatastore: Option<Arc<dyn MutableDeltaStore>> =
             if let Some(local_path) = self.local_path {
-                let local_pack_store = Box::new(MutableDataPackStore::new(
+                let local_pack_store = Arc::new(MutableDataPackStore::new(
                     get_packs_path(&local_path, &self.suffix)?,
                     CorruptionPolicy::IGNORE,
                 )?);
@@ -228,7 +228,7 @@ impl<'a> ContentStoreBuilder<'a> {
             };
 
         if let Some(local_path) = local_path {
-            datastore.add(Box::new(LfsStore::local(&local_path)?));
+            datastore.add(Arc::new(LfsStore::local(&local_path)?));
         }
 
         let remote_store: Option<Arc<dyn RemoteDataStore>> =
@@ -244,18 +244,19 @@ impl<'a> ContentStoreBuilder<'a> {
                     // store.
                     let memcachedatastore = memcachestore.datastore(shared_pack_store.clone());
 
-                    let mut multiplexstore = MultiplexDeltaStore::new();
-                    multiplexstore.add_store(Box::new(memcachestore));
+                    let mut multiplexstore: MultiplexDeltaStore<Arc<dyn MutableDeltaStore>> =
+                        MultiplexDeltaStore::new();
+                    multiplexstore.add_store(Arc::new(memcachestore));
                     multiplexstore.add_store(shared_pack_store.clone());
 
                     (
                         Some(memcachedatastore),
-                        Box::new(multiplexstore) as Box<dyn MutableDeltaStore>,
+                        Arc::new(multiplexstore) as Arc<dyn MutableDeltaStore>,
                     )
                 } else {
                     (
                         None,
-                        shared_pack_store.clone() as Box<dyn MutableDeltaStore>,
+                        shared_pack_store.clone() as Arc<dyn MutableDeltaStore>,
                     )
                 };
 
@@ -270,13 +271,13 @@ impl<'a> ContentStoreBuilder<'a> {
                     store
                 };
 
-                datastore.add(Box::new(remotestores.clone()));
+                datastore.add(Arc::new(remotestores.clone()));
                 Some(remotestores)
             } else {
                 None
             };
 
-        let shared_mutabledatastore: Box<dyn MutableDeltaStore> = shared_pack_store;
+        let shared_mutabledatastore: Arc<dyn MutableDeltaStore> = shared_pack_store;
 
         Ok(ContentStore {
             inner: Arc::new(ContentStoreInner {

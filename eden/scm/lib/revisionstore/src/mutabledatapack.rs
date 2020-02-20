@@ -10,7 +10,6 @@ use std::{
     io::{Read, Seek, SeekFrom, Write},
     mem::replace,
     path::{Path, PathBuf},
-    sync::Arc,
     u16,
 };
 
@@ -40,9 +39,8 @@ struct MutableDataPackInner {
     hasher: Sha1,
 }
 
-#[derive(Clone)]
 pub struct MutableDataPack {
-    inner: Arc<Mutex<MutableDataPackInner>>,
+    inner: Mutex<MutableDataPackInner>,
 }
 
 #[derive(Debug, Error)]
@@ -160,7 +158,7 @@ impl MutableDataPackInner {
 impl MutableDataPack {
     pub fn new(dir: impl AsRef<Path>, version: DataPackVersion) -> Result<Self> {
         Ok(Self {
-            inner: Arc::new(Mutex::new(MutableDataPackInner::new(dir, version)?)),
+            inner: Mutex::new(MutableDataPackInner::new(dir, version)?),
         })
     }
 }

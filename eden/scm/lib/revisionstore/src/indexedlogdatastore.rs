@@ -8,7 +8,6 @@
 use std::{
     io::{Cursor, Write},
     path::{Path, PathBuf},
-    sync::Arc,
 };
 
 use anyhow::{bail, ensure, Result};
@@ -35,9 +34,8 @@ struct IndexedLogDataStoreInner {
     log: RotateLog,
 }
 
-#[derive(Clone)]
 pub struct IndexedLogDataStore {
-    inner: Arc<RwLock<IndexedLogDataStoreInner>>,
+    inner: RwLock<IndexedLogDataStoreInner>,
 }
 
 struct Entry {
@@ -159,7 +157,7 @@ impl IndexedLogDataStore {
         let open_options = Self::default_open_options();
         let log = open_options.open(&path)?;
         Ok(IndexedLogDataStore {
-            inner: Arc::new(RwLock::new(IndexedLogDataStoreInner { log })),
+            inner: RwLock::new(IndexedLogDataStoreInner { log }),
         })
     }
 }

@@ -31,9 +31,9 @@ use crate::{
 };
 
 struct MetadataStoreInner {
-    historystore: UnionHistoryStore<Box<dyn HistoryStore>>,
-    local_mutablehistorystore: Option<Box<dyn MutableHistoryStore>>,
-    shared_mutablehistorystore: Box<dyn MutableHistoryStore>,
+    historystore: UnionHistoryStore<Arc<dyn HistoryStore>>,
+    local_mutablehistorystore: Option<Arc<dyn MutableHistoryStore>>,
+    shared_mutablehistorystore: Arc<dyn MutableHistoryStore>,
     remote_store: Option<Arc<dyn RemoteHistoryStore>>,
 }
 
@@ -166,17 +166,17 @@ impl<'a> MetadataStoreBuilder<'a> {
         let cache_path = get_cache_path(self.config, &self.suffix)?;
 
         let cache_packs_path = get_cache_packs_path(self.config, &self.suffix)?;
-        let shared_pack_store = Box::new(MutableHistoryPackStore::new(
+        let shared_pack_store = Arc::new(MutableHistoryPackStore::new(
             &cache_packs_path,
             CorruptionPolicy::REMOVE,
         )?);
-        let mut historystore: UnionHistoryStore<Box<dyn HistoryStore>> = UnionHistoryStore::new();
+        let mut historystore: UnionHistoryStore<Arc<dyn HistoryStore>> = UnionHistoryStore::new();
 
         if self
             .config
             .get_or_default::<bool>("remotefilelog", "indexedloghistorystore")?
         {
-            let shared_indexedloghistorystore = Box::new(IndexedLogHistoryStore::new(
+            let shared_indexedloghistorystore = Arc::new(IndexedLogHistoryStore::new(
                 get_indexedloghistorystore_path(&cache_path)?,
             )?);
             historystore.add(shared_indexedloghistorystore);
@@ -190,9 +190,9 @@ impl<'a> MetadataStoreBuilder<'a> {
         //    will be correct.
         historystore.add(shared_pack_store.clone());
 
-        let local_mutablehistorystore: Option<Box<dyn MutableHistoryStore>> =
+        let local_mutablehistorystore: Option<Arc<dyn MutableHistoryStore>> =
             if let Some(local_path) = self.local_path {
-                let local_pack_store = Box::new(MutableHistoryPackStore::new(
+                let local_pack_store = Arc::new(MutableHistoryPackStore::new(
                     get_packs_path(&local_path, &self.suffix)?,
                     CorruptionPolicy::IGNORE,
                 )?);
@@ -221,18 +221,19 @@ impl<'a> MetadataStoreBuilder<'a> {
                 // other clients and future requests won't need to go to a network store.
                 let memcachehistorystore = memcachestore.historystore(shared_pack_store.clone());
 
-                let mut multiplexstore = MultiplexHistoryStore::new();
-                multiplexstore.add_store(Box::new(memcachestore));
+                let mut multiplexstore: MultiplexHistoryStore<Arc<dyn MutableHistoryStore>> =
+                    MultiplexHistoryStore::new();
+                multiplexstore.add_store(Arc::new(memcachestore));
                 multiplexstore.add_store(shared_pack_store.clone());
 
                 (
                     Some(memcachehistorystore),
-                    Box::new(multiplexstore) as Box<dyn MutableHistoryStore>,
+                    Arc::new(multiplexstore) as Arc<dyn MutableHistoryStore>,
                 )
             } else {
                 (
                     None,
-                    shared_pack_store.clone() as Box<dyn MutableHistoryStore>,
+                    shared_pack_store.clone() as Arc<dyn MutableHistoryStore>,
                 )
             };
 
@@ -247,13 +248,13 @@ impl<'a> MetadataStoreBuilder<'a> {
                 store
             };
 
-            historystore.add(Box::new(remotestores.clone()));
+            historystore.add(Arc::new(remotestores.clone()));
             Some(remotestores)
         } else {
             None
         };
 
-        let shared_mutablehistorystore: Box<dyn MutableHistoryStore> = shared_pack_store;
+        let shared_mutablehistorystore: Arc<dyn MutableHistoryStore> = shared_pack_store;
 
         Ok(MetadataStore {
             inner: Arc::new(MetadataStoreInner {

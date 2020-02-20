@@ -13,16 +13,16 @@ use crate::{
 };
 
 pub trait RemoteStore: Send + Sync {
-    fn datastore(&self, store: Box<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore>;
-    fn historystore(&self, store: Box<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore>;
+    fn datastore(&self, store: Arc<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore>;
+    fn historystore(&self, store: Arc<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore>;
 }
 
 impl<T: RemoteStore + ?Sized, U: Deref<Target = T> + Send + Sync> RemoteStore for U {
-    fn datastore(&self, store: Box<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+    fn datastore(&self, store: Arc<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
         T::datastore(self, store)
     }
 
-    fn historystore(&self, store: Box<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
+    fn historystore(&self, store: Arc<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
         T::historystore(self, store)
     }
 }

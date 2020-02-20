@@ -151,22 +151,22 @@ impl LocalStore for MemcacheStore {
 }
 
 impl RemoteStore for MemcacheStore {
-    fn datastore(&self, store: Box<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+    fn datastore(&self, store: Arc<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
         Arc::new(MemcacheDataStore::new(self.clone(), store))
     }
 
-    fn historystore(&self, store: Box<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
+    fn historystore(&self, store: Arc<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
         Arc::new(MemcacheHistoryStore::new(self.clone(), store))
     }
 }
 
 struct MemcacheDataStore {
-    store: Box<dyn MutableDeltaStore>,
+    store: Arc<dyn MutableDeltaStore>,
     memcache: MemcacheStore,
 }
 
 impl MemcacheDataStore {
-    pub fn new(memcache: MemcacheStore, store: Box<dyn MutableDeltaStore>) -> Self {
+    pub fn new(memcache: MemcacheStore, store: Arc<dyn MutableDeltaStore>) -> Self {
         Self { memcache, store }
     }
 }
@@ -232,12 +232,12 @@ impl RemoteDataStore for MemcacheDataStore {
 }
 
 struct MemcacheHistoryStore {
-    store: Box<dyn MutableHistoryStore>,
+    store: Arc<dyn MutableHistoryStore>,
     memcache: MemcacheStore,
 }
 
 impl MemcacheHistoryStore {
-    pub fn new(memcache: MemcacheStore, store: Box<dyn MutableHistoryStore>) -> Self {
+    pub fn new(memcache: MemcacheStore, store: Arc<dyn MutableHistoryStore>) -> Self {
         Self { memcache, store }
     }
 }

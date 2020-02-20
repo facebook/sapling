@@ -117,7 +117,7 @@ struct PackStoreInner<T> {
 /// A `PackStore` automatically keeps track of packfiles in a given directory. New on-disk
 /// packfiles will be periodically scanned and opened accordingly.
 pub struct PackStore<T> {
-    inner: Arc<Mutex<PackStoreInner<T>>>,
+    inner: Mutex<PackStoreInner<T>>,
 }
 
 pub type DataPackStore = PackStore<DataPack>;
@@ -168,14 +168,14 @@ impl PackStoreOptions {
         let force_rescan = now - self.scan_frequency;
 
         PackStore {
-            inner: Arc::new(Mutex::new(PackStoreInner {
+            inner: Mutex::new(PackStoreInner {
                 pack_dir: self.pack_dir,
                 scan_frequency: self.scan_frequency,
                 extension: self.extension,
                 corruption_policy: self.corruption_policy,
                 last_scanned: RefCell::new(force_rescan),
                 packs: RefCell::new(LruStore::new()),
-            })),
+            }),
         }
     }
 }
@@ -368,30 +368,29 @@ impl HistoryStore for HistoryPackStore {
 
 struct MutableDataPackStoreInner {
     pack_store: Arc<DataPackStore>,
-    mutable_pack: MutableDataPack,
-    union_store: UnionDataStore<Box<dyn DataStore>>,
+    mutable_pack: Arc<MutableDataPack>,
+    union_store: UnionDataStore<Arc<dyn DataStore>>,
 }
 
 /// A `MutableDataPackStore` allows both reading and writing to data packfiles.
-#[derive(Clone)]
 pub struct MutableDataPackStore {
-    inner: Arc<MutableDataPackStoreInner>,
+    inner: MutableDataPackStoreInner,
 }
 
 impl MutableDataPackStore {
     pub fn new(pack_dir: impl AsRef<Path>, corruption_policy: CorruptionPolicy) -> Result<Self> {
         let pack_store = Arc::new(DataPackStore::new(pack_dir.as_ref(), corruption_policy));
-        let mutable_pack = MutableDataPack::new(pack_dir, DataPackVersion::One)?;
-        let mut union_store: UnionDataStore<Box<dyn DataStore>> = UnionDataStore::new();
-        union_store.add(Box::new(pack_store.clone()));
-        union_store.add(Box::new(mutable_pack.clone()));
+        let mutable_pack = Arc::new(MutableDataPack::new(pack_dir, DataPackVersion::One)?);
+        let mut union_store: UnionDataStore<Arc<dyn DataStore>> = UnionDataStore::new();
+        union_store.add(pack_store.clone());
+        union_store.add(mutable_pack.clone());
 
         Ok(Self {
-            inner: Arc::new(MutableDataPackStoreInner {
+            inner: MutableDataPackStoreInner {
                 pack_store,
                 mutable_pack,
                 union_store,
-            }),
+            },
         })
     }
 }
@@ -439,30 +438,29 @@ impl MutableDeltaStore for MutableDataPackStore {
 
 struct MutableHistoryPackStoreInner {
     pack_store: Arc<HistoryPackStore>,
-    mutable_pack: MutableHistoryPack,
-    union_store: UnionHistoryStore<Box<dyn HistoryStore>>,
+    mutable_pack: Arc<MutableHistoryPack>,
+    union_store: UnionHistoryStore<Arc<dyn HistoryStore>>,
 }
 
 /// A `MutableHistoryPackStore` allows both reading and writing to history packfiles.
-#[derive(Clone)]
 pub struct MutableHistoryPackStore {
-    inner: Arc<MutableHistoryPackStoreInner>,
+    inner: MutableHistoryPackStoreInner,
 }
 
 impl MutableHistoryPackStore {
     pub fn new(pack_dir: impl AsRef<Path>, corruption_policy: CorruptionPolicy) -> Result<Self> {
         let pack_store = Arc::new(HistoryPackStore::new(pack_dir.as_ref(), corruption_policy));
-        let mutable_pack = MutableHistoryPack::new(pack_dir, HistoryPackVersion::One)?;
-        let mut union_store: UnionHistoryStore<Box<dyn HistoryStore>> = UnionHistoryStore::new();
-        union_store.add(Box::new(pack_store.clone()));
-        union_store.add(Box::new(mutable_pack.clone()));
+        let mutable_pack = Arc::new(MutableHistoryPack::new(pack_dir, HistoryPackVersion::One)?);
+        let mut union_store: UnionHistoryStore<Arc<dyn HistoryStore>> = UnionHistoryStore::new();
+        union_store.add(pack_store.clone());
+        union_store.add(mutable_pack.clone());
 
         Ok(Self {
-            inner: Arc::new(MutableHistoryPackStoreInner {
+            inner: MutableHistoryPackStoreInner {
                 pack_store,
                 mutable_pack,
                 union_store,
-            }),
+            },
         })
     }
 }

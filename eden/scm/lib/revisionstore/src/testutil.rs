@@ -51,7 +51,7 @@ impl FakeRemoteStore {
 }
 
 impl RemoteStore for FakeRemoteStore {
-    fn datastore(&self, store: Box<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+    fn datastore(&self, store: Arc<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
         assert!(self.data.is_some());
 
         Arc::new(FakeRemoteDataStore {
@@ -60,7 +60,7 @@ impl RemoteStore for FakeRemoteStore {
         })
     }
 
-    fn historystore(&self, store: Box<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
+    fn historystore(&self, store: Arc<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
         assert!(self.hist.is_some());
 
         Arc::new(FakeRemoteHistoryStore {
@@ -71,7 +71,7 @@ impl RemoteStore for FakeRemoteStore {
 }
 
 struct FakeRemoteDataStore {
-    store: Box<dyn MutableDeltaStore>,
+    store: Arc<dyn MutableDeltaStore>,
     map: HashMap<Key, Bytes>,
 }
 
@@ -125,7 +125,7 @@ impl LocalStore for FakeRemoteDataStore {
 }
 
 struct FakeRemoteHistoryStore {
-    store: Box<dyn MutableHistoryStore>,
+    store: Arc<dyn MutableHistoryStore>,
     map: HashMap<Key, NodeInfo>,
 }
 
@@ -231,6 +231,6 @@ impl EdenApi for FakeEdenApi {
     }
 }
 
-pub fn fake_edenapi(map: HashMap<Key, Bytes>) -> Box<dyn EdenApi> {
-    Box::new(FakeEdenApi::new(map))
+pub fn fake_edenapi(map: HashMap<Key, Bytes>) -> Arc<dyn EdenApi> {
+    Arc::new(FakeEdenApi::new(map))
 }

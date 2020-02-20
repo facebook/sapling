@@ -460,14 +460,14 @@ py_class!(class indexedloghistorystore |py| {
 fn make_mutabledeltastore(
     packfilepath: Option<PyPathBuf>,
     indexedlogpath: Option<PyPathBuf>,
-) -> Result<Box<dyn MutableDeltaStore + Send>> {
-    let store: Box<dyn MutableDeltaStore + Send> = if let Some(packfilepath) = packfilepath {
-        Box::new(MutableDataPack::new(
+) -> Result<Arc<dyn MutableDeltaStore + Send>> {
+    let store: Arc<dyn MutableDeltaStore + Send> = if let Some(packfilepath) = packfilepath {
+        Arc::new(MutableDataPack::new(
             packfilepath.as_path(),
             DataPackVersion::One,
         )?)
     } else if let Some(indexedlogpath) = indexedlogpath {
-        Box::new(IndexedLogDataStore::new(indexedlogpath.as_path())?)
+        Arc::new(IndexedLogDataStore::new(indexedlogpath.as_path())?)
     } else {
         return Err(format_err!("Foo"));
     };
@@ -475,7 +475,7 @@ fn make_mutabledeltastore(
 }
 
 py_class!(pub class mutabledeltastore |py| {
-    data store: Box<dyn MutableDeltaStore>;
+    data store: Arc<dyn MutableDeltaStore>;
 
     def __new__(_cls, packfilepath: Option<PyPathBuf> = None, indexedlogpath: Option<PyPathBuf> = None) -> PyResult<mutabledeltastore> {
         let store = make_mutabledeltastore(packfilepath, indexedlogpath).map_pyerr(py)?;
@@ -570,9 +570,9 @@ impl MutableDeltaStore for mutabledeltastore {
 
 fn make_mutablehistorystore(
     packfilepath: Option<PyPathBuf>,
-) -> Result<Box<dyn MutableHistoryStore + Send>> {
-    let store: Box<dyn MutableHistoryStore + Send> = if let Some(packfilepath) = packfilepath {
-        Box::new(MutableHistoryPack::new(
+) -> Result<Arc<dyn MutableHistoryStore + Send>> {
+    let store: Arc<dyn MutableHistoryStore + Send> = if let Some(packfilepath) = packfilepath {
+        Arc::new(MutableHistoryPack::new(
             packfilepath.as_path(),
             HistoryPackVersion::One,
         )?)
@@ -584,7 +584,7 @@ fn make_mutablehistorystore(
 }
 
 py_class!(pub class mutablehistorystore |py| {
-    data store: Box<dyn MutableHistoryStore>;
+    data store: Arc<dyn MutableHistoryStore>;
 
     def __new__(_cls, packfilepath: Option<PyPathBuf>) -> PyResult<mutablehistorystore> {
         let store = make_mutablehistorystore(packfilepath).map_pyerr(py)?;
@@ -689,7 +689,7 @@ struct PyRemoteDataStore(PyRemoteStore);
 struct PyRemoteHistoryStore(PyRemoteStore);
 
 impl RemoteStore for PyRemoteStore {
-    fn datastore(&self, store: Box<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+    fn datastore(&self, store: Arc<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -699,7 +699,7 @@ impl RemoteStore for PyRemoteStore {
         Arc::new(PyRemoteDataStore(self.clone()))
     }
 
-    fn historystore(&self, store: Box<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
+    fn historystore(&self, store: Arc<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 

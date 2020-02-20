@@ -29,19 +29,19 @@ enum EdenApiRemoteStoreKind {
 /// the `DataStore` methods will always fetch data from the network.
 #[derive(Clone)]
 pub struct EdenApiRemoteStore {
-    edenapi: Arc<Box<dyn EdenApi>>,
+    edenapi: Arc<dyn EdenApi>,
     kind: EdenApiRemoteStoreKind,
 }
 
 impl EdenApiRemoteStore {
-    pub fn filestore(edenapi: Arc<Box<dyn EdenApi>>) -> Self {
+    pub fn filestore(edenapi: Arc<dyn EdenApi>) -> Self {
         Self {
             edenapi,
             kind: EdenApiRemoteStoreKind::File,
         }
     }
 
-    pub fn treestore(edenapi: Arc<Box<dyn EdenApi>>) -> Self {
+    pub fn treestore(edenapi: Arc<dyn EdenApi>) -> Self {
         Self {
             edenapi,
             kind: EdenApiRemoteStoreKind::Tree,
@@ -50,28 +50,27 @@ impl EdenApiRemoteStore {
 }
 
 impl RemoteStore for EdenApiRemoteStore {
-    fn datastore(&self, store: Box<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+    fn datastore(&self, store: Arc<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
         Arc::new(EdenApiRemoteDataStore {
-            inner: Arc::new(EdenApiRemoteDataStoreInner {
+            inner: EdenApiRemoteDataStoreInner {
                 edenapi: self.clone(),
                 store,
-            }),
+            },
         })
     }
 
-    fn historystore(&self, _store: Box<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
+    fn historystore(&self, _store: Arc<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
         unimplemented!()
     }
 }
 
 struct EdenApiRemoteDataStoreInner {
     edenapi: EdenApiRemoteStore,
-    store: Box<dyn MutableDeltaStore>,
+    store: Arc<dyn MutableDeltaStore>,
 }
 
-#[derive(Clone)]
 struct EdenApiRemoteDataStore {
-    inner: Arc<EdenApiRemoteDataStoreInner>,
+    inner: EdenApiRemoteDataStoreInner,
 }
 
 impl RemoteDataStore for EdenApiRemoteDataStore {
@@ -147,7 +146,7 @@ mod tests {
     #[test]
     fn test_get_delta() -> Result<()> {
         let tmp = TempDir::new()?;
-        let store = IndexedLogDataStore::new(&tmp)?;
+        let store = Arc::new(IndexedLogDataStore::new(&tmp)?);
 
         let k = key("a", "1");
         let d = delta("1234", None, k.clone());
@@ -155,9 +154,9 @@ mod tests {
         let mut map = HashMap::new();
         map.insert(k.clone(), d.data.clone());
 
-        let edenapi = EdenApiRemoteStore::filestore(Arc::new(fake_edenapi(map)));
+        let edenapi = EdenApiRemoteStore::filestore(fake_edenapi(map));
 
-        let remotestore = edenapi.datastore(Box::new(store.clone()));
+        let remotestore = edenapi.datastore(store.clone());
         assert_eq!(remotestore.get_delta(&k)?.unwrap(), d);
         assert_eq!(store.get_delta(&k)?.unwrap(), d);
 
@@ -167,12 +166,12 @@ mod tests {
     #[test]
     fn test_missing() -> Result<()> {
         let tmp = TempDir::new()?;
-        let store = IndexedLogDataStore::new(&tmp)?;
+        let store = Arc::new(IndexedLogDataStore::new(&tmp)?);
 
         let map = HashMap::new();
-        let edenapi = EdenApiRemoteStore::filestore(Arc::new(fake_edenapi(map)));
+        let edenapi = EdenApiRemoteStore::filestore(fake_edenapi(map));
 
-        let remotestore = edenapi.datastore(Box::new(store.clone()));
+        let remotestore = edenapi.datastore(store);
 
         let k = key("a", "1");
         assert_eq!(remotestore.get_delta(&k)?, None);
