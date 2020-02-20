@@ -13,7 +13,12 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use futures::{future, stream::FuturesUnordered, Future, Stream};
-use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt};
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_preview::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{FutureExt as NewFutureExt, TryFutureExt},
+    stream::TryStreamExt,
+};
 use manifest::{find_intersection_of_diffs, Entry};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, ManifestUnodeId};
 use std::collections::HashMap;
@@ -60,47 +65,52 @@ impl BonsaiDerived for RootFastlog {
         bonsai: BonsaiChangeset,
         _parents: Vec<Self>,
     ) -> BoxFuture<Self, Error> {
-        let bcs_id = bonsai.get_changeset_id();
-        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id)
-            .from_err()
-            .join(fetch_parent_root_unodes(ctx.clone(), repo.clone(), bonsai))
-            .and_then(move |(root_unode_mf_id, parents)| {
-                let blobstore = repo.get_blobstore().boxed();
-                let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
+        async move {
+            let bcs_id = bonsai.get_changeset_id();
+            let (root_unode_mf_id, parents) =
+                RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id)
+                    .from_err()
+                    .join(fetch_parent_root_unodes(ctx.clone(), repo.clone(), bonsai))
+                    .compat()
+                    .await?;
 
-                find_intersection_of_diffs(ctx.clone(), blobstore.clone(), unode_mf_id, parents)
-                    .map(move |(_, entry)| {
-                        let f = fetch_unode_parents(ctx.clone(), blobstore.clone(), entry)
-                            .and_then({
-                                cloned!(ctx, blobstore);
-                                move |parents| {
-                                    create_new_batch(
-                                        ctx.clone(),
-                                        blobstore.clone(),
-                                        parents,
-                                        bcs_id,
-                                    )
-                                    .and_then({
-                                        cloned!(ctx, blobstore);
-                                        move |fastlog_batch| {
-                                            save_fastlog_batch_by_unode_id(
-                                                ctx,
-                                                blobstore,
-                                                entry,
-                                                fastlog_batch,
-                                            )
-                                        }
-                                    })
-                                }
-                            });
+            let blobstore = repo.get_blobstore().boxed();
+            let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
 
-                        spawn_future(f)
-                    })
-                    .buffered(100)
-                    .for_each(|_| Ok(()))
-                    .map(move |_| RootFastlog(bcs_id))
-            })
-            .boxify()
+            find_intersection_of_diffs(ctx.clone(), blobstore.clone(), unode_mf_id, parents)
+                .compat()
+                .map_ok(move |(_, entry)| {
+                    cloned!(blobstore, ctx);
+                    async move {
+                        let res = tokio_preview::spawn(async move {
+                            let parents =
+                                fetch_unode_parents(ctx.clone(), blobstore.clone(), entry)
+                                    .compat()
+                                    .await?;
+
+                            let fastlog_batch =
+                                create_new_batch(ctx.clone(), blobstore.clone(), parents, bcs_id)
+                                    .compat()
+                                    .await?;
+
+                            save_fastlog_batch_by_unode_id(ctx, blobstore, entry, fastlog_batch)
+                                .compat()
+                                .await
+                        })
+                        .await?;
+
+                        res
+                    }
+                })
+                .try_buffer_unordered(100)
+                .try_for_each(|_| async { Ok(()) })
+                .await?;
+
+            Ok(RootFastlog(bcs_id))
+        }
+        .boxed()
+        .compat()
+        .boxify()
     }
 }
 
