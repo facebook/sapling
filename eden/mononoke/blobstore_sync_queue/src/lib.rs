@@ -11,7 +11,7 @@ use anyhow::{format_err, Error};
 use cloned::cloned;
 use context::CoreContext;
 use futures::sync::{mpsc, oneshot};
-use futures::{future, Future, IntoFuture, Stream};
+use futures::{future, stream, Future, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{DateTime, Timestamp};
@@ -398,12 +398,16 @@ impl BlobstoreSyncQueue for SqlBlobstoreSyncQueue {
                 })
             })
             .collect();
-        ids.into_future()
+
+        let ids = try_boxfuture!(ids);
+
+        stream::iter_ok(ids)
+            .chunks(10_000)
             .and_then({
                 cloned!(self.write_connection);
-                move |ids: Vec<u64>| DeleteEntries::query(&write_connection, &ids[..])
+                move |chunk: Vec<u64>| DeleteEntries::query(&write_connection, &chunk[..])
             })
-            .map(|_| ())
+            .for_each(|_| Ok(()))
             .boxify()
     }
 
