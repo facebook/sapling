@@ -3221,8 +3221,8 @@ def rustdisplaygraph(
         displayer.show(
             ctx, copies=copies, matchfn=revmatchfn, _graphwidth=width, **props
         )
-        # In case of graph display we don't preserve the original encoding
-        msg = "".join(ensurestr(s) for s in displayer.hunk.pop(rev))
+        # The Rust graph renderer works with unicode.
+        msg = u"".join(encoding.unifromlocal(s) for s in displayer.hunk.pop(rev))
         ui.write(encoding.unitolocal(renderer.nextrow(rev, parents, char, msg)))
         displayer.flush(ctx)
 
