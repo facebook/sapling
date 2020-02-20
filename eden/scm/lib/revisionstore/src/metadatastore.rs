@@ -24,7 +24,10 @@ use crate::{
     packstore::{CorruptionPolicy, MutableHistoryPackStore},
     remotestore::RemoteStore,
     unionhistorystore::UnionHistoryStore,
-    util::{get_cache_indexedloghistorystore_path, get_cache_packs_path, get_local_packs_path},
+    util::{
+        get_cache_packs_path, get_cache_path, get_indexedloghistorystore_path, get_local_path,
+        get_packs_path,
+    },
 };
 
 struct MetadataStoreInner {
@@ -112,7 +115,7 @@ pub struct MetadataStoreBuilder<'a> {
     no_local_store: bool,
     config: &'a ConfigSet,
     remotestore: Option<Box<dyn RemoteStore>>,
-    suffix: Option<&'a Path>,
+    suffix: Option<PathBuf>,
     memcachestore: Option<MemcacheStore>,
 }
 
@@ -153,13 +156,16 @@ impl<'a> MetadataStoreBuilder<'a> {
         self
     }
 
-    pub fn suffix(mut self, suffix: &'a Path) -> Self {
-        self.suffix = Some(suffix);
+    pub fn suffix(mut self, suffix: impl AsRef<Path>) -> Self {
+        self.suffix = Some(suffix.as_ref().to_path_buf());
         self
     }
 
     pub fn build(self) -> Result<MetadataStore> {
-        let cache_packs_path = get_cache_packs_path(self.config, self.suffix)?;
+        let _local_path = get_local_path(&self.local_path, &self.suffix)?;
+        let cache_path = get_cache_path(self.config, &self.suffix)?;
+
+        let cache_packs_path = get_cache_packs_path(self.config, &self.suffix)?;
         let shared_pack_store = Box::new(MutableHistoryPackStore::new(
             &cache_packs_path,
             CorruptionPolicy::REMOVE,
@@ -171,7 +177,7 @@ impl<'a> MetadataStoreBuilder<'a> {
             .get_or_default::<bool>("remotefilelog", "indexedloghistorystore")?
         {
             let shared_indexedloghistorystore = Box::new(IndexedLogHistoryStore::new(
-                get_cache_indexedloghistorystore_path(self.config)?,
+                get_indexedloghistorystore_path(&cache_path)?,
             )?);
             historystore.add(shared_indexedloghistorystore);
         }
@@ -187,7 +193,7 @@ impl<'a> MetadataStoreBuilder<'a> {
         let local_mutablehistorystore: Option<Box<dyn MutableHistoryStore>> =
             if let Some(local_path) = self.local_path {
                 let local_pack_store = Box::new(MutableHistoryPackStore::new(
-                    get_local_packs_path(local_path, self.suffix)?,
+                    get_packs_path(&local_path, &self.suffix)?,
                     CorruptionPolicy::IGNORE,
                 )?);
                 historystore.add(local_pack_store.clone());

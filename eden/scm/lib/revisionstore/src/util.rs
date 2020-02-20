@@ -30,7 +30,7 @@ pub fn get_repo_name(config: &ConfigSet) -> Result<String> {
     get_str_config(config, "remotefilelog", "reponame")
 }
 
-fn get_cache_path(config: &ConfigSet) -> Result<PathBuf> {
+fn get_config_cache_path(config: &ConfigSet) -> Result<PathBuf> {
     let reponame = get_repo_name(config)?;
     let config_path: PathBuf = config
         .get_or_default::<Option<_>>("remotefilelog", "cachepath")?
@@ -43,42 +43,65 @@ fn get_cache_path(config: &ConfigSet) -> Result<PathBuf> {
     Ok(path)
 }
 
-pub fn get_cache_packs_path(config: &ConfigSet, suffix: Option<&Path>) -> Result<PathBuf> {
-    let mut path = get_cache_path(config)?;
-    path.push("packs");
-    create_dir(&path)?;
+pub fn get_cache_path(config: &ConfigSet, suffix: &Option<PathBuf>) -> Result<PathBuf> {
+    let mut path = get_config_cache_path(config)?;
+
     if let Some(suffix) = suffix {
         path.push(suffix);
+        create_dir(&path)?;
     }
-    create_dir(&path)?;
+
     Ok(path)
 }
 
-pub fn get_cache_indexedlogdatastore_path(config: &ConfigSet) -> Result<PathBuf> {
-    let mut path = get_cache_path(config)?;
+pub fn get_local_path(
+    local_path: &Option<PathBuf>,
+    suffix: &Option<PathBuf>,
+) -> Result<Option<PathBuf>> {
+    if let Some(local_path) = local_path {
+        let mut path = local_path.to_path_buf();
+        create_dir(&path)?;
+
+        if let Some(suffix) = suffix {
+            path.push(&suffix);
+            create_dir(&path)?;
+        }
+
+        Ok(Some(path))
+    } else {
+        Ok(None)
+    }
+}
+
+pub fn get_indexedlogdatastore_path(path: impl AsRef<Path>) -> Result<PathBuf> {
+    let mut path = path.as_ref().to_owned();
     path.push("indexedlogdatastore");
     create_dir(&path)?;
     Ok(path)
 }
 
-pub fn get_cache_indexedloghistorystore_path(config: &ConfigSet) -> Result<PathBuf> {
-    let mut path = get_cache_path(config)?;
+pub fn get_indexedloghistorystore_path(path: impl AsRef<Path>) -> Result<PathBuf> {
+    let mut path = path.as_ref().to_owned();
     path.push("indexedloghistorystore");
     create_dir(&path)?;
     Ok(path)
 }
 
-pub fn get_local_packs_path(path: impl AsRef<Path>, suffix: Option<&Path>) -> Result<PathBuf> {
+pub fn get_packs_path(path: impl AsRef<Path>, suffix: &Option<PathBuf>) -> Result<PathBuf> {
     let mut path = path.as_ref().to_owned();
     path.push("packs");
     create_dir(&path)?;
 
     if let Some(suffix) = suffix {
         path.push(suffix);
+        create_dir(&path)?;
     }
 
-    create_dir(&path)?;
     Ok(path)
+}
+
+pub fn get_cache_packs_path(config: &ConfigSet, suffix: &Option<PathBuf>) -> Result<PathBuf> {
+    get_packs_path(get_config_cache_path(config)?, suffix)
 }
 
 fn get_lfs_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
