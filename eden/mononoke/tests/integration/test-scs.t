@@ -314,6 +314,13 @@ blame
   323afe77a1b1e632e54e8d5a683ba2cc8511f299: e
   323afe77a1b1e632e54e8d5a683ba2cc8511f299: f
 
+  $ scsc blame --repo repo -i "$COMMIT_C" --parent --path b
+  323afe77a1b1e632e54e8d5a683ba2cc8511f299: a
+  323afe77a1b1e632e54e8d5a683ba2cc8511f299: b
+  323afe77a1b1e632e54e8d5a683ba2cc8511f299: d
+  323afe77a1b1e632e54e8d5a683ba2cc8511f299: e
+  323afe77a1b1e632e54e8d5a683ba2cc8511f299: f
+
   $ scsc --json blame --repo repo -i "$COMMIT_C" --path b | jq -S .
   [
     {
