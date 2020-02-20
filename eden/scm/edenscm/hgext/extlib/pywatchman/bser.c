@@ -127,8 +127,10 @@ static PyObject* bserobj_getattrro(PyObject* o, PyObject* name) {
   bserObject* obj = (bserObject*)o;
   Py_ssize_t i, n;
   PyObject* name_bytes = NULL;
+  PyObject* key_bytes = NULL;
   PyObject* ret = NULL;
   const char* namestr;
+  const char* keystr;
 
   if (PyIndex_Check(name)) {
     i = PyNumber_AsSsize_t(name, PyExc_IndexError);
@@ -161,20 +163,35 @@ static PyObject* bserobj_getattrro(PyObject* o, PyObject* name) {
 
   n = PyTuple_GET_SIZE(obj->keys);
   for (i = 0; i < n; i++) {
-    const char* item_name = NULL;
     PyObject* key = PyTuple_GET_ITEM(obj->keys, i);
 
-    item_name = PyBytes_AsString(key);
-    if (!strcmp(item_name, namestr)) {
+    if (PyUnicode_Check(key)) {
+      key_bytes = PyUnicode_AsUTF8String(key);
+      if (key_bytes == NULL) {
+        goto bail;
+      }
+      keystr = PyBytes_AsString(key_bytes);
+    } else {
+      keystr = PyBytes_AsString(key);
+    }
+
+    if (keystr == NULL) {
+      goto bail;
+    }
+
+    if (!strcmp(keystr, namestr)) {
       ret = PySequence_GetItem(obj->values, i);
       goto bail;
     }
+    Py_XDECREF(key_bytes);
+    key_bytes = NULL;
   }
 
   PyErr_Format(
       PyExc_AttributeError, "bserobject has no attribute '%.400s'", namestr);
 bail:
   Py_XDECREF(name_bytes);
+  Py_XDECREF(key_bytes);
   return ret;
 }
 
@@ -512,6 +529,8 @@ static PyObject* bser_dumps(PyObject* self, PyObject* args, PyObject* kw) {
   PyObject *val = NULL, *res;
   bser_t bser;
   uint32_t len, bser_version = 1, bser_capabilities = 0;
+
+  (void)self;
 
   static char* kw_list[] = {"val", "version", "capabilities", NULL};
 
@@ -1031,6 +1050,8 @@ static int pdu_info_helper(
   int64_t expected_len;
   off_t position;
 
+  (void)self;
+
   if (!PyArg_ParseTuple(args, "s#", &start, &datalen)) {
     return 0;
   }
@@ -1087,6 +1108,8 @@ static PyObject* bser_loads(PyObject* self, PyObject* args, PyObject* kw) {
 
   static char* kw_list[] = {
       "buf", "mutable", "value_encoding", "value_errors", NULL};
+
+  (void)self;
 
   if (!PyArg_ParseTupleAndKeywords(
           args,
@@ -1148,6 +1171,8 @@ static PyObject* bser_load(PyObject* self, PyObject* args, PyObject* kw) {
 
   static char* kw_list[] = {
       "fp", "mutable", "value_encoding", "value_errors", NULL};
+
+  (void)self;
 
   if (!PyArg_ParseTupleAndKeywords(
           args,
