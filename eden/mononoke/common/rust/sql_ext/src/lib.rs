@@ -6,11 +6,10 @@
  */
 
 use anyhow::{Error, Result};
-use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{
     future::{loop_fn, ok, Loop},
-    Future, IntoFuture,
+    stream, Future, IntoFuture, Stream,
 };
 use futures_ext::{BoxFuture, FutureExt};
 use metaconfig_types::MetadataDBConfig;
@@ -364,26 +363,33 @@ pub fn myrouter_ready(
     mysql_options: MysqlOptions,
     logger: Logger,
 ) -> impl Future<Item = (), Error = Error> {
-    let logger_fut = loop_fn((), move |()| {
-        cloned!(logger);
-        sleep(Duration::from_secs(1)).map(move |_| {
-            info!(logger, "waiting for myrouter...");
-            Loop::Continue(())
-        })
-    })
-    .from_err();
-
-    let f = match db_addr_opt {
-        None => ok(()).left_future(), // No DB required: we can skip myrouter.
-        Some(db_address) => {
-            if let Some(myrouter_port) = mysql_options.myrouter_port {
-                myrouter::wait_for_myrouter(myrouter_port, db_address).right_future()
-            } else {
-                // MyRouter was not enabled: we don't need to wait for it.
-                ok(()).left_future()
-            }
+    let db_addr = match db_addr_opt {
+        Some(addr) => addr,
+        None => {
+            return ok(()).left_future();
         }
     };
 
-    f.select(logger_fut).map(|_| ()).map_err(|(err, _)| err)
+    let myrouter_port = match mysql_options.myrouter_port {
+        Some(myrouter_port) => myrouter_port,
+        None => {
+            return ok(()).left_future();
+        }
+    };
+
+    let wait_fut = myrouter::wait_for_myrouter(myrouter_port, db_addr.clone());
+
+    let logger_fut = stream::repeat(())
+        .and_then(|()| sleep(Duration::from_secs(1)))
+        .for_each(move |_| {
+            info!(logger, "waiting for myrouter ({})...", db_addr);
+            Ok(())
+        })
+        .from_err();
+
+    wait_fut
+        .select(logger_fut)
+        .map(|_| ())
+        .map_err(|(err, _)| err)
+        .right_future()
 }
