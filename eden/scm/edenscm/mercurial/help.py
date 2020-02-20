@@ -466,7 +466,7 @@ class _helpdispatch(object):
             rst = self.helplist(name, select)
             return rst
         except error.UnknownSubcommand as inst:
-            cmd, subcmd, __ = inst
+            cmd, subcmd = inst.args[:2]
             msg = _("'%s' has no such subcommand: %s") % (cmd, subcmd)
             hint = _("run 'hg help %s' to see available subcommands") % cmd
             raise error.Abort(msg, hint=hint)

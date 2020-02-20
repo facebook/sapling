@@ -868,7 +868,7 @@ def findcmd(cmd, table):
     if choice:
         return list(choice.values())[0]
 
-    raise error.UnknownCommand(cmd, allcmds)
+    raise error.UnknownCommand(cmd)
 
 
 def findsubcmd(args, table, partial=False):

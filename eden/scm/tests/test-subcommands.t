@@ -48,21 +48,6 @@
 
   $ hg test
   hg test: subcommand required
-  hg test SUBCOMMAND
-  
-  test command
-  
-  First Category:
-  
-   one           first test subcommand
-  
-  Other Subcommands:
-  
-   two           second test subcommand
-  
-  (use 'hg help test SUBCOMMAND' to show complete subcommand help)
-  
-  (some details hidden, use --verbose to show complete help)
   [255]
 
 
@@ -72,21 +57,6 @@
   test subcommand two called
   $ hg test nonexistent
   hg test: unknown subcommand 'nonexistent'
-  hg test SUBCOMMAND
-  
-  test command
-  
-  First Category:
-  
-   one           first test subcommand
-  
-  Other Subcommands:
-  
-   two           second test subcommand
-  
-  (use 'hg help test SUBCOMMAND' to show complete subcommand help)
-  
-  (some details hidden, use --verbose to show complete help)
   [255]
 
 
@@ -97,21 +67,6 @@
 
   $ hg xt
   hg test: subcommand required
-  hg test SUBCOMMAND
-  
-  test command
-  
-  First Category:
-  
-   one           first test subcommand
-  
-  Other Subcommands:
-  
-   two           second test subcommand
-  
-  (use 'hg help test SUBCOMMAND' to show complete subcommand help)
-  
-  (some details hidden, use --verbose to show complete help)
   [255]
 
 
@@ -119,28 +74,12 @@
   test subcommand one called
   $ hg xt too
   hg test: unknown subcommand 'too'
-  (did you mean two?)
   [255]
   $ hg xt1
   test subcommand one called
 
   $ hg xt0
   hg test: unknown subcommand 'nonexistent'
-  hg test SUBCOMMAND
-  
-  test command
-  
-  First Category:
-  
-   one           first test subcommand
-  
-  Other Subcommands:
-  
-   two           second test subcommand
-  
-  (use 'hg help test SUBCOMMAND' to show complete subcommand help)
-  
-  (some details hidden, use --verbose to show complete help)
   [255]
 
   $ hg othertest

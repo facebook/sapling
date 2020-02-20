@@ -703,21 +703,12 @@ def _callcatch(ui, func):
     except error.UnknownCommand as inst:
         ui.warn(_("unknown command %r\n(use 'hg help' to get help)\n") % inst.args[0])
     except error.UnknownSubcommand as inst:
-        cmd, subcmd, allsubcmds = inst.args
-        suggested = False
+        cmd, subcmd = inst.args[:2]
         if subcmd is not None:
             nosubcmdmsg = _("hg %s: unknown subcommand '%s'\n") % (cmd, subcmd)
-            sim = _getsimilar(allsubcmds, subcmd)
-            if sim:
-                ui.warn(nosubcmdmsg)
-                _reportsimilar(ui.warn, sim)
-                suggested = True
         else:
             nosubcmdmsg = _("hg %s: subcommand required\n") % cmd
-        if not suggested:
-            ui.pager("help")
-            ui.warn(nosubcmdmsg)
-            commands.help_(ui, cmd)
+        ui.warn(nosubcmdmsg)
     except IOError:
         raise
     except KeyboardInterrupt:
