@@ -5,12 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::{bail, Error, Result};
+use faster_hex::{hex_decode, hex_string};
 use hyper::Uri;
 use quickcheck::{Arbitrary, Gen};
 use serde::{Deserialize, Serialize};
-use std::collections::HashMap;
-
-use mononoke_types::hash::Sha256;
+use std::{
+    collections::HashMap,
+    fmt::{self, Debug, Display},
+    mem,
+    str::FromStr,
+};
 
 use crate::str_serialized;
 
@@ -69,6 +74,41 @@ impl Arbitrary for Ref {
     }
 }
 
+#[derive(Clone, Serialize, Deserialize, Hash, Eq, PartialEq, Copy)]
+pub struct Sha256(pub [u8; 32]);
+
+impl Sha256 {
+    fn to_hex(&self) -> String {
+        hex_string(&self.0).expect("failed to hex encode")
+    }
+}
+
+impl FromStr for Sha256 {
+    type Err = Error;
+
+    fn from_str(s: &str) -> Result<Self> {
+        if s.len() != mem::size_of::<Sha256>() * 2 {
+            bail!("invalid sha256 length: {}", s);
+        }
+
+        let mut ret = [0; mem::size_of::<Sha256>()];
+        hex_decode(s.as_bytes(), &mut ret)?;
+        Ok(Sha256(ret))
+    }
+}
+
+impl Debug for Sha256 {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "Sha256({})", self.to_hex())
+    }
+}
+
+impl Display for Sha256 {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        Display::fmt(&self.to_hex(), fmt)
+    }
+}
+
 #[derive(Clone, Serialize, Debug, Deserialize, Hash, Eq, PartialEq, Copy)]
 pub struct RequestObject {
     #[serde(with = "str_serialized")]
@@ -78,8 +118,10 @@ pub struct RequestObject {
 
 impl Arbitrary for RequestObject {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
+        let mut oid = [0; mem::size_of::<Sha256>()];
+        g.fill_bytes(&mut oid);
         Self {
-            oid: Sha256::arbitrary(g),
+            oid: Sha256(oid),
             size: u64::arbitrary(g),
         }
     }

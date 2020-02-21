@@ -24,7 +24,8 @@ use std::str::FromStr;
 use failure_ext::chain::ChainExt;
 use filestore::StoreRequest;
 use lfs_protocol::{
-    ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch, Transfer,
+    ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
+    Sha256 as LfsSha256, Transfer,
 };
 use mononoke_types::hash::Sha256;
 
@@ -70,7 +71,10 @@ async fn upstream_upload<S>(
 where
     S: Stream<Item = Result<Bytes, Error>> + Unpin + Send + 'static,
 {
-    let object = RequestObject { oid, size };
+    let object = RequestObject {
+        oid: LfsSha256(oid.into_inner()),
+        size,
+    };
 
     let batch = RequestBatch {
         operation: Operation::Upload,

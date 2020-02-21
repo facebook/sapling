@@ -394,6 +394,7 @@ impl BaseUri {
 #[cfg(test)]
 mod test {
     use super::*;
+    use lfs_protocol::Sha256 as LfsSha256;
     use mononoke_types::{hash::Sha256, ContentId};
     use std::str::FromStr;
 
@@ -403,7 +404,7 @@ mod test {
 
     fn obj() -> Result<RequestObject, Error> {
         Ok(RequestObject {
-            oid: Sha256::from_str(ONES_HASH)?,
+            oid: LfsSha256::from_str(ONES_HASH)?,
             size: SIZE,
         })
     }

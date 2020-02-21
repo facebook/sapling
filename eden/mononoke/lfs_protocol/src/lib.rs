@@ -12,5 +12,5 @@ mod str_serialized;
 
 pub use protocol::{
     ObjectAction, ObjectError, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
-    ResponseError, ResponseObject, Transfer,
+    ResponseError, ResponseObject, Sha256, Transfer,
 };

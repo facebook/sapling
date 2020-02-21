@@ -173,7 +173,7 @@ async fn internal_objects(
     objects: &[RequestObject],
 ) -> Result<HashMap<RequestObject, ObjectAction>, Error> {
     let futs = objects.iter().map(|object| async move {
-        let content_id = resolve_internal_object(ctx, object.oid).await?;
+        let content_id = resolve_internal_object(ctx, object.oid.0.into()).await?;
         Result::<_, Error>::Ok((content_id, object.oid))
     });
 
@@ -186,7 +186,8 @@ async fn internal_objects(
             // Map the objects we have locally into an action routing to a Mononoke LFS server.
             (Some(content_id), oid) => {
                 let uri = if ctx.config.enable_consistent_routing {
-                    ctx.uri_builder.consistent_download_uri(&content_id, oid)
+                    ctx.uri_builder
+                        .consistent_download_uri(&content_id, oid.0.into())
                 } else {
                     ctx.uri_builder.download_uri(&content_id)
                 };
@@ -504,7 +505,7 @@ mod test {
     use hyper::Uri;
     use std::sync::Arc;
 
-    use mononoke_types::hash::Sha256;
+    use lfs_protocol::Sha256 as LfsSha256;
     use pretty_assertions::assert_eq;
     use std::str::FromStr;
 
@@ -515,7 +516,7 @@ mod test {
     const THREES_HASH: &str = "3333333333333333333333333333333333333333333333333333333333333333";
 
     fn obj(oid: &str, size: u64) -> Result<RequestObject, Error> {
-        let oid = Sha256::from_str(oid)?;
+        let oid = LfsSha256::from_str(oid)?;
         Ok(RequestObject { oid, size })
     }
 

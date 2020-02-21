@@ -357,6 +357,16 @@ macro_rules! impl_hash {
             pub fn into_thrift(self) -> thrift::$type {
                 thrift::$type(self.0.to_vec())
             }
+
+            pub fn into_inner(self) -> [u8; $size] {
+                self.0
+            }
+        }
+
+        impl From<[u8; $size]> for $type {
+            fn from(slice: [u8; $size]) -> Self {
+                Self::from_byte_array(slice)
+            }
         }
 
         impl FromStr for $type {
