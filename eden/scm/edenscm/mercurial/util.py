@@ -52,7 +52,17 @@ import traceback
 import types
 import warnings
 import zlib
-from typing import Any, BinaryIO, Iterable, List, Optional, Type
+from typing import (
+    Any,
+    BinaryIO,
+    Callable,
+    Generic,
+    Iterable,
+    List,
+    Optional,
+    Type,
+    TypeVar,
+)
 
 import bindings
 from edenscmnative import base85, osutil
@@ -892,17 +902,24 @@ def lrucachefunc(func):
     return f
 
 
-class propertycache(object):
+C = TypeVar("C")
+T = TypeVar("T")
+
+
+class propertycache(Generic[C, T]):
     def __init__(self, func):
+        # type: (Callable[[C], T]) -> None
         self.func = func
         self.name = func.__name__
 
     def __get__(self, obj, type=None):
+        # type: (C, Optional[Type[C]]) -> T
         result = self.func(obj)
         self.cachevalue(obj, result)
         return result
 
     def cachevalue(self, obj, value):
+        # type: (C, T) -> None
         # __dict__ assignment required to bypass __setattr__ (eg: repoview)
         obj.__dict__[self.name] = value
 
