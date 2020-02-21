@@ -100,7 +100,8 @@ def _badcertwarning(ui):
     """Show the user a configurable message when their TLS certificate
        is missing, expired, or otherwise invalid.
     """
-    msg = ui.config("edenapi", "authhelp")
+    # internal config: help.tlsauthhelp
+    msg = ui.config("help", "tlsauthhelp")
     if msg is not None:
         ui.warn(msg + "\n")
 
@@ -109,7 +110,8 @@ def _tlswarning(ui):
     """Show the user a configurable message when a TLS error occurs
        during data fetching.
     """
-    msg = ui.config("edenapi", "tlshelp")
+    # internal config: help.tlshelp
+    msg = ui.config("help", "tlshelp")
     if msg is not None:
         ui.warn(msg + "\n")
 

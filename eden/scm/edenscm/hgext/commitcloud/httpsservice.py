@@ -67,16 +67,12 @@ class HttpsCommitCloudService(baseservice.BaseService):
 
         if self.client_certs and not os.path.isfile(self.client_certs):
             raise ccerror.TLSConfigurationError(
-                ui,
-                _("tls.ca_certs resolved to '%s' (no such file or is a directory)")
-                % self.client_certs,
+                ui, _("%s (no such file or is a directory)") % self.client_certs
             )
 
         if self.ca_certs and not os.path.isfile(self.ca_certs):
             raise ccerror.TLSConfigurationError(
-                ui,
-                _("tls.ca_certs resolved to '%s' (no such file or is a directory)")
-                % self.ca_certs,
+                ui, _("%s (no such file or is a directory)") % self.ca_certs
             )
 
         self._setuphttpsconnection()
@@ -146,17 +142,6 @@ class HttpsCommitCloudService(baseservice.BaseService):
         # exponential backoff here on failure, 1s, 2s, 4s, 8s, 16s etc
         sl = 1
 
-        def _tlserror(e):
-            # build tls error with all configuration details
-            details = []
-            if self.client_certs:
-                details.append(_("* client cert file used '%s'") % self.client_certs)
-            if self.ca_certs:
-                details.append(
-                    _("* certificate authority file used '%s'") % self.ca_certs
-                )
-            return ccerror.TLSAccessError(self.ui, str(e), details)
-
         for attempt in range(MAX_CONNECT_RETRIES):
             try:
                 self.connection.request("POST", path, rdata, self.headers)
@@ -185,10 +170,10 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 )
             except socket.error as e:
                 if "SSL" in str(e):
-                    raise _tlserror(e)
+                    raise ccerror.TLSAccessError(self.ui, str(e))
                 raise ccerror.ServiceError(self.ui, str(e))
             except ssl.CertificateError as e:
-                raise _tlserror(e)
+                raise ccerror.TLSAccessError(self.ui, str(e))
             time.sleep(sl)
             sl *= 2
         if e:

@@ -20,11 +20,6 @@ def getownerteam(ui):
     )
 
 
-def getconfighelp(ui):
-    # internal config: help.commitcloud-config-remediate
-    return ui.config("help", "commitcloud-config-remediate")
-
-
 class UnexpectedError(error.Abort):
     def __init__(self, ui, message, *args):
         details = traceback.format_exc()  # last part of traceback
@@ -80,7 +75,8 @@ class ConfigurationError(error.Abort):
 
 class TLSConfigurationError(error.Abort):
     def __init__(self, ui, message, *args):
-        helptext = getconfighelp(ui)
+        # internal config: help.tlsauthhelp
+        helptext = ui.config("help", "tlsauthhelp")
         message = "TLS config error: %s" % (message,)
         if helptext:
             message += "\n" + helptext
@@ -154,12 +150,13 @@ class KeychainAccessError(error.Abort):
 
 
 class TLSAccessError(error.Abort):
-    def __init__(self, ui, reason, details, *args):
+    def __init__(self, ui, reason, *args):
+        # internal config: help.tlshelp
+        helptext = ui.config("help", "tlshelp")
         contact = _("(please contact %s if this error persists)") % getownerteam(ui)
-        message = "tls certificate error: '%s'\n%s\n%s" % (
-            reason,
-            "\n".join(details),
-            contact,
-        )
-        ui.log("commitcloud_error", commitcloud_sync_error="tls certificate error")
+        message = "TLS error: '%s'\n" % reason
+        if helptext:
+            message += "\n" + helptext
+        message += "\n" + contact
+        ui.log("commitcloud_error", commitcloud_sync_error="TLS access error")
         super(TLSAccessError, self).__init__(message, *args, component="commitcloud")
