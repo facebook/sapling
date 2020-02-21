@@ -15,7 +15,7 @@ use futures_preview::compat::Future01CompatExt;
 use mononoke_types::{hash::GitSha1, BonsaiChangeset, ChangesetId, RepositoryId};
 use slog::warn;
 use sql::queries;
-use sql::Connection;
+use sql::{Connection, Transaction};
 use sql_ext::SqlConstructors;
 use stats::prelude::*;
 use std::collections::HashSet;
@@ -274,6 +274,39 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
         }
         Ok(mappings)
     }
+}
+
+/// An in-transaction version of bulk_add. Instead of using multiple connections
+/// it reuses existing `Transaction`. Useful for updating the mapping atomically
+/// with other changes.
+///
+/// It would be nice if we could use the usual SqlBonsaiGitMapping for this
+/// purpose as well but a self-contained object owning connection is very
+/// convenient to use and making every method take connection or transaction a
+/// parameter would complicate it greatly.
+pub async fn bulk_add_git_mapping_in_transaction(
+    transaction: Transaction,
+    entries: &[BonsaiGitMappingEntry],
+) -> Result<Transaction, AddGitMappingErrorKind> {
+    let rows: Vec<_> = entries
+        .into_iter()
+        .map(
+            |BonsaiGitMappingEntry {
+                 repo_id,
+                 git_sha1,
+                 bcs_id,
+             }| (repo_id, git_sha1, bcs_id),
+        )
+        .collect();
+
+    let (transaction, res) = InsertMapping::query_with_transaction(transaction, &rows[..])
+        .compat()
+        .await?;
+
+    if res.affected_rows() != rows.len() as u64 {
+        Err(AddGitMappingErrorKind::Conflict(entries.into()))?;
+    }
+    Ok(transaction)
 }
 
 fn filter_fetched_ids(
