@@ -370,6 +370,8 @@ ssh="$DUMMYSSH"
 remotefilelog=
 [remotefilelog]
 cachepath=$TESTTMP/cachepath
+[extensions]
+commitextras=
 EOF
 }
 
@@ -416,6 +418,10 @@ function init_bookmark_log_sqlite3_db {
   values(0, 'master_bookmark', NULL, X'04C1EA537B01FFF207445E043E310807F9059572DD3087A0FCE458DEC005E4BD', 'pushrebase', 0)";
 
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select * from bookmarks_update_log";
+}
+
+function get_bonsai_git_mapping {
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select hex(bcs_id), hex(git_sha1) from bonsai_git_mapping order by id";
 }
 
 function get_bonsai_globalrev_mapping {
@@ -672,6 +678,12 @@ fi
 if [[ -v ASSIGN_GLOBALREVS ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 assign_globalrevs=true
+CONFIG
+fi
+
+if [[ -v POPULATE_GIT_MAPPING ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+populate_git_mapping=true
 CONFIG
 fi
 

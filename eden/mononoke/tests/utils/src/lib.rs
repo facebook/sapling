@@ -29,6 +29,7 @@ pub struct CreateCommitContext<'a> {
     parents: Vec<CommitIdentifier>,
     files: BTreeMap<String, CreateFileContext>,
     author_date: Option<DateTime>,
+    extra: BTreeMap<String, Vec<u8>>,
 }
 
 impl<'a> CreateCommitContext<'a> {
@@ -44,6 +45,7 @@ impl<'a> CreateCommitContext<'a> {
             parents,
             files: BTreeMap::new(),
             author_date: None,
+            extra: btreemap! {},
         }
     }
 
@@ -56,11 +58,17 @@ impl<'a> CreateCommitContext<'a> {
             parents: vec![],
             files: BTreeMap::new(),
             author_date: None,
+            extra: btreemap! {},
         }
     }
 
     pub fn add_parent(mut self, id: impl Into<CommitIdentifier>) -> Self {
         self.parents.push(id.into());
+        self
+    }
+
+    pub fn add_extra(mut self, key: String, value: Vec<u8>) -> Self {
+        self.extra.insert(key, value);
         self
     }
 
@@ -163,7 +171,7 @@ impl<'a> CreateCommitContext<'a> {
             committer: None,
             committer_date: None,
             message: "message".to_string(),
-            extra: btreemap! {},
+            extra: self.extra,
             file_changes: btreemap! {},
         };
 

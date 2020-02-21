@@ -675,6 +675,9 @@ impl RepoConfigs {
                     block_merges: raw.block_merges.unwrap_or(default.block_merges),
                     emit_obsmarkers: raw.emit_obsmarkers.unwrap_or(default.emit_obsmarkers),
                     assign_globalrevs: raw.assign_globalrevs.unwrap_or(default.assign_globalrevs),
+                    populate_git_mapping: raw
+                        .populate_git_mapping
+                        .unwrap_or(default.populate_git_mapping),
                 })
             })
             .transpose()?
@@ -1589,6 +1592,7 @@ mod test {
                     emit_obsmarkers: false,
                     commit_scribe_category: None,
                     assign_globalrevs: false,
+                    populate_git_mapping: false,
                 },
                 lfs: LfsParams {
                     threshold: Some(1000),

@@ -21,6 +21,7 @@ use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt as Futures01FutureExt};
 use futures_stats::Timed;
 use futures_util::future::{FutureExt, TryFutureExt};
+use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
@@ -386,6 +387,11 @@ fn normal_pushrebase(
         hooks.push(hook);
     }
 
+    if pushrebase_params.populate_git_mapping {
+        let hook = GitMappingPushrebaseHook::new(repo.get_repoid());
+        hooks.push(hook);
+    }
+
     let mut flags = pushrebase_params.flags.clone();
     if let Some(rewritedates) = bookmark_attrs.should_rewrite_dates(bookmark) {
         // Bookmark config overrides repo flags.rewritedates config
@@ -447,6 +453,13 @@ fn force_pushrebase(
     if pushrebase_params.assign_globalrevs {
         return Err(Error::msg(
             "force_pushrebase is not allowed when assigning Globalrevs",
+        ))
+        .into_future()
+        .boxify();
+    }
+    if pushrebase_params.populate_git_mapping {
+        return Err(Error::msg(
+            "force_pushrebase is not allowed as it would skip populating Git mappings",
         ))
         .into_future()
         .boxify();
