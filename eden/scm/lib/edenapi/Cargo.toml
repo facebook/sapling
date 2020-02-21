@@ -17,7 +17,7 @@ log = "0.4.6"
 parking_lot = "0.9"
 regex = "1.0"
 serde = "1.0.89"
-serde_cbor = "0.9.0"
+serde_cbor = "0.11"
 thiserror = "1.0.5"
 tracing = "0"
 types = { path = "../types" }
