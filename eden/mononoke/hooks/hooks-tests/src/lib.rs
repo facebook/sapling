@@ -1356,7 +1356,7 @@ fn test_load_hooks(fb: FacebookInit) {
             },
             BookmarkParams {
                 bookmark: Regex::new("bm2").unwrap().into(),
-                hooks: vec!["hook2".into(), "hook3".into(), "rust:restrict_users".into()],
+                hooks: vec!["hook2".into(), "hook3".into()],
                 only_fast_forward: false,
                 allowed_users: None,
                 rewrite_dates: None,
@@ -1381,15 +1381,6 @@ fn test_load_hooks(fb: FacebookInit) {
                 code: Some("hook3 code".into()),
                 hook_type: HookType::PerChangeset,
                 config: Default::default(),
-            },
-            HookParams {
-                name: "rust:restrict_users".into(),
-                code: Some("whateva".into()),
-                hook_type: HookType::PerChangeset,
-                config: HookConfig {
-                    strings: hashmap! {String::from("allow_users_regex") => String::from(".*")},
-                    ..Default::default()
-                },
             },
         ];
 

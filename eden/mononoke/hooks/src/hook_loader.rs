@@ -14,7 +14,6 @@ use crate::facebook::rust_hooks::check_unittests::CheckUnittestsHook;
 use crate::facebook::rust_hooks::ensure_valid_email::EnsureValidEmailHook;
 use crate::facebook::rust_hooks::limit_commit_message_length::LimitCommitMessageLength;
 use crate::facebook::rust_hooks::limit_path_length::LimitPathLengthHook;
-use crate::facebook::rust_hooks::restrict_users::RestrictUsersHook;
 use crate::facebook::rust_hooks::verify_integrity::VerifyIntegrityHook;
 use crate::lua_hook::LuaHook;
 use crate::{Hook, HookChangeset, HookFile, HookManager};
@@ -61,7 +60,6 @@ pub fn load_hooks(
                 "ensure_valid_email" => {
                     ChangesetHook(Arc::new(EnsureValidEmailHook::new(fb, &hook.config)))
                 }
-                "restrict_users" => ChangesetHook(Arc::new(RestrictUsersHook::new(&hook.config)?)),
                 "limit_commit_message_length" => {
                     ChangesetHook(Arc::new(LimitCommitMessageLength::new(&hook.config)?))
                 }
