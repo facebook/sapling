@@ -452,7 +452,6 @@ class treedirstatemap(object):
         if self._rmap.storeoffset() > repackthreshold:
             self._ui.note(_("auto-repacking treedirstate\n"))
             self._ui.log("treedirstate_repacking", treedirstate_repacking=True)
-            self._repacked = True
             self._treeid = None
             self._gc()
         if self._treeid is None:
