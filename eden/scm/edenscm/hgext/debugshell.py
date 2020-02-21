@@ -19,8 +19,6 @@ import sys
 
 import bindings
 import edenscm
-
-# pyre-fixme[21]: Could not find `edenscmnative`.
 import edenscmnative
 from edenscm import hgext, mercurial
 from edenscm.mercurial import registrar

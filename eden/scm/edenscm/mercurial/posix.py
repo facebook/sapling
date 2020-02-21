@@ -28,7 +28,6 @@ import tempfile
 import unicodedata
 from typing import Optional
 
-# pyre-fixme[21]: Could not find `edenscmnative`.
 from edenscmnative import osutil
 
 from . import encoding, error, fscap, pycompat

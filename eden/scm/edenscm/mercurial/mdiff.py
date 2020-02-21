@@ -18,7 +18,6 @@ import zlib
 from hashlib import sha1
 from typing import TYPE_CHECKING, Iterator, List, Optional, Tuple
 
-# pyre-fixme[21]: Could not find `edenscmnative`.
 from edenscmnative import xdiff
 
 from . import error, policy, pycompat, util

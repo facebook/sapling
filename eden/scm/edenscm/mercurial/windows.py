@@ -21,7 +21,6 @@ import sys
 import tempfile
 from typing import IO, Optional
 
-# pyre-fixme[21]: Could not find `edenscmnative`.
 from edenscmnative import osutil
 
 from . import encoding, error, pycompat, win32, winutil

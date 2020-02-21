@@ -1474,7 +1474,6 @@ def debuginstall(ui, **opts):
 
     err = None
     try:
-        # pyre-fixme[21]: Could not find `edenscmnative`.
         from edenscmnative import base85, bdiff, mpatch, osutil
 
         dir(bdiff), dir(mpatch), dir(base85), dir(osutil)  # quiet pyflakes
