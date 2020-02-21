@@ -1552,11 +1552,21 @@ def splitpath(path):
 
 
 def isvalidutf8(string):
-    try:
-        string.decode("utf-8")
-        return True
-    except UnicodeDecodeError:
-        return False
+    if sys.version_info[0] >= 3:
+        if isinstance(string, str):
+            return True
+        elif isinstance(string, bytes):
+            try:
+                string.decode("utf-8")
+                return True
+            except UnicodeDecodeError:
+                return False
+    else:
+        try:
+            string.decode("utf-8")
+            return True
+        except UnicodeDecodeError:
+            return False
 
 
 def gui():

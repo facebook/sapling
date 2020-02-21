@@ -333,6 +333,10 @@ class physicalfilesystem(object):
                     continue
                 raise
             for f, kind, st in entries:
+                if not util.isvalidutf8(f):
+                    self.ui.warn(_("skipping invalid utf-8 filename: '%s'\n") % f)
+                    continue
+
                 if normalizefile:
                     # even though f might be a directory, we're only
                     # interested in comparing it to files currently in the

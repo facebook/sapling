@@ -19,19 +19,18 @@ feature.require(["no-windows", "no-osx"])
 sh % "hg init"
 open("\x9d\xc8\xac\xde\xa1\xee", "w").write("test")
 
+sh % "hg status" == "skipping invalid utf-8 filename: '\x9d\xc8\xac\xde\xa1\xee'"
+
+# fsmonitor ignores the file once, so it has slightly different output from here
 if feature.check("fsmonitor"):
-    sh % "hg status" == "skipping invalid utf-8 filename: '\x9d\xc8\xac\xde\xa1\xee'"
     sh % "hg addremove" == ''
     sh % "hg commit -m 'adding a filename that is invalid utf8'" == r"""
         nothing changed
         [1]"""
 else:
-    sh % "hg status" == r"""
-        abort: "\x9DȬޡ\xEE" is not a valid UTF-8 path
-        [255]"""
-    sh % "hg addremove" == r"""
-        abort: "\x9DȬޡ\xEE" is not a valid UTF-8 path
-        [255]"""
-    sh % "hg commit -m 'adding a filename that is invalid utf8'" == r"""
-        abort: "\x9DȬޡ\xEE" is not a valid UTF-8 path
-        [255]"""
+    sh % "hg addremove" == "skipping invalid utf-8 filename: '\x9d\xc8\xac\xde\xa1\xee'"
+    sh % "hg commit -m 'adding a filename that is invalid utf8'" == """
+        skipping invalid utf-8 filename: '\x9d\xc8\xac\xde\xa1\xee'
+        skipping invalid utf-8 filename: '\x9d\xc8\xac\xde\xa1\xee'
+        nothing changed
+        [1]"""
