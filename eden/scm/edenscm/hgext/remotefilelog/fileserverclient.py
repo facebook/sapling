@@ -364,9 +364,13 @@ class fileserverclient(object):
         ui = repo.ui
         self.repo = repo
         self.ui = ui
+
         self.cacheprocess = ui.config("remotefilelog", "cacheprocess")
         if not self.cacheprocess:
             self.cacheprocess = ui.config("remotefilelog", "cacheprocess2")
+            if self.cacheprocess:
+                key = ui.config("remotefilelog", "cachekey", "") + repo.name + ":"
+                self.cacheprocess += " " + key
 
         if self.cacheprocess:
             self.cacheprocess = util.expandpath(self.cacheprocess)
@@ -393,9 +397,7 @@ class fileserverclient(object):
                 path = shallowutil.getindexedloghistorystorepath(self.repo)
                 options += " --indexedloghistorystore_dir %s" % path
 
-            key = ui.config("remotefilelog", "cachekey", "") + repo.name + ":"
-
-            cmd = " ".join([self.cacheprocess, key, cachepath, options])
+            cmd = " ".join([self.cacheprocess, cachepath, options])
             self.remotecache = cacheconnection(repo, cmd)
         else:
             self.remotecache = simplecache()
