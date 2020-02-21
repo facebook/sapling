@@ -23,7 +23,7 @@
 #include <string.h>
 
 #ifdef _WIN32
-#include <io.h>
+#include <io.h> // @manual
 #include <windows.h>
 #else
 #include <dirent.h>
@@ -43,9 +43,9 @@
 #endif
 
 #ifdef __APPLE__
-#include <crt_externs.h>
-#include <sys/attr.h>
-#include <sys/vnode.h>
+#include <crt_externs.h> // @manual
+#include <sys/attr.h> // @manual
+#include <sys/vnode.h> // @manual
 #endif
 
 #include "eden/scm/edenscm/mercurial/cext/util.h"
