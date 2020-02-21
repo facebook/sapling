@@ -11,6 +11,7 @@ use blobrepo::BlobRepo;
 use blobrepo_errors::*;
 use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, make_sql_factory, SqlFactory};
+use bonsai_git_mapping::SqlBonsaiGitMapping;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use bonsai_hg_mapping::{CachingBonsaiHgMapping, SqlBonsaiHgMapping};
 use bookmarks::{Bookmarks, CachedBookmarks};
@@ -245,6 +246,10 @@ pub fn new_memblob_empty_with_id(
                 .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?,
         ),
         Arc::new(
+            SqlBonsaiGitMapping::with_sqlite_in_memory()
+                .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))?,
+        ),
+        Arc::new(
             SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()
                 .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGlobalrevMapping))?,
         ),
@@ -281,6 +286,7 @@ pub fn new_memblob_with_sqlite_connection_with_id(
 ) -> Result<(BlobRepo, Connection)> {
     con.execute_batch(SqlBookmarks::get_up_query())?;
     con.execute_batch(SqlChangesets::get_up_query())?;
+    con.execute_batch(SqlBonsaiGitMapping::get_up_query())?;
     con.execute_batch(SqlBonsaiGlobalrevMapping::get_up_query())?;
     con.execute_batch(SqlBonsaiHgMapping::get_up_query())?;
     con.execute_batch(SqlPhasesStore::get_up_query())?;
@@ -321,6 +327,11 @@ pub fn new_memblob_with_connection_with_id(
                     .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?,
             ),
             Arc::new(SqlChangesets::from_connections(
+                con.clone(),
+                con.clone(),
+                con.clone(),
+            )),
+            Arc::new(SqlBonsaiGitMapping::from_connections(
                 con.clone(),
                 con.clone(),
                 con.clone(),
@@ -380,6 +391,11 @@ fn new_development(
         .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))
         .from_err();
 
+    let bonsai_git_mapping = sql_factory
+        .open::<SqlBonsaiGitMapping>()
+        .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))
+        .from_err();
+
     let bonsai_globalrev_mapping = sql_factory
         .open::<SqlBonsaiGlobalrevMapping>()
         .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGlobalrevMapping))
@@ -396,7 +412,12 @@ fn new_development(
         .from_err();
 
     bookmarks
-        .join4(unredacted_blobstore, redacted_blobs, phases)
+        .join5(
+            unredacted_blobstore,
+            redacted_blobs,
+            phases,
+            bonsai_git_mapping,
+        )
         .join5(
             filenodes,
             changesets,
@@ -405,7 +426,7 @@ fn new_development(
         )
         .map({
             move |(
-                (bookmarks, blobstore, redacted_blobs, phases_store),
+                (bookmarks, blobstore, redacted_blobs, phases_store, bonsai_git_mapping),
                 filenodes,
                 changesets,
                 bonsai_globalrev_mapping,
@@ -420,6 +441,7 @@ fn new_development(
                     RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
                     filenodes,
                     changesets,
+                    bonsai_git_mapping,
                     bonsai_globalrev_mapping,
                     bonsai_hg_mapping,
                     Arc::new(InProcessLease::new()),
@@ -474,6 +496,7 @@ fn new_production(
     let filenodes_tier_and_filenodes = sql_factory.open_filenodes();
     let bookmarks = sql_factory.open::<SqlBookmarks>();
     let changesets = sql_factory.open::<SqlChangesets>();
+    let bonsai_git_mapping = sql_factory.open::<SqlBonsaiGitMapping>();
     let bonsai_globalrev_mapping = sql_factory.open::<SqlBonsaiGlobalrevMapping>();
     let bonsai_hg_mapping = sql_factory.open::<SqlBonsaiHgMapping>();
     let phases = sql_factory.open::<SqlPhasesStore>();
@@ -488,7 +511,7 @@ fn new_production(
     };
 
     filenodes_tier_and_filenodes
-        .join4(blobstore, redacted_blobs, phases)
+        .join5(blobstore, redacted_blobs, phases, bonsai_git_mapping)
         .join5(
             bookmarks,
             changesets,
@@ -497,7 +520,13 @@ fn new_production(
         )
         .map(
             move |(
-                ((filenodes_tier, filenodes), blobstore, redacted_blobs, phases),
+                (
+                    (filenodes_tier, filenodes),
+                    blobstore,
+                    redacted_blobs,
+                    phases,
+                    bonsai_git_mapping,
+                ),
                 bookmarks,
                 changesets,
                 bonsai_globalrev_mapping,
@@ -544,6 +573,7 @@ fn new_production(
                     RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
                     Arc::new(filenodes),
                     changesets,
+                    bonsai_git_mapping,
                     bonsai_globalrev_mapping,
                     Arc::new(bonsai_hg_mapping),
                     Arc::new(derive_data_lease),

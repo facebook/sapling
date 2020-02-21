@@ -12,6 +12,7 @@ use crate::errors::*;
 use crate::repo_commit::*;
 use anyhow::{format_err, Context, Error};
 use blobstore::{Blobstore, Loadable};
+use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::{BonsaiGlobalrevMapping, BonsaisOrGlobalrevs};
 use bonsai_hg_mapping::{BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds};
 use bookmarks::{
@@ -103,6 +104,7 @@ pub struct BlobRepo {
     bookmarks: Arc<dyn Bookmarks>,
     filenodes: Arc<dyn Filenodes>,
     changesets: Arc<dyn Changesets>,
+    bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
     bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
     bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
     repoid: RepositoryId,
@@ -122,6 +124,7 @@ impl BlobRepo {
         blobstore_args: RepoBlobstoreArgs,
         filenodes: Arc<dyn Filenodes>,
         changesets: Arc<dyn Changesets>,
+        bonsai_git_mapping: Arc<dyn BonsaiGitMapping>,
         bonsai_globalrev_mapping: Arc<dyn BonsaiGlobalrevMapping>,
         bonsai_hg_mapping: Arc<dyn BonsaiHgMapping>,
         derived_data_lease: Arc<dyn LeaseOps>,
@@ -146,6 +149,7 @@ impl BlobRepo {
             blobstore,
             filenodes,
             changesets,
+            bonsai_git_mapping,
             bonsai_globalrev_mapping,
             bonsai_hg_mapping,
             repoid,
@@ -172,6 +176,7 @@ impl BlobRepo {
             blobstore,
             filenodes,
             changesets,
+            bonsai_git_mapping,
             bonsai_globalrev_mapping,
             bonsai_hg_mapping,
             repoid,
@@ -192,6 +197,7 @@ impl BlobRepo {
             repo_blobstore_args,
             filenodes,
             changesets,
+            bonsai_git_mapping,
             bonsai_globalrev_mapping,
             bonsai_hg_mapping,
             derived_data_lease,
@@ -388,6 +394,10 @@ impl BlobRepo {
     ) -> BoxFuture<Option<ChangesetId>, Error> {
         STATS::get_bookmark.add_value(1);
         self.bookmarks.get(ctx, name, self.repoid)
+    }
+
+    pub fn bonsai_git_mapping(&self) -> &Arc<dyn BonsaiGitMapping> {
+        &self.bonsai_git_mapping
     }
 
     pub fn bonsai_globalrev_mapping(&self) -> &Arc<dyn BonsaiGlobalrevMapping> {
@@ -1937,6 +1947,7 @@ impl Clone for BlobRepo {
             blobstore: self.blobstore.clone(),
             filenodes: self.filenodes.clone(),
             changesets: self.changesets.clone(),
+            bonsai_git_mapping: self.bonsai_git_mapping.clone(),
             bonsai_globalrev_mapping: self.bonsai_globalrev_mapping.clone(),
             bonsai_hg_mapping: self.bonsai_hg_mapping.clone(),
             repoid: self.repoid.clone(),
