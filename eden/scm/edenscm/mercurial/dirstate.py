@@ -18,7 +18,7 @@ import errno
 import os
 import stat
 import weakref
-from typing import Callable
+from typing import Callable, List
 
 # Using an absolute import here allows us to import localrepo even though it
 # circularly imports us.
@@ -837,6 +837,7 @@ class dirstate(object):
 
     @perftrace.tracefunc("Status")
     def status(self, match, ignored, clean, unknown):
+        # type: (Callable[[str], bool], bool, bool, bool) -> scmutil.status
         """Determine the status of the working copy relative to the
         dirstate and return a pair of (unsure, status), where status is of type
         scmutil.status and:
@@ -858,19 +859,24 @@ class dirstate(object):
         pctx = wctx.parents()[0]
 
         listignored, listclean, listunknown = ignored, clean, unknown
-        modified, added, unknown, ignored = [], [], [], []
-        removed, deleted, clean = [], [], []
+        modified = []  # type: List[str]
+        added = []  # type: List[str]
+        unknownpaths = []  # type: List[str]
+        ignoredpaths = []  # type: List[str]
+        removed = []  # type: List[str]
+        deleted = []  # type: List[str]
+        cleanpaths = []  # type: List[str]
 
         dmap = self._map
         dmap.preload()
         dget = dmap.__getitem__
         madd = modified.append
         aadd = added.append
-        uadd = unknown.append
-        iadd = ignored.append
+        uadd = unknownpaths.append
+        iadd = ignoredpaths.append
         radd = removed.append
         dadd = deleted.append
-        cadd = clean.append
+        cadd = cleanpaths.append
         ignore = self._ignore
         copymap = self._map.copymap
 
@@ -917,6 +923,7 @@ class dirstate(object):
             ignorevisitdir = ignore.visitdir
 
             def dirfilter(path):
+                # type: (str) -> bool
                 result = ignorevisitdir(path.rstrip("/"))
                 return result == "all"
 
@@ -935,6 +942,7 @@ class dirstate(object):
         auditpath = pathutil.pathauditor(self._root, cached=True)
 
         def fileexists(fn):
+            # type: (str) -> bool
             # So let's double check for the existence of that file.
             st = list(util.statfiles([self._join(fn)]))[0]
 
@@ -1021,7 +1029,7 @@ class dirstate(object):
             seenset.add(fn)
 
         status = scmutil.status(
-            modified, added, removed, deleted, unknown, ignored, clean
+            modified, added, removed, deleted, unknownpaths, ignoredpaths, cleanpaths
         )
 
         # Step 3: If clean files were requested, add those to the results
@@ -1035,7 +1043,7 @@ class dirstate(object):
                 assert isinstance(fn, str)
                 if fn not in seenset:
                     cadd(fn)
-            seenset.update(clean)
+            seenset.update(cleanpaths)
 
         # Step 4: Report any explicitly requested files that don't exist
         for path in sorted(match.files()):
@@ -1052,10 +1060,10 @@ class dirstate(object):
             self._poststatusfixup(status, wctx, oldid)
 
         perftrace.tracevalue("A/M/R Files", len(modified) + len(added) + len(removed))
-        if len(unknown) > 0:
-            perftrace.tracevalue("Unknown Files", len(unknown))
-        if len(ignored) > 0:
-            perftrace.tracevalue("Ignored Files", len(ignored))
+        if len(unknownpaths) > 0:
+            perftrace.tracevalue("Unknown Files", len(unknownpaths))
+        if len(ignoredpaths) > 0:
+            perftrace.tracevalue("Ignored Files", len(ignoredpaths))
         return status
 
     def _poststatusfixup(self, status, wctx, oldid):

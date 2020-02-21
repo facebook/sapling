@@ -170,6 +170,7 @@ import os
 import stat
 import sys
 import weakref
+from typing import Callable, Iterable, Optional, Tuple
 
 from edenscm.mercurial import (
     blackbox,
@@ -835,6 +836,7 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
         self._ui = repo.ui
 
     def pendingchanges(self, match=None, listignored=False):
+        # type: (Optional[Callable[[str], bool]], bool) -> Iterable[Tuple[str, bool]]
         def bail(reason):
             self._ui.debug("fsmonitor: fallback to core status, %s\n" % reason)
             return super(fsmonitorfilesystem, self).pendingchanges(

@@ -5,6 +5,8 @@
 
 """Eden implementation for the dirstate filesystem class."""
 
+from typing import Callable, Iterable, Optional, Tuple
+
 from . import filesystem, perftrace, pycompat, util
 from .EdenThriftClient import ScmFileStatus
 from .pycompat import decodeutf8
@@ -12,6 +14,7 @@ from .pycompat import decodeutf8
 
 class eden_filesystem(filesystem.physicalfilesystem):
     def pendingchanges(self, match=None, listignored=False):
+        # type: (Optional[Callable[[str], bool]], bool) -> Iterable[Tuple[str, bool]]
         if match is None:
             match = util.always
 

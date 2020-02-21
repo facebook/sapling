@@ -13,6 +13,7 @@ from __future__ import absolute_import
 import errno
 import os
 import stat
+from typing import Callable, Iterable, Optional, Tuple
 
 from bindings import workingcopy
 from edenscm.mercurial import registrar
@@ -159,6 +160,7 @@ class physicalfilesystem(object):
             return None
 
     def pendingchanges(self, match=None, listignored=False):
+        # type: (Optional[Callable[[str], bool]], bool) -> Iterable[Tuple[str, bool]]
         """Yields all the files that differ from the pristine tree.
 
         Returns an iterator of (string, bool), where the string is the
