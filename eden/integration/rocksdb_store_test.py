@@ -66,27 +66,33 @@ stats-interval = "100ms"
                 initial_counters.get("local_store.persistent.total_size"), 500_000_000
             )
 
-            # Read back several files, which will import them into the local store
+            # Read back several files
             self.assertEqual((self.mount_path / "a/dir/foo.txt").read_text(), "foo\n")
             self.assertEqual((self.mount_path / "a/dir/bar.txt").read_text(), "bar\n")
             self.assertEqual(
                 (self.mount_path / "a/another_dir/hello.txt").read_text(), "hola\n"
             )
 
-            # The blob store size should be larger now after reading these files.
+            # The tree store size should be larger now after reading these files.
             # The counters won't be updated until the store.stats-interval expires.
             # Wait for this to happen.
-            def blob_size_incremented() -> Optional[bool]:
-                blob_size = client.getCounter("local_store.blob.size")
+            def tree_size_incremented() -> Optional[bool]:
+                tree_size = client.getCounter("local_store.tree.size")
 
-                initial_blob_size = initial_counters.get("local_store.blob.size")
-                assert initial_blob_size is not None
-                if blob_size > initial_blob_size:
+                initial_tree_size = initial_counters.get("local_store.tree.size")
+                assert initial_tree_size is not None
+                if tree_size > initial_tree_size:
                     return True
 
                 return None
 
-            poll_until(blob_size_incremented, timeout=1, interval=0.1)
+            poll_until(tree_size_incremented, timeout=1, interval=0.1)
+
+            # EdenFS should not import blobs to local store
+            self.assertEqual(
+                initial_counters.get("local_store.blob.size"),
+                client.getCounter("local_store.blob.size"),
+            )
 
             # Update the config file with a very small GC limit that will force GC to be
             # triggered

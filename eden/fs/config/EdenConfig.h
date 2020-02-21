@@ -305,7 +305,7 @@ class EdenConfig : private ConfigSettingManager {
   /**
    * Controls whether EdenFS reads directly from hgcache.
    */
-  ConfigSetting<bool> useHgCache{"hg:use-hgcache", false, this};
+  ConfigSetting<bool> useHgCache{"hg:use-hgcache", true, this};
 
   /**
    * Location of scribe_cat binary on the system. If not specified, scribe
@@ -324,7 +324,7 @@ class EdenConfig : private ConfigSettingManager {
    * Controls whether if EdenFS caches blobs in local store.
    */
   ConfigSetting<bool> enableBlobCaching{"experimental:enable-blob-caching",
-                                        true,
+                                        false,
                                         this};
 
   /**
