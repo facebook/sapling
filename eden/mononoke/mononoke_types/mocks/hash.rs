@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use mononoke_types::hash::Blake2;
+use mononoke_types::hash::{Blake2, GitSha1};
 
 // Definitions for hashes 1111...1111 to ffff...ffff.
 
@@ -29,6 +29,30 @@ pub const FS: Blake2 = Blake2::from_byte_array([0xff; 32]);
 pub const FS_ES: Blake2 = Blake2::from_byte_array([
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff,
     0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee,
+]);
+
+// Definitions for SHA-1 hashes 1111...1111 to ffff...ffff.
+
+pub const ONES_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([0x11; 20]);
+pub const TWOS_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([0x22; 20]);
+pub const THREES_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([0x33; 20]);
+pub const FOURS_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([0x44; 20]);
+pub const FIVES_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([0x55; 20]);
+pub const SIXES_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([0x66; 20]);
+pub const SEVENS_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([0x77; 20]);
+pub const EIGHTS_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([0x88; 20]);
+pub const NINES_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([0x99; 20]);
+pub const AS_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([0xaa; 20]);
+pub const BS_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([0xbb; 20]);
+pub const CS_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([0xcc; 20]);
+pub const DS_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([0xdd; 20]);
+pub const ES_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([0xee; 20]);
+pub const FS_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([0xff; 20]);
+
+// Definition for the SHA-1 hashes ff...ffee..eee
+pub const FS_ES_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([
+    0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee,
+    0xee, 0xee, 0xee, 0xee,
 ]);
 
 #[cfg(test)]

@@ -6,7 +6,7 @@
  */
 
 use crate::datetime::Timestamp;
-use crate::hash::Blake2;
+use crate::hash::{Blake2, GitSha1};
 use crate::repo::RepositoryId;
 use crate::typed_hash::ChangesetId;
 use sql::mysql_async::{
@@ -92,4 +92,33 @@ impl ConvIr<RepositoryId> for RepositoryId {
 
 impl FromValue for RepositoryId {
     type Intermediate = RepositoryId;
+}
+
+impl From<GitSha1> for Value {
+    fn from(sha1: GitSha1) -> Self {
+        Value::Bytes(sha1.as_ref().into())
+    }
+}
+
+impl ConvIr<GitSha1> for GitSha1 {
+    fn new(v: Value) -> FromValueResult<Self> {
+        match v {
+            Value::Bytes(bytes) => {
+                GitSha1::from_bytes(&bytes).map_err(move |_| FromValueError(Value::Bytes(bytes)))
+            }
+            v => Err(FromValueError(v)),
+        }
+    }
+
+    fn commit(self) -> Self {
+        self
+    }
+
+    fn rollback(self) -> Value {
+        self.into()
+    }
+}
+
+impl FromValue for GitSha1 {
+    type Intermediate = GitSha1;
 }
