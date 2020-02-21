@@ -381,10 +381,6 @@ corepypats = [
         (r"^import pickle", "don't use pickle, use util.pickle"),
         (r"^import httplib", "don't use httplib, use util.httplib"),
         (r"^import BaseHTTPServer", "use util.httpserver instead"),
-        (
-            r"^(from|import) mercurial\.(cext|pure|cffi)",
-            "use mercurial.policy.importmod instead",
-        ),
         (r"platform\.system\(\)", "don't use platform.system(), use pycompat"),
         # rules depending on implementation of repquote()
         (r' x+[xpqo%APM][\'"]\n\s+[\'"]x', "string join across lines with no space"),
@@ -664,14 +660,14 @@ checks = [
     ("python", r".*hgext.*\.py$", "", [], pyextnfpats),
     (
         "python",
-        r".*(hgext|mercurial)/(?!demandimport|policy|pycompat).*\.py",
+        r".*(hgext|mercurial)/(?!demandimport|pycompat).*\.py",
         "",
         pyfilters,
         pycorepats,
     ),
     (
         "python 3",
-        r".*(hgext|mercurial)/(?!demandimport|policy|pycompat).*\.py",
+        r".*(hgext|mercurial)/(?!demandimport|pycompat).*\.py",
         "",
         pyfilters,
         py3pats,

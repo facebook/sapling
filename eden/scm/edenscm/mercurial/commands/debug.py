@@ -58,7 +58,6 @@ from .. import (
     obsolete,
     obsutil,
     phases,
-    policy,
     progress,
     pvec,
     pycompat,

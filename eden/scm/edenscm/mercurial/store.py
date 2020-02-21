@@ -19,13 +19,12 @@ import stat
 from typing import Optional
 
 import bindings
+from edenscmnative import parsers
 
-from . import error, policy, pycompat, util, vfs as vfsmod
+from . import error, pycompat, util, vfs as vfsmod
 from .i18n import _
 from .pycompat import decodeutf8, encodeutf8, range
 
-
-parsers = policy.importmod(r"parsers")
 
 # This avoids a collision between a file named foo and a dir named
 # foo.i or foo.d

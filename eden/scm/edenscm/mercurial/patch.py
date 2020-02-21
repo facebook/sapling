@@ -26,6 +26,8 @@ import tempfile
 import zlib
 from typing import List, Optional, Sequence, Tuple
 
+from edenscmnative import diffhelpers
+
 from . import (
     copies,
     encoding,
@@ -33,7 +35,6 @@ from . import (
     mail,
     mdiff,
     pathutil,
-    policy,
     pycompat,
     scmutil,
     similar,
@@ -45,7 +46,6 @@ from .node import hex, short
 from .pycompat import decodeutf8, encodeutf8, range
 
 
-diffhelpers = policy.importmod(r"diffhelpers")
 stringio = util.stringio
 
 gitre = re.compile(br"diff --git a/(.*) b/(.*)")

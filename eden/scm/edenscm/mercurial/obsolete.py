@@ -77,12 +77,12 @@ from __future__ import absolute_import
 import errno
 import struct
 
-from . import error, node, obsutil, perftrace, phases, policy, pycompat, util
+from edenscmnative import parsers
+
+from . import error, node, obsutil, perftrace, phases, pycompat, util
 from .i18n import _
 from .pycompat import encodeutf8, range
 
-
-parsers = policy.importmod(r"parsers")
 
 _pack = struct.pack
 _unpack = struct.unpack

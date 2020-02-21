@@ -17,13 +17,14 @@ import itertools
 import os
 import struct
 
-from . import error, mdiff, policy, pycompat, revlog, util
+from edenscmnative import parsers
+
+from . import error, mdiff, pycompat, revlog, util
 from .i18n import _
 from .node import bin, hex
 from .pycompat import encodeutf8, unicode
 
 
-parsers = policy.importmod(r"parsers")
 propertycache = util.propertycache
 
 

@@ -29,16 +29,15 @@ import zlib
 from typing import IO, Any, List, Optional, Tuple, Union
 
 import bindings
+from edenscmnative import parsers
 
-from . import ancestor, error, mdiff, policy, pycompat, templatefilters, util
+from . import ancestor, error, mdiff, pycompat, templatefilters, util
 from .i18n import _
 
 # import stuff from node for others to import from revlog
 from .node import bbin, bhex, bin, hex, nullid, nullrev, wdirhex, wdirid, wdirrev
 from .pycompat import range
 
-
-parsers = policy.importmod(r"parsers")
 
 # Aliased for performance.
 _zlibdecompress = zlib.decompress

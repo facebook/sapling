@@ -10,17 +10,9 @@ import stat
 from typing import BinaryIO
 
 import eden.dirstate as eden_dirstate_serializer
+from edenscmnative import parsers
 
-from . import (
-    EdenThriftClient,
-    dirstate,
-    localrepo,
-    policy,
-    pycompat,
-    ui as ui_mod,
-    util,
-    vfs,
-)
+from . import EdenThriftClient, dirstate, localrepo, pycompat, ui as ui_mod, util, vfs
 
 
 MERGE_STATE_NOT_APPLICABLE = eden_dirstate_serializer.MERGE_STATE_NOT_APPLICABLE
@@ -34,8 +26,6 @@ modefromflag = {
     "l": (stat.S_IFREG if pycompat.iswindows else stat.S_IFLNK) | 0o755,
     "t": stat.S_IFDIR | 0o755,
 }
-
-parsers = policy.importmod(r"parsers")
 
 
 class eden_dirstate_map(dirstate.dirstatemap):

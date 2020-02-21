@@ -23,6 +23,7 @@ from typing import Callable
 # Using an absolute import here allows us to import localrepo even though it
 # circularly imports us.
 import edenscm.mercurial.localrepo
+from edenscmnative import parsers
 
 from . import (
     encoding,
@@ -32,7 +33,6 @@ from . import (
     match as matchmod,
     pathutil,
     perftrace,
-    policy,
     pycompat,
     scmutil,
     treedirstate,
@@ -46,8 +46,6 @@ from .i18n import _
 from .node import hex, nullid
 from .pycompat import encodeutf8
 
-
-parsers = policy.importmod(r"parsers")
 
 propertycache = util.propertycache
 filecache = scmutil.filecache

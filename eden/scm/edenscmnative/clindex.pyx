@@ -37,7 +37,6 @@ from edenscm.mercurial import (
     error,
     extensions,
     localrepo,
-    policy,
     pycompat,
     registrar,
     revlog,

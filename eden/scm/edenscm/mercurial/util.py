@@ -55,14 +55,11 @@ import zlib
 from typing import Any, BinaryIO, Iterable, List, Optional, Type
 
 import bindings
+from edenscmnative import base85, osutil
 
-from . import blackbox, encoding, error, fscap, i18n, policy, pycompat, urllibcompat
+from . import blackbox, encoding, error, fscap, i18n, pycompat, urllibcompat
 from .pycompat import decodeutf8, encodeutf8, range
 
-
-base85 = policy.importmod(r"base85")
-osutil = policy.importmod(r"osutil")
-parsers = policy.importmod(r"parsers")
 
 b85decode = base85.b85decode
 b85encode = base85.b85encode

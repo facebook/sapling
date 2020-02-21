@@ -173,7 +173,6 @@ from edenscm.mercurial import (
     mdiff,
     perftrace,
     phases,
-    policy,
     progress,
     pycompat,
     registrar,

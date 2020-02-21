@@ -202,7 +202,6 @@ def _preimportmodules():
         "pathutil",
         "peer",
         "phases",
-        "policy",
         "progress",
         "pushkey",
         "rcutil",

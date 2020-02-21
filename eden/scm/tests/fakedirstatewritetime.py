@@ -11,21 +11,19 @@ from edenscm.mercurial import (
     context,
     dirstate,
     extensions,
-    policy,
     pycompat,
     registrar,
     treedirstate,
     treestate,
     util,
 )
+from edenscmnative import parsers
 
 
 configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("fakedirstatewritetime", "fakenow", default=None)
-
-parsers = policy.importmod(r"parsers")
 
 
 def pack_dirstate(fakenow, orig, dmap, copymap, pl, now):

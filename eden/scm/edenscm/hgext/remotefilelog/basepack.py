@@ -13,7 +13,7 @@ import stat as statmod
 import struct
 import time
 
-from edenscm.mercurial import error, policy, pycompat, util, vfs as vfsmod
+from edenscm.mercurial import pycompat, util
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.pycompat import range
 

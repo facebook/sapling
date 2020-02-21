@@ -18,12 +18,12 @@ import os
 import sys
 import unicodedata
 
-from . import error, policy, pycompat
+from edenscmnative import parsers as charencode
+
+from . import error, pycompat
 from .pure import charencode as charencodepure
 from .pycompat import range
 
-
-charencode = policy.importmod(r"charencode")
 
 isasciistr = charencode.isasciistr
 asciilower = charencode.asciilower

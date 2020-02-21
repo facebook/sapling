@@ -17,7 +17,6 @@ from . import (
     localrepo,
     match as matchmod,
     perftrace,
-    policy,
     pycompat,
     scmutil,
     ui as ui_mod,
@@ -28,7 +27,6 @@ from .i18n import _
 from .node import nullid
 
 
-parsers = policy.importmod("parsers")
 propertycache = util.propertycache
 
 

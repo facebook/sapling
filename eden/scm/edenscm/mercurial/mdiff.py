@@ -18,9 +18,9 @@ import zlib
 from hashlib import sha1
 from typing import TYPE_CHECKING, Iterator, List, Optional, Tuple
 
-from edenscmnative import xdiff
+from edenscmnative import bdiff, mpatch, xdiff
 
-from . import error, policy, pycompat, util
+from . import error, util
 from .i18n import _
 from .pycompat import encodeutf8, range
 
@@ -30,9 +30,6 @@ if TYPE_CHECKING:
 
 
 _missing_newline_marker = b"\\ No newline at end of file\n"
-
-bdiff = policy.importmod(r"bdiff")
-mpatch = policy.importmod(r"mpatch")
 
 blocks = bdiff.blocks
 fixws = bdiff.fixws
