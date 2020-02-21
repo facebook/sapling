@@ -1424,27 +1424,6 @@ class filectx(basefilectx):
                 _("censored node: %s") % short(self._filenode),
                 hint=_("set censor.policy to ignore errors"),
             )
-        except KeyError as ex:
-            # Provide more context about what's being fetched.
-            message = ""
-            try:
-                message = "failed to fetch %s at commit %s (%s)\n" % (
-                    self.path(),
-                    hex(self.node()),
-                    self.phasestr(),
-                )
-                stack = []
-                for ctx in self.repo().set(
-                    "sort(parents(not public() & (::%n)) + %n, -rev)",
-                    self.node(),
-                    self.node(),
-                ):
-                    stack.append("  %s %s" % (ctx, ctx.description().split("\n", 1)[0]))
-                message += "(stack:\n%s)\n" % ("\n".join(stack))
-            except Exception as innerex:
-                message += "(failed to obtain more error context: %s)\n" % innerex
-            ex.args = tuple([message + ex.args[0]] + list(ex.args[1:]))
-            raise
 
     def size(self):
         return self._filelog.size(self._filerev)
