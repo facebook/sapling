@@ -32,6 +32,7 @@ use futures_preview::{
 use slog::{debug, error, info, Logger};
 
 use blobrepo::BlobRepo;
+use bonsai_git_mapping::BonsaiGitMapping;
 use bonsai_globalrev_mapping::{bulk_import_globalrevs, BonsaiGlobalrevMapping};
 use context::CoreContext;
 use derived_data_utils::derived_data_utils;
@@ -92,6 +93,7 @@ pub struct Blobimport {
     pub concurrent_lfs_imports: usize,
     pub fixed_parent_order: HashMap<HgChangesetId, Vec<HgChangesetId>>,
     pub has_globalrev: bool,
+    pub populate_git_mapping: bool,
     pub small_repo_id: Option<RepositoryId>,
     pub derived_data_types: Vec<String>,
 }
@@ -115,6 +117,7 @@ impl Blobimport {
             concurrent_lfs_imports,
             fixed_parent_order,
             has_globalrev,
+            populate_git_mapping,
             small_repo_id,
             derived_data_types,
         } = self;
@@ -234,6 +237,22 @@ impl Blobimport {
                                     future::ok(()).right_future()
                                 };
 
+                                let git_mapping_work = {
+                                    cloned!(changesets, ctx);
+                                    let git_mapping_store = blobrepo.bonsai_git_mapping().clone();
+                                    async move {
+                                        if populate_git_mapping {
+                                            git_mapping_store
+                                                .bulk_import_from_bonsai(ctx, repo_id, &changesets)
+                                                .await
+                                        } else {
+                                            Ok(())
+                                        }
+                                    }
+                                    .boxed()
+                                    .compat()
+                                };
+
                                 if !derived_data_types.is_empty() {
                                     info!(logger, "Deriving data for: {:?}", derived_data_types);
                                 }
@@ -251,6 +270,7 @@ impl Blobimport {
                                 globalrevs_work
                                     .join(synced_commit_mapping_work)
                                     .join(derivation_work)
+                                    .join(git_mapping_work)
                                     .map(move |_| max_rev)
                             }
                         })

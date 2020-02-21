@@ -282,7 +282,8 @@ fn main(fb: FacebookInit) -> Result<()> {
     }
 
     let has_globalrev = matches.is_present("has-globalrev");
-
+    let (_repo_name, repo_config) = args::get_config(ctx.fb, &matches)?;
+    let populate_git_mapping = repo_config.pushrebase.populate_git_mapping.clone();
     let small_repo_id = args::get_source_repo_id_opt(fb, &matches)?;
 
     let blobimport = blobrepo
@@ -308,6 +309,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                 concurrent_lfs_imports,
                 fixed_parent_order,
                 has_globalrev,
+                populate_git_mapping,
                 small_repo_id,
                 derived_data_types,
             }

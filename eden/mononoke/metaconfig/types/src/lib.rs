@@ -450,7 +450,7 @@ pub struct PushrebaseParams {
     pub commit_scribe_category: Option<String>,
     /// Whether Globalrevs should be assigned
     pub assign_globalrevs: bool,
-    /// Whether Git Mapping should be populated from extras
+    /// Whether Git Mapping should be populated from extras (affects also blobimport)
     pub populate_git_mapping: bool,
 }
 
