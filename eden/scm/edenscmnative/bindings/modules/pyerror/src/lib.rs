@@ -36,13 +36,25 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 fn register_error_handlers() {
     fn specific_error_handler(py: Python, e: &error::Error) -> Option<PyErr> {
         if let Some(e) = e.downcast_ref::<indexedlog::Error>() {
-            Some(PyErr::new::<IndexedLogError, _>(py, e.to_string()))
+            Some(PyErr::new::<IndexedLogError, _>(
+                py,
+                cpython_ext::Str::from(e.to_string()),
+            ))
         } else if let Some(e) = e.downcast_ref::<metalog::Error>() {
-            Some(PyErr::new::<MetaLogError, _>(py, e.to_string()))
+            Some(PyErr::new::<MetaLogError, _>(
+                py,
+                cpython_ext::Str::from(e.to_string()),
+            ))
         } else if let Some(e) = e.downcast_ref::<revisionstore::Error>() {
-            Some(PyErr::new::<RevisionstoreError, _>(py, e.to_string()))
+            Some(PyErr::new::<RevisionstoreError, _>(
+                py,
+                cpython_ext::Str::from(e.to_string()),
+            ))
         } else if let Some(e) = e.downcast_ref::<cpython_ext::Error>() {
-            Some(PyErr::new::<NonUTF8Path, _>(py, e.to_string()))
+            Some(PyErr::new::<NonUTF8Path, _>(
+                py,
+                cpython_ext::Str::from(e.to_string()),
+            ))
         } else {
             None
         }

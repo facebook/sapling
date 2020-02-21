@@ -1,3 +1,4 @@
+# coding=utf-8
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -16,10 +17,15 @@ feature.require(["no-windows", "no-osx"])
 # Test that trying to add invalid utf8 files to the repository will fail.
 
 sh % "hg init"
-open("invalid\x80utf8", "w").write("test")
+open("\x9d\xc8\xac\xde\xa1\xee", "w").write("test")
+
+sh % "hg status" == r"""
+    abort: "\x9DȬޡ\xEE" is not a valid UTF-8 path
+    [255]"""
+
 sh % "hg addremove" == r"""
-    abort: "invalid\x80utf8" is not a valid UTF-8 path
+    abort: "\x9DȬޡ\xEE" is not a valid UTF-8 path
     [255]"""
 sh % "hg commit -m 'adding a filename that is invalid utf8'" == r"""
-    abort: "invalid\x80utf8" is not a valid UTF-8 path
+    abort: "\x9DȬޡ\xEE" is not a valid UTF-8 path
     [255]"""
