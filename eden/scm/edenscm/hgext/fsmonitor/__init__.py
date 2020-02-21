@@ -513,6 +513,11 @@ def _walk(self, match, event):
     ignorelistappend = ignorelist.append
     for entry in result["files"]:
         fname = entry["name"]
+
+        if not util.isvalidutf8(fname):
+            self.ui.warn(_("skipping invalid utf-8 filename: '%s'\n") % fname)
+            continue
+
         if _fixencoding:
             fname = _watchmantofsencoding(fname)
         if switch_slashes:

@@ -1551,6 +1551,14 @@ def splitpath(path):
     return path.split(pycompat.ossep)
 
 
+def isvalidutf8(string):
+    try:
+        string.decode("utf-8")
+        return True
+    except UnicodeDecodeError:
+        return False
+
+
 def gui():
     """Are we running in a GUI?"""
     if pycompat.isdarwin:
