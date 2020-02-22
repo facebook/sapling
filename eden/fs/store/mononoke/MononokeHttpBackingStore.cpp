@@ -9,6 +9,7 @@
 
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
+#include <folly/io/SocketOptionMap.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/io/async/EventBaseManager.h>
 #include <folly/io/async/SSLOptions.h>
@@ -264,7 +265,7 @@ folly::Future<std::unique_ptr<IOBuf>> MononokeHttpBackingStore::sendRequestImpl(
   auto connector =
       std::make_unique<proxygen::HTTPConnector>(callback, timer.get());
 
-  static const folly::AsyncSocket::OptionMap opts{
+  static const folly::SocketOptionMap opts{
       {{SOL_SOCKET, SO_REUSEADDR}, 1}};
 
   if (sslContext_ != nullptr) {
