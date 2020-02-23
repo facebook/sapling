@@ -15,6 +15,9 @@ from .lib import testcase
 
 
 @testcase.eden_repo_test
+# pyre-fixme[13]: Attribute `commit1` is never initialized.
+# pyre-fixme[13]: Attribute `commit2` is never initialized.
+# pyre-fixme[13]: Attribute `commit3` is never initialized.
 class ThriftTest(testcase.EdenRepoTest):
     commit1: str
     commit2: str
