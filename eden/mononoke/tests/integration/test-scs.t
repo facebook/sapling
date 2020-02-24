@@ -659,3 +659,18 @@ list directory
   file        10  b
   file         5  binary
   file         0  c
+
+export
+  $ scsc export --repo repo -i ee87eb8cfeb218e7352a94689b241ea973b80402 -p "" -o exported
+  $ find exported | sort
+  exported
+  exported/a
+  exported/b
+  exported/binary
+  exported/c
+  $ cat exported/a
+  a
+  b
+  c
+  d
+  e
