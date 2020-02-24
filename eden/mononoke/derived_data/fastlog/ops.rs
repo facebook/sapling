@@ -7,7 +7,7 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use blobstore::Loadable;
+use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
@@ -17,6 +17,7 @@ use futures::{
     Future, Stream,
 };
 use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxFuture, FutureExt};
+use futures_preview::{compat::Future01CompatExt, future::TryFutureExt, FutureExt as NewFutureExt};
 use manifest::{Entry, ManifestOps};
 use maplit::{hashmap, hashset};
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
@@ -122,12 +123,22 @@ pub fn prefetch_history(
     repo: BlobRepo,
     unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
 ) -> impl Future<Item = Option<Vec<(ChangesetId, Vec<FastlogParent>)>>, Error = Error> {
-    let blobstore = Arc::new(repo.get_blobstore());
-    fetch_fastlog_batch_by_unode_id(ctx.clone(), blobstore.clone(), unode_entry).and_then(
-        move |maybe_fastlog_batch| {
-            maybe_fastlog_batch.map(|fastlog_batch| fetch_flattened(&fastlog_batch, ctx, blobstore))
-        },
-    )
+    let blobstore: Arc<dyn Blobstore> = Arc::new(repo.get_blobstore());
+    async move {
+        let maybe_fastlog_batch =
+            fetch_fastlog_batch_by_unode_id(&ctx, &blobstore, unode_entry).await?;
+        match maybe_fastlog_batch {
+            Some(fastlog_batch) => {
+                let res = fetch_flattened(&fastlog_batch, ctx, blobstore)
+                    .compat()
+                    .await?;
+                Ok(Some(res))
+            }
+            None => Ok(None),
+        }
+    }
+    .boxed()
+    .compat()
 }
 
 struct TraversalState {

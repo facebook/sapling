@@ -83,18 +83,12 @@ impl BonsaiDerived for RootFastlog {
                     cloned!(blobstore, ctx);
                     async move {
                         let res = tokio_preview::spawn(async move {
-                            let parents =
-                                fetch_unode_parents(ctx.clone(), blobstore.clone(), entry)
-                                    .compat()
-                                    .await?;
+                            let parents = fetch_unode_parents(&ctx, &blobstore, entry).await?;
 
                             let fastlog_batch =
-                                create_new_batch(ctx.clone(), blobstore.clone(), parents, bcs_id)
-                                    .compat()
-                                    .await?;
+                                create_new_batch(&ctx, &blobstore, parents, bcs_id).await?;
 
-                            save_fastlog_batch_by_unode_id(ctx, blobstore, entry, fastlog_batch)
-                                .compat()
+                            save_fastlog_batch_by_unode_id(&ctx, &blobstore, entry, fastlog_batch)
                                 .await
                         })
                         .await?;
@@ -127,28 +121,28 @@ pub fn fetch_parent_root_unodes(
     }))
 }
 
-fn fetch_unode_parents(
-    ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+async fn fetch_unode_parents(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn Blobstore>,
     unode_entry_id: Entry<ManifestUnodeId, FileUnodeId>,
-) -> impl Future<Item = Vec<Entry<ManifestUnodeId, FileUnodeId>>, Error = Error> {
-    unode_entry_id
-        .load(ctx, &blobstore)
-        .from_err()
-        .map(|unode_entry| match unode_entry {
-            Entry::Tree(tree) => tree
-                .parents()
-                .clone()
-                .into_iter()
-                .map(Entry::Tree)
-                .collect(),
-            Entry::Leaf(leaf) => leaf
-                .parents()
-                .clone()
-                .into_iter()
-                .map(Entry::Leaf)
-                .collect(),
-        })
+) -> Result<Vec<Entry<ManifestUnodeId, FileUnodeId>>, Error> {
+    let unode_entry = unode_entry_id.load(ctx.clone(), blobstore).compat().await?;
+
+    let res = match unode_entry {
+        Entry::Tree(tree) => tree
+            .parents()
+            .clone()
+            .into_iter()
+            .map(Entry::Tree)
+            .collect(),
+        Entry::Leaf(leaf) => leaf
+            .parents()
+            .clone()
+            .into_iter()
+            .map(Entry::Leaf)
+            .collect(),
+    };
+    Ok(res)
 }
 
 #[derive(Clone)]
@@ -781,13 +775,9 @@ mod tests {
         repo: BlobRepo,
         entry: Entry<ManifestUnodeId, FileUnodeId>,
     ) -> Vec<(ChangesetId, Vec<FastlogParent>)> {
-        let blobstore = Arc::new(repo.get_blobstore());
+        let blobstore: Arc<dyn Blobstore> = Arc::new(repo.get_blobstore());
         let batch = rt
-            .block_on(fetch_fastlog_batch_by_unode_id(
-                ctx.clone(),
-                blobstore.clone(),
-                entry,
-            ))
+            .block_on_std(fetch_fastlog_batch_by_unode_id(&ctx, &blobstore, entry))
             .unwrap()
             .expect("batch hasn't been generated yet");
 

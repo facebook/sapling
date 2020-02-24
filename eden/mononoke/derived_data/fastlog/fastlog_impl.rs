@@ -8,10 +8,9 @@
 use crate::{ErrorKind, FastlogParent};
 use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreBytes};
-use cloned::cloned;
 use context::CoreContext;
-use futures::{future, Future};
-use futures_ext::{BoxFuture, FutureExt};
+use futures::Future;
+use futures_preview::{compat::Future01CompatExt, future::try_join_all};
 use manifest::Entry;
 use maplit::hashset;
 use mononoke_types::{
@@ -21,46 +20,50 @@ use mononoke_types::{
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 
-pub(crate) fn create_new_batch(
-    ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+pub(crate) async fn create_new_batch(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn Blobstore>,
     unode_parents: Vec<Entry<ManifestUnodeId, FileUnodeId>>,
     linknode: ChangesetId,
-) -> impl Future<Item = FastlogBatch, Error = Error> {
-    let f = future::join_all(unode_parents.clone().into_iter().map({
-        cloned!(ctx, blobstore);
-        move |entry| {
-            fetch_fastlog_batch_by_unode_id(ctx.clone(), blobstore.clone(), entry)
-                .and_then(move |maybe_batch| maybe_batch.ok_or(ErrorKind::NotFound(entry).into()))
+) -> Result<FastlogBatch, Error> {
+    let parent_batches = try_join_all(unode_parents.clone().into_iter().map({
+        move |entry| async move {
+            let maybe_batch = fetch_fastlog_batch_by_unode_id(ctx, blobstore, entry).await?;
+            maybe_batch.ok_or(Error::from(ErrorKind::NotFound(entry)))
         }
-    }));
+    }))
+    .await?;
 
-    f.and_then(move |parent_batches| {
-        if parent_batches.len() < 2 {
-            match parent_batches.get(0) {
-                Some(parent_batch) => parent_batch
-                    .prepend_child_with_single_parent(ctx, blobstore, linknode)
-                    .boxify(),
-                None => {
-                    let mut d = VecDeque::new();
-                    d.push_back((linknode, vec![]));
-                    FastlogBatch::new_from_raw_list(ctx, blobstore, d).boxify()
-                }
+    if parent_batches.len() < 2 {
+        match parent_batches.get(0) {
+            Some(parent_batch) => {
+                parent_batch
+                    .prepend_child_with_single_parent(ctx.clone(), blobstore.clone(), linknode)
+                    .compat()
+                    .await
             }
-        } else {
-            future::join_all(parent_batches.into_iter().map({
-                cloned!(ctx, blobstore);
-                move |batch| fetch_flattened(&batch, ctx.clone(), blobstore.clone())
-            }))
-            .map(move |parents_flattened| create_merged_list(linknode, parents_flattened))
-            // Converts FastlogParent to ParentOffset
-            .map(convert_to_raw_list)
-            .and_then(move |raw_list| {
-                FastlogBatch::new_from_raw_list(ctx, blobstore, raw_list)
-            })
-            .boxify()
+            None => {
+                let mut d = VecDeque::new();
+                d.push_back((linknode, vec![]));
+                FastlogBatch::new_from_raw_list(ctx.clone(), blobstore.clone(), d)
+                    .compat()
+                    .await
+            }
         }
-    })
+    } else {
+        let parents_flattened = try_join_all(parent_batches.into_iter().map({
+            move |batch| async move {
+                fetch_flattened(&batch, ctx.clone(), blobstore.clone())
+                    .compat()
+                    .await
+            }
+        }))
+        .await?;
+        let raw_list = convert_to_raw_list(create_merged_list(linknode, parents_flattened));
+        FastlogBatch::new_from_raw_list(ctx.clone(), blobstore.clone(), raw_list)
+            .compat()
+            .await
+    }
 }
 
 // This function creates a FastlogBatch list for a merge unode.
@@ -159,35 +162,41 @@ fn convert_to_raw_list(
     res
 }
 
-pub(crate) fn fetch_fastlog_batch_by_unode_id(
-    ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+pub(crate) async fn fetch_fastlog_batch_by_unode_id(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn Blobstore>,
     unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
-) -> impl Future<Item = Option<FastlogBatch>, Error = Error> {
+) -> Result<Option<FastlogBatch>, Error> {
     let fastlog_batch_key = generate_fastlog_batch_key(unode_entry);
 
-    blobstore
-        .get(ctx, fastlog_batch_key.clone())
-        .and_then(move |maybe_bytes| match maybe_bytes {
-            Some(serialized) => FastlogBatch::from_bytes(serialized.as_bytes()).map(Some),
-            None => Ok(None),
-        })
+    let maybe_bytes = blobstore
+        .get(ctx.clone(), fastlog_batch_key)
+        .compat()
+        .await?;
+
+    match maybe_bytes {
+        Some(serialized) => FastlogBatch::from_bytes(serialized.as_bytes()).map(Some),
+        None => Ok(None),
+    }
 }
 
-pub(crate) fn save_fastlog_batch_by_unode_id(
-    ctx: CoreContext,
-    blobstore: Arc<dyn Blobstore>,
+pub(crate) async fn save_fastlog_batch_by_unode_id(
+    ctx: &CoreContext,
+    blobstore: &Arc<dyn Blobstore>,
     unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
     batch: FastlogBatch,
-) -> BoxFuture<(), Error> {
+) -> Result<(), Error> {
     let fastlog_batch_key = generate_fastlog_batch_key(unode_entry);
     let serialized = batch.into_bytes();
 
-    blobstore.put(
-        ctx,
-        fastlog_batch_key,
-        BlobstoreBytes::from_bytes(serialized),
-    )
+    blobstore
+        .put(
+            ctx.clone(),
+            fastlog_batch_key,
+            BlobstoreBytes::from_bytes(serialized),
+        )
+        .compat()
+        .await
 }
 
 fn generate_fastlog_batch_key(unode_entry: Entry<ManifestUnodeId, FileUnodeId>) -> String {
