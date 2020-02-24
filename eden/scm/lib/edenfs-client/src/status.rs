@@ -130,7 +130,7 @@ fn maybe_status_fastpath_internal(
         print_config.status_types.ignored,
     )?;
 
-    let relativizer = PathRelativizer::new(cwd.to_path_buf(), repo_root.to_path_buf());
+    let relativizer = PathRelativizer::new(cwd, repo_root);
     let relativizer = HgStatusPathRelativizer::new(print_config.root_relative, relativizer);
     print_config.print_status(
         &repo_root,
@@ -347,10 +347,14 @@ impl HgStatusPathRelativizer {
 
     /// path is a normalized file path relative to repo_root. If root_relative is true, then the
     /// path that is returned will be relative to cwd.
-    pub fn relativize(&self, path: &PathBuf) -> PathBuf {
+    pub fn relativize<P: AsRef<Path>>(&self, path: P) -> PathBuf {
+        self.relativize_impl(path.as_ref())
+    }
+
+    pub fn relativize_impl(&self, path: &Path) -> PathBuf {
         let out = match self.relativizer {
             Some(ref relativizer) => relativizer.relativize(path),
-            None => path.clone(),
+            None => path.to_path_buf(),
         };
 
         // Unfortunately, PathBuf does not have an is_empty() method:
@@ -832,7 +836,7 @@ mod test {
 
         let relativizer = HgStatusPathRelativizer::new(
             print_config.root_relative,
-            PathRelativizer::new(hg_args.cwd, repo_root.path().to_path_buf()),
+            PathRelativizer::new(hg_args.cwd, repo_root.path()),
         );
         let mut stdout: Vec<u8> = vec![];
         assert!(print_config

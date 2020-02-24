@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 // TODO: Consider cleaning up and moving this to utils::path.
-fn relativize(base: &PathBuf, path: &PathBuf) -> PathBuf {
+fn relativize(base: &Path, path: &Path) -> PathBuf {
     let mut base_iter = base.iter();
     let mut path_iter = path.iter();
     let mut rel_path = PathBuf::new();
@@ -89,15 +89,19 @@ pub struct PathRelativizer {
 impl PathRelativizer {
     /// `cwd` corresponds to getcwd(2) while `repo_root` is the absolute path specified via
     /// --repository/-R, or failing that, the Hg repo that contains `cwd`.
-    pub fn new(cwd: PathBuf, repo_root: PathBuf) -> PathRelativizer {
+    pub fn new(cwd: impl AsRef<Path>, repo_root: impl AsRef<Path>) -> PathRelativizer {
+        PathRelativizer::new_impl(cwd.as_ref(), repo_root.as_ref())
+    }
+
+    fn new_impl(cwd: &Path, repo_root: &Path) -> PathRelativizer {
         use self::PathRelativizerConfig::*;
-        let config = if cwd.starts_with(&repo_root) {
+        let config = if cwd.starts_with(repo_root) {
             CwdUnderRepo {
-                relative_cwd: relativize(&repo_root, &cwd),
+                relative_cwd: relativize(repo_root, cwd),
             }
         } else {
             CwdOutsideRepo {
-                prefix: relativize(&cwd, &repo_root),
+                prefix: relativize(cwd, repo_root),
             }
         };
         PathRelativizer { config }
@@ -105,7 +109,11 @@ impl PathRelativizer {
 
     /// `path` must be relative to the repo root. Returns a corresponding PathBuf that is suitable
     /// via display on the console.
-    pub fn relativize(&self, path: &PathBuf) -> PathBuf {
+    pub fn relativize(&self, path: impl AsRef<Path>) -> PathBuf {
+        self.relativize_impl(path.as_ref())
+    }
+
+    fn relativize_impl(&self, path: &Path) -> PathBuf {
         use self::PathRelativizerConfig::*;
         match self.config {
             CwdUnderRepo { ref relative_cwd } => relativize(relative_cwd, path),
@@ -121,9 +129,10 @@ mod test {
     #[test]
     fn relativize_absolute_paths() {
         let check = |base, path, expected| {
-            let base_buf = PathBuf::from(base);
-            let path_buf = PathBuf::from(path);
-            assert_eq!(relativize(&base_buf, &path_buf), PathBuf::from(expected));
+            assert_eq!(
+                relativize(Path::new(base), Path::new(path)),
+                Path::new(expected)
+            );
         };
         check("/", "/", "");
         check("/foo/bar/baz", "/foo/bar/baz", "");
@@ -137,24 +146,22 @@ mod test {
 
     #[test]
     fn relativize_path_from_repo_when_cwd_is_repo_root() {
-        let repo_root = PathBuf::from("/home/zuck/tfb");
-        let cwd = PathBuf::from("/home/zuck/tfb");
+        let repo_root = Path::new("/home/zuck/tfb");
+        let cwd = Path::new("/home/zuck/tfb");
         let relativizer = PathRelativizer::new(cwd, repo_root);
         let check = |path, expected| {
-            let path_buf = PathBuf::from(path);
-            assert_eq!(relativizer.relativize(&path_buf), PathBuf::from(expected));
+            assert_eq!(relativizer.relativize(Path::new(path)), Path::new(expected));
         };
         check("foo/bar.txt", "foo/bar.txt");
     }
 
     #[test]
     fn relativize_path_from_repo_when_cwd_is_descendant_of_repo_root() {
-        let repo_root = PathBuf::from("/home/zuck/tfb");
-        let cwd = PathBuf::from("/home/zuck/tfb/foo");
+        let repo_root = Path::new("/home/zuck/tfb");
+        let cwd = Path::new("/home/zuck/tfb/foo");
         let relativizer = PathRelativizer::new(cwd, repo_root);
         let check = |path, expected| {
-            let path_buf = PathBuf::from(path);
-            assert_eq!(relativizer.relativize(&path_buf), PathBuf::from(expected));
+            assert_eq!(relativizer.relativize(Path::new(path)), Path::new(expected));
         };
         check("foo/bar.txt", "bar.txt");
     }
@@ -165,20 +172,16 @@ mod test {
         let cwd = PathBuf::from("/home/zuck");
         let relativizer = PathRelativizer::new(cwd, repo_root);
         let check = |path, expected| {
-            let path_buf = PathBuf::from(path);
-            assert_eq!(relativizer.relativize(&path_buf), PathBuf::from(expected));
+            assert_eq!(relativizer.relativize(Path::new(path)), Path::new(expected));
         };
         check("foo/bar.txt", "tfb/foo/bar.txt");
     }
 
     #[test]
     fn relativize_path_from_repo_when_cwd_is_cousin_of_repo_root() {
-        let repo_root = PathBuf::from("/home/zuck/tfb");
-        let cwd = PathBuf::from("/home/schrep/tfb");
-        let relativizer = PathRelativizer::new(cwd, repo_root);
+        let relativizer = PathRelativizer::new("/home/schrep/tfb", "/home/zuck/tfb");
         let check = |path, expected| {
-            let path_buf = PathBuf::from(path);
-            assert_eq!(relativizer.relativize(&path_buf), PathBuf::from(expected));
+            assert_eq!(relativizer.relativize(Path::new(path)), Path::new(expected));
         };
         check("foo/bar.txt", "../../zuck/tfb/foo/bar.txt");
     }
