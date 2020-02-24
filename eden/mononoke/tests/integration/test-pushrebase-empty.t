@@ -6,7 +6,7 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-  $ BLOB_TYPE="blob_rocks" default_setup
+  $ BLOB_TYPE="blob_sqlite" default_setup
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   |

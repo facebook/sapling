@@ -651,12 +651,6 @@ pub enum BlobConfig {
         path: PathBuf,
     },
     /// Blob repository with path pointing to on-disk files with data. The files are stored in a
-    /// RocksDb database
-    Rocks {
-        /// Path to RocksDB directory
-        path: PathBuf,
-    },
-    /// Blob repository with path pointing to on-disk files with data. The files are stored in a
     /// Sqlite database
     Sqlite {
         /// Path to SQLite DB
@@ -718,7 +712,7 @@ impl BlobConfig {
         use BlobConfig::*;
 
         match self {
-            Disabled | Files { .. } | Rocks { .. } | Sqlite { .. } => true,
+            Disabled | Files { .. } | Sqlite { .. } => true,
             Manifold { .. } | Mysql { .. } | ManifoldWithTtl { .. } => false,
             Multiplexed { blobstores, .. } | Scrub { blobstores, .. } => blobstores
                 .iter()
@@ -769,9 +763,6 @@ impl TryFrom<&'_ RawBlobstoreConfig> for BlobConfig {
         let res = match raw {
             RawBlobstoreConfig::disabled(_) => BlobConfig::Disabled,
             RawBlobstoreConfig::blob_files(def) => BlobConfig::Files {
-                path: PathBuf::from(def.path.clone()),
-            },
-            RawBlobstoreConfig::blob_rocks(def) => BlobConfig::Rocks {
                 path: PathBuf::from(def.path.clone()),
             },
             RawBlobstoreConfig::blob_sqlite(def) => BlobConfig::Sqlite {

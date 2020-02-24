@@ -24,7 +24,6 @@ use context::CoreContext;
 use fileblob::Fileblob;
 use memblob::EagerMemblob;
 use mononoke_types::BlobstoreBytes;
-use rocksblob::Rocksblob;
 
 fn simple<B>(fb: FacebookInit, blobstore: B)
 where
@@ -154,15 +153,6 @@ blobstore_test_impl! {
     fileblob_test => {
         state: Arc::new(TempDir::new("fileblob_test").unwrap()),
         new: move |dir: Arc<TempDir>| Fileblob::open(&*dir),
-        persistent: true,
-    }
-}
-
-blobstore_test_impl! {
-    rocksblob_test => {
-        state: Arc::new(TempDir::new("rocksblob_test").unwrap()),
-        // create/open may need to be unified once persistence tests are added
-        new: move |dir: Arc<TempDir>| Rocksblob::create(&*dir),
         persistent: true,
     }
 }

@@ -431,7 +431,7 @@ function get_bonsai_globalrev_mapping {
 function setup_mononoke_config {
   cd "$TESTTMP" || exit
   mkdir -p mononoke-config
-  REPOTYPE="blob_rocks"
+  REPOTYPE="blob_sqlite"
   if [[ $# -gt 0 ]]; then
     REPOTYPE="$1"
     shift

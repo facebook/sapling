@@ -32,7 +32,6 @@ use metaconfig_types::{
 use multiplexedblob::{LoggingScrubHandler, MultiplexedBlobstore, ScrubBlobstore, ScrubHandler};
 use prefixblob::PrefixBlobstore;
 use readonlyblob::ReadOnlyBlobstore;
-use rocksblob::Rocksblob;
 use scuba::ScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::{
@@ -338,16 +337,6 @@ fn make_blobstore_impl(
             .map_err(Error::from)
             .into_future()
             .boxify(),
-
-        Rocks { path } => {
-            let options = rocksdb::Options::new().create_if_missing(true);
-            Rocksblob::open_with_options(path.join("blobs"), options)
-                .chain_err(ErrorKind::StateOpen)
-                .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
-                .map_err(Error::from)
-                .into_future()
-                .boxify()
-        }
 
         Sqlite { path } => Sqlblob::with_sqlite_path(path.join("blobs"), readonly_storage.0)
             .chain_err(ErrorKind::StateOpen)

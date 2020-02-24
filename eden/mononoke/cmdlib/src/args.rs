@@ -1011,7 +1011,7 @@ fn open_repo_internal_with_repo_id<'a>(
     };
     info!(logger, "using repo \"{}\" repoid {:?}", reponame, repo_id);
     match &config.storage_config.blobstore {
-        BlobConfig::Files { path } | BlobConfig::Rocks { path } | BlobConfig::Sqlite { path } => {
+        BlobConfig::Files { path } | BlobConfig::Sqlite { path } => {
             let create = if create {
                 // Many path repos can share one blobstore, so allow store to exist or create it.
                 CreateStorage::ExistingOrCreate

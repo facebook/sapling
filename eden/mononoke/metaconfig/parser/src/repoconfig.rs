@@ -1728,12 +1728,12 @@ mod test {
         let hook1_content = "this is hook1";
         let content = r#"
             repoid=0
-            storage_config = "rocks"
+            storage_config = "sqlite"
 
-            [storage.rocks.db.local]
+            [storage.sqlite.db.local]
             local_db_path = "/tmp/fbsource"
 
-            [storage.rocks.blobstore.blob_files]
+            [storage.sqlite.blobstore.blob_files]
             path = "/tmp/fbsource"
 
             [[bookmarks]]
@@ -1766,12 +1766,12 @@ mod test {
         let hook1_content = "this is hook1";
         let content = r#"
             repoid=0
-            storage_config = "rocks"
+            storage_config = "sqlite"
 
-            [storage.rocks.db.local]
+            [storage.sqlite.db.local]
             local_db_path = "/tmp/fbsource"
 
-            [storage.rocks.blobstore.blob_files]
+            [storage.sqlite.blobstore.blob_files]
             path = "/tmp/fbsource"
 
             [[bookmarks]]
@@ -1810,7 +1810,7 @@ mod test {
                 [storage.storage.db.local]
                 local_db_path = "/tmp/fbsource"
 
-                [storage.storage.blobstore.blob_rocks]
+                [storage.storage.blobstore.blob_sqlite]
                 path = "/tmp/fbsource"
             "#;
 
