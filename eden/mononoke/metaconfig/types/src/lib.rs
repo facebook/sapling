@@ -653,6 +653,8 @@ pub enum BlobConfig {
         blobstores: Vec<(BlobstoreId, BlobConfig)>,
         /// 1 in scuba_sample_rate samples will be logged.
         scuba_sample_rate: NonZeroU64,
+        /// DB config to use for the sync queue
+        queue_db: MetadataDBConfig,
     },
     /// Multiplex across multiple blobstores scrubbing for errors
     Scrub {
@@ -666,6 +668,8 @@ pub enum BlobConfig {
         scrub_action: ScrubAction,
         /// 1 in scuba_sample_rate samples will be logged.
         scuba_sample_rate: NonZeroU64,
+        /// DB config to use for the sync queue
+        queue_db: MetadataDBConfig,
     },
     /// Store in a manifold bucket, but every object will have an expiration
     ManifoldWithTtl {
@@ -705,6 +709,7 @@ impl BlobConfig {
             scuba_table,
             scuba_sample_rate,
             blobstores,
+            queue_db,
         } = self
         {
             let scuba_table = mem::replace(scuba_table, None);
@@ -718,6 +723,7 @@ impl BlobConfig {
                 scuba_sample_rate: *scuba_sample_rate,
                 blobstores,
                 scrub_action,
+                queue_db: queue_db.clone(),
             };
         }
     }
@@ -776,6 +782,10 @@ impl TryFrom<RawBlobstoreConfig> for BlobConfig {
                         ))
                     })
                     .collect::<Result<Vec<_>>>()?,
+                queue_db: def
+                    .queue_db
+                    .ok_or_else(|| anyhow!("missing queue_db from configuration"))?
+                    .try_into()?,
             },
             RawBlobstoreConfig::manifold_with_ttl(def) => {
                 let ttl = Duration::from_secs(def.ttl_secs.try_into()?);

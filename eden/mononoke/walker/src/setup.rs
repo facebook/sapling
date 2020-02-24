@@ -16,10 +16,12 @@ use crate::walk::OutgoingEdge;
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::open_blobrepo_given_datasources;
+use blobstore_factory::make_sql_factory;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
 use cmdlib::args;
 use fbinit::FacebookInit;
+use futures_ext::FutureExt as _;
 use futures_preview::{
     compat::Future01CompatExt,
     future::{BoxFuture, FutureExt, TryFutureExt},
@@ -678,7 +680,7 @@ pub fn setup_common(
         );
     }
 
-    let myrouter_port = args::parse_mysql_options(&matches);
+    let mysql_options = args::parse_mysql_options(&matches);
 
     let storage_id = matches.value_of(STORAGE_ID_ARG);
     let storage_config = match storage_id {
@@ -711,10 +713,10 @@ pub fn setup_common(
         .transpose()?;
 
     // Open the blobstore explicitly so we can do things like run on one side of a multiplex
-    let datasources = blobstore::open_blobstore(
+    let blobstore = blobstore::open_blobstore(
         fb,
-        myrouter_port,
-        storage_config,
+        mysql_options,
+        storage_config.blobstore,
         inner_blobstore_id,
         None,
         readonly_storage,
@@ -726,11 +728,22 @@ pub fn setup_common(
         logger.clone(),
     )
     .boxed()
-    .compat();
+    .compat()
+    .boxify();
+
+    let sql_factory = make_sql_factory(
+        fb,
+        storage_config.dbconfig,
+        mysql_options,
+        readonly_storage,
+        logger.clone(),
+    )
+    .boxify();
 
     let blobrepo = open_blobrepo_given_datasources(
         fb,
-        Box::new(datasources),
+        blobstore,
+        sql_factory,
         config.repoid,
         caching,
         config.bookmarks_cache_ttl,

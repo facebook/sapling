@@ -21,7 +21,7 @@ use slog::{info, o, Logger};
 
 use backsyncer::open_backsyncer_dbs_compat;
 use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
-use blobstore_factory::make_blobstore_no_sql;
+use blobstore_factory::make_blobstore;
 use cache_warmup::cache_warmup;
 use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
@@ -325,8 +325,10 @@ pub fn repo_handlers(
                 let wireproto_logging = create_wireproto_logging(
                     fb,
                     reponame.clone(),
+                    mysql_options,
                     readonly_storage,
                     wireproto_logging,
+                    logger.clone(),
                 )
                 .compat();
 
@@ -428,8 +430,10 @@ fn build_repo_handlers(
 fn create_wireproto_logging(
     fb: FacebookInit,
     reponame: String,
+    mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     wireproto_logging_config: WireprotoLoggingConfig,
+    logger: Logger,
 ) -> impl Future<Item = WireprotoLogging, Error = Error> {
     let WireprotoLoggingConfig {
         storage_config_and_threshold,
@@ -444,9 +448,16 @@ fn create_wireproto_logging(
                 ))
                 .right_future();
             }
-            make_blobstore_no_sql(fb, &storage_config.blobstore, readonly_storage)
-                .map(move |blobstore| Some((blobstore, threshold)))
-                .left_future()
+            make_blobstore(
+                fb,
+                storage_config.blobstore,
+                mysql_options,
+                readonly_storage,
+                Default::default(),
+                logger,
+            )
+            .map(move |blobstore| Some((blobstore, threshold)))
+            .left_future()
         }
         None => future::ok(None).right_future(),
     };

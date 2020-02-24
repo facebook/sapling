@@ -1398,6 +1398,7 @@ mod test {
                 { blobstore_id = 0, blobstore = { manifold = { manifold_bucket = "bucket" } } },
                 { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
             ]
+            queue_db = { remote = { db_address = "queue_db_address" } }
 
             [[bookmarks]]
             name="master"
@@ -1506,6 +1507,10 @@ mod test {
                     },
                 ),
             ],
+            queue_db: MetadataDBConfig::Mysql {
+                db_address: "queue_db_address".into(),
+                sharded_filenodes: None,
+            },
         };
         let main_storage_config = StorageConfig {
             blobstore: multiplex,
@@ -1876,6 +1881,7 @@ mod test {
         components = [
             { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
         ]
+        queue_db = { remote = { db_address = "queue_db_address" } }
 
         "#;
 
@@ -1913,7 +1919,11 @@ mod test {
                             (BlobstoreId::new(1), BlobConfig::Files {
                                 path: "/tmp/foo".into()
                             })
-                        ]
+                        ],
+                        queue_db: MetadataDBConfig::Mysql {
+                            db_address: "queue_db_address".into(),
+                            sharded_filenodes: None,
+                        },
                     },
                     dbconfig: MetadataDBConfig::Mysql {
                         db_address: "some_db".into(),

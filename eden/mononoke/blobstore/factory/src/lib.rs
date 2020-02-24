@@ -8,7 +8,7 @@
 use std::num::NonZeroU64;
 use std::{path::PathBuf, sync::Arc};
 
-use anyhow::{format_err, Error};
+use anyhow::Error;
 use cloned::cloned;
 use failure_ext::chain::ChainExt;
 use fbinit::FacebookInit;
@@ -72,6 +72,16 @@ impl BlobstoreOptions {
             throttle_options,
             manifold_api_key,
         }
+    }
+}
+
+impl Default for BlobstoreOptions {
+    fn default() -> Self {
+        Self::new(
+            ChaosOptions::new(None, None),
+            ThrottleOptions::new(None, None),
+            None,
+        )
     }
 }
 
@@ -272,55 +282,17 @@ pub fn make_sql_factory(
     }
 }
 
-/// Constructs a blobstore, returns an error if blobstore type requires a mysql
-pub fn make_blobstore_no_sql(
-    fb: FacebookInit,
-    blobconfig: &BlobConfig,
-    readonly_storage: ReadOnlyStorage,
-) -> BoxFuture<Arc<dyn Blobstore>, Error> {
-    make_blobstore_impl(
-        fb,
-        blobconfig,
-        None,
-        MysqlOptions::default(),
-        readonly_storage,
-        BlobstoreOptions::new(
-            ChaosOptions::new(None, None),
-            ThrottleOptions::new(None, None),
-            None,
-        ),
-    )
-}
-
 /// Construct a blobstore according to the specification. The multiplexed blobstore
 /// needs an SQL DB for its queue, as does the MySQL blobstore.
 /// If `throttling.read_qps` or `throttling.write_qps` are Some then ThrottledBlob will be used to limit
 /// QPS to the underlying blobstore
 pub fn make_blobstore(
     fb: FacebookInit,
-    blobconfig: &BlobConfig,
-    sql_factory: &SqlFactory,
+    blobconfig: BlobConfig,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
-) -> BoxFuture<Arc<dyn Blobstore>, Error> {
-    make_blobstore_impl(
-        fb,
-        blobconfig,
-        Some(sql_factory),
-        mysql_options,
-        readonly_storage,
-        blobstore_options,
-    )
-}
-
-fn make_blobstore_impl(
-    fb: FacebookInit,
-    blobconfig: &BlobConfig,
-    sql_factory: Option<&SqlFactory>,
-    mysql_options: MysqlOptions,
-    readonly_storage: ReadOnlyStorage,
-    blobstore_options: BlobstoreOptions,
+    logger: Logger,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     use BlobConfig::*;
     let mut has_components = false;
@@ -369,7 +341,7 @@ fn make_blobstore_impl(
                 shard_map.clone(),
                 myrouter_port,
                 mysql_options.myrouter_read_service_type(),
-                *shard_num,
+                shard_num,
                 readonly_storage.0,
             )
         } else {
@@ -377,7 +349,7 @@ fn make_blobstore_impl(
                 fb,
                 shard_map.clone(),
                 mysql_options.db_locator_read_instance_requirement(),
-                *shard_num,
+                shard_num,
                 readonly_storage.0,
             )
         }
@@ -389,19 +361,21 @@ fn make_blobstore_impl(
             scuba_table,
             scuba_sample_rate,
             blobstores,
+            queue_db,
         } => {
             has_components = true;
             make_blobstore_multiplexed(
                 fb,
-                *multiplex_id,
+                multiplex_id,
+                queue_db,
                 scuba_table,
-                *scuba_sample_rate,
+                scuba_sample_rate,
                 blobstores,
-                sql_factory,
                 mysql_options,
                 readonly_storage,
                 None,
                 blobstore_options.clone(),
+                logger,
             )
         }
         Scrub {
@@ -410,22 +384,24 @@ fn make_blobstore_impl(
             scuba_sample_rate,
             blobstores,
             scrub_action,
+            queue_db,
         } => {
             has_components = true;
             make_blobstore_multiplexed(
                 fb,
-                *multiplex_id,
+                multiplex_id,
+                queue_db,
                 scuba_table,
-                *scuba_sample_rate,
+                scuba_sample_rate,
                 blobstores,
-                sql_factory,
                 mysql_options,
                 readonly_storage,
                 Some((
                     Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>,
-                    *scrub_action,
+                    scrub_action,
                 )),
                 blobstore_options.clone(),
+                logger,
             )
         }
         ManifoldWithTtl {
@@ -435,7 +411,7 @@ fn make_blobstore_impl(
         } => ThriftManifoldBlob::new_with_ttl(
             fb,
             bucket.clone(),
-            *ttl,
+            ttl,
             blobstore_options.clone().manifold_api_key,
         )
         .map({
@@ -491,14 +467,15 @@ fn make_blobstore_impl(
 pub fn make_blobstore_multiplexed(
     fb: FacebookInit,
     multiplex_id: MultiplexId,
-    scuba_table: &Option<String>,
+    queue_db: MetadataDBConfig,
+    scuba_table: Option<String>,
     scuba_sample_rate: NonZeroU64,
-    inner_config: &[(BlobstoreId, BlobConfig)],
-    sql_factory: Option<&SqlFactory>,
+    inner_config: Vec<(BlobstoreId, BlobConfig)>,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
     scrub_args: Option<(Arc<dyn ScrubHandler>, ScrubAction)>,
     blobstore_options: BlobstoreOptions,
+    logger: Logger,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
     let component_readonly = match &scrub_args {
         // Need to write to components to repair them.
@@ -508,8 +485,9 @@ pub fn make_blobstore_multiplexed(
 
     let mut applied_chaos = false;
     let components: Vec<_> = inner_config
-        .iter()
+        .into_iter()
         .map({
+            cloned!(logger);
             move |(blobstoreid, config)| {
                 cloned!(blobstoreid, mut blobstore_options);
                 if blobstore_options.chaos_options.has_chaos() {
@@ -522,33 +500,25 @@ pub fn make_blobstore_multiplexed(
                         applied_chaos = true;
                     }
                 }
-                make_blobstore_impl(
+                make_blobstore(
                     // force per line for easier merges
                     fb,
                     config,
-                    sql_factory,
                     mysql_options,
                     component_readonly,
                     blobstore_options,
+                    logger.clone(),
                 )
                 .map({ move |store| (blobstoreid, store) })
             }
         })
         .collect();
 
-    let sql_factory = match sql_factory {
-        Some(sql_factory) => sql_factory,
-        None => {
-            let err =
-                format_err!("sql factory is not specified, but multiplexed stores require it",);
-            return future::err(err).boxify();
-        }
-    };
-    let queue = sql_factory.open::<SqlBlobstoreSyncQueue>();
+    let queue = make_sql_factory(fb, queue_db, mysql_options, readonly_storage, logger)
+        .and_then(|sql_factory| sql_factory.open::<SqlBlobstoreSyncQueue>());
 
     queue
         .and_then({
-            cloned!(scuba_table);
             move |queue| {
                 future::join_all(components).map({
                     move |components| match scrub_args {

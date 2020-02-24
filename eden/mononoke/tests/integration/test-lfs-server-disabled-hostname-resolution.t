@@ -8,7 +8,7 @@
 
 # Create a repository
   $ setup_mononoke_config
-  $ MULTIPLEXED=1 REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs1
+  $ REPOID=1 FILESTORE=1 FILESTORE_CHUNK_SIZE=10 setup_mononoke_repo_config lfs1
   $ LIVE_CONFIG="${TESTTMP}/live.json"
   $ cat > "$LIVE_CONFIG" << EOF
   > {

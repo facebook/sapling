@@ -14,7 +14,7 @@ mod replication_lag;
 
 use anyhow::{bail, format_err, Error, Result};
 use blobstore::Blobstore;
-use blobstore_factory::{make_blobstore, make_sql_factory, BlobstoreOptions, ReadOnlyStorage};
+use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
 use chrono::Duration as ChronoDuration;
 use clap::{value_t, App, Arg};
@@ -119,73 +119,64 @@ fn maybe_schedule_healer_for_storage(
     source_blobstore_key: Option<String>,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
-    sync_queue: BoxFuture<SqlBlobstoreSyncQueue, Error>,
     iter_limit: Option<u64>,
     heal_min_age: ChronoDuration,
 ) -> Result<BoxFuture<(), Error>> {
-    let (blobstore_configs, multiplex_id) = match &storage_config {
-        StorageConfig {
-            blobstore:
-                BlobConfig::Multiplexed {
-                    blobstores,
-                    multiplex_id,
-                    ..
-                },
+    let (blobstore_configs, multiplex_id, queue_db) = match storage_config.blobstore {
+        BlobConfig::Multiplexed {
+            blobstores,
+            multiplex_id,
+            queue_db,
             ..
-        } => (blobstores.clone(), multiplex_id.clone()),
+        } => (blobstores, multiplex_id, queue_db),
         s => bail!("Storage doesn't use Multiplexed blobstore, got {:?}", s),
     };
 
-    let blobstores = make_sql_factory(
+    let sync_queue = open_sql_with_config_and_mysql_options::<SqlBlobstoreSyncQueue>(
         fb,
-        storage_config.dbconfig.clone(),
+        queue_db,
         mysql_options,
         readonly_storage,
-        ctx.logger().clone(),
-    )
-    .and_then({
-        cloned!(ctx);
-        move |sql_factory| {
-            let blobstores: HashMap<_, BoxFuture<Arc<dyn Blobstore + 'static>, _>> = {
-                let mut blobstores = HashMap::new();
-                for (id, blobconfig) in blobstore_configs {
-                    let blobstore = make_blobstore(
-                        fb,
-                        &blobconfig,
-                        &sql_factory,
-                        mysql_options,
-                        readonly_storage,
-                        blobstore_options.clone(),
-                    );
-                    blobstores.insert(id, blobstore.boxify());
-                }
+    );
 
-                if !dry_run {
-                    blobstores
-                } else {
-                    blobstores
-                        .into_iter()
-                        .map(|(id, blobstore)| {
-                            let logger = ctx.logger().new(o!("blobstore" => format!("{:?}", id)));
-                            let blobstore = blobstore
-                                .map(move |blobstore| -> Arc<dyn Blobstore> {
-                                    Arc::new(DummyBlobstore::new(blobstore, logger))
-                                })
-                                .boxify();
-                            (id, blobstore)
-                        })
-                        .collect()
-                }
-            };
-
-            join_all(
-                blobstores
-                    .into_iter()
-                    .map(|(key, value)| value.map(move |value| (key, value))),
-            )
-            .map(|blobstores| blobstores.into_iter().collect::<HashMap<_, _>>())
+    let blobstores: HashMap<_, BoxFuture<Arc<dyn Blobstore + 'static>, _>> = {
+        let mut blobstores = HashMap::new();
+        for (id, blobconfig) in blobstore_configs {
+            let blobstore = make_blobstore(
+                fb,
+                blobconfig,
+                mysql_options,
+                readonly_storage,
+                blobstore_options.clone(),
+                ctx.logger().clone(),
+            );
+            blobstores.insert(id, blobstore.boxify());
         }
-    });
+
+        if !dry_run {
+            blobstores
+        } else {
+            blobstores
+                .into_iter()
+                .map(|(id, blobstore)| {
+                    let logger = ctx.logger().new(o!("blobstore" => format!("{:?}", id)));
+                    let blobstore = blobstore
+                        .map(move |blobstore| -> Arc<dyn Blobstore> {
+                            Arc::new(DummyBlobstore::new(blobstore, logger))
+                        })
+                        .boxify();
+                    (id, blobstore)
+                })
+                .collect()
+        }
+    };
+
+    let blobstores = join_all(
+        blobstores
+            .into_iter()
+            .map(|(key, value)| value.map(move |value| (key, value))),
+    )
+    .map(|blobstores| blobstores.into_iter().collect::<HashMap<_, _>>());
 
     let sync_queue = if !dry_run {
         sync_queue
@@ -380,13 +371,6 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let ctx = SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba);
 
-    let sync_queue = open_sql_with_config_and_mysql_options::<SqlBlobstoreSyncQueue>(
-        fb,
-        storage_config.dbconfig.clone(),
-        mysql_options,
-        readonly_storage,
-    );
-
     let healer = {
         let scheduled = maybe_schedule_healer_for_storage(
             fb,
@@ -399,7 +383,6 @@ fn main(fb: FacebookInit) -> Result<()> {
             source_blobstore_key.map(|s| s.to_string()),
             readonly_storage,
             blobstore_options,
-            sync_queue,
             iter_limit,
             healing_min_age,
         );

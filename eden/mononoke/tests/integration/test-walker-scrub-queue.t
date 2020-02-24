@@ -18,13 +18,13 @@ setup configuration
   blobimporting
 
 Erase the sqllites and blobstore_sync_queue
-  $ rm -rf "$TESTTMP/monsql/sqlite_dbs" "$TESTTMP/blobstore"
+  $ rm -rf "$TESTTMP/monsql/sqlite_dbs" "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "$TESTTMP/blobstore"
 
 blobimport them into Mononoke storage again, but with write failures on one side
   $ blobimport repo-hg/.hg repo --blobstore-write-chaos-rate=1
 
 Check that healer queue has successful items
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
+  $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
   60
 
 Check that scrub doesnt report issues despite one store being missing, as the entries needed are on the queue and less than N minutes old

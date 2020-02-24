@@ -26,11 +26,11 @@ Base case, check the stores have expected counts
   30
 
 Check that healer queue has all items
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
+  $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
   90
 
 Erase the sqllites and blobstore_sync_queue
-  $ rm -rf "$TESTTMP/monsql/sqlite_dbs" "$TESTTMP/blobstore/"*/blobs/*
+  $ rm -rf "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "$TESTTMP/blobstore/"*/blobs/*
 
 blobimport them into Mononoke storage again, but with failures on one side
   $ blobimport repo-hg/.hg repo --blobstore-write-chaos-rate=1
@@ -44,5 +44,5 @@ Check the stores have expected counts
   30
 
 Check that healer queue has successful items
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
+  $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
   60

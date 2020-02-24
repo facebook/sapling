@@ -16,7 +16,7 @@ use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 
 use blobstore::Blobstore;
-use blobstore_factory::{make_blobstore, make_sql_factory, BlobstoreOptions, ReadOnlyStorage};
+use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
 use cloned::cloned;
 use cmdlib::args;
@@ -90,24 +90,14 @@ fn get_blobstore(
         scrub_action
     ));
 
-    make_sql_factory(
+    make_blobstore(
         fb,
-        storage_config.dbconfig,
+        blobconfig,
         mysql_options,
         readonly_storage,
+        blobstore_options,
         logger,
     )
-    .and_then(move |sql_factory| {
-        make_blobstore(
-            fb,
-            &blobconfig,
-            &sql_factory,
-            mysql_options,
-            readonly_storage,
-            blobstore_options,
-        )
-    })
-    .boxify()
 }
 
 pub fn subcommand_blobstore_fetch(

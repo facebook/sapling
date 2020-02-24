@@ -489,14 +489,19 @@ function setup_mononoke_storage_config {
   local blobstorename="$2"
   local blobstorepath="$TESTTMP/$blobstorename"
 
+  local blobstore_db_path="$TESTTMP/blobstore_sync_queue"
+  mkdir -p "$blobstore_db_path"
+
   if [[ -v MULTIPLEXED ]]; then
     cat >> common/storage.toml <<CONFIG
 $(db_config "$blobstorename")
 
 [$blobstorename.blobstore.multiplexed]
 multiplex_id = 1
+queue_db = { local = { local_db_path = "$blobstore_db_path" } }
 components = [
 CONFIG
+
     local i
     for ((i=0; i<=MULTIPLEXED; i++)); do
       mkdir -p "$blobstorepath/$i"
@@ -1352,7 +1357,7 @@ function read_blobstore_sync_queue_size() {
   attempts="$((timeout * 10))"
 
   for _ in $(seq 1 $attempts); do
-    ret="$(sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) from blobstore_sync_queue" 2>/dev/null)"
+    ret="$(sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "select count(*) from blobstore_sync_queue" 2>/dev/null)"
     if [[ -n "$ret" ]]; then
       echo "$ret"
       return 0

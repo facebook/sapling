@@ -82,33 +82,29 @@ pub fn open_blobrepo(
     logger: Logger,
     derived_data_config: DerivedDataConfig,
 ) -> BoxFuture<BlobRepo, Error> {
-    let sql_fut = make_sql_factory(
+    let sql_factory = make_sql_factory(
         fb,
         storage_config.dbconfig,
         mysql_options,
         readonly_storage,
         logger.clone(),
-    );
-    let blobconfig = storage_config.blobstore;
-    let datasources = sql_fut
-        .map(move |sql_factory| {
-            (
-                make_blobstore(
-                    fb,
-                    &blobconfig,
-                    &sql_factory,
-                    mysql_options,
-                    readonly_storage,
-                    blobstore_options,
-                ),
-                sql_factory,
-            )
-        })
-        .boxify();
+    )
+    .boxify();
+
+    let blobstore = make_blobstore(
+        fb,
+        storage_config.blobstore,
+        mysql_options,
+        readonly_storage,
+        blobstore_options,
+        logger,
+    )
+    .boxify();
 
     open_blobrepo_given_datasources(
         fb,
-        datasources,
+        blobstore,
+        sql_factory,
         repoid,
         caching,
         bookmarks_cache_ttl,
@@ -124,7 +120,8 @@ pub fn open_blobrepo(
 /// Expose for graph walker that has storage open already
 pub fn open_blobrepo_given_datasources(
     fb: FacebookInit,
-    datasources: BoxFuture<(BoxFuture<Arc<dyn Blobstore>, Error>, SqlFactory), Error>,
+    unredacted_blobstore: BoxFuture<Arc<dyn Blobstore>, Error>,
+    sql_factory: BoxFuture<SqlFactory, Error>,
     repoid: RepositoryId,
     caching: Caching,
     bookmarks_cache_ttl: Option<Duration>,
@@ -134,7 +131,7 @@ pub fn open_blobrepo_given_datasources(
     readonly_storage: ReadOnlyStorage,
     derived_data_config: DerivedDataConfig,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
-    datasources.and_then(move |(unredacted_blobstore, sql_factory)| {
+    sql_factory.and_then(move |sql_factory| {
         let redacted_blobs = match redaction {
             Redaction::Enabled => sql_factory
                 .open::<SqlRedactedContentStore>()

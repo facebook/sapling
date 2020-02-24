@@ -18,7 +18,7 @@ setup configuration
   blobimporting
 
 Check that healer queue has all items
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
+  $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
   90
 
 Run the heal
@@ -30,11 +30,11 @@ Run the heal
   The last batch was not full size, waiting...
 
 Check that healer queue has drained
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
+  $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
   0
 
 Erase the sqllites and blobstore_sync_queue
-  $ rm -rf "$TESTTMP/monsql/sqlite_dbs" "$TESTTMP/blobstore"
+  $ rm -rf "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "$TESTTMP/blobstore"
 
 blobimport them into Mononoke storage again, but with write failures on one side
   $ blobimport repo-hg/.hg repo --blobstore-write-chaos-rate=1
@@ -48,7 +48,7 @@ Check the stores have expected counts
   30
 
 Check that healer queue has successful items
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
+  $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
   60
 
 Run the heal, with write errors injected, simulating store still bad
@@ -65,7 +65,7 @@ Run the heal, with write errors injected, simulating store still bad
   1 The last batch was not full size, waiting...
 
 Check that healer queue still has the items, should not have drained
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
+  $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
   60
 
 Healer run again now store recovered
@@ -77,7 +77,7 @@ Healer run again now store recovered
   1 The last batch was not full size, waiting...
 
 Check that healer queue has drained
-  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
+  $ sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "select count(*) FROM blobstore_sync_queue";
   0
 
 Check the stores have expected counts

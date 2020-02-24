@@ -10,16 +10,13 @@ use crate::validate::{CHECK_FAIL, CHECK_TYPE, NODE_KEY, REPO};
 use anyhow::{format_err, Error};
 use blobstore::Blobstore;
 use blobstore_factory::{
-    make_blobstore, make_blobstore_multiplexed, make_sql_factory, BlobstoreOptions,
-    ReadOnlyStorage, SqlFactory,
+    make_blobstore, make_blobstore_multiplexed, BlobstoreOptions, ReadOnlyStorage,
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::future::Future as OldFuture;
-use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
-use futures_preview::{compat::Future01CompatExt, future::TryFutureExt};
+use futures_preview::compat::Future01CompatExt;
 use inlinable_string::InlinableString;
-use metaconfig_types::{BlobConfig, BlobstoreId, ScrubAction, StorageConfig};
+use metaconfig_types::{BlobConfig, BlobstoreId, ScrubAction};
 use multiplexedblob::{LoggingScrubHandler, ScrubHandler};
 use prefixblob::PrefixBlobstore;
 use scuba_ext::ScubaSampleBuilder;
@@ -139,7 +136,7 @@ fn get_blobconfig(
 pub async fn open_blobstore(
     fb: FacebookInit,
     mysql_options: MysqlOptions,
-    storage_config: StorageConfig,
+    blob_config: BlobConfig,
     inner_blobstore_id: Option<u64>,
     // TODO(ahornby) take multiple prefix for when scrubbing multiple repos
     prefix: Option<String>,
@@ -150,8 +147,8 @@ pub async fn open_blobstore(
     repo_stats_key: String,
     blobstore_options: BlobstoreOptions,
     logger: Logger,
-) -> Result<(OldBoxFuture<Arc<dyn Blobstore>, Error>, SqlFactory), Error> {
-    let mut blobconfig = get_blobconfig(storage_config.blobstore, inner_blobstore_id)?;
+) -> Result<Arc<dyn Blobstore>, Error> {
+    let mut blobconfig = get_blobconfig(blob_config, inner_blobstore_id)?;
     let scrub_handler = scrub_action.map(|scrub_action| {
         blobconfig.set_scrubbed(scrub_action);
         Arc::new(StatsScrubHandler::new(
@@ -162,96 +159,92 @@ pub async fn open_blobstore(
         )) as Arc<dyn ScrubHandler>
     });
 
-    let datasources = make_sql_factory(
-        fb,
-        storage_config.dbconfig,
-        mysql_options,
-        readonly_storage,
-        logger,
-    )
-    .and_then(move |sql_factory| {
-        let blobstore = match (scrub_handler, blobconfig) {
-            (
-                Some(scrub_handler),
-                BlobConfig::Scrub {
-                    multiplex_id,
-                    scuba_table,
-                    scuba_sample_rate,
-                    blobstores,
-                    scrub_action,
-                },
-            ) => {
-                // Make sure the repair stats are set to zero for each store.
-                // Without this the new stats only show up when a repair is needed (i.e. as they get incremented),
-                // which makes them harder to monitor on (no datapoints rather than a zero datapoint at start).
-                for s in &[STATS::scrub_repaired, STATS::scrub_repair_required] {
-                    for (id, _config) in &blobstores {
-                        s.add_value(0, (walk_stats_key, id.to_string(), repo_stats_key.clone()));
-                    }
+    let blobstore = match (scrub_handler, blobconfig) {
+        (
+            Some(scrub_handler),
+            BlobConfig::Scrub {
+                multiplex_id,
+                scuba_table,
+                scuba_sample_rate,
+                blobstores,
+                scrub_action,
+                queue_db,
+            },
+        ) => {
+            // Make sure the repair stats are set to zero for each store.
+            // Without this the new stats only show up when a repair is needed (i.e. as they get incremented),
+            // which makes them harder to monitor on (no datapoints rather than a zero datapoint at start).
+            for s in &[STATS::scrub_repaired, STATS::scrub_repair_required] {
+                for (id, _config) in &blobstores {
+                    s.add_value(0, (walk_stats_key, id.to_string(), repo_stats_key.clone()));
                 }
-
-                make_blobstore_multiplexed(
-                    fb,
-                    multiplex_id,
-                    &scuba_table,
-                    scuba_sample_rate,
-                    &blobstores,
-                    Some(&sql_factory),
-                    mysql_options,
-                    readonly_storage,
-                    Some((scrub_handler, scrub_action)),
-                    blobstore_options,
-                )
             }
-            (
-                None,
-                BlobConfig::Multiplexed {
-                    multiplex_id,
-                    scuba_table,
-                    scuba_sample_rate,
-                    blobstores,
-                },
-            ) => make_blobstore_multiplexed(
+
+            make_blobstore_multiplexed(
                 fb,
                 multiplex_id,
-                &scuba_table,
+                queue_db,
+                scuba_table,
                 scuba_sample_rate,
-                &blobstores,
-                Some(&sql_factory),
+                blobstores,
+                mysql_options,
+                readonly_storage,
+                Some((scrub_handler, scrub_action)),
+                blobstore_options,
+                logger,
+            )
+            .compat()
+            .await?
+        }
+        (
+            None,
+            BlobConfig::Multiplexed {
+                multiplex_id,
+                scuba_table,
+                scuba_sample_rate,
+                blobstores,
+                queue_db,
+            },
+        ) => {
+            make_blobstore_multiplexed(
+                fb,
+                multiplex_id,
+                queue_db,
+                scuba_table,
+                scuba_sample_rate,
+                blobstores,
                 mysql_options,
                 readonly_storage,
                 None,
                 blobstore_options,
-            ),
-            (None, blobconfig) => make_blobstore(
+                logger,
+            )
+            .compat()
+            .await?
+        }
+        (None, blobconfig) => {
+            make_blobstore(
                 fb,
-                &blobconfig,
-                &sql_factory,
+                blobconfig,
                 mysql_options,
                 readonly_storage,
                 blobstore_options,
-            ),
-            (Some(_), _) => {
-                futures::future::err(format_err!("Scrub action passed for non-scrubbable store"))
-                    .boxify()
-            }
-        };
-        futures::future::ok((blobstore, sql_factory)).boxify()
-    })
-    .compat();
+                logger,
+            )
+            .compat()
+            .await?
+        }
+        (Some(_), _) => {
+            return Err(format_err!("Scrub action passed for non-scrubbable store"));
+        }
+    };
 
-    datasources
-        .map_ok(move |(storage, sql_factory)| match prefix {
-            None => (storage, sql_factory),
-            Some(prefix) => (
-                storage
-                    .map(|s| {
-                        Arc::new(PrefixBlobstore::new(s, InlinableString::from(prefix)))
-                            as Arc<dyn Blobstore>
-                    })
-                    .boxify(),
-                sql_factory,
-            ),
-        })
-        .await
+    if let Some(prefix) = prefix {
+        return Ok(Arc::new(PrefixBlobstore::new(
+            blobstore,
+            InlinableString::from(prefix),
+        )));
+    }
+
+    Ok(blobstore)
 }

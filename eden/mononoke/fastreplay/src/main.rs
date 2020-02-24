@@ -12,7 +12,7 @@ mod dispatcher;
 mod protocol;
 
 use anyhow::{Context, Error};
-use blobstore_factory::make_blobstore_no_sql;
+use blobstore_factory::make_blobstore;
 use clap::{Arg, ArgMatches};
 use cloned::cloned;
 use cmdlib::{args, monitoring::ReadyFlagService};
@@ -271,7 +271,15 @@ async fn bootstrap_repositories<'a>(
                 .storage_config_and_threshold
                 .as_ref()
                 .map(|(storage, _)| {
-                    make_blobstore_no_sql(fb, &storage.blobstore, readonly_storage).compat()
+                    make_blobstore(
+                        fb,
+                        storage.blobstore.clone(),
+                        mysql_options,
+                        readonly_storage,
+                        Default::default(),
+                        logger.clone(),
+                    )
+                    .compat()
                 });
 
             // Set the Multiplexed blob sampling rate, if used.
