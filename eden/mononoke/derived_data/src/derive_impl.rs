@@ -112,14 +112,26 @@ pub fn derive_impl<
                     .for_each({
                         cloned!(ctx, mapping, repo);
                         move |csid| {
+                            ctx.scuba().clone().log_with_msg(
+                                "Generating derived data",
+                                Some(format!("{} {}", Derived::NAME, csid)),
+                            );
+
                             derive_may_panic(ctx.clone(), repo.clone(), mapping.clone(), csid)
                                 .timed({
                                     cloned!(ctx);
-                                    move |stats, _| {
+                                    move |stats, res| {
+                                        let tag = if res.is_ok() {
+                                            "Generated derived data"
+                                        } else {
+                                            "Failed to generate derived data"
+                                        };
+
                                         ctx.scuba().clone().add_future_stats(&stats).log_with_msg(
-                                            "Generating derived data",
+                                            tag,
                                             Some(format!("{} {}", Derived::NAME, csid)),
                                         );
+
                                         Ok(())
                                     }
                                 })
