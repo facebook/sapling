@@ -583,35 +583,8 @@ impl TryFrom<RawStorageConfig> for StorageConfig {
 
     fn try_from(raw: RawStorageConfig) -> Result<Self, Error> {
         let config = StorageConfig {
-            dbconfig: match raw.db {
-                RawDbConfig::local(def) => MetadataDBConfig::LocalDB {
-                    path: PathBuf::from(def.local_db_path),
-                },
-                RawDbConfig::remote(def) => match def.sharded_filenodes {
-                    None => MetadataDBConfig::Mysql {
-                        db_address: def.db_address,
-                        sharded_filenodes: None,
-                    },
-                    Some(RawShardedFilenodesParams {
-                        shard_map,
-                        shard_num,
-                    }) => {
-                        let shard_num: Result<_> = NonZeroUsize::new(shard_num.try_into()?)
-                            .ok_or_else(|| anyhow!("filenodes shard_num must be > 0"));
-                        MetadataDBConfig::Mysql {
-                            db_address: def.db_address,
-                            sharded_filenodes: Some(ShardedFilenodesParams {
-                                shard_map,
-                                shard_num: shard_num?,
-                            }),
-                        }
-                    }
-                },
-                RawDbConfig::UnknownField(_) => {
-                    return Err(anyhow!("unsupported storage configuration"));
-                }
-            },
-            blobstore: TryFrom::try_from(&raw.blobstore)?,
+            dbconfig: TryFrom::try_from(raw.db)?,
+            blobstore: TryFrom::try_from(raw.blobstore)?,
         };
         Ok(config)
     }
@@ -756,24 +729,24 @@ impl Default for BlobConfig {
     }
 }
 
-impl TryFrom<&'_ RawBlobstoreConfig> for BlobConfig {
+impl TryFrom<RawBlobstoreConfig> for BlobConfig {
     type Error = Error;
 
-    fn try_from(raw: &RawBlobstoreConfig) -> Result<Self, Error> {
+    fn try_from(raw: RawBlobstoreConfig) -> Result<Self, Error> {
         let res = match raw {
             RawBlobstoreConfig::disabled(_) => BlobConfig::Disabled,
             RawBlobstoreConfig::blob_files(def) => BlobConfig::Files {
-                path: PathBuf::from(def.path.clone()),
+                path: PathBuf::from(def.path),
             },
             RawBlobstoreConfig::blob_sqlite(def) => BlobConfig::Sqlite {
-                path: PathBuf::from(def.path.clone()),
+                path: PathBuf::from(def.path),
             },
             RawBlobstoreConfig::manifold(def) => BlobConfig::Manifold {
-                bucket: def.manifold_bucket.clone(),
-                prefix: def.manifold_prefix.clone(),
+                bucket: def.manifold_bucket,
+                prefix: def.manifold_prefix,
             },
             RawBlobstoreConfig::mysql(def) => BlobConfig::Mysql {
-                shard_map: def.mysql_shardmap.clone(),
+                shard_map: def.mysql_shardmap,
                 shard_num: NonZeroUsize::new(def.mysql_shard_num.try_into()?).ok_or(anyhow!(
                     "mysql shard num must be specified and an interger larger than 0"
                 ))?,
@@ -783,7 +756,7 @@ impl TryFrom<&'_ RawBlobstoreConfig> for BlobConfig {
                     .multiplex_id
                     .map(|id| MultiplexId::new(id))
                     .ok_or_else(|| anyhow!("missing multiplex_id from configuration"))?,
-                scuba_table: def.scuba_table.clone(),
+                scuba_table: def.scuba_table,
                 scuba_sample_rate: def
                     .scuba_sample_rate
                     .map(|rate| {
@@ -795,11 +768,11 @@ impl TryFrom<&'_ RawBlobstoreConfig> for BlobConfig {
                     .unwrap_or(nonzero!(100_u64)),
                 blobstores: def
                     .components
-                    .iter()
+                    .into_iter()
                     .map(|comp| {
                         Ok((
                             BlobstoreId(comp.blobstore_id.try_into()?),
-                            BlobConfig::try_from(&comp.blobstore)?,
+                            BlobConfig::try_from(comp.blobstore)?,
                         ))
                     })
                     .collect::<Result<Vec<_>>>()?,
@@ -807,8 +780,8 @@ impl TryFrom<&'_ RawBlobstoreConfig> for BlobConfig {
             RawBlobstoreConfig::manifold_with_ttl(def) => {
                 let ttl = Duration::from_secs(def.ttl_secs.try_into()?);
                 BlobConfig::ManifoldWithTtl {
-                    bucket: def.manifold_bucket.clone(),
-                    prefix: def.manifold_prefix.clone(),
+                    bucket: def.manifold_bucket,
+                    prefix: def.manifold_prefix,
                     ttl,
                 }
             }
@@ -869,6 +842,39 @@ impl MetadataDBConfig {
         match self {
             MetadataDBConfig::LocalDB { path } => Some(path),
             MetadataDBConfig::Mysql { .. } => None,
+        }
+    }
+}
+
+impl TryFrom<RawDbConfig> for MetadataDBConfig {
+    type Error = Error;
+
+    fn try_from(raw: RawDbConfig) -> Result<Self, Self::Error> {
+        match raw {
+            RawDbConfig::local(def) => Ok(MetadataDBConfig::LocalDB {
+                path: PathBuf::from(def.local_db_path),
+            }),
+            RawDbConfig::remote(def) => match def.sharded_filenodes {
+                None => Ok(MetadataDBConfig::Mysql {
+                    db_address: def.db_address,
+                    sharded_filenodes: None,
+                }),
+                Some(RawShardedFilenodesParams {
+                    shard_map,
+                    shard_num,
+                }) => {
+                    let shard_num: Result<_> = NonZeroUsize::new(shard_num.try_into()?)
+                        .ok_or_else(|| anyhow!("filenodes shard_num must be > 0"));
+                    Ok(MetadataDBConfig::Mysql {
+                        db_address: def.db_address,
+                        sharded_filenodes: Some(ShardedFilenodesParams {
+                            shard_map,
+                            shard_num: shard_num?,
+                        }),
+                    })
+                }
+            },
+            RawDbConfig::UnknownField(_) => Err(anyhow!("unsupported DB configuration")),
         }
     }
 }
