@@ -231,7 +231,7 @@ int EdenMain::main(int argc, char** argv) {
     gflags::SetCommandLineOptionWithMode(
         "logtostderr", "1", gflags::SET_FLAGS_DEFAULT);
     gflags::SetCommandLineOptionWithMode(
-        "minloglevel", "0", gflags::SET_FLAGS_DEFAULT);
+        "minloglevel", "1", gflags::SET_FLAGS_DEFAULT);
 
     startupLogger->log("Starting ", getEdenfsBuildName(), ", pid ", getpid());
 
