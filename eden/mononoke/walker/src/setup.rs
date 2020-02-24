@@ -7,6 +7,7 @@
 
 use crate::blobstore;
 use crate::graph::{EdgeType, Node, NodeType};
+use crate::parse_node::parse_node;
 use crate::progress::{sort_by_string, ProgressStateCountByType, ProgressStateMutex};
 use crate::state::StepStats;
 use crate::validate::{CheckType, REPO, WALK_TYPE};
@@ -67,6 +68,7 @@ const INCLUDE_NODE_TYPE_ARG: &'static str = "include-node-type";
 const EXCLUDE_EDGE_TYPE_ARG: &'static str = "exclude-edge-type";
 const INCLUDE_EDGE_TYPE_ARG: &'static str = "include-edge-type";
 const BOOKMARK_ARG: &'static str = "bookmark";
+const WALK_ROOT_ARG: &'static str = "walk-root";
 const INNER_BLOBSTORE_ID_ARG: &'static str = "inner-blobstore-id";
 const SCRUB_BLOBSTORE_ACTION_ARG: &'static str = "scrub-blobstore-action";
 const ENABLE_DERIVE_ARG: &'static str = "enable-derive";
@@ -396,10 +398,20 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
                 .long(BOOKMARK_ARG)
                 .short("b")
                 .takes_value(true)
-                .required(true)
+                .required(false)
                 .multiple(true)
                 .number_of_values(1)
                 .help("Bookmark(s) to start traversal from"),
+        )
+        .arg(
+            Arg::with_name(WALK_ROOT_ARG)
+                .long(WALK_ROOT_ARG)
+                .short("r")
+                .takes_value(true)
+                .required(false)
+                .multiple(true)
+                .number_of_values(1)
+                .help("Root(s) to start traversal from in format <NodeType>:<node_key>, e.g. Bookmark:master or HgChangeset:7712b62acdc858689504945ac8965a303ded6626"),
         )
         .arg(
             Arg::with_name(ERROR_AS_DATA_NODE_TYPE_ARG)
@@ -582,21 +594,48 @@ pub fn setup_common(
         DEFAULT_INCLUDE_NODE_TYPES,
     )?;
 
-    let bookmarks: Result<Vec<_>, Error> = match sub_m.values_of(BOOKMARK_ARG) {
-        None => Err(format_err!("No bookmark passed")),
-        Some(values) => values.map(|bookmark| BookmarkName::new(bookmark)).collect(),
-    };
-    let bookmarks = bookmarks?;
+    let mut walk_roots: Vec<OutgoingEdge> = vec![];
 
-    // TODO, add other root types like hg change ids etc.
-    let walk_roots: Vec<_> = bookmarks
-        .into_iter()
-        .map(|b| OutgoingEdge::new(EdgeType::RootToBookmark, Node::Bookmark(b)))
-        .collect();
+    if sub_m.is_present(BOOKMARK_ARG) {
+        let bookmarks: Result<Vec<BookmarkName>, Error> = match sub_m.values_of(BOOKMARK_ARG) {
+            None => Err(format_err!("No bookmark passed to --{}", BOOKMARK_ARG)),
+            Some(values) => values.map(|bookmark| BookmarkName::new(bookmark)).collect(),
+        };
 
-    let root_node_types: HashSet<_> = walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
+        let mut bookmarks = bookmarks?
+            .into_iter()
+            .map(|b| OutgoingEdge::new(EdgeType::RootToBookmark, Node::Bookmark(b)))
+            .collect();
+        walk_roots.append(&mut bookmarks);
+    }
+
+    if sub_m.is_present(WALK_ROOT_ARG) {
+        let roots: Vec<_> = match sub_m.values_of(WALK_ROOT_ARG) {
+            None => Err(format_err!("No root node passed to --{}", WALK_ROOT_ARG)),
+            Some(values) => values.map(|root| parse_node(root)).collect(),
+        }?;
+        let mut roots = roots
+            .into_iter()
+            .filter_map(|node| {
+                node.get_type()
+                    .root_edge_type()
+                    .map(|et| OutgoingEdge::new(et, node))
+            })
+            .collect();
+        walk_roots.append(&mut roots);
+    }
+
+    if walk_roots.is_empty() {
+        return Err(format_err!(
+            "No walk roots provided, pass with --{} or --{}",
+            BOOKMARK_ARG,
+            WALK_ROOT_ARG,
+        ));
+    }
 
     info!(logger, "Walking roots {:?} ", walk_roots);
+
+    let root_node_types: HashSet<_> = walk_roots.iter().map(|e| e.label.outgoing_type()).collect();
 
     let (include_edge_types, include_node_types) =
         reachable_graph_elements(include_edge_types, include_node_types, root_node_types);

@@ -17,6 +17,7 @@ use cmdlib::{args, helpers::block_execute};
 mod blobstore;
 #[macro_use]
 mod graph;
+mod parse_node;
 mod progress;
 mod scrub;
 mod setup;

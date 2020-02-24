@@ -74,6 +74,29 @@ impl fmt::Display for NodeType {
     }
 }
 
+impl NodeType {
+    pub fn root_edge_type(&self) -> Option<EdgeType> {
+        match self {
+            NodeType::Root => None,
+            // Bonsai
+            NodeType::Bookmark => Some(EdgeType::RootToBookmark),
+            NodeType::BonsaiChangeset => Some(EdgeType::RootToBonsaiChangeset),
+            NodeType::BonsaiHgMapping => Some(EdgeType::RootToBonsaiHgMapping),
+            NodeType::BonsaiPhaseMapping => Some(EdgeType::RootToBonsaiPhaseMapping),
+            // Hg
+            NodeType::HgBonsaiMapping => Some(EdgeType::RootToHgBonsaiMapping),
+            NodeType::HgChangeset => Some(EdgeType::RootToHgChangeset),
+            NodeType::HgManifest => Some(EdgeType::RootToHgManifest),
+            NodeType::HgFileEnvelope => Some(EdgeType::RootToHgFileEnvelope),
+            NodeType::HgFileNode => Some(EdgeType::RootToHgFileNode),
+            // Content
+            NodeType::FileContent => Some(EdgeType::RootToFileContent),
+            NodeType::FileContentMetadata => Some(EdgeType::RootToFileContentMetadata),
+            NodeType::AliasContentMapping => Some(EdgeType::RootToAliasContentMapping),
+        }
+    }
+}
+
 // Set of keys to look up items by, name is the type of lookup, payload is the key used.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Node {
@@ -99,8 +122,21 @@ pub enum Node {
 // This is really a declaration of the steps a walker can take.
 define_type_enum! {
 enum EdgeType {
-    // Roots
+    // Bonsai Roots
     RootToBookmark,
+    RootToBonsaiChangeset,
+    RootToBonsaiHgMapping,
+    RootToBonsaiPhaseMapping,
+    // Hg Roots
+    RootToHgBonsaiMapping,
+    RootToHgChangeset,
+    RootToHgManifest,
+    RootToHgFileEnvelope,
+    RootToHgFileNode,
+    // Content Roots
+    RootToFileContent,
+    RootToFileContentMetadata,
+    RootToAliasContentMapping,
     // Bonsai
     BookmarkToBonsaiChangeset,
     BookmarkToBonsaiHgMapping,
@@ -130,10 +166,32 @@ enum EdgeType {
 }
 }
 
+define_type_enum! {
+    enum AliasType {
+        GitSha1,
+        Sha1,
+        Sha256,
+    }
+}
+
 impl EdgeType {
     pub fn incoming_type(&self) -> Option<NodeType> {
         match self {
+            // Bonsai Roots
             EdgeType::RootToBookmark => None,
+            EdgeType::RootToBonsaiChangeset => None,
+            EdgeType::RootToBonsaiHgMapping => None,
+            EdgeType::RootToBonsaiPhaseMapping => None,
+            // Hg Roots
+            EdgeType::RootToHgBonsaiMapping => None,
+            EdgeType::RootToHgChangeset => None,
+            EdgeType::RootToHgManifest => None,
+            EdgeType::RootToHgFileEnvelope => None,
+            EdgeType::RootToHgFileNode => None,
+            // Content Roots
+            EdgeType::RootToFileContent => None,
+            EdgeType::RootToFileContentMetadata => None,
+            EdgeType::RootToAliasContentMapping => None,
             // Bonsai
             EdgeType::BookmarkToBonsaiChangeset => Some(NodeType::Bookmark),
             EdgeType::BookmarkToBonsaiHgMapping => Some(NodeType::Bookmark),
@@ -164,7 +222,21 @@ impl EdgeType {
     }
     pub fn outgoing_type(&self) -> NodeType {
         match self {
+            // Bonsai Roots
             EdgeType::RootToBookmark => NodeType::Bookmark,
+            EdgeType::RootToBonsaiChangeset => NodeType::BonsaiChangeset,
+            EdgeType::RootToBonsaiHgMapping => NodeType::BonsaiHgMapping,
+            EdgeType::RootToBonsaiPhaseMapping => NodeType::BonsaiPhaseMapping,
+            // Hg Roots
+            EdgeType::RootToHgBonsaiMapping => NodeType::HgBonsaiMapping,
+            EdgeType::RootToHgChangeset => NodeType::HgChangeset,
+            EdgeType::RootToHgManifest => NodeType::HgManifest,
+            EdgeType::RootToHgFileEnvelope => NodeType::HgFileEnvelope,
+            EdgeType::RootToHgFileNode => NodeType::HgFileNode,
+            // Content Roots
+            EdgeType::RootToFileContent => NodeType::FileContent,
+            EdgeType::RootToFileContentMetadata => NodeType::FileContentMetadata,
+            EdgeType::RootToAliasContentMapping => NodeType::AliasContentMapping,
             // Bonsai
             EdgeType::BookmarkToBonsaiChangeset => NodeType::BonsaiChangeset,
             EdgeType::BookmarkToBonsaiHgMapping => NodeType::BonsaiHgMapping,
