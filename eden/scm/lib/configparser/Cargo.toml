@@ -5,7 +5,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.19"
-bytes = "0.4.10"
+bytes = "0.5"
 dirs = "1.0.4"
 indexmap = "1.0.1"
 parking_lot = "0.9"

@@ -13,7 +13,7 @@ manifest-tree = { path = "../manifest-tree" }
 revisionstore = { path = "../revisionstore" }
 types = { path = "../types" }
 anyhow = "1.0.20"
-bytes = "0.4.12"
+bytes = "0.5"
 libc = "0.2.62"
 env_logger = "0.7"
 

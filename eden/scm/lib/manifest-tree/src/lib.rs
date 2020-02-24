@@ -1013,7 +1013,9 @@ mod tests {
 
         use bytes::Bytes;
         for (path, hgid, raw, _, _) in tree_changed.iter() {
-            store.insert(&path, *hgid, Bytes::from(&raw[..])).unwrap();
+            store
+                .insert(&path, *hgid, Bytes::copy_from_slice(&raw[..]))
+                .unwrap();
         }
 
         let mut update = tree.clone();

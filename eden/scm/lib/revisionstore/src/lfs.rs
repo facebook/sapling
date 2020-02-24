@@ -278,7 +278,7 @@ fn strip_metadata(data: &Bytes) -> Result<(Bytes, Option<Key>)> {
             (Some(path), Some(hgid)) => Some(Key::new(path, hgid)),
         };
 
-        Ok((data.slice(2 + pos + 2, data.len()), key))
+        Ok((data.slice(2 + pos + 2..), key))
     } else {
         Ok((data.clone(), None))
     }
@@ -495,7 +495,7 @@ mod tests {
     #[test]
     fn test_strip_metadata() -> Result<()> {
         let key = key("foo/bar/baz", "1234");
-        let data = Bytes::from(
+        let data = Bytes::copy_from_slice(
             format!(
                 "\x01\ncopy: {}\ncopyrev: {}\n\x01\nthis is a blob",
                 key.path, key.hgid
@@ -544,7 +544,7 @@ mod tests {
 
         let k1 = key("a", "2");
         let delta = Delta {
-            data: Bytes::from(
+            data: Bytes::copy_from_slice(
                 format!(
                     "\x01\ncopy: {}\ncopyrev: {}\n\x01\nthis is a blob",
                     k1.path, k1.hgid

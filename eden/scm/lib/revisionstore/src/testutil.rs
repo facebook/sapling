@@ -22,7 +22,7 @@ use crate::{
 
 pub fn delta(data: &str, base: Option<Key>, key: Key) -> Delta {
     Delta {
-        data: Bytes::from(data),
+        data: Bytes::copy_from_slice(data.as_bytes()),
         base,
         key,
     }

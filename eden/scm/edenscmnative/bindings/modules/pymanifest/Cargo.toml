@@ -5,7 +5,7 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.20"
-bytes = { version = "0.4.11" }
+bytes = { version = "0.5" }
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.4", default-features = false }
 manifest = { path = "../../../../lib/manifest" }

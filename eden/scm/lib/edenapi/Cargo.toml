@@ -7,7 +7,7 @@ edition = "2018"
 anyhow = "1.0.20"
 auth = { path = "../auth" }
 blackbox = { path = "../blackbox" }
-bytes = "0.4.11"
+bytes = "0.5"
 configparser = { path = "../configparser" }
 curl = { version = "0.4.20", features = ["http2"] }
 http = "0.1.17"

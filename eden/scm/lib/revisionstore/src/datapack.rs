@@ -247,7 +247,7 @@ impl<'a> fmt::Debug for DataEntry<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let delta = self
             .delta()
-            .unwrap_or_else(|e| Bytes::from(format!("{:?}", e).as_bytes()));
+            .unwrap_or_else(|e| Bytes::copy_from_slice(format!("{:?}", e).as_bytes()));
         write!(
             f,
             "DataEntry {{\n  offset: {:?}\n  filename: {:?}\n  \

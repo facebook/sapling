@@ -17,6 +17,7 @@ use blobrepo::{file_history::get_file_history, BlobRepo};
 use blobrepo_factory::{open_blobrepo, BlobstoreOptions, Caching, ReadOnlyStorage};
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
+use bytes_ext::copy_from_old;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
@@ -949,7 +950,8 @@ impl MononokeRepo {
                 debug!(&logger, "fetching data for key: {}", &key);
 
                 get_parents.and_then(move |parents| {
-                    get_content.map(move |bytes| DataEntry::new(key, bytes, parents.into()))
+                    get_content
+                        .map(move |bytes| DataEntry::new(key, copy_from_old(bytes), parents.into()))
                 })
             });
 
@@ -1033,7 +1035,7 @@ impl MononokeRepo {
 
                 get_parents.and_then(move |parents| {
                     get_content.map(move |content| {
-                        DataEntry::new(key, content.into_inner(), parents.into())
+                        DataEntry::new(key, copy_from_old(content.into_inner()), parents.into())
                     })
                 })
             });
@@ -1075,7 +1077,7 @@ impl MononokeRepo {
                         let content = envelope.contents().clone();
                         let (p1, p2) = envelope.parents();
                         let parents = HgParents::new(p1, p2);
-                        DataEntry::new(key, content, parents.into())
+                        DataEntry::new(key, copy_from_old(content), parents.into())
                     })
                     .boxify()
             },

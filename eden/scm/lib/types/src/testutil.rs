@@ -7,6 +7,7 @@
 
 use std::collections::HashSet;
 
+use bytes::Bytes;
 use quickcheck::{Arbitrary, Gen};
 use rand::Rng;
 
@@ -69,7 +70,7 @@ pub fn null_key(path: &str) -> Key {
 }
 
 pub fn data_entry(key: Key, data: impl AsRef<[u8]>) -> DataEntry {
-    DataEntry::new(key, data.as_ref().into(), Parents::None)
+    DataEntry::new(key, Bytes::copy_from_slice(data.as_ref()), Parents::None)
 }
 
 pub fn generate_repo_paths<G: Gen>(count: usize, qc_gen: &mut G) -> Vec<RepoPathBuf> {

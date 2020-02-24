@@ -89,7 +89,7 @@ py_class!(pub class config |py| {
             let file = source.location().map(|(path, range)| {
                 // Calculate the line number - count "\n" till range.start
                 let file = source.file_content().unwrap();
-                let line = 1 + file.slice(0, range.start).iter().filter(|ch| **ch == b'\n').count();
+                let line = 1 + file.slice(0..range.start).iter().filter(|ch| **ch == b'\n').count();
 
                 let pypath = if path.as_os_str().is_empty() {
                     PyPathBuf::from(String::from("<builtin>"))

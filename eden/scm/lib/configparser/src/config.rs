@@ -122,20 +122,20 @@ impl ConfigSet {
     }
 
     /// Get config names in the given section. Sorted by insertion order.
-    pub fn keys<S: Into<Bytes>>(&self, section: S) -> Vec<Bytes> {
+    pub fn keys(&self, section: impl AsRef<[u8]>) -> Vec<Bytes> {
         self.sections
-            .get(&section.into())
+            .get(section.as_ref())
             .map(|section| section.items.keys().cloned().collect())
             .unwrap_or(Vec::new())
     }
 
     /// Get config value for a given config.
     /// Return `None` if the config item does not exist or is unset.
-    pub fn get<S: Into<Bytes>, N: Into<Bytes>>(&self, section: S, name: N) -> Option<Bytes> {
-        self.sections.get(&section.into()).and_then(|section| {
+    pub fn get(&self, section: impl AsRef<[u8]>, name: impl AsRef<[u8]>) -> Option<Bytes> {
+        self.sections.get(section.as_ref()).and_then(|section| {
             section
                 .items
-                .get(&name.into())
+                .get(name.as_ref())
                 .and_then(|values| values.last().and_then(|value| value.value.clone()))
         })
     }
@@ -144,29 +144,34 @@ impl ConfigSet {
     /// The last item in the returned vector is the latest value that is considered effective.
     ///
     /// Return an emtpy vector if the config does not exist.
-    pub fn get_sources<S: Into<Bytes>, N: Into<Bytes>>(
+    pub fn get_sources(
         &self,
-        section: S,
-        name: N,
+        section: impl AsRef<[u8]>,
+        name: impl AsRef<[u8]>,
     ) -> Vec<ValueSource> {
         self.sections
-            .get(&section.into())
-            .and_then(|section| section.items.get(&name.into()).map(|values| values.clone()))
+            .get(section.as_ref())
+            .and_then(|section| {
+                section
+                    .items
+                    .get(name.as_ref())
+                    .map(|values| values.clone())
+            })
             .unwrap_or(Vec::new())
     }
 
     /// Set a config item directly. `section`, `name` locates the config. `value` is the new value.
     /// `source` is some annotation about who set it, ex. "reporc", "userrc", "--config", etc.
-    pub fn set<T: Into<Bytes>, N: Into<Bytes>, V: Into<Bytes>>(
+    pub fn set(
         &mut self,
-        section: T,
-        name: N,
-        value: Option<V>,
+        section: impl AsRef<[u8]>,
+        name: impl AsRef<[u8]>,
+        value: Option<impl AsRef<[u8]>>,
         opts: &Options,
     ) {
-        let section = section.into();
-        let name = name.into();
-        let value = value.map(|v| v.into());
+        let section = Bytes::copy_from_slice(section.as_ref());
+        let name = Bytes::copy_from_slice(name.as_ref());
+        let value = value.map(|v| Bytes::copy_from_slice(v.as_ref()));
         self.set_internal(section, name, value, None, &opts)
     }
 
@@ -284,7 +289,7 @@ impl ConfigSet {
             };
 
             let (start, end) = strip_offsets(&value, 0, value.len());
-            let value = value.slice(start, end);
+            let value = value.slice(start..end);
 
             this.set_internal(section, name, value.into(), location.into(), opts)
         };
@@ -504,7 +509,7 @@ fn strip_offsets(buf: &Bytes, start: usize, end: usize) -> (usize, usize) {
 #[inline]
 fn extract<'a>(buf: &Bytes, span: Span<'a>) -> Bytes {
     let (start, end) = strip_offsets(buf, span.start(), span.end());
-    buf.slice(start, end)
+    buf.slice(start..end)
 }
 
 #[cfg(test)]

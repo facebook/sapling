@@ -272,7 +272,7 @@ impl ConfigSetHgExt for ConfigSet {
                 self.set(
                     "ui",
                     "editor",
-                    Some(editor.as_bytes()),
+                    Some(editor),
                     &Options::new().source(format!("${}", name)),
                 );
                 break;
@@ -281,12 +281,7 @@ impl ConfigSetHgExt for ConfigSet {
 
         // Convert $HGPROF to profiling.type
         if let Ok(profiling_type) = env::var("HGPROF") {
-            self.set(
-                "profiling",
-                "type",
-                Some(profiling_type.as_bytes()),
-                &"$HGPROF".into(),
-            );
+            self.set("profiling", "type", Some(profiling_type), &"$HGPROF".into());
         }
 
         let opts = Options::new().source("user").process_hgplain();
@@ -902,7 +897,7 @@ mod tests {
     #[test]
     fn test_parse_list() {
         fn b<B: AsRef<[u8]>>(bytes: B) -> Bytes {
-            Bytes::from(bytes.as_ref())
+            Bytes::copy_from_slice(bytes.as_ref())
         }
 
         // From test-ui-config.py

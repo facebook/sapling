@@ -91,7 +91,7 @@ impl Entry {
         Ok(Entry {
             key,
             content: None,
-            compressed_content: Some(compressed.into()),
+            compressed_content: Some(Bytes::copy_from_slice(compressed)),
             metadata,
         })
     }

@@ -10,7 +10,7 @@ for-tests = []
 
 [dependencies]
 anyhow = "1.0.20"
-bytes = { version = "0.4.11", features = ["serde"] }
+bytes = { version = "0.5", features = ["serde"] }
 byteorder = "1.2.7"
 configparser = { path = "../configparser" }
 edenapi = { path = "../edenapi" }

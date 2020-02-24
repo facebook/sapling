@@ -11,7 +11,6 @@ use crate::global_flags::HgGlobalOpts;
 use crate::io::IO;
 use crate::repo::OptionalRepo;
 use anyhow::Error;
-use bytes::Bytes;
 use cliparser::alias::{expand_aliases, find_command_name};
 use cliparser::parser::{ParseError, ParseOptions, ParseOutput, StructFlags};
 use configparser::config::ConfigSet;
@@ -59,7 +58,7 @@ where
         let section = &section_name_pair[..dot_pos];
         let name = &section_name_pair[dot_pos + 1..];
 
-        config.set(section, name, Some(Bytes::from(value)), &"--config".into());
+        config.set(section, name, Some(value), &"--config".into());
     }
 
     Ok(())

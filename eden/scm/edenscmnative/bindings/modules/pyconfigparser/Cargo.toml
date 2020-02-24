@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
-bytes = "0.4.11"
+bytes = "0.5"
 configparser = { path = "../../../../lib/configparser" }
 cpython = { version = "0.4", default-features = false }
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
