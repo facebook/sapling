@@ -31,7 +31,7 @@ class PersistenceTest(testcase.EdenRepoTest):
     #
     # However, today we remember metadata keyed on inode, and thus Eden does,
     # in practice remember them across restarts.
-    def test_preserves_inode_numbers_across_restarts(self):
+    def test_preserves_inode_numbers_across_restarts(self) -> None:
         before1 = os.lstat(os.path.join(self.mount, "subdir/file_in_subdir"))
         before2 = os.lstat(os.path.join(self.mount, "subdir2/file_in_subdir2"))
 
@@ -84,7 +84,7 @@ class PersistenceTest(testcase.EdenRepoTest):
                 f"ctime must line up for path {path}",
             )
 
-    def test_does_not_reuse_inode_numbers_after_cold_restart(self):
+    def test_does_not_reuse_inode_numbers_after_cold_restart(self) -> None:
         newdir1 = os.path.join(self.mount, "subdir", "newdir1")
         os.mkdir(newdir1)
         newdir_stat1 = os.lstat(newdir1)
