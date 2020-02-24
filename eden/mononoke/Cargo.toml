@@ -3,6 +3,9 @@
 members = [
     "blobstore",
     "common/scuba_ext",
+    "mononoke_types",
+    "mononoke_types/if",
+    "mononoke_types/mocks",
     "server/context",
     "server/session_id",
     "sshrelay",
