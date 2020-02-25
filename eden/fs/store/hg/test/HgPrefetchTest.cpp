@@ -180,31 +180,34 @@ usecunionstore=True
 
   // Build an HgBackingStore for this repository
   UnboundedQueueExecutor resultThreadPool(1, "ResultThread");
-  HgBackingStore store(
-      clientRepo.path(), &localStore, &resultThreadPool, config, stats);
 
-  // Now test running prefetch
-  // Build a list of file blob IDs to prefetch.
-  auto rootTree = store.getTreeForCommit(commit2).get(10s);
-  ASSERT_TRUE(rootTree);
-  auto srcTree =
-      store.getTree(rootTree->getEntryAt("src"_pc).getHash()).get(10s);
-  auto edenTree =
-      store.getTree(srcTree->getEntryAt("eden"_pc).getHash()).get(10s);
-  auto fooTree =
-      store.getTree(rootTree->getEntryAt("foo"_pc).getHash()).get(10s);
+  {
+    HgBackingStore store(
+        clientRepo.path(), &localStore, &resultThreadPool, config, stats);
 
-  std::vector<Hash> blobHashes;
-  blobHashes.push_back(edenTree->getEntryAt("main.py"_pc).getHash());
-  blobHashes.push_back(edenTree->getEntryAt("abc.py"_pc).getHash());
-  blobHashes.push_back(edenTree->getEntryAt("abc.py"_pc).getHash());
-  blobHashes.push_back(edenTree->getEntryAt(binaryFileName).getHash());
-  blobHashes.push_back(srcTree->getEntryAt("somelink"_pc).getHash());
-  blobHashes.push_back(fooTree->getEntryAt("bar.txt"_pc).getHash());
-  blobHashes.push_back(fooTree->getEntryAt("test.txt"_pc).getHash());
+    // Now test running prefetch
+    // Build a list of file blob IDs to prefetch.
+    auto rootTree = store.getTreeForCommit(commit2).get(10s);
+    ASSERT_TRUE(rootTree);
+    auto srcTree =
+        store.getTree(rootTree->getEntryAt("src"_pc).getHash()).get(10s);
+    auto edenTree =
+        store.getTree(srcTree->getEntryAt("eden"_pc).getHash()).get(10s);
+    auto fooTree =
+        store.getTree(rootTree->getEntryAt("foo"_pc).getHash()).get(10s);
 
-  // Call prefetchBlobs()
-  store.prefetchBlobs(blobHashes).get(10s);
+    std::vector<Hash> blobHashes;
+    blobHashes.push_back(edenTree->getEntryAt("main.py"_pc).getHash());
+    blobHashes.push_back(edenTree->getEntryAt("abc.py"_pc).getHash());
+    blobHashes.push_back(edenTree->getEntryAt("abc.py"_pc).getHash());
+    blobHashes.push_back(edenTree->getEntryAt(binaryFileName).getHash());
+    blobHashes.push_back(srcTree->getEntryAt("somelink"_pc).getHash());
+    blobHashes.push_back(fooTree->getEntryAt("bar.txt"_pc).getHash());
+    blobHashes.push_back(fooTree->getEntryAt("test.txt"_pc).getHash());
+
+    // Call prefetchBlobs()
+    store.prefetchBlobs(blobHashes).get(10s);
+  }
 
   // Running "hg cat" with ssh disabled and no server repo should succeed now
   // that we have prefetched the data.
