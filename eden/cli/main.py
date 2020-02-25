@@ -1399,13 +1399,17 @@ class RestartCmd(Subcmd):
             assert health.pid is not None
             if self.args.restart_type == RESTART_MODE_GRACEFUL:
                 status = self._graceful_restart(instance)
-                success = True if status == 0 else False
+                success = status == 0
                 sample = instance.build_sample("graceful_restart", success=success)
                 instance.log(sample)
                 return status
             else:
                 # pyre-fixme[6]: Expected `int` for 2nd param but got `Optional[int]`.
-                return self._full_restart(instance, health.pid)
+                status = self._full_restart(instance, health.pid)
+                success = status == 0
+                sample = instance.build_sample("full_restart", success=success)
+                instance.log(sample)
+                return status
         elif health.pid is None:
             # The daemon is not running
             return self._start(instance)
