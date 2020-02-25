@@ -15,10 +15,11 @@ import os
 import shlex
 import shutil
 
+from edenscm.hgext.convert.repo import repo_source
 from edenscm.mercurial import encoding, error, hg, progress, pycompat, scmutil, util
 from edenscm.mercurial.i18n import _
 
-from . import common, filemap, git, hg as hgconvert, p4, repo, subversion
+from . import common, filemap, git, hg as hgconvert, p4, subversion
 
 
 mapfile = common.mapfile
@@ -30,7 +31,7 @@ convert_git = git.convert_git
 mercurial_sink = hgconvert.mercurial_sink
 mercurial_source = hgconvert.mercurial_source
 p4_source = p4.p4_source
-repo_source = repo.repo_source
+repo_source = repo_source
 svn_sink = subversion.svn_sink
 svn_source = subversion.svn_source
 
