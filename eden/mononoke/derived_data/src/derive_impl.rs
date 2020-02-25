@@ -9,13 +9,12 @@ use crate::{BonsaiDerived, BonsaiDerivedMapping, DeriveError, Mode};
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use cacheblob::LeaseOps;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    future::{self, Loop},
-    stream, Future, IntoFuture, Stream,
-};
+use futures::{future, stream, Future, Stream};
 use futures_ext::{bounded_traversal, try_boxfuture, BoxFuture, FutureExt, StreamExt};
+use futures_preview::{compat::Future01CompatExt, future::FutureExt as NewFutureExt, TryFutureExt};
 use futures_stats::Timed;
 use lock_ext::LockExt;
 use mononoke_types::ChangesetId;
@@ -272,23 +271,58 @@ where
     Derived: BonsaiDerived,
     Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
 {
-    debug!(
-        ctx.logger(),
-        "derive {} for {}",
-        Derived::NAME,
-        bcs_id.to_hex()
-    );
+    async move {
+        debug!(
+            ctx.logger(),
+            "derive {} for {}",
+            Derived::NAME,
+            bcs_id.to_hex()
+        );
+
+        let lease = repo.get_derived_data_lease_ops();
+        let lease_key = Arc::new(format!(
+            "repo{}.{}.{}",
+            repo.get_repoid().id(),
+            Derived::NAME,
+            bcs_id
+        ));
+
+        let mut leased_state = false;
+        let res = derive_in_loop(
+            ctx,
+            repo,
+            mapping,
+            bcs_id,
+            &mut leased_state,
+            &lease,
+            &lease_key,
+        )
+        .await;
+
+        if leased_state {
+            let _ = lease.release_lease(&lease_key).compat().await;
+        }
+
+        res
+    }
+    .boxed()
+    .compat()
+}
+
+async fn derive_in_loop<Derived, Mapping>(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    mapping: Mapping,
+    bcs_id: ChangesetId,
+    leased_state: &mut bool,
+    lease: &Arc<dyn LeaseOps>,
+    lease_key: &Arc<String>,
+) -> Result<(), Error>
+where
+    Derived: BonsaiDerived,
+    Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
+{
     let event_id = EventId::new();
-    let bcs_fut = bcs_id.load(ctx.clone(), repo.blobstore()).from_err();
-
-    let lease = repo.get_derived_data_lease_ops();
-    let lease_key = Arc::new(format!(
-        "repo{}.{}.{}",
-        repo.get_repoid().id(),
-        Derived::NAME,
-        bcs_id
-    ));
-
     let changeset_fetcher = repo.get_changeset_fetcher();
     let derived_parents = changeset_fetcher
         .get_parents(ctx.clone(), bcs_id)
@@ -303,108 +337,75 @@ where
             }
         });
 
-    bcs_fut.join(derived_parents).and_then({
-        cloned!(ctx);
-        move |(bcs, parents)| {
-            let lease_start = Arc::new(Mutex::new(Instant::now()));
-            let lease_total = Arc::new(Mutex::new(Duration::from_secs(0)));
-            future::loop_fn((), move |()| {
-                lease
-                    .try_add_put_lease(&lease_key)
-                    .then({
-                        cloned!(ctx, lease_key, lease_start, lease_total);
-                        move |result| {
-                            // In case of lease unavailability we do not want to stall
-                            // generation of all derived data, since lease is a soft lock
-                            // it is safe to assume that we successfuly acquired it
-                            match result {
-                                Ok(leased) => {
-                                    let elapsed = lease_start.with(|elapsed| elapsed.elapsed());
-                                    if elapsed > LEASE_WARNING_THRESHOLD {
-                                        let total = lease_total.with(|total| {
-                                            *total += elapsed;
-                                            *total
-                                        });
-                                        lease_start.with(|elapsed| *elapsed = Instant::now());
-                                        warn!(
-                                            ctx.logger(),
-                                            "Can not acquire lease {} for more than {:?}",
-                                            lease_key,
-                                            total
-                                        );
-                                    }
-                                    Ok((leased, false))
-                                }
-                                Err(_) => Ok((false, true)),
-                            }
-                        }
-                    })
-                    .and_then({
-                        cloned!(ctx, repo, mapping, lease, lease_key, bcs, parents);
-                        move |(leased, ignored)| {
-                            mapping
-                                .get(ctx.clone(), vec![bcs_id])
-                                .map(move |mut vs| vs.remove(&bcs_id))
-                                .and_then({
-                                    cloned!(mapping, lease, lease_key);
-                                    move |derived| match derived {
-                                        Some(_) => future::ok(Loop::Break(())).left_future(),
-                                        None => {
-                                            if leased || ignored {
-                                                Derived::derive_from_parents(
-                                                    ctx.clone(),
-                                                    repo,
-                                                    bcs,
-                                                    parents,
-                                                )
-                                                .traced_with_id(
-                                                    &ctx.trace(),
-                                                    "derive::derive_from_parents",
-                                                    trace_args! {
-                                                        "csid" => bcs_id.to_hex().to_string(),
-                                                        "type" => Derived::NAME
-                                                    },
-                                                    event_id,
-                                                )
-                                                .and_then(move |derived| {
-                                                    mapping.put(ctx.clone(), bcs_id, derived)
-                                                })
-                                                .timed(move |stats, _| {
-                                                    STATS::derived_data_latency.add_value(
-                                                        stats.completion_time.as_millis_unchecked()
-                                                            as i64,
-                                                        (Derived::NAME,),
-                                                    );
-                                                    Ok(())
-                                                })
-                                                .map(|_| Loop::Break(()))
-                                                .left_future()
-                                                .right_future()
-                                            } else {
-                                                lease
-                                                    .wait_for_other_leases(&lease_key)
-                                                    .then(|_| Ok(Loop::Continue(())))
-                                                    .right_future()
-                                                    .right_future()
-                                            }
-                                        }
-                                    }
-                                })
-                                .then(move |result| {
-                                    if leased {
-                                        lease
-                                            .release_lease(&lease_key)
-                                            .then(|_| result)
-                                            .right_future()
-                                    } else {
-                                        result.into_future().left_future()
-                                    }
-                                })
-                        }
-                    })
-            })
+    let bcs_fut = bcs_id.load(ctx.clone(), repo.blobstore()).from_err();
+    let (bcs, parents) = bcs_fut.join(derived_parents).compat().await?;
+
+    let lease_start = Arc::new(Mutex::new(Instant::now()));
+    let lease_total = Arc::new(Mutex::new(Duration::from_secs(0)));
+
+    loop {
+        let result = lease.try_add_put_lease(&lease_key).compat().await;
+        // In case of lease unavailability we do not want to stall
+        // generation of all derived data, since lease is a soft lock
+        // it is safe to assume that we successfuly acquired it
+        let (leased, ignored) = match result {
+            Ok(leased) => {
+                let elapsed = lease_start.with(|elapsed| elapsed.elapsed());
+                if elapsed > LEASE_WARNING_THRESHOLD {
+                    let total = lease_total.with(|total| {
+                        *total += elapsed;
+                        *total
+                    });
+                    lease_start.with(|elapsed| *elapsed = Instant::now());
+                    warn!(
+                        ctx.logger(),
+                        "Can not acquire lease {} for more than {:?}", lease_key, total
+                    );
+                }
+                (leased, false)
+            }
+            Err(_) => (false, true),
+        };
+        *leased_state = leased;
+
+        let mut vs = mapping.get(ctx.clone(), vec![bcs_id]).compat().await?;
+        let derived = vs.remove(&bcs_id);
+
+        match derived {
+            Some(_) => {
+                break;
+            }
+            None => {
+                if leased || ignored {
+                    Derived::derive_from_parents(ctx.clone(), repo, bcs, parents)
+                        .traced_with_id(
+                            &ctx.trace(),
+                            "derive::derive_from_parents",
+                            trace_args! {
+                                "csid" => bcs_id.to_hex().to_string(),
+                                "type" => Derived::NAME
+                            },
+                            event_id,
+                        )
+                        .and_then(move |derived| mapping.put(ctx.clone(), bcs_id, derived))
+                        .timed(move |stats, _| {
+                            STATS::derived_data_latency.add_value(
+                                stats.completion_time.as_millis_unchecked() as i64,
+                                (Derived::NAME,),
+                            );
+                            Ok(())
+                        })
+                        .compat()
+                        .await?;
+                    break;
+                } else {
+                    let _ = lease.wait_for_other_leases(&lease_key).compat().await;
+                    continue;
+                }
+            }
         }
-    })
+    }
+    Ok(())
 }
 
 fn fetch_derived_may_panic<Derived, Mapping>(
