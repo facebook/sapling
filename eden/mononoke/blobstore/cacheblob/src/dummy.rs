@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use context::CoreContext;
 use futures::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
 
@@ -20,6 +21,8 @@ impl LeaseOps for DummyLease {
     fn try_add_put_lease(&self, _key: &str) -> BoxFuture<bool, ()> {
         Ok(true).into_future().boxify()
     }
+
+    fn renew_lease_until(&self, _ctx: CoreContext, _key: &str, _done: BoxFuture<(), ()>) {}
 
     fn wait_for_other_leases(&self, _key: &str) -> BoxFuture<(), ()> {
         Ok(()).into_future().boxify()

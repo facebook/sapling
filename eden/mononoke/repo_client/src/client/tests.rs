@@ -15,7 +15,6 @@ use maplit::hashset;
 
 use mononoke_types_mocks::changesetid::ONES_CSID;
 use std::collections::HashSet;
-use tokio_preview as tokio;
 
 #[test]
 fn test_parsing_caps_simple() {
@@ -203,7 +202,12 @@ fn test_pushredirect_config() {
 }
 
 #[fbinit::test]
-async fn get_changed_manifests_stream_test(fb: FacebookInit) -> Result<(), Error> {
+fn get_changed_manifests_stream_test(fb: FacebookInit) -> Result<(), Error> {
+    let mut runtime = tokio_compat::runtime::Runtime::new()?;
+    runtime.block_on_std(get_changed_manifests_stream_test_impl(fb))
+}
+
+async fn get_changed_manifests_stream_test_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo = many_files_dirs::getrepo(fb).await;
 
@@ -269,7 +273,12 @@ async fn get_changed_manifests_stream_test(fb: FacebookInit) -> Result<(), Error
 }
 
 #[fbinit::test]
-async fn get_changed_manifests_stream_test_depth(fb: FacebookInit) -> Result<(), Error> {
+fn get_changed_manifests_stream_test_depth(fb: FacebookInit) -> Result<(), Error> {
+    let mut runtime = tokio_compat::runtime::Runtime::new()?;
+    runtime.block_on_std(get_changed_manifests_stream_test_depth_impl(fb))
+}
+
+async fn get_changed_manifests_stream_test_depth_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo = many_files_dirs::getrepo(fb).await;
 
@@ -326,7 +335,12 @@ async fn get_changed_manifests_stream_test_depth(fb: FacebookInit) -> Result<(),
 }
 
 #[fbinit::test]
-async fn get_changed_manifests_stream_test_base_path(fb: FacebookInit) -> Result<(), Error> {
+fn get_changed_manifests_stream_test_base_path(fb: FacebookInit) -> Result<(), Error> {
+    let mut runtime = tokio_compat::runtime::Runtime::new()?;
+    runtime.block_on_std(get_changed_manifests_stream_test_base_path_impl(fb))
+}
+
+async fn get_changed_manifests_stream_test_base_path_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo = many_files_dirs::getrepo(fb).await;
 

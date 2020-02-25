@@ -183,7 +183,6 @@ mod test {
     use std::io::Write;
     use std::path::Path;
     use tempdir::TempDir;
-    use tokio_preview as tokio;
 
     /// This function creates a new Git tree from the fixture's master Bonsai bookmark,
     /// materializes it to disk, then verifies that libgit produces the same Git tree for it.
@@ -246,9 +245,12 @@ mod test {
     macro_rules! impl_test {
         ($fixture:ident) => {
             #[fbinit::test]
-            async fn $fixture(fb: FacebookInit) -> Result<(), Error> {
-                let repo = fixtures::$fixture::getrepo(fb).await;
-                run_tree_derivation_for_fixture(fb, repo).await
+            fn $fixture(fb: FacebookInit) -> Result<(), Error> {
+                let mut runtime = tokio_compat::runtime::Runtime::new()?;
+                runtime.block_on_std(async move {
+                    let repo = fixtures::$fixture::getrepo(fb).await;
+                    run_tree_derivation_for_fixture(fb, repo).await
+                })
             }
         };
     }

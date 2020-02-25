@@ -5,12 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{hash_map::Entry, HashMap};
-use std::sync::{Arc, Mutex};
-
+use context::CoreContext;
 use futures::sync::oneshot::{channel, Receiver, Sender};
 use futures::{future::Shared, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_preview::{
+    compat::Future01CompatExt,
+    future::{FutureExt as NewFutureExt, TryFutureExt},
+};
+use std::collections::{hash_map::Entry, HashMap};
+use std::sync::{Arc, Mutex};
 
 use crate::LeaseOps;
 
@@ -40,6 +44,20 @@ impl LeaseOps for InProcessLease {
             entry.or_insert((send, recv.shared()));
             Ok(true).into_future().boxify()
         }
+    }
+
+    fn renew_lease_until(&self, _ctx: CoreContext, key: &str, done: BoxFuture<(), ()>) {
+        let this = self.clone();
+        let key = key.to_string();
+        tokio::spawn(
+            async move {
+                done.compat().await?;
+                this.release_lease(&key).compat().await?;
+                Ok(())
+            }
+            .boxed()
+            .compat(),
+        );
     }
 
     fn wait_for_other_leases(&self, key: &str) -> BoxFuture<(), ()> {

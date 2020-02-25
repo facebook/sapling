@@ -86,6 +86,10 @@ pub trait LeaseOps: fmt::Debug + Send + Sync + 'static {
     /// otherwise
     fn try_add_put_lease(&self, key: &str) -> BoxFuture<bool, ()>;
 
+    /// Will keep the lease alive until `done` future resolves.
+    /// Note that it should only be called after successful try_add_put_lease()
+    fn renew_lease_until(&self, ctx: CoreContext, key: &str, done: BoxFuture<(), ()>);
+
     /// Wait for a suitable (cache-defined) period between `try_add_put_lease` attempts.
     /// For caches without a notification method, this should just be a suitable delay.
     /// For caches that can notify on key change, this should wait for that notification.
@@ -119,6 +123,10 @@ where
 {
     fn try_add_put_lease(&self, key: &str) -> BoxFuture<bool, ()> {
         self.as_ref().try_add_put_lease(key)
+    }
+
+    fn renew_lease_until(&self, ctx: CoreContext, key: &str, done: BoxFuture<(), ()>) {
+        self.as_ref().renew_lease_until(ctx, key, done)
     }
 
     fn wait_for_other_leases(&self, key: &str) -> BoxFuture<(), ()> {

@@ -28,7 +28,12 @@ use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
 use crate::GlobalrevPushrebaseHook;
 
 #[fbinit::test]
-async fn pushrebase_assigns_globalrevs(fb: FacebookInit) -> Result<(), Error> {
+fn pushrebase_assigns_globalrevs(fb: FacebookInit) -> Result<(), Error> {
+    let mut runtime = tokio_compat::runtime::Runtime::new()?;
+    runtime.block_on_std(pushrebase_assigns_globalrevs_impl(fb))
+}
+
+async fn pushrebase_assigns_globalrevs_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let (repo, _con) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
         SqliteConnection::open_in_memory()?,
@@ -136,6 +141,11 @@ async fn pushrebase_assigns_globalrevs(fb: FacebookInit) -> Result<(), Error> {
 }
 
 #[fbinit::test]
+fn test_pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Result<(), Error> {
+    let mut runtime = tokio_compat::runtime::Runtime::new()?;
+    runtime.block_on_std(pushrebase_race_assigns_monotonic_globalrevs(fb))
+}
+
 async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Result<(), Error> {
     #[derive(Copy, Clone)]
     struct SleepHook;

@@ -19,7 +19,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
 
 use blobstore::{Blobstore, CountedBlobstore};
-use context::PerfCounterType;
+use context::{CoreContext, PerfCounterType};
 use fbwhoami::FbWhoAmI;
 use mononoke_types::BlobstoreBytes;
 use stats::prelude::*;
@@ -28,7 +28,12 @@ use crate::dummy::DummyLease;
 use crate::CacheBlobstore;
 use crate::CacheOps;
 use crate::LeaseOps;
+use futures_preview::{
+    compat::Future01CompatExt,
+    future::{select, Either as NewEither, FutureExt as NewFutureExt, TryFutureExt},
+};
 use memcache_lock_thrift::LockState;
+use slog::warn;
 
 define_stats! {
     prefix = "mononoke.blobstore.memcache";
@@ -287,6 +292,47 @@ impl LeaseOps for MemcacheOps {
                 res
             })
             .boxify()
+    }
+
+    fn renew_lease_until(&self, ctx: CoreContext, key: &str, done: BoxFuture<(), ()>) {
+        let lockstate = compact_protocol::serialize(&LockState::locked_by(self.hostname.clone()));
+        let lock_ttl = Duration::from_secs(10);
+        let mc_key = self.presence_keygen.key(key);
+        let key = key.to_string();
+        cloned!(self.memcache);
+
+        let this = self.clone();
+        let mut done = done.compat().boxed();
+        tokio::spawn(
+            async move {
+                loop {
+                    let res = memcache
+                        .set_with_ttl(mc_key.clone(), lockstate.clone(), lock_ttl)
+                        .compat()
+                        .await;
+                    if res.is_err() {
+                        warn!(ctx.logger(), "failed to renew lease for {}", mc_key);
+                    }
+
+                    let sleep = tokio_preview::time::delay_for(Duration::from_secs(1));
+                    let res = select(sleep, done).await;
+                    match res {
+                        NewEither::Left((_, new_done)) => {
+                            done = new_done;
+                        }
+                        NewEither::Right(..) => {
+                            break;
+                        }
+                    }
+                }
+
+                this.release_lease(&key).compat().await?;
+                let res: Result<_, ()> = Ok(());
+                res
+            }
+            .boxed()
+            .compat(),
+        );
     }
 
     fn wait_for_other_leases(&self, _key: &str) -> BoxFuture<(), ()> {

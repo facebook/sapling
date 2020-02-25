@@ -1207,6 +1207,16 @@ impl BlobRepo {
         })
     }
 
+    fn renew_hg_generation_lease_forever(
+        &self,
+        ctx: CoreContext,
+        bcs_id: ChangesetId,
+        done: BoxFuture<(), ()>,
+    ) {
+        let key = self.generate_lease_key(&bcs_id);
+        self.derived_data_lease.renew_lease_until(ctx, &key, done)
+    }
+
     fn release_hg_generation_lease(
         &self,
         bcs_id: ChangesetId,
@@ -1435,13 +1445,29 @@ impl BlobRepo {
                                     .and_then({
                                         cloned!(repo);
                                         move |hg_parents| {
-                                            repo.generate_hg_changeset(ctx, bcs_id, bcs, hg_parents)
+                                            let (sender, receiver) = oneshot::channel();
+
+                                            repo.renew_hg_generation_lease_forever(
+                                                ctx.clone(),
+                                                bcs_id,
+                                                receiver.map_err(|_| ()).boxify(),
+                                            );
+
+                                            repo.generate_hg_changeset(
+                                                ctx.clone(),
+                                                bcs_id,
+                                                bcs,
+                                                hg_parents,
+                                            )
+                                            .then(
+                                                move |res| {
+                                                    let _ = sender.send(());
+                                                    res
+                                                },
+                                            )
                                         }
                                     })
-                                    .then(move |res| {
-                                        repo.release_hg_generation_lease(bcs_id)
-                                            .then(move |_| res.map(|hg_cs_id| (hg_cs_id, true)))
-                                    })
+                                    .map(|hg_cs_id| (hg_cs_id, true))
                                     .right_future()
                             }
                         }

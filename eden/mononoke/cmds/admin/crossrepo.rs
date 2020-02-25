@@ -440,7 +440,6 @@ mod test {
     use std::{collections::HashSet, sync::Arc};
     // To support async tests
     use synced_commit_mapping::SyncedCommitMappingEntry;
-    use tokio_preview as tokio;
 
     fn identity_mover(v: &MPath) -> Result<Option<MPath>, Error> {
         Ok(Some(v.clone()))
@@ -451,7 +450,12 @@ mod test {
     }
 
     #[fbinit::test]
-    async fn test_bookmark_diff(fb: FacebookInit) -> Result<(), Error> {
+    fn test_bookmark_diff(fb: FacebookInit) -> Result<(), Error> {
+        let mut runtime = tokio_compat::runtime::Runtime::new()?;
+        runtime.block_on_std(test_bookmark_diff_impl(fb))
+    }
+
+    async fn test_bookmark_diff_impl(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let commit_syncer = init(fb, CommitSyncDirection::LargeToSmall).await?;
 

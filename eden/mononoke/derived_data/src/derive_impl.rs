@@ -12,6 +12,7 @@ use blobstore::Loadable;
 use cacheblob::LeaseOps;
 use cloned::cloned;
 use context::CoreContext;
+use futures::sync::oneshot;
 use futures::{future, stream, Future, Stream};
 use futures_ext::{bounded_traversal, try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use futures_preview::{compat::Future01CompatExt, future::FutureExt as NewFutureExt, TryFutureExt};
@@ -287,21 +288,7 @@ where
             bcs_id
         ));
 
-        let mut leased_state = false;
-        let res = derive_in_loop(
-            ctx,
-            repo,
-            mapping,
-            bcs_id,
-            &mut leased_state,
-            &lease,
-            &lease_key,
-        )
-        .await;
-
-        if leased_state {
-            let _ = lease.release_lease(&lease_key).compat().await;
-        }
+        let res = derive_in_loop(ctx, repo, mapping, bcs_id, &lease, &lease_key).await;
 
         res
     }
@@ -314,7 +301,6 @@ async fn derive_in_loop<Derived, Mapping>(
     repo: BlobRepo,
     mapping: Mapping,
     bcs_id: ChangesetId,
-    leased_state: &mut bool,
     lease: &Arc<dyn LeaseOps>,
     lease_key: &Arc<String>,
 ) -> Result<(), Error>
@@ -366,7 +352,6 @@ where
             }
             Err(_) => (false, true),
         };
-        *leased_state = leased;
 
         let mut vs = mapping.get(ctx.clone(), vec![bcs_id]).compat().await?;
         let derived = vs.remove(&bcs_id);
@@ -377,7 +362,7 @@ where
             }
             None => {
                 if leased || ignored {
-                    Derived::derive_from_parents(ctx.clone(), repo, bcs, parents)
+                    let deriver = Derived::derive_from_parents(ctx.clone(), repo, bcs, parents)
                         .traced_with_id(
                             &ctx.trace(),
                             "derive::derive_from_parents",
@@ -387,7 +372,10 @@ where
                             },
                             event_id,
                         )
-                        .and_then(move |derived| mapping.put(ctx.clone(), bcs_id, derived))
+                        .and_then({
+                            cloned!(ctx);
+                            move |derived| mapping.put(ctx.clone(), bcs_id, derived)
+                        })
                         .timed(move |stats, _| {
                             STATS::derived_data_latency.add_value(
                                 stats.completion_time.as_millis_unchecked() as i64,
@@ -395,8 +383,16 @@ where
                             );
                             Ok(())
                         })
-                        .compat()
-                        .await?;
+                        .compat();
+                    let (sender, receiver) = oneshot::channel();
+                    lease.renew_lease_until(
+                        ctx.clone(),
+                        &lease_key,
+                        receiver.map_err(|_| ()).boxify(),
+                    );
+                    let res = deriver.await;
+                    let _ = sender.send(());
+                    res?;
                     break;
                 } else {
                     let _ = lease.wait_for_other_leases(&lease_key).compat().await;
@@ -900,6 +896,8 @@ mod test {
         fn try_add_put_lease(&self, _key: &str) -> BoxFuture<bool, ()> {
             future::err(()).boxify()
         }
+
+        fn renew_lease_until(&self, _ctx: CoreContext, _key: &str, _done: BoxFuture<(), ()>) {}
 
         fn wait_for_other_leases(&self, _key: &str) -> BoxFuture<(), ()> {
             future::err(()).boxify()

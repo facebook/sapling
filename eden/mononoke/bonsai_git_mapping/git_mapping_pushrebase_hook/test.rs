@@ -20,7 +20,12 @@ use tests_utils::{bookmark, CreateCommitContext};
 use crate::GitMappingPushrebaseHook;
 
 #[fbinit::test]
-async fn pushrebase_populates_git_mapping(fb: FacebookInit) -> Result<(), Error> {
+fn pushrebase_populates_git_mapping(fb: FacebookInit) -> Result<(), Error> {
+    let mut runtime = tokio_compat::runtime::Runtime::new()?;
+    runtime.block_on_std(pushrebase_populates_git_mapping_impl(fb))
+}
+
+async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::test_mock(fb);
     let repo_id = RepositoryId::new(1);
     let (repo, _con) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
