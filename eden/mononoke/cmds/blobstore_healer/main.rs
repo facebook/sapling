@@ -14,14 +14,14 @@ mod replication_lag;
 
 use anyhow::{bail, format_err, Error, Result};
 use blobstore::Blobstore;
-use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
+use blobstore_factory::{make_blobstore, make_sql_factory, BlobstoreOptions, ReadOnlyStorage};
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
 use chrono::Duration as ChronoDuration;
 use clap::{value_t, App, Arg};
 use cloned::cloned;
 use cmdlib::{
     args::{self, get_scuba_sample_builder},
-    helpers::{block_execute, open_sql_with_config_and_mysql_options},
+    helpers::block_execute,
 };
 use configerator::ConfigeratorAPI;
 use context::{CoreContext, SessionContainer};
@@ -132,12 +132,15 @@ fn maybe_schedule_healer_for_storage(
         s => bail!("Storage doesn't use Multiplexed blobstore, got {:?}", s),
     };
 
-    let sync_queue = open_sql_with_config_and_mysql_options::<SqlBlobstoreSyncQueue>(
+    let sync_queue = make_sql_factory(
         fb,
         queue_db,
         mysql_options,
         readonly_storage,
-    );
+        ctx.logger().clone(),
+    )
+    .and_then(|sql_factory| sql_factory.open::<SqlBlobstoreSyncQueue>())
+    .map(|q| q as Arc<dyn BlobstoreSyncQueue>);
 
     let blobstores: HashMap<_, BoxFuture<Arc<dyn Blobstore + 'static>, _>> = {
         let mut blobstores = HashMap::new();
@@ -179,9 +182,7 @@ fn maybe_schedule_healer_for_storage(
     .map(|blobstores| blobstores.into_iter().collect::<HashMap<_, _>>());
 
     let sync_queue = if !dry_run {
-        sync_queue
-            .map(|q| Arc::new(q) as Arc<dyn BlobstoreSyncQueue>)
-            .boxify()
+        sync_queue.boxify()
     } else {
         sync_queue
             .map({
