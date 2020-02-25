@@ -79,6 +79,13 @@ def cure_what_ails_you(
     else:
         fixer.add_problem(EdenfsUnexpectedStatus(status))
 
+    # num_problems and problem_counts are only defined for ProblemFixer
+    if not dry_run:
+        sample = instance.build_sample(
+            "eden_doctor", num_problems=fixer.num_problems, **fixer.problem_counts
+        )
+        instance.log(sample)
+
     if fixer.num_problems == 0:
         out.writeln("No issues detected.", fg=out.GREEN)
         return 0

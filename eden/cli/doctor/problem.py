@@ -6,7 +6,7 @@
 
 import abc
 from enum import IntEnum
-from typing import Optional
+from typing import Dict, Optional
 
 from eden.cli import ui
 
@@ -98,9 +98,15 @@ class ProblemFixer(ProblemTracker):
         self.num_fixed_problems = 0
         self.num_failed_fixes = 0
         self.num_manual_fixes = 0
+        self.problem_counts: Dict[str, int] = {}
 
     def add_problem(self, problem: ProblemBase) -> None:
         self.num_problems += 1
+        problem_class = problem.__class__.__name__
+        if problem_class in self.problem_counts:
+            self.problem_counts[problem_class] += 1
+        else:
+            self.problem_counts[problem_class] = 1
         self._out.writeln("- Found problem:", fg=self._out.YELLOW)
         self._out.writeln(problem.description())
         if isinstance(problem, FixableProblem):
