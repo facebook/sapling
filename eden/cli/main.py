@@ -1554,6 +1554,8 @@ class RageCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
+        sample = instance.build_sample("eden_rage")
+        instance.log(sample)
         rage_processor = instance.get_config_value("rage.reporter", default="")
 
         proc: Optional[subprocess.Popen] = None
