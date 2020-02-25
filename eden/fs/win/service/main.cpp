@@ -32,10 +32,15 @@ using namespace facebook::eden;
 using namespace std;
 using namespace folly;
 
+// TODO(puneetk): Logging on Windows doesn't work when the async is set. Fix the
+// Async logging and enable the default logging below.
+
 // Set the default log level for all eden logs to DBG2
 // Also change the "default" log handler (which logs to stderr) to log
 // messages asynchronously rather than blocking in the logging thread.
-FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
+// FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
+
+FOLLY_INIT_LOGGING_CONFIG("eden=DBG4");
 
 namespace {
 
@@ -151,13 +156,9 @@ int __cdecl main(int argc, char** argv) {
         std::move(privHelper),
         std::move(edenConfig));
     prepareFuture = server->prepare(startupLogger);
-
-    // startupLogger->log("Starting Eden");
   } catch (const std::exception& ex) {
     fprintf(stderr, "Error: failed to start Eden: %s\n", ex.what());
     return -1;
-    // startupLogger->exitUnsuccessfully(
-    //    EX_SOFTWARE, "error starting edenfs: ", folly::exceptionStr(ex));
   }
 
   server->getServer()->serve();
