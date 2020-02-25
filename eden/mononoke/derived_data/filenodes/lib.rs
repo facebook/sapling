@@ -360,6 +360,17 @@ async fn fetch_root_filenode(
     cs_id: ChangesetId,
     repo: &BlobRepo,
 ) -> Result<Option<RootFilenodeInfo>, Error> {
+    // If hg changeset is not generated, then root filenode can't possible be generated
+    // Check it and return None if hg changeset is not generated
+    let maybe_hg_cs_id = repo
+        .get_bonsai_hg_mapping()
+        .get_hg_from_bonsai(ctx.clone(), repo.get_repoid(), cs_id.clone())
+        .compat()
+        .await?;
+    if maybe_hg_cs_id.is_none() {
+        return Ok(None);
+    }
+
     let mf_id = fetch_root_manifest_id(ctx, &cs_id, repo).await?;
 
     // Special case null manifest id if we run into it
