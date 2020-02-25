@@ -254,3 +254,11 @@ class FakeEdenInstance:
         fake_repo = FakeHgRepo()
         fake_repo.commit_checker = bad_commit_checker
         return fake_repo
+
+    def build_sample(
+        self, log_type: str, **kwargs: Union[bool, int, str, float]
+    ) -> None:
+        pass
+
+    def log(self, sample: None) -> int:
+        return 0
