@@ -89,7 +89,7 @@ def is_nfs_mounted(path: str) -> bool:
     return fstype_for_path(path) == "nfs"
 
 
-def get_mountpt(path) -> str:
+def get_mountpt(path: str) -> str:
     if not os.path.exists(path):
         return path
     path = os.path.realpath(path)
