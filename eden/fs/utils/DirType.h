@@ -6,7 +6,12 @@
  */
 
 #pragma once
+#ifdef _WIN32
+#include <folly/portability/SysTypes.h> //@manual
+#include <sys/stat.h>
+#else
 #include <dirent.h>
+#endif
 #include <sys/types.h>
 #include <cstdint>
 
@@ -25,16 +30,68 @@ namespace eden {
  * Portability note: Solaris does not have a d_type field, so this
  * won't compile.  We don't currently have plans to support Solaris.
  */
+
+#ifdef _WIN32
+/**
+ * Convertion between st_mode and d_type on Windows. On Windows the 4th nibble
+ * of mode contains the type of directory entry. Right shifting by 12 bits to
+ * form a d_type.
+ */
+static_assert(S_IFMT == 0xF000, "The S_IFMT on Windows should be 0xF000");
+
+#define DT_UNKNOWN 0
+#define DT_FIFO ((_S_IFIFO) >> 12)
+#define DT_CHR ((_S_IFCHR) >> 12)
+#define DT_DIR ((_S_IFDIR) >> 12)
+#define DT_REG ((_S_IFREG) >> 12)
+
+#define IFTODT(mode) (((mode)&_S_IFMT) >> 12)
+#define DTTOIF(type) (((type) << 12) & _S_IFMT)
+
+#ifndef S_ISDIR
+#define S_ISDIR(mode) (((mode) & (_S_IFDIR)) == (_S_IFDIR) ? 1 : 0)
+#endif
+
+#ifndef S_ISREG
+#define S_ISREG(mode) (((mode) & (_S_IFREG)) == (_S_IFREG) ? 1 : 0)
+#endif
+
+/**
+ * The Window sdk has not defined the S_ISSOCK. I don't think we will ever need
+ * to store a unix domain socket on Eden. Hardcoding it to false.
+ */
+#ifndef S_ISSOCK
+#define S_ISSOCK(mode) (0)
+#endif
+
+/**
+ * We only use d_type from dirent on Windows.
+ */
+struct dirent {
+  unsigned char d_type;
+};
+
 enum class dtype_t : decltype(dirent::d_type) {
   Unknown = DT_UNKNOWN,
   Fifo = DT_FIFO,
   Char = DT_CHR,
   Dir = DT_DIR,
-  Block = DT_BLK,
   Regular = DT_REG,
+};
+#endif
+
+enum class dtype_t : decltype(dirent::d_type) {
+  Unknown = DT_UNKNOWN,
+  Fifo = DT_FIFO,
+  Char = DT_CHR,
+  Dir = DT_DIR,
+  Regular = DT_REG,
+#ifndef _WIN32
+  Block = DT_BLK,
   Symlink = DT_LNK,
   Socket = DT_SOCK,
   Whiteout = DT_WHT,
+#endif
 };
 
 /// Convert to a form suitable for inserting into a stat::st_mode
