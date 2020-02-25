@@ -263,8 +263,7 @@ class EdenTestCase(
         return "memory"
 
 
-# pyre-fixme[13]: Attribute `repo` is never initialized.
-# pyre-fixme[13]: Attribute `repo_name` is never initialized.
+# pyre-ignore[13]: T62487924
 class EdenRepoTest(EdenTestCase):
     """
     Base class for EdenHgTest and EdenGitTest.

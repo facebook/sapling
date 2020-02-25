@@ -25,7 +25,7 @@ libc.munmap.argtypes = [c_void_p, c_size_t]
 
 
 @testcase.eden_repo_test
-# pyre-fixme[13]: Attribute `filename` is never initialized.
+# pyre-ignore[13]: T62487924
 class MmapTest(testcase.EdenRepoTest):
     contents = "abcdef"
     filename: str

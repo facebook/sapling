@@ -14,7 +14,7 @@ from .lib import testcase
 
 
 @testcase.eden_repo_test
-# pyre-fixme[13]: Attribute `expected_mount_entries` is never initialized.
+# pyre-ignore[13]: T62487924
 class BasicTest(testcase.EdenRepoTest):
     """Exercise some fundamental properties of the filesystem.
 

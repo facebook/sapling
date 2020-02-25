@@ -15,10 +15,7 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test
-# pyre-fixme[13]: Attribute `backing_repo` is never initialized.
-# pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
-# pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
-# pyre-fixme[13]: Attribute `repo` is never initialized.
+# pyre-ignore[13]: T62487924
 class StatusDeadlockTest(EdenHgTestCase):
     """
     Test running an "hg status" command that needs to import many directories
@@ -31,6 +28,7 @@ class StatusDeadlockTest(EdenHgTestCase):
     """
 
     commit1: str
+    commit2: str
     expected_status: Dict[str, str] = {}
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
@@ -80,7 +78,6 @@ class StatusDeadlockTest(EdenHgTestCase):
         gen_tree("src", fanouts, create_new_file)
         self._hg_add_many(repo, new_files)
 
-        # pyre-fixme[16]: `StatusDeadlockTest` has no attribute `commit2`.
         self.commit2 = repo.commit("Initial commit.")
         logging.debug("== created second commit")
 

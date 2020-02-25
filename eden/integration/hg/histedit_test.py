@@ -13,10 +13,7 @@ from .lib.histedit_command import HisteditCommand
 
 
 @hg_test
-# pyre-fixme[13]: Attribute `backing_repo` is never initialized.
-# pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
-# pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
-# pyre-fixme[13]: Attribute `repo` is never initialized.
+# pyre-ignore[13]: T62487924
 class HisteditTest(EdenHgTestCase):
     _commit1: str
     _commit2: str

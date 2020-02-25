@@ -91,39 +91,21 @@ class _Hidden:
 
 
 @hg_test
-# pyre-fixme[13]: Attribute `_commit1` is never initialized.
-# pyre-fixme[13]: Attribute `_commit2` is never initialized.
-# pyre-fixme[13]: Attribute `_commit3` is never initialized.
-# pyre-fixme[13]: Attribute `backing_repo` is never initialized.
-# pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
-# pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
-# pyre-fixme[13]: Attribute `repo` is never initialized.
+# pyre-ignore[13]: T62487924
 class HisteditMemoryStorageEngineTest(_Hidden.StorageEngineTest):
     def select_storage_engine(self) -> str:
         return "memory"
 
 
 @hg_test
-# pyre-fixme[13]: Attribute `_commit1` is never initialized.
-# pyre-fixme[13]: Attribute `_commit2` is never initialized.
-# pyre-fixme[13]: Attribute `_commit3` is never initialized.
-# pyre-fixme[13]: Attribute `backing_repo` is never initialized.
-# pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
-# pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
-# pyre-fixme[13]: Attribute `repo` is never initialized.
+# pyre-ignore[13]: T62487924
 class HisteditSQLiteStorageEngineTest(_Hidden.StorageEngineTest):
     def select_storage_engine(self) -> str:
         return "sqlite"
 
 
 @hg_test
-# pyre-fixme[13]: Attribute `_commit1` is never initialized.
-# pyre-fixme[13]: Attribute `_commit2` is never initialized.
-# pyre-fixme[13]: Attribute `_commit3` is never initialized.
-# pyre-fixme[13]: Attribute `backing_repo` is never initialized.
-# pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
-# pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
-# pyre-fixme[13]: Attribute `repo` is never initialized.
+# pyre-ignore[13]: T62487924
 class HisteditRocksDBStorageEngineTest(_Hidden.StorageEngineTest):
     def select_storage_engine(self) -> str:
         return "rocksdb"

@@ -16,10 +16,7 @@ from eden.integration.lib import hgrepo
 
 
 @hg_test
-# pyre-fixme[13]: Attribute `backing_repo` is never initialized.
-# pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
-# pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
-# pyre-fixme[13]: Attribute `repo` is never initialized.
+# pyre-ignore[13]: T62487924
 class UpdateTest(EdenHgTestCase):
     commit1: str
     commit2: str
@@ -470,12 +467,12 @@ class UpdateTest(EdenHgTestCase):
 
 
 @hg_test
-# pyre-fixme[13]: Attribute `backing_repo` is never initialized.
-# pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
-# pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
-# pyre-fixme[13]: Attribute `repo` is never initialized.
+# pyre-ignore[13]: T62487924
 class UpdateCacheInvalidationTest(EdenHgTestCase):
     commit1: str
+    commit2: str
+    commit3: str
+    commit4: str
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
         return {
@@ -491,16 +488,13 @@ class UpdateCacheInvalidationTest(EdenHgTestCase):
         self.commit1 = repo.commit("Initial commit.")
 
         repo.remove_file("dir/file1")
-        # pyre-fixme[16]: `UpdateCacheInvalidationTest` has no attribute `commit2`.
         self.commit2 = repo.commit("Remove file1")
 
         repo.write_file("dir/file3", "three")
-        # pyre-fixme[16]: `UpdateCacheInvalidationTest` has no attribute `commit3`.
         self.commit3 = repo.commit("Add file3")
 
         repo.update(self.commit1)
         repo.write_file("dir/file2", "new two")
-        # pyre-fixme[16]: `UpdateCacheInvalidationTest` has no attribute `commit4`.
         self.commit4 = repo.commit("Change file2")
 
     def _populate_kernel_caches(self):

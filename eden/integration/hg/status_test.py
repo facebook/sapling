@@ -20,10 +20,7 @@ from .lib.hg_extension_test_base import EdenHgTestCase, hg_test
 
 
 @hg_test("TreeOnly")
-# pyre-fixme[13]: Attribute `backing_repo` is never initialized.
-# pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
-# pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
-# pyre-fixme[13]: Attribute `repo` is never initialized.
+# pyre-ignore[13]: T62487924
 class StatusTest(EdenHgTestCase):
     def populate_backing_repo(self, repo: HgRepository) -> None:
         repo.write_file("hello.txt", "hola")
@@ -215,10 +212,7 @@ enforce-parents = false
 # Define a separate TestCase class purely to test with different initial
 # repository contents.
 @hg_test
-# pyre-fixme[13]: Attribute `backing_repo` is never initialized.
-# pyre-fixme[13]: Attribute `backing_repo_name` is never initialized.
-# pyre-fixme[13]: Attribute `config_variant_name` is never initialized.
-# pyre-fixme[13]: Attribute `repo` is never initialized.
+# pyre-ignore[13]: T62487924
 class StatusRevertTest(EdenHgTestCase):
     commit1: str
     commit2: str

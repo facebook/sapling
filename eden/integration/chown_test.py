@@ -11,8 +11,7 @@ import pwd
 from .lib import repobase, testcase
 
 
-# pyre-fixme[13]: Attribute `nobody_gid` is never initialized.
-# pyre-fixme[13]: Attribute `nobody_uid` is never initialized.
+# pyre-ignore[13]: T62487924
 class ChownTest(testcase.EdenRepoTest):
     nobody_uid: int
     nobody_gid: int
