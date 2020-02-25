@@ -12,7 +12,7 @@ use bookmarks::BookmarkName;
 use filestore::Alias;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{
-    hash::{Sha1, Sha256},
+    hash::{GitSha1, Sha1, Sha256},
     ChangesetId, ContentId, MPath,
 };
 use std::str::FromStr;
@@ -94,12 +94,7 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
             let alias_type = AliasType::from_str(parts[0])?;
             let id = &parts[1..].join(NODE_SEP);
             let alias = match alias_type {
-                AliasType::GitSha1 => {
-                    return Err(format_err!(
-                        "Constructing GitSha1 currently requires we known the size"
-                    ))
-                }
-                // TODO AliasType::GitSha1 => Alias::GitSha1(RichGitSha1::from_str(id)?),
+                AliasType::GitSha1 => Alias::GitSha1(GitSha1::from_str(id)?),
                 AliasType::Sha1 => Alias::Sha1(Sha1::from_str(id)?),
                 AliasType::Sha256 => Alias::Sha256(Sha256::from_str(id)?),
             };
