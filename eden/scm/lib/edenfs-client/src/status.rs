@@ -24,7 +24,6 @@ use std::fs::File;
 use std::io;
 use std::io::BufReader;
 use std::io::Read;
-use std::io::Write;
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
 use std::path::Path;
@@ -138,7 +137,7 @@ fn maybe_status_fastpath_internal(
         &dirstate_data,
         &relativizer,
         use_color,
-        &mut io.output,
+        io,
     )?;
 
     if let Ok(version) = status.version.parse::<u32>() {
@@ -422,14 +421,14 @@ impl PrintConfig {
             root_relative: command.hgplain || command.is_present("root-relative"),
         }
     }
-    fn print_status<W: Write>(
+    fn print_status(
         &self,
         repo_root: &Path,
         status: &ScmStatus,
         dirstate_data: &DirstateData,
         relativizer: &HgStatusPathRelativizer,
         use_color: bool,
-        out: &mut W,
+        io: &mut IO,
     ) -> Result<()> {
         let groups = group_entries(&repo_root, &status, &dirstate_data)?;
         let endl = self.endl;
@@ -460,17 +459,20 @@ impl PrintConfig {
                 };
 
                 for path in group {
-                    write!(
-                        out,
+                    io.write(format!(
                         "{}{}{}{}",
                         prefix,
                         &relativizer.relativize(&path).display(),
                         suffix,
                         endl
-                    )?;
+                    ))?;
                     if self.copies {
                         if let Some(ref p) = dirstate_data.copymap.get(path) {
-                            write!(out, "  {}{}", &relativizer.relativize(p).display(), endl)?;
+                            io.write(format!(
+                                "  {}{}",
+                                &relativizer.relativize(p).display(),
+                                endl
+                            ))?;
                         }
                     }
                 }
@@ -808,6 +810,7 @@ mod test {
         files: Vec<(&'a str, Fixture<'a>)>,
         use_color: bool,
         stdout: String,
+        stderr: String,
     }
 
     /// This function is used to drive most of the tests. It runs PrintConfig.print_status(), so it
@@ -838,7 +841,10 @@ mod test {
             print_config.root_relative,
             PathRelativizer::new(hg_args.cwd, repo_root.path()),
         );
-        let mut stdout: Vec<u8> = vec![];
+        let tin = "".as_bytes();
+        let tout = Vec::new();
+        let terr = Vec::new();
+        let mut io = IO::new(tin, tout, Some(terr));
         assert!(print_config
             .print_status(
                 repo_root.path(),
@@ -846,10 +852,19 @@ mod test {
                 &dirstate_data,
                 &relativizer,
                 test_case.use_color,
-                &mut stdout
+                &mut io
             )
             .is_ok());
-        assert_eq!(test_case.stdout, str::from_utf8(&stdout).unwrap());
+        let actual_output = io.output.as_any().downcast_ref::<Vec<u8>>().unwrap();
+        assert_eq!(str::from_utf8(actual_output).unwrap(), test_case.stdout);
+        let actual_error = io
+            .error
+            .as_ref()
+            .unwrap()
+            .as_any()
+            .downcast_ref::<Vec<u8>>()
+            .unwrap();
+        assert_eq!(str::from_utf8(actual_error).unwrap(), test_case.stderr);
     }
 
     fn one_modified_file() -> BTreeMap<Vec<u8>, ScmFileStatus> {
