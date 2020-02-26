@@ -403,7 +403,7 @@ fn cached_regex_match(
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::{facebook, ChangedFileType, HookChangeset, HookChangesetParents};
+    use crate::{ChangedFileType, HookChangeset, HookChangesetParents};
     use aclchecker::AclChecker;
     use assert_matches::assert_matches;
     use bookmarks::BookmarkName;
@@ -601,7 +601,7 @@ mod test {
             let changeset = default_changeset(fb);
             let code = String::from(
                 "hook = function (ctx)\n\
-                 return ctx.is_valid_reviewer('zuck')\n\
+                 return ctx.is_valid_reviewer('pacomctaco')\n\
                  end",
             );
             assert_matches!(
@@ -1807,11 +1807,8 @@ end"#;
     }
 
     fn acl_checker(fb: FacebookInit) -> Arc<Option<AclChecker>> {
-        let checker = AclChecker::new(
-            fb,
-            &Identity::from_groupname(facebook::REVIEWERS_ACL_GROUP_NAME),
-        )
-        .expect("couldnt get acl checker");
+        let checker = AclChecker::new(fb, &Identity::from_groupname("mononoke_aclchecker_test"))
+            .expect("couldnt get acl checker");
         assert!(checker.do_wait_updated(10000));
         Arc::new(Some(checker))
     }
