@@ -4,18 +4,20 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import getpass
 import json
 import logging
 import platform
 import random
 import socket
-from typing import Optional, Tuple, TypeVar
+from typing import Dict, Optional, Tuple, TypeVar, Union
 
 from . import version
 
 
-log = logging.getLogger(__name__)
+log: logging.Logger = logging.getLogger(__name__)
 
 _session_id: Optional[int] = None
 
@@ -23,10 +25,10 @@ T = TypeVar("T", bound="TelemetryPayload")
 
 
 class TelemetryPayload:
-    def __init__(self):
-        self.ints = {}
-        self.strings = {}
-        self.doubles = {}
+    def __init__(self) -> None:
+        self.ints: Dict[str, int] = {}
+        self.strings: Dict[str, str] = {}
+        self.doubles: Dict[str, float] = {}
 
     def add_int(self: T, name: str, value: int) -> T:
         self.ints[name] = value
@@ -45,7 +47,7 @@ class TelemetryPayload:
         return self
 
     def get_json(self: T) -> str:
-        data = {}
+        data: Dict[str, Union[Dict[str, str], Dict[str, int], Dict[str, float]]] = {}
         data["int"] = self.ints
         data["normal"] = self.strings
         if self.doubles:
