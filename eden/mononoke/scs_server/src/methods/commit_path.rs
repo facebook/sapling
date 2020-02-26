@@ -214,28 +214,30 @@ impl SourceControlServiceImpl {
             .history(skip, params.after_timestamp, params.before_timestamp)
             .await?;
 
-        if params.format == thrift::HistoryFormat::COMMIT_INFO {
-            let history_resp = history
-                .map_err(errors::ServiceError::from)
-                .map(|cs_ctx| async {
-                    match cs_ctx {
-                        Ok(cs) => (&repo, cs, &params.identity_schemes).into_response().await,
-                        Err(er) => Err(er),
-                    }
+        match params.format {
+            thrift::HistoryFormat::COMMIT_INFO => {
+                let history_resp = history
+                    .map_err(errors::ServiceError::from)
+                    .map(|cs_ctx| async {
+                        match cs_ctx {
+                            Ok(cs) => (&repo, cs, &params.identity_schemes).into_response().await,
+                            Err(er) => Err(er),
+                        }
+                    })
+                    .buffered(100)
+                    .take(number)
+                    .try_collect::<Vec<_>>()
+                    .await?;
+
+                Ok(thrift::CommitPathHistoryResponse {
+                    history: thrift::History::commit_infos(history_resp),
                 })
-                .buffered(100)
-                .take(number)
-                .try_collect::<Vec<_>>()
-                .await?;
-            Ok(thrift::CommitPathHistoryResponse {
-                history: thrift::History::commit_infos(history_resp),
-            })
-        } else {
-            Err(errors::invalid_request(format!(
+            }
+            other_format => Err(errors::invalid_request(format!(
                 "unsupported file history format {}",
-                params.format
+                other_format
             ))
-            .into())
+            .into()),
         }
     }
 }

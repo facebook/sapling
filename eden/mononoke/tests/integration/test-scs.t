@@ -529,6 +529,15 @@ log skip and time filters conflict
   For more information try --help
   [1]
 
+log request a single commit
+  $ scsc log --repo repo -i "$COMMIT_F" --path b --limit 1
+  Commit: 96b51bc6787d9cb7ba1336d22674536bea2ef54e
+  Parent: 29012511b62d6aab72218098bc5a9e1de1ad308f
+  Date: 2020-01-01 00:00:00 +00:00
+  Author: test
+  
+  log-check-4
+  
 lookup, commit without globalrev
   $ scsc lookup --repo repo  -B BOOKMARK_B -S bonsai,hg,globalrev
   bonsai=c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb
