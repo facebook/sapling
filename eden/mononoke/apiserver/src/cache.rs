@@ -79,7 +79,7 @@ impl CacheManager {
     fn set(&self, key: String, value: Bytes) -> impl Future<Item = (), Error = ()> {
         let key = self.keygen.key(key);
         let _ = self.cachelib.set_cached(&key, &value.to_vec());
-        self.memcache.set(key, value)
+        self.memcache.set(key, bytes_ext::copy_from_old(value))
     }
 
     pub fn get_or_fill<
@@ -200,7 +200,10 @@ mod test {
         let serialized_bytes = Bytes::from(serialized.clone());
 
         runtime
-            .block_on(manager.memcache.set(keygen_key.clone(), serialized_bytes))
+            .block_on(manager.memcache.set(
+                keygen_key.clone(),
+                bytes_ext::copy_from_old(serialized_bytes),
+            ))
             .unwrap();
 
         let result = manager.cachelib.get_cached(&keygen_key).unwrap();
