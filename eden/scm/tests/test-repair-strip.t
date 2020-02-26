@@ -76,11 +76,6 @@
   data/b.i
   data/c.i
   rolling back interrupted transaction
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 2 changesets, 2 total revisions
   $ teststrip 0 2 r .hg/store/data/b.i
   % before update 0, strip 2
   changeset:   0:cb9a9f314b8b
@@ -141,10 +136,5 @@
   data/b.i
   data/c.i
   rolling back interrupted transaction
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  2 files, 2 changesets, 2 total revisions
 
   $ cd ..

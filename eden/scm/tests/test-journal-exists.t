@@ -18,11 +18,6 @@
 
   $ hg recover
   rolling back interrupted transaction
-  checking changesets
-  checking manifests
-  crosschecking files in changesets and manifests
-  checking files
-  1 files, 1 changesets, 1 total revisions
 
 Check that zero-size journals are correctly aborted:
 

@@ -5019,10 +5019,10 @@ def recover(ui, repo):
     interrupted operation. It should only be necessary when Mercurial
     suggests it.
 
-    Returns 0 if successful, 1 if nothing to recover or verify fails.
+    Returns 0 if successful, 1 if nothing to recover.
     """
     if repo.recover():
-        return hg.verify(repo, None)
+        return 0
     return 1
 
 
