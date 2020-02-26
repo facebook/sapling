@@ -384,7 +384,6 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
                 contenders.update(set(h.files()))
             except AttributeError:
                 pass
-
         changed = status.modified + status.added + status.removed
         newfiles = [f for f in changed if f in contenders]
         if not newfiles:
@@ -425,8 +424,7 @@ def dorecord(ui, repo, commitfunc, cmdsuggest, backupall, filterfn, *pats, **opt
 
             fp = stringio()
             for c in chunks:
-                fname = c.filename()
-                if fname in backups:
+                if c.filename() in backups:
                     c.write(fp)
             dopatch = fp.tell()
             fp.seek(0)

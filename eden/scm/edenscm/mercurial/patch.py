@@ -370,37 +370,37 @@ def readgitpatch(lr):
     gp = None
     gitpatches = []
     for line in lr:
-        line = line.rstrip(" \r\n")
-        if line.startswith("diff --git a/"):
+        line = line.rstrip(b" \r\n")
+        if line.startswith(b"diff --git a/"):
             m = gitre.match(line)
             if m:
                 if gp:
                     gitpatches.append(gp)
                 dst = m.group(2)
-                gp = patchmeta(dst)
+                gp = patchmeta(pycompat.decodeutf8(dst))
         elif gp:
-            if line.startswith("--- "):
+            if line.startswith(b"--- "):
                 gitpatches.append(gp)
                 gp = None
                 continue
-            if line.startswith("rename from "):
+            if line.startswith(b"rename from "):
                 gp.op = "RENAME"
-                gp.oldpath = line[12:]
-            elif line.startswith("rename to "):
-                gp.path = line[10:]
-            elif line.startswith("copy from "):
+                gp.oldpath = pycompat.decodeutf8(line[12:])
+            elif line.startswith(b"rename to "):
+                gp.path = pycompat.decodeutf8(line[10:])
+            elif line.startswith(b"copy from "):
                 gp.op = "COPY"
-                gp.oldpath = line[10:]
-            elif line.startswith("copy to "):
-                gp.path = line[8:]
-            elif line.startswith("deleted file"):
+                gp.oldpath = pycompat.decodeutf8(line[10:])
+            elif line.startswith(b"copy to "):
+                gp.path = pycompat.decodeutf8(line[8:])
+            elif line.startswith(b"deleted file"):
                 gp.op = "DELETE"
-            elif line.startswith("new file mode "):
+            elif line.startswith(b"new file mode "):
                 gp.op = "ADD"
                 gp.setmode(int(line[-6:], 8))
-            elif line.startswith("new mode "):
+            elif line.startswith(b"new mode "):
                 gp.setmode(int(line[-6:], 8))
-            elif line.startswith("GIT binary patch"):
+            elif line.startswith(b"GIT binary patch"):
                 gp.binary = True
     if gp:
         gitpatches.append(gp)
@@ -426,7 +426,7 @@ class linereader(object):
         return self.fp.readline()
 
     def __iter__(self):
-        return iter(self.readline, "")
+        return iter(self.readline, b"")
 
 
 class abstractbackend(object):
@@ -649,7 +649,7 @@ class repobackend(abstractbackend):
 
 
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
-unidesc = re.compile("@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
+unidesc = re.compile(b"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
 contextdesc = re.compile("(?:---|\*\*\*) (\d+)(?:,(\d+))? (?:---|\*\*\*)")
 eolmodes = ["strict", "crlf", "lf", "auto"]
 
@@ -681,15 +681,15 @@ class patchfile(object):
                 self.mode = mode
             if self.lines:
                 # Normalize line endings
-                if self.lines[0].endswith("\r\n"):
-                    self.eol = "\r\n"
-                elif self.lines[0].endswith("\n"):
-                    self.eol = "\n"
+                if self.lines[0].endswith(b"\r\n"):
+                    self.eol = b"\r\n"
+                elif self.lines[0].endswith(b"\n"):
+                    self.eol = b"\n"
                 if eolmode != "strict":
                     nlines = []
                     for l in self.lines:
-                        if l.endswith("\r\n"):
-                            l = l[:-2] + "\n"
+                        if l.endswith(b"\r\n"):
+                            l = l[:-2] + b"\n"
                         nlines.append(l)
                     self.lines = nlines
         else:
@@ -731,7 +731,7 @@ class patchfile(object):
                 rawlines.append(l)
             lines = rawlines
 
-        self.backend.setfile(fname, "".join(lines), mode, self.copysource)
+        self.backend.setfile(fname, b"".join(lines), mode, self.copysource)
 
     def printfile(self, warn):
         if self.fileprinted:
@@ -924,14 +924,18 @@ class header(object):
     def files(self):
         match = self.diffgit_re.match(self.header[0])
         if match:
-            fromfile, tofile = match.groups()
+            fromfile, tofile = [pycompat.decodeutf8(f) for f in match.groups()]
             if fromfile == tofile:
                 return [fromfile]
             return [fromfile, tofile]
         else:
-            return self.diff_re.match(self.header[0]).groups()
+            return [
+                pycompat.decodeutf8(f)
+                for f in self.diff_re.match(self.header[0]).groups()
+            ]
 
     def filename(self):
+        # type: () -> str
         return self.files()[-1]
 
     def __repr__(self):
@@ -946,7 +950,7 @@ class header(object):
         for h in self.header:
             matched = self.copyre.match(h)
             if matched:
-                return matched.group(1)
+                return pycompat.decodeutf8(matched.group(1))
         return None
 
     def special(self):
@@ -1238,7 +1242,7 @@ the hunk is left unchanged.
         if skipall is None:
             h.pretty(fd)
         msg = _("examine changes to %s?") % _(" and ").join(
-            "'%s'" % decodeutf8(f) for f in h.files()
+            "'%s'" % f for f in h.files()
         )
         r, skipfile, skipall, np = prompt(skipfile, skipall, msg, None)
         if not r:
@@ -1251,14 +1255,10 @@ the hunk is left unchanged.
             if skipfile is None and skipall is None:
                 chunk.pretty(fd)
             if total == 1:
-                msg = messages["single"][operation] % decodeutf8(chunk.filename())
+                msg = messages["single"][operation] % chunk.filename()
             else:
                 idx = pos - len(h.hunks) + i
-                msg = messages["multiple"][operation] % (
-                    idx,
-                    total,
-                    decodeutf8(chunk.filename()),
-                )
+                msg = messages["multiple"][operation] % (idx, total, chunk.filename())
             r, skipfile, skipall, newpatches = prompt(skipfile, skipall, msg, chunk)
             if r:
                 if fixoffset:
@@ -1454,7 +1454,7 @@ class hunk(object):
 
     def _fixnewline(self, lr):
         l = lr.readline()
-        if l.startswith("\ "):
+        if l.startswith(b"\ "):
             diffhelpers.fix_newline(self.hunk, self.a, self.b)
         else:
             lr.push(l)
@@ -1561,9 +1561,10 @@ class binhunk(object):
         self.text = text
 
 
-def parsefilename(str):
+def parsefilename(s):
+    # type: bytes -> str
     # --- filename \t|space stuff
-    s = str[4:].rstrip("\r\n")
+    s = pycompat.decodeutf8(s)[4:].rstrip("\r\n")
     i = s.find("\t")
     if i < 0:
         i = s.find(" ")
@@ -1968,19 +1969,19 @@ def iterhunks(fp):
     context = None
     lr = linereader(fp)
 
-    for x in iter(lr.readline, ""):
+    for x in iter(lr.readline, b""):
         if state == BFILE and (
-            (not context and x[0] == "@")
-            or (context is not False and x.startswith("***************"))
-            or x.startswith("GIT binary patch")
+            (not context and x[0:1] == b"@")
+            or (context is not False and x.startswith(b"***************"))
+            or x.startswith(b"GIT binary patch")
         ):
             gp = None
             if gitpatches and gitpatches[-1].ispatching(afile, bfile):
                 gp = gitpatches.pop()
-            if x.startswith("GIT binary patch"):
+            if x.startswith(b"GIT binary patch"):
                 h = binhunk(lr, gp.path)
             else:
-                if context is None and x.startswith("***************"):
+                if context is None and x.startswith(b"***************"):
                     context = True
                 h = hunk(x, hunknum + 1, lr, context)
             hunknum += 1
@@ -1988,8 +1989,8 @@ def iterhunks(fp):
                 emitfile = False
                 yield "file", (afile, bfile, h, gp and gp.copy() or None)
             yield "hunk", h
-        elif x.startswith("diff --git a/"):
-            m = gitre.match(x.rstrip(" \r\n"))
+        elif x.startswith(b"diff --git a/"):
+            m = gitre.match(x.rstrip(b" \r\n"))
             if not m:
                 continue
             if gitpatches is None:
@@ -1999,36 +2000,37 @@ def iterhunks(fp):
                     g.copy() for g in gitpatches if g.op in ("COPY", "RENAME")
                 ]
                 gitpatches.reverse()
-            afile = "a/" + m.group(1)
-            bfile = "b/" + m.group(2)
+            afile = "a/" + pycompat.decodeutf8(m.group(1))
+            bfile = "b/" + pycompat.decodeutf8(m.group(2))
             while gitpatches and not gitpatches[-1].ispatching(afile, bfile):
                 gp = gitpatches.pop()
-                yield "file", ("a/" + gp.path, "b/" + gp.path, None, gp.copy())
+                file = pycompat.decodeutf8(gp.path)
+                yield "file", ("a/" + file, "b/" + file, None, gp.copy())
             if not gitpatches:
                 raise PatchError(
                     _('failed to synchronize metadata for "%s"') % afile[2:]
                 )
             gp = gitpatches[-1]
             newfile = True
-        elif x.startswith("---"):
+        elif x.startswith(b"---"):
             # check for a unified diff
             l2 = lr.readline()
-            if not l2.startswith("+++"):
+            if not l2.startswith(b"+++"):
                 lr.push(l2)
                 continue
             newfile = True
             context = False
             afile = parsefilename(x)
             bfile = parsefilename(l2)
-        elif x.startswith("***"):
+        elif x.startswith(b"***"):
             # check for a context diff
             l2 = lr.readline()
-            if not l2.startswith("---"):
+            if not l2.startswith(b"---"):
                 lr.push(l2)
                 continue
             l3 = lr.readline()
             lr.push(l3)
-            if not l3.startswith("***************"):
+            if not l3.startswith(b"***************"):
                 lr.push(l2)
                 continue
             newfile = True
@@ -2044,7 +2046,8 @@ def iterhunks(fp):
 
     while gitpatches:
         gp = gitpatches.pop()
-        yield "file", ("a/" + gp.path, "b/" + gp.path, None, gp.copy())
+        file = pycompat.decodeutf8(gp.path)
+        yield "file", ("a/" + file, "b/" + file, None, gp.copy())
 
 
 def applybindelta(binchunk, data):
@@ -2176,7 +2179,7 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1, prefix="", eolmode="str
                     if gp.op == "ADD":
                         # Added files without content have no hunk and
                         # must be created
-                        data = ""
+                        data = b""
                 if data or mode:
                     if gp.op in ("ADD", "RENAME", "COPY") and backend.exists(gp.path):
                         raise PatchError(

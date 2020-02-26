@@ -343,4 +343,3 @@ Rebasing commits outside X:: can be surprising and more easily cause conflicts.
   o  1 ac2f7407182b A
   |
   o  0 48b9aae0607f Z
-
