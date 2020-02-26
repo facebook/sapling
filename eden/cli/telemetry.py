@@ -84,15 +84,6 @@ def get_os_and_ver() -> Tuple[str, str]:
     return os, ver
 
 
-def get_eden_ver() -> str:
-    # TODO: use generated information from  __manifest__.py for this
-    # instead of querying the RPM database to determine the version
-    edenver = version.get_installed_eden_rpm_version()
-    if edenver is None:
-        edenver = ""
-    return edenver
-
-
 def build_base_sample(log_type: str) -> TelemetryPayload:
     sample = TelemetryPayload()
     sample.add_string("type", log_type)
@@ -111,7 +102,7 @@ def build_base_sample(log_type: str) -> TelemetryPayload:
         sample.add_string("os", os)
         sample.add_string("osver", os_ver)
 
-        edenver = get_eden_ver()
+        edenver = version.get_current_version()
         sample.add_string("edenver", edenver)
 
         return sample

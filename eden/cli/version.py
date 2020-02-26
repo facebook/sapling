@@ -34,3 +34,28 @@ def format_eden_version(parts: Optional[Tuple[str, str]]) -> str:
 
 def get_installed_eden_rpm_version() -> str:
     return format_eden_version(get_installed_eden_rpm_version_parts())
+
+
+def get_current_version_parts() -> Tuple[str, str]:
+    """Get a tuple containing (version, release) of the currently running code.
+
+    The version and release strings will both be the empty string if this code is part
+    of a development build that is not a released package.
+    """
+    try:
+        from __manifest__ import fbmake
+
+        return (fbmake.get("version", ""), fbmake.get("release", ""))
+    except ImportError:
+        # Builds outside of fbsource won't have __manifest__.fbmake
+        # TODO: we should eventually generate a manifest file in CMake-based builds.
+        return ("", "")
+
+
+def get_current_version() -> str:
+    """Get a human-readable string describing the version of the currently running code.
+
+    Returns "-" when running a development build that is not part of an official
+    versioned release.
+    """
+    return format_eden_version(get_current_version_parts())
