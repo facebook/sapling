@@ -65,14 +65,15 @@ Check can walk fine on the multiplex with scrub-blobstore enabled in ReportOnly 
   1 Walking roots * (glob)
   1 Walking edge types * (glob)
   1 Walking node types * (glob)
-  27 scrub: blobstore_id BlobstoreId(0) not repaired for repo0000.
+  * scrub: blobstore_id BlobstoreId(0) not repaired for repo0000. (glob)
   1 Final count: (37, 37)
   1 Walked* (glob)
 
 Check scuba data
-  $ wc -l < scuba-reportonly.json
-  27
-  $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .repo, .walk_type ] | @csv' < scuba-reportonly.json | sort
+Note - we might get duplicate reports, we just expect that there should not be a lot of them
+  $ LINES="$(wc -l < scuba-reportonly.json)"
+  $ [[ $LINES -lt 50 ]]
+  $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .repo, .walk_type ] | @csv' < scuba-reportonly.json | sort | uniq
   1,"scrub_repair","repo0000.alias.gitsha1.7371f47a6f8bd23a8fa1a8b2a9479cdd76380e54","repo","scrub"
   1,"scrub_repair","repo0000.alias.gitsha1.8c7e5a667f1b771847fe88c01c3de34413a1b220","repo","scrub"
   1,"scrub_repair","repo0000.alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c","repo","scrub"
@@ -111,9 +112,10 @@ Check can walk fine on the multiplex with scrub-blobstore enabled in Repair mode
   1 Walked* (glob)
 
 Check scuba data
-  $ wc -l < scuba-repair.json
-  27
-  $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .repo, .walk_type ] | @csv' < scuba-repair.json | sort
+Note - we might get duplicate repairs, we just expect that there should not be a lot of them
+  $ LINES="$(wc -l < scuba-repair.json)"
+  $ [[ $LINES -lt 50 ]]
+  $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .repo, .walk_type ] | @csv' < scuba-repair.json | sort | uniq
   0,"scrub_repair","repo0000.alias.gitsha1.7371f47a6f8bd23a8fa1a8b2a9479cdd76380e54","repo","scrub"
   0,"scrub_repair","repo0000.alias.gitsha1.8c7e5a667f1b771847fe88c01c3de34413a1b220","repo","scrub"
   0,"scrub_repair","repo0000.alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c","repo","scrub"

@@ -260,8 +260,20 @@ fn bonsai_to_hg_mapping_step(
             .map(|((), hg_cs_id)| Some(hg_cs_id))
             .left_future()
     } else {
-        repo.get_bonsai_hg_mapping()
-            .get_hg_from_bonsai(ctx, repo.get_repoid(), bcs_id)
+        // Check that both filenodes and hg changesets are derived
+        FilenodesOnlyPublic::is_derived(&ctx, &repo, &bcs_id)
+            .from_err()
+            .join(
+                repo.get_bonsai_hg_mapping()
+                    .get_hg_from_bonsai(ctx, repo.get_repoid(), bcs_id),
+            )
+            .map(|(filenodes_derived, maybe_hg_cs_id)| {
+                if filenodes_derived {
+                    maybe_hg_cs_id
+                } else {
+                    None
+                }
+            })
             .right_future()
     };
 

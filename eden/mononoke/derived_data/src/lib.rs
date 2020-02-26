@@ -118,6 +118,16 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         .map(|underived| underived.len() as u64)
         .boxify()
     }
+
+    fn is_derived(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csid: &ChangesetId,
+    ) -> BoxFuture<bool, DeriveError> {
+        Self::count_underived(ctx, repo, csid, 1)
+            .map(|count| count == 0)
+            .boxify()
+    }
 }
 
 /// After derived data was generated then it will be stored in BonsaiDerivedMapping, which is

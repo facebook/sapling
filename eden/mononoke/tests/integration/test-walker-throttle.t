@@ -52,7 +52,7 @@ Check writes throttle in Repair mode
   1 Walking roots * (glob)
   1 Walking edge types * (glob)
   1 Walking node types * (glob)
-  27 scrub: blobstore_id BlobstoreId(0) repaired for repo0000.
+  * scrub: blobstore_id BlobstoreId(0) repaired for repo0000. (glob)
   1 Final count: (37, 37)
   1 Walked* (glob)
   $ END_SECS=$(/usr/bin/date "+%s")

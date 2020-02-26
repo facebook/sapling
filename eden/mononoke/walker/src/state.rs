@@ -96,7 +96,10 @@ impl WalkStateCHashMap {
         match &target_node {
             Node::BonsaiChangeset(bcs_id) => self.visited_bcs.insert(*bcs_id, ()).is_none(),
             // TODO - measure if worth tracking - the mapping is cachelib enabled.
-            Node::BonsaiHgMapping(bcs_id) => self.visited_bcs_mapping.insert(*bcs_id, ()).is_none(),
+            Node::BonsaiHgMapping(bcs_id) => {
+                // Does not insert, see record_resolved_visit
+                !self.visited_bcs_mapping.contains_key(bcs_id)
+            }
             Node::BonsaiPhaseMapping(bcs_id) => {
                 // Does not insert, as can only prune visits once data resolved, see record_resolved_visit
                 !self.visited_bcs_phase.contains_key(bcs_id)
@@ -121,6 +124,9 @@ impl WalkStateCHashMap {
             ) => {
                 // Only retain visit if already public, otherwise it could mutate between walks.
                 self.visited_bcs_phase.insert(bcs_id, ());
+            }
+            (&Node::BonsaiHgMapping(bcs_id), &NodeData::BonsaiHgMapping(Some(_))) => {
+                self.visited_bcs_mapping.insert(bcs_id, ());
             }
             _ => (),
         }
