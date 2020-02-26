@@ -32,7 +32,10 @@ use futures::stream::{self, futures_unordered, FuturesUnordered, Stream};
 use futures::sync::oneshot;
 use futures::IntoFuture;
 use futures_ext::{spawn_future, try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
-use futures_preview::{compat::Future01CompatExt, future::FutureExt as NewFutureExt};
+use futures_preview::{
+    compat::Future01CompatExt,
+    future::{self as new_future, FutureExt as NewFutureExt, TryFutureExt},
+};
 use futures_stats::Timed;
 use manifest::{Entry, Manifest, ManifestOps};
 use maplit::hashmap;
@@ -57,6 +60,7 @@ use std::{
     collections::{HashMap, HashSet, VecDeque},
     convert::From,
     sync::{Arc, Mutex},
+    time::Duration,
 };
 use time_ext::DurationExt;
 use topo_sort::sort_topological;
@@ -1169,13 +1173,14 @@ impl BlobRepo {
         cloned!(self.bonsai_hg_mapping, self.derived_data_lease);
         let repo = self.clone();
 
-        loop_fn((), move |()| {
+        let backoff_ms = 200;
+        loop_fn(backoff_ms, move |mut backoff_ms| {
             cloned!(ctx, key);
             derived_data_lease
                 .try_add_put_lease(&key)
                 .or_else(|_| Ok(false))
                 .and_then({
-                    cloned!(bcs_id, bonsai_hg_mapping, derived_data_lease, repo);
+                    cloned!(bcs_id, bonsai_hg_mapping, repo);
                     move |leased| {
                         let maybe_hg_cs =
                             bonsai_hg_mapping.get_hg_from_bonsai(ctx.clone(), repoid, bcs_id);
@@ -1195,10 +1200,19 @@ impl BlobRepo {
                                     Some(hg_cs_id) => {
                                         future::ok(Loop::Break(Some(hg_cs_id))).left_future()
                                     }
-                                    None => derived_data_lease
-                                        .wait_for_other_leases(&key)
-                                        .then(|_| Ok(Loop::Continue(())))
-                                        .right_future(),
+                                    None => tokio_preview::time::delay_for(Duration::from_millis(
+                                        backoff_ms,
+                                    ))
+                                    .then(|_| new_future::ready(Ok(())))
+                                    .compat()
+                                    .then(move |_: Result<(), Error>| {
+                                        backoff_ms *= 2;
+                                        if backoff_ms >= 1000 {
+                                            backoff_ms = 1000;
+                                        }
+                                        Ok(Loop::Continue(backoff_ms))
+                                    })
+                                    .right_future(),
                                 })
                                 .right_future()
                         }

@@ -328,6 +328,7 @@ where
 
     let lease_start = Arc::new(Mutex::new(Instant::now()));
     let lease_total = Arc::new(Mutex::new(Duration::from_secs(0)));
+    let mut backoff_ms = 200;
 
     loop {
         let result = lease.try_add_put_lease(&lease_key).compat().await;
@@ -395,7 +396,12 @@ where
                     res?;
                     break;
                 } else {
-                    let _ = lease.wait_for_other_leases(&lease_key).compat().await;
+                    let _ = tokio_preview::time::delay_for(Duration::from_millis(backoff_ms)).await;
+
+                    backoff_ms *= 2;
+                    if backoff_ms >= 1000 {
+                        backoff_ms = 1000;
+                    }
                     continue;
                 }
             }
@@ -862,7 +868,7 @@ mod test {
             .block_on(lease.release_lease(&lease_key))
             .map_err(|_| Error::msg("failed to release a lease"))?;
 
-        runtime.block_on(tokio_timer::sleep(Duration::from_millis(300)))?;
+        runtime.block_on(tokio_timer::sleep(Duration::from_millis(3000)))?;
         let result = match output.with(|output| output.pop()) {
             Some(result) => result?,
             None => panic!("scheduled derivation should have been completed"),
