@@ -277,20 +277,21 @@ def _bookmarks(orig, ui, repo, *names, **opts):
     delete = opts.get("delete")
     remotepath = opts.get("remote_path")
     path = ui.paths.getpath(remotepath or None, default=("default"))
-    with repo.wlock(), repo.lock(), repo.transaction("bookmarks"):
-        if pattern:
-            destpath = path.pushloc or path.loc
-            other = hg.peer(repo, opts, destpath)
-            if not names:
-                raise error.Abort(
-                    "--list-remote requires a bookmark pattern",
-                    hint='use "hg book" to get a list of your local bookmarks',
-                )
-            else:
-                fetchedbookmarks = other.listkeyspatterns("bookmarks", patterns=names)
-            _showbookmarks(ui, fetchedbookmarks, **opts)
-            return
-        elif delete and "remotenames" in extensions._extensions:
+
+    if pattern:
+        destpath = path.pushloc or path.loc
+        other = hg.peer(repo, opts, destpath)
+        if not names:
+            raise error.Abort(
+                "--list-remote requires a bookmark pattern",
+                hint='use "hg book" to get a list of your local bookmarks',
+            )
+        else:
+            fetchedbookmarks = other.listkeyspatterns("bookmarks", patterns=names)
+        _showbookmarks(ui, fetchedbookmarks, **opts)
+        return
+    elif delete and "remotenames" in extensions._extensions:
+        with repo.wlock(), repo.lock(), repo.transaction("bookmarks"):
             existing_local_bms = set(repo._bookmarks.keys())
             scratch_bms = []
             other_bms = []
@@ -310,8 +311,8 @@ def _bookmarks(orig, ui, repo, *names, **opts):
 
             if len(other_bms) > 0 or len(scratch_bms) == 0:
                 return orig(ui, repo, *other_bms, **opts)
-        else:
-            return orig(ui, repo, *names, **opts)
+    else:
+        return orig(ui, repo, *names, **opts)
 
 
 def _showbookmarks(ui, remotebookmarks, **opts):
