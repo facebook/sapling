@@ -53,14 +53,14 @@ Make a really non-public commit by importing it and not advancing bookmarks
   $ cd ..
   $ blobimport repo-hg/.hg repo --no-bookmark
 
-Remove the phase information so we don't use a cached Public value
+Remove the phase information so we do not use a cached public value
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";
 
 Update filenode for public commit C to have linknode pointing to non-public commit D
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE filenodes SET linknode=x'$HGCOMMITCNEW' where path_hash=x'$PATHHASHC'"
 
 validate, expect failures on phase info, as we now point to a non-public commit
-  $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore validate -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
+  $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore validate --scuba-log-file scuba.json -I deep -I marker -q --bookmark master_bookmark 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
@@ -69,3 +69,9 @@ validate, expect failures on phase info, as we now point to a non-public commit
   Final count: * (glob)
   Walked* (glob)
   Nodes,Pass,Fail:52,7,1; EdgesChecked:16; CheckType:Pass,Fail Total:7,1 BonsaiChangesetPhaseIsPublic:3,1 HgLinkNodePopulated:4,0
+
+Check scuba data
+  $ wc -l < scuba.json
+  1
+  $ jq -r '.int * .normal | [ .check_fail, .check_type, .node_key, .node_path, .node_type, .repo, .walk_type ] | @csv' < scuba.json | sort
+  1,"bonsai_phase_is_public","changeset.blake2.2b06a8547bfe6a3ac79392aef3fa7f3f45a82f4e0beb95c4fa2b914c34b5b215",,"BonsaiPhaseMapping","repo","validate"
