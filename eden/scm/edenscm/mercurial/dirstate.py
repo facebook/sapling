@@ -1515,7 +1515,7 @@ class dirstatemap(object):
             # This heuristic is imperfect in many ways, so in a future dirstate
             # format update it makes sense to just record the number of entries
             # on write.
-            self._map = parsers.dict_new_presized(len(st) / 71)
+            self._map = parsers.dict_new_presized(len(st) // 71)
 
         # Python's garbage collector triggers a GC each time a certain number
         # of container objects (the number being defined by

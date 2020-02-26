@@ -147,8 +147,13 @@ dirstate_tuple_new(PyTypeObject* subtype, PyObject* args, PyObject* kwds) {
   dirstateTupleObject* t;
   char state;
   int size, mode, mtime;
+#ifdef IS_PY3K
+  if (!PyArg_ParseTuple(args, "Ciii", &state, &mode, &size, &mtime))
+    return NULL;
+#else
   if (!PyArg_ParseTuple(args, "ciii", &state, &mode, &size, &mtime))
     return NULL;
+#endif
 
   t = (dirstateTupleObject*)subtype->tp_alloc(subtype, 1);
   if (!t)
@@ -173,7 +178,11 @@ static PyObject* dirstate_tuple_item(PyObject* o, Py_ssize_t i) {
   dirstateTupleObject* t = (dirstateTupleObject*)o;
   switch (i) {
     case 0:
+#ifdef IS_PY3K
+      return PyUnicode_FromStringAndSize(&t->state, 1);
+#else
       return PyBytes_FromStringAndSize(&t->state, 1);
+#endif
     case 1:
       return PyInt_FromLong(t->mode);
     case 2:
@@ -265,8 +274,14 @@ static PyObject* parse_dirstate(PyObject* self, PyObject* args) {
     goto quit;
   }
 
+#ifdef IS_PY3K
+  parents =
+      Py_BuildValue("y#y#", str, (Py_ssize_t)20, str + 20, (Py_ssize_t)20);
+#else
   parents =
       Py_BuildValue("s#s#", str, (Py_ssize_t)20, str + 20, (Py_ssize_t)20);
+#endif
+
   if (!parents)
     goto quit;
 
@@ -293,14 +308,23 @@ static PyObject* parse_dirstate(PyObject* self, PyObject* args) {
     entry = (PyObject*)make_dirstate_tuple(state, mode, size, mtime);
     cpos = memchr(cur, 0, flen);
     if (cpos) {
+#ifdef IS_PY3K
+      fname = PyUnicode_FromStringAndSize(cur, cpos - cur);
+      cname = PyUnicode_FromStringAndSize(cpos + 1, flen - (cpos - cur) - 1);
+#else
       fname = PyBytes_FromStringAndSize(cur, cpos - cur);
       cname = PyBytes_FromStringAndSize(cpos + 1, flen - (cpos - cur) - 1);
+#endif
       if (!fname || !cname || PyDict_SetItem(cmap, fname, cname) == -1 ||
           PyDict_SetItem(dmap, fname, entry) == -1)
         goto quit;
       Py_DECREF(cname);
     } else {
+#ifdef IS_PY3K
+      fname = PyUnicode_FromStringAndSize(cur, flen);
+#else
       fname = PyBytes_FromStringAndSize(cur, flen);
+#endif
       if (!fname || PyDict_SetItem(dmap, fname, entry) == -1)
         goto quit;
     }
@@ -382,6 +406,10 @@ static PyObject* pack_dirstate(PyObject* self, PyObject* args) {
   Py_ssize_t nbytes, pos, l;
   PyObject *k, *v = NULL, *pn;
   char *p, *s;
+#ifdef IS_PY3K
+  const char *utf8c = NULL;
+  const char *utf8k = NULL;
+#endif
   int now;
 
   if (!PyArg_ParseTuple(
@@ -403,6 +431,33 @@ static PyObject* pack_dirstate(PyObject* self, PyObject* args) {
   /* Figure out how much we need to allocate. */
   for (nbytes = 40, pos = 0; PyDict_Next(map, &pos, &k, &v);) {
     PyObject* c;
+#ifdef IS_PY3K
+    if (!PyUnicode_Check(k)) {
+      PyErr_SetString(PyExc_TypeError, "expected string key");
+      goto bail;
+    }
+    Py_ssize_t utf8k_size = 0;
+    utf8k = PyUnicode_AsUTF8AndSize(k, &utf8k_size);
+    if (!utf8k) {
+      goto bail;
+    }
+    nbytes += utf8k_size + 17;
+
+    c = PyDict_GetItem(copymap, k);
+
+    if (c) {
+      if (!PyUnicode_Check(c)) {
+        PyErr_SetString(PyExc_TypeError, "expected string key");
+        goto bail;
+      }
+      Py_ssize_t utf8c_size = 0;
+      utf8c = PyUnicode_AsUTF8AndSize(c, &utf8c_size);
+      if (!utf8c) {
+        goto bail;
+      }
+      nbytes += utf8c_size + 1;
+    }
+#else
     if (!PyBytes_Check(k)) {
       PyErr_SetString(PyExc_TypeError, "expected string key");
       goto bail;
@@ -416,6 +471,7 @@ static PyObject* pack_dirstate(PyObject* self, PyObject* args) {
       }
       nbytes += PyBytes_GET_SIZE(c) + 1;
     }
+#endif
   }
 
   packobj = PyBytes_FromStringAndSize(NULL, nbytes);
@@ -475,14 +531,30 @@ static PyObject* pack_dirstate(PyObject* self, PyObject* args) {
     putbe32((uint32_t)mtime, p + 8);
     t = p + 12;
     p += 16;
+#ifdef IS_PY3K
+    utf8k = PyUnicode_AsUTF8AndSize(k, &len);
+    if (!utf8k) {
+      goto bail;
+    }
+    memcpy(p, utf8k, len);
+#else
     len = PyBytes_GET_SIZE(k);
     memcpy(p, PyBytes_AS_STRING(k), len);
+#endif
     p += len;
     o = PyDict_GetItem(copymap, k);
     if (o) {
       *p++ = '\0';
+#ifdef IS_PY3K
+      utf8c = PyUnicode_AsUTF8AndSize(o, &l1);
+      if (!utf8c) {
+        goto bail;
+      }
+      memcpy(p, utf8c, l1);
+#else
       l1 = PyBytes_GET_SIZE(o);
       memcpy(p, PyBytes_AS_STRING(o), l1);
+#endif
       p += l1;
       len += l1 + 1;
     }
