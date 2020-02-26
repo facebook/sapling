@@ -4,10 +4,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import subprocess
 from typing import Optional, Tuple, cast
-
-from . import config
 
 
 # returns (installed_version, release) tuple
@@ -24,14 +24,6 @@ def get_installed_eden_rpm_version_parts() -> Tuple[Optional[str], Optional[str]
     return (parts[0], parts[1])
 
 
-# returns (runing_version, release) tuple
-def get_running_eden_version_parts(
-    instance: "config.EdenInstance"
-) -> Tuple[Optional[str], Optional[str]]:
-    bi = instance.get_server_build_info()
-    return (bi.get("build_package_version"), bi.get("build_package_release"))
-
-
 def format_eden_version(parts: Tuple[Optional[str], Optional[str]]) -> str:
     version = parts[0] or ""
     release = parts[1] or ""
@@ -40,7 +32,3 @@ def format_eden_version(parts: Tuple[Optional[str], Optional[str]]) -> str:
 
 def get_installed_eden_rpm_version() -> str:
     return format_eden_version(get_installed_eden_rpm_version_parts())
-
-
-def get_running_eden_version(instance: "config.EdenInstance") -> str:
-    return format_eden_version(get_running_eden_version_parts(instance))

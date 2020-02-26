@@ -73,7 +73,7 @@ def do_version(args: argparse.Namespace) -> int:
     print("Installed: %s" % version_mod.get_installed_eden_rpm_version())
 
     try:
-        rv = version_mod.get_running_eden_version(instance)
+        rv = instance.get_running_version()
         print("Running:   %s" % rv)
         if rv.startswith("-") or rv.endswith("-"):
             print("(Dev version of eden seems to be running)")

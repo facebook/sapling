@@ -26,7 +26,7 @@ import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
 import toml
 
-from . import configinterpolator, configutil, util
+from . import configinterpolator, configutil, util, version
 from .telemetry import TelemetryPayload, build_base_sample
 from .util import (
     EdenStartError,
@@ -276,6 +276,31 @@ class EdenInstance:
         except Exception as ex:
             log.warning(f"error logging with exception {ex}")
             return 1
+
+    def get_running_version_parts(self) -> Tuple[str, str]:
+        """Get a tuple containing (version, release) of the currently running EdenFS
+        daemon.
+
+        The version and release strings will both be the empty string if a development
+        build of EdenFS is being used.
+
+        Throws an EdenNotRunningError if EdenFS does not currently appear to be running.
+        """
+        bi = self.get_server_build_info()
+        return (
+            bi.get("build_package_version", ""),
+            bi.get("build_package_release", ""),
+        )
+
+    def get_running_version(self) -> str:
+        """Get a human-readable string representation of the currently running EdenFS
+        version.
+
+        Will return the string "-" if a dev build of EdenFS is being used.
+
+        Throws an EdenNotRunningError if EdenFS does not currently appear to be running.
+        """
+        return version.format_eden_version(self.get_running_version_parts())
 
     def get_repository_list(
         self, parser: Union[configutil.EdenConfigParser, "ConfigUpdater", None] = None

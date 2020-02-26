@@ -468,7 +468,7 @@ the old directory from before the Eden checkouts were mounted.
 
 
 def check_edenfs_version(tracker: ProblemTracker, instance: EdenInstance) -> None:
-    rver, release = version.get_running_eden_version_parts(instance)
+    rver, release = instance.get_running_version_parts()
     if not rver or not release:
         # This could be a dev build that returns the empty
         # string for both of these values.

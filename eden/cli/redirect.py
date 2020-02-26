@@ -23,7 +23,6 @@ from .config import CheckoutConfig, EdenCheckout, EdenInstance, load_toml_config
 from .stats_print import format_size
 from .subcmd import Subcmd
 from .util import mkdir_p, mkscratch_bin
-from .version import get_running_eden_version_parts
 
 
 redirect_cmd = subcmd_mod.Decorator()
@@ -618,7 +617,7 @@ class UnmountCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
-        vers_date, _vers_time = get_running_eden_version_parts(instance)
+        vers_date, _vers_time = instance.get_running_version_parts()
         if vers_date and vers_date < "20190701":
             # The redirection feature was shipped internally around the end
             # of June; using July 1st as a cutoff is reasonable.  If they
@@ -667,7 +666,7 @@ class FixupCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = cmd_util.require_checkout(args, args.mount)
-        vers_date, _vers_time = get_running_eden_version_parts(instance)
+        vers_date, _vers_time = instance.get_running_version_parts()
         if vers_date and vers_date < "20190701":
             # The redirection feature was shipped internally around the end
             # of June; using July 1st as a cutoff is reasonable.  If they

@@ -15,7 +15,7 @@ from typing import Dict, Iterable, List, NamedTuple, Optional, Tuple, Union
 
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
-from eden.cli import mtab
+from eden.cli import mtab, version as version_mod
 from eden.cli.config import CheckoutConfig, EdenCheckout, EdenInstance, HealthStatus
 from fb303_core.ttypes import fb303_status
 
@@ -32,6 +32,7 @@ class FakeCheckout(NamedTuple):
 
 class FakeEdenInstance:
     default_commit_hash: str = "1" * 40
+    _build_info: Dict[str, str] = {}
 
     def __init__(
         self,
@@ -262,3 +263,12 @@ class FakeEdenInstance:
 
     def log(self, sample: None) -> int:
         return 0
+
+    def get_running_version_parts(self) -> Tuple[str, str]:
+        return (
+            self._build_info.get("build_package_version", ""),
+            self._build_info.get("build_package_release", ""),
+        )
+
+    def get_running_version(self) -> str:
+        return version_mod.format_eden_version(self.get_running_version_parts())
