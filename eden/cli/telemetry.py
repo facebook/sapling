@@ -87,7 +87,7 @@ def get_os_and_ver() -> Tuple[str, str]:
 def get_eden_ver() -> str:
     # TODO: use generated information from  __manifest__.py for this
     # instead of querying the RPM database to determine the version
-    edenver = version.get_installed_eden_rpm_version_parts()[0]
+    edenver = version.get_installed_eden_rpm_version()
     if edenver is None:
         edenver = ""
     return edenver
