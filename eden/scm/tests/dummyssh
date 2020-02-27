@@ -2,12 +2,14 @@
 
 from __future__ import absolute_import, print_function
 
+import os
 import shlex
 import subprocess
-import os
 import sys
 
-os.chdir(os.getenv('TESTTMP'))
+
+os.chdir(os.getenv("TESTTMP"))
+
 
 def parse(cmd):
     """
@@ -18,6 +20,7 @@ def parse(cmd):
     except ValueError as e:
         print('Illegal command "%s": %s\n' % (cmd, e), file=sys.stderr)
         sys.exit(255)
+
 
 def parse_repo_path(path):
     """
@@ -36,15 +39,16 @@ def parse_repo_path(path):
 
     return repo, marker
 
+
 # Skipping SSH options
 host_index = 1
-while host_index < len(sys.argv) and sys.argv[host_index].startswith('-'):
+while host_index < len(sys.argv) and sys.argv[host_index].startswith("-"):
     host_index += 1
 
 if sys.argv[host_index] != "user@dummy":
     sys.exit(-1)
 
-os.environ["SSH_CLIENT"] = "%s 1 2" % os.environ.get('LOCALIP', '127.0.0.1')
+os.environ["SSH_CLIENT"] = "%s 1 2" % os.environ.get("LOCALIP", "127.0.0.1")
 
 log = open("dummylog", "ab")
 log.write(b"Got arguments")
@@ -53,7 +57,7 @@ for i, arg in enumerate(sys.argv[1:]):
 log.write(b"\n")
 log.close()
 hgcmd = sys.argv[host_index + 1]
-if os.name == 'nt':
+if os.name == "nt":
     # hack to make simple unix single quote quoting work on windows
     hgcmd = hgcmd.replace("'", '"')
 
@@ -76,7 +80,10 @@ if "hgcli" in hgcmd:
     hgcmd += (
         " --mononoke-path [::1]:"
         + os.getenv("MONONOKE_SOCKET")
-        + (" --cert %s --ca-pem %s --private-key %s --common-name localhost" % (cert, capem, privatekey))
+        + (
+            " --cert %s --ca-pem %s --private-key %s --common-name localhost"
+            % (cert, capem, privatekey)
+        )
     )
 
     mock_username = os.environ.get("MOCK_USERNAME")
