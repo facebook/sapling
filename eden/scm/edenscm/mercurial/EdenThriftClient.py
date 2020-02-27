@@ -158,7 +158,10 @@ class EdenThriftClient(object):
         if need_flush:
             self._flushPendingTransactions()
         with self._get_client() as client:
-            return client.checkOutRevision(self._eden_root, node, checkout_mode)
+            try:
+                return client.checkOutRevision(self._eden_root, node, checkout_mode)
+            except EdenError as e:
+                raise error.Abort(_("error performing EdenFS checkout: %s") % e.message)
 
     def glob(self, globs):
         with self._get_client() as client:
