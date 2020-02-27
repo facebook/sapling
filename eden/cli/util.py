@@ -168,9 +168,14 @@ def check_health(
     try:
         with get_client() as client:
             client.set_timeout(timeout)
-            # TODO: getDaemonInfo() could return both pid and status
-            pid = client.getPid()
-            status = client.getStatus()
+            info = client.getDaemonInfo()
+            pid = info.pid
+            status_value = info.status
+            if status_value is None:
+                # Older versions of EdenFS did not return a status field in the
+                # getDaemonInfo() response.  Query for it separately with getStatus()
+                status_value = client.getStatus()
+            status = status_value
     except (
         eden.thrift.EdenNotRunningError,
         thrift.transport.TTransport.TTransportException,

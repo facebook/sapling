@@ -1561,6 +1561,7 @@ void EdenServiceHandler::reloadConfig() {
 void EdenServiceHandler::getDaemonInfo(DaemonInfo& result) {
   result.pid = getpid();
   result.commandLine = originalCommandLine_;
+  result.set_status(getStatus());
 }
 
 int64_t EdenServiceHandler::getPid() {
