@@ -22,8 +22,8 @@ use fbwhoami::FbWhoAmI;
 use futures::future::ok;
 use futures::{future, stream, try_ready, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{
-    try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams, FutureExt as OldFutureExt,
-    StreamExt, StreamTimeoutError,
+    spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams,
+    FutureExt as OldFutureExt, StreamExt, StreamTimeoutError,
 };
 use futures_stats::{Timed, TimedStreamTrait};
 use futures_util::{FutureExt, TryFutureExt};
@@ -544,13 +544,18 @@ impl RepoClient {
                             })
                             .collect();
 
-                        let history_fut = get_unordered_file_history_for_multiple_nodes(
-                            ctx.clone(),
-                            repo.clone(),
-                            filenodes.into_iter().collect(),
-                            &path,
-                        )
-                        .collect();
+                        // NOTE: We don't otherwise await history_fut until we have the results
+                        // from blob_futs, so we need to spawn this to start fetching history
+                        // before we have resoved hg filenodes.
+                        let history_fut = spawn_future(
+                            get_unordered_file_history_for_multiple_nodes(
+                                ctx.clone(),
+                                repo.clone(),
+                                filenodes.into_iter().collect(),
+                                &path,
+                            )
+                            .collect(),
+                        );
 
                         future::join_all(blob_futs.into_iter()).map(move |blobs| {
                             let total_weight = blobs.iter().map(|(size, _)| size).sum();
