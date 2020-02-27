@@ -23,7 +23,8 @@ use futures::{
 };
 use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
 use futures_preview::{
-    compat::Future01CompatExt,
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{self, FutureExt, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
 use futures_util::try_join;
@@ -615,53 +616,53 @@ pub fn create_manifest_entries_stream(
     })
 }
 
-fn diff_with_parents(
+async fn diff_with_parents(
     ctx: CoreContext,
     repo: BlobRepo,
     hg_cs_id: HgChangesetId,
-) -> impl OldFuture<
-    Item = (
+) -> Result<
+    (
         Vec<(Option<MPath>, HgManifestId, HgChangesetId)>,
         Vec<(MPath, HgFileNodeId, HgChangesetId)>,
     ),
-    Error = Error,
+    Error,
 > {
-    let mf_id = fetch_manifest(ctx.clone(), repo.clone(), hg_cs_id.clone());
-    let parent_mf_ids = repo.get_changeset_parents(ctx.clone(), hg_cs_id).and_then({
-        cloned!(ctx, repo);
-        move |parents| {
-            old_future::join_all(parents.into_iter().map({
-                cloned!(ctx, repo);
-                move |p| fetch_manifest(ctx.clone(), repo.clone(), p.clone())
-            }))
-        }
-    });
+    let (mf_id, parent_mf_ids) = try_join!(fetch_manifest(ctx.clone(), &repo, &hg_cs_id), async {
+        let parents = repo
+            .get_changeset_parents(ctx.clone(), hg_cs_id)
+            .compat()
+            .await?;
+
+        future::try_join_all(
+            parents
+                .iter()
+                .map(|p| fetch_manifest(ctx.clone(), &repo, p)),
+        )
+        .await
+    })?;
 
     let blobstore = Arc::new(repo.get_blobstore());
-    mf_id
-        .join(parent_mf_ids)
-        .map(move |(mf_id, parent_mf_ids)| {
-            find_intersection_of_diffs(ctx, blobstore, mf_id, parent_mf_ids)
-        })
-        .flatten_stream()
-        .collect()
-        .map(move |new_entries| {
-            let mut mfs = vec![];
-            let mut files = vec![];
-            for (path, entry) in new_entries {
-                match entry {
-                    Entry::Tree(mf) => {
-                        mfs.push((path, mf, hg_cs_id.clone()));
-                    }
-                    Entry::Leaf((_, file)) => {
-                        let path = path.expect("empty file paths?");
-                        files.push((path, file, hg_cs_id.clone()));
-                    }
-                }
-            }
+    let new_entries: Vec<(Option<MPath>, Entry<_, _>)> =
+        find_intersection_of_diffs(ctx, blobstore, mf_id, parent_mf_ids)
+            .compat()
+            .try_collect()
+            .await?;
 
-            (mfs, files)
-        })
+    let mut mfs = vec![];
+    let mut files = vec![];
+    for (path, entry) in new_entries {
+        match entry {
+            Entry::Tree(mf) => {
+                mfs.push((path, mf, hg_cs_id.clone()));
+            }
+            Entry::Leaf((_, file)) => {
+                let path = path.expect("empty file paths?");
+                files.push((path, file, hg_cs_id.clone()));
+            }
+        }
+    }
+
+    Ok((mfs, files))
 }
 
 pub fn create_filenodes(
@@ -695,22 +696,29 @@ pub fn get_manifests_and_filenodes(
         .and_then({
             cloned!(ctx, lfs_params, repo);
             move |hg_cs_id| {
-                diff_with_parents(ctx.clone(), repo.clone(), hg_cs_id).and_then({
-                    cloned!(ctx, lfs_params, repo);
-                    move |(manifests, filenodes)| {
-                        (
-                            create_manifest_entries_stream(ctx.clone(), repo.clone(), manifests)
+                diff_with_parents(ctx.clone(), repo.clone(), hg_cs_id)
+                    .boxed()
+                    .compat()
+                    .and_then({
+                        cloned!(ctx, lfs_params, repo);
+                        move |(manifests, filenodes)| {
+                            (
+                                create_manifest_entries_stream(
+                                    ctx.clone(),
+                                    repo.clone(),
+                                    manifests,
+                                )
                                 .collect(),
-                            prepare_filenode_entries_stream(
-                                ctx,
-                                repo,
-                                filenodes,
-                                lfs_params.clone(),
+                                prepare_filenode_entries_stream(
+                                    ctx,
+                                    repo,
+                                    filenodes,
+                                    lfs_params.clone(),
+                                )
+                                .collect(),
                             )
-                            .collect(),
-                        )
-                    }
-                })
+                        }
+                    })
             }
         })
         .collect()
@@ -731,13 +739,11 @@ pub fn get_manifests_and_filenodes(
         })
 }
 
-fn fetch_manifest(
+async fn fetch_manifest(
     ctx: CoreContext,
-    repo: BlobRepo,
-    hg_cs_id: HgChangesetId,
-) -> impl OldFuture<Item = HgManifestId, Error = Error> {
-    hg_cs_id
-        .load(ctx, repo.blobstore())
-        .from_err()
-        .map(|blob_cs| blob_cs.manifestid())
+    repo: &BlobRepo,
+    hg_cs_id: &HgChangesetId,
+) -> Result<HgManifestId, Error> {
+    let blob_cs = hg_cs_id.load(ctx, repo.blobstore()).compat().await?;
+    Ok(blob_cs.manifestid())
 }
