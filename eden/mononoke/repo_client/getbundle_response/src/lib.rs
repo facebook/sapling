@@ -25,7 +25,7 @@ use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
 use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, FutureExt, TryFutureExt},
-    stream::{self, StreamExt, TryStreamExt},
+    stream::{self, Stream, StreamExt, TryStreamExt},
 };
 use futures_util::try_join;
 use load_limiter::Metric;
@@ -486,8 +486,8 @@ fn prepare_filenode_entries_stream(
     repo: BlobRepo,
     filenodes: Vec<(MPath, HgFileNodeId, HgChangesetId)>,
     lfs_params: LfsParams,
-) -> impl OldStream<Item = (MPath, Vec<PreparedFilenodeEntry>), Error = Error> {
-    old_stream::iter_ok(filenodes.into_iter())
+) -> impl Stream<Item = Result<(MPath, Vec<PreparedFilenodeEntry>), Error>> {
+    stream::iter(filenodes.into_iter())
         .map({
             cloned!(ctx, repo);
             move |(path, filenode, linknode)| {
@@ -542,6 +542,7 @@ fn prepare_filenode_entries_stream(
                                 .map(move |entry| (path, vec![entry]))
                         }
                     })
+                    .compat()
             }
         })
         .buffered(100)
@@ -591,15 +592,15 @@ fn generate_lfs_file(
     Ok(HgBlobNode::new(Bytes::from(bytes), p1, p2))
 }
 
-pub fn create_manifest_entries_stream(
+fn create_manifest_entries_stream(
     ctx: CoreContext,
     repo: BlobRepo,
     manifests: Vec<(Option<MPath>, HgManifestId, HgChangesetId)>,
-) -> impl OldStream<Item = OldBoxFuture<parts::TreepackPartInput, Error>, Error = Error> {
-    old_stream::iter_ok(manifests.into_iter()).map({
+) -> impl Stream<Item = Result<OldBoxFuture<parts::TreepackPartInput, Error>, Error>> {
+    stream::iter(manifests.into_iter()).map({
         cloned!(ctx, repo);
         move |(fullpath, mf_id, linknode)| {
-            fetch_manifest_envelope(ctx.clone(), &repo.get_blobstore().boxed(), mf_id)
+            let fut = fetch_manifest_envelope(ctx.clone(), &repo.get_blobstore().boxed(), mf_id)
                 .map(move |mf_envelope| {
                     let (p1, p2) = mf_envelope.parents();
                     parts::TreepackPartInput {
@@ -611,7 +612,9 @@ pub fn create_manifest_entries_stream(
                         linknode: linknode.into_nodehash(),
                     }
                 })
-                .boxify()
+                .boxify();
+
+            Result::<_, Error>::Ok(fut)
         }
     })
 }
@@ -708,6 +711,7 @@ pub fn get_manifests_and_filenodes(
                                     repo.clone(),
                                     manifests,
                                 )
+                                .compat()
                                 .collect(),
                                 prepare_filenode_entries_stream(
                                     ctx,
@@ -715,6 +719,7 @@ pub fn get_manifests_and_filenodes(
                                     filenodes,
                                     lfs_params.clone(),
                                 )
+                                .compat()
                                 .collect(),
                             )
                         }
