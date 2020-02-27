@@ -156,6 +156,11 @@ queries! {
         none,
         "DELETE FROM fixedcopyinfo"
     }
+
+    write DeletePaths() {
+        none,
+        "DELETE FROM paths"
+    }
 }
 
 #[fbinit::test]
@@ -194,6 +199,58 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
 
     // Now, delete the copy info from the replica.
     DeleteCopyInfo::query(&replica).compat().await?;
+
+    let reader = FilenodesReader::new(vec![replica], vec![master]);
+    let prepared = copied_filenode();
+    assert_filenode(
+        &ctx,
+        &reader,
+        &prepared.path,
+        prepared.info.filenode,
+        REPO_ZERO,
+        prepared.info.clone(),
+    )
+    .await?;
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_fallback_on_missing_paths(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+
+    let master = build_shard()?;
+    let replica = build_shard()?;
+
+    // Populate both master and replica with the same filenodes (to simulate replication).
+    FilenodesWriter::new(
+        SQLITE_INSERT_CHUNK_SIZE,
+        vec![master.clone()],
+        vec![master.clone()],
+    )
+    .insert_filenodes(
+        &ctx,
+        REPO_ZERO,
+        vec![copied_from_filenode(), copied_filenode()],
+        false,
+    )
+    .await?;
+
+    FilenodesWriter::new(
+        SQLITE_INSERT_CHUNK_SIZE,
+        vec![replica.clone()],
+        vec![replica.clone()],
+    )
+    .insert_filenodes(
+        &ctx,
+        REPO_ZERO,
+        vec![copied_from_filenode(), copied_filenode()],
+        false,
+    )
+    .await?;
+
+    // Now, delete the copy info from the replica.
+    DeletePaths::query(&replica).compat().await?;
 
     let reader = FilenodesReader::new(vec![replica], vec![master]);
     let prepared = copied_filenode();

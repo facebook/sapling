@@ -193,7 +193,9 @@ impl FilenodesReader {
             Ok(Some(res)) => {
                 return Ok(Some(res.try_into()?));
             }
-            Ok(None) | Err(ErrorKind::FixedCopyInfoMissing(_)) => {
+            Ok(None)
+            | Err(ErrorKind::FixedCopyInfoMissing(_))
+            | Err(ErrorKind::PathNotFound(_)) => {
                 // If the filenode wasn't found, or its copy info was missing, it might be present
                 // on the master.
             }
