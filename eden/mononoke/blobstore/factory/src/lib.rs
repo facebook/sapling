@@ -36,10 +36,11 @@ use scuba::ScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::{
     create_myrouter_connections, create_raw_xdb_connections, create_sqlite_connections,
-    myrouter_ready, MysqlOptions, PoolSizeConfig, SqlConnections,
+    myrouter_ready, MysqlOptions, PoolSizeConfig, SqlConnections, SqlConstructors,
 };
 use sqlblob::Sqlblob;
-use sqlfilenodes::{SqlConstructors, SqlFilenodes};
+//use sqlfilenodes::{SqlConstructors, SqlFilenodes};
+use newfilenodes::NewFilenodesBuilder;
 use throttledblob::ThrottledBlob;
 
 #[derive(Copy, Clone, PartialEq)]
@@ -94,8 +95,8 @@ trait SqlFactoryBase: Send + Sync {
     /// Open an arbitrary struct implementing SqlConstructors (without Arc)
     fn open_owned<T: SqlConstructors>(&self) -> BoxFuture<T, Error>;
 
-    /// Open SqlFilenodes, and return a tier name and the struct.
-    fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error>;
+    /// Open NewFilenodesBuilder, and return a tier name and the struct.
+    fn open_filenodes(&self) -> BoxFuture<(String, NewFilenodesBuilder), Error>;
 
     /// Creates connections to the db.
     fn create_connections(&self, label: String) -> BoxFuture<SqlConnections, Error>;
@@ -138,35 +139,33 @@ impl SqlFactoryBase for XdbFactory {
         .boxify()
     }
 
-    fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error> {
+    fn open_filenodes(&self) -> BoxFuture<(String, NewFilenodesBuilder), Error> {
         let (tier, filenodes) = match self.sharded_filenodes.clone() {
             Some(ShardedFilenodesParams {
                 shard_map,
                 shard_num,
             }) => {
-                let conn = SqlFilenodes::with_sharded_xdb(
+                let builder = NewFilenodesBuilder::with_sharded_xdb(
                     self.fb,
                     shard_map.clone(),
                     self.mysql_options,
                     shard_num.into(),
                     self.readonly,
                 );
-                (shard_map, conn)
+                (shard_map, builder)
             }
             None => {
-                let conn = SqlFilenodes::with_xdb(
+                let builder = NewFilenodesBuilder::with_xdb(
                     self.fb,
                     self.db_address.clone(),
                     self.mysql_options,
                     self.readonly,
                 );
-                (self.db_address.clone(), conn)
+                (self.db_address.clone(), builder)
             }
         };
 
-        filenodes
-            .map(move |filenodes| (tier, Arc::new(filenodes)))
-            .boxify()
+        filenodes.map(move |filenodes| (tier, filenodes)).boxify()
     }
 
     fn create_connections(&self, label: String) -> BoxFuture<SqlConnections, Error> {
@@ -212,9 +211,10 @@ impl SqlFactoryBase for SqliteFactory {
         Ok(r).into_future().boxify()
     }
 
-    fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error> {
-        self.open::<SqlFilenodes>()
+    fn open_filenodes(&self) -> BoxFuture<(String, NewFilenodesBuilder), Error> {
+        NewFilenodesBuilder::with_sqlite_path(self.path.join("sqlite_dbs"), self.readonly)
             .map(|filenodes| ("sqlite".to_string(), filenodes))
+            .into_future()
             .boxify()
     }
 
@@ -240,7 +240,7 @@ impl SqlFactory {
             .either(|l| l.open_owned(), |r| r.open_owned())
     }
 
-    pub fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error> {
+    pub fn open_filenodes(&self) -> BoxFuture<(String, NewFilenodesBuilder), Error> {
         self.underlying
             .as_ref()
             .either(|l| l.open_filenodes(), |r| r.open_filenodes())

@@ -101,6 +101,7 @@ pub struct CachelibSettings {
     pub presence_cache_size: Option<usize>,
     pub changesets_cache_size: Option<usize>,
     pub filenodes_cache_size: Option<usize>,
+    pub filenodes_history_cache_size: Option<usize>,
     pub idmapping_cache_size: Option<usize>,
     pub with_content_sha1_cache: bool,
     pub content_sha1_cache_size: Option<usize>,
@@ -119,6 +120,7 @@ impl Default for CachelibSettings {
             presence_cache_size: None,
             changesets_cache_size: None,
             filenodes_cache_size: None,
+            filenodes_history_cache_size: None,
             idmapping_cache_size: None,
             with_content_sha1_cache: false,
             content_sha1_cache_size: None,
@@ -220,6 +222,12 @@ pub fn init_cachelib_from_settings(
         "filenodes",
         settings
             .filenodes_cache_size
+            .unwrap_or(available_space / 20),
+    )?;
+    cachelib::get_or_create_volatile_pool(
+        "filenodes_history",
+        settings
+            .filenodes_history_cache_size
             .unwrap_or(available_space / 20),
     )?;
     cachelib::get_or_create_volatile_pool(

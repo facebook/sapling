@@ -27,7 +27,7 @@ use derived_data_filenodes::FilenodesOnlyPublic;
 use failure_ext::chain::ChainExt;
 use fastlog::RootFastlog;
 use fbinit::FacebookInit;
-use filenodes::CachingFilenodes;
+use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use fsnodes::RootFsnodeId;
 use futures::{future::IntoFuture, Future};
@@ -37,6 +37,7 @@ use maplit::btreeset;
 use memblob::EagerMemblob;
 use metaconfig_types::{self, DerivedDataConfig, FilestoreParams, Redaction, StorageConfig};
 use mononoke_types::RepositoryId;
+use newfilenodes::NewFilenodesBuilder;
 use phases::{SqlPhasesFactory, SqlPhasesStore};
 use readonlyblob::ReadOnlyBlobstore;
 use redactedblobstore::SqlRedactedContentStore;
@@ -44,8 +45,7 @@ use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
-use sql_ext::MysqlOptions;
-use sqlfilenodes::{SqlConstructors, SqlFilenodes};
+use sql_ext::{MysqlOptions, SqlConstructors};
 use std::{collections::HashMap, iter::FromIterator, sync::Arc, time::Duration};
 use unodes::RootUnodeManifestId;
 
@@ -236,8 +236,9 @@ pub fn new_memblob_empty_with_id(
         Arc::new(SqlBookmarks::with_sqlite_in_memory()?),
         repo_blobstore_args,
         Arc::new(
-            SqlFilenodes::with_sqlite_in_memory()
-                .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?,
+            NewFilenodesBuilder::with_sqlite_in_memory()
+                .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?
+                .build(),
         ),
         Arc::new(
             SqlChangesets::with_sqlite_in_memory()
@@ -322,8 +323,9 @@ pub fn new_memblob_with_connection_with_id(
             repo_blobstore_args,
             // Filenodes are intentionally created on another connection
             Arc::new(
-                SqlFilenodes::with_sqlite_in_memory()
-                    .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?,
+                NewFilenodesBuilder::with_sqlite_in_memory()
+                    .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?
+                    .build(),
             ),
             Arc::new(SqlChangesets::from_connections(
                 con.clone(),
@@ -382,7 +384,7 @@ fn new_development(
             bookmarks
         });
 
-    let filenodes = sql_factory
+    let filenodes_builder = sql_factory
         .open_filenodes()
         .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))
         .from_err()
@@ -425,7 +427,7 @@ fn new_development(
             bonsai_git_mapping,
         )
         .join5(
-            filenodes,
+            filenodes_builder,
             changesets,
             bonsai_globalrev_mapping,
             bonsai_hg_mapping,
@@ -433,7 +435,7 @@ fn new_development(
         .map({
             move |(
                 (bookmarks, blobstore, redacted_blobs, phases_store, bonsai_git_mapping),
-                filenodes,
+                filenodes_builder,
                 changesets,
                 bonsai_globalrev_mapping,
                 bonsai_hg_mapping,
@@ -445,7 +447,7 @@ fn new_development(
                 BlobRepo::new(
                     bookmarks,
                     RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
-                    filenodes,
+                    Arc::new(filenodes_builder.build()),
                     changesets,
                     bonsai_git_mapping,
                     bonsai_globalrev_mapping,
@@ -493,13 +495,14 @@ fn new_production(
     });
 
     let filenodes_pool = try_boxfuture!(get_volatile_pool("filenodes"));
+    let filenodes_history_pool = try_boxfuture!(get_volatile_pool("filenodes_history"));
     let changesets_cache_pool = try_boxfuture!(get_volatile_pool("changesets"));
     let bonsai_hg_mapping_cache_pool = try_boxfuture!(get_volatile_pool("bonsai_hg_mapping"));
     let phases_cache_pool = try_boxfuture!(get_volatile_pool("phases"));
 
     let derive_data_lease = try_boxfuture!(MemcacheOps::new(fb, "derived-data-lease", ""));
 
-    let filenodes_tier_and_filenodes = sql_factory.open_filenodes();
+    let filenodes_tier_and_builder = sql_factory.open_filenodes();
     let bookmarks = sql_factory.open::<SqlBookmarks>();
     let changesets = sql_factory.open::<SqlChangesets>();
     let bonsai_git_mapping = {
@@ -521,7 +524,7 @@ fn new_production(
         blobstore.right_future()
     };
 
-    filenodes_tier_and_filenodes
+    filenodes_tier_and_builder
         .join5(blobstore, redacted_blobs, phases, bonsai_git_mapping)
         .join5(
             bookmarks,
@@ -532,7 +535,7 @@ fn new_production(
         .map(
             move |(
                 (
-                    (filenodes_tier, filenodes),
+                    (filenodes_tier, mut filenodes_builder),
                     blobstore,
                     redacted_blobs,
                     phases,
@@ -543,11 +546,11 @@ fn new_production(
                 bonsai_globalrev_mapping,
                 bonsai_hg_mapping,
             )| {
-                let filenodes = CachingFilenodes::new(
+                filenodes_builder.enable_caching(
                     fb,
-                    filenodes,
                     filenodes_pool,
-                    "sqlfilenodes",
+                    filenodes_history_pool,
+                    "newfilenodes",
                     &filenodes_tier,
                 );
 
@@ -582,7 +585,7 @@ fn new_production(
                 BlobRepo::new(
                     bookmarks,
                     RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
-                    Arc::new(filenodes),
+                    Arc::new(filenodes_builder.build()) as Arc<dyn Filenodes>,
                     changesets,
                     bonsai_git_mapping,
                     bonsai_globalrev_mapping,

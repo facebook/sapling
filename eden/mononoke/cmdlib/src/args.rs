@@ -90,7 +90,11 @@ const CACHE_ARGS: &[(&str, &str)] = &[
     ),
     (
         "filenodes-cache-size",
-        "override size of the filenodes cache",
+        "override size of the filenodes cache (individual filenodes)",
+    ),
+    (
+        "filenodes-history-cache-size",
+        "override size of the filenodes history cache (entire batches of history for a node)",
     ),
     (
         "idmapping-cache-size",
@@ -752,6 +756,11 @@ pub fn init_cachelib<'a>(
         }
         if let Some(filenodes_cache_size) = matches.value_of("filenodes-cache-size") {
             settings.filenodes_cache_size = Some(filenodes_cache_size.parse().unwrap());
+        }
+        if let Some(filenodes_history_cache_size) = matches.value_of("filenodes-history-cache-size")
+        {
+            settings.filenodes_history_cache_size =
+                Some(filenodes_history_cache_size.parse().unwrap());
         }
         if let Some(idmapping_cache_size) = matches.value_of("idmapping-cache-size") {
             settings.idmapping_cache_size = Some(idmapping_cache_size.parse().unwrap());
