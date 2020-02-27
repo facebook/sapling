@@ -241,18 +241,23 @@ class EdenInstance:
     def get_telemetry_logger(self) -> telemetry.TelemetryLogger:
         logger = self._telemetry_logger
         if logger is None:
-            scribe_cat = self.get_config_value("telemetry.scribe-cat", default="")
-            scribe_category = self.get_config_value(
-                "telemetry.scribe-category", default=""
-            )
-            if scribe_cat == "" or scribe_category == "":
-                logger = telemetry.NullTelemetryLogger()
-            else:
-                logger = telemetry.ExternalTelemetryLogger(
-                    [scribe_cat, scribe_category]
-                )
+            logger = self._create_telemetry_logger()
             self._telemetry_logger = logger
         return logger
+
+    def _create_telemetry_logger(self) -> telemetry.TelemetryLogger:
+        try:
+            from eden.cli.facebook import scuba_telemetry
+
+            return scuba_telemetry.ScubaTelemetryLogger()
+        except ImportError:
+            pass
+
+        scribe_cat = self.get_config_value("telemetry.scribe-cat", default="")
+        scribe_category = self.get_config_value("telemetry.scribe-category", default="")
+        if scribe_cat == "" or scribe_category == "":
+            return telemetry.NullTelemetryLogger()
+        return telemetry.ExternalTelemetryLogger([scribe_cat, scribe_category])
 
     def build_sample(
         self, log_type: str, **kwargs: Union[bool, int, str, float]
