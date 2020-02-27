@@ -15,8 +15,11 @@ use context::CoreContext;
 use futures::sync::oneshot;
 use futures::{future, stream, Future, Stream};
 use futures_ext::{bounded_traversal, try_boxfuture, BoxFuture, FutureExt, StreamExt};
-use futures_preview::{compat::Future01CompatExt, future::FutureExt as NewFutureExt, TryFutureExt};
-use futures_stats::{futures03::TimedFutureExt, Timed};
+use futures_preview::{
+    compat::Future01CompatExt,
+    future::{try_join, try_join_all, FutureExt as NewFutureExt, TryFutureExt},
+};
+use futures_stats::futures03::TimedFutureExt;
 use lock_ext::LockExt;
 use mononoke_types::ChangesetId;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -78,113 +81,104 @@ pub fn derive_impl<
     start_csid: ChangesetId,
     mode: Mode,
 ) -> impl Future<Item = Derived, Error = DeriveError> {
-    find_underived(&ctx, &repo, &derived_mapping, &start_csid, None, mode)
-        .map({
-            cloned!(ctx);
-            move |commits_not_derived_to_parents| {
-                let topo_sorted_commit_graph = sort_topological(&commits_not_derived_to_parents)
-                    .expect("commit graph has cycles!");
-                let sz = topo_sorted_commit_graph.len();
-                if sz > 100 {
-                    warn!(
-                        ctx.logger(),
-                        "derive_impl is called on a graph of size {}", sz
-                    );
-                }
-                stream::iter_ok(
-                    topo_sorted_commit_graph
-                    .into_iter()
-                    // Note - sort_topological returns all nodes including commits which were already
-                    // derived i.e. sort_topological({"a" -> ["b"]}) return ("a", "b").
-                    // The '.filter()' below removes ["b"]
-                    .filter(move |cs_id| commits_not_derived_to_parents.contains_key(cs_id)),
-                )
+    async move {
+        let derivation = async {
+            let commits_not_derived_to_parents =
+                find_underived(&ctx, &repo, &derived_mapping, &start_csid, None, mode)
+                    .compat()
+                    .await?;
+
+            let topo_sorted_commit_graph = sort_topological(&commits_not_derived_to_parents)
+                .expect("commit graph has cycles!");
+            let sz = topo_sorted_commit_graph.len();
+            if sz > 100 {
+                warn!(
+                    ctx.logger(),
+                    "derive_impl is called on a graph of size {}", sz
+                );
             }
-        })
-        .flatten_stream()
-        .chunks(100)
-        .fold(0usize, {
-            cloned!(ctx, derived_mapping, repo);
-            move |acc, csids| {
+            let all_csids: Vec<_> = topo_sorted_commit_graph
+                .into_iter()
+                // Note - sort_topological returns all nodes including commits which were already
+                // derived i.e. sort_topological({"a" -> ["b"]}) return ("a", "b").
+                // The '.filter()' below removes ["b"]
+                .filter(move |cs_id| commits_not_derived_to_parents.contains_key(cs_id))
+                .collect();
+            let mut acc = 0;
+            for csids in all_csids.chunks(100) {
                 let mapping = DeferredDerivedMapping::new(derived_mapping.clone());
-                let chunk_size = csids.len();
-                stream::iter_ok(csids)
-                    .for_each({
-                        cloned!(ctx, mapping, repo);
-                        move |csid| {
-                            ctx.scuba().clone().log_with_msg(
-                                "Waiting for derived data to be generated",
-                                Some(format!("{} {}", Derived::NAME, csid)),
-                            );
 
-                            derive_may_panic(ctx.clone(), repo.clone(), mapping.clone(), csid)
-                                .timed({
-                                    cloned!(ctx);
-                                    move |stats, res| {
-                                        let tag = if res.is_ok() {
-                                            "Got derived data"
-                                        } else {
-                                            "Failed to get derived data"
-                                        };
-
-                                        ctx.scuba().clone().add_future_stats(&stats).log_with_msg(
-                                            tag,
-                                            Some(format!("{} {}", Derived::NAME, csid)),
-                                        );
-
-                                        Ok(())
-                                    }
-                                })
-                        }
-                    })
-                    .and_then({
-                        cloned!(ctx);
-                        move |_| {
-                            mapping.persist(ctx.clone()).traced(
-                                &ctx.trace(),
-                                "derive::update_mapping",
-                                None,
-                            )
-                        }
-                    })
-                    .map(move |_| acc + chunk_size)
-            }
-        })
-        .timed({
-            cloned!(ctx);
-            move |stats, count| {
-                let count = *count.unwrap_or(&0);
-                if stats.completion_time > DERIVE_TRACE_THRESHOLD {
-                    warn!(
-                        ctx.logger(),
-                        "slow derivation of {} {} for {}, took {:?}: mononoke_prod/flat/{}.trace",
-                        count,
-                        Derived::NAME,
-                        start_csid,
-                        stats.completion_time,
-                        ctx.trace().id(),
+                for csid in csids {
+                    ctx.scuba().clone().log_with_msg(
+                        "Waiting for derived data to be generated",
+                        Some(format!("{} {}", Derived::NAME, csid)),
                     );
+
+                    let (stats, res) = derive_may_panic(&ctx, &repo, &mapping, &csid).timed().await;
+
+                    let tag = if res.is_ok() {
+                        "Got derived data"
+                    } else {
+                        "Failed to get derived data"
+                    };
                     ctx.scuba()
                         .clone()
-                        .add("trace", ctx.trace().id().to_string())
                         .add_future_stats(&stats)
-                        .log_with_msg(
-                            "Slow derivation",
-                            Some(format!(
-                                "type={},count={},csid={}",
-                                Derived::NAME,
-                                count,
-                                start_csid.to_string()
-                            )),
-                        );
-                    tokio::spawn(ctx.trace_upload().discard());
+                        .log_with_msg(tag, Some(format!("{} {}", Derived::NAME, csid)));
+                    res?;
                 }
-                Ok(())
+
+                mapping
+                    .persist(ctx.clone())
+                    .traced(&ctx.trace(), "derive::update_mapping", None)
+                    .compat()
+                    .await?;
+                acc += csids.len();
             }
-        })
-        .and_then(move |_| {
-            fetch_derived_may_panic(ctx, start_csid, derived_mapping).map_err(DeriveError::from)
-        })
+
+            let res: Result<_, DeriveError> = Ok(acc);
+            res
+        };
+
+        let (stats, res) = derivation.timed().await;
+
+        let count = match res {
+            Ok(ref count) => *count,
+            Err(_) => 0,
+        };
+        if stats.completion_time > DERIVE_TRACE_THRESHOLD {
+            warn!(
+                ctx.logger(),
+                "slow derivation of {} {} for {}, took {:?}: mononoke_prod/flat/{}.trace",
+                count,
+                Derived::NAME,
+                start_csid,
+                stats.completion_time,
+                ctx.trace().id(),
+            );
+            ctx.scuba()
+                .clone()
+                .add("trace", ctx.trace().id().to_string())
+                .add_future_stats(&stats)
+                .log_with_msg(
+                    "Slow derivation",
+                    Some(format!(
+                        "type={},count={},csid={}",
+                        Derived::NAME,
+                        count,
+                        start_csid.to_string()
+                    )),
+                );
+            tokio::spawn(ctx.trace_upload().discard());
+        }
+
+        res?;
+
+        let derived = fetch_derived_may_panic(&ctx, start_csid, &derived_mapping).await?;
+        Ok(derived)
+    }
+    .boxed()
+    .compat()
 }
 
 fn fail_if_disabled<Derived: BonsaiDerived>(repo: &BlobRepo) -> Result<(), DeriveError> {
@@ -220,7 +214,13 @@ pub(crate) fn find_underived<
     bounded_traversal::bounded_traversal_stream(100, Some(*start_csid), {
         cloned!(ctx, derived_mapping);
         move |cs_id| {
-            DeriveNode::from_bonsai(ctx.clone(), derived_mapping.clone(), cs_id).and_then({
+            {
+                cloned!(ctx, derived_mapping, cs_id);
+                async move { DeriveNode::from_bonsai(&ctx, &derived_mapping, &cs_id).await }
+            }
+            .boxed()
+            .compat()
+            .and_then({
                 cloned!(ctx, changeset_fetcher, visited);
                 move |derive_node| {
                     if let Some(limit) = limit {
@@ -262,44 +262,40 @@ pub(crate) fn find_underived<
 }
 
 // Panics if any of the parents is not derived yet
-fn derive_may_panic<Derived, Mapping>(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    mapping: Mapping,
-    bcs_id: ChangesetId,
-) -> impl Future<Item = (), Error = Error>
+async fn derive_may_panic<Derived, Mapping>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    mapping: &Mapping,
+    bcs_id: &ChangesetId,
+) -> Result<(), Error>
 where
     Derived: BonsaiDerived,
     Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
 {
-    async move {
-        debug!(
-            ctx.logger(),
-            "derive {} for {}",
-            Derived::NAME,
-            bcs_id.to_hex()
-        );
+    debug!(
+        ctx.logger(),
+        "derive {} for {}",
+        Derived::NAME,
+        bcs_id.to_hex()
+    );
 
-        let lease = repo.get_derived_data_lease_ops();
-        let lease_key = Arc::new(format!(
-            "repo{}.{}.{}",
-            repo.get_repoid().id(),
-            Derived::NAME,
-            bcs_id
-        ));
+    let lease = repo.get_derived_data_lease_ops();
+    let lease_key = Arc::new(format!(
+        "repo{}.{}.{}",
+        repo.get_repoid().id(),
+        Derived::NAME,
+        bcs_id
+    ));
 
-        let res = derive_in_loop(ctx, repo, mapping, bcs_id, &lease, &lease_key).await;
+    let res = derive_in_loop(ctx, repo, mapping, *bcs_id, &lease, &lease_key).await;
 
-        res
-    }
-    .boxed()
-    .compat()
+    res
 }
 
 async fn derive_in_loop<Derived, Mapping>(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    mapping: Mapping,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    mapping: &Mapping,
     bcs_id: ChangesetId,
     lease: &Arc<dyn LeaseOps>,
     lease_key: &Arc<String>,
@@ -310,24 +306,28 @@ where
 {
     let event_id = EventId::new();
     let changeset_fetcher = repo.get_changeset_fetcher();
-    let derived_parents = changeset_fetcher
-        .get_parents(ctx.clone(), bcs_id)
-        .and_then({
-            cloned!(ctx, mapping);
-            move |parents| {
-                future::join_all(
-                    parents
-                        .into_iter()
-                        .map(move |p| fetch_derived_may_panic(ctx.clone(), p, mapping.clone())),
-                )
-            }
-        });
+    let parents = async {
+        let parents = changeset_fetcher
+            .get_parents(ctx.clone(), bcs_id)
+            .compat()
+            .await?;
 
-    let bcs_fut = bcs_id.load(ctx.clone(), repo.blobstore()).from_err();
-    let (bcs, parents) = bcs_fut.join(derived_parents).compat().await?;
+        try_join_all(
+            parents
+                .into_iter()
+                .map(|p| fetch_derived_may_panic(ctx, p, mapping)),
+        )
+        .await
+    };
 
-    let lease_start = Arc::new(Mutex::new(Instant::now()));
-    let lease_total = Arc::new(Mutex::new(Duration::from_secs(0)));
+    let bcs_fut = bcs_id
+        .load(ctx.clone(), repo.blobstore())
+        .from_err()
+        .compat();
+    let (parents, bcs) = try_join(parents, bcs_fut).await?;
+
+    let mut lease_start = Instant::now();
+    let mut lease_total = Duration::from_secs(0);
     let mut backoff_ms = 200;
 
     loop {
@@ -337,16 +337,13 @@ where
         // it is safe to assume that we successfuly acquired it
         let (leased, ignored) = match result {
             Ok(leased) => {
-                let elapsed = lease_start.with(|elapsed| elapsed.elapsed());
+                let elapsed = lease_start.elapsed();
                 if elapsed > LEASE_WARNING_THRESHOLD {
-                    let total = lease_total.with(|total| {
-                        *total += elapsed;
-                        *total
-                    });
-                    lease_start.with(|elapsed| *elapsed = Instant::now());
+                    lease_total += elapsed;
+                    lease_start = Instant::now();
                     warn!(
                         ctx.logger(),
-                        "Can not acquire lease {} for more than {:?}", lease_key, total
+                        "Can not acquire lease {} for more than {:?}", lease_key, lease_total
                     );
                 }
                 (leased, false)
@@ -363,28 +360,25 @@ where
             }
             None => {
                 if leased || ignored {
-                    let deriver = Derived::derive_from_parents(ctx.clone(), repo, bcs, parents)
-                        .traced_with_id(
-                            &ctx.trace(),
-                            "derive::derive_from_parents",
-                            trace_args! {
-                                "csid" => bcs_id.to_hex().to_string(),
-                                "type" => Derived::NAME
-                            },
-                            event_id,
-                        )
-                        .and_then({
-                            cloned!(ctx);
-                            move |derived| mapping.put(ctx.clone(), bcs_id, derived)
-                        })
-                        .timed(move |stats, _| {
-                            STATS::derived_data_latency.add_value(
-                                stats.completion_time.as_millis_unchecked() as i64,
-                                (Derived::NAME,),
-                            );
-                            Ok(())
-                        })
-                        .compat();
+                    let deriver = async {
+                        let derived =
+                            Derived::derive_from_parents(ctx.clone(), repo.clone(), bcs, parents)
+                                .traced_with_id(
+                                    &ctx.trace(),
+                                    "derive::derive_from_parents",
+                                    trace_args! {
+                                        "csid" => bcs_id.to_hex().to_string(),
+                                        "type" => Derived::NAME
+                                    },
+                                    event_id,
+                                )
+                                .compat()
+                                .await?;
+                        mapping.put(ctx.clone(), bcs_id, derived).compat().await?;
+                        let res: Result<_, Error> = Ok(());
+                        res
+                    };
+
                     let (sender, receiver) = oneshot::channel();
                     lease.renew_lease_until(
                         ctx.clone(),
@@ -397,6 +391,11 @@ where
                         Some(format!("{} {}", Derived::NAME, bcs_id)),
                     );
                     let (stats, res) = deriver.timed().await;
+
+                    STATS::derived_data_latency.add_value(
+                        stats.completion_time.as_millis_unchecked() as i64,
+                        (Derived::NAME,),
+                    );
                     let _ = sender.send(());
                     let tag = if res.is_ok() {
                         "Generated derived data"
@@ -425,23 +424,22 @@ where
     Ok(())
 }
 
-fn fetch_derived_may_panic<Derived, Mapping>(
-    ctx: CoreContext,
+async fn fetch_derived_may_panic<Derived, Mapping>(
+    ctx: &CoreContext,
     bcs_id: ChangesetId,
-    derived_mapping: Mapping,
-) -> impl Future<Item = Derived, Error = Error>
+    derived_mapping: &Mapping,
+) -> Result<Derived, Error>
 where
     Derived: BonsaiDerived,
     Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone,
 {
-    DeriveNode::from_bonsai(ctx, derived_mapping, bcs_id).map(
-        move |derive_node| match derive_node {
-            DeriveNode::Derived(derived) => derived,
-            DeriveNode::Bonsai(_) => {
-                panic!("{} should be derived already", bcs_id);
-            }
-        },
-    )
+    let derive_node = DeriveNode::from_bonsai(ctx, derived_mapping, &bcs_id).await?;
+    match derive_node {
+        DeriveNode::Derived(derived) => Ok(derived),
+        DeriveNode::Bonsai(_) => {
+            panic!("{} should be derived already", bcs_id);
+        }
+    }
 }
 
 #[derive(Clone, Copy)]
@@ -453,22 +451,24 @@ enum DeriveNode<Derived> {
 }
 
 impl<Derived: BonsaiDerived> DeriveNode<Derived> {
-    fn from_bonsai<Mapping>(
-        ctx: CoreContext,
-        derived_mapping: Mapping,
-        csid: ChangesetId,
-    ) -> impl Future<Item = Self, Error = Error>
+    async fn from_bonsai<Mapping>(
+        ctx: &CoreContext,
+        derived_mapping: &Mapping,
+        csid: &ChangesetId,
+    ) -> Result<Self, Error>
     where
         Mapping: BonsaiDerivedMapping<Value = Derived> + Clone,
     {
         // TODO: do not create intermediate hashmap, since this methods is going to be called
         //       most often, to get derived value
-        derived_mapping
-            .get(ctx, vec![csid.clone()])
-            .map(move |csids_to_id| match csids_to_id.get(&csid) {
-                Some(id) => DeriveNode::Derived(id.clone()),
-                None => DeriveNode::Bonsai(csid),
-            })
+        let csids_to_id = derived_mapping
+            .get(ctx.clone(), vec![*csid])
+            .compat()
+            .await?;
+        match csids_to_id.get(csid) {
+            Some(id) => Ok(DeriveNode::Derived(id.clone())),
+            None => Ok(DeriveNode::Bonsai(*csid)),
+        }
     }
 }
 
