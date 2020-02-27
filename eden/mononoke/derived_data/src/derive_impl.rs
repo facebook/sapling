@@ -16,7 +16,7 @@ use futures::sync::oneshot;
 use futures::{future, stream, Future, Stream};
 use futures_ext::{bounded_traversal, try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use futures_preview::{compat::Future01CompatExt, future::FutureExt as NewFutureExt, TryFutureExt};
-use futures_stats::Timed;
+use futures_stats::{futures03::TimedFutureExt, Timed};
 use lock_ext::LockExt;
 use mononoke_types::ChangesetId;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -113,7 +113,7 @@ pub fn derive_impl<
                         cloned!(ctx, mapping, repo);
                         move |csid| {
                             ctx.scuba().clone().log_with_msg(
-                                "Generating derived data",
+                                "Waiting for derived data to be generated",
                                 Some(format!("{} {}", Derived::NAME, csid)),
                             );
 
@@ -122,9 +122,9 @@ pub fn derive_impl<
                                     cloned!(ctx);
                                     move |stats, res| {
                                         let tag = if res.is_ok() {
-                                            "Generated derived data"
+                                            "Got derived data"
                                         } else {
-                                            "Failed to generate derived data"
+                                            "Failed to get derived data"
                                         };
 
                                         ctx.scuba().clone().add_future_stats(&stats).log_with_msg(
@@ -391,8 +391,23 @@ where
                         &lease_key,
                         receiver.map_err(|_| ()).boxify(),
                     );
-                    let res = deriver.await;
+
+                    ctx.scuba().clone().log_with_msg(
+                        "Generating derived data",
+                        Some(format!("{} {}", Derived::NAME, bcs_id)),
+                    );
+                    let (stats, res) = deriver.timed().await;
                     let _ = sender.send(());
+                    let tag = if res.is_ok() {
+                        "Generated derived data"
+                    } else {
+                        "Failed to generate derived data"
+                    };
+
+                    ctx.scuba()
+                        .clone()
+                        .add_future_stats(&stats)
+                        .log_with_msg(tag, Some(format!("{} {}", Derived::NAME, bcs_id)));
                     res?;
                     break;
                 } else {
