@@ -1,6 +1,7 @@
 #require py2
 #chg-compatible
 
+  $ export DUMMYSSH_STABLE_ORDER=1
   $ enable amend
   $ disable treemanifest
 
@@ -45,26 +46,26 @@ Check backing up top stack commit and mid commit
 
   $ hg cloud backup --traceback
   backing up stack rooted at 64164d1e0f82
+  backing up stack rooted at d0d71d09c927
+  backing up stack rooted at d79a807cba78
+  backing up stack rooted at eccc11f58a56
+  backing up stack rooted at 42952ab62cec
+  backing up stack rooted at 4903fdffd9c6
+  commitcloud: backed up 8 commits
   remote: pushing 2 commits:
   remote:     64164d1e0f82  A1
   remote:     796f1f48de85  B
-  backing up stack rooted at d0d71d09c927
   remote: pushing 2 commits:
   remote:     d0d71d09c927  A2
   remote:     daeeb2f180d6  C
-  backing up stack rooted at d79a807cba78
   remote: pushing 1 commit:
   remote:     d79a807cba78  D2
-  backing up stack rooted at eccc11f58a56
   remote: pushing 1 commit:
   remote:     eccc11f58a56  D3
-  backing up stack rooted at 42952ab62cec
   remote: pushing 1 commit:
   remote:     42952ab62cec  E1
-  backing up stack rooted at 4903fdffd9c6
   remote: pushing 1 commit:
   remote:     4903fdffd9c6  E2
-  commitcloud: backed up 8 commits
 
   $ hg cloud check -r $A1 -r $D2 -r $E1
   64164d1e0f82f6a670c84728b83061df1b126b5c backed up
