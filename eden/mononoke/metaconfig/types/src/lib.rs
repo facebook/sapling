@@ -947,6 +947,9 @@ pub struct InfinitepushParams {
     /// Valid namespace for infinite push bookmarks. If None, then infinitepush bookmarks are not
     /// allowed.
     pub namespace: Option<InfinitepushNamespace>,
+
+    /// Whether to put trees/files in the getbundle response for infinitepush commits
+    pub hydrate_getbundle_response: bool,
 }
 
 impl Default for InfinitepushParams {
@@ -954,6 +957,7 @@ impl Default for InfinitepushParams {
         Self {
             allow_writes: false,
             namespace: None,
+            hydrate_getbundle_response: false,
         }
     }
 }

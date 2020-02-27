@@ -721,6 +721,7 @@ impl RepoConfigs {
                 |RawInfinitepushParams {
                      allow_writes,
                      namespace_pattern,
+                     hydrate_getbundle_response,
                  }| {
                     let namespace = match namespace_pattern {
                         Some(ns) => {
@@ -732,9 +733,12 @@ impl RepoConfigs {
                         }
                         None => None,
                     };
+                    // When the field is missing, we default to not hydrating the response
+                    let hydrate_getbundle_response = hydrate_getbundle_response.unwrap_or(false);
                     InfinitepushParams {
                         allow_writes,
                         namespace,
+                        hydrate_getbundle_response,
                     }
                 },
             )
@@ -1620,6 +1624,7 @@ mod test {
                 infinitepush: InfinitepushParams {
                     allow_writes: true,
                     namespace: Some(InfinitepushNamespace::new(Regex::new("foobar/.+").unwrap())),
+                    hydrate_getbundle_response: false,
                 },
                 list_keys_patterns_max: 123,
                 hook_max_file_size: 456,
