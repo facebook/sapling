@@ -13,7 +13,7 @@ use std::{
     str,
 };
 
-use anyhow::{bail, ensure, Result};
+use anyhow::{ensure, Result};
 use bytes::{Bytes, BytesMut};
 use crypto::{digest::Digest, sha2::Sha256 as CryptoSha256};
 use parking_lot::RwLock;
@@ -21,11 +21,11 @@ use serde_derive::{Deserialize, Serialize};
 
 use indexedlog::log::IndexOutput;
 use mincode::{deserialize, serialize};
-use types::{HgId, Key, RepoPath, Sha256};
+use types::{HgId, Key, Sha256};
 use util::path::create_dir;
 
 use crate::{
-    datastore::{DataStore, Delta, Metadata, MutableDeltaStore},
+    datastore::{strip_metadata, DataStore, Delta, Metadata, MutableDeltaStore},
     indexedlogutil::{Store, StoreOpenOptions},
     localstore::LocalStore,
     util::{get_lfs_blobs_path, get_lfs_pointers_path},
@@ -233,57 +233,6 @@ impl LocalStore for LfsStore {
     }
 }
 
-/// Mercurial may embed the copy-from information into the blob itself, in which case, the `Delta`
-/// would look like:
-///
-///   \1
-///   copy: path
-///   copyrev: sha1
-///   \1
-///   blob
-///
-/// If the blob starts with \1\n too, it's escaped by adding \1\n\1\n at the beginning.
-fn strip_metadata(data: &Bytes) -> Result<(Bytes, Option<Key>)> {
-    let slice = data.as_ref();
-    if !slice.starts_with(b"\x01\n") {
-        return Ok((data.clone(), None));
-    }
-
-    let slice = &slice[2..];
-
-    if let Some(pos) = slice.windows(2).position(|needle| needle == b"\x01\n") {
-        let slice = &slice[..pos];
-
-        let mut path = None;
-        let mut hgid = None;
-        for line in slice.split(|c| c == &b'\n') {
-            if line.is_empty() {
-                continue;
-            }
-
-            if line.starts_with(b"copy: ") {
-                path = Some(RepoPath::from_str(str::from_utf8(&line[6..])?)?.to_owned());
-            } else if line.starts_with(b"copyrev: ") {
-                hgid = Some(HgId::from_str(str::from_utf8(&line[9..])?)?);
-            } else {
-                bail!("Unknown metadata in data: {:?}", line);
-            }
-        }
-
-        let key = match (path, hgid) {
-            (None, Some(_)) => bail!("missing 'copyrev' metadata"),
-            (Some(_), None) => bail!("missing 'copy' metadata"),
-
-            (None, None) => None,
-            (Some(path), Some(hgid)) => Some(Key::new(path, hgid)),
-        };
-
-        Ok((data.slice(2 + pos + 2..), key))
-    } else {
-        Ok((data.clone(), None))
-    }
-}
-
 /// When a file was copied, Mercurial expects the blob that the store returns to contain this copy
 /// information
 fn rebuild_metadata(data: Bytes, entry: &LfsPointersEntry) -> Bytes {
@@ -488,33 +437,6 @@ mod tests {
         store.add(&delta, &Default::default())?;
         let get_delta = store.get_delta(&k1)?;
         assert_eq!(Some(delta), get_delta);
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_strip_metadata() -> Result<()> {
-        let key = key("foo/bar/baz", "1234");
-        let data = Bytes::copy_from_slice(
-            format!(
-                "\x01\ncopy: {}\ncopyrev: {}\n\x01\nthis is a blob",
-                key.path, key.hgid
-            )
-            .as_bytes(),
-        );
-        let (split_data, path) = strip_metadata(&data)?;
-        assert_eq!(split_data, Bytes::from(&b"this is a blob"[..]));
-        assert_eq!(path, Some(key));
-
-        let data = Bytes::from(&b"\x01\n\x01\nthis is a blob"[..]);
-        let (split_data, path) = strip_metadata(&data)?;
-        assert_eq!(split_data, Bytes::from(&b"this is a blob"[..]));
-        assert_eq!(path, None);
-
-        let data = Bytes::from(&b"\x01\nthis is a blob"[..]);
-        let (split_data, path) = strip_metadata(&data)?;
-        assert_eq!(split_data, data);
-        assert_eq!(path, None);
 
         Ok(())
     }

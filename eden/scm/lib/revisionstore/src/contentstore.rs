@@ -11,12 +11,13 @@ use std::{
 };
 
 use anyhow::{format_err, Result};
+use bytes::Bytes;
 
 use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 use types::Key;
 
 use crate::{
-    datastore::{DataStore, Delta, Metadata, MutableDeltaStore, RemoteDataStore},
+    datastore::{strip_metadata, DataStore, Delta, Metadata, MutableDeltaStore, RemoteDataStore},
     indexedlogdatastore::IndexedLogDataStore,
     lfs::LfsStore,
     localstore::LocalStore,
@@ -52,6 +53,21 @@ impl ContentStore {
         ContentStoreBuilder::new(config)
             .local_path(&local_path)
             .build()
+    }
+
+    /// Some blobs may contain copy-from metadata, let's strip it. For more details about the
+    /// copy-from metadata, see `datastore::strip_metadata`.
+    ///
+    /// XXX: This should only be used on `ContentStore` that are storing actual
+    /// file content, tree stores should use the `get` method instead.
+    pub fn get_file_content(&self, key: &Key) -> Result<Option<Bytes>> {
+        if let Some(vec) = self.get(key)? {
+            let bytes = vec.into();
+            let (bytes, _) = strip_metadata(&bytes)?;
+            Ok(Some(bytes))
+        } else {
+            Ok(None)
+        }
     }
 }
 
