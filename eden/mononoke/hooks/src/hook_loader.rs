@@ -10,6 +10,7 @@
 #![deny(warnings)]
 
 use crate::errors::*;
+use crate::facebook::rust_hooks::check_nocommit::CheckNocommitHook;
 use crate::facebook::rust_hooks::check_unittests::CheckUnittestsHook;
 use crate::facebook::rust_hooks::ensure_valid_email::EnsureValidEmailHook;
 use crate::facebook::rust_hooks::limit_commit_message_length::LimitCommitMessageLength;
@@ -66,6 +67,7 @@ pub fn load_hooks(
                 }
                 "limit_path_length" => FileHook(Arc::new(LimitPathLengthHook::new(&hook.config)?)),
                 "signed_source" => FileHook(Arc::new(SignedSourceHook::new(&hook.config)?)),
+                "check_nocommit" => FileHook(Arc::new(CheckNocommitHook::new(&hook.config)?)),
                 _ => return Err(ErrorKind::InvalidRustHook(name.clone()).into()),
             };
 
