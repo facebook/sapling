@@ -159,6 +159,10 @@ def check_health(
 
     Returns a HealthStatus object containing health information.
     """
+    if timeout is None:
+        # Default to a 3 second timeout if an explicit value was not specified
+        timeout = 3.0
+
     pid = None
     status = fb303_status.DEAD
     try:

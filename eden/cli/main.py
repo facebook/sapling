@@ -311,7 +311,7 @@ class StatusCmd(Subcmd):
         parser.add_argument(
             "--timeout",
             type=float,
-            default=15.0,
+            default=3.0,
             help="Wait up to TIMEOUT seconds for the daemon to respond "
             "(default=%(default)s).",
         )
@@ -1507,6 +1507,7 @@ re-open these files after Eden is restarted.
 
     def _do_stop(self, instance: EdenInstance, pid: int, timeout: int) -> None:
         with instance.get_thrift_client() as client:
+            client.set_timeout(timeout)
             try:
                 stop_aux_processes(client)
             except Exception:
