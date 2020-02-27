@@ -148,8 +148,11 @@ dirstate_tuple_new(PyTypeObject* subtype, PyObject* args, PyObject* kwds) {
   char state;
   int size, mode, mtime;
 #ifdef IS_PY3K
-  if (!PyArg_ParseTuple(args, "Ciii", &state, &mode, &size, &mtime))
+  const char* utf8_state;
+  if (!PyArg_ParseTuple(args, "siii", &utf8_state, &mode, &size, &mtime))
     return NULL;
+  // We only need the first character of the string
+  state = *utf8_state;
 #else
   if (!PyArg_ParseTuple(args, "ciii", &state, &mode, &size, &mtime))
     return NULL;
@@ -407,8 +410,8 @@ static PyObject* pack_dirstate(PyObject* self, PyObject* args) {
   PyObject *k, *v = NULL, *pn;
   char *p, *s;
 #ifdef IS_PY3K
-  const char *utf8c = NULL;
-  const char *utf8k = NULL;
+  const char* utf8c = NULL;
+  const char* utf8k = NULL;
 #endif
   int now;
 
