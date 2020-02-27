@@ -1,7 +1,7 @@
 import os
 import unittest
 
-from edenscm.hgext.convert.repo import conversionrevision, gitutil, repo
+from edenscm.hgext.convert.repo import conversionrevision, gitutil, repo, repomanifest
 from hghave import require
 
 
@@ -301,6 +301,219 @@ class conversionrevisiontest(unittest.TestCase):
         out = hash(rev)
         self.assertIsNotNone(out)
         self.assertIsInstance(hash(rev), int)
+
+
+class repomanifesttest(unittest.TestCase):
+    """Tests implementation of the repomanifest class"""
+
+    def test_fromtext(self):
+        manifestblobs = {
+            "default.xml": """<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remote
+    name="origin"
+    fetch="ssh://git-ro.vip.facebook.com/data/gitrepos"
+    push="ssh://git.vip.facebook.com/data/gitrepos"
+    pushurl="ssh://git.vip.facebook.com/data/gitrepos"/>
+
+  <default
+    remote="origin"
+    revision="mydefaultbranch"/>
+
+  <project name="foo/alpha" path="A"/>
+  <project name="oculus/foo/bravo" path="vendor/b">
+    <linkfile dest=".watchmanconfig" src="watchmanconfig"/>
+    <annotation name="not_old" value="37"/>
+  </project>
+</manifest>
+"""
+        }
+        manifest = repomanifest.fromtext("default.xml", manifestblobs)
+        self.assertIsNotNone(manifest)
+
+    def test_getprojectrevision(self):
+        manifestblobs = {
+            "manifest.xml": """<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remote
+    name="origin"
+    fetch="ssh://git-ro.vip.facebook.com/data/gitrepos"
+    push="ssh://git.vip.facebook.com/data/gitrepos"
+    pushurl="ssh://git.vip.facebook.com/data/gitrepos"/>
+
+  <default
+    remote="origin"
+    revision="mydefaultbranch"/>
+
+  <project name="foo/alpha" path="A"/>
+  <project name="oculus/foo/bravo" path="vendor/b" revision="aosp-tb12">
+    <linkfile dest=".watchmanconfig" src="watchmanconfig"/>
+    <annotation name="not_old" value="37"/>
+  </project>
+</manifest>
+"""
+        }
+        manifest = repomanifest.fromtext("manifest.xml", manifestblobs)
+        self.assertEqual(
+            manifest.getprojectrevision("foo/alpha"), "origin/mydefaultbranch"
+        )
+        self.assertEqual(
+            manifest.getprojectrevision("oculus/foo/bravo"), "origin/aosp-tb12"
+        )
+
+    def test_getprojectpaths(self):
+        manifestblobs = {
+            "blob1": """<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remote
+    name="origin"
+    fetch="ssh://git-ro.vip.facebook.com/data/gitrepos"
+    push="ssh://git.vip.facebook.com/data/gitrepos"
+    pushurl="ssh://git.vip.facebook.com/data/gitrepos"/>
+
+  <default
+    remote="origin"
+    revision="mydefaultbranch"/>
+
+  <project name="foo/alpha" path="A"/>
+  <project name="oculus/foo/bravo" path="vendor/b/monterey" revision="monterey" />
+  <project name="oculus/foo/bravo" path="vendor/b/pacific" revision="pacific" />
+</manifest>
+"""
+        }
+        manifest = repomanifest.fromtext("blob1", manifestblobs)
+        self.assertEqual(manifest.getprojectpaths("foo/alpha"), ["A"])
+        self.assertEqual(
+            manifest.getprojectpaths("oculus/foo/bravo"),
+            ["vendor/b/monterey", "vendor/b/pacific"],
+        )
+
+    def test_getprojectpathrevisions(self):
+        manifestblobs = {
+            "default.xml": """<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remote
+    name="origin"
+    fetch="ssh://git-ro.vip.facebook.com/data/gitrepos"
+    push="ssh://git.vip.facebook.com/data/gitrepos"
+    pushurl="ssh://git.vip.facebook.com/data/gitrepos"/>
+
+  <remote name="myremote"/>
+  <default
+    remote="myremote"
+    revision="mydefaultbranch"/>
+
+  <project name="foo/alpha" path="A" remote="origin"/>
+  <project name="oculus/foo/bravo" path="vendor/b/monterey" revision="monterey" />
+  <project name="oculus/foo/bravo" path="vendor/b/pacific" revision="pacific" />
+</manifest>
+"""
+        }
+        manifest = repomanifest.fromtext("default.xml", manifestblobs)
+        self.assertEqual(
+            manifest.getprojectpathrevisions("foo/alpha"),
+            {"A": "origin/mydefaultbranch"},
+        )
+        self.assertEqual(
+            manifest.getprojectpathrevisions("oculus/foo/bravo"),
+            {
+                "vendor/b/monterey": "myremote/monterey",
+                "vendor/b/pacific": "myremote/pacific",
+            },
+        )
+
+    def test_getprojects(self):
+        manifestblobs = {
+            "default.xml": """<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remote
+    name="origin"
+    fetch="ssh://git-ro.vip.facebook.com/data/gitrepos"
+    push="ssh://git.vip.facebook.com/data/gitrepos"
+    pushurl="ssh://git.vip.facebook.com/data/gitrepos"/>
+
+  <default
+    remote="origin"
+    revision="mydefaultbranch"/>
+
+  <project name="foo/alpha" path="A"/>
+  <project name="oculus/foo/bravo" path="vendor/b/monterey" revision="monterey" />
+  <project name="oculus/foo/bravo" path="vendor/b/pacific" revision="pacific" />
+</manifest>
+"""
+        }
+        manifest = repomanifest.fromtext("default.xml", manifestblobs)
+        expected = [
+            ("foo/alpha", "A", "origin/mydefaultbranch"),
+            ("oculus/foo/bravo", "vendor/b/monterey", "origin/monterey"),
+            ("oculus/foo/bravo", "vendor/b/pacific", "origin/pacific"),
+        ]
+        self.assertEqual(manifest.getprojects(), expected)
+
+    def test_getprojects_hashes(self):
+        manifestblobs = {
+            "default.xml": """<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remote
+    name="origin"
+    fetch="ssh://git-ro.vip.facebook.com/data/gitrepos"
+    push="ssh://git.vip.facebook.com/data/gitrepos"
+    pushurl="ssh://git.vip.facebook.com/data/gitrepos"/>
+
+  <default
+    remote="origin"
+    revision="mydefaultbranch"/>
+
+  <project name="foo/alpha" path="A"/>
+  <project name="oculus/foo/bravo" path="vendor/b/monterey" revision="monterey" />
+  <project name="oculus/foo/bravo" path="vendor/b/pacific" revision="5fa2a4dbfb5616ffd2d32702f6f97be331e665a6" />
+</manifest>
+"""
+        }
+        manifest = repomanifest.fromtext("default.xml", manifestblobs)
+        expected = [
+            ("foo/alpha", "A", "origin/mydefaultbranch"),
+            ("oculus/foo/bravo", "vendor/b/monterey", "origin/monterey"),
+            (
+                "oculus/foo/bravo",
+                "vendor/b/pacific",
+                "5fa2a4dbfb5616ffd2d32702f6f97be331e665a6",
+            ),
+        ]
+        self.assertEqual(manifest.getprojects(), expected)
+
+    def test_include(self):
+        manifestblobs = {
+            "default.xml": """<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <remote
+    name="origin"
+    fetch="ssh://git-ro.vip.facebook.com/data/gitrepos"
+    push="ssh://git.vip.facebook.com/data/gitrepos"
+    pushurl="ssh://git.vip.facebook.com/data/gitrepos"/>
+
+  <default
+    remote="origin"
+    revision="mydefaultbranch"/>
+
+  <include name="include-example.xml"/>
+  <project name="foo/alpha" path="A"/>
+  <project name="oculus/foo/bravo" path="vendor/b/monterey" revision="monterey" />
+  <project name="oculus/foo/bravo" path="vendor/b/pacific" revision="pacific" />
+</manifest>
+""",
+            "include-example.xml": """<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <project name="include-c" path="include/c" />
+</manifest>
+""",
+        }
+        manifest = repomanifest.fromtext("default.xml", manifestblobs)
+        self.assertTrue(manifest.hasproject("include-c"))
+        self.assertEqual(manifest.getprojectpaths("include-c"), ["include/c"])
+        self.assertEqual(
+            manifest.getprojectrevision("include-c"), "origin/mydefaultbranch"
+        )
 
 
 if __name__ == "__main__":

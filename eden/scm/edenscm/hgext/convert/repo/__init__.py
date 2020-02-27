@@ -7,6 +7,7 @@ from __future__ import absolute_import
 
 from .conversionrevision import conversionrevision
 from .repo_source import gitutil, repo, repo_source
+from .repomanifest import repomanifest
 
 
-__all__ = ["conversionrevision", "repo_source"]
+__all__ = ["conversionrevision", "repomanifest", "repo_source"]
