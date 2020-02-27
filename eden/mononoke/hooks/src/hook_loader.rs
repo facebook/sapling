@@ -14,6 +14,7 @@ use crate::facebook::rust_hooks::check_unittests::CheckUnittestsHook;
 use crate::facebook::rust_hooks::ensure_valid_email::EnsureValidEmailHook;
 use crate::facebook::rust_hooks::limit_commit_message_length::LimitCommitMessageLength;
 use crate::facebook::rust_hooks::limit_path_length::LimitPathLengthHook;
+use crate::facebook::rust_hooks::signed_source::SignedSourceHook;
 use crate::facebook::rust_hooks::verify_integrity::VerifyIntegrityHook;
 use crate::lua_hook::LuaHook;
 use crate::{Hook, HookChangeset, HookFile, HookManager};
@@ -64,6 +65,7 @@ pub fn load_hooks(
                     ChangesetHook(Arc::new(LimitCommitMessageLength::new(&hook.config)?))
                 }
                 "limit_path_length" => FileHook(Arc::new(LimitPathLengthHook::new(&hook.config)?)),
+                "signed_source" => FileHook(Arc::new(SignedSourceHook::new(&hook.config)?)),
                 _ => return Err(ErrorKind::InvalidRustHook(name.clone()).into()),
             };
 
