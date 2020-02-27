@@ -18,7 +18,8 @@ use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use filestore::FetchKey;
 use futures::{
-    future, future::IntoFuture as OldIntoFuture, stream as old_stream, Future, Stream as OldStream,
+    future as old_future, future::IntoFuture as OldIntoFuture, stream as old_stream,
+    Future as OldFuture, Stream as OldStream,
 };
 use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
 use futures_preview::{
@@ -321,7 +322,7 @@ fn prepare_phases<'a>(
     repo: &BlobRepo,
     heads: impl IntoIterator<Item = &'a HgChangesetId>,
     phases: &Arc<dyn Phases>,
-) -> impl Future<Item = Vec<(HgChangesetId, HgPhase)>, Error = Error> {
+) -> impl OldFuture<Item = Vec<(HgChangesetId, HgPhase)>, Error = Error> {
     // create 'bonsai changesetid' => 'hg changesetid' hash map that will be later used
     // heads that are not known by the server will be skipped
     let heads: Vec<_> = heads.into_iter().cloned().collect();
@@ -388,12 +389,12 @@ fn calculate_public_roots(
     repo: BlobRepo,
     drafts: HashSet<ChangesetId>,
     phases: Arc<dyn Phases>,
-) -> impl Future<Item = HashSet<ChangesetId>, Error = Error> {
-    future::loop_fn(
+) -> impl OldFuture<Item = HashSet<ChangesetId>, Error = Error> {
+    old_future::loop_fn(
         (drafts, HashSet::new(), HashSet::new()),
         move |(drafts, mut public, mut visited)| {
             if drafts.is_empty() {
-                return future::ok(future::Loop::Break(public)).left_future();
+                return old_future::ok(old_future::Loop::Break(public)).left_future();
             }
 
             old_stream::iter_ok(drafts)
@@ -428,7 +429,7 @@ fn calculate_public_roots(
                     // update found public changests
                     public.extend(new_public);
                     // continue for the new drafts
-                    future::ok(future::Loop::Continue((new_drafts, public, visited)))
+                    old_future::ok(old_future::Loop::Continue((new_drafts, public, visited)))
                 })
                 .right_future()
         },
@@ -479,7 +480,7 @@ impl PreparedFilenodeEntry {
     }
 }
 
-pub fn prepare_filenode_entries_stream(
+fn prepare_filenode_entries_stream(
     ctx: CoreContext,
     repo: BlobRepo,
     filenodes: Vec<(MPath, HgFileNodeId, HgChangesetId)>,
@@ -618,7 +619,7 @@ fn diff_with_parents(
     ctx: CoreContext,
     repo: BlobRepo,
     hg_cs_id: HgChangesetId,
-) -> impl Future<
+) -> impl OldFuture<
     Item = (
         Vec<(Option<MPath>, HgManifestId, HgChangesetId)>,
         Vec<(MPath, HgFileNodeId, HgChangesetId)>,
@@ -629,7 +630,7 @@ fn diff_with_parents(
     let parent_mf_ids = repo.get_changeset_parents(ctx.clone(), hg_cs_id).and_then({
         cloned!(ctx, repo);
         move |parents| {
-            future::join_all(parents.into_iter().map({
+            old_future::join_all(parents.into_iter().map({
                 cloned!(ctx, repo);
                 move |p| fetch_manifest(ctx.clone(), repo.clone(), p.clone())
             }))
@@ -683,7 +684,7 @@ pub fn get_manifests_and_filenodes(
     repo: BlobRepo,
     commits: Vec<HgChangesetId>,
     lfs_params: LfsParams,
-) -> impl Future<
+) -> impl OldFuture<
     Item = (
         Vec<OldBoxFuture<parts::TreepackPartInput, Error>>,
         HashMap<MPath, Vec<PreparedFilenodeEntry>>,
@@ -734,7 +735,7 @@ fn fetch_manifest(
     ctx: CoreContext,
     repo: BlobRepo,
     hg_cs_id: HgChangesetId,
-) -> impl Future<Item = HgManifestId, Error = Error> {
+) -> impl OldFuture<Item = HgManifestId, Error = Error> {
     hg_cs_id
         .load(ctx, repo.blobstore())
         .from_err()
