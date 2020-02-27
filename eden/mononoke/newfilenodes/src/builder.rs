@@ -20,6 +20,7 @@ use std::sync::Arc;
 
 use crate::local_cache::{CachelibCache, LocalCache};
 use crate::reader::FilenodesReader;
+use crate::remote_cache::{MemcacheCache, RemoteCache};
 use crate::writer::FilenodesWriter;
 use crate::NewFilenodes;
 
@@ -68,12 +69,21 @@ impl NewFilenodesBuilder {
 
     pub fn enable_caching(
         &mut self,
+        fb: FacebookInit,
         filenodes_cache_pool: VolatileLruCachePool,
         filenodes_history_cache_pool: VolatileLruCachePool,
+        backing_store_name: &str,
+        backing_store_params: &str,
     ) {
         self.reader.local_cache = LocalCache::Cachelib(CachelibCache::new(
             filenodes_cache_pool,
             filenodes_history_cache_pool,
+        ));
+
+        self.reader.remote_cache = RemoteCache::Memcache(MemcacheCache::new(
+            fb,
+            backing_store_name,
+            backing_store_params,
         ));
     }
 

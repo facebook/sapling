@@ -83,7 +83,7 @@ impl<T: Abomonation + Clone + Send + 'static> CachelibHandler<T> {
         match self {
             CachelibHandler::Real(ref cache) => set_cached(cache, key, value),
             CachelibHandler::Mock(store) => {
-                store.set(key, value);
+                store.set(key, value.clone());
                 Ok(true)
             }
         }

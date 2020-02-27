@@ -18,7 +18,7 @@ use quickcheck::{Arbitrary, Gen};
 use std::convert::TryFrom;
 
 mod caching;
-mod thrift {
+pub mod thrift {
     pub use filenodes_if::*;
 }
 

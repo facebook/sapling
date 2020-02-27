@@ -24,7 +24,8 @@ use thiserror::Error as DeriveError;
 use filenodes::FilenodeInfo;
 
 use crate::connections::{AcquireReason, Connections};
-use crate::local_cache::{CacheKey, LocalCache};
+use crate::local_cache::{CacheKey, LocalCache, TrackedLocalCache};
+use crate::remote_cache::RemoteCache;
 use crate::structs::{PartialFilenode, PartialHistory, PathBytes, PathHashBytes, PathWithHash};
 
 define_stats! {
@@ -55,8 +56,6 @@ pub enum ErrorKind {
 
 enum Selection<Partial, Full> {
     Partial(Partial),
-    // NOTE: This is used later in this stack to represent a full object obtained from Memcache.
-    #[allow(unused)]
     Full(Full),
 }
 
@@ -117,6 +116,7 @@ pub struct FilenodesReader {
     read_connections: Connections,
     read_master_connections: Connections,
     pub local_cache: LocalCache,
+    pub remote_cache: RemoteCache,
 }
 
 impl FilenodesReader {
@@ -128,6 +128,7 @@ impl FilenodesReader {
             read_connections: Connections::new(read_connections),
             read_master_connections: Connections::new(read_master_connections),
             local_cache: LocalCache::Noop,
+            remote_cache: RemoteCache::Noop,
         }
     }
 
@@ -146,6 +147,7 @@ impl FilenodesReader {
 
         match select_filenode(
             &self.local_cache,
+            &self.remote_cache,
             &self.read_connections,
             repo_id,
             &pwh,
@@ -169,6 +171,7 @@ impl FilenodesReader {
 
         let res = select_filenode(
             &self.local_cache,
+            &self.remote_cache,
             &self.read_master_connections,
             repo_id,
             &pwh,
@@ -189,7 +192,14 @@ impl FilenodesReader {
 
         let pwh = PathWithHash::from_repo_path(&path);
 
-        let res = select_history(&self.local_cache, &self.read_connections, repo_id, &pwh).await?;
+        let res = select_history(
+            &self.local_cache,
+            &self.remote_cache,
+            &self.read_connections,
+            repo_id,
+            &pwh,
+        )
+        .await?;
 
         Ok(res)
     }
@@ -197,13 +207,23 @@ impl FilenodesReader {
 
 async fn select_filenode(
     local_cache: &LocalCache,
+    remote_cache: &RemoteCache,
     connections: &Connections,
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
     filenode: HgFileNodeId,
 ) -> Result<Option<FilenodeInfo>, ErrorKind> {
-    let selection =
-        select_partial_filenode(&local_cache, connections, repo_id, pwh, filenode).await?;
+    let local_cache = local_cache.tracked();
+
+    let selection = select_partial_filenode(
+        &local_cache,
+        remote_cache,
+        connections,
+        repo_id,
+        pwh,
+        filenode,
+    )
+    .await?;
 
     let partial = match selection {
         Some(Selection::Partial(partial)) => partial,
@@ -226,11 +246,16 @@ async fn select_filenode(
         }
     };
 
+    if local_cache.did_fill() {
+        remote_cache.fill_filenode(repo_id, &pwh.path, filenode, ret.clone());
+    }
+
     Ok(Some(ret))
 }
 
 async fn select_partial_filenode(
-    local_cache: &LocalCache,
+    local_cache: &TrackedLocalCache<'_>,
+    remote_cache: &RemoteCache,
     connections: &Connections,
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
@@ -253,6 +278,17 @@ async fn select_partial_filenode(
     }
 
     STATS::get_local_cache_misses.add_value(1);
+
+    // Before hiting MySQL, check our caches.
+
+    let from_remote_cache = remote_cache
+        .get_filenode(repo_id, &pwh.path, filenode)
+        .await;
+
+    if let Some(full) = from_remote_cache {
+        fill_full_filenode(local_cache.untracked(), &key, repo_id, &full);
+        return Ok(Some(Selection::Full(full)));
+    }
 
     let rows = SelectFilenode::query(
         connection.as_ref(),
@@ -277,11 +313,15 @@ async fn select_partial_filenode(
 
 async fn select_history(
     local_cache: &LocalCache,
+    remote_cache: &RemoteCache,
     connections: &Connections,
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
 ) -> Result<Vec<FilenodeInfo>, Error> {
-    let selection = select_partial_history(&local_cache, &connections, repo_id, &pwh).await?;
+    let local_cache = local_cache.tracked();
+
+    let selection =
+        select_partial_history(&local_cache, &remote_cache, &connections, repo_id, &pwh).await?;
 
     let partial = match selection {
         Selection::Partial(partial) => partial,
@@ -292,11 +332,16 @@ async fn select_history(
 
     let ret = fill_paths(&connections, &local_cache, &pwh, repo_id, partial.history).await?;
 
+    if local_cache.did_fill() {
+        remote_cache.fill_history(repo_id, &pwh.path, ret.clone());
+    }
+
     Ok(ret)
 }
 
 async fn select_partial_history(
-    local_cache: &LocalCache,
+    local_cache: &TrackedLocalCache<'_>,
+    remote_cache: &RemoteCache,
     connections: &Connections,
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
@@ -314,6 +359,13 @@ async fn select_partial_history(
     }
 
     STATS::range_local_cache_misses.add_value(1);
+
+    let from_remote_cache = remote_cache.get_history(repo_id, &pwh.path).await;
+
+    if let Some(full) = from_remote_cache {
+        fill_full_history(local_cache.untracked(), &key, repo_id, &full[..]);
+        return Ok(Selection::Full(full));
+    }
 
     let rows = SelectAllFilenodes::query(connection.as_ref(), &repo_id, &pwh.hash, &pwh.is_tree)
         .compat()
@@ -361,7 +413,7 @@ fn convert_row_to_partial_filenode(row: FilenodeRow) -> Result<PartialFilenode, 
 
 async fn fill_paths(
     connections: &Connections,
-    local_cache: &LocalCache,
+    local_cache: &TrackedLocalCache<'_>,
     pwh: &PathWithHash<'_>,
     repo_id: RepositoryId,
     rows: Vec<PartialFilenode>,
@@ -416,7 +468,7 @@ async fn fill_paths(
 
 async fn select_paths<I: Iterator<Item = PathHashBytes>>(
     connections: &Connections,
-    local_cache: &LocalCache,
+    local_cache: &TrackedLocalCache<'_>,
     repo_id: RepositoryId,
     iter: I,
 ) -> Result<HashMap<PathHashBytes, PathBytes>, ErrorKind> {
@@ -474,6 +526,55 @@ fn convert_to_repo_path(path_bytes: &PathBytes, is_tree: i8) -> Result<RepoPath,
     } else {
         RepoPath::file(&path_bytes.0[..]).map_err(ErrorKind::PathConversionFailed)
     }
+}
+
+fn extract_partial_filenode(
+    local_cache: &LocalCache,
+    repo_id: RepositoryId,
+    info: &FilenodeInfo,
+) -> PartialFilenode {
+    let copyfrom = match &info.copyfrom {
+        Some((path, filenode_id)) => {
+            let pwh = PathWithHash::from_repo_path(&path);
+            local_cache.fill(&path_cache_key(repo_id, &pwh.hash), &pwh.path_bytes);
+            Some((pwh.hash, *filenode_id))
+        }
+        None => None,
+    };
+
+    PartialFilenode {
+        filenode: info.filenode,
+        p1: info.p1,
+        p2: info.p2,
+        copyfrom,
+        linknode: info.linknode,
+    }
+}
+
+fn fill_full_filenode(
+    local_cache: &LocalCache,
+    key: &CacheKey<PartialFilenode>,
+    repo_id: RepositoryId,
+    info: &FilenodeInfo,
+) {
+    let partial = extract_partial_filenode(local_cache, repo_id, info);
+    local_cache.fill(key, &partial);
+}
+
+fn fill_full_history(
+    local_cache: &LocalCache,
+    key: &CacheKey<PartialHistory>,
+    repo_id: RepositoryId,
+    history: &[FilenodeInfo],
+) {
+    let history = history
+        .iter()
+        .map(|info| extract_partial_filenode(local_cache, repo_id, info))
+        .collect();
+
+    let history = PartialHistory { history };
+
+    local_cache.fill(key, &history);
 }
 
 queries! {

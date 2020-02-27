@@ -36,25 +36,40 @@ impl MemcacheHandler {
         }
     }
 
-    pub fn set(&self, key: String, value: Bytes) -> impl Future<Item = (), Error = ()> {
+    pub fn set<V>(&self, key: String, value: V) -> impl Future<Item = (), Error = ()>
+    where
+        IOBuf: From<V>,
+        Bytes: From<V>,
+        V: 'static,
+    {
         match self {
             MemcacheHandler::Real(ref client) => client.set(key, value).left_future(),
             MemcacheHandler::Mock(store) => {
-                store.set(&key, &value);
+                store.set(&key, Bytes::from(value).clone());
                 ok(()).right_future()
             }
         }
     }
 
-    pub fn set_with_ttl(
+    pub fn set_with_ttl<V>(
         &self,
         key: String,
-        value: Bytes,
+        value: V,
         duration: Duration,
-    ) -> impl Future<Item = (), Error = ()> {
+    ) -> impl Future<Item = (), Error = ()>
+    where
+        IOBuf: From<V>,
+        Bytes: From<V>,
+        V: 'static,
+    {
         match self {
-            MemcacheHandler::Real(ref client) => client.set_with_ttl(key, value, duration),
-            MemcacheHandler::Mock(_) => unimplemented!(),
+            MemcacheHandler::Real(ref client) => {
+                client.set_with_ttl(key, value, duration).left_future()
+            }
+            MemcacheHandler::Mock(_) => {
+                // For now we ignore TTLs here
+                self.set(key, value).right_future()
+            }
         }
     }
 

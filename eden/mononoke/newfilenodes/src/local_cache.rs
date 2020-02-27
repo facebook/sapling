@@ -12,6 +12,7 @@ use stats::prelude::*;
 use std::collections::HashMap;
 use std::hash::Hash;
 use std::marker::PhantomData;
+use std::sync::atomic::{AtomicBool, Ordering};
 
 define_stats! {
     prefix = "mononoke.filenodes";
@@ -90,6 +91,13 @@ impl LocalCache {
             })
             .collect()
     }
+
+    pub fn tracked<'a>(&'a self) -> TrackedLocalCache<'a> {
+        TrackedLocalCache {
+            inner: &self,
+            filled: AtomicBool::new(false),
+        }
+    }
 }
 
 pub struct CachelibCache {
@@ -136,6 +144,54 @@ impl CachelibCache {
             CachePool::Filenodes => &self.filenodes_cache_pool,
             CachePool::FilenodesHistory => &self.filenodes_history_cache_pool,
         }
+    }
+}
+
+pub struct TrackedLocalCache<'a> {
+    inner: &'a LocalCache,
+    filled: AtomicBool,
+}
+
+impl<'a> TrackedLocalCache<'a> {
+    pub fn get<V>(&self, key: &CacheKey<V>) -> Option<V>
+    where
+        V: Cacheable + Abomonation + Clone + Send + 'static,
+    {
+        self.inner.get(key)
+    }
+
+    pub fn fill<V>(&self, key: &CacheKey<V>, value: &V)
+    where
+        V: Cacheable + Abomonation + Clone + Send + 'static,
+    {
+        if !self.did_fill() {
+            self.filled.store(true, Ordering::Relaxed);
+        }
+
+        self.inner.fill(key, value)
+    }
+
+    pub fn populate<K, V, F>(
+        &self,
+        repo_id: RepositoryId,
+        output: &mut HashMap<K, V>,
+        pending: Vec<K>,
+        cache_key: F,
+    ) -> Vec<K>
+    where
+        F: Fn(RepositoryId, &K) -> CacheKey<V>,
+        K: Eq + Hash,
+        V: Cacheable + Abomonation + Clone + Send + 'static,
+    {
+        self.inner.populate(repo_id, output, pending, cache_key)
+    }
+
+    pub fn did_fill(&self) -> bool {
+        self.filled.load(Ordering::Relaxed)
+    }
+
+    pub fn untracked(&self) -> &'a LocalCache {
+        &self.inner
     }
 }
 
