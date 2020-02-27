@@ -22,6 +22,7 @@ use sql_ext::SqlConstructors;
 use tokio_preview as tokio;
 
 use crate::builder::{NewFilenodesBuilder, SQLITE_INSERT_CHUNK_SIZE};
+use crate::local_cache::{test::HashMapCache, LocalCache};
 use crate::reader::FilenodesReader;
 use crate::writer::FilenodesWriter;
 
@@ -350,7 +351,7 @@ async fn assert_all_filenodes(
 }
 
 macro_rules! filenodes_tests {
-    ($test_suite_name:ident, $create_db:ident) => {
+    ($test_suite_name:ident, $create_db:ident, $enable_caching:ident) => {
         mod $test_suite_name {
             use super::*;
             use fbinit::FacebookInit;
@@ -359,6 +360,7 @@ macro_rules! filenodes_tests {
             async fn test_simple_filenode_insert_and_get(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (reader, writer) = build_reader_writer($create_db()?);
+                let reader = $enable_caching(reader);
 
                 do_add_filenode(&ctx, &writer, root_first_filenode(), REPO_ZERO).await?;
 
@@ -406,6 +408,7 @@ macro_rules! filenodes_tests {
             async fn test_insert_filenode_with_parent(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (reader, writer) = build_reader_writer($create_db()?);
+                let reader = $enable_caching(reader);
                 do_add_filenode(&ctx, &writer, root_first_filenode(), REPO_ZERO).await?;
                 do_add_filenode(&ctx, &writer, root_second_filenode(), REPO_ZERO).await?;
                 assert_filenode(
@@ -435,6 +438,7 @@ macro_rules! filenodes_tests {
             ) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (reader, writer) = build_reader_writer($create_db()?);
+                let reader = $enable_caching(reader);
                 do_add_filenode(&ctx, &writer, root_first_filenode(), REPO_ZERO).await?;
                 do_add_filenode(&ctx, &writer, root_second_filenode(), REPO_ZERO).await?;
                 do_add_filenode(&ctx, &writer, root_merge_filenode(), REPO_ZERO).await?;
@@ -454,6 +458,7 @@ macro_rules! filenodes_tests {
             async fn test_insert_file_filenode(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (reader, writer) = build_reader_writer($create_db()?);
+                let reader = $enable_caching(reader);
                 do_add_filenode(&ctx, &writer, file_a_first_filenode(), REPO_ZERO).await?;
                 do_add_filenode(&ctx, &writer, file_b_first_filenode(), REPO_ZERO).await?;
 
@@ -490,6 +495,7 @@ macro_rules! filenodes_tests {
             async fn test_insert_different_repo(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (reader, writer) = build_reader_writer($create_db()?);
+                let reader = $enable_caching(reader);
                 do_add_filenode(&ctx, &writer, root_first_filenode(), REPO_ZERO).await?;
                 do_add_filenode(&ctx, &writer, root_second_filenode(), REPO_ONE).await?;
 
@@ -523,6 +529,7 @@ macro_rules! filenodes_tests {
             ) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (reader, writer) = build_reader_writer($create_db()?);
+                let reader = $enable_caching(reader);
 
                 do_add_filenodes(
                     &ctx,
@@ -558,6 +565,7 @@ macro_rules! filenodes_tests {
             async fn insert_copied_file(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (reader, writer) = build_reader_writer($create_db()?);
+                let reader = $enable_caching(reader);
 
                 do_add_filenodes(
                     &ctx,
@@ -598,6 +606,7 @@ macro_rules! filenodes_tests {
             async fn insert_copied_file_to_different_repo(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (reader, writer) = build_reader_writer($create_db()?);
+                let reader = $enable_caching(reader);
 
                 let copied = FilenodeInfo {
                     path: RepoPath::file("copiedto").unwrap(),
@@ -653,6 +662,7 @@ macro_rules! filenodes_tests {
             async fn get_all_filenodes_maybe_stale(fb: FacebookInit) -> Result<(), Error> {
                 let ctx = CoreContext::test_mock(fb);
                 let (reader, writer) = build_reader_writer($create_db()?);
+                let reader = $enable_caching(reader);
                 let root_filenodes = vec![
                     root_first_filenode(),
                     root_second_filenode(),
@@ -717,5 +727,17 @@ fn create_sharded() -> Result<Vec<Connection>, Error> {
     (0..16).into_iter().map(|_| build_shard()).collect()
 }
 
-filenodes_tests!(unsharded_test, create_unsharded);
-filenodes_tests!(sharded_test, create_sharded);
+fn no_caching(reader: FilenodesReader) -> FilenodesReader {
+    reader
+}
+
+fn with_caching(mut reader: FilenodesReader) -> FilenodesReader {
+    reader.local_cache = LocalCache::Test(HashMapCache::new());
+    reader
+}
+
+filenodes_tests!(uncached_unsharded_test, create_unsharded, no_caching);
+filenodes_tests!(uncached_sharded_test, create_sharded, no_caching);
+
+filenodes_tests!(cached_unsharded_test, create_unsharded, with_caching);
+filenodes_tests!(cached_sharded_test, create_sharded, with_caching);

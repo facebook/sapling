@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use crate::local_cache::{CachePool, Cacheable};
+use abomonation_derive::Abomonation;
 use mercurial_types::{HgChangesetId, HgFileNodeId};
 use mononoke_types::{hash, RepoPath};
 use sql::mysql_async::{
@@ -14,7 +16,7 @@ use sql::mysql_async::{
 use std::cmp::{Eq, Ord, PartialEq, PartialOrd};
 use std::hash::Hash;
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct PathHashBytes(pub Vec<u8>);
 
 impl ConvIr<PathHashBytes> for Vec<u8> {
@@ -41,8 +43,12 @@ impl From<PathHashBytes> for Value {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
+#[derive(Abomonation, Debug, Clone, PartialEq, Eq, Hash, PartialOrd, Ord)]
 pub struct PathBytes(pub Vec<u8>);
+
+impl Cacheable for PathBytes {
+    const POOL: CachePool = CachePool::Filenodes;
+}
 
 impl ConvIr<PathBytes> for Vec<u8> {
     fn new(v: Value) -> Result<Self, FromValueError> {
@@ -145,7 +151,7 @@ impl PathHash {
     }
 }
 
-#[derive(Clone)]
+#[derive(Abomonation, Clone)]
 pub struct PartialFilenode {
     pub filenode: HgFileNodeId,
     pub p1: Option<HgFileNodeId>,
@@ -154,7 +160,16 @@ pub struct PartialFilenode {
     pub linknode: HgChangesetId,
 }
 
-#[derive(Clone)]
+impl Cacheable for PartialFilenode {
+    const POOL: CachePool = CachePool::Filenodes;
+}
+
+#[derive(Abomonation, Clone)]
 pub struct PartialHistory {
+    // NOTE: We could store this more efficiently by deduplicating filenode IDs.
     pub history: Vec<PartialFilenode>,
+}
+
+impl Cacheable for PartialHistory {
+    const POOL: CachePool = CachePool::FilenodesHistory;
 }

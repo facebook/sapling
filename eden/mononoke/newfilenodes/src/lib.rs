@@ -7,6 +7,7 @@
 
 mod builder;
 mod connections;
+mod local_cache;
 mod reader;
 mod structs;
 mod writer;

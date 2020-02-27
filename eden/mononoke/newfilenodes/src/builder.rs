@@ -6,6 +6,7 @@
  */
 
 use anyhow::Error;
+use cachelib::VolatileLruCachePool;
 use fbinit::FacebookInit;
 use futures::future::{join_all, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt as _};
@@ -17,6 +18,7 @@ use sql_ext::{
 use sql_facebook::{myrouter, raw};
 use std::sync::Arc;
 
+use crate::local_cache::{CachelibCache, LocalCache};
 use crate::reader::FilenodesReader;
 use crate::writer::FilenodesWriter;
 use crate::NewFilenodes;
@@ -62,6 +64,17 @@ impl NewFilenodesBuilder {
             reader: Arc::new(self.reader),
             writer: Arc::new(self.writer),
         }
+    }
+
+    pub fn enable_caching(
+        &mut self,
+        filenodes_cache_pool: VolatileLruCachePool,
+        filenodes_history_cache_pool: VolatileLruCachePool,
+    ) {
+        self.reader.local_cache = LocalCache::Cachelib(CachelibCache::new(
+            filenodes_cache_pool,
+            filenodes_history_cache_pool,
+        ));
     }
 
     pub fn with_sharded_xdb(
