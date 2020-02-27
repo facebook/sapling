@@ -16,18 +16,31 @@ use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
-use futures::{future, stream as old_stream, Future, Stream as OldStream};
-use futures_ext::FutureExt as OldFutureExt;
+use filestore::FetchKey;
+use futures::{
+    future, future::IntoFuture as OldIntoFuture, stream as old_stream, Future, Stream as OldStream,
+};
+use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
 use futures_preview::{
     compat::Future01CompatExt,
     stream::{self, StreamExt, TryStreamExt},
 };
 use futures_util::try_join;
 use load_limiter::Metric;
-use mercurial_bundles::{changegroup::CgVersion, part_encode::PartEncodeBuilder, parts};
+use manifest::{find_intersection_of_diffs, Entry};
+use mercurial_bundles::{
+    changegroup::CgVersion,
+    part_encode::PartEncodeBuilder,
+    parts::{self, FilenodeEntry},
+};
 use mercurial_revlog::{self, RevlogChangeset};
-use mercurial_types::{HgBlobNode, HgChangesetId, HgPhase, NULL_CSID};
-use mononoke_types::ChangesetId;
+use mercurial_types::{
+    blobs::{fetch_manifest_envelope, File},
+    FileBytes, HgBlobNode, HgChangesetId, HgFileNodeId, HgManifestId, HgParents, HgPhase, MPath,
+    RevFlags, NULL_CSID,
+};
+use metaconfig_types::LfsParams;
+use mononoke_types::{hash::Sha256, ChangesetId};
 use phases::Phases;
 use reachabilityindex::LeastCommonAncestorsHint;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
@@ -420,4 +433,310 @@ fn calculate_public_roots(
                 .right_future()
         },
     )
+}
+
+pub enum FilenodeEntryContent {
+    InlineV2(FileBytes),
+    InlineV3(FileBytes),
+    LfsV3(Sha256, u64),
+}
+
+pub struct PreparedFilenodeEntry {
+    pub filenode: HgFileNodeId,
+    pub linknode: HgChangesetId,
+    pub parents: HgParents,
+    pub metadata: Bytes,
+    pub content: FilenodeEntryContent,
+}
+
+impl PreparedFilenodeEntry {
+    fn into_filenode(
+        self,
+    ) -> Result<(HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFlags>), Error> {
+        let Self {
+            filenode,
+            linknode,
+            parents,
+            metadata,
+            content,
+        } = self;
+
+        let (blob, flags) = match content {
+            FilenodeEntryContent::InlineV2(bytes) => {
+                (generate_inline_file(&bytes, parents, &metadata), None)
+            }
+            FilenodeEntryContent::InlineV3(bytes) => (
+                generate_inline_file(&bytes, parents, &metadata),
+                Some(RevFlags::REVIDX_DEFAULT_FLAGS),
+            ),
+            FilenodeEntryContent::LfsV3(oid, size) => (
+                generate_lfs_file(oid, parents, size, &metadata)?,
+                Some(RevFlags::REVIDX_EXTSTORED),
+            ),
+        };
+
+        Ok((filenode, linknode, blob, flags))
+    }
+}
+
+pub fn prepare_filenode_entries_stream(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    filenodes: Vec<(MPath, HgFileNodeId, HgChangesetId)>,
+    lfs_params: LfsParams,
+) -> impl OldStream<Item = (MPath, Vec<PreparedFilenodeEntry>), Error = Error> {
+    old_stream::iter_ok(filenodes.into_iter())
+        .map({
+            cloned!(ctx, repo);
+            move |(path, filenode, linknode)| {
+                filenode
+                    .load(ctx.clone(), repo.blobstore())
+                    .from_err()
+                    .and_then({
+                        cloned!(ctx, lfs_params, repo);
+                        move |envelope| {
+                            let file_size = envelope.content_size();
+                            let content = filestore::fetch_stream(
+                                repo.blobstore(),
+                                ctx.clone(),
+                                envelope.content_id(),
+                            )
+                            .concat2()
+                            .map(FileBytes);
+
+                            let content = match lfs_params.threshold {
+                                None => content.map(FilenodeEntryContent::InlineV2).boxify(),
+                                Some(lfs_threshold) if file_size <= lfs_threshold => {
+                                    content.map(FilenodeEntryContent::InlineV3).boxify()
+                                }
+                                _ => {
+                                    let key = FetchKey::from(envelope.content_id());
+                                    filestore::get_metadata(repo.blobstore(), ctx.clone(), &key)
+                                        .and_then(move |meta| {
+                                            let meta = meta.ok_or_else(|| {
+                                                Error::from(ErrorKind::MissingContent(key))
+                                            })?;
+                                            Ok(meta.sha256)
+                                        })
+                                        .map(move |oid| FilenodeEntryContent::LfsV3(oid, file_size))
+                                        .boxify()
+                                }
+                            };
+
+                            let parents = filenode
+                                .load(ctx, repo.blobstore())
+                                .from_err()
+                                .map(|envelope| envelope.hg_parents());
+
+                            (content, parents)
+                                .into_future()
+                                .map(move |(content, parents)| PreparedFilenodeEntry {
+                                    filenode,
+                                    linknode,
+                                    parents,
+                                    metadata: envelope.metadata().clone(),
+                                    content,
+                                })
+                                .map(move |entry| (path, vec![entry]))
+                        }
+                    })
+            }
+        })
+        .buffered(100)
+}
+
+fn generate_inline_file(content: &FileBytes, parents: HgParents, metadata: &Bytes) -> HgBlobNode {
+    let mut parents = parents.into_iter();
+    let p1 = parents.next();
+    let p2 = parents.next();
+
+    // Metadata is only used to store copy/rename information
+    let no_rename_metadata = metadata.is_empty();
+    let mut res = vec![];
+    res.extend(metadata);
+    res.extend(content.as_bytes());
+    if no_rename_metadata {
+        HgBlobNode::new(Bytes::from(res), p1, p2)
+    } else {
+        // Mercurial has a complicated logic regarding storing renames
+        // If copy/rename metadata is stored then p1 is always "null"
+        // (i.e. hash like "00000000....") - that's why we set it to None below.
+        // p2 is null for a non-merge commit, but not-null for merges.
+        // (See D6922881 for more details about merge logic)
+        //
+        // It boils down to the fact that we can't have both p1 and p2 to be
+        // non-null if we have rename metadata.
+        // `HgFileEnvelope::hg_parents()` returns HgParents structure, which
+        // always makes p2 a null commit if at least one parent commit is null.
+        // And that's why we set the second parent to p1 below.
+        debug_assert!(p2.is_none());
+        HgBlobNode::new(Bytes::from(res), None, p1)
+    }
+}
+
+fn generate_lfs_file(
+    oid: Sha256,
+    parents: HgParents,
+    file_size: u64,
+    metadata: &Bytes,
+) -> Result<HgBlobNode, Error> {
+    let copy_from = File::extract_copied_from(metadata)?;
+    let bytes = File::generate_lfs_file(oid, file_size, copy_from)?;
+
+    let mut parents = parents.into_iter();
+    let p1 = parents.next();
+    let p2 = parents.next();
+    Ok(HgBlobNode::new(Bytes::from(bytes), p1, p2))
+}
+
+pub fn create_manifest_entries_stream(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    manifests: Vec<(Option<MPath>, HgManifestId, HgChangesetId)>,
+) -> impl OldStream<Item = OldBoxFuture<parts::TreepackPartInput, Error>, Error = Error> {
+    old_stream::iter_ok(manifests.into_iter()).map({
+        cloned!(ctx, repo);
+        move |(fullpath, mf_id, linknode)| {
+            fetch_manifest_envelope(ctx.clone(), &repo.get_blobstore().boxed(), mf_id)
+                .map(move |mf_envelope| {
+                    let (p1, p2) = mf_envelope.parents();
+                    parts::TreepackPartInput {
+                        node: mf_id.into_nodehash(),
+                        p1,
+                        p2,
+                        content: mf_envelope.contents().clone(),
+                        fullpath,
+                        linknode: linknode.into_nodehash(),
+                    }
+                })
+                .boxify()
+        }
+    })
+}
+
+fn diff_with_parents(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    hg_cs_id: HgChangesetId,
+) -> impl Future<
+    Item = (
+        Vec<(Option<MPath>, HgManifestId, HgChangesetId)>,
+        Vec<(MPath, HgFileNodeId, HgChangesetId)>,
+    ),
+    Error = Error,
+> {
+    let mf_id = fetch_manifest(ctx.clone(), repo.clone(), hg_cs_id.clone());
+    let parent_mf_ids = repo.get_changeset_parents(ctx.clone(), hg_cs_id).and_then({
+        cloned!(ctx, repo);
+        move |parents| {
+            future::join_all(parents.into_iter().map({
+                cloned!(ctx, repo);
+                move |p| fetch_manifest(ctx.clone(), repo.clone(), p.clone())
+            }))
+        }
+    });
+
+    let blobstore = Arc::new(repo.get_blobstore());
+    mf_id
+        .join(parent_mf_ids)
+        .map(move |(mf_id, parent_mf_ids)| {
+            find_intersection_of_diffs(ctx, blobstore, mf_id, parent_mf_ids)
+        })
+        .flatten_stream()
+        .collect()
+        .map(move |new_entries| {
+            let mut mfs = vec![];
+            let mut files = vec![];
+            for (path, entry) in new_entries {
+                match entry {
+                    Entry::Tree(mf) => {
+                        mfs.push((path, mf, hg_cs_id.clone()));
+                    }
+                    Entry::Leaf((_, file)) => {
+                        let path = path.expect("empty file paths?");
+                        files.push((path, file, hg_cs_id.clone()));
+                    }
+                }
+            }
+
+            (mfs, files)
+        })
+}
+
+pub fn create_filenodes(
+    entries: HashMap<MPath, Vec<PreparedFilenodeEntry>>,
+) -> Result<Vec<(MPath, Vec<FilenodeEntry>)>, Error> {
+    entries
+        .into_iter()
+        .map(|(path, prepared_entries)| {
+            let entries: Result<Vec<_>, Error> = prepared_entries
+                .into_iter()
+                .map(PreparedFilenodeEntry::into_filenode)
+                .collect();
+            Ok((path, entries?))
+        })
+        .collect()
+}
+
+pub fn get_manifests_and_filenodes(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    commits: Vec<HgChangesetId>,
+    lfs_params: LfsParams,
+) -> impl Future<
+    Item = (
+        Vec<OldBoxFuture<parts::TreepackPartInput, Error>>,
+        HashMap<MPath, Vec<PreparedFilenodeEntry>>,
+    ),
+    Error = Error,
+> {
+    old_stream::iter_ok(commits)
+        .and_then({
+            cloned!(ctx, lfs_params, repo);
+            move |hg_cs_id| {
+                diff_with_parents(ctx.clone(), repo.clone(), hg_cs_id).and_then({
+                    cloned!(ctx, lfs_params, repo);
+                    move |(manifests, filenodes)| {
+                        (
+                            create_manifest_entries_stream(ctx.clone(), repo.clone(), manifests)
+                                .collect(),
+                            prepare_filenode_entries_stream(
+                                ctx,
+                                repo,
+                                filenodes,
+                                lfs_params.clone(),
+                            )
+                            .collect(),
+                        )
+                    }
+                })
+            }
+        })
+        .collect()
+        .map(move |entries| {
+            let mut all_mf_entries = vec![];
+            let mut all_filenode_entries: HashMap<_, Vec<_>> = HashMap::new();
+            for (mf_entries, file_entries) in entries {
+                all_mf_entries.extend(mf_entries);
+                for (file_path, filenodes) in file_entries {
+                    all_filenode_entries
+                        .entry(file_path)
+                        .or_default()
+                        .extend(filenodes);
+                }
+            }
+
+            (all_mf_entries, all_filenode_entries)
+        })
+}
+
+fn fetch_manifest(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    hg_cs_id: HgChangesetId,
+) -> impl Future<Item = HgManifestId, Error = Error> {
+    hg_cs_id
+        .load(ctx, repo.blobstore())
+        .from_err()
+        .map(|blob_cs| blob_cs.manifestid())
 }
