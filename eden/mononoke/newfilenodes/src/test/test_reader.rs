@@ -17,26 +17,15 @@ use mercurial_types_mocks::nodehash::{
 use mononoke_types::{MPath, RepoPath, RepositoryId};
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
 use sql::queries;
-use sql::{rusqlite::Connection as SqliteConnection, Connection};
-use sql_ext::SqlConstructors;
+use sql::Connection;
 use tokio_preview as tokio;
 
-use crate::builder::{NewFilenodesBuilder, SQLITE_INSERT_CHUNK_SIZE};
+use crate::builder::SQLITE_INSERT_CHUNK_SIZE;
 use crate::local_cache::{test::HashMapCache, LocalCache};
 use crate::reader::FilenodesReader;
 use crate::writer::FilenodesWriter;
 
-fn build_shard() -> Result<Connection, Error> {
-    let con = SqliteConnection::open_in_memory()?;
-    con.execute_batch(NewFilenodesBuilder::get_up_query())?;
-    Ok(Connection::with_sqlite(con))
-}
-
-fn build_reader_writer(shards: Vec<Connection>) -> (FilenodesReader, FilenodesWriter) {
-    let reader = FilenodesReader::new(shards.clone(), shards.clone());
-    let writer = FilenodesWriter::new(SQLITE_INSERT_CHUNK_SIZE, shards.clone(), shards.clone());
-    (reader, writer)
-}
+use super::util::{build_reader_writer, build_shard};
 
 async fn check_roundtrip(
     ctx: &CoreContext,

@@ -487,7 +487,7 @@ impl Iterator for PointersIter {
 }
 
 #[cfg(test)]
-mod test {
+pub mod test {
     use super::*;
     use anyhow::Error;
     use mercurial_types_mocks::nodehash::{ONES_CSID, ONES_FNID};
@@ -510,13 +510,54 @@ mod test {
         }
     }
 
-    fn make_test_cache() -> RemoteCache {
+    pub fn make_test_cache() -> RemoteCache {
         let keygen = KeyGen::new("newfilenodes.test", 0, 0);
 
         RemoteCache::Memcache(MemcacheCache {
             memcache: MemcacheHandler::create_mock(),
             keygen,
         })
+    }
+
+    pub async fn wait_for_filenode(
+        cache: &RemoteCache,
+        path: &RepoPath,
+        filenode: HgFileNodeId,
+    ) -> Result<FilenodeInfo, Error> {
+        let r = time::timeout(Duration::from_millis(TIMEOUT_MS), async {
+            loop {
+                match cache.get_filenode(REPO_ZERO, path, filenode).await {
+                    Some(f) => {
+                        break f;
+                    }
+                    None => {}
+                }
+                time::delay_for(Duration::from_millis(SLEEP_MS)).await;
+            }
+        })
+        .await?;
+
+        Ok(r)
+    }
+
+    pub async fn wait_for_history(
+        cache: &RemoteCache,
+        path: &RepoPath,
+    ) -> Result<Vec<FilenodeInfo>, Error> {
+        let r = time::timeout(Duration::from_millis(TIMEOUT_MS), async {
+            loop {
+                match cache.get_history(REPO_ZERO, path).await {
+                    Some(f) => {
+                        break f;
+                    }
+                    None => {}
+                }
+                time::delay_for(Duration::from_millis(SLEEP_MS)).await;
+            }
+        })
+        .await?;
+
+        Ok(r)
     }
 
     #[fbinit::test]
@@ -527,18 +568,7 @@ mod test {
 
         cache.fill_filenode(REPO_ZERO, &path, info.filenode, info.clone());
 
-        let from_cache = time::timeout(Duration::from_millis(TIMEOUT_MS), async {
-            loop {
-                match cache.get_filenode(REPO_ZERO, &path, info.filenode).await {
-                    Some(f) => {
-                        break f;
-                    }
-                    None => {}
-                }
-                time::delay_for(Duration::from_millis(SLEEP_MS)).await;
-            }
-        })
-        .await?;
+        let from_cache = wait_for_filenode(&cache, &path, info.filenode).await?;
 
         assert_eq!(from_cache, info);
         assert_eq!(
@@ -559,18 +589,7 @@ mod test {
 
         cache.fill_history(REPO_ZERO, &path, history.clone());
 
-        let from_cache = time::timeout(Duration::from_millis(TIMEOUT_MS), async {
-            loop {
-                match cache.get_history(REPO_ZERO, &path).await {
-                    Some(f) => {
-                        break f;
-                    }
-                    None => {}
-                }
-                time::delay_for(Duration::from_millis(SLEEP_MS)).await;
-            }
-        })
-        .await?;
+        let from_cache = wait_for_history(&cache, &path).await?;
 
         assert_eq!(from_cache, history);
         assert_eq!(None, cache.get_history(REPO_ONE, &path).await);
@@ -589,18 +608,7 @@ mod test {
 
         cache.fill_history(REPO_ZERO, &path, history.clone());
 
-        let from_cache = time::timeout(Duration::from_millis(TIMEOUT_MS), async {
-            loop {
-                match cache.get_history(REPO_ZERO, &path).await {
-                    Some(f) => {
-                        break f;
-                    }
-                    None => {}
-                }
-                time::delay_for(Duration::from_millis(SLEEP_MS)).await;
-            }
-        })
-        .await?;
+        let from_cache = wait_for_history(&cache, &path).await?;
 
         assert_eq!(from_cache, history);
         assert_eq!(None, cache.get_history(REPO_ONE, &path).await);
