@@ -1400,15 +1400,13 @@ class RestartCmd(Subcmd):
             if self.args.restart_type == RESTART_MODE_GRACEFUL:
                 status = self._graceful_restart(instance)
                 success = status == 0
-                sample = instance.build_sample("graceful_restart", success=success)
-                instance.log(sample)
+                instance.log_sample("graceful_restart", success=success)
                 return status
             else:
                 # pyre-fixme[6]: Expected `int` for 2nd param but got `Optional[int]`.
                 status = self._full_restart(instance, health.pid)
                 success = status == 0
-                sample = instance.build_sample("full_restart", success=success)
-                instance.log(sample)
+                instance.log_sample("full_restart", success=success)
                 return status
         elif health.pid is None:
             # The daemon is not running
@@ -1559,8 +1557,7 @@ class RageCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
-        sample = instance.build_sample("eden_rage")
-        instance.log(sample)
+        instance.log_sample("eden_rage")
         rage_processor = instance.get_config_value("rage.reporter", default="")
 
         proc: Optional[subprocess.Popen] = None
@@ -1646,8 +1643,7 @@ class StopCmd(Subcmd):
                 print_stderr("edenfs exited cleanly.")
                 return SHUTDOWN_EXIT_CODE_NORMAL
             else:
-                sample = instance.build_sample("cli_stop", success=False)
-                instance.log(sample)
+                instance.log_sample("cli_stop", success=False)
                 print_stderr("Terminated edenfs with SIGKILL.")
                 return SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
         except ShutdownError as ex:

@@ -26,8 +26,7 @@ import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
 import toml
 
-from . import configinterpolator, configutil, util, version
-from .telemetry import TelemetryPayload, build_base_sample
+from . import configinterpolator, configutil, telemetry, util, version
 from .util import (
     EdenStartError,
     HealthStatus,
@@ -139,6 +138,8 @@ class EdenInstance:
     modifying the list of checkouts managed by this edenfs instance.
     """
 
+    _telemetry_logger: Optional[telemetry.TelemetryLogger] = None
+
     def __init__(
         self,
         config_dir: Union[Path, str, None],
@@ -237,45 +238,29 @@ class EdenInstance:
         result.append(self._user_config_path)
         return result
 
+    def get_telemetry_logger(self) -> telemetry.TelemetryLogger:
+        logger = self._telemetry_logger
+        if logger is None:
+            scribe_cat = self.get_config_value("telemetry.scribe-cat", default="")
+            scribe_category = self.get_config_value(
+                "telemetry.scribe-category", default=""
+            )
+            if scribe_cat == "" or scribe_category == "":
+                logger = telemetry.NullTelemetryLogger()
+            else:
+                logger = telemetry.ExternalTelemetryLogger(
+                    [scribe_cat, scribe_category]
+                )
+            self._telemetry_logger = logger
+        return logger
+
     def build_sample(
         self, log_type: str, **kwargs: Union[bool, int, str, float]
-    ) -> TelemetryPayload:
-        sample = build_base_sample(log_type)
-        for name, value in kwargs.items():
-            if isinstance(value, bool):
-                sample.add_bool(name, value)
-            elif isinstance(value, str):
-                sample.add_string(name, value)
-            elif isinstance(value, int):
-                sample.add_int(name, value)
-            elif isinstance(value, float):
-                sample.add_double(name, value)
-            else:  # unsupported type
-                value_type = type(value)
-                log.error(
-                    f"unsupported log value type {value_type} passed to build sample"
-                )
-        return sample
+    ) -> telemetry.TelemetrySample:
+        return self.get_telemetry_logger().new_sample(log_type, **kwargs)
 
-    def log(self, sample: TelemetryPayload) -> int:
-        sample.add_int("time", int(time.time()))
-
-        scribe_cat = self.get_config_value("telemetry.scribe-cat", default="")
-        scribe_category = self.get_config_value("telemetry.scribe-category", default="")
-
-        if scribe_cat == "" or scribe_category == "":
-            return 0
-
-        cmd = [scribe_cat, scribe_category, sample.get_json()]
-        close_fds = os.name == "posix"
-        try:
-            rc = subprocess.call(cmd, close_fds=close_fds)
-            if rc != 0:
-                log.warning(f"log call returned non-zero exit code {rc}")
-            return rc
-        except Exception as ex:
-            log.warning(f"error logging with exception {ex}")
-            return 1
+    def log_sample(self, log_type: str, **kwargs: Union[bool, int, str, float]) -> None:
+        self.get_telemetry_logger().log(log_type, **kwargs)
 
     def get_running_version_parts(self) -> Tuple[str, str]:
         """Get a tuple containing (version, release) of the currently running EdenFS
