@@ -189,7 +189,7 @@ class sshpeer(wireproto.wirepeer):
         return True
 
     def close(self):
-        pass
+        self._cleanup()
 
     # End of _basepeer interface.
 
