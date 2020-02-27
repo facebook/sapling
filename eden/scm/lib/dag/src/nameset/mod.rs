@@ -16,6 +16,8 @@ use std::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
 
+pub mod union;
+
 /// A [`NameSet`] contains an immutable list of names.
 ///
 /// It provides order-preserving iteration and set operations,
@@ -26,6 +28,11 @@ pub struct NameSet(Arc<dyn NameSetQuery>);
 impl NameSet {
     pub(crate) fn from_query(query: impl NameSetQuery) -> Self {
         Self(Arc::new(query))
+    }
+
+    /// Calculates the union of two sets.
+    pub fn union(&self, other: &NameSet) -> NameSet {
+        Self::from_query(union::UnionSet::new(self.clone(), other.clone()))
     }
 }
 
