@@ -15,6 +15,7 @@ pub mod id;
 mod iddag;
 pub mod idmap;
 pub mod namedag;
+pub mod nameset;
 pub mod protocol;
 pub mod segment;
 pub mod spanset;
