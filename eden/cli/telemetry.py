@@ -15,8 +15,9 @@ import random
 import socket
 import subprocess
 import time
+import types
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Type, Union
 
 from . import version
 
@@ -27,6 +28,28 @@ _session_id: Optional[int] = None
 
 
 class TelemetrySample(abc.ABC):
+    _start_time: float = 0.0
+
+    def __enter__(self) -> "TelemetrySample":
+        self._start_time = time.time()
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        exc_tracebac: Optional[types.TracebackType],
+    ) -> bool:
+        duration = time.time() - self._start_time
+        self.add_double("duration", duration)
+        if exc_type is None:
+            self.add_bool("success", True)
+        else:
+            self.add_bool("success", False)
+            self.add_string("error", str(exc_value))
+        self.log()
+        return False
+
     @abc.abstractmethod
     def add_int(self, name: str, value: int) -> "TelemetrySample":
         raise NotImplementedError()
