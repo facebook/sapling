@@ -12,7 +12,7 @@ use std::str::FromStr;
 
 use chrono::{DateTime, FixedOffset, TimeZone};
 use faster_hex::hex_string;
-use mercurial_types::Globalrev;
+use mononoke_api::specifiers::{GitSha1, Globalrev};
 use mononoke_api::{
     ChangesetId, ChangesetIdPrefix, ChangesetPrefixSpecifier, ChangesetSpecifier, CopyInfo,
     CreateCopyInfo, FileId, FileType, HgChangesetId, HgChangesetIdPrefix, MononokePath, TreeId,
@@ -59,6 +59,17 @@ impl FromRequest<thrift::CommitId> for ChangesetSpecifier {
                     errors::invalid_request(format!("cannot parse globalrev {} to u64", rev))
                 })?);
                 Ok(ChangesetSpecifier::Globalrev(rev))
+            }
+            thrift::CommitId::git(git_sha1) => {
+                let git_sha1 = GitSha1::from_bytes(&git_sha1).map_err(|e| {
+                    errors::invalid_request(format!(
+                        "invalid commit id (scheme={} {}): {}",
+                        commit.scheme(),
+                        commit.to_string(),
+                        e
+                    ))
+                })?;
+                Ok(ChangesetSpecifier::GitSha1(git_sha1))
             }
             _ => Err(errors::invalid_request(format!(
                 "unsupported commit identity scheme ({})",

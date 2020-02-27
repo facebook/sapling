@@ -7,6 +7,7 @@
 
 use std::collections::{BTreeMap, BTreeSet};
 
+use cloned::cloned;
 use faster_hex::hex_string;
 use futures_util::{future, FutureExt};
 use mononoke_api::{ChangesetContext, ChangesetId, MononokeError, RepoContext};
@@ -44,6 +45,20 @@ pub(crate) async fn map_commit_identity(
                 let result: Result<Option<_>, MononokeError> = Ok(Some((
                     thrift::CommitIdentityScheme::GLOBALREV,
                     thrift::CommitId::globalrev(globalrev.id() as i64),
+                )));
+                result
+            } else {
+                Ok(None)
+            }
+        };
+        scheme_identities.push(identity.boxed());
+    }
+    if schemes.contains(&thrift::CommitIdentityScheme::GIT) {
+        let identity = async {
+            if let Some(git_sha1) = changeset_ctx.git_sha1().await? {
+                let result: Result<Option<_>, MononokeError> = Ok(Some((
+                    thrift::CommitIdentityScheme::GIT,
+                    thrift::CommitId::git(git_sha1.as_ref().into()),
                 )));
                 result
             } else {
@@ -97,6 +112,26 @@ pub(crate) async fn map_commit_identities(
                 })
                 .collect::<Vec<_>>();
             let result: Result<_, MononokeError> = Ok(bonsai_hg_ids);
+            result
+        };
+        scheme_identities.push(identities.boxed());
+    }
+    if schemes.contains(&thrift::CommitIdentityScheme::GIT) {
+        cloned!(ids);
+        let identities = async {
+            let bonsai_git_shas = repo_ctx
+                .changeset_git_sha1s(ids)
+                .await?
+                .into_iter()
+                .map(|(cs_id, git_sha1)| {
+                    (
+                        cs_id,
+                        thrift::CommitIdentityScheme::GIT,
+                        thrift::CommitId::git(git_sha1.as_ref().into()),
+                    )
+                })
+                .collect::<Vec<_>>();
+            let result: Result<_, MononokeError> = Ok(bonsai_git_shas);
             result
         };
         scheme_identities.push(identities.boxed());

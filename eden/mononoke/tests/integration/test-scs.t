@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 Setup config repo:
-  $ setup_common_config
+  $ POPULATE_GIT_MAPPING=1 setup_common_config
   $ cd "$TESTTMP"
 
 Setup testing repo for mononoke:
@@ -44,6 +44,13 @@ Commit with globalrev:
   adding c
   $ hg commit -Am "commit with globalrev" --extra global_rev=9999999999
   $ hg bookmark -i BOOKMARK_C
+
+Commit git SHA:
+  $ touch d
+  $ hg add
+  adding d
+  $ hg commit -Am "commit with git sha" --extra convert_revision=37b0a167e07f2b84149c918cec818ffeb183dddd --extra hg-git-rename-source=git
+  $ hg bookmark -i BOOKMARK_D
 
 A commit with file move and copy
 
@@ -524,7 +531,7 @@ log skip and time filters conflict
   error: The argument '--skip <SKIP>' cannot be used with '--after <AFTER>'
   
   USAGE:
-      scsc <--tier <TIER>|--host <HOST:PORT>> log --after <AFTER> --limit <LIMIT> --path <PATH> --repo <REPO> --schemes <SCHEMES>... --skip <SKIP> <--commit-id <COMMIT_ID>|--bookmark <BOOKMARK>|--hg-commit-id <HG_COMMIT_ID>|--bonsai-id <BONSAI_ID>|--globalrev <GLOBALREV>>
+      scsc <--tier <TIER>|--host <HOST:PORT>> log --after <AFTER> --limit <LIMIT> --path <PATH> --repo <REPO> --schemes <SCHEMES>... --skip <SKIP> <--commit-id <COMMIT_ID>|--bookmark <BOOKMARK>|--hg-commit-id <HG_COMMIT_ID>|--bonsai-id <BONSAI_ID>|--git <GIT_SHA1>|--globalrev <GLOBALREV>>
   
   For more information try --help
   [1]
@@ -538,13 +545,14 @@ log request a single commit
   
   log-check-4
   
-lookup, commit without globalrev
-  $ scsc lookup --repo repo  -B BOOKMARK_B -S bonsai,hg,globalrev
-  bonsai=c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb
-  hg=323afe77a1b1e632e54e8d5a683ba2cc8511f299
+lookup, commit with git
+  $ scsc lookup --repo repo  -B BOOKMARK_D -S bonsai,hg,globalrev,git
+  bonsai=227d4402516061c45a7ba66cf4561bdadaf3ac96eb12c6e75aa9c72dbabd42b6
+  git=37b0a167e07f2b84149c918cec818ffeb183dddd
+  hg=6e602c2eaa591b482602f5f3389de6c2749516d5
 
 lookup, commit with globalrev
-  $ scsc lookup --repo repo -B BOOKMARK_C -S bonsai,hg,globalrev
+  $ scsc lookup --repo repo -B BOOKMARK_C -S bonsai,hg,globalrev,git
   bonsai=006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b
   globalrev=9999999999
   hg=ee87eb8cfeb218e7352a94689b241ea973b80402
@@ -561,6 +569,10 @@ lookup using globalrev to identify commit
   globalrev=9999999999
   hg=ee87eb8cfeb218e7352a94689b241ea973b80402
 
+lookup using git to identify commit
+  $ scsc lookup --repo repo --git 37b0a167e07f2b84149c918cec818ffeb183dddd -S bonsai,hg,globalrev
+  bonsai=227d4402516061c45a7ba66cf4561bdadaf3ac96eb12c6e75aa9c72dbabd42b6
+  hg=6e602c2eaa591b482602f5f3389de6c2749516d5
 lookup using hg to identify commit
   $ scsc lookup --repo repo --hg-commit-id ee87eb8cfeb218e7352a94689b241ea973b80402 -S bonsai,hg,globalrev
   bonsai=006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b
@@ -636,6 +648,24 @@ show commit info
       global_rev=9999999999
   
   commit with globalrev
+
+show commit info for git commit
+  $ scsc info --repo repo -i 37b0a167e07f2b84149c918cec818ffeb183dddd -S bonsai,hg,globalrev,git
+  Commit:
+      bonsai=227d4402516061c45a7ba66cf4561bdadaf3ac96eb12c6e75aa9c72dbabd42b6
+      git=37b0a167e07f2b84149c918cec818ffeb183dddd
+      hg=6e602c2eaa591b482602f5f3389de6c2749516d5
+  Parent:
+      bonsai=006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b
+      globalrev=9999999999
+      hg=ee87eb8cfeb218e7352a94689b241ea973b80402
+  Date: 1970-01-01 00:00:00 +00:00
+  Author: test
+  Extra:
+      convert_revision=37b0a167e07f2b84149c918cec818ffeb183dddd
+      hg-git-rename-source=git
+  
+  commit with git sha
 
 show tree info
   $ scsc info --repo repo -i ee87eb8cfeb218e7352a94689b241ea973b80402 -p ""
