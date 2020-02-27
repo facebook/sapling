@@ -144,11 +144,11 @@ async fn insert_filenodes(
     let mut filenode_rows = Vec::new();
     let mut copydata_rows = Vec::new();
 
-    for (pwh, filenode) in filenodes {
+    for (ph, filenode) in filenodes {
         filenode_rows.push((
             &repo_id,
-            &pwh.hash,
-            &pwh.is_tree,
+            &ph.hash,
+            ph.sql_is_tree(),
             &filenode.info.filenode,
             &filenode.info.linknode,
             &filenode.info.p1,
@@ -163,15 +163,15 @@ async fn insert_filenodes(
         if let Some(ref copyinfo) = filenode.info.copyfrom {
             let (ref frompath, ref fromnode) = copyinfo;
             let from_pwh = PathHash::from_repo_path(frompath);
-            if from_pwh.is_tree != pwh.is_tree {
+            if from_pwh.is_tree != ph.is_tree {
                 let e = ErrorKind::InvalidCopy(filenode.path.clone(), frompath.clone());
                 return Err(e.into());
             }
             copydata_rows.push((
                 &repo_id,
-                &pwh.hash,
+                &ph.hash,
                 &filenode.info.filenode,
-                &pwh.is_tree,
+                ph.sql_is_tree(),
                 from_pwh.hash,
                 fromnode,
             ));

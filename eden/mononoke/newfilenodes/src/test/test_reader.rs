@@ -306,6 +306,19 @@ fn root_merge_filenode() -> PreparedFilenode {
     }
 }
 
+fn dir_a_first_filenode() -> PreparedFilenode {
+    PreparedFilenode {
+        path: RepoPath::dir("a").unwrap(),
+        info: FilenodeInfo {
+            filenode: ONES_FNID,
+            p1: None,
+            p2: None,
+            copyfrom: None,
+            linknode: ONES_CSID,
+        },
+    }
+}
+
 fn file_a_first_filenode() -> PreparedFilenode {
     PreparedFilenode {
         path: RepoPath::file("a").unwrap(),
@@ -790,6 +803,56 @@ macro_rules! filenodes_tests {
                     &vec![file_b_first_filenode().info],
                 )
                 .await?;
+                Ok(())
+            }
+
+            #[fbinit::test]
+            async fn test_mixed_path_insert_and_get(fb: FacebookInit) -> Result<(), Error> {
+                let ctx = CoreContext::test_mock(fb);
+                let (reader, writer) = build_reader_writer($create_db()?);
+                let reader = $enable_caching(reader);
+
+                do_add_filenode(&ctx, &writer, file_a_first_filenode(), REPO_ZERO).await?;
+                do_add_filenode(&ctx, &writer, dir_a_first_filenode(), REPO_ZERO).await?;
+
+                assert_filenode(
+                    &ctx,
+                    &reader,
+                    &RepoPath::file("a").unwrap(),
+                    ONES_FNID,
+                    REPO_ZERO,
+                    file_a_first_filenode().info,
+                )
+                .await?;
+
+                assert_filenode(
+                    &ctx,
+                    &reader,
+                    &RepoPath::dir("a").unwrap(),
+                    ONES_FNID,
+                    REPO_ZERO,
+                    dir_a_first_filenode().info,
+                )
+                .await?;
+
+                assert_all_filenodes(
+                    &ctx,
+                    &reader,
+                    &RepoPath::file("a").unwrap(),
+                    REPO_ZERO,
+                    &vec![file_a_first_filenode().info],
+                )
+                .await?;
+
+                assert_all_filenodes(
+                    &ctx,
+                    &reader,
+                    &RepoPath::dir("a").unwrap(),
+                    REPO_ZERO,
+                    &vec![dir_a_first_filenode().info],
+                )
+                .await?;
+
                 Ok(())
             }
         }

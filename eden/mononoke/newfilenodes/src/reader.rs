@@ -345,7 +345,14 @@ async fn select_partial_filenode(
     recorder.increment();
 
     let rows = enforce_sql_timeout(
-        SelectFilenode::query(&connection, &repo_id, &pwh.hash, &pwh.is_tree, &filenode).compat(),
+        SelectFilenode::query(
+            &connection,
+            &repo_id,
+            &pwh.hash,
+            pwh.sql_is_tree(),
+            &filenode,
+        )
+        .compat(),
     )
     .await?;
 
@@ -399,7 +406,7 @@ async fn select_partial_history(
     recorder.increment();
 
     let rows = enforce_sql_timeout(
-        SelectAllFilenodes::query(&connection, &repo_id, &pwh.hash, &pwh.is_tree).compat(),
+        SelectAllFilenodes::query(&connection, &repo_id, &pwh.hash, pwh.sql_is_tree()).compat(),
     )
     .await?;
 
@@ -470,7 +477,7 @@ async fn fill_paths(
                         .get(&from_path_hash)
                         .ok_or_else(|| ErrorKind::PathNotFound(from_path_hash.clone()))?
                         .clone();
-                    Some((pwh.is_tree != 0, from_path, from_node))
+                    Some((pwh.is_tree, from_path, from_node))
                 }
                 None => None,
             };
