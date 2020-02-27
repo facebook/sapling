@@ -15,8 +15,8 @@ use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use failure_ext::chain::ChainExt;
 use fbinit::FacebookInit;
-use futures::{future::join_all, Future, IntoFuture, Stream};
-use futures_ext::{BoxFuture, BoxStream, FutureExt};
+use futures::{future::join_all, stream, Future, IntoFuture, Stream};
+use futures_ext::{BoxFuture, FutureExt};
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_facebook::{myrouter, raw};
 use stats::prelude::*;
@@ -349,14 +349,14 @@ impl SqlFilenodes {
 
     fn do_insert(
         &self,
-        filenodes: BoxStream<FilenodeInfo, Error>,
+        filenodes: Vec<FilenodeInfo>,
         repo_id: RepositoryId,
         replace: bool,
     ) -> BoxFuture<(), Error> {
         cloned!(self.write_connection);
         cloned!(self.read_connection);
 
-        filenodes
+        stream::iter_ok(filenodes)
             .chunks(self.chunk_size)
             .and_then(move |filenodes| {
                 STATS::adds.add_value(filenodes.len() as i64);
@@ -389,7 +389,7 @@ impl Filenodes for SqlFilenodes {
     fn add_filenodes(
         &self,
         ctx: CoreContext,
-        filenodes: BoxStream<FilenodeInfo, Error>,
+        filenodes: Vec<FilenodeInfo>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
         ctx.perf_counters()
@@ -400,7 +400,7 @@ impl Filenodes for SqlFilenodes {
     fn add_or_replace_filenodes(
         &self,
         ctx: CoreContext,
-        filenodes: BoxStream<FilenodeInfo, Error>,
+        filenodes: Vec<FilenodeInfo>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
         ctx.perf_counters()

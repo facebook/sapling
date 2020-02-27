@@ -11,7 +11,7 @@ pub use crate::caching::CachingFilenodes;
 use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
 use context::CoreContext;
-use futures_ext::{BoxFuture, BoxStream};
+use futures_ext::BoxFuture;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, RepoPath};
 use mononoke_types::{hash, RepoPathCached, RepositoryId};
 use quickcheck::{Arbitrary, Gen};
@@ -155,14 +155,14 @@ pub trait Filenodes: Send + Sync {
     fn add_filenodes(
         &self,
         ctx: CoreContext,
-        info: BoxStream<FilenodeInfo, Error>,
+        info: Vec<FilenodeInfo>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error>;
 
     fn add_or_replace_filenodes(
         &self,
         ctx: CoreContext,
-        info: BoxStream<FilenodeInfo, Error>,
+        info: Vec<FilenodeInfo>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error>;
 

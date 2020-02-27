@@ -14,8 +14,8 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use filenodes::FilenodeInfo;
-use futures::{future as old_future, stream as old_stream, Future};
-use futures_ext::{BoxFuture, FutureExt as OldFutureExt, StreamExt as OldStreamExt};
+use futures::{future as old_future, Future};
+use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
 use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::try_join_all,
@@ -129,11 +129,7 @@ impl BonsaiDerived for FilenodesOnlyPublic {
                         let filenodes = repo.get_filenodes();
                         let repo_id = repo.get_repoid();
                         filenodes
-                            .add_filenodes(
-                                ctx.clone(),
-                                old_stream::iter_ok(non_roots).boxify(),
-                                repo_id,
-                            )
+                            .add_filenodes(ctx.clone(), non_roots, repo_id)
                             .compat()
                             .await?;
 
@@ -344,11 +340,7 @@ impl BonsaiDerivedMapping for FilenodesOnlyPublicMapping {
         let repo_id = self.repo.get_repoid();
         match id.root_filenode {
             Some(root_filenode) => filenodes
-                .add_filenodes(
-                    ctx.clone(),
-                    old_stream::once(Ok(root_filenode.into())).boxify(),
-                    repo_id,
-                )
+                .add_filenodes(ctx.clone(), vec![root_filenode.into()], repo_id)
                 .boxify(),
             None => old_future::ok(()).boxify(),
         }

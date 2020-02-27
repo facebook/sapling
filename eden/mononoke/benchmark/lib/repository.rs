@@ -25,7 +25,7 @@ use fbinit::FacebookInit;
 use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
 use filestore::FilestoreConfig;
 use futures::{future, Future};
-use futures_ext::{BoxFuture, BoxStream, FutureExt};
+use futures_ext::{BoxFuture, FutureExt};
 use memblob::EagerMemblob;
 use mercurial_types::{HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgFileNodeId};
 use mononoke_types::{
@@ -227,7 +227,7 @@ impl<F: Filenodes> Filenodes for DelayedFilenodes<F> {
     fn add_filenodes(
         &self,
         ctx: CoreContext,
-        info: BoxStream<FilenodeInfo, Error>,
+        info: Vec<FilenodeInfo>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
         delay(self.put_dist, self.inner.add_filenodes(ctx, info, repo_id)).boxify()
@@ -236,7 +236,7 @@ impl<F: Filenodes> Filenodes for DelayedFilenodes<F> {
     fn add_or_replace_filenodes(
         &self,
         ctx: CoreContext,
-        info: BoxStream<FilenodeInfo, Error>,
+        info: Vec<FilenodeInfo>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
         delay(

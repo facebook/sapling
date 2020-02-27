@@ -12,7 +12,6 @@
 
 use context::CoreContext;
 use filenodes::{FilenodeInfo, Filenodes};
-use futures_ext::StreamExt;
 use futures_preview::compat::Future01CompatExt;
 use mercurial_types::{HgFileNodeId, RepoPath};
 use mercurial_types_mocks::nodehash::{
@@ -105,9 +104,8 @@ async fn do_add_filenodes(
     to_insert: Vec<FilenodeInfo>,
     repo_id: RepositoryId,
 ) {
-    let stream = futures::stream::iter_ok(to_insert.into_iter()).boxify();
     filenodes
-        .add_filenodes(ctx, stream, repo_id)
+        .add_filenodes(ctx, to_insert, repo_id)
         .compat()
         .await
         .unwrap();

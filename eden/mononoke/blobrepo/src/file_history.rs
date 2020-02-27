@@ -125,6 +125,9 @@ fn get_file_history_using_prefetched(
     let seen_nodes = hashset! {startnode};
     let path = RepoPath::FilePath(path);
 
+    // TODO: There is probably another thundering herd problem here. If we change a file twice,
+    // then the original cached value will be reused, and we'll keep going back to getting the
+    // filenode individualy (perhaps not the end of the world?).
     stream::unfold(
         (startstate, seen_nodes, 0),
         move |(mut nodes, mut seen_nodes, depth): (

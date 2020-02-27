@@ -12,7 +12,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures::{future, Future, IntoFuture};
-use futures_ext::{BoxFuture, BoxStream, FutureExt};
+use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient, MEMCACHE_VALUE_MAX_SIZE};
 use mercurial_types::{HgFileNodeId, RepoPath};
 use mononoke_types::RepositoryId;
@@ -84,7 +84,7 @@ impl Filenodes for CachingFilenodes {
     fn add_filenodes(
         &self,
         ctx: CoreContext,
-        info: BoxStream<FilenodeInfo, Error>,
+        info: Vec<FilenodeInfo>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
         self.filenodes.add_filenodes(ctx, info, repo_id)
@@ -93,7 +93,7 @@ impl Filenodes for CachingFilenodes {
     fn add_or_replace_filenodes(
         &self,
         ctx: CoreContext,
-        info: BoxStream<FilenodeInfo, Error>,
+        info: Vec<FilenodeInfo>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
         self.filenodes.add_or_replace_filenodes(ctx, info, repo_id)
