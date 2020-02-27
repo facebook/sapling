@@ -13,7 +13,7 @@ use blobstore::Loadable;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use filenodes::FilenodeInfo;
+use filenodes::{FilenodeInfo, PreparedFilenode};
 use futures::{future as old_future, Future};
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
 use futures_preview::{
@@ -32,7 +32,7 @@ use mononoke_types::{BonsaiChangeset, ChangesetId, MPath, RepoPath};
 use std::{collections::HashMap, convert::TryFrom};
 
 #[derive(Clone, Debug)]
-struct RootFilenodeInfo {
+struct PreparedRootFilenode {
     pub filenode: HgFileNodeId,
     pub p1: Option<HgFileNodeId>,
     pub p2: Option<HgFileNodeId>,
@@ -40,9 +40,9 @@ struct RootFilenodeInfo {
     pub linknode: HgChangesetId,
 }
 
-impl From<RootFilenodeInfo> for FilenodeInfo {
-    fn from(root_filenode: RootFilenodeInfo) -> Self {
-        let RootFilenodeInfo {
+impl From<PreparedRootFilenode> for PreparedFilenode {
+    fn from(root_filenode: PreparedRootFilenode) -> Self {
+        let PreparedRootFilenode {
             filenode,
             p1,
             p2,
@@ -50,29 +50,32 @@ impl From<RootFilenodeInfo> for FilenodeInfo {
             linknode,
         } = root_filenode;
 
-        FilenodeInfo {
+        PreparedFilenode {
             path: RepoPath::RootPath,
-            filenode,
-            p1,
-            p2,
-            copyfrom,
-            linknode,
+            info: FilenodeInfo {
+                filenode,
+                p1,
+                p2,
+                copyfrom,
+                linknode,
+            },
         }
     }
 }
 
-impl TryFrom<FilenodeInfo> for RootFilenodeInfo {
+impl TryFrom<PreparedFilenode> for PreparedRootFilenode {
     type Error = Error;
 
-    fn try_from(filenode: FilenodeInfo) -> Result<Self, Self::Error> {
+    fn try_from(filenode: PreparedFilenode) -> Result<Self, Self::Error> {
+        let PreparedFilenode { path, info } = filenode;
+
         let FilenodeInfo {
-            path,
             filenode,
             p1,
             p2,
             copyfrom,
             linknode,
-        } = filenode;
+        } = info;
 
         if path != RepoPath::RootPath {
             return Err(format_err!("unexpected path for root filenode: {:?}", path));
@@ -91,7 +94,7 @@ impl TryFrom<FilenodeInfo> for RootFilenodeInfo {
 /// Note: that should be called only for public commits!
 #[derive(Clone, Debug)]
 pub struct FilenodesOnlyPublic {
-    root_filenode: Option<RootFilenodeInfo>,
+    root_filenode: Option<PreparedRootFilenode>,
 }
 
 impl BonsaiDerived for FilenodesOnlyPublic {
@@ -147,7 +150,7 @@ impl BonsaiDerived for FilenodesOnlyPublic {
     }
 }
 
-fn classify_filenode(filenode: FilenodeInfo) -> Either<RootFilenodeInfo, FilenodeInfo> {
+fn classify_filenode(filenode: PreparedFilenode) -> Either<PreparedRootFilenode, PreparedFilenode> {
     if filenode.path == RepoPath::RootPath {
         let FilenodeInfo {
             filenode,
@@ -155,10 +158,9 @@ fn classify_filenode(filenode: FilenodeInfo) -> Either<RootFilenodeInfo, Filenod
             p2,
             copyfrom,
             linknode,
-            ..
-        } = filenode;
+        } = filenode.info;
 
-        Either::Left(RootFilenodeInfo {
+        Either::Left(PreparedRootFilenode {
             filenode,
             p1,
             p2,
@@ -174,7 +176,7 @@ pub async fn generate_all_filenodes(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: ChangesetId,
-) -> Result<Vec<FilenodeInfo>, Error> {
+) -> Result<Vec<PreparedFilenode>, Error> {
     let parents = repo
         .get_changeset_parents_by_bonsai(ctx.clone(), cs_id)
         .compat()
@@ -241,7 +243,7 @@ fn create_manifest_filenode(
     path: Option<MPath>,
     envelope: HgManifestEnvelope,
     linknode: HgChangesetId,
-) -> FilenodeInfo {
+) -> PreparedFilenode {
     let path = match path {
         Some(path) => RepoPath::DirectoryPath(path),
         None => RepoPath::RootPath,
@@ -251,13 +253,15 @@ fn create_manifest_filenode(
     let p1 = p1.map(HgFileNodeId::new);
     let p2 = p2.map(HgFileNodeId::new);
 
-    FilenodeInfo {
+    PreparedFilenode {
         path,
-        filenode,
-        p1,
-        p2,
-        copyfrom: None,
-        linknode,
+        info: FilenodeInfo {
+            filenode,
+            p1,
+            p2,
+            copyfrom: None,
+            linknode,
+        },
     }
 }
 
@@ -265,7 +269,7 @@ fn create_file_filenode(
     path: Option<MPath>,
     envelope: HgFileEnvelope,
     linknode: HgChangesetId,
-) -> Result<FilenodeInfo, Error> {
+) -> Result<PreparedFilenode, Error> {
     let path = match path {
         Some(path) => RepoPath::FilePath(path),
         None => {
@@ -277,13 +281,15 @@ fn create_file_filenode(
     let copyfrom = File::extract_copied_from(envelope.metadata())?
         .map(|(path, node)| (RepoPath::FilePath(path), node));
 
-    Ok(FilenodeInfo {
+    Ok(PreparedFilenode {
         path,
-        filenode,
-        p1,
-        p2,
-        copyfrom,
-        linknode,
+        info: FilenodeInfo {
+            filenode,
+            p1,
+            p2,
+            copyfrom,
+            linknode,
+        },
     })
 }
 
@@ -351,7 +357,7 @@ async fn fetch_root_filenode(
     ctx: &CoreContext,
     cs_id: ChangesetId,
     repo: &BlobRepo,
-) -> Result<Option<RootFilenodeInfo>, Error> {
+) -> Result<Option<PreparedRootFilenode>, Error> {
     // If hg changeset is not generated, then root filenode can't possible be generated
     // Check it and return None if hg changeset is not generated
     let maybe_hg_cs_id = repo
@@ -369,7 +375,7 @@ async fn fetch_root_filenode(
     let mf_id = mf_id.into_nodehash();
     let filenodes = repo.get_filenodes();
     if mf_id == NULL_HASH {
-        Ok(Some(RootFilenodeInfo {
+        Ok(Some(PreparedRootFilenode {
             filenode: HgFileNodeId::new(NULL_HASH),
             p1: None,
             p2: None,
@@ -377,7 +383,7 @@ async fn fetch_root_filenode(
             linknode: HgChangesetId::new(NULL_HASH),
         }))
     } else {
-        let maybe_filenode = filenodes
+        let maybe_info = filenodes
             .get_filenode(
                 ctx.clone(),
                 &RepoPath::RootPath,
@@ -386,7 +392,15 @@ async fn fetch_root_filenode(
             )
             .compat()
             .await?;
-        maybe_filenode.map(RootFilenodeInfo::try_from).transpose()
+
+        maybe_info
+            .map(|info| {
+                PreparedRootFilenode::try_from(PreparedFilenode {
+                    path: RepoPath::RootPath,
+                    info,
+                })
+            })
+            .transpose()
     }
 }
 
@@ -438,7 +452,7 @@ mod tests {
             .await?;
 
         for filenode in filenodes {
-            assert_eq!(filenode.linknode, linknode);
+            assert_eq!(filenode.info.linknode, linknode);
         }
         Ok(())
     }

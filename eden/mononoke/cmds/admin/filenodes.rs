@@ -98,11 +98,11 @@ fn extract_path(path: &str) -> Result<MPath, Error> {
 
 fn log_filenode(
     logger: &Logger,
+    path: &RepoPath,
     filenode: &FilenodeInfo,
     envelope: Option<&HgFileEnvelope>,
 ) -> Option<()> {
     let FilenodeInfo {
-        path,
         filenode,
         p1,
         p2,
@@ -156,11 +156,9 @@ fn handle_filenodes_at_revision(
                     path_filenode_ids
                         .into_iter()
                         .map(move |(path, filenode_id)| {
-                            let filenode = blobrepo.get_filenode(
-                                ctx.clone(),
-                                &RepoPath::FilePath(path),
-                                filenode_id,
-                            );
+                            let path = RepoPath::FilePath(path);
+
+                            let filenode = blobrepo.get_filenode(ctx.clone(), &path, filenode_id);
 
                             let envelope = if log_envelope {
                                 filenode_id
@@ -172,7 +170,7 @@ fn handle_filenodes_at_revision(
                                 Ok(None).into_future().right_future()
                             };
 
-                            (filenode, envelope)
+                            (Ok(path), filenode, envelope)
                         }),
                 )
             }
@@ -180,9 +178,11 @@ fn handle_filenodes_at_revision(
         .map({
             cloned!(ctx);
             move |filenodes| {
-                filenodes.into_iter().for_each(|(filenode, envelope)| {
-                    log_filenode(ctx.logger(), &filenode, envelope.as_ref());
-                })
+                filenodes
+                    .into_iter()
+                    .for_each(|(path, filenode, envelope)| {
+                        log_filenode(ctx.logger(), &path, &filenode, envelope.as_ref());
+                    })
             }
         })
 }
@@ -246,14 +246,14 @@ pub fn subcommand_filenodes(
                                     Ok(None).into_future().right_future()
                                 };
 
-                                (Ok(filenode), envelope)
+                                (Ok(path), Ok(filenode), envelope)
                             })
                     }
                 })
                 .map({
                     cloned!(ctx);
-                    move |(filenode, envelope)| {
-                        log_filenode(ctx.logger(), &filenode, envelope.as_ref());
+                    move |(path, filenode, envelope)| {
+                        log_filenode(ctx.logger(), &path, &filenode, envelope.as_ref());
                     }
                 })
                 .from_err()

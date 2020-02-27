@@ -22,7 +22,7 @@ use changesets::{CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets,
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use fbinit::FacebookInit;
-use filenodes::{FilenodeInfo, Filenodes};
+use filenodes::{FilenodeInfo, Filenodes, PreparedFilenode};
 use filestore::FilestoreConfig;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
@@ -227,7 +227,7 @@ impl<F: Filenodes> Filenodes for DelayedFilenodes<F> {
     fn add_filenodes(
         &self,
         ctx: CoreContext,
-        info: Vec<FilenodeInfo>,
+        info: Vec<PreparedFilenode>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
         delay(self.put_dist, self.inner.add_filenodes(ctx, info, repo_id)).boxify()
@@ -236,7 +236,7 @@ impl<F: Filenodes> Filenodes for DelayedFilenodes<F> {
     fn add_or_replace_filenodes(
         &self,
         ctx: CoreContext,
-        info: Vec<FilenodeInfo>,
+        info: Vec<PreparedFilenode>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
         delay(

@@ -19,7 +19,7 @@ mod test;
 use anyhow::{Context, Error};
 use cloned::cloned;
 use context::CoreContext;
-use filenodes::{FilenodeInfo, Filenodes};
+use filenodes::{FilenodeInfo, Filenodes, PreparedFilenode};
 use futures_ext::{BoxFuture, FutureExt as _};
 use futures_preview::future::{FutureExt as _, TryFutureExt};
 use mercurial_types::HgFileNodeId;
@@ -53,7 +53,7 @@ impl Filenodes for NewFilenodes {
     fn add_filenodes(
         &self,
         ctx: CoreContext,
-        info: Vec<FilenodeInfo>,
+        info: Vec<PreparedFilenode>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
         cloned!(self.writer);
@@ -73,7 +73,7 @@ impl Filenodes for NewFilenodes {
     fn add_or_replace_filenodes(
         &self,
         ctx: CoreContext,
-        info: Vec<FilenodeInfo>,
+        info: Vec<PreparedFilenode>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
         cloned!(self.writer);
@@ -100,9 +100,8 @@ impl Filenodes for NewFilenodes {
         cloned!(self.reader, path);
 
         async move {
-            // TODO (later in this stack): Take path out of FilenodeInfo, and we can skip the clone.
             let ret = reader
-                .get_filenode(&ctx, repo_id, path.clone(), filenode_id)
+                .get_filenode(&ctx, repo_id, &path, filenode_id)
                 .await
                 .with_context(|| ErrorKind::FailFetchFilenode(filenode_id, path))?;
             Ok(ret)
@@ -121,9 +120,8 @@ impl Filenodes for NewFilenodes {
         cloned!(self.reader, path);
 
         async move {
-            // TODO: Same as above
             let ret = reader
-                .get_all_filenodes_for_path(&ctx, repo_id, path.clone())
+                .get_all_filenodes_for_path(&ctx, repo_id, &path)
                 .await
                 .with_context(|| ErrorKind::FailFetchFilenodeRange(path))?;
             Ok(ret)

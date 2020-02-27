@@ -599,7 +599,6 @@ impl BlobRepo {
                         })?
                         .map(|(path, node)| (RepoPath::FilePath(path), node));
                     Ok(FilenodeInfo {
-                        path,
                         filenode: node,
                         p1,
                         p2,

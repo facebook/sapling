@@ -10,7 +10,7 @@ include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 
 # Memcache constants. Should be change when we want to invalidate memcache
 # entries
-const i32 MC_CODEVER = 2
+const i32 MC_CODEVER = 3
 const i32 MC_SITEVER = 0
 
 union FilenodeInfoList {
@@ -19,7 +19,7 @@ union FilenodeInfoList {
 }
 
 struct FilenodeInfo {
-  1: required mononoke_types_thrift.RepoPath path,
+  // 1 was used previously.
   2: required mercurial_thrift.HgNodeHash filenode,
   3: optional mercurial_thrift.HgNodeHash p1,
   4: optional mercurial_thrift.HgNodeHash p2,

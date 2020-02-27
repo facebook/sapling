@@ -25,8 +25,13 @@ pub fn blake2_path_hash(data: &Vec<u8>) -> hash::Blake2 {
 }
 
 #[derive(Clone, Debug, Eq, PartialEq)]
-pub struct FilenodeInfo {
+pub struct PreparedFilenode {
     pub path: RepoPath,
+    pub info: FilenodeInfo,
+}
+
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct FilenodeInfo {
     pub filenode: HgFileNodeId,
     pub p1: Option<HgFileNodeId>,
     pub p2: Option<HgFileNodeId>,
@@ -46,7 +51,6 @@ impl FilenodeInfo {
             };
 
             Ok(Self {
-                path: RepoPath::from_thrift(info.path)?,
                 filenode: HgFileNodeId::new(HgNodeHash::from_thrift(info.filenode)?),
                 p1: HgNodeHash::from_thrift_opt(info.p1)?.map(HgFileNodeId::new),
                 p2: HgNodeHash::from_thrift_opt(info.p2)?.map(HgFileNodeId::new),
@@ -60,7 +64,6 @@ impl FilenodeInfo {
 
     pub fn into_thrift(self) -> thrift::FilenodeInfo {
         thrift::FilenodeInfo {
-            path: self.path.into_thrift(),
             filenode: self.filenode.into_nodehash().into_thrift(),
             p1: self.p1.map(|p| p.into_nodehash().into_thrift()),
             p2: self.p2.map(|p| p.into_nodehash().into_thrift()),
@@ -76,7 +79,6 @@ impl FilenodeInfo {
 impl Arbitrary for FilenodeInfo {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         Self {
-            path: RepoPath::arbitrary(g),
             filenode: HgFileNodeId::arbitrary(g),
             p1: <Option<HgFileNodeId>>::arbitrary(g),
             p2: <Option<HgFileNodeId>>::arbitrary(g),
@@ -90,14 +92,14 @@ pub trait Filenodes: Send + Sync {
     fn add_filenodes(
         &self,
         ctx: CoreContext,
-        info: Vec<FilenodeInfo>,
+        info: Vec<PreparedFilenode>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error>;
 
     fn add_or_replace_filenodes(
         &self,
         ctx: CoreContext,
-        info: Vec<FilenodeInfo>,
+        info: Vec<PreparedFilenode>,
         repo_id: RepositoryId,
     ) -> BoxFuture<(), Error>;
 

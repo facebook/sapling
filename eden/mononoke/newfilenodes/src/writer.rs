@@ -7,7 +7,7 @@
 
 use anyhow::Error;
 use context::CoreContext;
-use filenodes::FilenodeInfo;
+use filenodes::PreparedFilenode;
 use futures_preview::future;
 use itertools::Itertools;
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
@@ -54,7 +54,7 @@ impl FilenodesWriter {
         &self,
         _context: &CoreContext,
         repo_id: RepositoryId,
-        filenodes: Vec<FilenodeInfo>,
+        filenodes: Vec<PreparedFilenode>,
         replace: bool,
     ) -> Result<(), Error> {
         STATS::adds.add_value(1);
@@ -80,7 +80,7 @@ impl FilenodesWriter {
         &self,
         repo_id: RepositoryId,
         shard_number: usize,
-        filenodes: Vec<(PathHash, FilenodeInfo)>,
+        filenodes: Vec<(PathHash, PreparedFilenode)>,
         replace: bool,
     ) -> Result<(), Error> {
         for chunk in filenodes.chunks(self.chunk_size) {
@@ -98,7 +98,7 @@ async fn ensure_paths_exists(
     read_conn: &Connection,
     write_conn: &Connection,
     repo_id: RepositoryId,
-    filenodes: &[(PathHash, FilenodeInfo)],
+    filenodes: &[(PathHash, PreparedFilenode)],
 ) -> Result<(), Error> {
     let path_hashes = filenodes
         .iter()
@@ -138,7 +138,7 @@ async fn ensure_paths_exists(
 async fn insert_filenodes(
     write_conn: &Connection,
     repo_id: RepositoryId,
-    filenodes: &[(PathHash, FilenodeInfo)],
+    filenodes: &[(PathHash, PreparedFilenode)],
     replace: bool,
 ) -> Result<(), Error> {
     let mut filenode_rows = Vec::new();
@@ -149,18 +149,18 @@ async fn insert_filenodes(
             &repo_id,
             &pwh.hash,
             &pwh.is_tree,
-            &filenode.filenode,
-            &filenode.linknode,
-            &filenode.p1,
-            &filenode.p2,
-            if filenode.copyfrom.is_some() {
+            &filenode.info.filenode,
+            &filenode.info.linknode,
+            &filenode.info.p1,
+            &filenode.info.p2,
+            if filenode.info.copyfrom.is_some() {
                 &1i8
             } else {
                 &0i8
             },
         ));
 
-        if let Some(ref copyinfo) = filenode.copyfrom {
+        if let Some(ref copyinfo) = filenode.info.copyfrom {
             let (ref frompath, ref fromnode) = copyinfo;
             let from_pwh = PathHash::from_repo_path(frompath);
             if from_pwh.is_tree != pwh.is_tree {
@@ -170,7 +170,7 @@ async fn insert_filenodes(
             copydata_rows.push((
                 &repo_id,
                 &pwh.hash,
-                &filenode.filenode,
+                &filenode.info.filenode,
                 &pwh.is_tree,
                 from_pwh.hash,
                 fromnode,

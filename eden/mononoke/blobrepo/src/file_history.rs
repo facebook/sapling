@@ -149,6 +149,8 @@ fn get_file_history_using_prefetched(
                     .right_future()
             };
 
+            cloned!(path);
+
             let history = filenode_fut.and_then(move |filenode| {
                 let p1 = filenode.p1.map(|p| p.into_nodehash());
                 let p2 = filenode.p2.map(|p| p.into_nodehash());
@@ -159,7 +161,7 @@ fn get_file_history_using_prefetched(
                 let copyfrom = match filenode.copyfrom {
                     Some((RepoPath::FilePath(frompath), node)) => Some((frompath, node)),
                     Some((frompath, _)) => {
-                        return Err(ErrorKind::InconsistentCopyInfo(filenode.path, frompath).into());
+                        return Err(ErrorKind::InconsistentCopyInfo(path, frompath).into());
                     }
                     None => None,
                 };

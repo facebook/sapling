@@ -502,7 +502,6 @@ mod test {
 
     fn filenode() -> FilenodeInfo {
         FilenodeInfo {
-            path: RepoPath::file("copiedto").unwrap(),
             filenode: ONES_FNID,
             p1: None,
             p2: None,
@@ -523,16 +522,14 @@ mod test {
     #[fbinit::test]
     async fn test_store_filenode(_fb: FacebookInit) -> Result<(), Error> {
         let cache = make_test_cache();
+        let path = RepoPath::file("copiedto")?;
         let info = filenode();
 
-        cache.fill_filenode(REPO_ZERO, &info.path, info.filenode, info.clone());
+        cache.fill_filenode(REPO_ZERO, &path, info.filenode, info.clone());
 
         let from_cache = time::timeout(Duration::from_millis(TIMEOUT_MS), async {
             loop {
-                match cache
-                    .get_filenode(REPO_ZERO, &info.path, info.filenode)
-                    .await
-                {
+                match cache.get_filenode(REPO_ZERO, &path, info.filenode).await {
                     Some(f) => {
                         break f;
                     }
@@ -546,9 +543,7 @@ mod test {
         assert_eq!(from_cache, info);
         assert_eq!(
             None,
-            cache
-                .get_filenode(REPO_ONE, &info.path, info.filenode)
-                .await
+            cache.get_filenode(REPO_ONE, &path, info.filenode).await
         );
 
         Ok(())
@@ -557,15 +552,16 @@ mod test {
     #[fbinit::test]
     async fn test_store_short_history(_fb: FacebookInit) -> Result<(), Error> {
         let cache = make_test_cache();
+        let path = RepoPath::file("copiedto")?;
         let info = filenode();
 
         let history = vec![info.clone(), info.clone(), info.clone()];
 
-        cache.fill_history(REPO_ZERO, &info.path, history.clone());
+        cache.fill_history(REPO_ZERO, &path, history.clone());
 
         let from_cache = time::timeout(Duration::from_millis(TIMEOUT_MS), async {
             loop {
-                match cache.get_history(REPO_ZERO, &info.path).await {
+                match cache.get_history(REPO_ZERO, &path).await {
                     Some(f) => {
                         break f;
                     }
@@ -577,7 +573,7 @@ mod test {
         .await?;
 
         assert_eq!(from_cache, history);
-        assert_eq!(None, cache.get_history(REPO_ONE, &info.path).await);
+        assert_eq!(None, cache.get_history(REPO_ONE, &path).await);
 
         Ok(())
     }
@@ -585,16 +581,17 @@ mod test {
     #[fbinit::test]
     async fn test_store_long_history(_fb: FacebookInit) -> Result<(), Error> {
         let cache = make_test_cache();
+        let path = RepoPath::file("copiedto")?;
         let info = filenode();
 
         let history = (0..100_000).map(|_| info.clone()).collect::<Vec<_>>();
         assert!(serialize_history(history.clone()).len() >= MEMCACHE_VALUE_MAX_SIZE);
 
-        cache.fill_history(REPO_ZERO, &info.path, history.clone());
+        cache.fill_history(REPO_ZERO, &path, history.clone());
 
         let from_cache = time::timeout(Duration::from_millis(TIMEOUT_MS), async {
             loop {
-                match cache.get_history(REPO_ZERO, &info.path).await {
+                match cache.get_history(REPO_ZERO, &path).await {
                     Some(f) => {
                         break f;
                     }
@@ -606,7 +603,7 @@ mod test {
         .await?;
 
         assert_eq!(from_cache, history);
-        assert_eq!(None, cache.get_history(REPO_ONE, &info.path).await);
+        assert_eq!(None, cache.get_history(REPO_ONE, &path).await);
 
         Ok(())
     }

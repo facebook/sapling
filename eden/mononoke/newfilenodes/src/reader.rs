@@ -148,7 +148,7 @@ impl FilenodesReader {
         &self,
         ctx: &CoreContext,
         repo_id: RepositoryId,
-        path: RepoPath,
+        path: &RepoPath,
         filenode: HgFileNodeId,
     ) -> Result<Option<FilenodeInfo>, Error> {
         STATS::gets.add_value(1);
@@ -198,7 +198,7 @@ impl FilenodesReader {
         &self,
         _ctx: &CoreContext,
         repo_id: RepositoryId,
-        path: RepoPath,
+        path: &RepoPath,
     ) -> Result<Vec<FilenodeInfo>, Error> {
         STATS::range_gets.add_value(1);
 
@@ -464,7 +464,6 @@ async fn fill_paths(
             };
 
             let ret = FilenodeInfo {
-                path: pwh.path.clone(),
                 filenode,
                 p1,
                 p2,

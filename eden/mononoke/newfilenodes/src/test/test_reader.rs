@@ -8,7 +8,7 @@
 use anyhow::{format_err, Error};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use filenodes::FilenodeInfo;
+use filenodes::{FilenodeInfo, PreparedFilenode};
 use futures_preview::compat::Future01CompatExt;
 use mercurial_types::HgFileNodeId;
 use mercurial_types_mocks::nodehash::{
@@ -43,24 +43,24 @@ async fn check_roundtrip(
     repo_id: RepositoryId,
     reader: &FilenodesReader,
     writer: &FilenodesWriter,
-    info: FilenodeInfo,
+    payload: PreparedFilenode,
 ) -> Result<(), Error> {
     assert_eq!(
         reader
-            .get_filenode(&ctx, repo_id, info.path.clone(), info.filenode)
+            .get_filenode(&ctx, repo_id, &payload.path, payload.info.filenode)
             .await?,
         None
     );
 
     writer
-        .insert_filenodes(&ctx, repo_id, vec![info.clone()], false)
+        .insert_filenodes(&ctx, repo_id, vec![payload.clone()], false)
         .await?;
 
     assert_eq!(
         reader
-            .get_filenode(&ctx, repo_id, info.path.clone(), info.filenode)
+            .get_filenode(&ctx, repo_id, &payload.path, payload.info.filenode)
             .await?,
-        Some(info),
+        Some(payload.info),
     );
 
     Ok(())
@@ -73,16 +73,18 @@ async fn test_basic(fb: FacebookInit) -> Result<(), Error> {
     let shard = build_shard()?;
     let (reader, writer) = build_reader_writer(vec![shard]);
 
-    let info = FilenodeInfo {
+    let payload = PreparedFilenode {
         path: RepoPath::FilePath(MPath::new(b"test")?),
-        filenode: ONES_FNID,
-        p1: Some(TWOS_FNID),
-        p2: None,
-        copyfrom: None,
-        linknode: ONES_CSID,
+        info: FilenodeInfo {
+            filenode: ONES_FNID,
+            p1: Some(TWOS_FNID),
+            p2: None,
+            copyfrom: None,
+            linknode: ONES_CSID,
+        },
     };
 
-    check_roundtrip(&ctx, REPO_ZERO, &reader, &writer, info).await?;
+    check_roundtrip(&ctx, REPO_ZERO, &reader, &writer, payload).await?;
 
     Ok(())
 }
@@ -94,29 +96,33 @@ async fn read_copy_info(fb: FacebookInit) -> Result<(), Error> {
     let shard = build_shard()?;
     let (reader, writer) = build_reader_writer(vec![shard]);
 
-    let from = FilenodeInfo {
+    let from = PreparedFilenode {
         path: RepoPath::FilePath(MPath::new(b"from")?),
-        filenode: ONES_FNID,
-        p1: None,
-        p2: None,
-        copyfrom: None,
-        linknode: ONES_CSID,
+        info: FilenodeInfo {
+            filenode: ONES_FNID,
+            p1: None,
+            p2: None,
+            copyfrom: None,
+            linknode: ONES_CSID,
+        },
     };
 
     writer
         .insert_filenodes(&ctx, REPO_ZERO, vec![from.clone()], false)
         .await?;
 
-    let info = FilenodeInfo {
+    let payload = PreparedFilenode {
         path: RepoPath::FilePath(MPath::new(b"test")?),
-        filenode: TWOS_FNID,
-        p1: None,
-        p2: None,
-        copyfrom: Some((from.path.clone(), from.filenode)),
-        linknode: TWOS_CSID,
+        info: FilenodeInfo {
+            filenode: TWOS_FNID,
+            p1: None,
+            p2: None,
+            copyfrom: Some((from.path.clone(), from.info.filenode)),
+            linknode: TWOS_CSID,
+        },
     };
 
-    check_roundtrip(&ctx, REPO_ZERO, &reader, &writer, info).await?;
+    check_roundtrip(&ctx, REPO_ZERO, &reader, &writer, payload).await?;
 
     Ok(())
 }
@@ -128,22 +134,30 @@ async fn test_repo_ids(fb: FacebookInit) -> Result<(), Error> {
     let shard = build_shard()?;
     let (reader, writer) = build_reader_writer(vec![shard]);
 
-    let info = root_first_filenode();
+    let payload = root_first_filenode();
 
     writer
-        .insert_filenodes(&ctx, REPO_ZERO, vec![info.clone()], false)
+        .insert_filenodes(&ctx, REPO_ZERO, vec![payload.clone()], false)
         .await?;
 
     assert_filenode(
         &ctx,
         &reader,
-        &info.path,
-        info.filenode,
+        &payload.path,
+        payload.info.filenode,
         REPO_ZERO,
-        info.clone(),
+        payload.info.clone(),
     )
     .await?;
-    assert_no_filenode(&ctx, &reader, &info.path, info.filenode, REPO_ONE).await?;
+
+    assert_no_filenode(
+        &ctx,
+        &reader,
+        &payload.path,
+        payload.info.filenode,
+        REPO_ONE,
+    )
+    .await?;
 
     Ok(())
 }
@@ -193,101 +207,115 @@ async fn test_fallback_on_missing_copy_info(fb: FacebookInit) -> Result<(), Erro
     DeleteCopyInfo::query(&replica).compat().await?;
 
     let reader = FilenodesReader::new(vec![replica], vec![master]);
-    let info = copied_filenode();
+    let prepared = copied_filenode();
     assert_filenode(
         &ctx,
         &reader,
-        &info.path,
-        info.filenode,
+        &prepared.path,
+        prepared.info.filenode,
         REPO_ZERO,
-        info.clone(),
+        prepared.info.clone(),
     )
     .await?;
 
     Ok(())
 }
 
-fn root_first_filenode() -> FilenodeInfo {
-    FilenodeInfo {
+fn root_first_filenode() -> PreparedFilenode {
+    PreparedFilenode {
         path: RepoPath::root(),
-        filenode: ONES_FNID,
-        p1: None,
-        p2: None,
-        copyfrom: None,
-        linknode: ONES_CSID,
+        info: FilenodeInfo {
+            filenode: ONES_FNID,
+            p1: None,
+            p2: None,
+            copyfrom: None,
+            linknode: ONES_CSID,
+        },
     }
 }
 
-fn root_second_filenode() -> FilenodeInfo {
-    FilenodeInfo {
+fn root_second_filenode() -> PreparedFilenode {
+    PreparedFilenode {
         path: RepoPath::root(),
-        filenode: TWOS_FNID,
-        p1: Some(ONES_FNID),
-        p2: None,
-        copyfrom: None,
-        linknode: TWOS_CSID,
+        info: FilenodeInfo {
+            filenode: TWOS_FNID,
+            p1: Some(ONES_FNID),
+            p2: None,
+            copyfrom: None,
+            linknode: TWOS_CSID,
+        },
     }
 }
 
-fn root_merge_filenode() -> FilenodeInfo {
-    FilenodeInfo {
+fn root_merge_filenode() -> PreparedFilenode {
+    PreparedFilenode {
         path: RepoPath::root(),
-        filenode: THREES_FNID,
-        p1: Some(ONES_FNID),
-        p2: Some(TWOS_FNID),
-        copyfrom: None,
-        linknode: THREES_CSID,
+        info: FilenodeInfo {
+            filenode: THREES_FNID,
+            p1: Some(ONES_FNID),
+            p2: Some(TWOS_FNID),
+            copyfrom: None,
+            linknode: THREES_CSID,
+        },
     }
 }
 
-fn file_a_first_filenode() -> FilenodeInfo {
-    FilenodeInfo {
+fn file_a_first_filenode() -> PreparedFilenode {
+    PreparedFilenode {
         path: RepoPath::file("a").unwrap(),
-        filenode: ONES_FNID,
-        p1: None,
-        p2: None,
-        copyfrom: None,
-        linknode: ONES_CSID,
+        info: FilenodeInfo {
+            filenode: ONES_FNID,
+            p1: None,
+            p2: None,
+            copyfrom: None,
+            linknode: ONES_CSID,
+        },
     }
 }
 
-fn file_b_first_filenode() -> FilenodeInfo {
-    FilenodeInfo {
+fn file_b_first_filenode() -> PreparedFilenode {
+    PreparedFilenode {
         path: RepoPath::file("b").unwrap(),
-        filenode: TWOS_FNID,
-        p1: None,
-        p2: None,
-        copyfrom: None,
-        linknode: TWOS_CSID,
+        info: FilenodeInfo {
+            filenode: TWOS_FNID,
+            p1: None,
+            p2: None,
+            copyfrom: None,
+            linknode: TWOS_CSID,
+        },
     }
 }
 
-fn copied_from_filenode() -> FilenodeInfo {
-    FilenodeInfo {
+fn copied_from_filenode() -> PreparedFilenode {
+    PreparedFilenode {
         path: RepoPath::file("copiedfrom").unwrap(),
-        filenode: ONES_FNID,
-        p1: None,
-        p2: None,
-        copyfrom: None,
-        linknode: TWOS_CSID,
+        info: FilenodeInfo {
+            filenode: ONES_FNID,
+            p1: None,
+            p2: None,
+            copyfrom: None,
+            linknode: TWOS_CSID,
+        },
     }
 }
 
-fn copied_filenode() -> FilenodeInfo {
-    FilenodeInfo {
+fn copied_filenode() -> PreparedFilenode {
+    PreparedFilenode {
         path: RepoPath::file("copiedto").unwrap(),
-        filenode: TWOS_FNID,
-        p1: None,
-        p2: None,
-        copyfrom: Some((RepoPath::file("copiedfrom").unwrap(), ONES_FNID)),
-        linknode: TWOS_CSID,
+        info: FilenodeInfo {
+            filenode: TWOS_FNID,
+            p1: None,
+            p2: None,
+            copyfrom: Some((RepoPath::file("copiedfrom").unwrap(), ONES_FNID)),
+            linknode: TWOS_CSID,
+        },
     }
 }
 
 async fn do_add_filenodes(
     ctx: &CoreContext,
     writer: &FilenodesWriter,
-    to_insert: Vec<FilenodeInfo>,
+    to_insert: Vec<PreparedFilenode>,
     repo_id: RepositoryId,
 ) -> Result<(), Error> {
     writer
@@ -299,7 +327,7 @@ async fn do_add_filenodes(
 async fn do_add_filenode(
     ctx: &CoreContext,
     writer: &FilenodesWriter,
-    node: FilenodeInfo,
+    node: PreparedFilenode,
     repo_id: RepositoryId,
 ) -> Result<(), Error> {
     do_add_filenodes(ctx, writer, vec![node], repo_id).await?;
@@ -313,9 +341,7 @@ async fn assert_no_filenode(
     hash: HgFileNodeId,
     repo_id: RepositoryId,
 ) -> Result<(), Error> {
-    let res = reader
-        .get_filenode(&ctx, repo_id, path.clone(), hash)
-        .await?;
+    let res = reader.get_filenode(&ctx, repo_id, path, hash).await?;
     assert!(res.is_none());
     Ok(())
 }
@@ -329,7 +355,7 @@ async fn assert_filenode(
     expected: FilenodeInfo,
 ) -> Result<(), Error> {
     let res = reader
-        .get_filenode(&ctx, repo_id, path.clone(), hash)
+        .get_filenode(&ctx, repo_id, path, hash)
         .await?
         .ok_or(format_err!("not found: {}", hash))?;
     assert_eq!(res, expected);
@@ -344,7 +370,7 @@ async fn assert_all_filenodes(
     expected: &Vec<FilenodeInfo>,
 ) -> Result<(), Error> {
     let res = reader
-        .get_all_filenodes_for_path(&ctx, repo_id, path.clone())
+        .get_all_filenodes_for_path(&ctx, repo_id, &path)
         .await?;
     assert_eq!(&res, expected);
     Ok(())
@@ -370,7 +396,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::root(),
                     ONES_FNID,
                     REPO_ZERO,
-                    root_first_filenode(),
+                    root_first_filenode().info,
                 )
                 .await?;
 
@@ -417,7 +443,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::root(),
                     ONES_FNID,
                     REPO_ZERO,
-                    root_first_filenode(),
+                    root_first_filenode().info,
                 )
                 .await?;
                 assert_filenode(
@@ -426,7 +452,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::root(),
                     TWOS_FNID,
                     REPO_ZERO,
-                    root_second_filenode(),
+                    root_second_filenode().info,
                 )
                 .await?;
                 Ok(())
@@ -448,7 +474,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::root(),
                     THREES_FNID,
                     REPO_ZERO,
-                    root_merge_filenode(),
+                    root_merge_filenode().info,
                 )
                 .await?;
                 Ok(())
@@ -476,7 +502,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::file("a").unwrap(),
                     ONES_FNID,
                     REPO_ZERO,
-                    file_a_first_filenode(),
+                    file_a_first_filenode().info,
                 )
                 .await?;
                 assert_filenode(
@@ -485,7 +511,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::file("b").unwrap(),
                     TWOS_FNID,
                     REPO_ZERO,
-                    file_b_first_filenode(),
+                    file_b_first_filenode().info,
                 )
                 .await?;
                 Ok(())
@@ -505,7 +531,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::root(),
                     ONES_FNID,
                     REPO_ZERO,
-                    root_first_filenode(),
+                    root_first_filenode().info,
                 )
                 .await?;
 
@@ -517,7 +543,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::root(),
                     TWOS_FNID,
                     REPO_ONE,
-                    root_second_filenode(),
+                    root_second_filenode().info,
                 )
                 .await?;
                 Ok(())
@@ -545,7 +571,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::root(),
                     ONES_FNID,
                     REPO_ZERO,
-                    root_first_filenode(),
+                    root_first_filenode().info,
                 )
                 .await?;
 
@@ -555,7 +581,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::root(),
                     TWOS_FNID,
                     REPO_ZERO,
-                    root_second_filenode(),
+                    root_second_filenode().info,
                 )
                 .await?;
                 Ok(())
@@ -580,7 +606,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::file("copiedto").unwrap(),
                     TWOS_FNID,
                     REPO_ZERO,
-                    copied_filenode(),
+                    copied_filenode().info,
                 )
                 .await?;
                 Ok(())
@@ -608,22 +634,26 @@ macro_rules! filenodes_tests {
                 let (reader, writer) = build_reader_writer($create_db()?);
                 let reader = $enable_caching(reader);
 
-                let copied = FilenodeInfo {
+                let copied = PreparedFilenode {
                     path: RepoPath::file("copiedto").unwrap(),
-                    filenode: TWOS_FNID,
-                    p1: None,
-                    p2: None,
-                    copyfrom: Some((RepoPath::file("copiedfrom").unwrap(), ONES_FNID)),
-                    linknode: TWOS_CSID,
+                    info: FilenodeInfo {
+                        filenode: TWOS_FNID,
+                        p1: None,
+                        p2: None,
+                        copyfrom: Some((RepoPath::file("copiedfrom").unwrap(), ONES_FNID)),
+                        linknode: TWOS_CSID,
+                    },
                 };
 
-                let notcopied = FilenodeInfo {
+                let notcopied = PreparedFilenode {
                     path: RepoPath::file("copiedto").unwrap(),
-                    filenode: TWOS_FNID,
-                    p1: None,
-                    p2: None,
-                    copyfrom: None,
-                    linknode: TWOS_CSID,
+                    info: FilenodeInfo {
+                        filenode: TWOS_FNID,
+                        p1: None,
+                        p2: None,
+                        copyfrom: None,
+                        linknode: TWOS_CSID,
+                    },
                 };
 
                 do_add_filenodes(
@@ -642,7 +672,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::file("copiedto").unwrap(),
                     TWOS_FNID,
                     REPO_ZERO,
-                    copied,
+                    copied.info,
                 )
                 .await?;
 
@@ -652,7 +682,7 @@ macro_rules! filenodes_tests {
                     &RepoPath::file("copiedto").unwrap(),
                     TWOS_FNID,
                     REPO_ONE,
-                    notcopied,
+                    notcopied.info,
                 )
                 .await?;
                 Ok(())
@@ -663,11 +693,6 @@ macro_rules! filenodes_tests {
                 let ctx = CoreContext::test_mock(fb);
                 let (reader, writer) = build_reader_writer($create_db()?);
                 let reader = $enable_caching(reader);
-                let root_filenodes = vec![
-                    root_first_filenode(),
-                    root_second_filenode(),
-                    root_merge_filenode(),
-                ];
                 do_add_filenodes(
                     &ctx,
                     &writer,
@@ -687,6 +712,12 @@ macro_rules! filenodes_tests {
                 )
                 .await?;
 
+                let root_filenodes = vec![
+                    root_first_filenode().info,
+                    root_second_filenode().info,
+                    root_merge_filenode().info,
+                ];
+
                 assert_all_filenodes(
                     &ctx,
                     &reader,
@@ -701,7 +732,7 @@ macro_rules! filenodes_tests {
                     &reader,
                     &RepoPath::file("a").unwrap(),
                     REPO_ZERO,
-                    &vec![file_a_first_filenode()],
+                    &vec![file_a_first_filenode().info],
                 )
                 .await?;
 
@@ -710,7 +741,7 @@ macro_rules! filenodes_tests {
                     &reader,
                     &RepoPath::file("b").unwrap(),
                     REPO_ZERO,
-                    &vec![file_b_first_filenode()],
+                    &vec![file_b_first_filenode().info],
                 )
                 .await?;
                 Ok(())
