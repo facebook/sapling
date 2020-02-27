@@ -11,7 +11,7 @@ use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use blobrepo_factory::init_all_derived_data;
 use blobstore::Blobstore;
-use bonsai_git_mapping::SqlBonsaiGitMapping;
+use bonsai_git_mapping::SqlBonsaiGitMappingConnection;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use bonsai_hg_mapping::{
     BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds, CachingBonsaiHgMapping,
@@ -107,7 +107,6 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
         ))
     };
 
-    let bonsai_git_mapping = Arc::new(SqlBonsaiGitMapping::with_sqlite_in_memory()?);
     let bonsai_globalrev_mapping = Arc::new(SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()?);
 
     let bonsai_hg_mapping = {
@@ -132,6 +131,9 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
 
     // Disable redaction check when executing benchmark reports
     let repoid = RepositoryId::new(rand::random());
+
+    let bonsai_git_mapping =
+        Arc::new(SqlBonsaiGitMappingConnection::with_sqlite_in_memory()?.with_repo_id(repoid));
 
     let phases_store = Arc::new(SqlPhasesStore::with_sqlite_in_memory()?);
     let phases_factory = SqlPhasesFactory::new_no_caching(phases_store, repoid);

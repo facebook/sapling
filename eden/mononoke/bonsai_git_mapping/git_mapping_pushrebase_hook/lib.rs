@@ -88,11 +88,7 @@ impl PushrebaseCommitHook for GitMappingCommitHook {
                     })?
                     .0;
 
-                Ok(BonsaiGitMappingEntry::new(
-                    self.repository_id,
-                    *git_sha1,
-                    replacement_bcs_id,
-                ))
+                Ok(BonsaiGitMappingEntry::new(*git_sha1, replacement_bcs_id))
             })
             .collect::<Result<Vec<_>, Error>>()?;
 
@@ -104,11 +100,15 @@ impl PushrebaseCommitHook for GitMappingCommitHook {
             ));
         }
 
-        Ok(Box::new(GitMappingTransactionHook { entries }) as Box<dyn PushrebaseTransactionHook>)
+        Ok(Box::new(GitMappingTransactionHook {
+            repository_id: self.repository_id,
+            entries,
+        }) as Box<dyn PushrebaseTransactionHook>)
     }
 }
 
 struct GitMappingTransactionHook {
+    repository_id: RepositoryId,
     entries: Vec<BonsaiGitMappingEntry>,
 }
 
@@ -119,7 +119,7 @@ impl PushrebaseTransactionHook for GitMappingTransactionHook {
         _ctx: &CoreContext,
         txn: Transaction,
     ) -> Result<Transaction, BookmarkTransactionError> {
-        let txn = bulk_add_git_mapping_in_transaction(txn, &self.entries[..])
+        let txn = bulk_add_git_mapping_in_transaction(txn, &self.repository_id, &self.entries[..])
             .await
             .map_err(|e| BookmarkTransactionError::Other(e.into()))?;
         Ok(txn)

@@ -135,19 +135,19 @@ async fn pushrebase_populates_git_mapping_impl(fb: FacebookInit) -> Result<(), E
     assert_eq!(
         Some(TWOS_GIT_SHA1),
         mapping
-            .get_git_sha1_from_bonsai(repo_id.clone(), cs2_rebased.get_changeset_id())
+            .get_git_sha1_from_bonsai(cs2_rebased.get_changeset_id())
             .await?,
     );
     assert_eq!(
         Some(THREES_GIT_SHA1),
         mapping
-            .get_git_sha1_from_bonsai(repo_id.clone(), cs3_rebased.get_changeset_id())
+            .get_git_sha1_from_bonsai(cs3_rebased.get_changeset_id())
             .await?,
     );
     assert_eq!(
         Some(FOURS_GIT_SHA1),
         mapping
-            .get_git_sha1_from_bonsai(repo_id.clone(), cs4_rebased.get_changeset_id())
+            .get_git_sha1_from_bonsai(cs4_rebased.get_changeset_id())
             .await?,
     );
 

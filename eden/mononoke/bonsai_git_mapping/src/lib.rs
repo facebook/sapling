@@ -35,18 +35,13 @@ define_stats! {
 
 #[derive(Clone, Debug, Eq, Hash, PartialEq)]
 pub struct BonsaiGitMappingEntry {
-    pub repo_id: RepositoryId,
     pub git_sha1: GitSha1,
     pub bcs_id: ChangesetId,
 }
 
 impl BonsaiGitMappingEntry {
-    pub fn new(repo_id: RepositoryId, git_sha1: GitSha1, bcs_id: ChangesetId) -> Self {
-        BonsaiGitMappingEntry {
-            repo_id,
-            git_sha1,
-            bcs_id,
-        }
+    pub fn new(git_sha1: GitSha1, bcs_id: ChangesetId) -> Self {
+        BonsaiGitMappingEntry { git_sha1, bcs_id }
     }
 }
 
@@ -95,46 +90,34 @@ pub trait BonsaiGitMapping: Send + Sync {
         entries: &[BonsaiGitMappingEntry],
     ) -> Result<(), AddGitMappingErrorKind>;
 
-    async fn get(
-        &self,
-        repo_id: RepositoryId,
-        field: BonsaisOrGitShas,
-    ) -> anyhow::Result<Vec<BonsaiGitMappingEntry>>;
+    async fn get(&self, field: BonsaisOrGitShas) -> anyhow::Result<Vec<BonsaiGitMappingEntry>>;
 
     async fn get_git_sha1_from_bonsai(
         &self,
-        repo_id: RepositoryId,
         bcs_id: ChangesetId,
     ) -> anyhow::Result<Option<GitSha1>> {
-        let result = self
-            .get(repo_id, BonsaisOrGitShas::Bonsai(vec![bcs_id]))
-            .await?;
+        let result = self.get(BonsaisOrGitShas::Bonsai(vec![bcs_id])).await?;
         Ok(result.into_iter().next().map(|entry| entry.git_sha1))
     }
 
     async fn get_bonsai_from_git_sha1(
         &self,
-        repo_id: RepositoryId,
         git_sha1: GitSha1,
     ) -> anyhow::Result<Option<ChangesetId>> {
-        let result = self
-            .get(repo_id, BonsaisOrGitShas::GitSha1(vec![git_sha1]))
-            .await?;
+        let result = self.get(BonsaisOrGitShas::GitSha1(vec![git_sha1])).await?;
         Ok(result.into_iter().next().map(|entry| entry.bcs_id))
     }
 
     async fn bulk_import_from_bonsai(
         &self,
         ctx: CoreContext,
-        repo_id: RepositoryId,
         changesets: &[BonsaiChangeset],
     ) -> anyhow::Result<()> {
         let mut entries = vec![];
         for bcs in changesets.into_iter() {
             match extract_git_sha1_from_bonsai_extra(bcs.extra()) {
                 Ok(Some(git_sha1)) => {
-                    let entry =
-                        BonsaiGitMappingEntry::new(repo_id, git_sha1, bcs.get_changeset_id());
+                    let entry = BonsaiGitMappingEntry::new(git_sha1, bcs.get_changeset_id());
                     entries.push(entry);
                 }
                 Ok(None) => {
@@ -163,17 +146,14 @@ impl BonsaiGitMapping for Arc<dyn BonsaiGitMapping> {
         (**self).bulk_add(entries).await
     }
 
-    async fn get(
-        &self,
-        repo_id: RepositoryId,
-        field: BonsaisOrGitShas,
-    ) -> anyhow::Result<Vec<BonsaiGitMappingEntry>> {
-        (**self).get(repo_id, field).await
+    async fn get(&self, field: BonsaisOrGitShas) -> anyhow::Result<Vec<BonsaiGitMappingEntry>> {
+        (**self).get(field).await
     }
 }
 
 #[derive(Clone)]
 pub struct SqlBonsaiGitMapping {
+    repo_id: RepositoryId,
     write_connection: Connection,
     read_connection: Connection,
     read_master_connection: Connection,
@@ -209,7 +189,66 @@ queries! {
     }
 }
 
-impl SqlConstructors for SqlBonsaiGitMapping {
+#[async_trait]
+impl BonsaiGitMapping for SqlBonsaiGitMapping {
+    async fn bulk_add(
+        &self,
+        entries: &[BonsaiGitMappingEntry],
+    ) -> Result<(), AddGitMappingErrorKind> {
+        STATS::adds.add_value(entries.len().try_into().map_err(anyhow::Error::from)?);
+        let rows: Vec<_> = entries
+            .into_iter()
+            .map(|BonsaiGitMappingEntry { git_sha1, bcs_id }| (&self.repo_id, git_sha1, bcs_id))
+            .collect();
+
+        let res = InsertMapping::query(&self.write_connection, &rows[..])
+            .compat()
+            .await?;
+
+        if res.affected_rows() != rows.len() as u64 {
+            Err(AddGitMappingErrorKind::Conflict(entries.into()))?;
+        }
+        return Ok(());
+    }
+
+    async fn get(&self, objects: BonsaisOrGitShas) -> anyhow::Result<Vec<BonsaiGitMappingEntry>> {
+        STATS::gets.add_value(1);
+        let mut mappings = select_mapping(&self.read_connection, &self.repo_id, &objects).await?;
+        let left_to_fetch = filter_fetched_ids(objects, &mappings[..]);
+
+        if !left_to_fetch.is_empty() {
+            STATS::gets_master.add_value(1);
+            let mut master_mappings =
+                select_mapping(&self.read_master_connection, &self.repo_id, &left_to_fetch).await?;
+            mappings.append(&mut master_mappings);
+        }
+        Ok(mappings)
+    }
+}
+
+pub struct SqlBonsaiGitMappingConnection {
+    write_connection: Connection,
+    read_connection: Connection,
+    read_master_connection: Connection,
+}
+
+impl SqlBonsaiGitMappingConnection {
+    pub fn with_repo_id(self, repo_id: RepositoryId) -> SqlBonsaiGitMapping {
+        let SqlBonsaiGitMappingConnection {
+            write_connection,
+            read_connection,
+            read_master_connection,
+        } = self;
+        SqlBonsaiGitMapping {
+            repo_id,
+            write_connection,
+            read_connection,
+            read_master_connection,
+        }
+    }
+}
+
+impl SqlConstructors for SqlBonsaiGitMappingConnection {
     const LABEL: &'static str = "bonsai_git_mapping";
 
     fn from_connections(
@@ -229,53 +268,6 @@ impl SqlConstructors for SqlBonsaiGitMapping {
     }
 }
 
-#[async_trait]
-impl BonsaiGitMapping for SqlBonsaiGitMapping {
-    async fn bulk_add(
-        &self,
-        entries: &[BonsaiGitMappingEntry],
-    ) -> Result<(), AddGitMappingErrorKind> {
-        STATS::adds.add_value(entries.len().try_into().map_err(anyhow::Error::from)?);
-        let rows: Vec<_> = entries
-            .into_iter()
-            .map(
-                |BonsaiGitMappingEntry {
-                     repo_id,
-                     git_sha1,
-                     bcs_id,
-                 }| (repo_id, git_sha1, bcs_id),
-            )
-            .collect();
-
-        let res = InsertMapping::query(&self.write_connection, &rows[..])
-            .compat()
-            .await?;
-
-        if res.affected_rows() != rows.len() as u64 {
-            Err(AddGitMappingErrorKind::Conflict(entries.into()))?;
-        }
-        return Ok(());
-    }
-
-    async fn get(
-        &self,
-        repo_id: RepositoryId,
-        objects: BonsaisOrGitShas,
-    ) -> anyhow::Result<Vec<BonsaiGitMappingEntry>> {
-        STATS::gets.add_value(1);
-        let mut mappings = select_mapping(&self.read_connection, repo_id, &objects).await?;
-        let left_to_fetch = filter_fetched_ids(objects, &mappings[..]);
-
-        if !left_to_fetch.is_empty() {
-            STATS::gets_master.add_value(1);
-            let mut master_mappings =
-                select_mapping(&self.read_master_connection, repo_id, &left_to_fetch).await?;
-            mappings.append(&mut master_mappings);
-        }
-        Ok(mappings)
-    }
-}
-
 /// An in-transaction version of bulk_add. Instead of using multiple connections
 /// it reuses existing `Transaction`. Useful for updating the mapping atomically
 /// with other changes.
@@ -286,17 +278,12 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
 /// parameter would complicate it greatly.
 pub async fn bulk_add_git_mapping_in_transaction(
     transaction: Transaction,
+    repo_id: &RepositoryId,
     entries: &[BonsaiGitMappingEntry],
 ) -> Result<Transaction, AddGitMappingErrorKind> {
     let rows: Vec<_> = entries
         .into_iter()
-        .map(
-            |BonsaiGitMappingEntry {
-                 repo_id,
-                 git_sha1,
-                 bcs_id,
-             }| (repo_id, git_sha1, bcs_id),
-        )
+        .map(|BonsaiGitMappingEntry { git_sha1, bcs_id }| (repo_id, git_sha1, bcs_id))
         .collect();
 
     let (transaction, res) = InsertMapping::query_with_transaction(transaction, &rows[..])
@@ -351,7 +338,7 @@ fn filter_fetched_ids(
 
 async fn select_mapping(
     connection: &Connection,
-    repo_id: RepositoryId,
+    repo_id: &RepositoryId,
     objects: &BonsaisOrGitShas,
 ) -> anyhow::Result<Vec<BonsaiGitMappingEntry>> {
     if objects.is_empty() {
@@ -360,12 +347,12 @@ async fn select_mapping(
 
     let rows = match objects {
         BonsaisOrGitShas::Bonsai(bcs_ids) => {
-            SelectMappingByBonsai::query(&connection, &repo_id, &bcs_ids[..])
+            SelectMappingByBonsai::query(&connection, repo_id, &bcs_ids[..])
                 .compat()
                 .await?
         }
         BonsaisOrGitShas::GitSha1(git_sha1s) => {
-            SelectMappingByGitSha1::query(&connection, &repo_id, &git_sha1s[..])
+            SelectMappingByGitSha1::query(&connection, repo_id, &git_sha1s[..])
                 .compat()
                 .await?
         }
@@ -373,11 +360,7 @@ async fn select_mapping(
 
     Ok(rows
         .into_iter()
-        .map(move |(git_sha1, bcs_id)| BonsaiGitMappingEntry {
-            repo_id,
-            bcs_id,
-            git_sha1,
-        })
+        .map(move |(git_sha1, bcs_id)| BonsaiGitMappingEntry { bcs_id, git_sha1 })
         .collect())
 }
 

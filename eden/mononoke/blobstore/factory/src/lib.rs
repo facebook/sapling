@@ -87,7 +87,12 @@ impl Default for BlobstoreOptions {
 
 trait SqlFactoryBase: Send + Sync {
     /// Open an arbitrary struct implementing SqlConstructors
-    fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error>;
+    fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error> {
+        self.open_owned().map(|r| Arc::new(r)).boxify()
+    }
+
+    /// Open an arbitrary struct implementing SqlConstructors (without Arc)
+    fn open_owned<T: SqlConstructors>(&self) -> BoxFuture<T, Error>;
 
     /// Open SqlFilenodes, and return a tier name and the struct.
     fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error>;
@@ -123,14 +128,13 @@ impl XdbFactory {
 }
 
 impl SqlFactoryBase for XdbFactory {
-    fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error> {
+    fn open_owned<T: SqlConstructors>(&self) -> BoxFuture<T, Error> {
         T::with_xdb(
             self.fb,
             self.db_address.clone(),
             self.mysql_options,
             self.readonly,
         )
-        .map(|r| Arc::new(r))
         .boxify()
     }
 
@@ -200,12 +204,12 @@ impl SqliteFactory {
 }
 
 impl SqlFactoryBase for SqliteFactory {
-    fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error> {
+    fn open_owned<T: SqlConstructors>(&self) -> BoxFuture<T, Error> {
         let r = try_boxfuture!(T::with_sqlite_path(
             self.path.join("sqlite_dbs"),
             self.readonly
         ));
-        Ok(Arc::new(r)).into_future().boxify()
+        Ok(r).into_future().boxify()
     }
 
     fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error> {
@@ -228,6 +232,12 @@ pub struct SqlFactory {
 impl SqlFactory {
     pub fn open<T: SqlConstructors>(&self) -> BoxFuture<Arc<T>, Error> {
         self.underlying.as_ref().either(|l| l.open(), |r| r.open())
+    }
+
+    pub fn open_owned<T: SqlConstructors>(&self) -> BoxFuture<T, Error> {
+        self.underlying
+            .as_ref()
+            .either(|l| l.open_owned(), |r| r.open_owned())
     }
 
     pub fn open_filenodes(&self) -> BoxFuture<(String, Arc<SqlFilenodes>), Error> {

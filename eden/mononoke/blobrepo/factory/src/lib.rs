@@ -11,7 +11,7 @@ use blobrepo::BlobRepo;
 use blobrepo_errors::*;
 use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, make_sql_factory, SqlFactory};
-use bonsai_git_mapping::SqlBonsaiGitMapping;
+use bonsai_git_mapping::SqlBonsaiGitMappingConnection;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use bonsai_hg_mapping::{CachingBonsaiHgMapping, SqlBonsaiHgMapping};
 use bookmarks::{Bookmarks, CachedBookmarks};
@@ -19,6 +19,7 @@ use cacheblob::{
     new_cachelib_blobstore_no_lease, new_memcache_blobstore, InProcessLease, MemcacheOps,
 };
 use changesets::{CachingChangesets, SqlChangesets};
+use cloned::cloned;
 use dbbookmarks::SqlBookmarks;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
@@ -243,8 +244,9 @@ pub fn new_memblob_empty_with_id(
                 .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?,
         ),
         Arc::new(
-            SqlBonsaiGitMapping::with_sqlite_in_memory()
-                .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))?,
+            SqlBonsaiGitMappingConnection::with_sqlite_in_memory()
+                .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))?
+                .with_repo_id(repo_id),
         ),
         Arc::new(
             SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()
@@ -283,7 +285,7 @@ pub fn new_memblob_with_sqlite_connection_with_id(
 ) -> Result<(BlobRepo, Connection)> {
     con.execute_batch(SqlBookmarks::get_up_query())?;
     con.execute_batch(SqlChangesets::get_up_query())?;
-    con.execute_batch(SqlBonsaiGitMapping::get_up_query())?;
+    con.execute_batch(SqlBonsaiGitMappingConnection::get_up_query())?;
     con.execute_batch(SqlBonsaiGlobalrevMapping::get_up_query())?;
     con.execute_batch(SqlBonsaiHgMapping::get_up_query())?;
     con.execute_batch(SqlPhasesStore::get_up_query())?;
@@ -328,11 +330,14 @@ pub fn new_memblob_with_connection_with_id(
                 con.clone(),
                 con.clone(),
             )),
-            Arc::new(SqlBonsaiGitMapping::from_connections(
-                con.clone(),
-                con.clone(),
-                con.clone(),
-            )),
+            Arc::new(
+                SqlBonsaiGitMappingConnection::from_connections(
+                    con.clone(),
+                    con.clone(),
+                    con.clone(),
+                )
+                .with_repo_id(repo_id),
+            ),
             Arc::new(SqlBonsaiGlobalrevMapping::from_connections(
                 con.clone(),
                 con.clone(),
@@ -388,10 +393,14 @@ fn new_development(
         .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))
         .from_err();
 
-    let bonsai_git_mapping = sql_factory
-        .open::<SqlBonsaiGitMapping>()
-        .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))
-        .from_err();
+    let bonsai_git_mapping = {
+        cloned!(repoid);
+        sql_factory
+            .open_owned::<SqlBonsaiGitMappingConnection>()
+            .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))
+            .from_err()
+            .map(move |conn| Arc::new(conn.with_repo_id(repoid)))
+    };
 
     let bonsai_globalrev_mapping = sql_factory
         .open::<SqlBonsaiGlobalrevMapping>()
@@ -493,7 +502,12 @@ fn new_production(
     let filenodes_tier_and_filenodes = sql_factory.open_filenodes();
     let bookmarks = sql_factory.open::<SqlBookmarks>();
     let changesets = sql_factory.open::<SqlChangesets>();
-    let bonsai_git_mapping = sql_factory.open::<SqlBonsaiGitMapping>();
+    let bonsai_git_mapping = {
+        cloned!(repoid);
+        sql_factory
+            .open_owned::<SqlBonsaiGitMappingConnection>()
+            .map(move |conn| Arc::new(conn.with_repo_id(repoid)))
+    };
     let bonsai_globalrev_mapping = sql_factory.open::<SqlBonsaiGlobalrevMapping>();
     let bonsai_hg_mapping = sql_factory.open::<SqlBonsaiHgMapping>();
     let phases = sql_factory.open::<SqlPhasesStore>();

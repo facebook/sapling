@@ -243,7 +243,7 @@ impl Blobimport {
                                     async move {
                                         if populate_git_mapping {
                                             git_mapping_store
-                                                .bulk_import_from_bonsai(ctx, repo_id, &changesets)
+                                                .bulk_import_from_bonsai(ctx, &changesets)
                                                 .await
                                         } else {
                                             Ok(())
