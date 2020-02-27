@@ -3,6 +3,7 @@
 members = [
     "blobstore",
     "common/scuba_ext",
+    "lfs_protocol",
     "mononoke_types",
     "mononoke_types/if",
     "mononoke_types/mocks",

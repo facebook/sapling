@@ -14,5 +14,5 @@ futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git",
 scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures = "0.1" # todo: rename to "futures-old"
+futures = "0.1"
 rand = { version = "0.7", features = ["small_rng"] }
