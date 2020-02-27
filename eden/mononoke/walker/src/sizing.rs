@@ -12,14 +12,13 @@ use crate::progress::{
 };
 use crate::setup::{setup_common, COMPRESSION_BENEFIT, COMPRESSION_LEVEL_ARG, SAMPLE_RATE_ARG};
 use crate::state::{WalkState, WalkStateCHashMap};
-use crate::tail::walk_exact_tail;
+use crate::tail::{walk_exact_tail, RepoWalkRun};
 
 use anyhow::{format_err, Error};
 use async_compression::{metered::MeteredWrite, Compressor, CompressorType};
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
-use context::CoreContext;
 use fbinit::FacebookInit;
 use futures_preview::{
     future::{self, BoxFuture, FutureExt},
@@ -203,15 +202,14 @@ pub fn compression_benefit(
     match setup_common(COMPRESSION_BENEFIT, fb, &logger, matches, sub_m) {
         Err(e) => future::err::<_, Error>(e).boxed(),
         Ok((datasources, walk_params)) => {
-            let ctx = CoreContext::new_with_logger(fb, logger.clone());
-
             let sizing_state = ProgressStateMutex::new(SizingState::new(logger.clone(), 1));
             let compression_level = args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3);
             let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(100);
-            let make_sink = {
-                cloned!(ctx, walk_params.progress_state, walk_params.quiet);
+            cloned!(walk_params.progress_state, walk_params.quiet);
+            let make_sink = move |run: RepoWalkRun| {
+                cloned!(run.ctx);
                 async move |walk_output| {
-                    cloned!(ctx, progress_state, sizing_state);
+                    cloned!(ctx, sizing_state);
                     let walk_progress =
                         progress_stream(quiet, &progress_state.clone(), walk_output);
                     let compressor = size_sampling_stream(
@@ -233,7 +231,7 @@ pub fn compression_benefit(
                 include_node_types,
                 include_edge_types,
             ));
-            walk_exact_tail(ctx, datasources, walk_params, walk_state, make_sink).boxed()
+            walk_exact_tail(fb, logger, datasources, walk_params, walk_state, make_sink).boxed()
         }
     }
 }

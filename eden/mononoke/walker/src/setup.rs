@@ -37,6 +37,7 @@ pub struct RepoWalkDatasources {
     pub scuba_builder: ScubaSampleBuilder,
 }
 
+#[derive(Clone)]
 pub struct RepoWalkParams {
     pub enable_derive: bool,
     pub scheduled_max: usize,
@@ -698,10 +699,11 @@ pub fn setup_common(
     let blobstore_options = args::parse_blobstore_options(&matches);
 
     let scuba_table = sub_m.value_of(SCUBA_TABLE_ARG).map(|a| a.to_string());
+    let repo_name = args::get_repo_name(fb, &matches)?;
     let mut scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_table.clone());
     scuba_builder.add_common_server_data();
     scuba_builder.add(WALK_TYPE, walk_stats_key);
-    scuba_builder.add(REPO, args::get_repo_name(fb, &matches)?);
+    scuba_builder.add(REPO, repo_name.clone());
 
     if let Some(scuba_log_file) = sub_m.value_of(SCUBA_LOG_FILE_ARG) {
         scuba_builder = scuba_builder.with_log_file(scuba_log_file)?;
@@ -723,7 +725,7 @@ pub fn setup_common(
         scrub_action,
         scuba_builder.clone(),
         walk_stats_key,
-        args::get_repo_name(fb, &matches)?,
+        repo_name.clone(),
         blobstore_options,
         logger.clone(),
     )
@@ -764,7 +766,7 @@ pub fn setup_common(
     let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
         logger.clone(),
         walk_stats_key,
-        args::get_repo_name(fb, &matches)?,
+        repo_name,
         progress_node_types,
         progress_sample_rate.unwrap_or(PROGRESS_SAMPLE_RATE),
         Duration::from_secs(progress_interval_secs.unwrap_or(PROGRESS_SAMPLE_DURATION_S)),

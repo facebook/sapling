@@ -22,14 +22,13 @@ use crate::setup::{
     PROGRESS_SAMPLE_RATE, VALIDATE,
 };
 use crate::state::{StepStats, WalkState, WalkStateCHashMap};
-use crate::tail::walk_exact_tail;
+use crate::tail::{walk_exact_tail, RepoWalkRun};
 use crate::walk::{OutgoingEdge, ResolvedNode, WalkVisitor};
 
 use anyhow::{format_err, Error};
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
-use context::CoreContext;
 use fbinit::FacebookInit;
 use futures_preview::{
     future::{self, BoxFuture, FutureExt},
@@ -485,7 +484,6 @@ pub fn validate(
     ) {
         Err(e) => future::err::<_, Error>(e).boxed(),
         Ok((datasources, walk_params, repo_stats_key, include_check_types)) => {
-            let ctx = CoreContext::new_with_logger(fb, logger.clone());
             cloned!(
                 walk_params.include_node_types,
                 walk_params.include_edge_types,
@@ -505,7 +503,7 @@ pub fn validate(
 
             let validate_progress_state = ProgressStateMutex::new(ValidateProgressState::new(
                 logger.clone(),
-                ctx.fb,
+                fb,
                 datasources.scuba_builder.clone(),
                 repo_stats_key,
                 include_check_types,
@@ -513,8 +511,9 @@ pub fn validate(
                 Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
             ));
 
-            let make_sink = {
-                cloned!(ctx, walk_params.progress_state, walk_params.quiet);
+            cloned!(walk_params.progress_state, walk_params.quiet);
+            let make_sink = move |run: RepoWalkRun| {
+                cloned!(run.ctx);
                 async move |walk_output| {
                     cloned!(ctx, progress_state, validate_progress_state);
                     let walk_progress =
@@ -539,7 +538,15 @@ pub fn validate(
                     one_fut.await
                 }
             };
-            walk_exact_tail(ctx, datasources, walk_params, stateful_visitor, make_sink).boxed()
+            walk_exact_tail(
+                fb,
+                logger,
+                datasources,
+                walk_params,
+                stateful_visitor,
+                make_sink,
+            )
+            .boxed()
         }
     }
 }

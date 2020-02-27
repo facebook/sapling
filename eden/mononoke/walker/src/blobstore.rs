@@ -80,6 +80,7 @@ impl ScrubHandler for StatsScrubHandler {
                     1
                 },
             )
+            .add("session", ctx.session().session_id().to_string())
             .log();
         if is_repaired {
             STATS::scrub_repaired.add_value(

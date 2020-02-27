@@ -9,11 +9,10 @@ use crate::graph::{FileContentData, Node, NodeData};
 use crate::progress::{progress_stream, report_state};
 use crate::setup::{setup_common, LIMIT_DATA_FETCH_ARG, SCRUB};
 use crate::state::{WalkState, WalkStateCHashMap};
-use crate::tail::walk_exact_tail;
+use crate::tail::{walk_exact_tail, RepoWalkRun};
 
 use anyhow::Error;
 use clap::ArgMatches;
-use context::CoreContext;
 use fbinit::FacebookInit;
 use futures_preview::{
     future::{self, BoxFuture, FutureExt},
@@ -61,18 +60,16 @@ pub fn scrub_objects(
     match setup_common(SCRUB, fb, &logger, matches, sub_m) {
         Err(e) => future::err::<_, Error>(e).boxed(),
         Ok((datasources, walk_params)) => {
-            let ctx = CoreContext::new_with_logger(fb, logger.clone());
             let limit_data_fetch = sub_m.is_present(LIMIT_DATA_FETCH_ARG);
+            let scheduled_max = walk_params.scheduled_max;
+            let quiet = walk_params.quiet;
+            let progress_state = walk_params.progress_state.clone();
 
-            let make_sink = {
-                let scheduled_max = walk_params.scheduled_max;
-                let quiet = walk_params.quiet;
-                let progress_state = walk_params.progress_state.clone();
-                let ctx = ctx.clone();
+            let make_sink = move |run: RepoWalkRun| {
                 async move |walk_output| {
                     let loading = loading_stream(limit_data_fetch, scheduled_max, walk_output);
                     let show_progress = progress_stream(quiet, &progress_state, loading);
-                    report_state(ctx, progress_state, show_progress).await
+                    report_state(run.ctx, progress_state, show_progress).await
                 }
             };
 
@@ -80,7 +77,7 @@ pub fn scrub_objects(
                 walk_params.include_node_types.clone(),
                 walk_params.include_edge_types.clone(),
             ));
-            walk_exact_tail(ctx, datasources, walk_params, walk_state, make_sink).boxed()
+            walk_exact_tail(fb, logger, datasources, walk_params, walk_state, make_sink).boxed()
         }
     }
 }

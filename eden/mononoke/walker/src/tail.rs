@@ -11,22 +11,31 @@ use crate::walk::{walk_exact, WalkVisitor};
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-
+use fbinit::FacebookInit;
 use futures_preview::{
     future::Future,
     stream::{repeat, BoxStream, StreamExt},
 };
-
+use scuba_ext::ScubaSampleBuilder;
+use slog::Logger;
 use tokio_preview::time::{Duration, Instant};
 
-pub async fn walk_exact_tail<SinkFac, SinkOut, WS, VOut>(
-    ctx: CoreContext,
+#[derive(Clone)]
+pub struct RepoWalkRun {
+    pub ctx: CoreContext,
+    pub scuba_builder: ScubaSampleBuilder,
+}
+
+pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, WS, VOut>(
+    fb: FacebookInit,
+    logger: Logger,
     datasources: RepoWalkDatasources,
     walk_params: RepoWalkParams,
     walk_state: WS,
-    make_sink: SinkFac,
+    make_run: RunFac,
 ) -> Result<(), Error>
 where
+    RunFac: 'static + Clone + Send + Sync + FnOnce(RepoWalkRun) -> SinkFac,
     SinkFac: 'static + FnOnce(BoxStream<'static, Result<VOut, Error>>) -> SinkOut + Clone + Send,
     SinkOut: Future<Output = Result<(), Error>> + 'static + Send,
     WS: 'static + Clone + WalkVisitor<VOut> + Send,
@@ -38,21 +47,29 @@ where
     let mut stream: BoxStream<'static, Result<_, Error>> = repeat(())
         .then({
             move |_| {
-                cloned!(ctx, repo, walk_state, make_sink,);
-                {
-                    let walk_output = walk_exact(
-                        ctx,
-                        repo,
-                        walk_params.enable_derive,
-                        walk_params.walk_roots.clone(),
-                        walk_state,
-                        walk_params.scheduled_max,
-                        walk_params.error_as_data_node_types.clone(),
-                        walk_params.error_as_data_edge_types.clone(),
-                        scuba_builder.clone(),
-                    );
-                    make_sink(walk_output)
-                }
+                cloned!(make_run, repo, mut scuba_builder, walk_state,);
+
+                let ctx = CoreContext::new_with_logger(fb, logger.clone());
+                scuba_builder.add("session", ctx.session().session_id().to_string());
+                let walk_run = RepoWalkRun {
+                    ctx: ctx.clone(),
+                    scuba_builder: scuba_builder.clone(),
+                };
+
+                let walk_output = walk_exact(
+                    ctx,
+                    repo,
+                    walk_params.enable_derive,
+                    walk_params.walk_roots.clone(),
+                    walk_state,
+                    walk_params.scheduled_max,
+                    walk_params.error_as_data_node_types.clone(),
+                    walk_params.error_as_data_edge_types.clone(),
+                    scuba_builder,
+                );
+
+                let make_sink = make_run(walk_run);
+                make_sink(walk_output)
             }
         })
         .boxed();
