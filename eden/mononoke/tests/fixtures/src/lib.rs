@@ -43,7 +43,7 @@ pub async fn store_files(
                     repo.filestore_config(),
                     ctx.clone(),
                     &StoreRequest::new(size),
-                    stream::once(Ok(Bytes::from(content))),
+                    stream::once(Ok(Bytes::copy_from_slice(content.as_bytes()))),
                 )
                 .compat()
                 .await

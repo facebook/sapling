@@ -16,6 +16,7 @@ use assert_matches::assert_matches;
 use benchmark_lib::{new_benchmark_repo, DelaySettings, GenManifest};
 use blobrepo::{compute_changed_files, errors::ErrorKind, BlobRepo, UploadEntries};
 use blobstore::{Loadable, Storable};
+use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -67,7 +68,7 @@ async fn get_content(
         .compat()
         .await?
         .content_id();
-    let content = filestore::fetch_stream(repo.blobstore(), ctx.clone(), content_id).concat2();
+    let content = filestore::fetch_concat(repo.blobstore(), ctx.clone(), content_id);
     (content).compat().await
 }
 
@@ -664,7 +665,7 @@ fn make_file_change(
 ) -> impl Future<Item = FileChange, Error = Error> + Send {
     let content = content.as_ref();
     let content_size = content.len() as u64;
-    FileContents::new_bytes(content.as_ref())
+    FileContents::new_bytes(Bytes::copy_from_slice(content))
         .into_blob()
         .store(ctx, repo.blobstore())
         .map(move |content_id| FileChange::new(content_id, FileType::Regular, content_size, None))

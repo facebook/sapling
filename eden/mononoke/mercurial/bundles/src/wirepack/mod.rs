@@ -12,7 +12,7 @@ use std::io::Cursor;
 
 use anyhow::{bail, ensure, Context, Result};
 use byteorder::{BigEndian, ByteOrder};
-use bytes::{BufMut, BytesMut};
+use bytes_old::{BufMut, BytesMut};
 
 use mercurial_types::{Delta, HgNodeHash, RepoPath, NULL_HASH};
 use revisionstore::Metadata;

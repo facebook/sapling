@@ -15,9 +15,6 @@ use chrono::{FixedOffset, TimeZone};
 use fbinit::FacebookInit;
 use fixtures::{linear, many_files_dirs};
 
-use futures::stream::Stream;
-use futures_preview::compat::Future01CompatExt;
-
 use crate::{
     ChangesetContext, ChangesetId, CoreContext, CreateChange, FileType, Mononoke, MononokeError,
     MononokePath, RepoWriteContext,
@@ -74,12 +71,9 @@ fn create_commit(fb: FacebookInit) -> Result<(), Error> {
             .file()
             .await?
             .expect("file should exist")
-            .content()
-            .await
-            .collect()
-            .compat()
+            .content_concat()
             .await?;
-        assert_eq!(content, vec![Bytes::from("TEST CREATE\n")]);
+        assert_eq!(content, Bytes::from("TEST CREATE\n"));
 
         Ok(())
     })

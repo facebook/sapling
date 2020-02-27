@@ -77,10 +77,7 @@ impl CacheOps for CachelibOps {
         self.blob_pool
             .get(key)
             .map_err(|_| ())
-            .map(|opt| {
-                opt.map(bytes_ext::copy_from_new)
-                    .map(BlobstoreBytes::from_bytes)
-            })
+            .map(|opt| opt.map(BlobstoreBytes::from_bytes))
             .into_future()
             .boxify()
     }
@@ -89,7 +86,7 @@ impl CacheOps for CachelibOps {
         // A failure to set presence is considered fine, here.
         let _ = self.presence_pool.set(key, Bytes::from(b"P".as_ref()));
         self.blob_pool
-            .set(key, bytes_ext::copy_from_old(value.into_bytes()))
+            .set(key, value.into_bytes())
             .map(|_| ())
             .map_err(|_| ())
             .into_future()

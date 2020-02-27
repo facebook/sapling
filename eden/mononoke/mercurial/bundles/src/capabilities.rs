@@ -11,7 +11,7 @@ use std::borrow::Cow;
 use std::collections::HashMap;
 
 use anyhow::{Error, Result};
-use bytes::{Bytes, BytesMut};
+use bytes_old::{Bytes, BytesMut};
 use mercurial_types::utils::percent_encode;
 use percent_encoding::percent_decode;
 use tokio_io::codec::Decoder;

@@ -46,7 +46,7 @@ impl TryFrom<BlobstoreBytes> for RootFsnodeId {
 
 impl From<RootFsnodeId> for BlobstoreBytes {
     fn from(root_fsnode_id: RootFsnodeId) -> Self {
-        BlobstoreBytes::from_bytes(Bytes::from(root_fsnode_id.0.blake2().as_ref()))
+        BlobstoreBytes::from_bytes(Bytes::copy_from_slice(root_fsnode_id.0.blake2().as_ref()))
     }
 }
 

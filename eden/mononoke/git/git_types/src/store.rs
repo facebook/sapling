@@ -31,7 +31,6 @@ macro_rules! impl_blobstore_conversions {
             fn into(self) -> BlobstoreBytes {
                 let thrift: thrift::$ty = self.into();
                 let data = compact_protocol::serialize(&thrift);
-                let data = bytes_ext::copy_from_new(data);
                 BlobstoreBytes::from_bytes(data)
             }
         }

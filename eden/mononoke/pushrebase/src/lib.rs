@@ -3237,9 +3237,8 @@ mod tests {
                         .compat()
                         .await?
                         .content_id();
-                    let content = filestore::fetch_stream(store, ctx.clone(), content_id)
+                    let content = filestore::fetch_concat(store, ctx.clone(), content_id)
                         .compat()
-                        .try_concat()
                         .await?;
 
                     let s = String::from_utf8_lossy(content.as_ref()).into_owned();

@@ -19,17 +19,17 @@ use crate::{
 };
 use anyhow::{Error, Result};
 use blobstore::{Blobstore, Loadable, LoadableError};
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use failure_ext::{FutureFailureErrorExt, StreamFailureErrorExt};
-use filestore::{self, FetchKey};
+use filestore;
 use futures::{
     future::{lazy, Future},
     stream::Stream,
 };
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use itertools::Itertools;
-use mononoke_types::{hash::Sha256, ContentId};
+use mononoke_types::hash::Sha256;
 use std::{
     collections::HashMap,
     io::Write,
@@ -65,12 +65,14 @@ pub fn fetch_raw_filenode_bytes(
             let blobstore = blobstore.clone();
             move |envelope| {
                 let envelope = envelope.into_mut();
+                let content_id = envelope.content_id;
 
                 // TODO (T47717165): Avoid buffering here.
-                let file_bytes_fut =
-                    fetch_file_contents(ctx, &blobstore, envelope.content_id).concat2();
+                let file_bytes_fut = filestore::fetch_concat(&blobstore, ctx, content_id)
+                    .map(FileBytes)
+                    .context("While fetching content blob");
 
-                let mut metadata = envelope.metadata;
+                let metadata = envelope.metadata;
                 let f = if metadata.is_empty() {
                     file_bytes_fut
                         .map(|contents| contents.into_bytes())
@@ -80,8 +82,11 @@ pub fn fetch_raw_filenode_bytes(
                         .map(move |contents| {
                             // The copy info and the blob have to be joined together.
                             // TODO (T30456231): avoid the copy
-                            metadata.extend_from_slice(contents.into_bytes().as_ref());
-                            metadata
+                            let contents = contents.into_bytes();
+                            let mut buff = BytesMut::with_capacity(metadata.len() + contents.len());
+                            buff.extend_from_slice(&metadata);
+                            buff.extend_from_slice(&contents);
+                            buff.freeze()
                         })
                         .right_future()
                 };
@@ -133,19 +138,6 @@ impl Loadable for HgFileNodeId {
             })
             .boxify()
     }
-}
-
-fn fetch_file_contents(
-    ctx: CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
-    content_id: ContentId,
-) -> impl Stream<Item = FileBytes, Error = Error> {
-    filestore::fetch(blobstore, ctx, &FetchKey::Canonical(content_id))
-        .and_then(move |stream| stream.ok_or(ErrorKind::ContentBlobMissing(content_id).into()))
-        .flatten_stream()
-        .map(FileBytes)
-        .context("While fetching content blob")
-        .from_err()
 }
 
 impl HgBlobEntry {
@@ -248,8 +240,13 @@ impl HgEntry for HgBlobEntry {
                     .from_err()
                     .map(move |envelope| {
                         let envelope = envelope.into_mut();
-                        let stream =
-                            fetch_file_contents(ctx, &blobstore, envelope.content_id).boxify();
+                        let content_id = envelope.content_id;
+
+                        let stream = filestore::fetch_stream(&blobstore, ctx, content_id)
+                            .map(FileBytes)
+                            .context("While fetching content blob")
+                            .from_err()
+                            .boxify();
 
                         match file_type {
                             FileType::Regular => Content::File(stream),
@@ -442,20 +439,20 @@ impl File {
     pub fn metadata(&self) -> Bytes {
         let data = self.node.as_blob().as_inner();
         let (_, off) = Self::extract_meta(data);
-        data.slice_to(off)
+        data.slice(..off)
     }
 
     pub fn file_contents(&self) -> FileBytes {
         let data = self.node.as_blob().as_inner();
         let (_, off) = Self::extract_meta(data);
-        FileBytes(data.slice_from(off))
+        FileBytes(data.slice(off..))
     }
 
     pub fn get_lfs_content(&self) -> Result<LFSContent> {
         let data = self.node.as_blob().as_inner();
         let (_, off) = Self::extract_meta(data);
 
-        Self::get_lfs_struct(&Self::parse_content_to_lfs_hash_map(&data.slice_from(off)))
+        Self::get_lfs_struct(&Self::parse_content_to_lfs_hash_map(&data.slice(off..)))
     }
 
     fn parse_mandatory_lfs(contents: &HashMap<&[u8], &[u8]>) -> Result<(String, Sha256, u64)> {

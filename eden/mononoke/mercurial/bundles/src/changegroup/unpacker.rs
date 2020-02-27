@@ -12,7 +12,7 @@ use std::cmp;
 use std::mem;
 
 use anyhow::{bail, format_err, Context, Error, Result};
-use bytes::BytesMut;
+use bytes_old::BytesMut;
 use slog::Logger;
 use std::str::FromStr;
 use tokio_io::codec::Decoder;

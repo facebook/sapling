@@ -11,7 +11,8 @@ use std::fmt::{self, Debug, Formatter};
 use std::mem;
 
 use anyhow::{Error, Result};
-use bytes::Bytes;
+use bytes::Bytes as BytesNew;
+use bytes_old::Bytes;
 use futures::{Async, Future, Poll, Stream};
 use futures_ext::{BoxStream, StreamExt};
 
@@ -79,7 +80,7 @@ impl PartEncodeBuilder {
     pub fn add_mparam<S, B>(&mut self, key: S, val: B) -> Result<&mut Self>
     where
         S: Into<String>,
-        B: Into<Bytes>,
+        B: Into<BytesNew>,
     {
         self.headerb.add_mparam(key, val)?;
         Ok(self)
@@ -89,7 +90,7 @@ impl PartEncodeBuilder {
     pub fn add_aparam<S, B>(&mut self, key: S, val: B) -> Result<&mut Self>
     where
         S: Into<String>,
-        B: Into<Bytes>,
+        B: Into<BytesNew>,
     {
         self.headerb.add_aparam(key, val)?;
         Ok(self)

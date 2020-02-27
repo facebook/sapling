@@ -206,7 +206,7 @@ impl CreateFileContext {
         let file_change = match self {
             Self::FromHelper(content, file_type, copy_info) => {
                 let size = content.len();
-                let content = FileContents::new_bytes(Bytes::from(content));
+                let content = FileContents::new_bytes(Bytes::copy_from_slice(content.as_bytes()));
                 let content_id = content
                     .into_blob()
                     .store(ctx.clone(), repo.blobstore())
@@ -380,7 +380,7 @@ pub async fn store_files<T: AsRef<str>>(
             Some(content) => {
                 let content = content.as_ref();
                 let size = content.len();
-                let content = FileContents::new_bytes(Bytes::from(content));
+                let content = FileContents::new_bytes(Bytes::copy_from_slice(content.as_bytes()));
                 let content_id = content
                     .into_blob()
                     .store(ctx.clone(), repo.blobstore())
@@ -408,7 +408,7 @@ pub async fn store_rename(
 ) -> (MPath, Option<FileChange>) {
     let path = MPath::new(path).unwrap();
     let size = content.len();
-    let content = FileContents::new_bytes(Bytes::from(content));
+    let content = FileContents::new_bytes(Bytes::copy_from_slice(content.as_bytes()));
     let content_id = content
         .into_blob()
         .store(ctx, repo.blobstore())

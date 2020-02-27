@@ -12,6 +12,7 @@ use anyhow::{bail, Error, Result};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bytes::Bytes;
+use bytes_old::Bytes as BytesOld;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use derived_data::BonsaiDerived;
@@ -498,12 +499,11 @@ fn prepare_filenode_entries_stream(
                         cloned!(ctx, lfs_params, repo);
                         move |envelope| {
                             let file_size = envelope.content_size();
-                            let content = filestore::fetch_stream(
+                            let content = filestore::fetch_concat(
                                 repo.blobstore(),
                                 ctx.clone(),
                                 envelope.content_id(),
                             )
-                            .concat2()
                             .map(FileBytes);
 
                             let content = match lfs_params.threshold {
@@ -607,7 +607,7 @@ fn create_manifest_entries_stream(
                         node: mf_id.into_nodehash(),
                         p1,
                         p2,
-                        content: mf_envelope.contents().clone(),
+                        content: BytesOld::from(mf_envelope.contents().as_ref()),
                         fullpath,
                         linknode: linknode.into_nodehash(),
                     }

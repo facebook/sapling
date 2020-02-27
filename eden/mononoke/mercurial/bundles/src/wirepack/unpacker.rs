@@ -11,7 +11,7 @@ use std::cmp;
 use std::mem;
 
 use anyhow::{bail, Context, Error, Result};
-use bytes::BytesMut;
+use bytes_old::BytesMut;
 use slog::{trace, Logger};
 use tokio_codec::Decoder;
 

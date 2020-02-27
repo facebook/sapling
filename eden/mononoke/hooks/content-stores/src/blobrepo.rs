@@ -59,9 +59,7 @@ impl FileContentStore for BlobRepoFileContentStore {
         let store = self.repo.get_blobstore();
         id.load(ctx.clone(), &store)
             .from_err()
-            .map(move |envelope| filestore::fetch_stream(&store, ctx, envelope.content_id()))
-            .flatten_stream()
-            .concat2()
+            .and_then(move |envelope| filestore::fetch_concat(&store, ctx, envelope.content_id()))
             .map(|content| Some(FileBytes(content)))
             .boxify()
     }

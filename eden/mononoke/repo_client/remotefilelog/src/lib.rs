@@ -17,7 +17,7 @@ use std::{
 use anyhow::{Error, Result};
 use blobrepo::{file_history::get_file_history, BlobRepo};
 use blobstore::Loadable;
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FetchKey;
@@ -158,13 +158,14 @@ pub fn create_getpack_v1_blob(
                 Lfs => unreachable!(), // lfs_threshold = None implies no LFS blobs.
             };
 
-            let fut = data
-                .rescue_redacted()
-                .map(move |(mut meta_bytes, file_bytes)| {
-                    // TODO (T30456231): Avoid this copy
-                    meta_bytes.extend_from_slice(&file_bytes.as_bytes());
-                    (node, meta_bytes)
-                });
+            let fut = data.rescue_redacted().map(move |(meta_bytes, file_bytes)| {
+                // TODO (T30456231): Avoid this copy
+                let mut buff =
+                    BytesMut::with_capacity(meta_bytes.len() + file_bytes.as_bytes().len());
+                buff.extend_from_slice(&meta_bytes);
+                buff.extend_from_slice(file_bytes.as_bytes());
+                (node, buff.freeze())
+            });
 
             (weight, fut)
         },
@@ -204,13 +205,14 @@ pub fn create_getpack_v2_blob(
                 }
             };
 
-            let fut = data
-                .rescue_redacted()
-                .map(move |(mut meta_bytes, file_bytes)| {
-                    // TODO (T30456231): Avoid this copy
-                    meta_bytes.extend_from_slice(&file_bytes.as_bytes());
-                    (node, meta_bytes, metadata)
-                });
+            let fut = data.rescue_redacted().map(move |(meta_bytes, file_bytes)| {
+                // TODO (T30456231): Avoid this copy
+                let mut buff =
+                    BytesMut::with_capacity(meta_bytes.len() + file_bytes.as_bytes().len());
+                buff.extend_from_slice(&meta_bytes);
+                buff.extend_from_slice(file_bytes.as_bytes());
+                (node, buff.freeze(), metadata)
+            });
 
             (weight, fut)
         },
@@ -236,10 +238,12 @@ pub fn create_raw_filenode_blob(
                     .right_future(),
             }
         })
-        .map(|(mut meta_bytes, file_bytes)| {
+        .map(|(meta_bytes, file_bytes)| {
             // TODO (T30456231): Avoid this copy
-            meta_bytes.extend_from_slice(&file_bytes.as_bytes());
-            meta_bytes
+            let mut buff = BytesMut::with_capacity(meta_bytes.len() + file_bytes.as_bytes().len());
+            buff.extend_from_slice(&meta_bytes);
+            buff.extend_from_slice(file_bytes.as_bytes());
+            buff.freeze()
         })
 }
 
@@ -312,15 +316,16 @@ fn prepare_blob(
                                 p1, p2, metadata, ..
                             } = envelope.into_mut();
 
-                            let mut validation_bytes =
-                                Bytes::with_capacity(metadata.len() + file_bytes.as_bytes().len());
+                            let mut validation_bytes = BytesMut::with_capacity(
+                                metadata.len() + file_bytes.as_bytes().len(),
+                            );
                             validation_bytes.extend_from_slice(&metadata);
                             validation_bytes.extend_from_slice(file_bytes.as_bytes());
 
                             let p1 = p1.map(|p| p.into_nodehash());
                             let p2 = p2.map(|p| p.into_nodehash());
                             let actual = HgFileNodeId::new(calculate_hg_node_id(
-                                &validation_bytes,
+                                &validation_bytes.freeze(),
                                 &HgParents::new(p1, p2),
                             ));
 

@@ -101,7 +101,7 @@ where
         Response::builder()
             .header(CONTENT_TYPE, mime_header)
             .status(StatusCode::OK)
-            .body(bytes.into())
+            .body(bytes_ext::copy_from_new(bytes).into())
             .map_err(Error::from)
     }
 }
@@ -134,6 +134,8 @@ where
         } else {
             stream.right_stream()
         };
+
+        let stream = stream.map(bytes_ext::copy_from_new);
 
         Response::builder()
             .header(CONTENT_TYPE, mime_header)

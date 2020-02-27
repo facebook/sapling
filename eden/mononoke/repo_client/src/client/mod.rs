@@ -13,7 +13,8 @@ use anyhow::{format_err, Error, Result};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes::Bytes;
+use bytes_old::{BufMut as BufMutOld, Bytes as BytesOld, BytesMut as BytesMutOld};
 use cloned::cloned;
 use configerator_cached::ConfigHandle;
 use context::{CoreContext, LoggingContainer, PerfCounterType, SessionContainer};
@@ -371,7 +372,7 @@ impl RepoClient {
         }
     }
 
-    fn create_bundle(&self, ctx: CoreContext, args: GetbundleArgs) -> BoxStream<Bytes, Error> {
+    fn create_bundle(&self, ctx: CoreContext, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
         let blobrepo = self.repo.blobrepo().clone();
         let mut bundle2_parts = vec![];
 
@@ -442,7 +443,7 @@ impl RepoClient {
         &self,
         ctx: CoreContext,
         params: GettreepackArgs,
-    ) -> BoxStream<Bytes, Error> {
+    ) -> BoxStream<BytesOld, Error> {
         let validate_hash = rand::random::<usize>() % 100 < self.hash_validation_percentage;
         let changed_entries = gettreepack_entries(ctx.clone(), self.repo.blobrepo(), params)
             .filter({
@@ -481,7 +482,7 @@ impl RepoClient {
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
         handler: GetpackHandler,
         name: &'static str,
-    ) -> BoxStream<Bytes, Error>
+    ) -> BoxStream<BytesOld, Error>
     where
         WeightedContent: Future<Item = (u64, Content), Error = Error> + Send + 'static,
         Content:
@@ -912,13 +913,13 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('lookup', 'key')
-    fn lookup(&self, key: String) -> HgCommandRes<Bytes> {
+    fn lookup(&self, key: String) -> HgCommandRes<BytesOld> {
         let (ctx, command_logger) = self.start_command(ops::LOOKUP);
 
         let repo = self.repo.blobrepo().clone();
 
-        fn generate_resp_buf(success: bool, message: &[u8]) -> Bytes {
-            let mut buf = BytesMut::with_capacity(message.len() + 3);
+        fn generate_resp_buf(success: bool, message: &[u8]) -> BytesOld {
+            let mut buf = BytesMutOld::with_capacity(message.len() + 3);
             if success {
                 buf.put(b'1');
             } else {
@@ -931,7 +932,7 @@ impl HgCommands for RepoClient {
         }
 
         // Generate positive response including HgChangesetId as hex.
-        fn generate_changeset_resp_buf(csid: HgChangesetId) -> HgCommandRes<Bytes> {
+        fn generate_changeset_resp_buf(csid: HgChangesetId) -> HgCommandRes<BytesOld> {
             Ok(generate_resp_buf(true, csid.to_hex().as_bytes()))
                 .into_future()
                 .boxify()
@@ -943,7 +944,7 @@ impl HgCommands for RepoClient {
             ctx: CoreContext,
             repo: BlobRepo,
             suggestion_cids: Vec<HgChangesetId>,
-        ) -> HgCommandRes<Bytes> {
+        ) -> HgCommandRes<BytesOld> {
             let futs = suggestion_cids
                 .into_iter()
                 .map(|hg_csid| {
@@ -1012,8 +1013,8 @@ impl HgCommands for RepoClient {
 
                 // Describing the priority relative to bookmark presence for the key.
                 enum LookupOutcome {
-                    HighPriority(HgCommandRes<Bytes>),
-                    LowPriority(HgCommandRes<Bytes>),
+                    HighPriority(HgCommandRes<BytesOld>),
+                    LowPriority(HgCommandRes<BytesOld>),
                 };
 
                 let outcome = match resolved_cids {
@@ -1160,7 +1161,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('getbundle', '*')
-    fn getbundle(&self, args: GetbundleArgs) -> BoxStream<Bytes, Error> {
+    fn getbundle(&self, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
         let (ctx, command_logger) = self.start_command(ops::GETBUNDLE);
 
         let value = json!({
@@ -1300,8 +1301,8 @@ impl HgCommands for RepoClient {
         &self,
         _heads: Vec<String>,
         stream: BoxStream<Bundle2Item, Error>,
-        maybe_full_content: Option<Arc<Mutex<Bytes>>>,
-    ) -> HgCommandRes<Bytes> {
+        maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
+    ) -> HgCommandRes<BytesOld> {
         let client = self.clone();
         let pure_push_allowed = self.pure_push_allowed;
         let reponame = self.repo.reponame().clone();
@@ -1401,10 +1402,11 @@ impl HgCommands for RepoClient {
                     cloned!(ctx);
                     move |response| {
                         response.generate_bytes(
-                        ctx,
-                        blobrepo,
-                        pushrebase_params,
-                        lca_hint)
+                            ctx,
+                            blobrepo,
+                            pushrebase_params,
+                            lca_hint
+                        )
                         .from_err()
                     }
                 });
@@ -1446,6 +1448,7 @@ impl HgCommands for RepoClient {
                             };
                         }
                     })
+                    .map(bytes_ext::copy_from_new)
                     .from_err()
                     .timeout(*TIMEOUT)
                     .map_err(process_timeout_error)
@@ -1460,7 +1463,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
-    fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<Bytes, Error> {
+    fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<BytesOld, Error> {
         let args = json!({
             "rootdir": String::from_utf8_lossy(&params.rootdir),
             "mfnodes": format_manifests(&params.mfnodes),
@@ -1514,7 +1517,10 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('getfiles', 'files*')
-    fn getfiles(&self, params: BoxStream<(HgFileNodeId, MPath), Error>) -> BoxStream<Bytes, Error> {
+    fn getfiles(
+        &self,
+        params: BoxStream<(HgFileNodeId, MPath), Error>,
+    ) -> BoxStream<BytesOld, Error> {
         let (ctx, command_logger) = self.start_command(ops::GETFILES);
         let this = self.clone();
         // TODO(stash): make it configurable
@@ -1611,6 +1617,7 @@ impl HgCommands for RepoClient {
                         Ok(())
                     }
                 })
+                .map(bytes_ext::copy_from_new)
                 .boxify()
         };
 
@@ -1623,7 +1630,7 @@ impl HgCommands for RepoClient {
     }
 
     // @wireprotocommand('stream_out_shallow')
-    fn stream_out_shallow(&self) -> BoxStream<Bytes, Error> {
+    fn stream_out_shallow(&self) -> BoxStream<BytesOld, Error> {
         let (ctx, command_logger) = self.start_command(ops::STREAMOUTSHALLOW);
         let changelog = match self.repo.streaming_clone() {
             None => Ok(RevlogStreamingChunks::new()).into_future().left_future(),
@@ -1728,6 +1735,7 @@ impl HgCommands for RepoClient {
             })
             .flatten_stream()
             .whole_stream_timeout(*CLONE_TIMEOUT)
+            .map(bytes_ext::copy_from_new)
             .map_err(process_stream_timeout_error)
             .timed({
                 move |stats, _| {
@@ -1742,7 +1750,7 @@ impl HgCommands for RepoClient {
     fn getpackv1(
         &self,
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
-    ) -> BoxStream<Bytes, Error> {
+    ) -> BoxStream<BytesOld, Error> {
         self.getpack(
             params,
             |ctx, repo, node, _lfs_thresold, validate_hash| {
@@ -1760,7 +1768,7 @@ impl HgCommands for RepoClient {
     fn getpackv2(
         &self,
         params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
-    ) -> BoxStream<Bytes, Error> {
+    ) -> BoxStream<BytesOld, Error> {
         self.getpack(
             params,
             |ctx, repo, node, lfs_thresold, validate_hash| {
@@ -1954,7 +1962,7 @@ pub fn fetch_treepack_part_input(
             node: hg_mf_id.into_nodehash(),
             p1,
             p2,
-            content,
+            content: bytes_ext::copy_from_new(content),
             fullpath,
             linknode: linknode.into_nodehash(),
         })

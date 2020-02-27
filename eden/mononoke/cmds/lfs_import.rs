@@ -84,7 +84,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         .values_of(ARG_POINTERS)
         .unwrap()
         .into_iter()
-        .map(|e| File::new(Bytes::from(e), None, None).get_lfs_content())
+        .map(|e| File::new(Bytes::copy_from_slice(e.as_bytes()), None, None).get_lfs_content())
         .collect();
 
     let import = async move {

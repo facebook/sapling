@@ -18,6 +18,7 @@ use blobrepo::{BlobRepo, ChangesetHandle};
 use blobstore::Storable;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
+use bytes_old::Bytes as BytesOld;
 use cloned::cloned;
 use context::CoreContext;
 use core::fmt::Debug;
@@ -203,7 +204,7 @@ pub fn resolve(
     infinitepush_writes_allowed: bool,
     bundle2: BoxStream<Bundle2Item, Error>,
     readonly: RepoReadOnly,
-    maybe_full_content: Option<Arc<Mutex<Bytes>>>,
+    maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     pure_push_allowed: bool,
 ) -> BoxFuture<PostResolveAction, BundleResolverError> {
     let resolver = Bundle2Resolver::new(ctx.clone(), repo, infinitepush_writes_allowed);
@@ -308,7 +309,7 @@ fn resolve_push(
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
     non_fast_forward_policy: NonFastForwardPolicy,
-    maybe_full_content: Option<Arc<Mutex<Bytes>>>,
+    maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
 ) -> BoxFuture<PostResolveAction, Error> {
     resolver
@@ -455,7 +456,7 @@ fn resolve_pushrebase(
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
-    maybe_full_content: Option<Arc<Mutex<Bytes>>>,
+    maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
 ) -> BoxFuture<PostResolveAction, BundleResolverError> {
     resolver
@@ -625,7 +626,7 @@ fn resolve_bookmark_only_pushrebase(
     resolver: Bundle2Resolver,
     bundle2: BoxStream<Bundle2Item, Error>,
     non_fast_forward_policy: NonFastForwardPolicy,
-    maybe_full_content: Option<Arc<Mutex<Bytes>>>,
+    maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
 ) -> BoxFuture<PostResolveAction, Error> {
     // TODO: we probably run hooks even if no changesets are pushed?
     //       however, current run_hooks implementation will no-op such thing
@@ -787,11 +788,13 @@ impl Bundle2Resolver {
     /// Preserve the full raw content of the bundle2 for later replay
     fn maybe_save_full_content_bundle2(
         &self,
-        maybe_full_content: Option<Arc<Mutex<Bytes>>>,
+        maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     ) -> BoxFuture<Option<RawBundle2Id>, Error> {
         match maybe_full_content {
             Some(full_content) => {
-                let blob = RawBundle2::new_bytes(full_content.lock().unwrap().clone()).into_blob();
+                let blob =
+                    RawBundle2::new_bytes(Bytes::copy_from_slice(&full_content.lock().unwrap()))
+                        .into_blob();
                 let ctx = self.ctx.clone();
                 blob.store(ctx.clone(), self.repo.blobstore())
                     .map(move |id| {
@@ -1184,7 +1187,7 @@ impl Bundle2Resolver {
     fn ensure_stream_finished(
         &self,
         bundle2: BoxStream<Bundle2Item, Error>,
-        maybe_full_content: Option<Arc<Mutex<Bytes>>>,
+        maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     ) -> BoxFuture<Option<RawBundle2Id>, Error> {
         next_item(bundle2)
             .and_then(|(none, _)| {

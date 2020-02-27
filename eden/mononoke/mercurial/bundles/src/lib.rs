@@ -33,7 +33,7 @@ pub use crate::errors::ErrorKind;
 mod utils;
 
 use anyhow::{bail, Error, Result};
-use bytes::Bytes;
+use bytes_old::Bytes;
 use futures::sync::{mpsc, oneshot};
 use futures::{Future, Stream};
 use futures_ext::SinkToAsyncWrite;
@@ -53,14 +53,14 @@ pub enum Bundle2Item {
     B2xInfinitepush(PartHeader, BoxStream<changegroup::Part, Error>),
     B2xTreegroup2(PartHeader, BoxStream<wirepack::Part, Error>),
     // B2xInfinitepushBookmarks returns Bytes because this part is not going to be used.
-    B2xInfinitepushBookmarks(PartHeader, BoxStream<bytes::Bytes, Error>),
+    B2xInfinitepushBookmarks(PartHeader, BoxStream<bytes_old::Bytes, Error>),
     B2xRebasePack(PartHeader, BoxStream<wirepack::Part, Error>),
     B2xRebase(PartHeader, BoxStream<changegroup::Part, Error>),
     Replycaps(PartHeader, BoxFuture<capabilities::Capabilities, Error>),
     Pushkey(PartHeader, BoxFuture<(), Error>),
     Pushvars(PartHeader, BoxFuture<(), Error>),
     // Same as B2xInfinitepushBookmarks: this part won't be used.
-    Obsmarkers(PartHeader, BoxStream<bytes::Bytes, Error>),
+    Obsmarkers(PartHeader, BoxStream<bytes_old::Bytes, Error>),
 }
 
 impl Bundle2Item {
@@ -116,7 +116,7 @@ impl fmt::Debug for Bundle2Item {
 pub fn create_bundle_stream<C: Into<Option<async_compression::CompressorType>>>(
     parts: Vec<part_encode::PartEncodeBuilder>,
     ct: C,
-) -> impl Stream<Item = bytes::Bytes, Error = Error> {
+) -> impl Stream<Item = bytes_old::Bytes, Error = Error> {
     let (sender, receiver) = mpsc::channel::<Bytes>(1);
     // Sends either and empty Bytes if bundle generation was successful or an error.
     // Empty Bytes are used just to make chaining of streams below easier.

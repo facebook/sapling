@@ -40,7 +40,7 @@ fn lfs_stream(
             let stdout = cmd.stdout().take().expect("stdout was missing");
             let stdout = BufReader::new(stdout);
             let stream = codec::FramedRead::new(stdout, codec::BytesCodec::new())
-                .map(|bytes_mut| bytes_mut.freeze())
+                .map(|bytes_mut| bytes_ext::copy_from_old(bytes_mut.freeze()))
                 .from_err();
             (cmd, stream)
         })

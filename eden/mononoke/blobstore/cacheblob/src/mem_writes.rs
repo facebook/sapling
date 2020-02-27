@@ -100,7 +100,7 @@ impl<T: Blobstore + Clone> Blobstore for MemWritesBlobstore<T> {
 #[cfg(test)]
 mod test {
     use super::*;
-    use bytes_old::Bytes as BytesOld;
+    use bytes::Bytes;
     use fbinit::FacebookInit;
     use memblob::EagerMemblob;
 
@@ -131,7 +131,7 @@ mod test {
                 .expect("get to inner should work")
                 .expect("value should be present")
                 .into_bytes(),
-            BytesOld::from("foobar"),
+            Bytes::from("foobar"),
         );
     }
 
@@ -174,7 +174,7 @@ mod test {
                 .expect("get to outer should work")
                 .expect("value should be present")
                 .into_bytes(),
-            BytesOld::from("foobar"),
+            Bytes::from("foobar"),
         );
     }
 

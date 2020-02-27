@@ -85,7 +85,7 @@ impl Into<InMemoryFileText> for Bytes {
 
 impl Into<InMemoryFileText> for &str {
     fn into(self) -> InMemoryFileText {
-        let bytes: Bytes = self.into();
+        let bytes: Bytes = Bytes::copy_from_slice(self.as_bytes());
         bytes.into()
     }
 }

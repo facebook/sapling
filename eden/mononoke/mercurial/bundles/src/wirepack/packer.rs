@@ -13,7 +13,7 @@
 
 use anyhow::{bail, Error, Result};
 use byteorder::BigEndian;
-use bytes::BufMut;
+use bytes_old::BufMut;
 use futures::{Poll, Stream};
 
 use crate::chunk::Chunk;

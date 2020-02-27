@@ -189,6 +189,7 @@ where
 mod test {
     use super::*;
     use crate::blob::HgBlob;
+    use bytes::BytesMut;
     use futures::stream;
     use quickcheck::quickcheck;
     use tokio_compat::runtime::Runtime;
@@ -256,10 +257,10 @@ mod test {
 
             let stream = stream::iter_ok::<_, ()>(input.clone());
 
-            let bytes = input.iter().fold(Bytes::new(), |mut bytes, chunk| {
+            let bytes = input.iter().fold(BytesMut::new(), |mut bytes, chunk| {
                 bytes.extend_from_slice(&chunk);
                 bytes
-            });
+            }).freeze();
 
             let out_inplace = calculate_hg_node_id(bytes.as_ref(), &hg_parents);
             let out_stream = rt.block_on(calculate_hg_node_id_stream(stream, &hg_parents)).unwrap();

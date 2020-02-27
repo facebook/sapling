@@ -172,7 +172,6 @@ impl BlobstoreValue for FileUnode {
     fn into_blob(self) -> FileUnodeBlob {
         let thrift = self.into_thrift();
         let data = compact_protocol::serialize(&thrift);
-        let data = bytes_ext::copy_from_new(data);
         let mut context = FileUnodeIdContext::new();
         context.update(&data);
         let id = context.finish();
@@ -326,7 +325,6 @@ impl BlobstoreValue for ManifestUnode {
     fn into_blob(self) -> ManifestUnodeBlob {
         let thrift = self.into_thrift();
         let data = compact_protocol::serialize(&thrift);
-        let data = bytes_ext::copy_from_new(data);
         let mut context = ManifestUnodeIdContext::new();
         context.update(&data);
         let id = context.finish();

@@ -43,7 +43,7 @@ impl TryFrom<BlobstoreBytes> for RootDeletedManifestId {
 
 impl From<RootDeletedManifestId> for BlobstoreBytes {
     fn from(root_mf_id: RootDeletedManifestId) -> Self {
-        BlobstoreBytes::from_bytes(Bytes::from(root_mf_id.0.blake2().as_ref()))
+        BlobstoreBytes::from_bytes(Bytes::copy_from_slice(root_mf_id.0.blake2().as_ref()))
     }
 }
 

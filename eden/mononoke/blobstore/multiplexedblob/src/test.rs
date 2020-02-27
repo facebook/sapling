@@ -15,6 +15,7 @@ use crate::scrub::{LoggingScrubHandler, ScrubBlobstore, ScrubHandler};
 use anyhow::{bail, Error};
 use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
+use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -144,7 +145,7 @@ impl MultiplexedBlobstorePutHandler for LogHandler {
 }
 
 fn make_value(value: &str) -> BlobstoreBytes {
-    BlobstoreBytes::from_bytes(value.as_bytes())
+    BlobstoreBytes::from_bytes(Bytes::copy_from_slice(value.as_bytes()))
 }
 
 #[fbinit::test]

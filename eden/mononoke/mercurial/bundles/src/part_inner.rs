@@ -13,7 +13,7 @@ use std::io::BufRead;
 use std::str;
 
 use anyhow::{bail, ensure, Error, Result};
-use bytes::{Bytes, BytesMut};
+use bytes_old::{Bytes, BytesMut};
 use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use lazy_static::lazy_static;

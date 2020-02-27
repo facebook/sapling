@@ -110,6 +110,7 @@ pub fn execute_command(
                 let len: u64 = metadata.len().try_into().unwrap();
                 let data = codec::FramedRead::new(file_buf, codec::BytesCodec::new())
                     .map(|bytes_mut| bytes_mut.freeze())
+                    .map(bytes_ext::copy_from_old)
                     .from_err();
                 filestore::store(
                     blobrepo.get_blobstore(),

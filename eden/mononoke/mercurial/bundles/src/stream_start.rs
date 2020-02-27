@@ -9,7 +9,7 @@ use std::collections::HashMap;
 
 use anyhow::{bail, Context, Error, Result};
 use byteorder::{BigEndian, ByteOrder};
-use bytes::BytesMut;
+use bytes_old::BytesMut;
 use tokio_io::codec::Decoder;
 
 use crate::errors::ErrorKind;

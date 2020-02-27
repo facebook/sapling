@@ -395,6 +395,7 @@ impl<C: CacheOps> Blobstore for Sqlblob<C> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use bytes::Bytes;
     use fbinit::FacebookInit;
     use rand::{distributions::Alphanumeric, thread_rng, Rng, RngCore};
 
@@ -410,7 +411,7 @@ mod tests {
         let mut bytes_in = [0u8; 64];
         thread_rng().fill_bytes(&mut bytes_in);
 
-        let blobstore_bytes = BlobstoreBytes::from_bytes(&bytes_in as &[u8]);
+        let blobstore_bytes = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(&bytes_in));
 
         let fut = bs.is_present(ctx.clone(), key.clone())
                 .map(|is_present| assert!(!is_present, "Blob should not exist yet"))

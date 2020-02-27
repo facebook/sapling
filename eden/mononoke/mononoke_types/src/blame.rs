@@ -75,7 +75,6 @@ pub fn store_blame<B: Blobstore + Clone>(
 ) -> impl Future<Item = BlameId, Error = Error> {
     let blame_t = blame.into_thrift();
     let data = compact_protocol::serialize(&blame_t);
-    let data = bytes_ext::copy_from_new(data);
     let data = BlobstoreBytes::from_bytes(data);
     let blame_id = BlameId::from(file_unode_id);
     blobstore

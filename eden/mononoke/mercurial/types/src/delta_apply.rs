@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use heapsize_derive::HeapSizeOf;
 use std::cmp;
 
@@ -22,7 +22,7 @@ pub fn wrap_deltas<I: IntoIterator<Item = Delta>>(
     deltas: I,
 ) -> (Vec<FragmentWrapperIterator>, Bytes) {
     let mut wrapped_deltas = Vec::new();
-    let mut data = Bytes::new();
+    let mut data = BytesMut::new();
     let mut content_offset = 0;
 
     for delta in deltas {
@@ -35,7 +35,7 @@ pub fn wrap_deltas<I: IntoIterator<Item = Delta>>(
         wrapped_deltas.push(wrapped_delta);
     }
 
-    (wrapped_deltas, data)
+    (wrapped_deltas, data.freeze())
 }
 
 // Fragment Wrapper, it does not have actual data, only references to real data
@@ -123,7 +123,7 @@ impl FragmentWrapperIterator {
             let frag = Fragment {
                 start: frag_wrapper.start as usize,
                 end: frag_wrapper.end as usize,
-                content: data.slice(content_start, content_end).to_vec(),
+                content: data.slice(content_start..content_end).to_vec(),
             };
             frags.push(frag);
         }

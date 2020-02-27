@@ -352,7 +352,7 @@ impl MPath {
                 // These instances have already been checked to contain null bytes and also
                 // are split on '/' bytes and non-empty, so they're valid by construction. Skip the
                 // verification in MPathElement::new.
-                MPathElement(e.into())
+                MPathElement(Bytes::copy_from_slice(e))
             })
             .collect();
         if elements.is_empty() {

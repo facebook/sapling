@@ -342,7 +342,7 @@ pub async fn unified_diff(
                     let file = path.file().await?.ok_or_else(|| {
                         MononokeError::from(Error::msg("assertion error: file should exist"))
                     })?;
-                    let contents = file.content().await.compat().try_concat().await?;
+                    let contents = file.content_concat().await?;
                     let file_type = match file_type {
                         FileType::Regular => xdiff::FileType::Regular,
                         FileType::Executable => xdiff::FileType::Executable,

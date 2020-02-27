@@ -17,7 +17,8 @@ use crate::part_encode::PartEncodeBuilder;
 use crate::part_header::{PartHeaderType, PartId};
 use anyhow::{Error, Result};
 use byteorder::{BigEndian, WriteBytesExt};
-use bytes::Bytes;
+use bytes::Bytes as BytesNew;
+use bytes_old::Bytes;
 use context::CoreContext;
 use failure_ext::chain::ChainExt;
 use futures::stream::{iter_ok, once};
@@ -37,7 +38,7 @@ pub type FilenodeEntry = (HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFla
 
 pub fn listkey_part<N, S, K, V>(namespace: N, items: S) -> Result<PartEncodeBuilder>
 where
-    N: Into<Bytes>,
+    N: Into<BytesNew>,
     S: Stream<Item = (K, V), Error = Error> + Send + 'static,
     K: AsRef<[u8]>,
     V: AsRef<[u8]>,
@@ -96,7 +97,10 @@ where
     CS: Stream<Item = (HgNodeHash, HgBlobNode), Error = Error> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Changegroup)?;
-    builder.add_mparam("version", version.to_str())?;
+    builder.add_mparam(
+        "version",
+        BytesNew::copy_from_slice(version.to_str().as_bytes()),
+    )?;
 
     let changelogentries = convert_changeset_stream(changelogentries, version)
         .chain(once(Ok(Part::SectionEnd(Section::Changeset))))
@@ -141,9 +145,16 @@ where
     FS: Stream<Item = (MPath, Vec<FilenodeEntry>), Error = Error> + Send + 'static,
 {
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::B2xRebase)?;
-    builder.add_mparam("onto", onto_bookmark.as_ref())?;
+    builder.add_mparam(
+        "onto",
+        BytesNew::copy_from_slice(onto_bookmark.as_ref().as_bytes()),
+    )?;
+
     let version = CgVersion::Cg2Version;
-    builder.add_aparam("cgversion", version.to_str())?;
+    builder.add_aparam(
+        "cgversion",
+        BytesNew::copy_from_slice(version.to_str().as_bytes()),
+    )?;
 
     let changelogentries = convert_changeset_stream(changelogentries, version)
         .chain(once(Ok(Part::SectionEnd(Section::Changeset))))

@@ -169,7 +169,6 @@ impl BlobstoreValue for DeletedManifest {
     fn into_blob(self) -> DeletedManifestBlob {
         let thrift = self.into_thrift();
         let data = compact_protocol::serialize(&thrift);
-        let data = bytes_ext::copy_from_new(data);
         let mut context = DeletedManifestContext::new();
         context.update(&data);
         let id = context.finish();

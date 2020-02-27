@@ -101,9 +101,7 @@ impl CacheTranslator for DataCacheTranslator {
             }
         };
 
-        BlobstoreBytes::from_bytes(bytes_ext::copy_from_new(compact_protocol::serialize(
-            &thrift_val,
-        )))
+        BlobstoreBytes::from_bytes(compact_protocol::serialize(&thrift_val))
     }
 
     fn from_cache(&self, bytes: BlobstoreBytes) -> Result<Self::Value> {

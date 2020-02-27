@@ -9,6 +9,7 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use bytes::Bytes;
 use cmdlib::helpers::block_execute;
 use derived_data::BonsaiDerived;
 use futures::Future;
@@ -119,17 +120,21 @@ fn do_upload(
 ) -> BoxFuture<ContentMetadata, Error> {
     let repo = repo.lock().expect("Poisoned lock");
     let blob = try_boxfuture!(repo.find_blob(oid));
-    let bytes = blob.content();
+    let bytes = Bytes::copy_from_slice(blob.content());
     let size = bytes.len().try_into().unwrap();
 
-    let git_sha1 = try_boxfuture!(RichGitSha1::from_bytes(blob.id().as_bytes(), "blob", size));
+    let git_sha1 = try_boxfuture!(RichGitSha1::from_bytes(
+        Bytes::copy_from_slice(blob.id().as_bytes()),
+        "blob",
+        size
+    ));
     let req = StoreRequest::with_git_sha1(size, git_sha1);
     filestore::store(
         blobstore,
         &FilestoreConfig::default(),
         ctx,
         &req,
-        stream::once(Ok(bytes.into())),
+        stream::once(Ok(bytes)),
     )
     .boxify()
 }

@@ -5,12 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::cmp::min;
-
-use bytes::BufMut;
 use context::CoreContext;
-use futures::stream::Stream;
-use futures_preview::compat::Future01CompatExt;
 use source_control as thrift;
 
 use crate::errors;
@@ -60,20 +55,11 @@ impl SourceControlServiceImpl {
         match self.repo_file(ctx, &file).await? {
             (_repo, Some(file)) => {
                 let metadata = file.metadata().await?;
-                let expected_size = min(size, metadata.total_size.saturating_sub(offset));
-                let mut data = Vec::with_capacity(expected_size as usize);
-                file.content_range(offset, size)
-                    .await
-                    .for_each(|bytes| {
-                        data.put(bytes);
-                        Ok(())
-                    })
-                    .compat()
-                    .await?;
+                let data = file.content_range_concat(offset, size).await?;
                 Ok(thrift::FileChunk {
                     offset: params.offset,
                     file_size: metadata.total_size as i64,
-                    data,
+                    data: Vec::from(data.as_ref()),
                 })
             }
             (_repo, None) => Err(errors::file_not_found(file.description()).into()),

@@ -16,7 +16,7 @@ use bytes::Bytes;
 use chrono::{FixedOffset, TimeZone};
 use fbinit::FacebookInit;
 use fixtures::{branch_uneven, linear, many_files_dirs};
-use futures::{stream::Stream, Future};
+use futures::Future;
 use futures_preview::compat::Future01CompatExt;
 use futures_util::stream::TryStreamExt;
 
@@ -578,10 +578,10 @@ fn file_contents(fb: FacebookInit) -> Result<(), Error> {
 
         let path = cs.path("dir1/file_1_in_dir1")?;
         let file = path.file().await?.unwrap();
-        let content = file.content().await.concat2().compat().await?;
+        let content = file.content_concat().await?;
         assert_eq!(content, Bytes::from("content1\n"));
 
-        let content_range = file.content_range(3, 4).await.concat2().compat().await?;
+        let content_range = file.content_range_concat(3, 4).await?;
         assert_eq!(content_range, Bytes::from("tent"));
 
         Ok(())

@@ -12,7 +12,7 @@ use std::io::{BufRead, Chain, Cursor, Read};
 use std::mem;
 
 use anyhow::Error;
-use bytes::BytesMut;
+use bytes_old::BytesMut;
 use futures::{Async, Poll, Stream};
 
 use futures_ext::io::Either;

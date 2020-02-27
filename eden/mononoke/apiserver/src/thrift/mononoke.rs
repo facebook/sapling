@@ -147,8 +147,8 @@ impl MononokeAPIService for MononokeAPIServiceImpl {
                     MononokeRepoResponse::GetRawFile(stream) => stream
                         .into_bytes_stream()
                         .from_err()
-                        .concat2()
                         .map(|bytes| bytes.to_vec())
+                        .concat2()
                         .left_future(),
                     _ => Err(ErrorKind::InternalError(Error::msg(
                         "Actor returned wrong response type to query".to_string(),
@@ -448,8 +448,8 @@ impl MononokeAPIService for MononokeAPIServiceImpl {
                     MononokeRepoResponse::GetBlobContent(stream) => stream
                         .into_bytes_stream()
                         .from_err()
-                        .concat2()
                         .map(|bytes| bytes.to_vec())
+                        .concat2()
                         .map(|content| MononokeBlob { content })
                         .left_future(),
                     _ => Err(ErrorKind::InternalError(Error::msg(

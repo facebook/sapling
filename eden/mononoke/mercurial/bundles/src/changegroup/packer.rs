@@ -11,7 +11,7 @@ use futures::{try_ready, Async, Poll, Stream};
 
 use anyhow::{Error, Result};
 use byteorder::ByteOrder;
-use bytes::{BigEndian, BufMut};
+use bytes_old::{BigEndian, BufMut};
 
 use crate::chunk::Chunk;
 use crate::delta;

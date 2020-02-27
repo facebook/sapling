@@ -651,7 +651,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bytes_old::Bytes as BytesOld;
+    use bytes::Bytes;
     use fixtures::linear;
     use futures::stream;
     use maplit::btreemap;
@@ -664,7 +664,7 @@ mod tests {
         let mut rt = Runtime::new().unwrap();
 
         let stream: BoxStream<FileBytes, Error> =
-            Box::new(stream::once(Ok(FileBytes(BytesOld::from(&b""[..])))));
+            Box::new(stream::once(Ok(FileBytes(Bytes::from(&b""[..])))));
         let result = rt.block_on(number_of_lines(stream))?;
         assert_eq!(result, 0);
         Ok(())
@@ -675,7 +675,7 @@ mod tests {
         let mut rt = Runtime::new().unwrap();
 
         let stream: BoxStream<FileBytes, Error> = Box::new(stream::once(Ok(FileBytes(
-            BytesOld::from(&b"First line\n"[..]),
+            Bytes::from(&b"First line\n"[..]),
         ))));
         let result = rt.block_on(number_of_lines(stream))?;
         assert_eq!(result, 1);
@@ -687,7 +687,7 @@ mod tests {
         let mut rt = Runtime::new().unwrap();
 
         let stream: BoxStream<FileBytes, Error> = Box::new(stream::once(Ok(FileBytes(
-            BytesOld::from(&b"First line\nSecond line\nThird line\n"[..]),
+            Bytes::from(&b"First line\nSecond line\nThird line\n"[..]),
         ))));
         let result = rt.block_on(number_of_lines(stream))?;
         assert_eq!(result, 3);
@@ -699,11 +699,9 @@ mod tests {
         let mut rt = Runtime::new().unwrap();
 
         let vec = vec![
-            FileBytes(BytesOld::from(&b"First line\n"[..])),
-            FileBytes(BytesOld::from(&b""[..])),
-            FileBytes(BytesOld::from(
-                &b"First line\nSecond line\nThird line\n"[..],
-            )),
+            FileBytes(Bytes::from(&b"First line\n"[..])),
+            FileBytes(Bytes::from(&b""[..])),
+            FileBytes(Bytes::from(&b"First line\nSecond line\nThird line\n"[..])),
         ];
         let stream: BoxStream<FileBytes, Error> = Box::new(stream::iter_ok(vec));
         let result = rt.block_on(number_of_lines(stream))?;

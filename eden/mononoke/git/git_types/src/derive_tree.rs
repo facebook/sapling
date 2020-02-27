@@ -214,16 +214,12 @@ mod test {
         let mut index = git.index()?;
 
         for (mpath, blob_handle) in leaves.into_iter() {
-            let blob = filestore::fetch(
+            let blob = filestore::fetch_concat(
                 &repo.get_blobstore(),
                 ctx.clone(),
-                &FetchKey::Aliased(Alias::GitSha1(blob_handle.oid().sha1())),
+                FetchKey::Aliased(Alias::GitSha1(blob_handle.oid().sha1())),
             )
             .compat()
-            .await?
-            .ok_or(format_err!("Missing blob"))?
-            .compat()
-            .try_concat()
             .await?;
 
             let path = &mpath.to_string();

@@ -314,11 +314,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
                 let data = codec::FramedRead::new(stdout, codec::BytesCodec::new())
                     .map(|bytes_mut| bytes_mut.freeze())
+                    .map(bytes_ext::copy_from_old)
                     .from_err();
 
                 let (len, data) = if randomize {
                     let bytes = rand::thread_rng().gen::<[u8; 32]>();
-                    let bytes = Bytes::from(&bytes[..]);
+                    let bytes = Bytes::copy_from_slice(&bytes[..]);
                     (
                         len + (bytes.len() as u64),
                         iter_ok(vec![bytes]).chain(data).left_stream(),

@@ -12,7 +12,7 @@ use std::str;
 
 use anyhow::{bail, Context, Error, Result};
 use byteorder::{BigEndian, ByteOrder};
-use bytes::{Bytes, BytesMut};
+use bytes_old::{Bytes, BytesMut};
 
 use async_compression::{CompressorType, DecompressorType};
 use mercurial_types::{HgNodeHash, MPath};

@@ -716,7 +716,8 @@ mod tests {
             match content {
                 Some((content, file_type)) => {
                     let size = content.len();
-                    let content = FileContents::Bytes(Bytes::from(content)).into_blob();
+                    let content =
+                        FileContents::Bytes(Bytes::copy_from_slice(content.as_bytes())).into_blob();
                     let content_id = runtime
                         .block_on(content.store(ctx.clone(), repo.blobstore()))
                         .unwrap();

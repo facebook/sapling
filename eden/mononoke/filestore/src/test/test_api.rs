@@ -10,9 +10,9 @@ use crate as filestore;
 use crate::{errors, Alias, FetchKey, FilestoreConfig, StoreRequest};
 
 use super::failing_blobstore::{FailingBlobstore, FailingBlobstoreError};
-use anyhow::Result;
+use anyhow::{Error, Result};
 use assert_matches::assert_matches;
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
@@ -109,11 +109,11 @@ fn filestore_put_get_canon(fb: FacebookInit) -> Result<()> {
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
     ))?;
 
-    let res = rt.block_on(
-        filestore::fetch(&blob, ctx, &FetchKey::Canonical(content_id))
-            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
-            .flatten(),
-    );
+    let res = rt.block_on(filestore::fetch_concat_opt(
+        &blob,
+        ctx,
+        &FetchKey::Canonical(content_id),
+    ));
 
     println!("res = {:#?}", res);
 
@@ -139,15 +139,11 @@ fn filestore_put_get_sha1(fb: FacebookInit) -> Result<()> {
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
     ))?;
 
-    let res = rt.block_on(
-        filestore::fetch(
-            &blob,
-            ctx,
-            &FetchKey::Aliased(Alias::Sha1(*HELLO_WORLD_SHA1)),
-        )
-        .map(|maybe_str| maybe_str.map(|s| s.concat2()))
-        .flatten(),
-    );
+    let res = rt.block_on(filestore::fetch_concat_opt(
+        &blob,
+        ctx,
+        &FetchKey::Aliased(Alias::Sha1(*HELLO_WORLD_SHA1)),
+    ));
 
     println!("res = {:#?}", res);
 
@@ -172,15 +168,11 @@ fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
     ))?;
 
-    let res = rt.block_on(
-        filestore::fetch(
-            &blob,
-            ctx,
-            &FetchKey::Aliased(Alias::GitSha1(HELLO_WORLD_GIT_SHA1.sha1())),
-        )
-        .map(|maybe_str| maybe_str.map(|s| s.concat2()))
-        .flatten(),
-    );
+    let res = rt.block_on(filestore::fetch_concat_opt(
+        &blob,
+        ctx,
+        &FetchKey::Aliased(Alias::GitSha1(HELLO_WORLD_GIT_SHA1.sha1())),
+    ));
 
     println!("res = {:#?}", res);
 
@@ -205,15 +197,11 @@ fn filestore_put_get_sha256(fb: FacebookInit) -> Result<()> {
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
     ))?;
 
-    let res = rt.block_on(
-        filestore::fetch(
-            &blob,
-            ctx,
-            &FetchKey::Aliased(Alias::Sha256(*HELLO_WORLD_SHA256)),
-        )
-        .map(|maybe_str| maybe_str.map(|s| s.concat2()))
-        .flatten(),
-    );
+    let res = rt.block_on(filestore::fetch_concat_opt(
+        &blob,
+        ctx,
+        &FetchKey::Aliased(Alias::Sha256(*HELLO_WORLD_SHA256)),
+    ));
 
     println!("res = {:#?}", res);
 
@@ -244,11 +232,11 @@ fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
     ))?;
 
-    let res = rt.block_on(
-        filestore::fetch(&blob, ctx, &FetchKey::Canonical(content_id))
-            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
-            .flatten(),
-    );
+    let res = rt.block_on(filestore::fetch_concat_opt(
+        &blob,
+        ctx,
+        &FetchKey::Canonical(content_id),
+    ));
 
     println!("res = {:#?}", res);
 
@@ -324,11 +312,11 @@ fn filestore_content_not_found(fb: FacebookInit) -> Result<()> {
     let content_id = canonical(data);
 
     // Verify that we can still read the full thing.
-    let res = rt.block_on(
-        filestore::fetch(&blob, ctx, &FetchKey::Canonical(content_id))
-            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
-            .flatten(),
-    );
+    let res = rt.block_on(filestore::fetch_concat_opt(
+        &blob,
+        ctx,
+        &FetchKey::Canonical(content_id),
+    ));
 
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
@@ -364,11 +352,11 @@ fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
     assert!(blob.remove(&part_id.blobstore_key()).is_some());
 
     // This should fail
-    let res = rt.block_on(
-        filestore::fetch(&blob, ctx, &FetchKey::Canonical(content_id))
-            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
-            .flatten(),
-    );
+    let res = rt.block_on(filestore::fetch_concat_opt(
+        &blob,
+        ctx,
+        &FetchKey::Canonical(content_id),
+    ));
 
     println!("res = {:#?}", res);
     assert!(res.is_err());
@@ -594,7 +582,16 @@ fn filestore_get_range(fb: FacebookInit) -> Result<()> {
 
     let res = rt.block_on(
         filestore::fetch_range_with_size(&blob, ctx, &FetchKey::Canonical(content_id), 7, 5)
-            .map(|maybe_str| maybe_str.map(|(s, _size)| s.concat2()))
+            .map(|maybe_stream| {
+                maybe_stream.map(|(stream, _size)| {
+                    stream
+                        .fold(BytesMut::new(), |mut buff, chunk| {
+                            buff.extend_from_slice(&chunk);
+                            Result::<_, Error>::Ok(buff)
+                        })
+                        .map(BytesMut::freeze)
+                })
+            })
             .flatten(),
     );
 
@@ -632,7 +629,16 @@ fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
 
     let res = rt.block_on(
         filestore::fetch_range_with_size(&blob, ctx, &FetchKey::Canonical(full_id), 4, 6)
-            .map(|maybe_str| maybe_str.map(|(s, _size)| s.concat2()))
+            .map(|maybe_stream| {
+                maybe_stream.map(|(stream, _size)| {
+                    stream
+                        .fold(BytesMut::new(), |mut buff, chunk| {
+                            buff.extend_from_slice(&chunk);
+                            Result::<_, Error>::Ok(buff)
+                        })
+                        .map(BytesMut::freeze)
+                })
+            })
             .flatten(),
     );
 
@@ -903,11 +909,11 @@ fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
 
     rt.block_on(fut)?;
 
-    let res = rt.block_on(
-        filestore::fetch(&blob, ctx, &FetchKey::Canonical(content_id))
-            .map(|maybe_str| maybe_str.map(|s| s.concat2()))
-            .flatten(),
-    );
+    let res = rt.block_on(filestore::fetch_concat_opt(
+        &blob,
+        ctx,
+        &FetchKey::Canonical(content_id),
+    ));
 
     println!("res = {:#?}", res);
 
@@ -1191,11 +1197,18 @@ fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
 
     let (stream, size) = res?.unwrap();
 
-    let stream = rt.block_on(stream.concat2());
+    let fut = stream
+        .fold(BytesMut::new(), |mut buff, chunk| {
+            buff.extend_from_slice(&chunk);
+            Result::<_, Error>::Ok(buff)
+        })
+        .map(BytesMut::freeze);
 
-    println!("{:?}", stream);
+    let bytes = rt.block_on(fut);
 
-    assert_eq!(stream?, Bytes::from(HELLO_WORLD));
+    println!("{:?}", bytes);
+
+    assert_eq!(bytes?, Bytes::from(HELLO_WORLD));
     assert_eq!(size, HELLO_WORLD_LENGTH);
     Ok(())
 }

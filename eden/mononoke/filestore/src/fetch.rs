@@ -53,7 +53,7 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
                     let len = bytes.len() as u64;
                     let slice_start = min(range_start, len);
                     let slice_end = min(range_end, len);
-                    bytes.slice(slice_start as usize, slice_end as usize)
+                    bytes.slice((slice_start as usize)..(slice_end as usize))
                 }
                 Range::All => bytes,
             };
@@ -134,7 +134,7 @@ pub fn stream_file_bytes<B: Blobstore + Clone>(
 
                 let fut = match chunk_range {
                     Range::Span { start, end } => fut
-                        .map(move |b| b.slice(start as usize, end as usize))
+                        .map(move |b| b.slice((start as usize)..(end as usize)))
                         .left_future(),
                     Range::All => fut.right_future(),
                 };

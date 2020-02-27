@@ -9,7 +9,8 @@
 #![deny(warnings)]
 #![type_length_limit = "1658755"]
 
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
+use std::convert::TryInto;
 
 use anyhow::Error;
 use cloned::cloned;
@@ -285,6 +286,48 @@ pub fn fetch<B: Blobstore + Clone>(
     key: &FetchKey,
 ) -> impl Future<Item = Option<impl Stream<Item = Bytes, Error = Error>>, Error = Error> {
     fetch_with_size(blobstore, ctx, key).map(|res| res.map(|(stream, _len)| stream))
+}
+
+/// Fetch the contents of a blob concatenated together. This bad for buffering, and you shouldn't
+/// add new callsites. This is only for compatibility with existin callsites.
+pub fn fetch_concat_opt<B: Blobstore + Clone>(
+    blobstore: &B,
+    ctx: CoreContext,
+    key: &FetchKey,
+) -> impl Future<Item = Option<Bytes>, Error = Error> {
+    fetch_with_size(blobstore, ctx, key).and_then(|res| match res {
+        Some((stream, len)) => {
+            let len = len
+                .try_into()
+                .map_err(|_| anyhow::format_err!("Cannot fetch file with length {}", len));
+
+            len.into_future()
+                .and_then(move |len| {
+                    let buf = BytesMut::with_capacity(len);
+
+                    stream
+                        .fold(buf, |mut buffer, chunk| {
+                            buffer.extend_from_slice(&chunk);
+                            Result::<_, Error>::Ok(buffer)
+                        })
+                        .map(BytesMut::freeze)
+                        .map(Some)
+                })
+                .left_future()
+        }
+        None => Ok(None).into_future().right_future(),
+    })
+}
+
+/// Similar to fetch_concat, but requires the blob to be present, or errors out.
+pub fn fetch_concat<B: Blobstore + Clone>(
+    blobstore: &B,
+    ctx: CoreContext,
+    key: impl Into<FetchKey>,
+) -> impl Future<Item = Bytes, Error = Error> {
+    let key: FetchKey = key.into();
+    fetch_concat_opt(blobstore, ctx, &key)
+        .and_then(move |bytes| bytes.ok_or_else(|| errors::ErrorKind::MissingContent(key).into()))
 }
 
 /// Fetch content associated with the key as a stream

@@ -574,7 +574,7 @@ mod tests {
     }
 
     fn make_value(value: &str) -> BlobstoreBytes {
-        BlobstoreBytes::from_bytes(value.as_bytes())
+        BlobstoreBytes::from_bytes(Bytes::copy_from_slice(value.as_bytes()))
     }
 
     fn put_value(ctx: &CoreContext, store: Option<&Arc<dyn Blobstore>>, key: &str, value: &str) {

@@ -6,7 +6,7 @@
  */
 
 use anyhow::{bail, Error, Result};
-use bytes::{BufMut, Bytes, BytesMut};
+use bytes_old::{BufMut, Bytes, BytesMut};
 use tokio_codec::{Decoder, Encoder};
 
 use crate::errors::ErrorKind;

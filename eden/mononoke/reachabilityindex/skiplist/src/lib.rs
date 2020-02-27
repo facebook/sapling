@@ -120,7 +120,7 @@ impl SkiplistNodeType {
 
     pub fn serialize(&self) -> Bytes {
         let thrift_skiplist_node_type = self.to_thrift();
-        bytes_ext::copy_from_new(compact_protocol::serialize(&thrift_skiplist_node_type))
+        compact_protocol::serialize(&thrift_skiplist_node_type)
     }
 }
 

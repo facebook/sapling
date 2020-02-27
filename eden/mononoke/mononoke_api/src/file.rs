@@ -5,19 +5,19 @@
  * GNU General Public License version 2.
  */
 
+use std::convert::TryInto;
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
 use anyhow::format_err;
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use cloned::cloned;
 use context::CoreContext;
-use filestore::{fetch, fetch_range, get_metadata, FetchKey};
-use futures::stream::{self, Stream};
-use futures_ext::StreamExt;
-use futures_preview::compat::Future01CompatExt;
+use filestore::{self, get_metadata, FetchKey};
+use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
 use futures_preview::future::{FutureExt, Shared};
+use futures_preview::stream::TryStreamExt;
 
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
@@ -127,18 +127,19 @@ impl FileContext {
     }
 
     /// Return a stream of the content for the file.
-    pub async fn content(&self) -> impl Stream<Item = Bytes, Error = MononokeError> {
-        let stream = fetch(
+    pub async fn content_concat(&self) -> Result<Bytes, MononokeError> {
+        let bytes = filestore::fetch_concat_opt(
             self.repo().blob_repo().blobstore(),
             self.ctx().clone(),
             &self.fetch_key,
         )
         .compat()
         .await;
-        match stream {
-            Ok(Some(stream)) => stream.map_err(MononokeError::from).left_stream(),
-            Ok(None) => stream::once(Err(content_not_found_error(&self.fetch_key))).right_stream(),
-            Err(e) => stream::once(Err(MononokeError::from(e))).right_stream(),
+
+        match bytes {
+            Ok(Some(bytes)) => Ok(bytes),
+            Ok(None) => Err(content_not_found_error(&self.fetch_key)),
+            Err(e) => Err(MononokeError::from(e)),
         }
     }
 
@@ -147,12 +148,12 @@ impl FileContext {
     /// If the range goes past the end of the file, then content up to
     /// the end of the file is returned.  If the range starts past the
     /// end of the file, then an empty stream is returned.
-    pub async fn content_range(
+    pub async fn content_range_concat(
         &self,
         start: u64,
         size: u64,
-    ) -> impl Stream<Item = Bytes, Error = MononokeError> {
-        let stream = fetch_range(
+    ) -> Result<Bytes, MononokeError> {
+        let ret = filestore::fetch_range_with_size(
             self.repo().blob_repo().blobstore(),
             self.ctx().clone(),
             &self.fetch_key,
@@ -161,10 +162,30 @@ impl FileContext {
         )
         .compat()
         .await;
-        match stream {
-            Ok(Some(stream)) => stream.map_err(MononokeError::from).left_stream(),
-            Ok(None) => stream::once(Err(content_not_found_error(&self.fetch_key))).right_stream(),
-            Err(e) => stream::once(Err(MononokeError::from(e))).right_stream(),
+
+        match ret {
+            Ok(Some((stream, size))) => {
+                let size = size.try_into().map_err(|_| {
+                    MononokeError::from(format_err!("content too large: {:?}", self.fetch_key))
+                })?;
+
+                let bytes = stream
+                    .compat()
+                    .map_err(MononokeError::from)
+                    .try_fold(
+                        BytesMut::with_capacity(size),
+                        |mut buff, chunk| async move {
+                            buff.extend_from_slice(&chunk);
+                            Ok(buff)
+                        },
+                    )
+                    .await?
+                    .freeze();
+
+                Ok(bytes)
+            }
+            Ok(None) => Err(content_not_found_error(&self.fetch_key)),
+            Err(e) => Err(MononokeError::from(e)),
         }
     }
 }

@@ -8,7 +8,7 @@
 // Codecs related to infinitepush also known as Commit Cloud.
 
 use anyhow::{Error, Result};
-use bytes::{Bytes, BytesMut};
+use bytes_old::{Bytes, BytesMut};
 use tokio_io::codec::Decoder;
 
 use crate::utils::BytesExt;

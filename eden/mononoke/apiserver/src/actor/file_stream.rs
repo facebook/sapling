@@ -48,6 +48,7 @@ where
 {
     fn into_filestream(self) -> BoxFuture<FileStream, Error> {
         self.map(FileBytes::into_bytes)
+            .map(bytes_ext::copy_from_new)
             .into_future()
             .map_err(|(err, _stream)| err)
             .map(|(bytes, stream)| {

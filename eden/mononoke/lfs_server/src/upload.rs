@@ -117,7 +117,7 @@ where
         STATS::upstream_uploads.add_value(1);
         let ObjectAction { href, .. } = action;
 
-        let body = Body::wrap_stream(data.compat());
+        let body = Body::wrap_stream(data.map_ok(bytes_ext::copy_from_new).compat());
         let req = Request::put(href)
             .header("Content-Length", &size.to_string())
             .body(body.into())?;
@@ -205,7 +205,7 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
     let mut data = Body::take_from(state)
         .compat()
         .map_ok(|chunk| {
-            let bytes = chunk.into_bytes();
+            let bytes = bytes_ext::copy_from_old(chunk.into_bytes());
             received += bytes.len();
             bytes
         })

@@ -23,6 +23,7 @@ use crate::HgFileNodeId;
 use anyhow::Error;
 use ascii::AsciiString;
 use blobstore::Blobstore;
+use bytes::Bytes;
 use context::CoreContext;
 use futures::Future;
 use mononoke_types::{BlobstoreBytes, ContentId, MPath};
@@ -82,7 +83,7 @@ pub fn store_filenode_id<B: Blobstore>(
     key: FileNodeIdPointer,
     filenode_id: &HgFileNodeId,
 ) -> impl Future<Item = (), Error = Error> {
-    let contents = BlobstoreBytes::from_bytes(filenode_id.as_bytes());
+    let contents = BlobstoreBytes::from_bytes(Bytes::copy_from_slice(filenode_id.as_bytes()));
     blobstore.put(ctx, key.0, contents)
 }
 

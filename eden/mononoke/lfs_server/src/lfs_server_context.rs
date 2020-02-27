@@ -14,7 +14,7 @@ use std::sync::{
 
 use aclchecker::Identity;
 use anyhow::Error;
-use bytes::Bytes;
+use bytes_old::Bytes as BytesOld;
 use configerator_cached::ConfigHandle;
 use futures::Future as Future01;
 use futures_channel::oneshot;
@@ -252,7 +252,7 @@ impl RepositoryRequestContext {
             }
         };
 
-        let body: Bytes = serde_json::to_vec(&batch)
+        let body: BytesOld = serde_json::to_vec(&batch)
             .chain_err(ErrorKind::SerializationFailed)?
             .into();
 

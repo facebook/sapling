@@ -12,7 +12,7 @@ use super::MetadataEntry;
 use crate::chunk::Chunk;
 use anyhow::{Error, Result};
 use byteorder::ByteOrder;
-use bytes::{BigEndian, BufMut};
+use bytes_old::{BigEndian, BufMut};
 use futures::stream::iter_result;
 use futures::Stream;
 use mercurial_types::HgChangesetId;

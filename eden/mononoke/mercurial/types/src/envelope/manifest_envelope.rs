@@ -130,9 +130,7 @@ impl HgManifestEnvelope {
     #[inline]
     pub fn into_blob(self) -> HgEnvelopeBlob {
         let thrift = self.into_thrift();
-        HgEnvelopeBlob(bytes_ext::copy_from_new(compact_protocol::serialize(
-            &thrift,
-        )))
+        HgEnvelopeBlob(compact_protocol::serialize(&thrift))
     }
 }
 

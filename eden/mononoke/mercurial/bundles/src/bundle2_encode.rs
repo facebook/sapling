@@ -12,7 +12,7 @@ use std::vec::IntoIter;
 
 use anyhow::{bail, Context, Error, Result};
 use byteorder::ByteOrder;
-use bytes::{BigEndian, Buf, BufMut, Bytes, IntoBuf};
+use bytes_old::{BigEndian, Buf, BufMut, Bytes, IntoBuf};
 use failure_ext::chain::ChainExt;
 use futures::stream::Forward;
 use futures::{try_ready, Async, AsyncSink, Future, Poll, Sink, StartSend, Stream};

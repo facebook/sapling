@@ -8,8 +8,9 @@
 use anyhow::{Error, Result};
 use bytes::{Bytes, BytesMut};
 use futures::{
-    stream::{AndThen, Concat2},
-    try_ready, Async, Poll, Stream,
+    future::{Future, Map},
+    stream::{AndThen, Fold, Stream},
+    try_ready, Async, Poll,
 };
 use std::convert::TryFrom;
 use std::fmt::{self, Debug};
@@ -113,7 +114,15 @@ where
 type LimitFn = Box<dyn FnMut(Bytes) -> Result<Bytes> + Send>;
 type LimitStream<S> = AndThen<S, LimitFn, Result<Bytes>>;
 
-pub type BufferedStream<S> = Concat2<LimitStream<S>>;
+pub type BufferedStream<S> = Map<
+    Fold<
+        LimitStream<S>,
+        fn(BytesMut, Bytes) -> Result<BytesMut, Error>,
+        Result<BytesMut, Error>,
+        BytesMut,
+    >,
+    fn(BytesMut) -> Bytes,
+>;
 pub type ChunkedStream<S> = ChunkStream<LimitStream<S>>;
 
 pub enum Chunks<S>
@@ -134,6 +143,11 @@ where
             Chunks::Chunked(size, _) => write!(f, "Chunks::Chunked({:?}, ...)", size),
         }
     }
+}
+
+fn extend_bytes(mut bytes: BytesMut, incoming: Bytes) -> Result<BytesMut, Error> {
+    bytes.extend_from_slice(incoming.as_ref());
+    Ok(bytes)
 }
 
 /// Chunk a stream of incoming data for storage. We use the incoming size hint to decide whether
@@ -165,7 +179,12 @@ where
             Chunks::Chunked(expected_size, stream)
         }
         _ => {
-            let fut = data.concat2();
+            let fut = data
+                .fold(
+                    expected_size.new_buffer(),
+                    extend_bytes as fn(BytesMut, Bytes) -> Result<BytesMut, Error>,
+                )
+                .map(BytesMut::freeze as fn(BytesMut) -> Bytes);
             Chunks::Inline(fut)
         }
     }
@@ -379,15 +398,21 @@ mod test {
         let chunk_stream = ChunkStream::new(stream::iter_ok::<_, ()>(in_chunks.clone()), size);
         let out_chunks = rt.block_on(chunk_stream.collect()).unwrap();
 
-        let expected_bytes = in_chunks.iter().fold(Bytes::new(), |mut bytes, chunk| {
-            bytes.extend_from_slice(&chunk);
-            bytes
-        });
+        let expected_bytes = in_chunks
+            .iter()
+            .fold(BytesMut::new(), |mut bytes, chunk| {
+                bytes.extend_from_slice(&chunk);
+                bytes
+            })
+            .freeze();
 
-        let got_bytes = out_chunks.iter().fold(Bytes::new(), |mut bytes, chunk| {
-            bytes.extend_from_slice(&chunk);
-            bytes
-        });
+        let got_bytes = out_chunks
+            .iter()
+            .fold(BytesMut::new(), |mut bytes, chunk| {
+                bytes.extend_from_slice(&chunk);
+                bytes
+            })
+            .freeze();
 
         // The contents should be the same
         if expected_bytes != got_bytes {
@@ -426,10 +451,10 @@ mod test {
             let in_chunks: Vec<Bytes> = in_chunks.into_iter().map(Bytes::from).collect();
             let in_stream = stream::iter_ok::<_, Error>(in_chunks.clone());
 
-            let expected_bytes = in_chunks.iter().fold(Bytes::new(), |mut bytes, chunk| {
+            let expected_bytes = in_chunks.iter().fold(BytesMut::new(), |mut bytes, chunk| {
                 bytes.extend_from_slice(&chunk);
                 bytes
-            });
+            }).freeze();
 
             let len = expected_bytes.len() as u64;
 

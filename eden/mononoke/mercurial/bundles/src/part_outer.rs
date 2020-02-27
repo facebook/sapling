@@ -14,7 +14,7 @@ use std::mem;
 
 use anyhow::{Error, Result};
 use async_compression::Decompressor;
-use bytes::{Bytes, BytesMut};
+use bytes_old::{Bytes, BytesMut};
 use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
 use slog::{debug, o, Logger};
 use tokio_codec::{Decoder, Framed, FramedParts};

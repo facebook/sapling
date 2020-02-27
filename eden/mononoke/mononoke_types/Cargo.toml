@@ -28,7 +28,7 @@ anyhow = "1.0"
 ascii = "1.0"
 bincode = "1.2"
 blake2 = "0.8"
-bytes = { version = "0.4", features = ["serde"] }
+bytes = { version = "0.5", features = ["serde"] }
 chrono = { version="0.4", features=["serde"] }
 faster-hex = "0.4"
 futures = "0.1"
