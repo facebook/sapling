@@ -798,6 +798,19 @@ def clone(
                     _update(destrepo, uprev)
                     if update in destrepo._bookmarks:
                         bookmarks.activate(destrepo, update)
+        clonepreclose(
+            ui,
+            peeropts,
+            source,
+            dest,
+            pull,
+            rev,
+            update,
+            stream,
+            shareopts,
+            srcpeer,
+            destpeer,
+        )
     finally:
         release(srclock, destlockw, destlock)
         if srcpeer is not None:
@@ -806,6 +819,23 @@ def clone(
             destpeer.close()
         if cleandir is not None:
             shutil.rmtree(cleandir, True)
+    return srcpeer, destpeer
+
+
+def clonepreclose(
+    ui,
+    peeropts,
+    source,
+    dest=None,
+    pull=False,
+    rev=None,
+    update=True,
+    stream=False,
+    shareopts=None,
+    srcpeer=None,
+    destpeer=None,
+):
+    """Wrapped by extensions like remotenames before closing the peers"""
     return srcpeer, destpeer
 
 

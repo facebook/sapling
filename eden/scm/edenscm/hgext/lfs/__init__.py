@@ -172,7 +172,7 @@ def extsetup(ui):
         (wrapper.readfromstore, wrapper.writetostore, wrapper.bypasscheckhash),
     )
 
-    wrapfunction(hg, "clone", wrapper.hgclone)
+    wrapfunction(hg, "clonepreclose", wrapper.hgclone)
     wrapfunction(hg, "postshare", wrapper.hgpostshare)
 
     # Make bundle choose changegroup3 instead of changegroup2. This affects

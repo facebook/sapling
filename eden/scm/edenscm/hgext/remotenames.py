@@ -1025,7 +1025,7 @@ def extsetup(ui):
         extensions.wrapfunction(bookmarks, "activate", exactivate)
     else:
         extensions.wrapfunction(bookmarks, "setcurrent", exactivate)
-    extensions.wrapfunction(hg, "clone", exclone)
+    extensions.wrapfunction(hg, "clonepreclose", exclone)
     extensions.wrapfunction(hg, "updaterepo", exupdate)
     extensions.wrapfunction(localrepo.localrepository, "commit", excommit)
 
