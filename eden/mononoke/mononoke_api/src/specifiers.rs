@@ -17,6 +17,9 @@ pub type HgChangesetId = mercurial_types::HgChangesetId;
 /// A Globalrev.
 pub type Globalrev = mercurial_types::Globalrev;
 
+/// A Git SHA-1 hash.
+pub type GitSha1 = mononoke_types::hash::GitSha1;
+
 /// A changeset specifier.  This is anything that may be used to specify a
 /// unique changeset, such as its bonsai changeset ID, a changeset hash in an
 /// alternative hashing scheme, a globally unique hash prefix, or an
@@ -26,6 +29,7 @@ pub enum ChangesetSpecifier {
     Bonsai(ChangesetId),
     Hg(HgChangesetId),
     Globalrev(Globalrev),
+    GitSha1(GitSha1),
 }
 
 /// A prefix of canonical ID for a changeset (Bonsai).
@@ -96,6 +100,7 @@ impl fmt::Display for ChangesetSpecifier {
             ChangesetSpecifier::Bonsai(cs_id) => write!(f, "changeset {}", cs_id),
             ChangesetSpecifier::Hg(hg_cs_id) => write!(f, "hg changeset {}", hg_cs_id),
             ChangesetSpecifier::Globalrev(rev) => write!(f, "globalrev {}", rev.id()),
+            ChangesetSpecifier::GitSha1(git_sha1) => write!(f, "git sha1 {}", git_sha1),
         }
     }
 }

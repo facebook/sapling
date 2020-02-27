@@ -34,7 +34,7 @@ use metaconfig_types::{
     SourceControlServiceParams,
 };
 use mononoke_types::{
-    hash::{Sha1, Sha256},
+    hash::{GitSha1, Sha1, Sha256},
     Generation,
 };
 use revset::AncestorsNodeStream;
@@ -587,6 +587,12 @@ impl RepoContext {
                     .compat()
                     .await?
             }
+            ChangesetSpecifier::GitSha1(git_sha1) => {
+                self.blob_repo()
+                    .bonsai_git_mapping()
+                    .get_bonsai_from_git_sha1(git_sha1)
+                    .await?
+            }
         };
         Ok(id)
     }
@@ -684,6 +690,22 @@ impl RepoContext {
             .await?
             .into_iter()
             .map(|(hg_cs_id, cs_id)| (cs_id, hg_cs_id))
+            .collect();
+        Ok(mapping)
+    }
+
+    /// Similar to changeset_hg_ids, but returning Git-SHA1s.
+    pub async fn changeset_git_sha1s(
+        &self,
+        changesets: Vec<ChangesetId>,
+    ) -> Result<Vec<(ChangesetId, GitSha1)>, MononokeError> {
+        let mapping = self
+            .blob_repo()
+            .bonsai_git_mapping()
+            .get(changesets.into())
+            .await?
+            .into_iter()
+            .map(|entry| (entry.bcs_id, entry.git_sha1))
             .collect();
         Ok(mapping)
     }

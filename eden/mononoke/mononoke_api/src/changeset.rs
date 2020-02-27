@@ -33,7 +33,7 @@ use crate::changeset_path_diff::ChangesetPathDiffContext;
 use crate::errors::MononokeError;
 use crate::path::MononokePath;
 use crate::repo::RepoContext;
-use crate::specifiers::{ChangesetId, HgChangesetId};
+use crate::specifiers::{ChangesetId, GitSha1, HgChangesetId};
 
 #[derive(Clone)]
 pub struct ChangesetContext {
@@ -133,6 +133,16 @@ impl ChangesetContext {
             .compat()
             .await?;
         Ok(mapping.into_iter().next())
+    }
+
+    /// The git Sha1 for the changeset (if available).
+    pub async fn git_sha1(&self) -> Result<Option<GitSha1>, MononokeError> {
+        Ok(self
+            .repo()
+            .blob_repo()
+            .bonsai_git_mapping()
+            .get_git_sha1_from_bonsai(self.id)
+            .await?)
     }
 
     pub(crate) async fn root_fsnode_id(&self) -> Result<RootFsnodeId, MononokeError> {
