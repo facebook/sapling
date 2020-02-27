@@ -17,7 +17,8 @@ use deleted_files_manifest::{find_entries, list_all_entries, RootDeletedManifest
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{future::err, stream::futures_unordered, Future, IntoFuture, Stream};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::FutureExt;
+use futures_preview::compat::Future01CompatExt;
 use manifest::{get_implicit_deletes, PathOrPrefix};
 use mercurial_types::HgManifestId;
 use mononoke_types::{ChangesetId, MPath};
@@ -63,12 +64,12 @@ pub fn subcommand_deleted_manifest_build(name: &str) -> App {
         )
 }
 
-pub fn subcommand_deleted_manifest(
+pub async fn subcommand_deleted_manifest<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_matches: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
+    matches: &'a ArgMatches<'_>,
+    sub_matches: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
     args::init_cachelib(fb, &matches, None);
 
     let repo = args::open_repo(fb, &logger, &matches);
@@ -110,6 +111,8 @@ pub fn subcommand_deleted_manifest(
         }
         _ => err(SubcommandError::InvalidArgs).boxify(),
     }
+    .compat()
+    .await
 }
 
 fn subcommand_manifest(

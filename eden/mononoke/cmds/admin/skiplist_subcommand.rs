@@ -14,6 +14,7 @@ use futures::future::{loop_fn, ok, Loop};
 use futures::prelude::*;
 use futures::stream::iter_ok;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_preview::compat::Future01CompatExt;
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -30,12 +31,12 @@ use slog::{debug, info, Logger};
 use crate::cmdargs::{SKIPLIST_BUILD, SKIPLIST_READ};
 use crate::error::SubcommandError;
 
-pub fn subcommand_skiplist(
+pub async fn subcommand_skiplist<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
+    matches: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
     match sub_m.subcommand() {
         (SKIPLIST_BUILD, Some(sub_m)) => {
             let key = sub_m
@@ -84,6 +85,8 @@ pub fn subcommand_skiplist(
         }
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
+    .compat()
+    .await
 }
 
 fn build_skiplist_index<S: ToString>(

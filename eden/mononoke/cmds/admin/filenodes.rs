@@ -18,7 +18,8 @@ use fbinit::FacebookInit;
 use filenodes::FilenodeInfo;
 use futures::future::{join_all, Future};
 use futures::{IntoFuture, Stream};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::FutureExt;
+use futures_preview::compat::Future01CompatExt;
 use manifest::{Entry, ManifestOps};
 use mercurial_types::{HgFileEnvelope, HgFileNodeId, MPath};
 use mononoke_types::RepoPath;
@@ -187,12 +188,12 @@ fn handle_filenodes_at_revision(
         })
 }
 
-pub fn subcommand_filenodes(
+pub async fn subcommand_filenodes<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
+    matches: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     args::init_cachelib(fb, &matches, None);
 
@@ -312,4 +313,6 @@ pub fn subcommand_filenodes(
         }
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
+    .compat()
+    .await
 }

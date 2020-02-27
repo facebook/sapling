@@ -10,7 +10,7 @@ use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::prelude::*;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_preview::compat::Future01CompatExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, DateTime, FileChange};
 use serde_derive::Serialize;
 use slog::Logger;
@@ -19,12 +19,12 @@ use std::collections::BTreeMap;
 use crate::common::fetch_bonsai_changeset;
 use crate::error::SubcommandError;
 
-pub fn subcommand_bonsai_fetch(
+pub async fn subcommand_bonsai_fetch<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
+    matches: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
     let rev = sub_m.value_of("CHANGESET_ID").unwrap().to_string();
 
     args::init_cachelib(fb, &matches, None);
@@ -67,7 +67,8 @@ pub fn subcommand_bonsai_fetch(
             }
         })
         .from_err()
-        .boxify()
+        .compat()
+        .await
 }
 
 #[derive(Serialize)]

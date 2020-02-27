@@ -16,7 +16,8 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use futures::{future, Future, IntoFuture, Stream};
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_ext::{FutureExt, StreamExt};
+use futures_preview::compat::Future01CompatExt;
 use manifest::{Entry, ManifestOps, PathOrPrefix};
 
 use mononoke_types::{ChangesetId, MPath};
@@ -76,12 +77,12 @@ pub fn subcommand_unodes_build(name: &str) -> App {
         )
 }
 
-pub fn subcommand_unodes(
+pub async fn subcommand_unodes<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_matches: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
+    matches: &'a ArgMatches<'_>,
+    sub_matches: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
     let tracing_enable = sub_matches.is_present(ARG_TRACE);
     if tracing_enable {
         tracing::enable();
@@ -131,6 +132,8 @@ pub fn subcommand_unodes(
     } else {
         run
     }
+    .compat()
+    .await
 }
 
 fn subcommand_tree(

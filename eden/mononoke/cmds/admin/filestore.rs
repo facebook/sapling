@@ -13,7 +13,8 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{self, Alias, FetchKey, StoreRequest};
 use futures::{Future, IntoFuture, Stream};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::FutureExt;
+use futures_preview::compat::Future01CompatExt;
 use mononoke_types::{
     hash::{Sha1, Sha256},
     ContentId,
@@ -71,12 +72,12 @@ pub fn build_subcommand(name: &str) -> App {
         )
 }
 
-pub fn execute_command(
+pub async fn execute_command<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_matches: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
+    matches: &'a ArgMatches<'_>,
+    sub_matches: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
     args::init_cachelib(fb, &matches, None);
     let blobrepo = args::open_repo(fb, &logger, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
@@ -189,6 +190,8 @@ pub fn execute_command(
             .boxify(),
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
+    .compat()
+    .await
 }
 
 // NOTE: This assumes the matches are from a command that has ARG_KIND and ARG_ID.

@@ -21,6 +21,7 @@ use futures::stream::Stream;
 use futures_ext::{
     bounded_traversal::bounded_traversal_stream, try_boxfuture, BoxFuture, FutureExt,
 };
+use futures_preview::compat::Future01CompatExt;
 use itertools::{Either, Itertools};
 use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId, HgEntryId, HgManifest, MPath};
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};
@@ -123,12 +124,12 @@ fn find_files_with_given_content_id_blobstore_keys(
 }
 
 /// Entrypoint for redaction subcommand handling
-pub fn subcommand_redaction(
+pub async fn subcommand_redaction<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
+    matches: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
     match sub_m.subcommand() {
         (REDACTION_ADD, Some(sub_sub_m)) => redaction_add(fb, logger, matches, sub_sub_m),
         (REDACTION_REMOVE, Some(sub_sub_m)) => redaction_remove(fb, logger, matches, sub_sub_m),
@@ -138,6 +139,8 @@ pub fn subcommand_redaction(
             ::std::process::exit(1);
         }
     }
+    .compat()
+    .await
 }
 
 /// Fetch the file list from the subcommand cli matches

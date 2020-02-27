@@ -9,7 +9,7 @@ use anyhow::{format_err, Error};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 use futures::{future, future::IntoFuture, Future};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_ext::{BoxFuture, FutureExt};
 
 use blobrepo::BlobRepo;
 use bookmark_renaming::{get_large_to_small_renamer, get_small_to_large_renamer};
@@ -39,14 +39,14 @@ const HASH_ARG: &str = "HASH";
 const LARGE_REPO_HASH_ARG: &str = "LARGE_REPO_HASH";
 const UPDATE_LARGE_REPO_BOOKMARKS: &str = "update-large-repo-bookmarks";
 
-pub fn subcommand_crossrepo(
+pub async fn subcommand_crossrepo<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
-    let source_repo_id = try_boxfuture!(args::get_source_repo_id(fb, matches));
-    let target_repo_id = try_boxfuture!(args::get_target_repo_id(fb, matches));
+    matches: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
+    let source_repo_id = args::get_source_repo_id(fb, matches)?;
+    let target_repo_id = args::get_target_repo_id(fb, matches)?;
 
     args::init_cachelib(fb, &matches, None);
     let source_repo = args::open_repo_with_repo_id(fb, &logger, source_repo_id, matches);
@@ -68,8 +68,7 @@ pub fn subcommand_crossrepo(
                 .boxify()
         }
         (VERIFY_WC_SUBCOMMAND, Some(sub_sub_m)) => {
-            let (_, source_repo_config) =
-                try_boxfuture!(args::get_config_by_repoid(fb, matches, source_repo_id));
+            let (_, source_repo_config) = args::get_config_by_repoid(fb, matches, source_repo_id)?;
             let large_hash = sub_sub_m.value_of(LARGE_REPO_HASH_ARG).unwrap().to_owned();
 
             source_repo
@@ -101,8 +100,7 @@ pub fn subcommand_crossrepo(
                 .boxify()
         }
         (VERIFY_BOOKMARKS_SUBCOMMAND, Some(sub_sub_m)) => {
-            let (_, source_repo_config) =
-                try_boxfuture!(args::get_config_by_repoid(fb, matches, source_repo_id));
+            let (_, source_repo_config) = args::get_config_by_repoid(fb, matches, source_repo_id)?;
 
             let update_large_repo_bookmarks = sub_sub_m.is_present(UPDATE_LARGE_REPO_BOOKMARKS);
             source_repo
@@ -124,6 +122,8 @@ pub fn subcommand_crossrepo(
         }
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
+    .compat()
+    .await
 }
 
 fn subcommand_map(

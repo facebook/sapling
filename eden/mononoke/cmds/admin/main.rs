@@ -11,8 +11,6 @@
 use clap::{App, Arg, SubCommand};
 use fbinit::FacebookInit;
 use futures_ext::FutureExt as Future01Ext;
-use futures_preview::compat::Future01CompatExt;
-use futures_preview::FutureExt;
 use std::process::ExitCode;
 
 use cmdlib::args;
@@ -392,74 +390,61 @@ fn main(fb: FacebookInit) -> ExitCode {
     let logger = args::init_logging(fb, &matches);
     let error_logger = logger.clone();
 
-    let future = match matches.subcommand() {
-        (BLOBSTORE_FETCH, Some(sub_m)) => subcommand_blobstore_fetch(fb, logger, &matches, sub_m)
-            .compat()
-            .boxed(),
-        (BONSAI_FETCH, Some(sub_m)) => subcommand_bonsai_fetch(fb, logger, &matches, sub_m)
-            .compat()
-            .boxed(),
-        (CONTENT_FETCH, Some(sub_m)) => subcommand_content_fetch(fb, logger, &matches, sub_m)
-            .compat()
-            .boxed(),
-        (BOOKMARKS, Some(sub_m)) => {
-            args::init_cachelib(fb, &matches, None);
-            let ctx = CoreContext::new_with_logger(fb, logger.clone());
-            let repo_fut = args::open_repo(fb, &logger, &matches).boxify();
-            bookmarks_manager::handle_command(ctx, repo_fut, sub_m, logger)
-                .compat()
-                .boxed()
-        }
-        (HG_CHANGESET, Some(sub_m)) => subcommand_hg_changeset(fb, logger, &matches, sub_m)
-            .compat()
-            .boxed(),
-        (HG_SYNC_BUNDLE, Some(sub_m)) => {
-            subcommand_process_hg_sync(fb, sub_m, &matches, logger.clone())
-                .compat()
-                .boxed()
-        }
-        (SKIPLIST, Some(sub_m)) => subcommand_skiplist(fb, logger, &matches, sub_m)
-            .compat()
-            .boxed(),
-        (HASH_CONVERT, Some(sub_m)) => subcommand_hash_convert(fb, logger, &matches, sub_m)
-            .compat()
-            .boxed(),
-        (REDACTION, Some(sub_m)) => subcommand_redaction(fb, logger, &matches, sub_m)
-            .compat()
-            .boxed(),
-        (FILENODES, Some(sub_m)) => subcommand_filenodes(fb, logger, &matches, sub_m)
-            .compat()
-            .boxed(),
-        (FILESTORE, Some(sub_m)) => filestore::execute_command(fb, logger, &matches, sub_m)
-            .compat()
-            .boxed(),
-        (PHASES, Some(sub_m)) => phases::subcommand_phases(fb, logger, &matches, sub_m)
-            .compat()
-            .boxed(),
-        (UNODES, Some(sub_m)) => subcommand_unodes::subcommand_unodes(fb, logger, &matches, sub_m)
-            .compat()
-            .boxed(),
-        (CROSSREPO, Some(sub_m)) => subcommand_crossrepo(fb, logger, &matches, sub_m)
-            .compat()
-            .boxed(),
-        (BLAME, Some(sub_m)) => subcommand_blame::subcommand_blame(fb, logger, &matches, sub_m)
-            .compat()
-            .boxed(),
-        (DELETED_MANIFEST, Some(sub_m)) => {
-            subcommand_deleted_manifest::subcommand_deleted_manifest(fb, logger, &matches, sub_m)
-                .compat()
-                .boxed()
-        }
-        (DERIVED_DATA, Some(sub_m)) => {
-            derived_data::subcommand_derived_data(fb, logger, &matches, sub_m)
-        }
-        _ => futures_preview::future::err(SubcommandError::InvalidArgs).boxed(),
-    };
-
     let debug = matches.is_present("debug");
 
     let mut runtime = args::init_runtime(&matches).expect("failed to initialize Tokio runtime");
-    let res = runtime.block_on_std(future);
+    let res = runtime.block_on_std(async {
+        match matches.subcommand() {
+            (BLOBSTORE_FETCH, Some(sub_m)) => {
+                subcommand_blobstore_fetch(fb, logger, &matches, sub_m).await
+            }
+            (BONSAI_FETCH, Some(sub_m)) => {
+                subcommand_bonsai_fetch(fb, logger, &matches, sub_m).await
+            }
+            (CONTENT_FETCH, Some(sub_m)) => {
+                subcommand_content_fetch(fb, logger, &matches, sub_m).await
+            }
+            (BOOKMARKS, Some(sub_m)) => {
+                args::init_cachelib(fb, &matches, None);
+                let ctx = CoreContext::new_with_logger(fb, logger.clone());
+                let repo_fut = args::open_repo(fb, &logger, &matches).boxify();
+                bookmarks_manager::handle_command(ctx, repo_fut, sub_m, logger).await
+            }
+            (HG_CHANGESET, Some(sub_m)) => {
+                subcommand_hg_changeset(fb, logger, &matches, sub_m).await
+            }
+            (HG_SYNC_BUNDLE, Some(sub_m)) => {
+                subcommand_process_hg_sync(fb, sub_m, &matches, logger.clone()).await
+            }
+            (SKIPLIST, Some(sub_m)) => subcommand_skiplist(fb, logger, &matches, sub_m).await,
+            (HASH_CONVERT, Some(sub_m)) => {
+                subcommand_hash_convert(fb, logger, &matches, sub_m).await
+            }
+            (REDACTION, Some(sub_m)) => subcommand_redaction(fb, logger, &matches, sub_m).await,
+            (FILENODES, Some(sub_m)) => subcommand_filenodes(fb, logger, &matches, sub_m).await,
+            (FILESTORE, Some(sub_m)) => {
+                filestore::execute_command(fb, logger, &matches, sub_m).await
+            }
+            (PHASES, Some(sub_m)) => phases::subcommand_phases(fb, logger, &matches, sub_m).await,
+            (UNODES, Some(sub_m)) => {
+                subcommand_unodes::subcommand_unodes(fb, logger, &matches, sub_m).await
+            }
+            (CROSSREPO, Some(sub_m)) => subcommand_crossrepo(fb, logger, &matches, sub_m).await,
+            (BLAME, Some(sub_m)) => {
+                subcommand_blame::subcommand_blame(fb, logger, &matches, sub_m).await
+            }
+            (DELETED_MANIFEST, Some(sub_m)) => {
+                subcommand_deleted_manifest::subcommand_deleted_manifest(
+                    fb, logger, &matches, sub_m,
+                )
+                .await
+            }
+            (DERIVED_DATA, Some(sub_m)) => {
+                derived_data::subcommand_derived_data(fb, logger, &matches, sub_m).await
+            }
+            _ => Err(SubcommandError::InvalidArgs),
+        }
+    });
 
     match res {
         Ok(_) => ExitCode::SUCCESS,

@@ -22,6 +22,7 @@ use futures_ext::{
     bounded_traversal::{bounded_traversal_dag, Iter},
     BoxFuture, FutureExt,
 };
+use futures_preview::compat::Future01CompatExt;
 use manifest::ManifestOps;
 use mononoke_types::{
     blame::{Blame, BlameRejected},
@@ -77,12 +78,12 @@ pub fn subcommand_blame_build(name: &str) -> App {
         )
 }
 
-pub fn subcommand_blame(
+pub async fn subcommand_blame<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_matches: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
+    matches: &'a ArgMatches<'_>,
+    sub_matches: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
     args::init_cachelib(fb, &matches, None);
 
     let repo = args::open_repo(fb, &logger, &matches);
@@ -106,6 +107,8 @@ pub fn subcommand_blame(
         }
         _ => future::err(SubcommandError::InvalidArgs).boxify(),
     }
+    .compat()
+    .await
 }
 
 fn with_changeset_and_path<F, FOut>(

@@ -11,7 +11,7 @@ use clap::ArgMatches;
 use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{stream, Future, IntoFuture, Stream};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, FutureExt};
 use futures_preview::{
     compat::Future01CompatExt,
     future::{FutureExt as PreviewFutureExt, TryFutureExt},
@@ -36,12 +36,12 @@ use slog::{info, Logger};
 
 use crate::error::SubcommandError;
 
-pub fn subcommand_phases(
+pub async fn subcommand_phases<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
+    matches: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
     let repo = args::open_repo(fb, &logger, &matches);
     args::init_cachelib(fb, &matches, None);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
@@ -90,6 +90,8 @@ pub fn subcommand_phases(
         }
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
+    .compat()
+    .await
 }
 
 fn add_public_phases(

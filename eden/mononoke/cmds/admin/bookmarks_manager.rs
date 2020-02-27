@@ -11,6 +11,7 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_preview::compat::Future01CompatExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
 use serde_json::{json, to_string_pretty};
@@ -108,12 +109,12 @@ pub fn prepare_command<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
         .subcommand(del)
 }
 
-pub fn handle_command<'a>(
+pub async fn handle_command(
     ctx: CoreContext,
     repo: BoxFuture<BlobRepo, Error>,
-    matches: &ArgMatches<'a>,
+    matches: &ArgMatches<'_>,
     _logger: Logger,
-) -> BoxFuture<(), SubcommandError> {
+) -> Result<(), SubcommandError> {
     match matches.subcommand() {
         (GET_CMD, Some(sub_m)) => handle_get(sub_m, ctx, repo).from_err().boxify(),
         (SET_CMD, Some(sub_m)) => handle_set(sub_m, ctx, repo).from_err().boxify(),
@@ -122,6 +123,8 @@ pub fn handle_command<'a>(
         (DEL_CMD, Some(sub_m)) => handle_delete(sub_m, ctx, repo).from_err().boxify(),
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
+    .compat()
+    .await
 }
 
 fn format_output(json_flag: bool, changeset_id: String, changeset_type: &str) -> String {

@@ -14,6 +14,7 @@ use clap::ArgMatches;
 use fbinit::FacebookInit;
 use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_preview::compat::Future01CompatExt;
 
 use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
@@ -100,21 +101,21 @@ fn get_blobstore(
     )
 }
 
-pub fn subcommand_blobstore_fetch(
+pub async fn subcommand_blobstore_fetch<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
-    let repo_id = try_boxfuture!(args::get_repo_id(fb, &matches));
-    let (_, config) = try_boxfuture!(args::get_config(fb, &matches));
+    matches: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
+    let repo_id = args::get_repo_id(fb, &matches)?;
+    let (_, config) = args::get_config(fb, &matches)?;
     let redaction = config.redaction;
     let storage_config = config.storage_config;
     let inner_blobstore_id = args::get_u64_opt(&sub_m, "inner-blobstore-id");
-    let scrub_action = try_boxfuture!(sub_m
+    let scrub_action = sub_m
         .value_of(SCRUB_BLOBSTORE_ACTION_ARG)
         .map(ScrubAction::from_str)
-        .transpose());
+        .transpose()?;
     let mysql_options = args::parse_mysql_options(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
@@ -129,7 +130,7 @@ pub fn subcommand_blobstore_fetch(
         blobstore_options,
     );
 
-    let common_config = try_boxfuture!(args::read_common_config(fb, &matches));
+    let common_config = args::read_common_config(fb, &matches)?;
     let scuba_censored_table = common_config.scuba_censored_table;
     let scuba_redaction_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
 
@@ -200,7 +201,8 @@ pub fn subcommand_blobstore_fetch(
             }
         })
         .from_err()
-        .boxify()
+        .compat()
+        .await
 }
 
 fn get_from_sources<T: Blobstore + Clone>(

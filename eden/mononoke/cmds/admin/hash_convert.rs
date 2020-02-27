@@ -8,7 +8,8 @@
 use clap::ArgMatches;
 use fbinit::FacebookInit;
 use futures::prelude::*;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::FutureExt;
+use futures_preview::compat::Future01CompatExt;
 use std::str::FromStr;
 
 use cmdlib::args;
@@ -19,12 +20,12 @@ use slog::Logger;
 
 use crate::error::SubcommandError;
 
-pub fn subcommand_hash_convert(
+pub async fn subcommand_hash_convert<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
+    matches: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
     let source_hash = sub_m.value_of("HASH").unwrap().to_string();
     let source = sub_m.value_of("from").unwrap().to_string();
     let target = sub_m.value_of("to").unwrap();
@@ -70,5 +71,6 @@ pub fn subcommand_hash_convert(
             }
         })
         .from_err()
-        .boxify()
+        .compat()
+        .await
 }

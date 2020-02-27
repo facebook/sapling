@@ -17,18 +17,19 @@ use futures::future;
 use futures::prelude::*;
 use futures::stream::iter_ok;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_preview::compat::Future01CompatExt;
 use mercurial_types::manifest::Content;
 use mercurial_types::{HgManifest, MPath, MPathElement};
 use slog::{debug, Logger};
 
 use crate::error::SubcommandError;
 
-pub fn subcommand_content_fetch(
+pub async fn subcommand_content_fetch<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
+    matches: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
     let rev = sub_m.value_of("CHANGESET_ID").unwrap().to_string();
     let path = sub_m.value_of("PATH").unwrap().to_string();
 
@@ -74,7 +75,8 @@ pub fn subcommand_content_fetch(
             }
         })
         .map_err(|e| e.into())
-        .boxify()
+        .compat()
+        .await
 }
 
 fn fetch_content_from_manifest(

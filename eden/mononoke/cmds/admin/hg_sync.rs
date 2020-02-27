@@ -16,7 +16,8 @@ use failure_ext::FutureFailureErrorExt;
 use fbinit::FacebookInit;
 use futures::future::{self, ok};
 use futures::prelude::*;
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_ext::{try_boxfuture, FutureExt};
+use futures_preview::compat::Future01CompatExt;
 use futures_preview::future::{FutureExt as _, TryFutureExt};
 use mononoke_hg_sync_job_helper_lib::save_bundle_to_file;
 use mononoke_types::RepositoryId;
@@ -29,14 +30,13 @@ use crate::cmdargs::{
 use crate::common::{format_bookmark_log_entry, LATEST_REPLAYED_REQUEST_KEY};
 use crate::error::SubcommandError;
 
-pub fn subcommand_process_hg_sync(
+pub async fn subcommand_process_hg_sync<'a>(
     fb: FacebookInit,
-    sub_m: &ArgMatches<'_>,
-    matches: &ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+    matches: &'a ArgMatches<'_>,
     logger: Logger,
-) -> BoxFuture<(), SubcommandError> {
-    let repo_id =
-        try_boxfuture!(args::get_repo_id(fb, &matches).map_err(|e| SubcommandError::Error(e)));
+) -> Result<(), SubcommandError> {
+    let repo_id = args::get_repo_id(fb, &matches)?;
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
@@ -311,17 +311,15 @@ pub fn subcommand_process_hg_sync(
             args::init_cachelib(fb, &matches, None);
             let repo_fut = args::open_repo(fb, &logger, &matches);
             let id = args::get_u64_opt(sub_m, "id");
-            let id = try_boxfuture!(id.ok_or(Error::msg("--id is not specified")));
+            let id = id.ok_or(Error::msg("--id is not specified"))?;
             if id == 0 {
-                return future::err(Error::msg("--id has to be greater than 0"))
-                    .from_err()
-                    .boxify();
+                return Err(Error::msg("--id has to be greater than 0").into());
             }
 
-            let output_file = try_boxfuture!(sub_m
+            let output_file = sub_m
                 .value_of("output-file")
                 .ok_or(Error::msg("--output-file is not specified"))
-                .map(std::path::PathBuf::from));
+                .map(std::path::PathBuf::from)?;
 
             bookmarks
                 .and_then(move |bookmarks| {
@@ -383,6 +381,8 @@ pub fn subcommand_process_hg_sync(
             .boxify(),
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
+    .compat()
+    .await
 }
 
 fn process_hg_sync_verify(

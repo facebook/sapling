@@ -14,7 +14,8 @@ use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::prelude::*;
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::FutureExt;
+use futures_preview::compat::Future01CompatExt;
 use manifest::{bonsai_diff, BonsaiDiffFileChange};
 use mercurial_types::{HgChangesetId, HgManifestId, MPath};
 use revset::RangeNodeStream;
@@ -28,12 +29,12 @@ use std::str::FromStr;
 use crate::cmdargs::{HG_CHANGESET_DIFF, HG_CHANGESET_RANGE};
 use crate::error::SubcommandError;
 
-pub fn subcommand_hg_changeset(
+pub async fn subcommand_hg_changeset<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> BoxFuture<(), SubcommandError> {
+    matches: &'a ArgMatches<'_>,
+    sub_m: &'a ArgMatches<'_>,
+) -> Result<(), SubcommandError> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match sub_m.subcommand() {
@@ -120,6 +121,8 @@ pub fn subcommand_hg_changeset(
         }
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
+    .compat()
+    .await
 }
 
 fn hg_changeset_diff(
