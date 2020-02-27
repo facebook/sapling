@@ -1520,6 +1520,8 @@ class Test(unittest.TestCase):
             # in the test, which will go through the wrapper and get a correct
             # environment again.
             + " LD_LIBRARY_PATH"
+            # Used by dummyssh
+            + " DUMMYSSH_STABLE_ORDER"
         ).split():
             if k in env:
                 del env[k]

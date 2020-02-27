@@ -6,6 +6,7 @@ import os
 import shlex
 import subprocess
 import sys
+import threading
 
 
 os.chdir(os.getenv("TESTTMP"))
@@ -89,5 +90,29 @@ if "hgcli" in hgcmd:
     mock_username = os.environ.get("MOCK_USERNAME")
     hgcmd += " --mock-username '{}'".format(mock_username)
 
-r = os.system(hgcmd)
-sys.exit(bool(r))
+if os.environ.get("DUMMYSSH_STABLE_ORDER"):
+    # Buffer all stderr outputs until the end of connection.  This reduces test
+    # flakiness where stderr and stdout output order is nondeterministic.
+    p = subprocess.Popen(hgcmd, shell=True, stderr=subprocess.PIPE)
+    errbuf = [b""]
+
+    def readstderr():
+        while True:
+            ch = p.stderr.read(1)
+            if not ch:
+                break
+            errbuf[0] += ch
+
+    t = threading.Thread(target=readstderr)
+    t.start()
+
+    p.wait()
+    t.join()
+
+    sys.stderr.write(errbuf[0])
+    sys.stderr.flush()
+
+    sys.exit(p.returncode)
+else:
+    r = os.system(hgcmd)
+    sys.exit(bool(r))
