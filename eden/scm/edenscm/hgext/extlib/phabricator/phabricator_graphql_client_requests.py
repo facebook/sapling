@@ -5,9 +5,8 @@
 
 from __future__ import absolute_import
 
-import json
-
 import requests
+from edenscm.mercurial import json
 
 
 # helper class so phabricator_graphql_client can talk using the requests
@@ -22,7 +21,7 @@ class PhabricatorClientError(Exception):
 class PhabricatorGraphQLClientRequests(object):
     def sendpost(self, request_url, data, timeout, ca_bundle):
         res = requests.post(request_url, data, verify=ca_bundle or True)
-        data = json.loads(res.content.decode("utf-8"))
+        data = json.loads(res.content)
         if res.status_code != 200:
             raise PhabricatorClientError(
                 "Phabricator not available returned " + str(res.status), res

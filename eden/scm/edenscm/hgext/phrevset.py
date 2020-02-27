@@ -22,11 +22,10 @@ callsign = E
 
 """
 
-import json
 import re
 import threading
 
-from edenscm.mercurial import error, hg, namespaces, pycompat, registrar, util
+from edenscm.mercurial import error, hg, json, namespaces, pycompat, registrar, util
 from edenscm.mercurial.i18n import _
 
 from .extlib.phabricator import graphql
@@ -219,7 +218,7 @@ def revsetdiff(repo, diffid):
             # The response from phabricator contains a changeset ID.
             # Convert it back to a rev number.
             try:
-                return [repo[rev.encode("utf-8")].rev()]
+                return [repo[rev].rev()]
             except error.RepoLookupError:
                 # TODO: 's/svnrev/globalrev' after turning off Subversion
                 # servers. We will know about this when we remove the `svnrev`
@@ -246,8 +245,7 @@ def revsetdiff(repo, diffid):
             if prop["node"]["property_name"] == "local:commits":
                 commits = json.loads(prop["node"]["property_value"])
 
-        # the JSON parser returns Unicode strings, convert to `str` in UTF-8
-        revs = [c["commit"].encode("utf-8") for c in commits.values()]
+        revs = [c["commit"] for c in commits.values()]
 
         # verify all revisions exist in the current repo; if not, try to
         # find their counterpart by parsing the log
@@ -255,7 +253,7 @@ def revsetdiff(repo, diffid):
         for rev in revs:
             try:
                 unfiltered = repo.unfiltered()
-                node = unfiltered[rev.encode("utf-8")]
+                node = unfiltered[rev]
             except error.RepoLookupError:
                 raise error.Abort(
                     "Commit %s corresponding to D%s\n not found in the repo"
