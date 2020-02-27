@@ -70,19 +70,7 @@ class connectionpool(object):
                 pass
 
         if conn is None:
-
-            def _cleanup(orig):
-                # close pipee first so peer._cleanup reading it won't deadlock,
-                # if there are other processes with pipeo open (i.e. us).
-                peer = orig.__self__
-                if util.safehasattr(peer, "_pipee"):
-                    peer._pipee.close()
-                return orig()
-
             peer = hg.peer(self._repo.ui, {}, path)
-            if util.safehasattr(peer, "_cleanup"):
-                extensions.wrapfunction(peer, "_cleanup", _cleanup)
-
             conn = connection(self._repo.ui, pathpool, peer, path)
         else:
             self._repo.ui.debug("reusing connection from pool\n")
