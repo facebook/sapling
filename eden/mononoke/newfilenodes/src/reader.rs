@@ -10,7 +10,7 @@ use context::{CoreContext, PerfCounterType};
 use faster_hex::hex_encode;
 use futures_preview::{
     compat::Future01CompatExt,
-    future::{self},
+    future::{self, Future},
 };
 use itertools::Itertools;
 use mercurial_types::{HgChangesetId, HgFileNodeId};
@@ -19,7 +19,9 @@ use sql::{queries, Connection};
 use stats::prelude::*;
 use std::collections::HashMap;
 use std::marker::PhantomData;
+use std::time::Duration;
 use thiserror::Error as DeriveError;
+use tokio_preview::time::timeout;
 
 use filenodes::FilenodeInfo;
 
@@ -37,7 +39,14 @@ define_stats! {
     get_local_cache_misses: timeseries(Sum),
     range_local_cache_misses: timeseries(Sum),
     paths_local_cache_misses: timeseries(Sum),
+    remote_cache_timeouts: timeseries(Sum),
+    sql_timeouts: timeseries(Sum),
 }
+
+// Both of these are pretty convervative, and collected experimentally. They're here to ensure one
+// bad query doesn't lock down an entire shard for an extended period of time.
+const REMOTE_CACHE_TIMEOUT_MILLIS: u64 = 100;
+const SQL_TIMEOUT_MILLIS: u64 = 5_000;
 
 #[derive(Debug, DeriveError)]
 pub enum ErrorKind {
@@ -49,6 +58,9 @@ pub enum ErrorKind {
 
     #[error("Internal error: SQL error: {0:?}")]
     SqlError(Error),
+
+    #[error("Internal error: SQL timeout")]
+    SqlTimeout,
 
     #[error("Internal error: Path conversion failed: {0:?}")]
     PathConversionFailed(Error),
@@ -281,25 +293,25 @@ async fn select_partial_filenode(
 
     // Before hiting MySQL, check our caches.
 
-    let from_remote_cache = remote_cache
-        .get_filenode(repo_id, &pwh.path, filenode)
-        .await;
+    let from_remote_cache =
+        enforce_remote_cache_timeout(remote_cache.get_filenode(repo_id, &pwh.path, filenode)).await;
 
     if let Some(full) = from_remote_cache {
         fill_full_filenode(local_cache.untracked(), &key, repo_id, &full);
         return Ok(Some(Selection::Full(full)));
     }
 
-    let rows = SelectFilenode::query(
-        connection.as_ref(),
-        &repo_id,
-        &pwh.hash,
-        &pwh.is_tree,
-        &filenode,
+    let rows = enforce_sql_timeout(
+        SelectFilenode::query(
+            connection.as_ref(),
+            &repo_id,
+            &pwh.hash,
+            &pwh.is_tree,
+            &filenode,
+        )
+        .compat(),
     )
-    .compat()
-    .await
-    .map_err(ErrorKind::SqlError)?;
+    .await?;
 
     match rows.into_iter().next() {
         Some(row) => {
@@ -360,17 +372,18 @@ async fn select_partial_history(
 
     STATS::range_local_cache_misses.add_value(1);
 
-    let from_remote_cache = remote_cache.get_history(repo_id, &pwh.path).await;
+    let from_remote_cache =
+        enforce_remote_cache_timeout(remote_cache.get_history(repo_id, &pwh.path)).await;
 
     if let Some(full) = from_remote_cache {
         fill_full_history(local_cache.untracked(), &key, repo_id, &full[..]);
         return Ok(Selection::Full(full));
     }
 
-    let rows = SelectAllFilenodes::query(connection.as_ref(), &repo_id, &pwh.hash, &pwh.is_tree)
-        .compat()
-        .await
-        .map_err(ErrorKind::SqlError)?;
+    let rows = enforce_sql_timeout(
+        SelectAllFilenodes::query(connection.as_ref(), &repo_id, &pwh.hash, &pwh.is_tree).compat(),
+    )
+    .await?;
 
     let history = rows
         .into_iter()
@@ -493,11 +506,11 @@ async fn select_paths<I: Iterator<Item = PathHashBytes>>(
                 STATS::paths_local_cache_misses.add_value(group.len() as i64);
 
                 if group.len() > 0 {
-                    let paths = SelectPaths::query(connection.as_ref(), &repo_id, &group[..])
-                        .compat()
-                        .await
-                        .map_err(ErrorKind::SqlError)?
-                        .into_iter();
+                    let paths = enforce_sql_timeout(
+                        SelectPaths::query(connection.as_ref(), &repo_id, &group[..]).compat(),
+                    )
+                    .await?
+                    .into_iter();
 
                     for (path_hash, path) in paths {
                         local_cache.fill(&path_cache_key(repo_id, &path_hash), &path);
@@ -575,6 +588,33 @@ fn fill_full_history(
     let history = PartialHistory { history };
 
     local_cache.fill(key, &history);
+}
+
+async fn enforce_remote_cache_timeout<T, Fut>(fut: Fut) -> Option<T>
+where
+    Fut: Future<Output = Option<T>>,
+{
+    match timeout(Duration::from_millis(REMOTE_CACHE_TIMEOUT_MILLIS), fut).await {
+        Ok(r) => r,
+        Err(_) => {
+            STATS::remote_cache_timeouts.add_value(1);
+            None
+        }
+    }
+}
+
+async fn enforce_sql_timeout<T, Fut>(fut: Fut) -> Result<T, ErrorKind>
+where
+    Fut: Future<Output = Result<T, Error>>,
+{
+    match timeout(Duration::from_millis(SQL_TIMEOUT_MILLIS), fut).await {
+        Ok(Ok(r)) => Ok(r),
+        Ok(Err(e)) => Err(ErrorKind::SqlError(e)),
+        Err(_) => {
+            STATS::sql_timeouts.add_value(1);
+            Err(ErrorKind::SqlTimeout)
+        }
+    }
 }
 
 queries! {
