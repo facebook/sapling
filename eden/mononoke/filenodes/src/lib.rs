@@ -7,17 +7,13 @@
 
 #![deny(warnings)]
 
-pub use crate::caching::CachingFilenodes;
-use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
 use context::CoreContext;
 use futures_ext::BoxFuture;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgNodeHash, RepoPath};
-use mononoke_types::{hash, RepoPathCached, RepositoryId};
+use mononoke_types::{hash, RepositoryId};
 use quickcheck::{Arbitrary, Gen};
-use std::convert::TryFrom;
 
-mod caching;
 pub mod thrift {
     pub use filenodes_if::*;
 }
@@ -36,67 +32,6 @@ pub struct FilenodeInfo {
     pub p2: Option<HgFileNodeId>,
     pub copyfrom: Option<(RepoPath, HgFileNodeId)>,
     pub linknode: HgChangesetId,
-}
-
-#[derive(Abomonation, Clone)]
-pub struct FilenodeInfoCached {
-    pub path: RepoPathCached,
-    pub filenode: HgFileNodeId,
-    pub p1: Option<HgFileNodeId>,
-    pub p2: Option<HgFileNodeId>,
-    pub copyfrom: Option<(RepoPathCached, HgFileNodeId)>,
-    pub linknode: HgChangesetId,
-}
-
-impl From<FilenodeInfo> for FilenodeInfoCached {
-    fn from(info: FilenodeInfo) -> Self {
-        let FilenodeInfo {
-            path,
-            filenode,
-            p1,
-            p2,
-            copyfrom,
-            linknode,
-        } = info;
-        let path = path.into();
-        let copyfrom = copyfrom.map(|(path, filenode_id)| (path.into(), filenode_id));
-        FilenodeInfoCached {
-            path,
-            filenode,
-            p1,
-            p2,
-            copyfrom,
-            linknode,
-        }
-    }
-}
-
-impl TryFrom<FilenodeInfoCached> for FilenodeInfo {
-    type Error = Error;
-
-    fn try_from(info: FilenodeInfoCached) -> Result<Self> {
-        let FilenodeInfoCached {
-            path,
-            filenode,
-            p1,
-            p2,
-            copyfrom,
-            linknode,
-        } = info;
-        let path = RepoPath::try_from(&path)?;
-        let copyfrom = match copyfrom {
-            None => None,
-            Some((path, filenode_id)) => Some((RepoPath::try_from(&path)?, filenode_id)),
-        };
-        Ok(FilenodeInfo {
-            path,
-            filenode,
-            p1,
-            p2,
-            copyfrom,
-            linknode,
-        })
-    }
 }
 
 impl FilenodeInfo {

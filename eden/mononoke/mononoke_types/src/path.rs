@@ -14,7 +14,6 @@ use std::io::{self, Write};
 use std::iter::{once, FromIterator, Once};
 use std::slice::Iter;
 
-use abomonation_derive::Abomonation;
 use anyhow::{bail, Error, Result};
 use bytes::Bytes;
 use failure_ext::chain::ChainExt;
@@ -39,40 +38,6 @@ pub enum RepoPath {
     RootPath,
     DirectoryPath(MPath),
     FilePath(MPath),
-}
-
-// Cacheable instance of RepoPath that can be used inside cachelib
-#[derive(Abomonation, Clone, PartialEq, Eq, Hash)]
-pub enum RepoPathCached {
-    RootPath,
-    DirectoryPath(Vec<u8>),
-    FilePath(Vec<u8>),
-}
-
-impl From<RepoPath> for RepoPathCached {
-    fn from(path: RepoPath) -> Self {
-        match path {
-            RepoPath::RootPath => RepoPathCached::RootPath,
-            RepoPath::DirectoryPath(path) => RepoPathCached::DirectoryPath(path.to_vec()),
-            RepoPath::FilePath(path) => RepoPathCached::FilePath(path.to_vec()),
-        }
-    }
-}
-
-impl<'a> TryFrom<&'a RepoPathCached> for RepoPath {
-    type Error = Error;
-
-    fn try_from(path: &'a RepoPathCached) -> Result<Self> {
-        match path {
-            RepoPathCached::RootPath => Ok(RepoPath::RootPath),
-            RepoPathCached::DirectoryPath(path) => {
-                MPath::try_from(path.as_slice()).map(RepoPath::DirectoryPath)
-            }
-            RepoPathCached::FilePath(path) => {
-                MPath::try_from(path.as_slice()).map(RepoPath::FilePath)
-            }
-        }
-    }
 }
 
 impl RepoPath {

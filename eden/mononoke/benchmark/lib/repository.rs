@@ -22,7 +22,7 @@ use changesets::{CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets,
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use fbinit::FacebookInit;
-use filenodes::{CachingFilenodes, FilenodeInfo, Filenodes};
+use filenodes::{FilenodeInfo, Filenodes};
 use filestore::FilestoreConfig;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
@@ -32,13 +32,13 @@ use mononoke_types::{
     BlobstoreBytes, ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepoPath,
     RepositoryId,
 };
+use newfilenodes::NewFilenodesBuilder;
 use phases::{SqlPhasesFactory, SqlPhasesStore};
 use rand::Rng;
 use rand_distr::Distribution;
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::ScubaSampleBuilder;
 use sql_ext::SqlConstructors;
-use sqlfilenodes::SqlFilenodes;
 use std::{sync::Arc, time::Duration};
 
 pub type Normal = rand_distr::Normal<f64>;
@@ -76,20 +76,20 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
     };
 
     let filenodes = {
+        let pool = cachelib::get_volatile_pool("filenodes")
+            .unwrap()
+            .ok_or(Error::msg("no cache pool"))?;
+
+        let mut builder = NewFilenodesBuilder::with_sqlite_in_memory()?;
+        builder.enable_caching(fb, pool.clone(), pool, "filenodes", "");
+
         let filenodes: Arc<dyn Filenodes> = Arc::new(DelayedFilenodes::new(
-            SqlFilenodes::with_sqlite_in_memory()?,
+            builder.build(),
             settings.db_get_dist,
             settings.db_put_dist,
         ));
-        Arc::new(CachingFilenodes::new(
-            fb,
-            filenodes,
-            cachelib::get_volatile_pool("filenodes")
-                .unwrap()
-                .ok_or(Error::msg("no cache pool"))?,
-            "filenodes",
-            "",
-        ))
+
+        filenodes
     };
 
     let changesets = {
