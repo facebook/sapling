@@ -15,9 +15,11 @@ use futures_preview::{
 use itertools::Itertools;
 use mercurial_types::{HgChangesetId, HgFileNodeId};
 use mononoke_types::{RepoPath, RepositoryId};
+use scopeguard;
 use sql::{queries, Connection};
 use stats::prelude::*;
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::marker::PhantomData;
 use std::time::Duration;
 use thiserror::Error as DeriveError;
@@ -26,9 +28,10 @@ use tokio_preview::time::timeout;
 use filenodes::FilenodeInfo;
 
 use crate::connections::{AcquireReason, Connections};
-use crate::local_cache::{CacheKey, LocalCache, TrackedLocalCache};
+use crate::local_cache::{CacheKey, LocalCache};
 use crate::remote_cache::RemoteCache;
-use crate::structs::{PartialFilenode, PartialHistory, PathBytes, PathHashBytes, PathWithHash};
+use crate::shards::Shards;
+use crate::structs::{CachedFilenode, CachedHistory, PathBytes, PathHashBytes, PathWithHash};
 
 define_stats! {
     prefix = "mononoke.filenodes";
@@ -38,7 +41,6 @@ define_stats! {
     path_gets: timeseries(Sum),
     get_local_cache_misses: timeseries(Sum),
     range_local_cache_misses: timeseries(Sum),
-    paths_local_cache_misses: timeseries(Sum),
     remote_cache_timeouts: timeseries(Sum),
     sql_timeouts: timeseries(Sum),
 }
@@ -61,9 +63,6 @@ pub enum ErrorKind {
 
     #[error("Internal error: SQL timeout")]
     SqlTimeout,
-
-    #[error("Internal error: Path conversion failed: {0:?}")]
-    PathConversionFailed(Error),
 }
 
 struct PerfCounterRecorder<'a> {
@@ -77,11 +76,6 @@ impl<'a> PerfCounterRecorder<'a> {
     }
 }
 
-enum Selection<Partial, Full> {
-    Partial(Partial),
-    Full(Full),
-}
-
 type FilenodeRow = (
     HgFileNodeId,
     HgChangesetId,
@@ -92,11 +86,11 @@ type FilenodeRow = (
     Option<HgFileNodeId>,
 );
 
-fn filenode_cache_key(
+pub fn filenode_cache_key(
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
     filenode: &HgFileNodeId,
-) -> CacheKey<PartialFilenode> {
+) -> CacheKey<CachedFilenode> {
     let mut v = vec![0; pwh.hash.0.len() * 2];
     hex_encode(pwh.hash.0.as_ref(), &mut v).expect("failed to hex encode");
     let key = format!("filenode.{}.{}.{}", repo_id.id(), filenode, unsafe {
@@ -109,7 +103,7 @@ fn filenode_cache_key(
     }
 }
 
-fn history_cache_key(repo_id: RepositoryId, pwh: &PathWithHash<'_>) -> CacheKey<PartialHistory> {
+pub fn history_cache_key(repo_id: RepositoryId, pwh: &PathWithHash<'_>) -> CacheKey<CachedHistory> {
     let mut v = vec![0; pwh.hash.0.len() * 2];
     hex_encode(pwh.hash.0.as_ref(), &mut v).expect("failed to hex encode");
     let key = format!("history.{}.{}", repo_id.id(), unsafe {
@@ -122,22 +116,10 @@ fn history_cache_key(repo_id: RepositoryId, pwh: &PathWithHash<'_>) -> CacheKey<
     }
 }
 
-fn path_cache_key(repo_id: RepositoryId, hash: &PathHashBytes) -> CacheKey<PathBytes> {
-    let mut v = vec![0; hash.0.len() * 2];
-    hex_encode(hash.0.as_ref(), &mut v).expect("failed to hex encode");
-    let key = format!("hash.{}.{}", repo_id.id(), unsafe {
-        String::from_utf8_unchecked(v)
-    });
-
-    CacheKey {
-        key,
-        value: PhantomData,
-    }
-}
-
 pub struct FilenodesReader {
     read_connections: Connections,
     read_master_connections: Connections,
+    shards: Shards,
     pub local_cache: LocalCache,
     pub remote_cache: RemoteCache,
 }
@@ -148,6 +130,7 @@ impl FilenodesReader {
         read_master_connections: Vec<Connection>,
     ) -> Self {
         Self {
+            shards: Shards::new(1000, 1000),
             read_connections: Connections::new(read_connections),
             read_master_connections: Connections::new(read_master_connections),
             local_cache: LocalCache::Noop,
@@ -163,11 +146,39 @@ impl FilenodesReader {
         filenode: HgFileNodeId,
     ) -> Result<Option<FilenodeInfo>, Error> {
         STATS::gets.add_value(1);
-        let pwh = PathWithHash::from_repo_path(&path);
 
-        match select_filenode(
-            &self.local_cache,
-            &self.remote_cache,
+        let pwh = PathWithHash::from_repo_path(&path);
+        let key = filenode_cache_key(repo_id, &pwh, &filenode);
+
+        if let Some(cached) = self.local_cache.get(&key) {
+            return Ok(Some(cached.try_into()?));
+        }
+
+        let permit = self.shards.acquire_filenodes(&path, filenode).await;
+        scopeguard::defer! { drop(permit); };
+
+        // Now that we acquired the permit, check our cache again, in case the previous permit
+        // owner just filed the cache with the filenode we're looking for.
+        if let Some(cached) = self.local_cache.get(&key) {
+            return Ok(Some(cached.try_into()?));
+        }
+
+        STATS::get_local_cache_misses.add_value(1);
+
+        if let Some(info) = enforce_remote_cache_timeout(self.remote_cache.get_filenode(&key)).await
+        {
+            self.local_cache.fill(&key, &(&info).into());
+            return Ok(Some(info));
+        }
+
+        let cache_filler = FilenodeCacheFiller {
+            local_cache: &self.local_cache,
+            remote_cache: &self.remote_cache,
+            key: &key,
+        };
+
+        match select_filenode_from_sql(
+            cache_filler,
             &self.read_connections,
             repo_id,
             &pwh,
@@ -180,7 +191,7 @@ impl FilenodesReader {
         .await
         {
             Ok(Some(res)) => {
-                return Ok(Some(res));
+                return Ok(Some(res.try_into()?));
             }
             Ok(None) | Err(ErrorKind::FixedCopyInfoMissing(_)) => {
                 // If the filenode wasn't found, or its copy info was missing, it might be present
@@ -193,9 +204,8 @@ impl FilenodesReader {
 
         STATS::gets_master.add_value(1);
 
-        let res = select_filenode(
-            &self.local_cache,
-            &self.remote_cache,
+        let res = select_filenode_from_sql(
+            cache_filler,
             &self.read_master_connections,
             repo_id,
             &pwh,
@@ -207,7 +217,7 @@ impl FilenodesReader {
         )
         .await?;
 
-        Ok(res)
+        return res.map(|r| r.try_into()).transpose();
     }
 
     pub async fn get_all_filenodes_for_path(
@@ -219,10 +229,37 @@ impl FilenodesReader {
         STATS::range_gets.add_value(1);
 
         let pwh = PathWithHash::from_repo_path(&path);
+        let key = history_cache_key(repo_id, &pwh);
 
-        let res = select_history(
-            &self.local_cache,
-            &self.remote_cache,
+        if let Some(cached) = self.local_cache.get(&key) {
+            return Ok(cached.try_into()?);
+        }
+
+        let permit = self.shards.acquire_history(&path).await;
+        scopeguard::defer! { drop(permit); };
+
+        // See above for rationale here.
+        if let Some(cached) = self.local_cache.get(&key) {
+            return Ok(cached.try_into()?);
+        }
+
+        STATS::range_local_cache_misses.add_value(1);
+
+        if let Some(info) = enforce_remote_cache_timeout(self.remote_cache.get_history(&key)).await
+        {
+            // TODO: We should compress if this is too big.
+            self.local_cache.fill(&key, &(&info).into());
+            return Ok(info);
+        }
+
+        let cache_filler = HistoryCacheFiller {
+            local_cache: &self.local_cache,
+            remote_cache: &self.remote_cache,
+            key: &key,
+        };
+
+        let res = select_history_from_sql(
+            &cache_filler,
             &self.read_connections,
             repo_id,
             &pwh,
@@ -233,53 +270,55 @@ impl FilenodesReader {
         )
         .await?;
 
-        Ok(res)
+        Ok(res.try_into()?)
     }
 }
 
-async fn select_filenode(
-    local_cache: &LocalCache,
-    remote_cache: &RemoteCache,
+#[derive(Copy, Clone)]
+struct FilenodeCacheFiller<'a> {
+    local_cache: &'a LocalCache,
+    remote_cache: &'a RemoteCache,
+    key: &'a CacheKey<CachedFilenode>,
+}
+
+impl<'a> FilenodeCacheFiller<'a> {
+    fn fill(&self, filenode: CachedFilenode) {
+        self.local_cache.fill(&self.key, &filenode);
+        if let Ok(filenode) = filenode.try_into() {
+            self.remote_cache.fill_filenode(&self.key, filenode);
+        }
+    }
+}
+
+struct PartialFilenode {
+    filenode: HgFileNodeId,
+    p1: Option<HgFileNodeId>,
+    p2: Option<HgFileNodeId>,
+    copyfrom: Option<(PathHashBytes, HgFileNodeId)>,
+    linknode: HgChangesetId,
+}
+
+async fn select_filenode_from_sql(
+    filler: FilenodeCacheFiller<'_>,
     connections: &Connections,
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
     filenode: HgFileNodeId,
     recorder: &PerfCounterRecorder<'_>,
-) -> Result<Option<FilenodeInfo>, ErrorKind> {
-    let local_cache = local_cache.tracked();
+) -> Result<Option<CachedFilenode>, ErrorKind> {
+    let partial = select_partial_filenode(connections, repo_id, pwh, filenode, recorder).await?;
 
-    let selection = select_partial_filenode(
-        &local_cache,
-        remote_cache,
-        connections,
-        repo_id,
-        pwh,
-        filenode,
-        recorder,
-    )
-    .await?;
-
-    let partial = match selection {
-        Some(Selection::Partial(partial)) => partial,
-        Some(Selection::Full(full)) => {
-            return Ok(Some(full));
-        }
+    let partial = match partial {
+        Some(partial) => partial,
         None => {
             return Ok(None);
         }
     };
 
-    let ret = match fill_paths(
-        connections,
-        &local_cache,
-        pwh,
-        repo_id,
-        vec![partial],
-        recorder,
-    )
-    .await?
-    .into_iter()
-    .next()
+    let ret = match fill_paths(connections, pwh, repo_id, vec![partial], recorder)
+        .await?
+        .into_iter()
+        .next()
     {
         Some(ret) => ret,
         None => {
@@ -287,152 +326,78 @@ async fn select_filenode(
         }
     };
 
-    if local_cache.did_fill() {
-        remote_cache.fill_filenode(repo_id, &pwh.path, filenode, ret.clone());
-    }
+    filler.fill(ret.clone());
 
     Ok(Some(ret))
 }
 
 async fn select_partial_filenode(
-    local_cache: &TrackedLocalCache<'_>,
-    remote_cache: &RemoteCache,
     connections: &Connections,
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
     filenode: HgFileNodeId,
     recorder: &PerfCounterRecorder<'_>,
-) -> Result<Option<Selection<PartialFilenode, FilenodeInfo>>, ErrorKind> {
-    let key = filenode_cache_key(repo_id, &pwh, &filenode);
-
-    // Check our local cache first.
-    if let Some(partial) = local_cache.get(&key) {
-        return Ok(Some(Selection::Partial(partial)));
-    }
-
-    // Otherwise, request access to MySQL.
-    let connection = connections.acquire(&pwh, AcquireReason::Filenodes).await;
-
-    // Check the cache before dispatching any work: if we waited a long time to get the connection,
-    // it's possible that the cache has been filled by now.
-    if let Some(partial) = local_cache.get(&key) {
-        return Ok(Some(Selection::Partial(partial)));
-    }
-
-    STATS::get_local_cache_misses.add_value(1);
-
-    // Before hiting MySQL, check our caches.
-
-    let from_remote_cache =
-        enforce_remote_cache_timeout(remote_cache.get_filenode(repo_id, &pwh.path, filenode)).await;
-
-    if let Some(full) = from_remote_cache {
-        fill_full_filenode(local_cache.untracked(), &key, repo_id, &full);
-        return Ok(Some(Selection::Full(full)));
-    }
+) -> Result<Option<PartialFilenode>, ErrorKind> {
+    let connection = connections.checkout(&pwh, AcquireReason::Filenodes);
 
     recorder.increment();
 
     let rows = enforce_sql_timeout(
-        SelectFilenode::query(
-            connection.as_ref(),
-            &repo_id,
-            &pwh.hash,
-            &pwh.is_tree,
-            &filenode,
-        )
-        .compat(),
+        SelectFilenode::query(&connection, &repo_id, &pwh.hash, &pwh.is_tree, &filenode).compat(),
     )
     .await?;
 
     match rows.into_iter().next() {
         Some(row) => {
-            let ret = convert_row_to_partial_filenode(row)?;
-            local_cache.fill(&key, &ret);
-            Ok(Some(Selection::Partial(ret)))
+            let partial = convert_row_to_partial_filenode(row)?;
+            Ok(Some(partial))
         }
         None => Ok(None),
     }
 }
 
-async fn select_history(
-    local_cache: &LocalCache,
-    remote_cache: &RemoteCache,
+#[derive(Copy, Clone)]
+struct HistoryCacheFiller<'a> {
+    local_cache: &'a LocalCache,
+    remote_cache: &'a RemoteCache,
+    key: &'a CacheKey<CachedHistory>,
+}
+
+impl<'a> HistoryCacheFiller<'a> {
+    fn fill(&self, history: CachedHistory) {
+        self.local_cache.fill(&self.key, &history);
+        if let Ok(history) = history.try_into() {
+            self.remote_cache.fill_history(&self.key, history);
+        }
+    }
+}
+
+async fn select_history_from_sql(
+    filler: &HistoryCacheFiller<'_>,
     connections: &Connections,
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
     recorder: &PerfCounterRecorder<'_>,
-) -> Result<Vec<FilenodeInfo>, Error> {
-    let local_cache = local_cache.tracked();
-
-    let selection = select_partial_history(
-        &local_cache,
-        &remote_cache,
-        &connections,
-        repo_id,
-        &pwh,
-        recorder,
-    )
-    .await?;
-
-    let partial = match selection {
-        Selection::Partial(partial) => partial,
-        Selection::Full(full) => {
-            return Ok(full);
-        }
-    };
-
-    let ret = fill_paths(
-        &connections,
-        &local_cache,
-        &pwh,
-        repo_id,
-        partial.history,
-        recorder,
-    )
-    .await?;
-
-    if local_cache.did_fill() {
-        remote_cache.fill_history(repo_id, &pwh.path, ret.clone());
-    }
-
-    Ok(ret)
+) -> Result<CachedHistory, Error> {
+    let partial = select_partial_history(&connections, repo_id, &pwh, recorder).await?;
+    let history = fill_paths(&connections, &pwh, repo_id, partial, recorder).await?;
+    let history = CachedHistory { history };
+    filler.fill(history.clone());
+    Ok(history)
 }
 
 async fn select_partial_history(
-    local_cache: &TrackedLocalCache<'_>,
-    remote_cache: &RemoteCache,
     connections: &Connections,
     repo_id: RepositoryId,
     pwh: &PathWithHash<'_>,
     recorder: &PerfCounterRecorder<'_>,
-) -> Result<Selection<PartialHistory, Vec<FilenodeInfo>>, ErrorKind> {
-    let key = history_cache_key(repo_id, &pwh);
-
-    if let Some(history) = local_cache.get(&key) {
-        return Ok(Selection::Partial(history));
-    }
-
-    let connection = connections.acquire(&pwh, AcquireReason::History).await;
-
-    if let Some(history) = local_cache.get(&key) {
-        return Ok(Selection::Partial(history));
-    }
-
-    STATS::range_local_cache_misses.add_value(1);
-
-    let from_remote_cache =
-        enforce_remote_cache_timeout(remote_cache.get_history(repo_id, &pwh.path)).await;
-
-    if let Some(full) = from_remote_cache {
-        fill_full_history(local_cache.untracked(), &key, repo_id, &full[..]);
-        return Ok(Selection::Full(full));
-    }
+) -> Result<Vec<PartialFilenode>, ErrorKind> {
+    let connection = connections.checkout(&pwh, AcquireReason::History);
 
     recorder.increment();
 
     let rows = enforce_sql_timeout(
-        SelectAllFilenodes::query(connection.as_ref(), &repo_id, &pwh.hash, &pwh.is_tree).compat(),
+        SelectAllFilenodes::query(&connection, &repo_id, &pwh.hash, &pwh.is_tree).compat(),
     )
     .await?;
 
@@ -443,11 +408,8 @@ async fn select_partial_history(
 
     // TODO: It'd be nice to have some eviction here.
     // TODO: It'd be nice to chain those.
-    let history = PartialHistory { history };
 
-    local_cache.fill(&key, &history);
-
-    Ok(Selection::Partial(history))
+    Ok(history)
 }
 
 fn convert_row_to_partial_filenode(row: FilenodeRow) -> Result<PartialFilenode, ErrorKind> {
@@ -477,24 +439,17 @@ fn convert_row_to_partial_filenode(row: FilenodeRow) -> Result<PartialFilenode, 
 
 async fn fill_paths(
     connections: &Connections,
-    local_cache: &TrackedLocalCache<'_>,
     pwh: &PathWithHash<'_>,
     repo_id: RepositoryId,
     rows: Vec<PartialFilenode>,
     recorder: &PerfCounterRecorder<'_>,
-) -> Result<Vec<FilenodeInfo>, ErrorKind> {
+) -> Result<Vec<CachedFilenode>, ErrorKind> {
     let path_hashes_to_fetch = rows
         .iter()
         .filter_map(|r| r.copyfrom.as_ref().map(|c| c.0.clone()));
 
-    let path_hashes_to_paths = select_paths(
-        connections,
-        local_cache,
-        repo_id,
-        path_hashes_to_fetch,
-        recorder,
-    )
-    .await?;
+    let path_hashes_to_paths =
+        select_paths(connections, repo_id, path_hashes_to_fetch, recorder).await?;
 
     let ret = rows
         .into_iter()
@@ -513,15 +468,12 @@ async fn fill_paths(
                         .get(&from_path_hash)
                         .ok_or_else(|| ErrorKind::PathNotFound(from_path_hash.clone()))?
                         .clone();
-
-                    let from_path = convert_to_repo_path(&from_path, pwh.is_tree)?;
-
-                    Some((from_path, from_node))
+                    Some((pwh.is_tree != 0, from_path, from_node))
                 }
                 None => None,
             };
 
-            let ret = FilenodeInfo {
+            let ret = CachedFilenode {
                 filenode,
                 p1,
                 p2,
@@ -538,45 +490,29 @@ async fn fill_paths(
 
 async fn select_paths<I: Iterator<Item = PathHashBytes>>(
     connections: &Connections,
-    local_cache: &TrackedLocalCache<'_>,
     repo_id: RepositoryId,
     iter: I,
     recorder: &PerfCounterRecorder<'_>,
 ) -> Result<HashMap<PathHashBytes, PathBytes>, ErrorKind> {
     let futs = iter
-        .group_by(|path_hash| PathWithHash::shard_number_by_hash(&path_hash, connections.len()))
+        .group_by(|path_hash| connections.shard_id(&path_hash))
         .into_iter()
-        .map(|(shard_num, group)| {
+        .map(|(shard_id, group)| {
             let group = group.collect::<Vec<_>>();
 
             STATS::path_gets.add_value(group.len() as i64);
 
-            let mut output = HashMap::new();
-            let group = local_cache.populate(repo_id, &mut output, group, path_cache_key);
-
             async move {
-                let connection = connections
-                    .acquire_by_shard_number(shard_num, AcquireReason::Paths)
-                    .await;
+                recorder.increment();
 
-                let group = local_cache.populate(repo_id, &mut output, group, path_cache_key);
+                let connection = connections.checkout_by_shard_id(shard_id, AcquireReason::Paths);
 
-                STATS::paths_local_cache_misses.add_value(group.len() as i64);
-
-                if group.len() > 0 {
-                    recorder.increment();
-
-                    let paths = enforce_sql_timeout(
-                        SelectPaths::query(connection.as_ref(), &repo_id, &group[..]).compat(),
-                    )
-                    .await?
-                    .into_iter();
-
-                    for (path_hash, path) in paths {
-                        local_cache.fill(&path_cache_key(repo_id, &path_hash), &path);
-                        output.insert(path_hash, path);
-                    }
-                }
+                let output = enforce_sql_timeout(
+                    SelectPaths::query(&connection, &repo_id, &group[..]).compat(),
+                )
+                .await?
+                .into_iter()
+                .collect::<HashMap<_, _>>();
 
                 Result::<_, ErrorKind>::Ok(output)
             }
@@ -591,63 +527,6 @@ async fn select_paths<I: Iterator<Item = PathHashBytes>>(
     }
 
     Ok(ret)
-}
-
-fn convert_to_repo_path(path_bytes: &PathBytes, is_tree: i8) -> Result<RepoPath, ErrorKind> {
-    if is_tree != 0 {
-        RepoPath::dir(&path_bytes.0[..]).map_err(ErrorKind::PathConversionFailed)
-    } else {
-        RepoPath::file(&path_bytes.0[..]).map_err(ErrorKind::PathConversionFailed)
-    }
-}
-
-fn extract_partial_filenode(
-    local_cache: &LocalCache,
-    repo_id: RepositoryId,
-    info: &FilenodeInfo,
-) -> PartialFilenode {
-    let copyfrom = match &info.copyfrom {
-        Some((path, filenode_id)) => {
-            let pwh = PathWithHash::from_repo_path(&path);
-            local_cache.fill(&path_cache_key(repo_id, &pwh.hash), &pwh.path_bytes);
-            Some((pwh.hash, *filenode_id))
-        }
-        None => None,
-    };
-
-    PartialFilenode {
-        filenode: info.filenode,
-        p1: info.p1,
-        p2: info.p2,
-        copyfrom,
-        linknode: info.linknode,
-    }
-}
-
-fn fill_full_filenode(
-    local_cache: &LocalCache,
-    key: &CacheKey<PartialFilenode>,
-    repo_id: RepositoryId,
-    info: &FilenodeInfo,
-) {
-    let partial = extract_partial_filenode(local_cache, repo_id, info);
-    local_cache.fill(key, &partial);
-}
-
-fn fill_full_history(
-    local_cache: &LocalCache,
-    key: &CacheKey<PartialHistory>,
-    repo_id: RepositoryId,
-    history: &[FilenodeInfo],
-) {
-    let history = history
-        .iter()
-        .map(|info| extract_partial_filenode(local_cache, repo_id, info))
-        .collect();
-
-    let history = PartialHistory { history };
-
-    local_cache.fill(key, &history);
 }
 
 async fn enforce_remote_cache_timeout<T, Fut>(fut: Fut) -> Option<T>

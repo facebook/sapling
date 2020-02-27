@@ -11,8 +11,6 @@ use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures_preview::{compat::Future01CompatExt, future::try_join_all};
 use memcache::{KeyGen, MemcacheClient, MEMCACHE_VALUE_MAX_SIZE};
-use mercurial_types::{HgFileNodeId, RepoPath};
-use mononoke_types::RepositoryId;
 use rand::random;
 use stats::prelude::*;
 use std::collections::HashSet;
@@ -21,8 +19,10 @@ use std::time::Instant;
 use time_ext::DurationExt;
 use tokio_preview;
 
+use crate::local_cache::CacheKey;
+use crate::structs::{CachedFilenode, CachedHistory};
+
 use filenodes::{
-    blake2_path_hash,
     thrift::{self, MC_CODEVER, MC_SITEVER},
     FilenodeInfo,
 };
@@ -62,26 +62,14 @@ pub enum RemoteCache {
 
 impl RemoteCache {
     // TODO: Can we optimize to reuse the existing PathWithHash we got?
-    pub async fn get_filenode(
-        &self,
-        repo_id: RepositoryId,
-        path: &RepoPath,
-        filenode_id: HgFileNodeId,
-    ) -> Option<FilenodeInfo> {
+    pub async fn get_filenode(&self, key: &CacheKey<CachedFilenode>) -> Option<FilenodeInfo> {
         match self {
             Self::Memcache(memcache) => {
-                let path_hash = PathHash::from_repo_path(path);
-
                 let now = Instant::now();
 
-                let ret = get_single_filenode_from_memcache(
-                    &memcache.memcache,
-                    &memcache.keygen,
-                    repo_id,
-                    filenode_id,
-                    &path_hash,
-                )
-                .await;
+                let ret =
+                    get_single_filenode_from_memcache(&memcache.memcache, &memcache.keygen, &key)
+                        .await;
 
                 let elapsed = now.elapsed().as_micros_unchecked() as i64;
                 STATS::get_latency.add_value(elapsed);
@@ -92,47 +80,23 @@ impl RemoteCache {
         }
     }
 
-    pub fn fill_filenode(
-        &self,
-        repo_id: RepositoryId,
-        path: &RepoPath,
-        filenode_id: HgFileNodeId,
-        filenode: FilenodeInfo,
-    ) {
+    // TODO: Need to use the same CacheKey here.
+    pub fn fill_filenode(&self, key: &CacheKey<CachedFilenode>, filenode: FilenodeInfo) {
         match self {
             Self::Memcache(memcache) => {
-                let path_hash = PathHash::from_repo_path(path);
-                schedule_fill_filenode(
-                    &memcache.memcache,
-                    &memcache.keygen,
-                    repo_id,
-                    filenode_id,
-                    &path_hash,
-                    filenode,
-                )
+                schedule_fill_filenode(&memcache.memcache, &memcache.keygen, &key, filenode)
             }
             Self::Noop => {}
         }
     }
 
-    pub async fn get_history(
-        &self,
-        repo_id: RepositoryId,
-        path: &RepoPath,
-    ) -> Option<Vec<FilenodeInfo>> {
+    pub async fn get_history(&self, key: &CacheKey<CachedHistory>) -> Option<Vec<FilenodeInfo>> {
         match self {
             Self::Memcache(memcache) => {
-                let path_hash = PathHash::from_repo_path(path);
-
                 let now = Instant::now();
 
-                let ret = get_history_from_memcache(
-                    &memcache.memcache,
-                    &memcache.keygen,
-                    repo_id,
-                    &path_hash,
-                )
-                .await;
+                let ret =
+                    get_history_from_memcache(&memcache.memcache, &memcache.keygen, &key).await;
 
                 let elapsed = now.elapsed().as_micros_unchecked() as i64;
                 STATS::get_history.add_value(elapsed);
@@ -143,23 +107,15 @@ impl RemoteCache {
         }
     }
 
-    pub fn fill_history(
-        &self,
-        repo_id: RepositoryId,
-        path: &RepoPath,
-        filenodes: Vec<FilenodeInfo>,
-    ) {
+    // TODO: Take ownership of key
+    pub fn fill_history(&self, key: &CacheKey<CachedHistory>, filenodes: Vec<FilenodeInfo>) {
         match self {
-            Self::Memcache(memcache) => {
-                let path_hash = PathHash::from_repo_path(path);
-                schedule_fill_history(
-                    memcache.memcache.clone(),
-                    memcache.keygen.clone(),
-                    repo_id,
-                    path_hash,
-                    filenodes,
-                )
-            }
+            Self::Memcache(memcache) => schedule_fill_history(
+                memcache.memcache.clone(),
+                memcache.keygen.clone(),
+                key.clone(),
+                filenodes,
+            ),
             Self::Noop => {}
         }
     }
@@ -168,22 +124,9 @@ impl RemoteCache {
 type Pointer = i64;
 
 #[derive(Clone)]
-struct PathHash(String);
-
 pub struct MemcacheCache {
     memcache: MemcacheHandler,
     keygen: KeyGen,
-}
-
-impl PathHash {
-    fn from_repo_path(repo_path: &RepoPath) -> Self {
-        let path = match repo_path.mpath() {
-            Some(repo_path) => repo_path.to_vec(),
-            None => Vec::new(),
-        };
-
-        Self(blake2_path_hash(&path).to_string())
-    }
 }
 
 impl MemcacheCache {
@@ -205,40 +148,20 @@ impl MemcacheCache {
     }
 }
 
-fn get_mc_key_for_single_filenode(
-    keygen: &KeyGen,
-    repo_id: RepositoryId,
-    filenode: HgFileNodeId,
-    path_hash: &PathHash,
-) -> String {
-    keygen.key(format!("{}.{}.{}", repo_id.id(), filenode, path_hash.0))
-}
-
-fn get_mc_key_for_filenodes_list(
-    keygen: &KeyGen,
-    repo_id: RepositoryId,
-    path_hash: &PathHash,
-) -> String {
-    keygen.key(format!("{}.{}", repo_id.id(), path_hash.0))
-}
-
 fn get_mc_key_for_filenodes_list_chunk(
     keygen: &KeyGen,
-    repo_id: RepositoryId,
-    path_hash: &PathHash,
+    key: &CacheKey<CachedHistory>,
     pointer: Pointer,
 ) -> String {
-    keygen.key(format!("{}.{}.{}", repo_id.id(), path_hash.0, pointer))
+    keygen.key(format!("{}.{}", key.key, pointer))
 }
 
 async fn get_single_filenode_from_memcache(
     memcache: &MemcacheHandler,
     keygen: &KeyGen,
-    repo_id: RepositoryId,
-    filenode: HgFileNodeId,
-    path_hash: &PathHash,
+    key: &CacheKey<CachedFilenode>,
 ) -> Option<FilenodeInfo> {
-    let key = get_mc_key_for_single_filenode(&keygen, repo_id, filenode, path_hash);
+    let key = keygen.key(&key.key);
 
     let serialized = match memcache.get(key).compat().await {
         Ok(Some(serialized)) => serialized,
@@ -276,8 +199,7 @@ async fn get_single_filenode_from_memcache(
 async fn get_history_from_memcache(
     memcache: &MemcacheHandler,
     keygen: &KeyGen,
-    repo_id: RepositoryId,
-    path_hash: &PathHash,
+    key: &CacheKey<CachedHistory>,
 ) -> Option<Vec<FilenodeInfo>> {
     // helper function for deserializing list of thrift FilenodeInfo into rust structure with proper
     // error returned
@@ -289,9 +211,7 @@ async fn get_history_from_memcache(
         res.ok()
     }
 
-    let key = get_mc_key_for_filenodes_list(&keygen, repo_id, &path_hash);
-
-    let serialized = match memcache.get(key).compat().await {
+    let serialized = match memcache.get(keygen.key(&key.key)).compat().await {
         Ok(Some(serialized)) => serialized,
         Ok(None) => {
             STATS::gaf_miss.add_value(1);
@@ -321,11 +241,10 @@ async fn get_history_from_memcache(
             STATS::gaf_pointers.add_value(1);
 
             let read_chunks_fut = list.into_iter().map(move |pointer| {
-                let key =
-                    get_mc_key_for_filenodes_list_chunk(&keygen, repo_id, &path_hash, pointer);
+                let chunk_key = get_mc_key_for_filenodes_list_chunk(keygen, key, pointer);
 
                 async move {
-                    match memcache.get(key).compat().await {
+                    match memcache.get(chunk_key).compat().await {
                         Ok(Some(chunk)) => Ok(chunk),
                         _ => Err(()),
                     }
@@ -360,9 +279,7 @@ async fn get_history_from_memcache(
 fn schedule_fill_filenode(
     memcache: &MemcacheHandler,
     keygen: &KeyGen,
-    repo_id: RepositoryId,
-    filenode_id: HgFileNodeId,
-    path_hash: &PathHash,
+    key: &CacheKey<CachedFilenode>,
     filenode: FilenodeInfo,
 ) {
     let serialized = compact_protocol::serialize(&filenode.into_thrift());
@@ -370,12 +287,7 @@ fn schedule_fill_filenode(
     // Quite unlikely that single filenode will be bigger than MEMCACHE_VALUE_MAX_SIZE
     // It's probably not even worth logging it
     if serialized.len() < MEMCACHE_VALUE_MAX_SIZE {
-        let fut = memcache
-            .set(
-                get_mc_key_for_single_filenode(&keygen, repo_id, filenode_id, &path_hash),
-                serialized,
-            )
-            .compat();
+        let fut = memcache.set(keygen.key(&key.key), serialized).compat();
 
         tokio_preview::spawn(fut);
     }
@@ -384,12 +296,11 @@ fn schedule_fill_filenode(
 fn schedule_fill_history(
     memcache: MemcacheHandler,
     keygen: KeyGen,
-    repo_id: RepositoryId,
-    path_hash: PathHash,
+    key: CacheKey<CachedHistory>,
     filenodes: Vec<FilenodeInfo>,
 ) {
     let fut = async move {
-        let _ = fill_history(&memcache, &keygen, repo_id, &path_hash, filenodes).await;
+        let _ = fill_history(&memcache, &keygen, &key, filenodes).await;
     };
 
     tokio_preview::spawn(fut);
@@ -408,8 +319,7 @@ fn serialize_history(filenodes: Vec<FilenodeInfo>) -> Bytes {
 async fn fill_history(
     memcache: &MemcacheHandler,
     keygen: &KeyGen,
-    repo_id: RepositoryId,
-    path_hash: &PathHash,
+    key: &CacheKey<CachedHistory>,
     filenodes: Vec<FilenodeInfo>,
 ) -> Result<(), ()> {
     let serialized = serialize_history(filenodes);
@@ -426,12 +336,7 @@ async fn fill_history(
             .map({
                 move |(chunk, pointer)| {
                     async move {
-                        let chunk_key = get_mc_key_for_filenodes_list_chunk(
-                            &keygen,
-                            repo_id,
-                            &path_hash,
-                            pointer,
-                        );
+                        let chunk_key = get_mc_key_for_filenodes_list_chunk(keygen, key, pointer);
 
                         // give chunks non-random max TTL_SEC_RAND so that they always live
                         // longer than the pointer
@@ -449,7 +354,7 @@ async fn fill_history(
         compact_protocol::serialize(&thrift::FilenodeInfoList::Pointers(pointers))
     };
 
-    let root_key = get_mc_key_for_filenodes_list(&keygen, repo_id, &path_hash);
+    let root_key = keygen.key(&key.key);
     let root_ttl = Duration::from_secs(TTL_SEC + random::<u64>() % TTL_SEC_RAND);
 
     memcache
@@ -492,10 +397,13 @@ pub mod test {
     use anyhow::Error;
     use mercurial_types_mocks::nodehash::{ONES_CSID, ONES_FNID};
     use mononoke_types::RepoPath;
-    use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
+    use mononoke_types_mocks::repo::REPO_ZERO;
     use std::time::Duration;
     use tokio_preview as tokio;
     use tokio_preview::time;
+
+    use crate::reader::{filenode_cache_key, history_cache_key};
+    use crate::structs::PathWithHash;
 
     const TIMEOUT_MS: u64 = 100;
     const SLEEP_MS: u64 = 5;
@@ -521,12 +429,11 @@ pub mod test {
 
     pub async fn wait_for_filenode(
         cache: &RemoteCache,
-        path: &RepoPath,
-        filenode: HgFileNodeId,
+        key: &CacheKey<CachedFilenode>,
     ) -> Result<FilenodeInfo, Error> {
         let r = time::timeout(Duration::from_millis(TIMEOUT_MS), async {
             loop {
-                match cache.get_filenode(REPO_ZERO, path, filenode).await {
+                match cache.get_filenode(key).await {
                     Some(f) => {
                         break f;
                     }
@@ -542,11 +449,11 @@ pub mod test {
 
     pub async fn wait_for_history(
         cache: &RemoteCache,
-        path: &RepoPath,
+        key: &CacheKey<CachedHistory>,
     ) -> Result<Vec<FilenodeInfo>, Error> {
         let r = time::timeout(Duration::from_millis(TIMEOUT_MS), async {
             loop {
-                match cache.get_history(REPO_ZERO, path).await {
+                match cache.get_history(key).await {
                     Some(f) => {
                         break f;
                     }
@@ -566,15 +473,16 @@ pub mod test {
         let path = RepoPath::file("copiedto")?;
         let info = filenode();
 
-        cache.fill_filenode(REPO_ZERO, &path, info.filenode, info.clone());
+        let key = filenode_cache_key(
+            REPO_ZERO,
+            &PathWithHash::from_repo_path(&path),
+            &info.filenode,
+        );
 
-        let from_cache = wait_for_filenode(&cache, &path, info.filenode).await?;
+        cache.fill_filenode(&key, info.clone());
+        let from_cache = wait_for_filenode(&cache, &key).await?;
 
         assert_eq!(from_cache, info);
-        assert_eq!(
-            None,
-            cache.get_filenode(REPO_ONE, &path, info.filenode).await
-        );
 
         Ok(())
     }
@@ -584,15 +492,14 @@ pub mod test {
         let cache = make_test_cache();
         let path = RepoPath::file("copiedto")?;
         let info = filenode();
-
         let history = vec![info.clone(), info.clone(), info.clone()];
 
-        cache.fill_history(REPO_ZERO, &path, history.clone());
+        let key = history_cache_key(REPO_ZERO, &PathWithHash::from_repo_path(&path));
 
-        let from_cache = wait_for_history(&cache, &path).await?;
+        cache.fill_history(&key, history.clone());
+        let from_cache = wait_for_history(&cache, &key).await?;
 
         assert_eq!(from_cache, history);
-        assert_eq!(None, cache.get_history(REPO_ONE, &path).await);
 
         Ok(())
     }
@@ -606,12 +513,12 @@ pub mod test {
         let history = (0..100_000).map(|_| info.clone()).collect::<Vec<_>>();
         assert!(serialize_history(history.clone()).len() >= MEMCACHE_VALUE_MAX_SIZE);
 
-        cache.fill_history(REPO_ZERO, &path, history.clone());
+        let key = history_cache_key(REPO_ZERO, &PathWithHash::from_repo_path(&path));
 
-        let from_cache = wait_for_history(&cache, &path).await?;
+        cache.fill_history(&key, history.clone());
+        let from_cache = wait_for_history(&cache, &key).await?;
 
         assert_eq!(from_cache, history);
-        assert_eq!(None, cache.get_history(REPO_ONE, &path).await);
 
         Ok(())
     }

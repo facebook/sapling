@@ -16,7 +16,9 @@ use tokio_preview as tokio;
 
 use super::util::{build_reader_writer, build_shard};
 use crate::local_cache::{test::HashMapCache, LocalCache};
+use crate::reader::{filenode_cache_key, history_cache_key};
 use crate::remote_cache::test::{make_test_cache, wait_for_filenode, wait_for_history};
+use crate::structs::PathWithHash;
 
 fn filenode() -> FilenodeInfo {
     FilenodeInfo {
@@ -51,18 +53,24 @@ async fn test_filenode_fill(fb: FacebookInit) -> Result<(), Error> {
         )
         .await?;
 
+    let key = filenode_cache_key(
+        REPO_ZERO,
+        &PathWithHash::from_repo_path(&path),
+        &info.filenode,
+    );
+
     // A local miss should fill the remote cache:
     reader
         .get_filenode(&ctx, REPO_ZERO, &path, info.filenode)
         .await?;
-    wait_for_filenode(&reader.remote_cache, &path, info.filenode).await?;
+    wait_for_filenode(&reader.remote_cache, &key).await?;
 
     // A local hit should not fill the remote cache:
     reader.remote_cache = make_test_cache();
     reader
         .get_filenode(&ctx, REPO_ZERO, &path, info.filenode)
         .await?;
-    let r = wait_for_filenode(&reader.remote_cache, &path, info.filenode).await;
+    let r = wait_for_filenode(&reader.remote_cache, &key).await;
     assert!(r.is_err());
 
     Ok(())
@@ -95,14 +103,16 @@ async fn test_history_fill(fb: FacebookInit) -> Result<(), Error> {
     reader
         .get_all_filenodes_for_path(&ctx, REPO_ZERO, &path)
         .await?;
-    wait_for_history(&reader.remote_cache, &path).await?;
+
+    let key = history_cache_key(REPO_ZERO, &PathWithHash::from_repo_path(&path));
+    wait_for_history(&reader.remote_cache, &key).await?;
 
     // A local hit should not fill the remote cache:
     reader.remote_cache = make_test_cache();
     reader
         .get_all_filenodes_for_path(&ctx, REPO_ZERO, &path)
         .await?;
-    let r = wait_for_history(&reader.remote_cache, &path).await;
+    let r = wait_for_history(&reader.remote_cache, &key).await;
     assert!(r.is_err());
 
     Ok(())

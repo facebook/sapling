@@ -10,6 +10,7 @@ mod connections;
 mod local_cache;
 mod reader;
 mod remote_cache;
+mod shards;
 mod structs;
 mod writer;
 

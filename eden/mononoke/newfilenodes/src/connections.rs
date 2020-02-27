@@ -7,28 +7,14 @@
 
 use sql::Connection;
 use stats::prelude::*;
-use std::time::Instant;
-use time_ext::DurationExt;
-use tokio_preview::sync::{Semaphore, SemaphorePermit};
 
-use crate::structs::PathWithHash;
+use crate::structs::{PathHashBytes, PathWithHash};
 
 define_stats! {
     prefix = "mononoke.filenodes";
-    filenodes_conn_latency_ms: histogram(10, 0, 1_000, Average, Count; P 5; P 25; P 50; P 75; P 95; P 99; P 100),
-    history_conn_latency_ms: histogram(10, 0, 1_000, Average, Count; P 5; P 25; P 50; P 75; P 95; P 99; P 100),
-    paths_conn_latency_ms: histogram(10, 0, 1_000, Average, Count; P 5; P 25; P 50; P 75; P 95; P 99; P 100),
-}
-
-pub struct ConnectionGuard<'a> {
-    _permit: SemaphorePermit<'a>,
-    connection: &'a Connection,
-}
-
-impl<'a> AsRef<Connection> for ConnectionGuard<'a> {
-    fn as_ref(&self) -> &Connection {
-        &self.connection
-    }
+    filenodes_conn_checkout: timeseries(Rate, Sum),
+    history_conn_checkout: timeseries(Rate, Sum),
+    paths_conn_checkout: timeseries(Rate, Sum),
 }
 
 #[derive(Copy, Clone)]
@@ -38,85 +24,44 @@ pub enum AcquireReason {
     Paths,
 }
 
-struct SemaphoredConnection {
-    filenodes: Semaphore,
-    history: Semaphore,
-    paths: Semaphore,
-    connection: Connection,
-}
-
-impl SemaphoredConnection {
-    fn new(connection: Connection) -> Self {
-        Self {
-            filenodes: Semaphore::new(1),
-            history: Semaphore::new(1),
-            paths: Semaphore::new(1),
-            connection,
-        }
-    }
-
-    async fn acquire<'a>(&'a self, reason: AcquireReason) -> ConnectionGuard<'a> {
-        use AcquireReason::*;
-
-        let semaphore = match reason {
-            Filenodes => &self.filenodes,
-            History => &self.history,
-            Paths => &self.paths,
-        };
-
-        let now = Instant::now();
-        let permit = semaphore.acquire().await;
-        let elapsed = now.elapsed().as_millis_unchecked() as i64;
-
-        match reason {
-            Filenodes => STATS::filenodes_conn_latency_ms.add_value(elapsed),
-            History => STATS::history_conn_latency_ms.add_value(elapsed),
-            Paths => STATS::paths_conn_latency_ms.add_value(elapsed),
-        };
-
-        ConnectionGuard {
-            _permit: permit,
-            connection: &self.connection,
-        }
-    }
+#[derive(Hash, Eq, PartialEq)]
+pub struct ShardId {
+    id: usize,
 }
 
 pub struct Connections {
-    connections: Vec<SemaphoredConnection>,
+    connections: Vec<Connection>,
 }
 
 impl Connections {
     pub fn new(connections: Vec<Connection>) -> Self {
-        let connections = connections
-            .iter()
-            .cloned()
-            .map(SemaphoredConnection::new)
-            .collect();
-
         Self { connections }
     }
 }
 
 impl Connections {
-    pub fn len(&self) -> usize {
-        self.connections.len()
+    pub fn shard_id(&self, ph: &PathHashBytes) -> ShardId {
+        ShardId {
+            id: PathWithHash::shard_number_by_hash(ph, self.connections.len()),
+        }
     }
 
-    pub async fn acquire<'a>(
-        &'a self,
-        pwh: &PathWithHash<'_>,
-        reason: AcquireReason,
-    ) -> ConnectionGuard<'a> {
-        let shard = pwh.shard_number(self.connections.len());
-        self.acquire_by_shard_number(shard, reason).await
+    pub fn checkout<'a>(&'a self, pwh: &PathWithHash<'_>, reason: AcquireReason) -> &'a Connection {
+        let shard_id = self.shard_id(&pwh.hash);
+        self.checkout_by_shard_id(shard_id, reason)
     }
 
-    pub async fn acquire_by_shard_number<'a>(
+    pub fn checkout_by_shard_id<'a>(
         &'a self,
-        shard: usize,
+        shard_id: ShardId,
         reason: AcquireReason,
-    ) -> ConnectionGuard<'a> {
-        let conn = &self.connections[shard];
-        conn.acquire(reason).await
+    ) -> &'a Connection {
+        match reason {
+            AcquireReason::Filenodes => STATS::filenodes_conn_checkout.add_value(1),
+            AcquireReason::History => STATS::history_conn_checkout.add_value(1),
+            AcquireReason::Paths => STATS::paths_conn_checkout.add_value(1),
+        };
+        let connection = &self.connections[shard_id.id];
+        connection
     }
 }

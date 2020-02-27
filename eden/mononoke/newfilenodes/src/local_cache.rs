@@ -7,12 +7,8 @@
 
 use abomonation::Abomonation;
 use cachelib::{get_cached, set_cached, VolatileLruCachePool};
-use mononoke_types::RepositoryId;
 use stats::prelude::*;
-use std::collections::HashMap;
-use std::hash::Hash;
 use std::marker::PhantomData;
-use std::sync::atomic::{AtomicBool, Ordering};
 
 define_stats! {
     prefix = "mononoke.filenodes";
@@ -29,6 +25,7 @@ pub trait Cacheable {
     const POOL: CachePool;
 }
 
+#[derive(Clone)]
 pub struct CacheKey<V> {
     pub key: String,
     /// value is used to enforce that a CacheKey for a given type V can only be used to fetch
@@ -66,37 +63,6 @@ impl LocalCache {
             #[cfg(test)]
             Self::Test(cache) => cache.fill(key, value),
         };
-    }
-
-    pub fn populate<K, V, F>(
-        &self,
-        repo_id: RepositoryId,
-        output: &mut HashMap<K, V>,
-        pending: Vec<K>,
-        cache_key: F,
-    ) -> Vec<K>
-    where
-        F: Fn(RepositoryId, &K) -> CacheKey<V>,
-        K: Eq + Hash,
-        V: Cacheable + Abomonation + Clone + Send + 'static,
-    {
-        pending
-            .into_iter()
-            .filter_map(|key| match self.get(&cache_key(repo_id, &key)) {
-                Some(value) => {
-                    output.insert(key, value);
-                    None
-                }
-                None => Some(key),
-            })
-            .collect()
-    }
-
-    pub fn tracked<'a>(&'a self) -> TrackedLocalCache<'a> {
-        TrackedLocalCache {
-            inner: &self,
-            filled: AtomicBool::new(false),
-        }
     }
 }
 
@@ -147,57 +113,10 @@ impl CachelibCache {
     }
 }
 
-pub struct TrackedLocalCache<'a> {
-    inner: &'a LocalCache,
-    filled: AtomicBool,
-}
-
-impl<'a> TrackedLocalCache<'a> {
-    pub fn get<V>(&self, key: &CacheKey<V>) -> Option<V>
-    where
-        V: Cacheable + Abomonation + Clone + Send + 'static,
-    {
-        self.inner.get(key)
-    }
-
-    pub fn fill<V>(&self, key: &CacheKey<V>, value: &V)
-    where
-        V: Cacheable + Abomonation + Clone + Send + 'static,
-    {
-        if !self.did_fill() {
-            self.filled.store(true, Ordering::Relaxed);
-        }
-
-        self.inner.fill(key, value)
-    }
-
-    pub fn populate<K, V, F>(
-        &self,
-        repo_id: RepositoryId,
-        output: &mut HashMap<K, V>,
-        pending: Vec<K>,
-        cache_key: F,
-    ) -> Vec<K>
-    where
-        F: Fn(RepositoryId, &K) -> CacheKey<V>,
-        K: Eq + Hash,
-        V: Cacheable + Abomonation + Clone + Send + 'static,
-    {
-        self.inner.populate(repo_id, output, pending, cache_key)
-    }
-
-    pub fn did_fill(&self) -> bool {
-        self.filled.load(Ordering::Relaxed)
-    }
-
-    pub fn untracked(&self) -> &'a LocalCache {
-        &self.inner
-    }
-}
-
 #[cfg(test)]
 pub mod test {
     use super::*;
+    use std::collections::HashMap;
     use std::sync::Mutex;
 
     pub struct HashMapCache {
