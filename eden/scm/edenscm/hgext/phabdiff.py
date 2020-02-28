@@ -59,5 +59,7 @@ def showreviewers(repo, ctx, templ, **args):
         descr = ctx.description()
         match = re.search("Reviewers:(.*)", descr)
         if match:
-            reviewers = filter(None, re.split(r"[\s,]", match.group(1)))
+            reviewers = list(filter(None, re.split(r"[\s,]", match.group(1))))
+        args = args.copy()
+        args["templ"] = " ".join(reviewers)
         return templatekw.showlist("reviewer", reviewers, args)

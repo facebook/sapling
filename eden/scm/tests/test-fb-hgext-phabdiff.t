@@ -48,6 +48,8 @@ Test reviewers label
   $ echo f > f
   $ hg commit -Aqm "Differential Revision: http://phabricator.intern.facebook.com/D9876
   > Reviewers: xlwang, quark durham, rmcelroy"
+  $ hg log -r . --template '{reviewers}\n'
+  xlwang quark durham rmcelroy
   $ hg log -r . --template '{reviewers % "- {reviewer}\n"}\n'
   - xlwang
   - quark
