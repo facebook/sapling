@@ -13,6 +13,7 @@ use std::fmt;
 use std::io;
 use std::ops::Deref;
 use std::ops::DerefMut;
+use std::rc::Rc;
 use std::sync::atomic::{self, AtomicU64};
 
 /// Collected tracing data.
@@ -1501,6 +1502,92 @@ impl TracingData {
     }
 }
 
+// -------- Queries on TreeSpans --------
+
+/// Provides iteration support on TreeSpans.
+pub struct TreeWalker<'a> {
+    spans: &'a TreeSpans<'a>,
+
+    /// (span index, child index) in the walker tree.
+    stack: Vec<(usize, usize)>,
+
+    /// Filter function. If returns `false`, skip spans in `step()`.  The
+    /// function can call `TreeWalker::step_out()` once to skip visiting
+    /// subtrees.
+    filter: Option<Rc<dyn Fn(&mut TreeWalker, &TreeSpanWithMeta) -> bool>>,
+}
+
+impl<'a> TreeWalker<'a> {
+    /// Visit the next span in DFS order.
+    ///
+    /// This is similar to "step/step into" in a debugger.
+    pub fn step(&mut self) -> Option<&'a TreeSpanWithMeta<'a>> {
+        'visit_next: loop {
+            match self.stack.pop() {
+                Some((span_id, child_id)) => {
+                    let span = &self.spans[span_id];
+                    match span.children.get(child_id) {
+                        Some(&child_span_id) => {
+                            self.stack.push((span_id, child_id + 1));
+                            self.stack.push((child_span_id, 0));
+                            let span = &self.spans[child_span_id];
+                            if let Some(filter) = self.filter.clone() {
+                                if filter(self, span) == false {
+                                    continue 'visit_next;
+                                }
+                            }
+                            return Some(span);
+                        }
+                        None => {
+                            continue 'visit_next;
+                        }
+                    }
+                }
+                None => return None,
+            }
+        }
+    }
+
+    /// Apply a filter function `(walker, span) -> bool`. `step` will skip
+    /// returning spans if the filter function returns `false`. The filter
+    /// function can also call `walker.step_out()` to skip visiting a subtree.
+    pub fn filter(
+        mut self,
+        func: impl Fn(&mut TreeWalker, &TreeSpanWithMeta) -> bool + 'static,
+    ) -> Self {
+        assert!(self.filter.is_none(), "cannot apply multiple filters");
+        self.filter = Some(Rc::new(func));
+        self
+    }
+
+    /// Skip to the parent span. Call this immediately after `next` to avoid
+    /// visiting children of the span just returned by `next`.
+    ///
+    /// This is similar to "step out" in a debugger.
+    pub fn step_out(&mut self) {
+        let _ = self.stack.pop();
+    }
+}
+
+impl<'a> Iterator for TreeWalker<'a> {
+    type Item = &'a TreeSpanWithMeta<'a>;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        self.step()
+    }
+}
+
+impl TreeSpans<'_> {
+    /// Walk through the tree.
+    pub fn walk(&self) -> TreeWalker {
+        TreeWalker {
+            spans: self,
+            stack: vec![(0, 0)],
+            filter: None,
+        }
+    }
+}
+
 // -------- Tests --------
 
 #[cfg(test)]
@@ -1772,6 +1859,68 @@ Start Dur.ms | Name               Source
    26    ...    | foo             a.py line 10
 
 "#
+        );
+    }
+
+    #[test]
+    fn test_tree_span_filter() {
+        let mut data = TracingData::new_for_test();
+        let span_id1 = data.add_espan(&meta("foo", "a.py", "10"), None);
+        let span_id2 = data.add_espan(&meta("bar", "a.py", "20"), None);
+
+        data.add_action(span_id2, Action::EnterSpan);
+        data.add_action(span_id2, Action::EnterSpan);
+        data.add_action(span_id2, Action::ExitSpan);
+        data.add_action(span_id1, Action::EnterSpan);
+        data.add_action(span_id2, Action::EnterSpan);
+        data.add_action(span_id1, Action::EnterSpan);
+        data.add_action(span_id1, Action::ExitSpan);
+        data.add_action(span_id2, Action::ExitSpan);
+        data.add_action(span_id1, Action::ExitSpan);
+        data.add_action(span_id2, Action::ExitSpan);
+
+        assert_eq!(
+            data.ascii(&Default::default()),
+            r#"Process _ Thread _:
+Start Dur.ms | Name               Source
+    2    +18 | bar                a.py line 20
+    4     +2  \ bar               a.py line 20
+    8    +10  \ foo               a.py line 10
+   10     +6   | bar              a.py line 20
+   12     +2   | foo              a.py line 10
+
+"#
+        );
+
+        let render = |spans: TreeWalker| -> String {
+            spans
+                .map(|s| format!("{}@{}", s.meta["name"], s.start / 1000))
+                .collect::<Vec<_>>()
+                .join(" ")
+        };
+
+        let tree = data.tree_spans();
+        let tree: &TreeSpans = tree.iter().nth(0).unwrap().1;
+
+        // Walk through every span in DFS order.
+        assert_eq!(render(tree.walk()), "bar@2 bar@4 foo@8 bar@10 foo@12");
+
+        // Filter: select "foo".
+        assert_eq!(
+            render(tree.walk().filter(|_, s| s.meta["name"] == "foo")),
+            "foo@8 foo@12"
+        );
+
+        // Filter: select "foo" and skips subtrees.
+        assert_eq!(
+            render(tree.walk().filter(|w, s| {
+                let result = s.meta["name"] == "foo";
+                if result {
+                    w.step_out();
+                }
+                result
+            })),
+            "foo@8"
         );
     }
 
