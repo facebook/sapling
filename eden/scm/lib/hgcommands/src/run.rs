@@ -227,7 +227,7 @@ pub(crate) fn write_trace(
             out.flush()?;
         }
         Format::SpansJSON => {
-            let spans = data.tree_spans();
+            let spans = data.tree_spans::<&str>();
             blackbox::serde_json::to_writer(&mut out, &spans)?;
             out.flush()?;
         }

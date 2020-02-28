@@ -10,6 +10,7 @@ use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
+use std::hash::Hash;
 use std::io;
 use std::ops::Deref;
 use std::ops::DerefMut;
@@ -1430,16 +1431,16 @@ impl TracingData {
 // -------- Serde-serializable Spans Output --------
 
 #[derive(Serialize)]
-pub struct TreeSpanRef<'a> {
+pub struct TreeSpan<S: Eq + Hash> {
     #[serde(flatten)]
-    pub meta: IndexMap<&'a str, &'a str>,
+    pub meta: IndexMap<S, S>,
     pub start: u64,
     pub duration: Option<u64>,
     pub children: Vec<RawTreeSpanId>,
 }
 
-impl<'a> TreeSpanRef<'a> {
-    fn from_tree_span(data: &TracingData, span: RawTreeSpan) -> TreeSpanRef {
+impl<'a, S: From<&'a str> + Eq + Hash + 'a> TreeSpan<S> {
+    fn from_tree_span(data: &'a TracingData, span: RawTreeSpan) -> TreeSpan<S> {
         let meta = match span.espan_id {
             None => Default::default(),
             Some(espan_id) => {
@@ -1447,14 +1448,16 @@ impl<'a> TreeSpanRef<'a> {
                     espan
                         .meta
                         .iter()
-                        .map(|(k, v)| (data.strings.get(*k), data.strings.get(*v)))
+                        .map(|(k, v)| {
+                            (S::from(data.strings.get(*k)), S::from(data.strings.get(*v)))
+                        })
                         .collect()
                 } else {
                     Default::default()
                 }
             }
         };
-        TreeSpanRef {
+        TreeSpan {
             meta,
             start: span.start_time,
             duration: if span.is_incomplete() {
@@ -1471,12 +1474,12 @@ impl<'a> TreeSpanRef<'a> {
 /// Unlike flat span events (enter, exit), the spans form a tree.
 #[derive(Serialize)]
 #[serde(transparent)]
-pub struct TreeSpans<'a> {
-    pub spans: Vec<TreeSpanRef<'a>>,
+pub struct TreeSpans<S: Eq + Hash> {
+    pub spans: Vec<TreeSpan<S>>,
 }
 
-impl<'a> Deref for TreeSpans<'a> {
-    type Target = Vec<TreeSpanRef<'a>>;
+impl<'a, S: Eq + Hash> Deref for TreeSpans<S> {
+    type Target = [TreeSpan<S>];
     fn deref(&self) -> &Self::Target {
         &self.spans
     }
@@ -1485,7 +1488,9 @@ impl<'a> Deref for TreeSpans<'a> {
 impl TracingData {
     /// Calculate [`RawTreeSpan`]s for each `(pid, tid)` pair.
     /// The result is serializable and can be useful for assertions in tests.
-    pub fn tree_spans(&self) -> IndexMap<(u64, u64), TreeSpans> {
+    pub fn tree_spans<'a, S: From<&'a str> + Eq + Hash + 'a>(
+        &'a self,
+    ) -> IndexMap<(u64, u64), TreeSpans<S>> {
         let eventus_by_pid_tid = self.eventus_group_by_pid_tid();
 
         eventus_by_pid_tid
@@ -1494,7 +1499,7 @@ impl TracingData {
                 let tree_spans = self.build_tree_spans(eventus_list);
                 let tree_spans_with_meta = tree_spans
                     .into_iter()
-                    .map(|t| TreeSpanRef::from_tree_span(self, t))
+                    .map(|t| TreeSpan::from_tree_span(self, t))
                     .collect();
                 (
                     pid_tid,
@@ -1510,8 +1515,8 @@ impl TracingData {
 // -------- Queries on TreeSpans --------
 
 /// Provides iteration support on TreeSpans.
-pub struct TreeWalker<'a> {
-    spans: &'a TreeSpans<'a>,
+pub struct TreeWalker<'a, S: Eq + Hash> {
+    spans: &'a TreeSpans<S>,
 
     /// (span index, child index) in the walker tree.
     stack: Vec<(usize, usize)>,
@@ -1519,23 +1524,23 @@ pub struct TreeWalker<'a> {
     /// Filter function. If returns `false`, skip spans in `step()`.  The
     /// function can call `TreeWalker::step_out()` once to skip visiting
     /// subtrees.
-    filter: Option<Rc<dyn Fn(&mut TreeWalker, &TreeSpanRef) -> bool>>,
+    filter: Option<Rc<dyn Fn(&mut TreeWalker<S>, &TreeSpan<S>) -> bool>>,
 }
 
-impl<'a> TreeWalker<'a> {
+impl<'a, S: Eq + Hash> TreeWalker<'a, S> {
     /// Visit the next span in DFS order.
     ///
     /// This is similar to "step/step into" in a debugger.
-    pub fn step(&mut self) -> Option<&'a TreeSpanRef<'a>> {
+    pub fn step(&mut self) -> Option<&'a TreeSpan<S>> {
         'visit_next: loop {
             match self.stack.pop() {
                 Some((span_id, child_id)) => {
-                    let span = &self.spans[span_id];
+                    let span = &self.spans.spans[span_id];
                     match span.children.get(child_id) {
                         Some(&child_span_id) => {
                             self.stack.push((span_id, child_id + 1));
                             self.stack.push((child_span_id, 0));
-                            let span = &self.spans[child_span_id];
+                            let span = &self.spans.spans[child_span_id];
                             if let Some(filter) = self.filter.clone() {
                                 if filter(self, span) == false {
                                     continue 'visit_next;
@@ -1558,7 +1563,7 @@ impl<'a> TreeWalker<'a> {
     /// function can also call `walker.step_out()` to skip visiting a subtree.
     pub fn filter(
         mut self,
-        func: impl Fn(&mut TreeWalker, &TreeSpanRef) -> bool + 'static,
+        func: impl Fn(&mut TreeWalker<S>, &TreeSpan<S>) -> bool + 'static,
     ) -> Self {
         assert!(self.filter.is_none(), "cannot apply multiple filters");
         self.filter = Some(Rc::new(func));
@@ -1574,22 +1579,32 @@ impl<'a> TreeWalker<'a> {
     }
 }
 
-impl<'a> Iterator for TreeWalker<'a> {
-    type Item = &'a TreeSpanRef<'a>;
+impl<'a, S: Eq + Hash> Iterator for TreeWalker<'a, S> {
+    type Item = &'a TreeSpan<S>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.step()
     }
 }
 
-impl TreeSpans<'_> {
+impl<S: Eq + Hash> TreeSpans<S> {
     /// Walk through the tree.
-    pub fn walk(&self) -> TreeWalker {
+    pub fn walk(&self) -> TreeWalker<S> {
         TreeWalker {
             spans: self,
             stack: vec![(0, 0)],
             filter: None,
         }
+    }
+}
+
+impl<S: Eq + Hash> TreeSpan<S> {
+    pub fn start_millis(&self) -> u64 {
+        self.start / 1000
+    }
+
+    pub fn duration_millis(&self) -> Option<u64> {
+        self.duration.map(|d| d / 1000)
     }
 }
 
@@ -1688,7 +1703,13 @@ Start Dur.ms | Name                         Source
         let span_id = data.add_espan(&meta("foo", "a.py", "10"), None);
         data.add_action(span_id, Action::EnterSpan);
         data.add_action(span_id, Action::ExitSpan);
-        let tree_spans: Vec<_> = data.tree_spans().into_iter().nth(0).unwrap().1.spans;
+        let tree_spans: Vec<_> = data
+            .tree_spans::<&str>()
+            .into_iter()
+            .nth(0)
+            .unwrap()
+            .1
+            .spans;
         assert_eq!(
             serde_json::to_string_pretty(&tree_spans).unwrap(),
             r#"[
@@ -1897,15 +1918,15 @@ Start Dur.ms | Name               Source
 "#
         );
 
-        let render = |spans: TreeWalker| -> String {
+        let render = |spans: TreeWalker<&str>| -> String {
             spans
                 .map(|s| format!("{}@{}", s.meta["name"], s.start / 1000))
                 .collect::<Vec<_>>()
                 .join(" ")
         };
 
-        let tree = data.tree_spans();
-        let tree: &TreeSpans = tree.iter().nth(0).unwrap().1;
+        let tree = data.tree_spans::<&str>();
+        let tree: &TreeSpans<&str> = tree.iter().nth(0).unwrap().1;
 
         // Walk through every span in DFS order.
         assert_eq!(render(tree.walk()), "bar@2 bar@4 foo@8 bar@10 foo@12");

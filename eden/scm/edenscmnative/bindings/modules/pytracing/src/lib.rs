@@ -146,7 +146,7 @@ py_class!(class tracingdata |py| {
     /// {(pid, tid): {"start": micros, "duration": micros | null, "children": [index], **meta}}
     def treespans(&self) -> PyResult<PyObject> {
         let data = self.data(py).lock();
-        let tree_spans = data.tree_spans();
+        let tree_spans = data.tree_spans::<&str>();
         cpython_ext::ser::to_object(py, &tree_spans)
     }
 
