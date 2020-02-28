@@ -6,6 +6,8 @@ pub use self::errors::*;
 pub use self::types::*;
 
 pub mod types {
+    #![allow(clippy::redundant_closure)]
+
     use fbthrift::{
         Deserialize, GetTType, ProtocolReader, ProtocolWriter, Serialize, TType,
     };
@@ -73,7 +75,7 @@ pub mod types {
 
     impl std::fmt::Debug for ConfigSource {
         fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(fmt, "{}::{}", "ConfigSource", self)
+            write!(fmt, "ConfigSource::{}", self)
         }
     }
 
@@ -86,7 +88,7 @@ pub mod types {
                 "SystemConfig" => Ok(ConfigSource::SystemConfig),
                 "UserConfig" => Ok(ConfigSource::UserConfig),
                 "CommandLine" => Ok(ConfigSource::CommandLine),
-                _ => anyhow::bail!("Unable to parse {} as {}", string, "ConfigSource"),
+                _ => anyhow::bail!("Unable to parse {} as ConfigSource", string),
             }
         }
     }
@@ -159,7 +161,7 @@ pub mod types {
 
     impl std::fmt::Debug for ConfigReloadBehavior {
         fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(fmt, "{}::{}", "ConfigReloadBehavior", self)
+            write!(fmt, "ConfigReloadBehavior::{}", self)
         }
     }
 
@@ -171,7 +173,7 @@ pub mod types {
                 "AutoReload" => Ok(ConfigReloadBehavior::AutoReload),
                 "NoReload" => Ok(ConfigReloadBehavior::NoReload),
                 "ForceReload" => Ok(ConfigReloadBehavior::ForceReload),
-                _ => anyhow::bail!("Unable to parse {} as {}", string, "ConfigReloadBehavior"),
+                _ => anyhow::bail!("Unable to parse {} as ConfigReloadBehavior", string),
             }
         }
     }

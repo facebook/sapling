@@ -6,6 +6,8 @@ pub use self::errors::*;
 pub use self::types::*;
 
 pub mod types {
+    #![allow(clippy::redundant_closure)]
+
     use fbthrift::{
         Deserialize, GetTType, ProtocolReader, ProtocolWriter, Serialize, TType,
     };
@@ -369,7 +371,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetRegexCountersCompressedExn"),
@@ -463,7 +465,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetCountersCompressedExn"),
@@ -557,7 +559,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetCpuProfileExn"),
@@ -651,7 +653,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetCpuProfileWithOptionsExn"),
@@ -745,7 +747,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetHeapProfileExn"),
@@ -839,7 +841,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetWallTimeProfileExn"),
@@ -933,7 +935,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetMemoryUsageExn"),
@@ -1027,7 +1029,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetLoadExn"),
@@ -1121,7 +1123,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetPidExn"),
@@ -1215,7 +1217,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetCommandLineExn"),
@@ -1485,7 +1487,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "TranslateFramesExn"),
@@ -1579,7 +1581,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetPcapLoggingConfigExn"),
@@ -1798,7 +1800,7 @@ pub mod client {
             &self,
             arg_regex: &str,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getRegexCountersCompressed",
@@ -1818,7 +1820,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<Vec<u8>> {
                         let p = &mut p;
@@ -1849,7 +1851,7 @@ pub mod client {
         fn getCountersCompressed(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getCountersCompressed",
@@ -1866,7 +1868,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<Vec<u8>> {
                         let p = &mut p;
@@ -1898,7 +1900,7 @@ pub mod client {
             &self,
             arg_profileDurationInSec: i32,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getCpuProfile",
@@ -1918,7 +1920,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<String> {
                         let p = &mut p;
@@ -1950,7 +1952,7 @@ pub mod client {
             &self,
             arg_options: &crate::types::CpuProfileOptions,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getCpuProfileWithOptions",
@@ -1970,7 +1972,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<String> {
                         let p = &mut p;
@@ -2002,7 +2004,7 @@ pub mod client {
             &self,
             arg_profileDurationInSec: i32,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getHeapProfile",
@@ -2022,7 +2024,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<String> {
                         let p = &mut p;
@@ -2054,7 +2056,7 @@ pub mod client {
             &self,
             arg_profileDurationInSec: i32,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getWallTimeProfile",
@@ -2074,7 +2076,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<String> {
                         let p = &mut p;
@@ -2105,7 +2107,7 @@ pub mod client {
         fn getMemoryUsage(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getMemoryUsage",
@@ -2122,7 +2124,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<i64> {
                         let p = &mut p;
@@ -2153,7 +2155,7 @@ pub mod client {
         fn getLoad(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<f64>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getLoad",
@@ -2170,7 +2172,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<f64> {
                         let p = &mut p;
@@ -2201,7 +2203,7 @@ pub mod client {
         fn getPid(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getPid",
@@ -2218,7 +2220,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<i64> {
                         let p = &mut p;
@@ -2249,7 +2251,7 @@ pub mod client {
         fn getCommandLine(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getCommandLine",
@@ -2266,7 +2268,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<String> {
                         let p = &mut p;
@@ -2297,7 +2299,7 @@ pub mod client {
         fn reinitialize(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "reinitialize",
@@ -2314,7 +2316,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -2345,7 +2347,7 @@ pub mod client {
         fn shutdown(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "shutdown",
@@ -2362,7 +2364,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -2394,7 +2396,7 @@ pub mod client {
             &self,
             arg_pointers: &[i64],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "translateFrames",
@@ -2414,7 +2416,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<Vec<String>> {
                         let p = &mut p;
@@ -2445,7 +2447,7 @@ pub mod client {
         fn getPcapLoggingConfig(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::PcapLoggingConfig>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getPcapLoggingConfig",
@@ -2462,7 +2464,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::PcapLoggingConfig> {
                         let p = &mut p;
@@ -2494,7 +2496,7 @@ pub mod client {
             &self,
             arg_config: &crate::types::PcapLoggingConfig,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "setPcapLoggingConfig",
@@ -2514,7 +2516,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -3876,7 +3878,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
             let mut closure = self.getRegexCountersCompressed.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_regex.to_owned())
+            Box::pin(futures::future::ready(closure(arg_regex.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceGetRegexCountersCompressedError(error),
                 ))))
@@ -3886,7 +3888,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
             let mut closure = self.getCountersCompressed.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceGetCountersCompressedError(error),
                 ))))
@@ -3897,7 +3899,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
             let mut closure = self.getCpuProfile.closure.lock().unwrap();
             let closure: &mut dyn FnMut(i32) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_profileDurationInSec.clone())
+            Box::pin(futures::future::ready(closure(arg_profileDurationInSec.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceGetCpuProfileError(error),
                 ))))
@@ -3908,7 +3910,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
             let mut closure = self.getCpuProfileWithOptions.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::CpuProfileOptions) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_options.clone())
+            Box::pin(futures::future::ready(closure(arg_options.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceGetCpuProfileWithOptionsError(error),
                 ))))
@@ -3919,7 +3921,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
             let mut closure = self.getHeapProfile.closure.lock().unwrap();
             let closure: &mut dyn FnMut(i32) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_profileDurationInSec.clone())
+            Box::pin(futures::future::ready(closure(arg_profileDurationInSec.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceGetHeapProfileError(error),
                 ))))
@@ -3930,7 +3932,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
             let mut closure = self.getWallTimeProfile.closure.lock().unwrap();
             let closure: &mut dyn FnMut(i32) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_profileDurationInSec.clone())
+            Box::pin(futures::future::ready(closure(arg_profileDurationInSec.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceGetWallTimeProfileError(error),
                 ))))
@@ -3940,7 +3942,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
             let mut closure = self.getMemoryUsage.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceGetMemoryUsageError(error),
                 ))))
@@ -3950,7 +3952,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<f64>> + Send + 'static>> {
             let mut closure = self.getLoad.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceGetLoadError(error),
                 ))))
@@ -3960,7 +3962,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
             let mut closure = self.getPid.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceGetPidError(error),
                 ))))
@@ -3970,7 +3972,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
             let mut closure = self.getCommandLine.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceGetCommandLineError(error),
                 ))))
@@ -3980,7 +3982,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.reinitialize.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceReinitializeError(error),
                 ))))
@@ -3990,7 +3992,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.shutdown.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceShutdownError(error),
                 ))))
@@ -4001,7 +4003,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + 'static>> {
             let mut closure = self.translateFrames.closure.lock().unwrap();
             let closure: &mut dyn FnMut(Vec<i64>) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_pointers.to_owned())
+            Box::pin(futures::future::ready(closure(arg_pointers.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceTranslateFramesError(error),
                 ))))
@@ -4011,7 +4013,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::PcapLoggingConfig>> + Send + 'static>> {
             let mut closure = self.getPcapLoggingConfig.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceGetPcapLoggingConfigError(error),
                 ))))
@@ -4022,7 +4024,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.setPcapLoggingConfig.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PcapLoggingConfig) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_config.clone())
+            Box::pin(futures::future::ready(closure(arg_config.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::FacebookServiceSetPcapLoggingConfigError(error),
                 ))))

@@ -6,6 +6,8 @@ pub use self::errors::*;
 pub use self::types::*;
 
 pub mod types {
+    #![allow(clippy::redundant_closure)]
+
     use fbthrift::{
         Deserialize, GetTType, ProtocolReader, ProtocolWriter, Serialize, TType,
     };
@@ -66,7 +68,7 @@ pub mod types {
 
     impl std::fmt::Debug for fb303_status {
         fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(fmt, "{}::{}", "fb303_status", self)
+            write!(fmt, "fb303_status::{}", self)
         }
     }
 
@@ -81,7 +83,7 @@ pub mod types {
                 "STOPPING" => Ok(fb303_status::STOPPING),
                 "STOPPED" => Ok(fb303_status::STOPPED),
                 "WARNING" => Ok(fb303_status::WARNING),
-                _ => anyhow::bail!("Unable to parse {} as {}", string, "fb303_status"),
+                _ => anyhow::bail!("Unable to parse {} as fb303_status", string),
             }
         }
     }
@@ -199,7 +201,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetStatusExn"),
@@ -293,7 +295,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetNameExn"),
@@ -387,7 +389,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetVersionExn"),
@@ -481,7 +483,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetStatusDetailsExn"),
@@ -575,7 +577,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetCountersExn"),
@@ -669,7 +671,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetRegexCountersExn"),
@@ -763,7 +765,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetSelectedCountersExn"),
@@ -857,7 +859,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetCounterExn"),
@@ -951,7 +953,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetExportedValuesExn"),
@@ -1045,7 +1047,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetSelectedExportedValuesExn"),
@@ -1139,7 +1141,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetRegexExportedValuesExn"),
@@ -1233,7 +1235,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetExportedValueExn"),
@@ -1415,7 +1417,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetOptionExn"),
@@ -1509,7 +1511,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetOptionsExn"),
@@ -1603,7 +1605,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "AliveSinceExn"),
@@ -1709,7 +1711,7 @@ pub mod client {
     {        fn getStatus(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::fb303_status>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getStatus",
@@ -1726,7 +1728,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::fb303_status> {
                         let p = &mut p;
@@ -1757,7 +1759,7 @@ pub mod client {
         fn getName(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getName",
@@ -1774,7 +1776,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<String> {
                         let p = &mut p;
@@ -1805,7 +1807,7 @@ pub mod client {
         fn getVersion(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getVersion",
@@ -1822,7 +1824,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<String> {
                         let p = &mut p;
@@ -1853,7 +1855,7 @@ pub mod client {
         fn getStatusDetails(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getStatusDetails",
@@ -1870,7 +1872,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<String> {
                         let p = &mut p;
@@ -1901,7 +1903,7 @@ pub mod client {
         fn getCounters(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getCounters",
@@ -1918,7 +1920,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<std::collections::BTreeMap<String, i64>> {
                         let p = &mut p;
@@ -1950,7 +1952,7 @@ pub mod client {
             &self,
             arg_regex: &str,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getRegexCounters",
@@ -1970,7 +1972,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<std::collections::BTreeMap<String, i64>> {
                         let p = &mut p;
@@ -2002,7 +2004,7 @@ pub mod client {
             &self,
             arg_keys: &[String],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getSelectedCounters",
@@ -2022,7 +2024,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<std::collections::BTreeMap<String, i64>> {
                         let p = &mut p;
@@ -2054,7 +2056,7 @@ pub mod client {
             &self,
             arg_key: &str,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getCounter",
@@ -2074,7 +2076,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<i64> {
                         let p = &mut p;
@@ -2105,7 +2107,7 @@ pub mod client {
         fn getExportedValues(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getExportedValues",
@@ -2122,7 +2124,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<std::collections::BTreeMap<String, String>> {
                         let p = &mut p;
@@ -2154,7 +2156,7 @@ pub mod client {
             &self,
             arg_keys: &[String],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getSelectedExportedValues",
@@ -2174,7 +2176,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<std::collections::BTreeMap<String, String>> {
                         let p = &mut p;
@@ -2206,7 +2208,7 @@ pub mod client {
             &self,
             arg_regex: &str,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getRegexExportedValues",
@@ -2226,7 +2228,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<std::collections::BTreeMap<String, String>> {
                         let p = &mut p;
@@ -2258,7 +2260,7 @@ pub mod client {
             &self,
             arg_key: &str,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getExportedValue",
@@ -2278,7 +2280,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<String> {
                         let p = &mut p;
@@ -2311,7 +2313,7 @@ pub mod client {
             arg_key: &str,
             arg_value: &str,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "setOption",
@@ -2334,7 +2336,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -2366,7 +2368,7 @@ pub mod client {
             &self,
             arg_key: &str,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getOption",
@@ -2386,7 +2388,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<String> {
                         let p = &mut p;
@@ -2417,7 +2419,7 @@ pub mod client {
         fn getOptions(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getOptions",
@@ -2434,7 +2436,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<std::collections::BTreeMap<String, String>> {
                         let p = &mut p;
@@ -2465,7 +2467,7 @@ pub mod client {
         fn aliveSince(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "aliveSince",
@@ -2482,7 +2484,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<i64> {
                         let p = &mut p;
@@ -3912,7 +3914,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::fb303_status>> + Send + 'static>> {
             let mut closure = self.getStatus.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetStatusError(error),
                 ))))
@@ -3922,7 +3924,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
             let mut closure = self.getName.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetNameError(error),
                 ))))
@@ -3932,7 +3934,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
             let mut closure = self.getVersion.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetVersionError(error),
                 ))))
@@ -3942,7 +3944,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
             let mut closure = self.getStatusDetails.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetStatusDetailsError(error),
                 ))))
@@ -3952,7 +3954,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
             let mut closure = self.getCounters.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetCountersError(error),
                 ))))
@@ -3963,7 +3965,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
             let mut closure = self.getRegexCounters.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_regex.to_owned())
+            Box::pin(futures::future::ready(closure(arg_regex.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetRegexCountersError(error),
                 ))))
@@ -3974,7 +3976,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
             let mut closure = self.getSelectedCounters.closure.lock().unwrap();
             let closure: &mut dyn FnMut(Vec<String>) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_keys.to_owned())
+            Box::pin(futures::future::ready(closure(arg_keys.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetSelectedCountersError(error),
                 ))))
@@ -3985,7 +3987,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
             let mut closure = self.getCounter.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_key.to_owned())
+            Box::pin(futures::future::ready(closure(arg_key.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetCounterError(error),
                 ))))
@@ -3995,7 +3997,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
             let mut closure = self.getExportedValues.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetExportedValuesError(error),
                 ))))
@@ -4006,7 +4008,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
             let mut closure = self.getSelectedExportedValues.closure.lock().unwrap();
             let closure: &mut dyn FnMut(Vec<String>) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_keys.to_owned())
+            Box::pin(futures::future::ready(closure(arg_keys.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetSelectedExportedValuesError(error),
                 ))))
@@ -4017,7 +4019,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
             let mut closure = self.getRegexExportedValues.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_regex.to_owned())
+            Box::pin(futures::future::ready(closure(arg_regex.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetRegexExportedValuesError(error),
                 ))))
@@ -4028,7 +4030,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
             let mut closure = self.getExportedValue.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_key.to_owned())
+            Box::pin(futures::future::ready(closure(arg_key.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetExportedValueError(error),
                 ))))
@@ -4040,7 +4042,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.setOption.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String, String) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_key.to_owned(), arg_value.to_owned())
+            Box::pin(futures::future::ready(closure(arg_key.to_owned(), arg_value.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceSetOptionError(error),
                 ))))
@@ -4051,7 +4053,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
             let mut closure = self.getOption.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_key.to_owned())
+            Box::pin(futures::future::ready(closure(arg_key.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetOptionError(error),
                 ))))
@@ -4061,7 +4063,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
             let mut closure = self.getOptions.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceGetOptionsError(error),
                 ))))
@@ -4071,7 +4073,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
             let mut closure = self.aliveSince.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::BaseServiceAliveSinceError(error),
                 ))))

@@ -6,6 +6,8 @@ pub use self::errors::*;
 pub use self::types::*;
 
 pub mod types {
+    #![allow(clippy::redundant_closure)]
+
     use fbthrift::{
         Deserialize, GetTType, ProtocolReader, ProtocolWriter, Serialize, TType,
     };
@@ -36,6 +38,7 @@ pub mod types {
     pub struct DaemonInfo {
         pub pid: i32,
         pub commandLine: Vec<String>,
+        pub status: Option<fb303_core::types::fb303_status>,
     }
 
     #[derive(Clone, Debug, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -389,7 +392,7 @@ pub mod types {
 
     impl std::fmt::Debug for EdenErrorType {
         fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(fmt, "{}::{}", "EdenErrorType", self)
+            write!(fmt, "EdenErrorType::{}", self)
         }
     }
 
@@ -407,7 +410,7 @@ pub mod types {
                 "JOURNAL_TRUNCATED" => Ok(EdenErrorType::JOURNAL_TRUNCATED),
                 "CHECKOUT_IN_PROGRESS" => Ok(EdenErrorType::CHECKOUT_IN_PROGRESS),
                 "OUT_OF_DATE_PARENT" => Ok(EdenErrorType::OUT_OF_DATE_PARENT),
-                _ => anyhow::bail!("Unable to parse {} as {}", string, "EdenErrorType"),
+                _ => anyhow::bail!("Unable to parse {} as EdenErrorType", string),
             }
         }
     }
@@ -494,7 +497,7 @@ pub mod types {
 
     impl std::fmt::Debug for MountState {
         fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(fmt, "{}::{}", "MountState", self)
+            write!(fmt, "MountState::{}", self)
         }
     }
 
@@ -513,7 +516,7 @@ pub mod types {
                 "SHUT_DOWN" => Ok(MountState::SHUT_DOWN),
                 "DESTROYING" => Ok(MountState::DESTROYING),
                 "INIT_ERROR" => Ok(MountState::INIT_ERROR),
-                _ => anyhow::bail!("Unable to parse {} as {}", string, "MountState"),
+                _ => anyhow::bail!("Unable to parse {} as MountState", string),
             }
         }
     }
@@ -588,7 +591,7 @@ pub mod types {
 
     impl std::fmt::Debug for ScmFileStatus {
         fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(fmt, "{}::{}", "ScmFileStatus", self)
+            write!(fmt, "ScmFileStatus::{}", self)
         }
     }
 
@@ -601,7 +604,7 @@ pub mod types {
                 "MODIFIED" => Ok(ScmFileStatus::MODIFIED),
                 "REMOVED" => Ok(ScmFileStatus::REMOVED),
                 "IGNORED" => Ok(ScmFileStatus::IGNORED),
-                _ => anyhow::bail!("Unable to parse {} as {}", string, "ScmFileStatus"),
+                _ => anyhow::bail!("Unable to parse {} as ScmFileStatus", string),
             }
         }
     }
@@ -674,7 +677,7 @@ pub mod types {
 
     impl std::fmt::Debug for CheckoutMode {
         fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(fmt, "{}::{}", "CheckoutMode", self)
+            write!(fmt, "CheckoutMode::{}", self)
         }
     }
 
@@ -686,7 +689,7 @@ pub mod types {
                 "NORMAL" => Ok(CheckoutMode::NORMAL),
                 "DRY_RUN" => Ok(CheckoutMode::DRY_RUN),
                 "FORCE" => Ok(CheckoutMode::FORCE),
-                _ => anyhow::bail!("Unable to parse {} as {}", string, "CheckoutMode"),
+                _ => anyhow::bail!("Unable to parse {} as CheckoutMode", string),
             }
         }
     }
@@ -767,7 +770,7 @@ pub mod types {
 
     impl std::fmt::Debug for ConflictType {
         fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(fmt, "{}::{}", "ConflictType", self)
+            write!(fmt, "ConflictType::{}", self)
         }
     }
 
@@ -783,7 +786,7 @@ pub mod types {
                 "MISSING_REMOVED" => Ok(ConflictType::MISSING_REMOVED),
                 "MODIFIED_MODIFIED" => Ok(ConflictType::MODIFIED_MODIFIED),
                 "DIRECTORY_NOT_EMPTY" => Ok(ConflictType::DIRECTORY_NOT_EMPTY),
-                _ => anyhow::bail!("Unable to parse {} as {}", string, "ConflictType"),
+                _ => anyhow::bail!("Unable to parse {} as ConflictType", string),
             }
         }
     }
@@ -854,7 +857,7 @@ pub mod types {
 
     impl std::fmt::Debug for TracePointEvent {
         fn fmt(&self, fmt: &mut std::fmt::Formatter) -> std::fmt::Result {
-            write!(fmt, "{}::{}", "TracePointEvent", self)
+            write!(fmt, "TracePointEvent::{}", self)
         }
     }
 
@@ -865,7 +868,7 @@ pub mod types {
             match string {
                 "START" => Ok(TracePointEvent::START),
                 "STOP" => Ok(TracePointEvent::STOP),
-                _ => anyhow::bail!("Unable to parse {} as {}", string, "TracePointEvent"),
+                _ => anyhow::bail!("Unable to parse {} as TracePointEvent", string),
             }
         }
     }
@@ -1002,6 +1005,7 @@ pub mod types {
             Self {
                 pid: Default::default(),
                 commandLine: Default::default(),
+                status: None,
             }
         }
     }
@@ -1019,6 +1023,11 @@ pub mod types {
             p.write_field_begin("commandLine", TType::List, 2);
             Serialize::write(&self.commandLine, p);
             p.write_field_end();
+            if let Some(some) = &self.status {
+                p.write_field_begin("status", TType::I32, 3);
+                Serialize::write(some, p);
+                p.write_field_end();
+            }
             p.write_field_stop();
             p.write_struct_end();
         }
@@ -1028,6 +1037,7 @@ pub mod types {
         fn read(p: &mut P) -> anyhow::Result<Self> {
             let mut field_pid = None;
             let mut field_commandLine = None;
+            let mut field_status = None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
@@ -1035,6 +1045,7 @@ pub mod types {
                     (TType::Stop, _) => break,
                     (TType::I32, 1) => field_pid = Some(Deserialize::read(p)?),
                     (TType::List, 2) => field_commandLine = Some(Deserialize::read(p)?),
+                    (TType::I32, 3) => field_status = Some(Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -1043,6 +1054,7 @@ pub mod types {
             Ok(Self {
                 pid: field_pid.unwrap_or_default(),
                 commandLine: field_commandLine.unwrap_or_default(),
+                status: field_status,
             })
         }
     }
@@ -3583,7 +3595,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "ListMountsExn"),
@@ -3913,7 +3925,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "CheckOutRevisionExn"),
@@ -4135,7 +4147,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetSHA1Exn"),
@@ -4249,7 +4261,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetBindMountsExn"),
@@ -4579,7 +4591,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetCurrentJournalPositionExn"),
@@ -4693,7 +4705,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetFilesChangedSinceExn"),
@@ -4915,7 +4927,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetJournalMemoryLimitExn"),
@@ -5137,7 +5149,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "DebugGetRawJournalExn"),
@@ -5251,7 +5263,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetFileInformationExn"),
@@ -5365,7 +5377,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GlobExn"),
@@ -5479,7 +5491,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GlobFilesExn"),
@@ -5681,7 +5693,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetScmStatusV2Exn"),
@@ -5795,7 +5807,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetScmStatusExn"),
@@ -5909,7 +5921,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetScmStatusBetweenRevisionsExn"),
@@ -6043,7 +6055,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetManifestEntryExn"),
@@ -6157,7 +6169,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetDaemonInfoExn"),
@@ -6271,7 +6283,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetPidExn"),
@@ -6493,7 +6505,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetConfigExn"),
@@ -6715,7 +6727,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "DebugGetScmTreeExn"),
@@ -6829,7 +6841,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "DebugGetScmBlobExn"),
@@ -6943,7 +6955,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "DebugGetScmBlobMetadataExn"),
@@ -7057,7 +7069,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "DebugInodeStatusExn"),
@@ -7151,7 +7163,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "DebugOutstandingFuseCallsExn"),
@@ -7265,7 +7277,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "DebugGetInodePathExn"),
@@ -7379,7 +7391,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "DebugSetLogLevelExn"),
@@ -7493,7 +7505,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetAccessCountsExn"),
@@ -7931,7 +7943,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "UnloadInodeForPathExn"),
@@ -8261,7 +8273,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetStatInfoExn"),
@@ -8531,7 +8543,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "GetTracePointsExn"),
@@ -8753,7 +8765,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "RemoveFaultExn"),
@@ -8867,7 +8879,7 @@ pub mod services {
                     p.read_field_end()?;
                 }
                 p.read_struct_end()?;
-                alt.ok_or(
+                alt.ok_or_else(||
                     ApplicationException::new(
                         ApplicationExceptionErrorCode::MissingResult,
                         format!("Empty union {}", "UnblockFaultExn"),
@@ -9139,7 +9151,7 @@ pub mod client {
     {        fn listMounts(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::MountInfo>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "listMounts",
@@ -9156,7 +9168,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::MountInfo>> {
                         let p = &mut p;
@@ -9188,7 +9200,7 @@ pub mod client {
             &self,
             arg_info: &crate::types::MountArgument,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "mount",
@@ -9208,7 +9220,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -9240,7 +9252,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "unmount",
@@ -9260,7 +9272,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -9294,7 +9306,7 @@ pub mod client {
             arg_snapshotHash: &crate::types::BinaryHash,
             arg_checkoutMode: &crate::types::CheckoutMode,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::CheckoutConflict>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "checkOutRevision",
@@ -9320,7 +9332,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::CheckoutConflict>> {
                         let p = &mut p;
@@ -9353,7 +9365,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_parents: &crate::types::WorkingDirectoryParents,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "resetParentCommits",
@@ -9376,7 +9388,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -9409,7 +9421,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::SHA1Result>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getSHA1",
@@ -9432,7 +9444,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::SHA1Result>> {
                         let p = &mut p;
@@ -9464,7 +9476,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getBindMounts",
@@ -9484,7 +9496,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::PathString>> {
                         let p = &mut p;
@@ -9518,7 +9530,7 @@ pub mod client {
             arg_repoPath: &crate::types::PathString,
             arg_targetPath: &crate::types::PathString,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "addBindMount",
@@ -9544,7 +9556,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -9577,7 +9589,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_repoPath: &crate::types::PathString,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "removeBindMount",
@@ -9600,7 +9612,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -9632,7 +9644,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::JournalPosition>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getCurrentJournalPosition",
@@ -9652,7 +9664,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::JournalPosition> {
                         let p = &mut p;
@@ -9685,7 +9697,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_fromPosition: &crate::types::JournalPosition,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::FileDelta>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getFilesChangedSince",
@@ -9708,7 +9720,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::FileDelta> {
                         let p = &mut p;
@@ -9741,7 +9753,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_limit: i64,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "setJournalMemoryLimit",
@@ -9764,7 +9776,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -9796,7 +9808,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getJournalMemoryLimit",
@@ -9816,7 +9828,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<i64> {
                         let p = &mut p;
@@ -9848,7 +9860,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "flushJournal",
@@ -9868,7 +9880,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -9900,7 +9912,7 @@ pub mod client {
             &self,
             arg_params: &crate::types::DebugGetRawJournalParams,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::DebugGetRawJournalResponse>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "debugGetRawJournal",
@@ -9920,7 +9932,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::DebugGetRawJournalResponse> {
                         let p = &mut p;
@@ -9953,7 +9965,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FileInformationOrError>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getFileInformation",
@@ -9976,7 +9988,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::FileInformationOrError>> {
                         let p = &mut p;
@@ -10009,7 +10021,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_globs: &[String],
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "glob",
@@ -10032,7 +10044,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::PathString>> {
                         let p = &mut p;
@@ -10064,7 +10076,7 @@ pub mod client {
             &self,
             arg_params: &crate::types::GlobParams,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::Glob>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "globFiles",
@@ -10084,7 +10096,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::Glob> {
                         let p = &mut p;
@@ -10118,7 +10130,7 @@ pub mod client {
             arg_uid: i32,
             arg_gid: i32,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "chown",
@@ -10144,7 +10156,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -10176,7 +10188,7 @@ pub mod client {
             &self,
             arg_params: &crate::types::GetScmStatusParams,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::GetScmStatusResult>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getScmStatusV2",
@@ -10196,7 +10208,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::GetScmStatusResult> {
                         let p = &mut p;
@@ -10230,7 +10242,7 @@ pub mod client {
             arg_listIgnored: bool,
             arg_commit: &crate::types::BinaryHash,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmStatus>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getScmStatus",
@@ -10256,7 +10268,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::ScmStatus> {
                         let p = &mut p;
@@ -10290,7 +10302,7 @@ pub mod client {
             arg_oldHash: &crate::types::BinaryHash,
             arg_newHash: &crate::types::BinaryHash,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmStatus>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getScmStatusBetweenRevisions",
@@ -10316,7 +10328,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::ScmStatus> {
                         let p = &mut p;
@@ -10349,7 +10361,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_relativePath: &crate::types::PathString,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ManifestEntry>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getManifestEntry",
@@ -10372,7 +10384,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::ManifestEntry> {
                         let p = &mut p;
@@ -10403,7 +10415,7 @@ pub mod client {
         fn getDaemonInfo(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::DaemonInfo>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getDaemonInfo",
@@ -10420,7 +10432,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::DaemonInfo> {
                         let p = &mut p;
@@ -10451,7 +10463,7 @@ pub mod client {
         fn getPid(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getPid",
@@ -10468,7 +10480,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<i64> {
                         let p = &mut p;
@@ -10500,7 +10512,7 @@ pub mod client {
             &self,
             arg_reason: &str,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "initiateShutdown",
@@ -10520,7 +10532,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -10552,7 +10564,7 @@ pub mod client {
             &self,
             arg_params: &crate::types::GetConfigParams,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<eden_config::types::EdenConfigData>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getConfig",
@@ -10572,7 +10584,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<eden_config::types::EdenConfigData> {
                         let p = &mut p;
@@ -10603,7 +10615,7 @@ pub mod client {
         fn reloadConfig(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "reloadConfig",
@@ -10620,7 +10632,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -10654,7 +10666,7 @@ pub mod client {
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: bool,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::ScmTreeEntry>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "debugGetScmTree",
@@ -10680,7 +10692,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::ScmTreeEntry>> {
                         let p = &mut p;
@@ -10714,7 +10726,7 @@ pub mod client {
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: bool,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "debugGetScmBlob",
@@ -10740,7 +10752,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<Vec<u8>> {
                         let p = &mut p;
@@ -10774,7 +10786,7 @@ pub mod client {
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: bool,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmBlobMetadata>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "debugGetScmBlobMetadata",
@@ -10800,7 +10812,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::ScmBlobMetadata> {
                         let p = &mut p;
@@ -10833,7 +10845,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::TreeInodeDebugInfo>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "debugInodeStatus",
@@ -10856,7 +10868,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::TreeInodeDebugInfo>> {
                         let p = &mut p;
@@ -10888,7 +10900,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FuseCall>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "debugOutstandingFuseCalls",
@@ -10908,7 +10920,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::FuseCall>> {
                         let p = &mut p;
@@ -10941,7 +10953,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_inodeNumber: i64,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::InodePathDebugInfo>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "debugGetInodePath",
@@ -10964,7 +10976,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::InodePathDebugInfo> {
                         let p = &mut p;
@@ -10997,7 +11009,7 @@ pub mod client {
             arg_category: &str,
             arg_level: &str,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::SetLogLevelResult>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "debugSetLogLevel",
@@ -11020,7 +11032,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::SetLogLevelResult> {
                         let p = &mut p;
@@ -11052,7 +11064,7 @@ pub mod client {
             &self,
             arg_duration: i64,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::GetAccessCountsResult>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getAccessCounts",
@@ -11072,7 +11084,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::GetAccessCountsResult> {
                         let p = &mut p;
@@ -11103,7 +11115,7 @@ pub mod client {
         fn clearAndCompactLocalStore(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "clearAndCompactLocalStore",
@@ -11120,7 +11132,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -11151,7 +11163,7 @@ pub mod client {
         fn debugClearLocalStoreCaches(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "debugClearLocalStoreCaches",
@@ -11168,7 +11180,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -11199,7 +11211,7 @@ pub mod client {
         fn debugCompactLocalStorage(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "debugCompactLocalStorage",
@@ -11216,7 +11228,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -11250,7 +11262,7 @@ pub mod client {
             arg_path: &crate::types::PathString,
             arg_age: &crate::types::TimeSpec,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "unloadInodeForPath",
@@ -11276,7 +11288,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<i64> {
                         let p = &mut p;
@@ -11307,7 +11319,7 @@ pub mod client {
         fn flushStatsNow(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "flushStatsNow",
@@ -11324,7 +11336,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -11357,7 +11369,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "invalidateKernelInodeCache",
@@ -11380,7 +11392,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -11411,7 +11423,7 @@ pub mod client {
         fn getStatInfo(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::InternalStats>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getStatInfo",
@@ -11428,7 +11440,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<crate::types::InternalStats> {
                         let p = &mut p;
@@ -11459,7 +11471,7 @@ pub mod client {
         fn enableTracing(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "enableTracing",
@@ -11476,7 +11488,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -11507,7 +11519,7 @@ pub mod client {
         fn disableTracing(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "disableTracing",
@@ -11524,7 +11536,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -11555,7 +11567,7 @@ pub mod client {
         fn getTracePoints(
             &self,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::TracePoint>>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "getTracePoints",
@@ -11572,7 +11584,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::TracePoint>> {
                         let p = &mut p;
@@ -11604,7 +11616,7 @@ pub mod client {
             &self,
             arg_fault: &crate::types::FaultDefinition,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "injectFault",
@@ -11624,7 +11636,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<()> {
                         let p = &mut p;
@@ -11656,7 +11668,7 @@ pub mod client {
             &self,
             arg_fault: &crate::types::RemoveFaultArg,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<bool>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "removeFault",
@@ -11676,7 +11688,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<bool> {
                         let p = &mut p;
@@ -11708,7 +11720,7 @@ pub mod client {
             &self,
             arg_info: &crate::types::UnblockFaultArg,
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
-            use futures_preview::future::{FutureExt, TryFutureExt};
+            use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
                 "unblockFault",
@@ -11728,7 +11740,7 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
-                .and_then(|reply| futures_preview::future::ready({
+                .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
                     move |mut p: P::Deserializer| -> anyhow::Result<i64> {
                         let p = &mut p;
@@ -15891,7 +15903,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::MountInfo>>> + Send + 'static>> {
             let mut closure = self.listMounts.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceListMountsError(error),
                 ))))
@@ -15902,7 +15914,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.mount.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::MountArgument) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_info.clone())
+            Box::pin(futures::future::ready(closure(arg_info.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceMountError(error),
                 ))))
@@ -15913,7 +15925,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.unmount.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceUnmountError(error),
                 ))))
@@ -15926,7 +15938,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::CheckoutConflict>>> + Send + 'static>> {
             let mut closure = self.checkOutRevision.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::BinaryHash, crate::types::CheckoutMode) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_snapshotHash.clone(), arg_checkoutMode.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_snapshotHash.clone(), arg_checkoutMode.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceCheckOutRevisionError(error),
                 ))))
@@ -15938,7 +15950,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.resetParentCommits.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::WorkingDirectoryParents) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_parents.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_parents.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceResetParentCommitsError(error),
                 ))))
@@ -15950,7 +15962,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::SHA1Result>>> + Send + 'static>> {
             let mut closure = self.getSHA1.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, Vec<crate::types::PathString>) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetSHA1Error(error),
                 ))))
@@ -15961,7 +15973,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>> {
             let mut closure = self.getBindMounts.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetBindMountsError(error),
                 ))))
@@ -15974,7 +15986,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.addBindMount.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::PathString, crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_repoPath.clone(), arg_targetPath.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_repoPath.clone(), arg_targetPath.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceAddBindMountError(error),
                 ))))
@@ -15986,7 +15998,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.removeBindMount.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_repoPath.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_repoPath.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceRemoveBindMountError(error),
                 ))))
@@ -15997,7 +16009,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::JournalPosition>> + Send + 'static>> {
             let mut closure = self.getCurrentJournalPosition.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetCurrentJournalPositionError(error),
                 ))))
@@ -16009,7 +16021,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::FileDelta>> + Send + 'static>> {
             let mut closure = self.getFilesChangedSince.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::JournalPosition) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_fromPosition.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_fromPosition.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetFilesChangedSinceError(error),
                 ))))
@@ -16021,7 +16033,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.setJournalMemoryLimit.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, i64) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_limit.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_limit.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceSetJournalMemoryLimitError(error),
                 ))))
@@ -16032,7 +16044,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
             let mut closure = self.getJournalMemoryLimit.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetJournalMemoryLimitError(error),
                 ))))
@@ -16043,7 +16055,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.flushJournal.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceFlushJournalError(error),
                 ))))
@@ -16054,7 +16066,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::DebugGetRawJournalResponse>> + Send + 'static>> {
             let mut closure = self.debugGetRawJournal.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::DebugGetRawJournalParams) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_params.clone())
+            Box::pin(futures::future::ready(closure(arg_params.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceDebugGetRawJournalError(error),
                 ))))
@@ -16066,7 +16078,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FileInformationOrError>>> + Send + 'static>> {
             let mut closure = self.getFileInformation.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, Vec<crate::types::PathString>) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetFileInformationError(error),
                 ))))
@@ -16078,7 +16090,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>> {
             let mut closure = self.glob.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, Vec<String>) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_globs.to_owned())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_globs.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGlobError(error),
                 ))))
@@ -16089,7 +16101,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::Glob>> + Send + 'static>> {
             let mut closure = self.globFiles.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::GlobParams) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_params.clone())
+            Box::pin(futures::future::ready(closure(arg_params.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGlobFilesError(error),
                 ))))
@@ -16102,7 +16114,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.chown.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, i32, i32) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_uid.clone(), arg_gid.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_uid.clone(), arg_gid.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceChownError(error),
                 ))))
@@ -16113,7 +16125,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::GetScmStatusResult>> + Send + 'static>> {
             let mut closure = self.getScmStatusV2.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::GetScmStatusParams) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_params.clone())
+            Box::pin(futures::future::ready(closure(arg_params.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetScmStatusV2Error(error),
                 ))))
@@ -16126,7 +16138,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmStatus>> + Send + 'static>> {
             let mut closure = self.getScmStatus.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, bool, crate::types::BinaryHash) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_listIgnored.clone(), arg_commit.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_listIgnored.clone(), arg_commit.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetScmStatusError(error),
                 ))))
@@ -16139,7 +16151,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmStatus>> + Send + 'static>> {
             let mut closure = self.getScmStatusBetweenRevisions.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::BinaryHash, crate::types::BinaryHash) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_oldHash.clone(), arg_newHash.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_oldHash.clone(), arg_newHash.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetScmStatusBetweenRevisionsError(error),
                 ))))
@@ -16151,7 +16163,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ManifestEntry>> + Send + 'static>> {
             let mut closure = self.getManifestEntry.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_relativePath.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_relativePath.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetManifestEntryError(error),
                 ))))
@@ -16161,7 +16173,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::DaemonInfo>> + Send + 'static>> {
             let mut closure = self.getDaemonInfo.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetDaemonInfoError(error),
                 ))))
@@ -16171,7 +16183,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
             let mut closure = self.getPid.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetPidError(error),
                 ))))
@@ -16182,7 +16194,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.initiateShutdown.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_reason.to_owned())
+            Box::pin(futures::future::ready(closure(arg_reason.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceInitiateShutdownError(error),
                 ))))
@@ -16193,7 +16205,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<eden_config::types::EdenConfigData>> + Send + 'static>> {
             let mut closure = self.getConfig.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::GetConfigParams) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_params.clone())
+            Box::pin(futures::future::ready(closure(arg_params.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetConfigError(error),
                 ))))
@@ -16203,7 +16215,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.reloadConfig.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceReloadConfigError(error),
                 ))))
@@ -16216,7 +16228,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::ScmTreeEntry>>> + Send + 'static>> {
             let mut closure = self.debugGetScmTree.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::BinaryHash, bool) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_id.clone(), arg_localStoreOnly.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_id.clone(), arg_localStoreOnly.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceDebugGetScmTreeError(error),
                 ))))
@@ -16229,7 +16241,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
             let mut closure = self.debugGetScmBlob.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::BinaryHash, bool) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_id.clone(), arg_localStoreOnly.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_id.clone(), arg_localStoreOnly.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceDebugGetScmBlobError(error),
                 ))))
@@ -16242,7 +16254,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmBlobMetadata>> + Send + 'static>> {
             let mut closure = self.debugGetScmBlobMetadata.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::BinaryHash, bool) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_id.clone(), arg_localStoreOnly.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_id.clone(), arg_localStoreOnly.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceDebugGetScmBlobMetadataError(error),
                 ))))
@@ -16254,7 +16266,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::TreeInodeDebugInfo>>> + Send + 'static>> {
             let mut closure = self.debugInodeStatus.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_path.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_path.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceDebugInodeStatusError(error),
                 ))))
@@ -16265,7 +16277,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FuseCall>>> + Send + 'static>> {
             let mut closure = self.debugOutstandingFuseCalls.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceDebugOutstandingFuseCallsError(error),
                 ))))
@@ -16277,7 +16289,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::InodePathDebugInfo>> + Send + 'static>> {
             let mut closure = self.debugGetInodePath.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, i64) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_inodeNumber.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_inodeNumber.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceDebugGetInodePathError(error),
                 ))))
@@ -16289,7 +16301,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::SetLogLevelResult>> + Send + 'static>> {
             let mut closure = self.debugSetLogLevel.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String, String) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_category.to_owned(), arg_level.to_owned())
+            Box::pin(futures::future::ready(closure(arg_category.to_owned(), arg_level.to_owned())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceDebugSetLogLevelError(error),
                 ))))
@@ -16300,7 +16312,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::GetAccessCountsResult>> + Send + 'static>> {
             let mut closure = self.getAccessCounts.closure.lock().unwrap();
             let closure: &mut dyn FnMut(i64) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_duration.clone())
+            Box::pin(futures::future::ready(closure(arg_duration.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetAccessCountsError(error),
                 ))))
@@ -16310,7 +16322,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.clearAndCompactLocalStore.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceClearAndCompactLocalStoreError(error),
                 ))))
@@ -16320,7 +16332,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.debugClearLocalStoreCaches.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceDebugClearLocalStoreCachesError(error),
                 ))))
@@ -16330,7 +16342,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.debugCompactLocalStorage.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceDebugCompactLocalStorageError(error),
                 ))))
@@ -16343,7 +16355,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
             let mut closure = self.unloadInodeForPath.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::PathString, crate::types::TimeSpec) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_path.clone(), arg_age.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_path.clone(), arg_age.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceUnloadInodeForPathError(error),
                 ))))
@@ -16353,7 +16365,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.flushStatsNow.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceFlushStatsNowError(error),
                 ))))
@@ -16365,7 +16377,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.invalidateKernelInodeCache.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_mountPoint.clone(), arg_path.clone())
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_path.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceInvalidateKernelInodeCacheError(error),
                 ))))
@@ -16375,7 +16387,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::InternalStats>> + Send + 'static>> {
             let mut closure = self.getStatInfo.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetStatInfoError(error),
                 ))))
@@ -16385,7 +16397,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.enableTracing.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceEnableTracingError(error),
                 ))))
@@ -16395,7 +16407,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.disableTracing.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceDisableTracingError(error),
                 ))))
@@ -16405,7 +16417,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::TracePoint>>> + Send + 'static>> {
             let mut closure = self.getTracePoints.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure()
+            Box::pin(futures::future::ready(closure()
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceGetTracePointsError(error),
                 ))))
@@ -16416,7 +16428,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
             let mut closure = self.injectFault.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::FaultDefinition) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_fault.clone())
+            Box::pin(futures::future::ready(closure(arg_fault.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceInjectFaultError(error),
                 ))))
@@ -16427,7 +16439,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<bool>> + Send + 'static>> {
             let mut closure = self.removeFault.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::RemoveFaultArg) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_fault.clone())
+            Box::pin(futures::future::ready(closure(arg_fault.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceRemoveFaultError(error),
                 ))))
@@ -16438,7 +16450,7 @@ pub mod mock {
         ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
             let mut closure = self.unblockFault.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::UnblockFaultArg) -> _ = &mut **closure;
-            Box::pin(futures_preview::future::ready(closure(arg_info.clone())
+            Box::pin(futures::future::ready(closure(arg_info.clone())
                 .map_err(|error| anyhow::Error::from(
                     crate::errors::ErrorKind::EdenServiceUnblockFaultError(error),
                 ))))

@@ -91,7 +91,7 @@ edition = "2018"
 anyhow = "1"
 async-trait = "0.1"
 fbthrift = {{ path = "../../../../../thrift/lib/rust" }}
-futures_preview = {{ package = "futures", version = "0.3" }}
+futures = "0.3"
 thiserror = "1"
 {}"#,
                 "g", unit.name, deps
