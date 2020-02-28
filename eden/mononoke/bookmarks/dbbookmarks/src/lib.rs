@@ -555,11 +555,13 @@ impl Bookmarks for SqlBookmarks {
         limit: u64,
         freshness: Freshness,
     ) -> BoxStream<BookmarkUpdateLogEntry, Error> {
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlReadsReplica);
         let connection = if freshness == Freshness::MostRecent {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
             &self.read_master_connection
         } else {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsReplica);
             &self.read_connection
         };
 
