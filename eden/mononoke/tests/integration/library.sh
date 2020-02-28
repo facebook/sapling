@@ -730,18 +730,7 @@ threshold=$LFS_THRESHOLD
 CONFIG
 fi
 
-if [[ -v INFINITEPUSH_ALLOW_WRITES ]] || [[ -v INFINITEPUSH_NAMESPACE_REGEX ]]; then
-  namespace=""
-  if [[ -v INFINITEPUSH_NAMESPACE_REGEX ]]; then
-    namespace="namespace_pattern=\"$INFINITEPUSH_NAMESPACE_REGEX\""
-  fi
-
-  cat >> "repos/$reponame/server.toml" <<CONFIG
-[infinitepush]
-allow_writes = ${INFINITEPUSH_ALLOW_WRITES:-true}
-${namespace}
-CONFIG
-fi
+write_infinitepush_config "$reponame"
 
 if [[ -v ENABLED_DERIVED_DATA ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
@@ -754,6 +743,23 @@ else
 derived_data_types=["blame", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes"]
 CONFIG
 fi
+}
+
+function write_infinitepush_config {
+  local reponame="$1"
+  if [[ -v INFINITEPUSH_ALLOW_WRITES ]] || [[ -v INFINITEPUSH_NAMESPACE_REGEX ]] || [[ -v INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE ]]; then
+    namespace=""
+    if [[ -v INFINITEPUSH_NAMESPACE_REGEX ]]; then
+      namespace="namespace_pattern=\"$INFINITEPUSH_NAMESPACE_REGEX\""
+    fi
+
+    cat >> "repos/$reponame/server.toml" <<CONFIG
+[infinitepush]
+allow_writes = ${INFINITEPUSH_ALLOW_WRITES:-true}
+hydrate_getbundle_response = ${INFINITEPUSH_HYDRATE_GETBUNDLE_RESPONSE:-false}
+${namespace}
+CONFIG
+  fi
 }
 
 function register_hook {

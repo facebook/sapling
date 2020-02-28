@@ -21,10 +21,13 @@ use filestore::FetchKey;
 use futures::{
     future as old_future, stream as old_stream, Future as OldFuture, Stream as OldStream,
 };
-use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
+use futures_ext::{
+    BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, BufferedParams,
+    FutureExt as OldFutureExt, StreamExt as OldStreamExt,
+};
 use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self},
+    future::{self, FutureExt, TryFutureExt},
     stream::{self, Stream, StreamExt, TryStreamExt},
 };
 use futures_util::try_join;
@@ -38,13 +41,14 @@ use mercurial_bundles::{
 use mercurial_revlog::{self, RevlogChangeset};
 use mercurial_types::{
     blobs::{fetch_manifest_envelope, File},
-    FileBytes, HgBlobNode, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId, HgParents,
-    HgPhase, MPath, RevFlags, NULL_CSID,
+    FileBytes, HgBlobNode, HgChangesetId, HgFileNodeId, HgManifestId, HgParents, HgPhase, MPath,
+    RevFlags, NULL_CSID,
 };
 use metaconfig_types::LfsParams;
-use mononoke_types::{hash::Sha256, ChangesetId};
+use mononoke_types::{hash::Sha256, ChangesetId, ContentId};
 use phases::Phases;
 use reachabilityindex::LeastCommonAncestorsHint;
+use repo_blobstore::RepoBlobstore;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use slog::debug;
 use std::{
@@ -55,10 +59,23 @@ use std::{
 
 mod errors;
 
+pub const MAX_FILENODE_BYTES_IN_MEMORY: u64 = 100_000_000;
+
 #[derive(PartialEq, Eq)]
 pub enum PhasesPart {
     Yes,
     No,
+}
+
+/// An enum to identify the fullness of the information we
+/// want to include into the `getbundle` response for draft
+/// commits
+#[derive(PartialEq, Eq, Clone, Copy, Debug)]
+pub enum DraftsInBundlesPolicy {
+    /// Only include commit information (like for public changesets)
+    CommitsOnly,
+    /// Also include trees and files information
+    WithTreesAndFiles,
 }
 
 pub async fn create_getbundle_response(
@@ -68,6 +85,8 @@ pub async fn create_getbundle_response(
     heads: Vec<HgChangesetId>,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     return_phases: PhasesPart,
+    lfs_params: LfsParams,
+    drafts_in_bundles_policy: DraftsInBundlesPolicy,
 ) -> Result<Vec<PartEncodeBuilder>, Error> {
     let return_phases = return_phases == PhasesPart::Yes;
     debug!(ctx.logger(), "Return phases is: {:?}", return_phases);
@@ -76,7 +95,7 @@ pub async fn create_getbundle_response(
     let common: HashSet<_> = common.into_iter().collect();
     let commits_to_send = find_commits_to_send(&ctx, &blobrepo, &common, &heads, &lca_hint);
 
-    let public_derive_filenodes = async {
+    let phases = async {
         // Calculate phases only for heads that will be sent back to client (i.e. only
         // for heads that are not in "common"). Note that this is different from
         // "phases" part below, where we want to return phases for all heads.
@@ -85,17 +104,58 @@ pub async fn create_getbundle_response(
             .compat()
             .await?;
         report_draft_commits(&ctx, phases.iter());
-        derive_filenodes_for_public_heads(&ctx, &blobrepo, &common, &phases).await
+        derive_filenodes_for_public_heads(&ctx, &blobrepo, &common, &phases).await?;
+        Ok(phases)
     };
 
-    let (_, commits_to_send) = try_join!(public_derive_filenodes, commits_to_send)?;
+    let (phases, commits_to_send) = try_join!(phases, commits_to_send)?;
 
     let mut parts = vec![];
     if heads_len != 0 {
         // no heads means bookmark-only pushrebase, and the client
         // does not expect a changegroup part in this case
-        let cs_part = create_hg_changeset_part(&ctx, &blobrepo, commits_to_send).await?;
-        parts.push(cs_part);
+
+        let draft_hg_cs_ids: Vec<HgChangesetId> = phases
+            .iter()
+            .filter_map(|(hg_cs_id, hg_phase)| {
+                if HgPhase::Public == *hg_phase {
+                    None
+                } else {
+                    Some(hg_cs_id)
+                }
+            })
+            .cloned()
+            .collect();
+
+        let should_include_trees_and_files =
+            drafts_in_bundles_policy == DraftsInBundlesPolicy::WithTreesAndFiles;
+        let (maybe_manifests, maybe_filenodes): (Option<_>, Option<_>) =
+            if should_include_trees_and_files {
+                let (manifests, filenodes) =
+                    get_manifests_and_filenodes(&ctx, &blobrepo, draft_hg_cs_ids, &lfs_params)
+                        .await?;
+                (Some(manifests), Some(filenodes))
+            } else {
+                (None, None)
+            };
+
+        let cg_part = create_hg_changeset_part(
+            &ctx,
+            &blobrepo,
+            commits_to_send.clone(),
+            maybe_filenodes,
+            lfs_params,
+        )
+        .await?;
+        parts.push(cg_part);
+
+        if let Some(manifests) = maybe_manifests {
+            let manifests_stream =
+                create_manifest_entries_stream(ctx.clone(), blobrepo.get_blobstore(), manifests);
+            let tp_part = parts::treepack_part(manifests_stream)?;
+
+            parts.push(tp_part);
+        }
     }
 
     // Phases part has to be after the changegroup part.
@@ -213,6 +273,8 @@ async fn create_hg_changeset_part(
     ctx: &CoreContext,
     blobrepo: &BlobRepo,
     nodes_to_send: Vec<ChangesetId>,
+    maybe_prepared_filenode_entries: Option<HashMap<MPath, Vec<PreparedFilenodeEntry>>>,
+    lfs_params: LfsParams,
 ) -> Result<PartEncodeBuilder> {
     let map_chunk_size = 100;
     let load_buffer_size = 1000;
@@ -293,7 +355,20 @@ async fn create_hg_changeset_part(
         .boxed()
         .compat();
 
-    parts::changegroup_part(changelogentries, None, CgVersion::Cg2Version)
+    let maybe_filenode_entries = match maybe_prepared_filenode_entries {
+        Some(prepared_filenode_entries) => Some(
+            create_filenodes(ctx.clone(), blobrepo.clone(), prepared_filenode_entries).boxify(),
+        ),
+        None => None,
+    };
+
+    let cg_version = if lfs_params.threshold.is_some() {
+        CgVersion::Cg3Version
+    } else {
+        CgVersion::Cg2Version
+    };
+
+    parts::changegroup_part(changelogentries, maybe_filenode_entries, cg_version)
 }
 
 async fn hg_to_bonsai_stream(
@@ -438,8 +513,8 @@ fn calculate_public_roots(
 }
 
 pub enum FilenodeEntryContent {
-    InlineV2(FileBytes),
-    InlineV3(FileBytes),
+    InlineV2(ContentId),
+    InlineV3(ContentId),
     LfsV3(Sha256, u64),
 }
 
@@ -449,11 +524,20 @@ pub struct PreparedFilenodeEntry {
     pub parents: HgParents,
     pub metadata: Bytes,
     pub content: FilenodeEntryContent,
+    /// This field represents the memory footprint of a single
+    /// entry when streaming. For inline-stored entries, this is
+    /// just the size of the contents, while for LFS this is a size
+    /// of an LFS pointer. Of course, this does not have to be
+    /// precise, as it just provides an estimate on when to stop
+    /// buffering.
+    pub entry_weight_hint: u64,
 }
 
 impl PreparedFilenodeEntry {
-    fn into_filenode(
+    async fn into_filenode(
         self,
+        ctx: CoreContext,
+        repo: BlobRepo,
     ) -> Result<(HgFileNodeId, HgChangesetId, HgBlobNode, Option<RevFlags>), Error> {
         let Self {
             filenode,
@@ -461,16 +545,33 @@ impl PreparedFilenodeEntry {
             parents,
             metadata,
             content,
+            ..
         } = self;
 
+        async fn fetch_and_wrap(
+            ctx: CoreContext,
+            repo: BlobRepo,
+            content_id: ContentId,
+        ) -> Result<FileBytes, Error> {
+            let content = filestore::fetch_concat(repo.blobstore(), ctx, content_id)
+                .compat()
+                .await?;
+
+            Ok(FileBytes(content))
+        };
+
         let (blob, flags) = match content {
-            FilenodeEntryContent::InlineV2(bytes) => {
+            FilenodeEntryContent::InlineV2(content_id) => {
+                let bytes = fetch_and_wrap(ctx, repo, content_id).await?;
                 (generate_inline_file(&bytes, parents, &metadata), None)
             }
-            FilenodeEntryContent::InlineV3(bytes) => (
-                generate_inline_file(&bytes, parents, &metadata),
-                Some(RevFlags::REVIDX_DEFAULT_FLAGS),
-            ),
+            FilenodeEntryContent::InlineV3(content_id) => {
+                let bytes = fetch_and_wrap(ctx, repo, content_id).await?;
+                (
+                    generate_inline_file(&bytes, parents, &metadata),
+                    Some(RevFlags::REVIDX_DEFAULT_FLAGS),
+                )
+            }
             FilenodeEntryContent::LfsV3(oid, size) => (
                 generate_lfs_file(oid, parents, size, &metadata)?,
                 Some(RevFlags::REVIDX_EXTSTORED),
@@ -478,6 +579,28 @@ impl PreparedFilenodeEntry {
         };
 
         Ok((filenode, linknode, blob, flags))
+    }
+
+    pub fn maybe_get_lfs_pointer(&self) -> Option<(Sha256, u64)> {
+        match self.content {
+            FilenodeEntryContent::LfsV3(sha256, size) => Some((sha256.clone(), size)),
+            _ => None,
+        }
+    }
+}
+
+fn calculate_content_weight_hint(content_size: u64, content: &FilenodeEntryContent) -> u64 {
+    match content {
+        // Approximate calculation for LFS:
+        // - 34 bytes for GitVersion
+        // - 32 bytes for Sha256
+        // - 8 bytes for size
+        // - 40 bytes for parents
+        FilenodeEntryContent::LfsV3(_, _) => 34 + 32 + 8 + 40,
+        // Approximate calculation for inline:
+        // - content_size
+        // - parents
+        FilenodeEntryContent::InlineV2(_) | FilenodeEntryContent::InlineV3(_) => content_size + 40,
     }
 }
 
@@ -497,29 +620,10 @@ fn prepare_filenode_entries_stream<'a>(
 
                 let file_size = envelope.content_size();
 
-                async fn fetch_and_wrap(
-                    ctx: CoreContext,
-                    repo: &BlobRepo,
-                    envelope: &HgFileEnvelope,
-                    constructor: impl FnOnce(FileBytes) -> FilenodeEntryContent,
-                ) -> Result<FilenodeEntryContent, Error> {
-                    let content =
-                        filestore::fetch_concat(repo.blobstore(), ctx, envelope.content_id())
-                            .compat()
-                            .await?;
-
-                    let content = FileBytes(content);
-                    Ok(constructor(content))
-                };
-
                 let content = match lfs_params.threshold {
-                    None => {
-                        fetch_and_wrap(ctx.clone(), repo, &envelope, FilenodeEntryContent::InlineV2)
-                            .await?
-                    }
+                    None => FilenodeEntryContent::InlineV2(envelope.content_id()),
                     Some(lfs_threshold) if file_size <= lfs_threshold => {
-                        fetch_and_wrap(ctx.clone(), repo, &envelope, FilenodeEntryContent::InlineV3)
-                            .await?
+                        FilenodeEntryContent::InlineV3(envelope.content_id())
                     }
                     _ => {
                         let key = FetchKey::from(envelope.content_id());
@@ -534,12 +638,14 @@ fn prepare_filenode_entries_stream<'a>(
                 };
 
                 let parents = envelope.hg_parents();
+                let entry_weight_hint = calculate_content_weight_hint(file_size, &content);
                 let prepared_filenode_entry = PreparedFilenodeEntry {
                     filenode,
                     linknode,
                     parents,
                     metadata: envelope.metadata().clone(),
                     content,
+                    entry_weight_hint,
                 };
 
                 Ok((path, vec![prepared_filenode_entry]))
@@ -592,30 +698,30 @@ fn generate_lfs_file(
     Ok(HgBlobNode::new(Bytes::from(bytes), p1, p2))
 }
 
-fn create_manifest_entries_stream<'a>(
-    ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
+pub fn create_manifest_entries_stream(
+    ctx: CoreContext,
+    blobstore: RepoBlobstore,
     manifests: Vec<(Option<MPath>, HgManifestId, HgChangesetId)>,
-) -> impl Stream<Item = Result<OldBoxFuture<parts::TreepackPartInput, Error>, Error>> + 'a {
-    stream::iter(manifests.into_iter()).map({
-        move |(fullpath, mf_id, linknode)| {
-            let fut = fetch_manifest_envelope(ctx.clone(), &repo.get_blobstore().boxed(), mf_id)
-                .map(move |mf_envelope| {
-                    let (p1, p2) = mf_envelope.parents();
-                    parts::TreepackPartInput {
-                        node: mf_id.into_nodehash(),
-                        p1,
-                        p2,
-                        content: BytesOld::from(mf_envelope.contents().as_ref()),
-                        fullpath,
-                        linknode: linknode.into_nodehash(),
-                    }
-                })
-                .boxify();
-
-            Result::<_, Error>::Ok(fut)
-        }
-    })
+) -> OldBoxStream<OldBoxFuture<parts::TreepackPartInput, Error>, Error> {
+    old_stream::iter_ok(manifests.into_iter())
+        .map({
+            move |(fullpath, mf_id, linknode)| {
+                fetch_manifest_envelope(ctx.clone(), &blobstore.boxed(), mf_id)
+                    .map(move |mf_envelope| {
+                        let (p1, p2) = mf_envelope.parents();
+                        parts::TreepackPartInput {
+                            node: mf_id.into_nodehash(),
+                            p1,
+                            p2,
+                            content: BytesOld::from(mf_envelope.contents().as_ref()),
+                            fullpath,
+                            linknode: linknode.into_nodehash(),
+                        }
+                    })
+                    .boxify()
+            }
+        })
+        .boxify()
 }
 
 async fn diff_with_parents(
@@ -667,66 +773,79 @@ async fn diff_with_parents(
     Ok((mfs, files))
 }
 
-pub fn create_filenodes(
+fn create_filenodes_weighted(
+    ctx: CoreContext,
+    repo: BlobRepo,
     entries: HashMap<MPath, Vec<PreparedFilenodeEntry>>,
-) -> Result<Vec<(MPath, Vec<FilenodeEntry>)>, Error> {
-    entries
-        .into_iter()
-        .map(|(path, prepared_entries)| {
-            let entries: Result<Vec<_>, Error> = prepared_entries
+) -> impl OldStream<
+    Item = (
+        impl OldFuture<Item = (MPath, Vec<FilenodeEntry>), Error = Error>,
+        u64,
+    ),
+    Error = Error,
+> {
+    let items = entries.into_iter().map({
+        cloned!(ctx, repo);
+        move |(path, prepared_entries)| {
+            let total_weight: u64 = prepared_entries.iter().fold(0, |acc, prepared_entry| {
+                acc + prepared_entry.entry_weight_hint
+            });
+
+            let entry_futs: Vec<_> = prepared_entries
                 .into_iter()
-                .map(PreparedFilenodeEntry::into_filenode)
+                .map({
+                    |entry| {
+                        entry
+                            .into_filenode(ctx.clone(), repo.clone())
+                            .boxed()
+                            .compat()
+                    }
+                })
                 .collect();
-            Ok((path, entries?))
-        })
-        .collect()
+
+            let fut = old_future::join_all(entry_futs).map(|entries| (path, entries));
+
+            (fut, total_weight)
+        }
+    });
+    old_stream::iter_ok(items)
+}
+
+pub fn create_filenodes(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    entries: HashMap<MPath, Vec<PreparedFilenodeEntry>>,
+) -> impl OldStream<Item = (MPath, Vec<FilenodeEntry>), Error = Error> {
+    let params = BufferedParams {
+        weight_limit: MAX_FILENODE_BYTES_IN_MEMORY,
+        buffer_size: 100,
+    };
+    create_filenodes_weighted(ctx, repo, entries).buffered_weight_limited(params)
 }
 
 pub async fn get_manifests_and_filenodes(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     commits: Vec<HgChangesetId>,
-    lfs_params: LfsParams,
+    lfs_params: &LfsParams,
 ) -> Result<
     (
-        Vec<OldBoxFuture<parts::TreepackPartInput, Error>>,
+        Vec<(Option<MPath>, HgManifestId, HgChangesetId)>,
         HashMap<MPath, Vec<PreparedFilenodeEntry>>,
     ),
     Error,
 > {
     let entries: Vec<_> = stream::iter(commits)
         .then({
-            |hg_cs_id| {
-                let ctx = &ctx;
-                let lfs_params = &lfs_params;
-                let repo = &repo;
+            |hg_cs_id| async move {
+                let (manifests, filenodes) =
+                    diff_with_parents(ctx.clone(), repo.clone(), hg_cs_id).await?;
 
-                async move {
-                    let (manifests, filenodes) =
-                        diff_with_parents(ctx.clone(), repo.clone(), hg_cs_id).await?;
-                    let manifests_and_filenodes: (Vec<_>, Vec<_>) = try_join!(
-                        async {
-                            let manifests: Vec<OldBoxFuture<parts::TreepackPartInput, Error>> =
-                                create_manifest_entries_stream(&ctx, &repo, manifests)
-                                    .try_collect()
-                                    .await?;
-                            Result::<_, Error>::Ok(manifests)
-                        },
-                        async {
-                            let filenodes: Vec<(MPath, Vec<PreparedFilenodeEntry>)> =
-                                prepare_filenode_entries_stream(
-                                    &ctx,
-                                    &repo,
-                                    filenodes,
-                                    &lfs_params,
-                                )
-                                .try_collect()
-                                .await?;
-                            Result::<_, Error>::Ok(filenodes)
-                        }
-                    )?;
-                    Result::<_, Error>::Ok(manifests_and_filenodes)
-                }
+                let filenodes: Vec<(MPath, Vec<PreparedFilenodeEntry>)> =
+                    prepare_filenode_entries_stream(&ctx, &repo, filenodes, &lfs_params)
+                        .try_collect()
+                        .await?;
+                Result::<_, Error>::Ok((manifests, filenodes))
             }
         })
         .try_collect()

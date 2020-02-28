@@ -27,7 +27,7 @@ use futures_ext::{
 };
 use futures_stats::{Timed, TimedStreamTrait};
 use futures_util::{FutureExt, TryFutureExt};
-use getbundle_response::{create_getbundle_response, PhasesPart};
+use getbundle_response::{create_getbundle_response, DraftsInBundlesPolicy, PhasesPart};
 use hgproto::{GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 use hooks::HookExecution;
 use itertools::Itertools;
@@ -373,6 +373,7 @@ impl RepoClient {
     }
 
     fn create_bundle(&self, ctx: CoreContext, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
+        let lfs_params = self.repo.lfs_params().clone();
         let blobrepo = self.repo.blobrepo().clone();
         let mut bundle2_parts = vec![];
 
@@ -400,6 +401,13 @@ impl RepoClient {
         }
         let pull_default_bookmarks = self.get_pull_default_bookmarks_maybe_stale(ctx.clone());
         let lca_hint = self.repo.lca_hint().clone();
+
+        let drafts_in_bundles_policy = if self.repo.infinitepush().hydrate_getbundle_response {
+            DraftsInBundlesPolicy::WithTreesAndFiles
+        } else {
+            DraftsInBundlesPolicy::CommitsOnly
+        };
+
         async move {
             create_getbundle_response(
                 ctx.clone(),
@@ -412,6 +420,8 @@ impl RepoClient {
                 } else {
                     PhasesPart::No
                 },
+                lfs_params,
+                drafts_in_bundles_policy,
             )
             .await
         }
@@ -1326,6 +1336,7 @@ impl HgCommands for RepoClient {
             .expect("lock poisoned")
             .take();
 
+        let lfs_params = self.repo.lfs_params().clone();
         self.repo
             .readonly()
             // Assume read only if we have an error.
@@ -1410,7 +1421,8 @@ impl HgCommands for RepoClient {
                             ctx,
                             blobrepo,
                             pushrebase_params,
-                            lca_hint
+                            lca_hint,
+                            lfs_params,
                         )
                         .from_err()
                     }

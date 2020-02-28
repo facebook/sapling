@@ -16,8 +16,9 @@ use futures::{Future, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
 use futures_stats::Timed;
 use futures_util::{FutureExt, TryFutureExt};
-use getbundle_response::{create_getbundle_response, PhasesPart};
+use getbundle_response::{create_getbundle_response, DraftsInBundlesPolicy, PhasesPart};
 use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, PartId};
+use metaconfig_types::LfsParams;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::ChangesetId;
 use obsolete;
@@ -121,6 +122,7 @@ impl UnbundleResponse {
         repo: BlobRepo,
         pushrebase_params: PushrebaseParams,
         lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+        lfs_params: LfsParams,
     ) -> BoxFuture<Bytes, Error> {
         let UnbundlePushRebaseResponse {
             commonheads,
@@ -163,8 +165,20 @@ impl UnbundleResponse {
                 }
                 heads.push(pushrebased_hg_rev);
                 async move {
-                    create_getbundle_response(ctx, repo, common, heads, lca_hint, PhasesPart::Yes)
-                        .await
+                    create_getbundle_response(
+                        ctx,
+                        repo,
+                        common,
+                        heads,
+                        lca_hint,
+                        PhasesPart::Yes,
+                        lfs_params,
+                        // Note: pushrebase response can only ever respond
+                        // with public commits atm, so the value we are passing
+                        // here is inconsequential.
+                        DraftsInBundlesPolicy::CommitsOnly,
+                    )
+                    .await
                 }
                 .boxed()
                 .compat()
@@ -232,6 +246,7 @@ impl UnbundleResponse {
         repo: BlobRepo,
         pushrebase_params: PushrebaseParams,
         lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+        lfs_params: LfsParams,
     ) -> BoxFuture<Bytes, Error> {
         match self {
             UnbundleResponse::Push(data) => Self::generate_push_response_bytes(ctx, data),
@@ -244,6 +259,7 @@ impl UnbundleResponse {
                 repo,
                 pushrebase_params,
                 lca_hint,
+                lfs_params,
             ),
             UnbundleResponse::BookmarkOnlyPushRebase(data) => {
                 Self::generate_bookmark_only_pushrebase_response_bytes(ctx, data)

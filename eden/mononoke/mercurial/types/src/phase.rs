@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#[derive(Debug, Eq, PartialEq)]
+#[derive(Debug, Eq, PartialEq, Clone, Copy)]
 #[repr(u32)]
 pub enum HgPhase {
     Public = 0,
