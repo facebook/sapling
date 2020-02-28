@@ -54,6 +54,13 @@ def dumps(obj, paranoid=True):
         raise TypeError("cannot encode type %s" % obj.__class__.__name__)
 
 
+def dump(data, fp):
+    if sys.version_info[0] < 3:
+        return fp.write(dumps(data))
+    else:
+        return _sysjson.dump(data, fp)
+
+
 def _rapply(f, xs):
     if xs is None:
         # assume None means non-value of optional data

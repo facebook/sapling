@@ -7,13 +7,12 @@ from __future__ import absolute_import
 
 # Standard Library
 import gzip
-import json
 import os
 import socket
 import ssl
 import time
 
-from edenscm.mercurial import error, perftrace, pycompat, util
+from edenscm.mercurial import error, json, perftrace, pycompat, util
 from edenscm.mercurial.i18n import _
 
 from . import baseservice, error as ccerror

@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ enable commitcloud infinitepush amend rebase remotenames

@@ -6,10 +6,9 @@
 from __future__ import absolute_import
 
 # Standard Library
-import json
 import os
 
-from edenscm.mercurial import error
+from edenscm.mercurial import error, json, pycompat
 
 from . import baseservice, error as ccerror
 
@@ -30,7 +29,7 @@ class LocalService(baseservice.BaseService):
     def _load(self):
         filename = os.path.join(self.path, "commitcloudservicedb")
         if os.path.exists(filename):
-            with open(filename) as f:
+            with open(filename, "rb") as f:
                 data = json.load(f)
                 return data
         else:
@@ -44,8 +43,8 @@ class LocalService(baseservice.BaseService):
 
     def _save(self, data):
         filename = os.path.join(self.path, "commitcloudservicedb")
-        with open(filename, "w") as f:
-            json.dump(data, f)
+        with open(filename, "wb") as f:
+            f.write(pycompat.encodeutf8(json.dumps(data)))
 
     def _filteredobsmarkers(self, data, baseversion):
         """filter the obmarkers since the baseversion
@@ -65,7 +64,7 @@ class LocalService(baseservice.BaseService):
         heads = set(data["heads"])
         filename = os.path.join(self.path, "nodedata")
         if os.path.exists(filename):
-            with open(filename) as f:
+            with open(filename, "rb") as f:
                 nodes = json.load(f)
                 for node in nodes:
                     if node["node"] in heads:
@@ -144,7 +143,7 @@ class LocalService(baseservice.BaseService):
         if not os.path.exists(filename):
             nodes = {}
         else:
-            with open(filename) as f:
+            with open(filename, "rb") as f:
                 data = json.load(f)
                 nodes = self._makenodes(data["smartlog"])
         try:
@@ -157,7 +156,7 @@ class LocalService(baseservice.BaseService):
         if not os.path.exists(filename):
             nodes = {}
         else:
-            with open(filename) as f:
+            with open(filename, "rb") as f:
                 data = json.load(f)
                 nodes = self._makenodes(data["smartlog"])
         try:
@@ -179,5 +178,5 @@ class LocalService(baseservice.BaseService):
             "unixname": unixname,
         }
         filename = os.path.join(self.path, "checkoutlocations")
-        with open(filename, "w+") as f:
+        with open(filename, "wb+") as f:
             json.dump(data, f)

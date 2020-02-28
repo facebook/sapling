@@ -541,7 +541,11 @@ class changectx(basectx):
                         # Hex the node so it prints pretty.
                         changeid = hex(changeid)
                         raise error.RepoLookupError(
-                            _("unknown revision '%s'") % changeid
+                            _("unknown revision '%s'") % changeid,
+                            hint=_(
+                                "if %s is a remote bookmark or commit, try to 'hg pull' it first"
+                            )
+                            % changeid,
                         )
 
             # The valid changeid types are str, bytes, and int. int and bytes

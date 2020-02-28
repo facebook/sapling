@@ -591,6 +591,6 @@ def knownnodes(self, nodes):
     yield {"nodes": wireproto.encodelist(nodes)}, f
     d = f.value
     try:
-        yield [bool(int(b)) for b in d]
+        yield [bool(int(b)) for b in pycompat.decodeutf8(d)]
     except ValueError:
         error.Abort(error.ResponseError(_("unexpected response:"), d))

@@ -313,7 +313,6 @@ def cloudremote(repo, subset, x):
         return subset & repo.unfiltered().revs("%ls", hexnodespulled)
     except Exception as e:
         repo.ui.status(
-            repo.ui,
             _("unable to pull all changesets from the remote store\n%s\n") % e,
             component="commitcloud",
         )

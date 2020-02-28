@@ -8,9 +8,8 @@ from __future__ import absolute_import
 # Standard Library
 import abc
 import collections
-import json
 
-from edenscm.mercurial import dagop, node as nodemod, pycompat
+from edenscm.mercurial import dagop, json, node as nodemod, pycompat
 from edenscm.mercurial.graphmod import CHANGESET, GRANDPARENT, MISSINGPARENT, PARENT
 from edenscm.mercurial.pycompat import ensurestr
 
@@ -122,34 +121,25 @@ class BaseService(pycompat.ABC):
             Result represents struct References from this module
         """
         version = data["version"]
-        newheads = [h.encode("ascii") for h in data["heads"]]
-        newbookmarks = {
-            n.encode("utf-8"): v.encode("ascii") for n, v in data["bookmarks"].items()
-        }
+        newheads = [h for h in data["heads"]]
+        newbookmarks = {n: v for n, v in data["bookmarks"].items()}
         newobsmarkers = [
             (
                 nodemod.bin(m["pred"]),
                 tuple(nodemod.bin(s) for s in m["succs"]),
                 m["flags"],
-                tuple(
-                    (k.encode("utf-8"), v.encode("utf-8"))
-                    for k, v in json.loads(m["meta"])
-                ),
+                tuple((k, v) for k, v in json.loads(m["meta"])),
                 (m["date"], m["tz"]),
                 tuple(nodemod.bin(p) for p in m["predparents"]),
             )
             for m in data["new_obsmarkers_data"]
         ]
-        headdates = {
-            h.encode("ascii"): d for h, d in data.get("head_dates", {}).items()
-        }
+        headdates = {h: d for h, d in data.get("head_dates", {}).items()}
         newremotebookmarks = {
-            _joinremotename(
-                book["remote"].encode("utf-8"), book["name"].encode("utf-8")
-            ): book["node"].encode("ascii")
+            _joinremotename(book["remote"], book["name"]): book["node"]
             for book in data.get("remote_bookmarks", [])
         }
-        newsnapshots = [s.encode("ascii") for s in data["snapshots"]]
+        newsnapshots = [s for s in data["snapshots"]]
 
         return References(
             version,
