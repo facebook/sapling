@@ -5,13 +5,13 @@ edition = "2018"
 
 [dependencies]
 indexedlog = { path = "../indexedlog" }
+minibytes = { path = "../minibytes" }
 types = { path = "../types" }
 vlqencoding = { path = "../vlqencoding" }
 
 anyhow = "1.0.20"
 bitflags = "1"
 byteorder = "1.2.7"
-bytes = { version = "0.5", features = ["serde"] }
 fs2 = "0.4.3"
 indexmap = "1.0.1"
 serde = { version = "1", features = ["derive"] }

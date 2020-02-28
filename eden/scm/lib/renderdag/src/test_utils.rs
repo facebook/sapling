@@ -51,7 +51,11 @@ pub(crate) fn render_string_with_order(
     let mut last_head = 0;
     for head in heads.iter() {
         id_map
-            .assign_head(head.as_bytes().into(), &parents_by_name, Group::MASTER)
+            .assign_head(
+                head.as_bytes().to_vec().into(),
+                &parents_by_name,
+                Group::MASTER,
+            )
             .expect("can assign head");
         let Id(head_id) = id_map.find_id_by_name(head.as_bytes()).unwrap().unwrap();
         last_head = head_id;

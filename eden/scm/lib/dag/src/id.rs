@@ -9,7 +9,7 @@
 //!
 //! Defines types around [`Id`].
 
-pub use bytes::Bytes;
+pub use minibytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::fmt;
 use std::ops;
