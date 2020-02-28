@@ -1309,6 +1309,9 @@ class dirstatemap(object):
     def iteritems(self):
         return pycompat.iteritems(self._map)
 
+    def items(self):
+        return pycompat.iteritems(self._map)
+
     def __len__(self):
         return len(self._map)
 

@@ -22,6 +22,7 @@ import os
 import posixpath
 import re
 import shutil
+import sys
 import tempfile
 import zlib
 from typing import List, Optional, Sequence, Tuple
@@ -44,6 +45,12 @@ from . import (
 from .i18n import _
 from .node import hex, short
 from .pycompat import decodeutf8, encodeutf8, range
+
+
+if sys.version_info[0] < 3:
+    from email.Parser import Parser
+else:
+    from email.parser import Parser
 
 
 stringio = util.stringio
@@ -112,7 +119,7 @@ def split(stream):
             cur.append(line)
         c = chunk(cur)
 
-        m = email.Parser.Parser().parse(c)
+        m = Parser().parse(c)
         if not m.is_multipart():
             yield msgfp(m)
         else:
@@ -222,7 +229,7 @@ def extract(ui, fileobj):
     fd, tmpname = tempfile.mkstemp(prefix="hg-patch-")
     tmpfp = util.fdopen(fd, "w")
     try:
-        msg = email.Parser.Parser().parse(fileobj)
+        msg = Parser().parse(fileobj)
 
         subject = msg["Subject"] and mail.headdecode(msg["Subject"])
         data["user"] = msg["From"] and mail.headdecode(msg["From"])
@@ -238,7 +245,7 @@ def extract(ui, fileobj):
                 pend = subject.find("]")
                 if pend >= 0:
                     subject = subject[pend + 1 :].lstrip()
-            subject = re.sub(br"\n[ \t]+", " ", subject)
+            subject = re.sub(r"\n[ \t]+", " ", subject)
             ui.debug("Subject: %s\n" % subject)
         if data["user"]:
             ui.debug("From: %s\n" % data["user"])

@@ -96,14 +96,14 @@ py_class!(class treedirstatemap |py| {
     // Import another map of dirstate tuples into a treedirstate file.
     def importmap(&self, old_map: PyObject) -> PyResult<Option<PyObject>> {
         let mut dirstate = self.dirstate(py).borrow_mut();
+        let items = old_map.call_method(py, "items", NoArgs, None)?;
         let iter = PyIterator::from_object(
-            py,
-            old_map.call_method(py, "iteritems", NoArgs, None)?)?;
+            py, items.call_method(py, "__iter__", NoArgs, None)?)?;
         for item in iter {
             let item_tuple = item?.extract::<PyTuple>(py)?;
             let filename = item_tuple.get_item(py, 0).extract::<PyPathBuf>(py)?;
             let data = item_tuple.get_item(py, 1).extract::<PySequence>(py)?;
-            let state = *data.get_item(py, 0)?.extract::<PyBytes>(py)?.data(py).first().unwrap();
+            let state = data.get_item(py, 0)?.extract::<PyString>(py)?.data(py).to_string(py)?.bytes().next().unwrap();
             let mode = data.get_item(py, 1)?.extract::<u32>(py)?;
             let size = data.get_item(py, 2)?.extract::<i32>(py)?;
             let mtime = data.get_item(py, 3)?.extract::<i32>(py)?;
@@ -394,12 +394,12 @@ py_class!(class treedirstatemap |py| {
     def pathcomplete(
         &self,
         spec: PyPathBuf,
-        acceptablestates: PyBytes,
+        acceptablestates: PyString,
         matchcallback: PyObject,
         fullpaths: bool
     ) -> PyResult<PyNone> {
         let mut dirstate = self.dirstate(py).borrow_mut();
-        let acceptablestates = acceptablestates.data(py);
+        let acceptablestates = acceptablestates.data(py).to_string(py)?;
 
         let mut visitor = |filepath: &Vec<KeyRef>| {
             let filename = PyPathBuf::from_utf8_bytes(filepath.concat())?;
@@ -408,18 +408,18 @@ py_class!(class treedirstatemap |py| {
         };
 
         let acceptable = |state: &FileState| {
-            acceptablestates.contains(&state.state)
+            acceptablestates.contains(std::str::from_utf8(&[state.state; 1]).unwrap())
         };
 
         // Files in state a, n or m are in the tracked tree.
-        if b"anm".iter().any(|x| acceptablestates.contains(x)) {
+        if "anm".chars().any(|x| acceptablestates.contains(x)) {
             dirstate
                 .path_complete_tracked(spec.as_utf8_bytes(), fullpaths, &acceptable, &mut visitor)
                 .map_pyerr(py)?;
         }
 
         // Files in state r are in the removed tree.
-        if acceptablestates.contains(&b'r') {
+        if acceptablestates.contains("r") {
             dirstate
                 .path_complete_removed(spec.as_utf8_bytes(), fullpaths, &acceptable, &mut visitor)
                 .map_pyerr(py)?;
@@ -666,14 +666,15 @@ py_class!(class treestate |py| {
     // Import another map of dirstate tuples into this treestate. Note: copymap is not imported.
     def importmap(&self, old_map: PyObject) -> PyResult<Option<PyObject>> {
         let mut tree = self.state(py).borrow_mut();
+        let items = old_map.call_method(py, "items", NoArgs, None)?;
         let iter = PyIterator::from_object(
-            py,
-            old_map.call_method(py, "iteritems", NoArgs, None)?)?;
+            py, items.call_method(py, "__iter__", NoArgs, None)?)?;
+
         for item in iter {
             let item_tuple = item?.extract::<PyTuple>(py)?;
             let path = item_tuple.get_item(py, 0).extract::<PyPathBuf>(py)?;
             let data = item_tuple.get_item(py, 1).extract::<PySequence>(py)?;
-            let state = *data.get_item(py, 0)?.extract::<PyBytes>(py)?.data(py).first().unwrap();
+            let state = data.get_item(py, 0)?.extract::<PyString>(py)?.data(py).to_string(py)?.bytes().next().unwrap();
             let mode = data.get_item(py, 1)?.extract::<u32>(py)?;
             let size = data.get_item(py, 2)?.extract::<i32>(py)?;
             let mtime = data.get_item(py, 3)?.extract::<i32>(py)?;
