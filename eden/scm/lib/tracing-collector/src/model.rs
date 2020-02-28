@@ -11,6 +11,7 @@ use std::cell::RefCell;
 use std::collections::HashMap;
 use std::fmt;
 use std::io;
+use std::ops::Deref;
 use std::ops::DerefMut;
 use std::sync::atomic::{self, AtomicU64};
 
@@ -1409,10 +1410,10 @@ impl TracingData {
 #[derive(Serialize)]
 pub struct TreeSpanWithMeta<'a> {
     #[serde(flatten)]
-    meta: IndexMap<&'a str, &'a str>,
-    start: u64,
-    duration: Option<u64>,
-    children: Vec<TreeSpanId>,
+    pub meta: IndexMap<&'a str, &'a str>,
+    pub start: u64,
+    pub duration: Option<u64>,
+    pub children: Vec<TreeSpanId>,
 }
 
 impl<'a> TreeSpanWithMeta<'a> {
@@ -1444,10 +1445,25 @@ impl<'a> TreeSpanWithMeta<'a> {
     }
 }
 
+/// Contains parsed spans for a single thread.
+/// Unlike flat span events (enter, exit), the spans form a tree.
+#[derive(Serialize)]
+#[serde(transparent)]
+pub struct TreeSpans<'a> {
+    pub spans: Vec<TreeSpanWithMeta<'a>>,
+}
+
+impl<'a> Deref for TreeSpans<'a> {
+    type Target = Vec<TreeSpanWithMeta<'a>>;
+    fn deref(&self) -> &Self::Target {
+        &self.spans
+    }
+}
+
 impl TracingData {
     /// Calculate [`TreeSpan`]s for each `(pid, tid)` pair.
     /// The result is serializable and can be useful for assertions in tests.
-    pub fn tree_spans(&self) -> IndexMap<(u64, u64), Vec<TreeSpanWithMeta>> {
+    pub fn tree_spans(&self) -> IndexMap<(u64, u64), TreeSpans> {
         let eventus_by_pid_tid = self.eventus_group_by_pid_tid();
 
         eventus_by_pid_tid
@@ -1458,7 +1474,12 @@ impl TracingData {
                     .into_iter()
                     .map(|t| TreeSpanWithMeta::from_tree_span(self, t))
                     .collect();
-                (pid_tid, tree_spans_with_meta)
+                (
+                    pid_tid,
+                    TreeSpans {
+                        spans: tree_spans_with_meta,
+                    },
+                )
             })
             .collect()
     }
@@ -1559,7 +1580,7 @@ Start Dur.ms | Name                         Source
         let span_id = data.add_espan(&meta("foo", "a.py", "10"), None);
         data.add_action(span_id, Action::EnterSpan);
         data.add_action(span_id, Action::ExitSpan);
-        let tree_spans: Vec<_> = data.tree_spans().into_iter().nth(0).unwrap().1;
+        let tree_spans: Vec<_> = data.tree_spans().into_iter().nth(0).unwrap().1.spans;
         assert_eq!(
             serde_json::to_string_pretty(&tree_spans).unwrap(),
             r#"[
