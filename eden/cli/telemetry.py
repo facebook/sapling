@@ -29,6 +29,7 @@ _session_id: Optional[int] = None
 
 class TelemetrySample(abc.ABC):
     _start_time: float = 0.0
+    _success_recorded: bool = False
 
     def __enter__(self) -> "TelemetrySample":
         self._start_time = time.time()
@@ -42,11 +43,12 @@ class TelemetrySample(abc.ABC):
     ) -> bool:
         duration = time.time() - self._start_time
         self.add_double("duration", duration)
-        if exc_type is None:
-            self.add_bool("success", True)
-        else:
-            self.add_bool("success", False)
-            self.add_string("error", str(exc_value))
+        if not self._success_recorded:
+            if exc_type is None:
+                self.add_bool("success", True)
+            else:
+                self.add_bool("success", False)
+                self.add_string("error", str(exc_value))
         self.log()
         return False
 
@@ -80,6 +82,19 @@ class TelemetrySample(abc.ABC):
                     f"unsupported value type {type(value)} passed to add_fields()"
                 )
         return self
+
+    def fail(self, error_msg: str) -> None:
+        """Mark the sample as a failure.
+
+        This sets the success field to 0 and sets an error message.
+
+        Prefer using this method over manually setting the "success" field.  Otherwise
+        if you log this sample by using it in a `with` context the success field will be
+        overwritten with a successful value if the `with` context returns successfully.
+        """
+        self.add_bool("success", False)
+        self.add_string("error", error_msg)
+        self._success_recorded = True
 
     def log(self) -> None:
         """Log the sample to the telemetry data store."""
@@ -180,7 +195,7 @@ class JsonTelemetrySample(TelemetrySample):
         return json.dumps(data)
 
     def _log_impl(self) -> None:
-        self.logger.log_sample(self.get_json())
+        self.logger.log_sample(self)
 
 
 class BaseJsonTelemetryLogger(TelemetryLogger):
@@ -188,7 +203,7 @@ class BaseJsonTelemetryLogger(TelemetryLogger):
         return JsonTelemetrySample(self)
 
     @abc.abstractmethod
-    def log_sample(self, sample_data: str) -> None:
+    def log_sample(self, sample: JsonTelemetrySample) -> None:
         raise NotImplementedError()
 
 
@@ -202,8 +217,8 @@ class ExternalTelemetryLogger(BaseJsonTelemetryLogger):
         super().__init__()
         self.cmd = cmd[:]
 
-    def log_sample(self, sample_data: str) -> None:
-        cmd = self.cmd + [sample_data]
+    def log_sample(self, sample: JsonTelemetrySample) -> None:
+        cmd = self.cmd + [sample.get_json()]
         try:
             rc = subprocess.call(cmd)
             if rc != 0:
@@ -223,9 +238,21 @@ class LocalTelemetryLogger(BaseJsonTelemetryLogger):
         super().__init__()
         self.path = Path(path)
 
-    def log_sample(self, sample_data: str) -> None:
+    def log_sample(self, sample: JsonTelemetrySample) -> None:
         with self.path.open("a") as f:
-            f.write(sample_data + "\n")
+            f.write(sample.get_json() + "\n")
+
+
+class TestTelemetryLogger(BaseJsonTelemetryLogger):
+    """A TelemetryLogger that records all samples in a local list.
+    This is primarily useful for use in unit tests, so you can examine the samples
+    that were recorded.
+    """
+
+    samples: List[JsonTelemetrySample] = []
+
+    def log_sample(self, sample: JsonTelemetrySample) -> None:
+        self.samples.append(sample)
 
 
 class NullTelemetrySample(TelemetrySample):
