@@ -36,9 +36,9 @@
 use crate::errors::{IoResultExt, ResultExt};
 use crate::index::{self, Index, InsertKey, InsertValue, LeafValueIter, RangeIter, ReadonlyBuffer};
 use crate::lock::ScopedDirLock;
-use crate::utils::{self, mmap_empty, mmap_len, xxhash, xxhash32};
+use crate::utils::{self, mmap_path, xxhash, xxhash32};
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
-use memmap::Mmap;
+use minibytes::Bytes;
 use std::borrow::Cow;
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
@@ -95,7 +95,7 @@ const INDEX_CHECKSUM_CHUNK_SIZE_LOG: u32 = 20;
 /// disk requires taking a flock on the directory.
 pub struct Log {
     pub dir: GenericPath,
-    disk_buf: Arc<Mmap>,
+    disk_buf: Bytes,
     pub(crate) mem_buf: Pin<Box<Vec<u8>>>,
     meta: LogMetadata,
     indexes: Vec<Index>,
@@ -136,7 +136,7 @@ pub struct LogRangeIter<'a> {
 /// Satisfy [`index::ReadonlyBuffer`] trait so [`Log`] can use external
 /// keys on [`Index`] for in-memory-only entries.
 struct ExternalKeyBuffer {
-    disk_buf: Arc<Mmap>,
+    disk_buf: Bytes,
     disk_len: u64,
 
     // Prove the pointer is valid:
@@ -764,7 +764,7 @@ impl Log {
                     })?;
                     let index_len = {
                         let mut index = index::OpenOptions::new()
-                            .key_buf(Some(self.disk_buf.clone()))
+                            .key_buf(Some(Arc::new(self.disk_buf.clone())))
                             .open(&tmp.path())?;
                         Self::update_index_for_on_disk_entry_unchecked(
                             &self.dir,
@@ -1036,7 +1036,7 @@ impl Log {
         path: &GenericPath,
         index: &mut Index,
         def: &IndexDef,
-        disk_buf: &Mmap,
+        disk_buf: &Bytes,
         primary_len: u64,
     ) -> crate::Result<()> {
         // The index meta is used to store the next offset the index should be built.
@@ -1159,10 +1159,10 @@ impl Log {
         mem_buf: &Pin<Box<Vec<u8>>>,
         reuse_indexes: Option<&Vec<Index>>,
         fsync: bool,
-    ) -> crate::Result<(Arc<Mmap>, Vec<Index>)> {
+    ) -> crate::Result<(Bytes, Vec<Index>)> {
         let primary_buf = match dir.as_opt_path() {
-            Some(dir) => Arc::new(mmap_len(&dir.join(PRIMARY_FILE), meta.primary_len)?),
-            None => Arc::new(mmap_empty().infallible()?),
+            Some(dir) => mmap_path(&dir.join(PRIMARY_FILE), meta.primary_len)?,
+            None => Bytes::new(),
         };
 
         let mem_buf: &Vec<u8> = &mem_buf;

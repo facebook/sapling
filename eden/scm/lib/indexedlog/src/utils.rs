@@ -87,13 +87,13 @@ pub fn mmap_empty() -> io::Result<Mmap> {
     Ok(MmapOptions::new().len(1).map_anon()?.make_read_only()?)
 }
 
-/// Similar to [`mmap_readonly`], but accepts a [`Path`] directly so the
+/// Similar to [`mmap_bytes`], but accepts a [`Path`] directly so the
 /// callsite does not need to open a [`File`].
 ///
 /// Return [`crate::Result`], whcih makes it easier to use for error handling.
-pub fn mmap_len(path: &Path, len: u64) -> crate::Result<Mmap> {
+pub fn mmap_path(path: &Path, len: u64) -> crate::Result<Bytes> {
     if len == 0 {
-        mmap_empty().infallible()
+        Ok(Bytes::new())
     } else {
         let file = std::fs::OpenOptions::new()
             .read(true)
@@ -120,9 +120,9 @@ pub fn mmap_len(path: &Path, len: u64) -> crate::Result<Mmap> {
                     Err(err).context(path, "cannot open for mmap")
                 }
             })?;
-        mmap_readonly(&file, Some(len))
-            .context(path, "cannot mmap")
-            .map(|(mmap, _len)| mmap)
+        Ok(Bytes::from(
+            mmap_bytes(&file, Some(len)).context(path, "cannot mmap")?,
+        ))
     }
 }
 

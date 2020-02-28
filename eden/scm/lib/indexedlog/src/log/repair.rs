@@ -12,11 +12,10 @@ use crate::log::{
     PRIMARY_START_OFFSET,
 };
 use crate::repair::OpenOptionsRepair;
-use crate::utils::{self, atomic_write, mmap_len};
+use crate::utils::{self, atomic_write, mmap_path};
 use std::fs::{self};
 use std::io::{self, BufRead, Read, Seek, SeekFrom, Write};
 use std::path::Path;
-use std::sync::Arc;
 
 // Repair
 impl OpenOptions {
@@ -206,7 +205,7 @@ impl OpenOptions {
                 log.meta.primary_len = valid_len;
                 log.meta.indexes.clear();
                 log.meta.epoch = log.meta.epoch.wrapping_add(1);
-                log.disk_buf = Arc::new(mmap_len(&primary_path, valid_len)?);
+                log.disk_buf = mmap_path(&primary_path, valid_len)?;
 
                 log.meta
                     .write_file(&meta_path, log.open_options.fsync)
