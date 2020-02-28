@@ -51,6 +51,7 @@
 // - The "INLINE_LEAF" type is basically an inlined version of EXT_KEY and LINK, to save space.
 // - The "ROOT_LEN" is reversed so it can be read byte-by-byte from the end of a file.
 
+use minibytes::Bytes;
 use std::borrow::Cow;
 use std::cmp::Ordering::{Equal, Greater, Less};
 use std::fmt::{self, Debug, Formatter};
@@ -68,11 +69,10 @@ use crate::base16::{base16_to_base256, single_hex_to_base16, Base16Iter};
 use crate::checksum_table::ChecksumTable;
 use crate::errors::{IoResultExt, ResultExt};
 use crate::lock::ScopedFileLock;
-use crate::utils::{self, mmap_empty, mmap_readonly};
+use crate::utils::{self, mmap_bytes};
 
 use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
 use fs2::FileExt;
-use memmap::Mmap;
 use tracing::debug_span;
 use vlqencoding::{VLQDecodeAt, VLQEncode};
 
@@ -1547,14 +1547,12 @@ pub struct Index {
     file: Option<File>,
 
     // For efficient and shared random reading.
-    buf: Mmap,
+    // Backed by mmap.
+    buf: Bytes,
 
     // For error messages.
     // Log uses this field for error messages.
     pub(crate) path: PathBuf,
-
-    // Logical length. Could be different from `buf.len()`.
-    len: u64,
 
     // OpenOptions
     open_options: OpenOptions,
@@ -1738,17 +1736,17 @@ impl OpenOptions {
                 }
             };
 
-            let (mmap, len) = {
+            let bytes = {
                 match self.len {
                     None => {
                         // Take the lock to read file length, since that decides root entry location.
                         let lock = ScopedFileLock::new(&mut file, false)
                             .context(path, "cannot lock Log to read file length")?;
-                        mmap_readonly(lock.as_ref(), None).context(path, "cannot mmap")?
+                        mmap_bytes(lock.as_ref(), None).context(path, "cannot mmap")?
                     }
                     Some(len) => {
                         // No need to lock for getting file length.
-                        mmap_readonly(&file, Some(len)).context(path, "cannot mmap")?
+                        mmap_bytes(&file, Some(len)).context(path, "cannot mmap")?
                     }
                 }
             };
@@ -1760,7 +1758,7 @@ impl OpenOptions {
                 None
             };
 
-            let (dirty_radixes, clean_root) = if len == 0 {
+            let (dirty_radixes, clean_root) = if bytes.is_empty() {
                 // Empty file. Create root radix entry as an dirty entry, and
                 // rebuild checksum table (in case it's corrupted).
                 let radix_offset = RadixOffset::from_dirty_index(0);
@@ -1771,11 +1769,11 @@ impl OpenOptions {
                 let meta = Default::default();
                 (vec![MemRadix::default()], MemRoot { radix_offset, meta })
             } else {
-                let buf = SimpleIndexBuf(&mmap, path, &checksum);
+                let buf = SimpleIndexBuf(&bytes, path, &checksum);
                 // Verify the header byte.
                 check_type(&buf, 0, TYPE_HEAD)?;
                 // Load root entry from the end of the file (truncated at the logical length).
-                (vec![], MemRoot::read_from_end(buf, len)?)
+                (vec![], MemRoot::read_from_end(buf, bytes.len() as u64)?)
             };
 
             let key_buf = self.key_buf.clone();
@@ -1783,7 +1781,7 @@ impl OpenOptions {
 
             Ok(Index {
                 file: Some(file),
-                buf: mmap,
+                buf: bytes,
                 path: path.to_path_buf(),
                 open_options,
                 clean_root,
@@ -1795,7 +1793,6 @@ impl OpenOptions {
                 dirty_ext_keys: vec![],
                 checksum,
                 key_buf: key_buf.unwrap_or_else(|| Arc::new(&b""[..])),
-                len,
             })
         })();
         result.context(|| format!("in index::OpenOptions::open({:?})", path))
@@ -1821,7 +1818,7 @@ impl OpenOptions {
 
             Ok(Index {
                 file: None,
-                buf: mmap_empty().infallible()?,
+                buf: Bytes::new(),
                 path: PathBuf::new(),
                 open_options: self.clone(),
                 clean_root,
@@ -1833,7 +1830,6 @@ impl OpenOptions {
                 dirty_ext_keys: vec![],
                 checksum: None,
                 key_buf: key_buf.unwrap_or_else(|| Arc::new(&b""[..])),
-                len: 0,
             })
         })();
         result.context("in index::OpenOptions::create_in_memory")
@@ -1938,17 +1934,9 @@ impl Index {
     }
 
     pub(crate) fn try_clone_internal(&self, copy_dirty: bool) -> crate::Result<Index> {
-        let (file, mmap) = match &self.file {
-            Some(f) => (
-                Some(f.duplicate().context(self.path(), "cannot duplicate")?),
-                mmap_readonly(&f, Some(self.len))
-                    .context(self.path(), "cannot mmap")?
-                    .0,
-            ),
-            None => {
-                assert_eq!(self.len, 0);
-                (None, mmap_empty().infallible()?)
-            }
+        let file = match &self.file {
+            Some(f) => Some(f.duplicate().context(self.path(), "cannot duplicate")?),
+            None => None,
         };
         let checksum = match self.checksum {
             Some(ref table) => Some(table.try_clone()?),
@@ -1958,7 +1946,7 @@ impl Index {
         let index = if copy_dirty {
             Index {
                 file,
-                buf: mmap,
+                buf: self.buf.clone(),
                 path: self.path.clone(),
                 open_options: self.open_options.clone(),
                 clean_root: self.clean_root.clone(),
@@ -1970,12 +1958,11 @@ impl Index {
                 dirty_radixes: self.dirty_radixes.clone(),
                 checksum,
                 key_buf: self.key_buf.clone(),
-                len: self.len,
             }
         } else {
             Index {
                 file,
-                buf: mmap,
+                buf: self.buf.clone(),
                 path: self.path.clone(),
                 open_options: self.open_options.clone(),
                 clean_root: self.clean_root.clone(),
@@ -1992,7 +1979,6 @@ impl Index {
                 },
                 checksum,
                 key_buf: self.key_buf.clone(),
-                len: self.len,
             }
         };
 
@@ -2084,8 +2070,8 @@ impl Index {
                 return Ok(0);
             }
 
-            let old_len = self.len;
-            let mut new_len = self.len;
+            let old_len = self.buf.len() as u64;
+            let mut new_len = old_len;
             if !self.dirty_root.radix_offset.is_dirty() {
                 // Nothing changed
                 return Ok(new_len);
@@ -2199,9 +2185,8 @@ impl Index {
                 }
 
                 // Remap and update root since length has changed
-                let (mmap, mmap_len) =
-                    mmap_readonly(lock.as_ref(), None).context(&path, "cannot mmap")?;
-                self.buf = mmap;
+                let bytes = mmap_bytes(lock.as_ref(), None).context(&path, "cannot mmap")?;
+                self.buf = bytes;
 
                 // 'path' should not have changed.
                 debug_assert_eq!(&self.path, &path);
@@ -2211,7 +2196,7 @@ impl Index {
 
                 // Sanity check - the length should be expected. Otherwise, the lock
                 // is somehow ineffective.
-                if mmap_len != new_len {
+                if self.buf.len() as u64 != new_len {
                     return Err(this.corruption("file changed unexpectedly"));
                 }
 
@@ -2226,7 +2211,6 @@ impl Index {
             }
 
             // Outside critical section
-            self.len = new_len;
             self.clear_dirty();
 
             Ok(new_len)
@@ -2585,7 +2569,7 @@ impl Index {
 
     /// Verify checksum for the entire on-disk buffer.
     pub fn verify(&self) -> crate::Result<()> {
-        self.verify_checksum(0, self.len)
+        self.verify_checksum(0, self.buf.len() as _)
     }
 
     // Internal function used by [`Index::range`].
@@ -3148,27 +3132,29 @@ mod tests {
         let mut index = open_opts().open(dir.path().join("a")).expect("open");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 1, root: Radix[0] }\n\
+            "Index { len: 0, root: Radix[0] }\n\
              Radix[0]: Radix { link: None }\n"
         );
 
         index.insert(&[], 55).expect("update");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 1, root: Radix[0] }\n\
-             Radix[0]: Radix { link: Link[0] }\n\
-             Link[0]: Link { value: 55, next: None }\n"
+            r#"Index { len: 0, root: Radix[0] }
+Radix[0]: Radix { link: Link[0] }
+Link[0]: Link { value: 55, next: None }
+"#
         );
 
         index.insert(&[0x12], 77).expect("update");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 1, root: Radix[0] }\n\
-             Radix[0]: Radix { link: Link[0], 1: Leaf[0] }\n\
-             Leaf[0]: Leaf { key: Key[0], link: Link[1] }\n\
-             Link[0]: Link { value: 55, next: None }\n\
-             Link[1]: Link { value: 77, next: None }\n\
-             Key[0]: Key { key: 12 }\n"
+            r#"Index { len: 0, root: Radix[0] }
+Radix[0]: Radix { link: Link[0], 1: Leaf[0] }
+Leaf[0]: Leaf { key: Key[0], link: Link[1] }
+Link[0]: Link { value: 55, next: None }
+Link[1]: Link { value: 77, next: None }
+Key[0]: Key { key: 12 }
+"#
         );
 
         let link = index.get(&[0x12]).expect("get");
@@ -3177,15 +3163,16 @@ mod tests {
             .expect("update");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 1, root: Radix[0] }\n\
-             Radix[0]: Radix { link: Link[0], 1: Leaf[0], 3: Leaf[1] }\n\
-             Leaf[0]: Leaf { key: Key[0], link: Link[1] }\n\
-             Leaf[1]: Leaf { key: Key[1], link: Link[2] }\n\
-             Link[0]: Link { value: 55, next: None }\n\
-             Link[1]: Link { value: 77, next: None }\n\
-             Link[2]: Link { value: 99, next: Link[1] }\n\
-             Key[0]: Key { key: 12 }\n\
-             Key[1]: Key { key: 34 }\n"
+            r#"Index { len: 0, root: Radix[0] }
+Radix[0]: Radix { link: Link[0], 1: Leaf[0], 3: Leaf[1] }
+Leaf[0]: Leaf { key: Key[0], link: Link[1] }
+Leaf[1]: Leaf { key: Key[1], link: Link[2] }
+Link[0]: Link { value: 55, next: None }
+Link[1]: Link { value: 77, next: None }
+Link[2]: Link { value: 99, next: Link[1] }
+Key[0]: Key { key: 12 }
+Key[1]: Key { key: 34 }
+"#
         );
     }
 
@@ -3250,25 +3237,27 @@ mod tests {
         index.insert(&[0x12, 0x34], 5).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 1, root: Radix[0] }\n\
-             Radix[0]: Radix { link: None, 1: Leaf[0] }\n\
-             Leaf[0]: Leaf { key: Key[0], link: Link[0] }\n\
-             Link[0]: Link { value: 5, next: None }\n\
-             Key[0]: Key { key: 12 34 }\n"
+            r#"Index { len: 0, root: Radix[0] }
+Radix[0]: Radix { link: None, 1: Leaf[0] }
+Leaf[0]: Leaf { key: Key[0], link: Link[0] }
+Link[0]: Link { value: 5, next: None }
+Key[0]: Key { key: 12 34 }
+"#
         );
         index.insert(&[0x12, 0x78], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 1, root: Radix[0] }\n\
-             Radix[0]: Radix { link: None, 1: Radix[1] }\n\
-             Radix[1]: Radix { link: None, 2: Radix[2] }\n\
-             Radix[2]: Radix { link: None, 3: Leaf[0], 7: Leaf[1] }\n\
-             Leaf[0]: Leaf { key: Key[0], link: Link[0] }\n\
-             Leaf[1]: Leaf { key: Key[1], link: Link[1] }\n\
-             Link[0]: Link { value: 5, next: None }\n\
-             Link[1]: Link { value: 7, next: None }\n\
-             Key[0]: Key { key: 12 34 }\n\
-             Key[1]: Key { key: 12 78 }\n"
+            r#"Index { len: 0, root: Radix[0] }
+Radix[0]: Radix { link: None, 1: Radix[1] }
+Radix[1]: Radix { link: None, 2: Radix[2] }
+Radix[2]: Radix { link: None, 3: Leaf[0], 7: Leaf[1] }
+Leaf[0]: Leaf { key: Key[0], link: Link[0] }
+Leaf[1]: Leaf { key: Key[1], link: Link[1] }
+Link[0]: Link { value: 5, next: None }
+Link[1]: Link { value: 7, next: None }
+Key[0]: Key { key: 12 34 }
+Key[1]: Key { key: 12 78 }
+"#
         );
 
         // Example 2: new key is a prefix of the old key
@@ -3277,14 +3266,15 @@ mod tests {
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 1, root: Radix[0] }\n\
-             Radix[0]: Radix { link: None, 1: Radix[1] }\n\
-             Radix[1]: Radix { link: None, 2: Radix[2] }\n\
-             Radix[2]: Radix { link: Link[1], 3: Leaf[0] }\n\
-             Leaf[0]: Leaf { key: Key[0], link: Link[0] }\n\
-             Link[0]: Link { value: 5, next: None }\n\
-             Link[1]: Link { value: 7, next: None }\n\
-             Key[0]: Key { key: 12 34 }\n"
+            r#"Index { len: 0, root: Radix[0] }
+Radix[0]: Radix { link: None, 1: Radix[1] }
+Radix[1]: Radix { link: None, 2: Radix[2] }
+Radix[2]: Radix { link: Link[1], 3: Leaf[0] }
+Leaf[0]: Leaf { key: Key[0], link: Link[0] }
+Link[0]: Link { value: 5, next: None }
+Link[1]: Link { value: 7, next: None }
+Key[0]: Key { key: 12 34 }
+"#
         );
 
         // Example 3: old key is a prefix of the new key
@@ -3293,16 +3283,17 @@ mod tests {
         index.insert(&[0x12, 0x78], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 1, root: Radix[0] }\n\
-             Radix[0]: Radix { link: None, 1: Radix[1] }\n\
-             Radix[1]: Radix { link: None, 2: Radix[2] }\n\
-             Radix[2]: Radix { link: Link[0], 7: Leaf[1] }\n\
-             Leaf[0]: Leaf (unused)\n\
-             Leaf[1]: Leaf { key: Key[1], link: Link[1] }\n\
-             Link[0]: Link { value: 5, next: None }\n\
-             Link[1]: Link { value: 7, next: None }\n\
-             Key[0]: Key (unused)\n\
-             Key[1]: Key { key: 12 78 }\n"
+            r#"Index { len: 0, root: Radix[0] }
+Radix[0]: Radix { link: None, 1: Radix[1] }
+Radix[1]: Radix { link: None, 2: Radix[2] }
+Radix[2]: Radix { link: Link[0], 7: Leaf[1] }
+Leaf[0]: Leaf (unused)
+Leaf[1]: Leaf { key: Key[1], link: Link[1] }
+Link[0]: Link { value: 5, next: None }
+Link[1]: Link { value: 7, next: None }
+Key[0]: Key (unused)
+Key[1]: Key { key: 12 78 }
+"#
         );
 
         // Same key. Multiple values.
@@ -3311,12 +3302,13 @@ mod tests {
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 1, root: Radix[0] }\n\
-             Radix[0]: Radix { link: None, 1: Leaf[0] }\n\
-             Leaf[0]: Leaf { key: Key[0], link: Link[1] }\n\
-             Link[0]: Link { value: 5, next: None }\n\
-             Link[1]: Link { value: 7, next: Link[0] }\n\
-             Key[0]: Key { key: 12 }\n"
+            r#"Index { len: 0, root: Radix[0] }
+Radix[0]: Radix { link: None, 1: Leaf[0] }
+Leaf[0]: Leaf { key: Key[0], link: Link[1] }
+Link[0]: Link { value: 5, next: None }
+Link[1]: Link { value: 7, next: Link[0] }
+Key[0]: Key { key: 12 }
+"#
         );
     }
 

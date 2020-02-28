@@ -15,6 +15,7 @@ use std::{
 
 use crate::errors::{IoResultExt, ResultExt};
 use memmap::{Mmap, MmapOptions};
+use minibytes::Bytes;
 use twox_hash::{XxHash, XxHash32};
 
 /// Return a read-only mmap view of the entire file, and its length.
@@ -51,6 +52,34 @@ pub fn mmap_readonly(file: &File, len: Option<u64>) -> io::Result<(Mmap, u64)> {
         }
     };
     Ok((mmap, len))
+}
+
+/// Similar to [`mmap_readonly`], but returns [`Bytes`].
+pub fn mmap_bytes(file: &File, len: Option<u64>) -> io::Result<Bytes> {
+    let actual_len = file.metadata()?.len();
+    let len = match len {
+        Some(len) => {
+            if len > actual_len {
+                return Err(io::Error::new(
+                    io::ErrorKind::UnexpectedEof,
+                    format!(
+                        "mmap length {} is greater than file size {}",
+                        len, actual_len
+                    ),
+                ));
+            } else {
+                len
+            }
+        }
+        None => actual_len,
+    };
+    if len == 0 {
+        Ok(Bytes::new())
+    } else {
+        Ok(Bytes::from(unsafe {
+            MmapOptions::new().len(len as usize).map(&file)
+        }?))
+    }
 }
 
 /// Return a [`Mmap`] that is expected to be empty.
