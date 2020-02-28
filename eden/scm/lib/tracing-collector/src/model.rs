@@ -811,20 +811,20 @@ pub struct AsciiOptions {
 
 /// Spans that form a Tree. Internal used by write_ascii functions.
 #[derive(Default)]
-struct TreeSpan {
+struct RawTreeSpan {
     // None: Root Span. Otherwise non-root span.
     espan_id: Option<EspanId>,
     start_time: u64,
     duration: u64,
-    children: Vec<TreeSpanId>,
+    children: Vec<RawTreeSpanId>,
     call_count: usize,
     is_event: bool,
 }
-type TreeSpanId = usize;
+type RawTreeSpanId = usize;
 
-impl TreeSpan {
-    /// Whether the current [`TreeSpan`] covers another [`TreeSpan`] timestamp-wise.
-    fn covers(&self, other: &TreeSpan) -> bool {
+impl RawTreeSpan {
+    /// Whether the current [`RawTreeSpan`] covers another [`RawTreeSpan`] timestamp-wise.
+    fn covers(&self, other: &RawTreeSpan) -> bool {
         if self.is_incomplete() {
             self.start_time <= other.start_time
         } else {
@@ -838,7 +838,7 @@ impl TreeSpan {
     }
 
     /// Is this span considered interesting (should it be printed)?
-    fn is_interesting(&self, opts: &AsciiOptions, parent: Option<&TreeSpan>) -> bool {
+    fn is_interesting(&self, opts: &AsciiOptions, parent: Option<&RawTreeSpan>) -> bool {
         if self.call_count == 0 {
             return false;
         }
@@ -988,7 +988,7 @@ impl TracingData {
     }
 
     /// Scan `Eventus` list to reconstruct the call graph.
-    fn build_tree_spans(&self, eventus_list: &[&Eventus]) -> Vec<TreeSpan> {
+    fn build_tree_spans(&self, eventus_list: &[&Eventus]) -> Vec<RawTreeSpan> {
         // For example, eventus_list like:
         // (`+`: Enter, `-`: Exit, Number: SpanId)
         //
@@ -1058,10 +1058,10 @@ impl TracingData {
         // and refer to other TreeSpans using Vec indexes.
         // A dummy root is created, so the root is unique. That makes it a bit
         // easier to handle.
-        let mut tree_spans = vec![TreeSpan::default()];
+        let mut tree_spans = vec![RawTreeSpan::default()];
 
         // Keep a stack of TreeSpans to figure out parents.
-        let mut stack: Vec<TreeSpanId> = vec![0];
+        let mut stack: Vec<RawTreeSpanId> = vec![0];
 
         // Append a span to the list. Attach it to the "correct" parent span.
         let mut append = |tree_span| {
@@ -1082,7 +1082,7 @@ impl TracingData {
                 }
             };
 
-            // Record the new TreeSpan and record parent-child
+            // Record the new RawTreeSpan and record parent-child
             // relationship.
             let id = tree_spans.len();
             tree_spans.push(tree_span);
@@ -1108,7 +1108,7 @@ impl TracingData {
                         assert!(end_eid >= eid);
                         assert!(end.timestamp >= e.timestamp);
 
-                        TreeSpan {
+                        RawTreeSpan {
                             espan_id: Some(span_id),
                             start_time: e.timestamp.0,
                             duration: end.timestamp.0 - e.timestamp.0,
@@ -1117,12 +1117,12 @@ impl TracingData {
                             is_event: false,
                         }
                     } else {
-                        // No matched ExitSpan. Still create a TreeSpan
+                        // No matched ExitSpan. Still create a RawTreeSpan
                         // so it shows up.
-                        TreeSpan {
+                        RawTreeSpan {
                             espan_id: Some(span_id),
                             start_time: e.timestamp.0,
-                            duration: TreeSpan::incomplete_duration(),
+                            duration: RawTreeSpan::incomplete_duration(),
                             children: Vec::new(),
                             call_count: 1,
                             is_event: false,
@@ -1136,7 +1136,7 @@ impl TracingData {
                 }
                 Action::Event => {
                     // This is similar to EnterSpan + ExitSpan immediately.
-                    let tree_span = TreeSpan {
+                    let tree_span = RawTreeSpan {
                         espan_id: Some(span_id),
                         start_time: e.timestamp.0,
                         duration: 0,
@@ -1153,7 +1153,11 @@ impl TracingData {
     }
 
     /// Merge multiple similar spans into one larger span.
-    fn merge_tree_spans(&self, tree_spans: Vec<TreeSpan>, opts: &AsciiOptions) -> Vec<TreeSpan> {
+    fn merge_tree_spans(
+        &self,
+        tree_spans: Vec<RawTreeSpan>,
+        opts: &AsciiOptions,
+    ) -> Vec<RawTreeSpan> {
         // For example,
         //
         //   <root>
@@ -1176,16 +1180,17 @@ impl TracingData {
         struct Context<'a> {
             this: &'a TracingData,
             opts: &'a AsciiOptions,
-            tree_spans: Vec<TreeSpan>,
+            tree_spans: Vec<RawTreeSpan>,
         }
 
         /// Check children of tree_spans[id] recursively.
         fn visit(ctx: &mut Context, id: usize) {
-            type TreeSpanId = usize;
+            type RawTreeSpanId = usize;
             // Treat spans with the same metadata as same spans.
             // So different EspanIds can still be merged.
-            let mut meta_to_id = IndexMap::<Vec<(StringId, StringId)>, TreeSpanId>::new();
-            let child_ids: Vec<TreeSpanId> = ctx.tree_spans[id].children.iter().cloned().collect();
+            let mut meta_to_id = IndexMap::<Vec<(StringId, StringId)>, RawTreeSpanId>::new();
+            let child_ids: Vec<RawTreeSpanId> =
+                ctx.tree_spans[id].children.iter().cloned().collect();
             for child_id in child_ids {
                 // Do not try to merge this child span if itself, or any of the
                 // grand children is interesting. But some of the grand children
@@ -1204,7 +1209,7 @@ impl TracingData {
                     if let Some(espan) = ctx.this.get_espan(espan_id) {
                         let meta: Vec<(StringId, StringId)> =
                             espan.meta.iter().map(|(&k, &v)| (k, v)).collect();
-                        let existing_child_id: TreeSpanId =
+                        let existing_child_id: RawTreeSpanId =
                             *meta_to_id.entry(meta).or_insert(child_id);
                         if existing_child_id != child_id {
                             let duration = ctx.tree_spans[child_id].duration;
@@ -1230,12 +1235,12 @@ impl TracingData {
         context.tree_spans
     }
 
-    /// Render one `TreeSpan` into `Rows`.
-    fn render_tree_spans(&self, tree_spans: Vec<TreeSpan>, opts: &AsciiOptions) -> Rows {
+    /// Render one `RawTreeSpan` into `Rows`.
+    fn render_tree_spans(&self, tree_spans: Vec<RawTreeSpan>, opts: &AsciiOptions) -> Rows {
         struct Context<'a> {
             this: &'a TracingData,
             opts: &'a AsciiOptions,
-            tree_spans: Vec<TreeSpan>,
+            tree_spans: Vec<RawTreeSpan>,
             rows: Vec<Row>,
         }
 
@@ -1251,7 +1256,7 @@ impl TracingData {
             ""
         };
 
-        /// Render TreeSpan to rows.
+        /// Render RawTreeSpan to rows.
         fn render_span(ctx: &mut Context, id: usize, mut indent: usize, first_row_ch: char) {
             let tree_span = &ctx.tree_spans[id];
             if let Some(espan_id) = tree_span.espan_id {
@@ -1400,7 +1405,7 @@ impl TracingData {
             }],
         };
 
-        // Visit the root TreeSpan.
+        // Visit the root RawTreeSpan.
         visit(&mut context, 0, 0, '|');
 
         let column_alignments = vec![
@@ -1425,16 +1430,16 @@ impl TracingData {
 // -------- Serde-serializable Spans Output --------
 
 #[derive(Serialize)]
-pub struct TreeSpanWithMeta<'a> {
+pub struct TreeSpanRef<'a> {
     #[serde(flatten)]
     pub meta: IndexMap<&'a str, &'a str>,
     pub start: u64,
     pub duration: Option<u64>,
-    pub children: Vec<TreeSpanId>,
+    pub children: Vec<RawTreeSpanId>,
 }
 
-impl<'a> TreeSpanWithMeta<'a> {
-    fn from_tree_span(data: &TracingData, span: TreeSpan) -> TreeSpanWithMeta {
+impl<'a> TreeSpanRef<'a> {
+    fn from_tree_span(data: &TracingData, span: RawTreeSpan) -> TreeSpanRef {
         let meta = match span.espan_id {
             None => Default::default(),
             Some(espan_id) => {
@@ -1449,7 +1454,7 @@ impl<'a> TreeSpanWithMeta<'a> {
                 }
             }
         };
-        TreeSpanWithMeta {
+        TreeSpanRef {
             meta,
             start: span.start_time,
             duration: if span.is_incomplete() {
@@ -1467,18 +1472,18 @@ impl<'a> TreeSpanWithMeta<'a> {
 #[derive(Serialize)]
 #[serde(transparent)]
 pub struct TreeSpans<'a> {
-    pub spans: Vec<TreeSpanWithMeta<'a>>,
+    pub spans: Vec<TreeSpanRef<'a>>,
 }
 
 impl<'a> Deref for TreeSpans<'a> {
-    type Target = Vec<TreeSpanWithMeta<'a>>;
+    type Target = Vec<TreeSpanRef<'a>>;
     fn deref(&self) -> &Self::Target {
         &self.spans
     }
 }
 
 impl TracingData {
-    /// Calculate [`TreeSpan`]s for each `(pid, tid)` pair.
+    /// Calculate [`RawTreeSpan`]s for each `(pid, tid)` pair.
     /// The result is serializable and can be useful for assertions in tests.
     pub fn tree_spans(&self) -> IndexMap<(u64, u64), TreeSpans> {
         let eventus_by_pid_tid = self.eventus_group_by_pid_tid();
@@ -1489,7 +1494,7 @@ impl TracingData {
                 let tree_spans = self.build_tree_spans(eventus_list);
                 let tree_spans_with_meta = tree_spans
                     .into_iter()
-                    .map(|t| TreeSpanWithMeta::from_tree_span(self, t))
+                    .map(|t| TreeSpanRef::from_tree_span(self, t))
                     .collect();
                 (
                     pid_tid,
@@ -1514,14 +1519,14 @@ pub struct TreeWalker<'a> {
     /// Filter function. If returns `false`, skip spans in `step()`.  The
     /// function can call `TreeWalker::step_out()` once to skip visiting
     /// subtrees.
-    filter: Option<Rc<dyn Fn(&mut TreeWalker, &TreeSpanWithMeta) -> bool>>,
+    filter: Option<Rc<dyn Fn(&mut TreeWalker, &TreeSpanRef) -> bool>>,
 }
 
 impl<'a> TreeWalker<'a> {
     /// Visit the next span in DFS order.
     ///
     /// This is similar to "step/step into" in a debugger.
-    pub fn step(&mut self) -> Option<&'a TreeSpanWithMeta<'a>> {
+    pub fn step(&mut self) -> Option<&'a TreeSpanRef<'a>> {
         'visit_next: loop {
             match self.stack.pop() {
                 Some((span_id, child_id)) => {
@@ -1553,7 +1558,7 @@ impl<'a> TreeWalker<'a> {
     /// function can also call `walker.step_out()` to skip visiting a subtree.
     pub fn filter(
         mut self,
-        func: impl Fn(&mut TreeWalker, &TreeSpanWithMeta) -> bool + 'static,
+        func: impl Fn(&mut TreeWalker, &TreeSpanRef) -> bool + 'static,
     ) -> Self {
         assert!(self.filter.is_none(), "cannot apply multiple filters");
         self.filter = Some(Rc::new(func));
@@ -1570,7 +1575,7 @@ impl<'a> TreeWalker<'a> {
 }
 
 impl<'a> Iterator for TreeWalker<'a> {
-    type Item = &'a TreeSpanWithMeta<'a>;
+    type Item = &'a TreeSpanRef<'a>;
 
     fn next(&mut self) -> Option<Self::Item> {
         self.step()
