@@ -229,9 +229,8 @@ impl DefaultOpenOptions<ilog::OpenOptions> for MutationStore {
                 .collect()
         };
 
-        // Allow some lag to make the indexing more efficient.  Set to 10KB, which is roughly
-        // 100 records.
-        let lag_threshold = 10000;
+        // Allow some lag to make the indexing more efficient.  Set to 500 records.
+        let lag_threshold = 500;
         ilog::OpenOptions::new().create(true).index_defs(vec![
             IndexDef::new("pred", pred_index).lag_threshold(lag_threshold),
             IndexDef::new("succ", succ_index).lag_threshold(lag_threshold),
