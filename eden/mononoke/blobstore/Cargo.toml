@@ -1,5 +1,3 @@
-# @generated
-
 [package]
 name = "blobstore"
 edition = "2018"
