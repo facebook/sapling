@@ -2,6 +2,7 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ configure dummyssh
 This test tries to exercise the ssh functionality with a dummy script
 
 creating 'remote' repo
@@ -20,7 +21,7 @@ creating 'remote' repo
 clone remote via stream
 
   $ for i in 0 1 2 3 4 5 6 7 8; do
-  >    hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --stream -r "$i" ssh://user@dummy/remote test-"$i"
+  >    hg clone --stream -r "$i" ssh://user@dummy/remote test-"$i"
   >    if cd test-"$i"; then
   >       hg verify
   >       cd ..
@@ -141,7 +142,7 @@ clone remote via stream
   4 files, 9 changesets, 7 total revisions
   $ cd ..
   $ cd test-1
-  $ hg pull -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" -r 4 ssh://user@dummy/remote
+  $ hg pull -r 4 ssh://user@dummy/remote
   pulling from ssh://user@dummy/remote
   searching for changes
   adding changesets
@@ -154,7 +155,7 @@ clone remote via stream
   crosschecking files in changesets and manifests
   checking files
   1 files, 3 changesets, 2 total revisions
-  $ hg pull -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/remote
+  $ hg pull ssh://user@dummy/remote
   pulling from ssh://user@dummy/remote
   searching for changes
   adding changesets
@@ -163,7 +164,7 @@ clone remote via stream
   added 6 changesets with 5 changes to 4 files
   $ cd ..
   $ cd test-2
-  $ hg pull -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" -r 5 ssh://user@dummy/remote
+  $ hg pull -r 5 ssh://user@dummy/remote
   pulling from ssh://user@dummy/remote
   searching for changes
   adding changesets
@@ -176,7 +177,7 @@ clone remote via stream
   crosschecking files in changesets and manifests
   checking files
   1 files, 5 changesets, 3 total revisions
-  $ hg pull -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/remote
+  $ hg pull ssh://user@dummy/remote
   pulling from ssh://user@dummy/remote
   searching for changes
   adding changesets

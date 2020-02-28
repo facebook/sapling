@@ -66,19 +66,19 @@ Make a commit in the first client, and sync it
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 1cf4a5a0e8fc
-  remote: pushing 1 commit:
-  remote:     1cf4a5a0e8fc  feature1
   commitcloud: commits synchronized
   finished in * (glob)
+  remote: pushing 1 commit:
+  remote:     1cf4a5a0e8fc  feature1
 
   $ hg amend -m "feature1 renamed"
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at b68dd726c6c6
-  remote: pushing 1 commit:
-  remote:     b68dd726c6c6  feature1 renamed
   commitcloud: commits synchronized
   finished in * (glob)
+  remote: pushing 1 commit:
+  remote:     b68dd726c6c6  feature1 renamed
 
   $ cd ..
 
@@ -161,15 +161,15 @@ Amend twice, unamend, then unhide.  This causes a cycle in the obsgraph.
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at cb45bbd0ae75
-  remote: pushing 1 commit:
-  remote:     cb45bbd0ae75  feature1 renamed2
   backing up stack rooted at 74b668b6b779
-  remote: pushing 1 commit:
-  remote:     74b668b6b779  feature1 renamed3
   commitcloud: commits synchronized
   finished in * sec (glob)
   commitcloud: current revision cb45bbd0ae75 has been replaced remotely with multiple revisions
   (run 'hg update HASH' to go to the desired revision)
+  remote: pushing 1 commit:
+  remote:     cb45bbd0ae75  feature1 renamed2
+  remote: pushing 1 commit:
+  remote:     74b668b6b779  feature1 renamed3
 
 Now cloud sync in the other client.  The cycle means we can't reliably pick a destination.
   $ cd ../client2

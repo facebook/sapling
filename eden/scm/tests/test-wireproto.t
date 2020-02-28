@@ -2,6 +2,7 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ configure dummyssh
 #require killdaemons
 
 Test wire protocol argument passing

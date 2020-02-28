@@ -73,11 +73,11 @@ Add commit which mimics previous differential one merged to master
   $ hg push --to master
   pushing to ssh://user@dummy/repo
   searching for changes
+  updating bookmark master
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  updating bookmark master
 
   $ cd ..
 
@@ -94,10 +94,10 @@ Push all pulled commit to backup
   obsoleted 1 changesets
   $ hg cloud backup
   backing up stack rooted at 9b3ead1d8005
+  commitcloud: backed up 2 commits
   remote: pushing 2 commits:
   remote:     9b3ead1d8005  add b
   remote:     3969cd9723d1  add c
-  commitcloud: backed up 2 commits
 
   $ cd ..
 

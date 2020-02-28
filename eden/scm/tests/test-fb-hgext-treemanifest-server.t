@@ -393,6 +393,8 @@ Attempt to push from a treeonly repo without sending trees
   $ hg push --config treemanifest.sendtrees=False
   pushing to ssh://user@dummy/master
   searching for changes
+  remote: attempting to close transaction which includes commits (aa3c39e8a706a32cc5b0863f552985b682e1f55c) without manifests (18a44c7eeff67b47a4f985c5b318891544bad78f)
+  abort: push failed on remote
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -400,8 +402,6 @@ Attempt to push from a treeonly repo without sending trees
   remote: error: pretxnclose.checkmanifest hook failed: attempting to close transaction which includes commits (aa3c39e8a706a32cc5b0863f552985b682e1f55c) without manifests (18a44c7eeff67b47a4f985c5b318891544bad78f)
   remote: transaction abort!
   remote: rollback completed
-  remote: attempting to close transaction which includes commits (aa3c39e8a706a32cc5b0863f552985b682e1f55c) without manifests (18a44c7eeff67b47a4f985c5b318891544bad78f)
-  abort: push failed on remote
   [255]
 
   $ hg -R ../master export tip > /dev/null

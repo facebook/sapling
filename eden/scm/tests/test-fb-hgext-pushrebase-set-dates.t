@@ -85,13 +85,13 @@ Make a push from the client
   $ hg push -r . --to default
   pushing to ssh://user@dummy/server
   searching for changes
-  remote: pushing 1 changeset:
-  remote:     772868146114  client push
-  remote: 2 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 2 files
+  remote: pushing 1 changeset:
+  remote:     772868146114  client push
+  remote: 2 new changesets from the server will be downloaded
   $ log
   o  client push [draft:a8078509f8d1]
   |

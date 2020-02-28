@@ -83,6 +83,12 @@ Push in from the client.
   $ hg push --to @
   pushing rev b41b83f633d8 to destination ssh://user@dummy/server bookmark @
   searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 4 changesets with 1 changes to 3 files
+  3 new obsolescence markers
+  updating bookmark @
   remote: pushing 5 changesets:
   remote:     c85f9ce7b342  alpha
   remote:     0fcb170b6d84  merge alpha
@@ -90,12 +96,6 @@ Push in from the client.
   remote:     45a8d60c53ab  merge beta
   remote:     b41b83f633d8  merge alpha and beta
   remote: 6 new changesets from the server will be downloaded
-  adding changesets
-  adding manifests
-  adding file changes
-  added 4 changesets with 1 changes to 3 files
-  3 new obsolescence markers
-  updating bookmark @
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   obsoleted 3 changesets
   $ log

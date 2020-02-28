@@ -166,10 +166,10 @@ Make a commit in the first client, and sync it
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at fa5d62c46fd7
-  remote: pushing 1 commit:
-  remote:     fa5d62c46fd7  commit1
   commitcloud: commits synchronized
   finished in * (glob)
+  remote: pushing 1 commit:
+  remote:     fa5d62c46fd7  commit1
   $ cd ..
 
 Sync from the second client - the commit should appear
@@ -197,11 +197,11 @@ Make a commit from the second client and sync it
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at fa5d62c46fd7
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 2 commits:
   remote:     fa5d62c46fd7  commit1
   remote:     02f6fc2b7154  commit2
-  commitcloud: commits synchronized
-  finished in * (glob)
   $ cd ..
 
 On the first client, make a bookmark, then sync - the bookmark and new commit should be synced
@@ -276,11 +276,11 @@ Try to push selectively
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at a7bb357e7299
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     48610b1a7ec0  commit2
-  commitcloud: commits synchronized
-  finished in * (glob)
 
   $ tglog
   o  4: 48610b1a7ec0 'commit2' bookmark1
@@ -354,11 +354,11 @@ Expected result: the message telling that revision has been moved to another rev
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at a7bb357e7299
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     41f3b9359864  commit2 amended
-  commitcloud: commits synchronized
-  finished in * (glob)
 
   $ cd ..
 
@@ -410,11 +410,11 @@ Expected result: client2 should be moved to the amended version
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at a7bb357e7299
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     8134e74ecdc8  commit2 amended amended
-  commitcloud: commits synchronized
-  finished in * (glob)
 
   $ cd ..
 
@@ -471,12 +471,12 @@ Expected result: move should not happen, expect a message that move is ambiguous
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at a7bb357e7299
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 3 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     abd5311ab3c6  commit2 amended amended
   remote:     cebbb614447e  commit2 amended amended
-  commitcloud: commits synchronized
-  finished in * (glob)
 
   $ cd ..
 
@@ -535,11 +535,11 @@ Expected result: client2 should be moved to fada67350ab0
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at a7bb357e7299
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     fada67350ab0  commit2 amended amended amended amended amended
-  commitcloud: commits synchronized
-  finished in * (glob)
 
   $ cd ..
 
@@ -598,11 +598,11 @@ Expected result: client2 should be moved to 68e035cc1996
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at a7bb357e7299
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 2 commits:
   remote:     a7bb357e7299  commit1 amended
   remote:     68e035cc1996  commit2 amended amended rebased amended rebased am
-  commitcloud: commits synchronized
-  finished in * (glob)
 
   $ cd ..
 
@@ -883,13 +883,13 @@ Now sync in the repo we failed in.  This time it should work.
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 4b4f26511f8b
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 4 commits:
   remote:     4b4f26511f8b  race attempt
   remote:     715c1454ae33  stack commit 2
   remote:     a6b97eebbf74  shared commit updated
   remote:     9bd68ef10d6b  toobig
-  commitcloud: commits synchronized
-  finished in * (glob)
   $ hg cloud check -r .
   9bd68ef10d6bdb8ebf3273a7b91bc4f3debe2a87 backed up
   $ tglog
@@ -971,15 +971,15 @@ Make one of the commits public when it shouldn't be.
   push failed: stream ended unexpectedly (got 0 bytes, expected 4)
   retrying push with discovery
   searching for changes
+  backing up stack rooted at 3597ff85ead0
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 2 commits:
   remote:     e58a6603d256  stack 1 first
   remote:     9a3e7907fd5c  stack 1 second
-  backing up stack rooted at 3597ff85ead0
   remote: pushing 2 commits:
   remote:     3597ff85ead0  stack 2 first
   remote:     799d22972c4e  stack 2 second
-  commitcloud: commits synchronized
-  finished in * (glob)
 
 Commit still becomes available in the other repo
 

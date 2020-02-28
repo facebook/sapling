@@ -2,6 +2,7 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ configure dummyssh
 #require killdaemons
 
 Create an extension to test bundle2 remote-changegroup parts
@@ -85,7 +86,6 @@ Start a simple HTTP server to serve bundles
 
   $ cat >> $HGRCPATH << EOF
   > [ui]
-  > ssh=$PYTHON "$TESTDIR/dummyssh"
   > logtemplate={rev}:{node|short} {phase} {author} {bookmarks} {desc|firstline}
   > [format]
   > allowbundle1=True

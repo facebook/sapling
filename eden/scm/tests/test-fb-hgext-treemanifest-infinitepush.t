@@ -217,9 +217,9 @@ trees
   $ hg up -q '.^'
   $ hg cloud backup
   backing up stack rooted at 7e75be1136c3
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     7e75be1136c3  add foo
-  commitcloud: backed up 1 commit
   $ cd ..
 
 Verify its not on the server
@@ -302,10 +302,10 @@ treemanifest data for the public commits.
   $ hg commit -qm "merge"
   $ hg cloud backup
   backing up stack rooted at d32fd17cb041
+  commitcloud: backed up 2 commits
   remote: pushing 2 commits:
   remote:     d32fd17cb041  add z
   remote:     8b1db7b72253  merge
-  commitcloud: backed up 2 commits
 
 # Check the bundle.  It should only have 2 trees (one from z and one for the merged
 # root directory)

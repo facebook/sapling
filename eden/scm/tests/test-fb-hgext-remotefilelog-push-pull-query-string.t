@@ -57,11 +57,11 @@ as well
   $ hg push --to master
   pushing rev 421535db10b6 to destination ssh://user@dummy/repo?write bookmark master
   searching for changes
+  updating bookmark master
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  updating bookmark master
   $ hg log -r .
   changeset:   2:421535db10b6
   bookmark:    default/master

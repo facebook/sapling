@@ -70,11 +70,11 @@ Make pushbackup that contains bundle with 2 heads
   $ mkcommit newcommit2
   $ hg cloud backup
   backing up stack rooted at 0da81a72db1a
+  commitcloud: backed up 2 commits
   remote: pushing 3 commits:
   remote:     0da81a72db1a  commit
   remote:     5f9d85f9e1c6  newcommit
   remote:     c800524c1b76  newcommit2
-  commitcloud: backed up 2 commits
   $ hg cloud check -r .
   c800524c1b7637c6f3f997d1459237d01fe1ea10 backed up
 

@@ -53,10 +53,10 @@ Setup client
   $ hg commit -d "$commit_time 0" -m "Backed up changeset 2"
   $ hg cloud backup
   backing up stack rooted at * (glob)
+  commitcloud: backed up 2 commits
   remote: pushing 2 commits:
   remote:     *  Backed up changeset (glob)
   remote:     *  Backed up changeset 2 (glob)
-  commitcloud: backed up 2 commits
 
 Check hiding the backup head doesn't affect backed-up changesets
   $ hg up -q 2

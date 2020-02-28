@@ -99,10 +99,10 @@ Test for `hg diff --since-last-submit`
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at a8080066a666
-  remote: pushing 1 commit:
-  remote:     a8080066a666  Differential Revision: https://phabricator.fb.com/
   commitcloud: commits synchronized
   finished in * (glob)
+  remote: pushing 1 commit:
+  remote:     a8080066a666  Differential Revision: https://phabricator.fb.com/
 
   $ cat > $TESTTMP/mockduit << EOF
   > [{"data": {"query": [{"results": {"nodes": [{
@@ -128,10 +128,10 @@ Test for `hg diff --since-last-submit`
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 95847be64d6a
-  remote: pushing 1 commit:
-  remote:     95847be64d6a  Differential Revision: https://phabricator.fb.com/
   commitcloud: commits synchronized
   finished in * (glob)
+  remote: pushing 1 commit:
+  remote:     95847be64d6a  Differential Revision: https://phabricator.fb.com/
 
   $ cd ..
 

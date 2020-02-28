@@ -142,10 +142,10 @@
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 7917335ca006
-  remote: pushing 1 commit:
-  remote:     7917335ca006  snapshot
   commitcloud: commits synchronized
   finished in 0.00 sec
+  remote: pushing 1 commit:
+  remote:     7917335ca006  snapshot
   $ hg snapshot list
   7917335ca006 snapshot
 
@@ -160,8 +160,6 @@
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 5e55990d9843
-  remote: pushing 1 commit:
-  remote:     5e55990d9843  snapshot
   pulling 7917335ca006
   pulling from ssh://user@dummy/server
   searching for changes
@@ -169,6 +167,8 @@
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
+  remote: pushing 1 commit:
+  remote:     5e55990d9843  snapshot
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ hg snapshot list

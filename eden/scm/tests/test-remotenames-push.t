@@ -39,11 +39,11 @@ Create a remote bookmark
   $ hg push --to @ --create
   pushing rev cb9a9f314b8b to destination ssh://user@dummy/repo1 bookmark @
   searching for changes
+  exporting bookmark @
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  exporting bookmark @
 
 Test that we can still push a head that advances a remote bookmark
 
@@ -53,11 +53,11 @@ Test that we can still push a head that advances a remote bookmark
   $ hg push
   pushing to ssh://user@dummy/repo1
   searching for changes
+  updating bookmark @
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  updating bookmark @
 
 Test --delete
 

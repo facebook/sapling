@@ -3,9 +3,10 @@
 
 Push merge commits from a treeonly shallow repo to a hybrid treemanifest server
 
-  $ setconfig remotefilelog.reponame=x remotefilelog.cachepath=$TESTTMP/cache ui.ssh="python $TESTDIR/dummyssh"
+  $ setconfig remotefilelog.reponame=x remotefilelog.cachepath=$TESTTMP/cache
   $ setconfig format.aggressivemergedeltas=True
   $ setconfig treemanifest.flatcompat=False
+  $ configure dummyssh
 
   $ newrepo server
   $ setconfig treemanifest.server=True
@@ -27,13 +28,13 @@ Push merge commits from a treeonly shallow repo to a hybrid treemanifest server
   $ hg push --to foo --create -r $D -f  ssh://user@dummy/server
   pushing rev 5a587c09248a to destination ssh://user@dummy/server bookmark foo
   searching for changes
+  exporting bookmark foo
   remote: pushing 5 changesets:
   remote:     426bada5c675  A
   remote:     a6661b868de9  F
   remote:     9f93d39c36cf  B
   remote:     fc0baf5da824  E
   remote:     5a587c09248a  D
-  exporting bookmark foo
 
 Verify the renames are preserved (commit hashes did not change)
 
@@ -79,9 +80,9 @@ Push a commit that client1 doesnt have
   $ hg push --to foo
   pushing rev 0cfa18081ea6 to destination ssh://user@dummy/server bookmark foo
   searching for changes
+  updating bookmark foo
   remote: pushing 1 changeset:
   remote:     0cfa18081ea6  Add mydir/fileX & mydir/fileY
-  updating bookmark foo
 
 Push treeonly merge commit to a treeonly server
   $ cd $TESTTMP/client
@@ -98,16 +99,16 @@ Push treeonly merge commit to a treeonly server
   $ hg push --to foo ssh://user@dummy/server 2>&1
   pushing rev b634a5228cef to destination ssh://user@dummy/server bookmark foo
   searching for changes
-  remote: pushing 3 changesets:
-  remote:     a1d68bae23ee  Edit file
-  remote:     54deb28e5abb  Edit file2
-  remote:     b634a5228cef  Merge 2
-  remote: 4 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
   added 4 changesets with 9 changes to 9 files
   3 new obsolescence markers
   updating bookmark foo
+  remote: pushing 3 changesets:
+  remote:     a1d68bae23ee  Edit file
+  remote:     54deb28e5abb  Edit file2
+  remote:     b634a5228cef  Merge 2
+  remote: 4 new changesets from the server will be downloaded
   7 files updated, 0 files merged, 0 files removed, 0 files unresolved
   obsoleted 3 changesets

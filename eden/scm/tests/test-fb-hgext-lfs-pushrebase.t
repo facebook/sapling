@@ -337,10 +337,10 @@ TODO: configure mutation
   $ hg push --to master -r .
   pushing rev 026f7366f3d2 to destination ssh://user@dummy/master2 bookmark master
   searching for changes
-  remote: pushing 1 changeset:
-  remote:     026f7366f3d2  y-not-lfs
   remote: lfs.url needs to be configured
   abort: push failed on remote
+  remote: pushing 1 changeset:
+  remote:     026f7366f3d2  y-not-lfs
   [255]
 
 # Can push once server has lfs.url set
@@ -352,6 +352,6 @@ TODO: configure mutation
   $ hg push --to master -r .
   pushing rev 026f7366f3d2 to destination ssh://user@dummy/master2 bookmark master
   searching for changes
+  updating bookmark master
   remote: pushing 1 changeset:
   remote:     026f7366f3d2  y-not-lfs
-  updating bookmark master

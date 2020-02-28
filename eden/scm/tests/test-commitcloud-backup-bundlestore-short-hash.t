@@ -51,9 +51,9 @@ We will also run few checks with `hg hide` / `hg up` commands.
 Backup commit
   $ hg cloud backup
   backing up stack rooted at c1b6fe8fce73
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     c1b6fe8fce73  someothercommit
-  commitcloud: backed up 1 commit
 
 Quick test `hg hide` / `hg up`
 Check update now accesses hidden commits rather than trying to pull
@@ -185,13 +185,13 @@ With no configuration it should abort
 
   $ hg cloud backup
   backing up stack rooted at * (glob)
+  commitcloud: backed up 5 commits
   remote: pushing 5 commits:
   remote:     *  someothercommit1 (glob)
   remote:     *  someothercommit2 (glob)
   remote:     *  someothercommit3 (glob)
   remote:     *  someothercommit4 (glob)
   remote:     *  someothercommit5 (glob)
-  commitcloud: backed up 5 commits
   $ cd ../
 
 case 1: recent commit, length of prefix = 6 characters

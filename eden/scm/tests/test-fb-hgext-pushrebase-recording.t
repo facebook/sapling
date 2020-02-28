@@ -231,12 +231,12 @@ Enable pretxnchangegroup hooks and make sure we record failed pushes in that cas
   $ hg push -r . --to master
   pushing to ssh://user@dummy/server
   searching for changes
+  remote: pretxnchangegroup hook exited with status 1
+  abort: push failed on remote
   remote: pushing 1 changeset:
   remote:     e42da70f7a80  hook will fail
   remote: transaction abort!
   remote: rollback completed
-  remote: pretxnchangegroup hook exited with status 1
-  abort: push failed on remote
   [255]
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto_rebased_rev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
   repo_id	ontorev	onto_rebased_rev	onto	bundlehandle	conflicts	pushrebase_errmsg
@@ -290,9 +290,9 @@ Run python hook that records hook failure reason
   $ hg push -r . --to master
   pushing to ssh://user@dummy/server
   searching for changes
-  remote: error: prepushrebase hook failed: failure
   remote: failure
   abort: push failed on remote
+  remote: error: prepushrebase hook failed: failure
   [255]
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'select repo_id, ontorev, onto_rebased_rev, onto, bundlehandle, conflicts, pushrebase_errmsg from pushrebaserecording'
   repo_id	ontorev	onto_rebased_rev	onto	bundlehandle	conflicts	pushrebase_errmsg

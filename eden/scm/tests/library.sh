@@ -1,4 +1,5 @@
 CACHEDIR=$TESTTMP/hgcache
+export DUMMYSSH_STABLE_ORDER=1
 cat >> $HGRCPATH <<EOF
 [remotefilelog]
 cachepath=$CACHEDIR

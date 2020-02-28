@@ -18,9 +18,9 @@ Backup a commit
   $ mkcommit commit
   $ hg cloud backup
   backing up stack rooted at 7e6a6fd9c7c8
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit
-  commitcloud: backed up 1 commit
 
 Check the commit is compressed
   $ f=`cat ../repo/.hg/scratchbranches/index/nodemap/7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455`

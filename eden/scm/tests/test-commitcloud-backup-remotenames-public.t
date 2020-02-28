@@ -63,9 +63,9 @@ Create scratch commit and back it up.
   
   $ hg cloud backup
   backing up stack rooted at ce87a066ebc2
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     ce87a066ebc2  scratch
-  commitcloud: backed up 1 commit
   $ cd ..
 
 Create second client
@@ -110,7 +110,7 @@ Run cloud backup and make sure only scratch commits are backed up.
   $ mkcommit scratch2
   $ hg cloud backup
   backing up stack rooted at ce87a066ebc2
+  commitcloud: backed up 1 commit
   remote: pushing 2 commits:
   remote:     ce87a066ebc2  scratch
   remote:     4dbf2c8dd7d9  scratch2
-  commitcloud: backed up 1 commit

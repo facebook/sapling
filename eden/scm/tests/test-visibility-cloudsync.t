@@ -57,13 +57,13 @@ Create a client with some initial commits and sync them to the cloud workspace.
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at dae3b312bb78
+  commitcloud: commits synchronized
+  finished in * sec (glob)
   remote: pushing 4 commits:
   remote:     dae3b312bb78  Z
   remote:     2d0f0af04f18  C
   remote:     6ba5de8abe43  D
   remote:     c70a9bd6bfd1  E
-  commitcloud: commits synchronized
-  finished in * sec (glob)
 
 Create another client and use it to modify the commits and create some new ones.
 
@@ -122,13 +122,13 @@ Create another client and use it to modify the commits and create some new ones.
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at dae3b312bb78
+  commitcloud: commits synchronized
+  finished in * sec (glob)
   remote: pushing 4 commits:
   remote:     dae3b312bb78  Z
   remote:     c70a9bd6bfd1  E
   remote:     d8fc5ae9b7ef  D
   remote:     dd114d9b2f9e  X
-  commitcloud: commits synchronized
-  finished in * sec (glob)
 
 Before syncing, create a new commit in the original client
 
@@ -158,11 +158,6 @@ Now cloud sync.  The sets of commits should be merged.
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at dae3b312bb78
-  remote: pushing 4 commits:
-  remote:     dae3b312bb78  Z
-  remote:     c70a9bd6bfd1  E
-  remote:     ba83c5428cb2  F
-  remote:     6caded0e9807  D
   pulling d8fc5ae9b7ef dd114d9b2f9e
   pulling from ssh://user@dummy/server
   searching for changes
@@ -174,6 +169,11 @@ Now cloud sync.  The sets of commits should be merged.
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 2 files
+  remote: pushing 4 commits:
+  remote:     dae3b312bb78  Z
+  remote:     c70a9bd6bfd1  E
+  remote:     ba83c5428cb2  F
+  remote:     6caded0e9807  D
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
@@ -311,25 +311,25 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at dae3b312bb78
+  commitcloud: commits synchronized
+  finished in * sec (glob)
   remote: pushing 3 commits:
   remote:     dae3b312bb78  Z
   remote:     c70a9bd6bfd1  E
   remote:     b5ea82a7973c  F-amended-again
-  commitcloud: commits synchronized
-  finished in * sec (glob)
   $ hg undo
   undone to *, before amend -m F-amended-again (glob)
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at dae3b312bb78
-  remote: pushing 3 commits:
-  remote:     dae3b312bb78  Z
-  remote:     c70a9bd6bfd1  E
-  remote:     1ef69cfd595b  F-amended
   commitcloud: commits synchronized
   finished in * sec (glob)
   commitcloud: current revision 1ef69cfd595b has been replaced remotely with multiple revisions
   (run 'hg update HASH' to go to the desired revision)
+  remote: pushing 3 commits:
+  remote:     dae3b312bb78  Z
+  remote:     c70a9bd6bfd1  E
+  remote:     1ef69cfd595b  F-amended
 
   $ cd ../client3
   $ hg cloud sync

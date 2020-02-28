@@ -37,14 +37,14 @@ Test that pushing to a remotename preserves commit hash if no rebase happens
   $ hg push --to master
   pushing rev ea98a8f95390 to destination ssh://user@dummy/server1 bookmark master
   searching for changes
-  remote: pushing 1 changeset:
-  remote:     ea98a8f95390  changed message
-  remote: 1 new changeset from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 1 files
   updating bookmark master
+  remote: pushing 1 changeset:
+  remote:     ea98a8f95390  changed message
+  remote: 1 new changeset from the server will be downloaded
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -r . -T '{node}\n'
   a59527fd0ae5acd6fe09597193f5eb3e01113f22
@@ -79,14 +79,14 @@ Test that pushing to a remotename gets rebased
   $ hg push --to master --config remotenames.racy-pull-on-push=0
   pushing rev 5c3cfb78df2f to destination ssh://user@dummy/server bookmark master
   searching for changes
-  remote: pushing 1 changeset:
-  remote:     5c3cfb78df2f  client's commit
-  remote: 2 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 2 files
   updating bookmark master
+  remote: pushing 1 changeset:
+  remote:     5c3cfb78df2f  client's commit
+  remote: 2 new changesets from the server will be downloaded
   moving remote bookmark 'default/master' to 98d6f1036c3b
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -210,15 +210,15 @@ Test a push that comes with out-of-date bookmark discovery
   $ hg -R client push --to bm
   pushing rev 5db65b93a12b to destination ssh://user@dummy/server bookmark bm
   searching for changes
-  remote: moved bookmark to rev 1
-  remote: pushing 1 changeset:
-  remote:     5db65b93a12b  cc
-  remote: 2 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 2 files
   updating bookmark bm
+  remote: moved bookmark to rev 1
+  remote: pushing 1 changeset:
+  remote:     5db65b93a12b  cc
+  remote: 2 new changesets from the server will be downloaded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg -R server log -G -T '{rev} "{desc}" {bookmarks}'
   o  2 "cc" bm
@@ -252,13 +252,13 @@ Test that we still don't allow non-ff bm changes
   $ hg -R client push --to bm
   pushing rev 2f9755549086 to destination ssh://user@dummy/server bookmark bm
   searching for changes
+  abort: updating bookmark bm failed!
   remote: moved bookmark to rev 1
   remote: pushing 1 changeset:
   remote:     2f9755549086  dd
   remote: 1 new changeset from the server will be downloaded
   remote: transaction abort!
   remote: rollback completed
-  abort: updating bookmark bm failed!
   [255]
 
 Test force pushes
@@ -291,14 +291,14 @@ Test force pushes
   $ hg push -f --to master
   pushing rev 1846eede8b68 to destination * (glob)
   searching for changes
-  remote: pushing 1 changeset:
-  remote:     1846eede8b68  b
-  remote: 1 new changeset from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 1 files
   updating bookmark master
+  remote: pushing 1 changeset:
+  remote:     1846eede8b68  b
+  remote: 1 new changeset from the server will be downloaded
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -G -r 'all()' -T '{desc} {remotebookmarks} {bookmarks}'
   @  b default/master
@@ -349,14 +349,14 @@ Test 'hg push' with a tracking bookmark
   $ hg push
   pushing rev d2ae7f538514 to destination ssh://user@dummy/trackingserver bookmark master
   searching for changes
-  remote: pushing 1 changeset:
-  remote:     d2ae7f538514  b
-  remote: 2 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 1 changes to 2 files
   updating bookmark master
+  remote: pushing 1 changeset:
+  remote:     d2ae7f538514  b
+  remote: 2 new changesets from the server will be downloaded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -T '{rev} {desc}' -G
   @  3 b
@@ -389,11 +389,11 @@ Test push --to to a repo without pushrebase on (i.e. the default remotenames beh
   $ hg push --to serverfeature
   pushing rev d2ae7f538514 to destination ssh://user@dummy/oldserver bookmark serverfeature
   searching for changes
+  updating bookmark serverfeature
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
-  updating bookmark serverfeature
   $ hg log -G -T '{shortest(node)} {bookmarks}'
   @  d2ae clientfeature
   |
@@ -433,8 +433,8 @@ that requires pushrebase.
   $ hg push --to serverfeature
   pushing rev d2ae7f538514 to destination ssh://user@dummy/pushrebaseserver bookmark serverfeature
   searching for changes
-  remote: error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
   remote: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
   abort: push failed on remote
+  remote: error: prechangegroup.blocknonpushrebase hook failed: this repository requires that you enable the pushrebase extension and push using 'hg push --to'
   [255]
 

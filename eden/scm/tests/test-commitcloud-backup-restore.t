@@ -29,9 +29,9 @@ Backup
 Actually do a backup, make sure that backup check doesn't fail for empty backup state
   $ hg cloud backup
   backing up stack rooted at 89ecc969c0ac
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     89ecc969c0ac  firstcommit
-  commitcloud: backed up 1 commit
   $ cd ..
 
 Create logdir
@@ -68,9 +68,9 @@ Create second backup source
   $ hg book secondbook
   $ hg cloud backup
   backing up stack rooted at c1bfda8efb6e
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     c1bfda8efb6e  secondcommit
-  commitcloud: backed up 1 commit
   $ cd ..
 
 Restore with ambiguous repo root
@@ -128,9 +128,9 @@ Create a repo with `/bookmarks/` in path
   $ hg book bookbackupsource3
   $ hg cloud backup
   backing up stack rooted at a2a9ae518b62
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     a2a9ae518b62  commitinweirdrepo
-  commitcloud: backed up 1 commit
   $ cd ../../restored
   $ hg cloud restorebackup --reporoot $TESTTMP/bookmarks/backupsource3
   restoring backup for test from $TESTTMP/bookmarks/backupsource3 on testhost
@@ -183,11 +183,11 @@ Backup and restore two commits
   $ mkcommit secondinbatch
   $ hg cloud backup
   backing up stack rooted at 89ecc969c0ac
+  commitcloud: backed up 2 commits
   remote: pushing 3 commits:
   remote:     89ecc969c0ac  firstcommit
   remote:     33c1c9df81e9  firstinbatch
   remote:     0e1a088ff282  secondinbatch
-  commitcloud: backed up 2 commits
   $ cd ../restored
 
 Install server-side extension that will print message every time when bundlerepo
@@ -214,11 +214,11 @@ Backup as another user, then restore it
   e0230a60975b38a9014f098fb973199efd25c46f
   $ HGUSER=anotheruser hg cloud backup
   backing up stack rooted at 89ecc969c0ac
+  commitcloud: backed up 1 commit
   remote: pushing 3 commits:
   remote:     89ecc969c0ac  firstcommit
   remote:     0e1a088ff282  secondinbatch
   remote:     e0230a60975b  backupasanotheruser
-  commitcloud: backed up 1 commit
   $ cd ../restored
 
 Make sure commit was pulled by checking that commit is present
@@ -257,27 +257,27 @@ Make a couple more backup sources
   $ mkcommit commit4
   $ hg cloud backup
   backing up stack rooted at 56d472a48d80
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     56d472a48d80  commit4
-  commitcloud: backed up 1 commit
   $ cd ..
   $ hg clone ssh://user@dummy/repo backupsource5 -q
   $ cd backupsource5
   $ mkcommit commit5
   $ hg cloud backup
   backing up stack rooted at 6def11a9e22f
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     6def11a9e22f  commit5
-  commitcloud: backed up 1 commit
   $ cd ..
   $ hg clone ssh://user@dummy/repo backupsource6 -q
   $ cd backupsource6
   $ mkcommit commit6
   $ hg cloud backup
   backing up stack rooted at d30831eec2cf
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     d30831eec2cf  commit6
-  commitcloud: backed up 1 commit
   $ cd ../backupsource
 
   $ hg cloud listbackups

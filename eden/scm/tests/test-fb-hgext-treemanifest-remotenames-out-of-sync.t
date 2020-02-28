@@ -59,9 +59,9 @@
   $ hg push --to master
   pushing rev 0b41a6a811a2 to destination ssh://user@dummy/repo bookmark master
   searching for changes
+  updating bookmark master
   remote: pushing 1 changeset:
   remote:     0b41a6a811a2  x3
-  updating bookmark master
   $ hg log -r .
   changeset:   2:0b41a6a811a2
   bookmark:    default/master
@@ -105,15 +105,15 @@
   $ hg push --to master
   pushing rev e68715a0fc4c to destination ssh://user@dummy/repo?write bookmark master
   searching for changes
-  remote: pushing 1 changeset:
-  remote:     e68715a0fc4c  x4
-  remote: 2 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
   1 new obsolescence markers
   updating bookmark master
+  remote: pushing 1 changeset:
+  remote:     e68715a0fc4c  x4
+  remote: 2 new changesets from the server will be downloaded
   fetching tree '' eda1f7bdb1c764a4e03857a25db3d6cad9d25088, based on a18d21674e76d6aab2edb46810b20fbdbd10fb4b, found via 12f14bedbd28
   1 trees fetched over * (glob)
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

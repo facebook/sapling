@@ -102,10 +102,6 @@ Stack of non-conflicting commits should be accepted
   46a2df24e27273bb06dbf28b085fcc2e911bf986
   0e3997dc073308e42715a44d345466690abfd09a
   sending unbundle command
-  remote: pushing 2 changesets:
-  remote:     46a2df24e272  b => xxx
-  remote:     0e3997dc0733  b => baz
-  remote: 3 new changesets from the server will be downloaded
   adding changesets
   add changeset add0c792bfce
   add changeset 6a6d9484552c
@@ -118,6 +114,10 @@ Stack of non-conflicting commits should be accepted
   preparing listkeys for "phases"
   sending listkeys command
   received listkey for "phases": 15 bytes
+  remote: pushing 2 changesets:
+  remote:     46a2df24e272  b => xxx
+  remote:     0e3997dc0733  b => baz
+  remote: 3 new changesets from the server will be downloaded
 
 Check that we did not generate any check:heads parts
 
@@ -159,14 +159,14 @@ Push using changegroup2
   $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
-  remote: pushing 2 changesets:
-  remote:     46a2df24e272  b => xxx
-  remote:     0e3997dc0733  b => baz
-  remote: 3 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
   added 3 changesets with 1 changes to 2 files
+  remote: pushing 2 changesets:
+  remote:     46a2df24e272  b => xxx
+  remote:     0e3997dc0733  b => baz
+  remote: 3 new changesets from the server will be downloaded
 
   $ cd ../client
   $ hg debugstrip 1
@@ -345,6 +345,11 @@ Pushing a merge should rebase only the latest side of the merge
   $ hg push --to master -B master
   pushing to ssh://user@dummy/server
   searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 4 changesets with 1 changes to 3 files
+  updating bookmark master
   remote: pushing 5 changesets:
   remote:     e6b7549904cd  branch left
   remote:     add5ec74853d  branch start
@@ -352,11 +357,6 @@ Pushing a merge should rebase only the latest side of the merge
   remote:     2c0c699d7086  merge
   remote:     9007d6a204f8  on top of merge
   remote: 6 new changesets from the server will be downloaded
-  adding changesets
-  adding manifests
-  adding file changes
-  added 4 changesets with 1 changes to 3 files
-  updating bookmark master
   $ cd ../server
   $ log
   o  on top of merge [public:54b35e8b58eb] master
@@ -430,15 +430,15 @@ With evolution enabled, should set obsolescence markers
   $ hg push --to default
   pushing to ssh://user@dummy/server
   searching for changes
-  remote: pushing 2 changesets:
-  remote:     9467a8ee5d0d  b => k
-  remote:     e73acfaeee82  b => foobar
-  remote: 4 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
   added 4 changesets with 2 changes to 4 files
   2 new obsolescence markers
+  remote: pushing 2 changesets:
+  remote:     9467a8ee5d0d  b => k
+  remote:     e73acfaeee82  b => foobar
+  remote: 4 new changesets from the server will be downloaded
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   obsoleted 2 changesets
 
@@ -505,9 +505,9 @@ Test pushing master bookmark, fast forward
   $ hg push --to master
   pushing to ssh://user@dummy/server
   searching for changes
+  updating bookmark master
   remote: pushing 1 changeset:
   remote:     56b2e0949966  b => babar
-  updating bookmark master
   $ hg log -r master -R ../server -T"{node}\n"
   56b2e094996609874ae1c9aae1626bfba61d07d8
 
@@ -570,6 +570,8 @@ Test that the prepushrebase hook can run against the bundle repo
   $ hg push --to master
   pushing to ssh://user@dummy/prepushrebaseserver
   searching for changes
+  remote: prepushrebase hook exited with status * (glob)
+  abort: push failed on remote
   remote: changeset:   1:0e067c57feba
   remote: user:        test
   remote: date:        Thu Jan 01 00:00:00 1970 +0000
@@ -577,8 +579,6 @@ Test that the prepushrebase hook can run against the bundle repo
   remote: 
   remote: Checking if lock exists (it should not):
   remote: ls: *.hg/store/lock*: $ENOENT$ (glob)
-  remote: prepushrebase hook exited with status * (glob)
-  abort: push failed on remote
   [255]
 
   $ cd ..

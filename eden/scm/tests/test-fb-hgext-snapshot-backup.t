@@ -120,18 +120,18 @@
 # Back it up
   $ hg cloud backup
   backing up stack rooted at f473d4d5a1c0
-  remote: pushing 4 commits:
-  remote:     f473d4d5a1c0  merge #1
-  remote:     6eb2552aed20  merge #2
-  remote:     751f5ef10bc7  snapshot
-  remote:     ccf23db4d8f3  second snapshot
   backing up stack rooted at 6eb2552aed20
+  commitcloud: backed up 4 commits
   remote: pushing 4 commits:
   remote:     f473d4d5a1c0  merge #1
   remote:     6eb2552aed20  merge #2
   remote:     751f5ef10bc7  snapshot
   remote:     ccf23db4d8f3  second snapshot
-  commitcloud: backed up 4 commits
+  remote: pushing 4 commits:
+  remote:     f473d4d5a1c0  merge #1
+  remote:     6eb2552aed20  merge #2
+  remote:     751f5ef10bc7  snapshot
+  remote:     ccf23db4d8f3  second snapshot
 
 # Restore it on another client
   $ cd ../restored

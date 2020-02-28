@@ -1,5 +1,6 @@
 TESTDIR=${TESTDIR:-.}
 GETDB_PATH="$TESTDIR/${HGTEST_GETDB_PATH:-getdb.sh}"
+export DUMMYSSH_STABLE_ORDER=1
 
 if [[ ! -f "$GETDB_PATH" ]]; then
   echo "skipped: getdb.sh missing. copy from getdb.sh.example and edit it"

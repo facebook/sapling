@@ -3,8 +3,9 @@
 
 Push treeonly commits from a treeonly shallow repo to a treeonly server
 
-  $ setconfig remotefilelog.reponame=x remotefilelog.cachepath=$TESTTMP/cache ui.ssh="python $TESTDIR/dummyssh"
+  $ setconfig remotefilelog.reponame=x remotefilelog.cachepath=$TESTTMP/cache
   $ setconfig treemanifest.flatcompat=False
+  $ configure dummyssh
 
   $ newrepo server
   $ setconfig treemanifest.server=True
@@ -24,10 +25,10 @@ Push treeonly commits from a treeonly shallow repo to a treeonly server
   $ hg push --to foo -r $B --create
   pushing rev 112478962961 to destination ssh://user@dummy/server bookmark foo
   searching for changes
+  exporting bookmark foo
   remote: pushing 2 changesets:
   remote:     426bada5c675  A
   remote:     112478962961  B
-  exporting bookmark foo
 
 Make server treeonly and push trees to it
   $ switchrepo server
@@ -44,16 +45,16 @@ Make server treeonly and push trees to it
   $ hg push --to foo
   pushing rev 0560779f58ae to destination ssh://user@dummy/server bookmark foo
   searching for changes
-  remote: pushing 2 changesets:
-  remote:     e297a1e684b7  C
-  remote:     0560779f58ae  D
-  remote: 2 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 1 files
   2 new obsolescence markers
   updating bookmark foo
+  remote: pushing 2 changesets:
+  remote:     e297a1e684b7  C
+  remote:     0560779f58ae  D
+  remote: 2 new changesets from the server will be downloaded
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   obsoleted 2 changesets
 

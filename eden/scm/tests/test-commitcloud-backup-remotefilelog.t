@@ -135,9 +135,9 @@ the client doesn't receive the public commit file data during the pull.
   $ mkcommit draftcommit
   $ hg cloud backup
   backing up stack rooted at 1c8212bf302f
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     1c8212bf302f  draftcommit
-  commitcloud: backed up 1 commit
   $ cd ../client
   $ clearcache
   $ hg cloud restore --reporoot $TESTTMP/secondclient

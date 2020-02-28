@@ -36,9 +36,9 @@
   $ hg push --to master
   pushing rev 6b73ab2c9773 to destination ssh://user@dummy/master bookmark master
   searching for changes
+  updating bookmark master
   remote: pushing 1 changeset:
   remote:     6b73ab2c9773  Modify dir/x
-  updating bookmark master
   $ hg --cwd ../master log -G -l 1 --stat
   o  changeset:   1:6b73ab2c9773
   |  bookmark:    master

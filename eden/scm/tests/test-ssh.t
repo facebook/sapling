@@ -4,6 +4,7 @@
 This test tries to exercise the ssh functionality with a dummy script
 
   $ setconfig format.usegeneraldelta=yes
+  $ configure dummyssh
 
 creating 'remote' repo
 
@@ -24,21 +25,21 @@ configure for serving
 
 repo not found error
 
-  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/nonexistent local
+  $ hg clone ssh://user@dummy/nonexistent local
   remote: abort: repository nonexistent not found!
   abort: no suitable response from remote hg!
   [255]
 
 non-existent absolute path
 
-  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/`pwd`/nonexistent local
+  $ hg clone ssh://user@dummy/`pwd`/nonexistent local
   remote: abort: repository $TESTTMP/nonexistent not found!
   abort: no suitable response from remote hg!
   [255]
 
 clone remote via stream
 
-  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --stream ssh://user@dummy/remote local-stream
+  $ hg clone --stream ssh://user@dummy/remote local-stream
   streaming all changes
   5 files to transfer, * of data (glob)
   transferred 392 bytes in 0.0 seconds (383 KB/sec)
@@ -58,7 +59,7 @@ clone remote via stream
 clone bookmarks via stream
 
   $ hg -R local-stream book mybook
-  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" --stream ssh://user@dummy/local-stream stream2
+  $ hg clone --stream ssh://user@dummy/local-stream stream2
   streaming all changes
   5 files to transfer, * of data (glob)
   transferred 392 bytes in 0.0 seconds (383 KB/sec)
@@ -74,7 +75,7 @@ clone bookmarks via stream
 
 clone remote via pull
 
-  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/remote local
+  $ hg clone ssh://user@dummy/remote local
   requesting all changes
   adding changesets
   adding manifests
@@ -108,7 +109,7 @@ empty default pull
 
 pull from wrong ssh URL
 
-  $ hg pull -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/doesnotexist
+  $ hg pull ssh://user@dummy/doesnotexist
   pulling from ssh://user@dummy/doesnotexist
   remote: abort: repository doesnotexist not found!
   abort: no suitable response from remote hg!
@@ -138,7 +139,7 @@ find outgoing
 
 find incoming on the remote side
 
-  $ hg incoming -R ../remote -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/local
+  $ hg incoming -R ../remote ssh://user@dummy/local
   comparing with ssh://user@dummy/local
   searching for changes
   changeset:   1:a28a9d1a809c
@@ -149,7 +150,7 @@ find incoming on the remote side
 
 find incoming on the remote side (using absolute path)
 
-  $ hg incoming -R ../remote -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" "ssh://user@dummy/`pwd`"
+  $ hg incoming -R ../remote "ssh://user@dummy/`pwd`"
   comparing with ssh://user@dummy/$TESTTMP/local
   searching for changes
   changeset:   1:a28a9d1a809c
@@ -284,7 +285,7 @@ clone bookmarks
   $ hg -R ../remote bookmark test
   $ hg -R ../remote bookmarks
    * test                      2:6c0482d977a3
-  $ hg clone -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" ssh://user@dummy/remote local-bookmarks
+  $ hg clone ssh://user@dummy/remote local-bookmarks
   requesting all changes
   adding changesets
   adding manifests
@@ -437,13 +438,13 @@ stderr from remote commands should be printed before stdout from local code (iss
   $ hg push
   pushing to ssh://user@dummy/remote
   searching for changes
+  local stdout
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
   remote: added 1 changesets with 1 changes to 1 files
   remote: KABOOM
   remote: KABOOM IN PROCESS
-  local stdout
 
 debug output
 
@@ -524,6 +525,8 @@ remote hook failure is attributed to remote
   $ hg --config ui.ssh="\"$PYTHON\" $TESTDIR/dummyssh" push
   pushing to ssh://user@dummy/remote
   searching for changes
+  remote: pretxnchangegroup.fail hook failed
+  abort: push failed on remote
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -531,8 +534,6 @@ remote hook failure is attributed to remote
   remote: hook failure!
   remote: transaction abort!
   remote: rollback completed
-  remote: pretxnchangegroup.fail hook failed
-  abort: push failed on remote
   [255]
 
 abort during pull is properly reported as such
@@ -559,7 +560,7 @@ abort with no error hint when there is a ssh problem when pulling
 
 abort with configured error hint when there is a ssh problem when pulling
 
-  $ hg pull ssh://brokenrepository -e "\"$PYTHON\" \"$TESTDIR/dummyssh\"" \
+  $ hg pull ssh://brokenrepository \
   > --config ui.ssherrorhint="Please see http://company/internalwiki/ssh.html"
   pulling from ssh://brokenrepository/
   abort: no suitable response from remote hg!

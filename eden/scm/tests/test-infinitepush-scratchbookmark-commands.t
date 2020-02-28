@@ -1,12 +1,12 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ configure dummyssh
 Common configuration for both the server and client.
 
 
   $ enable infinitepush remotenames
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
-  $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
 
 
 Initialize the server.

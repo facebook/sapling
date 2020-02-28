@@ -2,6 +2,7 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ configure dummyssh
 #require serve
 
 Initialize repository
@@ -34,10 +35,6 @@ Block full streaming clones
   $ cat >> server/.hg/hgrc <<EOF
   > [server]
   > requireexplicitfullclone=True
-  > EOF
-  $ cat >> $HGRCPATH <<EOF
-  > [ui]
-  > ssh=python "$TESTDIR/dummyssh"
   > EOF
   $ hg clone --stream -U ssh://user@dummy/server blockedclone
   streaming all changes

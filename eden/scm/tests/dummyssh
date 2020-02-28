@@ -109,7 +109,10 @@ if os.environ.get("DUMMYSSH_STABLE_ORDER"):
     p.wait()
     t.join()
 
-    sys.stderr.write(errbuf[0])
+    if sys.version_info[0] >= 3:
+        sys.stderr.buffer.write(errbuf[0])
+    else:
+        sys.stderr.write(errbuf[0])
     sys.stderr.flush()
 
     sys.exit(p.returncode)

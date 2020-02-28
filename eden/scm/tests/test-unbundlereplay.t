@@ -1,8 +1,6 @@
 #require py2
 #chg-compatible
 
-#chg-compatible
-
   $ . "$TESTDIR/library.sh"
   $ . "$TESTDIR/hgsql/library.sh"
 
@@ -99,14 +97,14 @@ Send unbundlereplay with incorrect expected hash
   remote: 1
   using $TESTTMP/reports.txt as a reports file
   sending unbundlereplay command
+  replay failed: error:pushkey
+  unbundle replay batch item #0 failed
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
   remote: [ReplayVerification] Expected: (master_bookmark, d2e526aacb5100b7c1ddb9b711d2e012e6c69cda). Actual: (master_bookmark, c2e526aacb5100b7c1ddb9b711d2e012e6c69cda)
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
-  replay failed: error:pushkey
-  unbundle replay batch item #0 failed
   [1]
   $ cat $TESTTMP/reports.txt
   unbundle replay batch item #0 failed
@@ -124,14 +122,14 @@ Send unbundlereplay with incorrect expected bookmark
   remote: 1
   using $TESTTMP/reports.txt as a reports file
   sending unbundlereplay command
+  replay failed: error:pushkey
+  unbundle replay batch item #0 failed
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
   remote: [ReplayVerification] Expected: (master_bookmark_2, c2e526aacb5100b7c1ddb9b711d2e012e6c69cda). Actual: (master_bookmark, c2e526aacb5100b7c1ddb9b711d2e012e6c69cda)
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
-  replay failed: error:pushkey
-  unbundle replay batch item #0 failed
   [1]
   $ cat $TESTTMP/reports.txt
   unbundle replay batch item #0 failed
@@ -149,14 +147,14 @@ Send unbundlereplay with incorrect commit timestamp
   remote: 1
   using $TESTTMP/reports.txt as a reports file
   sending unbundlereplay command
+  replay failed: error:pushkey
+  unbundle replay batch item #0 failed
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
   remote: [ReplayVerification] Expected: (master_bookmark, c2e526aacb5100b7c1ddb9b711d2e012e6c69cda). Actual: (master_bookmark, 893d83f11bf81ce2b895a93d51638d4049d56ce2)
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
-  replay failed: error:pushkey
-  unbundle replay batch item #0 failed
   [1]
   $ cat $TESTTMP/reports.txt
   unbundle replay batch item #0 failed
@@ -176,20 +174,20 @@ Send Unbundlereplay batch 1 (all good)
   remote: 1
   using $TESTTMP/reports.txt as a reports file
   sending unbundlereplay command
+  unbundle replay batch item #0 successfully sent
+  sending unbundlereplay command
+  unbundle replay batch item #1 successfully sent
+  sending unbundlereplay command
+  unbundle replay batch item #2 successfully sent
   remote: pushing 1 changeset:
   remote:     a0c9c5791058  1
   remote: [ReplayVerification] Everything seems in order
-  unbundle replay batch item #0 successfully sent
-  sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     c9b2673d3218  2
   remote: [ReplayVerification] Everything seems in order
-  unbundle replay batch item #1 successfully sent
-  sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     e91cd89a81a5  3
   remote: [ReplayVerification] Everything seems in order
-  unbundle replay batch item #2 successfully sent
   $ cat $TESTTMP/reports.txt
   unbundle replay batch item #0 successfully sent
   unbundle replay batch item #1 successfully sent
@@ -210,19 +208,19 @@ Send unbundlereplay batch 2 (second has a wrong hash)
   remote: 1
   using $TESTTMP/reports.txt as a reports file
   sending unbundlereplay command
+  unbundle replay batch item #0 successfully sent
+  sending unbundlereplay command
+  replay failed: error:pushkey
+  unbundle replay batch item #1 failed
   remote: pushing 1 changeset:
   remote:     a6074953400c  4
   remote: [ReplayVerification] Everything seems in order
-  unbundle replay batch item #0 successfully sent
-  sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     cba0370ec397  5
   remote: [ReplayVerification] Expected: (master_bookmark, 0000000000000000000000000000000000000000). Actual: (master_bookmark, cc43a8d5ff4cfd07429374cd22d8d2c94d030807)
   remote: pushkey-abort: prepushkey hook exited with status 1
   remote: transaction abort!
   remote: rollback completed
-  replay failed: error:pushkey
-  unbundle replay batch item #1 failed
   [1]
   $ cat $TESTTMP/reports.txt
   unbundle replay batch item #0 successfully sent
@@ -245,35 +243,27 @@ Send unbundlereplay batch 3 (all good, this time with logging to files)
   remote: 1
   using $TESTTMP/reports.txt as a reports file
   sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     cba0370ec397  5
-  remote: [ReplayVerification] Everything seems in order
   unbundle replay batch item #0 successfully sent
   sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     6c384628f7c4  6
-  remote: [ReplayVerification] Everything seems in order
   unbundle replay batch item #1 successfully sent
   sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     d5313099c10d  7
-  remote: [ReplayVerification] Everything seems in order
   unbundle replay batch item #2 successfully sent
-  $ cat $TESTTMP/log1
-  sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     cba0370ec397  5
   remote: [ReplayVerification] Everything seems in order
-  $ cat $TESTTMP/log2
-  sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     6c384628f7c4  6
   remote: [ReplayVerification] Everything seems in order
-  $ cat $TESTTMP/log3
-  sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     d5313099c10d  7
   remote: [ReplayVerification] Everything seems in order
+ (dummyssh buffered stderr so they are missing in captured logs)
+  $ cat $TESTTMP/log1
+  sending unbundlereplay command
+  $ cat $TESTTMP/log2
+  sending unbundlereplay command
+  $ cat $TESTTMP/log3
+  sending unbundlereplay command
 #endif
 
 #if respondfully
@@ -294,51 +284,40 @@ Send unbundlereplay batch 3 (all good, this time with logging to files)
   remote: 1
   using $TESTTMP/reports.txt as a reports file
   sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     cba0370ec397  5
-  remote: 1 new changeset from the server will be downloaded
-  remote: [ReplayVerification] Everything seems in order
   bundle2-input-part: total payload size * (glob)
   bundle2-input-part: total payload size * (glob)
   unbundle replay batch item #0 successfully sent
   sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     6c384628f7c4  6
-  remote: 1 new changeset from the server will be downloaded
-  remote: [ReplayVerification] Everything seems in order
   bundle2-input-part: total payload size * (glob)
   bundle2-input-part: total payload size * (glob)
   unbundle replay batch item #1 successfully sent
   sending unbundlereplay command
-  remote: pushing 1 changeset:
-  remote:     d5313099c10d  7
-  remote: 1 new changeset from the server will be downloaded
-  remote: [ReplayVerification] Everything seems in order
   bundle2-input-part: total payload size * (glob)
   bundle2-input-part: total payload size * (glob)
   unbundle replay batch item #2 successfully sent
-  $ cat $TESTTMP/log1
-  sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     cba0370ec397  5
   remote: 1 new changeset from the server will be downloaded
   remote: [ReplayVerification] Everything seems in order
-  bundle2-input-part: total payload size * (glob)
-  bundle2-input-part: total payload size * (glob)
-  $ cat $TESTTMP/log2
-  sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     6c384628f7c4  6
   remote: 1 new changeset from the server will be downloaded
   remote: [ReplayVerification] Everything seems in order
-  bundle2-input-part: total payload size * (glob)
-  bundle2-input-part: total payload size * (glob)
-  $ cat $TESTTMP/log3
-  sending unbundlereplay command
   remote: pushing 1 changeset:
   remote:     d5313099c10d  7
   remote: 1 new changeset from the server will be downloaded
   remote: [ReplayVerification] Everything seems in order
+ (dummyssh buffered stderr so they are missing in captured logs)
+  $ cat $TESTTMP/log1
+  sending unbundlereplay command
+  bundle2-input-part: total payload size * (glob)
+  bundle2-input-part: total payload size * (glob)
+  $ cat $TESTTMP/log2
+  sending unbundlereplay command
+  bundle2-input-part: total payload size * (glob)
+  bundle2-input-part: total payload size * (glob)
+  $ cat $TESTTMP/log3
+  sending unbundlereplay command
   bundle2-input-part: total payload size * (glob)
   bundle2-input-part: total payload size * (glob)
 #endif

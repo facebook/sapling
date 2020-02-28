@@ -102,6 +102,10 @@ Make some non-conflicting commits in in the client repos.
   $ hg push -r . --to master
   pushing to ssh://user@dummy/server2
   searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 1 files
   remote: *FULL* manifest read for 1e4ac5512124 (outside lock)
   remote: cached manifest read for 1e4ac5512124 (outside lock)
   remote: cached manifest read for 1e4ac5512124 (outside lock)
@@ -109,10 +113,6 @@ Make some non-conflicting commits in in the client repos.
   remote: pushing 1 changeset:
   remote:     8ee8e01cbc17  third commit
   remote: 1 new changeset from the server will be downloaded
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 1 files
   $ hg pull -q
   $ log
   o  third commit [public:e71dff9ebf0e]
@@ -198,6 +198,10 @@ Meanwhile, push from client2 -> server2.
   $ hg push --to master 2>&1 | \sed "s/^/[client2 push] /"
   [client2 push] pushing to ssh://user@dummy/server2
   [client2 push] searching for changes
+  [client2 push] adding changesets
+  [client2 push] adding manifests
+  [client2 push] adding file changes
+  [client2 push] added 1 changesets with 0 changes to 1 files
   [client2 push] remote: *FULL* manifest read for 1e4ac5512124 (outside lock)
   [client2 push] remote: cached manifest read for 1e4ac5512124 (outside lock)
   [client2 push] remote: cached manifest read for 1e4ac5512124 (outside lock)
@@ -207,10 +211,6 @@ Meanwhile, push from client2 -> server2.
   [client2 push] remote:     0e59db56ba07  race winner
   [client2 push] remote: *FULL* manifest read for 0bf21a535a1f (*inside* lock)
   [client2 push] remote: 1 new changeset from the server will be downloaded
-  [client2 push] adding changesets
-  [client2 push] adding manifests
-  [client2 push] adding file changes
-  [client2 push] added 1 changesets with 0 changes to 1 files
 
 Check that the first push is still running/blocked...
   $ jobs
@@ -222,13 +222,13 @@ Check that the first push is still running/blocked...
   $ wait
   [client1 push] pushing to ssh://user@dummy/server1
   [client1 push] searching for changes
+  [client1 push] updating bookmark master
   [client1 push] remote: *FULL* manifest read for 8655e3409b0e (outside lock)
   [client1 push] remote: cached manifest read for 8655e3409b0e (outside lock)
   [client1 push] remote: cached manifest read for 8655e3409b0e (outside lock)
   [client1 push] remote: pushing 1 changeset:
   [client1 push] remote:     0ee934622ec8  race loser
   [client1 push] remote: cached manifest read for 8655e3409b0e (*inside* lock)
-  [client1 push] updating bookmark master
   $ log
   o  race loser [public:0ee934622ec8] master
   |

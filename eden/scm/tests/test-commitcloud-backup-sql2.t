@@ -21,18 +21,18 @@
   $ mkcommit initialcommit
   $ hg cloud backup
   backing up stack rooted at 67145f466344
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     67145f466344  initialcommit
-  commitcloud: backed up 1 commit
   $ mkcommit commitwithbookmark
   $ hg book abook
   $ sleep 1 # Resolution of the database is in seconds. This avoids test flakiness
   $ hg cloud backup
   backing up stack rooted at 67145f466344
+  commitcloud: backed up 1 commit
   remote: pushing 2 commits:
   remote:     67145f466344  initialcommit
   remote:     5ea4271ca0f0  commitwithbookmark
-  commitcloud: backed up 1 commit
   $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'SELECT bookmark, node, reponame from bookmarkstonode'
   bookmark	node	reponame
   infinitepush/backups/test/.*\$TESTTMP/client/bookmarks/abook	5ea4271ca0f0cda5477241ae95ffc1fa7056ee6f	babar (re)

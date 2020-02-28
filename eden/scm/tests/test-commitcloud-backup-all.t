@@ -1,7 +1,6 @@
 #require py2
 #chg-compatible
 
-  $ export DUMMYSSH_STABLE_ORDER=1
   $ enable amend
   $ disable treemanifest
 

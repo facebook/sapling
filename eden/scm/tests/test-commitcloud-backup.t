@@ -30,9 +30,9 @@ Backup empty repo
   $ mkcommit newcommit
   $ hg cloud backup
   backing up stack rooted at 606a357e69ad
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     606a357e69ad  newcommit
-  commitcloud: backed up 1 commit
 
 Re-clone the client
   $ cd ..
@@ -50,9 +50,9 @@ Make commit and backup it.
   $ mkcommit commit
   $ hg cloud backup
   backing up stack rooted at 7e6a6fd9c7c8
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     7e6a6fd9c7c8  commit
-  commitcloud: backed up 1 commit
   $ scratchnodes
   606a357e69adb2e36d559ae3237626e82a955c9d 9fa7f02468b18919035248ab21c8267674c0a3d6
   7e6a6fd9c7c8c8c307ee14678f03d63af3a7b455 168423c30397d95ef5f44d883f0887f0f5be0936
@@ -70,9 +70,9 @@ Make first commit public (by doing push) and then backup new commit
   $ mkcommit newcommit
   $ hg cloud backup
   backing up stack rooted at 94a60f5ad8b2
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     94a60f5ad8b2  newcommit
-  commitcloud: backed up 1 commit
   $ scratchbookmarks
   infinitepush/backups/test/testhost$TESTTMP/client/heads/94a60f5ad8b2e007240007edab982b3638a3f38d 94a60f5ad8b2e007240007edab982b3638a3f38d
 
@@ -93,11 +93,11 @@ Make obsoleted commit non-extinct by committing on top of it
 Backup both of them
   $ hg cloud backup
   backing up stack rooted at 94a60f5ad8b2
+  commitcloud: backed up 2 commits
   remote: pushing 3 commits:
   remote:     94a60f5ad8b2  newcommit
   remote:     361e89f06232  obsoletedcommit
   remote:     d5609f7fa633  ontopofobsoleted
-  commitcloud: backed up 2 commits
   $ scratchbookmarks
   infinitepush/backups/test/testhost$TESTTMP/client/heads/d5609f7fa63352da538eeffbe3ffabed1779aafc d5609f7fa63352da538eeffbe3ffabed1779aafc
 
@@ -107,9 +107,9 @@ Create one more head and run `hg cloud backup`. Make sure that only new head is 
   $ mkcommit newhead
   $ hg cloud backup
   backing up stack rooted at 3a30e220fe42
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     3a30e220fe42  newhead
-  commitcloud: backed up 1 commit
 
 Create two more heads and backup them
   $ hg up 0
@@ -120,12 +120,12 @@ Create two more heads and backup them
   $ mkcommit newhead2
   $ hg cloud backup
   backing up stack rooted at f79c5017def3
+  backing up stack rooted at 667453c0787e
+  commitcloud: backed up 2 commits
   remote: pushing 1 commit:
   remote:     f79c5017def3  newhead1
-  backing up stack rooted at 667453c0787e
   remote: pushing 1 commit:
   remote:     667453c0787e  newhead2
-  commitcloud: backed up 2 commits
 
 Backup in background
   $ scratchbookmarks
@@ -146,11 +146,11 @@ Backup with bookmark
   $ hg book abook
   $ hg cloud backup
   backing up stack rooted at 667453c0787e
+  commitcloud: backed up 1 commit
   remote: pushing 3 commits:
   remote:     667453c0787e  newhead2
   remote:     773a3ba2e7c2  newcommit
   remote:     166ff4468f7d  commitwithbookmark
-  commitcloud: backed up 1 commit
   $ scratchbookmarks
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/abook 166ff4468f7da443df90d268158ba7d75d52585a
   infinitepush/backups/test/testhost$TESTTMP/client/heads/166ff4468f7da443df90d268158ba7d75d52585a 166ff4468f7da443df90d268158ba7d75d52585a
@@ -220,11 +220,11 @@ Rebase + backup. Make sure that two heads were deleted and head was saved
   rebasing f79c5017def3 "newhead1"
   $ hg cloud backup
   backing up stack rooted at 667453c0787e
+  commitcloud: backed up 1 commit
   remote: pushing 3 commits:
   remote:     667453c0787e  newhead2
   remote:     773a3ba2e7c2  newcommit
   remote:     2d2e01441947  newhead1
-  commitcloud: backed up 1 commit
   $ scratchbookmarks
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/abook 773a3ba2e7c25358df2e5b3cced70371333bc61c
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/newbook 773a3ba2e7c25358df2e5b3cced70371333bc61c
@@ -367,9 +367,9 @@ t
   $ hg phase -qfs '.'
   $ hg cloud backup
   backing up stack rooted at dc80aa94cb8b
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     dc80aa94cb8b  secret
-  commitcloud: backed up 1 commit
   $ scratchbookmarks
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/bookonsecret dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110
@@ -382,9 +382,9 @@ Create two heads, set maxheadstobackup to 1, make sure only latest head was back
   $ hg cloud backup --config infinitepushbackup.maxheadstobackup=1
   backing up only the most recent 1 head
   backing up stack rooted at 6c4f4b30ae4c
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     6c4f4b30ae4c  headtwo
-  commitcloud: backed up 1 commit
   $ scratchbookmarks
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/bookonsecret dc80aa94cb8b16f962a5fb6e56e9ed234644b4e3
   infinitepush/backups/test/testhost$TESTTMP/client/bookmarks/somebook 630839011471e17f808b92ab084bedfaca33b110
@@ -402,9 +402,9 @@ Now set maxheadstobackup to 0 and backup again. Make sure nothing is backed up n
 Test cloud check command
   $ hg cloud backup
   backing up stack rooted at cf2adfba1469
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     cf2adfba1469  headone
-  commitcloud: backed up 1 commit
   $ hg cloud check
   6c4f4b30ae4c2dd928d551836c70c741ee836650 backed up
   $ hg cloud check -r 630839011471e17
@@ -433,9 +433,9 @@ Delete backup state file and try again
 Back the commit up again
   $ hg cloud backup
   backing up stack rooted at 6c4f4b30ae4c
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     6c4f4b30ae4c  headtwo
-  commitcloud: backed up 1 commit
 
 Hide the commit. Make sure isbackedup still works
   $ hg hide 6c4f4b30ae4c2dd928d551836c70c741ee836650
@@ -490,12 +490,12 @@ Create logs directory and set correct permissions
 
   $ hg cloud backup --config infinitepushbackup.logdir=$TESTTMP/logs
   backing up stack rooted at 426bada5c675
+  commitcloud: backed up 4 commits
   remote: pushing 4 commits:
   remote:     426bada5c675  A
   remote:     112478962961  B
   remote:     b18e25de2cf5  D
   remote:     26805aba1e60  C
-  commitcloud: backed up 4 commits
   $ hg cloud check -r ':'
   630839011471e17f808b92ab084bedfaca33b110 not backed up
   426bada5c67598ca65036d57d9e4b64b0c1ce7a0 backed up
@@ -526,12 +526,12 @@ Check the logs, make sure just one process was started
   
   * starting: hg cloud backup --config 'ui.ssh=python "*/dummyssh" -bgssh' (glob)
   backing up stack rooted at 426bada5c675
+  commitcloud: backed up 2 commits
   remote: pushing 4 commits:
   remote:     426bada5c675  A
   remote:     b18e25de2cf5  D
   remote:     1ef11233b74d  B
   remote:     ffeec75ec603  C
-  commitcloud: backed up 2 commits
 
 Check if ssh batch mode enables only for background backup and not for foreground
   $ mkcommit ssh1
@@ -575,11 +575,11 @@ Set the limit back high, and try again
   $ mv $TESTTMP/server-hgrc.bak ../repo/.hg/hgrc
   $ hg cloud backup
   backing up stack rooted at acf5bae70f50
+  commitcloud: backed up 1 commit
   remote: pushing 3 commits:
   remote:     acf5bae70f50  ssh1
   remote:     cb352c98cec7  ssh2
   remote:     b226c8ca23a2  toobig
-  commitcloud: backed up 1 commit
   $ hg cloud check -r .
   b226c8ca23a2db9b70a50978c6d30658683d9e9f backed up
   $ scratchnodes | grep b226c8ca23a2db9b70a50978c6d30658683d9e9f

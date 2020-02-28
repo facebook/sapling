@@ -2,7 +2,7 @@
 #chg-compatible
 
   $ enable infinitepush commitcloud
-  $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
+  $ configure dummyssh
   $ setconfig infinitepush.branchpattern="re:scratch/.*"
   $ setconfig commitcloud.hostname=testhost
   $ setconfig experimental.graphstyle.grandparent=2.

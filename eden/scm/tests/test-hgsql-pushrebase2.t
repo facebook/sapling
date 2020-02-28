@@ -79,6 +79,7 @@ Do the push!
   $ hg push -r C --to master ssh://user@dummy/serverrepo
   pushing rev dc0947a82db8 to destination ssh://user@dummy/serverrepo bookmark master
   searching for changes
+  updating bookmark master
   remote: prepushrebase hook called. A = 'A'
   remote: [hgsql] got lock after * seconds (read 1 rows) (glob)
   remote: pulling from $TESTTMP/state2
@@ -94,5 +95,4 @@ Do the push!
   remote: [hgsql] got lock after * seconds (read 1 rows) (glob)
   remote: rebasing stack from 426bada5c675 onto 426bada5c675
   remote: [hgsql] held lock for * seconds (read 8 rows; write 8 rows) (glob)
-  updating bookmark master
 

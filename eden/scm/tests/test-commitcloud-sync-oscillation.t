@@ -75,6 +75,8 @@ Make some commits
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 04b96a2be922
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 7 commits:
   remote:     04b96a2be922  A
   remote:     14bec91a4bc5  B
@@ -83,8 +85,6 @@ Make some commits
   remote:     65299708466c  C
   remote:     27ad02806080  E
   remote:     878302dcadc7  G
-  commitcloud: commits synchronized
-  finished in * (glob)
   $ tglogp
   o  7: 878302dcadc7 draft 'G'
   |
@@ -523,10 +523,10 @@ But client2 will push it as if it was a new commit.
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 48be23e24839
-  remote: pushing 1 commit:
-  remote:     48be23e24839  X
   commitcloud: commits synchronized
   finished in * (glob)
+  remote: pushing 1 commit:
+  remote:     48be23e24839  X
 
 Now client1 will revive the commit.
 

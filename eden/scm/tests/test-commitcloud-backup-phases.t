@@ -40,14 +40,14 @@ the history but is stored on disk
   
   $ hg cloud backup
   backing up stack rooted at bc62325caa65
+  backing up stack rooted at f13337e62e40
+  commitcloud: backed up 4 commits
   remote: pushing 2 commits:
   remote:     bc62325caa65  stack 1 - commit 1
   remote:     d567dbbdd271  stack 1 - commit 2
-  backing up stack rooted at f13337e62e40
   remote: pushing 2 commits:
   remote:     f13337e62e40  stack 2 - commit 1
   remote:     ccd5ee66f08a  stack 2 - commit 2
-  commitcloud: backed up 4 commits
   $ hg pull -r bc62
   pulling from ssh://user@dummy/master
   no changes found

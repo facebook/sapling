@@ -84,16 +84,16 @@ Create a _third_ draft commit, push to the (behind) server1:
   [1]
   $ hg push --to master ssh://user@dummy/server1
   pushing to ssh://user@dummy/server1
+  searching for changes
+  updating bookmark master
   remote: [hgsql] skipping database sync because another process is already syncing
   remote: [hgsql] getting 1 commits from database
-  searching for changes
   remote: checking conflicts with 8585ef078134
   remote: pushing 1 changeset:
   remote:     87df66bba286  third commit
   remote: [hgsql] got lock after * seconds (read 1 rows) (glob)
   remote: rebasing stack from 8585ef078134 onto 8585ef078134
   remote: [hgsql] held lock for * seconds (read 8 rows; write 9 rows) (glob)
-  updating bookmark master
 
 
   $ log

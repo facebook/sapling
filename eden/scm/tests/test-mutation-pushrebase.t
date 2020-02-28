@@ -55,15 +55,15 @@ Pushrebase some commits from the client
   $ hg push --to master
   pushing rev e52ebff26308 to destination ssh://user@dummy/server bookmark master
   searching for changes
-  remote: pushing 2 changesets:
-  remote:     b0c40d8745c8  c1
-  remote:     e52ebff26308  c2 (amended)
-  remote: 4 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
   added 4 changesets with 2 changes to 4 files
   updating bookmark master
+  remote: pushing 2 changesets:
+  remote:     b0c40d8745c8  c1
+  remote:     e52ebff26308  c2 (amended)
+  remote: 4 new changesets from the server will be downloaded
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglogp
   @  7: bc165ecd11df public 'c2 (amended)'
@@ -135,9 +135,9 @@ Push an original commit to the server.  This doesn't get pushrebased.
   $ hg push --to master
   pushing rev 5cfa12ac15ac to destination ssh://user@dummy/server bookmark master
   searching for changes
+  updating bookmark master
   remote: pushing 1 changeset:
   remote:     5cfa12ac15ac  c3
-  updating bookmark master
 
   $ hg debugmutation
    *  5cfa12ac15aca3668b5f91e5a7b92aa309b320a9
@@ -179,14 +179,14 @@ Push this commit to the server.  We should create local mutation information.
   $ hg push --to master
   pushing rev 254a42c0dcef to destination ssh://user@dummy/server bookmark master
   searching for changes
-  remote: pushing 1 changeset:
-  remote:     254a42c0dcef  c4 (amended)
-  remote: 3 new changesets from the server will be downloaded
   adding changesets
   adding manifests
   adding file changes
   added 3 changesets with 2 changes to 3 files
   updating bookmark master
+  remote: pushing 1 changeset:
+  remote:     254a42c0dcef  c4 (amended)
+  remote: 3 new changesets from the server will be downloaded
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ hg debugmutation -r ".~4::."

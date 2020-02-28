@@ -30,12 +30,12 @@ It should backup many bookmarks
   $ hg up -q "$commit0" && mkcommit commit3
   $ hg cloud backup
   backing up stack rooted at ace906b76ab4
+  commitcloud: backed up 4 commits
   remote: pushing 4 commits:
   remote:     ace906b76ab4  commit0
   remote:     b1e07bb9979c  commit1
   remote:     33701f08790f  commit2
   remote:     db45a2d42cf6  commit3
-  commitcloud: backed up 4 commits
   $ hg push -r . --to scratch/book --create
   pushing to ssh://user@dummy/server
   searching for changes

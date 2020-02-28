@@ -22,9 +22,9 @@ Do a normal backup
   $ mkcommit first
   $ hg cloud backup
   backing up stack rooted at b75a450e74d5
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     b75a450e74d5  first
-  commitcloud: backed up 1 commit
 
 Make a commit, than prune a commit, than create a bookmark on top of it.
 Do a backup and try to restore. Make sure it doesn't fail
@@ -41,9 +41,9 @@ Do a backup and try to restore. Make sure it doesn't fail
   $ hg --hidden book -r edb281c9cc7e2e51c382b6f254d1967fdfa5e6ff newbookonpruned
   $ hg cloud backup
   backing up stack rooted at edb281c9cc7e
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     edb281c9cc7e  tobepruned
-  commitcloud: backed up 1 commit
 
 Restore the repo
   $ cd ..

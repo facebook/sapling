@@ -102,6 +102,7 @@ configure() {
   do
     case "$name" in
       dummyssh)
+        export DUMMYSSH_STABLE_ORDER=1
         setconfig ui.ssh="$PYTHON \"$TESTDIR/dummyssh\""
         ;;
       mutation)

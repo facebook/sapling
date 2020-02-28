@@ -57,14 +57,14 @@ Check backing up top stack commit and mid commit
 
   $ hg cloud backup $A1 $A2 $B2
   backing up stack rooted at * (glob)
+  backing up stack rooted at * (glob)
+  commitcloud: backed up 4 commits
   remote: pushing 2 commits:
   remote:     *  A1 (glob)
   remote:     *  A2 (glob)
-  backing up stack rooted at * (glob)
   remote: pushing 2 commits:
   remote:     *  B1 (glob)
   remote:     *  B2 (glob)
-  commitcloud: backed up 4 commits
 
   $ hg cloud check -r $A1+$A2+$A3+$B1+$B2
   * backed up (glob)
@@ -76,11 +76,11 @@ Check backing up top stack commit and mid commit
 Check backing up new top commit
   $ hg cloud backup $A3
   backing up stack rooted at * (glob)
+  commitcloud: backed up 1 commit
   remote: pushing 3 commits:
   remote:     *  A1 (glob)
   remote:     *  A2 (glob)
   remote:     *  A3 (glob)
-  commitcloud: backed up 1 commit
 
   $ hg cloud backup $A2
   nothing to back up
@@ -116,11 +116,11 @@ Check that backup doesn't interfere with commit cloud
   $ B3=$(mkcommit B3)
   $ hg cloud backup $B3
   backing up stack rooted at * (glob)
+  commitcloud: backed up 1 commit
   remote: pushing 3 commits:
   remote:     *  B1 (glob)
   remote:     *  B2 (glob)
   remote:     *  B3 (glob)
-  commitcloud: backed up 1 commit
 
   $ hg cloud sync
   commitcloud: synchronizing 'master' with 'user/test/default'
@@ -132,10 +132,10 @@ Check that backup doesn't interfere with commit cloud
   $ hg cloud sync
   commitcloud: synchronizing 'master' with 'user/test/default'
   backing up stack rooted at 458a3fc7650d
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 4 commits:
   remote:     458a3fc7650d  B1
   remote:     ecd738f5fb6c  B2
   remote:     901656c16420  B3
   remote:     7b520430ff42  B4
-  commitcloud: commits synchronized
-  finished in * (glob)

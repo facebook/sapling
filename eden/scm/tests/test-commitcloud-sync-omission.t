@@ -106,19 +106,19 @@ Sync these to commit cloud - they all get pushed even though they are old
   $ hgfakedate 1990-02-28T00:00Z cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 1f9ebd6d1390
+  backing up stack rooted at 1c1b7955142c
+  backing up stack rooted at 56a352317b67
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 2 commits:
   remote:     1f9ebd6d1390  oldstack-feb1
   remote:     d16408588b2d  oldstack-feb4
-  backing up stack rooted at 1c1b7955142c
   remote: pushing 2 commits:
   remote:     1c1b7955142c  midstack-feb7
   remote:     d133b886da68  midstack-feb9
-  backing up stack rooted at 56a352317b67
   remote: pushing 2 commits:
   remote:     56a352317b67  newstack-feb13
   remote:     7f958333fe84  newstack-feb15
-  commitcloud: commits synchronized
-  finished in * (glob)
 
   $ tglogp
   @  6: 7f958333fe84 draft 'newstack-feb15'
@@ -199,10 +199,10 @@ Create a new commit
   $ hgfakedate 1990-02-28T01:01Z cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at ff52de2f760c
-  remote: pushing 1 commit:
-  remote:     ff52de2f760c  client2-feb28
   commitcloud: commits synchronized
   finished in * (glob)
+  remote: pushing 1 commit:
+  remote:     ff52de2f760c  client2-feb28
 
 Sync these commits to the first client - it has everything
   $ cd ../client1
@@ -277,12 +277,12 @@ Add a new commit to a stack on the first client
   $ hgfakedate 1990-02-28T02:01Z cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 56a352317b67
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 3 commits:
   remote:     56a352317b67  newstack-feb13
   remote:     7f958333fe84  newstack-feb15
   remote:     46f8775ee5d4  newstack-feb28
-  commitcloud: commits synchronized
-  finished in * (glob)
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
   version: 4
@@ -355,12 +355,12 @@ First client add a new commit to the old stack
   $ hgfakedate 1990-03-04T03:02Z cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 1f9ebd6d1390
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 3 commits:
   remote:     1f9ebd6d1390  oldstack-feb1
   remote:     d16408588b2d  oldstack-feb4
   remote:     2b8dce7bd745  oldstack-mar4
-  commitcloud: commits synchronized
-  finished in * (glob)
 
   $ python $TESTTMP/dumpcommitcloudmetadata.py
   version: 5

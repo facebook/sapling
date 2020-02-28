@@ -1,8 +1,6 @@
 #require py2
 #chg-compatible
 
-#chg-compatible
-
 #testcases case-innodb case-rocksdb
 
 #if case-rocksdb
@@ -77,9 +75,9 @@
   pushing to ssh://user@dummy/master
   searching for changes
   no changes found
+  exporting bookmark mybook
   remote: [hgsql] got lock after * seconds (read 1 rows) (glob)
   remote: [hgsql] held lock for * seconds (read 5 rows; write 1 rows) (glob)
-  exporting bookmark mybook
   [1]
   $ cd ../master2
   $ hg book

@@ -117,19 +117,19 @@ Test that pushrebase hooks can access the commit data
   $ hg push --to master -B master
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: abort: "unable to find the following nodes locally or on the server: ('', *)" (glob)
-  remote: 
   remote: prepushrebase.cat hook exited with status 1
   abort: push failed on remote
+  remote: abort: "unable to find the following nodes locally or on the server: ('', *)" (glob)
+  remote: 
   [255]
 
 - Push with sendtrees
   $ hg push --to master -B master --config treemanifest.sendtrees=True
   pushing to ssh://user@dummy/master
   searching for changes
-  remote: baz
   remote: prepushrebase.cat hook exited with status 1
   abort: push failed on remote
+  remote: baz
   [255]
 
 - Disable the hook

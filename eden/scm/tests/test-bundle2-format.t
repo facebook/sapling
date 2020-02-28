@@ -2,6 +2,7 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ configure dummyssh
 This test is dedicated to test the bundle2 container format
 
 It test multiple existing parts to test different feature of the container. You
@@ -231,7 +232,6 @@ Create an extension to test bundle2 API
   > [experimental]
   > evolution.createmarkers=True
   > [ui]
-  > ssh=$PYTHON "$TESTDIR/dummyssh"
   > logtemplate={rev}:{node|short} {phase} {author} {bookmarks} {desc|firstline}
   > [web]
   > push_ssl = false

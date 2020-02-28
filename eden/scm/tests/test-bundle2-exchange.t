@@ -2,6 +2,7 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ configure dummyssh
 Test exchange of common information using bundle2
 
 
@@ -23,7 +24,6 @@ enable obsolescence
   > evolution.exchange=True
   > bundle2-output-capture=True
   > [ui]
-  > ssh="$PYTHON" "$TESTDIR/dummyssh"
   > logtemplate={rev}:{node|short} {phase} {author} {bookmarks} {desc|firstline}
   > [web]
   > push_ssl = false
@@ -692,6 +692,8 @@ Check output capture control.
   $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
   pushing to ssh://user@dummy/other
   searching for changes
+  remote: pretxnchangegroup hook exited with status 1
+  abort: push failed on remote
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -700,8 +702,6 @@ Check output capture control.
   remote: transaction abort!
   remote: Cleaning up the mess...
   remote: rollback completed
-  remote: pretxnchangegroup hook exited with status 1
-  abort: push failed on remote
   [255]
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
   pushing to http://localhost:$HGPORT2/ (glob)
@@ -768,6 +768,7 @@ Check abort from mandatory pushkey
   $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
   pushing to ssh://user@dummy/other
   searching for changes
+  abort: Correct phase push failed (because hooks)
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -777,7 +778,6 @@ Check abort from mandatory pushkey
   remote: transaction abort!
   remote: Cleaning up the mess...
   remote: rollback completed
-  abort: Correct phase push failed (because hooks)
   [255]
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
   pushing to http://localhost:$HGPORT2/ (glob)
@@ -842,6 +842,7 @@ Check abort from mandatory pushkey
   $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
   pushing to ssh://user@dummy/other
   searching for changes
+  abort: Clown phase push failed
   remote: adding changesets
   remote: adding manifests
   remote: adding file changes
@@ -855,7 +856,6 @@ Check abort from mandatory pushkey
   remote: undolog/lock:  absent
   remote: prefetchlock:  free
   remote: infinitepushbackup.lock: free
-  abort: Clown phase push failed
   [255]
   $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
   pushing to http://localhost:$HGPORT2/ (glob)

@@ -74,6 +74,6 @@ Works ok with pushrebase.
   $ hg push -r 2 --to test --create
   pushing rev e0ce6fd597a7 to destination ssh://user@dummy/master bookmark test
   searching for changes
+  exporting bookmark test
   remote: pushing 1 changeset:
   remote:     e0ce6fd597a7  x2a
-  exporting bookmark test

@@ -3,7 +3,7 @@
 
   $ enable amend commitcloud infinitepush remotenames
   $ disable treemanifest
-  $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
+  $ configure dummyssh
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=server
 

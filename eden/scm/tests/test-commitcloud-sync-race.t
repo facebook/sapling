@@ -2,7 +2,7 @@
 #chg-compatible
 
   $ enable commitcloud infinitepush amend rebase remotenames
-  $ setconfig ui.ssh="python \"$TESTDIR/dummyssh\""
+  $ configure dummyssh
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=testrepo
   $ setconfig mutation.record=true mutation.enabled=true
@@ -71,11 +71,11 @@
   visibility: read 1 heads: 79089e97b9e7
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   backing up stack rooted at 79089e97b9e7
-  remote: pushing 1 commit:
-  remote:     79089e97b9e7  commit1
   commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks, 0 snapshots
   commitcloud: commits synchronized
   finished in 0.00 sec
+  remote: pushing 1 commit:
+  remote:     79089e97b9e7  commit1
 
   $ cd ../client2
 
@@ -108,8 +108,6 @@ Let the background sync we started earlier continue, and start a concurrent clou
   visibility: read 1 heads: 1292cc1f1c17
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   backing up stack rooted at 1292cc1f1c17
-  remote: pushing 1 commit:
-  remote:     1292cc1f1c17  commit2
   pulling 79089e97b9e7
   pulling from ssh://user@dummy/server
   searching for changes
@@ -118,6 +116,8 @@ Let the background sync we started earlier continue, and start a concurrent clou
   adding file changes
   added 1 changesets with 1 changes to 1 files
   visibility: removed 0 heads []; added 1 heads [79089e97b9e7]
+  remote: pushing 1 commit:
+  remote:     1292cc1f1c17  commit2
   commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks, 0 snapshots
   commitcloud_sync: synced to workspace user/test/default version 3: 2 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks, 0 snapshots
   visibility: wrote 2 heads: 79089e97b9e7, 1292cc1f1c17

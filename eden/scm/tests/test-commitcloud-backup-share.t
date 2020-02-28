@@ -31,9 +31,9 @@ it's not read by infinitepush backup client
   $ echo 'rubbish' > .hg/infinitepushbackups/infinitepushbackupstate_f6bce706
   $ hg cloud backup
   backing up stack rooted at b75a450e74d5
+  commitcloud: backed up 1 commit
   remote: pushing 1 commit:
   remote:     b75a450e74d5  first
-  commitcloud: backed up 1 commit
   $ scratchbookmarks
   infinitepush/backups/test/*$TESTTMP/client/heads/b75a450e74d5a7708da8c3144fbeb4ac88694044 b75a450e74d5a7708da8c3144fbeb4ac88694044 (glob)
 

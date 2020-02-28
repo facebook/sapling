@@ -99,11 +99,11 @@ because it can't access the second commit.
   $ hg cloud sync --config paths.infinitepush=ssh://user@dummy/server1
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at fa5d62c46fd7
+  pulling 02f6fc2b7154
+  pulling from ssh://user@dummy/server1
   remote: pushing 2 commits:
   remote:     fa5d62c46fd7  commit1
   remote:     26d5a99991bd  commit3
-  pulling 02f6fc2b7154
-  pulling from ssh://user@dummy/server1
   abort: unknown revision '02f6fc2b715444d7df09bd859e1d4877f9ef9946'!
   [255]
 
@@ -116,23 +116,23 @@ Return to client2.  We can still sync using the old server.
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at fa5d62c46fd7
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 3 commits:
   remote:     fa5d62c46fd7  commit1
   remote:     02f6fc2b7154  commit2
   remote:     c701070be855  commit4
-  commitcloud: commits synchronized
-  finished in * (glob)
 
 Configure the new server on this client.  It will now send all of its commits.
   $ hg cloud sync --config paths.infinitepush=ssh://user@dummy/server1
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at fa5d62c46fd7
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 3 commits:
   remote:     fa5d62c46fd7  commit1
   remote:     02f6fc2b7154  commit2
   remote:     c701070be855  commit4
-  commitcloud: commits synchronized
-  finished in * (glob)
 
   $ cd ..
 
@@ -155,9 +155,9 @@ are backed up there.
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at fa5d62c46fd7
+  commitcloud: commits synchronized
+  finished in * (glob)
   remote: pushing 2 commits:
   remote:     fa5d62c46fd7  commit1
   remote:     26d5a99991bd  commit3
-  commitcloud: commits synchronized
-  finished in * (glob)
 
