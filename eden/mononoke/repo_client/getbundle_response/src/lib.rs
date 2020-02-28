@@ -24,7 +24,7 @@ use futures::{
 use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
 use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, FutureExt, TryFutureExt},
+    future::{self},
     stream::{self, Stream, StreamExt, TryStreamExt},
 };
 use futures_util::try_join;
@@ -481,82 +481,68 @@ impl PreparedFilenodeEntry {
     }
 }
 
-fn prepare_filenode_entries_stream(
-    ctx: CoreContext,
-    repo: BlobRepo,
+fn prepare_filenode_entries_stream<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
     filenodes: Vec<(MPath, HgFileNodeId, HgChangesetId)>,
-    lfs_params: LfsParams,
-) -> impl Stream<Item = Result<(MPath, Vec<PreparedFilenodeEntry>), Error>> {
+    lfs_params: &'a LfsParams,
+) -> impl Stream<Item = Result<(MPath, Vec<PreparedFilenodeEntry>), Error>> + 'a {
     stream::iter(filenodes.into_iter())
         .map({
-            cloned!(ctx, repo, lfs_params);
-            move |(path, filenode, linknode)| {
-                cloned!(ctx, repo, lfs_params);
-                async move {
-                    let envelope = filenode
-                        .load(ctx.clone(), repo.blobstore())
-                        .compat()
-                        .await?;
+            move |(path, filenode, linknode)| async move {
+                let envelope = filenode
+                    .load(ctx.clone(), repo.blobstore())
+                    .compat()
+                    .await?;
 
-                    let file_size = envelope.content_size();
+                let file_size = envelope.content_size();
 
-                    async fn fetch_and_wrap(
-                        ctx: CoreContext,
-                        repo: &BlobRepo,
-                        envelope: &HgFileEnvelope,
-                        constructor: impl FnOnce(FileBytes) -> FilenodeEntryContent,
-                    ) -> Result<FilenodeEntryContent, Error> {
-                        let content =
-                            filestore::fetch_concat(repo.blobstore(), ctx, envelope.content_id())
-                                .compat()
-                                .await?;
+                async fn fetch_and_wrap(
+                    ctx: CoreContext,
+                    repo: &BlobRepo,
+                    envelope: &HgFileEnvelope,
+                    constructor: impl FnOnce(FileBytes) -> FilenodeEntryContent,
+                ) -> Result<FilenodeEntryContent, Error> {
+                    let content =
+                        filestore::fetch_concat(repo.blobstore(), ctx, envelope.content_id())
+                            .compat()
+                            .await?;
 
-                        let content = FileBytes(content);
-                        Ok(constructor(content))
-                    };
+                    let content = FileBytes(content);
+                    Ok(constructor(content))
+                };
 
-                    let content = match lfs_params.threshold {
-                        None => {
-                            fetch_and_wrap(
-                                ctx.clone(),
-                                &repo,
-                                &envelope,
-                                FilenodeEntryContent::InlineV2,
-                            )
+                let content = match lfs_params.threshold {
+                    None => {
+                        fetch_and_wrap(ctx.clone(), repo, &envelope, FilenodeEntryContent::InlineV2)
                             .await?
-                        }
-                        Some(lfs_threshold) if file_size <= lfs_threshold => {
-                            fetch_and_wrap(
-                                ctx.clone(),
-                                &repo,
-                                &envelope,
-                                FilenodeEntryContent::InlineV3,
-                            )
+                    }
+                    Some(lfs_threshold) if file_size <= lfs_threshold => {
+                        fetch_and_wrap(ctx.clone(), repo, &envelope, FilenodeEntryContent::InlineV3)
                             .await?
-                        }
-                        _ => {
-                            let key = FetchKey::from(envelope.content_id());
-                            let meta = filestore::get_metadata(repo.blobstore(), ctx.clone(), &key)
-                                .compat()
-                                .await?;
-                            let meta =
-                                meta.ok_or_else(|| Error::from(ErrorKind::MissingContent(key)))?;
-                            let oid = meta.sha256;
-                            FilenodeEntryContent::LfsV3(oid, file_size)
-                        }
-                    };
+                    }
+                    _ => {
+                        let key = FetchKey::from(envelope.content_id());
+                        let meta = filestore::get_metadata(repo.blobstore(), ctx.clone(), &key)
+                            .compat()
+                            .await?;
+                        let meta =
+                            meta.ok_or_else(|| Error::from(ErrorKind::MissingContent(key)))?;
+                        let oid = meta.sha256;
+                        FilenodeEntryContent::LfsV3(oid, file_size)
+                    }
+                };
 
-                    let parents = envelope.hg_parents();
-                    let prepared_filenode_entry = PreparedFilenodeEntry {
-                        filenode,
-                        linknode,
-                        parents,
-                        metadata: envelope.metadata().clone(),
-                        content,
-                    };
+                let parents = envelope.hg_parents();
+                let prepared_filenode_entry = PreparedFilenodeEntry {
+                    filenode,
+                    linknode,
+                    parents,
+                    metadata: envelope.metadata().clone(),
+                    content,
+                };
 
-                    Ok((path, vec![prepared_filenode_entry]))
-                }
+                Ok((path, vec![prepared_filenode_entry]))
             }
         })
         .buffered(100)
@@ -606,13 +592,12 @@ fn generate_lfs_file(
     Ok(HgBlobNode::new(Bytes::from(bytes), p1, p2))
 }
 
-fn create_manifest_entries_stream(
-    ctx: CoreContext,
-    repo: BlobRepo,
+fn create_manifest_entries_stream<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
     manifests: Vec<(Option<MPath>, HgManifestId, HgChangesetId)>,
-) -> impl Stream<Item = Result<OldBoxFuture<parts::TreepackPartInput, Error>, Error>> {
+) -> impl Stream<Item = Result<OldBoxFuture<parts::TreepackPartInput, Error>, Error>> + 'a {
     stream::iter(manifests.into_iter()).map({
-        cloned!(ctx, repo);
         move |(fullpath, mf_id, linknode)| {
             let fut = fetch_manifest_envelope(ctx.clone(), &repo.get_blobstore().boxed(), mf_id)
                 .map(move |mf_envelope| {
@@ -697,65 +682,69 @@ pub fn create_filenodes(
         .collect()
 }
 
-pub fn get_manifests_and_filenodes(
+pub async fn get_manifests_and_filenodes(
     ctx: CoreContext,
     repo: BlobRepo,
     commits: Vec<HgChangesetId>,
     lfs_params: LfsParams,
-) -> impl OldFuture<
-    Item = (
+) -> Result<
+    (
         Vec<OldBoxFuture<parts::TreepackPartInput, Error>>,
         HashMap<MPath, Vec<PreparedFilenodeEntry>>,
     ),
-    Error = Error,
+    Error,
 > {
-    old_stream::iter_ok(commits)
-        .and_then({
-            cloned!(ctx, lfs_params, repo);
-            move |hg_cs_id| {
-                diff_with_parents(ctx.clone(), repo.clone(), hg_cs_id)
-                    .boxed()
-                    .compat()
-                    .and_then({
-                        cloned!(ctx, lfs_params, repo);
-                        move |(manifests, filenodes)| {
-                            (
-                                create_manifest_entries_stream(
-                                    ctx.clone(),
-                                    repo.clone(),
-                                    manifests,
-                                )
-                                .compat()
-                                .collect(),
+    let entries: Vec<_> = stream::iter(commits)
+        .then({
+            |hg_cs_id| {
+                let ctx = &ctx;
+                let lfs_params = &lfs_params;
+                let repo = &repo;
+
+                async move {
+                    let (manifests, filenodes) =
+                        diff_with_parents(ctx.clone(), repo.clone(), hg_cs_id).await?;
+                    let manifests_and_filenodes: (Vec<_>, Vec<_>) = try_join!(
+                        async {
+                            let manifests: Vec<OldBoxFuture<parts::TreepackPartInput, Error>> =
+                                create_manifest_entries_stream(&ctx, &repo, manifests)
+                                    .try_collect()
+                                    .await?;
+                            Result::<_, Error>::Ok(manifests)
+                        },
+                        async {
+                            let filenodes: Vec<(MPath, Vec<PreparedFilenodeEntry>)> =
                                 prepare_filenode_entries_stream(
-                                    ctx,
-                                    repo,
+                                    &ctx,
+                                    &repo,
                                     filenodes,
-                                    lfs_params.clone(),
+                                    &lfs_params,
                                 )
-                                .compat()
-                                .collect(),
-                            )
+                                .try_collect()
+                                .await?;
+                            Result::<_, Error>::Ok(filenodes)
                         }
-                    })
-            }
-        })
-        .collect()
-        .map(move |entries| {
-            let mut all_mf_entries = vec![];
-            let mut all_filenode_entries: HashMap<_, Vec<_>> = HashMap::new();
-            for (mf_entries, file_entries) in entries {
-                all_mf_entries.extend(mf_entries);
-                for (file_path, filenodes) in file_entries {
-                    all_filenode_entries
-                        .entry(file_path)
-                        .or_default()
-                        .extend(filenodes);
+                    )?;
+                    Result::<_, Error>::Ok(manifests_and_filenodes)
                 }
             }
-
-            (all_mf_entries, all_filenode_entries)
         })
+        .try_collect()
+        .await?;
+
+    let mut all_mf_entries = vec![];
+    let mut all_filenode_entries: HashMap<_, Vec<_>> = HashMap::new();
+    for (mf_entries, file_entries) in entries {
+        all_mf_entries.extend(mf_entries);
+        for (file_path, filenodes) in file_entries {
+            all_filenode_entries
+                .entry(file_path)
+                .or_default()
+                .extend(filenodes);
+        }
+    }
+
+    Ok((all_mf_entries, all_filenode_entries))
 }
 
 async fn fetch_manifest(
