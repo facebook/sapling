@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use dag::{idmap::IdMap, segment::IdDag, spanset::SpanSet, Group, Id, VertexName};
+use dag::{idmap::IdMap, spanset::SpanSet, Group, Id, IdDag, VertexName};
 use minibench::{bench, elapsed};
 use tempfile::tempdir;
 

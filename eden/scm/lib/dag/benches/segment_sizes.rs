@@ -6,7 +6,7 @@
  */
 
 use anyhow::Result;
-use dag::{idmap::IdMap, segment::IdDag, Group, Id, VertexName};
+use dag::{idmap::IdMap, Group, Id, IdDag, VertexName};
 use minibench::{
     bench, elapsed,
     measure::{self, Measure},
