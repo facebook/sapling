@@ -793,7 +793,6 @@ fn test_repair_and_delete_content() {
     let truncate = |name: &str| fs::write(path.join(name), "garbage").unwrap();
     let delete = |name: &str| fs::remove_file(path.join(name)).unwrap();
     let index_file = format!("{}c", INDEX_FILE_PREFIX);
-    let checksum_file = format!("{}c.sum", INDEX_FILE_PREFIX);
     let append = || {
         let mut log = open().unwrap();
         log.append(&[b'x'; 50_000][..]).unwrap();
@@ -927,28 +926,8 @@ Rebuilt index "c""#
     );
     verify_len(5);
 
-    // Corrupt index checksum
-    corrupt(&checksum_file, -2);
-    verify_corrupted();
-    assert_eq!(
-        repair(),
-        r#"Verified 5 entries, 250072 bytes in log
-Rebuilt index "c""#
-    );
-    verify_len(5);
-
     // Replace index with garbage
     truncate(&index_file);
-    verify_corrupted();
-    assert_eq!(
-        repair(),
-        r#"Verified 5 entries, 250072 bytes in log
-Rebuilt index "c""#
-    );
-    verify_len(5);
-
-    // Replace index checksum with garbage
-    truncate(&checksum_file);
     verify_corrupted();
     assert_eq!(
         repair(),
@@ -976,16 +955,6 @@ Rebuilt index "c""#
 
     // Delete index
     delete(&index_file);
-    verify_corrupted();
-    assert_eq!(
-        repair(),
-        r#"Verified 3 entries, 150048 bytes in log
-Rebuilt index "c""#
-    );
-    verify_len(3);
-
-    // Delete checksum
-    delete(&checksum_file);
     verify_corrupted();
     assert_eq!(
         repair(),
@@ -1077,12 +1046,12 @@ Rebuilt index "c""#
         log.append(&[b'z'; 50_000][..]).unwrap();
         log.sync().unwrap();
         assert_eq!(len(PRIMARY_FILE), PRIMARY_START_OFFSET + 150036);
-        assert_eq!(len(&index_file), 70);
+        assert_eq!(len(&index_file), 100);
     };
     let delete_content = || {
         open_opts.delete_content(path).unwrap();
         assert_eq!(len(PRIMARY_FILE), PRIMARY_START_OFFSET);
-        assert_eq!(len(&index_file), 10);
+        assert_eq!(len(&index_file), 25);
         // Check SIGBUS
         try_trigger_sigbus();
         // Check log is empty
@@ -1091,9 +1060,6 @@ Rebuilt index "c""#
 
     // 'dir' does not exist - delete_content creates the log
     fs::remove_dir_all(&path).unwrap();
-    delete_content();
-
-    // Empty log
     delete_content();
 
     // Normal log
@@ -1113,11 +1079,6 @@ Rebuilt index "c""#
     corrupt(&index_file, -10);
     delete_content();
 
-    // Corrupt checksum
-    append();
-    corrupt(&checksum_file, -10);
-    delete_content();
-
     // Corrupt log and index
     append();
     corrupt(PRIMARY_FILE, -25_000);
@@ -1125,9 +1086,6 @@ Rebuilt index "c""#
     delete_content();
 
     // Deleted various files
-    delete(&checksum_file);
-    delete_content();
-
     delete(&index_file);
     delete_content();
 

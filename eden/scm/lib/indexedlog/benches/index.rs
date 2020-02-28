@@ -26,7 +26,7 @@ fn gen_buf(size: usize) -> Vec<u8> {
 /// Default open options: 4K checksum chunk
 fn open_opts() -> OpenOptions {
     let mut open_opts = OpenOptions::new();
-    open_opts.checksum_chunk_size(4096);
+    open_opts.checksum_chunk_size_log(12);
     open_opts
 }
 
@@ -108,7 +108,7 @@ fn main() {
     {
         let dir = tempdir().unwrap();
         let mut idx = open_opts()
-            .checksum_chunk_size(0)
+            .checksum_enabled(false)
             .open(dir.path().join("i"))
             .expect("open");
         let buf = gen_buf(N * 20);

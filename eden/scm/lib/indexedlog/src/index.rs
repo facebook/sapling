@@ -79,7 +79,6 @@ use std::sync::{
 use twox_hash::XxHash;
 
 use crate::base16::{base16_to_base256, single_hex_to_base16, Base16Iter};
-use crate::checksum_table::ChecksumTable;
 use crate::errors::{IoResultExt, ResultExt};
 use crate::lock::ScopedFileLock;
 use crate::utils::{self, mmap_bytes};
@@ -155,9 +154,6 @@ struct MemChecksum {
     /// Whether chunks are checked.
     checked: Vec<AtomicU64>,
 }
-
-// Shorter alias to `Option<ChecksumTable>`
-type Checksum = Option<ChecksumTable>;
 
 /// Read reversed vlq at the given end offset (exclusive).
 /// Return the decoded integer and the bytes used by the VLQ integer.
@@ -1382,7 +1378,7 @@ impl MemExtKey {
 }
 
 impl MemRoot {
-    fn read_from(index: impl IndexBuf, offset: u64) -> crate::Result<Self> {
+    fn read_from(index: impl IndexBuf, offset: u64) -> crate::Result<(Self, usize)> {
         let offset = offset as usize;
         let mut cur = offset;
         check_type(&index, offset, TYPE_ROOT)?;
@@ -1412,45 +1408,24 @@ impl MemRoot {
         cur += meta_len;
 
         index.verify_checksum(offset as u64, (cur - offset) as u64)?;
-        Ok(MemRoot {
-            radix_offset,
-            meta: meta.to_vec().into_boxed_slice(),
-        })
+        Ok((
+            MemRoot {
+                radix_offset,
+                meta: meta.to_vec().into_boxed_slice(),
+            },
+            cur - offset,
+        ))
     }
 
-    fn read_from_end(index: impl IndexBuf, end: u64) -> crate::Result<Self> {
-        let buf = index.buf();
-        if end > 1 {
-            let (root_size, vlq_size) = read_vlq_reverse(buf, end as usize)
-                .context(
-                    index.path(),
-                    "cannot read root_size in MemRoot::read_from_end",
-                )
-                .corruption()?;
-            let vlq_size = vlq_size as u64;
-            index.verify_checksum(end - vlq_size, vlq_size)?;
-            Self::read_from(index, end - vlq_size - root_size)
-        } else {
-            Err(index.corruption(format!(
-                "index::MemRoot::read_from_end received an 'end' that is too small ({})",
-                end
-            )))
-        }
-    }
-
-    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> io::Result<()> {
+    fn write_to<W: Write>(&self, writer: &mut W, offset_map: &OffsetMap) -> io::Result<usize> {
         let mut buf = Vec::with_capacity(16);
         buf.write_all(&[TYPE_ROOT])?;
         buf.write_vlq(self.radix_offset.to_disk(offset_map))?;
         buf.write_vlq(self.meta.len())?;
         buf.write_all(&self.meta)?;
         let len = buf.len();
-        let mut reversed_vlq = Vec::new();
-        reversed_vlq.write_vlq(len)?;
-        reversed_vlq.reverse();
-        buf.write_all(&reversed_vlq)?;
         writer.write_all(&buf)?;
-        Ok(())
+        Ok(len)
     }
 }
 
@@ -1726,6 +1701,14 @@ impl MemChecksum {
     }
 }
 
+fn write_reversed_vlq(mut writer: impl Write, value: usize) -> io::Result<()> {
+    let mut reversed_vlq = Vec::new();
+    reversed_vlq.write_vlq(value)?;
+    reversed_vlq.reverse();
+    writer.write_all(&reversed_vlq)?;
+    Ok(())
+}
+
 impl Clone for MemChecksum {
     fn clone(&self) -> Self {
         Self {
@@ -1766,14 +1749,15 @@ struct OffsetMap {
 }
 
 /// A simple structure that implements the IndexBuf interface.
-struct SimpleIndexBuf<'a>(&'a [u8], &'a Path, &'a Checksum);
+/// It does not check checksum.
+struct SimpleIndexBuf<'a>(&'a [u8], &'a Path);
 
 impl<'a> IndexBuf for SimpleIndexBuf<'a> {
     fn buf(&self) -> &[u8] {
         self.0
     }
-    fn checksum(&self) -> &Checksum {
-        &self.2
+    fn verify_checksum(&self, _start: u64, _length: u64) -> crate::Result<()> {
+        Ok(())
     }
     fn path(&self) -> &Path {
         &self.1
@@ -1796,7 +1780,7 @@ impl OffsetMap {
     #[inline]
     fn get(&self, offset: Offset) -> u64 {
         if offset.is_dirty() {
-            let dummy = SimpleIndexBuf(b"", Path::new("<dummy>"), &None);
+            let dummy = SimpleIndexBuf(b"", Path::new("<dummy>"));
             let result = match offset.to_typed(dummy).unwrap() {
                 // Radix entries are pushed in the reversed order. So the index needs to be
                 // reversed.
@@ -1921,8 +1905,7 @@ pub struct Index {
     dirty_keys: Vec<MemKey>,
     dirty_ext_keys: Vec<MemExtKey>,
 
-    // Optional checksum table.
-    checksum: Checksum,
+    checksum: MemChecksum,
 
     // Additional buffer for external keys.
     // Log::sync needs write access to this field.
@@ -1961,7 +1944,8 @@ pub enum InsertKey<'a> {
 /// an [`Index`] structure.
 #[derive(Clone)]
 pub struct OpenOptions {
-    checksum_chunk_size: u64,
+    checksum_chunk_size_log: u32,
+    checksum_enabled: bool,
     fsync: bool,
     len: Option<u64>,
     write: Option<bool>,
@@ -1971,14 +1955,15 @@ pub struct OpenOptions {
 impl OpenOptions {
     #[allow(clippy::new_without_default)]
     /// Create [`OpenOptions`] with default configuration:
-    /// - no checksum
+    /// - checksum enabled, with 1MB chunk size
     /// - no external key buffer
     /// - no fsync
     /// - read root entry from the end of the file
     /// - open as read-write but fallback to read-only
     pub fn new() -> OpenOptions {
         OpenOptions {
-            checksum_chunk_size: 0,
+            checksum_chunk_size_log: 20,
+            checksum_enabled: true,
             fsync: false,
             len: None,
             write: None,
@@ -1986,15 +1971,15 @@ impl OpenOptions {
         }
     }
 
-    /// Set checksum behavior.
-    ///
-    /// If `checksum_chunk_size` is set to 0, do not use checksums. Otherwise,
-    /// it's the size of a chunk to be checksummed, in bytes. Rounded to `2 ** n`
-    /// for performance reasons.
-    ///
-    /// Disabling checksum can help with performance.
-    pub fn checksum_chunk_size(&mut self, checksum_chunk_size: u64) -> &mut Self {
-        self.checksum_chunk_size = checksum_chunk_size;
+    /// Set checksum chunk size as `1 << checksum_chunk_size_log`.
+    pub fn checksum_chunk_size_log(&mut self, checksum_chunk_size_log: u32) -> &mut Self {
+        self.checksum_chunk_size_log = checksum_chunk_size_log;
+        self
+    }
+
+    /// Set whether to write checksum entries on `flush`.
+    pub fn checksum_enabled(&mut self, checksum_enabled: bool) -> &mut Self {
+        self.checksum_enabled = checksum_enabled;
         self
     }
 
@@ -2104,62 +2089,54 @@ impl OpenOptions {
                 }
             };
 
-            let checksum_chunk_size = self.checksum_chunk_size;
-            let mut checksum = if checksum_chunk_size > 0 {
-                Some(ChecksumTable::new(&path, bytes.clone())?.fsync(self.fsync))
-            } else {
-                None
-            };
-
-            let (dirty_radixes, clean_root) = if bytes.is_empty() {
+            let (dirty_radixes, clean_root, mut checksum) = if bytes.is_empty() {
                 // Empty file. Create root radix entry as an dirty entry, and
                 // rebuild checksum table (in case it's corrupted).
                 let radix_offset = RadixOffset::from_dirty_index(0);
-                if let Some(ref mut table) = checksum {
-                    table.clear();
-                }
                 let _ = utils::fix_perm_file(&file, false);
                 let meta = Default::default();
-                (vec![MemRadix::default()], MemRoot { radix_offset, meta })
+                let root = MemRoot { radix_offset, meta };
+                let checksum = MemChecksum::default();
+                (vec![MemRadix::default()], root, checksum)
             } else {
-                let buf = SimpleIndexBuf(&bytes, path, &checksum);
-                // Verify the header byte.
-                check_type(&buf, 0, TYPE_HEAD)?;
-                // Load root entry from the end of the file (truncated at the logical length).
-                (vec![], MemRoot::read_from_end(buf, bytes.len() as u64)?)
+                let end = bytes.len();
+                let (root, mut checksum) = read_root_checksum_at_end(path, &bytes, end)?;
+                if !self.checksum_enabled {
+                    checksum = MemChecksum::default();
+                }
+                (vec![], root, checksum)
             };
 
+            checksum.set_chunk_size_log(&bytes, self.checksum_chunk_size_log)?;
             let key_buf = self.key_buf.clone();
             let dirty_root = clean_root.clone();
 
-            Ok(Index {
+            let index = Index {
                 file: Some(file),
                 buf: bytes,
                 path: path.to_path_buf(),
                 open_options,
                 clean_root,
                 dirty_root,
+                checksum,
                 dirty_radixes,
                 dirty_links: vec![],
                 dirty_leafs: vec![],
                 dirty_keys: vec![],
                 dirty_ext_keys: vec![],
-                checksum,
                 key_buf: key_buf.unwrap_or_else(|| Arc::new(&b""[..])),
-            })
+            };
+
+            Ok(index)
         })();
         result.context(|| format!("in index::OpenOptions::open({:?})", path))
     }
 
     /// Create an in-memory [`Index`] that skips flushing to disk.
-    /// Return an error if `checksum_chunk_size` is not 0.
+    /// Return an error if `checksum_chunk_size_log` is not 0.
     pub fn create_in_memory(&self) -> crate::Result<Index> {
         let result: crate::Result<_> = (|| {
-            if self.checksum_chunk_size != 0 {
-                return Err(crate::Error::programming(
-                    "checksum_chunk_size is not supported for in-memory Index",
-                ));
-            }
+            let buf = Bytes::new();
             let dirty_radixes = vec![MemRadix::default()];
             let clean_root = {
                 let radix_offset = RadixOffset::from_dirty_index(0);
@@ -2168,20 +2145,22 @@ impl OpenOptions {
             };
             let key_buf = self.key_buf.clone();
             let dirty_root = clean_root.clone();
+            let mut checksum = MemChecksum::default();
+            checksum.set_chunk_size_log(&buf, self.checksum_chunk_size_log)?;
 
             Ok(Index {
                 file: None,
-                buf: Bytes::new(),
+                buf,
                 path: PathBuf::new(),
                 open_options: self.clone(),
                 clean_root,
                 dirty_root,
+                checksum,
                 dirty_radixes,
                 dirty_links: vec![],
                 dirty_leafs: vec![],
                 dirty_keys: vec![],
                 dirty_ext_keys: vec![],
-                checksum: None,
                 key_buf: key_buf.unwrap_or_else(|| Arc::new(&b""[..])),
             })
         })();
@@ -2189,10 +2168,73 @@ impl OpenOptions {
     }
 }
 
+/// Load root and checksum from the logical end.
+fn read_root_checksum_at_end(
+    path: &Path,
+    bytes: &[u8],
+    end: usize,
+) -> crate::Result<(MemRoot, MemChecksum)> {
+    // root_offset      (root_offset + root_size)
+    // v                v
+    // |---root_entry---|---checksum_entry---|--reversed_vlq_size---|
+    // |<--------- root_checksum_size ------>|
+    // |<-- root_size ->|
+
+    let buf = SimpleIndexBuf(&bytes, path);
+    // Be careful! SimpleIndexBuf does not do data verification.
+    // Handle integer range overflows here.
+    let (root_checksum_size, vlq_size) =
+        read_vlq_reverse(&bytes, end).context(path, "cannot read len(root+checksum)")?;
+
+    // Verify the header byte.
+    check_type(&buf, 0, TYPE_HEAD)?;
+
+    if end < root_checksum_size as usize + vlq_size {
+        return Err(crate::Error::corruption(
+            path,
+            format!(
+                "data corrupted at {} (invalid size: {})",
+                end, root_checksum_size
+            ),
+        ));
+    }
+
+    let root_offset = end - root_checksum_size as usize - vlq_size;
+    let (root, root_size) = MemRoot::read_from(&buf, root_offset as u64)?;
+
+    let checksum = if root_offset + root_size + vlq_size == end {
+        // No checksum - checksum disabled.
+        MemChecksum::default()
+    } else {
+        let (checksum, _checksum_len) =
+            MemChecksum::read_from(&buf, (root_offset + root_size) as u64)?;
+
+        // Not checking lengths here:
+        //
+        // root_offset + root_size + checksum_len + vlq_size == end
+        // so we can add new kinds of data in the future without breaking
+        // older clients, similar to how Checksum gets added while
+        // maintaining compatibility.
+
+        // Verify the Root entry, since SimpleIndexBuf skips checksum check.
+        // Checksum is self-verified. So no need to check it.
+        checksum
+            .check_range(bytes, root_offset as u64, root_size as u64)
+            .context(path, "failed to verify Root entry")?;
+        checksum
+    };
+
+    Ok((root, checksum))
+}
+
 impl fmt::Debug for OpenOptions {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(f, "OpenOptions {{ ")?;
-        write!(f, "checksum_chunk_size: {}, ", self.checksum_chunk_size)?;
+        write!(
+            f,
+            "checksum_chunk_size_log: {}, ",
+            self.checksum_chunk_size_log
+        )?;
         write!(f, "fsync: {}, ", self.fsync)?;
         write!(f, "len: {:?}, ", self.len)?;
         write!(f, "write: {:?}, ", self.write)?;
@@ -2211,23 +2253,10 @@ impl fmt::Debug for OpenOptions {
 /// - Provides the path (for error message).
 trait IndexBuf {
     fn buf(&self) -> &[u8];
-    fn checksum(&self) -> &Checksum;
     fn path(&self) -> &Path;
 
-    // Derived methods
-
     /// Verify checksum for the given range. Internal API used by `*Offset` structs.
-    #[inline]
-    fn verify_checksum(&self, start: u64, length: u64) -> crate::Result<()> {
-        // This method is used in hot code paths. Its instruction size matters.
-        // Be sure to run `cargo bench --bench index verified` when changing this
-        // function, or the inline attributes.
-        if let Some(ref table) = self.checksum() {
-            table.check_range(start, length)
-        } else {
-            Ok(())
-        }
-    }
+    fn verify_checksum(&self, start: u64, length: u64) -> crate::Result<()>;
 
     #[inline(never)]
     fn range_error(&self, start: usize, length: usize) -> crate::Error {
@@ -2248,8 +2277,8 @@ impl<T: IndexBuf> IndexBuf for &T {
     fn buf(&self) -> &[u8] {
         T::buf(self)
     }
-    fn checksum(&self) -> &Checksum {
-        T::checksum(self)
+    fn verify_checksum(&self, start: u64, length: u64) -> crate::Result<()> {
+        T::verify_checksum(self, start, length)
     }
     fn path(&self) -> &Path {
         T::path(self)
@@ -2260,8 +2289,10 @@ impl IndexBuf for Index {
     fn buf(&self) -> &[u8] {
         &self.buf
     }
-    fn checksum(&self) -> &Checksum {
-        &self.checksum
+    fn verify_checksum(&self, offset: u64, length: u64) -> crate::Result<()> {
+        self.checksum
+            .check_range(&self.buf, offset, length)
+            .context(&self.path, || format!("Index path = {:?}", self.path))
     }
     fn path(&self) -> &Path {
         &self.path
@@ -2308,10 +2339,6 @@ impl Index {
             Some(f) => Some(f.duplicate().context(self.path(), "cannot duplicate")?),
             None => None,
         };
-        let checksum = match self.checksum {
-            Some(ref table) => Some(table.try_clone()?),
-            None => None,
-        };
 
         let index = if copy_dirty {
             Index {
@@ -2321,12 +2348,12 @@ impl Index {
                 open_options: self.open_options.clone(),
                 clean_root: self.clean_root.clone(),
                 dirty_root: self.dirty_root.clone(),
+                checksum: self.checksum.clone(),
                 dirty_keys: self.dirty_keys.clone(),
                 dirty_ext_keys: self.dirty_ext_keys.clone(),
                 dirty_leafs: self.dirty_leafs.clone(),
                 dirty_links: self.dirty_links.clone(),
                 dirty_radixes: self.dirty_radixes.clone(),
-                checksum,
                 key_buf: self.key_buf.clone(),
             }
         } else {
@@ -2337,6 +2364,7 @@ impl Index {
                 open_options: self.open_options.clone(),
                 clean_root: self.clean_root.clone(),
                 dirty_root: self.clean_root.clone(),
+                checksum: self.checksum.clone(),
                 dirty_keys: Vec::new(),
                 dirty_ext_keys: Vec::new(),
                 dirty_leafs: Vec::new(),
@@ -2347,7 +2375,6 @@ impl Index {
                 } else {
                     Vec::new()
                 },
-                checksum,
                 key_buf: self.key_buf.clone(),
             }
         };
@@ -2542,10 +2569,29 @@ impl Index {
                     offset_map.radix_map[i] = offset;
                 }
 
-                self.dirty_root
+                // Write Root.
+                let root_len = self
+                    .dirty_root
                     .write_to(&mut buf, &offset_map)
                     .infallible()?;
+
+                // Update and write Checksum if it's enabled.
+                let mut new_checksum = self.checksum.clone();
+                let checksum_len = if self.open_options.checksum_enabled {
+                    new_checksum
+                        .update(&self.buf, lock.as_mut(), len, &buf)
+                        .context(&path, "cannot read and update checksum")?;
+                    new_checksum.write_to(&mut buf, &offset_map).infallible()?
+                } else {
+                    assert!(!self.checksum.is_enabled());
+                    0
+                };
+                write_reversed_vlq(&mut buf, root_len + checksum_len).infallible()?;
+
                 new_len = buf.len() as u64 + len;
+                lock.as_mut()
+                    .seek(SeekFrom::Start(len))
+                    .context(&path, "cannot seek")?;
                 lock.as_mut()
                     .write_all(&buf)
                     .context(&path, "cannot write new data to index")?;
@@ -2562,7 +2608,7 @@ impl Index {
                 debug_assert_eq!(&self.path, &path);
 
                 // This is to workaround the borrow checker.
-                let this = SimpleIndexBuf(&self.buf, &path, &None);
+                let this = SimpleIndexBuf(&self.buf, &path);
 
                 // Sanity check - the length should be expected. Otherwise, the lock
                 // is somehow ineffective.
@@ -2570,18 +2616,23 @@ impl Index {
                     return Err(this.corruption("file changed unexpectedly"));
                 }
 
-                if let Some(ref mut table) = self.checksum {
-                    debug_assert!(self.open_options.checksum_chunk_size > 0);
-                    let chunk_size_log =
-                        63 - (self.open_options.checksum_chunk_size as u64).leading_zeros();
-                    table.update(chunk_size_log.into(), self.buf.clone())?;
-                }
+                // Reload root and checksum.
+                let (root, checksum) =
+                    read_root_checksum_at_end(&path, &self.buf, new_len as usize)?;
 
-                self.clean_root = MemRoot::read_from_end(this, new_len)?;
+                debug_assert_eq!(checksum.end, new_checksum.end);
+                debug_assert_eq!(&checksum.xxhash_list, &new_checksum.xxhash_list);
+                self.checksum = checksum;
+                self.clean_root = root;
             }
 
             // Outside critical section
             self.clear_dirty();
+
+            #[cfg(debug_assertions)]
+            #[cfg(test)]
+            self.verify()
+                .expect("sync() should not break checksum check");
 
             Ok(new_len)
         })();
@@ -2939,7 +2990,7 @@ impl Index {
 
     /// Verify checksum for the entire on-disk buffer.
     pub fn verify(&self) -> crate::Result<()> {
-        self.verify_checksum(0, self.buf.len() as _)
+        self.verify_checksum(0, self.checksum.end)
     }
 
     // Internal function used by [`Index::range`].
@@ -3168,7 +3219,7 @@ impl Debug for Offset {
             write!(f, "None")
         } else if self.is_dirty() {
             let path = Path::new("<dummy>");
-            let dummy = SimpleIndexBuf(b"", &path, &None);
+            let dummy = SimpleIndexBuf(b"", &path);
             match self.to_typed(dummy).unwrap() {
                 TypedOffset::Radix(x) => x.fmt(f),
                 TypedOffset::Leaf(x) => x.fmt(f),
@@ -3260,10 +3311,11 @@ impl Debug for MemChecksum {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(
             f,
-            "Chesksum {{ previous: {}, chunk_size_log: {}, checksums: {:?} }}",
+            "Checksum {{ start: {}, end: {}, chunk_size_log: {}, checksums.len(): {} }}",
             self.start,
+            self.end,
             self.chunk_size_log,
-            self.xxhash_list_to_write(),
+            self.xxhash_list_to_write().len(),
         )
     }
 }
@@ -3281,6 +3333,7 @@ impl Debug for Index {
         let offset_map = OffsetMap::default();
         let mut buf = Vec::with_capacity(self.buf.len());
         buf.push(TYPE_HEAD);
+        let mut root_offset = 0;
         loop {
             let i = buf.len();
             if i >= self.buf.len() {
@@ -3322,13 +3375,33 @@ impl Debug for Index {
                     writeln!(f, "{:?}", e)?;
                 }
                 TYPE_ROOT => {
-                    let e = MemRoot::read_from(self, i).expect("read");
+                    root_offset = i as usize;
+                    let e = MemRoot::read_from(self, i).expect("read").0;
                     e.write_to(&mut buf, &offset_map).expect("write");
+                    // Preview the next entry. If it's not Checksum, then it's in "legacy"
+                    // format and we need to write "reversed_vlq" length of the Root entry
+                    // immediately.
+                    if self.buf.get(buf.len()) != Some(&TYPE_CHECKSUM)
+                        || MemChecksum::read_from(&self, buf.len() as u64).is_err()
+                    {
+                        let root_len = buf.len() - root_offset;
+                        write_reversed_vlq(&mut buf, root_len).expect("write");
+                    }
                     writeln!(f, "{:?}", e)?;
                 }
                 TYPE_CHECKSUM => {
                     let e = MemChecksum::read_from(&self, i).expect("read").0;
                     e.write_to(&mut buf, &offset_map).expect("write");
+                    let root_checksum_len = buf.len() - root_offset;
+                    let vlq_start = buf.len();
+                    write_reversed_vlq(&mut buf, root_checksum_len).expect("write");
+                    let vlq_end = buf.len();
+                    debug_assert_eq!(
+                        &buf[vlq_start..vlq_end],
+                        &self.buf[vlq_start..vlq_end],
+                        "reversed vlq should match (root+checksum len: {})",
+                        root_checksum_len
+                    );
                     writeln!(f, "{:?}", e)?;
                 }
                 _ => {
@@ -3339,6 +3412,7 @@ impl Debug for Index {
         }
 
         if buf.len() > 1 && self.buf[..] != buf[..] {
+            debug_assert_eq!(&self.buf[..], &buf[..]);
             return writeln!(f, "Inconsistent Data!");
         }
 
@@ -3383,8 +3457,7 @@ mod tests {
 
     fn open_opts() -> OpenOptions {
         let mut opts = OpenOptions::new();
-        // Use 1 as checksum chunk size to make sure checksum check covers necessary bytes.
-        opts.checksum_chunk_size(1);
+        opts.checksum_chunk_size_log(4);
         opts
     }
 
@@ -3568,12 +3641,14 @@ Key[1]: Key { key: 34 }
         let mut index = open_opts().open(dir.path().join("a")).expect("open");
 
         // 1st flush.
-        assert_eq!(index.flush().expect("flush"), 9);
+        assert_eq!(index.flush().expect("flush"), 24);
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 9, root: Disk[1] }\n\
-             Disk[1]: Radix { link: None }\n\
-             Disk[5]: Root { radix: Disk[1] }\n"
+            r#"Index { len: 24, root: Disk[1] }
+Disk[1]: Radix { link: None }
+Disk[5]: Root { radix: Disk[1] }
+Disk[8]: Checksum { start: 0, end: 8, chunk_size_log: 4, checksums.len(): 1 }
+"#
         );
 
         // Mixed on-disk and in-memory state.
@@ -3581,14 +3656,16 @@ Key[1]: Key { key: 34 }
         index.insert(&[0x12], 77).expect("update");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 9, root: Radix[0] }\n\
-             Disk[1]: Radix { link: None }\n\
-             Disk[5]: Root { radix: Disk[1] }\n\
-             Radix[0]: Radix { link: Link[0], 1: Leaf[0] }\n\
-             Leaf[0]: Leaf { key: Key[0], link: Link[1] }\n\
-             Link[0]: Link { value: 55, next: None }\n\
-             Link[1]: Link { value: 77, next: None }\n\
-             Key[0]: Key { key: 12 }\n"
+            r#"Index { len: 24, root: Radix[0] }
+Disk[1]: Radix { link: None }
+Disk[5]: Root { radix: Disk[1] }
+Disk[8]: Checksum { start: 0, end: 8, chunk_size_log: 4, checksums.len(): 1 }
+Radix[0]: Radix { link: Link[0], 1: Leaf[0] }
+Leaf[0]: Leaf { key: Key[0], link: Link[1] }
+Link[0]: Link { value: 55, next: None }
+Link[1]: Link { value: 77, next: None }
+Key[0]: Key { key: 12 }
+"#
         );
 
         // After 2nd flush. There are 2 roots.
@@ -3599,18 +3676,21 @@ Key[1]: Key { key: 34 }
         index.flush().expect("flush");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 50, root: Disk[30] }\n\
-             Disk[1]: Radix { link: None }\n\
-             Disk[5]: Root { radix: Disk[1] }\n\
-             Disk[9]: Key { key: 12 }\n\
-             Disk[12]: Key { key: 34 }\n\
-             Disk[15]: Link { value: 55, next: None }\n\
-             Disk[18]: Link { value: 77, next: None }\n\
-             Disk[21]: Link { value: 99, next: Disk[18] }\n\
-             Disk[24]: Leaf { key: Disk[9], link: Disk[18] }\n\
-             Disk[27]: Leaf { key: Disk[12], link: Disk[21] }\n\
-             Disk[30]: Radix { link: Disk[15], 1: Disk[24], 3: Disk[27] }\n\
-             Disk[46]: Root { radix: Disk[30] }\n"
+            r#"Index { len: 104, root: Disk[45] }
+Disk[1]: Radix { link: None }
+Disk[5]: Root { radix: Disk[1] }
+Disk[8]: Checksum { start: 0, end: 8, chunk_size_log: 4, checksums.len(): 1 }
+Disk[24]: Key { key: 12 }
+Disk[27]: Key { key: 34 }
+Disk[30]: Link { value: 55, next: None }
+Disk[33]: Link { value: 77, next: None }
+Disk[36]: Link { value: 99, next: Disk[33] }
+Disk[39]: Leaf { key: Disk[24], link: Disk[33] }
+Disk[42]: Leaf { key: Disk[27], link: Disk[36] }
+Disk[45]: Radix { link: Disk[30], 1: Disk[39], 3: Disk[42] }
+Disk[61]: Root { radix: Disk[45] }
+Disk[64]: Checksum { start: 0, end: 64, chunk_size_log: 4, checksums.len(): 4 }
+"#
         );
     }
 
@@ -3710,28 +3790,32 @@ Key[0]: Key { key: 12 }
         index.flush().expect("flush");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 23, root: Disk[11] }\n\
-             Disk[1]: Key { key: 12 34 }\n\
-             Disk[5]: Link { value: 5, next: None }\n\
-             Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
-             Disk[11]: Radix { link: None, 1: Disk[8] }\n\
-             Disk[19]: Root { radix: Disk[11] }\n"
+            r#"Index { len: 46, root: Disk[11] }
+Disk[1]: Key { key: 12 34 }
+Disk[5]: Link { value: 5, next: None }
+Disk[8]: Leaf { key: Disk[1], link: Disk[5] }
+Disk[11]: Radix { link: None, 1: Disk[8] }
+Disk[19]: Root { radix: Disk[11] }
+Disk[22]: Checksum { start: 0, end: 22, chunk_size_log: 4, checksums.len(): 2 }
+"#
         );
         index.insert(&[0x12, 0x78], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 23, root: Radix[0] }\n\
-             Disk[1]: Key { key: 12 34 }\n\
-             Disk[5]: Link { value: 5, next: None }\n\
-             Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
-             Disk[11]: Radix { link: None, 1: Disk[8] }\n\
-             Disk[19]: Root { radix: Disk[11] }\n\
-             Radix[0]: Radix { link: None, 1: Radix[1] }\n\
-             Radix[1]: Radix { link: None, 2: Radix[2] }\n\
-             Radix[2]: Radix { link: None, 3: Disk[8], 7: Leaf[0] }\n\
-             Leaf[0]: Leaf { key: Key[0], link: Link[0] }\n\
-             Link[0]: Link { value: 7, next: None }\n\
-             Key[0]: Key { key: 12 78 }\n"
+            r#"Index { len: 46, root: Radix[0] }
+Disk[1]: Key { key: 12 34 }
+Disk[5]: Link { value: 5, next: None }
+Disk[8]: Leaf { key: Disk[1], link: Disk[5] }
+Disk[11]: Radix { link: None, 1: Disk[8] }
+Disk[19]: Root { radix: Disk[11] }
+Disk[22]: Checksum { start: 0, end: 22, chunk_size_log: 4, checksums.len(): 2 }
+Radix[0]: Radix { link: None, 1: Radix[1] }
+Radix[1]: Radix { link: None, 2: Radix[2] }
+Radix[2]: Radix { link: None, 3: Disk[8], 7: Leaf[0] }
+Leaf[0]: Leaf { key: Key[0], link: Link[0] }
+Link[0]: Link { value: 7, next: None }
+Key[0]: Key { key: 12 78 }
+"#
         );
 
         // Example 2: new key is a prefix of the old key
@@ -3741,16 +3825,18 @@ Key[0]: Key { key: 12 }
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 23, root: Radix[0] }\n\
-             Disk[1]: Key { key: 12 34 }\n\
-             Disk[5]: Link { value: 5, next: None }\n\
-             Disk[8]: Leaf { key: Disk[1], link: Disk[5] }\n\
-             Disk[11]: Radix { link: None, 1: Disk[8] }\n\
-             Disk[19]: Root { radix: Disk[11] }\n\
-             Radix[0]: Radix { link: None, 1: Radix[1] }\n\
-             Radix[1]: Radix { link: None, 2: Radix[2] }\n\
-             Radix[2]: Radix { link: Link[0], 3: Disk[8] }\n\
-             Link[0]: Link { value: 7, next: None }\n"
+            r#"Index { len: 46, root: Radix[0] }
+Disk[1]: Key { key: 12 34 }
+Disk[5]: Link { value: 5, next: None }
+Disk[8]: Leaf { key: Disk[1], link: Disk[5] }
+Disk[11]: Radix { link: None, 1: Disk[8] }
+Disk[19]: Root { radix: Disk[11] }
+Disk[22]: Checksum { start: 0, end: 22, chunk_size_log: 4, checksums.len(): 2 }
+Radix[0]: Radix { link: None, 1: Radix[1] }
+Radix[1]: Radix { link: None, 2: Radix[2] }
+Radix[2]: Radix { link: Link[0], 3: Disk[8] }
+Link[0]: Link { value: 7, next: None }
+"#
         );
 
         // Example 3: old key is a prefix of the new key
@@ -3761,15 +3847,17 @@ Key[0]: Key { key: 12 }
         index.flush().expect("flush");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 46, root: Disk[34] }\n\
-             Disk[1]: Key { key: 12 78 }\n\
-             Disk[5]: Link { value: 5, next: None }\n\
-             Disk[8]: Link { value: 7, next: None }\n\
-             Disk[11]: Leaf { key: Disk[1], link: Disk[8] }\n\
-             Disk[14]: Radix { link: Disk[5], 7: Disk[11] }\n\
-             Disk[26]: Radix { link: None, 2: Disk[14] }\n\
-             Disk[34]: Radix { link: None, 1: Disk[26] }\n\
-             Disk[42]: Root { radix: Disk[34] }\n"
+            r#"Index { len: 77, root: Disk[34] }
+Disk[1]: Key { key: 12 78 }
+Disk[5]: Link { value: 5, next: None }
+Disk[8]: Link { value: 7, next: None }
+Disk[11]: Leaf { key: Disk[1], link: Disk[8] }
+Disk[14]: Radix { link: Disk[5], 7: Disk[11] }
+Disk[26]: Radix { link: None, 2: Disk[14] }
+Disk[34]: Radix { link: None, 1: Disk[26] }
+Disk[42]: Root { radix: Disk[34] }
+Disk[45]: Checksum { start: 0, end: 45, chunk_size_log: 4, checksums.len(): 3 }
+"#
         );
 
         // With two flushes - the old key cannot be removed since it was written.
@@ -3779,18 +3867,20 @@ Key[0]: Key { key: 12 }
         index.insert(&[0x12, 0x78], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 22, root: Radix[0] }\n\
-             Disk[1]: Key { key: 12 }\n\
-             Disk[4]: Link { value: 5, next: None }\n\
-             Disk[7]: Leaf { key: Disk[1], link: Disk[4] }\n\
-             Disk[10]: Radix { link: None, 1: Disk[7] }\n\
-             Disk[18]: Root { radix: Disk[10] }\n\
-             Radix[0]: Radix { link: None, 1: Radix[1] }\n\
-             Radix[1]: Radix { link: None, 2: Radix[2] }\n\
-             Radix[2]: Radix { link: Disk[4], 7: Leaf[0] }\n\
-             Leaf[0]: Leaf { key: Key[0], link: Link[0] }\n\
-             Link[0]: Link { value: 7, next: None }\n\
-             Key[0]: Key { key: 12 78 }\n"
+            r#"Index { len: 45, root: Radix[0] }
+Disk[1]: Key { key: 12 }
+Disk[4]: Link { value: 5, next: None }
+Disk[7]: Leaf { key: Disk[1], link: Disk[4] }
+Disk[10]: Radix { link: None, 1: Disk[7] }
+Disk[18]: Root { radix: Disk[10] }
+Disk[21]: Checksum { start: 0, end: 21, chunk_size_log: 4, checksums.len(): 2 }
+Radix[0]: Radix { link: None, 1: Radix[1] }
+Radix[1]: Radix { link: None, 2: Radix[2] }
+Radix[2]: Radix { link: Disk[4], 7: Leaf[0] }
+Leaf[0]: Leaf { key: Key[0], link: Link[0] }
+Link[0]: Link { value: 7, next: None }
+Key[0]: Key { key: 12 78 }
+"#
         );
 
         // Same key. Multiple values.
@@ -3800,15 +3890,17 @@ Key[0]: Key { key: 12 }
         index.insert(&[0x12], 7).expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 22, root: Radix[0] }\n\
-             Disk[1]: Key { key: 12 }\n\
-             Disk[4]: Link { value: 5, next: None }\n\
-             Disk[7]: Leaf { key: Disk[1], link: Disk[4] }\n\
-             Disk[10]: Radix { link: None, 1: Disk[7] }\n\
-             Disk[18]: Root { radix: Disk[10] }\n\
-             Radix[0]: Radix { link: None, 1: Leaf[0] }\n\
-             Leaf[0]: Leaf { key: Disk[1], link: Link[0] }\n\
-             Link[0]: Link { value: 7, next: Disk[4] }\n"
+            r#"Index { len: 45, root: Radix[0] }
+Disk[1]: Key { key: 12 }
+Disk[4]: Link { value: 5, next: None }
+Disk[7]: Leaf { key: Disk[1], link: Disk[4] }
+Disk[10]: Radix { link: None, 1: Disk[7] }
+Disk[18]: Root { radix: Disk[10] }
+Disk[21]: Checksum { start: 0, end: 21, chunk_size_log: 4, checksums.len(): 2 }
+Radix[0]: Radix { link: None, 1: Leaf[0] }
+Leaf[0]: Leaf { key: Disk[1], link: Link[0] }
+Link[0]: Link { value: 7, next: Disk[4] }
+"#
         );
     }
 
@@ -3829,20 +3921,22 @@ Key[0]: Key { key: 12 }
             .expect("insert");
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 20, root: Radix[0] }\n\
-             Disk[1]: InlineLeaf { key: Disk[2], link: Disk[5] }\n\
-             Disk[2]: ExtKey { start: 1, len: 2 }\n\
-             Disk[5]: Link { value: 55, next: None }\n\
-             Disk[8]: Radix { link: None, 3: Disk[1] }\n\
-             Disk[16]: Root { radix: Disk[8] }\n\
-             Radix[0]: Radix { link: None, 3: Radix[1] }\n\
-             Radix[1]: Radix { link: None, 4: Radix[2] }\n\
-             Radix[2]: Radix { link: None, 5: Radix[3] }\n\
-             Radix[3]: Radix { link: None, 6: Radix[4] }\n\
-             Radix[4]: Radix { link: Disk[5], 7: Leaf[0] }\n\
-             Leaf[0]: Leaf { key: ExtKey[0], link: Link[0] }\n\
-             Link[0]: Link { value: 77, next: None }\n\
-             ExtKey[0]: ExtKey { start: 1, len: 3 }\n"
+            r#"Index { len: 43, root: Radix[0] }
+Disk[1]: InlineLeaf { key: Disk[2], link: Disk[5] }
+Disk[2]: ExtKey { start: 1, len: 2 }
+Disk[5]: Link { value: 55, next: None }
+Disk[8]: Radix { link: None, 3: Disk[1] }
+Disk[16]: Root { radix: Disk[8] }
+Disk[19]: Checksum { start: 0, end: 19, chunk_size_log: 4, checksums.len(): 2 }
+Radix[0]: Radix { link: None, 3: Radix[1] }
+Radix[1]: Radix { link: None, 4: Radix[2] }
+Radix[2]: Radix { link: None, 5: Radix[3] }
+Radix[3]: Radix { link: None, 6: Radix[4] }
+Radix[4]: Radix { link: Disk[5], 7: Leaf[0] }
+Leaf[0]: Leaf { key: ExtKey[0], link: Link[0] }
+Link[0]: Link { value: 77, next: None }
+ExtKey[0]: ExtKey { start: 1, len: 3 }
+"#
         );
     }
 
@@ -3885,27 +3979,32 @@ Key[0]: Key { key: 12 }
 
         assert_eq!(
             format!("{:?}", index),
-            "Index { len: 97, root: Disk[77] }\n\
-             Disk[1]: InlineLeaf { key: Disk[2], link: Disk[5] }\n\
-             Disk[2]: ExtKey { start: 1, len: 1 }\n\
-             Disk[5]: Link { value: 55, next: None }\n\
-             Disk[8]: Radix { link: None, 3: Disk[1] }\n\
-             Disk[16]: Root { radix: Disk[8] }\n\
-             Disk[20]: InlineLeaf { key: Disk[21], link: Disk[24] }\n\
-             Disk[21]: ExtKey { start: 2, len: 1 }\n\
-             Disk[24]: Link { value: 77, next: None }\n\
-             Disk[27]: Radix { link: None, 3: Disk[1], 5: Disk[20] }\n\
-             Disk[39]: Root { radix: Disk[27] }\n\
-             Disk[43]: Link { value: 88, next: Disk[24] }\n\
-             Disk[46]: Leaf { key: Disk[21], link: Disk[43] }\n\
-             Disk[49]: Radix { link: None, 3: Disk[1], 5: Disk[46] }\n\
-             Disk[61]: Root { radix: Disk[49] }\n\
-             Disk[65]: ExtKey { start: 3, len: 1 }\n\
-             Disk[68]: Link { value: 99, next: None }\n\
-             Disk[71]: Link { value: 100, next: Disk[68] }\n\
-             Disk[74]: Leaf { key: Disk[65], link: Disk[71] }\n\
-             Disk[77]: Radix { link: None, 3: Disk[1], 5: Disk[46], 7: Disk[74] }\n\
-             Disk[93]: Root { radix: Disk[77] }\n"
+            r#"Index { len: 257, root: Disk[181] }
+Disk[1]: InlineLeaf { key: Disk[2], link: Disk[5] }
+Disk[2]: ExtKey { start: 1, len: 1 }
+Disk[5]: Link { value: 55, next: None }
+Disk[8]: Radix { link: None, 3: Disk[1] }
+Disk[16]: Root { radix: Disk[8] }
+Disk[19]: Checksum { start: 0, end: 19, chunk_size_log: 4, checksums.len(): 2 }
+Disk[43]: InlineLeaf { key: Disk[44], link: Disk[47] }
+Disk[44]: ExtKey { start: 2, len: 1 }
+Disk[47]: Link { value: 77, next: None }
+Disk[50]: Radix { link: None, 3: Disk[1], 5: Disk[43] }
+Disk[62]: Root { radix: Disk[50] }
+Disk[65]: Checksum { start: 19, end: 65, chunk_size_log: 4, checksums.len(): 4 }
+Disk[105]: Link { value: 88, next: Disk[47] }
+Disk[108]: Leaf { key: Disk[44], link: Disk[105] }
+Disk[111]: Radix { link: None, 3: Disk[1], 5: Disk[108] }
+Disk[123]: Root { radix: Disk[111] }
+Disk[126]: Checksum { start: 65, end: 126, chunk_size_log: 4, checksums.len(): 4 }
+Disk[166]: ExtKey { start: 3, len: 1 }
+Disk[169]: Link { value: 99, next: None }
+Disk[172]: Link { value: 100, next: Disk[169] }
+Disk[176]: Leaf { key: Disk[166], link: Disk[172] }
+Disk[181]: Radix { link: None, 3: Disk[1], 5: Disk[108], 7: Disk[176] }
+Disk[197]: Root { radix: Disk[181] }
+Disk[201]: Checksum { start: 126, end: 201, chunk_size_log: 4, checksums.len(): 6 }
+"#
         )
     }
 
@@ -3940,7 +4039,7 @@ Key[0]: Key { key: 12 }
 
         // Test in-memory Index
         let mut index3 = open_opts()
-            .checksum_chunk_size(0)
+            .checksum_chunk_size_log(0)
             .create_in_memory()
             .unwrap();
         let index4 = index3.try_clone().unwrap();
@@ -4010,7 +4109,26 @@ Key[0]: Key { key: 12 }
     }
 
     #[test]
-    fn test_checksum_bitflip() {
+    fn test_checksum_bitflip_1b() {
+        test_checksum_bitflip_with_size(0);
+    }
+
+    #[test]
+    fn test_checksum_bitflip_2b() {
+        test_checksum_bitflip_with_size(1);
+    }
+
+    #[test]
+    fn test_checksum_bitflip_16b() {
+        test_checksum_bitflip_with_size(4);
+    }
+
+    #[test]
+    fn test_checksum_bitflip_1mb() {
+        test_checksum_bitflip_with_size(20);
+    }
+
+    fn test_checksum_bitflip_with_size(checksum_log_size: u32) {
         let dir = tempdir().unwrap();
 
         // Debug build is much slower than release build. Limit the key length to 1-byte.
@@ -4027,9 +4145,12 @@ Key[0]: Key { key: 12 }
             vec![0x78],
             vec![0x78, 0x9a],
         ];
+        let opts = open_opts()
+            .checksum_chunk_size_log(checksum_log_size)
+            .clone();
 
         let bytes = {
-            let mut index = open_opts().open(dir.path().join("a")).expect("open");
+            let mut index = opts.clone().open(dir.path().join("a")).expect("open");
 
             for (i, key) in keys.iter().enumerate() {
                 index.insert(key, i as u64).expect("insert");
@@ -4041,10 +4162,14 @@ Key[0]: Key { key: 12 }
             let mut f = File::open(dir.path().join("a")).expect("open");
             let mut buf = vec![];
             f.read_to_end(&mut buf).expect("read");
-            buf
 
             // Drop `index` here. This would unmap files so File::create below
             // can work on Windows.
+            if std::env::var("DEBUG").is_ok() {
+                eprintln!("{:?}", &index);
+            }
+
+            buf
         };
 
         fn is_corrupted(index: &Index, key: &[u8]) -> bool {
@@ -4062,7 +4187,7 @@ Key[0]: Key { key: 12 }
             let mut f = File::create(dir.path().join("a")).expect("create");
             f.write_all(&bytes).expect("write");
 
-            let index = open_opts().open(dir.path().join("a"));
+            let index = opts.clone().open(dir.path().join("a"));
             let detected = match index {
                 Err(_) => true,
                 Ok(index) => {
@@ -4080,8 +4205,91 @@ Key[0]: Key { key: 12 }
                     }) || is_corrupted(&index, &[])
                 }
             };
-            assert!(detected, "bit flip at {} is not detected", i);
+            assert!(
+                detected,
+                "bit flip at byte {} , bit {} is not detected (set DEBUG=1 to see Index dump)",
+                i / 8,
+                i % 8,
+            );
         }
+    }
+
+    #[test]
+    fn test_checksum_toggle() {
+        let dir = tempdir().unwrap();
+        let open = |enabled: bool| {
+            open_opts()
+                .checksum_enabled(enabled)
+                .open(dir.path().join("a"))
+                .expect("open")
+        };
+
+        // Starting with checksum off.
+        let mut index = open(false);
+        index.verify().unwrap();
+        index.insert(b"abcdefg", 0x1234).unwrap();
+        index.flush().unwrap();
+        index.insert(b"bcdefgh", 0x2345).unwrap();
+        index.flush().unwrap();
+
+        // Turn on.
+        let mut index = open(true);
+        index.verify().unwrap();
+        index.insert(b"cdefghi", 0x3456).unwrap();
+        index.flush().unwrap();
+        index.insert(b"defghij", 0x4567).unwrap();
+        index.flush().unwrap();
+
+        // Turn off.
+        let mut index = open(false);
+        index.verify().unwrap();
+        index.insert(b"efghijh", 0x5678).unwrap();
+        index.flush().unwrap();
+        index.insert(b"fghijkl", 0x7890).unwrap();
+        index.flush().unwrap();
+
+        assert_eq!(
+            format!("{:?}", index),
+            r#"Index { len: 415, root: Disk[402] }
+Disk[1]: Key { key: 61 62 63 64 65 66 67 }
+Disk[10]: Link { value: 4660, next: None }
+Disk[14]: Leaf { key: Disk[1], link: Disk[10] }
+Disk[17]: Radix { link: None, 6: Disk[14] }
+Disk[25]: Root { radix: Disk[17] }
+Disk[29]: Key { key: 62 63 64 65 66 67 68 }
+Disk[38]: Link { value: 9029, next: None }
+Disk[42]: Leaf { key: Disk[29], link: Disk[38] }
+Disk[45]: Radix { link: None, 1: Disk[14], 2: Disk[42] }
+Disk[57]: Radix { link: None, 6: Disk[45] }
+Disk[65]: Root { radix: Disk[57] }
+Disk[69]: Key { key: 63 64 65 66 67 68 69 }
+Disk[78]: Link { value: 13398, next: None }
+Disk[82]: Leaf { key: Disk[69], link: Disk[78] }
+Disk[85]: Radix { link: None, 1: Disk[14], 2: Disk[42], 3: Disk[82] }
+Disk[101]: Radix { link: None, 6: Disk[85] }
+Disk[109]: Root { radix: Disk[101] }
+Disk[112]: Checksum { start: 0, end: 112, chunk_size_log: 4, checksums.len(): 7 }
+Disk[176]: Key { key: 64 65 66 67 68 69 6A }
+Disk[185]: Link { value: 17767, next: None }
+Disk[190]: Leaf { key: Disk[176], link: Disk[185] }
+Disk[195]: Radix { link: None, 1: Disk[14], 2: Disk[42], 3: Disk[82], 4: Disk[190] }
+Disk[215]: Radix { link: None, 6: Disk[195] }
+Disk[223]: Root { radix: Disk[215] }
+Disk[227]: Checksum { start: 112, end: 227, chunk_size_log: 4, checksums.len(): 8 }
+Disk[299]: Key { key: 65 66 67 68 69 6A 68 }
+Disk[308]: Link { value: 22136, next: None }
+Disk[313]: Leaf { key: Disk[299], link: Disk[308] }
+Disk[318]: Radix { link: None, 1: Disk[14], 2: Disk[42], 3: Disk[82], 4: Disk[190], 5: Disk[313] }
+Disk[342]: Radix { link: None, 6: Disk[318] }
+Disk[350]: Root { radix: Disk[342] }
+Disk[355]: Key { key: 66 67 68 69 6A 6B 6C }
+Disk[364]: Link { value: 30864, next: None }
+Disk[369]: Leaf { key: Disk[355], link: Disk[364] }
+Disk[374]: Radix { link: None, 1: Disk[14], 2: Disk[42], 3: Disk[82], 4: Disk[190], 5: Disk[313], 6: Disk[369] }
+Disk[402]: Radix { link: None, 6: Disk[374] }
+Disk[410]: Root { radix: Disk[402] }
+"#
+        );
     }
 
     #[test]
@@ -4290,7 +4498,7 @@ Key[0]: Key { key: 12 }
         fn test_multiple_values(map: HashMap<Vec<u8>, Vec<u64>>) -> bool {
             let dir = tempdir().unwrap();
             let mut index = open_opts().open(dir.path().join("a")).expect("open");
-            let mut index_mem = open_opts().checksum_chunk_size(0).create_in_memory().unwrap();
+            let mut index_mem = open_opts().checksum_chunk_size_log(20).create_in_memory().unwrap();
 
             for (key, values) in &map {
                 for value in values.iter().rev() {

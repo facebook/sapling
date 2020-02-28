@@ -1273,7 +1273,7 @@ mod tests {
         // The "current" log is still mutable. Its index respects lag_threshold,
         // and is logically empty (because side effect of delete_content, the
         // index has some bytes in it).
-        assert_eq!(size("2/index-idx"), 10);
+        assert_eq!(size("2/index-idx"), 25);
         assert!(size("2/log") < 100);
     }
 
