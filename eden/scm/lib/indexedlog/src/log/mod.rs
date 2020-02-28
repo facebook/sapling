@@ -99,6 +99,9 @@ pub struct Log {
     pub(crate) mem_buf: Pin<Box<Vec<u8>>>,
     meta: LogMetadata,
     indexes: Vec<Index>,
+    // On-disk indexes are lagging. How many entires do they lag?
+    // This affects whether `sync()` updates indexes.
+    index_lags: Vec<usize>,
     // Whether the index and the log is out-of-sync. In which case, index-based reads (lookups)
     // should return errors because it can no longer be trusted.
     // This could be improved to be per index. For now, it's a single state for simplicity. It's
@@ -360,12 +363,14 @@ impl Log {
         }
 
         // Create the new Log.
+        let index_lags = self.index_lags.clone();
         let mut log = Log {
             dir: self.dir.clone(),
             disk_buf,
             mem_buf,
             meta: self.meta.clone(),
             indexes,
+            index_lags,
             index_corrupted: false,
             open_options: self.open_options.clone(),
         };
@@ -565,19 +570,6 @@ impl Log {
             meta.primary_len += self.mem_buf.len() as u64;
             self.mem_buf.clear();
 
-            // Decide what indexes need to be updated on disk.
-            let indexes_to_flush: Vec<usize> = self
-                .open_options
-                .index_defs
-                .iter()
-                .enumerate()
-                .filter(|&(_i, def)| {
-                    let indexed = self.meta.indexes.get(&def.metaname()).cloned().unwrap_or(0);
-                    indexed.saturating_add(def.lag_threshold) < meta.primary_len
-                })
-                .map(|(i, _def)| i)
-                .collect();
-
             // Step 3: Reload primary log and indexes to get the latest view.
             let (disk_buf, indexes) = Self::load_log_and_indexes(
                 &self.dir,
@@ -599,6 +591,7 @@ impl Log {
                     Self::set_index_log_len(self.indexes.iter_mut(), meta.primary_len);
                     Some(&self.indexes)
                 },
+                &mut self.index_lags,
                 self.open_options.fsync,
             )?;
 
@@ -608,11 +601,16 @@ impl Log {
 
             // Step 4: Update the indexes. Optionally flush them.
             self.update_indexes_for_on_disk_entries()?;
-            for i in indexes_to_flush {
+            for (i, count) in self.index_lags.clone().into_iter().enumerate() {
+                if self.open_options.index_defs[i].lag_threshold >= count {
+                    continue;
+                }
                 let new_length = self.indexes[i].flush();
                 let new_length = self.maybe_set_index_error(new_length.map_err(Into::into))?;
                 let name = self.open_options.index_defs[i].metaname();
                 self.meta.indexes.insert(name, new_length);
+                // The index will be no longer lagging, since meta is being updated.
+                self.index_lags[i] = 0;
             }
 
             // Step 5: Write the updated meta file.
@@ -997,7 +995,13 @@ impl Log {
         offset: u64,
         data_offset: u64,
     ) -> crate::Result<()> {
-        for (index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
+        for (i, (index, def)) in self
+            .indexes
+            .iter_mut()
+            .zip(&self.open_options.index_defs)
+            .enumerate()
+        {
+            self.index_lags[i] += 1;
             for index_output in (def.func)(data) {
                 match index_output {
                     IndexOutput::Reference(range) => {
@@ -1024,6 +1028,8 @@ impl Log {
     }
 
     /// Build in-memory index so they cover all entries stored in `self.disk_buf`.
+    ///
+    /// Returns number of entries built per index.
     fn update_indexes_for_on_disk_entries(&mut self) -> crate::Result<()> {
         let result = self.update_indexes_for_on_disk_entries_unchecked();
         self.maybe_set_index_error(result)
@@ -1031,15 +1037,20 @@ impl Log {
 
     fn update_indexes_for_on_disk_entries_unchecked(&mut self) -> crate::Result<()> {
         // It's a programming error to call this when mem_buf is not empty.
-        assert!(self.mem_buf.is_empty());
-        for (index, def) in self.indexes.iter_mut().zip(&self.open_options.index_defs) {
-            Self::update_index_for_on_disk_entry_unchecked(
+        for (i, (index, def)) in self
+            .indexes
+            .iter_mut()
+            .zip(&self.open_options.index_defs)
+            .enumerate()
+        {
+            let count = Self::update_index_for_on_disk_entry_unchecked(
                 &self.dir,
                 index,
                 def,
                 &self.disk_buf,
                 self.meta.primary_len,
             )?;
+            self.index_lags[i] += count;
         }
         Ok(())
     }
@@ -1050,9 +1061,11 @@ impl Log {
         def: &IndexDef,
         disk_buf: &Bytes,
         primary_len: u64,
-    ) -> crate::Result<()> {
+    ) -> crate::Result<usize> {
         // The index meta is used to store the next offset the index should be built.
         let mut offset = Self::get_index_log_len(index)?;
+        // How many times the index function gets called?
+        let mut count = 0;
         // PERF: might be worthwhile to cache xxhash verification result.
         while let Some(entry_result) =
             Self::read_entry_from_buf(&path, disk_buf, offset).context(|| {
@@ -1062,6 +1075,7 @@ impl Log {
                 )
             })?
         {
+            count += 1;
             let data = entry_result.data;
             for index_output in (def.func)(data) {
                 match index_output {
@@ -1090,7 +1104,7 @@ impl Log {
         // The index now contains all entries. Write "next_offset" as the index meta.
         Self::set_index_log_len(std::iter::once(index), primary_len);
 
-        Ok(())
+        Ok(count)
     }
 
     /// Read [`LogMetadata`] from the given directory. If `create` is `true`,
@@ -1164,12 +1178,16 @@ impl Log {
     /// If `reuse_indexes` is not None, they are existing indexes that match `index_defs`
     /// order. This should only be used in `sync` code path when the on-disk `meta` matches
     /// the in-memory `meta`. Otherwise it is not a sound use.
+    ///
+    /// The indexes loaded by this function can be lagging.
+    /// Use `update_indexes_for_on_disk_entries` to update them.
     fn load_log_and_indexes(
         dir: &GenericPath,
         meta: &LogMetadata,
         index_defs: &[IndexDef],
         mem_buf: &Pin<Box<Vec<u8>>>,
         reuse_indexes: Option<&Vec<Index>>,
+        index_lags: &mut Vec<usize>,
         fsync: bool,
     ) -> crate::Result<(Bytes, Vec<Index>)> {
         let primary_buf = match dir.as_opt_path() {
@@ -1189,7 +1207,10 @@ impl Log {
             None => {
                 // No indexes are reused, reload them.
                 let mut indexes = Vec::with_capacity(index_defs.len());
-                for def in index_defs.iter() {
+                for (i, def) in index_defs.iter().enumerate() {
+                    // Re-calculate index_lag since the index is freshly loaded
+                    // without any pending entries.
+                    index_lags[i] = 0;
                     let index_len = meta.indexes.get(&def.metaname()).cloned().unwrap_or(0);
                     indexes.push(Self::load_index(
                         dir,
@@ -1203,14 +1224,19 @@ impl Log {
             }
             Some(indexes) => {
                 assert_eq!(index_defs.len(), indexes.len());
+                assert_eq!(index_lags.len(), indexes.len());
                 let mut new_indexes = Vec::with_capacity(indexes.len());
                 // Avoid reloading the index from disk.
                 // Update their ExternalKeyBuffer so they have the updated meta.primary_len.
-                for (index, def) in indexes.iter().zip(index_defs) {
+                for (i, (index, def)) in indexes.iter().zip(index_defs).enumerate() {
                     let index_len = meta.indexes.get(&def.metaname()).cloned().unwrap_or(0);
                     let index = if index_len > Self::get_index_log_len(index).unwrap_or(0) {
                         // The on-disk index covers more entries. Loading it is probably
                         // better than reusing the existing in-memory index.
+                        //
+                        // Re-calculate index_lag since the index is freshly loaded
+                        // without any pending entries.
+                        index_lags[i] = 0;
                         Self::load_index(dir, &def, index_len, key_buf.clone(), fsync)?
                     } else {
                         let mut index = index.try_clone()?;
@@ -1231,6 +1257,7 @@ impl Log {
     }
 
     /// Load a single index.
+    /// Callsites should set related index_lag to 0.
     fn load_index(
         dir: &GenericPath,
         def: &IndexDef,

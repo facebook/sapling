@@ -189,7 +189,7 @@ fn test_iter_and_iter_dirty() {
     );
 }
 
-fn get_index_defs(lag_threshold: u64) -> Vec<IndexDef> {
+fn get_index_defs(lag_threshold: usize) -> Vec<IndexDef> {
     // Two index functions. First takes every 2 bytes as references. The second takes every 3
     // bytes as owned slices.
     // Keys starting with '-' are considered as "deletion" requests.
@@ -287,9 +287,9 @@ fn test_slice_to_bytes() {
 fn test_index_manual() {
     // Test index lookups with these combinations:
     // - Index key: Reference and Owned.
-    // - Index lag_threshold: 0, 20, 1000.
+    // - Index lag_threshold: 0, 1, ....
     // - Entries: Mixed on-disk and in-memory ones.
-    for lag in [0u64, 20, 1000].iter().cloned() {
+    for lag in [0usize, 1, 2, 5, 1000].iter().cloned() {
         let dir = tempdir().unwrap();
         let mut log = Log::open(dir.path(), get_index_defs(lag)).unwrap();
         let entries: [&[u8]; 7] = [b"1", b"", b"2345", b"", b"78", b"3456", b"35"];
@@ -519,6 +519,40 @@ fn test_index_func() {
 }
 
 #[test]
+fn test_index_lag_threshold() {
+    for lag in vec![0, 1, 2, 5, 8] {
+        let dir = tempdir().unwrap();
+        let def = IndexDef::new("a", |_| vec![IndexOutput::Reference(0..1)]).lag_threshold(lag);
+        let index_filename = def.filename();
+        let open_opts = OpenOptions::new().create(true).index_defs(vec![def]);
+        let get_index_size = || -> u64 {
+            let index_path = dir.path().join(&index_filename);
+            index_path.metadata().map(|m| m.len()).unwrap_or(0)
+        };
+        let mut unindexed_entries = 0;
+        let mut log = open_opts.open(dir.path()).unwrap();
+        for i in 0..100 {
+            let index_size_before = get_index_size();
+            if i % 3 == 0 {
+                // This is optional, but makes the test more interesting.
+                log = open_opts.open(dir.path()).unwrap();
+            }
+            log.append(&vec![i as u8; (i + 1) as usize]).unwrap();
+            log.sync().unwrap();
+            let index_size_after = get_index_size();
+            let index_should_change = unindexed_entries >= lag;
+            if index_should_change {
+                unindexed_entries = 0;
+            } else {
+                unindexed_entries += 1;
+            }
+            let index_changed = index_size_after != index_size_before;
+            assert_eq!(index_should_change, index_changed);
+        }
+    }
+}
+
+#[test]
 fn test_flush_filter() {
     let dir = tempdir().unwrap();
 
@@ -564,7 +598,7 @@ fn test_flush_filter() {
 }
 
 /// Get a `Log` with index defined on first 8 bytes.
-fn log_with_index(path: &Path, lag: u64) -> Log {
+fn log_with_index(path: &Path, lag: usize) -> Log {
     let index_func = |_data: &[u8]| vec![IndexOutput::Reference(0..8)];
     let index_def = IndexDef::new("i", index_func).lag_threshold(lag);
     Log::open(path, vec![index_def]).unwrap()
@@ -831,7 +865,10 @@ fn test_repair_and_delete_content() {
     let path = dir.path();
     let open_opts = OpenOptions::new()
         .create(true)
-        .index("c", |_| vec![IndexOutput::Reference(0..1)]);
+        .index_defs(vec![IndexDef::new("c", |_| {
+            vec![IndexOutput::Reference(0..1)]
+        })
+        .lag_threshold(1)]);
 
     let long_lived_log = RefCell::new(open_opts.open(()).unwrap());
     let open = || open_opts.open(path);
