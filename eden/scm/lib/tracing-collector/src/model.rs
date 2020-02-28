@@ -817,6 +817,7 @@ struct TreeSpan {
     duration: u64,
     children: Vec<TreeSpanId>,
     call_count: usize,
+    is_event: bool,
 }
 type TreeSpanId = usize;
 
@@ -1051,8 +1052,6 @@ impl TracingData {
                 .or_default()
                 .process(e.action, eid);
         }
-        // NOTE: This does not handle incomplete (Enter without Exit). Consider
-        // force closing the spans somehow?
 
         // To make the Rust borrowck happy, use another Vec for all TreeSpans,
         // and refer to other TreeSpans using Vec indexes.
@@ -1114,6 +1113,7 @@ impl TracingData {
                             duration: end.timestamp.0 - e.timestamp.0,
                             children: Vec::new(),
                             call_count: 1,
+                            is_event: false,
                         }
                     } else {
                         // No matched ExitSpan. Still create a TreeSpan
@@ -1124,6 +1124,7 @@ impl TracingData {
                             duration: TreeSpan::incomplete_duration(),
                             children: Vec::new(),
                             call_count: 1,
+                            is_event: false,
                         }
                     };
 
@@ -1133,8 +1134,16 @@ impl TracingData {
                     // Handled in EnterSpan. Therefore do nothing here.
                 }
                 Action::Event => {
-                    // NOTE: Consider implementing this in some way.
-                    // Potentially in another function (?)
+                    // This is similar to EnterSpan + ExitSpan immediately.
+                    let tree_span = TreeSpan {
+                        espan_id: Some(span_id),
+                        start_time: e.timestamp.0,
+                        duration: 0,
+                        children: Vec::new(),
+                        call_count: 1,
+                        is_event: true,
+                    };
+                    append(tree_span);
                 }
             }
         }
@@ -1269,7 +1278,9 @@ impl TracingData {
                     }
                 };
                 let start = tree_span.start_time / 1000;
-                let duration = if tree_span.is_incomplete() {
+                let duration = if tree_span.is_event {
+                    "0".to_string()
+                } else if tree_span.is_incomplete() {
                     "...".to_string()
                 } else {
                     // Use milliseconds. This is consistent with traceprof.
@@ -1659,6 +1670,32 @@ Start Dur.ms | Name               Source
     8     +6   | foo              a.py line 10
    24    +10  \ foo               a.py line 10
    26     +4   | foo (2 times)    a.py line 10
+
+"#
+        );
+    }
+
+    #[test]
+    fn test_mixed_span_events() {
+        let mut data = TracingData::new_for_test();
+        let span_id1 = data.add_espan(&meta("foo", "a.py", "10"), None);
+        let span_id2 = data.add_espan(&meta("bar", "a.py", "20"), None);
+
+        data.add_action(span_id1, Action::EnterSpan);
+        data.add_action(span_id2, Action::Event);
+        data.add_action(span_id2, Action::Event);
+        data.add_action(span_id1, Action::Event);
+        data.add_action(span_id1, Action::ExitSpan);
+
+        let opts = AsciiOptions::default();
+        assert_eq!(
+            data.ascii(&opts),
+            r#"Process _ Thread _:
+Start Dur.ms | Name               Source
+    2     +8 | foo                a.py line 10
+    4      0  \ bar               a.py line 20
+    6      0  \ bar               a.py line 20
+    8      0  \ foo               a.py line 10
 
 "#
         );
