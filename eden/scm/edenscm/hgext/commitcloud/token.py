@@ -59,9 +59,10 @@ class TokenLocator(object):
                 isbackedup = True
             except Exception:
                 pass
-        with self.vfs.open(self.filename, "w") as configfile:
+        with self.vfs.open(self.filename, "wb") as configfile:
             configfile.write(
-                "[commitcloud]\nuser_token=%s\nbackedup=%s\n" % (token, isbackedup)
+                b"[commitcloud]\nuser_token=%s\nbackedup=%s\n"
+                % (pycompat.encodeutf8(token), pycompat.encodeutf8(str(isbackedup)))
             )
 
     def _gettokenfromsecretstool(self):

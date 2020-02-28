@@ -3,7 +3,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-from edenscm.mercurial import config, error, util
+from edenscm.mercurial import config, error, pycompat, util
 from edenscm.mercurial.i18n import _
 
 
@@ -117,11 +117,17 @@ def disconnected(repo):
 
 def setworkspace(repo, workspace):
     """Sets the currently connected workspace."""
-    with repo.wlock(), repo.lock(), repo.svfs.open(filename, "w", atomictemp=True) as f:
-        f.write("[commitcloud]\ncurrent_workspace=%s\n" % workspace)
+    with repo.wlock(), repo.lock(), repo.svfs.open(
+        filename, "wb", atomictemp=True
+    ) as f:
+        f.write(
+            b"[commitcloud]\ncurrent_workspace=%s\n" % pycompat.encodeutf8(workspace)
+        )
 
 
 def clearworkspace(repo):
     """Clears the currently connected workspace."""
-    with repo.wlock(), repo.lock(), repo.svfs.open(filename, "w", atomictemp=True) as f:
-        f.write("[commitcloud]\ndisconnected=true\n")
+    with repo.wlock(), repo.lock(), repo.svfs.open(
+        filename, "wb", atomictemp=True
+    ) as f:
+        f.write(b"[commitcloud]\ndisconnected=true\n")

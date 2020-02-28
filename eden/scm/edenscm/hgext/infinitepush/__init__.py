@@ -116,6 +116,7 @@ from edenscm.mercurial import (
     error,
     extensions,
     node as nodemod,
+    pycompat,
     util,
 )
 from edenscm.mercurial.i18n import _
@@ -173,14 +174,14 @@ def _createbundler(ui, repo, other):
     # Disallow pushback because we want to avoid taking repo locks.
     # And we don't need pushback anyway
     capsblob = bundle2.encodecaps(bundle2.getrepocaps(repo, allowpushback=False))
-    bundler.newpart("replycaps", data=capsblob)
+    bundler.newpart("replycaps", data=pycompat.encodeutf8(capsblob))
     return bundler
 
 
 def _sendbundle(bundler, other):
     stream = util.chunkbuffer(bundler.getchunks())
     try:
-        reply = other.unbundle(stream, ["force"], other.url())
+        reply = other.unbundle(stream, [b"force"], other.url())
         # Look for an error part in the response.  Note that we don't apply
         # the reply bundle, as we're not expecting any response, except maybe
         # an error.  If we receive any extra parts, that is an error.

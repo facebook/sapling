@@ -704,7 +704,7 @@ def _mergebookmarks(repo, tr, cloudbookmarks, lastsyncstate):
     localbookmarks = _getbookmarks(repo)
     omittedbookmarks = set(lastsyncstate.omittedbookmarks)
     changes = []
-    allnames = set(localbookmarks.keys() + cloudbookmarks.keys())
+    allnames = set(list(localbookmarks.keys()) + list(cloudbookmarks.keys()))
     newnames = set()
     for name in allnames:
         # We are doing a 3-way diff between the local bookmark and the cloud

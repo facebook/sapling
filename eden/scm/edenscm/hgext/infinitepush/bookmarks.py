@@ -110,7 +110,7 @@ def encodebookmarks(bookmarks):
     encoded = {}
     for bookmark, node in pycompat.iteritems(bookmarks):
         encoded[bookmark] = node
-    dumped = json.dumps(encoded)
+    dumped = pycompat.encodeutf8(json.dumps(encoded))
     result = struct.pack(">i", len(dumped)) + dumped
     return result
 
@@ -123,7 +123,5 @@ def decodebookmarks(stream):
     # it back to bytes string
     result = {}
     for bookmark, node in pycompat.iteritems(unicodedict):
-        bookmark = bookmark.encode("ascii")
-        node = node.encode("ascii")
         result[bookmark] = node
     return result
