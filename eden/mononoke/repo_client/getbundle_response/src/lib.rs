@@ -51,6 +51,7 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use revset::DifferenceOfUnionsOfAncestorsNodeStream;
 use slog::debug;
+use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
     iter::FromIterator,
@@ -60,6 +61,13 @@ use std::{
 mod errors;
 
 pub const MAX_FILENODE_BYTES_IN_MEMORY: u64 = 100_000_000;
+
+define_stats! {
+    prefix = "mononoke.getbundle_response";
+    manifests_returned: dynamic_timeseries("manifests_returned.{}", (reponame: String); Rate, Sum),
+    filenodes_returned: dynamic_timeseries("filenodes_returned.{}", (reponame: String); Rate, Sum),
+    filenodes_weight: dynamic_timeseries("filesnodes_weight.{}", (reponame: String); Rate, Sum),
+}
 
 #[derive(PartialEq, Eq)]
 pub enum PhasesPart {
@@ -81,6 +89,7 @@ pub enum DraftsInBundlesPolicy {
 pub async fn create_getbundle_response(
     ctx: CoreContext,
     blobrepo: BlobRepo,
+    reponame: String,
     common: Vec<HgChangesetId>,
     heads: Vec<HgChangesetId>,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
@@ -134,6 +143,7 @@ pub async fn create_getbundle_response(
                 let (manifests, filenodes) =
                     get_manifests_and_filenodes(&ctx, &blobrepo, draft_hg_cs_ids, &lfs_params)
                         .await?;
+                report_manifests_and_filenodes(&ctx, reponame, manifests.len(), filenodes.iter());
                 (Some(manifests), Some(filenodes))
             } else {
                 (None, None)
@@ -187,6 +197,50 @@ fn report_draft_commits<'a, I: IntoIterator<Item = &'a (HgChangesetId, HgPhase)>
     );
     ctx.perf_counters()
         .add_to_counter(PerfCounterType::GetbundleNumDrafts, num_drafts as i64);
+}
+
+fn report_manifests_and_filenodes<
+    'a,
+    FIter: IntoIterator<Item = (&'a MPath, &'a Vec<PreparedFilenodeEntry>)>,
+>(
+    ctx: &CoreContext,
+    reponame: String,
+    num_manifests: usize,
+    filenodes: FIter,
+) {
+    let mut num_filenodes: i64 = 0;
+    let mut total_filenodes_weight: i64 = 0;
+    for filenode in filenodes {
+        num_filenodes += filenode.1.len() as i64;
+        let total_weight_for_mpath = filenode
+            .1
+            .iter()
+            .fold(0, |acc, item| acc + item.entry_weight_hint);
+        total_filenodes_weight += total_weight_for_mpath as i64;
+    }
+
+    debug!(
+        ctx.logger(),
+        "Getbundle returning {} manifests", num_manifests
+    );
+    ctx.perf_counters()
+        .add_to_counter(PerfCounterType::GetbundleNumManifests, num_manifests as i64);
+    STATS::manifests_returned.add_value(num_manifests as i64, (reponame.clone(),));
+
+    debug!(
+        ctx.logger(),
+        "Getbundle returning {} filenodes with total size {} bytes",
+        num_filenodes,
+        total_filenodes_weight
+    );
+    ctx.perf_counters()
+        .add_to_counter(PerfCounterType::GetbundleNumFilenodes, num_filenodes);
+    ctx.perf_counters().add_to_counter(
+        PerfCounterType::GetbundleFilenodesTotalWeight,
+        total_filenodes_weight,
+    );
+    STATS::filenodes_returned.add_value(num_filenodes, (reponame.clone(),));
+    STATS::filenodes_weight.add_value(total_filenodes_weight, (reponame,));
 }
 
 async fn derive_filenodes_for_public_heads(

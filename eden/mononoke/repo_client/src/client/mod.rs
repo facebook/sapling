@@ -375,6 +375,7 @@ impl RepoClient {
     fn create_bundle(&self, ctx: CoreContext, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
         let lfs_params = self.repo.lfs_params().clone();
         let blobrepo = self.repo.blobrepo().clone();
+        let reponame = self.repo.reponame().clone();
         let mut bundle2_parts = vec![];
 
         let GetbundleArgs {
@@ -412,6 +413,7 @@ impl RepoClient {
             create_getbundle_response(
                 ctx.clone(),
                 blobrepo.clone(),
+                reponame,
                 common,
                 heads,
                 lca_hint,
@@ -1415,11 +1417,12 @@ impl HgCommands for RepoClient {
                         }
                     }
                 }).and_then({
-                    cloned!(ctx);
+                    cloned!(ctx, reponame);
                     move |response| {
                         response.generate_bytes(
                             ctx,
                             blobrepo,
+                            reponame,
                             pushrebase_params,
                             lca_hint,
                             lfs_params,
