@@ -9,7 +9,7 @@
 #![feature(never_type)]
 
 use anyhow::Error;
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use mercurial_types::{
     blobs::{filenode_lookup::FileNodeIdPointer, File, LFSContent, META_MARKER, META_SZ},
     nodehash::{HgChangesetId, HgNodeHash},
@@ -203,25 +203,36 @@ fn test_parse_to_hash_map_long_delimiter() {
     )
 }
 
+fn check_meta_roundtrip(file: &[u8], meta: &[u8]) {
+    let mut buff = BytesMut::new();
+    buff.extend_from_slice(meta);
+    buff.extend_from_slice(file);
+    let f = File::new(buff.freeze(), None, None);
+    assert_eq!(f.content(), file);
+    assert_eq!(f.metadata(), meta);
+}
+
 #[test]
 fn generate_metadata_0() {
     const FILE_BYTES: &[u8] = b"foobar";
     let file_bytes = FileBytes(Bytes::from(FILE_BYTES));
-    let mut out: Vec<u8> = vec![];
-    File::generate_metadata(None, &file_bytes, &mut out).expect("Vec::write_all should succeed");
-    assert_eq!(out.as_slice(), &b""[..]);
+    let mut meta: Vec<u8> = vec![];
+    File::generate_metadata(None, &file_bytes, &mut meta).expect("Vec::write_all should succeed");
+    assert_eq!(meta.as_slice(), &b""[..]);
+    check_meta_roundtrip(FILE_BYTES, &meta);
 
-    let mut out: Vec<u8> = vec![];
+    let mut meta: Vec<u8> = vec![];
     File::generate_metadata(
         Some(&(MPath::new("foo").unwrap(), nodehash::ONES_FNID)),
         &file_bytes,
-        &mut out,
+        &mut meta,
     )
     .expect("Vec::write_all should succeed");
     assert_eq!(
-        out.as_slice(),
+        meta.as_slice(),
         &b"\x01\ncopy: foo\ncopyrev: 1111111111111111111111111111111111111111\n\x01\n"[..]
     );
+    check_meta_roundtrip(FILE_BYTES, &meta);
 }
 
 #[test]
@@ -229,21 +240,23 @@ fn generate_metadata_1() {
     // The meta marker in the beginning should cause metadata to unconditionally be emitted.
     const FILE_BYTES: &[u8] = b"\x01\nfoobar";
     let file_bytes = FileBytes(Bytes::from(FILE_BYTES));
-    let mut out: Vec<u8> = vec![];
-    File::generate_metadata(None, &file_bytes, &mut out).expect("Vec::write_all should succeed");
-    assert_eq!(out.as_slice(), &b"\x01\n\x01\n"[..]);
+    let mut meta: Vec<u8> = vec![];
+    File::generate_metadata(None, &file_bytes, &mut meta).expect("Vec::write_all should succeed");
+    assert_eq!(meta.as_slice(), &b"\x01\n\x01\n"[..]);
+    check_meta_roundtrip(FILE_BYTES, &meta);
 
-    let mut out: Vec<u8> = vec![];
+    let mut meta: Vec<u8> = vec![];
     File::generate_metadata(
         Some(&(MPath::new("foo").unwrap(), nodehash::ONES_FNID)),
         &file_bytes,
-        &mut out,
+        &mut meta,
     )
     .expect("Vec::write_all should succeed");
     assert_eq!(
-        out.as_slice(),
+        meta.as_slice(),
         &b"\x01\ncopy: foo\ncopyrev: 1111111111111111111111111111111111111111\n\x01\n"[..]
     );
+    check_meta_roundtrip(FILE_BYTES, &meta);
 }
 
 #[test]
