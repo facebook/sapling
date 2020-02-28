@@ -74,10 +74,14 @@ impl ResolvedNode {
     }
 }
 
-pub trait WalkVisitor<VOut> {
+pub trait WalkVisitor<VOut, Route> {
     // This can mutate the internal state.  Takes ownership and returns data, plus next step
-    fn visit(&self, source: ResolvedNode, outgoing: Vec<OutgoingEdge>)
-        -> (VOut, Vec<OutgoingEdge>);
+    fn visit(
+        &self,
+        source: ResolvedNode,
+        route: Option<Route>,
+        outgoing: Vec<OutgoingEdge>,
+    ) -> (VOut, Route, Vec<OutgoingEdge>);
 }
 
 // Data found for this node, plus next steps
@@ -512,7 +516,7 @@ pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
 }
 
 /// Walk the graph from one or more starting points,  providing stream of data for later reduction
-pub fn walk_exact<V, VOut>(
+pub fn walk_exact<V, VOut, Route>(
     ctx: CoreContext,
     repo: BlobRepo,
     enable_derive: bool,
@@ -524,12 +528,14 @@ pub fn walk_exact<V, VOut>(
     scuba: ScubaSampleBuilder,
 ) -> BoxStream<'static, Result<VOut, Error>>
 where
-    V: 'static + Clone + WalkVisitor<VOut> + Send,
+    V: 'static + Clone + WalkVisitor<VOut, Route> + Send,
     VOut: 'static + Send,
+    Route: 'static + Send + Clone,
 {
     // record the roots so the stats add up
     visitor.visit(
         ResolvedNode::new(Node::Root, NodeData::Root, None),
+        None,
         walk_roots.clone(),
     );
 
@@ -547,11 +553,15 @@ where
         .collect_to::<HashMap<BookmarkName, ChangesetId>>()
         .compat();
 
+    // Roots were not stepped to from elsewhere, so their Option<Route> is None.
+    let walk_roots: Vec<(Option<Route>, OutgoingEdge)> =
+        walk_roots.into_iter().map(|e| (None, e)).collect();
+
     public_heads
         .map_ok(move |public_heads| {
             let public_heads = Arc::new(public_heads);
             bounded_traversal_stream(scheduled_max, walk_roots, {
-                move |walk_item| {
+                move |(via, walk_item)| {
                     cloned!(
                         ctx,
                         error_as_data_node_types,
@@ -565,6 +575,7 @@ where
                     async move {
                         let next = walk_one(
                             ctx,
+                            via,
                             walk_item,
                             repo,
                             enable_derive,
@@ -592,8 +603,9 @@ where
         .boxed()
 }
 
-async fn walk_one<V, VOut>(
+async fn walk_one<V, VOut, Route>(
     ctx: CoreContext,
+    via: Option<Route>,
     walk_item: OutgoingEdge,
     repo: BlobRepo,
     enable_derive: bool,
@@ -603,10 +615,11 @@ async fn walk_one<V, VOut>(
     mut scuba: ScubaSampleBuilder,
     public_heads: Arc<HashMap<BookmarkName, ChangesetId>>,
     heads_fetcher: HeadsFetcher,
-) -> Result<(VOut, Vec<OutgoingEdge>), Error>
+) -> Result<(VOut, Vec<(Option<Route>, OutgoingEdge)>), Error>
 where
-    V: 'static + Clone + WalkVisitor<VOut> + Send,
+    V: 'static + Clone + WalkVisitor<VOut, Route> + Send,
     VOut: 'static + Send,
+    Route: 'static + Send + Clone,
 {
     let logger = ctx.logger().clone();
     let node = walk_item.target.clone();
@@ -721,8 +734,14 @@ where
             // Allow WalkVisitor to record state and decline outgoing nodes if already visited
             Ok(visitor.visit(
                 ResolvedNode::new(node, node_data, Some(edge_label)),
+                via,
                 children,
             ))
+            .map(|(vout, via, next)| {
+                let via = Some(via);
+                let next = next.into_iter().map(|e| (via.clone(), e)).collect();
+                (vout, next)
+            })
         }
     }
 }

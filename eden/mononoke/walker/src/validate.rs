@@ -190,13 +190,15 @@ struct CheckData {
     stats: CheckStats,
 }
 
-impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>)> for ValidatingVisitor {
+impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ()> for ValidatingVisitor {
     fn visit(
         &self,
         current: ResolvedNode,
+        route: Option<()>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (
         (Node, Option<CheckData>, Option<StepStats>),
+        (),
         Vec<OutgoingEdge>,
     ) {
         let checks_to_do: Option<&HashSet<_>> =
@@ -236,7 +238,8 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>)> for ValidatingVis
         );
 
         // Call inner after checks. otherwise it will prune outgoing edges we wanted to check.
-        let ((node, _opt_data, opt_stats), outgoing) = self.inner.visit(current, outgoing);
+        let ((node, _opt_data, opt_stats), next_via, outgoing) =
+            self.inner.visit(current, route, outgoing);
 
         let vout = (
             node,
@@ -254,7 +257,7 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>)> for ValidatingVis
             },
             opt_stats,
         );
-        (vout, outgoing)
+        (vout, next_via, outgoing)
     }
 }
 

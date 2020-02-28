@@ -26,7 +26,7 @@ pub struct RepoWalkRun {
     pub scuba_builder: ScubaSampleBuilder,
 }
 
-pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, WS, VOut>(
+pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, WS, VOut, Route>(
     fb: FacebookInit,
     logger: Logger,
     datasources: RepoWalkDatasources,
@@ -38,8 +38,9 @@ where
     RunFac: 'static + Clone + Send + Sync + FnOnce(RepoWalkRun) -> SinkFac,
     SinkFac: 'static + FnOnce(BoxStream<'static, Result<VOut, Error>>) -> SinkOut + Clone + Send,
     SinkOut: Future<Output = Result<(), Error>> + 'static + Send,
-    WS: 'static + Clone + WalkVisitor<VOut> + Send,
+    WS: 'static + Clone + WalkVisitor<VOut, Route> + Send,
     VOut: 'static + Send,
+    Route: 'static + Send + Clone,
 {
     let scuba_builder = datasources.scuba_builder;
     let repo = datasources.blobrepo.await?;

@@ -146,13 +146,15 @@ impl WalkStateCHashMap {
     }
 }
 
-impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>)> for WalkStateCHashMap {
+impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), ()> for WalkStateCHashMap {
     fn visit(
         &self,
         source: ResolvedNode,
+        _route: Option<()>,
         mut outgoing: Vec<OutgoingEdge>,
     ) -> (
         (Node, Option<NodeData>, Option<StepStats>),
+        (),
         Vec<OutgoingEdge>,
     ) {
         // Filter things we don't want to enter the WalkVisitor at all.
@@ -184,7 +186,7 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>)> for WalkStateCHash
             visited_of_type: self.get_visit_count(&node.get_type()),
         });
 
-        ((node, node_data, stats), outgoing)
+        ((node, node_data, stats), (), outgoing)
     }
 }
 
@@ -209,16 +211,17 @@ impl<Inner> Clone for WalkState<Inner> {
     }
 }
 
-impl<Inner, VOut> WalkVisitor<VOut> for WalkState<Inner>
+impl<Inner, VOut, Route> WalkVisitor<VOut, Route> for WalkState<Inner>
 where
-    Inner: WalkVisitor<VOut>,
+    Inner: WalkVisitor<VOut, Route>,
     VOut: Send,
 {
     fn visit(
         &self,
         current: ResolvedNode,
+        route: Option<Route>,
         outgoing_edge: Vec<OutgoingEdge>,
-    ) -> (VOut, Vec<OutgoingEdge>) {
-        self.inner.visit(current, outgoing_edge)
+    ) -> (VOut, Route, Vec<OutgoingEdge>) {
+        self.inner.visit(current, route, outgoing_edge)
     }
 }
