@@ -153,9 +153,7 @@ impl NewFilenodesBuilder {
                     Some(shard_id),
                     port,
                     read_service_type,
-                    // NOTE: We use for_regular_connection here, but we only use a small number of
-                    // connections since they're semaphored under the hood.
-                    PoolSizeConfig::for_regular_connection(),
+                    PoolSizeConfig::for_sharded_connection(),
                     "shardedfilenodes".into(),
                     readonly,
                 ))
