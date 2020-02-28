@@ -1063,6 +1063,33 @@ impl TracingData {
         // Keep a stack of TreeSpans to figure out parents.
         let mut stack: Vec<TreeSpanId> = vec![0];
 
+        // Append a span to the list. Attach it to the "correct" parent span.
+        let mut append = |tree_span| {
+            // Find a suitable parent span. Pop parent spans
+            // if this span does not fit in it.
+            //
+            // But, always keep the (dummy) root parent span.
+            let parent_id = loop {
+                let parent_id = *stack.last().unwrap();
+                let parent = &tree_spans[parent_id];
+                if parent.covers(&tree_span) {
+                    break parent_id;
+                } else if stack.len() == 1 {
+                    // Use the root span as parent.
+                    break 0;
+                } else {
+                    stack.pop();
+                }
+            };
+
+            // Record the new TreeSpan and record parent-child
+            // relationship.
+            let id = tree_spans.len();
+            tree_spans.push(tree_span);
+            stack.push(id);
+            tree_spans[parent_id].children.push(id);
+        };
+
         // Scan through the `Eventus` list. For any `EnterSpan` action, try
         // to find the matching `ExitSpan` action and create a span with a
         // proper parent.
@@ -1100,29 +1127,7 @@ impl TracingData {
                         }
                     };
 
-                    // Find a suitable parent span. Pop parent spans
-                    // if this span does not fit in it.
-                    //
-                    // But, always keep the (dummy) root parent span.
-                    let parent_id = loop {
-                        let parent_id = *stack.last().unwrap();
-                        let parent = &tree_spans[parent_id];
-                        if parent.covers(&tree_span) {
-                            break parent_id;
-                        } else if stack.len() == 1 {
-                            // Use the root span as parent.
-                            break 0;
-                        } else {
-                            stack.pop();
-                        }
-                    };
-
-                    // Record the new TreeSpan and record parent-child
-                    // relationship.
-                    let id = tree_spans.len();
-                    tree_spans.push(tree_span);
-                    stack.push(id);
-                    tree_spans[parent_id].children.push(id);
+                    append(tree_span);
                 }
                 Action::ExitSpan => {
                     // Handled in EnterSpan. Therefore do nothing here.
