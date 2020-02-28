@@ -7,8 +7,6 @@ from edenscm.mercurial.context import _annotatepair, annotateline
 from hghave import require
 
 
-require(["py2"])
-
 try:
     xrange(0)
 except NameError:
@@ -21,8 +19,8 @@ class AnnotateTests(unittest.TestCase):
     def testannotatepair(self):
         self.maxDiff = None  # camelcase-required
 
-        oldfctx = b"old"
-        p1fctx, p2fctx, childfctx = b"p1", b"p2", b"c"
+        oldfctx = "old"
+        p1fctx, p2fctx, childfctx = "p1", "p2", "c"
         olddata = b"a\nb\n"
         p1data = b"a\nb\nc\n"
         p2data = b"a\nc\nd\n"

@@ -508,10 +508,10 @@ def annotate(ui, repo, *pats, **opts):
             fm.startitem()
             sep = "* " if l[0].skip else ": "
             fm.write(fields, "".join(f) + sep, *p, label="blame.age." + a)
-            fm.writebytes("line", b"%s", l[1])
+            fm.write("line", "%s", pycompat.decodeutf8(l[1], errors="replace"))
 
         if not lines[-1][1].endswith(b"\n"):
-            fm.plainbytes(b"\n")
+            fm.plain("\n")
         fm.end()
 
     rootfm.end()
