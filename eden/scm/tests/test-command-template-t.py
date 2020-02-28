@@ -2017,10 +2017,6 @@ sh % "hg log -l1 --template '{date|age}\\n'" == "7 years from now"
 
 sh % "cd .."
 
-if os.name != "nt":
-    # FIXME: Windows has difficulity deleting 'unstable-hash\\.hg\\blackbox\\v1\\0\\index-session_id'
-    sh % "rm -rf unstable-hash"
-
 # Add a dummy commit to make up for the instability of the above:
 
 sh % "echo a" > "a"

@@ -40,10 +40,10 @@ When everything looks okay:
 Break the repo in various ways:
 
   $ echo x > $TESTTMP/hgcache/master/indexedlogdatastore/latest
-  $ echo y > $TESTTMP/hgcache/master/indexedlogdatastore/0/index-node.sum
+  $ echo y > $TESTTMP/hgcache/master/indexedlogdatastore/0/index2-node.sum
   $ mkdir -p .hg/store/mutation/
   $ echo v > .hg/store/mutation/log
-  $ echo xx > .hg/store/metalog/blobs/index-id
+  $ echo xx > .hg/store/metalog/blobs/index2-id
   $ echo xx > .hg/store/metalog/roots/meta
   $ rm .hg/store/allheads/meta
 

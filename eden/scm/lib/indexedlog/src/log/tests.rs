@@ -336,11 +336,11 @@ fn test_index_mark_corrupt() {
     // Corrupt an index. Backup its content.
     let backup = {
         let mut buf = Vec::new();
-        let size = File::open(dir.path().join("index-x"))
+        let size = File::open(dir.path().join("index2-x"))
             .unwrap()
             .read_to_end(&mut buf)
             .unwrap();
-        let mut index_file = File::create(dir.path().join("index-x")).unwrap();
+        let mut index_file = File::create(dir.path().join("index2-x")).unwrap();
         index_file.write_all(&vec![0; size]).expect("write");
         buf
     };
@@ -349,7 +349,7 @@ fn test_index_mark_corrupt() {
     assert!(log.append(b"new").is_err());
 
     // Then index lookups will return errors. Even if its content is restored.
-    let mut index_file = File::create(dir.path().join("index-x")).unwrap();
+    let mut index_file = File::create(dir.path().join("index2-x")).unwrap();
     index_file.write_all(&backup).expect("write");
     assert!(log.lookup(1, b"23").is_err());
 }
@@ -646,7 +646,7 @@ fn test_rebuild_indexes() {
 
     let dump_index = || {
         let index = index::OpenOptions::new()
-            .open(dir.path().join("index-key"))
+            .open(dir.path().join("index2-key"))
             .unwrap();
         format!("{:?}", index)
     };
@@ -792,7 +792,7 @@ fn test_repair_and_delete_content() {
     let corrupt = |name: &str, offset: i64| pwrite(&path.join(name), offset, b"cc");
     let truncate = |name: &str| fs::write(path.join(name), "garbage").unwrap();
     let delete = |name: &str| fs::remove_file(path.join(name)).unwrap();
-    let index_file = format!("{}c", INDEX_FILE_PREFIX);
+    let index_file = "index2-c";
     let append = || {
         let mut log = open().unwrap();
         log.append(&[b'x'; 50_000][..]).unwrap();

@@ -70,7 +70,6 @@ pub(crate) const PRIMARY_FILE: &str = "log";
 const PRIMARY_HEADER: &[u8] = b"indexedlog0\0";
 const PRIMARY_START_OFFSET: u64 = 12; // PRIMARY_HEADER.len() as u64;
 pub(crate) const META_FILE: &str = "meta";
-const INDEX_FILE_PREFIX: &str = "index-";
 
 const ENTRY_FLAG_HAS_XXHASH64: u32 = 1;
 const ENTRY_FLAG_HAS_XXHASH32: u32 = 2;
@@ -574,7 +573,7 @@ impl Log {
                 .iter()
                 .enumerate()
                 .filter(|&(_i, def)| {
-                    let indexed = self.meta.indexes.get(def.name).cloned().unwrap_or(0);
+                    let indexed = self.meta.indexes.get(&def.metaname()).cloned().unwrap_or(0);
                     indexed.saturating_add(def.lag_threshold) < meta.primary_len
                 })
                 .map(|(i, _def)| i)
@@ -613,7 +612,7 @@ impl Log {
             for i in indexes_to_flush {
                 let new_length = self.indexes[i].flush();
                 let new_length = self.maybe_set_index_error(new_length.map_err(Into::into))?;
-                let name = self.open_options.index_defs[i].name.to_string();
+                let name = self.open_options.index_defs[i].metaname();
                 self.meta.indexes.insert(name, new_length);
             }
 
@@ -670,7 +669,7 @@ impl Log {
                 for i in 0..self.indexes.len() {
                     let new_length = self.indexes[i].flush();
                     let new_length = self.maybe_set_index_error(new_length.map_err(Into::into))?;
-                    let name = self.open_options.index_defs[i].name.to_string();
+                    let name = self.open_options.index_defs[i].metaname();
                     self.meta.indexes.insert(name, new_length);
                 }
 
@@ -782,14 +781,14 @@ impl Log {
                     // Before replacing the index, set its "logic length" to 0 so
                     // readers won't get inconsistent view about index length and data.
                     let meta_path = dir.join(META_FILE);
-                    self.meta.indexes.insert(name.to_string(), 0);
+                    self.meta.indexes.insert(def.metaname(), 0);
                     self.meta
                         .write_file(&meta_path, self.open_options.fsync)
                         .context(|| format!("  before replacing index {:?})", name))?;
 
                     let _ = utils::fix_perm_file(tmp.as_file(), false);
 
-                    let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
+                    let path = dir.join(def.filename());
                     tmp.persist(&path).map_err(|e| {
                         crate::Error::wrap(Box::new(e), || {
                             format!("cannot persist tempfile to replace index {:?}", name)
@@ -807,7 +806,7 @@ impl Log {
                         .update(Some(INDEX_CHECKSUM_CHUNK_SIZE_LOG), index_buf)
                         .context("while trying to update checksum for rebuilt index")?;
 
-                    self.meta.indexes.insert(name.to_string(), index_len);
+                    self.meta.indexes.insert(def.metaname(), index_len);
                     self.meta
                         .write_file(&meta_path, self.open_options.fsync)
                         .context(|| format!("  after replacing index {:?}", name))?;
@@ -1192,10 +1191,10 @@ impl Log {
                 // No indexes are reused, reload them.
                 let mut indexes = Vec::with_capacity(index_defs.len());
                 for def in index_defs.iter() {
-                    let index_len = meta.indexes.get(def.name).cloned().unwrap_or(0);
+                    let index_len = meta.indexes.get(&def.metaname()).cloned().unwrap_or(0);
                     indexes.push(Self::load_index(
                         dir,
-                        &def.name,
+                        &def,
                         index_len,
                         key_buf.clone(),
                         fsync,
@@ -1209,11 +1208,11 @@ impl Log {
                 // Avoid reloading the index from disk.
                 // Update their ExternalKeyBuffer so they have the updated meta.primary_len.
                 for (index, def) in indexes.iter().zip(index_defs) {
-                    let index_len = meta.indexes.get(def.name).cloned().unwrap_or(0);
+                    let index_len = meta.indexes.get(&def.metaname()).cloned().unwrap_or(0);
                     let index = if index_len > Self::get_index_log_len(index).unwrap_or(0) {
                         // The on-disk index covers more entries. Loading it is probably
                         // better than reusing the existing in-memory index.
-                        Self::load_index(dir, &def.name, index_len, key_buf.clone(), fsync)?
+                        Self::load_index(dir, &def, index_len, key_buf.clone(), fsync)?
                     } else {
                         let mut index = index.try_clone()?;
                         index.key_buf = key_buf.clone();
@@ -1235,14 +1234,14 @@ impl Log {
     /// Load a single index.
     fn load_index(
         dir: &GenericPath,
-        name: &str,
+        def: &IndexDef,
         len: u64,
         buf: Arc<dyn ReadonlyBuffer + Send + Sync>,
         fsync: bool,
     ) -> crate::Result<Index> {
         match dir.as_opt_path() {
             Some(dir) => {
-                let path = dir.join(format!("{}{}", INDEX_FILE_PREFIX, name));
+                let path = dir.join(def.filename());
                 index::OpenOptions::new()
                     .checksum_chunk_size_log(INDEX_CHECKSUM_CHUNK_SIZE_LOG)
                     .logical_len(Some(len))

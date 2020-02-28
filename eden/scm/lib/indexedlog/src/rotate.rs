@@ -1264,16 +1264,16 @@ mod tests {
 
         // First 2 logs become immutable, indexes are written regardless of
         // lag_threshold.
-        assert!(size("0/index-idx") > 0);
+        assert!(size("0/index2-idx") > 0);
         assert!(size("0/log") > 100);
 
-        assert!(size("1/index-idx") > 0);
+        assert!(size("1/index2-idx") > 0);
         assert!(size("1/log") > 100);
 
         // The "current" log is still mutable. Its index respects lag_threshold,
         // and is logically empty (because side effect of delete_content, the
         // index has some bytes in it).
-        assert_eq!(size("2/index-idx"), 25);
+        assert_eq!(size("2/index2-idx"), 25);
         assert!(size("2/log") < 100);
     }
 

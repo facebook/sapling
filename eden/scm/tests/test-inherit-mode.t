@@ -82,7 +82,7 @@ new directories are setgid
   00660 ./.hg/store/00changelog.i
   00660 ./.hg/store/00manifest.i
   02775 ./.hg/store/allheads/
-  00664 ./.hg/store/allheads/index-node
+  00664 ./.hg/store/allheads/index2-node
   00664 ./.hg/store/allheads/log
   00664 ./.hg/store/allheads/meta
   00770 ./.hg/store/data/
@@ -92,16 +92,16 @@ new directories are setgid
   00660 ./.hg/store/fncache
   02775 ./.hg/store/hgcommits/
   02775 ./.hg/store/hgcommits/v1/
-  00664 ./.hg/store/hgcommits/v1/index-id
+  00664 ./.hg/store/hgcommits/v1/index2-id
   00664 ./.hg/store/hgcommits/v1/log
   00664 ./.hg/store/hgcommits/v1/meta
   02775 ./.hg/store/metalog/
   02775 ./.hg/store/metalog/blobs/
-  00664 ./.hg/store/metalog/blobs/index-id
+  00664 ./.hg/store/metalog/blobs/index2-id
   00664 ./.hg/store/metalog/blobs/log
   00664 ./.hg/store/metalog/blobs/meta
   02775 ./.hg/store/metalog/roots/
-  00664 ./.hg/store/metalog/roots/index-reverse
+  00664 ./.hg/store/metalog/roots/index2-reverse
   00664 ./.hg/store/metalog/roots/log
   00664 ./.hg/store/metalog/roots/meta
   00660 ./.hg/store/phaseroots
@@ -151,7 +151,7 @@ XXX: treestate and allheads do not really respect this rule
   00660 ../push/.hg/store/00changelog.i
   00660 ../push/.hg/store/00manifest.i
   02775 ../push/.hg/store/allheads/
-  00664 ../push/.hg/store/allheads/index-node
+  00664 ../push/.hg/store/allheads/index2-node
   00664 ../push/.hg/store/allheads/log
   00664 ../push/.hg/store/allheads/meta
   00770 ../push/.hg/store/data/
@@ -161,16 +161,16 @@ XXX: treestate and allheads do not really respect this rule
   00660 ../push/.hg/store/fncache
   02775 ../push/.hg/store/hgcommits/
   02775 ../push/.hg/store/hgcommits/v1/
-  00664 ../push/.hg/store/hgcommits/v1/index-id
+  00664 ../push/.hg/store/hgcommits/v1/index2-id
   00664 ../push/.hg/store/hgcommits/v1/log
   00664 ../push/.hg/store/hgcommits/v1/meta
   02775 ../push/.hg/store/metalog/
   02775 ../push/.hg/store/metalog/blobs/
-  00664 ../push/.hg/store/metalog/blobs/index-id
+  00664 ../push/.hg/store/metalog/blobs/index2-id
   00664 ../push/.hg/store/metalog/blobs/log
   00664 ../push/.hg/store/metalog/blobs/meta
   02775 ../push/.hg/store/metalog/roots/
-  00664 ../push/.hg/store/metalog/roots/index-reverse
+  00664 ../push/.hg/store/metalog/roots/index2-reverse
   00664 ../push/.hg/store/metalog/roots/log
   00664 ../push/.hg/store/metalog/roots/meta
   00660 ../push/.hg/store/requires

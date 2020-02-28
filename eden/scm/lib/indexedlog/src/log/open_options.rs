@@ -15,6 +15,9 @@ use std::ops::Range;
 
 use tracing::debug_span;
 
+const INDEX_FILE_PREFIX: &str = "index2-";
+const META_PREFIX: &str = "2-";
+
 /// Definition of an index. It includes: name, function to extract index keys,
 /// and how much the index can lag on disk.
 #[derive(Clone)]
@@ -195,6 +198,16 @@ impl IndexDef {
             name: self.name,
             lag_threshold,
         }
+    }
+
+    /// Name used in log metadata.
+    pub(crate) fn metaname(&self) -> String {
+        format!("{}{}", META_PREFIX, self.name)
+    }
+
+    /// Name used in filesystem.
+    pub(crate) fn filename(&self) -> String {
+        format!("{}{}", INDEX_FILE_PREFIX, self.name)
     }
 }
 
