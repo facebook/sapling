@@ -191,6 +191,7 @@ impl ChecksumTable {
                 let chunk_size = 1 << chunk_size_log;
 
                 let len = buf.len() as u64;
+                // FIXME: The "len.min" part is unsound. See fixme_shorter_buffer.
                 let file_size = len.min(
                     cur.read_u64::<LittleEndian>()
                         .context(&checksum_path, "file_size field cannot be read")
@@ -551,5 +552,20 @@ mod tests {
         assert!(table.check_range(23, 1).is_err());
         // Update with a different chunk_size will also cause an error.
         update_table(&mut table, 2.into()).expect_err("broken during update");
+    }
+
+    #[test]
+    fn fixme_shorter_buffer() {
+        let (dir, mut file, get_table, update_table) = setup();
+        file.write_all(b"01234567890123456789").expect("write");
+
+        let mut table = get_table().unwrap();
+        update_table(&mut table, 10.into()).expect("update");
+
+        // Open with a shorter buffer.
+        let path = dir.path().join("main");
+        let table = ChecksumTable::new(&path, mmap_bytes(&file, Some(15)).unwrap()).unwrap();
+        // FIXME: This is incorrect - the range 10..12 is okay.
+        assert!(table.check_range(10, 12).is_err());
     }
 }
