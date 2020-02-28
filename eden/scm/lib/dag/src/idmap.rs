@@ -158,6 +158,12 @@ impl IdMap {
         }
     }
 
+    /// Find VertexName by a specified integer id.
+    pub fn find_vertex_name_by_id(&self, id: Id) -> Result<Option<VertexName>> {
+        self.find_name_by_id(id)
+            .map(|v| v.map(|n| VertexName(self.log.slice_to_bytes(n))))
+    }
+
     /// Find the integer id matching the given name.
     pub fn find_id_by_name(&self, name: &[u8]) -> Result<Option<Id>> {
         let key = self.log.lookup(Self::INDEX_NAME_TO_ID, name)?.nth(0);
@@ -399,8 +405,8 @@ impl IdMap {
         get_parents_by_name: &'a dyn Fn(VertexName) -> Result<Vec<VertexName>>,
     ) -> impl Fn(Id) -> Result<Vec<Id>> + 'a {
         let func = move |id: Id| -> Result<Vec<Id>> {
-            let name = match self.find_name_by_id(id)? {
-                Some(name) => VertexName::copy_from(name),
+            let name = match self.find_vertex_name_by_id(id)? {
+                Some(name) => name,
                 None => {
                     let name = match self.find_name_by_id(id) {
                         Ok(Some(name)) => format!("{} ({:?})", id, name),
@@ -509,10 +515,8 @@ impl IdMapLike for IdMap {
             .ok_or_else(|| format_err!("{:?} not found", name))
     }
     fn vertex_name(&self, id: Id) -> Result<VertexName> {
-        let bytes = self
-            .find_name_by_id(id)?
-            .ok_or_else(|| format_err!("{} not found", id))?;
-        Ok(VertexName::copy_from(bytes))
+        self.find_vertex_name_by_id(id)?
+            .ok_or_else(|| format_err!("{} not found", id))
     }
 }
 

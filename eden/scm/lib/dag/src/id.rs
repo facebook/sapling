@@ -22,7 +22,7 @@ pub struct Id(pub u64);
 /// Name of a vertex in the graph.
 #[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize, Deserialize)]
 #[serde(transparent)]
-pub struct VertexName(Bytes);
+pub struct VertexName(pub Bytes);
 
 impl AsRef<[u8]> for VertexName {
     fn as_ref(&self) -> &[u8] {

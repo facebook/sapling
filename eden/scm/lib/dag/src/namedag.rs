@@ -217,12 +217,9 @@ impl NameDag {
         self.dag
             .parent_ids(id)?
             .into_iter()
-            .map(|id| {
-                let name = match self.map.find_name_by_id(id)? {
-                    Some(name) => name,
-                    None => bail!("cannot resolve parent id {} to name", id),
-                };
-                Ok(VertexName::copy_from(name))
+            .map(|id| match self.map.find_vertex_name_by_id(id)? {
+                Some(name) => Ok(name),
+                None => bail!("cannot resolve parent id {} to name", id),
             })
             .collect()
     }
