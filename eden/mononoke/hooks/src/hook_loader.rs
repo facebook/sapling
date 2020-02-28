@@ -19,7 +19,7 @@ use crate::facebook::rust_hooks::signed_source::SignedSourceHook;
 use crate::facebook::rust_hooks::verify_integrity::VerifyIntegrityHook;
 use crate::lua_hook::LuaHook;
 use crate::{Hook, HookChangeset, HookFile, HookManager};
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use fbinit::FacebookInit;
 use metaconfig_types::{HookType, RepoConfig};
 use std::collections::HashSet;
@@ -80,7 +80,11 @@ pub fn load_hooks(
                 }
             }
         } else {
-            let lua_hook = LuaHook::new(name.clone(), hook.code.clone().unwrap());
+            let code = hook
+                .code
+                .ok_or(format_err!("Lua Hook must have path: {}", name))?
+                .load()?;
+            let lua_hook = LuaHook::new(name.clone(), code);
             match hook.hook_type {
                 HookType::PerAddedOrModifiedFile => {
                     hook_manager.register_file_hook(&name, Arc::new(lua_hook), hook.config)

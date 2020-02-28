@@ -31,7 +31,7 @@ use maplit::{btreemap, hashmap, hashset};
 use mercurial_types::{HgChangesetId, MPath};
 use mercurial_types_mocks::nodehash::{ONES_FNID, THREES_FNID, TWOS_FNID};
 use metaconfig_types::{
-    BlobConfig, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, DerivedDataConfig,
+    BlobConfig, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, DerivedDataConfig, HookCode,
     HookConfig, HookParams, HookType, InfinitepushParams, MetadataDBConfig, Redaction, RepoConfig,
     RepoReadOnly, SourceControlServiceParams, StorageConfig,
 };
@@ -1366,19 +1366,19 @@ fn test_load_hooks(fb: FacebookInit) {
         config.hooks = vec![
             HookParams {
                 name: "hook1".into(),
-                code: Some("hook1 code".into()),
+                code: Some(HookCode::Code("hook1 code".into())),
                 hook_type: HookType::PerAddedOrModifiedFile,
                 config: Default::default(),
             },
             HookParams {
                 name: "hook2".into(),
-                code: Some("hook2 code".into()),
+                code: Some(HookCode::Code("hook2 code".into())),
                 hook_type: HookType::PerAddedOrModifiedFile,
                 config: Default::default(),
             },
             HookParams {
                 name: "hook3".into(),
-                code: Some("hook3 code".into()),
+                code: Some(HookCode::Code("hook3 code".into())),
                 hook_type: HookType::PerChangeset,
                 config: Default::default(),
             },
@@ -1405,7 +1405,7 @@ fn test_verify_integrity_fast_failure(fb: FacebookInit) {
         }];
         config.hooks = vec![HookParams {
             name: "rust:verify_integrity".into(),
-            code: Some("whateva".into()),
+            code: Some(HookCode::Code("whateva".into())),
             hook_type: HookType::PerChangeset,
             config: HookConfig {
                 strings: hashmap! {String::from("verify_integrity_path") => String::from("bad_nonexisting_filename")},
@@ -1434,7 +1434,7 @@ fn test_load_hooks_no_such_hook(fb: FacebookInit) {
 
         config.hooks = vec![HookParams {
             name: "hook1".into(),
-            code: Some("hook1 code".into()),
+            code: Some(HookCode::Code("hook1 code".into())),
             hook_type: HookType::PerAddedOrModifiedFile,
             config: Default::default(),
         }];
@@ -1467,7 +1467,7 @@ fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
 
         config.hooks = vec![HookParams {
             name: "rust:hook1".into(),
-            code: Some("hook1 code".into()),
+            code: Some(HookCode::Code("hook1 code".into())),
             hook_type: HookType::PerChangeset,
             config: Default::default(),
         }];

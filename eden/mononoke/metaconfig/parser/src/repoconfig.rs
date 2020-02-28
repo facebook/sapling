@@ -23,17 +23,16 @@ use anyhow::{anyhow, format_err, Error, Result};
 use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
 use configerator::ConfigeratorAPI;
-use failure_ext::chain::ChainExt;
 use fbinit::FacebookInit;
 use itertools::Itertools;
 use maplit::hashmap;
 use metaconfig_types::{
     BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, CommitSyncConfig,
     CommitSyncDirection, CommonConfig, DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig,
-    HookBypass, HookConfig, HookManagerParams, HookParams, HookType, InfinitepushNamespace,
-    InfinitepushParams, LfsParams, PushParams, PushrebaseFlags, PushrebaseParams, Redaction,
-    RepoConfig, RepoReadOnly, SmallRepoCommitSyncConfig, SourceControlServiceParams, StorageConfig,
-    WhitelistEntry, WireprotoLoggingConfig,
+    HookBypass, HookCode, HookConfig, HookManagerParams, HookParams, HookType,
+    InfinitepushNamespace, InfinitepushParams, LfsParams, PushParams, PushrebaseFlags,
+    PushrebaseParams, Redaction, RepoConfig, RepoReadOnly, SmallRepoCommitSyncConfig,
+    SourceControlServiceParams, StorageConfig, WhitelistEntry, WireprotoLoggingConfig,
 };
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
@@ -437,13 +436,9 @@ impl RepoConfigs {
                     }
                 };
 
-                let contents = fs::read(&hook_path)
-                    .chain_err(format_err!("while reading hook {:?}", hook_path))?;
-                let code = str::from_utf8(&contents)?;
-                let code = code.to_string();
                 HookParams {
                     name: raw_hook_config.name,
-                    code: Some(code),
+                    code: Some(HookCode::Path(hook_path.clone())),
                     hook_type: HookType::from_str(&raw_hook_config.hook_type)?,
                     config,
                 }
@@ -1364,7 +1359,6 @@ mod test {
 
     #[fbinit::test]
     fn test_read_manifest(fb: FacebookInit) {
-        let hook1_content = "this is hook1";
         let fbsource_content = r#"
             write_lock_db_address="write_lock_db_address"
             generation_cache_size=1048576
@@ -1481,7 +1475,6 @@ mod test {
         let paths = btreemap! {
             "common/common.toml" => common_content,
             "common/commitsyncmap.toml" => "",
-            "common/hooks/hook1.lua" => hook1_content,
             "repos/fbsource/server.toml" => fbsource_content,
             "repos/www/server.toml" => www_content,
             "my_path/my_files" => "",
@@ -1565,7 +1558,9 @@ mod test {
                 hooks: vec![
                     HookParams {
                         name: "hook1".to_string(),
-                        code: Some("this is hook1".to_string()),
+                        code: Some(HookCode::Path(
+                            tmp_dir.path().join(PathBuf::from("common/hooks/hook1.lua")),
+                        )),
                         hook_type: HookType::PerAddedOrModifiedFile,
                         config: HookConfig {
                             bypass: Some(HookBypass::CommitMessage("@allow_hook1".into())),

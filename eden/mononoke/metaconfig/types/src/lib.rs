@@ -11,11 +11,11 @@
 #![deny(missing_docs)]
 #![deny(warnings)]
 
-use anyhow::{anyhow, Error, Result};
+use anyhow::{anyhow, Context, Error, Result};
 use std::{
     collections::{BTreeSet, HashMap},
     convert::{TryFrom, TryInto},
-    fmt, mem,
+    fmt, fs, mem,
     num::NonZeroU64,
     num::NonZeroUsize,
     path::PathBuf,
@@ -382,6 +382,29 @@ pub struct HookConfig {
     pub ints: HashMap<String, i32>,
 }
 
+/// Source code for a Lua hook
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum HookCode {
+    /// Load this hook from a path
+    Path(PathBuf),
+    /// Use this code as-is
+    Code(String),
+}
+
+impl HookCode {
+    /// Load the code for this Hook
+    pub fn load(self) -> Result<String, Error> {
+        match self {
+            Self::Path(path) => {
+                let contents = fs::read(&path).context(anyhow!("while reading hook {:?}", path))?;
+                let code = str::from_utf8(&contents)?;
+                Ok(code.to_string())
+            }
+            Self::Code(code) => Ok(code),
+        }
+    }
+}
+
 /// Configuration for a hook
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct HookParams {
@@ -390,7 +413,7 @@ pub struct HookParams {
     /// The type of the hook
     pub hook_type: HookType,
     /// The code of the hook
-    pub code: Option<String>,
+    pub code: Option<HookCode>,
     /// Configs that should be passed to hook
     pub config: HookConfig,
 }
