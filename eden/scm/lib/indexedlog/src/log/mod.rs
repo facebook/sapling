@@ -33,7 +33,6 @@
 // Integers are VLQ encoded, except for XXHASH64 and XXHASH32, which uses
 // LittleEndian encoding.
 
-use crate::checksum_table::ChecksumTable;
 use crate::errors::{IoResultExt, ResultExt};
 use crate::index::{self, Index, InsertKey, InsertValue, LeafValueIter, RangeIter, ReadonlyBuffer};
 use crate::lock::ScopedDirLock;
@@ -763,7 +762,7 @@ impl Log {
                     let tmp = tempfile::NamedTempFile::new_in(dir).context(&dir, || {
                         format!("cannot create tempfile for rebuilding index {:?}", name)
                     })?;
-                    let (index_len, index_buf) = {
+                    let index_len = {
                         let mut index = index::OpenOptions::new()
                             .key_buf(Some(self.disk_buf.clone()))
                             .open(&tmp.path())?;
@@ -774,8 +773,7 @@ impl Log {
                             &self.disk_buf,
                             self.meta.primary_len,
                         )?;
-                        let len = index.flush()?;
-                        (len, index.buf.clone())
+                        index.flush()?
                     };
 
                     // Before replacing the index, set its "logic length" to 0 so
@@ -794,17 +792,6 @@ impl Log {
                             format!("cannot persist tempfile to replace index {:?}", name)
                         })
                     })?;
-
-                    // At this point, other processes might see an updated index
-                    // with an outdated checksum table. That's okay because the
-                    // index metadata says index len is 0. That disables checksum
-                    // check.
-
-                    // Update checksum table.
-                    let mut table = ChecksumTable::new_empty(&path)?;
-                    table
-                        .update(Some(INDEX_CHECKSUM_CHUNK_SIZE_LOG), index_buf)
-                        .context("while trying to update checksum for rebuilt index")?;
 
                     self.meta.indexes.insert(def.metaname(), index_len);
                     self.meta

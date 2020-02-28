@@ -12,15 +12,13 @@
 //! Indexed Log provides an integrity-checked, append-only storage
 //! with index support.
 //!
-//! See [log::Log] for the main structure. The index and integrity
-//! check parts can be used independently. See [index::Index] and
-//! [checksum_table::ChecksumTable] for details.
+//! See [log::Log] for the main structure. The index can be used independently.
+//! See [index::Index] for details.
 
 #[macro_use]
 mod macros;
 
 pub mod base16;
-pub mod checksum_table;
 mod errors;
 pub mod index;
 pub mod lock;
