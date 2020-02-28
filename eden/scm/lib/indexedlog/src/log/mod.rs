@@ -601,17 +601,7 @@ impl Log {
 
             // Step 4: Update the indexes. Optionally flush them.
             self.update_indexes_for_on_disk_entries()?;
-            for (i, count) in self.index_lags.clone().into_iter().enumerate() {
-                if self.open_options.index_defs[i].lag_threshold >= count {
-                    continue;
-                }
-                let new_length = self.indexes[i].flush();
-                let new_length = self.maybe_set_index_error(new_length.map_err(Into::into))?;
-                let name = self.open_options.index_defs[i].metaname();
-                self.meta.indexes.insert(name, new_length);
-                // The index will be no longer lagging, since meta is being updated.
-                self.index_lags[i] = 0;
-            }
+            self.flush_lagging_indexes(&lock)?;
 
             // Step 5: Write the updated meta file.
             self.dir.write_meta(&self.meta, self.open_options.fsync)?;
@@ -622,6 +612,24 @@ impl Log {
         result
             .context("in Log::sync")
             .context(|| format!("  Log.dir = {:?}", self.dir))
+    }
+
+    /// Write (updated) lagging indexes back to disk.
+    /// Usually called after `update_indexes_for_on_disk_entries`.
+    pub(crate) fn flush_lagging_indexes(&mut self, _lock: &ScopedDirLock) -> crate::Result<()> {
+        for (i, count) in self.index_lags.clone().into_iter().enumerate() {
+            if self.open_options.index_defs[i].lag_threshold >= count {
+                continue;
+            }
+            let new_length = self.indexes[i].flush();
+            let new_length = self.maybe_set_index_error(new_length.map_err(Into::into))?;
+            let name = self.open_options.index_defs[i].metaname();
+            self.meta.indexes.insert(name, new_length);
+            // The index will be no longer lagging, since meta is being updated.
+            self.index_lags[i] = 0;
+        }
+
+        Ok(())
     }
 
     /// Check if the log is changed on disk.
