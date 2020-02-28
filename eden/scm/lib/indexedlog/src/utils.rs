@@ -14,47 +14,13 @@ use std::{
 };
 
 use crate::errors::{IoResultExt, ResultExt};
-use memmap::{Mmap, MmapOptions};
+use memmap::MmapOptions;
 use minibytes::Bytes;
 use twox_hash::{XxHash, XxHash32};
 
-/// Return a read-only mmap view of the entire file, and its length.
+/// Return a read-only view of the entire file.
 ///
 /// If `len` is `None`, detect the file length automatically.
-///
-/// For an empty file, return (1-byte mmap, 0) instead.
-///
-/// The caller might want to use some kind of locking to make
-/// sure the file length is at some kind of boundary.
-pub fn mmap_readonly(file: &File, len: Option<u64>) -> io::Result<(Mmap, u64)> {
-    let actual_len = file.metadata()?.len();
-    let len = match len {
-        Some(len) => {
-            if len > actual_len {
-                return Err(io::Error::new(
-                    io::ErrorKind::UnexpectedEof,
-                    format!(
-                        "mmap length {} is greater than file size {}",
-                        len, actual_len
-                    ),
-                ));
-            } else {
-                len
-            }
-        }
-        None => actual_len,
-    };
-    let mmap = unsafe {
-        if len == 0 {
-            mmap_empty()?
-        } else {
-            MmapOptions::new().len(len as usize).map(&file)?
-        }
-    };
-    Ok((mmap, len))
-}
-
-/// Similar to [`mmap_readonly`], but returns [`Bytes`].
 pub fn mmap_bytes(file: &File, len: Option<u64>) -> io::Result<Bytes> {
     let actual_len = file.metadata()?.len();
     let len = match len {
@@ -80,11 +46,6 @@ pub fn mmap_bytes(file: &File, len: Option<u64>) -> io::Result<Bytes> {
             MmapOptions::new().len(len as usize).map(&file)
         }?))
     }
-}
-
-/// Return a [`Mmap`] that is expected to be empty.
-pub fn mmap_empty() -> io::Result<Mmap> {
-    Ok(MmapOptions::new().len(1).map_anon()?.make_read_only()?)
 }
 
 /// Similar to [`mmap_bytes`], but accepts a [`Path`] directly so the
