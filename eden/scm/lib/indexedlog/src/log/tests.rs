@@ -238,6 +238,52 @@ fn get_index_defs(lag_threshold: u64) -> Vec<IndexDef> {
 }
 
 #[test]
+fn test_slice_to_bytes() {
+    let dir = tempdir().unwrap();
+    let mut log = Log::open(dir.path(), get_index_defs(0)).unwrap();
+    log.append(b"0123456").unwrap();
+    log.append(b"1231516").unwrap();
+    log.sync().unwrap();
+
+    let slice = log.lookup(0, b"23").unwrap().into_vec().unwrap()[0];
+    assert_eq!(slice, b"1231516");
+
+    // The bytes are zero-copy from the Log buffer.
+    let bytes1 = log.slice_to_bytes(slice);
+    let bytes2 = log.slice_to_bytes(slice);
+    assert_eq!(bytes1.as_ptr(), bytes2.as_ptr());
+
+    // No zero-copy from the Index buffer.
+    let bytes1 = log.index_slice_to_bytes(0, slice);
+    let bytes2 = log.index_slice_to_bytes(0, slice);
+    assert_ne!(bytes1.as_ptr(), bytes2.as_ptr());
+
+    // Try IndexOutput::Reference produced by Index #0.
+    let key = log.lookup_range(0, ..).unwrap().nth(0).unwrap().unwrap().0;
+    assert_eq!(&key[..], b"01");
+
+    // The key is from the main Log buffer.
+    let bytes1 = log.slice_to_bytes(&key);
+    let bytes2 = log.slice_to_bytes(&key);
+    assert_eq!(bytes1.as_ptr(), bytes2.as_ptr());
+    let bytes1 = log.index_slice_to_bytes(0, &key);
+    let bytes2 = log.index_slice_to_bytes(0, &key);
+    assert_ne!(bytes1.as_ptr(), bytes2.as_ptr());
+
+    // Try IndexOutput::Owned produced by Index #1.
+    let key = log.lookup_range(1, ..).unwrap().nth(0).unwrap().unwrap().0;
+    assert_eq!(&key[..], b"012");
+
+    // The key is from the Index buffer.
+    let bytes1 = log.slice_to_bytes(&key);
+    let bytes2 = log.slice_to_bytes(&key);
+    assert_ne!(bytes1.as_ptr(), bytes2.as_ptr());
+    let bytes1 = log.index_slice_to_bytes(1, &key);
+    let bytes2 = log.index_slice_to_bytes(1, &key);
+    assert_eq!(bytes1.as_ptr(), bytes2.as_ptr());
+}
+
+#[test]
 fn test_index_manual() {
     // Test index lookups with these combinations:
     // - Index key: Reference and Owned.

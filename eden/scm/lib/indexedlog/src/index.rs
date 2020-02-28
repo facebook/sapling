@@ -2988,6 +2988,12 @@ impl Index {
         }
     }
 
+    /// Convert a slice to [`Bytes`].
+    /// Do not copy the slice if it's from the on-disk buffer.
+    pub fn slice_to_bytes(&self, slice: &[u8]) -> Bytes {
+        self.buf.slice_to_bytes(slice)
+    }
+
     /// Verify checksum for the entire on-disk buffer.
     pub fn verify(&self) -> crate::Result<()> {
         self.verify_checksum(0, self.checksum.end)

@@ -639,6 +639,18 @@ impl Log {
         self.sync()
     }
 
+    /// Convert a slice to [`Bytes`].
+    /// Do not copy the slice if it's from the main on-disk buffer.
+    pub fn slice_to_bytes(&self, slice: &[u8]) -> Bytes {
+        self.disk_buf.slice_to_bytes(slice)
+    }
+
+    /// Convert a slice to [`Bytes`].
+    /// Do not copy the slice if it's from the specified index buffer.
+    pub fn index_slice_to_bytes(&self, index_id: usize, slice: &[u8]) -> Bytes {
+        self.indexes[index_id].slice_to_bytes(slice)
+    }
+
     /// Make sure on-disk indexes are up-to-date with the primary log, regardless
     /// of `lag_threshold`.
     ///
