@@ -25,6 +25,7 @@ use futures_preview::{
     stream::{Stream, TryStreamExt},
 };
 use mercurial_types::FileBytes;
+use scuba_ext::ScubaSampleBuilder;
 use slog::{info, Logger};
 use std::{
     cmp::min,
@@ -153,6 +154,10 @@ impl ProgressRecorderUnprotected<SizingStats> for SizingState {
             }
             None => {}
         }
+    }
+
+    fn set_sample_builder(&mut self, _s: ScubaSampleBuilder) {
+        ()
     }
 }
 

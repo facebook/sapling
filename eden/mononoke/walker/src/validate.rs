@@ -14,8 +14,8 @@
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType};
 use crate::progress::{
-    progress_stream, report_state, sort_by_string, ProgressRecorderUnprotected, ProgressReporter,
-    ProgressReporterUnprotected, ProgressStateMutex,
+    progress_stream, report_state, sort_by_string, ProgressRecorder, ProgressRecorderUnprotected,
+    ProgressReporter, ProgressReporterUnprotected, ProgressStateMutex,
 };
 use crate::setup::{
     setup_common, EXCLUDE_CHECK_TYPE_ARG, INCLUDE_CHECK_TYPE_ARG, PROGRESS_SAMPLE_DURATION_S,
@@ -385,6 +385,10 @@ pub fn add_node_to_scuba(n: &Node, scuba: &mut ScubaSampleBuilder) {
 }
 
 impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
+    fn set_sample_builder(&mut self, s: ScubaSampleBuilder) {
+        self.scuba_builder = s;
+    }
+
     fn record_step(self: &mut Self, n: &Node, opt: Option<&CheckData>) {
         self.checked_nodes += 1;
         let mut had_pass = false;
@@ -514,6 +518,7 @@ pub fn validate(
             cloned!(walk_params.progress_state, walk_params.quiet);
             let make_sink = move |run: RepoWalkRun| {
                 cloned!(run.ctx);
+                validate_progress_state.set_sample_builder(run.scuba_builder);
                 async move |walk_output| {
                     cloned!(ctx, progress_state, validate_progress_state);
                     let walk_progress =
