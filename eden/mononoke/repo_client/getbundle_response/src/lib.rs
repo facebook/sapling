@@ -19,8 +19,7 @@ use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use filestore::FetchKey;
 use futures::{
-    future as old_future, future::IntoFuture as OldIntoFuture, stream as old_stream,
-    Future as OldFuture, Stream as OldStream,
+    future as old_future, stream as old_stream, Future as OldFuture, Stream as OldStream,
 };
 use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
 use futures_preview::{
@@ -39,8 +38,8 @@ use mercurial_bundles::{
 use mercurial_revlog::{self, RevlogChangeset};
 use mercurial_types::{
     blobs::{fetch_manifest_envelope, File},
-    FileBytes, HgBlobNode, HgChangesetId, HgFileNodeId, HgManifestId, HgParents, HgPhase, MPath,
-    RevFlags, NULL_CSID,
+    FileBytes, HgBlobNode, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId, HgParents,
+    HgPhase, MPath, RevFlags, NULL_CSID,
 };
 use metaconfig_types::LfsParams;
 use mononoke_types::{hash::Sha256, ChangesetId};
@@ -490,59 +489,74 @@ fn prepare_filenode_entries_stream(
 ) -> impl Stream<Item = Result<(MPath, Vec<PreparedFilenodeEntry>), Error>> {
     stream::iter(filenodes.into_iter())
         .map({
-            cloned!(ctx, repo);
+            cloned!(ctx, repo, lfs_params);
             move |(path, filenode, linknode)| {
-                filenode
-                    .load(ctx.clone(), repo.blobstore())
-                    .from_err()
-                    .and_then({
-                        cloned!(ctx, lfs_params, repo);
-                        move |envelope| {
-                            let file_size = envelope.content_size();
-                            let content = filestore::fetch_concat(
-                                repo.blobstore(),
+                cloned!(ctx, repo, lfs_params);
+                async move {
+                    let envelope = filenode
+                        .load(ctx.clone(), repo.blobstore())
+                        .compat()
+                        .await?;
+
+                    let file_size = envelope.content_size();
+
+                    async fn fetch_and_wrap(
+                        ctx: CoreContext,
+                        repo: &BlobRepo,
+                        envelope: &HgFileEnvelope,
+                        constructor: impl FnOnce(FileBytes) -> FilenodeEntryContent,
+                    ) -> Result<FilenodeEntryContent, Error> {
+                        let content =
+                            filestore::fetch_concat(repo.blobstore(), ctx, envelope.content_id())
+                                .compat()
+                                .await?;
+
+                        let content = FileBytes(content);
+                        Ok(constructor(content))
+                    };
+
+                    let content = match lfs_params.threshold {
+                        None => {
+                            fetch_and_wrap(
                                 ctx.clone(),
-                                envelope.content_id(),
+                                &repo,
+                                &envelope,
+                                FilenodeEntryContent::InlineV2,
                             )
-                            .map(FileBytes);
-
-                            let content = match lfs_params.threshold {
-                                None => content.map(FilenodeEntryContent::InlineV2).boxify(),
-                                Some(lfs_threshold) if file_size <= lfs_threshold => {
-                                    content.map(FilenodeEntryContent::InlineV3).boxify()
-                                }
-                                _ => {
-                                    let key = FetchKey::from(envelope.content_id());
-                                    filestore::get_metadata(repo.blobstore(), ctx.clone(), &key)
-                                        .and_then(move |meta| {
-                                            let meta = meta.ok_or_else(|| {
-                                                Error::from(ErrorKind::MissingContent(key))
-                                            })?;
-                                            Ok(meta.sha256)
-                                        })
-                                        .map(move |oid| FilenodeEntryContent::LfsV3(oid, file_size))
-                                        .boxify()
-                                }
-                            };
-
-                            let parents = filenode
-                                .load(ctx, repo.blobstore())
-                                .from_err()
-                                .map(|envelope| envelope.hg_parents());
-
-                            (content, parents)
-                                .into_future()
-                                .map(move |(content, parents)| PreparedFilenodeEntry {
-                                    filenode,
-                                    linknode,
-                                    parents,
-                                    metadata: envelope.metadata().clone(),
-                                    content,
-                                })
-                                .map(move |entry| (path, vec![entry]))
+                            .await?
                         }
-                    })
-                    .compat()
+                        Some(lfs_threshold) if file_size <= lfs_threshold => {
+                            fetch_and_wrap(
+                                ctx.clone(),
+                                &repo,
+                                &envelope,
+                                FilenodeEntryContent::InlineV3,
+                            )
+                            .await?
+                        }
+                        _ => {
+                            let key = FetchKey::from(envelope.content_id());
+                            let meta = filestore::get_metadata(repo.blobstore(), ctx.clone(), &key)
+                                .compat()
+                                .await?;
+                            let meta =
+                                meta.ok_or_else(|| Error::from(ErrorKind::MissingContent(key)))?;
+                            let oid = meta.sha256;
+                            FilenodeEntryContent::LfsV3(oid, file_size)
+                        }
+                    };
+
+                    let parents = envelope.hg_parents();
+                    let prepared_filenode_entry = PreparedFilenodeEntry {
+                        filenode,
+                        linknode,
+                        parents,
+                        metadata: envelope.metadata().clone(),
+                        content,
+                    };
+
+                    Ok((path, vec![prepared_filenode_entry]))
+                }
             }
         })
         .buffered(100)
