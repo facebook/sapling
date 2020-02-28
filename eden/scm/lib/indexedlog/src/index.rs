@@ -15,7 +15,8 @@
 // INDEX       := HEADER + ENTRY_LIST
 // HEADER      := '\0'  (takes offset 0, so 0 is not a valid offset for ENTRY)
 // ENTRY_LIST  := RADIX | ENTRY_LIST + ENTRY
-// ENTRY       := RADIX | LEAF | LINK | KEY | ROOT + REVERSED(VLQ(ROOT_LEN))
+// ENTRY       := RADIX | LEAF | LINK | KEY | ROOT + REVERSED(VLQ(ROOT_LEN)) |
+//                ROOT + CHECKSUM + REVERSED(VLQ(ROOT_LEN + CHECKSUM_LEN))
 // RADIX       := '\2' + RADIX_FLAG (1 byte) + BITMAP (2 bytes) +
 //                PTR2(RADIX | LEAF) * popcnt(BITMAP) + PTR2(LINK)
 // LEAF        := '\3' + PTR(KEY | EXT_KEY) + PTR(LINK)
@@ -24,6 +25,9 @@
 // EXT_KEY     := '\6' + VLQ(KEY_START) + VLQ(KEY_LEN)
 // INLINE_LEAF := '\7' + EXT_KEY + LINK
 // ROOT        := '\1' + PTR(RADIX) + VLQ(META_LEN) + META
+// CHECKSUM    := '\8' + PTR(PREVIOUS_CHECKSUM) + VLQ(CHUNK_SIZE_LOG) +
+//                VLQ(CHECKSUM_CHUNK_START) + XXHASH_LIST + CHECKSUM_XX32 (LE32)
+// XXHASH_LIST := A list of 64-bit xxhash in Little Endian.
 //
 // PTR(ENTRY)  := VLQ(the offset of ENTRY)
 // PTR2(ENTRY) := the offset of ENTRY, in 0 or 4, or 8 bytes depending on BITMAP and FLAGS
@@ -51,19 +55,28 @@
 // - The "INLINE_LEAF" type is basically an inlined version of EXT_KEY and LINK, to save space.
 // - The "ROOT_LEN" is reversed so it can be read byte-by-byte from the end of a file.
 
+use crate::utils::{xxhash, xxhash32};
 use minibytes::Bytes;
 use std::borrow::Cow;
 use std::cmp::Ordering::{Equal, Greater, Less};
 use std::fmt::{self, Debug, Formatter};
 use std::fs::{self, File};
-use std::io::{self, Seek, SeekFrom, Write};
+use std::hash::Hasher;
+use std::io::{self, Read, Seek, SeekFrom, Write};
 use std::mem::size_of;
 use std::ops::{
     Bound::{self, Excluded, Included, Unbounded},
     Deref, RangeBounds,
 };
 use std::path::{Path, PathBuf};
-use std::sync::Arc;
+use std::sync::{
+    atomic::{
+        AtomicU64,
+        Ordering::{AcqRel, Acquire, Relaxed},
+    },
+    Arc,
+};
+use twox_hash::XxHash;
 
 use crate::base16::{base16_to_base256, single_hex_to_base16, Base16Iter};
 use crate::checksum_table::ChecksumTable;
@@ -71,7 +84,7 @@ use crate::errors::{IoResultExt, ResultExt};
 use crate::lock::ScopedFileLock;
 use crate::utils::{self, mmap_bytes};
 
-use byteorder::{ByteOrder, LittleEndian, WriteBytesExt};
+use byteorder::{ByteOrder, LittleEndian, ReadBytesExt, WriteBytesExt};
 use fs2::FileExt;
 use tracing::debug_span;
 use vlqencoding::{VLQDecodeAt, VLQEncode};
@@ -114,6 +127,35 @@ struct MemRoot {
     pub meta: Box<[u8]>,
 }
 
+/// A Checksum entry specifies the checksums for all bytes before the checksum
+/// entry.  To make CHECKSUM entry size bounded, a Checksum entry can refer to a
+/// previous Checksum entry so it does not have to repeat byte range that is
+/// already covered by the previous entry.  The xxhash list contains one xxhash
+/// per chunk. A chunk has (1 << CHUNK_SIZE_LOG) bytes.  The last chunk can be
+/// incomplete.
+struct MemChecksum {
+    /// Indicates the "start" offset of the bytes that should be written
+    /// on serialization.
+    ///
+    /// This is also the offset of the previous Checksum entry.
+    start: u64,
+
+    /// Indicates the "end" offset of the bytes that can be checked.
+    ///
+    /// This is also the offset of the current Checksum entry.
+    end: u64,
+
+    /// Each chunk has (1 << chunk_size_log) bytes. The last chunk can be
+    /// shorter.
+    chunk_size_log: u32,
+
+    /// Checksums per chunk.
+    xxhash_list: Vec<u64>,
+
+    /// Whether chunks are checked.
+    checked: Vec<AtomicU64>,
+}
+
 // Shorter alias to `Option<ChecksumTable>`
 type Checksum = Option<ChecksumTable>;
 
@@ -144,6 +186,7 @@ const TYPE_LINK: u8 = 4;
 const TYPE_KEY: u8 = 5;
 const TYPE_EXT_KEY: u8 = 6;
 const TYPE_INLINE_LEAF: u8 = 7;
+const TYPE_CHECKSUM: u8 = 8;
 
 // Bits needed to represent the above type integers.
 const TYPE_BITS: usize = 3;
@@ -178,6 +221,8 @@ pub struct LinkOffset(Offset);
 struct KeyOffset(Offset);
 #[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
 struct ExtKeyOffset(Offset);
+#[derive(Copy, Clone, PartialEq, PartialOrd, Default)]
+struct ChecksumOffset(Offset);
 
 #[derive(Copy, Clone)]
 enum TypedOffset {
@@ -186,6 +231,7 @@ enum TypedOffset {
     Link(LinkOffset),
     Key(KeyOffset),
     ExtKey(ExtKeyOffset),
+    Checksum(ChecksumOffset),
 }
 
 impl Offset {
@@ -218,6 +264,7 @@ impl Offset {
             TYPE_EXT_KEY => Ok(TypedOffset::ExtKey(ExtKeyOffset(self))),
             // LeafOffset handles inline transparently.
             TYPE_INLINE_LEAF => Ok(TypedOffset::Leaf(LeafOffset(self))),
+            TYPE_CHECKSUM => Ok(TypedOffset::Checksum(ChecksumOffset(self))),
             _ => Err(index.corruption(format!("type {} is unsupported", type_int))),
         }
     }
@@ -258,6 +305,7 @@ impl Offset {
             Some(TYPE_EXT_KEY) => Some(TypedOffset::ExtKey(ExtKeyOffset(self))),
             // LeafOffset handles inline transparently.
             Some(TYPE_INLINE_LEAF) => Some(TypedOffset::Leaf(LeafOffset(self))),
+            Some(TYPE_CHECKSUM) => Some(TypedOffset::Checksum(ChecksumOffset(self))),
             _ => None,
         }
     }
@@ -320,6 +368,7 @@ impl_offset!(LeafOffset, TYPE_LEAF, "Leaf");
 impl_offset!(LinkOffset, TYPE_LINK, "Link");
 impl_offset!(KeyOffset, TYPE_KEY, "Key");
 impl_offset!(ExtKeyOffset, TYPE_EXT_KEY, "ExtKey");
+impl_offset!(ChecksumOffset, TYPE_CHECKSUM, "Checksum");
 
 impl RadixOffset {
     /// Link offset of a radix entry.
@@ -1405,6 +1454,307 @@ impl MemRoot {
     }
 }
 
+impl MemChecksum {
+    fn read_from(index: &impl IndexBuf, offset: u64) -> crate::Result<(Self, usize)> {
+        if offset == 0 {
+            // Special case: an empty checksum.
+            return Ok((Self::default(), 0));
+        }
+
+        let offset = offset as usize;
+        let mut cur = offset;
+        check_type(&index, offset, TYPE_CHECKSUM)?;
+        cur += TYPE_BYTES;
+
+        let (previous_offset, vlq_len): (u64, _) = index
+            .buf()
+            .read_vlq_at(cur)
+            .context(index.path(), "cannot read previous_checksum_offset")
+            .corruption()?;
+        cur += vlq_len;
+
+        let (chunk_size_log, vlq_len): (u32, _) = index
+            .buf()
+            .read_vlq_at(cur)
+            .context(index.path(), "cannot read chunk_size_log")
+            .corruption()?;
+        if chunk_size_log > 31 {
+            return Err(crate::Error::corruption(
+                index.path(),
+                format!("invalid chunk_size_log {} at {}", chunk_size_log, cur),
+            ));
+        }
+        cur += vlq_len;
+
+        // Load the previous chunk.
+        // This is currently bounded to O(file_len / chunk_size). If the index
+        // is too large it might stack overflow.
+        // NOTE: Consider switching to a non-recursive implementation, or
+        // limit the chain length.
+        let mut result = Self::read_from(index, previous_offset)?.0;
+        result.set_chunk_size_log(index.buf(), chunk_size_log)?;
+        result.start = previous_offset;
+        result.end = offset as u64;
+
+        let chunk_size = 1usize << chunk_size_log;
+        let chunk_needed = (offset + chunk_size - 1) >> chunk_size_log;
+        result.xxhash_list.resize(chunk_needed, 0);
+
+        //    0     1     2     3     4     5
+        // |chunk|chunk|chunk|chunk|chunk|chunk|
+        // |--------------|-----------------|---
+        // 0              ^ previous        ^ offset
+        //
+        // The previous Checksum entry covers chunk 0,1,2(incomplete).
+        // This Checksum entry covers chunk 2(complete),3,4,5(incomplete).
+
+        // Read the new chunksums.
+        let start_chunk_index = (previous_offset >> chunk_size_log) as usize;
+        for i in start_chunk_index..result.xxhash_list.len() {
+            result.xxhash_list[i] = (&index.buf()[cur..])
+                .read_u64::<LittleEndian>()
+                .context(index.path(), "cannot read xxhash for checksum")?;
+            cur += 8;
+        }
+
+        // Check the checksum buffer itself.
+        let xx32_read = (&index.buf()[cur..])
+            .read_u32::<LittleEndian>()
+            .context(index.path(), "cannot read xxhash32 for checksum")?;
+        let xx32_self = xxhash32(&index.buf()[offset as usize..cur as usize]);
+        if xx32_read != xx32_self {
+            return Err(crate::Error::corruption(
+                index.path(),
+                format!(
+                    "checksum at {} fails integrity check ({} != {})",
+                    offset, xx32_read, xx32_self
+                ),
+            ));
+        }
+        cur += 4;
+
+        let checked_needed = (result.xxhash_list.len() + 63) / 64;
+        result.checked.resize_with(checked_needed, Default::default);
+
+        Ok((result, cur - offset))
+    }
+
+    /// Incrementally update the checksums so it covers the file content + `append_buf`.
+    /// Assume the file content is append-only.
+    /// Call this before writing write_to.
+    fn update(
+        &mut self,
+        old_buf: &[u8],
+        file: &mut File,
+        file_len: u64,
+        append_buf: &[u8],
+    ) -> io::Result<()> {
+        let start_chunk_index = (self.end >> self.chunk_size_log) as usize;
+        let start_chunk_offset = (start_chunk_index as u64) << self.chunk_size_log;
+
+        // Check the range that is being rewritten.
+        let old_end = (old_buf.len() as u64).min(self.end);
+        if old_end > start_chunk_offset {
+            self.check_range(old_buf, start_chunk_offset, old_end - start_chunk_offset)?;
+        }
+
+        let new_total_len = file_len + append_buf.len() as u64;
+        let chunk_size = 1u64 << self.chunk_size_log;
+        let chunk_needed = ((new_total_len + chunk_size - 1) >> self.chunk_size_log) as usize;
+        self.xxhash_list.resize(chunk_needed, 0);
+
+        if self.end > file_len {
+            return Err(io::Error::new(
+                io::ErrorKind::UnexpectedEof,
+                "unexpected truncation",
+            ));
+        }
+
+        //              start_chunk_offset
+        //                   v
+        //                   |(1)-|
+        // |chunk|chunk|chunk|chunk|chunk|chunk|chunk|chunk|chunk|
+        //                   |---file_buf---|
+        // |--------------file--------------|
+        // |-------old_buf--------|
+        // |-----(2)-----|---(3)--|         |---append_buf---|
+        //               ^        ^         ^                ^
+        //          self.start  self.end  file_len     new_total_len
+        //
+        // (1): range being rewritten
+        // (2): covered by the previous Checksum
+        // (3): covered by the current Checksum
+
+        let file_buf = {
+            let mut file_buf = vec![0; (file_len - start_chunk_offset) as usize];
+            file.seek(SeekFrom::Start(start_chunk_offset))?;
+            file.read_exact(&mut file_buf)?;
+            file_buf
+        };
+
+        for i in start_chunk_index..self.xxhash_list.len() {
+            let start = (i as u64) << self.chunk_size_log;
+            let end = (start + chunk_size).min(new_total_len);
+            let mut xx = XxHash::default();
+            // Hash portions of file_buf that intersect with start..end.
+            let file_buf_start = ((start - start_chunk_offset) as usize).min(file_buf.len());
+            let file_buf_end = ((end - start_chunk_offset) as usize).min(file_buf.len());
+            xx.write(&file_buf[file_buf_start..file_buf_end]);
+            // Hash portions of append_buf that intersect with start..end.
+            let append_buf_start = (start.max(file_len) - file_len) as usize;
+            let append_buf_end = (end.max(file_len) - file_len) as usize;
+            xx.write(&append_buf[append_buf_start..append_buf_end]);
+            self.xxhash_list[i] = xx.finish();
+        }
+
+        // Update start and end:
+        //
+        //      chunk | chunk
+        //      start   end (both are valid ChecksumOffset, in different chunks)
+        //      v       v
+        // old: |-------|
+        // new:         |--------|----(1)----|
+        //              ^        ^
+        //              start    new_total_len
+        //
+        // (1): Place that this Checksum will be written to.
+        //
+        // Avoid updating start if start and end are in a same chunk:
+        //
+        //       -----chunk----|
+        //       start     end
+        //       v         v
+        // old:  |---------|
+        // new:  |--------------------|
+        //       ^                    ^
+        //       start                end
+        //
+        // This makes the length of chain of Checksums O(len(chunks)).
+        if (self.start >> self.chunk_size_log) != (self.end >> self.chunk_size_log) {
+            self.start = self.end;
+        }
+        self.end = new_total_len;
+
+        Ok(())
+    }
+
+    fn write_to<W: Write>(&self, writer: &mut W, _offset_map: &OffsetMap) -> io::Result<usize> {
+        let mut buf = Vec::with_capacity(16);
+        buf.write_all(&[TYPE_CHECKSUM])?;
+        buf.write_vlq(self.start)?;
+        // self.end is implied by the write position.
+        buf.write_vlq(self.chunk_size_log)?;
+        for &xx in self.xxhash_list_to_write() {
+            buf.write_u64::<LittleEndian>(xx)?;
+        }
+        let xx32 = xxhash32(&buf);
+        buf.write_u32::<LittleEndian>(xx32)?;
+        writer.write_all(&buf)?;
+        Ok(buf.len())
+    }
+
+    /// Return a sub list of the xxhash list that is not covered by the
+    /// previous Checksum entry. It's used for serialization.
+    fn xxhash_list_to_write(&self) -> &[u64] {
+        // See the comment in `read_from` for `start_chunk_index`.
+        // It is the starting index for
+        let start_chunk_index = (self.start >> self.chunk_size_log) as usize;
+        return &self.xxhash_list[start_chunk_index..];
+    }
+
+    /// Reset the `chunk_size_log`.
+    fn set_chunk_size_log(&mut self, _buf: &[u8], chunk_size_log: u32) -> crate::Result<()> {
+        // Change chunk_size_log if the checksum list is empty.
+        if self.xxhash_list.is_empty() {
+            self.chunk_size_log = chunk_size_log;
+        }
+        // NOTE: Consider re-hashing and allow changing the chunk_size_log.
+        Ok(())
+    }
+
+    /// Check a range of bytes.
+    ///
+    /// Depending on `chunk_size_log`, bytes outside the specified range
+    /// might also be checked.
+    #[inline]
+    fn check_range(&self, buf: &[u8], offset: u64, length: u64) -> io::Result<()> {
+        if length == 0 || !self.is_enabled() {
+            return Ok(());
+        }
+
+        // Ranges not covered by checksums are treated as bad.
+        if offset + length > self.end {
+            return checksum_error(self, offset, length);
+        }
+
+        // Otherwise, scan related chunks.
+        let start = (offset >> self.chunk_size_log) as usize;
+        let end = ((offset + length - 1) >> self.chunk_size_log) as usize;
+        if !(start..=end).all(|i| self.check_chunk(buf, i)) {
+            return checksum_error(self, offset, length);
+        }
+        Ok(())
+    }
+
+    /// Check the i-th chunk. The callsite must make sure `index` is within range.
+    #[inline]
+    fn check_chunk(&self, buf: &[u8], index: usize) -> bool {
+        debug_assert!(index < self.xxhash_list.len());
+        let bit = 1 << (index % 64);
+        let checked = &self.checked[index / 64];
+        if (checked.load(Acquire) & bit) == bit {
+            true
+        } else {
+            let start = index << self.chunk_size_log;
+            let end = (self.end as usize).min((index + 1) << self.chunk_size_log);
+            if start == end {
+                return true;
+            }
+            let hash = xxhash(&buf[start..end]);
+            if hash == self.xxhash_list[index] {
+                checked.fetch_or(bit, AcqRel);
+                true
+            } else {
+                false
+            }
+        }
+    }
+
+    #[inline]
+    fn is_enabled(&self) -> bool {
+        self.end > 0
+    }
+}
+
+impl Clone for MemChecksum {
+    fn clone(&self) -> Self {
+        Self {
+            start: self.start,
+            end: self.end,
+            chunk_size_log: self.chunk_size_log,
+            xxhash_list: self.xxhash_list.clone(),
+            checked: self
+                .checked
+                .iter()
+                .map(|c| c.load(Relaxed))
+                .map(AtomicU64::new)
+                .collect(),
+        }
+    }
+}
+
+impl Default for MemChecksum {
+    fn default() -> Self {
+        Self {
+            start: 0,
+            end: 0,
+            chunk_size_log: 20, // chunk_size: 1MB.
+            xxhash_list: Vec::new(),
+            checked: Vec::new(),
+        }
+    }
+}
+
 #[derive(Default)]
 struct OffsetMap {
     radix_len: usize,
@@ -1455,6 +1805,9 @@ impl OffsetMap {
                 TypedOffset::Link(x) => self.link_map[x.dirty_index()],
                 TypedOffset::Key(x) => self.key_map[x.dirty_index()],
                 TypedOffset::ExtKey(x) => self.ext_key_map[x.dirty_index()],
+                TypedOffset::Checksum(_) => {
+                    panic!("bug: ChecksumOffset shouldn't be used in OffsetMap::get")
+                }
             };
             // result == 0 means an entry marked "unused" is actually used. It's a logic error.
             debug_assert!(result > 0);
@@ -1913,6 +2266,23 @@ impl IndexBuf for Index {
     fn path(&self) -> &Path {
         &self.path
     }
+}
+
+// Intentionally not inlined. This affects the "index lookup (disk, verified)"
+// benchmark. It takes 74ms with this function inlined, and 61ms without.
+//
+// Reduce instruction count in `Index::verify_checksum`.
+#[inline(never)]
+fn checksum_error(checksum: &MemChecksum, offset: u64, length: u64) -> io::Result<()> {
+    Err(io::Error::new(
+        io::ErrorKind::InvalidData,
+        format!(
+            "range {}..{} failed checksum check ({:?})",
+            offset,
+            offset + length,
+            &checksum,
+        ),
+    ))
 }
 
 impl Index {
@@ -2805,6 +3175,7 @@ impl Debug for Offset {
                 TypedOffset::Link(x) => x.fmt(f),
                 TypedOffset::Key(x) => x.fmt(f),
                 TypedOffset::ExtKey(x) => x.fmt(f),
+                TypedOffset::Checksum(x) => x.fmt(f),
             }
         } else {
             write!(f, "Disk[{}]", self.0)
@@ -2885,6 +3256,17 @@ impl Debug for MemRoot {
         }
     }
 }
+impl Debug for MemChecksum {
+    fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
+        write!(
+            f,
+            "Chesksum {{ previous: {}, chunk_size_log: {}, checksums: {:?} }}",
+            self.start,
+            self.chunk_size_log,
+            self.xxhash_list_to_write(),
+        )
+    }
+}
 
 impl Debug for Index {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
@@ -2944,6 +3326,11 @@ impl Debug for Index {
                     e.write_to(&mut buf, &offset_map).expect("write");
                     writeln!(f, "{:?}", e)?;
                 }
+                TYPE_CHECKSUM => {
+                    let e = MemChecksum::read_from(&self, i).expect("read").0;
+                    e.write_to(&mut buf, &offset_map).expect("write");
+                    writeln!(f, "{:?}", e)?;
+                }
                 _ => {
                     writeln!(f, "Broken Data!")?;
                     break;
@@ -2990,7 +3377,6 @@ mod tests {
     use quickcheck::quickcheck;
     use std::collections::{BTreeSet, HashMap};
     use std::fs::File;
-    use std::io::prelude::*;
     use tempfile::tempdir;
 
     use super::InsertValue::PrependReplace;
