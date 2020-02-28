@@ -9,7 +9,7 @@
 
 use std::collections::{HashMap, HashSet};
 use std::sync::{Arc, RwLock};
-use std::time::{Duration, Instant};
+use std::time::Duration;
 
 use anyhow::Error;
 use blame::{derive_blame, BlameRoot};
@@ -19,9 +19,15 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::{derive_fsnodes, RootFsnodeId};
-use futures::{future, stream, sync, Future, Stream};
-use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt};
-use futures_stats::Timed;
+use futures::Future;
+use futures_ext::{BoxFuture, FutureExt};
+use futures_preview::{
+    channel::oneshot,
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{select, FutureExt as NewFutureExt, TryFutureExt},
+    stream::{FuturesUnordered, StreamExt, TryStreamExt},
+};
+use futures_stats::futures03::TimedFutureExt;
 use lock_ext::RwLockExt;
 use mononoke_types::ChangesetId;
 use slog::info;
@@ -36,7 +42,7 @@ define_stats! {
 
 pub struct WarmBookmarksCache {
     bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
-    terminate: Option<sync::oneshot::Sender<()>>,
+    terminate: Option<oneshot::Sender<()>>,
 }
 
 pub type WarmerFn =
@@ -65,7 +71,7 @@ impl WarmBookmarksCache {
 
         let warmers = Arc::new(warmers);
         let bookmarks = Arc::new(RwLock::new(HashMap::new()));
-        let (sender, receiver) = sync::oneshot::channel();
+        let (sender, receiver) = oneshot::channel();
         let warm_cs_ids = Arc::new(RwLock::new(HashSet::new()));
         spawn_bookmarks_updater(
             bookmarks.clone(),
@@ -75,15 +81,20 @@ impl WarmBookmarksCache {
             warmers.clone(),
             warm_cs_ids.clone(),
         );
-        update_bookmarks(bookmarks.clone(), ctx.clone(), repo, warmers, warm_cs_ids).map(
-            move |()| {
-                info!(ctx.logger(), "Started warm bookmark cache updater");
-                Self {
-                    bookmarks,
-                    terminate: Some(sender),
-                }
-            },
-        )
+
+        {
+            cloned!(bookmarks, ctx);
+            async move { update_bookmarks(&bookmarks, &ctx, &repo, &warmers, &warm_cs_ids).await }
+        }
+        .boxed()
+        .compat()
+        .map(move |()| {
+            info!(ctx.logger(), "Started warm bookmark cache updater");
+            Self {
+                bookmarks,
+                terminate: Some(sender),
+            }
+        })
     }
 
     pub fn get(&self, bookmark: &BookmarkName) -> Option<ChangesetId> {
@@ -106,57 +117,56 @@ impl Drop for WarmBookmarksCache {
 
 fn spawn_bookmarks_updater(
     bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
-    terminate: sync::oneshot::Receiver<()>,
+    terminate: oneshot::Receiver<()>,
     ctx: CoreContext,
     repo: BlobRepo,
     warmers: Arc<Vec<Box<WarmerFn>>>,
     warm_cs_ids: Arc<RwLock<HashSet<ChangesetId>>>,
 ) {
-    tokio::spawn(future::lazy(move || {
+    // ignore JoinHandle, because we want it to run until `terminate` receives a signal
+    let _ = tokio_preview::spawn(async move {
         info!(ctx.logger(), "Starting warm bookmark cache updater");
-        stream::repeat(())
-            .and_then({
-                cloned!(ctx);
-                move |()| {
-                    let repoid = repo.get_repoid();
-                    update_bookmarks(bookmarks.clone(), ctx.clone(), repo.clone(), warmers.clone(), warm_cs_ids.clone())
-                    .timed(move |stats, _| {
-                        STATS::cached_bookmark_update_time_ms
-                            .add_value(stats.completion_time.as_millis_unchecked() as i64, (repoid.id().to_string(), ));
-                        Ok(())
-                    })
-                }
-            })
-            .then(|_| {
-                let dur = Duration::from_millis(1000);
-                tokio::timer::Delay::new(Instant::now() + dur)
-            })
-            // Ignore all errors and always retry - we don't want a transient
-            // failure make our bookmarks stale forever
-            .then(|_| Ok(()))
-            .for_each(|_| -> Result<(), ()> { Ok(()) })
-            .select2(terminate)
-            .then(move |_| {
-                info!(ctx.logger(), "Stopped warm bookmark cache updater");
-                Ok(())
-            })
-    }));
+        let infinite_loop = async {
+            loop {
+                let repoid = repo.get_repoid();
+                let (stats, _) = update_bookmarks(&bookmarks, &ctx, &repo, &warmers, &warm_cs_ids)
+                    .timed()
+                    .await;
+
+                STATS::cached_bookmark_update_time_ms.add_value(
+                    stats.completion_time.as_millis_unchecked() as i64,
+                    (repoid.id().to_string(),),
+                );
+
+                let _ = tokio_preview::time::delay_for(Duration::from_millis(1000)).await;
+            }
+        }
+        .boxed();
+
+        let _ = select(infinite_loop, terminate).await;
+
+        info!(ctx.logger(), "Stopped warm bookmark cache updater");
+        let res: Result<_, Error> = Ok(());
+        res
+    });
 }
 
-fn update_bookmarks(
-    bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
-    ctx: CoreContext,
-    repo: BlobRepo,
-    warmers: Arc<Vec<Box<WarmerFn>>>,
-    warm_cs_ids: Arc<RwLock<HashSet<ChangesetId>>>,
-) -> impl Future<Item = (), Error = Error> {
-    repo.get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-        .map({
+async fn update_bookmarks<'a>(
+    bookmarks: &'a Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
+    warmers: &'a Arc<Vec<Box<WarmerFn>>>,
+    warm_cs_ids: &'a Arc<RwLock<HashSet<ChangesetId>>>,
+) -> Result<(), Error> {
+    let warmed_bookmarks = repo
+        .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+        .compat()
+        .map_ok({
             cloned!(warm_cs_ids);
             move |(bookmark, cs_id)| {
-                if warm_cs_ids.read().unwrap().contains(&cs_id) {
+                let success = if warm_cs_ids.read().unwrap().contains(&cs_id) {
                     // This changeset was warmed on the previous iteration.
-                    future::ok(true).left_future()
+                    async { Ok(true) }.left_future()
                 } else {
                     // Derive all the necessary data to make the changeset
                     // warm. This makes sure the read path doesn't have to
@@ -171,39 +181,54 @@ fn update_bookmarks(
                     //
                     // Spawn each warmer into a separate task so that they
                     // run in parallel.
-                    let warmers = warmers.iter().map({
-                        cloned!(ctx, repo);
-                        move |warmer| {
-                            spawn_future((*warmer)(ctx.clone(), repo.clone(), cs_id))
-                                .then(|res| Ok(res.is_ok()))
+                    let mut warmers = warmers
+                        .iter()
+                        .map(|warmer| {
+                            let join_handle = tokio_preview::spawn(
+                                (*warmer)(ctx.clone(), repo.clone(), cs_id).compat(),
+                            );
+                            async move {
+                                let res: Result<_, Error> = match join_handle.await {
+                                    Ok(Ok(_)) => Ok(true),
+                                    Ok(Err(_)) | Err(_) => Ok(false),
+                                };
+                                res
+                            }
+                        })
+                        .collect::<FuturesUnordered<_>>();
+                    async move {
+                        let mut res = true;
+                        while let Some(newres) = warmers.next().await {
+                            res &= newres?;
                         }
-                    });
-                    stream::futures_unordered(warmers)
-                        .fold(true, |a, b| -> Result<bool, Error> { Ok(a && b) })
-                        .right_future()
-                }
-                .map(move |success| (bookmark.into_name(), cs_id, success))
+                        Ok(res)
+                    }
+                    .right_future()
+                };
+
+                success.map_ok(move |success| (bookmark.into_name(), cs_id, success))
             }
         })
-        .buffered(100)
-        .collect_to::<Vec<_>>()
-        .map(move |warmed_bookmarks| {
-            // The new set of warm changesets are those which were
-            // already warm, or for which all derivations succeeded.
-            let new_warm_cs_ids: HashSet<_> = warmed_bookmarks
-                .iter()
-                .filter(|(_name, _cs_id, success)| *success)
-                .map(|(_name, cs_id, _success)| cs_id.clone())
-                .collect();
-            warm_cs_ids.with_write(|warm_cs_ids| *warm_cs_ids = new_warm_cs_ids);
-            // The new bookmarks are all the bookmarks, regardless of
-            // whether derivation succeeded.
-            let new_bookmarks: HashMap<_, _> = warmed_bookmarks
-                .into_iter()
-                .map(|(name, cs_id, _success)| (name, cs_id))
-                .collect();
-            bookmarks.with_write(|bookmarks| *bookmarks = new_bookmarks);
-        })
+        .try_buffer_unordered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    // The new set of warm changesets are those which were
+    // already warm, or for which all derivations succeeded.
+    let new_warm_cs_ids: HashSet<_> = warmed_bookmarks
+        .iter()
+        .filter(|(_name, _cs_id, success)| *success)
+        .map(|(_name, cs_id, _success)| cs_id.clone())
+        .collect();
+    warm_cs_ids.with_write(|warm_cs_ids| *warm_cs_ids = new_warm_cs_ids);
+    // The new bookmarks are all the bookmarks, regardless of
+    // whether derivation succeeded.
+    let new_bookmarks: HashMap<_, _> = warmed_bookmarks
+        .into_iter()
+        .map(|(name, cs_id, _success)| (name, cs_id))
+        .collect();
+    bookmarks.with_write(|bookmarks| *bookmarks = new_bookmarks);
+    Ok(())
 }
 
 /// Warm the Mecurial derived data for a changeset.
