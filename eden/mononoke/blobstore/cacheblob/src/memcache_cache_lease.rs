@@ -184,14 +184,14 @@ pub fn new_memcache_blobstore<T>(
     blobstore: T,
     backing_store_name: &'static str,
     backing_store_params: impl ToString,
-) -> Result<CountedBlobstore<CacheBlobstore<MemcacheOps, MemcacheOps, T>>, Error>
+) -> Result<CountedBlobstore<CacheBlobstore<MemcacheOps, DummyLease, T>>, Error>
 where
     T: Blobstore + Clone,
 {
     let cache_ops = MemcacheOps::new(fb, backing_store_name, backing_store_params)?;
     Ok(CountedBlobstore::new(
         "memcache".to_string(),
-        CacheBlobstore::new(cache_ops.clone(), cache_ops, blobstore),
+        CacheBlobstore::new(cache_ops, DummyLease {}, blobstore),
     ))
 }
 
