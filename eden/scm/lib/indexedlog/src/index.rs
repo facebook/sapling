@@ -1548,7 +1548,7 @@ pub struct Index {
 
     // For efficient and shared random reading.
     // Backed by mmap.
-    buf: Bytes,
+    pub(crate) buf: Bytes,
 
     // For error messages.
     // Log uses this field for error messages.
@@ -1753,7 +1753,7 @@ impl OpenOptions {
 
             let checksum_chunk_size = self.checksum_chunk_size;
             let mut checksum = if checksum_chunk_size > 0 {
-                Some(ChecksumTable::new(&path)?.fsync(self.fsync))
+                Some(ChecksumTable::new(&path, bytes.clone())?.fsync(self.fsync))
             } else {
                 None
             };
@@ -2204,7 +2204,7 @@ impl Index {
                     debug_assert!(self.open_options.checksum_chunk_size > 0);
                     let chunk_size_log =
                         63 - (self.open_options.checksum_chunk_size as u64).leading_zeros();
-                    table.update(chunk_size_log.into())?;
+                    table.update(chunk_size_log.into(), self.buf.clone())?;
                 }
 
                 self.clean_root = MemRoot::read_from_end(this, new_len)?;

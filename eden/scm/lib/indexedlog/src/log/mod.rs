@@ -765,7 +765,7 @@ impl Log {
                     let tmp = tempfile::NamedTempFile::new_in(dir).context(&dir, || {
                         format!("cannot create tempfile for rebuilding index {:?}", name)
                     })?;
-                    let index_len = {
+                    let (index_len, index_buf) = {
                         let mut index = index::OpenOptions::new()
                             .key_buf(Some(self.disk_buf.clone()))
                             .open(&tmp.path())?;
@@ -776,7 +776,8 @@ impl Log {
                             &self.disk_buf,
                             self.meta.primary_len,
                         )?;
-                        index.flush()?
+                        let len = index.flush()?;
+                        (len, index.buf.clone())
                     };
 
                     // Before replacing the index, set its "logic length" to 0 so
@@ -804,7 +805,7 @@ impl Log {
                     // Update checksum table.
                     let mut table = ChecksumTable::new_empty(&path)?;
                     table
-                        .update(Some(INDEX_CHECKSUM_CHUNK_SIZE_LOG))
+                        .update(Some(INDEX_CHECKSUM_CHUNK_SIZE_LOG), index_buf)
                         .context("while trying to update checksum for rebuilt index")?;
 
                     self.meta.indexes.insert(name.to_string(), index_len);

@@ -27,18 +27,17 @@
 // embed checksum logic into them.
 
 use crate::errors::{IoResultExt, ResultExt};
-use crate::utils::{atomic_write, mmap_empty, mmap_readonly, xxhash};
+use crate::utils::{atomic_write, xxhash};
 use byteorder::{LittleEndian, ReadBytesExt, WriteBytesExt};
-use fs2::FileExt;
-use memmap::Mmap;
+use minibytes::Bytes;
 use std::{
-    fs::{File, OpenOptions},
+    fs::OpenOptions,
     io::{self, Cursor, Read},
     path::{Path, PathBuf},
     sync::atomic::{AtomicU64, Ordering},
 };
 
-/// An table of checksums to verify another file.
+/// An table of checksums to verify an append-only buffer.
 ///
 /// The table is backed by a file on disk, and can be updated incrementally
 /// for append-only files.
@@ -52,12 +51,7 @@ use std::{
 /// way by always using [`ChecksumTable::clear`] to reset the existing table
 /// before updating.
 pub struct ChecksumTable {
-    // The file to be checked. Maintain a separate mmap buffer so
-    // the API is easier to use for the caller. It's expected for
-    // the caller to also use mmap to let the system do the "sharing"
-    // work. But that's not required for correctness.
-    file: File,
-    buf: Mmap,
+    pub(crate) buf: Bytes,
     path: PathBuf,
 
     // Whether fsync is set.
@@ -153,16 +147,10 @@ impl ChecksumTable {
     ///
     /// Once the table is loaded from disk, changes on disk won't affect
     /// the table in memory.
-    pub fn new<P: AsRef<Path>>(path: &P) -> crate::Result<Self> {
+    pub fn new<P: AsRef<Path>>(path: &P, buf: Bytes) -> crate::Result<Self> {
         // Read the source of truth file as a mmap buffer
         let result = (|| {
             let path = path.as_ref();
-            let file = OpenOptions::new()
-                .read(true)
-                .open(path)
-                .context(path, "cannot open checksummed file")?;
-            let (mmap, len) =
-                mmap_readonly(&file, None).context(path, "cannot mmap checksummed file")?;
 
             // Read checksum file into memory
             let checksum_path = path_appendext(path, "sum");
@@ -201,6 +189,8 @@ impl ChecksumTable {
                 }
                 let chunk_size_log = chunk_size_log as u32;
                 let chunk_size = 1 << chunk_size_log;
+
+                let len = buf.len() as u64;
                 let file_size = len.min(
                     cur.read_u64::<LittleEndian>()
                         .context(&checksum_path, "file_size field cannot be read")
@@ -222,8 +212,7 @@ impl ChecksumTable {
             };
 
             Ok(ChecksumTable {
-                file,
-                buf: mmap,
+                buf,
                 path: path.to_path_buf(),
                 fsync: false,
                 chunk_size_log,
@@ -244,13 +233,8 @@ impl ChecksumTable {
         let path = path.as_ref();
         (|| -> crate::Result<Self> {
             let checksum_path = path_appendext(path, "sum");
-            let file = OpenOptions::new()
-                .read(true)
-                .open(path)
-                .context(path, "cannot open checksummed file")?;
             Ok(ChecksumTable {
-                file,
-                buf: mmap_empty().infallible()?,
+                buf: Bytes::new(),
                 path: path.to_path_buf(),
                 fsync: false,
                 chunk_size_log: DEFAULT_CHUNK_SIZE_LOG,
@@ -275,27 +259,8 @@ impl ChecksumTable {
     /// Clone the checksum table.
     pub fn try_clone(&self) -> crate::Result<Self> {
         let result: crate::Result<Self> = (|| {
-            let file = self
-                .file
-                .duplicate()
-                .context(&self.path, "cannot duplicate file descriptor")?;
-            // Special case: buf.len() == 1 might still mean an empty file.
-            let mmap = if self.buf.len() == 1
-                && file
-                    .metadata()
-                    .context(&self.path, "cannot read metadata")?
-                    .len()
-                    == 0
-            {
-                mmap_empty().context(&self.path, "cannot mmap")?
-            } else {
-                mmap_readonly(&file, (self.buf.len() as u64).into())
-                    .context(&self.path, "cannot mmap")?
-                    .0
-            };
             Ok(ChecksumTable {
-                file,
-                buf: mmap,
+                buf: self.buf.clone(),
                 path: self.path.clone(),
                 fsync: self.fsync,
                 checksum_path: self.checksum_path.clone(),
@@ -329,9 +294,8 @@ impl ChecksumTable {
     ///
     /// Otherwise, update the in-memory checksum table. Then write it in an
     /// atomic-replace way.  Return write errors if write fails.
-    pub fn update(&mut self, chunk_size_log: Option<u32>) -> crate::Result<()> {
+    pub fn update(&mut self, chunk_size_log: Option<u32>, buf: Bytes) -> crate::Result<()> {
         let result = (|| {
-            let (mmap, len) = mmap_readonly(&self.file, None).context(&self.path, "cannot mmap")?;
             let chunk_size_log = chunk_size_log.unwrap_or(self.chunk_size_log);
             if chunk_size_log > MAX_CHUNK_SIZE_LOG {
                 return Err(crate::Error::programming("chunk_size_log is too large"));
@@ -343,6 +307,7 @@ impl ChecksumTable {
                 return Err(crate::Error::programming("chunk_size_log cannot be 0"));
             }
 
+            let len = buf.len() as _;
             if len == self.end && chunk_size == old_chunk_size {
                 return Ok(());
             }
@@ -375,25 +340,27 @@ impl ChecksumTable {
             let mut offset = checksums.len() as u64 * chunk_size;
             while offset < len {
                 let end = (offset + chunk_size).min(len);
-                let chunk = &mmap[offset as usize..end as usize];
+                let chunk = &buf.as_ref()[offset as usize..end as usize];
                 checksums.push(xxhash(chunk));
                 offset = end;
             }
 
             // Prepare changes
-            let mut buf = Vec::with_capacity(16 + checksums.len() * 8);
-            buf.write_u64::<LittleEndian>(chunk_size_log as u64)
-                .infallible()?;
-            buf.write_u64::<LittleEndian>(len).infallible()?;
-            for checksum in &checksums {
-                buf.write_u64::<LittleEndian>(*checksum).infallible()?;
+            {
+                let mut buf = Vec::with_capacity(16 + checksums.len() * 8);
+                buf.write_u64::<LittleEndian>(chunk_size_log as u64)
+                    .infallible()?;
+                buf.write_u64::<LittleEndian>(len).infallible()?;
+                for checksum in &checksums {
+                    buf.write_u64::<LittleEndian>(*checksum).infallible()?;
+                }
+
+                // Write changes to disk
+                atomic_write(&self.checksum_path, &buf, self.fsync)?;
             }
 
-            // Write changes to disk
-            atomic_write(&self.checksum_path, &buf, self.fsync)?;
-
             // Update fields
-            self.buf = mmap;
+            self.buf = buf;
             self.end = len;
             self.checked = (0..(checksums.len() + 63) / 64)
                 .map(|_| AtomicU64::new(0))
@@ -436,36 +403,41 @@ fn checksum_error(table: &ChecksumTable, offset: u64, length: u64) -> crate::Res
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::utils::mmap_bytes;
+    use fs2::FileExt;
+    use std::fs::File;
     use std::io::{Seek, SeekFrom, Write};
-    use tempfile::tempdir;
+    use tempfile::{tempdir, TempDir};
 
-    fn setup() -> (File, Box<dyn Fn() -> crate::Result<ChecksumTable>>) {
+    fn setup() -> (
+        TempDir,
+        File,
+        Box<dyn Fn() -> crate::Result<ChecksumTable>>,
+        Box<dyn Fn(&mut ChecksumTable, Option<u32>) -> crate::Result<()>>,
+    ) {
         let dir = tempdir().unwrap();
-
-        // Checksum an non-existed file is an error.
-        assert!(ChecksumTable::new(&dir.path().join("non-existed")).is_err());
+        let path = dir.path().join("main");
 
         // Checksum an empty file is not an error.
         let file = OpenOptions::new()
+            .read(true)
             .write(true)
             .create(true)
             .open(&dir.path().join("main"))
             .expect("open");
-        let f = move || ChecksumTable::new(&dir.path().join("main"));
+        let file1 = file.duplicate().unwrap();
+        let file2 = file.duplicate().unwrap();
+        let get_table = move || ChecksumTable::new(&path, mmap_bytes(&file1, None).unwrap());
+        let update_table = move |table: &mut ChecksumTable, chunk_size| {
+            table.update(chunk_size, mmap_bytes(&file2, None).unwrap())
+        };
 
-        (file, Box::new(f))
-    }
-
-    #[test]
-    fn test_non_existed() {
-        // Checksum an non-existed file is an error.
-        let dir = tempdir().unwrap();
-        assert!(ChecksumTable::new(&dir.path().join("non-existed")).is_err());
+        (dir, file, Box::new(get_table), Box::new(update_table))
     }
 
     #[test]
     fn test_empty() {
-        let (_file, get_table) = setup();
+        let (_dir, _file, get_table, _update_table) = setup();
         let table = get_table().expect("checksum on an empty file is okay");
         assert!(table.check_range(0, 0).is_ok());
         assert!(table.check_range(0, 1).is_err());
@@ -475,10 +447,10 @@ mod tests {
 
     #[test]
     fn test_update_from_empty() {
-        let (mut file, get_table) = setup();
+        let (_dir, mut file, get_table, update_table) = setup();
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
-        table.update(7.into()).expect("update");
+        update_table(&mut table, 7.into()).expect("update");
         assert!(table.check_range(1, 19).is_ok());
         assert!(table.check_range(1, 20).is_err());
         assert!(table.check_range(19, 1).is_ok());
@@ -488,25 +460,25 @@ mod tests {
 
     #[test]
     fn test_incremental_update() {
-        let (mut file, get_table) = setup();
+        let (_dir, mut file, get_table, update_table) = setup();
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
-        table.update(3.into()).expect("update");
+        update_table(&mut table, 3.into()).expect("update");
         assert!(table.check_range(0, 20).is_ok());
         file.write_all(b"01234567890123456789").expect("write");
         assert!(table.check_range(20, 1).is_err());
-        table.update(None).expect("update");
+        update_table(&mut table, None).expect("update");
         assert!(table.check_range(20, 20).is_ok());
     }
 
     #[test]
     fn test_change_chunk_size() {
-        let (mut file, get_table) = setup();
+        let (_dir, mut file, get_table, update_table) = setup();
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
-        table.update(2.into()).expect("update");
+        update_table(&mut table, 2.into()).expect("update");
         for &chunk_size in &[1, 2, 3, 4] {
-            table.update(chunk_size.into()).expect("update");
+            update_table(&mut table, chunk_size.into()).expect("update");
             assert!(table.check_range(0, 20).is_ok());
             assert!(table.check_range(0, 21).is_err());
         }
@@ -514,10 +486,10 @@ mod tests {
 
     #[test]
     fn test_reload_from_disk() {
-        let (mut file, get_table) = setup();
+        let (_dir, mut file, get_table, update_table) = setup();
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
-        table.update(3.into()).expect("update");
+        update_table(&mut table, 3.into()).expect("update");
         assert!(table.check_range(0, 20).is_ok());
         assert!(table.check_range(0, 21).is_err());
         let table = get_table().unwrap();
@@ -527,10 +499,10 @@ mod tests {
 
     #[test]
     fn test_broken_byte() {
-        let (mut file, get_table) = setup();
+        let (_dir, mut file, get_table, update_table) = setup();
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
-        table.update(1.into()).expect("update");
+        update_table(&mut table, 1.into()).expect("update");
         // Corruption: Corrupt the file at byte 5
         file.seek(SeekFrom::Start(5)).expect("seek");
         file.write_all(&[1]).expect("write");
@@ -547,10 +519,10 @@ mod tests {
     #[cfg(not(windows))]
     #[test]
     fn test_truncate() {
-        let (mut file, get_table) = setup();
+        let (_dir, mut file, get_table, update_table) = setup();
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
-        table.update(1.into()).expect("update");
+        update_table(&mut table, 1.into()).expect("update");
         file.set_len(19).expect("set_len");
         let table = get_table().unwrap();
         assert!(table.check_range(0, 20).is_err());
@@ -560,24 +532,24 @@ mod tests {
 
     #[test]
     fn test_broken_during_update() {
-        let (mut file, get_table) = setup();
+        let (_dir, mut file, get_table, update_table) = setup();
         file.write_all(b"01234567890123456789").expect("write");
         let mut table = get_table().unwrap();
-        table.update(3.into()).expect("update");
+        update_table(&mut table, 3.into()).expect("update");
         file.seek(SeekFrom::End(-1)).expect("seek");
         file.write_all(b"x0123").expect("write");
-        table.update(None).expect_err("broken during update");
-        table.update(3.into()).expect_err("broken during update");
+        update_table(&mut table, None).expect_err("broken during update");
+        update_table(&mut table, 3.into()).expect_err("broken during update");
         // With clear(), update can work.
         table.clear();
-        table.update(3.into()).expect("update");
+        update_table(&mut table, 3.into()).expect("update");
         // If chunk boundary aligns with the broken range, corruption won't be detected.
         assert_eq!(file.seek(SeekFrom::End(-1)).expect("seek"), 23);
         file.write_all(b"x123451234512345").expect("write");
-        table.update(None).expect("update");
+        update_table(&mut table, None).expect("update");
         // But explicitly verifying it will reveal the problem.
         assert!(table.check_range(23, 1).is_err());
         // Update with a different chunk_size will also cause an error.
-        table.update(2.into()).expect_err("broken during update");
+        update_table(&mut table, 2.into()).expect_err("broken during update");
     }
 }
