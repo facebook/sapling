@@ -628,8 +628,18 @@ impl Log {
             // The index will be no longer lagging, since meta is being updated.
             self.index_lags[i] = 0;
         }
-
         Ok(())
+    }
+
+    /// Return `true` if there is at least one index that is lagging,
+    /// and `flush_lagging_indexes` should be called.
+    pub(crate) fn is_any_index_lagging(&self) -> bool {
+        for (i, &count) in self.index_lags.iter().enumerate() {
+            if self.open_options.index_defs[i].lag_threshold < count {
+                return true;
+            }
+        }
+        false
     }
 
     /// Check if the log is changed on disk.

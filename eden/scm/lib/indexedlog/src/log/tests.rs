@@ -553,6 +553,78 @@ fn test_index_lag_threshold() {
 }
 
 #[test]
+fn test_update_index_upon_open() {
+    // Indexes that are lagging are updated on open.
+    let dir = tempdir().unwrap();
+    let def = IndexDef::new("a", |_| vec![IndexOutput::Reference(0..1)]).lag_threshold(3);
+    let index_filename = def.filename();
+    let open_opts = OpenOptions::new().create(true).index_defs(vec![def]);
+    let get_index_size = || -> u64 {
+        let index_path = dir.path().join(&index_filename);
+        index_path.metadata().map(|m| m.len()).unwrap_or(0)
+    };
+    assert_eq!(get_index_size(), 0);
+    let mut log = open_opts.open(dir.path()).unwrap();
+    log.append(b"abc").unwrap();
+    log.append(b"abc").unwrap();
+    log.append(b"abc").unwrap();
+    log.sync().unwrap();
+    assert_eq!(
+        get_index_size(),
+        0,
+        "index should be empty as 3 entries are within lag threshold 3"
+    );
+
+    log.append(b"abc").unwrap();
+    log.sync().unwrap();
+    assert_eq!(
+        get_index_size(),
+        47,
+        "index should not be empty as 4 entries exceed lag threshold 3"
+    );
+
+    log.append(b"abc").unwrap();
+    log.append(b"abc").unwrap();
+    log.sync().unwrap();
+    assert_eq!(
+        get_index_size(),
+        47,
+        "index should not be changed because 2 new entries are within lag threshold 3"
+    );
+
+    // Open with a different OpenOptions. This should update the indexes.
+    let def = IndexDef::new("a", |_| vec![IndexOutput::Reference(0..1)]).lag_threshold(1);
+    let open_opts = OpenOptions::new().create(true).index_defs(vec![def]);
+    let _log = open_opts.open(dir.path()).unwrap();
+    assert_eq!(
+        get_index_size(),
+        84,
+        "index should be changed because 2 pending entries exceeds lag threshold 1"
+    );
+
+    // Open with IndexDef renamed.
+    let def = IndexDef::new("b", |_| vec![IndexOutput::Reference(0..1)]).lag_threshold(4);
+    let index_filename = def.filename();
+    let open_opts = OpenOptions::new().create(true).index_defs(vec![def]);
+    let _log = open_opts.open(dir.path()).unwrap();
+    assert_eq!(
+        dir.path().join(index_filename).metadata().unwrap().len(),
+        53,
+        "new index should be built at open time since 6 entries exceeds threshold 4"
+    );
+
+    let def = IndexDef::new("c", |_| vec![IndexOutput::Reference(0..1)]).lag_threshold(6);
+    let index_filename = def.filename();
+    let open_opts = OpenOptions::new().create(true).index_defs(vec![def]);
+    let _log = open_opts.open(dir.path()).unwrap();
+    assert_eq!(
+        dir.path().join(index_filename).metadata().unwrap().len(),
+        0,
+        "new index should be built at open time since 6 entries do not exceed threshold 6"
+    );
+}
+
+#[test]
 fn test_flush_filter() {
     let dir = tempdir().unwrap();
 

@@ -425,6 +425,19 @@ impl OpenOptions {
             open_options: self.clone(),
         };
         log.update_indexes_for_on_disk_entries()?;
+        if log.is_any_index_lagging() {
+            // Update indexes.
+            // NOTE: Consider ignoring failures if they are caused by permission
+            // issues.
+            if let Some(lock) = lock {
+                log.flush_lagging_indexes(lock)?;
+                log.dir.write_meta(&log.meta, self.fsync)?;
+            } else {
+                let lock = dir.lock()?;
+                log.flush_lagging_indexes(&lock)?;
+                log.dir.write_meta(&log.meta, self.fsync)?;
+            }
+        }
         Ok(log)
     }
 }
