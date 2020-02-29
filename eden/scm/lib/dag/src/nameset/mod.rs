@@ -18,6 +18,7 @@ use std::sync::Arc;
 
 pub mod difference;
 pub mod intersection;
+pub mod r#static;
 pub mod union;
 
 /// A [`NameSet`] contains an immutable list of names.
@@ -30,6 +31,11 @@ pub struct NameSet(Arc<dyn NameSetQuery>);
 impl NameSet {
     pub(crate) fn from_query(query: impl NameSetQuery) -> Self {
         Self(Arc::new(query))
+    }
+
+    /// Creates from a (short) list of known names.
+    pub fn from_static_names(names: impl IntoIterator<Item = VertexName>) -> NameSet {
+        Self::from_query(r#static::StaticSet::from_names(names))
     }
 
     /// Calculates the subset that is only in self, not in other.
