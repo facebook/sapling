@@ -18,6 +18,7 @@ use std::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
 
+pub mod all;
 pub mod dag;
 pub mod difference;
 pub mod intersection;
@@ -36,6 +37,11 @@ pub struct NameSet(Arc<dyn NameSetQuery>);
 impl NameSet {
     pub(crate) fn from_query(query: impl NameSetQuery) -> Self {
         Self(Arc::new(query))
+    }
+
+    /// Creates a virtual "all" set that can intersect with other sets.
+    pub fn all() -> NameSet {
+        Self::from_query(all::AllSet)
     }
 
     /// Creates from a (short) list of known names.
