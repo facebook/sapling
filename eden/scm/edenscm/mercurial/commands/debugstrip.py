@@ -48,12 +48,11 @@ def _findupdatetarget(repo, nodes):
     if currentbranch != repo[unode].branch():
         pwdir = "parents(wdir())"
         revset = "max(((parents(%ln::%r) + %r) - %ln::%r) and branch(%s))"
-        branchtarget = repo.revs(
-            revset, nodes, pwdir, pwdir, nodes, pwdir, currentbranch
+        branchtarget = list(
+            repo.nodes(revset, nodes, pwdir, pwdir, nodes, pwdir, currentbranch)
         )
         if branchtarget:
-            cl = repo.changelog
-            unode = cl.node(branchtarget.first())
+            unode = branchtarget[0]
 
     return unode
 
@@ -165,11 +164,11 @@ def stripcmd(ui, repo, *revs, **opts):
 
             # only reset the dirstate for files that would actually change
             # between the working context and uctx
-            descendantrevs = repo.revs("%s::." % uctx.rev())
+            descendantnodes = repo.nodes("%s::." % uctx.rev())
             changedfiles = []
-            for rev in descendantrevs:
+            for n in descendantnodes:
                 # blindly reset the files, regardless of what actually changed
-                changedfiles.extend(repo[rev].files())
+                changedfiles.extend(repo[n].files())
 
             # reset files that only changed in the dirstate too
             dirstate = repo.dirstate
