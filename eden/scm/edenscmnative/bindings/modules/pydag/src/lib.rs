@@ -42,6 +42,9 @@ impl Into<SpanSet> for Spans {
     }
 }
 
+// Mercurial's special case. -1 maps to (b"\0" * 20)
+const NULL_NODE: [u8; 20] = [0u8; 20];
+
 // A wrapper around [`SpanSet`].
 // This is different from `smartset.spanset`.
 // Used in the Python world. The Rust world should use the `Spans` and `SpanSet` types.
@@ -202,21 +205,31 @@ py_class!(class namedag |py| {
     }
 
     /// Translate id to node.
-    def id2node(&self, id: u64) -> PyResult<Option<PyBytes>> {
-        let namedag = self.namedag(py).borrow();
-        Ok(namedag.map()
-            .find_name_by_id(Id(id))
-            .map_pyerr(py)?
-            .map(|node| PyBytes::new(py, node)))
+    def id2node(&self, id: i64) -> PyResult<Option<PyBytes>> {
+        if id == -1 {
+            Ok(Some(PyBytes::new(py, &NULL_NODE)))
+        } else if id < 0 {
+            Ok(None)
+        } else {
+            let namedag = self.namedag(py).borrow();
+            Ok(namedag.map()
+                .find_name_by_id(Id(id as u64))
+                .map_pyerr(py)?
+                .map(|node| PyBytes::new(py, node)))
+        }
     }
 
     /// Translate node to id.
-    def node2id(&self, node: PyBytes) -> PyResult<Option<u64>> {
-        let namedag = self.namedag(py).borrow();
+    def node2id(&self, node: PyBytes) -> PyResult<Option<i64>> {
         let node = node.data(py);
-        Ok(namedag.map()
-            .find_id_by_name(&node)
-            .map_pyerr(py)?.map(|id| id.0))
+        if node == &NULL_NODE {
+            Ok(Some(-1))
+        } else {
+            let namedag = self.namedag(py).borrow();
+            Ok(namedag.map()
+                .find_id_by_name(&node)
+                .map_pyerr(py)?.map(|id| id.0 as i64))
+        }
     }
 
     /// Lookup nodes by hex prefix.
