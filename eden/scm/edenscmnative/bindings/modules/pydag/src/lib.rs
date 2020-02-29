@@ -19,6 +19,8 @@ use std::cell::RefCell;
 
 use dag::namedag::LowLevelAccess;
 
+mod nameset;
+
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -26,6 +28,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let m = PyModule::new(py, &name)?;
     m.add_class::<namedag>(py)?;
     m.add_class::<spans>(py)?;
+    m.add_class::<nameset::nameset>(py)?;
     Ok(m)
 }
 
