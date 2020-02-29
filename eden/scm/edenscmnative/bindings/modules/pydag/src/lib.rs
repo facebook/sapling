@@ -11,19 +11,20 @@ use anyhow::Error;
 use cpython::*;
 use cpython_ext::{AnyhowResultExt, PyNone, PyPath, ResultPyErrExt};
 use dag::{
-    id::{Group, Id, VertexName},
-    idmap::IdMap,
+    id::{Id, VertexName},
     spanset::{SpanSet, SpanSetIter},
-    IdDag,
+    NameDag,
 };
 use std::cell::RefCell;
+
+use dag::namedag::LowLevelAccess;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "dag"].join(".");
     let m = PyModule::new(py, &name)?;
-    m.add_class::<dagindex>(py)?;
+    m.add_class::<namedag>(py)?;
     m.add_class::<spans>(py)?;
     Ok(m)
 }
@@ -164,195 +165,192 @@ impl ToPyObject for Spans {
     }
 }
 
-py_class!(class dagindex |py| {
-    data dag: RefCell<IdDag>;
-    data map: RefCell<IdMap>;
+py_class!(class namedag |py| {
+    data namedag: RefCell<NameDag>;
+    data pyparentfunc: PyObject;
 
-    def __new__(_cls, path: &PyPath, segment_size: usize = 16) -> PyResult<dagindex> {
-        let mut dag = IdDag::open(path.as_path().join("segment")).map_pyerr(py)?;
-        let map = IdMap::open(path.as_path().join("idmap")).map_pyerr(py)?;
-        dag.set_new_segment_size(segment_size);
-        Self::create_instance(py, RefCell::new(dag), RefCell::new(map))
+    def __new__(_cls, path: &PyPath, parentfunc: PyObject) -> PyResult<namedag> {
+        let dag = NameDag::open(path.as_path()).map_pyerr(py)?;
+        Self::create_instance(py, RefCell::new(dag), parentfunc)
     }
 
-    /// Build segments. Store them on disk.
-    def build(&self, masternodes: Vec<PyBytes>, othernodes: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<PyNone> {
-        let map = self.map(py).borrow();
-        // All nodes known and nothing needs to be built?
-        if masternodes.iter().all(|n| is_ok_some(map.find_id_by_name_with_max_group(n.data(py), Group::MASTER)))
-            && othernodes.iter().all(|n| is_ok_some(map.find_id_by_name(n.data(py)))) {
-            return Ok(PyNone);
-        }
-        drop(map);
-        let get_parents = translate_get_parents(py, parentfunc);
-        let mut map = self.map(py).borrow_mut();
-        let mut map = map.prepare_filesystem_sync().map_pyerr(py)?;
-        for (nodes, group) in [(masternodes, Group::MASTER), (othernodes, Group::NON_MASTER)].iter() {
-            for node in nodes {
-                let node = VertexName::copy_from(node.data(py));
-                map.assign_head(node, &get_parents, *group).map_pyerr(py)?;
-            }
-        }
-        map.sync().map_pyerr(py)?;
-
-        let get_parents = map.build_get_parents_by_id(&get_parents);
-        let mut dag = self.dag(py).borrow_mut();
-        use std::ops::DerefMut;
-        let mut syncable = dag.prepare_filesystem_sync().map_pyerr(py)?;
-        for &group in Group::ALL.iter() {
-            let id = map.next_free_id(group).map_pyerr(py)?;
-            if id > group.min_id() {
-                syncable.build_segments_persistent(id - 1, &get_parents).map_pyerr(py)?;
-            }
-        }
-        syncable.sync(std::iter::once(dag.deref_mut())).map_pyerr(py)?;
-
+    /// Add heads to the in-memory DAG.
+    def addheads(&self, heads: Vec<PyBytes>) -> PyResult<PyNone> {
+        let mut namedag = self.namedag(py).borrow_mut();
+        let parents = self.parentfunc(py);
+        let heads = heads.into_iter().map(|b| VertexName::copy_from(b.data(py))).collect::<Vec<_>>();
+        namedag.add_heads(&parents, &heads).map_pyerr(py)?;
         Ok(PyNone)
     }
 
-    /// Reload segments. Get changes on disk.
-    def reload(&self) -> PyResult<PyNone> {
-        self.map(py).borrow_mut().reload().map_pyerr(py)?;
-        self.dag(py).borrow_mut().reload().map_pyerr(py)?;
+    /// Write the DAG to disk.
+    def flush(&self, masterheads: Vec<PyBytes>) -> PyResult<PyNone> {
+        let mut namedag = self.namedag(py).borrow_mut();
+        let heads = masterheads.into_iter().map(|b| VertexName::copy_from(b.data(py))).collect::<Vec<_>>();
+        namedag.flush(&heads).map_pyerr(py)?;
         Ok(PyNone)
     }
 
+    /// Write heads directly to disk. Similar to addheads + flush, but faster.
+    def addheadsflush(&self, masterheads: Vec<PyBytes>, otherheads: Vec<PyBytes>) -> PyResult<PyNone> {
+        let mut namedag = self.namedag(py).borrow_mut();
+        let parents = self.parentfunc(py);
+        let masterheads = masterheads.into_iter().map(|b| VertexName::copy_from(b.data(py))).collect::<Vec<_>>();
+        let otherheads = otherheads.into_iter().map(|b| VertexName::copy_from(b.data(py))).collect::<Vec<_>>();
+        namedag.add_heads_and_flush(&parents, &masterheads, &otherheads).map_pyerr(py)?;
+        Ok(PyNone)
+    }
+
+    /// Translate id to node.
     def id2node(&self, id: u64) -> PyResult<Option<PyBytes>> {
-        // Translate id to node.
-        let map = self.map(py).borrow();
-        Ok(map
+        let namedag = self.namedag(py).borrow();
+        Ok(namedag.map()
             .find_name_by_id(Id(id))
             .map_pyerr(py)?
             .map(|node| PyBytes::new(py, node)))
     }
 
+    /// Translate node to id.
     def node2id(&self, node: PyBytes) -> PyResult<Option<u64>> {
-        // Translate node to id.
+        let namedag = self.namedag(py).borrow();
         let node = node.data(py);
-        let map = self.map(py).borrow();
-        Ok(map
+        Ok(namedag.map()
             .find_id_by_name(&node)
             .map_pyerr(py)?.map(|id| id.0))
     }
 
+    /// Lookup nodes by hex prefix.
+    def hexprefixmatch(&self, prefix: PyBytes, limit: usize = 5) -> PyResult<Vec<PyBytes>> {
+        let prefix = prefix.data(py);
+        if !prefix.iter().all(|&b| (b >= b'0' && b <= b'9') || (b >= b'a' && b <= b'f')) {
+            // Invalid hex prefix. Pretend nothing matches.
+            return Ok(Vec::new())
+        }
+        let namedag = self.namedag(py).borrow();
+        let nodes = namedag.map()
+            .find_names_by_hex_prefix(prefix, limit)
+            .map_pyerr(py)?
+            .into_iter()
+            .map(|s| PyBytes::new(py, &s))
+            .collect();
+        Ok(nodes)
+    }
+
     def all(&self) -> PyResult<Spans> {
-        let dag = self.dag(py).borrow();
-        Ok(Spans(dag.all().map_pyerr(py)?))
+        let namedag = self.namedag(py).borrow();
+        Ok(Spans(namedag.dag().all().map_pyerr(py)?))
     }
 
     /// Calculate all ancestors reachable from the set.
     def ancestors(&self, set: Spans) -> PyResult<Spans> {
-        let dag = self.dag(py).borrow();
-        Ok(Spans(dag.ancestors(set).map_pyerr(py)?))
+        let namedag = self.namedag(py).borrow();
+        Ok(Spans(namedag.dag().ancestors(set).map_pyerr(py)?))
     }
 
     /// Calculate parents of the given set.
     def parents(&self, set: Spans) -> PyResult<Spans> {
-        let dag = self.dag(py).borrow();
-        Ok(Spans(dag.parents(set).map_pyerr(py)?))
+        let namedag = self.namedag(py).borrow();
+        Ok(Spans(namedag.dag().parents(set).map_pyerr(py)?))
     }
 
     /// Get parents of a single `id`. Preserve the order.
     def parentids(&self, id: u64) -> PyResult<Vec<u64>> {
-        let dag = self.dag(py).borrow();
-        Ok(dag.parent_ids(Id(id)).map_pyerr(py)?.into_iter().map(|id| id.0).collect())
+        let namedag = self.namedag(py).borrow();
+        Ok(namedag.dag().parent_ids(Id(id)).map_pyerr(py)?.into_iter().map(|id| id.0).collect())
     }
 
     /// Calculate parents of the given set.
     def heads(&self, set: Spans) -> PyResult<Spans> {
-        let dag = self.dag(py).borrow();
-        Ok(Spans(dag.heads(set).map_pyerr(py)?))
+        let namedag = self.namedag(py).borrow();
+        Ok(Spans(namedag.dag().heads(set).map_pyerr(py)?))
     }
 
     /// Calculate children of the given set.
     def children(&self, set: Spans) -> PyResult<Spans> {
-        let dag = self.dag(py).borrow();
-        Ok(Spans(dag.children(set).map_pyerr(py)?))
+        let namedag = self.namedag(py).borrow();
+        Ok(Spans(namedag.dag().children(set).map_pyerr(py)?))
     }
 
     /// Calculate roots of the given set.
     def roots(&self, set: Spans) -> PyResult<Spans> {
-        let dag = self.dag(py).borrow();
-        Ok(Spans(dag.roots(set).map_pyerr(py)?))
+        let namedag = self.namedag(py).borrow();
+        Ok(Spans(namedag.dag().roots(set).map_pyerr(py)?))
     }
 
     /// Calculate one greatest common ancestor of a set.
     /// If there are multiple greatest common ancestors, pick an arbitrary one.
     def gcaone(&self, set: Spans) -> PyResult<Option<u64>> {
-        let dag = self.dag(py).borrow();
-        Ok(dag.gca_one(set).map_pyerr(py)?.map(|id| id.0))
+        let namedag = self.namedag(py).borrow();
+        Ok(namedag.dag().gca_one(set).map_pyerr(py)?.map(|id| id.0))
     }
 
     /// Calculate all greatest common ancestors of a set.
     def gcaall(&self, set: Spans) -> PyResult<Spans> {
-        let dag = self.dag(py).borrow();
-        Ok(Spans(dag.gca_all(set).map_pyerr(py)?))
+        let namedag = self.namedag(py).borrow();
+        Ok(Spans(namedag.dag().gca_all(set).map_pyerr(py)?))
     }
 
     /// Calculate all common ancestors of a set.
     def commonancestors(&self, set: Spans) -> PyResult<Spans> {
-        let dag = self.dag(py).borrow();
-        Ok(Spans(dag.common_ancestors(set).map_pyerr(py)?))
+        let namedag = self.namedag(py).borrow();
+        Ok(Spans(namedag.dag().common_ancestors(set).map_pyerr(py)?))
     }
 
     /// Check if `ancestor` is an ancestor of `descendant`.
     def isancestor(&self, ancestor: u64, descendant: u64) -> PyResult<bool> {
-        let dag = self.dag(py).borrow();
-        dag.is_ancestor(Id(ancestor), Id(descendant)).map_pyerr(py)
+        let namedag = self.namedag(py).borrow();
+        namedag.dag().is_ancestor(Id(ancestor), Id(descendant)).map_pyerr(py)
     }
 
     /// Calculate `heads(ancestors(set))`.
     /// This is faster than calling `heads` and `ancestors` individually.
     def headsancestors(&self, set: Spans) -> PyResult<Spans> {
-        let dag = self.dag(py).borrow();
-        Ok(Spans(dag.heads_ancestors(set).map_pyerr(py)?))
+        let namedag = self.namedag(py).borrow();
+        Ok(Spans(namedag.dag().heads_ancestors(set).map_pyerr(py)?))
     }
 
     /// Calculate `roots::heads`.
     def range(&self, roots: Spans, heads: Spans) -> PyResult<Spans> {
-        let dag = self.dag(py).borrow();
-        Ok(Spans(dag.range(roots, heads).map_pyerr(py)?))
+        let namedag = self.namedag(py).borrow();
+        Ok(Spans(namedag.dag().range(roots, heads).map_pyerr(py)?))
     }
 
     /// Calculate descendants of the given set.
     def descendants(&self, set: Spans) -> PyResult<Spans> {
-        let dag = self.dag(py).borrow();
-        Ok(Spans(dag.descendants(set).map_pyerr(py)?))
+        let namedag = self.namedag(py).borrow();
+        Ok(Spans(namedag.dag().descendants(set).map_pyerr(py)?))
     }
 
     def debugsegments(&self) -> PyResult<String> {
-        let dag = self.dag(py).borrow();
-        Ok(format!("{:?}", dag))
+        let namedag = self.namedag(py).borrow();
+        Ok(format!("{:?}", namedag.dag()))
     }
 });
 
-fn is_ok_some<T>(value: Result<Option<T>>) -> bool {
-    match value {
-        Ok(Some(_)) => true,
-        _ => false,
-    }
-}
-
-/// Translate a Python `get_parents(node) -> [node]` function to a Rust one.
-fn translate_get_parents<'a>(
-    py: Python<'a>,
-    get_parents: PyObject,
-) -> impl Fn(VertexName) -> Result<Vec<VertexName>> + 'a {
-    move |node: VertexName| -> Result<Vec<VertexName>> {
-        let mut result = Vec::new();
-        let node = PyBytes::new(py, node.as_ref());
-        let parents = get_parents.call(py, (node,), None).into_anyhow_result()?;
-        for parent in parents.iter(py).into_anyhow_result()? {
-            let parent = VertexName::copy_from(
-                parent
-                    .into_anyhow_result()?
-                    .cast_as::<PyBytes>(py)
-                    .map_err(PyErr::from)
-                    .into_anyhow_result()?
-                    .data(py),
-            );
-            result.push(parent);
+impl namedag {
+    /// Return the "parents" function that takes VertexName and returns
+    /// VertexNames.
+    fn parentfunc<'a>(
+        &'a self,
+        py: Python<'a>,
+    ) -> impl Fn(VertexName) -> Result<Vec<VertexName>> + 'a {
+        let pyparentfunc = self.pyparentfunc(py);
+        move |node: VertexName| -> Result<Vec<VertexName>> {
+            let mut result = Vec::new();
+            let node = PyBytes::new(py, node.as_ref());
+            let parents = pyparentfunc.call(py, (node,), None).into_anyhow_result()?;
+            for parent in parents.iter(py).into_anyhow_result()? {
+                let parent = VertexName::copy_from(
+                    parent
+                        .into_anyhow_result()?
+                        .cast_as::<PyBytes>(py)
+                        .map_err(PyErr::from)
+                        .into_anyhow_result()?
+                        .data(py),
+                );
+                result.push(parent);
+            }
+            Ok(result)
         }
-        Ok(result)
     }
 }
