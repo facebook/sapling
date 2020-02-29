@@ -14,6 +14,7 @@ use anyhow::{bail, ensure, format_err, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
+use std::borrow::Cow;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::{Cursor, Read, Write};
@@ -279,6 +280,22 @@ impl IdMap {
             Id(cached)
         };
         Ok(id)
+    }
+
+    /// Lookup names by hex prefix.
+    pub fn find_names_by_hex_prefix(
+        &self,
+        hex_prefix: &[u8],
+        limit: usize,
+    ) -> Result<Vec<Cow<[u8]>>> {
+        self.log
+            .lookup_prefix_hex(Self::INDEX_NAME_TO_ID, hex_prefix)?
+            .take(limit)
+            .map(|entry| {
+                let (k, _v) = entry?;
+                Ok(k)
+            })
+            .collect::<Result<_>>()
     }
 
     // Find an unused id that is bigger than existing ids.
@@ -560,6 +577,18 @@ mod tests {
         map.insert(Id(15), b"jkl2").unwrap(); // reassign jkl2 to master group - ok.
         map.insert(id + 3, b"abc").unwrap_err(); // reassign abc to non-master group - error.
         assert_eq!(map.next_free_id(Group::NON_MASTER).unwrap(), id + 2);
+
+        // Test hex lookup.
+        assert_eq!(0x6a, b'j');
+        assert_eq!(
+            map.find_names_by_hex_prefix(b"6a", 3).unwrap(),
+            [&b"jkl"[..], b"jkl2"]
+        );
+        assert_eq!(
+            map.find_names_by_hex_prefix(b"6a", 1).unwrap(),
+            [&b"jkl"[..]]
+        );
+        assert!(map.find_names_by_hex_prefix(b"6b", 1).unwrap().is_empty());
 
         for _ in 0..=1 {
             assert_eq!(map.find_name_by_id(Id(1)).unwrap().unwrap(), b"abc");
