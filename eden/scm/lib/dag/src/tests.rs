@@ -9,6 +9,7 @@ use crate::id::{Group, Id, VertexName};
 use crate::iddag::FirstAncestorConstraint;
 use crate::iddag::IdDag;
 use crate::idmap::IdMap;
+use crate::nameset::NameSet;
 use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
 use crate::spanset::SpanSet;
 use crate::NameDag;
@@ -46,6 +47,54 @@ static ASCII_DAG5: &str = r#"
         B---D---F
          \   \   \
       A---C---E---G"#;
+
+#[test]
+fn test_namedag() -> Result<()> {
+    let ascii = r#"
+            J K
+           /|\|\
+          G H I H
+          |/|/
+          E F
+         /|/|\
+        A B C D"#;
+    let result = build_segments(ascii, "J K", 2);
+    let dag = &result.name_dag;
+
+    fn nameset(names: &str) -> NameSet {
+        let names: Vec<VertexName> = names
+            .split_whitespace()
+            .map(|n| VertexName::copy_from(n.as_bytes()))
+            .collect();
+        NameSet::from_static_names(names)
+    }
+
+    fn expand(set: NameSet) -> String {
+        set.iter()
+            .unwrap()
+            .map(|n| String::from_utf8_lossy(n.unwrap().as_ref()).to_string())
+            .collect::<Vec<String>>()
+            .join(" ")
+    }
+
+    assert_eq!(expand(dag.all()?), "K J I H F D C G E B A");
+    assert_eq!(expand(dag.ancestors(nameset("H I"))?), "I H F D C E B A");
+    assert_eq!(expand(dag.parents(nameset("H I E"))?), "F E B A");
+    assert_eq!(dag.first_ancestor_nth("H".into(), 2)?, "A".into());
+    assert_eq!(expand(dag.heads(nameset("E H F K I D"))?), "K");
+    assert_eq!(expand(dag.children(nameset("E F I"))?), "K J I H G");
+    assert_eq!(expand(dag.roots(nameset("E G H J I K D"))?), "I D E");
+    assert_eq!(dag.gca_one(nameset("J K"))?, Some("I".into()));
+    assert_eq!(expand(dag.gca_all(nameset("J K"))?), "I H");
+    assert_eq!(expand(dag.common_ancestors(nameset("G H"))?), "E B A");
+    assert!(dag.is_ancestor("B".into(), "K".into())?);
+    assert!(!dag.is_ancestor("K".into(), "B".into())?);
+    assert_eq!(expand(dag.heads_ancestors(nameset("A E F D G"))?), "F G");
+    assert_eq!(expand(dag.range(nameset("A"), nameset("K"))?), "K H E A");
+    assert_eq!(expand(dag.descendants(nameset("F E"))?), "K J I H F G E");
+
+    Ok(())
+}
 
 #[test]
 fn test_protocols() {
