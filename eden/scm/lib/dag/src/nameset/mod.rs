@@ -17,6 +17,7 @@ use std::ops::Deref;
 use std::sync::Arc;
 
 pub mod difference;
+pub mod intersection;
 pub mod union;
 
 /// A [`NameSet`] contains an immutable list of names.
@@ -34,6 +35,14 @@ impl NameSet {
     /// Calculates the subset that is only in self, not in other.
     pub fn difference(&self, other: &NameSet) -> NameSet {
         Self::from_query(difference::DifferenceSet::new(self.clone(), other.clone()))
+    }
+
+    /// Calculates the intersection of two sets.
+    pub fn intersection(&self, other: &NameSet) -> NameSet {
+        Self::from_query(intersection::IntersectionSet::new(
+            self.clone(),
+            other.clone(),
+        ))
     }
 
     /// Calculates the union of two sets.
