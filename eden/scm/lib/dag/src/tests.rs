@@ -7,12 +7,12 @@
 
 use crate::id::{Group, Id, VertexName};
 use crate::iddag::FirstAncestorConstraint;
-use crate::iddag::IdDag;
-use crate::idmap::IdMap;
-use crate::nameset::NameSet;
 use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
-use crate::spanset::SpanSet;
+use crate::IdDag;
+use crate::IdMap;
 use crate::NameDag;
+use crate::NameSet;
+use crate::SpanSet;
 use anyhow::Result;
 use tempfile::tempdir;
 
