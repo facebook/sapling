@@ -209,7 +209,7 @@ impl NameDag {
     }
 
     /// Get ordered parent vertexes.
-    pub fn parents(&self, name: VertexName) -> Result<Vec<VertexName>> {
+    pub fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
         let id = match self.map.find_id_by_name(name.as_ref())? {
             Some(id) => id,
             None => bail!("{:?} does not exist in DAG", name),
@@ -234,7 +234,7 @@ impl NameDag {
             if group == Some(Group::MASTER) {
                 continue;
             }
-            let parents = self.parents(name.clone())?;
+            let parents = self.parent_names(name.clone())?;
             for parent in parents.iter() {
                 to_visit.push(parent.clone());
             }
