@@ -175,17 +175,16 @@ impl ToPyObject for Spans {
 
 py_class!(class namedag |py| {
     data namedag: RefCell<NameDag>;
-    data pyparentfunc: PyObject;
 
-    def __new__(_cls, path: &PyPath, parentfunc: PyObject) -> PyResult<namedag> {
+    def __new__(_cls, path: &PyPath) -> PyResult<namedag> {
         let dag = NameDag::open(path.as_path()).map_pyerr(py)?;
-        Self::create_instance(py, RefCell::new(dag), parentfunc)
+        Self::create_instance(py, RefCell::new(dag))
     }
 
     /// Add heads to the in-memory DAG.
-    def addheads(&self, heads: Vec<PyBytes>) -> PyResult<PyNone> {
+    def addheads(&self, heads: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<PyNone> {
         let mut namedag = self.namedag(py).borrow_mut();
-        let parents = self.parentfunc(py);
+        let parents = wrap_parentfunc(py, parentfunc);
         let heads = heads.into_iter().map(|b| VertexName::copy_from(b.data(py))).collect::<Vec<_>>();
         namedag.add_heads(&parents, &heads).map_pyerr(py)?;
         Ok(PyNone)
@@ -200,9 +199,9 @@ py_class!(class namedag |py| {
     }
 
     /// Write heads directly to disk. Similar to addheads + flush, but faster.
-    def addheadsflush(&self, masterheads: Vec<PyBytes>, otherheads: Vec<PyBytes>) -> PyResult<PyNone> {
+    def addheadsflush(&self, masterheads: Vec<PyBytes>, otherheads: Vec<PyBytes>, parentfunc: PyObject) -> PyResult<PyNone> {
         let mut namedag = self.namedag(py).borrow_mut();
-        let parents = self.parentfunc(py);
+        let parents = wrap_parentfunc(py, parentfunc);
         let masterheads = masterheads.into_iter().map(|b| VertexName::copy_from(b.data(py))).collect::<Vec<_>>();
         let otherheads = otherheads.into_iter().map(|b| VertexName::copy_from(b.data(py))).collect::<Vec<_>>();
         namedag.add_heads_and_flush(&parents, &masterheads, &otherheads).map_pyerr(py)?;
@@ -348,30 +347,27 @@ py_class!(class namedag |py| {
     }
 });
 
-impl namedag {
-    /// Return the "parents" function that takes VertexName and returns
-    /// VertexNames.
-    fn parentfunc<'a>(
-        &'a self,
-        py: Python<'a>,
-    ) -> impl Fn(VertexName) -> Result<Vec<VertexName>> + 'a {
-        let pyparentfunc = self.pyparentfunc(py);
-        move |node: VertexName| -> Result<Vec<VertexName>> {
-            let mut result = Vec::new();
-            let node = PyBytes::new(py, node.as_ref());
-            let parents = pyparentfunc.call(py, (node,), None).into_anyhow_result()?;
-            for parent in parents.iter(py).into_anyhow_result()? {
-                let parent = VertexName::copy_from(
-                    parent
-                        .into_anyhow_result()?
-                        .cast_as::<PyBytes>(py)
-                        .map_err(PyErr::from)
-                        .into_anyhow_result()?
-                        .data(py),
-                );
-                result.push(parent);
-            }
-            Ok(result)
+/// Return the "parents" function that takes VertexName and returns
+/// VertexNames.
+fn wrap_parentfunc<'a>(
+    py: Python<'a>,
+    pyparentfunc: PyObject,
+) -> impl Fn(VertexName) -> Result<Vec<VertexName>> + 'a {
+    move |node: VertexName| -> Result<Vec<VertexName>> {
+        let mut result = Vec::new();
+        let node = PyBytes::new(py, node.as_ref());
+        let parents = pyparentfunc.call(py, (node,), None).into_anyhow_result()?;
+        for parent in parents.iter(py).into_anyhow_result()? {
+            let parent = VertexName::copy_from(
+                parent
+                    .into_anyhow_result()?
+                    .cast_as::<PyBytes>(py)
+                    .map_err(PyErr::from)
+                    .into_anyhow_result()?
+                    .data(py),
+            );
+            result.push(parent);
         }
+        Ok(result)
     }
 }
