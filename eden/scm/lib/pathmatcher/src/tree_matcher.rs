@@ -529,4 +529,16 @@ mod tests {
         assert_eq!(next_path_separator(b"[/]a\\/b", 0), None);
         assert_eq!(next_path_separator(b"\\[/]a", 0), Some(2));
     }
+
+    #[test]
+    fn test_t62872044() {
+        let patterns = ["fbandroid/libraries/fbjni/**", "xplat/hermes/**"];
+        let m1 = TreeMatcher::from_rules(patterns.iter()).unwrap();
+        let m2 = TreeMatcher::from_rules(patterns.iter().rev()).unwrap();
+        // aho-corasick 0.7.x where x < 9 can fail this test.
+        // Update aho-corasick to 0.7.9 can solve it.
+        // See https://github.com/BurntSushi/aho-corasick/issues/53.
+        assert!(m1.matches("fbandroid/libraries/fbjni/x"));
+        assert!(m2.matches("fbandroid/libraries/fbjni/x"));
+    }
 }
