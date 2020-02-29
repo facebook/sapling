@@ -16,6 +16,7 @@ use std::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
 
+pub mod difference;
 pub mod union;
 
 /// A [`NameSet`] contains an immutable list of names.
@@ -28,6 +29,11 @@ pub struct NameSet(Arc<dyn NameSetQuery>);
 impl NameSet {
     pub(crate) fn from_query(query: impl NameSetQuery) -> Self {
         Self(Arc::new(query))
+    }
+
+    /// Calculates the subset that is only in self, not in other.
+    pub fn difference(&self, other: &NameSet) -> NameSet {
+        Self::from_query(difference::DifferenceSet::new(self.clone(), other.clone()))
     }
 
     /// Calculates the union of two sets.
