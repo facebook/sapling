@@ -9,6 +9,8 @@
 //!
 //! See [`NameSet`] for the main structure.
 
+use crate::idmap::IdMap;
+use crate::spanset::SpanSet;
 use crate::VertexName;
 use anyhow::Result;
 use std::any::Any;
@@ -16,6 +18,7 @@ use std::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
 
+pub mod dag;
 pub mod difference;
 pub mod intersection;
 pub mod r#static;
@@ -36,6 +39,11 @@ impl NameSet {
     /// Creates from a (short) list of known names.
     pub fn from_static_names(names: impl IntoIterator<Item = VertexName>) -> NameSet {
         Self::from_query(r#static::StaticSet::from_names(names))
+    }
+
+    /// Creates from [`SpanSet`] and [`IdMap`]. Used by [`NameDag`].
+    pub(crate) fn from_spans_idmap(spans: SpanSet, map: Arc<IdMap>) -> NameSet {
+        Self::from_query(dag::DagSet::from_spans_idmap(spans, map))
     }
 
     /// Calculates the subset that is only in self, not in other.
