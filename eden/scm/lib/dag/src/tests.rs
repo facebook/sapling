@@ -71,9 +71,11 @@ Lv3: R0-11[]"#
 
     // [Id] -> RequestLocationToName (useful for getting commit hashes from ids).
     let ids: Vec<Id> = (b'A'..=b'L')
-        .map(|b| built.id_map.find_id_by_name(&[b]).unwrap().unwrap())
+        .map(|b| built.name_dag.map.find_id_by_name(&[b]).unwrap().unwrap())
         .collect();
-    let request1: RequestLocationToName = (&built.id_map, &built.dag).process(ids).unwrap();
+    let request1: RequestLocationToName = (&built.name_dag.map, &built.name_dag.dag)
+        .process(ids)
+        .unwrap();
     assert_eq!(
         replace(format!("{:?}", &request1)),
         "RequestLocationToName { paths: [B~1, B~0, D~1, D~0, H~3, H~2, H~1, H~0, J~1, J~0, L~1, L~0] }"
@@ -81,14 +83,18 @@ Lv3: R0-11[]"#
 
     // [name] -> RequestNameToLocation (useful for getting ids from commit hashes).
     let names = (b'A'..=b'L').map(|b| VertexName::copy_from(&[b])).collect();
-    let request2: RequestNameToLocation = (&built.id_map, &built.dag).process(names).unwrap();
+    let request2: RequestNameToLocation = (&built.name_dag.map, &built.name_dag.dag)
+        .process(names)
+        .unwrap();
     assert_eq!(
         replace(format!("{:?}", &request2)),
         "RequestNameToLocation { names: [A, B, C, D, E, F, G, H, I, J, K, L], heads: [L] }"
     );
 
     // RequestLocationToName -> ResponseIdNamePair
-    let response1 = (&built.id_map, &built.dag).process(request1).unwrap();
+    let response1 = (&built.name_dag.map, &built.name_dag.dag)
+        .process(request1)
+        .unwrap();
     assert_eq!(
         replace(format!("{:?}", &response1)),
         "ResponseIdNamePair { path_names: [(B~1, [A]), (B~0, [B]), (D~1, [C]), (D~0, [D]), (H~3, [E]), (H~2, [F]), (H~1, [G]), (H~0, [H]), (J~1, [I]), (J~0, [J]), (L~1, [K]), (L~0, [L])] }"
@@ -96,22 +102,29 @@ Lv3: R0-11[]"#
 
     // RequestNameToLocation -> ResponseIdNamePair
     // Only B, D, H, J, L are used since they are "universally known".
-    let response2 = (&built.id_map, &built.dag).process(request2).unwrap();
+    let response2 = (&built.name_dag.map, &built.name_dag.dag)
+        .process(request2)
+        .unwrap();
     assert_eq!(
         replace(format!("{:?}", &response2)),
         "ResponseIdNamePair { path_names: [(B~1, [A]), (B~0, [B]), (D~1, [C]), (D~0, [D]), (H~3, [E]), (H~2, [F]), (H~1, [G]), (H~0, [H]), (J~1, [I]), (J~0, [J]), (L~1, [K]), (L~0, [L])] }"
     );
 
     // Applying responses to IdMap. Should not cause errors.
-    (&mut built.id_map, &built.dag).process(&response1).unwrap();
-    (&mut built.id_map, &built.dag).process(&response2).unwrap();
+    (&mut built.name_dag.map, &built.name_dag.dag)
+        .process(&response1)
+        .unwrap();
+    (&mut built.name_dag.map, &built.name_dag.dag)
+        .process(&response2)
+        .unwrap();
 
     // Try applying response2 to a sparse IdMap.
     // Prepare the sparse IdMap.
     let mut sparse_id_map = IdMap::open(built.dir.path().join("sparse-id")).unwrap();
     built
+        .name_dag
         .dag
-        .write_sparse_idmap(&built.id_map, &mut sparse_id_map)
+        .write_sparse_idmap(&built.name_dag.map, &mut sparse_id_map)
         .unwrap();
     assert_eq!(
         format!("{:?}", &sparse_id_map),
@@ -125,7 +138,7 @@ Lv3: R0-11[]"#
 "#
     );
     // Apply response2.
-    (&mut sparse_id_map, &built.dag)
+    (&mut sparse_id_map, &built.name_dag.dag)
         .process(&response2)
         .unwrap();
     assert_eq!(
@@ -345,10 +358,19 @@ Lv2: R0-12[] N0-N5[1, 9]"#
 
     // Notice that N4 to N6 were re-written in the last step.
     // 'm' only has 1 id: 8 (master). The old id (N5) is now taken by 'q'.
-    assert_eq!(built.id_map.find_id_by_name(b"m").unwrap().unwrap(), Id(8));
-    assert_eq!(built.id_map.find_name_by_id(Id(8)).unwrap().unwrap(), b"m");
+    assert_eq!(
+        built.name_dag.map.find_id_by_name(b"m").unwrap().unwrap(),
+        Id(8)
+    );
+    assert_eq!(
+        built.name_dag.map.find_name_by_id(Id(8)).unwrap().unwrap(),
+        b"m"
+    );
     let id = Group::NON_MASTER.min_id() + 5;
-    assert_eq!(built.id_map.find_name_by_id(id).unwrap().unwrap(), b"q");
+    assert_eq!(
+        built.name_dag.map.find_name_by_id(id).unwrap().unwrap(),
+        b"q"
+    );
 }
 
 #[test]
@@ -358,7 +380,7 @@ fn test_segment_ancestors_example1() {
             2-3-\     /--8--9--\
         0-1------4-5-6-7--------10-11"#;
     let result = build_segments(ascii_dag, "11", 3);
-    let dag = result.dag;
+    let dag = result.name_dag.dag;
 
     for (id, count) in vec![
         (11, 12),
@@ -428,7 +450,7 @@ fn test_segment_multiple_gcas() {
 Lv0: RH0-0[] R1-1[] H2-2[0, 1] 3-3[0, 1]
 Lv1: R0-2[] 3-3[0, 1]"#
     );
-    let dag = result.dag;
+    let dag = result.name_dag.dag;
     // This is kind of "undefined" whether it's 1 or 0.
     assert_eq!(dag.gca_one((2, 3)).unwrap(), Some(Id(1)));
     assert_eq!(
@@ -450,7 +472,7 @@ Lv1: R0-7[] 8-11[6, 7]
 Lv2: R0-11[]"#
     );
 
-    let dag = result.dag;
+    let dag = result.name_dag.dag;
 
     let parents =
         |spans| -> String { format_set(dag.parents(SpanSet::from_spans(spans)).unwrap()) };
@@ -520,7 +542,7 @@ Lv2: R0-11[]"#
 #[test]
 fn test_children() {
     let result = build_segments(ASCII_DAG1, "L", 3);
-    let dag = result.dag;
+    let dag = result.name_dag.dag;
     let children =
         |spans| -> String { format_set(dag.children(SpanSet::from_spans(spans)).unwrap()) };
 
@@ -580,7 +602,7 @@ Lv1: R0-2[] R3-4[] 5-6[3, 4] R7-9[] 10-10[8] 11-11[7]
 Lv2: R0-2[] R3-6[] R7-9[] 10-10[8] 11-11[7]"#
     );
 
-    let dag = result.dag;
+    let dag = result.name_dag.dag;
     let heads = |spans| -> String { format_set(dag.heads(SpanSet::from_spans(spans)).unwrap()) };
 
     assert_eq!(heads(vec![]), "");
@@ -614,7 +636,7 @@ Lv2: R0-2[] R3-6[] R7-9[] R10-11[9]
 Lv3: R0-2[] R3-6[] R7-11[]"#
     );
 
-    let dag = result.dag;
+    let dag = result.name_dag.dag;
     let roots = |spans| -> String { format_set(dag.roots(SpanSet::from_spans(spans)).unwrap()) };
 
     assert_eq!(roots(vec![]), "");
@@ -653,7 +675,7 @@ Lv3: R0-3[] R4-9[1, 2, 3]
 Lv4: R0-9[]"#
     );
 
-    let dag = result.dag;
+    let dag = result.name_dag.dag;
     let range = |roots, heads| -> String {
         format_set(
             dag.range(SpanSet::from_spans(roots), SpanSet::from_spans(heads))
@@ -785,8 +807,7 @@ impl IdDag {
 /// Result of `build_segments`.
 struct BuildSegmentResult {
     ascii: Vec<String>,
-    id_map: IdMap,
-    dag: IdDag,
+    name_dag: NameDag,
     dir: tempfile::TempDir,
 }
 
@@ -794,8 +815,8 @@ struct BuildSegmentResult {
 /// Return the ASCII DAG and segments strings, together with the IdMap and IdDag.
 fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentResult {
     let dir = tempdir().unwrap();
-    let mut named_dag = NameDag::open(dir.path().join("n")).unwrap();
-    named_dag.dag.set_new_segment_size(segment_size);
+    let mut name_dag = NameDag::open(dir.path().join("n")).unwrap();
+    name_dag.dag.set_new_segment_size(segment_size);
 
     let parents = drawdag::parse(&text);
     let parents_by_name = |name: VertexName| -> Result<Vec<VertexName>> {
@@ -817,17 +838,16 @@ fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentR
                 (vec![binary_head], vec![])
             };
 
-            named_dag.add_heads(&parents_by_name, &master).unwrap();
-            named_dag.add_heads(&parents_by_name, &other).unwrap();
-            named_dag.flush(&master).unwrap();
-            format!("{}\n{}", named_dag.map.replace(text), named_dag.dag.dump())
+            name_dag.add_heads(&parents_by_name, &master).unwrap();
+            name_dag.add_heads(&parents_by_name, &other).unwrap();
+            name_dag.flush(&master).unwrap();
+            format!("{}\n{}", name_dag.map.replace(text), name_dag.dag.dump())
         })
         .collect();
 
     BuildSegmentResult {
         ascii,
-        id_map: named_dag.map,
-        dag: named_dag.dag,
+        name_dag,
         dir,
     }
 }
