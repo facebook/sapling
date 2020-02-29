@@ -21,6 +21,8 @@ use dag::namedag::LowLevelAccess;
 
 mod nameset;
 
+use nameset::Names;
+
 type Result<T, E = Error> = std::result::Result<T, E>;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -252,89 +254,92 @@ py_class!(class namedag |py| {
         Ok(nodes)
     }
 
-    def all(&self) -> PyResult<Spans> {
+    def all(&self) -> PyResult<Names> {
         let namedag = self.namedag(py).borrow();
-        Ok(Spans(namedag.dag().all().map_pyerr(py)?))
+        Ok(Names(namedag.all().map_pyerr(py)?))
     }
 
     /// Calculate all ancestors reachable from the set.
-    def ancestors(&self, set: Spans) -> PyResult<Spans> {
+    def ancestors(&self, set: Names) -> PyResult<Names> {
         let namedag = self.namedag(py).borrow();
-        Ok(Spans(namedag.dag().ancestors(set).map_pyerr(py)?))
+        Ok(Names(namedag.ancestors(set.0).map_pyerr(py)?))
     }
 
     /// Calculate parents of the given set.
-    def parents(&self, set: Spans) -> PyResult<Spans> {
+    def parents(&self, set: Names) -> PyResult<Names> {
         let namedag = self.namedag(py).borrow();
-        Ok(Spans(namedag.dag().parents(set).map_pyerr(py)?))
+        Ok(Names(namedag.parents(set.0).map_pyerr(py)?))
     }
 
-    /// Get parents of a single `id`. Preserve the order.
-    def parentids(&self, id: u64) -> PyResult<Vec<u64>> {
+    /// Get parents of a single `name`. Preserve the order.
+    def parentnames(&self, name: PyBytes) -> PyResult<Vec<PyBytes>> {
         let namedag = self.namedag(py).borrow();
-        Ok(namedag.dag().parent_ids(Id(id)).map_pyerr(py)?.into_iter().map(|id| id.0).collect())
+        let parents = namedag.parent_names(VertexName::copy_from(name.data(py))).map_pyerr(py)?;
+        Ok(parents.into_iter().map(|name| PyBytes::new(py, name.as_ref())).collect())
     }
 
     /// Calculate parents of the given set.
-    def heads(&self, set: Spans) -> PyResult<Spans> {
+    def heads(&self, set: Names) -> PyResult<Names> {
         let namedag = self.namedag(py).borrow();
-        Ok(Spans(namedag.dag().heads(set).map_pyerr(py)?))
+        Ok(Names(namedag.heads(set.0).map_pyerr(py)?))
     }
 
     /// Calculate children of the given set.
-    def children(&self, set: Spans) -> PyResult<Spans> {
+    def children(&self, set: Names) -> PyResult<Names> {
         let namedag = self.namedag(py).borrow();
-        Ok(Spans(namedag.dag().children(set).map_pyerr(py)?))
+        Ok(Names(namedag.children(set.0).map_pyerr(py)?))
     }
 
     /// Calculate roots of the given set.
-    def roots(&self, set: Spans) -> PyResult<Spans> {
+    def roots(&self, set: Names) -> PyResult<Names> {
         let namedag = self.namedag(py).borrow();
-        Ok(Spans(namedag.dag().roots(set).map_pyerr(py)?))
+        Ok(Names(namedag.roots(set.0).map_pyerr(py)?))
     }
 
     /// Calculate one greatest common ancestor of a set.
     /// If there are multiple greatest common ancestors, pick an arbitrary one.
-    def gcaone(&self, set: Spans) -> PyResult<Option<u64>> {
+    def gcaone(&self, set: Names) -> PyResult<Option<PyBytes>> {
         let namedag = self.namedag(py).borrow();
-        Ok(namedag.dag().gca_one(set).map_pyerr(py)?.map(|id| id.0))
+        Ok(namedag.gca_one(set.0).map_pyerr(py)?.map(|name| PyBytes::new(py, name.as_ref())))
     }
 
     /// Calculate all greatest common ancestors of a set.
-    def gcaall(&self, set: Spans) -> PyResult<Spans> {
+    def gcaall(&self, set: Names) -> PyResult<Names> {
         let namedag = self.namedag(py).borrow();
-        Ok(Spans(namedag.dag().gca_all(set).map_pyerr(py)?))
+        Ok(Names(namedag.gca_all(set.0).map_pyerr(py)?))
     }
 
     /// Calculate all common ancestors of a set.
-    def commonancestors(&self, set: Spans) -> PyResult<Spans> {
+    def commonancestors(&self, set: Names) -> PyResult<Names> {
         let namedag = self.namedag(py).borrow();
-        Ok(Spans(namedag.dag().common_ancestors(set).map_pyerr(py)?))
+        Ok(Names(namedag.common_ancestors(set.0).map_pyerr(py)?))
     }
 
     /// Check if `ancestor` is an ancestor of `descendant`.
-    def isancestor(&self, ancestor: u64, descendant: u64) -> PyResult<bool> {
+    def isancestor(&self, ancestor: PyBytes, descendant: PyBytes) -> PyResult<bool> {
         let namedag = self.namedag(py).borrow();
-        namedag.dag().is_ancestor(Id(ancestor), Id(descendant)).map_pyerr(py)
+        let ancestor = VertexName::copy_from(ancestor.data(py));
+        let descendant = VertexName::copy_from(descendant.data(py));
+        namedag.is_ancestor(ancestor, descendant).map_pyerr(py)
     }
 
     /// Calculate `heads(ancestors(set))`.
     /// This is faster than calling `heads` and `ancestors` individually.
-    def headsancestors(&self, set: Spans) -> PyResult<Spans> {
+    def headsancestors(&self, set: Names) -> PyResult<Names> {
         let namedag = self.namedag(py).borrow();
-        Ok(Spans(namedag.dag().heads_ancestors(set).map_pyerr(py)?))
+        Ok(Names(namedag.heads_ancestors(set.0).map_pyerr(py)?))
     }
 
     /// Calculate `roots::heads`.
-    def range(&self, roots: Spans, heads: Spans) -> PyResult<Spans> {
+    def range(&self, roots: Names, heads: Names) -> PyResult<Names> {
         let namedag = self.namedag(py).borrow();
-        Ok(Spans(namedag.dag().range(roots, heads).map_pyerr(py)?))
+        Ok(Names(namedag.range(roots.0, heads.0).map_pyerr(py)?))
     }
 
     /// Calculate descendants of the given set.
-    def descendants(&self, set: Spans) -> PyResult<Spans> {
+    def descendants(&self, set: Names) -> PyResult<Names> {
         let namedag = self.namedag(py).borrow();
-        Ok(Spans(namedag.dag().descendants(set).map_pyerr(py)?))
+        Ok(Names(namedag.descendants(set.0).map_pyerr(py)?))
     }
 
     def debugsegments(&self) -> PyResult<String> {
