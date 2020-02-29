@@ -615,8 +615,6 @@ Expected result: client2 should be moved to 68e035cc1996
   |/
   | o  6: 8134e74ecdc8 'commit2 amended amended' bookmark1
   |/
-  | x  5: 41f3b9359864 'commit2 amended'
-  |/
   o  3: a7bb357e7299 'commit1 amended' bookmark1-testhost
   |
   o  0: d20a80d4def3 'base'
@@ -632,11 +630,10 @@ Clean up by hiding some commits, and create a new stack
   $ hg update d20a80d4def3 -q
   $ hg hide a7bb357e7299
   hiding commit a7bb357e7299 "commit1 amended"
-  hiding commit 41f3b9359864 "commit2 amended"
   hiding commit 8134e74ecdc8 "commit2 amended amended"
   hiding commit fada67350ab0 "commit2 amended amended amended amended amended"
   hiding commit 68e035cc1996 "commit2 amended amended rebased amended rebased am"
-  5 changesets hidden
+  4 changesets hidden
   removing bookmark "bookmark1 (was at: 8134e74ecdc8)"
   removing bookmark "bookmark1-testhost (was at: a7bb357e7299)"
   2 bookmarks removed

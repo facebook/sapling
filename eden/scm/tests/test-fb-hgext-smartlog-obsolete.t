@@ -180,7 +180,5 @@ Hidden changesets are not considered as successors
   hint[strip-hide]: 'hg strip' may be deprecated in the future - use 'hg hide' instead
   hint[hint-ack]: use 'hg hint --ack strip-hide' to silence these hints
   $ hg log -T "{rev} {node|short} {amendsuccessors % '(amend as {short(amendsuccessor)}) '}\n" -G -r 'all()'
-  x  1 66f7d451a68b
-  |
   @  0 1ea73414a91b
   

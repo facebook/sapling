@@ -71,7 +71,6 @@ from .. import histedit, rebase as rebasemod
 from . import (
     common,
     fold,
-    hiddenoverride,
     hide,
     metaedit,
     movement,
@@ -182,7 +181,6 @@ def hintsplitphabricator(advice):
 
 
 def uisetup(ui):
-    hiddenoverride.uisetup(ui)
     entry = extensions.wrapcommand(commands.table, "commit", commit)
     for opt in amendopts:
         opt = (opt[0], opt[1], opt[2], "(with --amend) " + opt[3])

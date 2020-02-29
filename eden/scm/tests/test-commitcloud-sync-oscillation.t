@@ -443,10 +443,11 @@ hiddenoverride, but commit cloud ignores it).
   $ cd ../client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
+  detected obsmarker inconsistency (fixing by obsoleting [] and reviving [878302dcadc7])
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp -r $F::
-  x  7: 878302dcadc7 draft 'G'
+  o  7: 878302dcadc7 draft 'G'
   |
   o  6: 64b4d9634423 draft 'F'
   |
@@ -457,10 +458,11 @@ In client 1 the obsmarker inconsistency is finally detected and fixed.
   $ cd ../client1
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  detected obsmarker inconsistency (fixing by obsoleting [878302dcadc7] and reviving [])
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglogp -r $F::
+  o  7: 878302dcadc7 draft 'G'
+  |
   o  4: 64b4d9634423 draft 'F'
   |
   ~
@@ -474,19 +476,19 @@ Everything is stable now.
   $ cd ../client2
   $ hg cloud sync -q
   $ tglogp -r $F::
-  x  7: 878302dcadc7 draft 'G'
+  o  7: 878302dcadc7 draft 'G'
   |
   o  6: 64b4d9634423 draft 'F'
   |
   ~
   $ python $TESTTMP/dumpcommitcloudmetadata.py
-  version: 6
+  version: 5
   bookmarks:
       foo => 5817a557f93f46ab290e8571c89624ff856130c0
   heads:
       65299708466caa8f13c05d82e76d611c183defee
       27ad028060800678c2de95fea2e826bbd4bf2c21
-      64b4d963442377cb7aa4b0997eeca249ac8643c9
+      878302dcadc7a800f326d8e06a5e9beec77e5a1c
 
 Make a new commit.  Copy it to the other client via a bundle, and then hide it
 with commit cloud inactive.

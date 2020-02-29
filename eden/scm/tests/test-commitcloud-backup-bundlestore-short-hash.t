@@ -83,7 +83,7 @@ Test that updating to new head after hiding current head works as expected.
   1 changeset hidden
   $ hg up -qr "heads(.::)"
   $ hg log -r "." -T "{node|short}\n"
-  c1b6fe8fce73
+  f8b49bf62d4d
 
 Check hg up on another client.
 Commit should be pulled from backup storage.

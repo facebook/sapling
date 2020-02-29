@@ -808,8 +808,6 @@ Sync in client 2.  It doesn't have the new destination of midbook, so should omi
   $ tglogp
   o  10: 2ace67ee4791 draft 'oldstack-mar4 amended'
   |
-  | x  9: 2b8dce7bd745 draft 'oldstack-mar4'
-  |/
   o  8: d16408588b2d draft 'oldstack-feb4'
   |
   o  7: 1f9ebd6d1390 draft 'oldstack-feb1'
@@ -823,8 +821,6 @@ Sync in client 2.  It doesn't have the new destination of midbook, so should omi
   |
   | @  10: 2ace67ee4791 draft 'oldstack-mar4 amended'
   | |
-  | | x  9: 2b8dce7bd745 draft 'oldstack-mar4'
-  | |/
   | o  2: d16408588b2d draft 'oldstack-feb4'
   | |
   | o  1: 1f9ebd6d1390 draft 'oldstack-feb1'
