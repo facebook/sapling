@@ -21,6 +21,7 @@ use std::sync::Arc;
 pub mod dag;
 pub mod difference;
 pub mod intersection;
+pub mod lazy;
 pub mod r#static;
 pub mod union;
 
@@ -39,6 +40,15 @@ impl NameSet {
     /// Creates from a (short) list of known names.
     pub fn from_static_names(names: impl IntoIterator<Item = VertexName>) -> NameSet {
         Self::from_query(r#static::StaticSet::from_names(names))
+    }
+
+    /// Creates from a (lazy) iterator of names.
+    pub fn from_iter<I>(iter: I) -> NameSet
+    where
+        I: IntoIterator<Item = Result<VertexName>> + 'static,
+        <I as IntoIterator>::IntoIter: Send + Sync,
+    {
+        Self::from_query(lazy::LazySet::from_iter(iter))
     }
 
     /// Creates from [`SpanSet`] and [`IdMap`]. Used by [`NameDag`].
