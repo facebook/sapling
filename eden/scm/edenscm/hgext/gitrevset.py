@@ -105,11 +105,8 @@ def _getnamespace(_repo):
 
 
 def _gitlookup(repo, gitrev):
-    cl = repo.changelog
-    tonode = cl.node
-
     def _gittohg(githash):
-        return [tonode(rev) for rev in repo.revs("gitnode(%s)" % githash)]
+        return list(repo.nodes("gitnode(%s)" % githash))
 
     m = githashre.match(gitrev)
     if m is not None:

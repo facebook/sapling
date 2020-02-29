@@ -9,7 +9,6 @@ hg debuginstall
     SNI not supported by Python install; may have connectivity issues with some servers (?)
   checking Mercurial version (*) (glob)
   checking Mercurial custom build (*) (glob)
-  checking module policy (*) (glob)
   checking installed modules (*mercurial)... (glob)
   checking registered compression engines (*zlib*) (glob)
   checking available compression engines (*zlib*) (glob)
@@ -35,8 +34,7 @@ hg debuginstall JSON
     "editornotfound": false,
     "encoding": "utf-8",
     "encodingerror": null,
-    "extensionserror": null, (no-pure !)
-    "hgmodulepolicy": "*", (glob)
+    "extensionserror": null,
     "hgmodules": "*mercurial", (glob)
     "hgver": "*", (glob)
     "hgverextra": "*", (glob)
@@ -64,7 +62,6 @@ hg debuginstall with no username
     SNI not supported by Python install; may have connectivity issues with some servers (?)
   checking Mercurial version (*) (glob)
   checking Mercurial custom build (*) (glob)
-  checking module policy (*) (glob)
   checking installed modules (*mercurial)... (glob)
   checking registered compression engines (*zlib*) (glob)
   checking available compression engines (*zlib*) (glob)
@@ -89,7 +86,7 @@ exception message in JSON
   $ HGENCODING=invalidenc HGUSER= hg debuginstall -Tjson | grep error
     "defaulttemplateerror": null,
     "encodingerror": "unknown encoding: invalidenc",
-    "extensionserror": null, (no-pure !)
+    "extensionserror": null,
     "usernameerror": "no username supplied",
 
 path variables are expanded (~ is the same as $TESTTMP)
@@ -108,7 +105,6 @@ path variables are expanded (~ is the same as $TESTTMP)
     SNI not supported by Python install; may have connectivity issues with some servers (?)
   checking Mercurial version (*) (glob)
   checking Mercurial custom build (*) (glob)
-  checking module policy (*) (glob)
   checking installed modules (*mercurial)... (glob)
   checking registered compression engines (*zlib*) (glob)
   checking available compression engines (*zlib*) (glob)

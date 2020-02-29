@@ -77,18 +77,20 @@ fn test_namedag() -> Result<()> {
             .join(" ")
     }
 
+    let v = |name: &str| -> VertexName { VertexName::copy_from(name.as_bytes()) };
+
     assert_eq!(expand(dag.all()?), "K J I H F D C G E B A");
     assert_eq!(expand(dag.ancestors(nameset("H I"))?), "I H F D C E B A");
     assert_eq!(expand(dag.parents(nameset("H I E"))?), "F E B A");
-    assert_eq!(dag.first_ancestor_nth("H".into(), 2)?, "A".into());
+    assert_eq!(dag.first_ancestor_nth(v("H"), 2)?, v("A"));
     assert_eq!(expand(dag.heads(nameset("E H F K I D"))?), "K");
     assert_eq!(expand(dag.children(nameset("E F I"))?), "K J I H G");
     assert_eq!(expand(dag.roots(nameset("E G H J I K D"))?), "I D E");
-    assert_eq!(dag.gca_one(nameset("J K"))?, Some("I".into()));
+    assert_eq!(dag.gca_one(nameset("J K"))?, Some(v("I")));
     assert_eq!(expand(dag.gca_all(nameset("J K"))?), "I H");
     assert_eq!(expand(dag.common_ancestors(nameset("G H"))?), "E B A");
-    assert!(dag.is_ancestor("B".into(), "K".into())?);
-    assert!(!dag.is_ancestor("K".into(), "B".into())?);
+    assert!(dag.is_ancestor(v("B"), v("K"))?);
+    assert!(!dag.is_ancestor(v("K"), v("B"))?);
     assert_eq!(expand(dag.heads_ancestors(nameset("A E F D G"))?), "F G");
     assert_eq!(expand(dag.range(nameset("A"), nameset("K"))?), "K H E A");
     assert_eq!(expand(dag.descendants(nameset("F E"))?), "K J I H F G E");

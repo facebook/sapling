@@ -633,9 +633,7 @@ templatefunc = registrar.templatefunc()
 
 def _undonehexnodes(repo, reverseindex):
     revstring = revsetlang.formatspec("olddraft(0) - olddraft(%d)", reverseindex)
-    revs = repo.revs(revstring)
-    tonode = repo.changelog.node
-    return [tonode(x) for x in revs]
+    return list(repo.nodes(revstring))
 
 
 @templatefunc("undonecommits(reverseindex)")
@@ -657,9 +655,7 @@ def showundonecommits(context, mapping, args):
 def _donehexnodes(repo, reverseindex):
     repo = repo.unfiltered()
     revstring = revsetlang.formatspec("olddraft(%d)", reverseindex)
-    revs = repo.revs(revstring)
-    tonode = repo.changelog.node
-    return [tonode(x) for x in revs]
+    return list(repo.nodes(revstring))
 
 
 @templatefunc("donecommits(reverseindex)")
@@ -744,9 +740,7 @@ def oldworkingparenttemplate(context, mapping, args):
     ctx = mapping["ctx"]
     repo = repo.unfiltered()
     revstring = revsetlang.formatspec("oldworkingcopyparent(%d)", reverseindex)
-    revs = repo.revs(revstring)
-    tonode = repo.changelog.node
-    nodes = [tonode(x) for x in revs]
+    nodes = list(repo.nodes(revstring))
     if ctx.node() in nodes:
         result = ctx.hex()
     else:
@@ -1430,7 +1424,6 @@ def _getrevlog(repo, filename):
 
 
 def tohexnode(repo, spec):
-    revs = repo.revs(spec)
-    tonode = repo.changelog.node
-    hexnodes = [hex(tonode(x)) for x in revs]
+    nodes = repo.nodes(spec)
+    hexnodes = [hex(x) for x in nodes]
     return hexnodes

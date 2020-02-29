@@ -264,8 +264,7 @@ because the pure code comes up with slightly different deltas internally.
 
   $ hg annotate -nlf b --skip 6
   0 a:1: a
-  1 a:2* z (no-pure !)
-  0 a:1* z (pure !)
+  1 a:2* z
   1 a:3: a
   3 b:4: b4
   4 b:5: c
@@ -914,13 +913,12 @@ create history with a filerev whose linkrev points to another branch
   $ hg commit -Am 'unrelated'
   adding unrelated
   $ hg graft -r 'desc(contentB)'
-  grafting 1:fd27c222e3e6 "contentB"
+  grafting fd27c222e3e6 "contentB"
   $ echo C >> a
   $ hg commit -m 'contentC'
   $ echo W >> a
   $ hg log -G
   @  changeset:   4:072f1e8df249
-  |  tag:         tip
   |  user:        test
   |  date:        Thu Jan 01 00:00:00 1970 +0000
   |  summary:     contentC

@@ -175,11 +175,9 @@ def _getnamespace(_repo):
 def _phablookup(repo, phabrev):
     # type: (Any, str) -> List[bytes]
     # Is the given revset a phabricator hg hash (ie: rHGEXTaaacb34aacb34aa)
-    cl = repo.changelog
-    tonode = cl.node
 
     def gittohg(githash):
-        return [tonode(rev) for rev in repo.revs("gitnode(%s)" % githash)]
+        return list(repo.nodes("gitnode(%s)" % githash))
 
     phabmatch = phabhashre.match(phabrev)
     if phabmatch:
@@ -197,7 +195,7 @@ def _phablookup(repo, phabrev):
     svnrevmatch = svnrevre.match(phabrev)
     if svnrevmatch is not None:
         svnrev = svnrevmatch.group(1)
-        return [tonode(rev) for rev in repo.revs("svnrev(%s)" % svnrev)]
+        return list(repo.nodes("svnrev(%s)" % svnrev))
 
     m = githashre.match(phabrev)
     if m is not None:

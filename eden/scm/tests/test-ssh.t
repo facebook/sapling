@@ -384,23 +384,12 @@ Test hg-ssh in read-only mode:
   > hg debugpython -- "$TESTDIR/../contrib/hg-ssh" --read-only "$TESTTMP/remote"
   > EOF
 
-  $ hg clone --ssh "sh ssh.sh" "ssh://user@dummy/$TESTTMP/remote" read-only-local
-  requesting all changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 4 changesets with 5 changes to 4 files
-  updating to branch default
-  3 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  $ hg clone -q --ssh "sh ssh.sh" "ssh://user@dummy/$TESTTMP/remote" read-only-local
 
   $ cd read-only-local
   $ echo "baz" > bar
   $ hg ci -A -m "unpushable commit" bar
-  $ hg push --ssh "sh ../ssh.sh"
-  pushing to ssh://user@dummy/*/remote (glob)
-  searching for changes
-  remote: Permission denied - blocked by readonlyrejectpush hook
-  remote: pretxnopen.readonlyrejectpush hook failed
+  $ hg push -q --ssh "sh ../ssh.sh"
   abort: push failed on remote
   [255]
 
