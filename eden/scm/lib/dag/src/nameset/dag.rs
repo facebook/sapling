@@ -115,6 +115,11 @@ impl NameSetQuery for DagSet {
         }
     }
 
+    fn is_topo_sorted(&self) -> bool {
+        // SpanSet is always sorted.
+        true
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }

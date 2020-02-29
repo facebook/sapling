@@ -53,6 +53,10 @@ impl NameSetQuery for DifferenceSet {
         Ok(self.lhs.contains(name)? && !self.rhs.contains(name)?)
     }
 
+    fn is_topo_sorted(&self) -> bool {
+        self.lhs.is_topo_sorted()
+    }
+
     fn as_any(&self) -> &dyn Any {
         self
     }

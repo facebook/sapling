@@ -22,6 +22,7 @@ pub mod dag;
 pub mod difference;
 pub mod intersection;
 pub mod lazy;
+pub mod sorted;
 pub mod r#static;
 pub mod union;
 
@@ -72,6 +73,17 @@ impl NameSet {
     /// Calculates the union of two sets.
     pub fn union(&self, other: &NameSet) -> NameSet {
         Self::from_query(union::UnionSet::new(self.clone(), other.clone()))
+    }
+
+    /// Mark the set as "topologically sorted".
+    /// Useful to mark a [`LazySet`] as sorted to avoid actual sorting
+    /// (and keep the set lazy).
+    pub fn mark_sorted(&self) -> NameSet {
+        if self.is_topo_sorted() {
+            self.clone()
+        } else {
+            Self::from_query(sorted::SortedSet::from_set(self.clone()))
+        }
     }
 }
 
@@ -129,6 +141,12 @@ pub trait NameSetQuery: Any + Debug + Send + Sync {
             }
         }
         Ok(false)
+    }
+
+    /// Returns true if this set is known topologically sorted (head first, root
+    /// last).
+    fn is_topo_sorted(&self) -> bool {
+        false
     }
 
     /// For downcasting.
