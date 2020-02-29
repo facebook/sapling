@@ -197,7 +197,7 @@ pub trait NameSetQuery: Any + Debug + Send + Sync {
 /// Iterator of [`NameSet`].
 /// Types implementing this should consider replacing `iter_rev` with a fast
 /// path if possible.
-pub trait NameIter: Iterator<Item = Result<VertexName>> {}
+pub trait NameIter: Iterator<Item = Result<VertexName>> + Send {}
 
 type VecNameIter =
     std::iter::Map<std::vec::IntoIter<VertexName>, fn(VertexName) -> Result<VertexName>>;

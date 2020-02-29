@@ -30,8 +30,8 @@ type RevIter<F> = Chain<
     Box<dyn NameIter<Item = Result<VertexName>>>,
 >;
 
-impl<F: FnMut(&Result<VertexName>) -> bool> NameIter for Iter<F> {}
-impl<F: FnMut(&Result<VertexName>) -> bool> NameIter for RevIter<F> {}
+impl<F: FnMut(&Result<VertexName>) -> bool + Send> NameIter for Iter<F> {}
+impl<F: FnMut(&Result<VertexName>) -> bool + Send> NameIter for RevIter<F> {}
 
 impl UnionSet {
     pub fn new(lhs: NameSet, rhs: NameSet) -> Self {
