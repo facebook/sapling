@@ -27,6 +27,8 @@ pub mod sorted;
 pub mod r#static;
 pub mod union;
 
+use self::dag::DagSet;
+
 /// A [`NameSet`] contains an immutable list of names.
 ///
 /// It provides order-preserving iteration and set operations,
@@ -65,11 +67,35 @@ impl NameSet {
 
     /// Calculates the subset that is only in self, not in other.
     pub fn difference(&self, other: &NameSet) -> NameSet {
+        if let (Some(this), Some(other)) = (
+            self.as_any().downcast_ref::<DagSet>(),
+            other.as_any().downcast_ref::<DagSet>(),
+        ) {
+            if Arc::ptr_eq(&this.map, &other.map) {
+                // Fast path for DagSet
+                return Self::from_spans_idmap(
+                    this.spans.difference(&other.spans),
+                    this.map.clone(),
+                );
+            }
+        }
         Self::from_query(difference::DifferenceSet::new(self.clone(), other.clone()))
     }
 
     /// Calculates the intersection of two sets.
     pub fn intersection(&self, other: &NameSet) -> NameSet {
+        if let (Some(this), Some(other)) = (
+            self.as_any().downcast_ref::<DagSet>(),
+            other.as_any().downcast_ref::<DagSet>(),
+        ) {
+            if Arc::ptr_eq(&this.map, &other.map) {
+                // Fast path for DagSet
+                return Self::from_spans_idmap(
+                    this.spans.intersection(&other.spans),
+                    this.map.clone(),
+                );
+            }
+        }
         Self::from_query(intersection::IntersectionSet::new(
             self.clone(),
             other.clone(),
@@ -78,6 +104,15 @@ impl NameSet {
 
     /// Calculates the union of two sets.
     pub fn union(&self, other: &NameSet) -> NameSet {
+        if let (Some(this), Some(other)) = (
+            self.as_any().downcast_ref::<DagSet>(),
+            other.as_any().downcast_ref::<DagSet>(),
+        ) {
+            if Arc::ptr_eq(&this.map, &other.map) {
+                // Fast path for DagSet
+                return Self::from_spans_idmap(this.spans.union(&other.spans), this.map.clone());
+            }
+        }
         Self::from_query(union::UnionSet::new(self.clone(), other.clone()))
     }
 
