@@ -58,6 +58,16 @@ impl IdMap {
         Self::open_from_log(log)
     }
 
+    pub(crate) fn try_clone(&self) -> Result<Self> {
+        let result = Self {
+            log: self.log.try_clone()?,
+            path: self.path.clone(),
+            cached_next_free_ids: Default::default(),
+            need_rebuild_non_master: self.need_rebuild_non_master,
+        };
+        Ok(result)
+    }
+
     pub(crate) fn open_from_log(log: log::Log) -> Result<Self> {
         let path = log.path().as_opt_path().unwrap().to_path_buf();
         Ok(Self {

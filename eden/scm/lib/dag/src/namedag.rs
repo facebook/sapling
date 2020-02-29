@@ -20,6 +20,7 @@ use anyhow::{anyhow, bail, ensure, Result};
 use indexedlog::multi;
 use std::collections::{HashMap, HashSet};
 use std::path::Path;
+use std::sync::Arc;
 
 /// A DAG that uses VertexName instead of ids as vertexes.
 ///
@@ -28,6 +29,7 @@ use std::path::Path;
 pub struct NameDag {
     pub(crate) dag: IdDag,
     pub(crate) map: IdMap,
+    pub(crate) arc_map: Arc<IdMap>,
 
     mlog: multi::MultiLog,
 
@@ -48,9 +50,11 @@ impl NameDag {
         let map_log = logs.pop().unwrap();
         let map = IdMap::open_from_log(map_log)?;
         let dag = IdDag::open_from_log(dag_log)?;
+        let arc_map = Arc::new(map.try_clone()?);
         Ok(Self {
             dag,
             map,
+            arc_map,
             mlog,
             pending_heads: Default::default(),
         })
@@ -108,6 +112,9 @@ impl NameDag {
         map.sync()?;
         dag.sync(std::iter::once(&mut self.dag))?;
         self.mlog.write_meta(&lock)?;
+
+        // Update arc_map.
+        self.arc_map = Arc::new(self.map.try_clone()?);
         Ok(())
     }
 
