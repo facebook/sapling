@@ -12,13 +12,13 @@ use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
 use anyhow::Error;
-use blame::{derive_blame, BlameRoot};
+use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use fsnodes::{derive_fsnodes, RootFsnodeId};
+use fsnodes::RootFsnodeId;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_preview::{
@@ -29,11 +29,12 @@ use futures_preview::{
 };
 use futures_stats::futures03::TimedFutureExt;
 use lock_ext::RwLockExt;
+use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::ChangesetId;
 use slog::info;
 use stats::prelude::*;
 use time_ext::DurationExt;
-use unodes::{derive_unodes, RootUnodeManifestId};
+use unodes::RootUnodeManifestId;
 
 define_stats! {
     prefix = "mononoke.bookmarks.warm_bookmarks_cache";
@@ -48,25 +49,32 @@ pub struct WarmBookmarksCache {
 pub type WarmerFn =
     dyn Fn(CoreContext, BlobRepo, ChangesetId) -> BoxFuture<(), Error> + Send + Sync + 'static;
 
+fn create_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Box<WarmerFn> {
+    info!(ctx.logger(), "Warming {}", D::NAME);
+    let warmer: Box<WarmerFn> = Box::new(|ctx: CoreContext, repo: BlobRepo, cs_id: ChangesetId| {
+        D::derive(ctx, repo, cs_id)
+            .map(|_| ())
+            .map_err(Error::from)
+            .boxify()
+    });
+    warmer
+}
+
 impl WarmBookmarksCache {
     pub fn new(ctx: CoreContext, repo: BlobRepo) -> impl Future<Item = Self, Error = Error> {
         let derived_data_types = &repo.get_derived_data_config().derived_data_types;
         let mut warmers: Vec<Box<WarmerFn>> = Vec::new();
 
-        info!(ctx.logger(), "Warming hg changesets");
-        warmers.push(Box::new(&warm_hg_changeset));
+        warmers.push(create_warmer::<MappedHgChangesetId>(&ctx));
 
         if derived_data_types.contains(RootUnodeManifestId::NAME) {
-            info!(ctx.logger(), "Warming {}", RootUnodeManifestId::NAME);
-            warmers.push(Box::new(&derive_unodes));
+            warmers.push(create_warmer::<RootUnodeManifestId>(&ctx));
         }
         if derived_data_types.contains(RootFsnodeId::NAME) {
-            info!(ctx.logger(), "Warming {}", RootFsnodeId::NAME);
-            warmers.push(Box::new(&derive_fsnodes));
+            warmers.push(create_warmer::<RootFsnodeId>(&ctx));
         }
         if derived_data_types.contains(BlameRoot::NAME) {
-            info!(ctx.logger(), "Warming {}", BlameRoot::NAME);
-            warmers.push(Box::new(&derive_blame));
+            warmers.push(create_warmer::<BlameRoot>(&ctx));
         }
 
         let warmers = Arc::new(warmers);
@@ -229,17 +237,4 @@ async fn update_bookmarks<'a>(
         .collect();
     bookmarks.with_write(|bookmarks| *bookmarks = new_bookmarks);
     Ok(())
-}
-
-/// Warm the Mecurial derived data for a changeset.
-// TODO(mbthomas): move to Mercurial derived data crate when Mercurial is
-// derived using the normal derivation mechanism.
-pub fn warm_hg_changeset(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    cs_id: ChangesetId,
-) -> BoxFuture<(), Error> {
-    repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-        .map(|_| ())
-        .boxify()
 }

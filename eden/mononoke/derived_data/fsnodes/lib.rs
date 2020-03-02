@@ -8,13 +8,7 @@
 #![deny(warnings)]
 #![type_length_limit = "4715995"]
 
-use anyhow::Error;
-use blobrepo::BlobRepo;
-use context::CoreContext;
-use derived_data::BonsaiDerived;
-use futures::Future;
-use futures_ext::{BoxFuture, FutureExt};
-use mononoke_types::{ChangesetId, ContentId, FsnodeId};
+use mononoke_types::{ContentId, FsnodeId};
 use thiserror::Error;
 
 mod derive;
@@ -32,15 +26,4 @@ pub enum ErrorKind {
     MissingParent(FsnodeId),
     #[error("Missing fsnode subentry for '{0}': {1}")]
     MissingSubentry(String, FsnodeId),
-}
-
-pub fn derive_fsnodes(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    cs_id: ChangesetId,
-) -> BoxFuture<(), Error> {
-    RootFsnodeId::derive(ctx, repo, cs_id)
-        .map(|_| ())
-        .from_err()
-        .boxify()
 }

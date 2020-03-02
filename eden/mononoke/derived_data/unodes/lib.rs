@@ -13,7 +13,6 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use futures::{future, Future, Stream};
-use futures_ext::{BoxFuture, FutureExt};
 use manifest::ManifestOps;
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, MPath};
 use std::collections::HashMap;
@@ -28,13 +27,6 @@ pub use mapping::{RootUnodeManifestId, RootUnodeManifestMapping};
 pub enum ErrorKind {
     #[error("Invalid bonsai changeset: {0}")]
     InvalidBonsai(String),
-}
-
-pub fn derive_unodes(ctx: CoreContext, repo: BlobRepo, cs_id: ChangesetId) -> BoxFuture<(), Error> {
-    RootUnodeManifestId::derive(ctx, repo, cs_id)
-        .map(|_| ())
-        .from_err()
-        .boxify()
 }
 
 /// Given bonsai changeset find unodes for all renames that happened in this changesest.

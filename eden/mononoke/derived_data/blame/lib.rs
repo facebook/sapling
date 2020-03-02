@@ -22,7 +22,7 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, DeriveError};
 use futures::{future, Future};
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::FutureExt;
 use manifest::ManifestOps;
 use mononoke_types::{
     blame::{Blame, BlameId, BlameMaybeRejected, BlameRejected},
@@ -122,11 +122,4 @@ fn fetch_blame_if_derived(
                     })
             }
         })
-}
-
-pub fn derive_blame(ctx: CoreContext, repo: BlobRepo, csid: ChangesetId) -> BoxFuture<(), Error> {
-    BlameRoot::derive(ctx, repo, csid)
-        .map(|_| ())
-        .from_err()
-        .boxify()
 }
