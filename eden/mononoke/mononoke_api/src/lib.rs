@@ -34,6 +34,7 @@ pub mod changeset_path;
 pub mod changeset_path_diff;
 pub mod errors;
 pub mod file;
+pub mod hg;
 pub mod legacy;
 pub mod path;
 pub mod repo;

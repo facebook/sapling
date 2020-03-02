@@ -50,6 +50,7 @@ use warm_bookmarks_cache::WarmBookmarksCache;
 use crate::changeset::ChangesetContext;
 use crate::errors::MononokeError;
 use crate::file::{FileContext, FileId};
+use crate::hg::HgRepoContext;
 use crate::repo_write::RepoWriteContext;
 use crate::specifiers::{
     ChangesetId, ChangesetPrefixSpecifier, ChangesetSpecifier, ChangesetSpecifierPrefixResolution,
@@ -853,6 +854,11 @@ impl RepoContext {
         self.repo.check_acl(&self.ctx, "write")?;
 
         Ok(RepoWriteContext::new(self))
+    }
+
+    /// Get an HgRepoContext to access this repo's data in Mercurial-specific formats.
+    pub fn hg(self) -> HgRepoContext {
+        HgRepoContext::new(self)
     }
 }
 

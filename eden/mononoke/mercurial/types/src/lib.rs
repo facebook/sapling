@@ -52,7 +52,7 @@ pub mod blobnode;
 pub mod blobs;
 pub mod delta;
 pub mod delta_apply;
-mod envelope;
+pub mod envelope;
 pub mod errors;
 pub mod file;
 pub mod flags;
