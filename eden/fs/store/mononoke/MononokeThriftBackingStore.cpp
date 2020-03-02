@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/store/mononoke/MononokeThriftBackingStore.h"
+#include <folly/executors/GlobalExecutor.h>
 
 #include <eden/mononoke/apiserver/gen-cpp2/MononokeAPIServiceAsyncClient.h>
 #include <eden/mononoke/apiserver/gen-cpp2/apiserver_types.h>
