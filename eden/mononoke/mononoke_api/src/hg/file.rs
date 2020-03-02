@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use blobstore::Loadable;
+use blobstore::{Loadable, LoadableError};
 use bytes::Bytes;
 use futures_preview::compat::Future01CompatExt;
 use mercurial_types::envelope::HgFileEnvelope;
@@ -25,6 +25,10 @@ pub struct HgFileContext {
 }
 
 impl HgFileContext {
+    /// Create a new `HgFileContext`. The file must exist in the repository.
+    ///
+    /// To construct an `HgFileContext` for a file that may not exist, use
+    /// `new_check_exists`.
     pub async fn new(
         repo: HgRepoContext,
         filenode_id: HgFileNodeId,
@@ -35,6 +39,19 @@ impl HgFileContext {
         let blobstore = repo.blob_repo().blobstore();
         let envelope = filenode_id.load(ctx, blobstore).compat().await?;
         Ok(Self { repo, envelope })
+    }
+
+    pub async fn new_check_exists(
+        repo: HgRepoContext,
+        filenode_id: HgFileNodeId,
+    ) -> Result<Option<Self>, MononokeError> {
+        let ctx = repo.ctx().clone();
+        let blobstore = repo.blob_repo().blobstore();
+        match filenode_id.load(ctx, blobstore).compat().await {
+            Ok(envelope) => Ok(Some(Self { repo, envelope })),
+            Err(LoadableError::Missing(_)) => Ok(None),
+            Err(e) => Err(e)?,
+        }
     }
 
     /// Get the filenode hash (HgFileNodeId) for this file version.
@@ -113,18 +130,26 @@ mod tests {
             let repo_ctx = RepoContext::new(ctx, repo)?;
             let hg = repo_ctx.hg();
 
+            // Test HgFileContext::new.
             let file_id =
                 HgFileNodeId::from_str("b8e02f6433738021a065f94175c7cd23db5f05be").unwrap();
-            let hg_file = hg.file(file_id).await?;
+            let hg_file = HgFileContext::new(hg.clone(), file_id).await?;
 
             assert_eq!(file_id, hg_file.node_id());
 
             let content = hg_file.content().await?;
             assert_eq!(content, &b"1\n"[..]);
 
+            // Test HgFileContext::new_check_exists.
+            let hg_file = HgFileContext::new_check_exists(hg.clone(), file_id).await?;
+            assert!(hg_file.is_some());
+
             let null_id = HgFileNodeId::new(NULL_HASH);
-            let null_file = hg.file(null_id).await;
+            let null_file = HgFileContext::new(hg.clone(), null_id).await;
             assert!(null_file.is_err());
+
+            let null_file = HgFileContext::new_check_exists(hg.clone(), null_id).await?;
+            assert!(null_file.is_none());
 
             Ok(())
         })

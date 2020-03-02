@@ -40,8 +40,11 @@ impl HgRepoContext {
     }
 
     /// Look up a file in the repo by `HgFileNodeId`.
-    pub async fn file(&self, filenode_id: HgFileNodeId) -> Result<HgFileContext, MononokeError> {
-        HgFileContext::new(self.clone(), filenode_id).await
+    pub async fn file(
+        &self,
+        filenode_id: HgFileNodeId,
+    ) -> Result<Option<HgFileContext>, MononokeError> {
+        HgFileContext::new_check_exists(self.clone(), filenode_id).await
     }
 }
 
