@@ -5,6 +5,7 @@
 # GNU General Public License version 2.
 
 import os
+import platform
 import subprocess
 import sys
 import tempfile
@@ -75,7 +76,7 @@ def check_shared_path(tracker: ProblemTracker, mount_path: Path) -> None:
 
 
 def fstype_for_path(path: str) -> str:
-    if sys.platform == "linux2":
+    if platform.system() == "Linux":
         try:
             args = ["stat", "-fc", "%T", "--", path]
             return subprocess.check_output(args).decode("ascii").strip()

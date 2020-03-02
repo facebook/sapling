@@ -7,6 +7,7 @@
 import abc
 import logging
 import os
+import platform
 import sys
 from pathlib import Path
 from typing import Dict, Iterable, List, NamedTuple, Optional
@@ -160,6 +161,6 @@ class LinuxProcessFinder(ProcessFinder):
 
 
 def new():
-    if sys.platform == "linux2":
+    if platform.system() == "Linux":
         return LinuxProcessFinder()
     return NopProcessFinder()
