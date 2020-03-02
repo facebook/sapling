@@ -11,10 +11,9 @@ from typing import Tuple
 import eden.cli.doctor as doctor
 import eden.dirstate
 from eden.cli.config import EdenCheckout
+from eden.cli.test.lib.fake_process_finder import FakeProcessFinder
 from eden.cli.test.lib.output import TestOutput
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
-
-from .fake_process_finder import FakeProcessFinder
 
 
 class DoctorTestBase(unittest.TestCase, TemporaryDirectoryMixin):

@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import abc
 import logging
 import os
@@ -22,7 +24,7 @@ class ProcessInfo(NamedTuple):
     eden_dir: Optional[Path]
 
 
-log = logging.getLogger("eden.cli.process_finder")
+log: logging.Logger = logging.getLogger("eden.cli.process_finder")
 
 
 class ProcessFinder(abc.ABC):
@@ -160,7 +162,7 @@ class LinuxProcessFinder(ProcessFinder):
                     yield info
 
 
-def new():
+def new() -> ProcessFinder:
     if platform.system() == "Linux":
         return LinuxProcessFinder()
     return NopProcessFinder()
