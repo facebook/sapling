@@ -679,7 +679,7 @@ where
                         logger,
                         "Could not step to {:?}, due to: {:?}", &walk_item, e
                     );
-                    add_node_to_scuba(&walk_item.target, &mut scuba);
+                    add_node_to_scuba(None, &walk_item.target, &mut scuba);
                     scuba
                         .add(EDGE_TYPE, edge_label.to_string())
                         .add(CHECK_TYPE, "step")

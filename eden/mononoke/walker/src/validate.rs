@@ -66,6 +66,9 @@ pub const CHECK_TYPE: &'static str = "check_type";
 pub const CHECK_FAIL: &'static str = "check_fail";
 pub const WALK_TYPE: &'static str = "walk_type";
 pub const REPO: &'static str = "repo";
+const SRC_NODE_KEY: &'static str = "src_node_key";
+const SRC_NODE_TYPE: &'static str = "src_node_type";
+const SRC_NODE_PATH: &'static str = "src_node_path";
 
 define_stats! {
     prefix = "mononoke.walker.validate";
@@ -186,19 +189,20 @@ impl AddAssign for CheckStats {
 }
 
 struct CheckData {
+    source_node: Option<Node>,
     checked: Vec<CheckOutput>,
     stats: CheckStats,
 }
 
-impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ()> for ValidatingVisitor {
+impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), Node> for ValidatingVisitor {
     fn visit(
         &self,
         current: ResolvedNode,
-        route: Option<()>,
+        route: Option<Node>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (
         (Node, Option<CheckData>, Option<StepStats>),
-        (),
+        Node,
         Vec<OutgoingEdge>,
     ) {
         let checks_to_do: Option<&HashSet<_>> =
@@ -238,15 +242,17 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ()> for Validatin
         );
 
         // Call inner after checks. otherwise it will prune outgoing edges we wanted to check.
-        let ((node, _opt_data, opt_stats), next_via, outgoing) =
-            self.inner.visit(current, route, outgoing);
+        let ((node, _opt_data, opt_stats), _, outgoing) =
+            self.inner
+                .visit(current, route.as_ref().map(|_| ()), outgoing);
 
         let vout = (
-            node,
+            node.clone(),
             if checked.is_empty() {
                 None
             } else {
                 Some(CheckData {
+                    source_node: route,
                     checked,
                     stats: CheckStats {
                         pass,
@@ -257,6 +263,7 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), ()> for Validatin
             },
             opt_stats,
         );
+        let next_via = node;
         (vout, next_via, outgoing)
     }
 }
@@ -378,12 +385,25 @@ impl ValidateProgressState {
     }
 }
 
-pub fn add_node_to_scuba(n: &Node, scuba: &mut ScubaSampleBuilder) {
+fn scuba_log_node(
+    n: &Node,
+    scuba: &mut ScubaSampleBuilder,
+    type_key: &'static str,
+    key_key: &'static str,
+    path_key: &'static str,
+) {
     scuba
-        .add(NODE_TYPE, n.get_type().to_string())
-        .add(NODE_KEY, n.stats_key());
+        .add(type_key, n.get_type().to_string())
+        .add(key_key, n.stats_key());
     if let Some(path) = n.stats_path() {
-        scuba.add(NODE_PATH, MPath::display_opt(path).to_string());
+        scuba.add(path_key, MPath::display_opt(path).to_string());
+    }
+}
+
+pub fn add_node_to_scuba(source_node: Option<&Node>, n: &Node, scuba: &mut ScubaSampleBuilder) {
+    scuba_log_node(n, scuba, NODE_TYPE, NODE_KEY, NODE_PATH);
+    if let Some(src_node) = source_node {
+        scuba_log_node(src_node, scuba, SRC_NODE_TYPE, SRC_NODE_KEY, SRC_NODE_PATH);
     }
 }
 
@@ -406,6 +426,7 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
             // total
             self.total_checks += checkdata.stats;
             // By type
+            let source_node = &checkdata.source_node;
             for c in &checkdata.checked {
                 let k = c.check;
                 let stats = self.stats_by_type.entry(k).or_insert(CheckStats::default());
@@ -419,7 +440,7 @@ impl ProgressRecorderUnprotected<CheckData> for ValidateProgressState {
                     stats.fail += 1;
                     // For failures log immediately
                     let mut scuba = self.scuba_builder.clone();
-                    add_node_to_scuba(n, &mut scuba);
+                    add_node_to_scuba(source_node.as_ref(), n, &mut scuba);
                     scuba
                         .add(CHECK_TYPE, k.stats_key())
                         .add(
