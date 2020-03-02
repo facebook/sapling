@@ -126,7 +126,10 @@ impl FileContext {
         self.metadata.clone().await
     }
 
-    /// Return a stream of the content for the file.
+    /// Return the content for the file.
+    ///
+    /// This method buffers the full file content in memory, which may
+    /// be expensive in the case of large files.
     pub async fn content_concat(&self) -> Result<Bytes, MononokeError> {
         let bytes = filestore::fetch_concat_opt(
             self.repo().blob_repo().blobstore(),
@@ -143,11 +146,11 @@ impl FileContext {
         }
     }
 
-    /// Return a stream of the content for a range within the file.
+    /// Return the content for a range within the file.
     ///
     /// If the range goes past the end of the file, then content up to
     /// the end of the file is returned.  If the range starts past the
-    /// end of the file, then an empty stream is returned.
+    /// end of the file, then an empty buffer is returned.
     pub async fn content_range_concat(
         &self,
         start: u64,
