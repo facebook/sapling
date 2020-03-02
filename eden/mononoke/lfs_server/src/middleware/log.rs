@@ -157,13 +157,15 @@ impl LogMiddleware {
     }
 }
 
+#[async_trait::async_trait]
 impl Middleware for LogMiddleware {
-    fn inbound(&self, state: &mut State) {
+    async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         let entry = LogEntry::RequestIn;
         self.log(state, entry);
+        None
     }
 
-    fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
+    async fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
         let entry = LogEntry::ResponseOut(response.status());
         self.log(state, entry);
     }

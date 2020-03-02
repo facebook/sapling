@@ -288,12 +288,14 @@ impl ScubaMiddlewareState {
     }
 }
 
+#[async_trait::async_trait]
 impl Middleware for ScubaMiddleware {
-    fn inbound(&self, state: &mut State) {
+    async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         state.put(ScubaMiddlewareState(self.scuba.clone()));
+        None
     }
 
-    fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
+    async fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
         if let Some(uri) = Uri::try_borrow_from(&state) {
             if uri.path() == "/health_check" {
                 return;

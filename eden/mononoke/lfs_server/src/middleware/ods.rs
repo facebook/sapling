@@ -78,8 +78,9 @@ impl OdsMiddleware {
     }
 }
 
+#[async_trait::async_trait]
 impl Middleware for OdsMiddleware {
-    fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
+    async fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
         log_stats(state, response.status());
     }
 }

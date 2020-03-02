@@ -43,13 +43,15 @@ impl LoadMiddleware {
     }
 }
 
+#[async_trait::async_trait]
 impl Middleware for LoadMiddleware {
-    fn inbound(&self, state: &mut State) {
+    async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         let old_request_count = self.requests.fetch_add(1, Ordering::Relaxed);
         state.put(RequestLoad(old_request_count + 1));
+        None
     }
 
-    fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
+    async fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
         if let Some(request_load) = state.try_take::<RequestLoad>() {
             let headers = response.headers_mut();
             headers.insert("X-Load", request_load.0.into());

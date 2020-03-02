@@ -8,6 +8,7 @@
 use anyhow::Error;
 use gotham::state::{FromState, State};
 use hex;
+use hyper::{Body, Response};
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::path::Path;
@@ -56,8 +57,10 @@ impl TlsSessionDataMiddleware {
     }
 }
 
+#[async_trait::async_trait]
 impl Middleware for TlsSessionDataMiddleware {
-    fn inbound(&self, state: &mut State) {
+    async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         self.log(state);
+        None
     }
 }

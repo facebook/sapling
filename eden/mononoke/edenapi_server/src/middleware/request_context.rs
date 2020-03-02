@@ -7,6 +7,7 @@
 
 use gotham::state::{request_id, State};
 use gotham_derive::StateData;
+use hyper::{Body, Response};
 use slog::{o, Logger};
 
 use context::{CoreContext, SessionContainer};
@@ -41,8 +42,9 @@ impl RequestContextMiddleware {
     }
 }
 
+#[async_trait::async_trait]
 impl Middleware for RequestContextMiddleware {
-    fn inbound(&self, state: &mut State) {
+    async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         let request_id = request_id(&state);
 
         let logger = self.logger.new(o!("request_id" => request_id.to_string()));
@@ -50,5 +52,7 @@ impl Middleware for RequestContextMiddleware {
         let ctx = session.new_context(logger, ScubaSampleBuilder::with_discard());
 
         state.put(RequestContext::new(ctx));
+
+        None
     }
 }

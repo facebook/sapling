@@ -215,8 +215,9 @@ impl RequestContextMiddleware {
     }
 }
 
+#[async_trait::async_trait]
 impl Middleware for RequestContextMiddleware {
-    fn inbound(&self, state: &mut State) {
+    async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         let request_id = request_id(&state);
 
         let logger = self.logger.new(o!("request_id" => request_id.to_string()));
@@ -228,9 +229,11 @@ impl Middleware for RequestContextMiddleware {
             .unwrap_or(true);
 
         state.put(RequestContext::new(ctx, should_log));
+
+        None
     }
 
-    fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
+    async fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
         let client_address = ClientIdentity::try_borrow_from(&state)
             .map(|client_identity| *client_identity.address())
             .flatten();

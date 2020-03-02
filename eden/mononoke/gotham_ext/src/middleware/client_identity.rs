@@ -9,6 +9,7 @@ use aclchecker::Identity;
 use gotham::state::{client_addr, FromState, State};
 use gotham_derive::StateData;
 use hyper::header::HeaderMap;
+use hyper::{Body, Response};
 use json_encoded::get_identities;
 use lazy_static::lazy_static;
 use percent_encoding::percent_decode;
@@ -112,8 +113,9 @@ fn request_client_correlator_from_headers(headers: &HeaderMap) -> Option<String>
     Some(header.to_string())
 }
 
+#[async_trait::async_trait]
 impl Middleware for ClientIdentityMiddleware {
-    fn inbound(&self, state: &mut State) {
+    async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
         let mut client_identity = ClientIdentity::default();
         let cert_idents = TlsCertificateIdentities::try_take_from(state);
 
@@ -136,5 +138,7 @@ impl Middleware for ClientIdentityMiddleware {
         }
 
         state.put(client_identity);
+
+        None
     }
 }

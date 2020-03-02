@@ -5,67 +5,99 @@
  * GNU General Public License version 2.
  */
 
-use failure::Error; // required by gotham's NewHandler trait
-use futures::Future;
+use futures_preview::{
+    compat::Future01CompatExt,
+    future::{FutureExt, TryFutureExt},
+};
 use gotham::{
     handler::{Handler, HandlerFuture, IntoResponse, NewHandler},
-    router::Router,
     state::State,
 };
+use hyper::{Body, Response};
+use std::panic::RefUnwindSafe;
 use std::sync::Arc;
 
 use crate::middleware::Middleware;
 
 #[derive(Clone)]
-pub struct MononokeHttpHandler {
-    router: Router,
+pub struct MononokeHttpHandler<H> {
+    inner: H,
     middleware: Arc<Vec<Box<dyn Middleware>>>,
 }
 
 // This trait is boilerplate to let us bind this in Gotham as the service. This is essentially
 // patterned match off of how the Router Handler works in Gotham.
-impl NewHandler for MononokeHttpHandler {
-    type Instance = MononokeHttpHandler;
+impl<H: Handler + Clone + Send + Sync + 'static + RefUnwindSafe> NewHandler
+    for MononokeHttpHandler<H>
+{
+    type Instance = MononokeHttpHandler<H>;
 
-    fn new_handler(&self) -> Result<Self::Instance, Error> {
+    fn new_handler(&self) -> Result<Self::Instance, failure::Error> {
         Ok(self.clone())
     }
 }
 
+/// Executes a stack middleware. If any Middleware instance preempts the request, it returns the
+/// index of the first middleware that didn't run and the response.
+async fn run_middleware(
+    middleware: &[Box<dyn Middleware>],
+    state: &mut State,
+) -> Option<(usize, Response<Body>)> {
+    for (i, m) in middleware.iter().enumerate() {
+        if let Some(response) = m.inbound(state).await {
+            return Some((i + 1, response));
+        }
+    }
+
+    None
+}
+
 // Gotham's router only runs middleware on route matches, which means we don't get any visibility
 // into e.g. 404's. So, we use this handler to wrap Gotham's router and run our own middleware
-// stack. Our middleware is also fairly minimal in the sense that it doesn't need to replace
-// responses or prevent requests, so we expose a slightly simpler API.
-impl Handler for MononokeHttpHandler {
+// stack. Another reason not to use Gotham's middleware stack is that it places all middleware
+// instances in the poll chain, so for e.g. an upload, we'd chain poll() calls through every single
+// instance of middleware. In contrast, our middleware stack is completely out of the way once it
+// has finished executing.
+impl<H: Handler + Send + Sync + 'static> Handler for MononokeHttpHandler<H> {
     fn handle(self, mut state: State) -> Box<HandlerFuture> {
-        // On request, middleware is called in order, then called the other way around on response.
-        // This is what regular Router middleware in Gotham would do.
-        let middleware = self.middleware.clone();
-        for m in middleware.iter() {
-            m.inbound(&mut state);
-        }
+        let fut = async move {
+            // On request, middleware is called in order, then called the other way around on
+            // response (this is what regular Router middleware in Gotham would do).
+            let (idx, mut state, mut response) =
+                match run_middleware(self.middleware.as_ref(), &mut state).await {
+                    Some((idx, r)) => (idx, state, r),
+                    None => {
+                        // NOTE: It's a bit unfortunate that we have to return a HandlerFuture here
+                        // when really we'd rather be working with just (State, HttpResponse<Body>)
+                        // everywhere, but that's how it is in Gotham.
+                        let (state, res) = match self.inner.handle(state).compat().await {
+                            Ok((state, res)) => (state, res),
+                            Err((state, err)) => {
+                                let response = err.into_response(&state);
+                                (state, response)
+                            }
+                        };
 
-        // NOTE: It's a bit unfortunate that we have to return a HandlerFuture here when really
-        // we'd rather be working with just (State, HttpResponse<Body>) everywhere, but that's how
-        // it is in Gotham.
-        let fut = self.router.handle(state).then(move |res| {
-            let (mut state, mut response) = res.unwrap_or_else(|(state, err)| {
-                let response = err.into_response(&state);
-                (state, response)
-            });
+                        let idx = self.middleware.len();
+                        (idx, state, res)
+                    }
+                };
 
-            for m in middleware.iter().rev() {
-                m.outbound(&mut state, &mut response);
+            // On outbound, only run middleware that did run in inbound.
+            for m in self.middleware[0..idx].iter().rev() {
+                m.outbound(&mut state, &mut response).await;
             }
 
             Ok((state, response))
-        });
+        };
 
-        Box::new(fut)
+        Box::new(fut.boxed().compat())
     }
 }
 
-impl MononokeHttpHandler {
+// NOTE: This is just syntactic sugar for MononokeHttpHandler::builder(), which is why the
+// "handler" type is () here.
+impl MononokeHttpHandler<()> {
     pub fn builder() -> MononokeHttpHandlerBuilder {
         MononokeHttpHandlerBuilder { middleware: vec![] }
     }
@@ -81,10 +113,178 @@ impl MononokeHttpHandlerBuilder {
         self
     }
 
-    pub fn build(self, router: Router) -> MononokeHttpHandler {
+    pub fn build<H: Handler + Send + Sync + 'static>(self, inner: H) -> MononokeHttpHandler<H> {
         MononokeHttpHandler {
-            router,
+            inner,
             middleware: Arc::new(self.middleware),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use gotham::test::TestServer;
+    use gotham_derive::StateData;
+    use hyper::{http::StatusCode, Body};
+
+    // Basic response handler for tests
+
+    #[derive(Clone)]
+    struct TestHandler;
+
+    impl Handler for TestHandler {
+        fn handle(self, state: State) -> Box<HandlerFuture> {
+            let response = Response::builder()
+                .status(StatusCode::OK)
+                .body(Body::empty())
+                .unwrap();
+            Box::new(::futures::future::ok((state, response)))
+        }
+    }
+
+    // Handler that expects to not be called
+
+    #[derive(Clone)]
+    struct PanicHandler;
+
+    impl Handler for PanicHandler {
+        fn handle(self, _state: State) -> Box<HandlerFuture> {
+            panic!("PanicHandler::handle was called")
+        }
+    }
+
+    // Basic middleware for tests
+
+    struct NoopMiddleware;
+
+    #[async_trait::async_trait]
+    impl Middleware for NoopMiddleware {}
+
+    // MiddlewareValueMiddleware is used below for asserting that middleware is called in the right
+    // order.
+
+    #[derive(StateData)]
+    pub struct MiddlewareValue(u64);
+
+    struct MiddlewareValueMiddleware(Option<u64>, u64);
+
+    #[async_trait::async_trait]
+    impl Middleware for MiddlewareValueMiddleware {
+        async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
+            assert_eq!(state.try_borrow::<MiddlewareValue>().map(|v| v.0), self.0);
+            state.put(MiddlewareValue(self.1));
+            None
+        }
+
+        async fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
+            assert_eq!(state.take::<MiddlewareValue>().0, self.1);
+
+            if let Some(v) = self.0 {
+                state.put(MiddlewareValue(v))
+            }
+        }
+    }
+
+    // InterceptMiddleware is used to check that middleware can intercept requests.
+
+    struct InterceptMiddleware;
+
+    #[async_trait::async_trait]
+    impl Middleware for InterceptMiddleware {
+        async fn inbound(&self, _state: &mut State) -> Option<Response<Body>> {
+            let response = Response::builder()
+                .status(StatusCode::NOT_FOUND)
+                .body(Body::empty())
+                .unwrap();
+            Some(response)
+        }
+
+        async fn outbound(&self, _state: &mut State, response: &mut Response<Body>) {
+            assert_eq!(response.status(), StatusCode::NOT_FOUND);
+        }
+    }
+
+    // PanicMiddleware is used to check that interceptign a request interrupts the call chain.
+
+    struct PanicMiddleware;
+
+    #[async_trait::async_trait]
+    impl Middleware for PanicMiddleware {
+        async fn inbound(&self, _state: &mut State) -> Option<Response<Body>> {
+            panic!("PanicMiddleware::inbound was called");
+        }
+
+        async fn outbound(&self, _state: &mut State, _response: &mut Response<Body>) {
+            panic!("PanicMiddleware::outbound was called");
+        }
+    }
+
+    #[test]
+    fn test_empty() -> Result<(), failure::Error> {
+        async_unit::tokio_unit_test(async {
+            let handler = MononokeHttpHandler::builder().build(TestHandler);
+            let server = TestServer::new(handler)?;
+            let res = server.client().get("http://host/").perform()?;
+            assert_eq!(res.status(), StatusCode::OK);
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_noop() -> Result<(), failure::Error> {
+        async_unit::tokio_unit_test(async {
+            let handler = MononokeHttpHandler::builder()
+                .add(NoopMiddleware)
+                .add(NoopMiddleware)
+                .build(TestHandler);
+            let server = TestServer::new(handler)?;
+            let res = server.client().get("http://host/").perform()?;
+            assert_eq!(res.status(), StatusCode::OK);
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_chain() -> Result<(), failure::Error> {
+        async_unit::tokio_unit_test(async {
+            let handler = MononokeHttpHandler::builder()
+                .add(MiddlewareValueMiddleware(None, 1))
+                .add(MiddlewareValueMiddleware(Some(1), 2))
+                .build(TestHandler);
+            let server = TestServer::new(handler)?;
+            let res = server.client().get("http://host/").perform()?;
+            assert_eq!(res.status(), StatusCode::OK);
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_intercept_alone() -> Result<(), failure::Error> {
+        async_unit::tokio_unit_test(async {
+            let handler = MononokeHttpHandler::builder()
+                .add(InterceptMiddleware)
+                .build(TestHandler);
+            let server = TestServer::new(handler)?;
+            let res = server.client().get("http://host/").perform()?;
+            assert_eq!(res.status(), StatusCode::NOT_FOUND);
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_intercept_chain() -> Result<(), failure::Error> {
+        async_unit::tokio_unit_test(async {
+            let handler = MononokeHttpHandler::builder()
+                .add(MiddlewareValueMiddleware(None, 1))
+                .add(MiddlewareValueMiddleware(Some(1), 2))
+                .add(InterceptMiddleware)
+                .add(PanicMiddleware)
+                .build(PanicHandler);
+            let server = TestServer::new(handler)?;
+            let res = server.client().get("http://host/").perform()?;
+            assert_eq!(res.status(), StatusCode::NOT_FOUND);
+            Ok(())
+        })
     }
 }

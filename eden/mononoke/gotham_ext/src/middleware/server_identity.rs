@@ -64,8 +64,9 @@ impl ServerIdentityMiddleware {
     }
 }
 
+#[async_trait::async_trait]
 impl Middleware for ServerIdentityMiddleware {
-    fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
+    async fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
         let headers = response.headers_mut();
 
         for (header, value) in self.headers.iter() {

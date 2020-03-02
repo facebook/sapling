@@ -18,13 +18,16 @@ pub use client_identity::{ClientIdentity, ClientIdentityMiddleware};
 pub use server_identity::ServerIdentityMiddleware;
 pub use tls_session_data::TlsSessionDataMiddleware;
 
+#[async_trait::async_trait]
 pub trait Middleware: 'static + RefUnwindSafe + Send + Sync {
-    fn inbound(&self, _state: &mut State) {
+    async fn inbound(&self, _state: &mut State) -> Option<Response<Body>> {
         // Implement inbound to perform pre-request actions, such as putting something in the
         // state.
+
+        None
     }
 
-    fn outbound(&self, _state: &mut State, _response: &mut Response<Body>) {
+    async fn outbound(&self, _state: &mut State, _response: &mut Response<Body>) {
         // Implement outbound to perform post-request actions, such as logging the response status
         // code.
     }

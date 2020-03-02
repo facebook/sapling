@@ -19,8 +19,9 @@ impl TimerMiddleware {
     }
 }
 
+#[async_trait::async_trait]
 impl Middleware for TimerMiddleware {
-    fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
+    async fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
         if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
             ctx.headers_ready();
         }
