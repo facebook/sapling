@@ -19,10 +19,11 @@ use futures_preview::{
     compat::Future01CompatExt,
     future::{try_join, try_join_all, FutureExt as NewFutureExt, TryFutureExt},
 };
-use futures_stats::futures03::TimedFutureExt;
+use futures_stats::{futures03::TimedFutureExt, FutureStats};
 use lock_ext::LockExt;
+use metaconfig_types::DerivedDataConfig;
 use mononoke_types::ChangesetId;
-use scuba_ext::ScubaSampleBuilderExt;
+use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::debug;
 use slog::warn;
 use stats::prelude::*;
@@ -386,27 +387,20 @@ where
                         receiver.map_err(|_| ()).boxify(),
                     );
 
-                    ctx.scuba().clone().log_with_msg(
-                        "Generating derived data",
-                        Some(format!("{} {}", Derived::NAME, bcs_id)),
-                    );
-                    let (stats, res) = deriver.timed().await;
+                    let derived_data_config = repo.get_derived_data_config();
+                    let mut derived_data_scuba =
+                        init_derived_data_scuba(&ctx, &derived_data_config);
 
-                    STATS::derived_data_latency.add_value(
-                        stats.completion_time.as_millis_unchecked() as i64,
-                        (Derived::NAME,),
+                    log_derivation_start::<Derived>(&ctx, &mut derived_data_scuba, &bcs_id);
+                    let (stats, res) = deriver.timed().await;
+                    log_derivation_end::<Derived>(
+                        &ctx,
+                        &mut derived_data_scuba,
+                        &bcs_id,
+                        &stats,
+                        res.is_ok(),
                     );
                     let _ = sender.send(());
-                    let tag = if res.is_ok() {
-                        "Generated derived data"
-                    } else {
-                        "Failed to generate derived data"
-                    };
-
-                    ctx.scuba()
-                        .clone()
-                        .add_future_stats(&stats)
-                        .log_with_msg(tag, Some(format!("{} {}", Derived::NAME, bcs_id)));
                     res?;
                     break;
                 } else {
@@ -440,6 +434,64 @@ where
             panic!("{} should be derived already", bcs_id);
         }
     }
+}
+
+fn init_derived_data_scuba(
+    ctx: &CoreContext,
+    derived_data_config: &DerivedDataConfig,
+) -> ScubaSampleBuilder {
+    match &derived_data_config.scuba_table {
+        Some(scuba_table) => {
+            let mut builder = ScubaSampleBuilder::new(ctx.fb, scuba_table);
+            builder.add_common_server_data();
+            builder
+        }
+        None => ScubaSampleBuilder::with_discard(),
+    }
+}
+
+fn log_derivation_start<Derived>(
+    ctx: &CoreContext,
+    derived_data_scuba: &mut ScubaSampleBuilder,
+    bcs_id: &ChangesetId,
+) where
+    Derived: BonsaiDerived,
+{
+    let tag = "Generating derived data";
+    let msg = Some(format!("{} {}", Derived::NAME, bcs_id));
+    ctx.scuba().clone().log_with_msg(tag, msg.clone());
+    derived_data_scuba.log_with_msg(tag, msg)
+}
+
+fn log_derivation_end<Derived>(
+    ctx: &CoreContext,
+    derived_data_scuba: &mut ScubaSampleBuilder,
+    bcs_id: &ChangesetId,
+    stats: &FutureStats,
+    success: bool,
+) where
+    Derived: BonsaiDerived,
+{
+    let tag = if success {
+        "Generated derived data"
+    } else {
+        "Failed to generate derived data"
+    };
+
+    let msg = Some(format!("{} {}", Derived::NAME, bcs_id));
+    ctx.scuba()
+        .clone()
+        .add_future_stats(&stats)
+        .log_with_msg(tag, msg.clone());
+
+    derived_data_scuba
+        .add_future_stats(&stats)
+        .log_with_msg(tag, msg);
+
+    STATS::derived_data_latency.add_value(
+        stats.completion_time.as_millis_unchecked() as i64,
+        (Derived::NAME,),
+    );
 }
 
 #[derive(Clone, Copy)]
