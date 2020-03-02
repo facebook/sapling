@@ -261,7 +261,10 @@ fn derived_data_utils_impl(
 ) -> Result<Arc<dyn DerivedUtils>, Error> {
     match name.as_ref() {
         RootUnodeManifestId::NAME => {
-            let mapping = RootUnodeManifestMapping::new(repo.get_blobstore());
+            let mapping = RootUnodeManifestMapping::new(
+                repo.get_blobstore(),
+                repo.get_derived_data_config().unode_version,
+            );
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         RootFastlog::NAME => {

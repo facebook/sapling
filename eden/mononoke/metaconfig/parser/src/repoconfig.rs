@@ -32,13 +32,14 @@ use metaconfig_types::{
     HookBypass, HookCode, HookConfig, HookManagerParams, HookParams, HookType,
     InfinitepushNamespace, InfinitepushParams, LfsParams, PushParams, PushrebaseFlags,
     PushrebaseParams, Redaction, RepoConfig, RepoReadOnly, SmallRepoCommitSyncConfig,
-    SourceControlServiceParams, StorageConfig, WhitelistEntry, WireprotoLoggingConfig,
+    SourceControlServiceParams, StorageConfig, UnodeVersion, WhitelistEntry,
+    WireprotoLoggingConfig,
 };
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
 use repos::{
     RawCommitSyncConfig, RawCommitSyncSmallRepoConfig, RawCommonConfig, RawHookConfig,
-    RawInfinitepushParams, RawRepoConfig, RawRepoConfigs, RawStorageConfig,
+    RawInfinitepushParams, RawRepoConfig, RawRepoConfigs, RawStorageConfig, RawUnodeVersion,
     RawWireprotoLoggingConfig,
 };
 
@@ -795,12 +796,29 @@ impl RepoConfigs {
 
         let derived_data_config = this
             .derived_data_config
-            .map(|raw_derived_data_config| DerivedDataConfig {
-                scuba_table: raw_derived_data_config.scuba_table,
-                derived_data_types: raw_derived_data_config
-                    .derived_data_types
-                    .unwrap_or(BTreeSet::new()),
+            .map(|raw_derived_data_config| {
+                let unode_version =
+                    if let Some(unode_version) = raw_derived_data_config.raw_unode_version {
+                        match unode_version {
+                            RawUnodeVersion::unode_version_v1(_) => UnodeVersion::V1,
+                            RawUnodeVersion::unode_version_v2(_) => UnodeVersion::V2,
+                            RawUnodeVersion::UnknownField(field) => {
+                                return Err(format_err!("unknown unode version {}", field));
+                            }
+                        }
+                    } else {
+                        UnodeVersion::default()
+                    };
+
+                Ok(DerivedDataConfig {
+                    scuba_table: raw_derived_data_config.scuba_table,
+                    derived_data_types: raw_derived_data_config
+                        .derived_data_types
+                        .unwrap_or(BTreeSet::new()),
+                    unode_version,
+                })
             })
+            .transpose()?
             .unwrap_or(DerivedDataConfig::default());
 
         Ok(RepoConfig {
@@ -1385,6 +1403,9 @@ mod test {
             [derived_data_config]
             derived_data_types=["fsnodes"]
 
+            [derived_data_config.raw_unode_version]
+            unode_version_v2 = {}
+
             [storage.main.db.remote]
             db_address="db_address"
             sharded_filenodes = { shard_map = "db_address_shards", shard_num = 123 }
@@ -1641,6 +1662,7 @@ mod test {
                 derived_data_config: DerivedDataConfig {
                     derived_data_types: btreeset![String::from("fsnodes")],
                     scuba_table: None,
+                    unode_version: UnodeVersion::V2,
                 },
             },
         );

@@ -35,7 +35,9 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use git_types::TreeHandle;
 use maplit::btreeset;
 use memblob::EagerMemblob;
-use metaconfig_types::{self, DerivedDataConfig, FilestoreParams, Redaction, StorageConfig};
+use metaconfig_types::{
+    self, DerivedDataConfig, FilestoreParams, Redaction, StorageConfig, UnodeVersion,
+};
 use mononoke_types::RepositoryId;
 use newfilenodes::NewFilenodesBuilder;
 use phases::{SqlPhasesFactory, SqlPhasesStore};
@@ -276,6 +278,7 @@ pub fn init_all_derived_data() -> DerivedDataConfig {
             RootUnodeManifestId::NAME.to_string(),
             TreeHandle::NAME.to_string(),
         },
+        unode_version: UnodeVersion::V2,
     }
 }
 

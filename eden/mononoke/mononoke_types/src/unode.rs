@@ -213,6 +213,10 @@ impl ManifestUnode {
         self.subentries.iter()
     }
 
+    pub fn subentries(&self) -> &BTreeMap<MPathElement, UnodeEntry> {
+        &self.subentries
+    }
+
     pub fn parents(&self) -> &Vec<ManifestUnodeId> {
         &self.parents
     }

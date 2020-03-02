@@ -10,12 +10,17 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future, sync::mpsc, Future, IntoFuture};
+use futures::{future, sync::mpsc, Future};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_preview::{
+    compat::Future01CompatExt,
+    future::{self as new_future, FutureExt as NewFutureExt, TryFutureExt},
+};
 use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, TreeInfo};
+use metaconfig_types::UnodeVersion;
 use mononoke_types::unode::{FileUnode, ManifestUnode, UnodeEntry};
 use mononoke_types::{
-    BlobstoreValue, ChangesetId, ContentId, FileType, FileUnodeId, MPath, MPathHash,
+    BlobstoreValue, ChangesetId, ContentId, FileType, FileUnodeId, MPath, MPathElement, MPathHash,
     ManifestUnodeId, MononokeId,
 };
 use repo_blobstore::RepoBlobstore;
@@ -34,6 +39,8 @@ pub(crate) fn derive_unode_manifest(
     parents: Vec<ManifestUnodeId>,
     changes: Vec<(MPath, Option<(ContentId, FileType)>)>,
 ) -> impl Future<Item = ManifestUnodeId, Error = Error> {
+    let unode_version = repo.get_derived_data_config().unode_version;
+
     future::lazy(move || {
         let parents: Vec<_> = parents.into_iter().collect();
         let blobstore = repo.get_blobstore();
@@ -52,13 +59,21 @@ pub(crate) fn derive_unode_manifest(
                         blobstore.clone(),
                         Some(sender),
                         tree_info,
+                        unode_version,
                     )
                 }
             },
             {
                 cloned!(blobstore, ctx, cs_id);
                 move |leaf_info, sender| {
-                    create_unode_file(ctx.clone(), cs_id, blobstore.clone(), sender, leaf_info)
+                    create_unode_file(
+                        ctx.clone(),
+                        cs_id,
+                        blobstore.clone(),
+                        sender,
+                        leaf_info,
+                        unode_version,
+                    )
                 }
             },
         )
@@ -73,7 +88,7 @@ pub(crate) fn derive_unode_manifest(
                         parents,
                         subentries: Default::default(),
                     };
-                    create_unode_manifest(ctx, cs_id, blobstore, None, tree_info)
+                    create_unode_manifest(ctx, cs_id, blobstore, None, tree_info, unode_version)
                         .map(|((), tree_id)| tree_id)
                         .right_future()
                 }
@@ -104,35 +119,45 @@ fn create_unode_manifest(
     blobstore: RepoBlobstore,
     sender: Option<mpsc::UnboundedSender<BoxFuture<(), Error>>>,
     tree_info: TreeInfo<ManifestUnodeId, FileUnodeId, ()>,
+    unode_version: UnodeVersion,
 ) -> impl Future<Item = ((), ManifestUnodeId), Error = Error> {
-    let mut subentries = BTreeMap::new();
-    for (basename, (_context, entry)) in tree_info.subentries {
-        match entry {
-            Entry::Tree(mf_unode) => {
-                subentries.insert(basename, UnodeEntry::Directory(mf_unode));
-            }
-            Entry::Leaf(file_unode) => {
-                subentries.insert(basename, UnodeEntry::File(file_unode));
+    async move {
+        let mut subentries = BTreeMap::new();
+        for (basename, (_context, entry)) in tree_info.subentries {
+            match entry {
+                Entry::Tree(mf_unode) => {
+                    subentries.insert(basename, UnodeEntry::Directory(mf_unode));
+                }
+                Entry::Leaf(file_unode) => {
+                    subentries.insert(basename, UnodeEntry::File(file_unode));
+                }
             }
         }
+        if unode_version == UnodeVersion::V2 && tree_info.parents.len() > 1 {
+            if let Some(mf_unode_id) =
+                reuse_manifest_parent(&ctx, &blobstore, &tree_info.parents, &subentries).await?
+            {
+                return Ok(((), mf_unode_id));
+            }
+        }
+
+        let mf_unode = ManifestUnode::new(tree_info.parents, subentries, linknode);
+        let mf_unode_id = mf_unode.get_unode_id();
+
+        let key = mf_unode_id.blobstore_key();
+        let blob = mf_unode.into_blob();
+        let f = blobstore.put(ctx, key, blob.into());
+
+        match sender {
+            Some(sender) => sender
+                .unbounded_send(f)
+                .map_err(|err| format_err!("failed to send manifest future {}", err))?,
+            None => f.compat().await?,
+        };
+        Ok(((), mf_unode_id))
     }
-    let parents: Vec<_> = tree_info.parents.into_iter().collect();
-    let mf_unode = ManifestUnode::new(parents, subentries, linknode);
-    let mf_unode_id = mf_unode.get_unode_id();
-
-    let key = mf_unode_id.blobstore_key();
-    let blob = mf_unode.into_blob();
-    let f = blobstore.put(ctx, key, blob.into());
-
-    let res = match sender {
-        Some(sender) => sender
-            .unbounded_send(f)
-            .into_future()
-            .map_err(|err| format_err!("failed to send manifest future {}", err))
-            .left_future(),
-        None => f.right_future(),
-    };
-    res.map(move |()| ((), mf_unode_id))
+    .boxed()
+    .compat()
 }
 
 fn create_unode_file(
@@ -141,6 +166,7 @@ fn create_unode_file(
     blobstore: RepoBlobstore,
     sender: mpsc::UnboundedSender<BoxFuture<(), Error>>,
     leaf_info: LeafInfo<FileUnodeId, (ContentId, FileType)>,
+    unode_version: UnodeVersion,
 ) -> impl Future<Item = ((), FileUnodeId), Error = Error> {
     fn save_unode(
         ctx: CoreContext,
@@ -151,24 +177,36 @@ fn create_unode_file(
         file_type: FileType,
         path_hash: MPathHash,
         linknode: ChangesetId,
+        unode_version: UnodeVersion,
     ) -> BoxFuture<FileUnodeId, Error> {
-        let file_unode = FileUnode::new(parents, content_id, file_type, path_hash, linknode);
-        let file_unode_id = file_unode.get_unode_id();
-        let f = future::lazy(move || {
-            blobstore.put(
-                ctx,
-                file_unode_id.blobstore_key(),
-                file_unode.into_blob().into(),
-            )
-        })
-        .boxify();
+        async move {
+            if unode_version == UnodeVersion::V2 && parents.len() > 1 {
+                if let Some(parent) =
+                    reuse_file_parent(&ctx, &blobstore, &parents, &content_id, file_type).await?
+                {
+                    return Ok(parent);
+                }
+            };
+            let file_unode = FileUnode::new(parents, content_id, file_type, path_hash, linknode);
+            let file_unode_id = file_unode.get_unode_id();
 
-        sender
-            .unbounded_send(f)
-            .into_future()
-            .map(move |()| file_unode_id)
-            .map_err(|err| format_err!("failed to send manifest future {}", err))
-            .boxify()
+            let f = future::lazy(move || {
+                blobstore.put(
+                    ctx,
+                    file_unode_id.blobstore_key(),
+                    file_unode.into_blob().into(),
+                )
+            })
+            .boxify();
+
+            sender
+                .unbounded_send(f)
+                .map_err(|err| format_err!("failed to send manifest future {}", err))?;
+            Ok(file_unode_id)
+        }
+        .boxed()
+        .compat()
+        .boxify()
     }
 
     let LeafInfo {
@@ -187,6 +225,7 @@ fn create_unode_file(
             file_type,
             path.get_path_hash(),
             linknode,
+            unode_version,
         )
     } else {
         // We can end up in this codepath if there are at least 2 parent commits have a unode with
@@ -236,6 +275,7 @@ fn create_unode_file(
                     *file_type,
                     path.get_path_hash(),
                     linknode,
+                    unode_version,
                 ),
                 _ => future::err(
                     ErrorKind::InvalidBonsai(
@@ -250,6 +290,80 @@ fn create_unode_file(
     }
     .map(|leaf_id| ((), leaf_id))
     .boxify()
+}
+
+// reuse_manifest_parent() and reuse_file_parent() are used in unodes v2 in order to avoid
+// creating unnecessary unodes that were created in unodes v1. Consider this graph with a diamond merge:
+//
+//   O <- merge commit, doesn't change anything
+//  / \
+// P1  |  <- modified "file.txt"
+// |   P2    <- created "other.txt"
+// \  /
+//  ROOT <- created "file.txt"
+//
+// In unodes v1 merge commit would contain a unode for "file.txt" which points to "file.txt"
+// unode from P1 and and "file.txt" unode from ROOT. This is
+// actually quite unexpected - merge commit didn't touch "file.txt" at all, but "file.txt"'s history
+// would contain a merge commit.
+//
+// reuse_manifest_parent() and reuse_file_parent() are heuristics that help fix this problem.
+// They check if content of the unode in the merge commit is the same as the content of unode
+// in one of the parents. If yes, then this unode is reused. Note - it actually might also lead
+// to surprising results in some cases:
+//
+//   O <- merge commit, doesn't change anything
+//  / \
+// P1  |  <- modified "file.txt" to "B"
+// |   P2    <- modified "file.txt" to "B"
+// \  /
+//  ROOT <- created "file.txt" with content "A"
+//
+// In that case it would be ideal to preserve that "file.txt" was modified in both commits.
+// But we consider this case is rare enough to not worry about it.
+
+async fn reuse_manifest_parent(
+    ctx: &CoreContext,
+    blobstore: &RepoBlobstore,
+    parents: &Vec<ManifestUnodeId>,
+    subentries: &BTreeMap<MPathElement, UnodeEntry>,
+) -> Result<Option<ManifestUnodeId>, Error> {
+    let parents = new_future::try_join_all(parents.into_iter().map(|id| {
+        id.load(ctx.clone(), blobstore)
+            .map_err(Error::from)
+            .compat()
+    }))
+    .await?;
+
+    if let Some(mf_unode) = parents.iter().find(|p| p.subentries() == subentries) {
+        Ok(Some(mf_unode.get_unode_id()))
+    } else {
+        Ok(None)
+    }
+}
+
+async fn reuse_file_parent(
+    ctx: &CoreContext,
+    blobstore: &RepoBlobstore,
+    parents: &Vec<FileUnodeId>,
+    content_id: &ContentId,
+    file_type: FileType,
+) -> Result<Option<FileUnodeId>, Error> {
+    let parents = new_future::try_join_all(parents.into_iter().map(|id| {
+        id.load(ctx.clone(), blobstore)
+            .map_err(Error::from)
+            .compat()
+    }))
+    .await?;
+
+    if let Some(file_unode) = parents
+        .iter()
+        .find(|p| p.content_id() == content_id && p.file_type() == &file_type)
+    {
+        Ok(Some(file_unode.get_unode_id()))
+    } else {
+        Ok(None)
+    }
 }
 
 // If all elements in `unodes` are the same than this element is returned, otherwise None is returned
@@ -268,9 +382,10 @@ fn return_if_unique_filenode(unodes: &Vec<FileUnode>) -> Option<(&ContentId, &Fi
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::mapping::get_file_changes;
+    use crate::mapping::{get_file_changes, RootUnodeManifestId};
     use anyhow::Result;
     use blobrepo::save_bonsai_changesets;
+    use blobrepo::{BlobRepo, DangerousOverride};
     use blobrepo_factory::new_memblob_empty;
     use blobstore::Storable;
     use bytes::Bytes;
@@ -280,15 +395,17 @@ mod tests {
     use fixtures::linear;
     use futures::Stream;
     use futures_preview::{compat::Future01CompatExt, FutureExt as NewFutureExt, TryFutureExt};
+    use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_types::{blobs::BlobManifest, HgFileNodeId, HgManifestId};
+    use metaconfig_types::DerivedDataConfig;
     use mononoke_types::{
         BlobstoreValue, BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileContents,
         RepoPath,
     };
     use std::collections::{HashSet, VecDeque};
     use test_utils::{get_bonsai_changeset, iterate_all_entries};
-    use tests_utils::resolve_cs_id;
+    use tests_utils::{resolve_cs_id, CreateCommitContext};
     use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
@@ -489,6 +606,113 @@ mod tests {
             btreemap! {},
         )
         .is_err());
+    }
+
+    async fn diamond_merge_unodes_v2(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = new_memblob_empty(None)?;
+        let merged_files = "dir/file.txt";
+        let root_commit = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file(merged_files, "a")
+            .commit()
+            .await?;
+
+        let p1 = CreateCommitContext::new(&ctx, &repo, vec![root_commit])
+            .add_file("p1.txt", "p1")
+            .add_file(merged_files, "b")
+            .commit()
+            .await?;
+
+        let p2 = CreateCommitContext::new(&ctx, &repo, vec![root_commit])
+            .add_file("p2.txt", "p2")
+            .commit()
+            .await?;
+
+        let merge = CreateCommitContext::new(&ctx, &repo, vec![p1, p2])
+            .add_file(merged_files, "b")
+            .commit()
+            .await?;
+
+        let find_unodes = {
+            |ctx: CoreContext, repo: BlobRepo| async move {
+                let p1_root_unode_mf_id =
+                    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), p1)
+                        .compat()
+                        .await?;
+
+                let mut p1_unodes = p1_root_unode_mf_id
+                    .manifest_unode_id()
+                    .find_entries(
+                        ctx.clone(),
+                        repo.get_blobstore(),
+                        vec![Some(MPath::new(&merged_files)?), Some(MPath::new("dir")?)],
+                        // Some(MPath::new(&merged_files)?),
+                    )
+                    .collect()
+                    .compat()
+                    .await?;
+                p1_unodes.sort_by_key(|(path, _)| path.clone());
+
+                let merge_root_unode_mf_id =
+                    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), merge)
+                        .compat()
+                        .await?;
+
+                let mut merge_unodes = merge_root_unode_mf_id
+                    .manifest_unode_id()
+                    .find_entries(
+                        ctx.clone(),
+                        repo.get_blobstore(),
+                        vec![Some(MPath::new(&merged_files)?), Some(MPath::new("dir")?)],
+                    )
+                    .collect()
+                    .compat()
+                    .await?;
+                merge_unodes.sort_by_key(|(path, _)| path.clone());
+
+                let res: Result<_, Error> = Ok((p1_unodes, merge_unodes));
+                res
+            }
+        };
+
+        // Unodes v2 should just reuse merged filenode
+        let (p1_unodes, merge_unodes) = find_unodes(ctx.clone(), repo.clone()).await?;
+        assert_eq!(p1_unodes, merge_unodes);
+
+        // Unodes v1 should create a new one that points to the parent unode
+        let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
+            derived_data_config.unode_version = UnodeVersion::V1;
+            derived_data_config
+        });
+        let (p1_unodes, merge_unodes) = find_unodes(ctx.clone(), repo.clone()).await?;
+        assert_ne!(p1_unodes, merge_unodes);
+
+        for ((_, p1), (_, merge)) in p1_unodes.iter().zip(merge_unodes.iter()) {
+            let merge_unode = merge
+                .load(ctx.clone(), &repo.get_blobstore())
+                .compat()
+                .await?;
+
+            match (p1, merge_unode) {
+                (Entry::Leaf(p1), Entry::Leaf(ref merge_unode)) => {
+                    assert!(merge_unode.parents().contains(p1));
+                }
+                (Entry::Tree(p1), Entry::Tree(ref merge_unode)) => {
+                    assert!(merge_unode.parents().contains(p1));
+                }
+                _ => {
+                    return Err(format_err!("inconsistent unodes in p1 and merge"));
+                }
+            }
+        }
+
+        Ok(())
+    }
+
+    #[fbinit::test]
+    fn test_diamond_merge_unodes_v2(fb: FacebookInit) -> Result<(), Error> {
+        let mut runtime = Runtime::new()?;
+        runtime.block_on_std(diamond_merge_unodes_v2(fb))
     }
 
     #[fbinit::test]

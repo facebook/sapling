@@ -140,6 +140,23 @@ pub struct DerivedDataConfig {
     pub scuba_table: Option<String>,
     /// Types of derived data that can be derived for this repo
     pub derived_data_types: BTreeSet<String>,
+    /// What unode version should be used (defaults to V1)
+    pub unode_version: UnodeVersion,
+}
+
+/// What type of unode derived data to generate
+#[derive(Eq, Clone, Copy, Debug, PartialEq)]
+pub enum UnodeVersion {
+    /// Unodes v1
+    V1,
+    /// Unodes v2
+    V2,
+}
+
+impl Default for UnodeVersion {
+    fn default() -> Self {
+        UnodeVersion::V1
+    }
 }
 
 impl RepoConfig {

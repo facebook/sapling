@@ -17,6 +17,7 @@ use futures::{
     Future, Stream,
 };
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use metaconfig_types::UnodeVersion;
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, ManifestUnodeId,
 };
@@ -55,7 +56,10 @@ impl BonsaiDerived for RootUnodeManifestId {
     type Mapping = RootUnodeManifestMapping;
 
     fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
-        RootUnodeManifestMapping::new(repo.blobstore().clone())
+        RootUnodeManifestMapping::new(
+            repo.blobstore().clone(),
+            repo.get_derived_data_config().unode_version,
+        )
     }
 
     fn derive_from_parents(
@@ -84,15 +88,22 @@ impl BonsaiDerived for RootUnodeManifestId {
 #[derive(Clone)]
 pub struct RootUnodeManifestMapping {
     blobstore: RepoBlobstore,
+    unode_version: UnodeVersion,
 }
 
 impl RootUnodeManifestMapping {
-    pub fn new(blobstore: RepoBlobstore) -> Self {
-        Self { blobstore }
+    pub fn new(blobstore: RepoBlobstore, unode_version: UnodeVersion) -> Self {
+        Self {
+            blobstore,
+            unode_version,
+        }
     }
 
     fn format_key(&self, cs_id: ChangesetId) -> String {
-        format!("derived_root_unode.{}", cs_id)
+        match self.unode_version {
+            UnodeVersion::V1 => format!("derived_root_unode.{}", cs_id),
+            UnodeVersion::V2 => format!("derived_root_unode_v2.{}", cs_id),
+        }
     }
 
     fn fetch_unode(
