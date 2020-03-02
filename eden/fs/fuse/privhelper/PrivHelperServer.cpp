@@ -23,6 +23,7 @@
 #include <folly/logging/LogConfigParser.h>
 #include <folly/logging/LoggerDB.h>
 #include <folly/logging/xlog.h>
+#include <folly/system/ThreadName.h>
 #include <signal.h>
 #include <sys/mount.h>
 #include <sys/stat.h>
@@ -79,6 +80,15 @@ void PrivHelperServer::initPartial(folly::File&& socket, uid_t uid, gid_t gid) {
   // Make sure init() is only called once.
   CHECK_EQ(uid_, std::numeric_limits<uid_t>::max());
   CHECK_EQ(gid_, std::numeric_limits<gid_t>::max());
+
+  // Set our thread name to to make it easier to distinguish
+  // the privhelper process from the main EdenFS process.  Setting the thread
+  // name for the main thread also changes the process name reported
+  // /proc/PID/comm (and therefore by ps).
+  //
+  // Note that the process name is limited to 15 bytes on Linux, so our process
+  // name shows up only as "edenfs_privhelp"
+  folly::setThreadName("edenfs_privhelper");
 
   // eventBase_ is a unique_ptr only so that we can delay constructing it until
   // init() is called.  We want to avoid creating it in the constructor since
