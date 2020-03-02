@@ -179,14 +179,18 @@ define_flags! {
 }
 
 fn status(opts: StatusOpts, io: &mut IO, repo: Repo) -> Result<u8> {
+    let rev_check = opts.rev.is_empty() || (opts.rev.len() == 1 && opts.rev[0] == ".");
+
+    let args_check = opts.args.is_empty() || (opts.args.len() == 1 && opts.args[0] == "re:.");
+
     if opts.all
         || !opts.change.is_empty()
         || !opts.terse.is_empty()
-        || !opts.rev.is_empty()
+        || !rev_check
         || !opts.walk_opts.include.is_empty()
         || !opts.walk_opts.exclude.is_empty()
         || !opts.formatter_opts.template.is_empty()
-        || !opts.args.is_empty()
+        || !args_check
     {
         return Err(errors::FallbackToPython.into());
     }
