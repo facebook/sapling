@@ -11,12 +11,12 @@ use clap::Arg;
 use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures_ext::FutureExt;
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::TryFutureExt,
     stream::{self, TryStreamExt},
 };
+use futures_ext::FutureExt;
 use lfs_import_lib::lfs_upload;
 use mercurial_types::blobs::File;
 

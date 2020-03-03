@@ -15,7 +15,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use futures_preview::{compat::Future01CompatExt, future::FutureExt as PreviewFutureExt};
+use futures::{compat::Future01CompatExt, future::FutureExt as PreviewFutureExt};
 use futures_util::{
     stream::{self as new_stream, StreamExt as NewStreamExt},
     try_join,

@@ -14,10 +14,10 @@ use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::StoreRequest;
+use futures::compat::Future01CompatExt;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::{join_all, Future};
 use futures_old::stream;
-use futures_preview::compat::Future01CompatExt;
 use maplit::btreemap;
 use mercurial_types::{HgChangesetId, MPath};
 use mononoke_types::{

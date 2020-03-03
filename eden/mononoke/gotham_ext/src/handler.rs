@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::{FutureExt, TryFutureExt},
 };
@@ -139,7 +139,7 @@ mod test {
                 .status(StatusCode::OK)
                 .body(Body::empty())
                 .unwrap();
-            Box::new(::futures::future::ok((state, response)))
+            Box::new(futures_old::future::ok((state, response)))
         }
     }
 

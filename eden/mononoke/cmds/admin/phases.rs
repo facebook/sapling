@@ -10,12 +10,12 @@ use anyhow::{bail, format_err, Error};
 use clap::ArgMatches;
 use cloned::cloned;
 use fbinit::FacebookInit;
-use futures_ext::{try_boxfuture, FutureExt};
-use futures_old::{stream, Future, IntoFuture, Stream};
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::{FutureExt as PreviewFutureExt, TryFutureExt},
 };
+use futures_ext::{try_boxfuture, FutureExt};
+use futures_old::{stream, Future, IntoFuture, Stream};
 use std::{
     fs::File,
     io::{BufRead, BufReader, Write},

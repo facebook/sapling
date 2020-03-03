@@ -9,7 +9,7 @@ use anyhow::{format_err, Error};
 use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 use mononoke_types::ChangesetId;
 use pushrebase::{
     PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,

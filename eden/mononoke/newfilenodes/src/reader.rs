@@ -8,7 +8,7 @@
 use anyhow::Error;
 use context::{CoreContext, PerfCounterType};
 use faster_hex::hex_encode;
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::{self, Future},
 };

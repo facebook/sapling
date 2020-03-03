@@ -12,12 +12,12 @@ use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::future::TryFutureExt;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{
     future::{join_all, lazy},
     Future, IntoFuture,
 };
-use futures_preview::future::TryFutureExt;
 use slog::{debug, info, o, Logger};
 use sql_ext::MysqlOptions;
 use tokio_compat::runtime::TaskExecutor;

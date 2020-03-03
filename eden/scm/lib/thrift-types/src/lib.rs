@@ -19,5 +19,5 @@ pub use fb303_core;
 // Re-export
 pub use anyhow;
 pub use fbthrift;
-pub use futures_preview as futures;
+pub use futures;
 pub use thiserror;

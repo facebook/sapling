@@ -21,11 +21,11 @@ use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
 use cmdlib::args;
 use fbinit::FacebookInit;
-use futures_ext::FutureExt as _;
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::{BoxFuture, FutureExt, TryFutureExt},
 };
+use futures_ext::FutureExt as _;
 use lazy_static::lazy_static;
 use metaconfig_types::{Redaction, ScrubAction};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};

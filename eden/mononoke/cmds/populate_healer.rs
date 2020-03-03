@@ -11,9 +11,9 @@ use anyhow::{bail, format_err, Error};
 use clap::Arg;
 use cloned::cloned;
 use fbinit::FacebookInit;
+use futures::compat::Future01CompatExt;
 use futures_ext::FutureExt;
 use futures_old::{future, stream::Stream, Future, IntoFuture};
-use futures_preview::compat::Future01CompatExt;
 use serde_derive::{Deserialize, Serialize};
 use tokio_compat::runtime;
 

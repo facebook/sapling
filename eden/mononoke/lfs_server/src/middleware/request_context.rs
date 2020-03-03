@@ -12,9 +12,9 @@ use configerator_cached::ConfigHandle;
 use context::{CoreContext, PerfCounters, SessionContainer};
 use dns_lookup::lookup_addr;
 use fbinit::FacebookInit;
+use futures::{future, prelude::*};
 use futures_ext::FutureExt;
 use futures_old::{future::ok, Future, IntoFuture};
-use futures_preview::{future, prelude::*};
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
 use hyper::{

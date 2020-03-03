@@ -14,13 +14,13 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use filenodes::{FilenodeInfo, PreparedFilenode};
-use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
-use futures_old::{future as old_future, Future};
-use futures_preview::{
+use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::try_join_all,
     stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
 };
+use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
+use futures_old::{future as old_future, Future};
 use futures_util::try_join;
 use itertools::{Either, Itertools};
 use manifest::{find_intersection_of_diffs_and_parents, Entry};

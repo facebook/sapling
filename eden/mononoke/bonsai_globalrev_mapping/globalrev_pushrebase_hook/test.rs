@@ -11,7 +11,7 @@ use blobstore::Loadable;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures_preview::{compat::Future01CompatExt, future::try_join_all};
+use futures::{compat::Future01CompatExt, future::try_join_all};
 use maplit::hashset;
 use mercurial_types::globalrev::{Globalrev, START_COMMIT_GLOBALREV};
 use mononoke_types::{BonsaiChangesetMut, ChangesetId, RepositoryId};

@@ -14,7 +14,7 @@ use blobstore_factory::{
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 use inlinable_string::InlinableString;
 use metaconfig_types::{BlobConfig, BlobstoreId, ScrubAction};
 use multiplexedblob::{LoggingScrubHandler, ScrubHandler};

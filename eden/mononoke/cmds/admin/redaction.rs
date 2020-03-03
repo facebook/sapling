@@ -16,12 +16,12 @@ use cmdlib::{args, helpers};
 use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
 use fbinit::FacebookInit;
+use futures::compat::Future01CompatExt;
 use futures_ext::{
     bounded_traversal::bounded_traversal_stream, try_boxfuture, BoxFuture, FutureExt,
 };
 use futures_old::future::{self, join_all, Future};
 use futures_old::stream::Stream;
-use futures_preview::compat::Future01CompatExt;
 use itertools::{Either, Itertools};
 use mercurial_types::{blobs::HgBlobChangeset, HgChangesetId, HgEntryId, HgManifest, MPath};
 use mononoke_types::{typed_hash::MononokeId, ContentId, Timestamp};

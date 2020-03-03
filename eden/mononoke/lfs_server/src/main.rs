@@ -14,14 +14,14 @@ use anyhow::{bail, Error};
 use clap::{Arg, Values};
 use cloned::cloned;
 use fbinit::FacebookInit;
-use futures_ext::FutureExt as Futures01Ext;
-use futures_old::{Future, IntoFuture};
-use futures_preview::{
+use futures::{
     channel::oneshot,
     compat::Future01CompatExt,
     future::{lazy, select, try_join_all},
     FutureExt, TryFutureExt,
 };
+use futures_ext::FutureExt as Futures01Ext;
+use futures_old::{Future, IntoFuture};
 // TODO: When we get rid of old futures, this can come from `futures` (can't while new futures is called `futures_preview`)
 use futures_util::try_join;
 use gotham::{bind_server, bind_server_with_pre_state};

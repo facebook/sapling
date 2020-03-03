@@ -21,7 +21,7 @@ use cross_repo_sync::{
     validation::{self, BookmarkDiff},
     CommitSyncRepos, CommitSyncer,
 };
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::{FutureExt as PreviewFutureExt, TryFutureExt},
 };

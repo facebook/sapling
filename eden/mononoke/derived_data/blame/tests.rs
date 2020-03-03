@@ -10,7 +10,7 @@ use anyhow::Error;
 use bytes::Bytes;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 use maplit::{btreemap, hashmap};
 use mononoke_types::{Blame, ChangesetId, MPath};
 use std::collections::HashMap;

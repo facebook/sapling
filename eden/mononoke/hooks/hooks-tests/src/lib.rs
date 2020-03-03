@@ -14,11 +14,11 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::many_files_dirs;
+use futures::compat::Future01CompatExt;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::ok;
 use futures_old::Future;
 use futures_old::{stream, Stream};
-use futures_preview::compat::Future01CompatExt;
 use hooks::{
     hook_loader::load_hooks, ErrorKind, FileHookExecutionID, Hook, HookChangeset,
     HookChangesetParents, HookContext, HookExecution, HookFile, HookManager, HookRejectionInfo,

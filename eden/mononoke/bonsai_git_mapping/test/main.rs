@@ -13,7 +13,7 @@ use bonsai_git_mapping::{
     bulk_add_git_mapping_in_transaction, AddGitMappingErrorKind, BonsaiGitMapping,
     BonsaiGitMappingEntry, BonsaisOrGitShas, SqlBonsaiGitMappingConnection,
 };
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::hash::*;
 use mononoke_types_mocks::repo::REPO_ZERO;

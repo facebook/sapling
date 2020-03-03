@@ -9,7 +9,7 @@ use anyhow::{format_err, Error};
 use bookmarks::BookmarkName;
 use filenodes::FilenodeInfo;
 use filestore::Alias;
-use futures_preview::stream::BoxStream;
+use futures::stream::BoxStream;
 use mercurial_types::{
     blobs::{BlobManifest, HgBlobChangeset},
     FileBytes, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId,

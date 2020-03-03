@@ -24,12 +24,12 @@ use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_utils::POSSIBLE_DERIVED_TYPES;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
-use futures_ext::FutureExt;
-use futures_old::{future, Future, IntoFuture};
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::{FutureExt as _, TryFutureExt},
 };
+use futures_ext::FutureExt;
+use futures_old::{future, Future, IntoFuture};
 use manifold::{ObjectMeta, PayloadDesc, StoredObject};
 use manifold_thrift::thrift::{self, manifold_thrift_new, RequestContext};
 use mercurial_revlog::revlog::RevIdx;

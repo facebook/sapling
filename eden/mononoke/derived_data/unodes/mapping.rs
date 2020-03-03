@@ -166,7 +166,7 @@ mod test {
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
-    use futures_preview::future::Future as NewFuture;
+    use futures::future::Future as NewFuture;
     use manifest::Entry;
     use mercurial_types::{HgChangesetId, HgManifestId};
     use revset::AncestorsNodeStream;

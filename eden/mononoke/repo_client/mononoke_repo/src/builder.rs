@@ -9,7 +9,7 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobrepo_factory::{open_blobrepo, BlobstoreOptions, Caching, ReadOnlyStorage};
 use context::CoreContext;
-use futures_preview::{compat::Future01CompatExt, future};
+use futures::{compat::Future01CompatExt, future};
 use hooks::HookManager;
 use metaconfig_types::RepoConfig;
 use mutable_counters::SqlMutableCounters;

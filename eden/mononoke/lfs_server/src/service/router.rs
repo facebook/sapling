@@ -6,8 +6,8 @@
  */
 
 use fbinit::FacebookInit;
+use futures::{FutureExt as Futures03Ext, TryFutureExt};
 use futures_ext::FutureExt;
-use futures_preview::{FutureExt as Futures03Ext, TryFutureExt};
 use gotham::{
     handler::HandlerFuture,
     helpers::http::response::{create_empty_response, create_response},

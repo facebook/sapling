@@ -10,7 +10,7 @@
 #![deny(warnings)]
 
 use fbinit::FacebookInit;
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 
 use context::CoreContext;
 use mononoke_types_mocks::changesetid as bonsai;

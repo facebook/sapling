@@ -11,12 +11,12 @@ use std::sync::Arc;
 use anyhow::{format_err, Error};
 use cloned::cloned;
 use failure_ext::chain::ChainExt;
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use futures_old::{future, Future};
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::{FutureExt as _, TryFutureExt},
 };
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_old::{future, Future};
 use slog::{info, o, Logger};
 
 use backsyncer::open_backsyncer_dbs_compat;
@@ -333,7 +333,7 @@ pub fn repo_handlers(
                 .compat();
 
                 let (repo, support_bundle2_listkeys, sql_commit_sync_mapping, wireproto_logging) =
-                    futures_preview::future::try_join4(
+                    futures::future::try_join4(
                         repo,
                         support_bundle2_listkeys,
                         sql_commit_sync_mapping,

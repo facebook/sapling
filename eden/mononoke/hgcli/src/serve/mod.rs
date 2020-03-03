@@ -29,8 +29,8 @@ use tokio::net::TcpStream;
 use clap::ArgMatches;
 
 use failure_ext::{err_downcast_ref, SlogKVError};
+use futures::compat::Future01CompatExt;
 use futures_ext::StreamExt;
-use futures_preview::compat::Future01CompatExt;
 use futures_stats::TimedFutureExt;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use secure_utils::{build_identity, read_x509};

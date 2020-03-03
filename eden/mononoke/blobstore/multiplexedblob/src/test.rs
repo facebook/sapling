@@ -19,14 +19,14 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::future::{Future, IntoFuture};
-use futures_old::sync::oneshot;
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::FutureExt as _,
     task::{Context, Poll},
 };
+use futures_ext::{BoxFuture, FutureExt};
+use futures_old::future::{Future, IntoFuture};
+use futures_old::sync::oneshot;
 use lock_ext::LockExt;
 use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
 use mononoke_types::BlobstoreBytes;
@@ -151,7 +151,7 @@ fn make_value(value: &str) -> BlobstoreBytes {
 #[fbinit::test]
 fn base(fb: FacebookInit) {
     async_unit::tokio_unit_test(async move {
-        let waker = futures_preview::task::noop_waker();
+        let waker = futures::task::noop_waker();
         let mut task_ctx = Context::from_waker(&waker);
 
         let bs0 = Arc::new(Tickable::new());
@@ -304,7 +304,7 @@ fn base(fb: FacebookInit) {
 #[fbinit::test]
 fn multiplexed(fb: FacebookInit) {
     async_unit::tokio_unit_test(async move {
-        let waker = futures_preview::task::noop_waker();
+        let waker = futures::task::noop_waker();
         let mut task_ctx = Context::from_waker(&waker);
 
         let ctx = CoreContext::test_mock(fb);
@@ -397,7 +397,7 @@ fn multiplexed(fb: FacebookInit) {
 #[fbinit::test]
 fn scrubbed(fb: FacebookInit) {
     async_unit::tokio_unit_test(async move {
-        let waker = futures_preview::task::noop_waker();
+        let waker = futures::task::noop_waker();
         let mut task_ctx = Context::from_waker(&waker);
 
         let ctx = CoreContext::test_mock(fb);
@@ -590,7 +590,7 @@ fn scrubbed(fb: FacebookInit) {
 #[fbinit::test]
 fn queue_waits(fb: FacebookInit) {
     async_unit::tokio_unit_test(async move {
-        let waker = futures_preview::task::noop_waker();
+        let waker = futures::task::noop_waker();
         let mut task_ctx = Context::from_waker(&waker);
 
         let bs0 = Arc::new(Tickable::new());

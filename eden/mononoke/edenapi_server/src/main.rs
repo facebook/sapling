@@ -15,13 +15,13 @@ use std::sync::{
 
 use anyhow::{Context, Result};
 use clap::{Arg, ArgMatches};
-use futures_ext::FutureExt as OldFutureExt;
-use futures_old::future;
-use futures_preview::{
+use futures::{
     channel::oneshot,
     compat::Future01CompatExt,
     future::{lazy, select, FutureExt, TryFutureExt},
 };
+use futures_ext::FutureExt as OldFutureExt;
+use futures_old::future;
 use gotham::bind_server;
 use hyper::header::HeaderValue;
 use openssl::ssl::SslAcceptor;

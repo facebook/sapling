@@ -11,7 +11,7 @@ use anyhow;
 use ascii::AsciiStr;
 use async_trait::async_trait;
 use context::CoreContext;
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 use mononoke_types::{hash::GitSha1, BonsaiChangeset, ChangesetId, RepositoryId};
 use slog::warn;
 use sql::queries;

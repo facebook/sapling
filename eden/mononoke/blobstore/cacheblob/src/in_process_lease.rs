@@ -6,13 +6,13 @@
  */
 
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::sync::oneshot::{channel, Receiver, Sender};
-use futures_old::{future::Shared, Future, IntoFuture};
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::{FutureExt as NewFutureExt, TryFutureExt},
 };
+use futures_ext::{BoxFuture, FutureExt};
+use futures_old::sync::oneshot::{channel, Receiver, Sender};
+use futures_old::{future::Shared, Future, IntoFuture};
 use std::collections::{hash_map::Entry, HashMap};
 use std::sync::{Arc, Mutex};
 

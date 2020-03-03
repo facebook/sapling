@@ -10,7 +10,7 @@ use crate::state::StepStats;
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use futures_preview::{
+use futures::{
     future::FutureExt,
     stream::{Stream, StreamExt, TryStreamExt},
 };

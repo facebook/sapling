@@ -9,9 +9,9 @@ use anyhow::{format_err, Error};
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
+use futures::future::try_join_all;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future, sync::mpsc, Future, IntoFuture};
-use futures_preview::future::try_join_all;
 use futures_util::{
     compat::Future01CompatExt,
     future::{FutureExt as Futures02Ext, TryFutureExt},

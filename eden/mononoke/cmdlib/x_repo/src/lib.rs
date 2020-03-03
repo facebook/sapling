@@ -16,7 +16,7 @@ use clap::ArgMatches;
 use cmdlib::{args, helpers::open_sql_with_config_and_mysql_options};
 use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
 use fbinit::FacebookInit;
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 use futures_util::try_join;
 use metaconfig_types::RepoConfig;
 use slog::Logger;

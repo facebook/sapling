@@ -718,9 +718,9 @@ mod test {
     use chashmap::CHashMap;
     use context::CoreContext;
     use fbinit::FacebookInit;
+    use futures::compat::Future01CompatExt;
     use futures_old::stream::iter_ok;
     use futures_old::stream::Stream;
-    use futures_preview::compat::Future01CompatExt;
     use revset::AncestorsNodeStream;
     use std::collections::HashSet;
     use std::iter::FromIterator;

@@ -9,7 +9,7 @@ use bytes::Bytes;
 use caching_ext::MemcacheHandler;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
-use futures_preview::{compat::Future01CompatExt, future::try_join_all};
+use futures::{compat::Future01CompatExt, future::try_join_all};
 use memcache::{KeyGen, MemcacheClient, MEMCACHE_VALUE_MAX_SIZE};
 use rand::random;
 use stats::prelude::*;

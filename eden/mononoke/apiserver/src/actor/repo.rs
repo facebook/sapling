@@ -63,7 +63,7 @@ use reachabilityindex::ReachabilityIndex;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 
 // Purely so that we can build new-style API objects from old style
-use futures_preview::future::{FutureExt as _, TryFutureExt};
+use futures::future::{FutureExt as _, TryFutureExt};
 use mononoke_api::repo::open_synced_commit_mapping;
 use synced_commit_mapping::SyncedCommitMapping;
 

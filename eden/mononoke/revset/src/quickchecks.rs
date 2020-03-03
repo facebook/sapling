@@ -32,12 +32,12 @@ mod test {
     use cloned::cloned;
     use context::CoreContext;
     use fbinit::FacebookInit;
+    use futures::{compat::Stream01CompatExt, stream::StreamExt as _};
     use futures_ext::{BoxFuture, BoxStream, StreamExt};
     use futures_old::{
         future::{join_all, ok},
         Stream,
     };
-    use futures_preview::{compat::Stream01CompatExt, stream::StreamExt as _};
     use mononoke_types::ChangesetId;
     use quickcheck::{quickcheck, Arbitrary, Gen};
     use rand::{seq::SliceRandom, thread_rng, Rng};

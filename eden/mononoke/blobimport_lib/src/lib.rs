@@ -21,14 +21,14 @@ use std::sync::Arc;
 use anyhow::Error;
 use ascii::AsciiString;
 use cloned::cloned;
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
-use futures_old::{future, Future, Stream};
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::{ready, Future as NewFuture, FutureExt as _, TryFutureExt},
     stream::futures_unordered::FuturesUnordered,
     TryStreamExt,
 };
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_old::{future, Future, Stream};
 use slog::{debug, error, info, Logger};
 
 use blobrepo::BlobRepo;

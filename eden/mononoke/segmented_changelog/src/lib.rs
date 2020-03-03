@@ -14,7 +14,7 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 use maplit::{hashmap, hashset};
 
 use blobrepo::BlobRepo;
@@ -92,8 +92,8 @@ mod tests {
     use super::*;
 
     use fbinit::FacebookInit;
+    use futures::StreamExt;
     use futures_old::stream::{self, Stream};
-    use futures_preview::StreamExt;
     use futures_util::compat::Stream01CompatExt;
     use revset::AncestorsNodeStream;
 

@@ -10,7 +10,7 @@ use blobstore::Loadable;
 use configerator_cached::ConfigHandle;
 use fbinit::FacebookInit;
 use fixtures::many_files_dirs;
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 use maplit::hashset;
 
 use mononoke_types_mocks::changesetid::ONES_CSID;

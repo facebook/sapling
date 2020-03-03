@@ -20,14 +20,14 @@ use bookmark_renaming::{
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use futures_old::Future;
-use futures_old::Stream as StreamOld;
-use futures_preview::future::try_join_all;
-use futures_preview::{
+use futures::future::try_join_all;
+use futures::{
     compat::Future01CompatExt,
     future::{self, FutureExt, TryFutureExt},
     stream::{self, futures_unordered::FuturesUnordered, StreamExt, TryStreamExt},
 };
+use futures_old::Future;
+use futures_old::Stream as StreamOld;
 use manifest::get_implicit_deletes;
 use maplit::{hashmap, hashset};
 use mercurial_types::HgManifestId;

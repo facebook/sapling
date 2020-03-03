@@ -17,8 +17,8 @@ use bookmarks::{
 use context::CoreContext;
 use dbbookmarks::{SqlBookmarks, SqlConstructors};
 use fbinit::FacebookInit;
+use futures::compat::Future01CompatExt;
 use futures_old::{Future, Stream};
-use futures_preview::compat::Future01CompatExt;
 use maplit::hashmap;
 use mercurial_types_mocks::nodehash as mercurial_mocks;
 use mononoke_types::Timestamp;

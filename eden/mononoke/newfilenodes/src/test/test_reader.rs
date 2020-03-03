@@ -9,7 +9,7 @@ use anyhow::{format_err, Error};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filenodes::{FilenodeInfo, PreparedFilenode};
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 use mercurial_types::HgFileNodeId;
 use mercurial_types_mocks::nodehash::{
     ONES_CSID, ONES_FNID, THREES_CSID, THREES_FNID, TWOS_CSID, TWOS_FNID,

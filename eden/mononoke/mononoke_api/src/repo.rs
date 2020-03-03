@@ -22,11 +22,11 @@ use context::CoreContext;
 use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
+use futures::compat::{Future01CompatExt, Stream01CompatExt};
+use futures::future::{self, try_join, try_join_all, TryFutureExt};
+use futures::StreamExt as NewStreamExt;
 use futures_ext::StreamExt;
 use futures_old::stream::{self, Stream};
-use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
-use futures_preview::future::{self, try_join, try_join_all, TryFutureExt};
-use futures_preview::StreamExt as NewStreamExt;
 use identity::Identity;
 use mercurial_types::Globalrev;
 use metaconfig_types::{

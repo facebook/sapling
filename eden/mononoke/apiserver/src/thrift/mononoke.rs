@@ -26,9 +26,9 @@ use async_trait::async_trait;
 use cloned::cloned;
 use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
+use futures::compat::Future01CompatExt;
 use futures_ext::FutureExt;
 use futures_old::{Future, IntoFuture, Stream};
-use futures_preview::compat::Future01CompatExt;
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 

@@ -12,9 +12,9 @@ use std::sync::Arc;
 use anyhow::{format_err, Error, Result};
 use clap::ArgMatches;
 use fbinit::FacebookInit;
+use futures::compat::Future01CompatExt;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::prelude::*;
-use futures_preview::compat::Future01CompatExt;
 
 use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};

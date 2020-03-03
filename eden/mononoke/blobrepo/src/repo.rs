@@ -27,15 +27,15 @@ use context::CoreContext;
 use failure_ext::{Compat, FutureFailureErrorExt, FutureFailureExt};
 use filenodes::{FilenodeInfo, Filenodes};
 use filestore::FilestoreConfig;
+use futures::{
+    compat::Future01CompatExt,
+    future::{self as new_future, FutureExt as NewFutureExt, TryFutureExt},
+};
 use futures_ext::{spawn_future, try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_old::future::{self, loop_fn, ok, Future, Loop};
 use futures_old::stream::{self, futures_unordered, FuturesUnordered, Stream};
 use futures_old::sync::oneshot;
 use futures_old::IntoFuture;
-use futures_preview::{
-    compat::Future01CompatExt,
-    future::{self as new_future, FutureExt as NewFutureExt, TryFutureExt},
-};
 use futures_stats::Timed;
 use manifest::{Entry, Manifest, ManifestOps};
 use maplit::hashmap;

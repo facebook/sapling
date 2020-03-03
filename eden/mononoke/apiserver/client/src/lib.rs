@@ -20,7 +20,7 @@ use apiserver_thrift::types::{
     MononokeRevision, MononokeTreeHash,
 };
 use fbinit::FacebookInit;
-use futures_preview::future::TryFutureExt;
+use futures::future::TryFutureExt;
 use srclient::SRChannelBuilder;
 
 pub struct MononokeAPIClient {

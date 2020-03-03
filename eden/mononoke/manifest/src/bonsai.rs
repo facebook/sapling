@@ -8,9 +8,9 @@
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
+use futures::compat::Future01CompatExt;
 use futures_ext::bounded_traversal::bounded_traversal_stream;
 use futures_old::{Future, Stream};
-use futures_preview::compat::Future01CompatExt;
 use futures_util::{
     future::{try_join_all, FutureExt as Futures03FutureExt, TryFutureExt},
     try_join,

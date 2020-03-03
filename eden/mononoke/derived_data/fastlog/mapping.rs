@@ -12,13 +12,13 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
-use futures_old::{future, stream::FuturesUnordered, Future, Stream};
-use futures_preview::{
+use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{FutureExt as NewFutureExt, TryFutureExt},
     stream::TryStreamExt,
 };
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_old::{future, stream::FuturesUnordered, Future, Stream};
 use manifest::{find_intersection_of_diffs, Entry};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, ManifestUnodeId};
 use std::collections::HashMap;

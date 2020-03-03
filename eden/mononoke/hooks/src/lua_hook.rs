@@ -409,7 +409,7 @@ mod test {
     use bookmarks::BookmarkName;
     use failure_ext::err_downcast;
     use fbinit::FacebookInit;
-    use futures_preview::compat::Future01CompatExt;
+    use futures::compat::Future01CompatExt;
     use hooks_content_stores::{InMemoryFileContentStore, InMemoryFileText};
     use mercurial_types::{HgChangesetId, MPath};
     use std::str::FromStr;

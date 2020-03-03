@@ -239,8 +239,8 @@ mod test {
     use blobrepo::BlobRepo;
     use context::CoreContext;
     use fbinit::FacebookInit;
+    use futures::compat::Future01CompatExt;
     use futures_ext::StreamExt;
-    use futures_preview::compat::Future01CompatExt;
     use mercurial_types::HgChangesetId;
     use revset_test_helper::assert_changesets_sequence;
     use revset_test_helper::string_to_nodehash;

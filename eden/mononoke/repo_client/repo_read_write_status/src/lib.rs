@@ -202,7 +202,7 @@ impl RepoReadWriteFetcher {
 #[cfg(test)]
 mod test {
     use super::*;
-    use futures_preview::compat::Future01CompatExt;
+    use futures::compat::Future01CompatExt;
     use metaconfig_types::RepoReadOnly::*;
 
     static CONFIG_MSG: &str = "Set by config option";

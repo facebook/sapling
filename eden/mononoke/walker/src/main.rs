@@ -10,7 +10,7 @@
 #![feature(async_closure)]
 use anyhow::Error;
 use fbinit::FacebookInit;
-use futures_preview::future::{self, FutureExt};
+use futures::future::{self, FutureExt};
 
 use cmdlib::{args, helpers::block_execute};
 

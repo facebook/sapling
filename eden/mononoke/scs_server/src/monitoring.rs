@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use futures_preview::StreamExt;
+use futures::StreamExt;
 use mononoke_api::{CoreContext, Mononoke};
 use slog::warn;
 use std::sync::Arc;

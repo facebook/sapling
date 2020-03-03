@@ -19,14 +19,14 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
-use futures::Future;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_preview::{
+use futures::{
     channel::oneshot,
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{select, FutureExt as NewFutureExt, TryFutureExt},
     stream::{FuturesUnordered, StreamExt, TryStreamExt},
 };
+use futures_ext::{BoxFuture, FutureExt};
+use futures_old::Future;
 use futures_stats::futures03::TimedFutureExt;
 use lock_ext::RwLockExt;
 use mercurial_derived_data::MappedHgChangesetId;

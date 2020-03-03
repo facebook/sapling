@@ -14,7 +14,7 @@ use crate::tail::{walk_exact_tail, RepoWalkRun};
 use anyhow::Error;
 use clap::ArgMatches;
 use fbinit::FacebookInit;
-use futures_preview::{
+use futures::{
     future::{self, BoxFuture, FutureExt},
     stream::{Stream, TryStreamExt},
     TryFutureExt,

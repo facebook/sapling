@@ -18,8 +18,8 @@ use bonsai_hg_mapping::{
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures::compat::Future01CompatExt;
 use futures_ext::BoxFuture;
-use futures_preview::compat::Future01CompatExt;
 use mercurial_types::{HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
 use mercurial_types_mocks::nodehash as hg;
 use mononoke_types::RepositoryId;

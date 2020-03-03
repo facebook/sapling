@@ -28,7 +28,7 @@ use crate::dummy::DummyLease;
 use crate::CacheBlobstore;
 use crate::CacheOps;
 use crate::LeaseOps;
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::{select, Either as NewEither, FutureExt as NewFutureExt, TryFutureExt},
 };

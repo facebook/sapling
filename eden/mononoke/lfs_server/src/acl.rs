@@ -10,7 +10,7 @@ use infrasec_authorization as acl_constants;
 use aclchecker::{AclChecker, Identity};
 use anyhow::{bail, Error};
 use fbinit::FacebookInit;
-use futures_preview::{future, prelude::*};
+use futures::{future, prelude::*};
 use slog::{info, Logger};
 
 const ACL_CHECKER_TIMEOUT_MS: u32 = 10_000;

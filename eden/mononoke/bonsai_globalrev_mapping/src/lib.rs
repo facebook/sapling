@@ -15,13 +15,13 @@ use thiserror::Error;
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::future::Future;
-use futures_old::{future, IntoFuture};
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::{FutureExt as _, TryFutureExt},
 };
+use futures_ext::{BoxFuture, FutureExt};
+use futures_old::future::Future;
+use futures_old::{future, IntoFuture};
 use mercurial_types::Globalrev;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use slog::warn;

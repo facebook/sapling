@@ -10,12 +10,12 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future, sync::mpsc, Future};
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::{self as new_future, FutureExt as NewFutureExt, TryFutureExt},
 };
+use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{future, sync::mpsc, Future};
 use manifest::{derive_manifest_with_io_sender, Entry, LeafInfo, TreeInfo};
 use metaconfig_types::UnodeVersion;
 use mononoke_types::unode::{FileUnode, ManifestUnode, UnodeEntry};
@@ -393,8 +393,8 @@ mod tests {
     use derived_data_filenodes::FilenodesOnlyPublic;
     use fbinit::FacebookInit;
     use fixtures::linear;
+    use futures::{compat::Future01CompatExt, FutureExt as NewFutureExt, TryFutureExt};
     use futures_old::Stream;
-    use futures_preview::{compat::Future01CompatExt, FutureExt as NewFutureExt, TryFutureExt};
     use manifest::ManifestOps;
     use maplit::btreemap;
     use mercurial_types::{blobs::BlobManifest, HgFileNodeId, HgManifestId};

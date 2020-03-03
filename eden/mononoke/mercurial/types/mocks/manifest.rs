@@ -293,8 +293,8 @@ impl HgEntry for MockEntry {
 mod test {
     use super::*;
     use fbinit::FacebookInit;
+    use futures::compat::Future01CompatExt;
     use futures_old::Stream;
-    use futures_preview::compat::Future01CompatExt;
     use maplit::btreemap;
 
     #[fbinit::test]

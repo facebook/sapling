@@ -13,7 +13,7 @@ use clap::{App, ArgMatches};
 use cmdlib::{args, monitoring::ReadyFlagService};
 use configerator_cached::ConfigStore;
 use fbinit::FacebookInit;
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::{FutureExt, TryFutureExt},
 };

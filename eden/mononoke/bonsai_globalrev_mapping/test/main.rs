@@ -13,7 +13,7 @@ use bonsai_globalrev_mapping::{
     add_globalrevs, AddGlobalrevsErrorKind, BonsaiGlobalrevMapping, BonsaiGlobalrevMappingEntry,
     BonsaisOrGlobalrevs, SqlBonsaiGlobalrevMapping,
 };
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 use mercurial_types_mocks::globalrev::*;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;

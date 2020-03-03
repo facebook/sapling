@@ -20,7 +20,7 @@ use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
 use fbinit::FacebookInit;
-use futures_preview::{
+use futures::{
     future::{self, BoxFuture, FutureExt, TryFutureExt},
     stream::{Stream, TryStreamExt},
 };

@@ -13,7 +13,7 @@ use blobrepo::BlobRepo;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::{branch_wide, linear, merge_uneven};
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 
 #[cfg(test)]
 use common::fetch_generation_and_join;

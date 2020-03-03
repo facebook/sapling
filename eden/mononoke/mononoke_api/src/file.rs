@@ -15,9 +15,9 @@ use bytes::{Bytes, BytesMut};
 use cloned::cloned;
 use context::CoreContext;
 use filestore::{self, get_metadata, FetchKey};
-use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
-use futures_preview::future::{FutureExt, Shared};
-use futures_preview::stream::TryStreamExt;
+use futures::compat::{Future01CompatExt, Stream01CompatExt};
+use futures::future::{FutureExt, Shared};
+use futures::stream::TryStreamExt;
 
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;

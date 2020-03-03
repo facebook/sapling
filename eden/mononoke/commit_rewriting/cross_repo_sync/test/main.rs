@@ -26,7 +26,7 @@ use context::CoreContext;
 use cross_repo_sync_test_utils::rebase_root_on_master;
 
 use fixtures::{linear, many_files_dirs};
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,

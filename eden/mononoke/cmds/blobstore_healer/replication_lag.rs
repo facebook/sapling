@@ -7,8 +7,8 @@
 
 use anyhow::{format_err, Error};
 use async_trait::async_trait;
-use futures_preview::compat::Future01CompatExt;
-use futures_preview::future;
+use futures::compat::Future01CompatExt;
+use futures::future;
 use slog::{info, Logger};
 use sql::Connection;
 use sql_facebook::ext::ConnectionFbExt;

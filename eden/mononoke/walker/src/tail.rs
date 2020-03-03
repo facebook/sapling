@@ -12,7 +12,7 @@ use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures_preview::{
+use futures::{
     future::Future,
     stream::{repeat, BoxStream, StreamExt},
 };

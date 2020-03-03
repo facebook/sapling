@@ -7,7 +7,7 @@
 
 use blobstore::{Loadable, LoadableError};
 use bytes::Bytes;
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 use mercurial_types::envelope::HgFileEnvelope;
 use remotefilelog::create_getpack_v1_blob;
 

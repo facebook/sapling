@@ -12,13 +12,13 @@ use blobstore::Loadable;
 use cacheblob::LeaseOps;
 use cloned::cloned;
 use context::CoreContext;
-use futures_ext::{bounded_traversal, try_boxfuture, BoxFuture, FutureExt, StreamExt};
-use futures_old::sync::oneshot;
-use futures_old::{future, stream, Future, Stream};
-use futures_preview::{
+use futures::{
     compat::Future01CompatExt,
     future::{try_join, try_join_all, FutureExt as NewFutureExt, TryFutureExt},
 };
+use futures_ext::{bounded_traversal, try_boxfuture, BoxFuture, FutureExt, StreamExt};
+use futures_old::sync::oneshot;
+use futures_old::{future, stream, Future, Stream};
 use futures_stats::{futures03::TimedFutureExt, FutureStats};
 use lock_ext::LockExt;
 use metaconfig_types::DerivedDataConfig;
@@ -602,8 +602,8 @@ mod test {
         branch_even, branch_uneven, branch_wide, linear, many_diamonds, many_files_dirs,
         merge_even, merge_uneven, unshared_merge_even, unshared_merge_uneven,
     };
+    use futures::compat::Future01CompatExt;
     use futures_ext::BoxFuture;
-    use futures_preview::compat::Future01CompatExt;
     use lazy_static::lazy_static;
     use lock_ext::LockExt;
     use maplit::hashmap;

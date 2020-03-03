@@ -10,11 +10,11 @@ use clap::ArgMatches;
 use cloned::cloned;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
+use futures::compat::Future01CompatExt;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::{loop_fn, ok, Loop};
 use futures_old::prelude::*;
 use futures_old::stream::iter_ok;
-use futures_preview::compat::Future01CompatExt;
 use std::collections::HashMap;
 use std::sync::Arc;
 

@@ -9,13 +9,13 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures_ext::BoxStream;
-use futures_old::future::Future;
-use futures_old::stream::Stream;
-use futures_preview::{
+use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     stream::StreamExt,
 };
+use futures_ext::BoxStream;
+use futures_old::future::Future;
+use futures_old::stream::Stream;
 use mercurial_types::nodehash::HgChangesetId;
 use mercurial_types::HgNodeHash;
 use mononoke_types::ChangesetId;

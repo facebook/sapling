@@ -8,7 +8,7 @@
 use anyhow::Error;
 use context::CoreContext;
 use filenodes::PreparedFilenode;
-use futures_preview::future;
+use futures::future;
 use itertools::Itertools;
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
 use mononoke_types::RepositoryId;
@@ -18,7 +18,7 @@ use std::collections::HashSet;
 use thiserror::Error as DeriveError;
 
 use crate::structs::{PathBytes, PathHash, PathHashBytes};
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 
 define_stats! {
     prefix = "mononoke.filenodes";

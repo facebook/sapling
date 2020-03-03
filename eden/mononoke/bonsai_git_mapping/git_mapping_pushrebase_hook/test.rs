@@ -9,7 +9,7 @@ use anyhow::Error;
 use blobstore::Loadable;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 use maplit::hashset;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::hash::*;

@@ -7,11 +7,11 @@
 
 use anyhow::Error;
 use bytes::Bytes;
-use futures_old::Future;
-use futures_preview::{
+use futures::{
     channel::mpsc::channel, compat::Future01CompatExt, compat::Stream01CompatExt, future::ready,
     SinkExt, Stream, StreamExt, TryStreamExt,
 };
+use futures_old::Future;
 use futures_util::try_join;
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};

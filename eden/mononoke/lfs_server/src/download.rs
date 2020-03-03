@@ -8,9 +8,9 @@
 use mononoke_types::hash::Sha256;
 
 use failure_ext::chain::ChainExt;
+use futures::compat::Future01CompatExt;
 use futures_ext::StreamExt;
 use futures_old::Stream;
-use futures_preview::compat::Future01CompatExt;
 use gotham::state::State;
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;

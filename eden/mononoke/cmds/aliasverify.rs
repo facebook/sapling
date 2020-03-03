@@ -18,9 +18,9 @@ use bytes::Bytes;
 use clap::{App, Arg};
 use cloned::cloned;
 use fbinit::FacebookInit;
+use futures::compat::Future01CompatExt;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{stream, Future, IntoFuture, Stream};
-use futures_preview::compat::Future01CompatExt;
 use slog::{debug, info, Logger};
 use tokio::prelude::stream::iter_ok;
 

@@ -9,7 +9,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use bookmarks::BookmarkTransactionError;
 use context::CoreContext;
-use futures_preview::compat::Future01CompatExt;
+use futures::compat::Future01CompatExt;
 use mercurial_types::globalrev::{Globalrev, GLOBALREV_EXTRA, START_COMMIT_GLOBALREV};
 use mononoke_types::{BonsaiChangesetMut, ChangesetId, RepositoryId};
 use pushrebase::{

@@ -17,7 +17,7 @@ use context::CoreContext;
 use cross_repo_sync::{
     rewrite_commit, update_mapping, upload_commits, CommitSyncRepos, CommitSyncer, Syncers,
 };
-use futures_preview::{compat::Future01CompatExt, FutureExt, TryFutureExt};
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use maplit::hashmap;
 use megarepolib::{common::ChangesetArgs, perform_move};
 use metaconfig_types::{

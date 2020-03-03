@@ -55,13 +55,13 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
-use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt, StreamExt as Futures01StreamExt};
-use futures_old::{stream, Future, Stream};
-use futures_preview::{
+use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{try_join, try_join_all, FutureExt, TryFutureExt},
     stream::{StreamExt, TryStream, TryStreamExt},
 };
+use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt, StreamExt as Futures01StreamExt};
+use futures_old::{stream, Future, Stream};
 use manifest::{bonsai_diff, BonsaiDiffFileChange, ManifestOps};
 use maplit::hashmap;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId, MPath};
@@ -1196,7 +1196,7 @@ mod tests {
     use dbbookmarks::SqlBookmarks;
     use fbinit::FacebookInit;
     use fixtures::{linear, many_files_dirs, merge_even};
-    use futures_preview::{
+    use futures::{
         compat::Future01CompatExt,
         future::{try_join_all, TryFutureExt},
         stream::{self, TryStreamExt},

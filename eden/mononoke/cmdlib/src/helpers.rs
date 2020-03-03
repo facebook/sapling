@@ -19,12 +19,12 @@ use anyhow::{bail, format_err, Context, Error, Result};
 use clap::ArgMatches;
 use cloned::cloned;
 use fbinit::FacebookInit;
-use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
-use futures_old::{Future as OldFuture, IntoFuture};
-use futures_preview::{
+use futures::{
     future::{self, Either},
     StreamExt, TryFutureExt,
 };
+use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
+use futures_old::{Future as OldFuture, IntoFuture};
 use services::Fb303Service;
 use slog::{debug, error, info, Logger};
 use tokio_preview::{
@@ -474,7 +474,7 @@ mod test {
     use super::*;
     use crate::args;
     use anyhow::Error;
-    use futures_preview::future::lazy;
+    use futures::future::lazy;
     use slog_glog_fmt;
 
     use crate::monitoring::AliveService;
