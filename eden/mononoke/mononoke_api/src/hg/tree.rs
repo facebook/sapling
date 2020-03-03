@@ -5,9 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
-
-use blobstore::Blobstore;
 use bytes::Bytes;
 use futures::compat::Future01CompatExt;
 use mercurial_types::{
@@ -35,8 +32,8 @@ impl HgTreeContext {
         manifest_id: HgManifestId,
     ) -> Result<Self, MononokeError> {
         let ctx = repo.ctx().clone();
-        let blobstore: Arc<dyn Blobstore> = Arc::new(repo.blob_repo().blobstore().clone());
-        let envelope = fetch_manifest_envelope(ctx, &blobstore, manifest_id)
+        let blobstore = repo.blob_repo().blobstore();
+        let envelope = fetch_manifest_envelope(ctx, blobstore, manifest_id)
             .compat()
             .await?;
         Ok(Self { repo, envelope })
@@ -47,8 +44,8 @@ impl HgTreeContext {
         manifest_id: HgManifestId,
     ) -> Result<Option<Self>, MononokeError> {
         let ctx = repo.ctx().clone();
-        let blobstore: Arc<dyn Blobstore> = Arc::new(repo.blob_repo().blobstore().clone());
-        let envelope = fetch_manifest_envelope_opt(ctx, &blobstore, manifest_id)
+        let blobstore = repo.blob_repo().blobstore();
+        let envelope = fetch_manifest_envelope_opt(ctx, blobstore, manifest_id)
             .compat()
             .await?;
         Ok(envelope.map(move |envelope| Self { repo, envelope }))

@@ -78,9 +78,9 @@ impl ManifestContent {
     }
 }
 
-pub fn fetch_raw_manifest_bytes(
+pub fn fetch_raw_manifest_bytes<B: Blobstore>(
     ctx: CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &B,
     manifest_id: HgManifestId,
 ) -> BoxFuture<HgBlob, Error> {
     fetch_manifest_envelope(ctx, blobstore, manifest_id)
@@ -92,9 +92,9 @@ pub fn fetch_raw_manifest_bytes(
         .boxify()
 }
 
-pub fn fetch_manifest_envelope(
+pub fn fetch_manifest_envelope<B: Blobstore>(
     ctx: CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &B,
     manifest_id: HgManifestId,
 ) -> impl Future<Item = HgManifestEnvelope, Error = Error> {
     fetch_manifest_envelope_opt(ctx, blobstore, manifest_id)
@@ -109,9 +109,9 @@ pub fn fetch_manifest_envelope(
 }
 
 /// Like `fetch_manifest_envelope`, but returns None if the manifest wasn't found.
-pub fn fetch_manifest_envelope_opt(
+pub fn fetch_manifest_envelope_opt<B: Blobstore>(
     ctx: CoreContext,
-    blobstore: &Arc<dyn Blobstore>,
+    blobstore: &B,
     node_id: HgManifestId,
 ) -> impl Future<Item = Option<HgManifestEnvelope>, Error = Error> {
     let blobstore_key = node_id.blobstore_key();
