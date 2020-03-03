@@ -246,6 +246,9 @@ class EdenInstance:
         return logger
 
     def _create_telemetry_logger(self) -> telemetry.TelemetryLogger:
+        if "INTEGRATION_TEST" in os.environ:
+            return telemetry.NullTelemetryLogger()
+
         try:
             from eden.cli.facebook import scuba_telemetry
 

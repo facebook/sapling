@@ -82,6 +82,10 @@ class EdenTestCase(
         self.last_event = self.start
         self.system_hgrc: Optional[str] = None
 
+        # Set an environment variable to prevent telemetry logging
+        # during integration tests
+        os.environ["INTEGRATION_TEST"] = "1"
+
         # Add a cleanup event just to log once the other cleanup
         # actions have completed.
         self.addCleanup(self.report_time, "clean up done")
