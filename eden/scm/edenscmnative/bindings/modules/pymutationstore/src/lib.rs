@@ -245,7 +245,7 @@ py_class!(class mutationstore |py| {
     }
 
     @staticmethod
-    def repair(path: &str) -> PyResult<PyUnicode> {
-        py.allow_threads(|| MutationStore::repair(path)).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
+    def repair(path: &str) -> PyResult<Str> {
+        py.allow_threads(|| MutationStore::repair(path)).map_pyerr(py).map(Into::into)
     }
 });

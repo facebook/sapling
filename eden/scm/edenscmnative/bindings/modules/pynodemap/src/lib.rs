@@ -12,7 +12,7 @@ use std::cell::RefCell;
 use cpython::*;
 
 use ::nodemap::{NodeMap, NodeSet, Repair};
-use cpython_ext::{Bytes, PyNone, PyPath, ResultPyErrExt};
+use cpython_ext::{Bytes, PyNone, PyPath, ResultPyErrExt, Str};
 use types::node::Node;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -84,8 +84,8 @@ py_class!(class nodemap |py| {
     }
 
     @staticmethod
-    def repair(path: &str) -> PyResult<PyUnicode> {
-        py.allow_threads(|| NodeMap::repair(path)).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
+    def repair(path: &str) -> PyResult<Str> {
+        py.allow_threads(|| NodeMap::repair(path)).map_pyerr(py).map(Into::into)
     }
 });
 
@@ -125,7 +125,7 @@ py_class!(class nodeset |py| {
     }
 
     @staticmethod
-    def repair(path: &str) -> PyResult<PyUnicode> {
-        NodeSet::repair(path).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
+    def repair(path: &str) -> PyResult<Str> {
+        NodeSet::repair(path).map_pyerr(py).map(Into::into)
     }
 });

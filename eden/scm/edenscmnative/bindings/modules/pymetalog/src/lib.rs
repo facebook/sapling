@@ -9,7 +9,7 @@
 
 use ::metalog::{CommitOptions, Id20, MetaLog, Repair};
 use cpython::*;
-use cpython_ext::{Bytes, PyNone, ResultPyErrExt};
+use cpython_ext::{Bytes, PyNone, ResultPyErrExt, Str};
 use std::cell::RefCell;
 use std::time::SystemTime;
 
@@ -107,7 +107,7 @@ py_class!(class metalog |py| {
     }
 
     @staticmethod
-    def repair(path: &str) -> PyResult<PyUnicode> {
-        py.allow_threads(|| MetaLog::repair(path)).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
+    def repair(path: &str) -> PyResult<Str> {
+        py.allow_threads(|| MetaLog::repair(path)).map_pyerr(py).map(Into::into)
     }
 });

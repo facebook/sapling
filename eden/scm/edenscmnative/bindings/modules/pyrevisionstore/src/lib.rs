@@ -20,7 +20,7 @@ use anyhow::{format_err, Error};
 use cpython::*;
 use parking_lot::RwLock;
 
-use cpython_ext::{PyErr, PyPath, PyPathBuf, ResultPyErrExt};
+use cpython_ext::{PyErr, PyPath, PyPathBuf, ResultPyErrExt, Str};
 use pyconfigparser::config;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
@@ -384,8 +384,8 @@ py_class!(class indexedlogdatastore |py| {
     }
 
     @staticmethod
-    def repair(path: &PyPath) -> PyResult<PyUnicode> {
-        py.allow_threads(|| IndexedLogDataStore::repair(path.as_path())).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
+    def repair(path: &PyPath) -> PyResult<Str> {
+        py.allow_threads(|| IndexedLogDataStore::repair(path.as_path())).map_pyerr(py).map(Into::into)
     }
 
     def getdelta(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyObject> {
