@@ -5,11 +5,15 @@
 # GNU General Public License version 2.
 
 import subprocess
-from typing import Callable, Optional
+from typing import Callable, List, Optional
 
 
 class FakeHgRepo:
     commit_checker: Optional[Callable[[str], bool]] = None
+    source: str
+
+    def __init__(self, source: str) -> None:
+        self.source = source
 
     def get_commit_hash(self, commit: str, stderr_output=None) -> str:
         commit_checker = self.commit_checker
@@ -22,3 +26,6 @@ class FakeHgRepo:
         raise subprocess.CalledProcessError(
             returncode=255, cmd=cmd, output=str.encode(output)
         )
+
+    def _run_hg(self, args: List[str], stderr_output=None) -> None:
+        pass

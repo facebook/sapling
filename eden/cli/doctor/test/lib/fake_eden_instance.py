@@ -193,7 +193,8 @@ class FakeEdenInstance:
         (hg_dir / "bookmarks").touch()
         (hg_dir / "branch").write_text("default\n")
 
-        fake_repo = FakeHgRepo()
+        source = str(fake_checkout.config.backing_repo)
+        fake_repo = FakeHgRepo(source)
         self._hg_repo_by_path[Path(full_path)] = fake_repo
         self._hg_repo_by_path[fake_checkout.config.backing_repo] = fake_repo
 
@@ -252,7 +253,7 @@ class FakeEdenInstance:
         def bad_commit_checker(commit: str) -> bool:
             return False
 
-        fake_repo = FakeHgRepo()
+        fake_repo = FakeHgRepo(str(path))
         fake_repo.commit_checker = bad_commit_checker
         return fake_repo
 

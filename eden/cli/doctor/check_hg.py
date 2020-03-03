@@ -295,6 +295,25 @@ class BranchChecker(HgFileChecker):
         self.path.write_text("default\n")
 
 
+class AbandonedTransactionChecker(HgChecker):
+    def __init__(self, checkout: EdenCheckout) -> None:
+        super().__init__(checkout)
+        self.backing_repo = self.checkout.get_backing_repo()
+
+    def check_for_error(self) -> List[str]:
+        hg_dir = Path(self.backing_repo.source) / ".hg"
+
+        if (hg_dir / "store" / "journal").exists():
+            return [
+                "Found a journal file in backing repo, might have "
+                + "an interrupted transaction"
+            ]
+        return []
+
+    def repair(self):
+        self.backing_repo._run_hg(["recover"])
+
+
 def get_tip_commit_hash(repo: Path) -> bytes:
     # Try to get the tip commit ID.  If that fails, use the null commit ID.
     args = ["hg", "log", "-T", "{node}", "-r", "tip"]
@@ -311,7 +330,7 @@ def get_tip_commit_hash(repo: Path) -> bytes:
 
 
 def check_hg(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
-    checker_classes: List[Type[HgChecker]] = [
+    file_checker_classes: List[Type[HgChecker]] = [
         DirstateChecker,
         HgrcChecker,
         RequiresChecker,
@@ -320,7 +339,15 @@ def check_hg(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
         BookmarksChecker,
         BranchChecker,
     ]
-    checkers = [checker_class(checkout) for checker_class in checker_classes]
+    # `AbandonedTransactionChecker` is looking for the existence of the journal
+    # file as indicator of a potential problem. The rest is check if files are
+    # missing.
+    other_checker_classes: List[Type[HgChecker]] = [AbandonedTransactionChecker]
+
+    file_checkers = [checker_class(checkout) for checker_class in file_checker_classes]
+    checkers = file_checkers + [
+        checker_class(checkout) for checker_class in other_checker_classes
+    ]
 
     hg_path = checkout.path / ".hg"
     if not os.path.exists(hg_path):
@@ -338,9 +365,11 @@ def check_hg(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
             tracker.add_problem(UnexpectedCheckError())
 
     if bad_checkers:
+        # if all the file checkers fail, it indicates we are seeing an empty
+        # `.hg` directory
         msg = (
             f"No contents present in hg directory: {checkout.path}/.hg"
-            if len(bad_checkers) == len(checkers)
+            if len(bad_checkers) == len(file_checkers)
             else None
         )
         tracker.add_problem(HgDirectoryError(checkout, bad_checkers, msg))

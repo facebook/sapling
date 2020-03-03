@@ -121,6 +121,25 @@ Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
         )
         self._verify_hg_dir()
 
+    def test_interrupted_transaction(self) -> None:
+        store = self.backing_repo / ".hg" / "store"
+        store.mkdir()
+        journal = store / "journal"
+        journal.write_text("")
+        out = self.cure_what_ails_you(dry_run=False)
+        self.assertEqual(
+            f"""\
+Checking {self.checkout.path}
+<yellow>- Found problem:<reset>
+Found inconsistent/missing data in {self.checkout.path}/.hg:
+  Found a journal file in backing repo, might have an interrupted transaction
+Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
+
+<yellow>Successfully fixed 1 problem.<reset>
+""",
+            out.getvalue(),
+        )
+
     def _verify_hg_dir(self) -> None:
         hg_dir = self.checkout.path / ".hg"
         self.assertTrue((hg_dir / "dirstate").is_file())
