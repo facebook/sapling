@@ -103,7 +103,7 @@ impl Mononoke {
         match self.repos.get(&repo) {
             Some(repo) => self
                 .executor
-                .spawn_handle(repo.send_query(ctx, kind))
+                .spawn_handle(repo.send_query(ctx, kind, self.executor.clone()))
                 .compat()
                 .then(|r| match r {
                     Ok(r) => r,

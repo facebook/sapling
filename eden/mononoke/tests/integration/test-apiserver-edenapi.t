@@ -162,3 +162,43 @@ Verify that datapack has entry with expected content
   $TESTTMP/cachepath/repo/packs/manifests/86dd528d5618ed64aae3c301efc771a09575b7e5:
   copy.txt\x0017b8d4e3bafd4ec4812ad7c930aace9bf07ab033 (esc)
   test.txt\x00186cafa3319c24956783383dc44c5cbc68c5a0ca (esc)
+
+Verify that we can also fetch using stream
+  $ STREAM=(--config edenapi.streamdata=True --config edenapi.streamhistory=True --config edenapi.streamtrees=True)
+
+  $ DATAPACK_PATH=$(hg "${STREAM[@]}" debuggetfile <<EOF | tail -n 1 | awk '{print $3}'
+  > $TEST_FILENODE test.txt
+  > $COPY_FILENODE copy.txt
+  > EOF
+  > )
+
+  $ hg debugdatapack "$DATAPACK_PATH" --node $TEST_FILENODE
+  $TESTTMP/cachepath/repo/packs/*: (glob)
+  test content
+
+  $ hg debugdatapack "$DATAPACK_PATH" --node $COPY_FILENODE
+  $TESTTMP/cachepath/repo/packs/*: (glob)
+  \x01 (esc)
+  copy: test.txt
+  copyrev: 186cafa3319c24956783383dc44c5cbc68c5a0ca
+  \x01 (esc)
+  test content
+
+  $ HISTPACK_PATH=$(hg "${STREAM[@]}" debuggethistory <<EOF | tail -n 1 | awk '{print $3}'
+  > $TEST_FILENODE2 test.txt
+  > $COPY_FILENODE2 copy.txt
+  > EOF
+  > )
+
+  $ hg debughistorypack "$HISTPACK_PATH"
+  
+  copy.txt
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  672343a6daad  17b8d4e3bafd  000000000000  6f445033ece9  
+  17b8d4e3bafd  186cafa3319c  000000000000  507881746c0f  test.txt
+  
+  test.txt
+  Node          P1 Node       P2 Node       Link Node     Copy From
+  596c909aab72  b6fe30270546  000000000000  4af0b091e704  
+  b6fe30270546  186cafa3319c  000000000000  6f445033ece9  
+  186cafa3319c  000000000000  000000000000  f91e155a86e1  

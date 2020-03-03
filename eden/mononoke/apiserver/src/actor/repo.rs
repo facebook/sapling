@@ -38,6 +38,7 @@ use repo_client::gettreepack_entries;
 use slog::{debug, Logger};
 use sql_ext::MysqlOptions;
 use time_ext::DurationExt;
+use tokio_compat::runtime::TaskExecutor;
 use unodes::RootUnodeManifestId;
 
 use mercurial_types::{
@@ -353,6 +354,7 @@ impl MononokeRepo {
         ctx: CoreContext,
         revision: Revision,
         path: String,
+        executor: TaskExecutor,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         STATS::get_raw_file.add_value(1);
         let mpath = try_boxfuture!(FS::get_mpath(path.clone()));
@@ -369,7 +371,7 @@ impl MononokeRepo {
                     | Content::Executable(stream)
                     | Content::Symlink(stream) => stream
                         .into_filestream()
-                        .map(MononokeRepoResponse::GetRawFile)
+                        .map(|stream| MononokeRepoResponse::GetRawFile(executor, stream))
                         .left_future(),
                     _ => Err(ErrorKind::InvalidInput(path.to_string(), None).into())
                         .into_future()
@@ -408,6 +410,7 @@ impl MononokeRepo {
         &self,
         ctx: CoreContext,
         hash: String,
+        executor: TaskExecutor,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         STATS::get_blob_content.add_value(1);
         let blobhash = try_boxfuture!(FS::get_nodehash(&hash));
@@ -421,7 +424,7 @@ impl MononokeRepo {
             .flatten_stream()
             .map(mercurial_types::FileBytes)
             .into_filestream()
-            .map(MononokeRepoResponse::GetBlobContent)
+            .map(|stream| MononokeRepoResponse::GetBlobContent(executor, stream))
             .from_err()
             .boxify()
     }
@@ -926,7 +929,7 @@ impl MononokeRepo {
         &self,
         ctx: CoreContext,
         keys: Vec<Key>,
-        stream: bool,
+        stream: Option<TaskExecutor>,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         STATS::eden_get_data.add_value(1);
         let mut fetches = Vec::new();
@@ -957,14 +960,17 @@ impl MononokeRepo {
         }
 
         let entries = iter_ok(fetches).buffer_unordered(10);
-        if stream {
-            ok(MononokeRepoResponse::EdenGetDataStream(entries.boxify())).boxify()
-        } else {
-            entries
+        match stream {
+            Some(executor) => ok(MononokeRepoResponse::EdenGetDataStream(
+                executor,
+                entries.boxify(),
+            ))
+            .boxify(),
+            None => entries
                 .collect()
                 .map(|entries| MononokeRepoResponse::EdenGetData(DataResponse::new(entries)))
                 .from_err()
-                .boxify()
+                .boxify(),
         }
     }
 
@@ -973,7 +979,7 @@ impl MononokeRepo {
         ctx: CoreContext,
         keys: Vec<Key>,
         depth: Option<u32>,
-        stream: bool,
+        stream: Option<TaskExecutor>,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         STATS::eden_get_history.add_value(1);
         let mut fetches = Vec::new();
@@ -1000,14 +1006,17 @@ impl MononokeRepo {
         }
 
         let entries = iter_ok(fetches).buffer_unordered(10).map(iter_ok).flatten();
-        if stream {
-            ok(MononokeRepoResponse::EdenGetHistoryStream(entries.boxify())).boxify()
-        } else {
-            entries
+        match stream {
+            Some(executor) => ok(MononokeRepoResponse::EdenGetHistoryStream(
+                executor,
+                entries.boxify(),
+            ))
+            .boxify(),
+            None => entries
                 .collect()
                 .map(|entries| MononokeRepoResponse::EdenGetHistory(HistoryResponse::new(entries)))
                 .from_err()
-                .boxify()
+                .boxify(),
         }
     }
 
@@ -1015,7 +1024,7 @@ impl MononokeRepo {
         &self,
         ctx: CoreContext,
         keys: Vec<Key>,
-        stream: bool,
+        stream: Option<TaskExecutor>,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         STATS::eden_get_trees.add_value(1);
         let mut fetches = Vec::new();
@@ -1042,14 +1051,17 @@ impl MononokeRepo {
         }
 
         let entries = iter_ok(fetches).buffer_unordered(10);
-        if stream {
-            ok(MononokeRepoResponse::EdenGetTreesStream(entries.boxify())).boxify()
-        } else {
-            entries
+        match stream {
+            Some(executor) => ok(MononokeRepoResponse::EdenGetTreesStream(
+                executor,
+                entries.boxify(),
+            ))
+            .boxify(),
+            None => entries
                 .collect()
                 .map(|entries| MononokeRepoResponse::EdenGetTrees(DataResponse::new(entries)))
                 .from_err()
-                .boxify()
+                .boxify(),
         }
     }
 
@@ -1057,7 +1069,7 @@ impl MononokeRepo {
         &self,
         ctx: CoreContext,
         req: TreeRequest,
-        stream: bool,
+        stream: Option<TaskExecutor>,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         STATS::eden_prefetch_trees.add_value(1);
         cloned!(self.repo);
@@ -1081,17 +1093,17 @@ impl MononokeRepo {
             },
         );
 
-        if stream {
-            ok(MononokeRepoResponse::EdenPrefetchTreesStream(
+        match stream {
+            Some(executor) => ok(MononokeRepoResponse::EdenPrefetchTreesStream(
+                executor,
                 entries.boxify(),
             ))
-            .boxify()
-        } else {
-            entries
+            .boxify(),
+            None => entries
                 .collect()
                 .map(|entries| MononokeRepoResponse::EdenPrefetchTrees(DataResponse::new(entries)))
                 .from_err()
-                .boxify()
+                .boxify(),
         }
     }
 
@@ -1099,6 +1111,7 @@ impl MononokeRepo {
         &self,
         ctx: CoreContext,
         msg: MononokeRepoQuery,
+        executor: TaskExecutor,
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         use crate::MononokeRepoQuery::*;
 
@@ -1106,8 +1119,8 @@ impl MononokeRepo {
         let query = serde_json::to_value(&msg).unwrap_or(serde_json::json!(null));
 
         let query_fut = match msg {
-            GetRawFile { revision, path } => self.get_raw_file(ctx, revision, path),
-            GetBlobContent { hash } => self.get_blob_content(ctx, hash),
+            GetRawFile { revision, path } => self.get_raw_file(ctx, revision, path, executor),
+            GetBlobContent { hash } => self.get_blob_content(ctx, hash, executor),
             ListDirectory { revision, path } => self.list_directory(ctx, revision, path),
             ListDirectoryUnodes { revision, path } => {
                 self.list_directory_unodes(ctx, revision, path)
@@ -1131,16 +1144,20 @@ impl MononokeRepo {
             EdenGetData {
                 request: DataRequest { keys },
                 stream,
-            } => self.eden_get_data(ctx, keys, stream),
+            } => self.eden_get_data(ctx, keys, if stream { Some(executor) } else { None }),
             EdenGetHistory {
                 request: HistoryRequest { keys, depth },
                 stream,
-            } => self.eden_get_history(ctx, keys, depth, stream),
+            } => {
+                self.eden_get_history(ctx, keys, depth, if stream { Some(executor) } else { None })
+            }
             EdenGetTrees {
                 request: DataRequest { keys },
                 stream,
-            } => self.eden_get_trees(ctx, keys, stream),
-            EdenPrefetchTrees { request, stream } => self.eden_prefetch_trees(ctx, request, stream),
+            } => self.eden_get_trees(ctx, keys, if stream { Some(executor) } else { None }),
+            EdenPrefetchTrees { request, stream } => {
+                self.eden_prefetch_trees(ctx, request, if stream { Some(executor) } else { None })
+            }
         };
 
         query_fut.timed({

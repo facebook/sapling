@@ -144,7 +144,7 @@ impl MononokeAPIService for MononokeAPIServiceImpl {
                 ctx.clone(),
                 params,
                 move |resp: MononokeRepoResponse| match resp {
-                    MononokeRepoResponse::GetRawFile(stream) => stream
+                    MononokeRepoResponse::GetRawFile(_, stream) => stream
                         .into_bytes_stream()
                         .from_err()
                         .map(|bytes| bytes.to_vec())
@@ -445,7 +445,7 @@ impl MononokeAPIService for MononokeAPIServiceImpl {
                 ctx.clone(),
                 params,
                 |resp: MononokeRepoResponse| match resp {
-                    MononokeRepoResponse::GetBlobContent(stream) => stream
+                    MononokeRepoResponse::GetBlobContent(_, stream) => stream
                         .into_bytes_stream()
                         .from_err()
                         .map(|bytes| bytes.to_vec())

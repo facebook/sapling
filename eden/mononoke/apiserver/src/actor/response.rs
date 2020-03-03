@@ -10,9 +10,11 @@ use std::collections::BTreeMap;
 use actix_web::{self, dev::BodyStream, Body, HttpRequest, HttpResponse, Json, Responder};
 use anyhow::Error;
 use bytes::Bytes;
-use futures_ext::{BoxStream, StreamExt};
+use futures_ext::{BoxStream, FutureExt, StreamExt};
 use futures_old::Stream;
 use serde::{Deserialize, Serialize};
+use tokio::{self, sync::mpsc};
+use tokio_compat::runtime::TaskExecutor;
 
 use types::{
     api::{DataResponse, HistoryResponse},
@@ -54,9 +56,9 @@ pub enum MononokeRepoResponse {
 
     // NOTE: Please add serializable responses before this line
     #[serde(skip)]
-    GetRawFile(FileStream),
+    GetRawFile(TaskExecutor, FileStream),
     #[serde(skip)]
-    GetBlobContent(FileStream),
+    GetBlobContent(TaskExecutor, FileStream),
     #[serde(skip)]
     EdenGetData(DataResponse),
     #[serde(skip)]
@@ -66,13 +68,13 @@ pub enum MononokeRepoResponse {
     #[serde(skip)]
     EdenPrefetchTrees(DataResponse),
     #[serde(skip)]
-    EdenGetDataStream(StreamingDataResponse),
+    EdenGetDataStream(TaskExecutor, StreamingDataResponse),
     #[serde(skip)]
-    EdenGetHistoryStream(StreamingHistoryResponse),
+    EdenGetHistoryStream(TaskExecutor, StreamingHistoryResponse),
     #[serde(skip)]
-    EdenGetTreesStream(StreamingDataResponse),
+    EdenGetTreesStream(TaskExecutor, StreamingDataResponse),
     #[serde(skip)]
-    EdenPrefetchTreesStream(StreamingDataResponse),
+    EdenPrefetchTreesStream(TaskExecutor, StreamingDataResponse),
 }
 
 fn hostname() -> Option<String> {
@@ -94,26 +96,33 @@ fn cbor_response(content: impl Serialize) -> HttpResponse {
         .body(Body::Binary(content.into()))
 }
 
-fn streaming_cbor_response<S, I>(entries: S) -> HttpResponse
+fn streaming_cbor_response<S, I>(executor: TaskExecutor, entries: S) -> HttpResponse
 where
     S: Stream<Item = I, Error = Error> + Send + 'static,
-    I: Serialize,
+    I: Serialize + Sync + Send + 'static,
 {
-    let stream = entries
+    let (tx, rx) = mpsc::channel(1);
+    executor.spawn(entries.forward(tx).discard());
+
+    let stream = rx
+        .map_err(|e| failure::Error::from_boxed_compat(e.into()))
         .and_then(|entry| Ok(serde_cbor::to_vec(&entry)?))
         .map(Bytes::from)
         .map_err(|e| failure::Error::from_boxed_compat(e.into()))
         .from_err()
         .boxify();
+
     HttpResponse::Ok()
         .content_type("application/cbor")
         .header("x-served-by", hostname().unwrap_or_default())
         .body(Body::Streaming(stream as BodyStream))
 }
 
-fn streaming_binary_response(stream: FileStream) -> HttpResponse {
-    let stream = stream
-        .into_bytes_stream()
+fn streaming_binary_response(executor: TaskExecutor, stream: FileStream) -> HttpResponse {
+    let (tx, rx) = mpsc::channel(1);
+    executor.spawn(stream.into_bytes_stream().forward(tx).discard());
+
+    let stream = rx
         .map_err(|e| failure::Error::from_boxed_compat(e.into()))
         .from_err()
         .boxify();
@@ -146,15 +155,21 @@ impl Responder for MononokeRepoResponse {
                     "false".into()
                 }
             })),
-            GetRawFile(stream) | GetBlobContent(stream) => Ok(streaming_binary_response(stream)),
+            GetRawFile(executor, stream) | GetBlobContent(executor, stream) => {
+                Ok(streaming_binary_response(executor, stream))
+            }
             EdenGetData(response) => Ok(cbor_response(response)),
             EdenGetHistory(response) => Ok(cbor_response(response)),
             EdenGetTrees(response) => Ok(cbor_response(response)),
             EdenPrefetchTrees(response) => Ok(cbor_response(response)),
-            EdenGetDataStream(entries) => Ok(streaming_cbor_response(entries)),
-            EdenGetHistoryStream(entries) => Ok(streaming_cbor_response(entries)),
-            EdenGetTreesStream(entries) => Ok(streaming_cbor_response(entries)),
-            EdenPrefetchTreesStream(entries) => Ok(streaming_cbor_response(entries)),
+            EdenGetDataStream(executor, entries) => Ok(streaming_cbor_response(executor, entries)),
+            EdenGetHistoryStream(executor, entries) => {
+                Ok(streaming_cbor_response(executor, entries))
+            }
+            EdenGetTreesStream(executor, entries) => Ok(streaming_cbor_response(executor, entries)),
+            EdenPrefetchTreesStream(executor, entries) => {
+                Ok(streaming_cbor_response(executor, entries))
+            }
         }
     }
 }
