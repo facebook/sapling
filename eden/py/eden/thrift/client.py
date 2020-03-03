@@ -19,7 +19,7 @@ if os.name == "nt":
     # pyre-fixme[21]: Could not find a module corresponding to import
     # eden.thrift.windows_thrift. This is a Windows only file and only included
     # on Windows.
-    from .windows_thrift import WinTSocket
+    from eden.thrift.windows_thrift import WinTSocket  # @manual
 else:
     from thrift.transport.TSocket import TSocket
 
