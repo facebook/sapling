@@ -8,15 +8,12 @@
 use blobstore::{Loadable, LoadableError};
 use bytes::Bytes;
 use futures::compat::Future01CompatExt;
-use mercurial_types::envelope::HgFileEnvelope;
+use mercurial_types::{envelope::HgFileEnvelope, HgFileNodeId, HgParents};
 use remotefilelog::create_getpack_v1_blob;
 
 use crate::errors::MononokeError;
 
 use super::HgRepoContext;
-
-pub use mercurial_types::HgFileNodeId;
-pub use mercurial_types::HgParents;
 
 #[derive(Clone)]
 pub struct HgFileContext {

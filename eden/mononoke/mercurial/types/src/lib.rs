@@ -70,7 +70,9 @@ pub mod utils;
 pub use self::manifest::{HgEntry, HgManifest, Type};
 pub use blob::HgBlob;
 pub use blobnode::{calculate_hg_node_id, calculate_hg_node_id_stream, HgBlobNode, HgParents};
-pub use blobs::{fetch_manifest_envelope, fetch_raw_manifest_bytes};
+pub use blobs::{
+    fetch_manifest_envelope, fetch_manifest_envelope_opt, fetch_raw_manifest_bytes, HgBlobEnvelope,
+};
 pub use delta::Delta;
 pub use envelope::{
     HgChangesetEnvelope, HgChangesetEnvelopeMut, HgFileEnvelope, HgFileEnvelopeMut,

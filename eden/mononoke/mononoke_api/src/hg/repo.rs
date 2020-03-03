@@ -7,12 +7,12 @@
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use mercurial_types::HgFileNodeId;
+use mercurial_types::{HgFileNodeId, HgManifestId};
 
 use crate::errors::MononokeError;
 use crate::repo::RepoContext;
 
-use super::HgFileContext;
+use super::{HgFileContext, HgTreeContext};
 
 #[derive(Clone)]
 pub struct HgRepoContext {
@@ -45,6 +45,13 @@ impl HgRepoContext {
         filenode_id: HgFileNodeId,
     ) -> Result<Option<HgFileContext>, MononokeError> {
         HgFileContext::new_check_exists(self.clone(), filenode_id).await
+    }
+
+    pub async fn tree(
+        &self,
+        manifest_id: HgManifestId,
+    ) -> Result<Option<HgTreeContext>, MononokeError> {
+        HgTreeContext::new_check_exists(self.clone(), manifest_id).await
     }
 }
 
