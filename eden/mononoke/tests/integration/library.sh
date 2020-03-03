@@ -658,6 +658,12 @@ fi
 forbid_p2_root_rebases=false
 CONFIG
 
+if [[ -v ALLOW_CASEFOLDING ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+casefolding_check=false
+CONFIG
+fi
+
 if [[ -v BLOCK_MERGES ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 block_merges=true
