@@ -532,8 +532,12 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
   auto fut =
       folly::via(
           importThreadPool_.get(),
-          [path, manifestNode] {
-            return getThreadLocalImporter().fetchTree(path, manifestNode);
+          [path, manifestNode, stats = stats_] {
+            Importer& importer = getThreadLocalImporter();
+            folly::stop_watch<std::chrono::milliseconds> watch;
+            importer.fetchTree(path, manifestNode);
+            stats->getHgBackingStoreStatsForCurrentThread()
+                .hgBackingStoreImportTree.addValue(watch.elapsed().count());
           })
           .via(serverThreadPool_);
   return std::move(fut).thenTry(

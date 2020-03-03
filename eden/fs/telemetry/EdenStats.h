@@ -192,6 +192,7 @@ class HgBackingStoreThreadStats : public EdenThreadStatsBase {
   Histogram hgBackingStoreGetBlob{createHistogram("store.hg.get_blob")};
   Histogram hgBackingStoreImportBlob{createHistogram("store.hg.import_blob")};
   Histogram hgBackingStoreGetTree{createHistogram("store.hg.get_tree")};
+  Histogram hgBackingStoreImportTree{createHistogram("store.hg.import_tree")};
   Histogram mononokeBackingStoreGetTree{
       createHistogram("store.mononoke.get_tree")};
   Histogram mononokeBackingStoreGetBlob{
