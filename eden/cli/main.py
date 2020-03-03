@@ -114,9 +114,18 @@ class DiskUsageCmd(Subcmd):
         parser.add_argument(
             "mounts", default=[], nargs="*", help="Names of the mount points"
         )
+        parser.add_argument("--clean", action="store_true")
 
     def run(self, args: argparse.Namespace) -> int:
         mounts = args.mounts
+        clean = args.clean
+        if clean:
+            print(
+                """
+WARNING: --clean option is incomplete.
+Currently, it only reduces the space used by the storage engine.
+"""
+            )
         instance = None
 
         if len(mounts) == 0:
@@ -136,7 +145,7 @@ class DiskUsageCmd(Subcmd):
             self.backing_usage(backing)
 
         if instance:
-            self.shared_usage(instance)
+            self.shared_usage(instance, clean)
 
         return 0
 
@@ -191,14 +200,18 @@ space by running:
 """
                 )
 
-    def shared_usage(self, instance: EdenInstance) -> None:
+    def shared_usage(self, instance: EdenInstance, clean: bool) -> None:
         logs_dir = instance.state_dir / "logs"
         storage_dir = instance.state_dir / "storage"
 
         self.underlined("Data shared by all mounts in this Eden instance")
         self.usage_for_dir("Log files", logs_dir)
         self.usage_for_dir("Storage engine", storage_dir)
-        print("\nRun `eden gc` to reduce the space used by the storage engine.")
+        if clean:
+            print("\nCleaning the space used by the storage engine...")
+            subprocess.check_call(["buck", "run", "edenfsctl", "gc"])
+        else:
+            print("\nRun `eden gc` to reduce the space used by the storage engine.")
 
     def usage_for_redirections(self, checkout: EdenCheckout) -> None:
         redirections = redirect_mod.get_effective_redirections(checkout, mtab.new())
