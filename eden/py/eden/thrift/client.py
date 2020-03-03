@@ -9,6 +9,7 @@ import os
 from typing import Any, Optional, cast  # noqa: F401
 
 from facebook.eden import EdenService
+from facebook.eden.ttypes import DaemonInfo
 from thrift.protocol.THeaderProtocol import THeaderProtocol
 from thrift.Thrift import TApplicationException
 from thrift.transport.THeaderTransport import THeaderTransport
@@ -110,6 +111,23 @@ class EdenClient(EdenService.Client):
             self._transport.close()
             self._transport = None
 
+    def getDaemonInfo(self):
+        # type: () -> DaemonInfo
+        try:
+            info = super(EdenClient, self).getDaemonInfo()
+        except TApplicationException as ex:
+            if ex.type != TApplicationException.UNKNOWN_METHOD:
+                raise
+            # Older versions of EdenFS did not have a getDaemonInfo() method
+            pid = super(EdenClient, self).getPid()
+            info = DaemonInfo(pid=pid, status=None)
+
+        # Older versions of EdenFS did not return status information in the
+        # getDaemonInfo() response.
+        if info.status is None:
+            info.status = super(EdenClient, self).getStatus()
+        return info
+
     def getPid(self):
         # type: () -> int
         try:
@@ -118,7 +136,7 @@ class EdenClient(EdenService.Client):
             if ex.type == TApplicationException.UNKNOWN_METHOD:
                 # Running on an older server build, fall back to the
                 # old getPid() method.
-                return super().getPid()
+                return super(EdenClient, self).getPid()
             else:
                 raise
 

@@ -171,10 +171,11 @@ def check_health(
             info = client.getDaemonInfo()
             pid = info.pid
             status_value = info.status
-            if status_value is None:
-                # Older versions of EdenFS did not return a status field in the
-                # getDaemonInfo() response.  Query for it separately with getStatus()
-                status_value = client.getStatus()
+            # Our wrapper client class always ensures that info.status is present.
+            # It will explicitly call getStatus() to get this information if the
+            # daemon is running an older version that does not return this from
+            # getDaemonInfo()
+            assert status_value is not None
             status = status_value
     except (
         eden.thrift.EdenNotRunningError,
