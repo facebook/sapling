@@ -18,8 +18,8 @@ import typing
 pystemd_import_error = None
 try:
     import pystemd
-    import pystemd.dbusexc
-    import pystemd.dbuslib
+    import pystemd.dbusexc  # pyre-ignore[21]: T32805591
+    import pystemd.dbuslib  # pyre-ignore[21]: T32805591
     import pystemd.systemd1.manager
     import pystemd.systemd1.unit
 except ModuleNotFoundError as e:
@@ -427,6 +427,7 @@ class SystemdUserBus:
     """
 
     _cleanups: contextlib.ExitStack
+    # pyre-fixme[11]: Type `DBus` is not defined.
     _dbus: "pystemd.dbuslib.DBus"
     _event_loop: asyncio.AbstractEventLoop
     _manager: "pystemd.SDManager"
@@ -446,7 +447,9 @@ class SystemdUserBus:
         self._manager = pystemd.systemd1.manager.Manager(bus=self._dbus)
 
     @staticmethod
-    def _get_dbus(xdg_runtime_dir: str,) -> "pystemd.dbuslib.DBus":
+    def _get_dbus(
+        xdg_runtime_dir: str,
+    ) -> "pystemd.dbuslib.DBus":  # pyre-ignore[11]: T32805591
         # HACK(strager): pystemd.dbuslib.DBus(user_mode=True) fails with a
         # connection timeout. 'SYSTEMCTL_FORCE_BUS=1 systemctl --user ...' also
         # fails, and it seems to use the same C APIs as
@@ -456,12 +459,12 @@ class SystemdUserBus:
         #
         # [1] https://github.com/systemd/systemd/blob/78a562ee4bcbc7b0e8b58b475ff656f646e95e40/src/shared/bus-util.c#L594
         socket_path = pathlib.Path(xdg_runtime_dir) / "systemd" / "private"
-        return pystemd.dbuslib.DBusAddress(
+        return pystemd.dbuslib.DBusAddress(  # pyre-ignore[16]: T32805591
             b"unix:path=" + escape_dbus_address(bytes(socket_path)), peer_to_peer=True
         )
 
     def open(self) -> None:
-        self._cleanups.enter_context(self._dbus)  # pyre-fixme[6]: pystemd has hints now
+        self._cleanups.enter_context(self._dbus)
         self._manager.load()
         self._add_to_event_loop()
 
@@ -595,7 +598,7 @@ class SystemdUserBus:
 
     @staticmethod
     def _on_job_removed(
-        msg: "pystemd.dbuslib.DbusMessage",
+        msg: "pystemd.dbuslib.DbusMessage",  # pyre-ignore[11]: T32805591
         error: typing.Optional[Exception],
         userdata: typing.Any,
     ) -> None:
@@ -748,11 +751,15 @@ def escape_dbus_address(input: bytes) -> bytes:
 
 
 if pystemd_import_error is None:
-    SystemdConnectionRefusedError = pystemd.dbusexc.DBusConnectionRefusedError
-    SystemdFileNotFoundError = pystemd.dbusexc.DBusFileNotFoundError
+    SystemdConnectionRefusedError = (
+        pystemd.dbusexc.DBusConnectionRefusedError  # pyre-ignore[16]: T32805591
+    )
+    SystemdFileNotFoundError = (
+        pystemd.dbusexc.DBusFileNotFoundError  # pyre-ignore[16]: T32805591
+    )
 else:
-    SystemdConnectionRefusedError = Exception  # pyre-ignore[9]: pystemd missng
-    SystemdFileNotFoundError = Exception  # pyre-ignore[9]: pystemd missing
+    SystemdConnectionRefusedError = Exception
+    SystemdFileNotFoundError = Exception
 
 
 class SystemdServiceFailedToStartError(Exception):
