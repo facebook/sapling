@@ -38,6 +38,7 @@ pub fn convert_parents_to_remotefilelog_format<'a>(
 }
 
 /// Represents a file history entry in Mercurial's loose file format.
+#[derive(Clone, Eq, PartialEq, Debug)]
 pub struct HgFileHistoryEntry {
     node: HgFileNodeId,
     parents: HgParents,
