@@ -100,28 +100,36 @@ class LinuxProcessFinder(ProcessFinder):
         return path.lstat()
 
     def get_eden_dir(self, pid: ProcessID, cmdline: List[bytes]) -> Optional[Path]:
+        # In most situations we currently invoke edenfs with the state directory
+        # explicitly specified in its command line arguments.  Check to see if the
+        # directory is present in the arguments.
         eden_dir: Optional[Path] = None
         for idx in range(1, len(cmdline) - 1):
             if cmdline[idx] == b"--edenDir":
                 eden_dir = Path(os.fsdecode(cmdline[idx + 1]))
+                # We can only return the path from the command line arguments
+                # if it was an absolute path
+                if eden_dir.is_absolute():
+                    return eden_dir
                 break
 
-        if eden_dir is None:
-            log.debug(
-                f"could not determine edenDir for edenfs process {pid} ({cmdline})"
-            )
-            return None
+        # In case the state directory was not specified on the command line we can
+        # look at the open FDs to find the state directory
+        fd_dir = self.proc_path / str(pid) / "fd"
+        try:
+            for entry in fd_dir.iterdir():
+                try:
+                    dest = os.readlink(entry)
+                except OSError:
+                    continue
+                if dest.endswith("/lock") or dest.endswith("/lock (deleted)"):
+                    return Path(dest).parent
+        except OSError:
+            # We may not have permission to read the fd directory
+            pass
 
-        if not eden_dir.is_absolute():
-            # We generally expect edenfs to be invoked with an absolute path to its
-            # state directory.  We cannot check relative paths here, so just skip them.
-            log.debug(
-                f"could not determine absolute path to edenDir for edenfs process "
-                f"{pid} ({cmdline})"
-            )
-            return None
-
-        return eden_dir
+        log.debug(f"could not determine edenDir for edenfs process {pid} ({cmdline})")
+        return None
 
 
 def new() -> ProcessFinder:

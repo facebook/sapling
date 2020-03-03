@@ -34,7 +34,10 @@ class ProcessFinderTests(unittest.TestCase):
             pid=1234, uid=99, eden_dir="/home/nobody/eden_dir_1"
         )
         self.process_finder.add_edenfs(
-            pid=4567, uid=99, eden_dir="/home/nobody/local/.eden"
+            pid=4567,
+            uid=99,
+            eden_dir="/home/nobody/local/.eden",
+            cmdline=["edenfs", "--edenfs"],
         )
 
         # Add an EdenFS processes owned by user 65534

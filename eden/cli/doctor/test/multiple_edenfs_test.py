@@ -153,6 +153,38 @@ kill -9 775206
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
+    def test_state_directory_from_lock_fd(self) -> None:
+        process_finder = self.make_process_finder()
+        process_finder.add_edenfs(
+            1234,
+            "/home/someuser/.eden",
+            cmdline=["edenfs", "--edenfs"],
+            set_lockfile=True,
+        )
+        process_finder.add_edenfs(
+            5678,
+            "/home/someuser/.eden",
+            cmdline=["edenfs", "--edenfs"],
+            set_lockfile=False,
+        )
+        process_finder.add_edenfs(
+            9876,
+            "/home/someuser/.eden",
+            cmdline=["edenfs", "--edenfs"],
+            set_lockfile=False,
+        )
+        fixer, out = self.run_check(process_finder, dry_run=False)
+        self.assertEqual(
+            f"""\
+<yellow>- Found problem:<reset>
+Many edenfs processes are running. Please keep only one for each config directory.
+kill -9 5678 9876
+
+""",
+            out,
+        )
+        self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
+
     def test_when_differently_configured_edenfs_processes_running_with_rogue_pids(
         self
     ) -> None:

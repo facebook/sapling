@@ -31,6 +31,7 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         cmdline: List[str],
         uid: Optional[int] = None,
         comm: Optional[str] = None,
+        fds: Optional[Dict[int, str]] = None,
     ) -> None:
         pid_dir = self.proc_path / str(pid)
         pid_dir.mkdir()
@@ -44,41 +45,62 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
 
         self._process_stat[pid] = self._make_fake_process_metadata(pid, uid)
 
+        fd_dir = pid_dir / "fd"
+        fd_dir.mkdir()
+        if fds:
+            for fd, contents in fds.items():
+                (fd_dir / str(fd)).symlink_to(contents)
+
     def add_edenfs(
         self,
         pid: int,
         eden_dir: str,
         uid: Optional[int] = None,
         set_lockfile: bool = True,
+        cmdline: Optional[List[str]] = None,
     ) -> None:
         """Add a fake EdenFS instance.
         Note that this will add 2 processes: the main EdenFS process with the
         specified PID, and its corresponding privhelper process using PID+1
         """
+        lock_path = Path(eden_dir) / "lock"
+        lock_symlink = str(lock_path)
         if set_lockfile:
-            self.set_file_contents(Path(eden_dir) / "lock", f"{pid}\n".encode("utf-8"))
+            self.set_file_contents(lock_path, f"{pid}\n".encode("utf-8"))
+        else:
+            lock_symlink += " (deleted)"
 
-        cmdline = [
-            "/usr/bin/edenfs",
-            "--edenfs",
-            "--edenfsctlPath",
-            "/usr/local/bin/edenfsctl",
-            "--edenDir",
-            eden_dir,
-            "--etcEdenDir",
-            "/etc/eden",
-            "--configPath",
-            "/home/user/.edenrc",
-        ]
+        if cmdline is None:
+            cmdline = [
+                "/usr/bin/edenfs",
+                "--edenfs",
+                "--edenfsctlPath",
+                "/usr/local/bin/edenfsctl",
+                "--edenDir",
+                eden_dir,
+                "--etcEdenDir",
+                "/etc/eden",
+                "--configPath",
+                "/home/user/.edenrc",
+            ]
+        log_path = str(Path(eden_dir) / "logs" / "edenfs.log")
+        edenfs_fds = {
+            0: "/dev/null",
+            1: log_path,
+            2: log_path,
+            4: "socket:[1234]",
+            8: lock_symlink,
+        }
         # Add the main EdenFS process
-        self.add_process(pid, cmdline, uid=uid)
+        self.add_process(pid, cmdline, uid=uid, fds=edenfs_fds)
 
         # Also add a privhelper process
         # Newer versions of EdenFS name this process "edenfs_privhelp", but older
         # versions call it just "edenfs".  Continue calling it "edenfs" here for now
         # until we know all privhelper processes using the old "edenfs" have been
         # restarted.
-        self.add_process(pid + 1, cmdline, uid=0, comm="edenfs")
+        privhelper_fds = {0: "/dev/null", 1: log_path, 2: log_path, 5: "socket:[1235]"}
+        self.add_process(pid + 1, cmdline, uid=0, comm="edenfs", fds=privhelper_fds)
 
     def set_file_contents(self, path: Union[Path, str], contents: bytes) -> None:
         self._file_contents[Path(path)] = contents
