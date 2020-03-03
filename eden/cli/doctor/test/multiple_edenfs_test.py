@@ -37,8 +37,8 @@ class MultipleEdenfsRunningTest(DoctorTestBase):
     def test_when_there_are_rogue_pids(self) -> None:
         process_finder = self.make_process_finder()
         process_finder.add_edenfs(123, "/home/someuser/.eden", set_lockfile=False)
-        process_finder.add_edenfs(124, "/home/someuser/.eden", set_lockfile=False)
-        process_finder.add_edenfs(125, "/home/someuser/.eden", set_lockfile=True)
+        process_finder.add_edenfs(456, "/home/someuser/.eden", set_lockfile=False)
+        process_finder.add_edenfs(789, "/home/someuser/.eden", set_lockfile=True)
         fixer, out = self.run_check(process_finder, dry_run=False)
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
         self.assertEqual(
@@ -46,7 +46,7 @@ class MultipleEdenfsRunningTest(DoctorTestBase):
             f"""\
 <yellow>- Found problem:<reset>
 Many edenfs processes are running. Please keep only one for each config directory.
-kill -9 123 124
+kill -9 123 456
 
 """,
         )
@@ -66,11 +66,11 @@ kill -9 123 124
         # This sort of simulates what would happen if the processes exited while the
         # code was trying to read their information.
         process_finder.add_edenfs(123, "/home/someuser/.eden", set_lockfile=False)
-        process_finder.add_edenfs(124, "/home/someuser/.eden", set_lockfile=False)
-        process_finder.add_edenfs(125, "/home/someuser/.eden", set_lockfile=True)
+        process_finder.add_edenfs(456, "/home/someuser/.eden", set_lockfile=False)
+        process_finder.add_edenfs(789, "/home/someuser/.eden", set_lockfile=True)
 
-        (process_finder.proc_path / "124" / "comm").unlink()
-        (process_finder.proc_path / "125" / "cmdline").unlink()
+        (process_finder.proc_path / "456" / "comm").unlink()
+        (process_finder.proc_path / "789" / "cmdline").unlink()
 
         fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual("", out)
@@ -96,10 +96,10 @@ kill -9 123 124
             475203, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=True
         )
         process_finder.add_edenfs(
-            475204, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
+            575204, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
         )
         process_finder.add_edenfs(
-            475205, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
+            675205, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
         )
         fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual(
@@ -107,7 +107,7 @@ kill -9 123 124
             f"""\
 <yellow>- Found problem:<reset>
 Many edenfs processes are running. Please keep only one for each config directory.
-kill -9 475204 475205
+kill -9 575204 675205
 
 """,
         )
@@ -117,13 +117,13 @@ kill -9 475204 475205
         process_finder = self.make_process_finder()
         process_finder.add_edenfs(475203, "/home/user/.eden")
         process_finder.add_process(
-            475204, ["/foobar/fooedenfs", "--edenDir", "/home/user/.eden", "--edenfs"]
+            575204, ["/foobar/fooedenfs", "--edenDir", "/home/user/.eden", "--edenfs"]
         )
         process_finder.add_process(
-            475205, ["/foobar/edenfsbar", "--edenDir", "/home/user/.eden", "--edenfs"]
+            675205, ["/foobar/edenfsbar", "--edenDir", "/home/user/.eden", "--edenfs"]
         )
         process_finder.add_process(
-            475206, ["/foobar/edenfs", "--edenDir", "/home/user/.eden", "--edenfs"]
+            775206, ["/foobar/edenfs", "--edenDir", "/home/user/.eden", "--edenfs"]
         )
 
         fixer, out = self.run_check(process_finder, dry_run=False)
@@ -131,7 +131,7 @@ kill -9 475204 475205
             f"""\
 <yellow>- Found problem:<reset>
 Many edenfs processes are running. Please keep only one for each config directory.
-kill -9 475206
+kill -9 775206
 
 """,
             out,
@@ -158,11 +158,11 @@ kill -9 475206
     ) -> None:
         process_finder = self.make_process_finder()
         process_finder.add_edenfs(475203, "/tmp/config1/.eden")
-        process_finder.add_edenfs(475204, "/tmp/config1/.eden", set_lockfile=False)
-        process_finder.add_edenfs(475205, "/tmp/config1/.eden", set_lockfile=False)
+        process_finder.add_edenfs(475304, "/tmp/config1/.eden", set_lockfile=False)
+        process_finder.add_edenfs(475405, "/tmp/config1/.eden", set_lockfile=False)
         process_finder.add_edenfs(575203, "/tmp/config2/.eden")
-        process_finder.add_edenfs(575204, "/tmp/config2/.eden", set_lockfile=False)
-        process_finder.add_edenfs(575205, "/tmp/config2/.eden", set_lockfile=False)
+        process_finder.add_edenfs(575304, "/tmp/config2/.eden", set_lockfile=False)
+        process_finder.add_edenfs(575405, "/tmp/config2/.eden", set_lockfile=False)
         fixer, out = self.run_check(process_finder, dry_run=False)
 
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
@@ -171,7 +171,7 @@ kill -9 475206
             f"""\
 <yellow>- Found problem:<reset>
 Many edenfs processes are running. Please keep only one for each config directory.
-kill -9 475204 475205 575204 575205
+kill -9 475304 475405 575304 575405
 
 """,
         )
@@ -194,7 +194,7 @@ kill -9 475204 475205 575204 575205
         # In config3/ report two separate edenfs processes, with one legitimate rogue
         # process
         process_finder.add_edenfs(123900, "/tmp/config3/.eden")
-        process_finder.add_edenfs(123901, "/tmp/config3/.eden", set_lockfile=False)
+        process_finder.add_edenfs(123991, "/tmp/config3/.eden", set_lockfile=False)
 
         fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual(
@@ -202,7 +202,7 @@ kill -9 475204 475205 575204 575205
             f"""\
 <yellow>- Found problem:<reset>
 Many edenfs processes are running. Please keep only one for each config directory.
-kill -9 123901
+kill -9 123991
 
 """,
         )
@@ -213,7 +213,7 @@ kill -9 123901
             475203, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
         )
         process_finder.add_edenfs(
-            475204, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
+            475304, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
         )
         with self.assertLogs() as logs_assertion:
             fixer, out = self.run_check(process_finder, dry_run=False)
@@ -232,7 +232,7 @@ kill -9 123901
             475203, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
         )
         process_finder.add_edenfs(
-            475204, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
+            475304, "/tmp/eden_test.68yxptnx/.eden", set_lockfile=False
         )
         process_finder.set_file_contents("/tmp/eden_test.68yxptnx/.eden/lock", b"asdf")
         with self.assertLogs() as logs_assertion:
