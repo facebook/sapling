@@ -119,6 +119,23 @@ Check changelog repiar:
 
   $ hg status
 
+Check unknown visibleheads format:
+
+  $ newrepo
+  $ hg dbsh << 'EOS'
+  > ml = repo.svfs.metalog
+  > ml.set("visibleheads", "v-1")
+  > ml.commit("break visibleheads")
+  > EOS
+  $ hg doctor
+  checking internal storage
+  mutation: looks okay
+  changelog: looks okay
+  metalog: looks okay
+  visibleheads: skipped
+  treestate: looks okay
+  allheads: looks okay
+
 Check dirstate pointing to a stripped commit:
 
   $ newrepo
@@ -203,4 +220,14 @@ Try other kinds of dirstate corruptions:
   visibleheads: looks okay
   treestate: repaired
   allheads: looks okay
+  $ hg status
+  M A2
+  A A0
+  A X
+  R A
+  R A1
+  ? B
+  ? C
+  ? Y
+  ? Z
 #endif
