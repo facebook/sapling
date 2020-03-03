@@ -185,7 +185,7 @@ async fn internal_objects(
         .filter_map(|(obj, content_and_oid)| match content_and_oid {
             // Map the objects we have locally into an action routing to a Mononoke LFS server.
             (Some(content_id), oid) => {
-                let uri = if ctx.config.enable_consistent_routing {
+                let uri = if ctx.config.enable_consistent_routing() {
                     ctx.uri_builder
                         .consistent_download_uri(&content_id, oid.0.into())
                 } else {

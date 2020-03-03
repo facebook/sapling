@@ -62,7 +62,7 @@ async fn fetch_by_key(
         .ok_or_else(|| ErrorKind::ObjectDoesNotExist(key))
         .map_err(HttpError::e404)?;
 
-    let stream = if ctx.config.track_bytes_sent {
+    let stream = if ctx.config.track_bytes_sent() {
         stream
             .inspect(|bytes| STATS::size_bytes_sent.add_value(bytes.len() as i64))
             .left_stream()

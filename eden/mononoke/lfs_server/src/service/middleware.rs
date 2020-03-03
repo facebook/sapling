@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use aclchecker::Identity;
 use configerator_cached::ConfigHandle;
 use fbinit::FacebookInit;
 use futures_ext::FutureExt;
@@ -16,10 +17,11 @@ use stats_facebook::service_data::{get_service_data_singleton, ServiceData, Serv
 use std::convert::TryInto;
 use std::time::Duration;
 
-use crate::config::ServerConfig;
+use crate::config::{Limit, ServerConfig};
 
 use crate::errors::ErrorKind;
 use crate::http::HttpError;
+use crate::middleware::ClientIdentity;
 
 use super::util::http_error_to_handler_error;
 
@@ -45,14 +47,23 @@ impl Middleware for ThrottleMiddleware {
     where
         Chain: FnOnce(State) -> Box<HandlerFuture>,
     {
+        let identities = if let Some(client_ident) = state.try_borrow::<ClientIdentity>() {
+            client_ident.identities().as_ref()
+        } else {
+            None
+        };
         let service_data = get_service_data_singleton(self.fb);
 
-        for limit in self.handle.get().throttle_limits.iter() {
-            if let Some(err) = is_limit_exceeded(&service_data, &limit.counter, limit.limit) {
+        for limit in self.handle.get().throttle_limits().iter() {
+            if !limit_applies_to_client(&limit, &identities) {
+                continue;
+            }
+
+            if let Some(err) = is_limit_exceeded(&service_data, &limit.counter(), limit.limit()) {
                 let err = HttpError::e429(err);
 
-                let sleep_ms: u64 = limit.sleep_ms.try_into().unwrap_or(0);
-                let max_jitter_ms: u64 = limit.max_jitter_ms.try_into().unwrap_or(0);
+                let sleep_ms: u64 = limit.sleep_ms().try_into().unwrap_or(0);
+                let max_jitter_ms: u64 = limit.max_jitter_ms().try_into().unwrap_or(0);
                 let mut jitter: u64 = 0;
 
                 if max_jitter_ms > 0 {
@@ -81,4 +92,22 @@ fn is_limit_exceeded(
         Some(value) if value > limit => Some(ErrorKind::Throttled(key.to_string(), value, limit)),
         _ => None,
     }
+}
+
+fn limit_applies_to_client(limit: &Limit, client_identity: &Option<&Vec<Identity>>) -> bool {
+    let configured_identities = match limit.client_identities().is_empty() {
+        true => return true,
+        false => limit.client_identities(),
+    };
+
+    let presented_identities = match client_identity {
+        Some(value) => value,
+        _ => return false,
+    };
+
+    configured_identities.iter().any(|configured_id| {
+        presented_identities
+            .iter()
+            .any(|presented_id| presented_id == configured_id)
+    })
 }

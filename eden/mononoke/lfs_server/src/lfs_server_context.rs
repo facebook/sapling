@@ -103,8 +103,8 @@ impl LfsServerContext {
             Some((repo, aclchecker)) => {
                 let config = inner.config_handle.get();
 
-                if config.acl_check {
-                    acl_check(aclchecker, identities, config.enforce_acl_check)?;
+                if config.acl_check() {
+                    acl_check(aclchecker, identities, config.enforce_acl_check())?;
                 }
 
                 Ok(RepositoryRequestContext {

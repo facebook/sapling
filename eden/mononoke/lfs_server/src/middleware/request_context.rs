@@ -245,7 +245,7 @@ impl Middleware for RequestContextMiddleware {
             ctx.dispatch_post_request(
                 client_address,
                 content_length,
-                config.disable_hostname_logging,
+                config.disable_hostname_logging(),
             );
         }
     }
