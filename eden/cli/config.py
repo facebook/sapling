@@ -1259,13 +1259,33 @@ def find_eden(
     checkout_root = None
     checkout_state_dir = None
     try:
-        eden_socket_path = readlink_retry_estale(path.joinpath(path, ".eden", "socket"))
-        eden_state_dir = os.path.dirname(eden_socket_path)
+        if os.name != "nt":
+            eden_socket_path = readlink_retry_estale(
+                path.joinpath(path, ".eden", "socket")
+            )
+            eden_state_dir = os.path.dirname(eden_socket_path)
 
-        checkout_root = Path(readlink_retry_estale(path.joinpath(".eden", "root")))
-        checkout_state_dir = Path(
-            readlink_retry_estale(path.joinpath(".eden", "client"))
-        )
+            checkout_root = Path(readlink_retry_estale(path.joinpath(".eden", "root")))
+            checkout_state_dir = Path(
+                readlink_retry_estale(path.joinpath(".eden", "client"))
+            )
+        else:
+            # On Windows, walk the path backwards until both parent and dir
+            # point to "C:\"
+            curdir = path
+            while curdir != curdir.parent:
+                try:
+                    tomlconfig = toml.load(curdir / ".eden" / "config")
+                except FileNotFoundError:
+                    curdir = curdir.parent
+                    continue
+
+                eden_socket_path = tomlconfig["Config"]["socket"]
+                eden_state_dir = os.path.dirname(eden_socket_path)
+                checkout_root = Path(tomlconfig["Config"]["root"])
+                checkout_state_dir = Path(tomlconfig["Config"]["client"])
+                break
+
     except OSError:
         # We will get an OSError if any of these symlinks do not exist
         # Fall through and we will handle this below.
