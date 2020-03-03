@@ -7,9 +7,10 @@
 # pyre-strict
 
 import logging
+import os
 import shlex
 from pathlib import Path
-from typing import Dict, List
+from typing import Dict, List, Optional
 
 from eden.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
 from eden.cli.process_finder import EdenFSProcess, ProcessFinder, ProcessID
@@ -18,17 +19,25 @@ from eden.cli.process_finder import EdenFSProcess, ProcessFinder, ProcessID
 log: logging.Logger = logging.getLogger("eden.cli.doctor.check_rogue_edenfs")
 
 
-def find_rogue_processes(process_finder: ProcessFinder) -> List[EdenFSProcess]:
+def find_rogue_processes(
+    process_finder: ProcessFinder, uid: Optional[int] = None
+) -> List[EdenFSProcess]:
     # Build a dictionary of eden directory to list of running PIDs,
     # so that below we can we only check each eden directory once even if there are
     # multiple processes that appear to be running for it.
     info_by_eden_dir: Dict[Path, List[EdenFSProcess]] = {}
+    user_id = os.getuid() if uid is None else uid
     for info in process_finder.get_edenfs_processes():
+        # Ignore processes not owned by the current user
+        if info.uid != user_id:
+            continue
+
         # Ignore processes if we could not figure out the EdenFS state directory.
         # This shouldn't normally happen for real EdenFS processes.
         eden_dir = info.eden_dir
         if eden_dir is None:
             continue
+
         if eden_dir not in info_by_eden_dir:
             info_by_eden_dir[eden_dir] = []
         info_by_eden_dir[eden_dir].append(info)
@@ -70,9 +79,9 @@ def find_rogue_processes(process_finder: ProcessFinder) -> List[EdenFSProcess]:
 
 
 def check_many_edenfs_are_running(
-    tracker: ProblemTracker, process_finder: ProcessFinder
+    tracker: ProblemTracker, process_finder: ProcessFinder, uid: Optional[int] = None
 ) -> None:
-    rogue_processes = find_rogue_processes(process_finder)
+    rogue_processes = find_rogue_processes(process_finder, uid=uid)
     if len(rogue_processes) > 0:
         rogue_pids = [p.pid for p in rogue_processes]
         rogue_pids_problem = ManyEdenFsRunning(rogue_pids)

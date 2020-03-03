@@ -4,20 +4,30 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre_strict
+
 import errno
 import os
+import stat
+import time
 from pathlib import Path
-from typing import Dict, List, Union
+from typing import Dict, List, Optional, Union
 
 from eden.cli import process_finder
 
 
 class FakeProcessFinder(process_finder.LinuxProcessFinder):
-    def __init__(self, tmp_dir: str) -> None:
-        self.proc_path = Path(tmp_dir)
-        self._file_contents: Dict[Path, Union[bytes, Exception]] = {}
+    _file_contents: Dict[Path, Union[bytes, Exception]] = {}
+    _process_stat: Dict[int, os.stat_result] = {}
+    _default_uid: int
 
-    def add_process(self, pid: int, cmdline: List[str]) -> None:
+    def __init__(self, tmp_dir: str, default_uid: Optional[int] = None) -> None:
+        self.proc_path = Path(tmp_dir)
+        self._default_uid = os.getuid() if default_uid is None else default_uid
+
+    def add_process(
+        self, pid: int, cmdline: List[str], uid: Optional[int] = None
+    ) -> None:
         pid_dir = self.proc_path / str(pid)
         pid_dir.mkdir()
 
@@ -27,7 +37,15 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         cmdline_bytes = b"".join((arg.encode("utf-8") + b"\0") for arg in cmdline)
         (pid_dir / "cmdline").write_bytes(cmdline_bytes)
 
-    def add_edenfs(self, pid: int, eden_dir: str, set_lockfile: bool = True) -> None:
+        self._process_stat[pid] = self._make_fake_process_metadata(pid, uid)
+
+    def add_edenfs(
+        self,
+        pid: int,
+        eden_dir: str,
+        uid: Optional[int] = None,
+        set_lockfile: bool = True,
+    ) -> None:
         if set_lockfile:
             self.set_file_contents(Path(eden_dir) / "lock", f"{pid}\n".encode("utf-8"))
 
@@ -41,13 +59,44 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
             "--configPath",
             "/home/user/.edenrc",
         ]
-        self.add_process(pid, cmdline)
+        self.add_process(pid, cmdline, uid=uid)
 
     def set_file_contents(self, path: Union[Path, str], contents: bytes) -> None:
         self._file_contents[Path(path)] = contents
 
     def set_file_exception(self, path: Union[Path, str], exception: Exception) -> None:
         self._file_contents[Path(path)] = exception
+
+    def stat_process_dir(self, path: Path) -> os.stat_result:
+        try:
+            if path.parent != self.proc_path:
+                raise ValueError()
+            pid = int(path.name)
+            return self._process_stat[pid]
+        except (ValueError, KeyError):
+            raise FileNotFoundError(errno.ENOENT, "No such file or directory")
+
+    def _make_fake_process_metadata(
+        self, pid: int, uid: Optional[int]
+    ) -> os.stat_result:
+        if uid is None:
+            uid = self._default_uid
+        start_time = int(time.time())
+
+        return os.stat_result(
+            (
+                stat.S_IFDIR | 0o555,  # mode
+                pid,  # inode.  We just use the pid for convenience
+                4,  # dev
+                9,  # nlink
+                uid,  # uid
+                uid,  # gid
+                0,  # size
+                start_time,  # atime
+                start_time,  # mtime
+                start_time,  # ctime
+            )
+        )
 
     def read_lock_file(self, path: Path) -> bytes:
         contents = self._file_contents.get(path, None)

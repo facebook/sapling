@@ -21,6 +21,7 @@ ProcessID = int
 
 class EdenFSProcess(NamedTuple):
     pid: ProcessID
+    uid: int
     cmdline: List[bytes]
     eden_dir: Optional[Path]
 
@@ -47,11 +48,13 @@ class LinuxProcessFinder(ProcessFinder):
     proc_path = Path("/proc")
 
     def get_edenfs_processes(self) -> Iterable[EdenFSProcess]:
-        """Return information about all running edenfs processes owned by the
-        specified user.
-        """
-        user_id = os.getuid()
+        """Return information about all running EdenFS processes.
 
+        This returns information about processes owned by all users.  The returned
+        `EdenFSProcess` objects indicate the UID of the user running each process.
+        You can filter the results based on this if you only care about processes owned
+        by a specific user.
+        """
         for entry in os.listdir(self.proc_path):
             # Ignore entries that do not look like integer process IDs
             try:
@@ -61,9 +64,14 @@ class LinuxProcessFinder(ProcessFinder):
 
             pid_path = self.proc_path / entry
             try:
-                # Ignore processes not owned by the current user
-                st = pid_path.lstat()
-                if st.st_uid != user_id:
+                # Ignore processes owned by root, to avoid matching privhelper processes
+                # D20199409 changes the privhelper to report its name as
+                # "edenfs_privhelp", but in older versions of EdenFS the privhelper
+                # process also showed up with a command name of "edenfs".  Once we are
+                # sure no old privhelper processes from older versions of EdenFS remain
+                # we can drop this check.
+                st = self.stat_process_dir(pid_path)
+                if st.st_uid == 0:
                     continue
 
                 # Ignore processes that aren't edenfs
@@ -80,7 +88,16 @@ class LinuxProcessFinder(ProcessFinder):
 
             cmdline = cmdline_bytes.split(b"\x00")
             eden_dir = self.get_eden_dir(pid, cmdline)
-            yield EdenFSProcess(pid=pid, cmdline=cmdline, eden_dir=eden_dir)
+            yield EdenFSProcess(
+                pid=pid, cmdline=cmdline, eden_dir=eden_dir, uid=st.st_uid
+            )
+
+    def stat_process_dir(self, path: Path) -> os.stat_result:
+        """Call lstat() on a /proc/PID directory.
+        This exists as a separate method solely to allow it to be overridden in unit
+        tests.
+        """
+        return path.lstat()
 
     def get_eden_dir(self, pid: ProcessID, cmdline: List[bytes]) -> Optional[Path]:
         eden_dir: Optional[Path] = None

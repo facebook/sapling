@@ -13,6 +13,10 @@ import eden.cli.doctor as doctor
 from eden.cli import process_finder
 from eden.cli.doctor import check_rogue_edenfs
 from eden.cli.doctor.test.lib.testcase import DoctorTestBase
+from eden.cli.test.lib.fake_process_finder import FakeProcessFinder
+
+
+TEST_UID = 99
 
 
 class MultipleEdenfsRunningTest(DoctorTestBase):
@@ -22,8 +26,13 @@ class MultipleEdenfsRunningTest(DoctorTestBase):
         self, process_finder: process_finder.ProcessFinder, dry_run: bool
     ) -> Tuple[doctor.ProblemFixer, str]:
         fixer, out = self.create_fixer(dry_run)
-        check_rogue_edenfs.check_many_edenfs_are_running(fixer, process_finder)
+        check_rogue_edenfs.check_many_edenfs_are_running(
+            fixer, process_finder, uid=TEST_UID
+        )
         return fixer, out.getvalue()
+
+    def make_process_finder(self) -> FakeProcessFinder:
+        return FakeProcessFinder(self.make_temporary_directory(), default_uid=TEST_UID)
 
     def test_when_there_are_rogue_pids(self) -> None:
         process_finder = self.make_process_finder()
