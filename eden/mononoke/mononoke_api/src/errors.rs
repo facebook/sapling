@@ -45,10 +45,11 @@ impl StdError for InternalError {
 pub enum MononokeError {
     #[error("invalid request: {0}")]
     InvalidRequest(String),
-    #[error("permission denied: {mode} access not permitted for {identities}")]
+    #[error("permission denied: {mode} access to repo {reponame} not permitted for {identities}")]
     PermissionDenied {
         mode: &'static str,
         identities: String,
+        reponame: String,
     },
     #[error("not available: {0}")]
     NotAvailable(String),

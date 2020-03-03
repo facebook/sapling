@@ -513,7 +513,11 @@ impl Repo {
                     .as_ref()
                     .map(|identities| identities.to_string())
                     .unwrap_or_else(|| "<none>".to_string());
-                return Err(MononokeError::PermissionDenied { mode, identities });
+                return Err(MononokeError::PermissionDenied {
+                    mode,
+                    identities,
+                    reponame: self.name.clone(),
+                });
             }
         }
         Ok(())
