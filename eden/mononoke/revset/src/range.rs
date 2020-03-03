@@ -14,10 +14,10 @@ use std::sync::Arc;
 use anyhow::Error;
 use cloned::cloned;
 use failure_ext::chain::ChainExt;
-use futures::future::Future;
-use futures::stream::{self, iter_ok, Stream};
-use futures::{Async, Poll};
 use futures_ext::{BoxStream, StreamExt};
+use futures_old::future::Future;
+use futures_old::stream::{self, iter_ok, Stream};
+use futures_old::{Async, Poll};
 
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;

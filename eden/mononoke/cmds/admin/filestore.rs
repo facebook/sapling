@@ -12,8 +12,8 @@ use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{self, Alias, FetchKey, StoreRequest};
-use futures::{Future, IntoFuture, Stream};
 use futures_ext::FutureExt;
+use futures_old::{Future, IntoFuture, Stream};
 use futures_preview::compat::Future01CompatExt;
 use mononoke_types::{
     hash::{Sha1, Sha256},

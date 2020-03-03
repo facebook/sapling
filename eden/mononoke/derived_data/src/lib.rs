@@ -10,8 +10,8 @@
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::Future;
 use lock_ext::LockExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use std::{

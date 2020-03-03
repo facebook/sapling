@@ -12,11 +12,11 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use cloned::cloned;
 use cmdlib::helpers;
 use context::CoreContext;
-use futures::{
+use futures_ext::{FutureExt, StreamExt};
+use futures_old::{
     future::{self, Future},
     Stream,
 };
-use futures_ext::{FutureExt, StreamExt};
 use manifest::ManifestOps;
 use mercurial_types::{HgChangesetId, HgFileNodeId, MPath};
 use mononoke_types::{BonsaiChangeset, DateTime, Timestamp};

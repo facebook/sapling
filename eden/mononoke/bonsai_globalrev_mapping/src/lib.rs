@@ -15,9 +15,9 @@ use thiserror::Error;
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::Future;
-use futures::{future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::future::Future;
+use futures_old::{future, IntoFuture};
 use futures_preview::{
     compat::Future01CompatExt,
     future::{FutureExt as _, TryFutureExt},

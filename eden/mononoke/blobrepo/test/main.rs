@@ -21,8 +21,8 @@ use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::{create_bonsai_changeset, many_files_dirs, merge_uneven};
-use futures::{Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{Future, Stream};
 use futures_util::{
     compat::Future01CompatExt,
     future::{FutureExt as Futures02FutureExt, TryFutureExt},

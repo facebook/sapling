@@ -20,8 +20,8 @@ use bookmark_renaming::{
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use futures::Future;
-use futures::Stream as StreamOld;
+use futures_old::Future;
+use futures_old::Stream as StreamOld;
 use futures_preview::future::try_join_all;
 use futures_preview::{
     compat::Future01CompatExt,

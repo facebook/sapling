@@ -17,11 +17,11 @@ use cmdlib::{args, helpers};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{future, Future, IntoFuture};
 use futures_ext::{
     bounded_traversal::{bounded_traversal_dag, Iter},
     BoxFuture, FutureExt,
 };
+use futures_old::{future, Future, IntoFuture};
 use futures_preview::compat::Future01CompatExt;
 use manifest::ManifestOps;
 use mononoke_types::{

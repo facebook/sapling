@@ -8,8 +8,8 @@
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{stream::futures_unordered, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_old::{stream::futures_unordered, Future, IntoFuture, Stream};
 use manifest::derive_manifest;
 use std::collections::HashMap;
 use std::convert::TryInto;

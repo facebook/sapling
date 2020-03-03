@@ -11,8 +11,8 @@ use std::str::FromStr;
 
 use anyhow::Error;
 use bytes::Bytes;
-use futures::{try_ready, Async, Poll, Stream};
 use futures_ext::StreamExt;
+use futures_old::{try_ready, Async, Poll, Stream};
 use gotham::state::State;
 use hyper::{
     header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE},

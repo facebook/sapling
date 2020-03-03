@@ -12,9 +12,9 @@ use blobstore::Loadable;
 use cacheblob::LeaseOps;
 use cloned::cloned;
 use context::CoreContext;
-use futures::sync::oneshot;
-use futures::{future, stream, Future, Stream};
 use futures_ext::{bounded_traversal, try_boxfuture, BoxFuture, FutureExt, StreamExt};
+use futures_old::sync::oneshot;
+use futures_old::{future, stream, Future, Stream};
 use futures_preview::{
     compat::Future01CompatExt,
     future::{try_join, try_join_all, FutureExt as NewFutureExt, TryFutureExt},

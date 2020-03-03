@@ -14,8 +14,8 @@ use anyhow::{bail, Error};
 use clap::{Arg, Values};
 use cloned::cloned;
 use fbinit::FacebookInit;
-use futures::{Future, IntoFuture};
 use futures_ext::FutureExt as Futures01Ext;
+use futures_old::{Future, IntoFuture};
 use futures_preview::{
     channel::oneshot,
     compat::Future01CompatExt,

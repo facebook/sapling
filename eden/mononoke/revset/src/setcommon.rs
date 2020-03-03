@@ -9,9 +9,9 @@
 use anyhow::bail;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use futures::future::Future;
-use futures::stream::Stream;
 use futures_ext::{BoxStream, StreamExt};
+use futures_old::future::Future;
+use futures_old::stream::Stream;
 #[cfg(test)]
 use mercurial_types::HgNodeHash;
 use mononoke_types::{ChangesetId, Generation};
@@ -23,7 +23,7 @@ use crate::errors::*;
 use crate::BonsaiNodeStream;
 use anyhow::Error;
 
-use futures::{Async, Poll};
+use futures_old::{Async, Poll};
 
 type GenericStream<T> = BoxStream<(T, Generation), Error>;
 pub type BonsaiInputStream = GenericStream<ChangesetId>;

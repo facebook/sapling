@@ -15,7 +15,7 @@ use context::{generate_session_id, SessionId};
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use fbwhoami::FbWhoAmI;
-use futures::{Future, Sink, Stream};
+use futures_old::{Future, Sink, Stream};
 use futures_stats::Timed;
 use lazy_static::lazy_static;
 use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits, RateLimits};

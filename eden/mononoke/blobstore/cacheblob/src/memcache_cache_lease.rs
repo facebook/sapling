@@ -11,11 +11,11 @@ use anyhow::Error;
 use cloned::cloned;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
-use futures::{
+use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{
     future::{self, Either},
     Future, IntoFuture,
 };
-use futures_ext::{BoxFuture, FutureExt};
 use memcache::{KeyGen, MemcacheClient};
 
 use blobstore::{Blobstore, CountedBlobstore};

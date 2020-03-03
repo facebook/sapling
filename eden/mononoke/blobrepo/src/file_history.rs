@@ -12,8 +12,8 @@ use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
 use filenodes::FilenodeInfo;
-use futures::{future::ok, stream, Future, Stream};
 use futures_ext::{BoxStream, FutureExt, StreamExt};
+use futures_old::{future::ok, stream, Future, Stream};
 use maplit::hashset;
 use mercurial_types::{
     HgFileHistoryEntry, HgFileNodeId, HgParents, MPath, RepoPath, NULL_CSID, NULL_HASH,

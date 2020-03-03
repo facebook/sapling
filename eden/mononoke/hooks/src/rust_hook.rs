@@ -13,8 +13,8 @@
 use super::{Hook, HookChangeset, HookContext, HookExecution};
 use anyhow::Error;
 use context::CoreContext;
-use futures::future::ok;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::future::ok;
 
 pub struct RustHook {
     pub name: String,

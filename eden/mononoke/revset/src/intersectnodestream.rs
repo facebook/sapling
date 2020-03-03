@@ -8,9 +8,9 @@
 use anyhow::Error;
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use futures::stream::Stream;
-use futures::Async;
-use futures::Poll;
+use futures_old::stream::Stream;
+use futures_old::Async;
+use futures_old::Poll;
 use mononoke_types::{ChangesetId, Generation};
 use std::collections::hash_map::IntoIter;
 use std::collections::HashMap;
@@ -109,7 +109,7 @@ impl Stream for IntersectNodeStream {
     type Error = Error;
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         // This feels wrong, but in practice it's fine - it should be quick to hit a return, and
-        // the standard futures::executor expects you to only return NotReady if blocked on I/O.
+        // the standard futures_old::executor expects you to only return NotReady if blocked on I/O.
         loop {
             // Start by trying to turn as many NotReady as possible into real items
             poll_all_inputs(&mut self.inputs);
@@ -179,8 +179,8 @@ mod test {
     use context::CoreContext;
     use failure_ext::err_downcast;
     use fbinit::FacebookInit;
-    use futures::executor::spawn;
     use futures_ext::StreamExt;
+    use futures_old::executor::spawn;
     use revset_test_helper::assert_changesets_sequence;
     use revset_test_helper::{single_changeset_id, string_to_bonsai};
     use std::sync::Arc;

@@ -11,8 +11,8 @@ use anyhow::Error;
 use ascii::AsAsciiStr;
 use bytes::Bytes;
 use fbinit::FacebookInit;
-use futures::stream::futures_unordered;
 use futures_ext::{BoxFuture, StreamExt};
+use futures_old::stream::futures_unordered;
 use scuba_ext::ScubaSampleBuilder;
 
 use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset};

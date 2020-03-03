@@ -21,8 +21,8 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, DeriveError};
-use futures::{future, Future};
 use futures_ext::FutureExt;
+use futures_old::{future, Future};
 use manifest::ManifestOps;
 use mononoke_types::{
     blame::{Blame, BlameId, BlameMaybeRejected, BlameRejected},

@@ -26,8 +26,8 @@ use apiserver_thrift::types::{
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use context::CoreContext;
-use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_old::prelude::*;
 use mercurial_types::{blobs::HgBlobChangeset, HgEntry, HgEntryId, HgManifest, Type};
 use mononoke_types::RepositoryId;
 

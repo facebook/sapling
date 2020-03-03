@@ -13,8 +13,8 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use filestore::{self, FetchKey};
-use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, BoxFuture, FutureExt, StreamExt};
+use futures_old::{future, stream, Future, IntoFuture, Stream};
 use manifest::find_intersection_of_diffs;
 use mononoke_types::{
     blame::{store_blame, Blame, BlameId, BlameRejected},

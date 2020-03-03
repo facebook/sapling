@@ -11,8 +11,8 @@ use std::sync::Arc;
 use anyhow::{format_err, Error};
 use ascii::AsciiString;
 use cloned::cloned;
-use futures::{prelude::*, stream};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_old::{prelude::*, stream};
 use slog::{info, Logger};
 
 use blobrepo::BlobRepo;

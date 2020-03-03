@@ -12,12 +12,12 @@ use blobrepo::BlobRepo;
 use bytes::Bytes;
 use cmdlib::helpers::block_execute;
 use derived_data::BonsaiDerived;
-use futures::Future;
-use futures::{
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
+use futures_old::Future;
+use futures_old::{
     future::IntoFuture,
     stream::{self, Stream},
 };
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
 use futures_preview::compat::Future01CompatExt;
 use git2::{ObjectType, Oid, Repository, Sort};
 use std::collections::HashSet;

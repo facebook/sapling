@@ -9,8 +9,8 @@
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use fbinit::FacebookInit;
-use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::future::Future;
 use hooks::HookManager;
 use metaconfig_types::{
     BookmarkAttrs, BookmarkParams, InfinitepushParams, LfsParams, PushrebaseParams, RepoReadOnly,

@@ -12,7 +12,7 @@ use std::thread::{self};
 use anyhow::{format_err, Error};
 use clap::ArgMatches;
 use fbinit::FacebookInit;
-use futures::Future;
+use futures_old::Future;
 use services::{self, Fb303Service, FbStatus};
 use slog::{info, Logger};
 use stats::schedule_stats_aggregation;

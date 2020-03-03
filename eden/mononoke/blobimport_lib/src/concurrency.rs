@@ -6,11 +6,11 @@
  */
 
 use anyhow::{format_err, Error, Result};
-use futures::{
+use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{
     sync::{mpsc, oneshot},
     Future, IntoFuture, Stream,
 };
-use futures_ext::{BoxFuture, FutureExt};
 use tokio::executor::Executor;
 
 type Job<In, Out> = (In, oneshot::Sender<Result<Out>>);

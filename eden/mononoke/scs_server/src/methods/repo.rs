@@ -11,7 +11,7 @@ use std::convert::TryFrom;
 use bytes::Bytes;
 use chrono::{DateTime, FixedOffset, Local};
 use context::CoreContext;
-use futures::stream::Stream;
+use futures_old::stream::Stream;
 use futures_preview::compat::Future01CompatExt;
 use futures_util::stream::FuturesOrdered;
 use futures_util::TryStreamExt;

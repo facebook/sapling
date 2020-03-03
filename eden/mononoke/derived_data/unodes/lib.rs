@@ -12,7 +12,7 @@ use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use futures::{future, Future, Stream};
+use futures_old::{future, Future, Stream};
 use manifest::ManifestOps;
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileUnodeId, MPath};
 use std::collections::HashMap;

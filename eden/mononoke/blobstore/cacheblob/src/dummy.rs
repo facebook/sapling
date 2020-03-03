@@ -6,8 +6,8 @@
  */
 
 use context::CoreContext;
-use futures::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::IntoFuture;
 
 use mononoke_types::BlobstoreBytes;
 

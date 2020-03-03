@@ -13,7 +13,7 @@ use anyhow::{bail, format_err, Error, Result};
 use bytes::Bytes;
 use context::generate_session_id;
 use fbinit::FacebookInit;
-use futures::{future, stream, Future, Sink, Stream};
+use futures_old::{future, stream, Future, Sink, Stream};
 use slog::{debug, error, o, Drain, Logger};
 
 use dns_lookup::lookup_addr;

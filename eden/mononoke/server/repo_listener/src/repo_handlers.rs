@@ -11,8 +11,8 @@ use std::sync::Arc;
 use anyhow::{format_err, Error};
 use cloned::cloned;
 use failure_ext::chain::ChainExt;
-use futures::{future, Future};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_old::{future, Future};
 use futures_preview::{
     compat::Future01CompatExt,
     future::{FutureExt as _, TryFutureExt},

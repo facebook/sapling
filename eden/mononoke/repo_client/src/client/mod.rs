@@ -19,12 +19,12 @@ use cloned::cloned;
 use configerator_cached::ConfigHandle;
 use context::{CoreContext, LoggingContainer, PerfCounterType, SessionContainer};
 use fbwhoami::FbWhoAmI;
-use futures::future::ok;
-use futures::{future, stream, try_ready, Async, Future, IntoFuture, Poll, Stream};
 use futures_ext::{
     spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams,
     FutureExt as OldFutureExt, StreamExt, StreamTimeoutError,
 };
+use futures_old::future::ok;
+use futures_old::{future, stream, try_ready, Async, Future, IntoFuture, Poll, Stream};
 use futures_stats::{Timed, TimedStreamTrait};
 use futures_util::{FutureExt, TryFutureExt};
 use getbundle_response::{create_getbundle_response, DraftsInBundlesPolicy, PhasesPart};

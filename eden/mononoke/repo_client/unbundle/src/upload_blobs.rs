@@ -9,8 +9,8 @@ use std::collections::HashMap;
 
 use anyhow::{ensure, Error, Result};
 use failure_ext::Compat;
-use futures::{future::Shared, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{future::Shared, Future, Stream};
 
 use blobrepo::BlobRepo;
 use context::CoreContext;

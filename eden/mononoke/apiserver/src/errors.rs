@@ -11,7 +11,7 @@ use actix_web::http::StatusCode;
 use actix_web::HttpResponse;
 use anyhow::{anyhow, Error};
 use failure_ext::{err_downcast, err_downcast_ref};
-use futures::Canceled;
+use futures_old::Canceled;
 use serde_derive::Serialize;
 use std::error::Error as _;
 use thiserror::Error;

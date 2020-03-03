@@ -11,8 +11,8 @@ use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::chain::ChainExt;
-use futures::{self, future::join_all, prelude::*};
 use futures_ext::FutureExt;
+use futures_old::{self, future::join_all, prelude::*};
 use itertools::{Either, Itertools};
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::{BlobstoreBytes, DateTime};
@@ -97,7 +97,7 @@ impl Healer {
                         let entries: Vec<_> = entries.collect();
                         if drain_only {
                             Some(
-                                futures::future::ok((
+                                futures_old::future::ok((
                                     HealStats {
                                         queue_del: entries.len(),
                                         queue_add: 0,
@@ -129,7 +129,7 @@ impl Healer {
 
                 if last_batch_size == 0 {
                     info!(ctx.logger(), "All caught up, nothing to do");
-                    return futures::future::ok(false).left_future();
+                    return futures_old::future::ok(false).left_future();
                 }
 
                 info!(
@@ -137,7 +137,7 @@ impl Healer {
                     "Found {} blobs to be healed... Doing it", last_batch_size
                 );
 
-                futures::stream::futures_unordered(healing_futures)
+                futures_old::stream::futures_unordered(healing_futures)
                     .collect()
                     .and_then(
                         move |heal_res: Vec<(HealStats, Vec<BlobstoreSyncQueueEntry>)>| {
@@ -154,7 +154,9 @@ impl Healer {
                                 processed_entries.into_iter().flatten().collect();
                             cleanup_after_healing(ctx, sync_queue, entries_to_remove).and_then(
                                 move |()| {
-                                    return futures::future::ok(last_batch_size == max_batch_size);
+                                    return futures_old::future::ok(
+                                        last_batch_size == max_batch_size,
+                                    );
                                 },
                             )
                         },
@@ -245,7 +247,7 @@ fn heal_blob(
         // All blobstores have been synchronized or all are unknown to be requeued
         return Some(
             if unknown_seen_blobstores.is_empty() {
-                futures::future::ok(()).left_future()
+                futures_old::future::ok(()).left_future()
             } else {
                 requeue_partial_heal(ctx, sync_queue, key, unknown_seen_blobstores, multiplex_id)
                     .right_future()
@@ -345,7 +347,7 @@ fn heal_blob(
                     put_success: healed_stores.len(),
                     put_failure: unhealed_stores.len(),
                 };
-                futures::future::ok(heal_stats).right_future()
+                futures_old::future::ok(heal_stats).right_future()
             }
         })
     });
@@ -408,10 +410,10 @@ fn fetch_blob(
                 }
             }
             match blob {
-                None => {
-                    futures::future::err(Error::msg("None of the blobstores to fetch responded"))
-                }
-                Some(blob_data) => futures::future::ok(FetchData {
+                None => futures_old::future::err(Error::msg(
+                    "None of the blobstores to fetch responded",
+                )),
+                Some(blob_data) => futures_old::future::ok(FetchData {
                     blob: blob_data,
                     good_sources,
                     missing_sources,

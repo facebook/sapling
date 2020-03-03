@@ -8,9 +8,9 @@
 #![deny(warnings)]
 
 use anyhow::Error;
-use futures::future::{err, ok};
-use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::future::{err, ok};
+use futures_old::Future;
 use sql::{queries, Connection};
 use sql_ext::SqlConstructors;
 

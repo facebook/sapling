@@ -18,11 +18,11 @@ use cmdlib::args;
 use context::CoreContext;
 use failure_ext::DisplayChain;
 use fbinit::FacebookInit;
-use futures::{
+use futures_ext::{try_boxfuture, FutureExt};
+use futures_old::{
     future::{self, join_all, Either},
     Future, IntoFuture, Stream,
 };
-use futures_ext::{try_boxfuture, FutureExt};
 use futures_preview::compat::Future01CompatExt;
 use lock_ext::LockExt;
 use mercurial_types::HgChangesetId;

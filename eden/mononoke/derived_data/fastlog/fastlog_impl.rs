@@ -9,7 +9,7 @@ use crate::{ErrorKind, FastlogParent};
 use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreBytes};
 use context::CoreContext;
-use futures::Future;
+use futures_old::Future;
 use futures_preview::{compat::Future01CompatExt, future::try_join_all};
 use manifest::Entry;
 use maplit::hashset;

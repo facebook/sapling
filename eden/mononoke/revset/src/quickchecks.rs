@@ -32,11 +32,11 @@ mod test {
     use cloned::cloned;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use futures::{
+    use futures_ext::{BoxFuture, BoxStream, StreamExt};
+    use futures_old::{
         future::{join_all, ok},
         Stream,
     };
-    use futures_ext::{BoxFuture, BoxStream, StreamExt};
     use futures_preview::{compat::Stream01CompatExt, stream::StreamExt as _};
     use mononoke_types::ChangesetId;
     use quickcheck::{quickcheck, Arbitrary, Gen};
@@ -482,8 +482,8 @@ mod test {
     }
     mod empty_skiplist_tests {
         use super::*;
-        use futures::Future;
         use futures_ext::FutureExt;
+        use futures_old::Future;
 
         fn create_skiplist(
             _ctxt: CoreContext,
@@ -504,8 +504,8 @@ mod test {
 
     mod full_skiplist_tests {
         use super::*;
-        use futures::Future;
         use futures_ext::FutureExt;
+        use futures_old::Future;
 
         fn create_skiplist(
             ctx: CoreContext,

@@ -14,7 +14,7 @@ use bytes::Bytes;
 use chrono::{DateTime, FixedOffset};
 use context::CoreContext;
 use filestore::{FetchKey, StoreRequest};
-use futures::stream as old_stream;
+use futures_old::stream as old_stream;
 use futures_preview::Stream;
 use futures_util::compat::Future01CompatExt;
 use futures_util::future;

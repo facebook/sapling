@@ -18,9 +18,9 @@ use aclchecker::Identity;
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use futures::future::{ok, result};
-use futures::{future, Future};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_old::future::{ok, result};
+use futures_old::{future, Future};
 use hlua::{
     function0, function1, function2, AnyLuaString, AnyLuaValue, Lua, LuaError,
     LuaFunctionCallError, LuaTable, PushGuard, TuplePushError, Void,

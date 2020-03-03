@@ -31,10 +31,10 @@ use std::sync::Arc;
 use anyhow::Error;
 use cloned::cloned;
 use failure_ext::chain::ChainExt;
-use futures::future::{ok, Future};
-use futures::stream::{self, iter_ok, Stream};
-use futures::{try_ready, Async, IntoFuture, Poll};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, SelectAll, StreamExt};
+use futures_old::future::{ok, Future};
+use futures_old::stream::{self, iter_ok, Stream};
+use futures_old::{try_ready, Async, IntoFuture, Poll};
 use maplit::hashset;
 
 use changeset_fetcher::ChangesetFetcher;

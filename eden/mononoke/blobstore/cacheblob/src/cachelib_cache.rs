@@ -13,8 +13,8 @@ use bytes::Bytes;
 use crate::locking_cache::CacheOps;
 use cachelib::LruCachePool;
 use context::PerfCounterType;
-use futures::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::IntoFuture;
 use mononoke_types::BlobstoreBytes;
 
 use blobstore::{Blobstore, CountedBlobstore};

@@ -10,8 +10,8 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future, sync::mpsc, Future};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{future, sync::mpsc, Future};
 use futures_preview::{
     compat::Future01CompatExt,
     future::{self as new_future, FutureExt as NewFutureExt, TryFutureExt},
@@ -393,7 +393,7 @@ mod tests {
     use derived_data_filenodes::FilenodesOnlyPublic;
     use fbinit::FacebookInit;
     use fixtures::linear;
-    use futures::Stream;
+    use futures_old::Stream;
     use futures_preview::{compat::Future01CompatExt, FutureExt as NewFutureExt, TryFutureExt};
     use manifest::ManifestOps;
     use maplit::btreemap;

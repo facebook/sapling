@@ -11,8 +11,8 @@ use std::sync::Arc;
 
 use anyhow::{bail, Context, Error, Result};
 use bytes::Bytes;
-use futures::{stream, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_old::{stream, IntoFuture};
 
 use context::CoreContext;
 use mercurial_types::blobnode::HgParents;
@@ -293,7 +293,7 @@ impl HgEntry for MockEntry {
 mod test {
     use super::*;
     use fbinit::FacebookInit;
-    use futures::Stream;
+    use futures_old::Stream;
     use futures_preview::compat::Future01CompatExt;
     use maplit::btreemap;
 

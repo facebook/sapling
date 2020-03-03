@@ -8,7 +8,7 @@
 use anyhow::Error;
 use bytes::Bytes;
 use fbinit::FacebookInit;
-use futures::{Future, IntoFuture};
+use futures_old::{Future, IntoFuture};
 
 use caching_ext::{CachelibHandler, MemcacheHandler};
 use cloned::cloned;
@@ -111,7 +111,7 @@ impl CacheManager {
 mod test {
     use super::*;
 
-    use futures::future::{lazy, FutureResult};
+    use futures_old::future::{lazy, FutureResult};
     use serde_derive::{Deserialize, Serialize};
 
     #[derive(Deserialize, Serialize, Debug)]

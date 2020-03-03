@@ -16,7 +16,7 @@ use bytes::Bytes;
 use chrono::{FixedOffset, TimeZone};
 use fbinit::FacebookInit;
 use fixtures::{branch_uneven, linear, many_files_dirs};
-use futures::Future;
+use futures_old::Future;
 use futures_preview::compat::Future01CompatExt;
 use futures_util::stream::TryStreamExt;
 

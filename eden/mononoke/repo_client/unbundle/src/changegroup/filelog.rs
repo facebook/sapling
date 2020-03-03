@@ -13,9 +13,9 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Compat, FutureFailureErrorExt};
-use futures::future::Shared;
-use futures::{Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_old::future::Shared;
+use futures_old::{Future, IntoFuture, Stream};
 use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
@@ -354,8 +354,8 @@ mod tests {
 
     use blobrepo_factory::new_memblob_empty;
     use fbinit::FacebookInit;
-    use futures::stream::iter_ok;
-    use futures::Future;
+    use futures_old::stream::iter_ok;
+    use futures_old::Future;
     use itertools::{assert_equal, EitherOrBoth, Itertools};
     use quickcheck::quickcheck;
 

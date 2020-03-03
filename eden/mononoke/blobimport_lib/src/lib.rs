@@ -21,8 +21,8 @@ use std::sync::Arc;
 use anyhow::Error;
 use ascii::AsciiString;
 use cloned::cloned;
-use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_old::{future, Future, Stream};
 use futures_preview::{
     compat::Future01CompatExt,
     future::{ready, Future as NewFuture, FutureExt as _, TryFutureExt},

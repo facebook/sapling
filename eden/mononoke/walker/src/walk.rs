@@ -19,8 +19,8 @@ use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use failure_ext::chain::ChainExt;
 use filestore::{self, Alias};
-use futures::{future as old_future, Future as Future01, Stream as Stream01};
 use futures_ext::{FutureExt as Future01Ext, StreamExt as Stream01Ext};
+use futures_old::{future as old_future, Future as Future01, Stream as Stream01};
 use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, Future, FutureExt},

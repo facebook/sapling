@@ -15,9 +15,9 @@ use bytes::Bytes;
 use chashmap::CHashMap;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use futures::future::{join_all, loop_fn, ok, Future, Loop};
-use futures::IntoFuture;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_old::future::{join_all, loop_fn, ok, Future, Loop};
+use futures_old::IntoFuture;
 use maplit::{hashmap, hashset};
 use slog::{info, Logger};
 
@@ -718,8 +718,8 @@ mod test {
     use chashmap::CHashMap;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use futures::stream::iter_ok;
-    use futures::stream::Stream;
+    use futures_old::stream::iter_ok;
+    use futures_old::stream::Stream;
     use futures_preview::compat::Future01CompatExt;
     use revset::AncestorsNodeStream;
     use std::collections::HashSet;

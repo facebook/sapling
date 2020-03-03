@@ -9,9 +9,9 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::future::Future;
-use futures::stream::Stream;
 use futures_ext::BoxStream;
+use futures_old::future::Future;
+use futures_old::stream::Stream;
 use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},
     stream::StreamExt,

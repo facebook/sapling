@@ -27,11 +27,11 @@ use configerator::ConfigeratorAPI;
 use context::{CoreContext, SessionContainer};
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
 use fbinit::FacebookInit;
-use futures::{
+use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{
     future::{self, join_all},
     prelude::*,
 };
-use futures_ext::{BoxFuture, FutureExt};
 use futures_preview::compat::Future01CompatExt;
 use futures_preview::future::{FutureExt as _, TryFutureExt};
 use healer::Healer;

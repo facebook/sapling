@@ -11,10 +11,10 @@ use anyhow::{bail, Error, Result};
 use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset};
 use context::CoreContext;
 use failure_ext::{Compat, FutureFailureErrorExt, StreamFailureErrorExt};
-use futures::future::{self, ok, Shared};
-use futures::Future;
-use futures::{stream, Stream};
 use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_old::future::{self, ok, Shared};
+use futures_old::Future;
+use futures_old::{stream, Stream};
 use mercurial_revlog::{
     changeset::RevlogChangeset,
     manifest::{Details, ManifestContent},

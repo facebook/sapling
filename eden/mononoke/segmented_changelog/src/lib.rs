@@ -92,7 +92,7 @@ mod tests {
     use super::*;
 
     use fbinit::FacebookInit;
-    use futures::stream::{self, Stream};
+    use futures_old::stream::{self, Stream};
     use futures_preview::StreamExt;
     use futures_util::compat::Stream01CompatExt;
     use revset::AncestorsNodeStream;

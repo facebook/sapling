@@ -11,12 +11,12 @@ use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use futures::{
+use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxFuture, FutureExt};
+use futures_old::{
     future,
     stream::{iter_ok, FuturesUnordered},
     Future, Stream,
 };
-use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxFuture, FutureExt};
 use futures_preview::{compat::Future01CompatExt, future::TryFutureExt, FutureExt as NewFutureExt};
 use manifest::{Entry, ManifestOps};
 use maplit::{hashmap, hashset};

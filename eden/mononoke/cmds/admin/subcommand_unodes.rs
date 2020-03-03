@@ -15,8 +15,8 @@ use cmdlib::{args, helpers};
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
-use futures::{future, Future, IntoFuture, Stream};
 use futures_ext::{FutureExt, StreamExt};
+use futures_old::{future, Future, IntoFuture, Stream};
 use futures_preview::compat::Future01CompatExt;
 use manifest::{Entry, ManifestOps, PathOrPrefix};
 

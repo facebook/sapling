@@ -6,8 +6,8 @@
  */
 
 use anyhow::{bail, ensure, Error};
-use futures::{try_ready, Async, Future, Poll, Stream};
 use futures_ext::{BoxStream, StreamExt};
+use futures_old::{try_ready, Async, Future, Poll, Stream};
 
 use mercurial_bundles::changegroup::{Part, Section};
 
@@ -171,7 +171,7 @@ where
 mod tests {
     use super::*;
 
-    use futures::stream::iter_ok;
+    use futures_old::stream::iter_ok;
     use itertools::{assert_equal, equal};
     use quickcheck::quickcheck;
 

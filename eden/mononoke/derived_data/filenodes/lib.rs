@@ -14,8 +14,8 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
 use filenodes::{FilenodeInfo, PreparedFilenode};
-use futures::{future as old_future, Future};
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
+use futures_old::{future as old_future, Future};
 use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::try_join_all,

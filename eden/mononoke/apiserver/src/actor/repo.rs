@@ -22,14 +22,14 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fastlog::{prefetch_history, FastlogParent, RootFastlog};
 use fbinit::FacebookInit;
-use futures::{
+use futures_ext::{
+    bounded_traversal::bounded_traversal_dag, try_boxfuture, BoxFuture, FutureExt, StreamExt,
+};
+use futures_old::{
     future::{self, err, join_all, ok},
     lazy,
     stream::{futures_ordered, iter_ok, FuturesUnordered},
     Future, IntoFuture, Stream,
-};
-use futures_ext::{
-    bounded_traversal::bounded_traversal_dag, try_boxfuture, BoxFuture, FutureExt, StreamExt,
 };
 use futures_stats::{FutureStats, Timed};
 use manifest::{Entry as ManifestEntry, ManifestOps};

@@ -19,9 +19,9 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::future::{Future, IntoFuture};
-use futures::sync::oneshot;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::future::{Future, IntoFuture};
+use futures_old::sync::oneshot;
 use futures_preview::{
     compat::Future01CompatExt,
     future::FutureExt as _,

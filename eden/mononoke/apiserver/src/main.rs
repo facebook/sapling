@@ -14,8 +14,8 @@ use anyhow::Result;
 use bytes::Bytes;
 use clap::{value_t, Arg};
 use fbinit::FacebookInit;
-use futures::{future::err, Future};
 use futures_ext::FutureExt;
+use futures_old::{future::err, Future};
 
 use blobrepo_factory::Caching;
 use context::CoreContext;

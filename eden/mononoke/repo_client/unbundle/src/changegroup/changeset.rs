@@ -7,8 +7,8 @@
 
 use anyhow::{ensure, Error};
 use bytes::Bytes;
-use futures::Stream;
 use futures_ext::{BoxStream, StreamExt};
+use futures_old::Stream;
 
 use mercurial_bundles::changegroup::CgDeltaChunk;
 use mercurial_revlog::changeset::RevlogChangeset;
@@ -57,8 +57,8 @@ where
 mod tests {
     use super::*;
 
-    use futures::stream::iter_ok;
-    use futures::Future;
+    use futures_old::stream::iter_ok;
+    use futures_old::Future;
     use itertools::equal;
     use mercurial_types::HgNodeHash;
     use quickcheck::quickcheck;

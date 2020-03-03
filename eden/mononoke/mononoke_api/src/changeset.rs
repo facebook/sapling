@@ -17,7 +17,7 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
-use futures::Future as OldFuture;
+use futures_old::Future as OldFuture;
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
 use futures_preview::stream::Stream;
 use futures_util::future::{self, try_join, try_join_all, FutureExt, Shared};

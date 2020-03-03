@@ -9,8 +9,8 @@ use anyhow::Error;
 use blobstore::Blobstore;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use futures::future::{self, Future, Loop};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::future::{self, Future, Loop};
 use futures_stats::Timed;
 use itertools::{Either, Itertools};
 use metaconfig_types::{BlobstoreId, MultiplexId};
@@ -461,7 +461,7 @@ fn finish_put<F: Future<Item = BlobstoreId, Error = Error> + Send + 'static>(
     // - We wrote it to the SQL queue that will replicate it to other blobstores.
     // - We wrote it to all the blobstores.
     // As soon as either of those things happen, we can report the put as successful.
-    use futures::future::Either;
+    use futures_old::future::Either;
 
     let queue_write = handler.on_put(ctx.clone(), blobstore_id, multiplex_id, key.clone());
 

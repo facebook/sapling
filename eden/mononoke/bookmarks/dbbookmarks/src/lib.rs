@@ -15,11 +15,11 @@ use bookmarks::{
 };
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use futures::{
+use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_old::{
     future::{self, loop_fn, Loop},
     stream, Future, IntoFuture, Stream,
 };
-use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use mononoke_types::Timestamp;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::{queries, Connection, Transaction as SqlTransaction};

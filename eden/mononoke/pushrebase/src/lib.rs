@@ -55,8 +55,8 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
-use futures::{stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt, StreamExt as Futures01StreamExt};
+use futures_old::{stream, Future, Stream};
 use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{try_join, try_join_all, FutureExt, TryFutureExt},

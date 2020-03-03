@@ -8,8 +8,8 @@
 use anyhow::{format_err, Error};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
-use futures::{future, future::IntoFuture, Future};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{future, future::IntoFuture, Future};
 
 use blobrepo::BlobRepo;
 use bookmark_renaming::{get_large_to_small_renamer, get_small_to_large_renamer};
@@ -428,7 +428,7 @@ mod test {
     use bookmarks::BookmarkName;
     use cross_repo_sync::validation::find_bookmark_diff;
     use fixtures::{linear, set_bookmark};
-    use futures::stream::Stream;
+    use futures_old::stream::Stream;
     use maplit::{hashmap, hashset};
     use metaconfig_types::{
         CommitSyncConfig, CommitSyncDirection, DefaultSmallToLargeCommitSyncPathAction,

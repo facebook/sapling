@@ -16,9 +16,9 @@ use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData, Transactio
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
-use futures::future::{err, ok};
-use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt as Futures01FutureExt};
+use futures_old::future::{err, ok};
+use futures_old::{future, Future, IntoFuture};
 use futures_stats::Timed;
 use futures_util::future::{FutureExt, TryFutureExt};
 use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
@@ -398,7 +398,7 @@ fn normal_pushrebase(
         flags.rewritedates = rewritedates;
     }
 
-    futures::lazy({
+    futures_old::lazy({
         cloned!(repo, onto_bookmark, ctx);
         move || {
             ctx.scuba().clone().log_with_msg("pushrebase started", None);

@@ -31,8 +31,8 @@ use derived_data_utils::{derived_data_utils, derived_data_utils_unsafe, POSSIBLE
 use fastlog::{fetch_parent_root_unodes, RootFastlog};
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
-use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{spawn_future, try_boxfuture, BoxFuture, FutureExt};
+use futures_old::{future, stream, Future, IntoFuture, Stream};
 use futures_preview::{compat::Future01CompatExt, future::try_join3, stream::FuturesUnordered};
 use futures_stats::Timed;
 use futures_util::{

@@ -18,11 +18,11 @@ use ascii::AsciiString;
 use changeset_fetcher::ChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
+use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{
     future::{self, IntoFuture, Loop},
     stream, Future, Stream,
 };
-use futures_ext::{BoxFuture, FutureExt};
 use futures_preview::{future::BoxFuture as NewBoxFuture, TryFutureExt};
 use mercurial_types::HgPhase;
 use mononoke_types::{ChangesetId, RepositoryId};

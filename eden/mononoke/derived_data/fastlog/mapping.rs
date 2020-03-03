@@ -12,8 +12,8 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use futures::{future, stream::FuturesUnordered, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_old::{future, stream::FuturesUnordered, Future, Stream};
 use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{FutureExt as NewFutureExt, TryFutureExt},

@@ -9,7 +9,7 @@ use clap::ArgMatches;
 use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::prelude::*;
+use futures_old::prelude::*;
 use futures_preview::compat::Future01CompatExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, DateTime, FileChange};
 use serde_derive::Serialize;

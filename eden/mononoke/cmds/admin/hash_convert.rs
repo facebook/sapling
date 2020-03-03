@@ -7,8 +7,8 @@
 
 use clap::ArgMatches;
 use fbinit::FacebookInit;
-use futures::prelude::*;
 use futures_ext::FutureExt;
+use futures_old::prelude::*;
 use futures_preview::compat::Future01CompatExt;
 use std::str::FromStr;
 

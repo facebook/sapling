@@ -12,11 +12,11 @@ use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use futures::{
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_old::{
     stream::{self, FuturesUnordered},
     Future, Stream,
 };
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use metaconfig_types::UnodeVersion;
 use mononoke_types::{
     BlobstoreBytes, BonsaiChangeset, ChangesetId, ContentId, FileType, MPath, ManifestUnodeId,

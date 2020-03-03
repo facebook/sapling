@@ -15,7 +15,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use fastlog::list_file_history;
 use filestore::FetchKey;
-use futures::{stream::Stream as StreamLegacy, Future as FutureLegacy};
+use futures_old::{stream::Stream as StreamLegacy, Future as FutureLegacy};
 use futures_preview::compat::{Future01CompatExt, Stream01CompatExt};
 use futures_preview::future::{ready, FutureExt, Shared};
 use futures_preview::stream::Stream;

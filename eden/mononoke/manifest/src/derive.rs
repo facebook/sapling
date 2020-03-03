@@ -9,8 +9,8 @@ use crate::{Entry, Manifest, PathTree, StoreLoadable};
 use anyhow::{format_err, Error};
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future, stream::Stream, sync::mpsc, Future, IntoFuture};
 use futures_ext::{bounded_traversal::bounded_traversal, BoxFuture, FutureExt};
+use futures_old::{future, stream::Stream, sync::mpsc, Future, IntoFuture};
 use mononoke_types::{MPath, MPathElement};
 use std::{
     collections::{BTreeMap, HashSet},

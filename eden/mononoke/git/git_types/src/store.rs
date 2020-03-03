@@ -9,8 +9,8 @@ use anyhow::Error;
 use blobstore::{Blobstore, BlobstoreBytes, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use fbthrift::compact_protocol;
-use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::Future;
 use std::convert::TryFrom;
 use std::convert::TryInto;
 

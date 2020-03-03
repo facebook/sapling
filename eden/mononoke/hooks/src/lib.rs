@@ -30,8 +30,8 @@ use context::CoreContext;
 pub use errors::*;
 use failure_ext::FutureFailureErrorExt;
 use fbinit::FacebookInit;
-use futures::{future, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_old::{future, Future, IntoFuture};
 use futures_stats::Timed;
 use hooks_content_stores::{ChangedFileType, ChangesetStore, FileContentStore};
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgParents, MPath};
@@ -280,7 +280,7 @@ impl HookManager {
         bookmark: BookmarkName,
         scuba: ScubaSampleBuilder,
     ) -> BoxFuture<Vec<(String, HookExecution)>, Error> {
-        futures::future::join_all(hooks.into_iter().map(move |(hook_name, hook, config)| {
+        futures_old::future::join_all(hooks.into_iter().map(move |(hook_name, hook, config)| {
             HookManager::run_hook(
                 ctx.clone(),
                 hook,
@@ -400,7 +400,7 @@ impl HookManager {
                 }
             })
             .collect();
-        futures::future::join_all(v)
+        futures_old::future::join_all(v)
             .map(|vv| vv.into_iter().flatten().collect())
             .boxify()
     }
@@ -439,7 +439,7 @@ impl HookManager {
                 }
             })
         });
-        futures::future::join_all(hook_futs).boxify()
+        futures_old::future::join_all(hook_futs).boxify()
     }
 
     fn run_hook<T: Clone>(

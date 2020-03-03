@@ -8,8 +8,8 @@
 use anyhow::{Error, Result};
 use changeset_fetcher::ChangesetFetcher;
 use context::CoreContext;
-use futures::stream::Stream;
-use futures::{Async, Poll};
+use futures_old::stream::Stream;
+use futures_old::{Async, Poll};
 use mononoke_types::{ChangesetId, Generation};
 use std::collections::HashSet;
 use std::sync::Arc;
@@ -73,7 +73,7 @@ impl Stream for SetDifferenceNodeStream {
     type Error = Error;
     fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
         // This feels wrong, but in practice it's fine - it should be quick to hit a return, and
-        // the standard futures::executor expects you to only return NotReady if blocked on I/O.
+        // the standard futures_old::executor expects you to only return NotReady if blocked on I/O.
         loop {
             let (keep_hash, keep_gen) = match self.next_keep()? {
                 &Async::NotReady => return Ok(Async::NotReady),
@@ -129,8 +129,8 @@ mod test {
     use context::CoreContext;
     use failure_ext::err_downcast;
     use fbinit::FacebookInit;
-    use futures::executor::spawn;
     use futures_ext::StreamExt;
+    use futures_old::executor::spawn;
     use revset_test_helper::assert_changesets_sequence;
     use revset_test_helper::{single_changeset_id, string_to_bonsai};
     use std::sync::Arc;

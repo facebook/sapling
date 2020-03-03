@@ -24,8 +24,8 @@ use derived_data_filenodes::FilenodesOnlyPublic;
 use derived_data_utils::POSSIBLE_DERIVED_TYPES;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
-use futures::{future, Future, IntoFuture};
 use futures_ext::FutureExt;
+use futures_old::{future, Future, IntoFuture};
 use futures_preview::{
     compat::Future01CompatExt,
     future::{FutureExt as _, TryFutureExt},

@@ -6,9 +6,9 @@
  */
 
 use context::CoreContext;
-use futures::sync::oneshot::{channel, Receiver, Sender};
-use futures::{future::Shared, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::sync::oneshot::{channel, Receiver, Sender};
+use futures_old::{future::Shared, Future, IntoFuture};
 use futures_preview::{
     compat::Future01CompatExt,
     future::{FutureExt as NewFutureExt, TryFutureExt},

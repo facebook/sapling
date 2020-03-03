@@ -23,11 +23,11 @@
 
 use anyhow::Error;
 use bytes::Bytes;
-use futures::{
+use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures_old::{
     stream::{iter_ok, once},
     Future, Stream,
 };
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use mercurial_types::FileBytes;
 
 pub struct FileStream(BoxStream<Bytes, Error>);

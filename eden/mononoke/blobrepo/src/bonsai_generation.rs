@@ -10,9 +10,9 @@ use std::collections::BTreeMap;
 use anyhow::{Context, Error, Result};
 use cloned::cloned;
 use failure_ext::FutureFailureErrorExt;
-use futures::future::{join_all, Future};
-use futures::{IntoFuture, Stream};
 use futures_ext::{try_boxfuture, FutureExt};
+use futures_old::future::{join_all, Future};
+use futures_old::{IntoFuture, Stream};
 
 use blobstore::{Blobstore, Loadable};
 use context::CoreContext;

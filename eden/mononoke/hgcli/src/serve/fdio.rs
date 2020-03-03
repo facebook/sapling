@@ -9,15 +9,15 @@
 //!
 //! Adapter for blocking IO source (implements std::io::Read) or
 //! sink (implements std::io::Write) to an async Stream or Sink.
-//! The async portion is implemented with a `futures::sync::mpsc`
+//! The async portion is implemented with a `futures_old::sync::mpsc`
 //! bounded channel pair.
 use std::io::{self, Read, Write};
 use std::thread;
 
 use bytes::Bytes;
-use futures::sync::mpsc::{channel, Receiver, Sender};
-use futures::{Future, Sink, Stream};
 use futures_ext::{BoxStream, StreamExt};
+use futures_old::sync::mpsc::{channel, Receiver, Sender};
+use futures_old::{Future, Sink, Stream};
 
 const BUFSZ: usize = 8192;
 const NUMBUFS: usize = 50000;

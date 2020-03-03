@@ -15,8 +15,8 @@ use std::sync::{
 
 use anyhow::{Context, Result};
 use clap::{Arg, ArgMatches};
-use futures::future;
 use futures_ext::FutureExt as OldFutureExt;
+use futures_old::future;
 use futures_preview::{
     channel::oneshot,
     compat::Future01CompatExt,

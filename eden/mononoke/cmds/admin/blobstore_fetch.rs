@@ -12,8 +12,8 @@ use std::sync::Arc;
 use anyhow::{format_err, Error, Result};
 use clap::ArgMatches;
 use fbinit::FacebookInit;
-use futures::prelude::*;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_old::prelude::*;
 use futures_preview::compat::Future01CompatExt;
 
 use blobstore::Blobstore;
@@ -22,7 +22,7 @@ use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
-use futures::future;
+use futures_old::future;
 use git_types::Tree as GitTree;
 use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
 use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, ScrubAction, StorageConfig};

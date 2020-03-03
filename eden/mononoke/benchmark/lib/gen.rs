@@ -10,8 +10,8 @@ use anyhow::Error;
 use blobrepo::{save_bonsai_changesets, BlobRepo};
 use blobstore::Storable;
 use context::CoreContext;
-use futures::{future, stream, Future, Stream};
 use futures_ext::FutureExt;
+use futures_old::{future, stream, Future, Stream};
 use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
     MPath, MPathElement,

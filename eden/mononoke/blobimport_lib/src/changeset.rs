@@ -13,14 +13,14 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::{Compat, FutureFailureErrorExt, FutureFailureExt, StreamFailureErrorExt};
-use futures::{
+use futures_ext::{
+    spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt, StreamExt,
+};
+use futures_old::{
     future::{self, SharedItem},
     stream::{self, Stream},
     sync::oneshot,
     Future, IntoFuture,
-};
-use futures_ext::{
-    spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, FutureExt, StreamExt,
 };
 use scuba_ext::ScubaSampleBuilder;
 use tokio::executor::DefaultExecutor;

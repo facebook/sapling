@@ -6,8 +6,8 @@
  */
 
 use anyhow::{format_err, Error};
-use futures::{stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_old::{stream, Future, Stream};
 
 use super::{CommitSyncOutcome, CommitSyncer};
 use blobrepo::BlobRepo;
@@ -492,7 +492,7 @@ mod test {
     use bookmarks::BookmarkName;
     use fbinit::FacebookInit;
     use fixtures::linear;
-    use futures::stream::Stream;
+    use futures_old::stream::Stream;
     use metaconfig_types::CommitSyncDirection;
     use mononoke_types::{MPath, RepositoryId};
     use revset::AncestorsNodeStream;

@@ -19,8 +19,8 @@ use anyhow::{bail, format_err, Context, Error, Result};
 use clap::ArgMatches;
 use cloned::cloned;
 use fbinit::FacebookInit;
-use futures::{Future as OldFuture, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
+use futures_old::{Future as OldFuture, IntoFuture};
 use futures_preview::{
     future::{self, Either},
     StreamExt, TryFutureExt,

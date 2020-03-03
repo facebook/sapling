@@ -24,8 +24,8 @@ use dbbookmarks::SqlBookmarks;
 use fbinit::FacebookInit;
 use filenodes::{FilenodeInfo, Filenodes, PreparedFilenode};
 use filestore::FilestoreConfig;
-use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{future, Future};
 use memblob::EagerMemblob;
 use mercurial_types::{HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgFileNodeId};
 use mononoke_types::{

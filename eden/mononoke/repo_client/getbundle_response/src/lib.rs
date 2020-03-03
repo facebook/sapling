@@ -18,12 +18,12 @@ use context::{CoreContext, PerfCounterType};
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use filestore::FetchKey;
-use futures::{
-    future as old_future, stream as old_stream, Future as OldFuture, Stream as OldStream,
-};
 use futures_ext::{
     BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, BufferedParams,
     FutureExt as OldFutureExt, StreamExt as OldStreamExt,
+};
+use futures_old::{
+    future as old_future, stream as old_stream, Future as OldFuture, Stream as OldStream,
 };
 use futures_preview::{
     compat::{Future01CompatExt, Stream01CompatExt},

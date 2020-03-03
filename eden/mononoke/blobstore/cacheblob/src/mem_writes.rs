@@ -8,8 +8,8 @@
 use anyhow::Error;
 use blobstore::Blobstore;
 use context::CoreContext;
-use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{future, stream, Future, Stream};
 use lock_ext::LockExt;
 use mononoke_types::BlobstoreBytes;
 use std::{

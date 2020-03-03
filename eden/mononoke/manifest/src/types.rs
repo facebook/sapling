@@ -8,8 +8,8 @@
 use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::Future;
 use mononoke_types::{
     fsnode::{Fsnode, FsnodeEntry},
     unode::{ManifestUnode, UnodeEntry},

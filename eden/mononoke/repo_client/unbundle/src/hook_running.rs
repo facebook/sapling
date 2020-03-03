@@ -13,9 +13,9 @@ use crate::{
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
-use futures::future::ok;
-use futures::{stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::future::ok;
+use futures_old::{stream, Future, Stream};
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookManager};
 use std::collections::HashMap;
 use std::sync::Arc;

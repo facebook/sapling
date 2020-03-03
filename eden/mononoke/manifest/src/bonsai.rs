@@ -8,8 +8,8 @@
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{Future, Stream};
 use futures_ext::bounded_traversal::bounded_traversal_stream;
+use futures_old::{Future, Stream};
 use futures_preview::compat::Future01CompatExt;
 use futures_util::{
     future::{try_join_all, FutureExt as Futures03FutureExt, TryFutureExt},
@@ -340,8 +340,8 @@ mod test {
     };
     use anyhow::format_err;
     use fbinit::{self, FacebookInit};
-    use futures::IntoFuture;
     use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt};
+    use futures_old::IntoFuture;
     use mononoke_types::MPathElement;
     use tokio_preview as tokio;
 

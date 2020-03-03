@@ -13,8 +13,8 @@ use caching_ext::{
 };
 use cloned::cloned;
 use context::CoreContext;
-use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::Future;
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{ChangesetId, RepositoryId};
 use stats::prelude::*;

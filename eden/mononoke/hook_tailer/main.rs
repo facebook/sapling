@@ -18,10 +18,10 @@ use cloned::cloned;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::future::{err, ok, Future};
-use futures::stream::repeat;
-use futures::Stream;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures_old::future::{err, ok, Future};
+use futures_old::stream::repeat;
+use futures_old::Stream;
 use futures_preview::compat::Future01CompatExt;
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution};
 use manifold::{ManifoldHttpClient, RequestContext};
@@ -148,7 +148,7 @@ fn main(fb: FacebookInit) -> Result<()> {
                                     .map(|_| ())
                                     .boxify()
                             }
-                            None => futures::future::ok(()).boxify(),
+                            None => futures_old::future::ok(()).boxify(),
                         };
 
                         match (continuous, changeset) {

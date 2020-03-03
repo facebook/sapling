@@ -8,8 +8,8 @@
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{stream, Future, Stream};
 use futures_ext::StreamExt;
+use futures_old::{stream, Future, Stream};
 use mononoke_types::{FileType, MPath};
 use std::collections::HashSet;
 use std::hash::Hash;
@@ -156,8 +156,8 @@ mod test {
     };
     use anyhow::format_err;
     use fbinit::{self, FacebookInit};
-    use futures::IntoFuture;
     use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt};
+    use futures_old::IntoFuture;
     use futures_util::compat::Future01CompatExt;
     use maplit::hashmap;
     use mononoke_types::MPathElement;

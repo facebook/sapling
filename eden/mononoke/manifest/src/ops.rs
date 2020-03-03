@@ -9,10 +9,10 @@ use crate::{Entry, Manifest, PathTree, StoreLoadable};
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future, stream, Future, Stream};
 use futures_ext::{
     bounded_traversal::bounded_traversal_stream, BoxFuture, BoxStream, FutureExt, StreamExt,
 };
+use futures_old::{future, stream, Future, Stream};
 use mononoke_types::MPath;
 use std::collections::HashMap;
 use std::marker::PhantomData;

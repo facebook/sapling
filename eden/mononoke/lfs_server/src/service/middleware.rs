@@ -7,8 +7,8 @@
 
 use configerator_cached::ConfigHandle;
 use fbinit::FacebookInit;
-use futures::future::Future;
 use futures_ext::FutureExt;
+use futures_old::future::Future;
 use gotham::{handler::HandlerFuture, middleware::Middleware, state::State};
 use gotham_derive::NewMiddleware;
 use rand::Rng;
