@@ -74,7 +74,7 @@ const ENTRY_FLAG_HAS_XXHASH64: u32 = 1;
 const ENTRY_FLAG_HAS_XXHASH32: u32 = 2;
 
 // 1MB index checksum. This makes checksum file within one block (4KB) for 512MB index.
-const INDEX_CHECKSUM_CHUNK_SIZE_LOG: u32 = 20;
+const INDEX_CHECKSUM_CHUNK_SIZE_LOGARITHM: u32 = 20;
 
 /// An append-only storage with indexes and integrity checks.
 ///
@@ -1287,7 +1287,7 @@ impl Log {
             Some(dir) => {
                 let path = dir.join(def.filename());
                 index::OpenOptions::new()
-                    .checksum_chunk_size_log(INDEX_CHECKSUM_CHUNK_SIZE_LOG)
+                    .checksum_chunk_size_logarithm(INDEX_CHECKSUM_CHUNK_SIZE_LOGARITHM)
                     .logical_len(Some(len))
                     .key_buf(Some(buf))
                     .fsync(fsync)

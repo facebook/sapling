@@ -25,7 +25,7 @@
 // EXT_KEY     := '\6' + VLQ(KEY_START) + VLQ(KEY_LEN)
 // INLINE_LEAF := '\7' + EXT_KEY + LINK
 // ROOT        := '\1' + PTR(RADIX) + VLQ(META_LEN) + META
-// CHECKSUM    := '\8' + PTR(PREVIOUS_CHECKSUM) + VLQ(CHUNK_SIZE_LOG) +
+// CHECKSUM    := '\8' + PTR(PREVIOUS_CHECKSUM) + VLQ(CHUNK_SIZE_LOGARITHM) +
 //                VLQ(CHECKSUM_CHUNK_START) + XXHASH_LIST + CHECKSUM_XX32 (LE32)
 // XXHASH_LIST := A list of 64-bit xxhash in Little Endian.
 //
@@ -130,8 +130,8 @@ struct MemRoot {
 /// entry.  To make CHECKSUM entry size bounded, a Checksum entry can refer to a
 /// previous Checksum entry so it does not have to repeat byte range that is
 /// already covered by the previous entry.  The xxhash list contains one xxhash
-/// per chunk. A chunk has (1 << CHUNK_SIZE_LOG) bytes.  The last chunk can be
-/// incomplete.
+/// per chunk. A chunk has (1 << chunk_size_logarithm) bytes.  The last chunk
+/// can be incomplete.
 struct MemChecksum {
     /// Indicates the "start" offset of the bytes that should be written
     /// on serialization.
@@ -144,9 +144,9 @@ struct MemChecksum {
     /// This is also the offset of the current Checksum entry.
     end: u64,
 
-    /// Each chunk has (1 << chunk_size_log) bytes. The last chunk can be
-    /// shorter.
-    chunk_size_log: u32,
+    /// Each chunk has (1 << chunk_size_logarithmarithm) bytes. The last chunk
+    /// can be shorter.
+    chunk_size_logarithm: u32,
 
     /// Checksums per chunk.
     xxhash_list: Vec<u64>,
@@ -1448,15 +1448,18 @@ impl MemChecksum {
             .corruption()?;
         cur += vlq_len;
 
-        let (chunk_size_log, vlq_len): (u32, _) = index
+        let (chunk_size_logarithm, vlq_len): (u32, _) = index
             .buf()
             .read_vlq_at(cur)
-            .context(index.path(), "cannot read chunk_size_log")
+            .context(index.path(), "cannot read chunk_size_logarithm")
             .corruption()?;
-        if chunk_size_log > 31 {
+        if chunk_size_logarithm > 31 {
             return Err(crate::Error::corruption(
                 index.path(),
-                format!("invalid chunk_size_log {} at {}", chunk_size_log, cur),
+                format!(
+                    "invalid chunk_size_logarithm {} at {}",
+                    chunk_size_logarithm, cur
+                ),
             ));
         }
         cur += vlq_len;
@@ -1467,12 +1470,12 @@ impl MemChecksum {
         // NOTE: Consider switching to a non-recursive implementation, or
         // limit the chain length.
         let mut result = Self::read_from(index, previous_offset)?.0;
-        result.set_chunk_size_log(index.buf(), chunk_size_log)?;
+        result.set_chunk_size_logarithm(index.buf(), chunk_size_logarithm)?;
         result.start = previous_offset;
         result.end = offset as u64;
 
-        let chunk_size = 1usize << chunk_size_log;
-        let chunk_needed = (offset + chunk_size - 1) >> chunk_size_log;
+        let chunk_size = 1usize << chunk_size_logarithm;
+        let chunk_needed = (offset + chunk_size - 1) >> chunk_size_logarithm;
         result.xxhash_list.resize(chunk_needed, 0);
 
         //    0     1     2     3     4     5
@@ -1484,7 +1487,7 @@ impl MemChecksum {
         // This Checksum entry covers chunk 2(complete),3,4,5(incomplete).
 
         // Read the new chunksums.
-        let start_chunk_index = (previous_offset >> chunk_size_log) as usize;
+        let start_chunk_index = (previous_offset >> chunk_size_logarithm) as usize;
         for i in start_chunk_index..result.xxhash_list.len() {
             result.xxhash_list[i] = (&index.buf()[cur..])
                 .read_u64::<LittleEndian>()
@@ -1524,8 +1527,8 @@ impl MemChecksum {
         file_len: u64,
         append_buf: &[u8],
     ) -> io::Result<()> {
-        let start_chunk_index = (self.end >> self.chunk_size_log) as usize;
-        let start_chunk_offset = (start_chunk_index as u64) << self.chunk_size_log;
+        let start_chunk_index = (self.end >> self.chunk_size_logarithm) as usize;
+        let start_chunk_offset = (start_chunk_index as u64) << self.chunk_size_logarithm;
 
         // Check the range that is being rewritten.
         let old_end = (old_buf.len() as u64).min(self.end);
@@ -1534,8 +1537,8 @@ impl MemChecksum {
         }
 
         let new_total_len = file_len + append_buf.len() as u64;
-        let chunk_size = 1u64 << self.chunk_size_log;
-        let chunk_needed = ((new_total_len + chunk_size - 1) >> self.chunk_size_log) as usize;
+        let chunk_size = 1u64 << self.chunk_size_logarithm;
+        let chunk_needed = ((new_total_len + chunk_size - 1) >> self.chunk_size_logarithm) as usize;
         self.xxhash_list.resize(chunk_needed, 0);
 
         if self.end > file_len {
@@ -1568,7 +1571,7 @@ impl MemChecksum {
         };
 
         for i in start_chunk_index..self.xxhash_list.len() {
-            let start = (i as u64) << self.chunk_size_log;
+            let start = (i as u64) << self.chunk_size_logarithm;
             let end = (start + chunk_size).min(new_total_len);
             let mut xx = XxHash::default();
             // Hash portions of file_buf that intersect with start..end.
@@ -1605,7 +1608,7 @@ impl MemChecksum {
         //       start                end
         //
         // This makes the length of chain of Checksums O(len(chunks)).
-        if (self.start >> self.chunk_size_log) != (self.end >> self.chunk_size_log) {
+        if (self.start >> self.chunk_size_logarithm) != (self.end >> self.chunk_size_logarithm) {
             self.start = self.end;
         }
         self.end = new_total_len;
@@ -1618,7 +1621,7 @@ impl MemChecksum {
         buf.write_all(&[TYPE_CHECKSUM])?;
         buf.write_vlq(self.start)?;
         // self.end is implied by the write position.
-        buf.write_vlq(self.chunk_size_log)?;
+        buf.write_vlq(self.chunk_size_logarithm)?;
         for &xx in self.xxhash_list_to_write() {
             buf.write_u64::<LittleEndian>(xx)?;
         }
@@ -1633,23 +1636,27 @@ impl MemChecksum {
     fn xxhash_list_to_write(&self) -> &[u64] {
         // See the comment in `read_from` for `start_chunk_index`.
         // It is the starting index for
-        let start_chunk_index = (self.start >> self.chunk_size_log) as usize;
+        let start_chunk_index = (self.start >> self.chunk_size_logarithm) as usize;
         return &self.xxhash_list[start_chunk_index..];
     }
 
-    /// Reset the `chunk_size_log`.
-    fn set_chunk_size_log(&mut self, _buf: &[u8], chunk_size_log: u32) -> crate::Result<()> {
-        // Change chunk_size_log if the checksum list is empty.
+    /// Reset the `chunk_size_logarithm`.
+    fn set_chunk_size_logarithm(
+        &mut self,
+        _buf: &[u8],
+        chunk_size_logarithm: u32,
+    ) -> crate::Result<()> {
+        // Change chunk_size_logarithm if the checksum list is empty.
         if self.xxhash_list.is_empty() {
-            self.chunk_size_log = chunk_size_log;
+            self.chunk_size_logarithm = chunk_size_logarithm;
         }
-        // NOTE: Consider re-hashing and allow changing the chunk_size_log.
+        // NOTE: Consider re-hashing and allow changing the chunk_size_logarithm.
         Ok(())
     }
 
     /// Check a range of bytes.
     ///
-    /// Depending on `chunk_size_log`, bytes outside the specified range
+    /// Depending on `chunk_size_logarithm`, bytes outside the specified range
     /// might also be checked.
     #[inline]
     fn check_range(&self, buf: &[u8], offset: u64, length: u64) -> io::Result<()> {
@@ -1663,8 +1670,8 @@ impl MemChecksum {
         }
 
         // Otherwise, scan related chunks.
-        let start = (offset >> self.chunk_size_log) as usize;
-        let end = ((offset + length - 1) >> self.chunk_size_log) as usize;
+        let start = (offset >> self.chunk_size_logarithm) as usize;
+        let end = ((offset + length - 1) >> self.chunk_size_logarithm) as usize;
         if !(start..=end).all(|i| self.check_chunk(buf, i)) {
             return checksum_error(self, offset, length);
         }
@@ -1680,8 +1687,8 @@ impl MemChecksum {
         if (checked.load(Acquire) & bit) == bit {
             true
         } else {
-            let start = index << self.chunk_size_log;
-            let end = (self.end as usize).min((index + 1) << self.chunk_size_log);
+            let start = index << self.chunk_size_logarithm;
+            let end = (self.end as usize).min((index + 1) << self.chunk_size_logarithm);
             if start == end {
                 return true;
             }
@@ -1714,7 +1721,7 @@ impl Clone for MemChecksum {
         Self {
             start: self.start,
             end: self.end,
-            chunk_size_log: self.chunk_size_log,
+            chunk_size_logarithm: self.chunk_size_logarithm,
             xxhash_list: self.xxhash_list.clone(),
             checked: self
                 .checked
@@ -1731,7 +1738,7 @@ impl Default for MemChecksum {
         Self {
             start: 0,
             end: 0,
-            chunk_size_log: 20, // chunk_size: 1MB.
+            chunk_size_logarithm: 20, // chunk_size: 1MB.
             xxhash_list: Vec::new(),
             checked: Vec::new(),
         }
@@ -1944,7 +1951,7 @@ pub enum InsertKey<'a> {
 /// an [`Index`] structure.
 #[derive(Clone)]
 pub struct OpenOptions {
-    checksum_chunk_size_log: u32,
+    checksum_chunk_size_logarithm: u32,
     checksum_enabled: bool,
     fsync: bool,
     len: Option<u64>,
@@ -1962,7 +1969,7 @@ impl OpenOptions {
     /// - open as read-write but fallback to read-only
     pub fn new() -> OpenOptions {
         OpenOptions {
-            checksum_chunk_size_log: 20,
+            checksum_chunk_size_logarithm: 20,
             checksum_enabled: true,
             fsync: false,
             len: None,
@@ -1971,9 +1978,12 @@ impl OpenOptions {
         }
     }
 
-    /// Set checksum chunk size as `1 << checksum_chunk_size_log`.
-    pub fn checksum_chunk_size_log(&mut self, checksum_chunk_size_log: u32) -> &mut Self {
-        self.checksum_chunk_size_log = checksum_chunk_size_log;
+    /// Set checksum chunk size as `1 << checksum_chunk_size_logarithm`.
+    pub fn checksum_chunk_size_logarithm(
+        &mut self,
+        checksum_chunk_size_logarithm: u32,
+    ) -> &mut Self {
+        self.checksum_chunk_size_logarithm = checksum_chunk_size_logarithm;
         self
     }
 
@@ -2107,7 +2117,7 @@ impl OpenOptions {
                 (vec![], root, checksum)
             };
 
-            checksum.set_chunk_size_log(&bytes, self.checksum_chunk_size_log)?;
+            checksum.set_chunk_size_logarithm(&bytes, self.checksum_chunk_size_logarithm)?;
             let key_buf = self.key_buf.clone();
             let dirty_root = clean_root.clone();
 
@@ -2133,7 +2143,7 @@ impl OpenOptions {
     }
 
     /// Create an in-memory [`Index`] that skips flushing to disk.
-    /// Return an error if `checksum_chunk_size_log` is not 0.
+    /// Return an error if `checksum_chunk_size_logarithm` is not 0.
     pub fn create_in_memory(&self) -> crate::Result<Index> {
         let result: crate::Result<_> = (|| {
             let buf = Bytes::new();
@@ -2146,7 +2156,7 @@ impl OpenOptions {
             let key_buf = self.key_buf.clone();
             let dirty_root = clean_root.clone();
             let mut checksum = MemChecksum::default();
-            checksum.set_chunk_size_log(&buf, self.checksum_chunk_size_log)?;
+            checksum.set_chunk_size_logarithm(&buf, self.checksum_chunk_size_logarithm)?;
 
             Ok(Index {
                 file: None,
@@ -2232,8 +2242,8 @@ impl fmt::Debug for OpenOptions {
         write!(f, "OpenOptions {{ ")?;
         write!(
             f,
-            "checksum_chunk_size_log: {}, ",
-            self.checksum_chunk_size_log
+            "checksum_chunk_size_logarithm: {}, ",
+            self.checksum_chunk_size_logarithm
         )?;
         write!(f, "fsync: {}, ", self.fsync)?;
         write!(f, "len: {:?}, ", self.len)?;
@@ -3317,10 +3327,10 @@ impl Debug for MemChecksum {
     fn fmt(&self, f: &mut Formatter) -> Result<(), fmt::Error> {
         write!(
             f,
-            "Checksum {{ start: {}, end: {}, chunk_size_log: {}, checksums.len(): {} }}",
+            "Checksum {{ start: {}, end: {}, chunk_size_logarithm: {}, checksums.len(): {} }}",
             self.start,
             self.end,
-            self.chunk_size_log,
+            self.chunk_size_logarithm,
             self.xxhash_list_to_write().len(),
         )
     }
@@ -3463,7 +3473,7 @@ mod tests {
 
     fn open_opts() -> OpenOptions {
         let mut opts = OpenOptions::new();
-        opts.checksum_chunk_size_log(4);
+        opts.checksum_chunk_size_logarithm(4);
         opts
     }
 
@@ -3653,7 +3663,7 @@ Key[1]: Key { key: 34 }
             r#"Index { len: 24, root: Disk[1] }
 Disk[1]: Radix { link: None }
 Disk[5]: Root { radix: Disk[1] }
-Disk[8]: Checksum { start: 0, end: 8, chunk_size_log: 4, checksums.len(): 1 }
+Disk[8]: Checksum { start: 0, end: 8, chunk_size_logarithm: 4, checksums.len(): 1 }
 "#
         );
 
@@ -3665,7 +3675,7 @@ Disk[8]: Checksum { start: 0, end: 8, chunk_size_log: 4, checksums.len(): 1 }
             r#"Index { len: 24, root: Radix[0] }
 Disk[1]: Radix { link: None }
 Disk[5]: Root { radix: Disk[1] }
-Disk[8]: Checksum { start: 0, end: 8, chunk_size_log: 4, checksums.len(): 1 }
+Disk[8]: Checksum { start: 0, end: 8, chunk_size_logarithm: 4, checksums.len(): 1 }
 Radix[0]: Radix { link: Link[0], 1: Leaf[0] }
 Leaf[0]: Leaf { key: Key[0], link: Link[1] }
 Link[0]: Link { value: 55, next: None }
@@ -3685,7 +3695,7 @@ Key[0]: Key { key: 12 }
             r#"Index { len: 104, root: Disk[45] }
 Disk[1]: Radix { link: None }
 Disk[5]: Root { radix: Disk[1] }
-Disk[8]: Checksum { start: 0, end: 8, chunk_size_log: 4, checksums.len(): 1 }
+Disk[8]: Checksum { start: 0, end: 8, chunk_size_logarithm: 4, checksums.len(): 1 }
 Disk[24]: Key { key: 12 }
 Disk[27]: Key { key: 34 }
 Disk[30]: Link { value: 55, next: None }
@@ -3695,7 +3705,7 @@ Disk[39]: Leaf { key: Disk[24], link: Disk[33] }
 Disk[42]: Leaf { key: Disk[27], link: Disk[36] }
 Disk[45]: Radix { link: Disk[30], 1: Disk[39], 3: Disk[42] }
 Disk[61]: Root { radix: Disk[45] }
-Disk[64]: Checksum { start: 0, end: 64, chunk_size_log: 4, checksums.len(): 4 }
+Disk[64]: Checksum { start: 0, end: 64, chunk_size_logarithm: 4, checksums.len(): 4 }
 "#
         );
     }
@@ -3802,7 +3812,7 @@ Disk[5]: Link { value: 5, next: None }
 Disk[8]: Leaf { key: Disk[1], link: Disk[5] }
 Disk[11]: Radix { link: None, 1: Disk[8] }
 Disk[19]: Root { radix: Disk[11] }
-Disk[22]: Checksum { start: 0, end: 22, chunk_size_log: 4, checksums.len(): 2 }
+Disk[22]: Checksum { start: 0, end: 22, chunk_size_logarithm: 4, checksums.len(): 2 }
 "#
         );
         index.insert(&[0x12, 0x78], 7).expect("insert");
@@ -3814,7 +3824,7 @@ Disk[5]: Link { value: 5, next: None }
 Disk[8]: Leaf { key: Disk[1], link: Disk[5] }
 Disk[11]: Radix { link: None, 1: Disk[8] }
 Disk[19]: Root { radix: Disk[11] }
-Disk[22]: Checksum { start: 0, end: 22, chunk_size_log: 4, checksums.len(): 2 }
+Disk[22]: Checksum { start: 0, end: 22, chunk_size_logarithm: 4, checksums.len(): 2 }
 Radix[0]: Radix { link: None, 1: Radix[1] }
 Radix[1]: Radix { link: None, 2: Radix[2] }
 Radix[2]: Radix { link: None, 3: Disk[8], 7: Leaf[0] }
@@ -3837,7 +3847,7 @@ Disk[5]: Link { value: 5, next: None }
 Disk[8]: Leaf { key: Disk[1], link: Disk[5] }
 Disk[11]: Radix { link: None, 1: Disk[8] }
 Disk[19]: Root { radix: Disk[11] }
-Disk[22]: Checksum { start: 0, end: 22, chunk_size_log: 4, checksums.len(): 2 }
+Disk[22]: Checksum { start: 0, end: 22, chunk_size_logarithm: 4, checksums.len(): 2 }
 Radix[0]: Radix { link: None, 1: Radix[1] }
 Radix[1]: Radix { link: None, 2: Radix[2] }
 Radix[2]: Radix { link: Link[0], 3: Disk[8] }
@@ -3862,7 +3872,7 @@ Disk[14]: Radix { link: Disk[5], 7: Disk[11] }
 Disk[26]: Radix { link: None, 2: Disk[14] }
 Disk[34]: Radix { link: None, 1: Disk[26] }
 Disk[42]: Root { radix: Disk[34] }
-Disk[45]: Checksum { start: 0, end: 45, chunk_size_log: 4, checksums.len(): 3 }
+Disk[45]: Checksum { start: 0, end: 45, chunk_size_logarithm: 4, checksums.len(): 3 }
 "#
         );
 
@@ -3879,7 +3889,7 @@ Disk[4]: Link { value: 5, next: None }
 Disk[7]: Leaf { key: Disk[1], link: Disk[4] }
 Disk[10]: Radix { link: None, 1: Disk[7] }
 Disk[18]: Root { radix: Disk[10] }
-Disk[21]: Checksum { start: 0, end: 21, chunk_size_log: 4, checksums.len(): 2 }
+Disk[21]: Checksum { start: 0, end: 21, chunk_size_logarithm: 4, checksums.len(): 2 }
 Radix[0]: Radix { link: None, 1: Radix[1] }
 Radix[1]: Radix { link: None, 2: Radix[2] }
 Radix[2]: Radix { link: Disk[4], 7: Leaf[0] }
@@ -3902,7 +3912,7 @@ Disk[4]: Link { value: 5, next: None }
 Disk[7]: Leaf { key: Disk[1], link: Disk[4] }
 Disk[10]: Radix { link: None, 1: Disk[7] }
 Disk[18]: Root { radix: Disk[10] }
-Disk[21]: Checksum { start: 0, end: 21, chunk_size_log: 4, checksums.len(): 2 }
+Disk[21]: Checksum { start: 0, end: 21, chunk_size_logarithm: 4, checksums.len(): 2 }
 Radix[0]: Radix { link: None, 1: Leaf[0] }
 Leaf[0]: Leaf { key: Disk[1], link: Link[0] }
 Link[0]: Link { value: 7, next: Disk[4] }
@@ -3933,7 +3943,7 @@ Disk[2]: ExtKey { start: 1, len: 2 }
 Disk[5]: Link { value: 55, next: None }
 Disk[8]: Radix { link: None, 3: Disk[1] }
 Disk[16]: Root { radix: Disk[8] }
-Disk[19]: Checksum { start: 0, end: 19, chunk_size_log: 4, checksums.len(): 2 }
+Disk[19]: Checksum { start: 0, end: 19, chunk_size_logarithm: 4, checksums.len(): 2 }
 Radix[0]: Radix { link: None, 3: Radix[1] }
 Radix[1]: Radix { link: None, 4: Radix[2] }
 Radix[2]: Radix { link: None, 5: Radix[3] }
@@ -3991,25 +4001,25 @@ Disk[2]: ExtKey { start: 1, len: 1 }
 Disk[5]: Link { value: 55, next: None }
 Disk[8]: Radix { link: None, 3: Disk[1] }
 Disk[16]: Root { radix: Disk[8] }
-Disk[19]: Checksum { start: 0, end: 19, chunk_size_log: 4, checksums.len(): 2 }
+Disk[19]: Checksum { start: 0, end: 19, chunk_size_logarithm: 4, checksums.len(): 2 }
 Disk[43]: InlineLeaf { key: Disk[44], link: Disk[47] }
 Disk[44]: ExtKey { start: 2, len: 1 }
 Disk[47]: Link { value: 77, next: None }
 Disk[50]: Radix { link: None, 3: Disk[1], 5: Disk[43] }
 Disk[62]: Root { radix: Disk[50] }
-Disk[65]: Checksum { start: 19, end: 65, chunk_size_log: 4, checksums.len(): 4 }
+Disk[65]: Checksum { start: 19, end: 65, chunk_size_logarithm: 4, checksums.len(): 4 }
 Disk[105]: Link { value: 88, next: Disk[47] }
 Disk[108]: Leaf { key: Disk[44], link: Disk[105] }
 Disk[111]: Radix { link: None, 3: Disk[1], 5: Disk[108] }
 Disk[123]: Root { radix: Disk[111] }
-Disk[126]: Checksum { start: 65, end: 126, chunk_size_log: 4, checksums.len(): 4 }
+Disk[126]: Checksum { start: 65, end: 126, chunk_size_logarithm: 4, checksums.len(): 4 }
 Disk[166]: ExtKey { start: 3, len: 1 }
 Disk[169]: Link { value: 99, next: None }
 Disk[172]: Link { value: 100, next: Disk[169] }
 Disk[176]: Leaf { key: Disk[166], link: Disk[172] }
 Disk[181]: Radix { link: None, 3: Disk[1], 5: Disk[108], 7: Disk[176] }
 Disk[197]: Root { radix: Disk[181] }
-Disk[201]: Checksum { start: 126, end: 201, chunk_size_log: 4, checksums.len(): 6 }
+Disk[201]: Checksum { start: 126, end: 201, chunk_size_logarithm: 4, checksums.len(): 6 }
 "#
         )
     }
@@ -4045,7 +4055,7 @@ Disk[201]: Checksum { start: 126, end: 201, chunk_size_log: 4, checksums.len(): 
 
         // Test in-memory Index
         let mut index3 = open_opts()
-            .checksum_chunk_size_log(0)
+            .checksum_chunk_size_logarithm(0)
             .create_in_memory()
             .unwrap();
         let index4 = index3.try_clone().unwrap();
@@ -4152,7 +4162,7 @@ Disk[201]: Checksum { start: 126, end: 201, chunk_size_log: 4, checksums.len(): 
             vec![0x78, 0x9a],
         ];
         let opts = open_opts()
-            .checksum_chunk_size_log(checksum_log_size)
+            .checksum_chunk_size_logarithm(checksum_log_size)
             .clone();
 
         let bytes = {
@@ -4274,14 +4284,14 @@ Disk[82]: Leaf { key: Disk[69], link: Disk[78] }
 Disk[85]: Radix { link: None, 1: Disk[14], 2: Disk[42], 3: Disk[82] }
 Disk[101]: Radix { link: None, 6: Disk[85] }
 Disk[109]: Root { radix: Disk[101] }
-Disk[112]: Checksum { start: 0, end: 112, chunk_size_log: 4, checksums.len(): 7 }
+Disk[112]: Checksum { start: 0, end: 112, chunk_size_logarithm: 4, checksums.len(): 7 }
 Disk[176]: Key { key: 64 65 66 67 68 69 6A }
 Disk[185]: Link { value: 17767, next: None }
 Disk[190]: Leaf { key: Disk[176], link: Disk[185] }
 Disk[195]: Radix { link: None, 1: Disk[14], 2: Disk[42], 3: Disk[82], 4: Disk[190] }
 Disk[215]: Radix { link: None, 6: Disk[195] }
 Disk[223]: Root { radix: Disk[215] }
-Disk[227]: Checksum { start: 112, end: 227, chunk_size_log: 4, checksums.len(): 8 }
+Disk[227]: Checksum { start: 112, end: 227, chunk_size_logarithm: 4, checksums.len(): 8 }
 Disk[299]: Key { key: 65 66 67 68 69 6A 68 }
 Disk[308]: Link { value: 22136, next: None }
 Disk[313]: Leaf { key: Disk[299], link: Disk[308] }
@@ -4504,7 +4514,7 @@ Disk[410]: Root { radix: Disk[402] }
         fn test_multiple_values(map: HashMap<Vec<u8>, Vec<u64>>) -> bool {
             let dir = tempdir().unwrap();
             let mut index = open_opts().open(dir.path().join("a")).expect("open");
-            let mut index_mem = open_opts().checksum_chunk_size_log(20).create_in_memory().unwrap();
+            let mut index_mem = open_opts().checksum_chunk_size_logarithm(20).create_in_memory().unwrap();
 
             for (key, values) in &map {
                 for value in values.iter().rev() {
