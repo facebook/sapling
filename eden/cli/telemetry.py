@@ -17,7 +17,7 @@ import subprocess
 import time
 import types
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple, Type, Union
+from typing import Dict, List, Optional, Set, Tuple, Type, Union
 
 from . import version
 
@@ -25,6 +25,8 @@ from . import version
 log: logging.Logger = logging.getLogger(__name__)
 
 _session_id: Optional[int] = None
+
+_TelemetryTypes = Union[bool, int, str, float, Set[str]]
 
 
 class TelemetrySample(abc.ABC):
@@ -64,10 +66,14 @@ class TelemetrySample(abc.ABC):
     def add_double(self, name: str, value: float) -> "TelemetrySample":
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def add_tags(self, name: str, value: Set[str]) -> "TelemetrySample":
+        raise NotImplementedError()
+
     def add_bool(self, name: str, value: bool) -> "TelemetrySample":
         return self.add_int(name, int(value))
 
-    def add_fields(self, **kwargs: Union[bool, int, str, float]) -> "TelemetrySample":
+    def add_fields(self, **kwargs: _TelemetryTypes) -> "TelemetrySample":
         for name, value in kwargs.items():
             if isinstance(value, bool):
                 self.add_bool(name, value)
@@ -77,6 +83,8 @@ class TelemetrySample(abc.ABC):
                 self.add_int(name, value)
             elif isinstance(value, float):
                 self.add_double(name, value)
+            elif isinstance(value, set):
+                self.add_tags(name, value)
             else:  # unsupported type
                 log.error(
                     f"unsupported value type {type(value)} passed to add_fields()"
@@ -144,9 +152,7 @@ class TelemetryLogger(abc.ABC):
             log.warning(f"error determining EdenFS version for telemetry logging: {ex}")
             self.eden_version = ""
 
-    def new_sample(
-        self, event_type: str, **kwargs: Union[bool, int, str, float]
-    ) -> TelemetrySample:
+    def new_sample(self, event_type: str, **kwargs: _TelemetryTypes) -> TelemetrySample:
         sample = self._create_sample()
         sample.add_string("type", event_type)
         sample.add_int("session_id", self.session_id)
@@ -158,7 +164,7 @@ class TelemetryLogger(abc.ABC):
         sample.add_fields(**kwargs)
         return sample
 
-    def log(self, event_type: str, **kwargs: Union[bool, int, str, float]) -> None:
+    def log(self, event_type: str, **kwargs: _TelemetryTypes) -> None:
         self.new_sample(event_type, **kwargs).log()
 
     @abc.abstractmethod
@@ -172,6 +178,7 @@ class JsonTelemetrySample(TelemetrySample):
         self.ints: Dict[str, int] = {}
         self.strings: Dict[str, str] = {}
         self.doubles: Dict[str, float] = {}
+        self.tags: Dict[str, Set[str]] = {}
         self.logger: "BaseJsonTelemetryLogger" = logger
 
     def add_int(self, name: str, value: int) -> "JsonTelemetrySample":
@@ -186,12 +193,23 @@ class JsonTelemetrySample(TelemetrySample):
         self.doubles[name] = value
         return self
 
+    def add_tags(self, name: str, value: Set[str]) -> "JsonTelemetrySample":
+        self.tags[name] = value
+        return self
+
     def get_json(self) -> str:
-        data: Dict[str, Union[Dict[str, str], Dict[str, int], Dict[str, float]]] = {}
+        data: Dict[
+            str,
+            Union[
+                Dict[str, str], Dict[str, int], Dict[str, float], Dict[str, Set[str]]
+            ],
+        ] = {}
         data["int"] = self.ints
         data["normal"] = self.strings
         if self.doubles:
             data["double"] = self.doubles
+        if self.tags:
+            data["tags"] = self.tags
         return json.dumps(data)
 
     def _log_impl(self) -> None:
@@ -265,12 +283,13 @@ class NullTelemetrySample(TelemetrySample):
     def add_double(self, name: str, value: float) -> "NullTelemetrySample":
         pass
 
+    def add_tags(self, name: str, value: Set[str]) -> "NullTelemetrySample":
+        pass
+
     def add_bool(self, name: str, value: bool) -> "NullTelemetrySample":
         pass
 
-    def add_fields(
-        self, **kwargs: Union[bool, int, str, float]
-    ) -> "NullTelemetrySample":
+    def add_fields(self, **kwargs: _TelemetryTypes) -> "NullTelemetrySample":
         pass
 
     def _log_impl(self) -> None:

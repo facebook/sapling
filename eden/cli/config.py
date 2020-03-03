@@ -20,7 +20,7 @@ import time
 import types
 import typing
 from pathlib import Path
-from typing import Any, Dict, List, Mapping, Optional, Tuple, Type, Union, cast
+from typing import Any, Dict, List, Mapping, Optional, Set, Tuple, Type, Union, cast
 
 import eden.thrift
 import facebook.eden.ttypes as eden_ttypes
@@ -260,11 +260,13 @@ class EdenInstance:
         return telemetry.ExternalTelemetryLogger([scribe_cat, scribe_category])
 
     def build_sample(
-        self, log_type: str, **kwargs: Union[bool, int, str, float]
+        self, log_type: str, **kwargs: Union[bool, int, str, float, Set[str]]
     ) -> telemetry.TelemetrySample:
         return self.get_telemetry_logger().new_sample(log_type, **kwargs)
 
-    def log_sample(self, log_type: str, **kwargs: Union[bool, int, str, float]) -> None:
+    def log_sample(
+        self, log_type: str, **kwargs: Union[bool, int, str, float, Set[str]]
+    ) -> None:
         self.get_telemetry_logger().log(log_type, **kwargs)
 
     def get_running_version_parts(self) -> Tuple[str, str]:
