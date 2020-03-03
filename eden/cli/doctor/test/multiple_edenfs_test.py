@@ -4,8 +4,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import itertools
-from typing import Tuple
+from typing import Optional, Tuple
 
 import eden.cli.doctor as doctor
 from eden.cli import process_finder
@@ -14,7 +16,7 @@ from eden.cli.doctor.test.lib.testcase import DoctorTestBase
 
 
 class MultipleEdenfsRunningTest(DoctorTestBase):
-    maxDiff = None
+    maxDiff: Optional[int] = None
 
     def run_check(
         self, process_finder: process_finder.ProcessFinder, dry_run: bool
@@ -209,9 +211,9 @@ kill -9 123901
             self.assertEqual("", out)
             self.assert_results(fixer, num_problems=0)
             logs = "\n".join(logs_assertion.output)
-            self.assertIn(
-                "WARNING:eden.cli.process_finder:Lock file cannot be read for",
+            self.assertRegex(
                 logs,
+                r"WARNING:eden\.cli\..*:Lock file cannot be read for",
                 "when lock file can't be opened",
             )
 
@@ -239,7 +241,7 @@ kill -9 123901
         for rogue_pids_list in itertools.permutations(pids):
             with self.subTest(rogue_pids_list=rogue_pids_list):
                 problem = check_rogue_edenfs.ManyEdenFsRunning(
-                    rogue_pids_list=rogue_pids_list
+                    rogue_pids_list=list(rogue_pids_list)
                 )
                 message = problem.get_manual_remediation_message()
                 assert message is not None

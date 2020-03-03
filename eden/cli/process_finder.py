@@ -15,43 +15,43 @@ from pathlib import Path
 from typing import Dict, Iterable, List, NamedTuple, Optional
 
 
+log: logging.Logger = logging.getLogger("eden.cli.process_finder")
 ProcessID = int
 
 
-class ProcessInfo(NamedTuple):
+class EdenFSProcess(NamedTuple):
     pid: ProcessID
     cmdline: List[bytes]
     eden_dir: Optional[Path]
 
 
-log: logging.Logger = logging.getLogger("eden.cli.process_finder")
-
-
 class ProcessFinder(abc.ABC):
     @abc.abstractmethod
-    def find_rogue_pids(self) -> List[ProcessID]:
-        """Returns a list of rogue pids for edenfs processes"""
+    def get_edenfs_processes(self) -> Iterable[EdenFSProcess]:
+        """Returns a list of running EdenFS processes on the system."""
+        raise NotImplementedError()
+
+    def read_lock_file(self, path: Path) -> bytes:
+        """Read an EdenFS lock file.
+        This method exists primarily to allow it to be overridden in test cases.
+        """
+        return path.read_bytes()
 
 
 class NopProcessFinder(ProcessFinder):
-    def find_rogue_pids(self) -> List[ProcessID]:
+    def get_edenfs_processes(self) -> Iterable[EdenFSProcess]:
         return []
 
 
 class LinuxProcessFinder(ProcessFinder):
     proc_path = Path("/proc")
 
-    def find_rogue_pids(self) -> List[ProcessID]:
-        edenfs_processes = self.get_edenfs_processes()
-        return [info.pid for info in self.yield_rogue_processes(edenfs_processes)]
-
-    def get_edenfs_processes(self) -> List[ProcessInfo]:
+    def get_edenfs_processes(self) -> Iterable[EdenFSProcess]:
         """Return information about all running edenfs processes owned by the
         specified user.
         """
         user_id = os.getuid()
 
-        edenfs_processes = []
         for entry in os.listdir(self.proc_path):
             # Ignore entries that do not look like integer process IDs
             try:
@@ -80,14 +80,7 @@ class LinuxProcessFinder(ProcessFinder):
 
             cmdline = cmdline_bytes.split(b"\x00")
             eden_dir = self.get_eden_dir(pid, cmdline)
-            edenfs_processes.append(
-                ProcessInfo(pid=pid, cmdline=cmdline, eden_dir=eden_dir)
-            )
-
-        return edenfs_processes
-
-    def read_lock_file(self, path: Path) -> bytes:
-        return path.read_bytes()
+            yield EdenFSProcess(pid=pid, cmdline=cmdline, eden_dir=eden_dir)
 
     def get_eden_dir(self, pid: ProcessID, cmdline: List[bytes]) -> Optional[Path]:
         eden_dir: Optional[Path] = None
@@ -112,54 +105,6 @@ class LinuxProcessFinder(ProcessFinder):
             return None
 
         return eden_dir
-
-    def yield_rogue_processes(
-        self, edenfs_processes: List[ProcessInfo]
-    ) -> Iterable[ProcessInfo]:
-        # Build a dictionary of eden directory to list of running PIDs,
-        # so that below we can we only check each eden directory once even if there are
-        # multiple processes that appear to be running for it.
-        info_by_eden_dir: Dict[Path, List[ProcessInfo]] = {}
-        for info in edenfs_processes:
-            if info.eden_dir is None:
-                continue
-            if info.eden_dir not in info_by_eden_dir:
-                # pyre-fixme[6]: Expected `Path` for 1st param but got `Optional[Path]`.
-                info_by_eden_dir[info.eden_dir] = []
-            # pyre-fixme[6]: Expected `Path` for 1st param but got `Optional[Path]`.
-            info_by_eden_dir[info.eden_dir].append(info)
-
-        log.debug(f"List of processes per eden_dir output: {info_by_eden_dir}")
-
-        # Filter this list to only ones that we can confirm shouldn't be running
-        for eden_dir, info_list in info_by_eden_dir.items():
-            # Only bother checking for rogue processes if we found more than one EdenFS
-            # instance for this directory.
-            #
-            # The check below is inherently racy: it can misdetect state if edenfs
-            # processes are currently starting/stopping/restarting while it runs.
-            # Therefore we only want to try and report this if we actually find multiple
-            # edenfs processes for the same state directory.
-            if len(info_list) <= 1:
-                continue
-
-            lockfile = eden_dir / "lock"
-            try:
-                lock_pid = ProcessID(self.read_lock_file(lockfile).strip())
-            except OSError:
-                log.warning(f"Lock file cannot be read for {eden_dir}", exc_info=True)
-                continue
-            except ValueError:
-                log.warning(
-                    f"lock file contains data that cannot be parsed for PID: "
-                    f"{lockfile}",
-                    exc_info=True,
-                )
-                continue
-
-            for info in info_list:
-                if info.pid != lock_pid:
-                    yield info
 
 
 def new() -> ProcessFinder:
