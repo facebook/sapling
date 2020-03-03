@@ -11,6 +11,7 @@ import logging
 import os
 import platform
 import sys
+import typing
 from pathlib import Path
 from typing import Dict, Iterable, List, NamedTuple, Optional
 
@@ -19,11 +20,65 @@ log: logging.Logger = logging.getLogger("eden.cli.process_finder")
 ProcessID = int
 
 
+class BuildInfo(NamedTuple):
+    package_name: str = ""
+    package_version: str = ""
+    package_release: str = ""
+    revision: str = ""
+    upstream_revision: str = ""
+    build_time: int = 0
+
+
 class EdenFSProcess(NamedTuple):
     pid: ProcessID
     uid: int
     cmdline: List[bytes]
     eden_dir: Optional[Path]
+
+    def get_build_info(self) -> BuildInfo:
+        """
+        Get build information for this EdenFS process.
+
+        Note that the various build info fields may not be populated: development builds
+        that are not part of a release will not have build info set, and in some cases
+        we may not be able to determine build information.  (We could return an
+        Optional[BuildInfo] here, but there doesn't seem to be much value in
+        distinguishing failure to get build info vs dev builds that have an empty
+        BuildInfo.)
+        """
+        info = get_build_info_from_pid(self.pid)
+        if info is None:
+            return BuildInfo()
+        return info
+
+
+try:
+    from common.base.pid_info.py import build_info_lib  # @manual
+
+    def get_build_info_from_pid(pid: int) -> Optional[BuildInfo]:
+        build_info_dict = build_info_lib.get_build_info_from_pid(pid)
+        return BuildInfo(
+            package_name=typing.cast(str, build_info_dict.get("package_name", "")),
+            package_version=typing.cast(
+                str, build_info_dict.get("package_version", "")
+            ),
+            package_release=typing.cast(
+                str, build_info_dict.get("package_release", "")
+            ),
+            revision=typing.cast(str, build_info_dict.get("revision", "")),
+            upstream_revision=typing.cast(
+                str, build_info_dict.get("upstream_revision", "")
+            ),
+            build_time=typing.cast(int, build_info_dict.get("time", 0)),
+        )
+
+
+except ImportError:
+
+    def get_build_info_from_pid(pid: int) -> Optional[BuildInfo]:
+        # TODO: We could potentially try making a getExportedValues() thrift call to the
+        # process if get_build_info_from_pid() is unavailable.
+        return None
 
 
 class ProcessFinder(abc.ABC):
@@ -88,7 +143,7 @@ class LinuxProcessFinder(ProcessFinder):
 
             cmdline = cmdline_bytes.split(b"\x00")
             eden_dir = self.get_eden_dir(pid, cmdline)
-            yield EdenFSProcess(
+            yield self.make_edenfs_process(
                 pid=pid, cmdline=cmdline, eden_dir=eden_dir, uid=st.st_uid
             )
 
@@ -130,6 +185,11 @@ class LinuxProcessFinder(ProcessFinder):
 
         log.debug(f"could not determine edenDir for edenfs process {pid} ({cmdline})")
         return None
+
+    def make_edenfs_process(
+        self, pid: int, cmdline: List[bytes], eden_dir: Optional[Path], uid: int
+    ) -> EdenFSProcess:
+        return EdenFSProcess(pid=pid, cmdline=cmdline, eden_dir=eden_dir, uid=uid)
 
 
 def new() -> ProcessFinder:

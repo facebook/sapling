@@ -6,6 +6,7 @@
 
 # pyre_strict
 
+import datetime
 import errno
 import os
 import stat
@@ -16,10 +17,18 @@ from typing import Dict, List, Optional, Union
 from eden.cli import process_finder
 
 
+class FakeEdenFSProcess(process_finder.EdenFSProcess):
+    build_info: process_finder.BuildInfo = process_finder.BuildInfo()
+
+    def get_build_info(self) -> process_finder.BuildInfo:
+        return self.build_info
+
+
 class FakeProcessFinder(process_finder.LinuxProcessFinder):
     _file_contents: Dict[Path, Union[bytes, Exception]] = {}
     _process_stat: Dict[int, os.stat_result] = {}
     _default_uid: int
+    _build_info: Dict[int, process_finder.BuildInfo] = {}
 
     def __init__(self, tmp_dir: str, default_uid: Optional[int] = None) -> None:
         self.proc_path = Path(tmp_dir)
@@ -32,6 +41,7 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         uid: Optional[int] = None,
         comm: Optional[str] = None,
         fds: Optional[Dict[int, str]] = None,
+        build_info: Optional[process_finder.BuildInfo] = None,
     ) -> None:
         pid_dir = self.proc_path / str(pid)
         pid_dir.mkdir()
@@ -51,6 +61,9 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
             for fd, contents in fds.items():
                 (fd_dir / str(fd)).symlink_to(contents)
 
+        if build_info:
+            self._build_info[pid] = build_info
+
     def add_edenfs(
         self,
         pid: int,
@@ -58,7 +71,8 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         uid: Optional[int] = None,
         set_lockfile: bool = True,
         cmdline: Optional[List[str]] = None,
-    ) -> None:
+        build_time: int = 0,
+    ) -> process_finder.BuildInfo:
         """Add a fake EdenFS instance.
         Note that this will add 2 processes: the main EdenFS process with the
         specified PID, and its corresponding privhelper process using PID+1
@@ -91,8 +105,11 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
             4: "socket:[1234]",
             8: lock_symlink,
         }
+
+        build_info = make_edenfs_build_info(build_time)
+
         # Add the main EdenFS process
-        self.add_process(pid, cmdline, uid=uid, fds=edenfs_fds)
+        self.add_process(pid, cmdline, uid=uid, fds=edenfs_fds, build_info=build_info)
 
         # Also add a privhelper process
         # Newer versions of EdenFS name this process "edenfs_privhelp", but older
@@ -100,7 +117,15 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         # until we know all privhelper processes using the old "edenfs" have been
         # restarted.
         privhelper_fds = {0: "/dev/null", 1: log_path, 2: log_path, 5: "socket:[1235]"}
-        self.add_process(pid + 1, cmdline, uid=0, comm="edenfs", fds=privhelper_fds)
+        self.add_process(
+            pid + 1,
+            cmdline,
+            uid=0,
+            comm="edenfs",
+            fds=privhelper_fds,
+            build_info=build_info,
+        )
+        return build_info
 
     def set_file_contents(self, path: Union[Path, str], contents: bytes) -> None:
         self._file_contents[Path(path)] = contents
@@ -146,3 +171,29 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         if isinstance(contents, Exception):
             raise contents
         return contents
+
+    def make_edenfs_process(
+        self, pid: int, cmdline: List[bytes], eden_dir: Optional[Path], uid: int
+    ) -> FakeEdenFSProcess:
+        build_info = self._build_info.get(pid, process_finder.BuildInfo())
+        p = FakeEdenFSProcess(pid=pid, cmdline=cmdline, eden_dir=eden_dir, uid=uid)
+        p.build_info = build_info
+        return p
+
+
+def make_edenfs_build_info(build_time: int) -> process_finder.BuildInfo:
+    if build_time == 0:
+        # Return an empty BuildInfo if the build time is 0
+        return process_finder.BuildInfo()
+
+    utc = datetime.timezone.utc
+    build_datetime = datetime.datetime.fromtimestamp(build_time, tz=utc)
+    revision = "1" * 40
+    return process_finder.BuildInfo(
+        package_name="fb-eden",
+        package_version=build_datetime.strftime("%Y%m%d"),
+        package_release=build_datetime.strftime("%H%M%S"),
+        revision=revision,
+        upstream_revision=revision,
+        build_time=build_time,
+    )
