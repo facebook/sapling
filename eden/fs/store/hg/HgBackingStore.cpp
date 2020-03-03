@@ -726,9 +726,15 @@ SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
 SemiFuture<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(
     const RelativePathPiece& path,
     const Hash& id) {
-  return folly::via(importThreadPool_.get(), [path = path.copy(), id] {
-    return getThreadLocalImporter().importFileContents(path, id);
-  });
+  return folly::via(
+      importThreadPool_.get(), [path = path.copy(), stats = stats_, id] {
+        Importer& importer = getThreadLocalImporter();
+        folly::stop_watch<std::chrono::milliseconds> watch;
+        auto blob = importer.importFileContents(path, id);
+        stats->getHgBackingStoreStatsForCurrentThread()
+            .hgBackingStoreImportBlob.addValue(watch.elapsed().count());
+        return blob;
+      });
 }
 
 folly::Future<folly::Unit> HgBackingStore::prefetchBlobs(

@@ -110,7 +110,13 @@ class HgBackingStoreStatsTest(testcase.EdenRepoTest):
         self.assertEqual(
             counters_after.get("store.hg.get_blob.count", 0),
             counters_before.get("store.hg.get_blob.count", 0) + 1,
-            f"Reading {path} should increment store.hg.get_file.count",
+            f"Reading {path} should increment store.hg.get_blob.count",
+        )
+
+        self.assertEqual(
+            counters_after.get("store.hg.import_blob.count", 0),
+            counters_before.get("store.hg.import_blob.count", 0) + 1,
+            f"Reading {path} should increment store.hg.import_blob.count",
         )
 
     def create_repo(self, name: str) -> HgRepository:
