@@ -1395,20 +1395,20 @@ class RestartCmd(Subcmd):
         instance = get_eden_instance(self.args)
 
         health = instance.check_health()
+        edenfs_pid = health.pid
         if health.is_healthy():
-            assert health.pid is not None
+            assert edenfs_pid is not None
             if self.args.restart_type == RESTART_MODE_GRACEFUL:
                 status = self._graceful_restart(instance)
                 success = status == 0
                 instance.log_sample("graceful_restart", success=success)
                 return status
             else:
-                # pyre-fixme[6]: Expected `int` for 2nd param but got `Optional[int]`.
-                status = self._full_restart(instance, health.pid)
+                status = self._full_restart(instance, edenfs_pid)
                 success = status == 0
                 instance.log_sample("full_restart", success=success)
                 return status
-        elif health.pid is None:
+        elif edenfs_pid is None:
             # The daemon is not running
             return self._start(instance)
         else:
@@ -1443,8 +1443,7 @@ class RestartCmd(Subcmd):
             if self.args.restart_type != RESTART_MODE_FORCE:
                 print(f"Use --force if you want to forcibly restart the current daemon")
                 return 1
-            # pyre-fixme[6]: Expected `int` for 2nd param but got `Optional[int]`.
-            return self._force_restart(instance, health.pid, stop_timeout)
+            return self._force_restart(instance, edenfs_pid, stop_timeout)
 
     def _graceful_restart(self, instance: EdenInstance) -> int:
         print("Performing a graceful restart...")
