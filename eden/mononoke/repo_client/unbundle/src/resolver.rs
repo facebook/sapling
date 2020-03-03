@@ -36,7 +36,7 @@ use mercurial_types::{
     blobs::{ContentBlobInfo, HgBlobEntry},
     HgChangesetId, HgNodeKey, RepoPath,
 };
-use metaconfig_types::RepoReadOnly;
+use metaconfig_types::{PushrebaseFlags, RepoReadOnly};
 use mononoke_types::{BlobstoreValue, BonsaiChangeset, ChangesetId, RawBundle2, RawBundle2Id};
 use pushrebase::HgReplayData;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -206,8 +206,14 @@ pub fn resolve(
     readonly: RepoReadOnly,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     pure_push_allowed: bool,
+    pushrebase_flags: PushrebaseFlags,
 ) -> BoxFuture<PostResolveAction, BundleResolverError> {
-    let resolver = Bundle2Resolver::new(ctx.clone(), repo, infinitepush_writes_allowed);
+    let resolver = Bundle2Resolver::new(
+        ctx.clone(),
+        repo,
+        infinitepush_writes_allowed,
+        pushrebase_flags,
+    );
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
 
     resolver
@@ -748,14 +754,21 @@ pub struct Bundle2Resolver {
     ctx: CoreContext,
     repo: BlobRepo,
     infinitepush_writes_allowed: bool,
+    pushrebase_flags: PushrebaseFlags,
 }
 
 impl Bundle2Resolver {
-    fn new(ctx: CoreContext, repo: BlobRepo, infinitepush_writes_allowed: bool) -> Self {
+    fn new(
+        ctx: CoreContext,
+        repo: BlobRepo,
+        infinitepush_writes_allowed: bool,
+        pushrebase_flags: PushrebaseFlags,
+    ) -> Self {
         Self {
             ctx,
             repo,
             infinitepush_writes_allowed,
+            pushrebase_flags,
         }
     }
 
@@ -1113,6 +1126,7 @@ impl Bundle2Resolver {
         );
 
         let scuba_logger = self.ctx.scuba().clone();
+        let casefolding_check = self.pushrebase_flags.casefolding_check;
         let upload_changeset_fun = Arc::new({
             cloned!(ctx);
             move |uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle>,
@@ -1129,6 +1143,7 @@ impl Bundle2Resolver {
                     &filelogs,
                     &manifests,
                     &content_blobs,
+                    casefolding_check,
                 )
             }
         });

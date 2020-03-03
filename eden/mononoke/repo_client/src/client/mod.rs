@@ -1360,6 +1360,7 @@ impl HgCommands for RepoClient {
                     read_write,
                     maybe_full_content,
                     pure_push_allowed,
+                    pushrebase_params.flags.clone(),
                 ).and_then({
                     cloned!(ctx);
                     move |action| {

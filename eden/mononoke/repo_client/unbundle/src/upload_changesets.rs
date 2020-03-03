@@ -283,6 +283,7 @@ pub fn upload_changeset(
     filelogs: &Filelogs,
     manifests: &Manifests,
     content_blobs: &ContentBlobs,
+    must_check_case_conflicts: bool,
 ) -> BoxFuture<UploadedChangesets, Error> {
     let (p1, p2) = {
         (
@@ -324,7 +325,7 @@ pub fn upload_changeset(
                 sub_entries,
                 // XXX pass content blobs to CreateChangeset here
                 cs_metadata,
-                must_check_case_conflicts: true,
+                must_check_case_conflicts,
             };
             let scheduled_uploading = create_changeset.create(ctx, &repo, scuba_logger);
 

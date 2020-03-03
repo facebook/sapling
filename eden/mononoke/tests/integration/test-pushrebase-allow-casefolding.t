@@ -23,10 +23,5 @@ Create commit which only differs in case
   $ touch foo.txt Foo.txt
   $ hg ci -Aqm commit1
 
-Push the commit, showing the flag has not worked
+Push the commit, showing the flag has worked
   $ hgmn push -q -r . --to master_bookmark || (sed -nr -e 's/, uuid:.*//' -e 's/^.*\] (Caused by.*)/\1/p' "$TESTTMP"/mononoke.out | strip_glog; exit 1)
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
-  Caused by: While creating Changeset Some(HgNodeHash(Sha1(143fbdc73580e33c8432457df2a10e1038936a72)))
-  Caused by: While computing changed files
-  Caused by: Case conflict in a commit
-  [1]
