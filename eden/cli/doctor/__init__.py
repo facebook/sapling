@@ -79,10 +79,10 @@ def cure_what_ails_you(
     else:
         fixer.add_problem(EdenfsUnexpectedStatus(status))
 
-    # num_problems and problem_counts are only defined for ProblemFixer
+    # num_problems and problem_types are only defined for ProblemFixer
     if not dry_run:
         instance.log_sample(
-            "eden_doctor", num_problems=fixer.num_problems, **fixer.problem_counts
+            "eden_doctor", num_problems=fixer.num_problems, problems=fixer.problem_types
         )
 
     if fixer.num_problems == 0:
