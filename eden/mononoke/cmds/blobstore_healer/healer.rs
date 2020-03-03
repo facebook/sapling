@@ -1115,6 +1115,7 @@ mod tests {
         runtime.block_on_std(test_heal_blob_where_store_and_queue_mismatch_some_put_fails(fb))
     }
 
+    #[fbinit::compat_test]
     async fn test_healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(2);
@@ -1170,12 +1171,8 @@ mod tests {
 
         Ok(())
     }
-    #[fbinit::test]
-    fn healer_heal_with_failing_blobstore(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new()?;
-        runtime.block_on_std(test_healer_heal_with_failing_blobstore(fb))
-    }
 
+    #[fbinit::compat_test]
     async fn test_healer_heal_with_default_multiplex_id(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let (bids, underlying_stores, stores) = make_empty_stores(2);
@@ -1208,11 +1205,5 @@ mod tests {
         assert_eq!(1, underlying_stores.get(&bids[1]).unwrap().len());
 
         Ok(())
-    }
-
-    #[fbinit::test]
-    fn healer_heal_with_default_multiplex_id(fb: FacebookInit) -> Result<(), Error> {
-        let mut runtime = tokio_compat::runtime::Runtime::new()?;
-        runtime.block_on_std(test_healer_heal_with_default_multiplex_id(fb))
     }
 }
