@@ -19,7 +19,7 @@ use slog::{info, Logger};
 use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
-    ops::Add,
+    ops::{Add, Div, Mul, Sub},
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
@@ -29,6 +29,8 @@ define_stats! {
     walk_progress_walked: dynamic_timeseries("{}.progress.{}.walked", (subcommand: &'static str, repo: String); Rate, Sum),
     walk_progress_queued: dynamic_timeseries("{}.progress.{}.queued", (subcommand: &'static str, repo: String); Rate, Sum),
     walk_progress_errors: dynamic_timeseries("{}.progress.{}.errors", (subcommand: &'static str, repo: String); Rate, Sum),
+    walk_progress_walked_by_type: dynamic_timeseries("{}.progress.{}.{}.walked", (subcommand: &'static str, repo: String, node_type: String); Rate, Sum),
+    walk_progress_errors_by_type: dynamic_timeseries("{}.progress.{}.{}.errors", (subcommand: &'static str, repo: String, node_type: String); Rate, Sum),
 }
 
 pub trait ProgressRecorderUnprotected<SS> {
@@ -83,11 +85,66 @@ where
     }
 }
 
+#[derive(Clone, Copy, Default, Debug)]
+struct ProgressSummary {
+    walked: u64,
+    checked: u64,
+    queued: u64,
+    errors: u64,
+}
+
+impl Add<ProgressSummary> for ProgressSummary {
+    type Output = Self;
+    fn add(self, other: Self) -> Self {
+        Self {
+            walked: self.walked + other.walked,
+            checked: self.checked + other.checked,
+            queued: self.queued + other.queued,
+            errors: self.errors + other.errors,
+        }
+    }
+}
+
+impl Sub<ProgressSummary> for ProgressSummary {
+    type Output = Self;
+    fn sub(self, other: Self) -> Self {
+        Self {
+            walked: self.walked - other.walked,
+            checked: self.checked - other.checked,
+            queued: self.queued - other.queued,
+            errors: self.errors - other.errors,
+        }
+    }
+}
+
+impl Mul<u64> for ProgressSummary {
+    type Output = Self;
+    fn mul(self, other: u64) -> Self {
+        Self {
+            walked: self.walked * other,
+            checked: self.checked * other,
+            queued: self.queued * other,
+            errors: self.errors * other,
+        }
+    }
+}
+
+impl Div<u64> for ProgressSummary {
+    type Output = Self;
+    fn div(self, other: u64) -> Self {
+        Self {
+            walked: self.walked / other,
+            checked: self.checked / other,
+            queued: self.queued / other,
+            errors: self.errors / other,
+        }
+    }
+}
+
 struct ProgressStateReporting {
     start_time: Instant,
-    last_node_count: u64,
-    last_error_count: u64,
-    last_reported: u64,
+    last_summary_by_type: HashMap<NodeType, ProgressSummary>,
+    last_summary: ProgressSummary,
     last_update: Instant,
 }
 
@@ -143,105 +200,136 @@ where
             // Updated by report_*
             reporting_stats: ProgressStateReporting {
                 start_time: now,
-                last_error_count: 0,
-                last_node_count: 0,
-                last_reported: 0,
+                last_summary_by_type: HashMap::new(),
+                last_summary: ProgressSummary::default(),
                 last_update: now,
             },
         }
     }
 }
+
 impl ProgressStateCountByType<StepStats> {
+    fn report_stats(&self, node_type: &NodeType, summary: &ProgressSummary) {
+        STATS::walk_progress_walked_by_type.add_value(
+            summary.walked as i64,
+            (
+                self.params.subcommand_stats_key,
+                self.params.repo_stats_key.clone(),
+                node_type.to_string(),
+            ),
+        );
+        STATS::walk_progress_errors_by_type.add_value(
+            summary.errors as i64,
+            (
+                self.params.subcommand_stats_key,
+                self.params.repo_stats_key.clone(),
+                node_type.to_string(),
+            ),
+        );
+    }
+
     fn report_progress_log(self: &mut Self, delta_time: Option<Duration>) {
-        let (new_node_count, new_error_count) = &self
+        let summary_by_type: HashMap<NodeType, ProgressSummary> = self
             .work_stats
             .stats_by_type
+            .iter()
+            .map(|(k, (ps, ss))| {
+                let s = ProgressSummary {
+                    walked: *ps,
+                    checked: ss.visited_of_type as u64,
+                    // num_expanded_new is per type children which when summed == a top level queued stat
+                    queued: ss.num_expanded_new as u64,
+                    errors: ss.error_count as u64,
+                };
+                let delta = s - self
+                    .reporting_stats
+                    .last_summary_by_type
+                    .get(k)
+                    .cloned()
+                    .unwrap_or_default();
+                self.report_stats(k, &delta);
+                (*k, s)
+            })
+            .collect();
+
+        let new_summary = summary_by_type
             .values()
-            .map(|(_, ss)| (ss.num_expanded_new as u64, ss.error_count as u64))
-            .fold((0, 0), |acc, v| (acc.0 + v.0, acc.1 + v.1));
-        let delta_progress: u64 =
-            self.work_stats.total_progress - self.reporting_stats.last_reported;
-        let delta_error_count: u64 = new_error_count - self.reporting_stats.last_error_count;
-        let delta_node_count: u64 = new_node_count - self.reporting_stats.last_node_count;
+            .fold(ProgressSummary::default(), |acc, v| acc + *v);
+        let delta_summary = new_summary - self.reporting_stats.last_summary;
+
         let detail = &self
             .params
             .types_sorted_by_name
             .iter()
             .map(|t| {
-                let (seen, new_children, visited_of_type) = self
-                    .work_stats
-                    .stats_by_type
-                    .get(t)
-                    .map(|(ps, ss)| (*ps, ss.num_expanded_new, ss.visited_of_type))
-                    .unwrap_or((0, 0, 0));
-                format!("{}:{},{},{}", t, seen, visited_of_type, new_children)
+                let s = summary_by_type.get(t).cloned().unwrap_or_default();
+                format!("{}:{},{},{}", t, s.walked, s.checked, s.queued)
             })
             .collect::<Vec<_>>()
             .join(" ");
-        let mut walked_per_s = 0;
-        let mut queued_per_s = 0;
-        let mut delta_s = 0;
-        delta_time.map(|delta_time| {
-            delta_s = delta_time.as_secs();
-            walked_per_s = delta_progress * 1000 / (delta_time.as_millis() as u64);
-            queued_per_s = delta_node_count * 1000 / (delta_time.as_millis() as u64);
-        });
+
+        let (delta_s, delta_summary_per_s) = delta_time
+            .map(|delta_time| {
+                (
+                    delta_time.as_secs(),
+                    delta_summary * 1000 / (delta_time.as_millis() as u64),
+                )
+            })
+            .unwrap_or((0, ProgressSummary::default()));
 
         let total_time = self
             .reporting_stats
             .last_update
             .duration_since(self.reporting_stats.start_time);
-        let (avg_walked_per_s, avg_queued_per_s) = if total_time.as_millis() > 0 {
-            (
-                self.work_stats.total_progress * 1000 / (total_time.as_millis() as u64),
-                new_node_count * 1000 / (total_time.as_millis() as u64),
-            )
+
+        let total_summary_per_s = if total_time.as_millis() > 0 {
+            new_summary * 1000 / (total_time.as_millis() as u64)
         } else {
-            (0, 0)
+            ProgressSummary::default()
         };
 
         info!(
             self.params.logger,
             "Walked/s,Children/s,Walked,Errors,Children,Time; Delta {:06}/s,{:06}/s,{},{},{},{}s; Run {:06}/s,{:06}/s,{},{},{},{}s; Type:Walked,Checks,Children {}",
-            walked_per_s,
-            queued_per_s,
-            delta_progress,
-            delta_error_count,
-            delta_node_count,
+            delta_summary_per_s.walked,
+            delta_summary_per_s.queued,
+            delta_summary.walked,
+            delta_summary.errors,
+            delta_summary.queued,
             delta_s,
-            avg_walked_per_s,
-            avg_queued_per_s,
+            total_summary_per_s.walked,
+            total_summary_per_s.queued,
             self.work_stats.total_progress,
-            new_error_count,
-            new_node_count,
+            new_summary.errors,
+            new_summary.queued,
             total_time.as_secs(),
             detail,
         );
-        self.reporting_stats.last_reported = self.work_stats.total_progress;
-        self.reporting_stats.last_error_count = *new_error_count;
-        self.reporting_stats.last_node_count = *new_node_count;
 
         STATS::walk_progress_walked.add_value(
-            delta_progress as i64,
+            delta_summary.walked as i64,
             (
                 self.params.subcommand_stats_key,
                 self.params.repo_stats_key.clone(),
             ),
         );
         STATS::walk_progress_queued.add_value(
-            delta_node_count as i64,
+            delta_summary.queued as i64,
             (
                 self.params.subcommand_stats_key,
                 self.params.repo_stats_key.clone(),
             ),
         );
         STATS::walk_progress_errors.add_value(
-            delta_error_count as i64,
+            delta_summary.errors as i64,
             (
                 self.params.subcommand_stats_key,
                 self.params.repo_stats_key.clone(),
             ),
         );
+
+        self.reporting_stats.last_summary_by_type = summary_by_type;
+        self.reporting_stats.last_summary = new_summary;
     }
 }
 
