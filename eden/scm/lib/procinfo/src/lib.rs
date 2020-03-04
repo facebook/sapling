@@ -89,7 +89,7 @@ mod windows {
             self.find_by_pid(process_id)
                 .map(|pe32| pe32.szExeFile)
                 .map(|cs| {
-                    cs.into_iter()
+                    cs.iter()
                         .take_while(|&&i| i != 0)
                         .map(|&i| i as u16)
                         .collect::<Vec<u16>>()
