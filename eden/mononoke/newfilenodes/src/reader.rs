@@ -25,7 +25,7 @@ use std::time::Duration;
 use thiserror::Error as DeriveError;
 use tokio_preview::time::timeout;
 
-use filenodes::FilenodeInfo;
+use filenodes::{FilenodeInfo, PreparedFilenode};
 
 use crate::connections::{AcquireReason, Connections};
 use crate::local_cache::{CacheKey, LocalCache};
@@ -274,6 +274,19 @@ impl FilenodesReader {
         .await?;
 
         Ok(res.try_into()?)
+    }
+
+    pub fn prime_cache(
+        &self,
+        _ctx: &CoreContext,
+        repo_id: RepositoryId,
+        filenodes: &[PreparedFilenode],
+    ) {
+        for c in filenodes {
+            let pwh = PathWithHash::from_repo_path(&c.path);
+            let key = filenode_cache_key(repo_id, &pwh, &c.info.filenode);
+            self.local_cache.fill(&key, &(&c.info).into())
+        }
     }
 }
 

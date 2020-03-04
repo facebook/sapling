@@ -272,6 +272,15 @@ impl<F: Filenodes> Filenodes for DelayedFilenodes<F> {
         )
         .boxify()
     }
+
+    fn prime_cache(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        filenodes: &[PreparedFilenode],
+    ) {
+        self.inner.prime_cache(ctx, repo_id, filenodes)
+    }
 }
 
 struct DelayedChangesets<C> {

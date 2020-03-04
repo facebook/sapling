@@ -133,4 +133,13 @@ impl Filenodes for NewFilenodes {
         .compat()
         .boxify()
     }
+
+    fn prime_cache(
+        &self,
+        ctx: &CoreContext,
+        repo_id: RepositoryId,
+        filenodes: &[PreparedFilenode],
+    ) {
+        self.reader.prime_cache(ctx, repo_id, filenodes);
+    }
 }
