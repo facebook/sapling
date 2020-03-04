@@ -176,7 +176,9 @@ async fn dispatch(
             scuba.log_with_msg("Replay Succeeded", None);
         }
         Err(e) => {
-            scuba.log_with_msg("Replay Failed", format!("{:#?}", e));
+            scuba
+                .unsampled()
+                .log_with_msg("Replay Failed", format!("{:#?}", e));
         }
     }
 
