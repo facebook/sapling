@@ -23,7 +23,6 @@ use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, info, warn};
-use tracing::{trace_args, Traced};
 
 mod errors {
     use bookmarks::BookmarkName;
@@ -109,11 +108,6 @@ fn blobstore_and_filenodes_warmup(
                 debug!(ctx.logger(), "finished manifests warmup");
             }
         })
-        .traced(
-            &ctx.trace(),
-            "cache_warmup::blobstore_and_filenodes",
-            trace_args! {},
-        )
 }
 
 // Iterate over first parents, and fetch them
@@ -143,7 +137,6 @@ fn changesets_warmup(
                     })
             }
         })
-        .traced(&ctx.trace(), "cache_warmup::changesets", trace_args! {})
 }
 
 fn do_cache_warmup(
@@ -202,13 +195,6 @@ fn do_cache_warmup(
                 ctx.perf_counters().insert_perf_counters(&mut scuba);
                 scuba.log_with_msg("Cache warmup complete", None);
                 Ok(())
-            }
-        })
-        .traced(&ctx.trace(), "cache_warmup", trace_args! {})
-        .map({
-            let ctx = ctx.clone();
-            move |_| {
-                tokio::spawn(future::lazy(move || ctx.trace_upload().then(|_| Ok(()))));
             }
         })
 }
