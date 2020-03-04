@@ -3,8 +3,9 @@
 A script to generate nasty diff worst-case scenarios:
 
   $ cat > s.py <<EOF
-  > import random
-  > for x in xrange(100000):
+  > import random, sys
+  > random.seed(int(sys.argv[-1]))
+  > for x in range(100000):
   >     print
   >     if random.randint(0, 100) >= 50:
   >         x += 1
@@ -16,12 +17,12 @@ A script to generate nasty diff worst-case scenarios:
 
 Check in a big file:
 
-  $ $PYTHON ../s.py > a
+  $ hg debugpython -- ../s.py 1 > a
   $ hg ci -qAm0
 
 Modify it:
 
-  $ $PYTHON ../s.py > a
+  $ hg debugpython -- ../s.py 2 > a
 
 Time a check-in, should never take more than 10 seconds user time:
 

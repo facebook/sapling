@@ -391,7 +391,7 @@ class transaction(util.transactional):
             raise KeyError(file)
         index = self.map[file]
         self.entries[index] = (file, offset, data)
-        self.file.write("%s\0%d\n" % (file, offset))
+        self.file.write(b"%s\0%d\n" % (encodeutf8(file), offset))
         self.file.flush()
 
     @active
