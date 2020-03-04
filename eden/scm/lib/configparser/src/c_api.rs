@@ -6,11 +6,10 @@
  */
 
 //! This module exports some symbols to allow calling the config parser from C/C++
-use std::ffi::{CStr, OsStr};
-use std::os::raw::c_char;
-use std::path::Path;
+use std::ffi::CStr;
 use std::ptr;
 use std::slice;
+use std::{os::raw::c_char, path::Path};
 
 use bytes::Bytes;
 
@@ -62,17 +61,17 @@ fn load_path(cfg: &mut ConfigSet, path: &Path) -> *mut Bytes {
 /// If successful, returns a nullptr.
 /// Returns a Bytes object containing the error reason on failure; the
 /// error object is UTF-8 encoded text, and errors can span multiple lines.
-#[cfg(unix)]
 #[no_mangle]
 pub extern "C" fn hgrc_configset_load_path(cfg: *mut ConfigSet, path: *const c_char) -> *mut Bytes {
     debug_assert!(!path.is_null());
     debug_assert!(!cfg.is_null());
 
-    use std::os::unix::ffi::OsStrExt;
-
     let path_cstr = unsafe { CStr::from_ptr(path) };
-    let path_bytes = path_cstr.to_bytes();
-    let path = Path::new(OsStr::from_bytes(&path_bytes));
+    let path_str = match path_cstr.to_str() {
+        Ok(path) => path,
+        Err(e) => return errors_to_bytes(vec![Error::Utf8Path(path_cstr.to_owned(), e)]),
+    };
+    let path = Path::new(path_str);
 
     let cfg = unsafe { &mut *cfg };
 

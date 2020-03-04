@@ -242,7 +242,6 @@ impl ConfigSetHgExt for ConfigSet {
             #[cfg(windows)]
             {
                 if let Ok(program_data_path) = env::var("PROGRAMDATA") {
-                    use std::path::Path;
                     let hgrc_dir = Path::new(&program_data_path).join("Facebook\\Mercurial");
                     errors.append(&mut self.load_path(hgrc_dir.join("system.rc"), &opts));
                     // TODO(quark): Remove this after packages using system.rc are rolled out

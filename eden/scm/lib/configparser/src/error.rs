@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use std::ffi::CString;
 use std::io;
 use std::path::PathBuf;
 use std::str;
@@ -29,4 +30,7 @@ pub enum Error {
     /// Config file contains invalid UTF-8.
     #[error("{0:?}: {1}")]
     Utf8(PathBuf, #[source] str::Utf8Error),
+
+    #[error("{0:?}: {1}")]
+    Utf8Path(CString, #[source] str::Utf8Error),
 }
