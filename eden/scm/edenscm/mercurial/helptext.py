@@ -1832,6 +1832,14 @@ Setting used to control when to paginate and with what external tool. See
     progress bars to stderr while the pager is running.  Depending on the
     pager, this may overlay the pager display.
 
+``encoding``
+    Encoding to use to output to ther pager.
+
+    If set, overrides the output encoding when sending output to the pager.
+
+      [pager]
+      encoding = utf-8
+
 ``patch``
 ---------
 

@@ -810,6 +810,11 @@ class ui(object):
             self.setconfig("ui", "formatted", wasformatted, "pager")
             self.setconfig("ui", "interactive", False, "pager")
 
+            # If pager encoding is set, update the output encoding
+            pagerencoding = self.config("pager", "encoding")
+            if pagerencoding:
+                encoding.outputencoding = pagerencoding
+
             # If pagermode differs from color.mode, reconfigure color now that
             # pageractive is set.
             cm = self._colormode
