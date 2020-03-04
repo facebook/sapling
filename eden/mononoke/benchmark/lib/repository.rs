@@ -21,6 +21,7 @@ use cacheblob::{dummy::DummyLease, new_cachelib_blobstore};
 use changesets::{CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
+use delayblob::DelayedBlobstore;
 use fbinit::FacebookInit;
 use filenodes::{FilenodeInfo, Filenodes, PreparedFilenode};
 use filestore::FilestoreConfig;
@@ -29,8 +30,7 @@ use futures_old::{future, Future};
 use memblob::EagerMemblob;
 use mercurial_types::{HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgFileNodeId};
 use mononoke_types::{
-    BlobstoreBytes, ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepoPath,
-    RepositoryId,
+    ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepoPath, RepositoryId,
 };
 use newfilenodes::NewFilenodesBuilder;
 use phases::{SqlPhasesFactory, SqlPhasesStore};
@@ -170,41 +170,6 @@ where
         .from_err()
         .and_then(move |_| target)
     })
-}
-
-#[derive(Debug)]
-struct DelayedBlobstore<B> {
-    inner: B,
-    get_dist: Normal,
-    put_dist: Normal,
-}
-
-impl<B> DelayedBlobstore<B> {
-    fn new(inner: B, get_dist: Normal, put_dist: Normal) -> Self {
-        Self {
-            inner,
-            get_dist,
-            put_dist,
-        }
-    }
-}
-
-impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        delay(self.get_dist, self.inner.get(ctx, key)).boxify()
-    }
-
-    fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        delay(self.put_dist, self.inner.put(ctx, key, value)).boxify()
-    }
-
-    fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
-        delay(self.get_dist, self.inner.is_present(ctx, key)).boxify()
-    }
-
-    fn assert_present(&self, ctx: CoreContext, key: String) -> BoxFuture<(), Error> {
-        delay(self.get_dist, self.inner.assert_present(ctx, key)).boxify()
-    }
 }
 
 struct DelayedFilenodes<F> {
