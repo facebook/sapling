@@ -29,6 +29,9 @@ mod walk;
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
+    // FIXME: Investigate why some SQL queries kicked off by the walker take 30s or more.
+    newfilenodes::disable_sql_timeouts();
+
     let app_name = "walker";
     let matches = setup::setup_toplevel_app(app_name).get_matches();
     let logger = args::init_logging(fb, &matches);

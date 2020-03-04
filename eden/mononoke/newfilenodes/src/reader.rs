@@ -32,6 +32,7 @@ use crate::local_cache::{CacheKey, LocalCache};
 use crate::remote_cache::RemoteCache;
 use crate::shards::Shards;
 use crate::structs::{CachedFilenode, CachedHistory, PathBytes, PathHashBytes, PathWithHash};
+use crate::tunables;
 
 define_stats! {
     prefix = "mononoke.filenodes";
@@ -555,6 +556,10 @@ async fn enforce_sql_timeout<T, Fut>(fut: Fut) -> Result<T, ErrorKind>
 where
     Fut: Future<Output = Result<T, Error>>,
 {
+    if !tunables::should_enforce_sql_timeouts() {
+        return fut.await.map_err(ErrorKind::SqlError);
+    }
+
     match timeout(Duration::from_millis(SQL_TIMEOUT_MILLIS), fut).await {
         Ok(Ok(r)) => Ok(r),
         Ok(Err(e)) => Err(ErrorKind::SqlError(e)),
