@@ -12,8 +12,7 @@ use crate::lock::ScopedDirLock;
 use crate::log::{self, GenericPath, LogMetadata};
 use crate::utils;
 use std::collections::BTreeMap;
-use std::fs;
-use std::io::{self, Read};
+use std::io;
 use std::mem;
 use std::ops;
 use std::path::{Path, PathBuf};
@@ -296,9 +295,7 @@ impl MultiMeta {
 
     /// Update self with metadata from a file.
     pub fn read_file<P: AsRef<Path>>(&mut self, path: P) -> io::Result<()> {
-        let mut file = fs::OpenOptions::new().read(true).open(path)?;
-        let mut buf = Vec::new();
-        file.read_to_end(&mut buf)?;
+        let buf = utils::atomic_read(path.as_ref())?;
         self.read(&buf[..])
     }
 

@@ -1159,7 +1159,7 @@ Rebuilt index "c""#
     verify_len(200000);
 
     // Corrupt meta
-    corrupt(META_FILE, 2);
+    crate::utils::atomic_write(&path.join(META_FILE), b"xxx", false).unwrap();
     corrupt(PRIMARY_FILE, 1000);
     verify_corrupted();
     assert_eq!(
@@ -1171,7 +1171,7 @@ Rebuilt index "c""#
     );
     verify_len(141);
 
-    truncate(META_FILE);
+    crate::utils::atomic_write(&path.join(META_FILE), b"yyy", false).unwrap();
     verify_corrupted();
     assert_eq!(
         repair(),

@@ -20,7 +20,8 @@ pub enum GenericPath {
     /// The [`Log`] is backed by a directory on filesystem.
     Filesystem(PathBuf),
 
-    /// Metadata is shared. Other parts still use `path`.
+    /// Metadata is shared (between `Log` and `MultiLog`).
+    /// Other parts still use `path`.
     SharedMeta {
         path: Box<GenericPath>,
         meta: Arc<Mutex<LogMetadata>>,

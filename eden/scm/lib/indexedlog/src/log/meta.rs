@@ -6,9 +6,8 @@
  */
 
 use crate::errors::IoResultExt;
-use crate::utils::{self, atomic_write, xxhash};
+use crate::utils::{self, atomic_read, atomic_write, xxhash};
 use std::collections::BTreeMap;
-use std::fs;
 use std::io::{self, Cursor, Read, Write};
 use std::path::Path;
 use vlqencoding::{VLQDecode, VLQEncode};
@@ -35,7 +34,7 @@ impl LogMetadata {
     const POISONED_HEADER: &'static [u8] = b"pois\0";
 
     /// Read metadata from a reader.
-    pub fn read<R: Read>(reader: &mut R) -> io::Result<Self> {
+    pub fn read<R: Read>(mut reader: R) -> io::Result<Self> {
         let mut header = vec![0; Self::HEADER.len()];
         reader.read_exact(&mut header)?;
         if header == Self::POISONED_HEADER {
@@ -118,11 +117,8 @@ impl LogMetadata {
 
     /// Read metadata from a file.
     pub fn read_file<P: AsRef<Path>>(path: P) -> io::Result<Self> {
-        let mut file = fs::OpenOptions::new().read(true).open(path)?;
-        let mut buf = Vec::new();
-        file.read_to_end(&mut buf)?;
-        let mut cur = Cursor::new(buf);
-        Self::read(&mut cur)
+        let buf = atomic_read(path.as_ref())?;
+        Self::read(&buf[..])
     }
 
     /// Atomically write metadata to a file.

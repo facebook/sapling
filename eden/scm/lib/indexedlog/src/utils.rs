@@ -8,7 +8,7 @@
 use std::{
     fs::{self, File},
     hash::Hasher,
-    io::{self, Write},
+    io::{self, Read, Write},
     path::Path,
     sync::atomic::AtomicI64,
 };
@@ -164,6 +164,18 @@ pub fn atomic_write(
             path, content_desc
         )
     })
+}
+
+/// Read the entire file written by `atomic_write`.
+///
+/// The read itself is only atomic if the file was written by `atomic_write`.
+/// This function handles format differences (symlink vs normal files)
+/// transparently.
+pub fn atomic_read(path: &Path) -> io::Result<Vec<u8>> {
+    let mut file = fs::OpenOptions::new().read(true).open(path)?;
+    let mut buf = Vec::new();
+    file.read_to_end(&mut buf)?;
+    Ok(buf)
 }
 
 /// `uid` and `gid` to `chown` for `mkdir_p`.

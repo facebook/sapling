@@ -274,7 +274,8 @@ impl OpenOptions {
                     | io::ErrorKind::UnexpectedEof => {
                         let latest = guess_latest(ids);
                         let content = format!("{}", latest);
-                        fs::write(&latest_path, content).context(&latest_path, "cannot write")?;
+                        let fsync = false;
+                        utils::atomic_write(&latest_path, content, fsync)?;
                         message += &format!("Reset latest to {}\n", latest);
                     }
                     _ => return Err(err).context(&latest_path, "cannot read or parse"),
@@ -710,7 +711,13 @@ fn read_latest(dir: &Path) -> crate::Result<u8> {
 // Unlike read_latest, this function returns io::Result.
 fn read_latest_raw(dir: &Path) -> io::Result<u8> {
     let latest_path = dir.join(LATEST_FILE);
-    let content: String = fs::read_to_string(&latest_path)?;
+    let data = utils::atomic_read(&latest_path)?;
+    let content: String = String::from_utf8(data).map_err(|_e| {
+        io::Error::new(
+            io::ErrorKind::InvalidData,
+            format!("{:?}: failed to read as utf8 string", latest_path),
+        )
+    })?;
     let id: u8 = content.parse().map_err(|_e| {
         io::Error::new(
             io::ErrorKind::InvalidData,
@@ -1015,7 +1022,7 @@ mod tests {
         let rotate2 = open_opts.open(&dir).unwrap();
 
         // Break logs by truncating "meta".
-        fs::write(dir.path().join("0").join(log::META_FILE), "").unwrap();
+        utils::atomic_write(dir.path().join("0").join(log::META_FILE), "", false).unwrap();
 
         // rotate1 can still use its existing indexes even if "a1"
         // might have been deleted (on Unix).
@@ -1323,7 +1330,7 @@ mod tests {
 
         // Corrupt "latest".
         let latest_path = dir.path().join(LATEST_FILE);
-        fs::write(&latest_path, "NaN").unwrap();
+        utils::atomic_write(&latest_path, "NaN", false).unwrap();
         assert!(opts.open(&dir).is_err());
         assert_eq!(
             opts.repair(&dir).unwrap(),
