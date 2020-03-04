@@ -42,13 +42,21 @@ When everything looks okay:
 Break the repo in various ways:
 
   $ mv $TESTTMP/hgcache/master/indexedlogdatastore/latest{,.bak}
-  $ ln -s foo $TESTTMP/hgcache/master/indexedlogdatastore/latest || echo foo > $TESTTMP/hgcache/master/indexedlogdatastore/latest
+#if symlink
+  $ ln -s foo $TESTTMP/hgcache/master/indexedlogdatastore/latest
+#else
+  $ echo foo > $TESTTMP/hgcache/master/indexedlogdatastore/latest
+#endif
   $ echo y > $TESTTMP/hgcache/master/indexedlogdatastore/0/index2-node
   $ mkdir -p .hg/store/mutation/
   $ echo v > .hg/store/mutation/log
   $ echo xx > .hg/store/metalog/blobs/index2-id
   $ rm .hg/store/metalog/roots/meta
-  $ ln -s foo .hg/store/metalog/roots/meta || echo foo > rm .hg/store/metalog/roots/meta
+#if symlink
+  $ ln -s foo .hg/store/metalog/roots/meta
+#else
+  $ echo foo > .hg/store/metalog/roots/meta
+#endif
   $ rm .hg/store/allheads/meta
 
 Check the repo is broken (exit code is non-zero):
