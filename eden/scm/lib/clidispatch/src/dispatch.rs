@@ -16,6 +16,7 @@ use cliparser::parser::{ParseError, ParseOptions, ParseOutput, StructFlags};
 use configparser::config::ConfigSet;
 use configparser::hg::ConfigSetHgExt;
 use std::convert::TryInto;
+use std::sync::atomic::Ordering::SeqCst;
 use std::{env, path::Path};
 
 type Result<T, E = Error> = std::result::Result<T, E>;
@@ -120,9 +121,7 @@ fn initialize_blackbox(optional_repo: &OptionalRepo) -> Result<()> {
 }
 
 fn initialize_indexedlog(config: &ConfigSet) -> Result<()> {
-    #[cfg(unix)]
-    {
-        use std::sync::atomic::Ordering::SeqCst;
+    if cfg!(unix) {
         let chown_group = config.get_or("permissions", "chown-group", || String::new())?;
         if !chown_group.is_empty() {
             // Try to find the group from /etc/group
