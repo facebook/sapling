@@ -14,12 +14,9 @@ use std::collections::HashMap;
 use std::env;
 use std::fmt;
 use std::path::{Path, PathBuf};
-use std::{fs, io};
-
-#[cfg(unix)]
 use std::process::Command;
-#[cfg(unix)]
 use std::str;
+use std::{fs, io};
 
 static JOINED_DIR: &str = ".commitcloud";
 static JOINED: &str = "joined";
@@ -168,8 +165,7 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<Token> {
         None
     };
     // try to read token from keychain
-    #[cfg(target_os = "macos")]
-    {
+    if cfg!(target_os = "macos") {
         if token.is_none() {
             // security find-generic-password -g -s commitcloud -a commitcloud -w
             info!("Token Lookup: reading commitcloud OAuth token from keychain...");
@@ -212,8 +208,8 @@ pub fn read_access_token(user_token_path: &Option<PathBuf>) -> Result<Token> {
             }
         }
     }
-    #[cfg(unix)]
-    {
+
+    if cfg!(unix) {
         // try to issue a cat token
         if token.is_none() {
             info!("Token Lookup: generating commitcloud CAT token via clicat...");
