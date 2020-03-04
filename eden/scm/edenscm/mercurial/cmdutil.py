@@ -3184,18 +3184,29 @@ def rustdisplaygraph(
 ):
     props = props or {}
     formatnode = _graphnodeformatter(ui, displayer)
+    renderername = ui.config("experimental", "graph.renderer")
+    if renderername == "lines":
+        # Find which renderer can render to the current output encoding.  If
+        # none are supported we will fall back to the ASCII renderer.
+        for chars, candidate in [
+            (renderdag.linescurvedchars, "lines-curved"),
+            (renderdag.linessquarechars, "lines-square"),
+        ]:
+            try:
+                chars.encode(encoding.outputencoding or encoding.encoding, "strict")
+                renderername = candidate
+                break
+            except Exception:
+                continue
     renderers = {
-        "ascii": (renderdag.ascii, 2),
-        "ascii-large": (renderdag.asciilarge, 2),
-        "lines": (renderdag.lines, 2),
-        "lines-square": (renderdag.linessquare, 2),
-        "lines-dec": (renderdag.linesdec, 2),
+        "ascii": renderdag.ascii,
+        "ascii-large": renderdag.asciilarge,
+        "lines-curved": renderdag.linescurved,
+        "lines-square": renderdag.linessquare,
+        "lines-dec": renderdag.linesdec,
     }
-    renderer, minheight = renderers.get(
-        ui.config("experimental", "graph.renderer"), (renderdag.ascii, 2)
-    )
-    if ui.configbool("experimental", "graphshorten"):
-        minheight = 1
+    renderer = renderers.get(renderername, renderdag.ascii)
+    minheight = 1 if ui.configbool("experimental", "graphshorten") else 2
     minheight = ui.configint("experimental", "graph.min-row-height", minheight)
     renderer = renderer(minheight)
 
