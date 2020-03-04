@@ -220,9 +220,14 @@ pub fn cache_warmup(
     repo: BlobRepo,
     cache_warmup: Option<CacheWarmupParams>,
 ) -> impl Future<Item = (), Error = Error> {
+    let repoid = repo.get_repoid();
     match cache_warmup {
         Some(cache_warmup) => {
             do_cache_warmup(ctx, repo, cache_warmup.bookmark, cache_warmup.commit_limit)
+                .map_err(move |err| {
+                    err.context(format!("while warming up repo {}", repoid))
+                        .into()
+                })
                 .left_future()
         }
         None => Ok(()).into_future().right_future(),
