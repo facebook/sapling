@@ -366,7 +366,10 @@ def trim(s, width, ellipsis="", leftside=False):
     for i in range(1, len(u)):
         usub = uslice(i)
         if ucolwidth(usub) <= width:
-            return concat(usub.encode(encoding))
+            if sys.version_info[0] == 3:
+                return concat(usub)
+            else:
+                return concat(usub.encode(encoding))
     return ellipsis  # no enough room for multi-column characters
 
 
