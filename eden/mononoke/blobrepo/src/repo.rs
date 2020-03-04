@@ -2112,3 +2112,16 @@ impl DangerousOverride<DerivedDataConfig> for BlobRepo {
         }
     }
 }
+
+impl DangerousOverride<FilestoreConfig> for BlobRepo {
+    fn dangerous_override<F>(&self, modify: F) -> Self
+    where
+        F: FnOnce(FilestoreConfig) -> FilestoreConfig,
+    {
+        let filestore_config = modify(self.filestore_config.clone());
+        BlobRepo {
+            filestore_config,
+            ..self.clone()
+        }
+    }
+}

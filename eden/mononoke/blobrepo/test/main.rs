@@ -17,6 +17,7 @@ use benchmark_lib::{new_benchmark_repo, DelaySettings, GenManifest};
 use blobrepo::{compute_changed_files, errors::ErrorKind, BlobRepo, UploadEntries};
 use blobstore::{Loadable, Storable};
 use bytes::Bytes;
+use bytes::BytesMut;
 use cloned::cloned;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -102,8 +103,15 @@ async fn upload_blob_no_parents(fb: FacebookInit, repo: BlobRepo) {
         manifest::Content::File(stream) => stream,
         _ => panic!(),
     };
-    let bytes = stream.concat2().compat().await.unwrap();
-    assert_eq!(bytes.into_bytes().as_ref(), &b"blob"[..]);
+    let bytes = stream
+        .fold(BytesMut::new(), |mut buff, file_bytes| {
+            buff.extend_from_slice(file_bytes.as_bytes().as_ref());
+            Result::<_, Error>::Ok(buff)
+        })
+        .compat()
+        .await
+        .unwrap();
+    assert_eq!(bytes.as_ref(), &b"blob"[..]);
 
     // And the blob now exists
     let bytes = get_content(ctx, &repo, expected_hash).await.unwrap();
@@ -154,8 +162,15 @@ async fn upload_blob_one_parent(fb: FacebookInit, repo: BlobRepo) {
         manifest::Content::File(stream) => stream,
         _ => panic!(),
     };
-    let bytes = stream.concat2().compat().await.unwrap();
-    assert_eq!(bytes.into_bytes().as_ref(), &b"blob"[..]);
+    let bytes = stream
+        .fold(BytesMut::new(), |mut buff, file_bytes| {
+            buff.extend_from_slice(file_bytes.as_bytes().as_ref());
+            Result::<_, Error>::Ok(buff)
+        })
+        .compat()
+        .await
+        .unwrap();
+    assert_eq!(bytes.as_ref(), &b"blob"[..]);
 
     // And the blob now exists
     let bytes = get_content(ctx.clone(), &repo, expected_hash)
@@ -805,8 +820,15 @@ fn test_get_manifest_from_bonsai(fb: FacebookInit) {
                 manifest::Content::File(stream) => stream,
                 _ => panic!("content type mismatch"),
             };
-            let bytes = (stream.concat2()).compat().await.unwrap();
-            assert_eq!(bytes.into_bytes().as_ref(), content_expected.as_ref());
+            let bytes = stream
+                .fold(BytesMut::new(), |mut buff, file_bytes| {
+                    buff.extend_from_slice(file_bytes.as_bytes().as_ref());
+                    Result::<_, Error>::Ok(buff)
+                })
+                .compat()
+                .await
+                .unwrap();
+            assert_eq!(bytes.as_ref(), content_expected.as_ref());
 
             let new_parents = (new.get_parents(ctx.clone())).compat().await.unwrap();
             assert_eq!(new_parents, HgParents::None);

@@ -8,6 +8,7 @@
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use bytes::BytesMut;
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::{args, helpers};
@@ -45,10 +46,12 @@ pub async fn subcommand_content_fetch<'a>(
                 future::ok(()).boxify()
             }
             Content::File(stream) | Content::Symlink(stream) => stream
-                .concat2()
+                .fold(BytesMut::new(), |mut buff, file_bytes| {
+                    buff.extend_from_slice(file_bytes.as_bytes().as_ref());
+                    Result::<_, Error>::Ok(buff)
+                })
                 .map(|bytes| {
-                    let content = String::from_utf8(bytes.into_bytes().to_vec())
-                        .expect("non-utf8 file content");
+                    let content = String::from_utf8(bytes.to_vec()).expect("non-utf8 file content");
                     println!("{}", content);
                 })
                 .boxify(),

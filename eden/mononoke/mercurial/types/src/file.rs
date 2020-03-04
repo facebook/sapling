@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use bytes::{Bytes, BytesMut};
+use bytes::Bytes;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 
 /// Contents of a Mercurial file, stripped of any inline metadata.
@@ -38,15 +38,6 @@ impl IntoIterator for FileBytes {
 
     fn into_iter(self) -> Self::IntoIter {
         self.0.into_iter()
-    }
-}
-
-// TODO: We should get rid of this. This is highly inefficient (and always has been).
-impl Extend<u8> for FileBytes {
-    fn extend<T: IntoIterator<Item = u8>>(&mut self, iter: T) {
-        let mut buf = BytesMut::with_capacity(self.0.len());
-        buf.extend(iter);
-        self.0 = buf.freeze();
     }
 }
 

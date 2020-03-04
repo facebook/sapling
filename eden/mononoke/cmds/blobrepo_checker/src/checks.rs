@@ -159,9 +159,8 @@ fn check_one_file(
 ) -> impl Future<Item = (), Error = Error> {
     // Fetch file.
     // TODO (T47717165): stream!
-    let bytes = filestore::fetch_stream(repo.blobstore(), ctx.clone(), file_info.id)
+    let bytes = filestore::fetch_concat(repo.blobstore(), ctx.clone(), file_info.id)
         .map(FileBytes)
-        .concat2()
         .boxify(); // type is too large
 
     let file_checks = bytes.and_then({

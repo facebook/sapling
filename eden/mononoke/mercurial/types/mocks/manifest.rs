@@ -292,6 +292,7 @@ impl HgEntry for MockEntry {
 #[cfg(test)]
 mod test {
     use super::*;
+    use bytes::BytesMut;
     use fbinit::FacebookInit;
     use futures::compat::Future01CompatExt;
     use futures_old::Stream;
@@ -341,11 +342,14 @@ mod test {
                 other => panic!("expected File content, found {:?}", other),
             };
             let bar1_bytes = bar1_stream
-                .concat2()
+                .fold(BytesMut::new(), |mut buff, file_bytes| {
+                    buff.extend_from_slice(file_bytes.as_bytes().as_ref());
+                    Result::<_, Error>::Ok(buff)
+                })
                 .compat()
                 .await
                 .expect("content stream should work");
-            assert_eq!(bar1_bytes.into_bytes().as_ref(), &b"bar1"[..]);
+            assert_eq!(bar1_bytes.as_ref(), &b"bar1"[..]);
 
             let bar2_entry = foo_manifest
                 .lookup(&MPathElement::new(b"bar2".to_vec()).unwrap())
@@ -360,11 +364,14 @@ mod test {
                 other => panic!("expected Symlink content, found {:?}", other),
             };
             let bar2_bytes = bar2_stream
-                .concat2()
+                .fold(BytesMut::new(), |mut buff, file_bytes| {
+                    buff.extend_from_slice(file_bytes.as_bytes().as_ref());
+                    Result::<_, Error>::Ok(buff)
+                })
                 .compat()
                 .await
                 .expect("content stream should work");
-            assert_eq!(bar2_bytes.into_bytes().as_ref(), &b"bar2"[..]);
+            assert_eq!(bar2_bytes.as_ref(), &b"bar2"[..]);
         })
     }
 }

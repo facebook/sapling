@@ -8,7 +8,7 @@
 #![deny(warnings)]
 use anyhow::Error;
 use bytes::Bytes;
-use futures::{Async, Future, Poll};
+use futures_old::{Async, Future, Poll};
 use mercurial_types::FileBytes;
 
 use redactedblobstore::ErrorKind;

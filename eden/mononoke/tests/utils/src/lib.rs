@@ -13,6 +13,8 @@ use blobstore::Storable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use bytes::Bytes;
 use context::CoreContext;
+use filestore::{self, StoreRequest};
+use futures::stream;
 use futures_util::{compat::Future01CompatExt, future};
 use maplit::btreemap;
 use mercurial_types::HgChangesetId;
@@ -20,7 +22,7 @@ use mononoke_types::{
     BlobstoreValue, BonsaiChangesetMut, ChangesetId, DateTime, FileChange, FileContents, FileType,
     MPath,
 };
-use std::{collections::BTreeMap, str::FromStr};
+use std::{collections::BTreeMap, convert::TryInto, str::FromStr};
 
 /// Helper to create bonsai changesets in a BlobRepo
 pub struct CreateCommitContext<'a> {
@@ -205,13 +207,15 @@ impl CreateFileContext {
     ) -> Result<Option<FileChange>, Error> {
         let file_change = match self {
             Self::FromHelper(content, file_type, copy_info) => {
-                let size = content.len();
-                let content = FileContents::new_bytes(Bytes::copy_from_slice(content.as_bytes()));
-                let content_id = content
-                    .into_blob()
-                    .store(ctx.clone(), repo.blobstore())
-                    .compat()
-                    .await?;
+                let meta = filestore::store(
+                    repo.get_blobstore(),
+                    repo.filestore_config(),
+                    ctx.clone(),
+                    &StoreRequest::new(content.len().try_into().unwrap()),
+                    stream::once(Ok(Bytes::copy_from_slice(content.as_bytes()))),
+                )
+                .compat()
+                .await?;
 
                 let copy_info = match copy_info {
                     Some((path, cs_id)) => {
@@ -231,9 +235,9 @@ impl CreateFileContext {
                 };
 
                 Some(FileChange::new(
-                    content_id,
+                    meta.content_id,
                     file_type,
-                    size as u64,
+                    meta.total_size,
                     copy_info,
                 ))
             }

@@ -11,6 +11,7 @@ mod redaction;
 
 use std::{
     collections::HashSet,
+    fmt,
     io::{Cursor, Write},
 };
 
@@ -21,8 +22,8 @@ use bytes::{Bytes, BytesMut};
 use cloned::cloned;
 use context::CoreContext;
 use filestore::FetchKey;
-use futures::{Future, IntoFuture, Stream};
 use futures_ext::{select_all, BoxFuture, FutureExt};
+use futures_old::{Future, IntoFuture, Stream};
 use mercurial_types::{
     blobs::File, calculate_hg_node_id, FileBytes, HgFileEnvelopeMut, HgFileHistoryEntry,
     HgFileNodeId, HgParents, MPath, RevFlags,
@@ -62,6 +63,12 @@ struct RemotefilelogBlob {
     /// data is a future of the metadata bytes and file bytes. For LFS blobs, the metadata bytes
     /// will be empty and the file bytes will contain a serialized LFS pointer.
     data: BoxFuture<(Bytes, FileBytes), Error>,
+}
+
+impl fmt::Debug for RemotefilelogBlob {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(f, "RemotefilelogBlob {{ kind: {:?} }}", self.kind)
+    }
 }
 
 /// Remotefilelog blob consists of file content in `node` revision and all the history
@@ -305,9 +312,8 @@ fn prepare_blob(
 
             if inline_file {
                 let content_fut =
-                    filestore::fetch_stream(repo.blobstore(), ctx, envelope.content_id())
-                        .map(FileBytes)
-                        .concat2();
+                    filestore::fetch_concat(repo.blobstore(), ctx, envelope.content_id())
+                        .map(FileBytes);
 
                 let blob_fut = if validate_hash {
                     content_fut
@@ -374,4 +380,86 @@ fn prepare_blob(
             }
         }
     })
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use assert_matches::assert_matches;
+    use blobrepo::DangerousOverride;
+    use fbinit::FacebookInit;
+    use filestore::FilestoreConfig;
+    use futures::compat::Future01CompatExt;
+    use manifest::{Entry, Manifest};
+    use mononoke_types::MPathElement;
+    use tests_utils::CreateCommitContext;
+
+    async fn roundtrip_blob(
+        fb: FacebookInit,
+        repo: &BlobRepo,
+        content: &str,
+    ) -> Result<RemotefilelogBlobKind, Error> {
+        let filename = "f1";
+
+        let ctx = CoreContext::test_mock(fb);
+
+        let bcs = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file(filename, content)
+            .commit()
+            .await?;
+
+        let hg_manifest = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), bcs)
+            .compat()
+            .await?
+            .load(ctx.clone(), repo.blobstore())
+            .compat()
+            .await?
+            .manifestid()
+            .load(ctx.clone(), repo.blobstore())
+            .compat()
+            .await?;
+
+        let entry = hg_manifest
+            .lookup(&MPathElement::new(filename.as_bytes().to_vec())?)
+            .ok_or(Error::msg("file is missing"))?;
+
+        let filenode = match entry {
+            Entry::Leaf((_, filenode)) => filenode,
+            _ => {
+                return Err(Error::msg("file is not a leaf"));
+            }
+        };
+
+        let blob = prepare_blob(ctx.clone(), repo.clone(), filenode, None, true)
+            .compat()
+            .await?;
+
+        let RemotefilelogBlob { kind, data } = blob;
+        data.compat().await?; // Await the blob data to make sure hash validation passes.
+
+        Ok(kind)
+    }
+
+    #[fbinit::compat_test]
+    async fn test_prepare_blob(fb: FacebookInit) -> Result<(), Error> {
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let blob = roundtrip_blob(fb, &repo, "foo").await?;
+        assert_matches!(blob, RemotefilelogBlobKind::Inline(3));
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_prepare_blob_chunked(fb: FacebookInit) -> Result<(), Error> {
+        let repo = blobrepo_factory::new_memblob_empty(None)?.dangerous_override(
+            |mut config: FilestoreConfig| {
+                config.chunk_size = Some(1);
+                config
+            },
+        );
+
+        let blob = roundtrip_blob(fb, &repo, "foo").await?;
+        assert_matches!(blob, RemotefilelogBlobKind::Inline(3));
+        Ok(())
+    }
 }

@@ -208,9 +208,8 @@ impl AliasVerification {
         let repo = self.blobrepo.clone();
         let av = self.clone();
 
-        filestore::fetch_stream(repo.blobstore(), ctx.clone(), content_id)
+        filestore::fetch_concat(repo.blobstore(), ctx.clone(), content_id)
             .map(FileBytes)
-            .concat2()
             .map(|content| get_sha256(&content.into_bytes()))
             .and_then(move |alias| av.process_alias(ctx, alias, content_id))
     }
