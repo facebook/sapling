@@ -11,12 +11,12 @@ use std::str::FromStr;
 use abomonation_derive::Abomonation;
 use anyhow::{bail, Error, Result};
 use ascii::{AsciiStr, AsciiString};
-use crypto::{digest::Digest, sha1};
 use faster_hex::{hex_decode, hex_encode};
 use heapsize_derive::HeapSizeOf;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
+use sha1::Digest;
 
 use crate::errors::ErrorKind;
 use crate::thrift;
@@ -116,9 +116,7 @@ impl<'a> From<&'a [u8]> for Sha1 {
         let mut sha1 = sha1::Sha1::new();
         sha1.input(data);
 
-        let mut ret = NULL;
-        sha1.result(&mut ret.0[..]);
-        ret
+        Sha1(sha1.result().into())
     }
 }
 
@@ -295,10 +293,8 @@ impl Context {
         self.0.input(data.as_ref())
     }
 
-    pub fn finish(mut self) -> Sha1 {
-        let mut ret = NULL;
-        self.0.result(&mut ret.0[..]);
-        ret
+    pub fn finish(self) -> Sha1 {
+        Sha1(self.0.result().into())
     }
 }
 
