@@ -25,30 +25,23 @@ from .linux import LinuxCgroup, ProcessID
 from .temporary_directory import create_tmp_dir
 
 
-logger = logging.getLogger(__name__)
+logger: logging.Logger = logging.getLogger(__name__)
 
 SystemdUnitName = str
 
 
-class SystemdUserServiceManager:
+class BaseSystemdUserServiceManager:
     """A running 'systemd --user' process manageable using 'systemctl --user'."""
 
-    def __init__(
-        self, xdg_runtime_dir: pathlib.Path, process_id: typing.Optional[ProcessID]
-    ) -> None:
+    __xdg_runtime_dir: pathlib.Path
+
+    def __init__(self, xdg_runtime_dir: pathlib.Path) -> None:
         super().__init__()
         self.__xdg_runtime_dir = xdg_runtime_dir
-        self.__process_id = process_id
 
     @property
     def xdg_runtime_dir(self) -> pathlib.Path:
         return self.__xdg_runtime_dir
-
-    @property
-    def process_id(self) -> ProcessID:
-        if self.__process_id is None:
-            raise NotImplementedError()
-        return self.__process_id
 
     def is_alive(self) -> bool:
         result = self._systemctl.run(
@@ -169,15 +162,6 @@ class SystemdUserServiceManager:
     def get_service(self, unit_name: SystemdUnitName) -> "SystemdService":
         return SystemdService(unit_name=unit_name, systemd=self)
 
-    def exit(self) -> None:
-        process_id = self.process_id
-        # We intentionally do not check the result from the systemctl command here.
-        # It may fail with a "Connection reset by peer" error due to systemd exiting.
-        # We simply confirm that systemd exits after running this command.
-        self._systemctl.run(["start", "exit.target"])
-        if not wait_for_process_exit(process_id, timeout=60):
-            raise TimeoutError()
-
     @property
     def env(self) -> typing.Dict[str, str]:
         env = dict(os.environ)
@@ -200,8 +184,36 @@ class SystemdUserServiceManager:
 
     def __repr__(self) -> str:
         return (
+            f"BaseSystemdUserServiceManager(xdg_runtime_dir={self.xdg_runtime_dir!r})"
+        )
+
+
+class SystemdUserServiceManager(BaseSystemdUserServiceManager):
+    """A temporary 'systemd --user' process that we control."""
+
+    __process_id: ProcessID
+
+    def __init__(self, xdg_runtime_dir: pathlib.Path, process_id: ProcessID) -> None:
+        super().__init__(xdg_runtime_dir)
+        self.__process_id = process_id
+
+    @property
+    def process_id(self) -> ProcessID:
+        return self.__process_id
+
+    def exit(self) -> None:
+        process_id = self.process_id
+        # We intentionally do not check the result from the systemctl command here.
+        # It may fail with a "Connection reset by peer" error due to systemd exiting.
+        # We simply confirm that systemd exits after running this command.
+        self._systemctl.run(["start", "exit.target"])
+        if not wait_for_process_exit(process_id, timeout=60):
+            raise TimeoutError()
+
+    def __repr__(self) -> str:
+        return (
             f"SystemdUserServiceManager("
-            f"xdg_runtime_dir={repr(self.xdg_runtime_dir)}, "
+            f"xdg_runtime_dir={self.xdg_runtime_dir!r}, "
             f"process_id={self.process_id}"
             f")"
         )
@@ -209,7 +221,7 @@ class SystemdUserServiceManager:
 
 class SystemdService:
     def __init__(
-        self, unit_name: SystemdUnitName, systemd: SystemdUserServiceManager
+        self, unit_name: SystemdUnitName, systemd: BaseSystemdUserServiceManager
     ) -> None:
         super().__init__()
         self.__systemd = systemd
@@ -240,7 +252,7 @@ class SystemdService:
     def query_sub_state(self) -> str:
         return self.__query_property("SubState").decode("utf-8")
 
-    def query_main_process_id(self) -> typing.Optional[ProcessID]:
+    def query_main_process_id(self) -> ProcessID:
         return ProcessID(self.__query_property("MainPID"))
 
     def query_cgroup(self) -> LinuxCgroup:
@@ -348,8 +360,8 @@ def temporary_systemd_user_service_manager() -> typing.Iterator[
 ]:
     """Create an isolated systemd instance for tests."""
 
-    parent_systemd = SystemdUserServiceManager(
-        xdg_runtime_dir=_get_current_xdg_runtime_dir(), process_id=None
+    parent_systemd: BaseSystemdUserServiceManager = BaseSystemdUserServiceManager(
+        xdg_runtime_dir=_get_current_xdg_runtime_dir()
     )
 
     def should_create_managed() -> bool:
@@ -405,7 +417,7 @@ def _is_system_booted_with_systemd() -> bool:
 @contextlib.contextmanager
 def _transient_managed_systemd_user_service_manager(
     xdg_runtime_dir: pathlib.Path,
-    parent_systemd: SystemdUserServiceManager,
+    parent_systemd: BaseSystemdUserServiceManager,
     lifetime_duration: int,
 ) -> typing.Iterator[SystemdUserServiceManager]:
     """Create an isolated systemd instance using 'systemd-run systemd'."""
@@ -437,6 +449,23 @@ def _transient_managed_systemd_user_service_manager(
                 f"Failed to stop systemd user service manager ({child_systemd})"
             )
             # Ignore the exception.
+
+
+class _SubprocessSystemdUserServiceManager(SystemdUserServiceManager):
+    __subprocess: subprocess.Popen
+
+    def __init__(
+        self, xdg_runtime_dir: pathlib.Path, process: subprocess.Popen
+    ) -> None:
+        super().__init__(xdg_runtime_dir, process.pid)
+        self.__subprocess = process
+
+    def exit(self) -> None:
+        # We intentionally do not check the result from the systemctl command here.
+        # It may fail with a "Connection reset by peer" error due to systemd exiting.
+        # We simply confirm that systemd exits after running this command.
+        self._systemctl.run(["start", "exit.target"])
+        self.__subprocess.wait(timeout=60)
 
 
 class _TransientUnmanagedSystemdUserServiceManager:
@@ -499,7 +528,7 @@ class _TransientUnmanagedSystemdUserServiceManager:
         """
         path = pathlib.Path("/run/systemd")
         try:
-            path.mkdir(exist_ok=False, mode=0o755, parents=False)
+            path.mkdir(exist_ok=True, mode=0o755, parents=False)
         except OSError:
             logging.warning(
                 f"Failed to create {path}; ignoring error, but systemd might "
@@ -549,8 +578,8 @@ class _TransientUnmanagedSystemdUserServiceManager:
 
     def __enter__(self) -> SystemdUserServiceManager:
         systemd_process = self.start_systemd_process()
-        child_systemd = SystemdUserServiceManager(
-            xdg_runtime_dir=self.__xdg_runtime_dir, process_id=systemd_process.pid
+        child_systemd = _SubprocessSystemdUserServiceManager(
+            xdg_runtime_dir=self.__xdg_runtime_dir, process=systemd_process
         )
         self.wait_until_systemd_is_alive(systemd_process, child_systemd)
         return child_systemd
