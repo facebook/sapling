@@ -111,19 +111,6 @@ def sigkill_process(pid: int, timeout: float = 5.0) -> None:
         )
 
 
-def is_zombie_process(pid: int) -> bool:
-    try:
-        with open(f"/proc/{pid}/stat", "rb") as proc_stat:
-            line = proc_stat.read()
-            pieces = line.split()
-            if len(pieces) > 2 and pieces[2] == b"Z":
-                return True
-    except (FileNotFoundError, ProcessLookupError):
-        pass
-
-    return False
-
-
 def did_process_exit(pid: int) -> bool:
     try:
         os.kill(pid, 0)
@@ -135,8 +122,6 @@ def did_process_exit(pid: int) -> bool:
         # anything else is unexpected
         elif ex.errno != errno.EPERM:
             raise
-    if is_zombie_process(pid):
-        return True
     # Still running
     return False
 
