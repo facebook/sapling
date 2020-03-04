@@ -1850,9 +1850,11 @@ class TTest(Test):
         if wifexited(ret):
             ret = os.WEXITSTATUS(ret)
         if ret == 2:
-            with iolock:
-                print(stdout.decode("utf-8"))
-            sys.exit(1)
+            # The feature is "missing" - hghave does not know how to check it.
+            # This is most likely a mis-spelled feature name, or some
+            # codemod that removes features from hghave without cleaning
+            # up related test code. Treat it as a test failure.
+            raise AssertionError("feature unknown to hghave: %r" % reqs)
 
         if ret != 0:
             return False, stdout

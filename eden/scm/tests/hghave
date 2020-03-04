@@ -65,4 +65,7 @@ if __name__ == '__main__':
     if options.test_features:
         sys.exit(test_features())
 
+    # Exit code:
+    # - 2: internal error
+    # - 80: skipped (missing features)
     hghave.require(args)

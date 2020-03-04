@@ -1417,10 +1417,13 @@ Test a broken #if statement doesn't break run-tests threading.
   > EOF
   > done
   $ rt -j 2
-  ....
-  # Ran 5 tests, 0 skipped, 0 failed.
-  skipped: unknown feature: notarealhghavefeature
   
+  ERROR: test-broken.t output changed
+  * (glob)
+  Failed test-broken.t: feature unknown to hghave: ['notarealhghavefeature']
+  # Ran 5 tests, 0 skipped, 1 failed.
+  python hash seed: * (glob)
+  [1]
   $ cd ..
   $ rm -rf broken
 
