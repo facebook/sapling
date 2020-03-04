@@ -2,7 +2,7 @@ hg debuginstall
   $ hg debuginstall
   checking encoding (utf-8)...
   checking Python executable (*) (glob)
-  checking Python version (2.*) (glob)
+  checking Python version (*) (glob)
   checking Python lib (*lib*)... (glob)
   checking Python security support (*) (glob)
     TLS 1.2 not supported by Python install; network connections lack modern security (?)
@@ -55,7 +55,7 @@ hg debuginstall with no username
   $ HGUSER= hg debuginstall
   checking encoding (utf-8)...
   checking Python executable (*) (glob)
-  checking Python version (2.*) (glob)
+  checking Python version (*) (glob)
   checking Python lib (*lib*)... (glob)
   checking Python security support (*) (glob)
     TLS 1.2 not supported by Python install; network connections lack modern security (?)
