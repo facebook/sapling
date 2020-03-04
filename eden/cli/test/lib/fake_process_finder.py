@@ -24,6 +24,9 @@ class FakeEdenFSProcess(process_finder.EdenFSProcess):
         return self.build_info
 
 
+_default_start_age = datetime.timedelta(hours=1)
+
+
 class FakeProcessFinder(process_finder.LinuxProcessFinder):
     _file_contents: Dict[Path, Union[bytes, Exception]] = {}
     _process_stat: Dict[int, os.stat_result] = {}
@@ -42,6 +45,8 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         comm: Optional[str] = None,
         fds: Optional[Dict[int, str]] = None,
         build_info: Optional[process_finder.BuildInfo] = None,
+        ppid: int = 1,
+        start_age: datetime.timedelta = _default_start_age,
     ) -> None:
         pid_dir = self.proc_path / str(pid)
         pid_dir.mkdir()
@@ -53,7 +58,10 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         cmdline_bytes = b"".join((arg.encode("utf-8") + b"\0") for arg in cmdline)
         (pid_dir / "cmdline").write_bytes(cmdline_bytes)
 
-        self._process_stat[pid] = self._make_fake_process_metadata(pid, uid)
+        start_time = time.time() - start_age.total_seconds()
+        self._process_stat[pid] = self._make_fake_process_metadata(
+            pid, uid=uid, start_time=start_time
+        )
 
         fd_dir = pid_dir / "fd"
         fd_dir.mkdir()
@@ -64,6 +72,11 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         if build_info:
             self._build_info[pid] = build_info
 
+        stat_contents = self.make_fake_proc_stat_contents(
+            pid, command=comm, ppid=ppid, start_time=start_time
+        )
+        (pid_dir / "stat").write_text(stat_contents)
+
     def add_edenfs(
         self,
         pid: int,
@@ -72,6 +85,7 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         set_lockfile: bool = True,
         cmdline: Optional[List[str]] = None,
         build_time: int = 0,
+        start_age: datetime.timedelta = _default_start_age,
     ) -> process_finder.BuildInfo:
         """Add a fake EdenFS instance.
         Note that this will add 2 processes: the main EdenFS process with the
@@ -109,7 +123,14 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         build_info = make_edenfs_build_info(build_time)
 
         # Add the main EdenFS process
-        self.add_process(pid, cmdline, uid=uid, fds=edenfs_fds, build_info=build_info)
+        self.add_process(
+            pid,
+            cmdline,
+            uid=uid,
+            fds=edenfs_fds,
+            build_info=build_info,
+            start_age=start_age,
+        )
 
         # Also add a privhelper process
         # Newer versions of EdenFS name this process "edenfs_privhelp", but older
@@ -124,6 +145,8 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
             comm="edenfs",
             fds=privhelper_fds,
             build_info=build_info,
+            ppid=pid,
+            start_age=start_age,
         )
         return build_info
 
@@ -143,11 +166,10 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
             raise FileNotFoundError(errno.ENOENT, "No such file or directory")
 
     def _make_fake_process_metadata(
-        self, pid: int, uid: Optional[int]
+        self, pid: int, uid: Optional[int], start_time: float
     ) -> os.stat_result:
         if uid is None:
             uid = self._default_uid
-        start_time = int(time.time())
 
         return os.stat_result(
             (
@@ -158,9 +180,9 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
                 uid,  # uid
                 uid,  # gid
                 0,  # size
-                start_time,  # atime
-                start_time,  # mtime
-                start_time,  # ctime
+                int(start_time),  # atime
+                int(start_time),  # mtime
+                int(start_time),  # ctime
             )
         )
 
@@ -179,6 +201,75 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         p = FakeEdenFSProcess(pid=pid, cmdline=cmdline, eden_dir=eden_dir, uid=uid)
         p.build_info = build_info
         return p
+
+    def _read_system_uptime(self) -> float:
+        # Report an uptime of 1 year when running tests.
+        # This helps ensure that we don't test with any process start times that
+        # are older than the reported system uptime.
+        return 60 * 60 * 24 * 365
+
+    def make_fake_proc_stat_contents(
+        self, pid: int, command: str, ppid: int, start_time: float
+    ) -> str:
+        time_after_boot = start_time - self.get_system_boot_time()
+        assert time_after_boot >= 0
+        start_time_jiffies = int(time_after_boot * self.get_jiffies_per_sec())
+        stat_fields = [
+            # (1) pid
+            # (2) comm
+            # (3) state
+            ppid,  # ppid
+            ppid,  # pgrp
+            ppid,  # session
+            0,  # tty_nr
+            -1,  # tpgid
+            0x400040,  # flags
+            0,  # minflt
+            0,  # cminflt
+            0,  # majflt
+            0,  # cmajflt
+            5432,  # utime
+            1234,  # stime
+            0,  # cutime
+            0,  # cstime
+            20,  # priority
+            0,  # nice
+            1,  # num_threads
+            0,  # itrealvalue
+            start_time_jiffies,  # starttime
+            114826723328,  # vsize
+            1708100,  # rss
+            0xFFFFFFFFFFFFFFFF,  # rsslim
+            0x400000,  # startcode
+            0x468F794,  # endcode
+            0x7FFDF3C91AE0,  # startstack
+            0,  # kstkesp
+            0,  # kstkeip
+            0,  # signal
+            0,  # blocked
+            0,  # sigignore
+            0x4005CEE,  # sigcatch
+            0,  # wchan
+            0,  # nswap
+            0,  # cnswap
+            17,  # exit_signal
+            1,  # processor
+            0,  # rt_priority
+            0,  # policy
+            0,  # delayacct_blkio_ticks
+            0,  # guest_time
+            0,  # cguest_time
+            73871424,  # start_data
+            73987988,  # end_data
+            77119488,  # start_brk
+            140728693501496,  # arg_start
+            140728693501673,  # arg_end
+            140728693501673,  # env_start
+            140728693501913,  # env_end
+            0,  # exit_code
+        ]
+        stat_fields_str = " ".join(str(n) for n in stat_fields)
+        return f"{pid} ({command}) S {stat_fields_str}\n"
 
 
 def make_edenfs_build_info(build_time: int) -> process_finder.BuildInfo:

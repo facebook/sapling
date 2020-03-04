@@ -11,6 +11,7 @@ import logging
 import os
 import platform
 import sys
+import time
 import typing
 from pathlib import Path
 from typing import Dict, Iterable, List, NamedTuple, Optional
@@ -87,6 +88,11 @@ class ProcessFinder(abc.ABC):
         """Returns a list of running EdenFS processes on the system."""
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def get_process_start_time(self, pid: int) -> float:
+        """Get the start time of the process, in seconds since the Unix epoch."""
+        raise NotImplementedError()
+
     def read_lock_file(self, path: Path) -> bytes:
         """Read an EdenFS lock file.
         This method exists primarily to allow it to be overridden in test cases.
@@ -98,9 +104,16 @@ class NopProcessFinder(ProcessFinder):
     def get_edenfs_processes(self) -> Iterable[EdenFSProcess]:
         return []
 
+    def get_process_start_time(self, pid: int) -> float:
+        raise NotImplementedError(
+            "NopProcessFinder does not currently implement get_process_start_time()"
+        )
+
 
 class LinuxProcessFinder(ProcessFinder):
     proc_path = Path("/proc")
+    _system_boot_time: Optional[float] = None
+    _jiffies_per_sec: Optional[int] = None
 
     def get_edenfs_processes(self) -> Iterable[EdenFSProcess]:
         """Return information about all running EdenFS processes.
@@ -190,6 +203,40 @@ class LinuxProcessFinder(ProcessFinder):
         self, pid: int, cmdline: List[bytes], eden_dir: Optional[Path], uid: int
     ) -> EdenFSProcess:
         return EdenFSProcess(pid=pid, cmdline=cmdline, eden_dir=eden_dir, uid=uid)
+
+    def get_process_start_time(self, pid: int) -> float:
+        stat_path = self.proc_path / str(pid) / "stat"
+        stat_data = stat_path.read_bytes()
+        pid_and_cmd, partition, fields_str = stat_data.rpartition(b") ")
+        if not partition:
+            raise ValueError("unexpected data in {stat_path}: {stat_data!r}")
+        try:
+            fields = fields_str.split(b" ")
+            jiffies_after_boot = int(fields[19])
+        except (ValueError, IndexError):
+            raise ValueError("unexpected data in {stat_path}: {stat_data!r}")
+
+        seconds_after_boot = jiffies_after_boot / self.get_jiffies_per_sec()
+        return self.get_system_boot_time() + seconds_after_boot
+
+    def get_system_boot_time(self) -> float:
+        boot_time = self._system_boot_time
+        if boot_time is None:
+            uptime_seconds = self._read_system_uptime()
+            boot_time = time.time() - uptime_seconds
+            self._system_boot_time = boot_time
+        return boot_time
+
+    def _read_system_uptime(self) -> float:
+        uptime_line = (self.proc_path / "uptime").read_text()
+        return float(uptime_line.split(" ", 1)[0])
+
+    def get_jiffies_per_sec(self) -> int:
+        jps = self._jiffies_per_sec
+        if jps is None:
+            jps = os.sysconf(os.sysconf_names["SC_CLK_TCK"])
+            self._jiffies_per_sec = jps
+        return jps
 
 
 def new() -> ProcessFinder:
