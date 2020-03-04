@@ -157,7 +157,7 @@ impl CacheOpsUtil {
 
         move |value| {
             if let Some(ref value) = value {
-                tokio::spawn(cache.put(&key, value.clone()));
+                tokio_old::spawn(cache.put(&key, value.clone()));
             }
             value
         }

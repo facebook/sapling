@@ -42,7 +42,7 @@ impl AsyncLimiter {
 
         match flavor {
             TokioFlavor::V01 => {
-                tokio::spawn(worker.map(Ok).boxed().compat());
+                tokio_old::spawn(worker.map(Ok).boxed().compat());
             }
             TokioFlavor::V02 => {
                 tokio_preview::spawn(worker.boxed());

@@ -25,7 +25,7 @@ use scuba::ScubaSampleBuilder;
 use slog::{o, Logger};
 use std::net::IpAddr;
 use std::time::{Duration, Instant};
-use tokio::{
+use tokio_old::{
     self,
     sync::oneshot::{channel, Receiver, Sender},
 };
@@ -190,7 +190,7 @@ impl RequestContext {
                 .right_future()
         };
 
-        tokio::spawn(fut.discard());
+        tokio_old::spawn(fut.discard());
     }
 }
 

@@ -23,7 +23,7 @@ use slog::{info, Logger};
 use std::convert::TryInto;
 use std::io::BufReader;
 use std::str::FromStr;
-use tokio::{codec, fs::File};
+use tokio_old::{codec, fs::File};
 
 use crate::error::SubcommandError;
 

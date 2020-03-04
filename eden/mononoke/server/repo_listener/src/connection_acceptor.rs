@@ -33,9 +33,9 @@ use repo_client::CONFIGERATOR_PUSHREDIRECT_ENABLE;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{crit, error, o, Drain, Level, Logger};
 use slog_kvfilter::KVFilter;
-use tokio::net::{TcpListener, TcpStream};
 use tokio_codec::{FramedRead, FramedWrite};
 use tokio_io::{AsyncRead, AsyncWrite, IoStream};
+use tokio_old::net::{TcpListener, TcpStream};
 use tokio_openssl::SslAcceptorExt;
 use x509::identity;
 
@@ -121,7 +121,7 @@ pub fn connection_acceptor(
                 security_checker
             );
             OPEN_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
-            tokio::spawn(future::lazy(move || {
+            tokio_old::spawn(future::lazy(move || {
                 accept(
                     fb,
                     sock,
@@ -405,7 +405,7 @@ where
                     .forward(wr);
 
                 // spawn a task for forwarding stdout/err into stream
-                tokio::spawn(fwd.discard());
+                tokio_old::spawn(fwd.discard());
 
                 (otx, etx)
             };

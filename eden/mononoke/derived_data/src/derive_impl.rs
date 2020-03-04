@@ -170,7 +170,7 @@ pub fn derive_impl<
                         start_csid.to_string()
                     )),
                 );
-            tokio::spawn(ctx.trace_upload().discard());
+            tokio_old::spawn(ctx.trace_upload().discard());
         }
 
         res?;

@@ -20,7 +20,7 @@ use hyper::{
 };
 use lazy_static::lazy_static;
 use mime::Mime;
-use tokio::sync::oneshot::Sender;
+use tokio_old::sync::oneshot::Sender;
 
 use crate::errors::LfsServerContextErrorKind;
 use crate::middleware::{RequestContext, ScubaKey, ScubaMiddlewareState};

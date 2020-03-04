@@ -20,7 +20,7 @@ use std::time::Instant;
 use crate::TokioFlavor;
 
 enum TokioDelay {
-    V01(Compat01As03<tokio::timer::Delay>),
+    V01(Compat01As03<tokio_old::timer::Delay>),
     V02(tokio_preview::time::Delay),
 }
 
@@ -87,7 +87,7 @@ where
                     let instant = nc.earliest_possible();
                     self.pending = Some(match self.flavor {
                         TokioFlavor::V01 => {
-                            let delay = tokio::timer::Delay::new(instant).compat();
+                            let delay = tokio_old::timer::Delay::new(instant).compat();
                             TokioDelay::V01(delay)
                         }
                         TokioFlavor::V02 => {

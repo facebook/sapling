@@ -25,7 +25,7 @@ use gotham_derive::StateData;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use hyper::{Body, Request};
 use slog::Logger;
-use tokio::spawn;
+use tokio_old::spawn;
 
 use blobrepo::BlobRepo;
 use context::CoreContext;

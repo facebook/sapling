@@ -31,7 +31,7 @@ use slog::{error, info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
-use tokio::net::TcpListener;
+use tokio_old::net::TcpListener;
 use tokio_openssl::SslAcceptorExt;
 
 use blobrepo::BlobRepo;

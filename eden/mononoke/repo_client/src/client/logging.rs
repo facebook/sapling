@@ -282,7 +282,7 @@ fn do_wireproto_logging<'a>(
             })
             .or_else(|_| Ok(()))
     });
-    tokio::spawn(f);
+    tokio_old::spawn(f);
 }
 
 fn generate_random_string(len: usize) -> String {

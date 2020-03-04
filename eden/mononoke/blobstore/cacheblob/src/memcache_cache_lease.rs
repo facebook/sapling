@@ -303,7 +303,7 @@ impl LeaseOps for MemcacheOps {
 
         let this = self.clone();
         let mut done = done.compat().boxed();
-        tokio::spawn(
+        tokio_old::spawn(
             async move {
                 loop {
                     let res = memcache
@@ -407,7 +407,7 @@ impl LeaseOps for MemcacheOps {
         // We don't have to wait for the releasing to finish, it can be done in background
         // because leases have a timeout. So even if they haven't been released explicitly they
         // will be released after a timeout.
-        tokio::spawn(f);
+        tokio_old::spawn(f);
         future::ok(()).boxify()
     }
 }

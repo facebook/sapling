@@ -49,7 +49,7 @@ impl LeaseOps for InProcessLease {
     fn renew_lease_until(&self, _ctx: CoreContext, key: &str, done: BoxFuture<(), ()>) {
         let this = self.clone();
         let key = key.to_string();
-        tokio::spawn(
+        tokio_old::spawn(
             async move {
                 done.compat().await?;
                 this.release_lease(&key).compat().await?;

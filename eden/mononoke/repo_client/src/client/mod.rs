@@ -63,8 +63,8 @@ use std::sync::{Arc, Mutex};
 use std::time::Duration;
 use streaming_clone::RevlogStreamingChunks;
 use time_ext::DurationExt;
-use tokio::timer::timeout::Error as TimeoutError;
-use tokio::util::FutureExt as TokioFutureExt;
+use tokio_old::timer::timeout::Error as TimeoutError;
+use tokio_old::util::FutureExt as TokioFutureExt;
 use tracing::{trace_args, Traced};
 
 mod logging;
