@@ -10,7 +10,7 @@ use std::{
     hash::Hasher,
     io::{self, Read, Write},
     path::Path,
-    sync::atomic::AtomicI64,
+    sync::atomic::{self, AtomicI64},
 };
 
 use crate::errors::{IoResultExt, ResultExt};
@@ -124,6 +124,7 @@ pub fn xxhash32<T: AsRef<[u8]>>(buf: T) -> u32 {
 }
 
 /// Atomically create or replace a file with the given content.
+/// Attempt to use symlinks on unix if `SYMLINK_ATOMIC_WRITE` is set.
 pub fn atomic_write(
     path: impl AsRef<Path>,
     content: impl AsRef<[u8]>,
@@ -131,6 +132,26 @@ pub fn atomic_write(
 ) -> crate::Result<()> {
     let path = path.as_ref();
     let content = content.as_ref();
+    #[cfg(unix)]
+    {
+        // Try the symlink approach first. This makes sure the file is not
+        // empty.
+        //
+        // In theory the non-symlink approach (open, write, rename, close)
+        // should also result in a non-empty file. However, we have seen empty
+        // files sometimes without OS crashes (see https://fburl.com/bky2zu9e).
+        if SYMLINK_ATOMIC_WRITE.load(atomic::Ordering::SeqCst) {
+            if let Ok(_) = atomic_write_symlink(path, content) {
+                return Ok(());
+            }
+        }
+    }
+    atomic_write_plain(path, content, fsync)
+}
+
+/// Atomically create or replace a file with the given content.
+/// Use a plain file. Do not use symlinks.
+pub fn atomic_write_plain(path: &Path, content: &[u8], fsync: bool) -> crate::Result<()> {
     let result: crate::Result<_> = {
         let dir = path.parent().expect("path has a parent");
         let mut file =
@@ -166,16 +187,77 @@ pub fn atomic_write(
     })
 }
 
+/// Atomically create or replace a symlink with hex(content).
+#[cfg(unix)]
+fn atomic_write_symlink(path: &Path, content: &[u8]) -> io::Result<()> {
+    let encoded_content: String = {
+        // Use 'content' as-is if possible. Otherwise encode it using hex() and
+        // prefix with 'hex:'.
+        match std::str::from_utf8(content) {
+            Ok(s) if !s.starts_with("hex:") && !content.contains(&0) => s.to_string(),
+            _ => format!("hex:{}", hex::encode(content)),
+        }
+    };
+    let temp_path = loop {
+        let temp_path = path.with_extension(format!(".temp{}", rand::random::<u16>()));
+        match std::os::unix::fs::symlink(&encoded_content, &temp_path) {
+            Err(e) if e.kind() == io::ErrorKind::AlreadyExists => {
+                // Try another temp_path.
+                continue;
+            }
+            Err(e) => return Err(e),
+            Ok(_) => break temp_path,
+        }
+    };
+    let _ = fix_perm_symlink(&temp_path);
+    match fs::rename(&temp_path, path) {
+        Ok(_) => Ok(()),
+        Err(e) => {
+            // Clean up: Remove the temp file.
+            let _ = fs::remove_file(&temp_path);
+            Err(e)
+        }
+    }
+}
+
 /// Read the entire file written by `atomic_write`.
 ///
 /// The read itself is only atomic if the file was written by `atomic_write`.
 /// This function handles format differences (symlink vs normal files)
 /// transparently.
 pub fn atomic_read(path: &Path) -> io::Result<Vec<u8>> {
+    #[cfg(unix)]
+    {
+        if let Ok(data) = atomic_read_symlink(path) {
+            return Ok(data);
+        }
+    }
     let mut file = fs::OpenOptions::new().read(true).open(path)?;
     let mut buf = Vec::new();
     file.read_to_end(&mut buf)?;
     Ok(buf)
+}
+
+/// Read and decode the symlink content.
+#[cfg(unix)]
+fn atomic_read_symlink(path: &Path) -> io::Result<Vec<u8>> {
+    use std::os::unix::ffi::OsStrExt;
+    let encoded_content = path.read_link()?;
+    let encoded_content = encoded_content.as_os_str().as_bytes();
+    if encoded_content.starts_with(b"hex:") {
+        // Decode hex.
+        Ok(hex::decode(&encoded_content[4..]).map_err(|_e| {
+            io::Error::new(
+                io::ErrorKind::InvalidData,
+                format!(
+                    "{:?}: cannot decode hex content {:?}",
+                    path, &encoded_content,
+                ),
+            )
+        })?)
+    } else {
+        Ok(encoded_content.to_vec())
+    }
 }
 
 /// `uid` and `gid` to `chown` for `mkdir_p`.
@@ -183,6 +265,9 @@ pub fn atomic_read(path: &Path) -> io::Result<Vec<u8>> {
 /// - x (x >= 0): try to chown to `x`, do nothing if failed
 pub static CHOWN_UID: AtomicI64 = AtomicI64::new(-1);
 pub static CHOWN_GID: AtomicI64 = AtomicI64::new(-1);
+
+/// If set to true, prefer symlinks to normal files for atomic_write.
+pub static SYMLINK_ATOMIC_WRITE: atomic::AtomicBool = atomic::AtomicBool::new(cfg!(test));
 
 /// Default chmod mode for directories.
 /// u: rwx g:rws o:r-x
@@ -254,7 +339,6 @@ pub(crate) fn fix_perm_path(path: &Path, is_dir: bool) -> io::Result<()> {
 pub(crate) fn fix_perm_file(file: &File, is_dir: bool) -> io::Result<()> {
     #[cfg(unix)]
     {
-        use std::sync::atomic;
         // chown
         let mut uid = CHOWN_UID.load(atomic::Ordering::SeqCst);
         let mut gid = CHOWN_GID.load(atomic::Ordering::SeqCst);
@@ -288,8 +372,87 @@ pub(crate) fn fix_perm_file(file: &File, is_dir: bool) -> io::Result<()> {
     Ok(())
 }
 
+/// Attempt to chmod and chown a symlink at the given path.
+pub(crate) fn fix_perm_symlink(path: &Path) -> io::Result<()> {
+    #[cfg(unix)]
+    {
+        use std::ffi::CString;
+        use std::os::unix::ffi::OsStrExt;
+
+        let path = CString::new(path.as_os_str().as_bytes())?;
+
+        // chown
+        let uid = CHOWN_UID.load(atomic::Ordering::SeqCst);
+        let gid = CHOWN_GID.load(atomic::Ordering::SeqCst);
+        if uid >= 0 || gid >= 0 {
+            unsafe { libc::lchown(path.as_ptr(), uid as libc::uid_t, gid as libc::gid_t) };
+        }
+
+        // chmod
+        let mode = CHMOD_FILE.load(atomic::Ordering::SeqCst);
+        if mode >= 0 {
+            unsafe {
+                libc::fchmodat(
+                    libc::AT_FDCWD,
+                    path.as_ptr(),
+                    mode as _,
+                    libc::AT_SYMLINK_NOFOLLOW,
+                )
+            };
+        }
+    }
+    #[cfg(windows)]
+    {
+        let _ = path;
+    }
+    Ok(())
+}
+
 /// Return a value that is likely changing over time.
 /// This is used to detect non-append-only cases.
 pub(crate) fn epoch() -> u64 {
     rand::random()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn check_atomic_read_write(data: &[u8]) {
+        SYMLINK_ATOMIC_WRITE.store(true, atomic::Ordering::SeqCst);
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("a");
+        let fsync = false;
+        atomic_write(&path, data, fsync).unwrap();
+        let read = atomic_read(&path).unwrap();
+        assert_eq!(data, &read[..]);
+    }
+
+    #[test]
+    fn test_atomic_read_write_roundtrip() {
+        for data in [
+            &b""[..],
+            b"hex",
+            b"hex:",
+            b"hex:abc",
+            b"hex:hex:abc",
+            b"abc",
+            b"\xe4\xbd\xa0\xe5\xa5\xbd",
+            b"hex:\xe4\xbd\xa0\xe5\xa5\xbd",
+            b"a\0b\0c\0",
+            b"hex:a\0b\0c\0",
+            b"\0\0\0\0\0\0",
+        ]
+        .iter()
+        {
+            check_atomic_read_write(data);
+        }
+    }
+
+    quickcheck::quickcheck! {
+        fn quickcheck_atomic_read_write_roundtrip(data: Vec<u8>) -> bool {
+            check_atomic_read_write(&data);
+            true
+        }
+    }
 }

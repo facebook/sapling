@@ -150,6 +150,10 @@ fn initialize_indexedlog(config: &ConfigSet) -> Result<()> {
         if chmod_dir >= 0 {
             indexedlog::utils::CHMOD_DIR.store(chmod_dir, SeqCst);
         }
+
+        let use_symlink_atomic_write: bool =
+            config.get_or_default("format", "use-symlink-atomic-write")?;
+        indexedlog::utils::SYMLINK_ATOMIC_WRITE.store(use_symlink_atomic_write, SeqCst);
     }
 
     Ok(())

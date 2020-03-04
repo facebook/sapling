@@ -12,7 +12,7 @@ use crate::log::{
     PRIMARY_START_OFFSET,
 };
 use crate::repair::OpenOptionsRepair;
-use crate::utils::{self, atomic_write, mmap_path};
+use crate::utils::{self, mmap_path};
 use std::fs::{self};
 use std::io::{self, BufRead, Read, Seek, SeekFrom, Write};
 use std::path::Path;
@@ -259,7 +259,7 @@ impl OpenOptions {
 
             // Replace the primary log.
             let primary_path = dir.join(PRIMARY_FILE);
-            atomic_write(primary_path, PRIMARY_HEADER, self.fsync)?;
+            utils::atomic_write_plain(&primary_path, PRIMARY_HEADER, self.fsync)?;
 
             // Replace indexes so they become empty.
             let log = self

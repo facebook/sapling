@@ -31,8 +31,10 @@ def doctor(ui, **opts):
     # type: (...) -> typing.Optional[int]
     """attempt to check and fix issues
 
-    This command is still in its early days. So expect it does not fix all
-    issues.
+    Fix repo corruptions including:
+    - changelog corruption at the end
+    - dirstate pointing to an invalid commit
+    - indexedlog corruptions (usually after hard reboot)
     """
 
     from .. import dispatch  # avoid cycle
@@ -105,20 +107,20 @@ def repair(ui, name, path, fixfunc):
     # type: (..., str, str, ...) -> None
     """Attempt to repair path by using fixfunc"""
     with progress.spinner(ui, "checking %s" % name):
-        oldmtime = mtime(path)
+        oldfshash = fshash(path)
         try:
             message = fixfunc(path)
         except Exception as ex:
             ui.warn(_("%s: failed to fix: %s\n") % (name, ex))
         else:
-            newmtime = mtime(path)
+            newfshash = fshash(path)
             tracing.singleton.event(
                 (("cat", "repair"), ("name", "repair %s" % name), ("details", message))
             )
             if ui.verbose:
-                ui.write_err(_("%s:\n %s\n") % (name, indent(message)))
+                ui.write_err(_("%s:\n%s\n") % (name, indent(message)))
             else:
-                if oldmtime != newmtime:
+                if oldfshash != newfshash:
                     ui.write_err(_("%s: repaired\n") % name)
                 else:
                     ui.write_err(_("%s: looks okay\n") % name)
@@ -346,18 +348,19 @@ def repairtreestate(ui, vfs, root, cl):
     )
 
 
-def mtime(path):
+def fshash(path):
     # type: (str) -> int
     """Return an integer that is likely changed if content of the directory is changed"""
-    mtime = 0
-    for dirpath, _dirnames, filenames in os.walk(path):
-        paths = [os.path.join(path, dirpath, name) for name in filenames]
-        mtime += sum(
+    value = 0
+    for dirpath, dirnames, filenames in os.walk(path):
+        paths = [os.path.join(path, dirpath, name) for name in filenames + dirnames]
+        value += len(paths)
+        value += sum(
             (st.st_mtime % 1024) + st.st_size * 1024
             for st in util.statfiles(paths)
             if st
         )
-    return mtime
+    return value
 
 
 def indent(message):
