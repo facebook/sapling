@@ -444,10 +444,18 @@ impl BlobRepo {
         ctx: CoreContext,
         name: BookmarkName,
         max_rec: u32,
+        offset: Option<u32>,
+        freshness: Freshness,
     ) -> impl Stream<Item = (Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error = Error>
     {
-        self.bookmarks
-            .list_bookmark_log_entries(ctx.clone(), name, self.repoid, max_rec)
+        self.bookmarks.list_bookmark_log_entries(
+            ctx.clone(),
+            name,
+            self.repoid,
+            max_rec,
+            offset,
+            freshness,
+        )
     }
 
     pub fn read_next_bookmark_log_entries(

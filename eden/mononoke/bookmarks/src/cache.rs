@@ -323,9 +323,11 @@ impl Bookmarks for CachedBookmarks {
         name: BookmarkName,
         repoid: RepositoryId,
         max_rec: u32,
+        offset: Option<u32>,
+        freshness: Freshness,
     ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error> {
         self.bookmarks
-            .list_bookmark_log_entries(ctx, name, repoid, max_rec)
+            .list_bookmark_log_entries(ctx, name, repoid, max_rec, offset, freshness)
     }
 
     fn count_further_bookmark_log_entries(
@@ -631,6 +633,8 @@ mod tests {
             _name: BookmarkName,
             _repo_id: RepositoryId,
             _max_rec: u32,
+            _offset: Option<u32>,
+            _freshness: Freshness,
         ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error> {
             unimplemented!()
         }

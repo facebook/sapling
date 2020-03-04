@@ -145,6 +145,8 @@ pub trait Bookmarks: Send + Sync + 'static {
         name: BookmarkName,
         repo_id: RepositoryId,
         max_rec: u32,
+        offset: Option<u32>,
+        freshness: Freshness,
     ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error>;
 
     /// Count the number of BookmarkUpdateLog entries with id greater than the given value,

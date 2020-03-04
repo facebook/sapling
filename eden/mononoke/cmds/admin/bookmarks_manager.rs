@@ -6,6 +6,7 @@
  */
 
 use anyhow::Error;
+use bookmarks::Freshness;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use context::CoreContext;
@@ -186,7 +187,7 @@ fn list_hg_bookmark_log_entries(
     Item = BoxFuture<(Option<HgChangesetId>, BookmarkUpdateReason, Timestamp), Error>,
     Error = Error,
 > {
-    repo.list_bookmark_log_entries(ctx.clone(), name, max_rec)
+    repo.list_bookmark_log_entries(ctx.clone(), name, max_rec, None, Freshness::MostRecent)
         .map({
             cloned!(ctx, repo);
             move |(cs_id, rs, ts)| match cs_id {
@@ -244,25 +245,31 @@ fn handle_log<'a>(
 
         "bonsai" => repo
             .and_then(move |repo| {
-                repo.list_bookmark_log_entries(ctx, bookmark.clone(), max_rec)
-                    .map(move |rows| {
-                        let (cs_id, reason, timestamp) = rows;
-                        let cs_id_str = match cs_id {
-                            None => String::new(),
-                            Some(x) => x.to_string(),
-                        };
-                        let output = format_bookmark_log_entry(
-                            json_flag,
-                            cs_id_str,
-                            reason,
-                            timestamp,
-                            "bonsai",
-                            bookmark.clone(),
-                            None,
-                        );
-                        println!("{}", output);
-                    })
-                    .for_each(|_| Ok(()))
+                repo.list_bookmark_log_entries(
+                    ctx,
+                    bookmark.clone(),
+                    max_rec,
+                    None,
+                    Freshness::MostRecent,
+                )
+                .map(move |rows| {
+                    let (cs_id, reason, timestamp) = rows;
+                    let cs_id_str = match cs_id {
+                        None => String::new(),
+                        Some(x) => x.to_string(),
+                    };
+                    let output = format_bookmark_log_entry(
+                        json_flag,
+                        cs_id_str,
+                        reason,
+                        timestamp,
+                        "bonsai",
+                        bookmark.clone(),
+                        None,
+                    );
+                    println!("{}", output);
+                })
+                .for_each(|_| Ok(()))
             })
             .boxify(),
 

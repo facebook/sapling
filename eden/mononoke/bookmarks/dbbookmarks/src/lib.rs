@@ -208,6 +208,18 @@ queries! {
          LIMIT {max_records}"
       }
 
+    read SelectBookmarkLogsWithOffset(repo_id: RepositoryId, name: BookmarkName, max_records: u32, offset: u32) -> (
+        Option<ChangesetId>, BookmarkUpdateReason, Timestamp
+    ) {
+        "SELECT to_changeset_id, reason, timestamp
+         FROM bookmarks_update_log
+         WHERE repo_id = {repo_id}
+           AND name = {name}
+         ORDER BY id DESC
+         LIMIT {max_records}
+         OFFSET {offset}"
+      }
+
     read SelectAll(repo_id: RepositoryId, limit: u64, >list hg_kind: BookmarkHgKind) ->  (BookmarkName, BookmarkHgKind, ChangesetId) {
         "SELECT name, hg_kind, changeset_id
          FROM bookmarks
@@ -403,13 +415,31 @@ impl Bookmarks for SqlBookmarks {
         name: BookmarkName,
         repo_id: RepositoryId,
         max_rec: u32,
+        offset: Option<u32>,
+        freshness: Freshness,
     ) -> BoxStream<(Option<ChangesetId>, BookmarkUpdateReason, Timestamp), Error> {
-        ctx.perf_counters()
-            .increment_counter(PerfCounterType::SqlReadsMaster);
-        SelectBookmarkLogs::query(&self.read_master_connection, &repo_id, &name, &max_rec)
-            .map(|rows| stream::iter_ok(rows))
-            .flatten_stream()
-            .boxify()
+        let connection = if freshness == Freshness::MostRecent {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsMaster);
+            &self.read_master_connection
+        } else {
+            ctx.perf_counters()
+                .increment_counter(PerfCounterType::SqlReadsReplica);
+            &self.read_connection
+        };
+
+        match offset {
+            Some(offset) => {
+                SelectBookmarkLogsWithOffset::query(&connection, &repo_id, &name, &max_rec, &offset)
+                    .map(|rows| stream::iter_ok(rows))
+                    .flatten_stream()
+                    .boxify()
+            }
+            None => SelectBookmarkLogs::query(&connection, &repo_id, &name, &max_rec)
+                .map(|rows| stream::iter_ok(rows))
+                .flatten_stream()
+                .boxify(),
+        }
     }
 
     fn create_transaction(&self, ctx: CoreContext, repoid: RepositoryId) -> Box<dyn Transaction> {
