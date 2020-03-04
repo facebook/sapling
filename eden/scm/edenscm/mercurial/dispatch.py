@@ -1027,8 +1027,11 @@ def _dispatch(req):
             encoding.encoding = options["encoding"]
         if options["encodingmode"]:
             encoding.encodingmode = options["encodingmode"]
-        if options["outputencoding"]:
-            util.outputencoding = options["outputencoding"]
+        if (
+            options["outputencoding"]
+            and options["outputencoding"] != "same as encoding"
+        ):
+            encoding.outputencoding = options["outputencoding"]
         i18n.init()
 
         if options["config"] != req.earlyoptions["config"]:
