@@ -334,7 +334,9 @@ async fn bootstrap_repositories<'a>(
 
             if let Some(warmup) = warmup {
                 info!(&logger, "Waiting for cache warmup to complete...");
-                warmup.await??;
+                warmup
+                    .await?
+                    .with_context(|| format!("Performing cache warmup on {}", name))?;
             }
 
             Result::<_, Error>::Ok((name, dispatcher))
