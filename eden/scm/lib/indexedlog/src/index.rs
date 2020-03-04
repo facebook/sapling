@@ -2479,7 +2479,7 @@ impl Index {
 
             let old_len = self.buf.len() as u64;
             let mut new_len = old_len;
-            if !self.dirty_root.radix_offset.is_dirty() {
+            if self.dirty_root == self.clean_root && !self.dirty_root.radix_offset.is_dirty() {
                 // Nothing changed
                 return Ok(new_len);
             }
@@ -4488,6 +4488,27 @@ Disk[410]: Root { radix: Disk[402] }
 
         assert_eq!(index.get_meta(), [42]);
         assert!(index.get(&"bar").unwrap().is_null());
+    }
+
+    #[test]
+    fn test_meta_only_flush() {
+        let dir = tempdir().unwrap();
+        let mut index = open_opts().open(dir.path().join("a")).unwrap();
+
+        index.set_meta(b"foo");
+        index.flush().unwrap();
+
+        let mut index = open_opts().open(dir.path().join("a")).unwrap();
+        assert_eq!(index.get_meta(), b"foo");
+
+        index.set_meta(b"bar");
+        let len1 = index.flush().unwrap();
+
+        let mut index = open_opts().open(dir.path().join("a")).unwrap();
+        assert_eq!(index.get_meta(), b"bar");
+        index.set_meta(b"bar");
+        let len2 = index.flush().unwrap();
+        assert_eq!(len1, len2);
     }
 
     quickcheck! {
