@@ -11,7 +11,7 @@ setting up an ephemeral MySQL shard.
 Use:
 
 ```sh
-buck run eden/mononoke/tests/integration:integration_runner -- TEST
+buck run //eden/mononoke/tests/integration:integration_runner -- TEST
 ```
 
 But! Keep reading: there are faster ways to run the tests if you're going to be
@@ -29,7 +29,7 @@ need to rebuild blobimport more than once).
 To do this, you should start by building everything once:
 
 ```sh
-buck build eden/mononoke/tests/integration
+buck build //eden/mononoke/tests/integration
 ```
 
 Then, run the tests by executing the integration runner directly. The

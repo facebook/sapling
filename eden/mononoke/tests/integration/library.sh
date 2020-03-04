@@ -424,6 +424,10 @@ function get_bonsai_git_mapping {
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select hex(bcs_id), hex(git_sha1) from bonsai_git_mapping order by id";
 }
 
+function get_bonsai_hg_mapping {
+  sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select hex(bcs_id), hex(hg_cs_id) from bonsai_hg_mapping order by repo_id, bcs_id";
+}
+
 function get_bonsai_globalrev_mapping {
   sqlite3 "$TESTTMP/monsql/sqlite_dbs" "select hex(bcs_id), globalrev from bonsai_globalrev_mapping order by globalrev";
 }
@@ -790,6 +794,11 @@ hook_type="$hook_type"
 CONFIG
     [ -n "$EXTRA_CONFIG_DESCRIPTOR" ] && cat "$EXTRA_CONFIG_DESCRIPTOR"
   ) >> "repos/$REPONAME/server.toml"
+}
+
+function backfill_git_mapping {
+  GLOG_minloglevel=5 "$MONONOKE_BACKFILL_GIT_MAPPING" --repo_id "$REPOID" \
+  --mononoke-config-path "$TESTTMP/mononoke-config" "${COMMON_ARGS[@]}" "$@"
 }
 
 function blobimport {
