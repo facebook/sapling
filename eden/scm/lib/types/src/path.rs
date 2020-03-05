@@ -345,6 +345,13 @@ impl RepoPath {
     pub fn components<'a>(&'a self) -> Components<'a> {
         Components::new(self)
     }
+
+    /// Returns an iterator over the ancestors of the current path.
+    ///
+    /// This should be strictly equivalent to: `self.parents().rev()`.
+    pub fn ancestors<'a>(&'a self) -> Ancestors<'a> {
+        Ancestors::new(self)
+    }
 }
 
 impl Ord for RepoPath {
@@ -609,6 +616,28 @@ impl<'a> Iterator for Components<'a> {
                 }
             }
         }
+    }
+}
+
+pub struct Ancestors<'a> {
+    path: Option<&'a RepoPath>,
+}
+
+impl<'a> Ancestors<'a> {
+    pub fn new(path: &'a RepoPath) -> Self {
+        Ancestors {
+            path: path.parent(),
+        }
+    }
+}
+
+impl<'a> Iterator for Ancestors<'a> {
+    type Item = &'a RepoPath;
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let path = self.path;
+        self.path = path.and_then(RepoPath::parent);
+        path
     }
 }
 
@@ -951,10 +980,30 @@ mod tests {
         assert_eq!(iter.next(), None);
     }
 
+    #[test]
+    fn test_ancestors_on_regular_path() {
+        let path = repo_path("foo/bar/baz/file.txt");
+        let mut iter = path.ancestors();
+        assert_eq!(iter.next(), Some(repo_path("foo/bar/baz")));
+        assert_eq!(iter.next(), Some(repo_path("foo/bar")));
+        assert_eq!(iter.next(), Some(repo_path("foo")));
+        assert_eq!(iter.next(), Some(RepoPath::empty()));
+        assert_eq!(iter.next(), None)
+    }
+
+    #[test]
+    fn test_ancestors_on_empty_path() {
+        assert_eq!(RepoPath::empty().ancestors().next(), None)
+    }
+
     quickcheck! {
        fn test_parents_equal_components(path: RepoPathBuf) -> bool {
            path.deref().parents().count() == path.deref().components().count()
         }
+
+       fn test_ancestors_equal_parents(path: RepoPathBuf) -> bool {
+           path.deref().ancestors().count() == path.deref().parents().count()
+       }
     }
 
     #[test]
