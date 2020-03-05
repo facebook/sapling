@@ -8,7 +8,7 @@
 #![allow(non_camel_case_types)]
 
 use cpython::*;
-use cpython_ext::{Bytes, PyNone, ResultPyErrExt};
+use cpython_ext::{Bytes, PyNone, ResultPyErrExt, Str};
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
 #[cfg(feature = "python2")]
@@ -133,10 +133,10 @@ py_class!(class tracingdata |py| {
     ///
     /// `minduration` specifies the minimal duration threshold in micro seconds.
     /// The default value is 10000 (10 milliseconds).
-    def ascii(&self, minduration: u64 = 10000) -> PyResult<String> {
+    def ascii(&self, minduration: u64 = 10000) -> PyResult<Str> {
         let mut opts = tracing_collector::model::AsciiOptions::default();
         opts.min_duration_micros_to_hide = minduration;
-        Ok(self.data(py).lock().ascii(&opts))
+        Ok(self.data(py).lock().ascii(&opts).into())
     }
 
     /// Export as TreeSpans.
