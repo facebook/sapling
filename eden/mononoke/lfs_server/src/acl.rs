@@ -35,7 +35,7 @@ impl LfsAclChecker {
             );
             let identity = Identity::new(acl_constants::REPO, &acl);
 
-            tokio_preview::task::spawn_blocking(move || {
+            tokio::task::spawn_blocking(move || {
                 let acl_checker = AclChecker::new(fb, &identity)?;
                 if acl_checker.do_wait_updated(ACL_CHECKER_TIMEOUT_MS) {
                     Ok(Self::AclChecker(Some(acl_checker)))

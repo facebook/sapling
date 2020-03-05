@@ -45,7 +45,7 @@ impl AsyncLimiter {
                 tokio_old::spawn(worker.map(Ok).boxed().compat());
             }
             TokioFlavor::V02 => {
-                tokio_preview::spawn(worker.boxed());
+                tokio::spawn(worker.boxed());
             }
         }
 
@@ -88,7 +88,6 @@ mod test {
     use nonzero_ext::nonzero;
     use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
     use std::time::{Duration, Instant};
-    use tokio_preview as tokio;
 
     #[tokio::test]
     async fn test_access_enters_queue_lazily() -> Result<(), Error> {

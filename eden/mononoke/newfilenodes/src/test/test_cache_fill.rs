@@ -12,7 +12,6 @@ use filenodes::{FilenodeInfo, PreparedFilenode};
 use mercurial_types_mocks::nodehash::{ONES_CSID, ONES_FNID};
 use mononoke_types::RepoPath;
 use mononoke_types_mocks::repo::REPO_ZERO;
-use tokio_preview as tokio;
 
 use super::util::{build_reader_writer, build_shard};
 use crate::local_cache::{test::HashMapCache, LocalCache};

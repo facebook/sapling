@@ -1207,19 +1207,19 @@ impl BlobRepo {
                                     Some(hg_cs_id) => {
                                         future::ok(Loop::Break(Some(hg_cs_id))).left_future()
                                     }
-                                    None => tokio_preview::time::delay_for(Duration::from_millis(
-                                        backoff_ms,
-                                    ))
-                                    .then(|_| new_future::ready(Ok(())))
-                                    .compat()
-                                    .then(move |_: Result<(), Error>| {
-                                        backoff_ms *= 2;
-                                        if backoff_ms >= 1000 {
-                                            backoff_ms = 1000;
-                                        }
-                                        Ok(Loop::Continue(backoff_ms))
-                                    })
-                                    .right_future(),
+                                    None => {
+                                        tokio::time::delay_for(Duration::from_millis(backoff_ms))
+                                            .then(|_| new_future::ready(Ok(())))
+                                            .compat()
+                                            .then(move |_: Result<(), Error>| {
+                                                backoff_ms *= 2;
+                                                if backoff_ms >= 1000 {
+                                                    backoff_ms = 1000;
+                                                }
+                                                Ok(Loop::Continue(backoff_ms))
+                                            })
+                                            .right_future()
+                                    }
                                 })
                                 .right_future()
                         }

@@ -264,7 +264,7 @@ pub fn repo_handlers(
                 let blobrepo = builder.blobrepo().clone();
 
                 info!(logger, "Warming up cache");
-                let initial_warmup = tokio_preview::task::spawn(
+                let initial_warmup = tokio::task::spawn(
                     cache_warmup(ctx.clone(), blobrepo.clone(), cache_warmup_params)
                         .chain_err(format!("while warming up cache for repo: {}", reponame))
                         .map_err(Error::from)

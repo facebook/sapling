@@ -14,7 +14,7 @@ use std::time::Duration;
 const SUBMIT_STATS_ONCE_PER_SECS: u64 = 10;
 
 pub async fn monitoring_stats_submitter(ctx: CoreContext, mononoke: Arc<Mononoke>) {
-    tokio_preview::time::interval(Duration::from_secs(SUBMIT_STATS_ONCE_PER_SECS))
+    tokio::time::interval(Duration::from_secs(SUBMIT_STATS_ONCE_PER_SECS))
         .for_each(|_| async {
             if let Err(e) = mononoke.report_monitoring_stats(&ctx).await {
                 warn!(ctx.logger(), "Failed to report monitoring stats: {:#?}", e);

@@ -163,7 +163,6 @@ mod test {
     use mononoke_types::MPathElement;
     use std::collections::HashMap;
     use std::fmt::Debug;
-    use tokio_preview as tokio;
 
     fn ensure_unordered_eq<T: Debug + Hash + PartialEq + Eq, I: IntoIterator<Item = T>>(
         v1: I,

@@ -12,7 +12,7 @@ use stats::prelude::*;
 use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use time_ext::DurationExt;
-use tokio_preview::sync::{Semaphore, SemaphorePermit};
+use tokio::sync::{Semaphore, SemaphorePermit};
 
 define_stats! {
     prefix = "mononoke.filenodes";

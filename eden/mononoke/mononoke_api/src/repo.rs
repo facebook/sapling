@@ -159,7 +159,7 @@ impl Repo {
 
         let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-        let acl_checker = tokio_preview::task::spawn_blocking({
+        let acl_checker = tokio::task::spawn_blocking({
             let acl = config.hipster_acl;
             move || match &acl {
                 Some(acl) => {

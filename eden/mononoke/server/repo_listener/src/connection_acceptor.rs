@@ -56,7 +56,7 @@ lazy_static! {
 
 pub async fn wait_for_connections_closed() {
     while OPEN_CONNECTIONS.load(Ordering::Relaxed) > 0 {
-        tokio_preview::time::delay_for(Duration::new(1, 0)).await;
+        tokio::time::delay_for(Duration::new(1, 0)).await;
     }
 }
 

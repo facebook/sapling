@@ -23,7 +23,7 @@ use std::convert::TryInto;
 use std::marker::PhantomData;
 use std::time::Duration;
 use thiserror::Error as DeriveError;
-use tokio_preview::time::timeout;
+use tokio::time::timeout;
 
 use filenodes::{FilenodeInfo, PreparedFilenode};
 

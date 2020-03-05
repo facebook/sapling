@@ -267,7 +267,7 @@ fn spawn_bookmarks_updater(
     warm_cs_ids: Arc<RwLock<HashSet<ChangesetId>>>,
 ) {
     // ignore JoinHandle, because we want it to run until `terminate` receives a signal
-    let _ = tokio_preview::spawn(async move {
+    let _ = tokio::spawn(async move {
         info!(ctx.logger(), "Starting warm bookmark cache updater");
         let infinite_loop = async {
             loop {
@@ -281,7 +281,7 @@ fn spawn_bookmarks_updater(
                     (repoid.id().to_string(),),
                 );
 
-                let _ = tokio_preview::time::delay_for(Duration::from_millis(1000)).await;
+                let _ = tokio::time::delay_for(Duration::from_millis(1000)).await;
             }
         }
         .boxed();
@@ -327,7 +327,7 @@ async fn update_bookmarks<'a>(
                     let mut warmers = warmers
                         .iter()
                         .map(|warmer| {
-                            let join_handle = tokio_preview::spawn(
+                            let join_handle = tokio::spawn(
                                 (*warmer.warmer)(ctx.clone(), repo.clone(), cs_id).compat(),
                             );
                             async move {

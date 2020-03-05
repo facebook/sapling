@@ -18,7 +18,6 @@ use mononoke_types::{MPath, RepoPath, RepositoryId};
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
 use sql::queries;
 use sql::Connection;
-use tokio_preview as tokio;
 
 use crate::builder::SQLITE_INSERT_CHUNK_SIZE;
 use crate::local_cache::{test::HashMapCache, LocalCache};

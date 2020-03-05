@@ -592,7 +592,7 @@ where
                             }),
                         );
 
-                        let handle = tokio_preview::task::spawn(next);
+                        let handle = tokio::task::spawn(next);
                         handle.await?
                     }
                     .boxed()

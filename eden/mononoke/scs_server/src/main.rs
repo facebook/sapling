@@ -28,7 +28,7 @@ use srserver::service_framework::{
     BuildModule, Fb303Module, ProfileModule, ServiceFramework, ThriftStatsModule,
 };
 use srserver::{ThriftServer, ThriftServerBuilder};
-use tokio_preview::task;
+use tokio::task;
 
 mod commit_id;
 mod errors;

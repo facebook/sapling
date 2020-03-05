@@ -142,7 +142,7 @@ impl RequestContext {
         // We get the client hostname in post request, because that might be a little slow.
         let client_hostname = match disable_hostname_logging {
             true => ok(None).left_future(),
-            _ => tokio_preview::task::spawn_blocking(move || -> Result<_, Error> {
+            _ => tokio::task::spawn_blocking(move || -> Result<_, Error> {
                 let hostname = client_address
                     .as_ref()
                     .map(lookup_addr)

@@ -404,7 +404,7 @@ where
                     res?;
                     break;
                 } else {
-                    let _ = tokio_preview::time::delay_for(Duration::from_millis(backoff_ms)).await;
+                    let _ = tokio::time::delay_for(Duration::from_millis(backoff_ms)).await;
 
                     backoff_ms *= 2;
                     if backoff_ms >= 1000 {

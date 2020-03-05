@@ -15,7 +15,7 @@ use fbinit::FacebookInit;
 use futures::{future::Future, stream::BoxStream};
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
-use tokio_preview::time::{Duration, Instant};
+use tokio::time::{Duration, Instant};
 
 #[derive(Clone)]
 pub struct RepoWalkRun {
@@ -71,7 +71,7 @@ where
             Some(interval) => {
                 let start = Instant::now();
                 let next_iter_deadline = start + Duration::from_secs(interval);
-                tokio_preview::time::delay_until(next_iter_deadline).await;
+                tokio::time::delay_until(next_iter_deadline).await;
             }
             None => return Ok(()),
         }

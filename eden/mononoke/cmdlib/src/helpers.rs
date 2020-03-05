@@ -27,7 +27,7 @@ use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
 use futures_old::{Future as OldFuture, IntoFuture};
 use services::Fb303Service;
 use slog::{debug, error, info, Logger};
-use tokio_preview::{
+use tokio::{
     signal::unix::{signal, SignalKind},
     time,
 };
@@ -400,10 +400,10 @@ where
             .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
         // Note: this returns a JoinHandle, which we drop, thus detaching the task
         // It thus does not count towards shutdown_on_idle below
-        tokio_preview::task::spawn(stats_agg);
+        tokio::task::spawn(stats_agg);
 
         // Spawn the server onto its own task
-        let server_handle = tokio_preview::task::spawn(server);
+        let server_handle = tokio::task::spawn(server);
 
         // Now wait for the termination signal, or a server exit.
         match future::select(server_handle, signalled).await {
@@ -452,7 +452,7 @@ where
             .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
         // Note: this returns a JoinHandle, which we drop, thus detaching the task
         // It thus does not count towards shutdown_on_idle below
-        tokio_preview::task::spawn(stats_agg);
+        tokio::task::spawn(stats_agg);
 
         future.await
     });

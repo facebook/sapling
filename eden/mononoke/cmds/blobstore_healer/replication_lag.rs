@@ -13,7 +13,7 @@ use slog::{info, Logger};
 use sql::Connection;
 use sql_facebook::ext::ConnectionFbExt;
 use std::time::Duration;
-use tokio_preview::time;
+use tokio::time;
 
 const MAX_ALLOWED_REPLICATION_LAG_SECS: u64 = 5;
 const REPLICATION_LAG_POLL_INTERVAL_SECS: u64 = 2;

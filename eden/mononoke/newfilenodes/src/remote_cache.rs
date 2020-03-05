@@ -17,7 +17,6 @@ use std::collections::HashSet;
 use std::time::Duration;
 use std::time::Instant;
 use time_ext::DurationExt;
-use tokio_preview;
 
 use crate::local_cache::CacheKey;
 use crate::structs::{CachedFilenode, CachedHistory};
@@ -289,7 +288,7 @@ fn schedule_fill_filenode(
     if serialized.len() < MEMCACHE_VALUE_MAX_SIZE {
         let fut = memcache.set(keygen.key(&key.key), serialized).compat();
 
-        tokio_preview::spawn(fut);
+        tokio::spawn(fut);
     }
 }
 
@@ -303,7 +302,7 @@ fn schedule_fill_history(
         let _ = fill_history(&memcache, &keygen, &key, filenodes).await;
     };
 
-    tokio_preview::spawn(fut);
+    tokio::spawn(fut);
 }
 
 fn serialize_history(filenodes: Vec<FilenodeInfo>) -> Bytes {
@@ -399,8 +398,7 @@ pub mod test {
     use mononoke_types::RepoPath;
     use mononoke_types_mocks::repo::REPO_ZERO;
     use std::time::Duration;
-    use tokio_preview as tokio;
-    use tokio_preview::time;
+    use tokio::time;
 
     use crate::reader::{filenode_cache_key, history_cache_key};
     use crate::structs::PathWithHash;

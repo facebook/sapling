@@ -82,7 +82,7 @@ impl BonsaiDerived for RootFastlog {
                 .map_ok(move |(_, entry)| {
                     cloned!(blobstore, ctx);
                     async move {
-                        let res = tokio_preview::spawn(async move {
+                        let res = tokio::spawn(async move {
                             let parents = fetch_unode_parents(&ctx, &blobstore, entry).await?;
 
                             let fastlog_batch =

@@ -291,7 +291,7 @@ async fn schedule_healing(
         // want to hammer the database with thousands of reads a second.
         if !last_batch_was_full_size {
             info!(ctx.logger(), "The last batch was not full size, waiting...",);
-            tokio_preview::time::delay_for(Duration::from_secs(1)).await;
+            tokio::time::delay_for(Duration::from_secs(1)).await;
         }
     }
 }

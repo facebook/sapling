@@ -314,7 +314,7 @@ impl LeaseOps for MemcacheOps {
                         warn!(ctx.logger(), "failed to renew lease for {}", mc_key);
                     }
 
-                    let sleep = tokio_preview::time::delay_for(Duration::from_secs(1));
+                    let sleep = tokio::time::delay_for(Duration::from_secs(1));
                     let res = select(sleep, done).await;
                     match res {
                         NewEither::Left((_, new_done)) => {

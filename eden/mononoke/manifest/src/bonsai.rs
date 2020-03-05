@@ -343,7 +343,6 @@ mod test {
     use futures_ext::{BoxFuture, FutureExt as Futures01FutureExt};
     use futures_old::IntoFuture;
     use mononoke_types::MPathElement;
-    use tokio_preview as tokio;
 
     impl<ManifestId, FileId> CompositeEntry<ManifestId, FileId>
     where
