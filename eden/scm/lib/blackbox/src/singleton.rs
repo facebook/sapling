@@ -10,10 +10,9 @@
 //! Useful for cases where it's inconvenient to pass [`Blackbox`] around.
 
 use crate::{event::Event, Blackbox, BlackboxOptions};
-use indexedlog::rotate::RotateLowLevelExt;
 use lazy_static::lazy_static;
 use parking_lot::Mutex;
-use std::ops::{Deref, DerefMut};
+use std::ops::DerefMut;
 
 lazy_static! {
     pub static ref SINGLETON: Mutex<Blackbox> =
@@ -30,12 +29,10 @@ pub fn init(mut blackbox: Blackbox) {
     let mut singleton = SINGLETON.lock();
 
     // Insert dirty entries to the new blackbox.
-    let old_blackbox = singleton.deref();
-    for log in old_blackbox.log.logs().iter() {
-        for entry in log.iter_dirty() {
-            if let Ok(entry) = entry {
-                let _ = blackbox.log.append(entry);
-            }
+    let old_blackbox = singleton.deref_mut();
+    for entry in old_blackbox.log.iter_dirty() {
+        if let Ok(entry) = entry {
+            let _ = blackbox.log.append(entry);
         }
     }
 
