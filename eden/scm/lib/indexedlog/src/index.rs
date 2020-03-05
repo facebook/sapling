@@ -2398,6 +2398,13 @@ impl Index {
         &self.dirty_root.meta
     }
 
+    /// Get metadata attached to the root node at file open time. This is what
+    /// stored on the filesystem at the index open time, not affected by
+    /// [`Index::set_meta`].
+    pub fn get_original_meta(&self) -> &[u8] {
+        &self.clean_root.meta
+    }
+
     /// Set metadata attached to the root node. Will be written at
     /// [`Index::flush`] time.
     pub fn set_meta<B: AsRef<[u8]>>(&mut self, meta: B) {
@@ -4484,6 +4491,8 @@ Disk[410]: Root { radix: Disk[402] }
 
         index.set_meta(&vec![43]);
         index.insert(&"bar", 2).unwrap();
+
+        assert_eq!(index.get_original_meta(), [42]);
         index.clear_dirty();
 
         assert_eq!(index.get_meta(), [42]);
