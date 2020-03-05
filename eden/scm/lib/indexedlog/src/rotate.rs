@@ -561,6 +561,11 @@ impl RotateLog {
         let logs = self.logs();
         logs.into_iter().rev().flat_map(|log| log.iter())
     }
+
+    /// Iterate over all dirty entries.
+    pub fn iter_dirty(&mut self) -> impl Iterator<Item = crate::Result<&[u8]>> {
+        self.writable_log().iter_dirty()
+    }
 }
 
 /// Wrap `Log` in a `OnceCell`.
@@ -1181,16 +1186,29 @@ mod tests {
         let b = vec![b'b'; 10];
 
         rotate.append(a.clone()).unwrap();
+        assert_eq!(
+            rotate.iter_dirty().collect::<Result<Vec<_>, _>>().unwrap(),
+            vec![&a[..]]
+        );
+
         rotate.sync().unwrap(); // trigger rotate
         rotate.append(b.clone()).unwrap();
-        rotate.sync().unwrap();
+        rotate.append(a.clone()).unwrap();
+        rotate.append(a.clone()).unwrap();
+        assert_eq!(
+            rotate.iter_dirty().collect::<Result<Vec<_>, _>>().unwrap(),
+            vec![&b[..], &a, &a]
+        );
 
         assert_eq!(
-            rotate
-                .iter()
-                .map(|e| e.unwrap().to_vec())
-                .collect::<Vec<Vec<u8>>>(),
-            vec![a, b]
+            rotate.iter().map(|e| e.unwrap()).collect::<Vec<&[u8]>>(),
+            vec![&a[..], &b, &a, &a],
+        );
+
+        rotate.sync().unwrap(); // trigger rotate
+        assert_eq!(
+            rotate.iter().map(|e| e.unwrap()).collect::<Vec<&[u8]>>(),
+            vec![&b[..], &a, &a],
         );
     }
 
