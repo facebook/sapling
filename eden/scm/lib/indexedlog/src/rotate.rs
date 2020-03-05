@@ -544,7 +544,12 @@ impl RotateLog {
                 let id = self.latest.wrapping_sub(index as u8);
                 if let Some(dir) = &self.dir {
                     Ok(Some(cell.get_or_try_init(|| {
-                        load_log(&dir, id, &self.open_options)
+                        let mut open_options = self.open_options.log_open_options.clone();
+                        if index > 0 {
+                            open_options = open_options.with_zero_index_lag();
+                        }
+                        let log = load_log(&dir, id, open_options);
+                        log
                     })?))
                 } else {
                     Ok(cell.get())
@@ -577,14 +582,10 @@ fn create_log_cell(log: Log) -> OnceCell<Log> {
 }
 
 /// Load a single log at the given location.
-fn load_log(dir: &Path, id: u8, open_options: &OpenOptions) -> crate::Result<Log> {
+fn load_log(dir: &Path, id: u8, open_options: log::OpenOptions) -> crate::Result<Log> {
     let name = format!("{}", id);
     let log_path = dir.join(&name);
-    open_options
-        .log_open_options
-        .clone()
-        .create(false)
-        .open(&log_path)
+    open_options.create(false).open(&log_path)
 }
 
 /// Get access to internals of [`RotateLog`].
@@ -743,7 +744,7 @@ fn read_logs(
     let mut logs = Vec::with_capacity(open_options.max_log_count as usize);
 
     // Make sure the first log (latest) can be loaded.
-    let log = load_log(dir, latest, open_options)?;
+    let log = load_log(dir, latest, open_options.log_open_options.clone())?;
     logs.push(create_log_cell(log));
 
     // Lazily load the rest of logs.
@@ -1329,6 +1330,44 @@ mod tests {
         assert_eq!(rotate.logs()[0].iter_dirty().count(), 1);
         rotate.append(vec![b'x'; 50]).unwrap(); // trigger sync
         assert_eq!(rotate.logs()[0].iter_dirty().count(), 0);
+    }
+
+    #[test]
+    fn test_reindex_old_logs() {
+        let dir = tempdir().unwrap();
+        let opts = OpenOptions::new()
+            .max_bytes_per_log(10)
+            .max_log_count(10)
+            .create(true);
+
+        let mut rotate = opts.clone().create(true).open(&dir).unwrap();
+        for i in 0..2u8 {
+            rotate.append(vec![i; 50]).unwrap();
+            rotate.sync().unwrap(); // rotate
+        }
+
+        // New OpenOptions: With indexes.
+        let opts = opts.index("a", |_data| vec![IndexOutput::Reference(0..1)]);
+
+        // Triggers rebuilding indexes.
+        let rotate = opts.clone().create(true).open(&dir).unwrap();
+
+        // Because older log is lazy. It hasn't been loaded yet. So it does not have the index.
+        assert!(!dir.path().join("1/index2-a").exists());
+        assert!(!dir.path().join("0/index2-a").exists());
+
+        // Do an index lookup. This will trigger loading old logs.
+        let mut iter = rotate.lookup(0, b"\x00".to_vec()).unwrap();
+
+        // The iterator is lazy. So it does not build the index immediately.
+        assert!(!dir.path().join("1/index2-a").exists());
+
+        // Iterate through all logs.
+        assert_eq!(iter.nth(0).unwrap().unwrap(), &[0; 50][..]);
+
+        // Now the index is built for older logs.
+        assert!(dir.path().join("1/index2-a").exists());
+        assert!(dir.path().join("0/index2-a").exists());
     }
 
     #[test]

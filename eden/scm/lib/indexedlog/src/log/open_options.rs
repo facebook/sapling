@@ -299,6 +299,16 @@ impl OpenOptions {
         self
     }
 
+    /// Remove index lagging.
+    ///
+    /// Used by `RotateLog` to make sure old logs have complete indexes.
+    pub(crate) fn with_zero_index_lag(mut self) -> Self {
+        for def in self.index_defs.iter_mut() {
+            def.lag_threshold = 0;
+        }
+        self
+    }
+
     /// Construct [`Log`] at given directory. Incrementally build up specified
     /// indexes.
     ///
