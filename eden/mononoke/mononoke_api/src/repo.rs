@@ -28,6 +28,7 @@ use futures::StreamExt as NewStreamExt;
 use futures_ext::StreamExt;
 use futures_old::stream::{self, Stream};
 use identity::Identity;
+use itertools::Itertools;
 use mercurial_types::Globalrev;
 use metaconfig_types::{
     CommitSyncConfig, CommonConfig, RepoConfig, SourceControlServiceMonitoring,
@@ -44,7 +45,7 @@ use sql_ext::MysqlOptions;
 #[cfg(test)]
 use sql_ext::SqlConstructors;
 use stats_facebook::service_data::{get_service_data_singleton, ServiceData};
-use std::collections::{HashSet, VecDeque};
+use std::collections::HashSet;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 use warm_bookmarks_cache::WarmBookmarksCache;
 
@@ -793,7 +794,11 @@ impl RepoContext {
         }
     }
 
-    /// Get a stack for the list of heads (up to the first public commit)
+    /// Get a stack for the list of heads (up to the first public commit).
+    ///
+    /// Limit represents the max depth to go into the stacks.
+    /// Algo is designed to minimize number of db queries.
+    /// Missing changesets are skipped.
     pub async fn stack(
         &self,
         changesets: Vec<ChangesetId>,
@@ -820,24 +825,25 @@ impl RepoContext {
             .partition(|cs_id| public_phases.contains(cs_id));
 
         // initialize the queue
-        let mut queue: VecDeque<(_, usize)> =
-            draft.iter().cloned().map(|cs_id| (cs_id, 1)).collect();
+        let mut queue: Vec<_> = draft.iter().cloned().collect();
 
-        while let Some((draft_cs_id, level)) = queue.pop_front() {
-            // too deep stack, skip the rest
-            if level >= limit {
-                continue;
-            }
+        let mut level: usize = 1;
 
-            // get the parents & skip visited & update visited
+        while !queue.is_empty() && level < limit {
+            // get the unique parents for all changesets in the queue & skip visited & update visited
             let parents: Vec<_> = self
                 .blob_repo()
-                .get_changeset_parents_by_bonsai(self.ctx.clone(), draft_cs_id)
+                .get_changesets_object()
+                .get_many(self.ctx.clone(), self.blob_repo().get_repoid(), queue)
                 .compat()
                 .await?
                 .into_iter()
+                .map(|cs_entry| cs_entry.parents)
+                .flatten()
                 .filter(|cs_id| !visited.contains(cs_id))
+                .unique()
                 .collect();
+
             visited.extend(parents.iter().cloned());
 
             // get phases for the parents
@@ -851,10 +857,9 @@ impl RepoContext {
                 .into_iter()
                 .partition(|cs_id| public_phases.contains(cs_id));
 
-            // update queue
-            for draft_cs_id in new_draft.iter() {
-                queue.push_back((draft_cs_id.clone(), level + 1));
-            }
+            // update queue and level
+            queue = new_draft.clone();
+            level = level + 1;
 
             // update draft & public
             public.extend(new_public.into_iter());
