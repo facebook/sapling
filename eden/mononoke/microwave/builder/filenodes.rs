@@ -44,20 +44,20 @@ impl MicrowaveFilenodes {
 impl Filenodes for MicrowaveFilenodes {
     fn add_filenodes(
         &self,
-        ctx: CoreContext,
-        info: Vec<PreparedFilenode>,
-        repo_id: RepositoryId,
+        _ctx: CoreContext,
+        _info: Vec<PreparedFilenode>,
+        _repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
-        self.inner.add_filenodes(ctx, info, repo_id)
+        unimplemented!()
     }
 
     fn add_or_replace_filenodes(
         &self,
-        ctx: CoreContext,
-        info: Vec<PreparedFilenode>,
-        repo_id: RepositoryId,
+        _ctx: CoreContext,
+        _info: Vec<PreparedFilenode>,
+        _repo_id: RepositoryId,
     ) -> BoxFuture<(), Error> {
-        self.inner.add_or_replace_filenodes(ctx, info, repo_id)
+        unimplemented!()
     }
 
     fn get_filenode(
@@ -98,11 +98,11 @@ impl Filenodes for MicrowaveFilenodes {
 
     fn get_all_filenodes_maybe_stale(
         &self,
-        ctx: CoreContext,
-        path: &RepoPath,
-        repo_id: RepositoryId,
+        _ctx: CoreContext,
+        _path: &RepoPath,
+        _repo_id: RepositoryId,
     ) -> BoxFuture<Vec<FilenodeInfo>, Error> {
-        self.inner.get_all_filenodes_maybe_stale(ctx, path, repo_id)
+        unimplemented!()
     }
 
     fn prime_cache(

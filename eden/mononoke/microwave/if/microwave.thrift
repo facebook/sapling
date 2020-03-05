@@ -9,7 +9,7 @@ include "eden/mononoke/mononoke_types/if/mononoke_types_thrift.thrift"
 include "eden/mononoke/mercurial/types/if/mercurial_thrift.thrift"
 
 // Code version constant -- update to invalidate saved state.
-const i32 CODEVER = 0
+const i32 CODEVER = 1
 
 struct FilenodeSnapshot {
   // Note: required fields are enforced at runtime here (to prevent Thift from
@@ -27,6 +27,13 @@ struct CopyInfoSnapshot {
   2: optional mercurial_thrift.HgNodeHash filenode,
 }
 
+struct ChangesetSnapshot {
+  1: optional mononoke_types_thrift.ChangesetId cs_id,
+  2: optional list<mononoke_types_thrift.ChangesetId> parents,
+  3: optional i64 gen,
+}
+
 struct RepoSnapshot {
   1: optional list<FilenodeSnapshot> filenodes,
+  2: optional list<ChangesetSnapshot> changesets,
 }

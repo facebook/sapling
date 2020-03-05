@@ -2108,6 +2108,31 @@ impl DangerousOverride<Arc<dyn Filenodes>> for BlobRepo {
     }
 }
 
+impl DangerousOverride<Arc<dyn Changesets>> for BlobRepo {
+    fn dangerous_override<F>(&self, modify: F) -> Self
+    where
+        F: FnOnce(Arc<dyn Changesets>) -> Arc<dyn Changesets>,
+    {
+        let changesets = modify(self.changesets.clone());
+
+        let changeset_fetcher_factory = {
+            cloned!(changesets, self.repoid);
+            move || {
+                let res: Arc<dyn ChangesetFetcher + Send + Sync> = Arc::new(
+                    SimpleChangesetFetcher::new(changesets.clone(), repoid.clone()),
+                );
+                res
+            }
+        };
+
+        BlobRepo {
+            changesets,
+            changeset_fetcher_factory: Arc::new(changeset_fetcher_factory),
+            ..self.clone()
+        }
+    }
+}
+
 impl DangerousOverride<DerivedDataConfig> for BlobRepo {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where

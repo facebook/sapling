@@ -301,6 +301,10 @@ impl<C: Changesets> Changesets for DelayedChangesets<C> {
         )
         .boxify()
     }
+
+    fn prime_cache(&self, ctx: &CoreContext, changesets: &[ChangesetEntry]) {
+        self.inner.prime_cache(ctx, changesets)
+    }
 }
 
 struct DelayedBonsaiHgMapping<M> {

@@ -5,8 +5,10 @@
  * GNU General Public License version 2.
  */
 
+mod changesets;
 mod filenodes;
 
+use ::changesets::Changesets;
 use ::filenodes::Filenodes;
 use anyhow::{format_err, Error};
 use blobrepo::DangerousOverride;
@@ -24,6 +26,7 @@ use slog::{info, o, Logger};
 use std::path::Path;
 use std::sync::Arc;
 
+use crate::changesets::MicrowaveChangesets;
 use crate::filenodes::MicrowaveFilenodes;
 
 const SUBCOMMAND_LOCAL_PATH: &str = "local-path";
@@ -72,6 +75,7 @@ async fn do_main<'a>(
                 };
 
                 let (filenodes_sender, filenodes_receiver) = mpsc::channel(1000);
+                let (changesets_sender, changesets_receiver) = mpsc::channel(1000);
                 let warmup_ctx = ctx.clone();
 
                 let RepoConfig {
@@ -104,9 +108,13 @@ async fn do_main<'a>(
                     .compat()
                     .await?;
 
-                    let warmup_repo = repo.dangerous_override(|inner| -> Arc<dyn Filenodes> {
-                        Arc::new(MicrowaveFilenodes::new(repoid, filenodes_sender, inner))
-                    });
+                    let warmup_repo = repo
+                        .dangerous_override(|inner| -> Arc<dyn Filenodes> {
+                            Arc::new(MicrowaveFilenodes::new(repoid, filenodes_sender, inner))
+                        })
+                        .dangerous_override(|inner| -> Arc<dyn Changesets> {
+                            Arc::new(MicrowaveChangesets::new(repoid, changesets_sender, inner))
+                        });
 
                     cache_warmup::cache_warmup(warmup_ctx, warmup_repo, cache_warmup)
                         .compat()
@@ -116,9 +124,9 @@ async fn do_main<'a>(
                 };
 
                 let handle = tokio::task::spawn(warmup);
-                let snapshot = Snapshot::build(filenodes_receiver).await;
+                let snapshot = Snapshot::build(filenodes_receiver, changesets_receiver).await;
 
-                // Make sure cache warmup has succeeded before committign this snapshot, and get
+                // Make sure cache warmup has succeeded before committing this snapshot, and get
                 // the repo back.
                 let repo = handle.await??;
 

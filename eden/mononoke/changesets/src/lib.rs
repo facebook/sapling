@@ -154,6 +154,8 @@ pub trait Changesets: Send + Sync {
         cs_prefix: ChangesetIdPrefix,
         limit: usize,
     ) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error>;
+
+    fn prime_cache(&self, ctx: &CoreContext, changesets: &[ChangesetEntry]);
 }
 
 #[derive(Clone)]
@@ -406,6 +408,10 @@ impl Changesets for SqlChangesets {
                 _ => ok(resolved_cs).boxify(),
             })
             .boxify()
+    }
+
+    fn prime_cache(&self, _ctx: &CoreContext, _changesets: &[ChangesetEntry]) {
+        // No-op
     }
 }
 

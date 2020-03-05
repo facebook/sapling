@@ -196,6 +196,13 @@ impl Changesets for CachingChangesets {
             .get_many_by_prefix(ctx, repo_id, cs_prefix, limit)
             .boxify()
     }
+
+    fn prime_cache(&self, _ctx: &CoreContext, changesets: &[ChangesetEntry]) {
+        for cs in changesets {
+            let key = get_cache_key(cs.repo_id, &cs.cs_id);
+            let _ = self.cachelib.set_cached(&key, &cs);
+        }
+    }
 }
 
 fn deserialize_changeset_entry(buf: IOBuf) -> Result<ChangesetEntry, ()> {

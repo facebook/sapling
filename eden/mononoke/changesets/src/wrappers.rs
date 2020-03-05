@@ -50,4 +50,8 @@ impl Changesets for Arc<dyn Changesets> {
     ) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error> {
         (**self).get_many_by_prefix(ctx, repo_id, cs_prefix, limit)
     }
+
+    fn prime_cache(&self, ctx: &CoreContext, changesets: &[ChangesetEntry]) {
+        (**self).prime_cache(ctx, changesets)
+    }
 }
