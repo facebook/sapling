@@ -13,7 +13,9 @@
 //! may want to use watchman to watch a portion of the scratch space
 //! and can arrange the directory structure to prevent over-watching.
 
-use anyhow::{bail, ensure, format_err, Result};
+#[cfg(unix)]
+use anyhow::ensure;
+use anyhow::{bail, format_err, Result};
 use clap::{App, AppSettings, Arg, SubCommand};
 use serde::Deserialize;
 use std::collections::HashMap;
@@ -80,7 +82,7 @@ fn lookup_home_dir_for_user(user: &str) -> Result<String> {
 /// This is technically wrong for windows, but is at least
 /// wrong in a backwards compatible way
 #[cfg(windows)]
-fn lookup_home_dir_for_user(user: &str) -> Result<String> {
+fn lookup_home_dir_for_user(_user: &str) -> Result<String> {
     Ok(home_dir())
 }
 
