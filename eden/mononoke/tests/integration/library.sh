@@ -731,7 +731,14 @@ if [[ -v CACHE_WARMUP_BOOKMARK ]]; then
 [cache_warmup]
 bookmark="$CACHE_WARMUP_BOOKMARK"
 CONFIG
+
+  if [[ -v CACHE_WARMUP_MICROWAVE ]]; then
+    cat >> "repos/$reponame/server.toml" <<CONFIG
+microwave_preload = true
+CONFIG
+  fi
 fi
+
 
 if [[ -v LFS_THRESHOLD ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
@@ -1495,6 +1502,13 @@ function fastreplay() {
     "${COMMON_ARGS[@]}" \
     --no-skiplist \
     --no-cache-warmup \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "$@"
+}
+
+function microwave_builder() {
+  "$MONONOKE_MICROWAVE_BUILDER" \
+    "${COMMON_ARGS[@]}" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \
     "$@"
 }

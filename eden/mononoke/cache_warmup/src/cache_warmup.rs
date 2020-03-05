@@ -13,12 +13,14 @@ use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
-use futures::{future, Future, IntoFuture, Stream};
+use futures::future::{FutureExt as _, TryFutureExt};
 use futures_ext::{spawn_future, FutureExt};
+use futures_old::{future, Future, IntoFuture, Stream};
 use futures_stats::Timed;
 use manifest::{Entry, ManifestOps};
 use mercurial_types::{HgChangesetId, HgFileNodeId, RepoPath};
 use metaconfig_types::CacheWarmupParams;
+use microwave::{self, SnapshotLocation};
 use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
 use scuba_ext::ScubaSampleBuilderExt;
@@ -199,6 +201,29 @@ fn do_cache_warmup(
         })
 }
 
+fn microwave_preload(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    params: CacheWarmupParams,
+) -> impl Future<Item = (CoreContext, BlobRepo, CacheWarmupParams), Error = Error> {
+    async move {
+        if params.microwave_preload {
+            match microwave::prime_cache(&ctx, &repo, SnapshotLocation::Blobstore).await {
+                Ok(_) => {
+                    warn!(ctx.logger(), "microwave: successfully primed cached");
+                }
+                Err(e) => {
+                    warn!(ctx.logger(), "microwave: cache warmup failed: {:#?}", e);
+                }
+            }
+        }
+
+        Ok((ctx, repo, params))
+    }
+    .boxed()
+    .compat()
+}
+
 /// Fetch all manifest entries for a bookmark, and fetches up to `commit_warmup_limit`
 /// ancestors of the bookmark.
 pub fn cache_warmup(
@@ -208,14 +233,15 @@ pub fn cache_warmup(
 ) -> impl Future<Item = (), Error = Error> {
     let repoid = repo.get_repoid();
     match cache_warmup {
-        Some(cache_warmup) => {
-            do_cache_warmup(ctx, repo, cache_warmup.bookmark, cache_warmup.commit_limit)
-                .map_err(move |err| {
-                    err.context(format!("while warming up repo {}", repoid))
-                        .into()
-                })
-                .left_future()
-        }
+        Some(params) => microwave_preload(ctx, repo, params)
+            .and_then(move |(ctx, repo, params)| {
+                do_cache_warmup(ctx, repo, params.bookmark, params.commit_limit)
+            })
+            .map_err(move |err| {
+                err.context(format!("while warming up repo {}", repoid))
+                    .into()
+            })
+            .left_future(),
         None => Ok(()).into_future().right_future(),
     }
 }

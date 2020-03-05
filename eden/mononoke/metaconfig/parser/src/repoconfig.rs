@@ -579,6 +579,7 @@ impl RepoConfigs {
                     .map(|v| v.try_into())
                     .transpose()?
                     .unwrap_or(200000),
+                microwave_preload: raw.microwave_preload.unwrap_or(false),
             }),
             None => None,
         };
@@ -1555,6 +1556,7 @@ mod test {
                 cache_warmup: Some(CacheWarmupParams {
                     bookmark: BookmarkName::new("master").unwrap(),
                     commit_limit: 100,
+                    microwave_preload: false,
                 }),
                 hook_manager_params: Some(HookManagerParams {
                     disable_acl_checker: false,
