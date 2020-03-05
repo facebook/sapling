@@ -51,7 +51,7 @@ pub struct IndexDef {
     /// `name` is used so the existing index won't be reused incorrectly.
     pub(crate) name: &'static str,
 
-    /// How many entries (as counted in the file backing [`Log`]) could be left not
+    /// How many bytes (as counted in the file backing [`Log`]) could be left not
     /// indexed on-disk.
     ///
     /// This is related to [`Index`] implementation detail. Since it's append-only
@@ -62,7 +62,7 @@ pub struct IndexDef {
     /// [`Log::open`].
     ///
     /// Practically, this correlates to how fast `func` is.
-    pub(crate) lag_threshold: usize,
+    pub(crate) lag_threshold: u64,
 }
 
 /// Output of an index function. Bytes that can be used for lookups.
@@ -180,7 +180,7 @@ impl IndexDef {
             // for commit hash index, and might be okay for non-commit-hash
             // indexes. Users should customize the value if the default is not
             // good enough.
-            lag_threshold: 500,
+            lag_threshold: 25 * 500,
         }
     }
 
@@ -195,7 +195,7 @@ impl IndexDef {
     /// [`Log::open`].
     ///
     /// Practically, this correlates to how fast `func` is.
-    pub fn lag_threshold(self, lag_threshold: usize) -> Self {
+    pub fn lag_threshold(self, lag_threshold: u64) -> Self {
         Self {
             func: self.func,
             name: self.name,
@@ -351,14 +351,12 @@ impl OpenOptions {
         let result: crate::Result<_> = (|| {
             let meta = LogMetadata::new_with_primary_len(PRIMARY_START_OFFSET);
             let mem_buf = Box::pin(Vec::new());
-            let mut index_lags = vec![0; self.index_defs.len()];
             let (disk_buf, indexes) = Log::load_log_and_indexes(
                 &dir,
                 &meta,
                 &self.index_defs,
                 &mem_buf,
                 None,
-                &mut index_lags,
                 self.fsync,
             )?;
             Ok(Log {
@@ -367,7 +365,6 @@ impl OpenOptions {
                 mem_buf,
                 meta,
                 indexes,
-                index_lags,
                 index_corrupted: false,
                 open_options: self.clone(),
             })
@@ -414,14 +411,12 @@ impl OpenOptions {
         })?;
 
         let mem_buf = Box::pin(Vec::new());
-        let mut index_lags = vec![0; self.index_defs.len()];
         let (disk_buf, indexes) = Log::load_log_and_indexes(
             dir,
             &meta,
             &self.index_defs,
             &mem_buf,
             reuse_indexes,
-            &mut index_lags,
             self.fsync,
         )?;
         let mut log = Log {
@@ -430,21 +425,21 @@ impl OpenOptions {
             mem_buf,
             meta,
             indexes,
-            index_lags,
             index_corrupted: false,
             open_options: self.clone(),
         };
         log.update_indexes_for_on_disk_entries()?;
-        if log.is_any_index_lagging() {
+        let lagging_index_ids = log.lagging_index_ids();
+        if !lagging_index_ids.is_empty() {
             // Update indexes.
             // NOTE: Consider ignoring failures if they are caused by permission
             // issues.
             if let Some(lock) = lock {
-                log.flush_lagging_indexes(lock)?;
+                log.flush_lagging_indexes(&lagging_index_ids, lock)?;
                 log.dir.write_meta(&log.meta, self.fsync)?;
             } else {
                 let lock = dir.lock()?;
-                log.flush_lagging_indexes(&lock)?;
+                log.flush_lagging_indexes(&lagging_index_ids, &lock)?;
                 log.dir.write_meta(&log.meta, self.fsync)?;
             }
         }

@@ -1274,7 +1274,7 @@ mod tests {
             .index_defs(vec![IndexDef::new("idx", |_| {
                 vec![IndexOutput::Reference(0..2)]
             })
-            .lag_threshold(usize::max_value())])
+            .lag_threshold(u64::max_value())])
             .max_bytes_per_log(100)
             .max_log_count(3);
 

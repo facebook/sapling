@@ -49,7 +49,7 @@ impl LogMetadata {
             return Err(io::Error::new(io::ErrorKind::InvalidData, msg));
         }
 
-        let hash = reader.read_vlq()?;
+        let hash: u64 = reader.read_vlq()?;
         let buf_len = reader.read_vlq()?;
 
         let mut buf = vec![0; buf_len];
