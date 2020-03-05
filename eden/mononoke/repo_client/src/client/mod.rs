@@ -1674,11 +1674,17 @@ impl HgCommands for RepoClient {
                         .map(|fut| {
                             fut.timed({
                                 let ctx = ctx.clone();
-                                move |stats, _| {
+                                move |stats, blob| {
                                     ctx.perf_counters().add_to_counter(
                                         PerfCounterType::SumManifoldPollTime,
                                         stats.poll_time.as_nanos_unchecked() as i64,
                                     );
+                                    if let Ok(bytes) = blob {
+                                        ctx.perf_counters().add_to_counter(
+                                            PerfCounterType::BytesSent,
+                                            bytes.len() as i64,
+                                        )
+                                    }
                                     Ok(())
                                 }
                             })
@@ -1691,11 +1697,17 @@ impl HgCommands for RepoClient {
                         .map(|fut| {
                             fut.timed({
                                 let ctx = ctx.clone();
-                                move |stats, _| {
+                                move |stats, blob| {
                                     ctx.perf_counters().add_to_counter(
                                         PerfCounterType::SumManifoldPollTime,
                                         stats.poll_time.as_nanos_unchecked() as i64,
                                     );
+                                    if let Ok(bytes) = blob {
+                                        ctx.perf_counters().add_to_counter(
+                                            PerfCounterType::BytesSent,
+                                            bytes.len() as i64,
+                                        )
+                                    }
                                     Ok(())
                                 }
                             })

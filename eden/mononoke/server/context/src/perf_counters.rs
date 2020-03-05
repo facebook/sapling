@@ -54,6 +54,7 @@ define_perf_counters! {
         BlobPresenceChecksMaxLatency,
         BlobPuts,
         BlobPutsMaxLatency,
+        BytesSent,
         CachelibHits,
         CachelibMisses,
         GetbundleNumCommits,
