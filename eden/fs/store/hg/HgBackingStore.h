@@ -214,6 +214,10 @@ class HgBackingStore : public BackingStore {
 #ifdef EDEN_HAVE_RUST_DATAPACK
   std::optional<HgDatapackStore> datapackStore_;
 #endif
+
+  mutable std::atomic<size_t> pendingImportBlobCount_{0};
+  mutable std::atomic<size_t> pendingImportTreeCount_{0};
+  mutable std::atomic<size_t> pendingImportPrefetchCount_{0};
 };
 } // namespace eden
 } // namespace facebook

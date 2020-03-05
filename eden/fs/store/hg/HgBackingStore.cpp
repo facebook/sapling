@@ -184,6 +184,26 @@ std::unique_ptr<Blob> getBlobFromUnionStore(
   }
   return nullptr;
 }
+
+/**
+ * managers the pointer to the number of outstanding imports
+ */
+class PendingImportsCounterScope {
+ public:
+  explicit PendingImportsCounterScope(std::atomic<size_t>* pendingRequestsCount)
+      : pendingRequestsCount_(pendingRequestsCount) {
+    pendingRequestsCount_->fetch_add(1, std::memory_order_relaxed);
+  }
+
+  ~PendingImportsCounterScope() {
+    pendingRequestsCount_->fetch_sub(1, std::memory_order_relaxed);
+  }
+  PendingImportsCounterScope(PendingImportsCounterScope&&) = delete;
+  PendingImportsCounterScope& operator=(PendingImportsCounterScope&&) = delete;
+
+ private:
+  std::atomic<size_t>* pendingRequestsCount_;
+};
 } // namespace
 
 HgBackingStore::HgBackingStore(
@@ -529,6 +549,8 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
     Hash edenTreeID,
     RelativePath path,
     std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
+  auto queueTracker =
+      std::make_unique<PendingImportsCounterScope>(&pendingImportTreeCount_);
   auto fut =
       folly::via(
           importThreadPool_.get(),
@@ -540,19 +562,20 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
                 .hgBackingStoreImportTree.addValue(watch.elapsed().count());
           })
           .via(serverThreadPool_);
-  return std::move(fut).thenTry(
-      [this,
-       ownedPath = std::move(path),
-       node = std::move(manifestNode),
-       treeID = std::move(edenTreeID),
-       batch = std::move(writeBatch)](folly::Try<folly::Unit> val) {
+  return std::move(fut)
+      .thenTry([this,
+                ownedPath = std::move(path),
+                node = std::move(manifestNode),
+                treeID = std::move(edenTreeID),
+                batch = std::move(writeBatch)](folly::Try<folly::Unit> val) {
         val.value();
         // Now try loading it again
         unionStore_->wlock()->markForRefresh();
         auto content =
             unionStoreGet(*unionStore_->wlock(), ownedPath.stringPiece(), node);
         return processTree(content, node, treeID, ownedPath, batch.get());
-      });
+      })
+      .ensure([tracker = std::move(queueTracker)] {});
 }
 
 std::unique_ptr<Tree> HgBackingStore::processTree(
@@ -730,25 +753,32 @@ SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
 SemiFuture<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(
     const RelativePathPiece& path,
     const Hash& id) {
+  auto queueTracker =
+      std::make_unique<PendingImportsCounterScope>(&pendingImportBlobCount_);
   return folly::via(
-      importThreadPool_.get(), [path = path.copy(), stats = stats_, id] {
-        Importer& importer = getThreadLocalImporter();
-        folly::stop_watch<std::chrono::milliseconds> watch;
-        auto blob = importer.importFileContents(path, id);
-        stats->getHgBackingStoreStatsForCurrentThread()
-            .hgBackingStoreImportBlob.addValue(watch.elapsed().count());
-        return blob;
-      });
+             importThreadPool_.get(),
+             [path = path.copy(), stats = stats_, id] {
+               Importer& importer = getThreadLocalImporter();
+               folly::stop_watch<std::chrono::milliseconds> watch;
+               auto blob = importer.importFileContents(path, id);
+               stats->getHgBackingStoreStatsForCurrentThread()
+                   .hgBackingStoreImportBlob.addValue(watch.elapsed().count());
+               return blob;
+             })
+      .ensure([tracker = std::move(queueTracker)] {});
 }
 
 folly::Future<folly::Unit> HgBackingStore::prefetchBlobs(
     const std::vector<Hash>& ids) const {
+  auto queueTracker = std::make_unique<PendingImportsCounterScope>(
+      &pendingImportPrefetchCount_);
   return HgProxyHash::getBatch(localStore_, ids)
       .via(importThreadPool_.get())
       .thenValue([](std::vector<std::pair<RelativePath, Hash>>&& hgPathHashes) {
         return getThreadLocalImporter().prefetchFiles(hgPathHashes);
       })
-      .via(serverThreadPool_);
+      .via(serverThreadPool_)
+      .ensure([tracker = std::move(queueTracker)] {});
 }
 
 SemiFuture<unique_ptr<Tree>> HgBackingStore::getTreeForCommit(
