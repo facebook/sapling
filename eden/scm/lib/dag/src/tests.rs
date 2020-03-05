@@ -856,15 +856,15 @@ impl IdDag {
 }
 
 /// Result of `build_segments`.
-struct BuildSegmentResult {
-    ascii: Vec<String>,
-    name_dag: NameDag,
-    dir: tempfile::TempDir,
+pub(crate) struct BuildSegmentResult {
+    pub(crate) ascii: Vec<String>,
+    pub(crate) name_dag: NameDag,
+    pub(crate) dir: tempfile::TempDir,
 }
 
 /// Take an ASCII DAG, assign segments from given heads.
 /// Return the ASCII DAG and segments strings, together with the IdMap and IdDag.
-fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentResult {
+pub(crate) fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentResult {
     let dir = tempdir().unwrap();
     let mut name_dag = NameDag::open(dir.path().join("n")).unwrap();
     name_dag.dag.set_new_segment_size(segment_size);
