@@ -60,6 +60,8 @@ impl AddScubaParams for thrift::RepoResolveCommitPrefixParams {
     }
 }
 
+impl AddScubaParams for thrift::RepoStackInfoParams {}
+
 impl AddScubaParams for thrift::CommitCompareParams {
     fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
         if let Some(other_commit_id) = self.other_commit_id.as_ref() {

@@ -395,5 +395,10 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             repo: thrift::RepoSpecifier,
             params: thrift::RepoCreateCommitParams,
         ) -> Result<thrift::RepoCreateCommitResponse, service::RepoCreateCommitExn>;
+
+        async fn repo_stack_info(
+            repo: thrift::RepoSpecifier,
+            params: thrift::RepoStackInfoParams,
+        ) -> Result<thrift::RepoStackInfoResponse, service::RepoStackInfoExn>;
     }
 }

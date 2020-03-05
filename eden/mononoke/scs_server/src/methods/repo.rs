@@ -6,12 +6,12 @@
  */
 
 use std::collections::BTreeMap;
-use std::convert::TryFrom;
+use std::convert::{identity, TryFrom};
 
 use bytes::Bytes;
 use chrono::{DateTime, FixedOffset, Local};
 use context::CoreContext;
-use futures::compat::Future01CompatExt;
+use futures::{compat::Future01CompatExt, future::try_join, future::try_join_all};
 use futures_old::stream::Stream;
 use futures_util::stream::FuturesOrdered;
 use futures_util::TryStreamExt;
@@ -26,6 +26,7 @@ use source_control as thrift;
 use crate::commit_id::{map_commit_identities, map_commit_identity, CommitIdExt};
 use crate::errors;
 use crate::from_request::{check_range_and_convert, FromRequest};
+use crate::into_response::AsyncIntoResponse;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 impl SourceControlServiceImpl {
@@ -304,5 +305,89 @@ impl SourceControlServiceImpl {
             .await?;
         let ids = map_commit_identity(&changeset, &params.identity_schemes).await?;
         Ok(thrift::RepoCreateCommitResponse { ids })
+    }
+
+    /// Build stacks for the given list of heads.
+    ///
+    /// Returns the IDs of the changeset in the requested identity schemes.
+    /// Draft nodes and first public roots.
+    ///
+    /// Best effort: missing changesets are skipped,
+    ///              building stack up to provided limit.
+    pub(crate) async fn repo_stack_info(
+        &self,
+        ctx: CoreContext,
+        repo: thrift::RepoSpecifier,
+        params: thrift::RepoStackInfoParams,
+    ) -> Result<thrift::RepoStackInfoResponse, errors::ServiceError> {
+        let repo = self.repo(ctx, &repo)?;
+
+        // parse changeset specifiers from params
+        let head_specifiers = params
+            .heads
+            .iter()
+            .map(ChangesetSpecifier::from_request)
+            .collect::<Result<Vec<_>, _>>()?;
+
+        // convert changeset specifiers to bonsai changeset ids
+        // missing changesets are skipped
+        let heads_ids = try_join_all(
+            head_specifiers
+                .into_iter()
+                .map(|specifier| repo.resolve_specifier(specifier)),
+        )
+        .await?
+        .into_iter()
+        .filter_map(identity)
+        .collect::<Vec<_>>();
+
+        // get stack
+        let stack = repo.stack(heads_ids, params.limit as usize).await?;
+
+        // resolve draft changesets & public changesets
+        let (draft_commits, public_parents) = try_join(
+            try_join_all(
+                stack
+                    .draft
+                    .into_iter()
+                    .map(|cs_id| repo.changeset(ChangesetSpecifier::Bonsai(cs_id))),
+            ),
+            try_join_all(
+                stack
+                    .public
+                    .into_iter()
+                    .map(|cs_id| repo.changeset(ChangesetSpecifier::Bonsai(cs_id))),
+            ),
+        )
+        .await?;
+
+        // generate response
+        match (
+            draft_commits.into_iter().collect::<Option<Vec<_>>>(),
+            public_parents.into_iter().collect::<Option<Vec<_>>>(),
+        ) {
+            (Some(draft_commits), Some(public_parents)) => {
+                let (draft_commits, public_parents) = try_join(
+                    try_join_all(
+                        draft_commits
+                            .into_iter()
+                            .map(|cs| (&repo, cs, &params.identity_schemes).into_response()),
+                    ),
+                    try_join_all(
+                        public_parents
+                            .into_iter()
+                            .map(|cs| (&repo, cs, &params.identity_schemes).into_response()),
+                    ),
+                )
+                .await?;
+                Ok(thrift::RepoStackInfoResponse {
+                    draft_commits,
+                    public_parents,
+                })
+            }
+            _ => Err(
+                errors::internal_error("unexpected failure to resolve an existing commit").into(),
+            ),
+        }
     }
 }

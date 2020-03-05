@@ -44,6 +44,7 @@ use sql_ext::MysqlOptions;
 #[cfg(test)]
 use sql_ext::SqlConstructors;
 use stats_facebook::service_data::{get_service_data_singleton, ServiceData};
+use std::collections::{HashSet, VecDeque};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 use warm_bookmarks_cache::WarmBookmarksCache;
 
@@ -524,6 +525,12 @@ impl Repo {
     }
 }
 
+#[derive(Default)]
+pub struct Stack {
+    pub draft: HashSet<ChangesetId>,
+    pub public: HashSet<ChangesetId>,
+}
+
 /// A context object representing a query to a particular repo.
 impl RepoContext {
     pub(crate) fn new(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
@@ -784,6 +791,77 @@ impl RepoContext {
                 .map_err(MononokeError::from)
                 .boxify()
         }
+    }
+
+    /// Get a stack for the list of heads (up to the first public commit)
+    pub async fn stack(
+        &self,
+        changesets: Vec<ChangesetId>,
+        limit: usize,
+    ) -> Result<Stack, MononokeError> {
+        if limit == 0 {
+            return Ok(Default::default());
+        }
+
+        // initialize visited
+        let mut visited: HashSet<_> = changesets.iter().cloned().collect();
+
+        let phases = self.blob_repo().get_phases();
+
+        // get phases
+        let public_phases = phases
+            .get_public(self.ctx.clone(), changesets.clone(), false)
+            .compat()
+            .await?;
+
+        // partition
+        let (mut public, mut draft): (HashSet<_>, HashSet<_>) = changesets
+            .into_iter()
+            .partition(|cs_id| public_phases.contains(cs_id));
+
+        // initialize the queue
+        let mut queue: VecDeque<(_, usize)> =
+            draft.iter().cloned().map(|cs_id| (cs_id, 1)).collect();
+
+        while let Some((draft_cs_id, level)) = queue.pop_front() {
+            // too deep stack, skip the rest
+            if level >= limit {
+                continue;
+            }
+
+            // get the parents & skip visited & update visited
+            let parents: Vec<_> = self
+                .blob_repo()
+                .get_changeset_parents_by_bonsai(self.ctx.clone(), draft_cs_id)
+                .compat()
+                .await?
+                .into_iter()
+                .filter(|cs_id| !visited.contains(cs_id))
+                .collect();
+            visited.extend(parents.iter().cloned());
+
+            // get phases for the parents
+            let public_phases = phases
+                .get_public(self.ctx.clone(), parents.clone(), false)
+                .compat()
+                .await?;
+
+            // partition
+            let (new_public, new_draft): (Vec<_>, Vec<_>) = parents
+                .into_iter()
+                .partition(|cs_id| public_phases.contains(cs_id));
+
+            // update queue
+            for draft_cs_id in new_draft.iter() {
+                queue.push_back((draft_cs_id.clone(), level + 1));
+            }
+
+            // update draft & public
+            public.extend(new_public.into_iter());
+            draft.extend(new_draft.into_iter());
+        }
+
+        Ok(Stack { draft, public })
     }
 
     /// Get a Tree by id.  Returns `None` if the tree doesn't exist.
