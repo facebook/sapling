@@ -155,19 +155,6 @@ class StopTest(StopTestBase, PexpectAssertionMixin):
                 with contextlib.suppress(ProcessLookupError):
                     os.kill(daemon_pid, signal.SIGCONT)
 
-    def test_stopping_daemon_stopped_by_sigstop_kills_daemon(self) -> None:
-        with self.spawn_fake_edenfs(self.eden_dir) as daemon_pid:
-            os.kill(daemon_pid, signal.SIGSTOP)
-            try:
-                stop_process = self.spawn_stop(["--timeout", "1"])
-                stop_process.expect_exact("warning: edenfs is not responding")
-                self.assert_process_exit_code(
-                    stop_process, SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL
-                )
-            finally:
-                with contextlib.suppress(ProcessLookupError):
-                    os.kill(daemon_pid, signal.SIGCONT)
-
     def test_hanging_thrift_call_kills_daemon_with_sigkill(self) -> None:
         with self.spawn_fake_edenfs(self.eden_dir, ["--sleepBeforeStop=5"]):
             stop_process = self.spawn_stop(["--timeout", "1"])
