@@ -10,9 +10,9 @@ use crate::VertexName;
 use anyhow::Result;
 use indexmap::IndexSet;
 use std::any::Any;
+use std::fmt;
 
 /// A set backed by a concrete ordered set.
-#[derive(Debug)]
 pub struct StaticSet(pub(crate) IndexSet<VertexName>);
 
 type Iter =
@@ -61,6 +61,28 @@ impl NameSetQuery for StaticSet {
     }
 }
 
+impl fmt::Debug for StaticSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<[")?;
+        let mut count = 0;
+        // Makes the "debug" string bounded so it won't be super long for large StaticSet.
+        for name in self.0.iter().take(3) {
+            if count > 0 {
+                write!(f, " ")?;
+            }
+            write!(f, "{:?}", &name)?;
+            count += 1;
+        }
+        let remaining = self.0.len() - count;
+        if remaining > 0 {
+            write!(f, "] + {} more>", remaining)?;
+        } else {
+            write!(f, "]>")?;
+        }
+        Ok(())
+    }
+}
+
 // Test infra is unhappy about 'r#' yet (D20008157).
 #[cfg(not(fbcode_build))]
 #[cfg(test)]
@@ -84,6 +106,18 @@ mod tests {
         assert_eq!(shorten_name(set.first()?.unwrap()), "11");
         assert_eq!(shorten_name(set.last()?.unwrap()), "55");
         Ok(())
+    }
+
+    #[test]
+    fn test_debug() {
+        let set = static_set(b"");
+        assert_eq!(format!("{:?}", set), "<[]>");
+
+        let set = static_set(b"\x11\x33\x22");
+        assert_eq!(format!("{:?}", set), "<[1111 3333 2222]>");
+
+        let set = static_set(b"\xaa\x00\xaa\xdd\xee\xdd\x11\x22");
+        assert_eq!(format!("{:?}", set), "<[aaaa 0000 dddd] + 3 more>");
     }
 
     quickcheck::quickcheck! {

@@ -57,7 +57,7 @@ where
 
 impl fmt::Debug for VertexName {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        if self.0.len() >= 20 {
+        if self.0.len() >= 2 {
             // Use hex format for long names (ex. binary commit hashes).
             write!(f, "{}", self.to_hex())
         } else {

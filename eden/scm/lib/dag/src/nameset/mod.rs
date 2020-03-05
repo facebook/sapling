@@ -249,7 +249,7 @@ pub(crate) mod tests {
 
     /// Create a [`VertexName`] from `u8` by repeating them.
     pub(crate) fn to_name(value: u8) -> VertexName {
-        VertexName::from(vec![value; 20])
+        VertexName::from(vec![value; 2])
     }
 
     /// Shorten a [`VertexName`] result.
