@@ -23,6 +23,11 @@ Make 'B' public, and 'C' draft.
 Migrate down.
 
   $ setconfig experimental.narrow-heads=false
+
+ (Test if the repo is locked, the auto migration is skipped)
+  $ EDENSCM_TEST_PRETEND_LOCKED=lock hg phase $B
+  112478962961147124edd43549aedd1a335e44bf: public
+
   $ hg phase $B
   migrating repo to old-style visibility and phases
   (this restores the behavior to a known good state; post in Source Control @ FB if you have issues)

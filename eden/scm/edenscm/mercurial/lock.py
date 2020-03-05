@@ -302,6 +302,15 @@ class lock(object):
             return
         assert self._lockfd is None
         retry = 5
+
+        path = self.vfs.join(self.f)
+        if (
+            util.istest()
+            and self.f
+            in encoding.environ.get("EDENSCM_TEST_PRETEND_LOCKED", "").split()
+        ):
+            raise error.LockHeld(errno.EAGAIN, path, self.desc, None)
+
         while not self.held and retry:
             retry -= 1
             try:

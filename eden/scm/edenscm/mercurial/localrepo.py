@@ -579,6 +579,16 @@ class localrepository(object):
         # generic mapping between names and nodes
         self.names = namespaces.namespaces(self)
 
+        self._eventreporting = True
+        try:
+            self._svfsmigration()
+            self._narrowheadsmigration()
+            self._zstorecommitdatamigration()
+        except errormod.LockHeld:
+            # Not fatal.
+            pass
+
+    def _svfsmigration(self):
         # Migrate 'remotenames' and 'bookmarks' state from sharedvfs to
         # storevfs.
         # This cannot be safely done in the remotenames extension because
@@ -586,14 +596,10 @@ class localrepository(object):
         # use changelog before 'remotenames.reposetup'.
         for name in ["remotenames", "bookmarks"]:
             if self.sharedvfs.exists(name) and not os.path.exists(self.svfs.join(name)):
-                with self.wlock(), self.lock():
+                with self.wlock(wait=False), self.lock(wait=False):
                     data = self.sharedvfs.read(name)
                     # avoid svfs.write so it does not write into metalog.
                     util.writefile(self.svfs.join(name), data)
-
-        self._narrowheadsmigration()
-        self._zstorecommitdatamigration()
-        self._eventreporting = True
 
     def _narrowheadsmigration(self):
         """Migrate if 'narrow-heads' config has changed."""
@@ -613,13 +619,13 @@ class localrepository(object):
         if narrowheadsdesired != narrowheadscurrent:
             if narrowheadsdesired:
                 # Migrating up is easy: Just add the requirement.
-                self.ui.write_err(
-                    _(
-                        "migrating repo to new-style visibility and phases\n"
-                        "(this does not affect most workflows; post in Source Control @ FB if you have issues)\n"
+                with self.lock(wait=False):
+                    self.ui.write_err(
+                        _(
+                            "migrating repo to new-style visibility and phases\n"
+                            "(this does not affect most workflows; post in Source Control @ FB if you have issues)\n"
+                        )
                     )
-                )
-                with self.lock():
                     self.storerequirements.add("narrowheads")
                     self._writestorerequirements()
             else:
@@ -627,14 +633,14 @@ class localrepository(object):
                 # For this invocation, still pretend that we use narrow-heads.
                 # But the next invocation will use non-narrow-heads.
                 self.ui.setconfig("experimental", "narrow-heads", True)
-                # Writing to <shared repo path>/.hg/phaseroots
-                self.ui.write_err(
-                    _(
-                        "migrating repo to old-style visibility and phases\n"
-                        "(this restores the behavior to a known good state; post in Source Control @ FB if you have issues)\n"
+                with self.lock(wait=False):
+                    # Writing to <shared repo path>/.hg/phaseroots
+                    self.ui.write_err(
+                        _(
+                            "migrating repo to old-style visibility and phases\n"
+                            "(this restores the behavior to a known good state; post in Source Control @ FB if you have issues)\n"
+                        )
                     )
-                )
-                with self.lock():
                     # Accessing the raw file directly without going through
                     # complicated phasescache APIs.
                     draftroots = self.nodes("roots(draft())")
@@ -668,13 +674,13 @@ class localrepository(object):
             if zstorecommitdatadesired:
                 # Migrating up. Read all commits in revlog and store them in
                 # zstore.
-                with self.lock():
+                with self.lock(wait=False):
                     self._syncrevlogtozstore()
                     self.storerequirements.add("zstorecommitdata")
                     self._writestorerequirements()
             else:
                 # Migrating down is just removing the store requirement.
-                with self.lock():
+                with self.lock(wait=False):
                     self.storerequirements.remove("zstorecommitdata")
                     self._writestorerequirements()
 
