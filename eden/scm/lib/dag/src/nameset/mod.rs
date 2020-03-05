@@ -220,6 +220,16 @@ impl NameIter for RevVecNameIter {}
 pub(crate) mod tests {
     use super::*;
 
+    // For easier testing.
+    impl From<&str> for NameSet {
+        fn from(name: &str) -> NameSet {
+            NameSet::from_static_names(
+                name.split_whitespace()
+                    .map(|n| VertexName::copy_from(n.as_bytes())),
+            )
+        }
+    }
+
     #[derive(Debug)]
     pub(crate) struct VecQuery(Vec<VertexName>);
 
@@ -314,7 +324,7 @@ pub(crate) mod tests {
 
     /// Check consistency of a `NameSetQuery`, such as `iter().nth(0)` matches
     /// `first()` etc.
-    pub(crate) fn check_invariants(query: &impl NameSetQuery) -> Result<()> {
+    pub(crate) fn check_invariants(query: &dyn NameSetQuery) -> Result<()> {
         let is_empty = query.is_empty()?;
         let count = query.count()?;
         let first = query.first()?;

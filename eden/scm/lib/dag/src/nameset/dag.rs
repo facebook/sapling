@@ -124,3 +124,100 @@ impl NameSetQuery for DagSet {
         self
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::super::tests::*;
+    use super::*;
+    use crate::tests::build_segments;
+    use crate::NameDag;
+    use std::ops::Deref;
+
+    /// Test with a predefined DAG.
+    fn with_dag<R, F: Fn(&NameDag) -> R>(func: F) -> R {
+        let built = build_segments(
+            r#"
+            A--B--C--D
+                \--E--F--G"#,
+            "D G",
+            2,
+        );
+        //  0--1--2--3
+        //      \--4--5--6
+        func(&built.name_dag)
+    }
+
+    #[test]
+    fn test_dag_invariants() -> Result<()> {
+        with_dag(|dag| {
+            let bef = dag.range("B".into(), "F".into())?;
+            check_invariants(bef.deref())?;
+
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_dag_fast_paths() -> Result<()> {
+        with_dag(|dag| {
+            let abcd = dag.ancestors("D".into())?;
+            let abefg = dag.ancestors("G".into())?;
+
+            let ab = abcd.intersection(&abefg);
+            check_invariants(ab.deref())?;
+            // should not be "<and <...> <...>>"
+            assert_eq!(format!("{:?}", &ab), "<dag [0 1]>");
+
+            let abcdefg = abcd.union(&abefg);
+            check_invariants(abcd.deref())?;
+            // should not be "<or <...> <...>>"
+            assert_eq!(format!("{:?}", &abcdefg), "<dag [0..=6]>");
+
+            let cd = abcd.difference(&abefg);
+            check_invariants(cd.deref())?;
+            // should not be "<difference <...> <...>>"
+            assert_eq!(format!("{:?}", &cd), "<dag [2 3]>");
+
+            Ok(())
+        })
+    }
+
+    #[test]
+    fn test_dag_no_fast_paths() -> Result<()> {
+        with_dag(|dag1| -> Result<()> {
+            with_dag(|dag2| -> Result<()> {
+                let abcd = dag1.ancestors("D".into())?;
+                let abefg = dag2.ancestors("G".into())?;
+
+                // Since abcd and abefg are from 2 "separate" Dags, fast paths should not
+                // be used for intersection, union, and difference.
+
+                let ab = abcd.intersection(&abefg);
+                check_invariants(ab.deref())?;
+                // should not be "<dag ...>"
+                assert_eq!(
+                    format!("{:?}", &ab),
+                    "<and <dag [0..=3]> <dag [0 1 4 5 6]>>"
+                );
+
+                let abcdefg = abcd.union(&abefg);
+                check_invariants(abcd.deref())?;
+                // should not be "<dag ...>"
+                assert_eq!(
+                    format!("{:?}", &abcdefg),
+                    "<or <dag [0..=3]> <dag [0 1 4 5 6]>>"
+                );
+
+                let cd = abcd.difference(&abefg);
+                check_invariants(cd.deref())?;
+                // should not be "<dag ...>"
+                assert_eq!(
+                    format!("{:?}", &cd),
+                    "<difference <dag [0..=3]> <dag [0 1 4 5 6]>>"
+                );
+
+                Ok(())
+            })
+        })
+    }
+}
