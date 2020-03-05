@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+#![deny(warnings)]
+
 mod changeset_info;
+mod derive;
 
 pub use changeset_info::{ChangesetInfo, ChangesetMessage};

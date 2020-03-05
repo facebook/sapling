@@ -18,6 +18,7 @@ use bookmarks::{Bookmarks, CachedBookmarks};
 use cacheblob::{
     new_cachelib_blobstore_no_lease, new_memcache_blobstore, InProcessLease, MemcacheOps,
 };
+use changeset_info::ChangesetInfo;
 use changesets::{CachingChangesets, SqlChangesets};
 use cloned::cloned;
 use dbbookmarks::SqlBookmarks;
@@ -272,6 +273,7 @@ pub fn init_all_derived_data() -> DerivedDataConfig {
         derived_data_types: btreeset! {
             BlameRoot::NAME.to_string(),
             FilenodesOnlyPublic::NAME.to_string(),
+            ChangesetInfo::NAME.to_string(),
             RootFastlog::NAME.to_string(),
             RootFsnodeId::NAME.to_string(),
             RootDeletedManifestId::NAME.to_string(),

@@ -15,6 +15,7 @@ use anyhow::Error;
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, Freshness};
+use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
@@ -91,6 +92,9 @@ impl WarmBookmarksCache {
         }
         if derived_data_types.contains(BlameRoot::NAME) {
             warmers.push(create_warmer::<BlameRoot>(&ctx));
+        }
+        if derived_data_types.contains(ChangesetInfo::NAME) {
+            warmers.push(create_warmer::<ChangesetInfo>(&ctx));
         }
 
         let warmers = Arc::new(warmers);
