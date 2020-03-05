@@ -11,7 +11,7 @@
 
 use std::{
     collections::HashMap,
-    ffi::{CStr, OsStr},
+    ffi::CStr,
     fs,
     os::raw::c_char,
     path::{Path, PathBuf},
@@ -121,19 +121,17 @@ impl DataPackUnion {
     }
 }
 
-/// Construct a new datapack store for unix systems.
+/// Construct a new datapack store.
 /// Will panic the program if the paths array or elements
 /// of the paths array are null.
 /// Returns an instance of DataPackUnion which must be
 /// freed using revisionstore_datapackunion_free when it is
 /// no longer required.
-#[cfg(unix)]
 #[no_mangle]
 pub extern "C" fn revisionstore_datapackunion_new(
     paths: *const *const c_char,
     num_paths: usize,
 ) -> *mut DataPackUnion {
-    use std::os::unix::ffi::OsStrExt;
     debug_assert!(!paths.is_null());
     let paths = unsafe { slice::from_raw_parts(paths, num_paths) };
     let paths = paths
@@ -144,8 +142,8 @@ pub extern "C" fn revisionstore_datapackunion_new(
                 "paths passed to revisionstore_unionstore_new must not be null"
             );
             let path_cstr = unsafe { CStr::from_ptr(path_ptr) };
-            let path_bytes = path_cstr.to_bytes();
-            Path::new(OsStr::from_bytes(&path_bytes)).to_path_buf()
+            let path_str = path_cstr.to_str().expect("Not a valid UTF-8 path");
+            Path::new(path_str).to_path_buf()
         })
         .collect();
     let mut store = DataPackUnion::new(paths);
