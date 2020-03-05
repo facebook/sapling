@@ -9,13 +9,13 @@ use super::{NameIter, NameSet, NameSetQuery};
 use crate::VertexName;
 use anyhow::Result;
 use std::any::Any;
+use std::fmt;
 use std::iter::{Chain, Filter};
 
 /// Union of 2 sets.
 ///
 /// The order is preserved. The first set is iterated first, then the second set
 /// is iterated, with duplicated names skipped.
-#[derive(Debug)]
 pub struct UnionSet {
     sets: [NameSet; 2],
 }
@@ -98,6 +98,12 @@ impl NameSetQuery for UnionSet {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+impl fmt::Debug for UnionSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<or {:?} {:?}>", &self.sets[0], &self.sets[1])
     }
 }
 

@@ -9,11 +9,11 @@ use super::{NameIter, NameSet, NameSetQuery};
 use crate::VertexName;
 use anyhow::Result;
 use std::any::Any;
+use std::fmt;
 
 /// Subset of `lhs` that does not overlap with `rhs`.
 ///
 /// The iteration order is defined by `lhs`.
-#[derive(Debug)]
 pub struct DifferenceSet {
     lhs: NameSet,
     rhs: NameSet,
@@ -59,6 +59,12 @@ impl NameSetQuery for DifferenceSet {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+impl fmt::Debug for DifferenceSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<difference {:?} {:?}>", &self.lhs, &self.rhs)
     }
 }
 

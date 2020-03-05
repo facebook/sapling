@@ -46,7 +46,7 @@ impl NameIter for Iter {}
 
 impl fmt::Debug for DagSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        self.spans.fmt(f)
+        write!(f, "<dag [{:?}]>", &self.spans)
     }
 }
 

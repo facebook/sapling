@@ -9,11 +9,11 @@ use super::{NameIter, NameSet, NameSetQuery};
 use crate::VertexName;
 use anyhow::Result;
 use std::any::Any;
+use std::fmt;
 
 /// Intersection of 2 sets.
 ///
 /// The iteration order is defined by the first set.
-#[derive(Debug)]
 pub struct IntersectionSet {
     lhs: NameSet,
     rhs: NameSet,
@@ -59,6 +59,12 @@ impl NameSetQuery for IntersectionSet {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+impl fmt::Debug for IntersectionSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<and {:?} {:?}>", &self.lhs, &self.rhs)
     }
 }
 

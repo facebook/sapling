@@ -14,6 +14,7 @@ use crate::spanset::SpanSet;
 use crate::VertexName;
 use anyhow::Result;
 use std::any::Any;
+use std::fmt;
 use std::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -33,7 +34,7 @@ use self::dag::DagSet;
 ///
 /// It provides order-preserving iteration and set operations,
 /// and is cheaply clonable.
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct NameSet(Arc<dyn NameSetQuery>);
 
 impl NameSet {
@@ -133,6 +134,12 @@ impl Deref for NameSet {
 
     fn deref(&self) -> &Self::Target {
         self.0.deref()
+    }
+}
+
+impl fmt::Debug for NameSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        self.0.fmt(f)
     }
 }
 
@@ -290,6 +297,19 @@ pub(crate) mod tests {
         assert!(query.contains(&to_name(0xef))?);
         assert!(!query.contains(&to_name(0))?);
         Ok(())
+    }
+
+    #[test]
+    fn test_debug() {
+        let set = NameSet::all()
+            .union(&NameSet::from_static_names(vec![to_name(1)]))
+            .difference(
+                &NameSet::all().intersection(&NameSet::from_static_names(vec![to_name(2)])),
+            );
+        assert_eq!(
+            format!("{:?}", set),
+            "<difference <or <all> <[0101]>> <and <all> <[0202]>>>"
+        );
     }
 
     /// Check consistency of a `NameSetQuery`, such as `iter().nth(0)` matches

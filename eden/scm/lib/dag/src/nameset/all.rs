@@ -14,7 +14,7 @@ use std::fmt;
 /// A virtual set that includes everything.
 ///
 /// Most operations are unsupported. It can only be intersected with other sets.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone)]
 pub struct AllSet;
 
 #[derive(Copy, Clone, Debug)]
@@ -61,5 +61,11 @@ impl NameSetQuery for AllSet {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+impl fmt::Debug for AllSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<all>")
     }
 }

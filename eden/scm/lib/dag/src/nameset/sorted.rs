@@ -9,11 +9,11 @@ use super::{NameIter, NameSet, NameSetQuery};
 use crate::VertexName;
 use anyhow::Result;
 use std::any::Any;
+use std::fmt;
 
 /// A set that is marked as topologically sorted.
 ///
 /// Useful for [`LazySet`] and [`StaticSet`].
-#[derive(Debug)]
 pub struct SortedSet(pub(crate) NameSet);
 
 impl SortedSet {
@@ -49,5 +49,11 @@ impl NameSetQuery for SortedSet {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+impl fmt::Debug for SortedSet {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "<sorted {:?}>", &self.0)
     }
 }
