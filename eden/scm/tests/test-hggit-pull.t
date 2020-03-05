@@ -322,6 +322,41 @@ also add an annotated tag
   summary:     add delta
   
 
+Skip commits using hggit.skipgithashes
+  $ hg init skiprepo
+  $ cd skiprepo
+  $ hg pull --config extensions.hggit= --config hggit.skipgithashes=cee7863e67baaf98d4b6f3645dd9fa78fba9de0d ../gitrepo
+  pulling from ../gitrepo
+  importing git objects into hg
+  forcing git commit cee7863e67baaf98d4b6f3645dd9fa78fba9de0d to be empty
+  $ hg log -G --stat -T '{desc}'
+  o  newcommit newcommit |  1 +
+  |   1 files changed, 1 insertions(+), 0 deletions(-)
+  |
+  o  oldcommit oldcommit |  1 +
+  |   1 files changed, 1 insertions(+), 0 deletions(-)
+  |
+  | o  oldtag oldtag |  1 +
+  |/    1 files changed, 1 insertions(+), 0 deletions(-)
+  |
+  o    Merge branch 'beta' beta |  1 +
+  |\    1 files changed, 1 insertions(+), 0 deletions(-)
+  | |
+  | o  add beta beta |  1 +
+  | |   1 files changed, 1 insertions(+), 0 deletions(-)
+  | |
+  o |  add gamma
+  |/
+  o  add alpha alpha |  1 +
+      1 files changed, 1 insertions(+), 0 deletions(-)
+  
+  $ hg log -r 4d4019e3dd06 --stat
+  changeset:   1:4d4019e3dd06
+  user:        test <test@example.org>
+  date:        Mon Jan 01 00:00:13 2007 +0000
+  summary:     add gamma
+  
+  
 test for ssh vulnerability
 
   $ cat >> $HGRCPATH << EOF

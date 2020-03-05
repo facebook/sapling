@@ -930,6 +930,16 @@ class GitHandler(object):
 
         # get a list of the changed, added, removed files and gitlinks
         files, gitlinks, git_renames = self.get_files_changed(commit, detect_renames)
+
+        # If we need to skip a commit because the contents are problematic,
+        # let's still write the commit, so we have something to map to from git,
+        # but leave it empty.
+        if commit.id in self.ui.configlist("hggit", "skipgithashes", []):
+            self.ui.warn(_("forcing git commit %s to be empty\n") % commit.id)
+            files = {}
+            gitlinks = {}
+            git_renames = {}
+
         if detect_renames:
             renames = git_renames
 

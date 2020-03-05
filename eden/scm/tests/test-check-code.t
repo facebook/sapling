@@ -68,6 +68,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   Skipping tests/test-rustthreading.py it has no-che?k-code (glob)
   edenscm/hgext/extlib/phabricator/graphql.py:*: use foobar, not foo_bar naming --> ca_bundle = repo.ui.configpath("web", "cacerts") (glob)
   edenscm/hgext/extlib/phabricator/graphql.py:*: use foobar, not foo_bar naming --> def scmquery_log( (glob)
+  edenscm/hgext/hggit/git_handler.py:*: use foobar, not foo_bar naming --> git_renames = {} (glob)
   tests/run-tests.py:*: don't use camelcase in identifiers --> self.testsSkipped = 0 (glob)
 
 @commands in debugcommands.py should be in alphabetical order.
