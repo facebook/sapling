@@ -56,7 +56,7 @@ impl DateTime {
         Ok(Self::new(dt))
     }
 
-    pub(crate) fn from_thrift(dt: thrift::DateTime) -> Result<Self> {
+    pub fn from_thrift(dt: thrift::DateTime) -> Result<Self> {
         Self::from_timestamp(dt.timestamp_secs, dt.tz_offset_secs)
     }
 
@@ -89,7 +89,7 @@ impl DateTime {
         self.0
     }
 
-    pub(crate) fn into_thrift(self) -> thrift::DateTime {
+    pub fn into_thrift(self) -> thrift::DateTime {
         thrift::DateTime {
             timestamp_secs: self.timestamp_secs(),
             tz_offset_secs: self.tz_offset_secs(),
