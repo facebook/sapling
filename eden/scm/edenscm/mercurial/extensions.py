@@ -145,7 +145,7 @@ def loadpath(path, module_name):
         if prefix == "python-base64":
             import base64
 
-            source = base64.decodestring(content.encode("utf-8"))
+            source = base64.b64decode(content)
             return loadsource(source, module_name)
     if os.path.isdir(path):
         # module/__init__.py style
