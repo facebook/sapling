@@ -256,34 +256,29 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let scuba_censored_table = common.scuba_censored_table.clone();
             cloned!(blobstore_options, test_acl_checker, logger);
             async move {
+                let hipster_acl = config.hipster_acl;
                 let aclchecker = async {
                     if let Some(test_checker) = test_acl_checker {
                         Ok(test_checker)
                     } else {
-                        LfsAclChecker::new_acl_checker(
-                            fb,
-                            &name,
-                            &logger,
-                            config.hipster_acl.clone(),
-                        )
-                        .await
+                        LfsAclChecker::new_acl_checker(fb, &name, &logger, hipster_acl).await
                     }
                 };
 
                 let blobrepo = open_blobrepo(
                     fb,
-                    config.storage_config.clone(),
+                    config.storage_config,
                     config.repoid,
                     mysql_options,
                     caching,
                     config.bookmarks_cache_ttl,
                     config.redaction,
                     scuba_censored_table,
-                    config.filestore.clone(),
+                    config.filestore,
                     readonly_storage,
                     blobstore_options,
                     logger.clone(),
-                    config.derived_data_config.clone(),
+                    config.derived_data_config,
                 )
                 .compat();
 
