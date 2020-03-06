@@ -36,6 +36,9 @@ Configs:
     ``remotefilelog.prefetchdays`` specifies the maximum age of a commit in
     days after which it is no longer prefetched.
 
+    ``remotefilelog.prefetchchunksize`` specifies how many files to fetch from the
+    server in one go.
+
     ``remotefilelog.prefetchdelay`` specifies delay between background
     prefetches in seconds after operations that change the working copy parent
 

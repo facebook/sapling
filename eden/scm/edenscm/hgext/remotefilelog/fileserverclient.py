@@ -537,7 +537,10 @@ class fileserverclient(object):
 
         dpack, hpack = self.repo.fileslog.getmutablesharedpacks()
         fileids = [(filename, bin(node)) for filename, node in fileids]
-        self.getpackclient.prefetch(dpack, hpack, fileids)
+        chunksize = self.ui.configint("remotefilelog", "prefetchchunksize", 200000)
+        for start_id in range(0, len(fileids), chunksize):
+            ids = fileids[start_id : start_id + chunksize]
+            self.getpackclient.prefetch(dpack, hpack, ids)
 
     def _httpfetchpacks(self, fileids, fetchdata, fetchhistory):
         """Fetch packs via HTTPS using the Eden API"""
