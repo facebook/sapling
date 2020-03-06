@@ -304,6 +304,7 @@ Test extension help:
        crdump        (no help text available)
        debugcommitmessage
                      (no help text available)
+       debugnetwork  test network connections to the server
        dialect       replace terms with more widely used equivalents
        directaccess  This extension provides direct access
        dirsync
@@ -1318,12 +1319,14 @@ Test -e / -c / -k combinations
   $ hg help -e|egrep '^[A-Z].*:|^ debug'
   Extensions:
    debugcommitmessage  (no help text available)
+   debugnetwork        test network connections to the server
    debugshell          a python shell with repo, changelog & manifest objects
   $ hg help -k|egrep '^[A-Z].*:|^ debug'
   Topics:
   Commands:
   Extensions:
    debugcommitmessage  (no help text available)
+   debugnetwork        test network connections to the server
    debugshell          a python shell with repo, changelog & manifest objects
   Extension Commands:
   $ hg help -c schemes
