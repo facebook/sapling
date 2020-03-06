@@ -2,6 +2,17 @@
 
 members = [
     "blobstore",
+    "blobstore/chaosblob",
+    "blobstore/delayblob",
+    "blobstore/fileblob",
+    "blobstore/memblob",
+    "blobstore/prefixblob",
+    "blobstore/readonlyblob",
+    "blobstore/redactedblobstore",
+    "blobstore/throttledblob",
+    "common/async_limiter",
+    "common/async_limiter/examples/tokio_v1",
+    "common/async_limiter/examples/tokio_v2",
     "common/rust/sql_ext",
     "common/scuba_ext",
     "lfs_protocol",

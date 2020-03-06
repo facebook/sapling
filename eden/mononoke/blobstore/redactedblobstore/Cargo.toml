@@ -1,0 +1,30 @@
+[package]
+name = "redactedblobstore"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["schemas/**/*.sql", "src/**/*.rs"]
+
+[dependencies]
+blobstore = { path = ".." }
+context = { path = "../../server/context" }
+mononoke_types = { path = "../../mononoke_types" }
+prefixblob = { path = "../prefixblob" }
+scuba_ext = { path = "../../common/scuba_ext" }
+sql_ext = { path = "../../common/rust/sql_ext" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+assert_matches = "1.3"
+futures = "0.1"
+slog = { version="2.5", features=["max_level_debug"] }
+thiserror = "1.0"
+
+[dev-dependencies]
+memblob = { path = "../memblob" }
+maplit = "1.0"
+tokio = "0.1"
+tokio-compat = "0.1"
