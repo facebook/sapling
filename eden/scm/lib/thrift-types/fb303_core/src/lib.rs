@@ -121,13 +121,6 @@ pub mod services {
         pub enum GetStatusExn {
             Success(crate::types::fb303_status),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetStatusExn {
-            fn default() -> Self {
-                GetStatusExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetStatusExn {
@@ -158,11 +151,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetStatusExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -215,13 +203,6 @@ pub mod services {
         pub enum GetNameExn {
             Success(String),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetNameExn {
-            fn default() -> Self {
-                GetNameExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetNameExn {
@@ -252,11 +233,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetNameExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -309,13 +285,6 @@ pub mod services {
         pub enum GetVersionExn {
             Success(String),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetVersionExn {
-            fn default() -> Self {
-                GetVersionExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetVersionExn {
@@ -346,11 +315,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetVersionExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -403,13 +367,6 @@ pub mod services {
         pub enum GetStatusDetailsExn {
             Success(String),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetStatusDetailsExn {
-            fn default() -> Self {
-                GetStatusDetailsExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetStatusDetailsExn {
@@ -440,11 +397,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetStatusDetailsExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -497,13 +449,6 @@ pub mod services {
         pub enum GetCountersExn {
             Success(std::collections::BTreeMap<String, i64>),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetCountersExn {
-            fn default() -> Self {
-                GetCountersExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetCountersExn {
@@ -534,11 +479,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetCountersExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -591,13 +531,6 @@ pub mod services {
         pub enum GetRegexCountersExn {
             Success(std::collections::BTreeMap<String, i64>),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetRegexCountersExn {
-            fn default() -> Self {
-                GetRegexCountersExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetRegexCountersExn {
@@ -628,11 +561,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetRegexCountersExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -685,13 +613,6 @@ pub mod services {
         pub enum GetSelectedCountersExn {
             Success(std::collections::BTreeMap<String, i64>),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetSelectedCountersExn {
-            fn default() -> Self {
-                GetSelectedCountersExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetSelectedCountersExn {
@@ -722,11 +643,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetSelectedCountersExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -779,13 +695,6 @@ pub mod services {
         pub enum GetCounterExn {
             Success(i64),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetCounterExn {
-            fn default() -> Self {
-                GetCounterExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetCounterExn {
@@ -816,11 +725,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetCounterExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -873,13 +777,6 @@ pub mod services {
         pub enum GetExportedValuesExn {
             Success(std::collections::BTreeMap<String, String>),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetExportedValuesExn {
-            fn default() -> Self {
-                GetExportedValuesExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetExportedValuesExn {
@@ -910,11 +807,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetExportedValuesExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -967,13 +859,6 @@ pub mod services {
         pub enum GetSelectedExportedValuesExn {
             Success(std::collections::BTreeMap<String, String>),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetSelectedExportedValuesExn {
-            fn default() -> Self {
-                GetSelectedExportedValuesExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetSelectedExportedValuesExn {
@@ -1004,11 +889,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetSelectedExportedValuesExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -1061,13 +941,6 @@ pub mod services {
         pub enum GetRegexExportedValuesExn {
             Success(std::collections::BTreeMap<String, String>),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetRegexExportedValuesExn {
-            fn default() -> Self {
-                GetRegexExportedValuesExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetRegexExportedValuesExn {
@@ -1098,11 +971,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetRegexExportedValuesExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -1155,13 +1023,6 @@ pub mod services {
         pub enum GetExportedValueExn {
             Success(String),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetExportedValueExn {
-            fn default() -> Self {
-                GetExportedValueExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetExportedValueExn {
@@ -1192,11 +1053,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetExportedValueExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -1249,13 +1105,6 @@ pub mod services {
         pub enum SetOptionExn {
             Success(()),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for SetOptionExn {
-            fn default() -> Self {
-                SetOptionExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for SetOptionExn {
@@ -1286,11 +1135,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    SetOptionExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -1337,13 +1181,6 @@ pub mod services {
         pub enum GetOptionExn {
             Success(String),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetOptionExn {
-            fn default() -> Self {
-                GetOptionExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetOptionExn {
@@ -1374,11 +1211,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetOptionExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -1431,13 +1263,6 @@ pub mod services {
         pub enum GetOptionsExn {
             Success(std::collections::BTreeMap<String, String>),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetOptionsExn {
-            fn default() -> Self {
-                GetOptionsExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetOptionsExn {
@@ -1468,11 +1293,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetOptionsExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -1525,13 +1345,6 @@ pub mod services {
         pub enum AliveSinceExn {
             Success(i64),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for AliveSinceExn {
-            fn default() -> Self {
-                AliveSinceExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for AliveSinceExn {
@@ -1562,11 +1375,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    AliveSinceExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -1645,61 +1453,61 @@ pub mod client {
     pub trait BaseService: Send {
         fn getStatus(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::fb303_status>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError>> + Send + 'static>>;
         fn getName(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetNameError>> + Send + 'static>>;
         fn getVersion(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetVersionError>> + Send + 'static>>;
         fn getStatusDetails(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetStatusDetailsError>> + Send + 'static>>;
         fn getCounters(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetCountersError>> + Send + 'static>>;
         fn getRegexCounters(
             &self,
             arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetRegexCountersError>> + Send + 'static>>;
         fn getSelectedCounters(
             &self,
             arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetSelectedCountersError>> + Send + 'static>>;
         fn getCounter(
             &self,
             arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::GetCounterError>> + Send + 'static>>;
         fn getExportedValues(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetExportedValuesError>> + Send + 'static>>;
         fn getSelectedExportedValues(
             &self,
             arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetSelectedExportedValuesError>> + Send + 'static>>;
         fn getRegexExportedValues(
             &self,
             arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetRegexExportedValuesError>> + Send + 'static>>;
         fn getExportedValue(
             &self,
             arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetExportedValueError>> + Send + 'static>>;
         fn setOption(
             &self,
             arg_key: &str,
             arg_value: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::base_service::SetOptionError>> + Send + 'static>>;
         fn getOption(
             &self,
             arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetOptionError>> + Send + 'static>>;
         fn getOptions(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetOptionsError>> + Send + 'static>>;
         fn aliveSince(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::AliveSinceError>> + Send + 'static>>;
     }
 
     impl<P, T> BaseService for BaseServiceImpl<P, T>
@@ -1710,7 +1518,7 @@ pub mod client {
         ProtocolEncoded<P>: BufMutExt<Final = FramingEncodedFinal<T>>,
     {        fn getStatus(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::fb303_status>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -1728,26 +1536,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::fb303_status> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::GetStatusExn::read(p)? {
-                                    crate::services::base_service::GetStatusExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceGetStatusError(exn).into()),
+                                let exn = crate::services::base_service::GetStatusExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::GetStatusExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetStatusExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::GetStatusError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceGetStatusError(
-                                    crate::services::base_service::GetStatusExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::GetStatusError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::GetStatusError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1758,7 +1569,7 @@ pub mod client {
         }
         fn getName(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetNameError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -1776,26 +1587,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<String> {
+                    move |mut p: P::Deserializer| -> std::result::Result<String, crate::errors::base_service::GetNameError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::GetNameExn::read(p)? {
-                                    crate::services::base_service::GetNameExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceGetNameError(exn).into()),
+                                let exn = crate::services::base_service::GetNameExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::GetNameExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetNameExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::GetNameError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceGetNameError(
-                                    crate::services::base_service::GetNameExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::GetNameError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::GetNameError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1806,7 +1620,7 @@ pub mod client {
         }
         fn getVersion(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetVersionError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -1824,26 +1638,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<String> {
+                    move |mut p: P::Deserializer| -> std::result::Result<String, crate::errors::base_service::GetVersionError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::GetVersionExn::read(p)? {
-                                    crate::services::base_service::GetVersionExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceGetVersionError(exn).into()),
+                                let exn = crate::services::base_service::GetVersionExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::GetVersionExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetVersionExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::GetVersionError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceGetVersionError(
-                                    crate::services::base_service::GetVersionExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::GetVersionError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::GetVersionError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1854,7 +1671,7 @@ pub mod client {
         }
         fn getStatusDetails(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetStatusDetailsError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -1872,26 +1689,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<String> {
+                    move |mut p: P::Deserializer| -> std::result::Result<String, crate::errors::base_service::GetStatusDetailsError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::GetStatusDetailsExn::read(p)? {
-                                    crate::services::base_service::GetStatusDetailsExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceGetStatusDetailsError(exn).into()),
+                                let exn = crate::services::base_service::GetStatusDetailsExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::GetStatusDetailsExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetStatusDetailsExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::GetStatusDetailsError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceGetStatusDetailsError(
-                                    crate::services::base_service::GetStatusDetailsExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::GetStatusDetailsError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::GetStatusDetailsError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1902,7 +1722,7 @@ pub mod client {
         }
         fn getCounters(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetCountersError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -1920,26 +1740,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<std::collections::BTreeMap<String, i64>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetCountersError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::GetCountersExn::read(p)? {
-                                    crate::services::base_service::GetCountersExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceGetCountersError(exn).into()),
+                                let exn = crate::services::base_service::GetCountersExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::GetCountersExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetCountersExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::GetCountersError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceGetCountersError(
-                                    crate::services::base_service::GetCountersExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::GetCountersError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::GetCountersError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1951,7 +1774,7 @@ pub mod client {
         fn getRegexCounters(
             &self,
             arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetRegexCountersError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -1972,26 +1795,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<std::collections::BTreeMap<String, i64>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetRegexCountersError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::GetRegexCountersExn::read(p)? {
-                                    crate::services::base_service::GetRegexCountersExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceGetRegexCountersError(exn).into()),
+                                let exn = crate::services::base_service::GetRegexCountersExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::GetRegexCountersExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetRegexCountersExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::GetRegexCountersError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceGetRegexCountersError(
-                                    crate::services::base_service::GetRegexCountersExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::GetRegexCountersError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::GetRegexCountersError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2003,7 +1829,7 @@ pub mod client {
         fn getSelectedCounters(
             &self,
             arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetSelectedCountersError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2024,26 +1850,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<std::collections::BTreeMap<String, i64>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetSelectedCountersError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::GetSelectedCountersExn::read(p)? {
-                                    crate::services::base_service::GetSelectedCountersExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceGetSelectedCountersError(exn).into()),
+                                let exn = crate::services::base_service::GetSelectedCountersExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::GetSelectedCountersExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetSelectedCountersExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::GetSelectedCountersError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceGetSelectedCountersError(
-                                    crate::services::base_service::GetSelectedCountersExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::GetSelectedCountersError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::GetSelectedCountersError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2055,7 +1884,7 @@ pub mod client {
         fn getCounter(
             &self,
             arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::GetCounterError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2076,26 +1905,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<i64> {
+                    move |mut p: P::Deserializer| -> std::result::Result<i64, crate::errors::base_service::GetCounterError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::GetCounterExn::read(p)? {
-                                    crate::services::base_service::GetCounterExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceGetCounterError(exn).into()),
+                                let exn = crate::services::base_service::GetCounterExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::GetCounterExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetCounterExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::GetCounterError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceGetCounterError(
-                                    crate::services::base_service::GetCounterExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::GetCounterError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::GetCounterError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2106,7 +1938,7 @@ pub mod client {
         }
         fn getExportedValues(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetExportedValuesError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2124,26 +1956,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<std::collections::BTreeMap<String, String>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetExportedValuesError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::GetExportedValuesExn::read(p)? {
-                                    crate::services::base_service::GetExportedValuesExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceGetExportedValuesError(exn).into()),
+                                let exn = crate::services::base_service::GetExportedValuesExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::GetExportedValuesExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetExportedValuesExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::GetExportedValuesError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceGetExportedValuesError(
-                                    crate::services::base_service::GetExportedValuesExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::GetExportedValuesError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::GetExportedValuesError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2155,7 +1990,7 @@ pub mod client {
         fn getSelectedExportedValues(
             &self,
             arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetSelectedExportedValuesError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2176,26 +2011,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<std::collections::BTreeMap<String, String>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetSelectedExportedValuesError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::GetSelectedExportedValuesExn::read(p)? {
-                                    crate::services::base_service::GetSelectedExportedValuesExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceGetSelectedExportedValuesError(exn).into()),
+                                let exn = crate::services::base_service::GetSelectedExportedValuesExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::GetSelectedExportedValuesExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetSelectedExportedValuesExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::GetSelectedExportedValuesError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceGetSelectedExportedValuesError(
-                                    crate::services::base_service::GetSelectedExportedValuesExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::GetSelectedExportedValuesError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::GetSelectedExportedValuesError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2207,7 +2045,7 @@ pub mod client {
         fn getRegexExportedValues(
             &self,
             arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetRegexExportedValuesError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2228,26 +2066,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<std::collections::BTreeMap<String, String>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetRegexExportedValuesError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::GetRegexExportedValuesExn::read(p)? {
-                                    crate::services::base_service::GetRegexExportedValuesExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceGetRegexExportedValuesError(exn).into()),
+                                let exn = crate::services::base_service::GetRegexExportedValuesExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::GetRegexExportedValuesExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetRegexExportedValuesExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::GetRegexExportedValuesError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceGetRegexExportedValuesError(
-                                    crate::services::base_service::GetRegexExportedValuesExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::GetRegexExportedValuesError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::GetRegexExportedValuesError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2259,7 +2100,7 @@ pub mod client {
         fn getExportedValue(
             &self,
             arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetExportedValueError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2280,26 +2121,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<String> {
+                    move |mut p: P::Deserializer| -> std::result::Result<String, crate::errors::base_service::GetExportedValueError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::GetExportedValueExn::read(p)? {
-                                    crate::services::base_service::GetExportedValueExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceGetExportedValueError(exn).into()),
+                                let exn = crate::services::base_service::GetExportedValueExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::GetExportedValueExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetExportedValueExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::GetExportedValueError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceGetExportedValueError(
-                                    crate::services::base_service::GetExportedValueExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::GetExportedValueError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::GetExportedValueError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2312,7 +2156,7 @@ pub mod client {
             &self,
             arg_key: &str,
             arg_value: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::base_service::SetOptionError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2336,26 +2180,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::base_service::SetOptionError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::SetOptionExn::read(p)? {
-                                    crate::services::base_service::SetOptionExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceSetOptionError(exn).into()),
+                                let exn = crate::services::base_service::SetOptionExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::SetOptionExn::Success(x) => Ok(x),
+                                    crate::services::base_service::SetOptionExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::SetOptionError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceSetOptionError(
-                                    crate::services::base_service::SetOptionExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::SetOptionError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::SetOptionError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2367,7 +2214,7 @@ pub mod client {
         fn getOption(
             &self,
             arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetOptionError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2388,26 +2235,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<String> {
+                    move |mut p: P::Deserializer| -> std::result::Result<String, crate::errors::base_service::GetOptionError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::GetOptionExn::read(p)? {
-                                    crate::services::base_service::GetOptionExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceGetOptionError(exn).into()),
+                                let exn = crate::services::base_service::GetOptionExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::GetOptionExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetOptionExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::GetOptionError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceGetOptionError(
-                                    crate::services::base_service::GetOptionExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::GetOptionError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::GetOptionError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2418,7 +2268,7 @@ pub mod client {
         }
         fn getOptions(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetOptionsError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2436,26 +2286,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<std::collections::BTreeMap<String, String>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetOptionsError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::GetOptionsExn::read(p)? {
-                                    crate::services::base_service::GetOptionsExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceGetOptionsError(exn).into()),
+                                let exn = crate::services::base_service::GetOptionsExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::GetOptionsExn::Success(x) => Ok(x),
+                                    crate::services::base_service::GetOptionsExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::GetOptionsError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceGetOptionsError(
-                                    crate::services::base_service::GetOptionsExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::GetOptionsError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::GetOptionsError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2466,7 +2319,7 @@ pub mod client {
         }
         fn aliveSince(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::AliveSinceError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2484,26 +2337,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<i64> {
+                    move |mut p: P::Deserializer| -> std::result::Result<i64, crate::errors::base_service::AliveSinceError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::base_service::AliveSinceExn::read(p)? {
-                                    crate::services::base_service::AliveSinceExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::BaseServiceAliveSinceError(exn).into()),
+                                let exn = crate::services::base_service::AliveSinceExn::read(p)?;
+                                match exn {
+                                    crate::services::base_service::AliveSinceExn::Success(x) => Ok(x),
+                                    crate::services::base_service::AliveSinceExn::ApplicationException(ae) => {
+                                        Err(crate::errors::base_service::AliveSinceError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::BaseServiceAliveSinceError(
-                                    crate::services::base_service::AliveSinceExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::base_service::AliveSinceError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::base_service::AliveSinceError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2521,38 +2377,38 @@ pub mod client {
     {
         fn getStatus(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::fb303_status>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError>> + Send + 'static>> {
             self.as_ref().getStatus(
             )
         }
         fn getName(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetNameError>> + Send + 'static>> {
             self.as_ref().getName(
             )
         }
         fn getVersion(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetVersionError>> + Send + 'static>> {
             self.as_ref().getVersion(
             )
         }
         fn getStatusDetails(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetStatusDetailsError>> + Send + 'static>> {
             self.as_ref().getStatusDetails(
             )
         }
         fn getCounters(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetCountersError>> + Send + 'static>> {
             self.as_ref().getCounters(
             )
         }
         fn getRegexCounters(
             &self,
             arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetRegexCountersError>> + Send + 'static>> {
             self.as_ref().getRegexCounters(
                 arg_regex,
             )
@@ -2560,7 +2416,7 @@ pub mod client {
         fn getSelectedCounters(
             &self,
             arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetSelectedCountersError>> + Send + 'static>> {
             self.as_ref().getSelectedCounters(
                 arg_keys,
             )
@@ -2568,21 +2424,21 @@ pub mod client {
         fn getCounter(
             &self,
             arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::GetCounterError>> + Send + 'static>> {
             self.as_ref().getCounter(
                 arg_key,
             )
         }
         fn getExportedValues(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetExportedValuesError>> + Send + 'static>> {
             self.as_ref().getExportedValues(
             )
         }
         fn getSelectedExportedValues(
             &self,
             arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetSelectedExportedValuesError>> + Send + 'static>> {
             self.as_ref().getSelectedExportedValues(
                 arg_keys,
             )
@@ -2590,7 +2446,7 @@ pub mod client {
         fn getRegexExportedValues(
             &self,
             arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetRegexExportedValuesError>> + Send + 'static>> {
             self.as_ref().getRegexExportedValues(
                 arg_regex,
             )
@@ -2598,7 +2454,7 @@ pub mod client {
         fn getExportedValue(
             &self,
             arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetExportedValueError>> + Send + 'static>> {
             self.as_ref().getExportedValue(
                 arg_key,
             )
@@ -2607,7 +2463,7 @@ pub mod client {
             &self,
             arg_key: &str,
             arg_value: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::base_service::SetOptionError>> + Send + 'static>> {
             self.as_ref().setOption(
                 arg_key,
                 arg_value,
@@ -2616,20 +2472,20 @@ pub mod client {
         fn getOption(
             &self,
             arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetOptionError>> + Send + 'static>> {
             self.as_ref().getOption(
                 arg_key,
             )
         }
         fn getOptions(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetOptionsError>> + Send + 'static>> {
             self.as_ref().getOptions(
             )
         }
         fn aliveSince(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::AliveSinceError>> + Send + 'static>> {
             self.as_ref().aliveSince(
             )
         }
@@ -2911,7 +2767,6 @@ pub mod server {
                         "getStatus",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -2954,7 +2809,6 @@ pub mod server {
                         "getName",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -2997,7 +2851,6 @@ pub mod server {
                         "getVersion",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3040,7 +2893,6 @@ pub mod server {
                         "getStatusDetails",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3083,7 +2935,6 @@ pub mod server {
                         "getCounters",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3134,7 +2985,6 @@ pub mod server {
                         "getRegexCounters",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3185,7 +3035,6 @@ pub mod server {
                         "getSelectedCounters",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3236,7 +3085,6 @@ pub mod server {
                         "getCounter",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3279,7 +3127,6 @@ pub mod server {
                         "getExportedValues",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3330,7 +3177,6 @@ pub mod server {
                         "getSelectedExportedValues",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3381,7 +3227,6 @@ pub mod server {
                         "getRegexExportedValues",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3432,7 +3277,6 @@ pub mod server {
                         "getExportedValue",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3491,7 +3335,6 @@ pub mod server {
                         "setOption",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3542,7 +3385,6 @@ pub mod server {
                         "getOption",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3585,7 +3427,6 @@ pub mod server {
                         "getOptions",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3628,7 +3469,6 @@ pub mod server {
                         "aliveSince",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3911,172 +3751,124 @@ pub mod mock {
     impl<'mock> super::client::BaseService for BaseService<'mock> {
         fn getStatus(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::fb303_status>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::fb303_status, crate::errors::base_service::GetStatusError>> + Send + 'static>> {
             let mut closure = self.getStatus.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceGetStatusError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn getName(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetNameError>> + Send + 'static>> {
             let mut closure = self.getName.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceGetNameError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn getVersion(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetVersionError>> + Send + 'static>> {
             let mut closure = self.getVersion.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceGetVersionError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn getStatusDetails(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetStatusDetailsError>> + Send + 'static>> {
             let mut closure = self.getStatusDetails.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceGetStatusDetailsError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn getCounters(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetCountersError>> + Send + 'static>> {
             let mut closure = self.getCounters.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceGetCountersError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn getRegexCounters(
             &self,
             arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetRegexCountersError>> + Send + 'static>> {
             let mut closure = self.getRegexCounters.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_regex.to_owned())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceGetRegexCountersError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_regex.to_owned())))
         }
         fn getSelectedCounters(
             &self,
             arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, i64>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, i64>, crate::errors::base_service::GetSelectedCountersError>> + Send + 'static>> {
             let mut closure = self.getSelectedCounters.closure.lock().unwrap();
             let closure: &mut dyn FnMut(Vec<String>) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_keys.to_owned())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceGetSelectedCountersError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_keys.to_owned())))
         }
         fn getCounter(
             &self,
             arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::GetCounterError>> + Send + 'static>> {
             let mut closure = self.getCounter.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_key.to_owned())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceGetCounterError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_key.to_owned())))
         }
         fn getExportedValues(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetExportedValuesError>> + Send + 'static>> {
             let mut closure = self.getExportedValues.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceGetExportedValuesError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn getSelectedExportedValues(
             &self,
             arg_keys: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetSelectedExportedValuesError>> + Send + 'static>> {
             let mut closure = self.getSelectedExportedValues.closure.lock().unwrap();
             let closure: &mut dyn FnMut(Vec<String>) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_keys.to_owned())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceGetSelectedExportedValuesError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_keys.to_owned())))
         }
         fn getRegexExportedValues(
             &self,
             arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetRegexExportedValuesError>> + Send + 'static>> {
             let mut closure = self.getRegexExportedValues.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_regex.to_owned())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceGetRegexExportedValuesError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_regex.to_owned())))
         }
         fn getExportedValue(
             &self,
             arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetExportedValueError>> + Send + 'static>> {
             let mut closure = self.getExportedValue.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_key.to_owned())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceGetExportedValueError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_key.to_owned())))
         }
         fn setOption(
             &self,
             arg_key: &str,
             arg_value: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::base_service::SetOptionError>> + Send + 'static>> {
             let mut closure = self.setOption.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String, String) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_key.to_owned(), arg_value.to_owned())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceSetOptionError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_key.to_owned(), arg_value.to_owned())))
         }
         fn getOption(
             &self,
             arg_key: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::base_service::GetOptionError>> + Send + 'static>> {
             let mut closure = self.getOption.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_key.to_owned())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceGetOptionError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_key.to_owned())))
         }
         fn getOptions(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<std::collections::BTreeMap<String, String>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<std::collections::BTreeMap<String, String>, crate::errors::base_service::GetOptionsError>> + Send + 'static>> {
             let mut closure = self.getOptions.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceGetOptionsError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn aliveSince(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::base_service::AliveSinceError>> + Send + 'static>> {
             let mut closure = self.aliveSince.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::BaseServiceAliveSinceError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
     }
 
@@ -4087,7 +3879,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     crate::types::fb303_status,
-                    crate::services::base_service::GetStatusExn,
+                    crate::errors::base_service::GetStatusError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4114,7 +3906,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::GetStatusExn>,
+                E: Into<crate::errors::base_service::GetStatusError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4126,7 +3918,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     String,
-                    crate::services::base_service::GetNameExn,
+                    crate::errors::base_service::GetNameError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4153,7 +3945,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::GetNameExn>,
+                E: Into<crate::errors::base_service::GetNameError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4165,7 +3957,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     String,
-                    crate::services::base_service::GetVersionExn,
+                    crate::errors::base_service::GetVersionError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4192,7 +3984,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::GetVersionExn>,
+                E: Into<crate::errors::base_service::GetVersionError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4204,7 +3996,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     String,
-                    crate::services::base_service::GetStatusDetailsExn,
+                    crate::errors::base_service::GetStatusDetailsError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4231,7 +4023,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::GetStatusDetailsExn>,
+                E: Into<crate::errors::base_service::GetStatusDetailsError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4243,7 +4035,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     std::collections::BTreeMap<String, i64>,
-                    crate::services::base_service::GetCountersExn,
+                    crate::errors::base_service::GetCountersError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4270,7 +4062,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::GetCountersExn>,
+                E: Into<crate::errors::base_service::GetCountersError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4282,7 +4074,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(String) -> Result<
                     std::collections::BTreeMap<String, i64>,
-                    crate::services::base_service::GetRegexCountersExn,
+                    crate::errors::base_service::GetRegexCountersError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4309,7 +4101,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::GetRegexCountersExn>,
+                E: Into<crate::errors::base_service::GetRegexCountersError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4321,7 +4113,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(Vec<String>) -> Result<
                     std::collections::BTreeMap<String, i64>,
-                    crate::services::base_service::GetSelectedCountersExn,
+                    crate::errors::base_service::GetSelectedCountersError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4348,7 +4140,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::GetSelectedCountersExn>,
+                E: Into<crate::errors::base_service::GetSelectedCountersError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4360,7 +4152,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(String) -> Result<
                     i64,
-                    crate::services::base_service::GetCounterExn,
+                    crate::errors::base_service::GetCounterError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4387,7 +4179,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::GetCounterExn>,
+                E: Into<crate::errors::base_service::GetCounterError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4399,7 +4191,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     std::collections::BTreeMap<String, String>,
-                    crate::services::base_service::GetExportedValuesExn,
+                    crate::errors::base_service::GetExportedValuesError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4426,7 +4218,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::GetExportedValuesExn>,
+                E: Into<crate::errors::base_service::GetExportedValuesError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4438,7 +4230,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(Vec<String>) -> Result<
                     std::collections::BTreeMap<String, String>,
-                    crate::services::base_service::GetSelectedExportedValuesExn,
+                    crate::errors::base_service::GetSelectedExportedValuesError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4465,7 +4257,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::GetSelectedExportedValuesExn>,
+                E: Into<crate::errors::base_service::GetSelectedExportedValuesError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4477,7 +4269,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(String) -> Result<
                     std::collections::BTreeMap<String, String>,
-                    crate::services::base_service::GetRegexExportedValuesExn,
+                    crate::errors::base_service::GetRegexExportedValuesError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4504,7 +4296,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::GetRegexExportedValuesExn>,
+                E: Into<crate::errors::base_service::GetRegexExportedValuesError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4516,7 +4308,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(String) -> Result<
                     String,
-                    crate::services::base_service::GetExportedValueExn,
+                    crate::errors::base_service::GetExportedValueError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4543,7 +4335,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::GetExportedValueExn>,
+                E: Into<crate::errors::base_service::GetExportedValueError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4555,7 +4347,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(String, String) -> Result<
                     (),
-                    crate::services::base_service::SetOptionExn,
+                    crate::errors::base_service::SetOptionError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4582,7 +4374,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::SetOptionExn>,
+                E: Into<crate::errors::base_service::SetOptionError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4594,7 +4386,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(String) -> Result<
                     String,
-                    crate::services::base_service::GetOptionExn,
+                    crate::errors::base_service::GetOptionError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4621,7 +4413,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::GetOptionExn>,
+                E: Into<crate::errors::base_service::GetOptionError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4633,7 +4425,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     std::collections::BTreeMap<String, String>,
-                    crate::services::base_service::GetOptionsExn,
+                    crate::errors::base_service::GetOptionsError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4660,7 +4452,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::GetOptionsExn>,
+                E: Into<crate::errors::base_service::GetOptionsError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4672,7 +4464,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     i64,
-                    crate::services::base_service::AliveSinceExn,
+                    crate::errors::base_service::AliveSinceError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4699,7 +4491,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::base_service::AliveSinceExn>,
+                E: Into<crate::errors::base_service::AliveSinceError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4710,50 +4502,328 @@ pub mod mock {
 }
 
 pub mod errors {
-    use fbthrift::ApplicationException;
-    use thiserror::Error;
+    pub mod base_service {
 
-    #[derive(Debug, Error)]
-    pub enum ErrorKind {
-        #[error("BaseService::getStatus failed with {0:?}")]
-        BaseServiceGetStatusError(crate::services::base_service::GetStatusExn),
-        #[error("BaseService::getName failed with {0:?}")]
-        BaseServiceGetNameError(crate::services::base_service::GetNameExn),
-        #[error("BaseService::getVersion failed with {0:?}")]
-        BaseServiceGetVersionError(crate::services::base_service::GetVersionExn),
-        #[error("BaseService::getStatusDetails failed with {0:?}")]
-        BaseServiceGetStatusDetailsError(crate::services::base_service::GetStatusDetailsExn),
-        #[error("BaseService::getCounters failed with {0:?}")]
-        BaseServiceGetCountersError(crate::services::base_service::GetCountersExn),
-        #[error("BaseService::getRegexCounters failed with {0:?}")]
-        BaseServiceGetRegexCountersError(crate::services::base_service::GetRegexCountersExn),
-        #[error("BaseService::getSelectedCounters failed with {0:?}")]
-        BaseServiceGetSelectedCountersError(crate::services::base_service::GetSelectedCountersExn),
-        #[error("BaseService::getCounter failed with {0:?}")]
-        BaseServiceGetCounterError(crate::services::base_service::GetCounterExn),
-        #[error("BaseService::getExportedValues failed with {0:?}")]
-        BaseServiceGetExportedValuesError(crate::services::base_service::GetExportedValuesExn),
-        #[error("BaseService::getSelectedExportedValues failed with {0:?}")]
-        BaseServiceGetSelectedExportedValuesError(crate::services::base_service::GetSelectedExportedValuesExn),
-        #[error("BaseService::getRegexExportedValues failed with {0:?}")]
-        BaseServiceGetRegexExportedValuesError(crate::services::base_service::GetRegexExportedValuesExn),
-        #[error("BaseService::getExportedValue failed with {0:?}")]
-        BaseServiceGetExportedValueError(crate::services::base_service::GetExportedValueExn),
-        #[error("BaseService::setOption failed with {0:?}")]
-        BaseServiceSetOptionError(crate::services::base_service::SetOptionExn),
-        #[error("BaseService::getOption failed with {0:?}")]
-        BaseServiceGetOptionError(crate::services::base_service::GetOptionExn),
-        #[error("BaseService::getOptions failed with {0:?}")]
-        BaseServiceGetOptionsError(crate::services::base_service::GetOptionsExn),
-        #[error("BaseService::aliveSince failed with {0:?}")]
-        BaseServiceAliveSinceError(crate::services::base_service::AliveSinceExn),
-        #[error("Application exception: {0:?}")]
-        ApplicationException(ApplicationException),
-    }
-
-    impl From<ApplicationException> for ErrorKind {
-        fn from(exn: ApplicationException) -> Self {
-            ErrorKind::ApplicationException(exn)
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetStatusError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
         }
+
+        impl From<::anyhow::Error> for GetStatusError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetStatusError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetStatusError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetStatusError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetNameError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetNameError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetNameError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetNameError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetNameError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetVersionError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetVersionError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetVersionError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetVersionError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetVersionError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetStatusDetailsError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetStatusDetailsError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetStatusDetailsError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetStatusDetailsError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetStatusDetailsError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetCountersError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetCountersError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetCountersError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetCountersError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetCountersError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetRegexCountersError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetRegexCountersError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetRegexCountersError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetRegexCountersError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetRegexCountersError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetSelectedCountersError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetSelectedCountersError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetSelectedCountersError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetSelectedCountersError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetSelectedCountersError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetCounterError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetCounterError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetCounterError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetCounterError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetCounterError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetExportedValuesError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetExportedValuesError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetExportedValuesError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetExportedValuesError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetExportedValuesError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetSelectedExportedValuesError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetSelectedExportedValuesError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetSelectedExportedValuesError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetSelectedExportedValuesError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetSelectedExportedValuesError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetRegexExportedValuesError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetRegexExportedValuesError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetRegexExportedValuesError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetRegexExportedValuesError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetRegexExportedValuesError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetExportedValueError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetExportedValueError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetExportedValueError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetExportedValueError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetExportedValueError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum SetOptionError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for SetOptionError {
+            fn from(err: ::anyhow::Error) -> Self {
+                SetOptionError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for SetOptionError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                SetOptionError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetOptionError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetOptionError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetOptionError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetOptionError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetOptionError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetOptionsError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetOptionsError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetOptionsError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetOptionsError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetOptionsError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum AliveSinceError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for AliveSinceError {
+            fn from(err: ::anyhow::Error) -> Self {
+                AliveSinceError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for AliveSinceError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                AliveSinceError::ApplicationException(ae)
+            }
+        }
+
     }
+
 }

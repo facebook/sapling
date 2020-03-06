@@ -3496,13 +3496,6 @@ pub mod services {
             Success(Vec<crate::types::MountInfo>),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for ListMountsExn {
-            fn default() -> Self {
-                ListMountsExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for ListMountsExn {
@@ -3548,11 +3541,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    ListMountsExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -3610,13 +3598,6 @@ pub mod services {
             Success(()),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for MountExn {
-            fn default() -> Self {
-                MountExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for MountExn {
@@ -3662,11 +3643,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    MountExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -3718,13 +3694,6 @@ pub mod services {
             Success(()),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for UnmountExn {
-            fn default() -> Self {
-                UnmountExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for UnmountExn {
@@ -3770,11 +3739,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    UnmountExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -3826,13 +3790,6 @@ pub mod services {
             Success(Vec<crate::types::CheckoutConflict>),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for CheckOutRevisionExn {
-            fn default() -> Self {
-                CheckOutRevisionExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for CheckOutRevisionExn {
@@ -3878,11 +3835,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    CheckOutRevisionExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -3940,13 +3892,6 @@ pub mod services {
             Success(()),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for ResetParentCommitsExn {
-            fn default() -> Self {
-                ResetParentCommitsExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for ResetParentCommitsExn {
@@ -3992,11 +3937,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    ResetParentCommitsExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -4048,13 +3988,6 @@ pub mod services {
             Success(Vec<crate::types::SHA1Result>),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetSHA1Exn {
-            fn default() -> Self {
-                GetSHA1Exn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GetSHA1Exn {
@@ -4100,11 +4033,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetSHA1Exn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -4162,13 +4090,6 @@ pub mod services {
             Success(Vec<crate::types::PathString>),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetBindMountsExn {
-            fn default() -> Self {
-                GetBindMountsExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GetBindMountsExn {
@@ -4214,11 +4135,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetBindMountsExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -4276,13 +4192,6 @@ pub mod services {
             Success(()),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for AddBindMountExn {
-            fn default() -> Self {
-                AddBindMountExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for AddBindMountExn {
@@ -4328,11 +4237,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    AddBindMountExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -4384,13 +4288,6 @@ pub mod services {
             Success(()),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for RemoveBindMountExn {
-            fn default() -> Self {
-                RemoveBindMountExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for RemoveBindMountExn {
@@ -4436,11 +4333,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    RemoveBindMountExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -4492,13 +4384,6 @@ pub mod services {
             Success(crate::types::JournalPosition),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetCurrentJournalPositionExn {
-            fn default() -> Self {
-                GetCurrentJournalPositionExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GetCurrentJournalPositionExn {
@@ -4544,11 +4429,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetCurrentJournalPositionExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -4606,13 +4486,6 @@ pub mod services {
             Success(crate::types::FileDelta),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetFilesChangedSinceExn {
-            fn default() -> Self {
-                GetFilesChangedSinceExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GetFilesChangedSinceExn {
@@ -4658,11 +4531,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetFilesChangedSinceExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -4720,13 +4588,6 @@ pub mod services {
             Success(()),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for SetJournalMemoryLimitExn {
-            fn default() -> Self {
-                SetJournalMemoryLimitExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for SetJournalMemoryLimitExn {
@@ -4772,11 +4633,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    SetJournalMemoryLimitExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -4828,13 +4684,6 @@ pub mod services {
             Success(i64),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetJournalMemoryLimitExn {
-            fn default() -> Self {
-                GetJournalMemoryLimitExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GetJournalMemoryLimitExn {
@@ -4880,11 +4729,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetJournalMemoryLimitExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -4942,13 +4786,6 @@ pub mod services {
             Success(()),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for FlushJournalExn {
-            fn default() -> Self {
-                FlushJournalExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for FlushJournalExn {
@@ -4994,11 +4831,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    FlushJournalExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -5050,13 +4882,6 @@ pub mod services {
             Success(crate::types::DebugGetRawJournalResponse),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for DebugGetRawJournalExn {
-            fn default() -> Self {
-                DebugGetRawJournalExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for DebugGetRawJournalExn {
@@ -5102,11 +4927,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    DebugGetRawJournalExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -5164,13 +4984,6 @@ pub mod services {
             Success(Vec<crate::types::FileInformationOrError>),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetFileInformationExn {
-            fn default() -> Self {
-                GetFileInformationExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GetFileInformationExn {
@@ -5216,11 +5029,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetFileInformationExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -5278,13 +5086,6 @@ pub mod services {
             Success(Vec<crate::types::PathString>),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GlobExn {
-            fn default() -> Self {
-                GlobExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GlobExn {
@@ -5330,11 +5131,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GlobExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -5392,13 +5188,6 @@ pub mod services {
             Success(crate::types::Glob),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GlobFilesExn {
-            fn default() -> Self {
-                GlobFilesExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GlobFilesExn {
@@ -5444,11 +5233,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GlobFilesExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -5505,13 +5289,6 @@ pub mod services {
         pub enum ChownExn {
             Success(()),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for ChownExn {
-            fn default() -> Self {
-                ChownExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for ChownExn {
@@ -5542,11 +5319,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    ChownExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -5594,13 +5366,6 @@ pub mod services {
             Success(crate::types::GetScmStatusResult),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetScmStatusV2Exn {
-            fn default() -> Self {
-                GetScmStatusV2Exn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GetScmStatusV2Exn {
@@ -5646,11 +5411,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetScmStatusV2Exn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -5708,13 +5468,6 @@ pub mod services {
             Success(crate::types::ScmStatus),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetScmStatusExn {
-            fn default() -> Self {
-                GetScmStatusExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GetScmStatusExn {
@@ -5760,11 +5513,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetScmStatusExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -5822,13 +5570,6 @@ pub mod services {
             Success(crate::types::ScmStatus),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetScmStatusBetweenRevisionsExn {
-            fn default() -> Self {
-                GetScmStatusBetweenRevisionsExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GetScmStatusBetweenRevisionsExn {
@@ -5874,11 +5615,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetScmStatusBetweenRevisionsExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -5937,13 +5673,6 @@ pub mod services {
             ex(crate::types::EdenError),
             noValueForKeyError(crate::types::NoValueForKeyError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetManifestEntryExn {
-            fn default() -> Self {
-                GetManifestEntryExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GetManifestEntryExn {
@@ -6004,11 +5733,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetManifestEntryExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6070,13 +5794,6 @@ pub mod services {
             Success(crate::types::DaemonInfo),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetDaemonInfoExn {
-            fn default() -> Self {
-                GetDaemonInfoExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GetDaemonInfoExn {
@@ -6122,11 +5839,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetDaemonInfoExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6184,13 +5896,6 @@ pub mod services {
             Success(i64),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetPidExn {
-            fn default() -> Self {
-                GetPidExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GetPidExn {
@@ -6236,11 +5941,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetPidExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6298,13 +5998,6 @@ pub mod services {
             Success(()),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for InitiateShutdownExn {
-            fn default() -> Self {
-                InitiateShutdownExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for InitiateShutdownExn {
@@ -6350,11 +6043,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    InitiateShutdownExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6406,13 +6094,6 @@ pub mod services {
             Success(eden_config::types::EdenConfigData),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetConfigExn {
-            fn default() -> Self {
-                GetConfigExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GetConfigExn {
@@ -6458,11 +6139,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetConfigExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6520,13 +6196,6 @@ pub mod services {
             Success(()),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for ReloadConfigExn {
-            fn default() -> Self {
-                ReloadConfigExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for ReloadConfigExn {
@@ -6572,11 +6241,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    ReloadConfigExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6628,13 +6292,6 @@ pub mod services {
             Success(Vec<crate::types::ScmTreeEntry>),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for DebugGetScmTreeExn {
-            fn default() -> Self {
-                DebugGetScmTreeExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for DebugGetScmTreeExn {
@@ -6680,11 +6337,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    DebugGetScmTreeExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6742,13 +6394,6 @@ pub mod services {
             Success(Vec<u8>),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for DebugGetScmBlobExn {
-            fn default() -> Self {
-                DebugGetScmBlobExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for DebugGetScmBlobExn {
@@ -6794,11 +6439,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    DebugGetScmBlobExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6856,13 +6496,6 @@ pub mod services {
             Success(crate::types::ScmBlobMetadata),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for DebugGetScmBlobMetadataExn {
-            fn default() -> Self {
-                DebugGetScmBlobMetadataExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for DebugGetScmBlobMetadataExn {
@@ -6908,11 +6541,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    DebugGetScmBlobMetadataExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -6970,13 +6598,6 @@ pub mod services {
             Success(Vec<crate::types::TreeInodeDebugInfo>),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for DebugInodeStatusExn {
-            fn default() -> Self {
-                DebugInodeStatusExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for DebugInodeStatusExn {
@@ -7022,11 +6643,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    DebugInodeStatusExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7083,13 +6699,6 @@ pub mod services {
         pub enum DebugOutstandingFuseCallsExn {
             Success(Vec<crate::types::FuseCall>),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for DebugOutstandingFuseCallsExn {
-            fn default() -> Self {
-                DebugOutstandingFuseCallsExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for DebugOutstandingFuseCallsExn {
@@ -7120,11 +6729,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    DebugOutstandingFuseCallsExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7178,13 +6782,6 @@ pub mod services {
             Success(crate::types::InodePathDebugInfo),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for DebugGetInodePathExn {
-            fn default() -> Self {
-                DebugGetInodePathExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for DebugGetInodePathExn {
@@ -7230,11 +6827,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    DebugGetInodePathExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7292,13 +6884,6 @@ pub mod services {
             Success(crate::types::SetLogLevelResult),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for DebugSetLogLevelExn {
-            fn default() -> Self {
-                DebugSetLogLevelExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for DebugSetLogLevelExn {
@@ -7344,11 +6929,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    DebugSetLogLevelExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7406,13 +6986,6 @@ pub mod services {
             Success(crate::types::GetAccessCountsResult),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetAccessCountsExn {
-            fn default() -> Self {
-                GetAccessCountsExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GetAccessCountsExn {
@@ -7458,11 +7031,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetAccessCountsExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7520,13 +7088,6 @@ pub mod services {
             Success(()),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for ClearAndCompactLocalStoreExn {
-            fn default() -> Self {
-                ClearAndCompactLocalStoreExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for ClearAndCompactLocalStoreExn {
@@ -7572,11 +7133,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    ClearAndCompactLocalStoreExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7628,13 +7184,6 @@ pub mod services {
             Success(()),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for DebugClearLocalStoreCachesExn {
-            fn default() -> Self {
-                DebugClearLocalStoreCachesExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for DebugClearLocalStoreCachesExn {
@@ -7680,11 +7229,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    DebugClearLocalStoreCachesExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7736,13 +7280,6 @@ pub mod services {
             Success(()),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for DebugCompactLocalStorageExn {
-            fn default() -> Self {
-                DebugCompactLocalStorageExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for DebugCompactLocalStorageExn {
@@ -7788,11 +7325,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    DebugCompactLocalStorageExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7844,13 +7376,6 @@ pub mod services {
             Success(i64),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for UnloadInodeForPathExn {
-            fn default() -> Self {
-                UnloadInodeForPathExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for UnloadInodeForPathExn {
@@ -7896,11 +7421,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    UnloadInodeForPathExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -7958,13 +7478,6 @@ pub mod services {
             Success(()),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for FlushStatsNowExn {
-            fn default() -> Self {
-                FlushStatsNowExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for FlushStatsNowExn {
@@ -8010,11 +7523,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    FlushStatsNowExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8066,13 +7574,6 @@ pub mod services {
             Success(()),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for InvalidateKernelInodeCacheExn {
-            fn default() -> Self {
-                InvalidateKernelInodeCacheExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for InvalidateKernelInodeCacheExn {
@@ -8118,11 +7619,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    InvalidateKernelInodeCacheExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8174,13 +7670,6 @@ pub mod services {
             Success(crate::types::InternalStats),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetStatInfoExn {
-            fn default() -> Self {
-                GetStatInfoExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for GetStatInfoExn {
@@ -8226,11 +7715,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetStatInfoExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8287,13 +7771,6 @@ pub mod services {
         pub enum EnableTracingExn {
             Success(()),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for EnableTracingExn {
-            fn default() -> Self {
-                EnableTracingExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for EnableTracingExn {
@@ -8324,11 +7801,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    EnableTracingExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8375,13 +7847,6 @@ pub mod services {
         pub enum DisableTracingExn {
             Success(()),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for DisableTracingExn {
-            fn default() -> Self {
-                DisableTracingExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for DisableTracingExn {
@@ -8412,11 +7877,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    DisableTracingExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8463,13 +7923,6 @@ pub mod services {
         pub enum GetTracePointsExn {
             Success(Vec<crate::types::TracePoint>),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetTracePointsExn {
-            fn default() -> Self {
-                GetTracePointsExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetTracePointsExn {
@@ -8500,11 +7953,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetTracePointsExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8558,13 +8006,6 @@ pub mod services {
             Success(()),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for InjectFaultExn {
-            fn default() -> Self {
-                InjectFaultExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for InjectFaultExn {
@@ -8610,11 +8051,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    InjectFaultExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8666,13 +8102,6 @@ pub mod services {
             Success(bool),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for RemoveFaultExn {
-            fn default() -> Self {
-                RemoveFaultExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for RemoveFaultExn {
@@ -8718,11 +8147,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    RemoveFaultExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8780,13 +8204,6 @@ pub mod services {
             Success(i64),
             ex(crate::types::EdenError),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for UnblockFaultExn {
-            fn default() -> Self {
-                UnblockFaultExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::EdenError> for UnblockFaultExn {
@@ -8832,11 +8249,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    UnblockFaultExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -8928,218 +8340,218 @@ pub mod client {
     pub trait EdenService: fb303_core::client::BaseService + Send {
         fn listMounts(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::MountInfo>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::MountInfo>, crate::errors::eden_service::ListMountsError>> + Send + 'static>>;
         fn mount(
             &self,
             arg_info: &crate::types::MountArgument,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::MountError>> + Send + 'static>>;
         fn unmount(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::UnmountError>> + Send + 'static>>;
         fn checkOutRevision(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_snapshotHash: &crate::types::BinaryHash,
             arg_checkoutMode: &crate::types::CheckoutMode,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::CheckoutConflict>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::CheckoutConflict>, crate::errors::eden_service::CheckOutRevisionError>> + Send + 'static>>;
         fn resetParentCommits(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_parents: &crate::types::WorkingDirectoryParents,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ResetParentCommitsError>> + Send + 'static>>;
         fn getSHA1(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::SHA1Result>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::SHA1Result>, crate::errors::eden_service::GetSHA1Error>> + Send + 'static>>;
         fn getBindMounts(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::PathString>, crate::errors::eden_service::GetBindMountsError>> + Send + 'static>>;
         fn addBindMount(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_repoPath: &crate::types::PathString,
             arg_targetPath: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::AddBindMountError>> + Send + 'static>>;
         fn removeBindMount(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_repoPath: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::RemoveBindMountError>> + Send + 'static>>;
         fn getCurrentJournalPosition(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::JournalPosition>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::JournalPosition, crate::errors::eden_service::GetCurrentJournalPositionError>> + Send + 'static>>;
         fn getFilesChangedSince(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_fromPosition: &crate::types::JournalPosition,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::FileDelta>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::FileDelta, crate::errors::eden_service::GetFilesChangedSinceError>> + Send + 'static>>;
         fn setJournalMemoryLimit(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_limit: i64,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::SetJournalMemoryLimitError>> + Send + 'static>>;
         fn getJournalMemoryLimit(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::GetJournalMemoryLimitError>> + Send + 'static>>;
         fn flushJournal(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::FlushJournalError>> + Send + 'static>>;
         fn debugGetRawJournal(
             &self,
             arg_params: &crate::types::DebugGetRawJournalParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::DebugGetRawJournalResponse>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::DebugGetRawJournalResponse, crate::errors::eden_service::DebugGetRawJournalError>> + Send + 'static>>;
         fn getFileInformation(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FileInformationOrError>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::FileInformationOrError>, crate::errors::eden_service::GetFileInformationError>> + Send + 'static>>;
         fn glob(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_globs: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::PathString>, crate::errors::eden_service::GlobError>> + Send + 'static>>;
         fn globFiles(
             &self,
             arg_params: &crate::types::GlobParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::Glob>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::Glob, crate::errors::eden_service::GlobFilesError>> + Send + 'static>>;
         fn chown(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_uid: i32,
             arg_gid: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ChownError>> + Send + 'static>>;
         fn getScmStatusV2(
             &self,
             arg_params: &crate::types::GetScmStatusParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::GetScmStatusResult>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::GetScmStatusResult, crate::errors::eden_service::GetScmStatusV2Error>> + Send + 'static>>;
         fn getScmStatus(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_listIgnored: bool,
             arg_commit: &crate::types::BinaryHash,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmStatus>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusError>> + Send + 'static>>;
         fn getScmStatusBetweenRevisions(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_oldHash: &crate::types::BinaryHash,
             arg_newHash: &crate::types::BinaryHash,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmStatus>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusBetweenRevisionsError>> + Send + 'static>>;
         fn getManifestEntry(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_relativePath: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ManifestEntry>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ManifestEntry, crate::errors::eden_service::GetManifestEntryError>> + Send + 'static>>;
         fn getDaemonInfo(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::DaemonInfo>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::DaemonInfo, crate::errors::eden_service::GetDaemonInfoError>> + Send + 'static>>;
         fn getPid(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::GetPidError>> + Send + 'static>>;
         fn initiateShutdown(
             &self,
             arg_reason: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::InitiateShutdownError>> + Send + 'static>>;
         fn getConfig(
             &self,
             arg_params: &crate::types::GetConfigParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<eden_config::types::EdenConfigData>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<eden_config::types::EdenConfigData, crate::errors::eden_service::GetConfigError>> + Send + 'static>>;
         fn reloadConfig(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ReloadConfigError>> + Send + 'static>>;
         fn debugGetScmTree(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: bool,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::ScmTreeEntry>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::ScmTreeEntry>, crate::errors::eden_service::DebugGetScmTreeError>> + Send + 'static>>;
         fn debugGetScmBlob(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: bool,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, crate::errors::eden_service::DebugGetScmBlobError>> + Send + 'static>>;
         fn debugGetScmBlobMetadata(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: bool,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmBlobMetadata>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ScmBlobMetadata, crate::errors::eden_service::DebugGetScmBlobMetadataError>> + Send + 'static>>;
         fn debugInodeStatus(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::TreeInodeDebugInfo>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError>> + Send + 'static>>;
         fn debugOutstandingFuseCalls(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FuseCall>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::FuseCall>, crate::errors::eden_service::DebugOutstandingFuseCallsError>> + Send + 'static>>;
         fn debugGetInodePath(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_inodeNumber: i64,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::InodePathDebugInfo>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::InodePathDebugInfo, crate::errors::eden_service::DebugGetInodePathError>> + Send + 'static>>;
         fn debugSetLogLevel(
             &self,
             arg_category: &str,
             arg_level: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::SetLogLevelResult>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::SetLogLevelResult, crate::errors::eden_service::DebugSetLogLevelError>> + Send + 'static>>;
         fn getAccessCounts(
             &self,
             arg_duration: i64,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::GetAccessCountsResult>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::GetAccessCountsResult, crate::errors::eden_service::GetAccessCountsError>> + Send + 'static>>;
         fn clearAndCompactLocalStore(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ClearAndCompactLocalStoreError>> + Send + 'static>>;
         fn debugClearLocalStoreCaches(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::DebugClearLocalStoreCachesError>> + Send + 'static>>;
         fn debugCompactLocalStorage(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::DebugCompactLocalStorageError>> + Send + 'static>>;
         fn unloadInodeForPath(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
             arg_age: &crate::types::TimeSpec,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::UnloadInodeForPathError>> + Send + 'static>>;
         fn flushStatsNow(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::FlushStatsNowError>> + Send + 'static>>;
         fn invalidateKernelInodeCache(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::InvalidateKernelInodeCacheError>> + Send + 'static>>;
         fn getStatInfo(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::InternalStats>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::InternalStats, crate::errors::eden_service::GetStatInfoError>> + Send + 'static>>;
         fn enableTracing(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::EnableTracingError>> + Send + 'static>>;
         fn disableTracing(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::DisableTracingError>> + Send + 'static>>;
         fn getTracePoints(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::TracePoint>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::TracePoint>, crate::errors::eden_service::GetTracePointsError>> + Send + 'static>>;
         fn injectFault(
             &self,
             arg_fault: &crate::types::FaultDefinition,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::InjectFaultError>> + Send + 'static>>;
         fn removeFault(
             &self,
             arg_fault: &crate::types::RemoveFaultArg,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<bool>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<bool, crate::errors::eden_service::RemoveFaultError>> + Send + 'static>>;
         fn unblockFault(
             &self,
             arg_info: &crate::types::UnblockFaultArg,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::UnblockFaultError>> + Send + 'static>>;
     }
 
     impl<P, T> EdenService for EdenServiceImpl<P, T>
@@ -9150,7 +8562,7 @@ pub mod client {
         ProtocolEncoded<P>: BufMutExt<Final = FramingEncodedFinal<T>>,
     {        fn listMounts(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::MountInfo>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::MountInfo>, crate::errors::eden_service::ListMountsError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9168,26 +8580,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::MountInfo>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<Vec<crate::types::MountInfo>, crate::errors::eden_service::ListMountsError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::ListMountsExn::read(p)? {
-                                    crate::services::eden_service::ListMountsExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceListMountsError(exn).into()),
+                                let exn = crate::services::eden_service::ListMountsExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::ListMountsExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::ListMountsExn::ex(err) => {
+                                        Err(crate::errors::eden_service::ListMountsError::ex(err))
+                                    }
+                                    crate::services::eden_service::ListMountsExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::ListMountsError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceListMountsError(
-                                    crate::services::eden_service::ListMountsExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::ListMountsError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::ListMountsError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -9199,7 +8617,7 @@ pub mod client {
         fn mount(
             &self,
             arg_info: &crate::types::MountArgument,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::MountError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9220,26 +8638,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::MountError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::MountExn::read(p)? {
-                                    crate::services::eden_service::MountExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceMountError(exn).into()),
+                                let exn = crate::services::eden_service::MountExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::MountExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::MountExn::ex(err) => {
+                                        Err(crate::errors::eden_service::MountError::ex(err))
+                                    }
+                                    crate::services::eden_service::MountExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::MountError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceMountError(
-                                    crate::services::eden_service::MountExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::MountError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::MountError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -9251,7 +8675,7 @@ pub mod client {
         fn unmount(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::UnmountError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9272,26 +8696,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::UnmountError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::UnmountExn::read(p)? {
-                                    crate::services::eden_service::UnmountExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceUnmountError(exn).into()),
+                                let exn = crate::services::eden_service::UnmountExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::UnmountExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::UnmountExn::ex(err) => {
+                                        Err(crate::errors::eden_service::UnmountError::ex(err))
+                                    }
+                                    crate::services::eden_service::UnmountExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::UnmountError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceUnmountError(
-                                    crate::services::eden_service::UnmountExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::UnmountError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::UnmountError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -9305,7 +8735,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_snapshotHash: &crate::types::BinaryHash,
             arg_checkoutMode: &crate::types::CheckoutMode,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::CheckoutConflict>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::CheckoutConflict>, crate::errors::eden_service::CheckOutRevisionError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9332,26 +8762,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::CheckoutConflict>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<Vec<crate::types::CheckoutConflict>, crate::errors::eden_service::CheckOutRevisionError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::CheckOutRevisionExn::read(p)? {
-                                    crate::services::eden_service::CheckOutRevisionExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceCheckOutRevisionError(exn).into()),
+                                let exn = crate::services::eden_service::CheckOutRevisionExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::CheckOutRevisionExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::CheckOutRevisionExn::ex(err) => {
+                                        Err(crate::errors::eden_service::CheckOutRevisionError::ex(err))
+                                    }
+                                    crate::services::eden_service::CheckOutRevisionExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::CheckOutRevisionError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceCheckOutRevisionError(
-                                    crate::services::eden_service::CheckOutRevisionExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::CheckOutRevisionError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::CheckOutRevisionError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -9364,7 +8800,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_parents: &crate::types::WorkingDirectoryParents,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ResetParentCommitsError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9388,26 +8824,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::ResetParentCommitsError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::ResetParentCommitsExn::read(p)? {
-                                    crate::services::eden_service::ResetParentCommitsExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceResetParentCommitsError(exn).into()),
+                                let exn = crate::services::eden_service::ResetParentCommitsExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::ResetParentCommitsExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::ResetParentCommitsExn::ex(err) => {
+                                        Err(crate::errors::eden_service::ResetParentCommitsError::ex(err))
+                                    }
+                                    crate::services::eden_service::ResetParentCommitsExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::ResetParentCommitsError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceResetParentCommitsError(
-                                    crate::services::eden_service::ResetParentCommitsExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::ResetParentCommitsError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::ResetParentCommitsError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -9420,7 +8862,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::SHA1Result>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::SHA1Result>, crate::errors::eden_service::GetSHA1Error>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9444,26 +8886,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::SHA1Result>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<Vec<crate::types::SHA1Result>, crate::errors::eden_service::GetSHA1Error> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetSHA1Exn::read(p)? {
-                                    crate::services::eden_service::GetSHA1Exn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetSHA1Error(exn).into()),
+                                let exn = crate::services::eden_service::GetSHA1Exn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetSHA1Exn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetSHA1Exn::ex(err) => {
+                                        Err(crate::errors::eden_service::GetSHA1Error::ex(err))
+                                    }
+                                    crate::services::eden_service::GetSHA1Exn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetSHA1Error::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetSHA1Error(
-                                    crate::services::eden_service::GetSHA1Exn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetSHA1Error::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetSHA1Error::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -9475,7 +8923,7 @@ pub mod client {
         fn getBindMounts(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::PathString>, crate::errors::eden_service::GetBindMountsError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9496,26 +8944,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::PathString>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<Vec<crate::types::PathString>, crate::errors::eden_service::GetBindMountsError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetBindMountsExn::read(p)? {
-                                    crate::services::eden_service::GetBindMountsExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetBindMountsError(exn).into()),
+                                let exn = crate::services::eden_service::GetBindMountsExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetBindMountsExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetBindMountsExn::ex(err) => {
+                                        Err(crate::errors::eden_service::GetBindMountsError::ex(err))
+                                    }
+                                    crate::services::eden_service::GetBindMountsExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetBindMountsError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetBindMountsError(
-                                    crate::services::eden_service::GetBindMountsExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetBindMountsError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetBindMountsError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -9529,7 +8983,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_repoPath: &crate::types::PathString,
             arg_targetPath: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::AddBindMountError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9556,26 +9010,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::AddBindMountError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::AddBindMountExn::read(p)? {
-                                    crate::services::eden_service::AddBindMountExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceAddBindMountError(exn).into()),
+                                let exn = crate::services::eden_service::AddBindMountExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::AddBindMountExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::AddBindMountExn::ex(err) => {
+                                        Err(crate::errors::eden_service::AddBindMountError::ex(err))
+                                    }
+                                    crate::services::eden_service::AddBindMountExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::AddBindMountError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceAddBindMountError(
-                                    crate::services::eden_service::AddBindMountExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::AddBindMountError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::AddBindMountError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -9588,7 +9048,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_repoPath: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::RemoveBindMountError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9612,26 +9072,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::RemoveBindMountError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::RemoveBindMountExn::read(p)? {
-                                    crate::services::eden_service::RemoveBindMountExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceRemoveBindMountError(exn).into()),
+                                let exn = crate::services::eden_service::RemoveBindMountExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::RemoveBindMountExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::RemoveBindMountExn::ex(err) => {
+                                        Err(crate::errors::eden_service::RemoveBindMountError::ex(err))
+                                    }
+                                    crate::services::eden_service::RemoveBindMountExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::RemoveBindMountError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceRemoveBindMountError(
-                                    crate::services::eden_service::RemoveBindMountExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::RemoveBindMountError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::RemoveBindMountError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -9643,7 +9109,7 @@ pub mod client {
         fn getCurrentJournalPosition(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::JournalPosition>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::JournalPosition, crate::errors::eden_service::GetCurrentJournalPositionError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9664,26 +9130,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::JournalPosition> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::JournalPosition, crate::errors::eden_service::GetCurrentJournalPositionError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetCurrentJournalPositionExn::read(p)? {
-                                    crate::services::eden_service::GetCurrentJournalPositionExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetCurrentJournalPositionError(exn).into()),
+                                let exn = crate::services::eden_service::GetCurrentJournalPositionExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetCurrentJournalPositionExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetCurrentJournalPositionExn::ex(err) => {
+                                        Err(crate::errors::eden_service::GetCurrentJournalPositionError::ex(err))
+                                    }
+                                    crate::services::eden_service::GetCurrentJournalPositionExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetCurrentJournalPositionError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetCurrentJournalPositionError(
-                                    crate::services::eden_service::GetCurrentJournalPositionExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetCurrentJournalPositionError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetCurrentJournalPositionError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -9696,7 +9168,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_fromPosition: &crate::types::JournalPosition,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::FileDelta>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::FileDelta, crate::errors::eden_service::GetFilesChangedSinceError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9720,26 +9192,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::FileDelta> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::FileDelta, crate::errors::eden_service::GetFilesChangedSinceError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetFilesChangedSinceExn::read(p)? {
-                                    crate::services::eden_service::GetFilesChangedSinceExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetFilesChangedSinceError(exn).into()),
+                                let exn = crate::services::eden_service::GetFilesChangedSinceExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetFilesChangedSinceExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetFilesChangedSinceExn::ex(err) => {
+                                        Err(crate::errors::eden_service::GetFilesChangedSinceError::ex(err))
+                                    }
+                                    crate::services::eden_service::GetFilesChangedSinceExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetFilesChangedSinceError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetFilesChangedSinceError(
-                                    crate::services::eden_service::GetFilesChangedSinceExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetFilesChangedSinceError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetFilesChangedSinceError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -9752,7 +9230,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_limit: i64,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::SetJournalMemoryLimitError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9776,26 +9254,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::SetJournalMemoryLimitError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::SetJournalMemoryLimitExn::read(p)? {
-                                    crate::services::eden_service::SetJournalMemoryLimitExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceSetJournalMemoryLimitError(exn).into()),
+                                let exn = crate::services::eden_service::SetJournalMemoryLimitExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::SetJournalMemoryLimitExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::SetJournalMemoryLimitExn::ex(err) => {
+                                        Err(crate::errors::eden_service::SetJournalMemoryLimitError::ex(err))
+                                    }
+                                    crate::services::eden_service::SetJournalMemoryLimitExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::SetJournalMemoryLimitError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceSetJournalMemoryLimitError(
-                                    crate::services::eden_service::SetJournalMemoryLimitExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::SetJournalMemoryLimitError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::SetJournalMemoryLimitError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -9807,7 +9291,7 @@ pub mod client {
         fn getJournalMemoryLimit(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::GetJournalMemoryLimitError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9828,26 +9312,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<i64> {
+                    move |mut p: P::Deserializer| -> std::result::Result<i64, crate::errors::eden_service::GetJournalMemoryLimitError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetJournalMemoryLimitExn::read(p)? {
-                                    crate::services::eden_service::GetJournalMemoryLimitExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetJournalMemoryLimitError(exn).into()),
+                                let exn = crate::services::eden_service::GetJournalMemoryLimitExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetJournalMemoryLimitExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetJournalMemoryLimitExn::ex(err) => {
+                                        Err(crate::errors::eden_service::GetJournalMemoryLimitError::ex(err))
+                                    }
+                                    crate::services::eden_service::GetJournalMemoryLimitExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetJournalMemoryLimitError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetJournalMemoryLimitError(
-                                    crate::services::eden_service::GetJournalMemoryLimitExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetJournalMemoryLimitError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetJournalMemoryLimitError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -9859,7 +9349,7 @@ pub mod client {
         fn flushJournal(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::FlushJournalError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9880,26 +9370,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::FlushJournalError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::FlushJournalExn::read(p)? {
-                                    crate::services::eden_service::FlushJournalExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceFlushJournalError(exn).into()),
+                                let exn = crate::services::eden_service::FlushJournalExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::FlushJournalExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::FlushJournalExn::ex(err) => {
+                                        Err(crate::errors::eden_service::FlushJournalError::ex(err))
+                                    }
+                                    crate::services::eden_service::FlushJournalExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::FlushJournalError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceFlushJournalError(
-                                    crate::services::eden_service::FlushJournalExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::FlushJournalError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::FlushJournalError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -9911,7 +9407,7 @@ pub mod client {
         fn debugGetRawJournal(
             &self,
             arg_params: &crate::types::DebugGetRawJournalParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::DebugGetRawJournalResponse>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::DebugGetRawJournalResponse, crate::errors::eden_service::DebugGetRawJournalError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9932,26 +9428,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::DebugGetRawJournalResponse> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::DebugGetRawJournalResponse, crate::errors::eden_service::DebugGetRawJournalError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::DebugGetRawJournalExn::read(p)? {
-                                    crate::services::eden_service::DebugGetRawJournalExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceDebugGetRawJournalError(exn).into()),
+                                let exn = crate::services::eden_service::DebugGetRawJournalExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::DebugGetRawJournalExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::DebugGetRawJournalExn::ex(err) => {
+                                        Err(crate::errors::eden_service::DebugGetRawJournalError::ex(err))
+                                    }
+                                    crate::services::eden_service::DebugGetRawJournalExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::DebugGetRawJournalError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceDebugGetRawJournalError(
-                                    crate::services::eden_service::DebugGetRawJournalExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::DebugGetRawJournalError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::DebugGetRawJournalError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -9964,7 +9466,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FileInformationOrError>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::FileInformationOrError>, crate::errors::eden_service::GetFileInformationError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -9988,26 +9490,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::FileInformationOrError>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<Vec<crate::types::FileInformationOrError>, crate::errors::eden_service::GetFileInformationError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetFileInformationExn::read(p)? {
-                                    crate::services::eden_service::GetFileInformationExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetFileInformationError(exn).into()),
+                                let exn = crate::services::eden_service::GetFileInformationExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetFileInformationExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetFileInformationExn::ex(err) => {
+                                        Err(crate::errors::eden_service::GetFileInformationError::ex(err))
+                                    }
+                                    crate::services::eden_service::GetFileInformationExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetFileInformationError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetFileInformationError(
-                                    crate::services::eden_service::GetFileInformationExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetFileInformationError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetFileInformationError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10020,7 +9528,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_globs: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::PathString>, crate::errors::eden_service::GlobError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10044,26 +9552,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::PathString>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<Vec<crate::types::PathString>, crate::errors::eden_service::GlobError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GlobExn::read(p)? {
-                                    crate::services::eden_service::GlobExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGlobError(exn).into()),
+                                let exn = crate::services::eden_service::GlobExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GlobExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GlobExn::ex(err) => {
+                                        Err(crate::errors::eden_service::GlobError::ex(err))
+                                    }
+                                    crate::services::eden_service::GlobExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GlobError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGlobError(
-                                    crate::services::eden_service::GlobExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GlobError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GlobError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10075,7 +9589,7 @@ pub mod client {
         fn globFiles(
             &self,
             arg_params: &crate::types::GlobParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::Glob>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::Glob, crate::errors::eden_service::GlobFilesError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10096,26 +9610,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::Glob> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::Glob, crate::errors::eden_service::GlobFilesError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GlobFilesExn::read(p)? {
-                                    crate::services::eden_service::GlobFilesExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGlobFilesError(exn).into()),
+                                let exn = crate::services::eden_service::GlobFilesExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GlobFilesExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GlobFilesExn::ex(err) => {
+                                        Err(crate::errors::eden_service::GlobFilesError::ex(err))
+                                    }
+                                    crate::services::eden_service::GlobFilesExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GlobFilesError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGlobFilesError(
-                                    crate::services::eden_service::GlobFilesExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GlobFilesError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GlobFilesError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10129,7 +9649,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_uid: i32,
             arg_gid: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ChownError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10156,26 +9676,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::ChownError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::ChownExn::read(p)? {
-                                    crate::services::eden_service::ChownExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceChownError(exn).into()),
+                                let exn = crate::services::eden_service::ChownExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::ChownExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::ChownExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::ChownError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceChownError(
-                                    crate::services::eden_service::ChownExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::ChownError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::ChownError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10187,7 +9710,7 @@ pub mod client {
         fn getScmStatusV2(
             &self,
             arg_params: &crate::types::GetScmStatusParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::GetScmStatusResult>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::GetScmStatusResult, crate::errors::eden_service::GetScmStatusV2Error>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10208,26 +9731,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::GetScmStatusResult> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::GetScmStatusResult, crate::errors::eden_service::GetScmStatusV2Error> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetScmStatusV2Exn::read(p)? {
-                                    crate::services::eden_service::GetScmStatusV2Exn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetScmStatusV2Error(exn).into()),
+                                let exn = crate::services::eden_service::GetScmStatusV2Exn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetScmStatusV2Exn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetScmStatusV2Exn::ex(err) => {
+                                        Err(crate::errors::eden_service::GetScmStatusV2Error::ex(err))
+                                    }
+                                    crate::services::eden_service::GetScmStatusV2Exn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetScmStatusV2Error::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetScmStatusV2Error(
-                                    crate::services::eden_service::GetScmStatusV2Exn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetScmStatusV2Error::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetScmStatusV2Error::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10241,7 +9770,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_listIgnored: bool,
             arg_commit: &crate::types::BinaryHash,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmStatus>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10268,26 +9797,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::ScmStatus> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetScmStatusExn::read(p)? {
-                                    crate::services::eden_service::GetScmStatusExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetScmStatusError(exn).into()),
+                                let exn = crate::services::eden_service::GetScmStatusExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetScmStatusExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetScmStatusExn::ex(err) => {
+                                        Err(crate::errors::eden_service::GetScmStatusError::ex(err))
+                                    }
+                                    crate::services::eden_service::GetScmStatusExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetScmStatusError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetScmStatusError(
-                                    crate::services::eden_service::GetScmStatusExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetScmStatusError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetScmStatusError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10301,7 +9836,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_oldHash: &crate::types::BinaryHash,
             arg_newHash: &crate::types::BinaryHash,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmStatus>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusBetweenRevisionsError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10328,26 +9863,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::ScmStatus> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusBetweenRevisionsError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetScmStatusBetweenRevisionsExn::read(p)? {
-                                    crate::services::eden_service::GetScmStatusBetweenRevisionsExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetScmStatusBetweenRevisionsError(exn).into()),
+                                let exn = crate::services::eden_service::GetScmStatusBetweenRevisionsExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetScmStatusBetweenRevisionsExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetScmStatusBetweenRevisionsExn::ex(err) => {
+                                        Err(crate::errors::eden_service::GetScmStatusBetweenRevisionsError::ex(err))
+                                    }
+                                    crate::services::eden_service::GetScmStatusBetweenRevisionsExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetScmStatusBetweenRevisionsError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetScmStatusBetweenRevisionsError(
-                                    crate::services::eden_service::GetScmStatusBetweenRevisionsExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetScmStatusBetweenRevisionsError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetScmStatusBetweenRevisionsError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10360,7 +9901,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_relativePath: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ManifestEntry>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ManifestEntry, crate::errors::eden_service::GetManifestEntryError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10384,26 +9925,35 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::ManifestEntry> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::ManifestEntry, crate::errors::eden_service::GetManifestEntryError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetManifestEntryExn::read(p)? {
-                                    crate::services::eden_service::GetManifestEntryExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetManifestEntryError(exn).into()),
+                                let exn = crate::services::eden_service::GetManifestEntryExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetManifestEntryExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetManifestEntryExn::ex(err) => {
+                                        Err(crate::errors::eden_service::GetManifestEntryError::ex(err))
+                                    }
+                                    crate::services::eden_service::GetManifestEntryExn::noValueForKeyError(err) => {
+                                        Err(crate::errors::eden_service::GetManifestEntryError::noValueForKeyError(err))
+                                    }
+                                    crate::services::eden_service::GetManifestEntryExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetManifestEntryError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetManifestEntryError(
-                                    crate::services::eden_service::GetManifestEntryExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetManifestEntryError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetManifestEntryError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10414,7 +9964,7 @@ pub mod client {
         }
         fn getDaemonInfo(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::DaemonInfo>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::DaemonInfo, crate::errors::eden_service::GetDaemonInfoError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10432,26 +9982,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::DaemonInfo> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::DaemonInfo, crate::errors::eden_service::GetDaemonInfoError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetDaemonInfoExn::read(p)? {
-                                    crate::services::eden_service::GetDaemonInfoExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetDaemonInfoError(exn).into()),
+                                let exn = crate::services::eden_service::GetDaemonInfoExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetDaemonInfoExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetDaemonInfoExn::ex(err) => {
+                                        Err(crate::errors::eden_service::GetDaemonInfoError::ex(err))
+                                    }
+                                    crate::services::eden_service::GetDaemonInfoExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetDaemonInfoError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetDaemonInfoError(
-                                    crate::services::eden_service::GetDaemonInfoExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetDaemonInfoError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetDaemonInfoError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10462,7 +10018,7 @@ pub mod client {
         }
         fn getPid(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::GetPidError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10480,26 +10036,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<i64> {
+                    move |mut p: P::Deserializer| -> std::result::Result<i64, crate::errors::eden_service::GetPidError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetPidExn::read(p)? {
-                                    crate::services::eden_service::GetPidExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetPidError(exn).into()),
+                                let exn = crate::services::eden_service::GetPidExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetPidExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetPidExn::ex(err) => {
+                                        Err(crate::errors::eden_service::GetPidError::ex(err))
+                                    }
+                                    crate::services::eden_service::GetPidExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetPidError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetPidError(
-                                    crate::services::eden_service::GetPidExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetPidError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetPidError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10511,7 +10073,7 @@ pub mod client {
         fn initiateShutdown(
             &self,
             arg_reason: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::InitiateShutdownError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10532,26 +10094,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::InitiateShutdownError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::InitiateShutdownExn::read(p)? {
-                                    crate::services::eden_service::InitiateShutdownExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceInitiateShutdownError(exn).into()),
+                                let exn = crate::services::eden_service::InitiateShutdownExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::InitiateShutdownExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::InitiateShutdownExn::ex(err) => {
+                                        Err(crate::errors::eden_service::InitiateShutdownError::ex(err))
+                                    }
+                                    crate::services::eden_service::InitiateShutdownExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::InitiateShutdownError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceInitiateShutdownError(
-                                    crate::services::eden_service::InitiateShutdownExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::InitiateShutdownError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::InitiateShutdownError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10563,7 +10131,7 @@ pub mod client {
         fn getConfig(
             &self,
             arg_params: &crate::types::GetConfigParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<eden_config::types::EdenConfigData>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<eden_config::types::EdenConfigData, crate::errors::eden_service::GetConfigError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10584,26 +10152,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<eden_config::types::EdenConfigData> {
+                    move |mut p: P::Deserializer| -> std::result::Result<eden_config::types::EdenConfigData, crate::errors::eden_service::GetConfigError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetConfigExn::read(p)? {
-                                    crate::services::eden_service::GetConfigExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetConfigError(exn).into()),
+                                let exn = crate::services::eden_service::GetConfigExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetConfigExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetConfigExn::ex(err) => {
+                                        Err(crate::errors::eden_service::GetConfigError::ex(err))
+                                    }
+                                    crate::services::eden_service::GetConfigExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetConfigError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetConfigError(
-                                    crate::services::eden_service::GetConfigExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetConfigError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetConfigError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10614,7 +10188,7 @@ pub mod client {
         }
         fn reloadConfig(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ReloadConfigError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10632,26 +10206,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::ReloadConfigError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::ReloadConfigExn::read(p)? {
-                                    crate::services::eden_service::ReloadConfigExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceReloadConfigError(exn).into()),
+                                let exn = crate::services::eden_service::ReloadConfigExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::ReloadConfigExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::ReloadConfigExn::ex(err) => {
+                                        Err(crate::errors::eden_service::ReloadConfigError::ex(err))
+                                    }
+                                    crate::services::eden_service::ReloadConfigExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::ReloadConfigError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceReloadConfigError(
-                                    crate::services::eden_service::ReloadConfigExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::ReloadConfigError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::ReloadConfigError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10665,7 +10245,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: bool,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::ScmTreeEntry>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::ScmTreeEntry>, crate::errors::eden_service::DebugGetScmTreeError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10692,26 +10272,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::ScmTreeEntry>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<Vec<crate::types::ScmTreeEntry>, crate::errors::eden_service::DebugGetScmTreeError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::DebugGetScmTreeExn::read(p)? {
-                                    crate::services::eden_service::DebugGetScmTreeExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceDebugGetScmTreeError(exn).into()),
+                                let exn = crate::services::eden_service::DebugGetScmTreeExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::DebugGetScmTreeExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::DebugGetScmTreeExn::ex(err) => {
+                                        Err(crate::errors::eden_service::DebugGetScmTreeError::ex(err))
+                                    }
+                                    crate::services::eden_service::DebugGetScmTreeExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::DebugGetScmTreeError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceDebugGetScmTreeError(
-                                    crate::services::eden_service::DebugGetScmTreeExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::DebugGetScmTreeError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::DebugGetScmTreeError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10725,7 +10311,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: bool,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, crate::errors::eden_service::DebugGetScmBlobError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10752,26 +10338,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<Vec<u8>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<Vec<u8>, crate::errors::eden_service::DebugGetScmBlobError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::DebugGetScmBlobExn::read(p)? {
-                                    crate::services::eden_service::DebugGetScmBlobExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceDebugGetScmBlobError(exn).into()),
+                                let exn = crate::services::eden_service::DebugGetScmBlobExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::DebugGetScmBlobExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::DebugGetScmBlobExn::ex(err) => {
+                                        Err(crate::errors::eden_service::DebugGetScmBlobError::ex(err))
+                                    }
+                                    crate::services::eden_service::DebugGetScmBlobExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::DebugGetScmBlobError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceDebugGetScmBlobError(
-                                    crate::services::eden_service::DebugGetScmBlobExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::DebugGetScmBlobError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::DebugGetScmBlobError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10785,7 +10377,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: bool,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmBlobMetadata>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ScmBlobMetadata, crate::errors::eden_service::DebugGetScmBlobMetadataError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10812,26 +10404,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::ScmBlobMetadata> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::ScmBlobMetadata, crate::errors::eden_service::DebugGetScmBlobMetadataError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::DebugGetScmBlobMetadataExn::read(p)? {
-                                    crate::services::eden_service::DebugGetScmBlobMetadataExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceDebugGetScmBlobMetadataError(exn).into()),
+                                let exn = crate::services::eden_service::DebugGetScmBlobMetadataExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::DebugGetScmBlobMetadataExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::DebugGetScmBlobMetadataExn::ex(err) => {
+                                        Err(crate::errors::eden_service::DebugGetScmBlobMetadataError::ex(err))
+                                    }
+                                    crate::services::eden_service::DebugGetScmBlobMetadataExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::DebugGetScmBlobMetadataError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceDebugGetScmBlobMetadataError(
-                                    crate::services::eden_service::DebugGetScmBlobMetadataExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::DebugGetScmBlobMetadataError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::DebugGetScmBlobMetadataError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10844,7 +10442,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::TreeInodeDebugInfo>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10868,26 +10466,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::TreeInodeDebugInfo>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::DebugInodeStatusExn::read(p)? {
-                                    crate::services::eden_service::DebugInodeStatusExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceDebugInodeStatusError(exn).into()),
+                                let exn = crate::services::eden_service::DebugInodeStatusExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::DebugInodeStatusExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::DebugInodeStatusExn::ex(err) => {
+                                        Err(crate::errors::eden_service::DebugInodeStatusError::ex(err))
+                                    }
+                                    crate::services::eden_service::DebugInodeStatusExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::DebugInodeStatusError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceDebugInodeStatusError(
-                                    crate::services::eden_service::DebugInodeStatusExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::DebugInodeStatusError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::DebugInodeStatusError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10899,7 +10503,7 @@ pub mod client {
         fn debugOutstandingFuseCalls(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FuseCall>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::FuseCall>, crate::errors::eden_service::DebugOutstandingFuseCallsError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10920,26 +10524,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::FuseCall>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<Vec<crate::types::FuseCall>, crate::errors::eden_service::DebugOutstandingFuseCallsError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::DebugOutstandingFuseCallsExn::read(p)? {
-                                    crate::services::eden_service::DebugOutstandingFuseCallsExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceDebugOutstandingFuseCallsError(exn).into()),
+                                let exn = crate::services::eden_service::DebugOutstandingFuseCallsExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::DebugOutstandingFuseCallsExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::DebugOutstandingFuseCallsExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::DebugOutstandingFuseCallsError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceDebugOutstandingFuseCallsError(
-                                    crate::services::eden_service::DebugOutstandingFuseCallsExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::DebugOutstandingFuseCallsError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::DebugOutstandingFuseCallsError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -10952,7 +10559,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_inodeNumber: i64,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::InodePathDebugInfo>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::InodePathDebugInfo, crate::errors::eden_service::DebugGetInodePathError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -10976,26 +10583,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::InodePathDebugInfo> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::InodePathDebugInfo, crate::errors::eden_service::DebugGetInodePathError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::DebugGetInodePathExn::read(p)? {
-                                    crate::services::eden_service::DebugGetInodePathExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceDebugGetInodePathError(exn).into()),
+                                let exn = crate::services::eden_service::DebugGetInodePathExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::DebugGetInodePathExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::DebugGetInodePathExn::ex(err) => {
+                                        Err(crate::errors::eden_service::DebugGetInodePathError::ex(err))
+                                    }
+                                    crate::services::eden_service::DebugGetInodePathExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::DebugGetInodePathError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceDebugGetInodePathError(
-                                    crate::services::eden_service::DebugGetInodePathExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::DebugGetInodePathError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::DebugGetInodePathError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11008,7 +10621,7 @@ pub mod client {
             &self,
             arg_category: &str,
             arg_level: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::SetLogLevelResult>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::SetLogLevelResult, crate::errors::eden_service::DebugSetLogLevelError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -11032,26 +10645,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::SetLogLevelResult> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::SetLogLevelResult, crate::errors::eden_service::DebugSetLogLevelError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::DebugSetLogLevelExn::read(p)? {
-                                    crate::services::eden_service::DebugSetLogLevelExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceDebugSetLogLevelError(exn).into()),
+                                let exn = crate::services::eden_service::DebugSetLogLevelExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::DebugSetLogLevelExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::DebugSetLogLevelExn::ex(err) => {
+                                        Err(crate::errors::eden_service::DebugSetLogLevelError::ex(err))
+                                    }
+                                    crate::services::eden_service::DebugSetLogLevelExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::DebugSetLogLevelError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceDebugSetLogLevelError(
-                                    crate::services::eden_service::DebugSetLogLevelExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::DebugSetLogLevelError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::DebugSetLogLevelError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11063,7 +10682,7 @@ pub mod client {
         fn getAccessCounts(
             &self,
             arg_duration: i64,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::GetAccessCountsResult>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::GetAccessCountsResult, crate::errors::eden_service::GetAccessCountsError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -11084,26 +10703,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::GetAccessCountsResult> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::GetAccessCountsResult, crate::errors::eden_service::GetAccessCountsError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetAccessCountsExn::read(p)? {
-                                    crate::services::eden_service::GetAccessCountsExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetAccessCountsError(exn).into()),
+                                let exn = crate::services::eden_service::GetAccessCountsExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetAccessCountsExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetAccessCountsExn::ex(err) => {
+                                        Err(crate::errors::eden_service::GetAccessCountsError::ex(err))
+                                    }
+                                    crate::services::eden_service::GetAccessCountsExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetAccessCountsError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetAccessCountsError(
-                                    crate::services::eden_service::GetAccessCountsExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetAccessCountsError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetAccessCountsError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11114,7 +10739,7 @@ pub mod client {
         }
         fn clearAndCompactLocalStore(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ClearAndCompactLocalStoreError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -11132,26 +10757,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::ClearAndCompactLocalStoreError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::ClearAndCompactLocalStoreExn::read(p)? {
-                                    crate::services::eden_service::ClearAndCompactLocalStoreExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceClearAndCompactLocalStoreError(exn).into()),
+                                let exn = crate::services::eden_service::ClearAndCompactLocalStoreExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::ClearAndCompactLocalStoreExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::ClearAndCompactLocalStoreExn::ex(err) => {
+                                        Err(crate::errors::eden_service::ClearAndCompactLocalStoreError::ex(err))
+                                    }
+                                    crate::services::eden_service::ClearAndCompactLocalStoreExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::ClearAndCompactLocalStoreError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceClearAndCompactLocalStoreError(
-                                    crate::services::eden_service::ClearAndCompactLocalStoreExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::ClearAndCompactLocalStoreError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::ClearAndCompactLocalStoreError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11162,7 +10793,7 @@ pub mod client {
         }
         fn debugClearLocalStoreCaches(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::DebugClearLocalStoreCachesError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -11180,26 +10811,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::DebugClearLocalStoreCachesError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::DebugClearLocalStoreCachesExn::read(p)? {
-                                    crate::services::eden_service::DebugClearLocalStoreCachesExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceDebugClearLocalStoreCachesError(exn).into()),
+                                let exn = crate::services::eden_service::DebugClearLocalStoreCachesExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::DebugClearLocalStoreCachesExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::DebugClearLocalStoreCachesExn::ex(err) => {
+                                        Err(crate::errors::eden_service::DebugClearLocalStoreCachesError::ex(err))
+                                    }
+                                    crate::services::eden_service::DebugClearLocalStoreCachesExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::DebugClearLocalStoreCachesError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceDebugClearLocalStoreCachesError(
-                                    crate::services::eden_service::DebugClearLocalStoreCachesExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::DebugClearLocalStoreCachesError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::DebugClearLocalStoreCachesError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11210,7 +10847,7 @@ pub mod client {
         }
         fn debugCompactLocalStorage(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::DebugCompactLocalStorageError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -11228,26 +10865,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::DebugCompactLocalStorageError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::DebugCompactLocalStorageExn::read(p)? {
-                                    crate::services::eden_service::DebugCompactLocalStorageExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceDebugCompactLocalStorageError(exn).into()),
+                                let exn = crate::services::eden_service::DebugCompactLocalStorageExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::DebugCompactLocalStorageExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::DebugCompactLocalStorageExn::ex(err) => {
+                                        Err(crate::errors::eden_service::DebugCompactLocalStorageError::ex(err))
+                                    }
+                                    crate::services::eden_service::DebugCompactLocalStorageExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::DebugCompactLocalStorageError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceDebugCompactLocalStorageError(
-                                    crate::services::eden_service::DebugCompactLocalStorageExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::DebugCompactLocalStorageError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::DebugCompactLocalStorageError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11261,7 +10904,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
             arg_age: &crate::types::TimeSpec,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::UnloadInodeForPathError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -11288,26 +10931,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<i64> {
+                    move |mut p: P::Deserializer| -> std::result::Result<i64, crate::errors::eden_service::UnloadInodeForPathError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::UnloadInodeForPathExn::read(p)? {
-                                    crate::services::eden_service::UnloadInodeForPathExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceUnloadInodeForPathError(exn).into()),
+                                let exn = crate::services::eden_service::UnloadInodeForPathExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::UnloadInodeForPathExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::UnloadInodeForPathExn::ex(err) => {
+                                        Err(crate::errors::eden_service::UnloadInodeForPathError::ex(err))
+                                    }
+                                    crate::services::eden_service::UnloadInodeForPathExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::UnloadInodeForPathError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceUnloadInodeForPathError(
-                                    crate::services::eden_service::UnloadInodeForPathExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::UnloadInodeForPathError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::UnloadInodeForPathError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11318,7 +10967,7 @@ pub mod client {
         }
         fn flushStatsNow(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::FlushStatsNowError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -11336,26 +10985,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::FlushStatsNowError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::FlushStatsNowExn::read(p)? {
-                                    crate::services::eden_service::FlushStatsNowExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceFlushStatsNowError(exn).into()),
+                                let exn = crate::services::eden_service::FlushStatsNowExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::FlushStatsNowExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::FlushStatsNowExn::ex(err) => {
+                                        Err(crate::errors::eden_service::FlushStatsNowError::ex(err))
+                                    }
+                                    crate::services::eden_service::FlushStatsNowExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::FlushStatsNowError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceFlushStatsNowError(
-                                    crate::services::eden_service::FlushStatsNowExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::FlushStatsNowError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::FlushStatsNowError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11368,7 +11023,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::InvalidateKernelInodeCacheError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -11392,26 +11047,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::InvalidateKernelInodeCacheError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::InvalidateKernelInodeCacheExn::read(p)? {
-                                    crate::services::eden_service::InvalidateKernelInodeCacheExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceInvalidateKernelInodeCacheError(exn).into()),
+                                let exn = crate::services::eden_service::InvalidateKernelInodeCacheExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::InvalidateKernelInodeCacheExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::InvalidateKernelInodeCacheExn::ex(err) => {
+                                        Err(crate::errors::eden_service::InvalidateKernelInodeCacheError::ex(err))
+                                    }
+                                    crate::services::eden_service::InvalidateKernelInodeCacheExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::InvalidateKernelInodeCacheError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceInvalidateKernelInodeCacheError(
-                                    crate::services::eden_service::InvalidateKernelInodeCacheExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::InvalidateKernelInodeCacheError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::InvalidateKernelInodeCacheError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11422,7 +11083,7 @@ pub mod client {
         }
         fn getStatInfo(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::InternalStats>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::InternalStats, crate::errors::eden_service::GetStatInfoError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -11440,26 +11101,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::InternalStats> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::InternalStats, crate::errors::eden_service::GetStatInfoError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetStatInfoExn::read(p)? {
-                                    crate::services::eden_service::GetStatInfoExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetStatInfoError(exn).into()),
+                                let exn = crate::services::eden_service::GetStatInfoExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetStatInfoExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetStatInfoExn::ex(err) => {
+                                        Err(crate::errors::eden_service::GetStatInfoError::ex(err))
+                                    }
+                                    crate::services::eden_service::GetStatInfoExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetStatInfoError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetStatInfoError(
-                                    crate::services::eden_service::GetStatInfoExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetStatInfoError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetStatInfoError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11470,7 +11137,7 @@ pub mod client {
         }
         fn enableTracing(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::EnableTracingError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -11488,26 +11155,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::EnableTracingError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::EnableTracingExn::read(p)? {
-                                    crate::services::eden_service::EnableTracingExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceEnableTracingError(exn).into()),
+                                let exn = crate::services::eden_service::EnableTracingExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::EnableTracingExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::EnableTracingExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::EnableTracingError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceEnableTracingError(
-                                    crate::services::eden_service::EnableTracingExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::EnableTracingError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::EnableTracingError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11518,7 +11188,7 @@ pub mod client {
         }
         fn disableTracing(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::DisableTracingError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -11536,26 +11206,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::DisableTracingError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::DisableTracingExn::read(p)? {
-                                    crate::services::eden_service::DisableTracingExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceDisableTracingError(exn).into()),
+                                let exn = crate::services::eden_service::DisableTracingExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::DisableTracingExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::DisableTracingExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::DisableTracingError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceDisableTracingError(
-                                    crate::services::eden_service::DisableTracingExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::DisableTracingError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::DisableTracingError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11566,7 +11239,7 @@ pub mod client {
         }
         fn getTracePoints(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::TracePoint>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::TracePoint>, crate::errors::eden_service::GetTracePointsError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -11584,26 +11257,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<Vec<crate::types::TracePoint>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<Vec<crate::types::TracePoint>, crate::errors::eden_service::GetTracePointsError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::GetTracePointsExn::read(p)? {
-                                    crate::services::eden_service::GetTracePointsExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceGetTracePointsError(exn).into()),
+                                let exn = crate::services::eden_service::GetTracePointsExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::GetTracePointsExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::GetTracePointsExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::GetTracePointsError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceGetTracePointsError(
-                                    crate::services::eden_service::GetTracePointsExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::GetTracePointsError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::GetTracePointsError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11615,7 +11291,7 @@ pub mod client {
         fn injectFault(
             &self,
             arg_fault: &crate::types::FaultDefinition,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::InjectFaultError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -11636,26 +11312,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::eden_service::InjectFaultError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::InjectFaultExn::read(p)? {
-                                    crate::services::eden_service::InjectFaultExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceInjectFaultError(exn).into()),
+                                let exn = crate::services::eden_service::InjectFaultExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::InjectFaultExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::InjectFaultExn::ex(err) => {
+                                        Err(crate::errors::eden_service::InjectFaultError::ex(err))
+                                    }
+                                    crate::services::eden_service::InjectFaultExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::InjectFaultError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceInjectFaultError(
-                                    crate::services::eden_service::InjectFaultExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::InjectFaultError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::InjectFaultError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11667,7 +11349,7 @@ pub mod client {
         fn removeFault(
             &self,
             arg_fault: &crate::types::RemoveFaultArg,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<bool>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<bool, crate::errors::eden_service::RemoveFaultError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -11688,26 +11370,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<bool> {
+                    move |mut p: P::Deserializer| -> std::result::Result<bool, crate::errors::eden_service::RemoveFaultError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::RemoveFaultExn::read(p)? {
-                                    crate::services::eden_service::RemoveFaultExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceRemoveFaultError(exn).into()),
+                                let exn = crate::services::eden_service::RemoveFaultExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::RemoveFaultExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::RemoveFaultExn::ex(err) => {
+                                        Err(crate::errors::eden_service::RemoveFaultError::ex(err))
+                                    }
+                                    crate::services::eden_service::RemoveFaultExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::RemoveFaultError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceRemoveFaultError(
-                                    crate::services::eden_service::RemoveFaultExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::RemoveFaultError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::RemoveFaultError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11719,7 +11407,7 @@ pub mod client {
         fn unblockFault(
             &self,
             arg_info: &crate::types::UnblockFaultArg,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::UnblockFaultError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -11740,26 +11428,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<i64> {
+                    move |mut p: P::Deserializer| -> std::result::Result<i64, crate::errors::eden_service::UnblockFaultError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::eden_service::UnblockFaultExn::read(p)? {
-                                    crate::services::eden_service::UnblockFaultExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::EdenServiceUnblockFaultError(exn).into()),
+                                let exn = crate::services::eden_service::UnblockFaultExn::read(p)?;
+                                match exn {
+                                    crate::services::eden_service::UnblockFaultExn::Success(x) => Ok(x),
+                                    crate::services::eden_service::UnblockFaultExn::ex(err) => {
+                                        Err(crate::errors::eden_service::UnblockFaultError::ex(err))
+                                    }
+                                    crate::services::eden_service::UnblockFaultExn::ApplicationException(ae) => {
+                                        Err(crate::errors::eden_service::UnblockFaultError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::EdenServiceUnblockFaultError(
-                                    crate::services::eden_service::UnblockFaultExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::eden_service::UnblockFaultError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::eden_service::UnblockFaultError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -11778,14 +11472,14 @@ pub mod client {
     {
         fn listMounts(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::MountInfo>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::MountInfo>, crate::errors::eden_service::ListMountsError>> + Send + 'static>> {
             self.as_ref().listMounts(
             )
         }
         fn mount(
             &self,
             arg_info: &crate::types::MountArgument,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::MountError>> + Send + 'static>> {
             self.as_ref().mount(
                 arg_info,
             )
@@ -11793,7 +11487,7 @@ pub mod client {
         fn unmount(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::UnmountError>> + Send + 'static>> {
             self.as_ref().unmount(
                 arg_mountPoint,
             )
@@ -11803,7 +11497,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_snapshotHash: &crate::types::BinaryHash,
             arg_checkoutMode: &crate::types::CheckoutMode,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::CheckoutConflict>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::CheckoutConflict>, crate::errors::eden_service::CheckOutRevisionError>> + Send + 'static>> {
             self.as_ref().checkOutRevision(
                 arg_mountPoint,
                 arg_snapshotHash,
@@ -11814,7 +11508,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_parents: &crate::types::WorkingDirectoryParents,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ResetParentCommitsError>> + Send + 'static>> {
             self.as_ref().resetParentCommits(
                 arg_mountPoint,
                 arg_parents,
@@ -11824,7 +11518,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::SHA1Result>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::SHA1Result>, crate::errors::eden_service::GetSHA1Error>> + Send + 'static>> {
             self.as_ref().getSHA1(
                 arg_mountPoint,
                 arg_paths,
@@ -11833,7 +11527,7 @@ pub mod client {
         fn getBindMounts(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::PathString>, crate::errors::eden_service::GetBindMountsError>> + Send + 'static>> {
             self.as_ref().getBindMounts(
                 arg_mountPoint,
             )
@@ -11843,7 +11537,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_repoPath: &crate::types::PathString,
             arg_targetPath: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::AddBindMountError>> + Send + 'static>> {
             self.as_ref().addBindMount(
                 arg_mountPoint,
                 arg_repoPath,
@@ -11854,7 +11548,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_repoPath: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::RemoveBindMountError>> + Send + 'static>> {
             self.as_ref().removeBindMount(
                 arg_mountPoint,
                 arg_repoPath,
@@ -11863,7 +11557,7 @@ pub mod client {
         fn getCurrentJournalPosition(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::JournalPosition>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::JournalPosition, crate::errors::eden_service::GetCurrentJournalPositionError>> + Send + 'static>> {
             self.as_ref().getCurrentJournalPosition(
                 arg_mountPoint,
             )
@@ -11872,7 +11566,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_fromPosition: &crate::types::JournalPosition,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::FileDelta>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::FileDelta, crate::errors::eden_service::GetFilesChangedSinceError>> + Send + 'static>> {
             self.as_ref().getFilesChangedSince(
                 arg_mountPoint,
                 arg_fromPosition,
@@ -11882,7 +11576,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_limit: i64,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::SetJournalMemoryLimitError>> + Send + 'static>> {
             self.as_ref().setJournalMemoryLimit(
                 arg_mountPoint,
                 arg_limit,
@@ -11891,7 +11585,7 @@ pub mod client {
         fn getJournalMemoryLimit(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::GetJournalMemoryLimitError>> + Send + 'static>> {
             self.as_ref().getJournalMemoryLimit(
                 arg_mountPoint,
             )
@@ -11899,7 +11593,7 @@ pub mod client {
         fn flushJournal(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::FlushJournalError>> + Send + 'static>> {
             self.as_ref().flushJournal(
                 arg_mountPoint,
             )
@@ -11907,7 +11601,7 @@ pub mod client {
         fn debugGetRawJournal(
             &self,
             arg_params: &crate::types::DebugGetRawJournalParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::DebugGetRawJournalResponse>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::DebugGetRawJournalResponse, crate::errors::eden_service::DebugGetRawJournalError>> + Send + 'static>> {
             self.as_ref().debugGetRawJournal(
                 arg_params,
             )
@@ -11916,7 +11610,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FileInformationOrError>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::FileInformationOrError>, crate::errors::eden_service::GetFileInformationError>> + Send + 'static>> {
             self.as_ref().getFileInformation(
                 arg_mountPoint,
                 arg_paths,
@@ -11926,7 +11620,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_globs: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::PathString>, crate::errors::eden_service::GlobError>> + Send + 'static>> {
             self.as_ref().glob(
                 arg_mountPoint,
                 arg_globs,
@@ -11935,7 +11629,7 @@ pub mod client {
         fn globFiles(
             &self,
             arg_params: &crate::types::GlobParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::Glob>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::Glob, crate::errors::eden_service::GlobFilesError>> + Send + 'static>> {
             self.as_ref().globFiles(
                 arg_params,
             )
@@ -11945,7 +11639,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_uid: i32,
             arg_gid: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ChownError>> + Send + 'static>> {
             self.as_ref().chown(
                 arg_mountPoint,
                 arg_uid,
@@ -11955,7 +11649,7 @@ pub mod client {
         fn getScmStatusV2(
             &self,
             arg_params: &crate::types::GetScmStatusParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::GetScmStatusResult>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::GetScmStatusResult, crate::errors::eden_service::GetScmStatusV2Error>> + Send + 'static>> {
             self.as_ref().getScmStatusV2(
                 arg_params,
             )
@@ -11965,7 +11659,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_listIgnored: bool,
             arg_commit: &crate::types::BinaryHash,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmStatus>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusError>> + Send + 'static>> {
             self.as_ref().getScmStatus(
                 arg_mountPoint,
                 arg_listIgnored,
@@ -11977,7 +11671,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_oldHash: &crate::types::BinaryHash,
             arg_newHash: &crate::types::BinaryHash,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmStatus>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusBetweenRevisionsError>> + Send + 'static>> {
             self.as_ref().getScmStatusBetweenRevisions(
                 arg_mountPoint,
                 arg_oldHash,
@@ -11988,7 +11682,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_relativePath: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ManifestEntry>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ManifestEntry, crate::errors::eden_service::GetManifestEntryError>> + Send + 'static>> {
             self.as_ref().getManifestEntry(
                 arg_mountPoint,
                 arg_relativePath,
@@ -11996,20 +11690,20 @@ pub mod client {
         }
         fn getDaemonInfo(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::DaemonInfo>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::DaemonInfo, crate::errors::eden_service::GetDaemonInfoError>> + Send + 'static>> {
             self.as_ref().getDaemonInfo(
             )
         }
         fn getPid(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::GetPidError>> + Send + 'static>> {
             self.as_ref().getPid(
             )
         }
         fn initiateShutdown(
             &self,
             arg_reason: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::InitiateShutdownError>> + Send + 'static>> {
             self.as_ref().initiateShutdown(
                 arg_reason,
             )
@@ -12017,14 +11711,14 @@ pub mod client {
         fn getConfig(
             &self,
             arg_params: &crate::types::GetConfigParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<eden_config::types::EdenConfigData>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<eden_config::types::EdenConfigData, crate::errors::eden_service::GetConfigError>> + Send + 'static>> {
             self.as_ref().getConfig(
                 arg_params,
             )
         }
         fn reloadConfig(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ReloadConfigError>> + Send + 'static>> {
             self.as_ref().reloadConfig(
             )
         }
@@ -12033,7 +11727,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: bool,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::ScmTreeEntry>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::ScmTreeEntry>, crate::errors::eden_service::DebugGetScmTreeError>> + Send + 'static>> {
             self.as_ref().debugGetScmTree(
                 arg_mountPoint,
                 arg_id,
@@ -12045,7 +11739,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: bool,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, crate::errors::eden_service::DebugGetScmBlobError>> + Send + 'static>> {
             self.as_ref().debugGetScmBlob(
                 arg_mountPoint,
                 arg_id,
@@ -12057,7 +11751,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: bool,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmBlobMetadata>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ScmBlobMetadata, crate::errors::eden_service::DebugGetScmBlobMetadataError>> + Send + 'static>> {
             self.as_ref().debugGetScmBlobMetadata(
                 arg_mountPoint,
                 arg_id,
@@ -12068,7 +11762,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::TreeInodeDebugInfo>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError>> + Send + 'static>> {
             self.as_ref().debugInodeStatus(
                 arg_mountPoint,
                 arg_path,
@@ -12077,7 +11771,7 @@ pub mod client {
         fn debugOutstandingFuseCalls(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FuseCall>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::FuseCall>, crate::errors::eden_service::DebugOutstandingFuseCallsError>> + Send + 'static>> {
             self.as_ref().debugOutstandingFuseCalls(
                 arg_mountPoint,
             )
@@ -12086,7 +11780,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_inodeNumber: i64,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::InodePathDebugInfo>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::InodePathDebugInfo, crate::errors::eden_service::DebugGetInodePathError>> + Send + 'static>> {
             self.as_ref().debugGetInodePath(
                 arg_mountPoint,
                 arg_inodeNumber,
@@ -12096,7 +11790,7 @@ pub mod client {
             &self,
             arg_category: &str,
             arg_level: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::SetLogLevelResult>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::SetLogLevelResult, crate::errors::eden_service::DebugSetLogLevelError>> + Send + 'static>> {
             self.as_ref().debugSetLogLevel(
                 arg_category,
                 arg_level,
@@ -12105,26 +11799,26 @@ pub mod client {
         fn getAccessCounts(
             &self,
             arg_duration: i64,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::GetAccessCountsResult>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::GetAccessCountsResult, crate::errors::eden_service::GetAccessCountsError>> + Send + 'static>> {
             self.as_ref().getAccessCounts(
                 arg_duration,
             )
         }
         fn clearAndCompactLocalStore(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ClearAndCompactLocalStoreError>> + Send + 'static>> {
             self.as_ref().clearAndCompactLocalStore(
             )
         }
         fn debugClearLocalStoreCaches(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::DebugClearLocalStoreCachesError>> + Send + 'static>> {
             self.as_ref().debugClearLocalStoreCaches(
             )
         }
         fn debugCompactLocalStorage(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::DebugCompactLocalStorageError>> + Send + 'static>> {
             self.as_ref().debugCompactLocalStorage(
             )
         }
@@ -12133,7 +11827,7 @@ pub mod client {
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
             arg_age: &crate::types::TimeSpec,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::UnloadInodeForPathError>> + Send + 'static>> {
             self.as_ref().unloadInodeForPath(
                 arg_mountPoint,
                 arg_path,
@@ -12142,7 +11836,7 @@ pub mod client {
         }
         fn flushStatsNow(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::FlushStatsNowError>> + Send + 'static>> {
             self.as_ref().flushStatsNow(
             )
         }
@@ -12150,7 +11844,7 @@ pub mod client {
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::InvalidateKernelInodeCacheError>> + Send + 'static>> {
             self.as_ref().invalidateKernelInodeCache(
                 arg_mountPoint,
                 arg_path,
@@ -12158,32 +11852,32 @@ pub mod client {
         }
         fn getStatInfo(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::InternalStats>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::InternalStats, crate::errors::eden_service::GetStatInfoError>> + Send + 'static>> {
             self.as_ref().getStatInfo(
             )
         }
         fn enableTracing(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::EnableTracingError>> + Send + 'static>> {
             self.as_ref().enableTracing(
             )
         }
         fn disableTracing(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::DisableTracingError>> + Send + 'static>> {
             self.as_ref().disableTracing(
             )
         }
         fn getTracePoints(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::TracePoint>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::TracePoint>, crate::errors::eden_service::GetTracePointsError>> + Send + 'static>> {
             self.as_ref().getTracePoints(
             )
         }
         fn injectFault(
             &self,
             arg_fault: &crate::types::FaultDefinition,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::InjectFaultError>> + Send + 'static>> {
             self.as_ref().injectFault(
                 arg_fault,
             )
@@ -12191,7 +11885,7 @@ pub mod client {
         fn removeFault(
             &self,
             arg_fault: &crate::types::RemoveFaultArg,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<bool>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<bool, crate::errors::eden_service::RemoveFaultError>> + Send + 'static>> {
             self.as_ref().removeFault(
                 arg_fault,
             )
@@ -12199,7 +11893,7 @@ pub mod client {
         fn unblockFault(
             &self,
             arg_info: &crate::types::UnblockFaultArg,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::UnblockFaultError>> + Send + 'static>> {
             self.as_ref().unblockFault(
                 arg_info,
             )
@@ -13895,7 +13589,6 @@ pub mod server {
                         "chown",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -14681,7 +14374,6 @@ pub mod server {
                         "debugOutstandingFuseCalls",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -15234,7 +14926,6 @@ pub mod server {
                         "enableTracing",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -15277,7 +14968,6 @@ pub mod server {
                         "disableTracing",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -15320,7 +15010,6 @@ pub mod server {
                         "getTracePoints",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -15900,560 +15589,413 @@ pub mod mock {
     impl<'mock> super::client::EdenService for EdenService<'mock> {
         fn listMounts(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::MountInfo>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::MountInfo>, crate::errors::eden_service::ListMountsError>> + Send + 'static>> {
             let mut closure = self.listMounts.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceListMountsError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn mount(
             &self,
             arg_info: &crate::types::MountArgument,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::MountError>> + Send + 'static>> {
             let mut closure = self.mount.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::MountArgument) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_info.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceMountError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_info.clone())))
         }
         fn unmount(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::UnmountError>> + Send + 'static>> {
             let mut closure = self.unmount.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceUnmountError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())))
         }
         fn checkOutRevision(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_snapshotHash: &crate::types::BinaryHash,
             arg_checkoutMode: &crate::types::CheckoutMode,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::CheckoutConflict>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::CheckoutConflict>, crate::errors::eden_service::CheckOutRevisionError>> + Send + 'static>> {
             let mut closure = self.checkOutRevision.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::BinaryHash, crate::types::CheckoutMode) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_snapshotHash.clone(), arg_checkoutMode.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceCheckOutRevisionError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_snapshotHash.clone(), arg_checkoutMode.clone())))
         }
         fn resetParentCommits(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_parents: &crate::types::WorkingDirectoryParents,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ResetParentCommitsError>> + Send + 'static>> {
             let mut closure = self.resetParentCommits.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::WorkingDirectoryParents) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_parents.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceResetParentCommitsError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_parents.clone())))
         }
         fn getSHA1(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::SHA1Result>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::SHA1Result>, crate::errors::eden_service::GetSHA1Error>> + Send + 'static>> {
             let mut closure = self.getSHA1.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, Vec<crate::types::PathString>) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetSHA1Error(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned())))
         }
         fn getBindMounts(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::PathString>, crate::errors::eden_service::GetBindMountsError>> + Send + 'static>> {
             let mut closure = self.getBindMounts.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetBindMountsError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())))
         }
         fn addBindMount(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_repoPath: &crate::types::PathString,
             arg_targetPath: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::AddBindMountError>> + Send + 'static>> {
             let mut closure = self.addBindMount.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::PathString, crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_repoPath.clone(), arg_targetPath.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceAddBindMountError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_repoPath.clone(), arg_targetPath.clone())))
         }
         fn removeBindMount(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_repoPath: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::RemoveBindMountError>> + Send + 'static>> {
             let mut closure = self.removeBindMount.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_repoPath.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceRemoveBindMountError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_repoPath.clone())))
         }
         fn getCurrentJournalPosition(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::JournalPosition>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::JournalPosition, crate::errors::eden_service::GetCurrentJournalPositionError>> + Send + 'static>> {
             let mut closure = self.getCurrentJournalPosition.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetCurrentJournalPositionError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())))
         }
         fn getFilesChangedSince(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_fromPosition: &crate::types::JournalPosition,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::FileDelta>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::FileDelta, crate::errors::eden_service::GetFilesChangedSinceError>> + Send + 'static>> {
             let mut closure = self.getFilesChangedSince.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::JournalPosition) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_fromPosition.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetFilesChangedSinceError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_fromPosition.clone())))
         }
         fn setJournalMemoryLimit(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_limit: i64,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::SetJournalMemoryLimitError>> + Send + 'static>> {
             let mut closure = self.setJournalMemoryLimit.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, i64) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_limit.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceSetJournalMemoryLimitError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_limit.clone())))
         }
         fn getJournalMemoryLimit(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::GetJournalMemoryLimitError>> + Send + 'static>> {
             let mut closure = self.getJournalMemoryLimit.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetJournalMemoryLimitError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())))
         }
         fn flushJournal(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::FlushJournalError>> + Send + 'static>> {
             let mut closure = self.flushJournal.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceFlushJournalError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())))
         }
         fn debugGetRawJournal(
             &self,
             arg_params: &crate::types::DebugGetRawJournalParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::DebugGetRawJournalResponse>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::DebugGetRawJournalResponse, crate::errors::eden_service::DebugGetRawJournalError>> + Send + 'static>> {
             let mut closure = self.debugGetRawJournal.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::DebugGetRawJournalParams) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_params.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceDebugGetRawJournalError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_params.clone())))
         }
         fn getFileInformation(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_paths: &[crate::types::PathString],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FileInformationOrError>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::FileInformationOrError>, crate::errors::eden_service::GetFileInformationError>> + Send + 'static>> {
             let mut closure = self.getFileInformation.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, Vec<crate::types::PathString>) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetFileInformationError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_paths.to_owned())))
         }
         fn glob(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_globs: &[String],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::PathString>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::PathString>, crate::errors::eden_service::GlobError>> + Send + 'static>> {
             let mut closure = self.glob.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, Vec<String>) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_globs.to_owned())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGlobError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_globs.to_owned())))
         }
         fn globFiles(
             &self,
             arg_params: &crate::types::GlobParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::Glob>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::Glob, crate::errors::eden_service::GlobFilesError>> + Send + 'static>> {
             let mut closure = self.globFiles.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::GlobParams) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_params.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGlobFilesError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_params.clone())))
         }
         fn chown(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_uid: i32,
             arg_gid: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ChownError>> + Send + 'static>> {
             let mut closure = self.chown.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, i32, i32) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_uid.clone(), arg_gid.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceChownError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_uid.clone(), arg_gid.clone())))
         }
         fn getScmStatusV2(
             &self,
             arg_params: &crate::types::GetScmStatusParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::GetScmStatusResult>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::GetScmStatusResult, crate::errors::eden_service::GetScmStatusV2Error>> + Send + 'static>> {
             let mut closure = self.getScmStatusV2.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::GetScmStatusParams) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_params.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetScmStatusV2Error(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_params.clone())))
         }
         fn getScmStatus(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_listIgnored: bool,
             arg_commit: &crate::types::BinaryHash,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmStatus>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusError>> + Send + 'static>> {
             let mut closure = self.getScmStatus.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, bool, crate::types::BinaryHash) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_listIgnored.clone(), arg_commit.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetScmStatusError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_listIgnored.clone(), arg_commit.clone())))
         }
         fn getScmStatusBetweenRevisions(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_oldHash: &crate::types::BinaryHash,
             arg_newHash: &crate::types::BinaryHash,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmStatus>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ScmStatus, crate::errors::eden_service::GetScmStatusBetweenRevisionsError>> + Send + 'static>> {
             let mut closure = self.getScmStatusBetweenRevisions.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::BinaryHash, crate::types::BinaryHash) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_oldHash.clone(), arg_newHash.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetScmStatusBetweenRevisionsError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_oldHash.clone(), arg_newHash.clone())))
         }
         fn getManifestEntry(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_relativePath: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ManifestEntry>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ManifestEntry, crate::errors::eden_service::GetManifestEntryError>> + Send + 'static>> {
             let mut closure = self.getManifestEntry.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_relativePath.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetManifestEntryError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_relativePath.clone())))
         }
         fn getDaemonInfo(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::DaemonInfo>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::DaemonInfo, crate::errors::eden_service::GetDaemonInfoError>> + Send + 'static>> {
             let mut closure = self.getDaemonInfo.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetDaemonInfoError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn getPid(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::GetPidError>> + Send + 'static>> {
             let mut closure = self.getPid.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetPidError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn initiateShutdown(
             &self,
             arg_reason: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::InitiateShutdownError>> + Send + 'static>> {
             let mut closure = self.initiateShutdown.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_reason.to_owned())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceInitiateShutdownError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_reason.to_owned())))
         }
         fn getConfig(
             &self,
             arg_params: &crate::types::GetConfigParams,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<eden_config::types::EdenConfigData>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<eden_config::types::EdenConfigData, crate::errors::eden_service::GetConfigError>> + Send + 'static>> {
             let mut closure = self.getConfig.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::GetConfigParams) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_params.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetConfigError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_params.clone())))
         }
         fn reloadConfig(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ReloadConfigError>> + Send + 'static>> {
             let mut closure = self.reloadConfig.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceReloadConfigError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn debugGetScmTree(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: bool,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::ScmTreeEntry>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::ScmTreeEntry>, crate::errors::eden_service::DebugGetScmTreeError>> + Send + 'static>> {
             let mut closure = self.debugGetScmTree.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::BinaryHash, bool) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_id.clone(), arg_localStoreOnly.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceDebugGetScmTreeError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_id.clone(), arg_localStoreOnly.clone())))
         }
         fn debugGetScmBlob(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: bool,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, crate::errors::eden_service::DebugGetScmBlobError>> + Send + 'static>> {
             let mut closure = self.debugGetScmBlob.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::BinaryHash, bool) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_id.clone(), arg_localStoreOnly.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceDebugGetScmBlobError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_id.clone(), arg_localStoreOnly.clone())))
         }
         fn debugGetScmBlobMetadata(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_id: &crate::types::BinaryHash,
             arg_localStoreOnly: bool,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::ScmBlobMetadata>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::ScmBlobMetadata, crate::errors::eden_service::DebugGetScmBlobMetadataError>> + Send + 'static>> {
             let mut closure = self.debugGetScmBlobMetadata.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::BinaryHash, bool) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_id.clone(), arg_localStoreOnly.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceDebugGetScmBlobMetadataError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_id.clone(), arg_localStoreOnly.clone())))
         }
         fn debugInodeStatus(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::TreeInodeDebugInfo>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::TreeInodeDebugInfo>, crate::errors::eden_service::DebugInodeStatusError>> + Send + 'static>> {
             let mut closure = self.debugInodeStatus.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_path.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceDebugInodeStatusError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_path.clone())))
         }
         fn debugOutstandingFuseCalls(
             &self,
             arg_mountPoint: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::FuseCall>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::FuseCall>, crate::errors::eden_service::DebugOutstandingFuseCallsError>> + Send + 'static>> {
             let mut closure = self.debugOutstandingFuseCalls.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceDebugOutstandingFuseCallsError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone())))
         }
         fn debugGetInodePath(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_inodeNumber: i64,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::InodePathDebugInfo>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::InodePathDebugInfo, crate::errors::eden_service::DebugGetInodePathError>> + Send + 'static>> {
             let mut closure = self.debugGetInodePath.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, i64) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_inodeNumber.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceDebugGetInodePathError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_inodeNumber.clone())))
         }
         fn debugSetLogLevel(
             &self,
             arg_category: &str,
             arg_level: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::SetLogLevelResult>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::SetLogLevelResult, crate::errors::eden_service::DebugSetLogLevelError>> + Send + 'static>> {
             let mut closure = self.debugSetLogLevel.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String, String) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_category.to_owned(), arg_level.to_owned())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceDebugSetLogLevelError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_category.to_owned(), arg_level.to_owned())))
         }
         fn getAccessCounts(
             &self,
             arg_duration: i64,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::GetAccessCountsResult>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::GetAccessCountsResult, crate::errors::eden_service::GetAccessCountsError>> + Send + 'static>> {
             let mut closure = self.getAccessCounts.closure.lock().unwrap();
             let closure: &mut dyn FnMut(i64) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_duration.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetAccessCountsError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_duration.clone())))
         }
         fn clearAndCompactLocalStore(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::ClearAndCompactLocalStoreError>> + Send + 'static>> {
             let mut closure = self.clearAndCompactLocalStore.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceClearAndCompactLocalStoreError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn debugClearLocalStoreCaches(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::DebugClearLocalStoreCachesError>> + Send + 'static>> {
             let mut closure = self.debugClearLocalStoreCaches.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceDebugClearLocalStoreCachesError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn debugCompactLocalStorage(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::DebugCompactLocalStorageError>> + Send + 'static>> {
             let mut closure = self.debugCompactLocalStorage.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceDebugCompactLocalStorageError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn unloadInodeForPath(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
             arg_age: &crate::types::TimeSpec,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::UnloadInodeForPathError>> + Send + 'static>> {
             let mut closure = self.unloadInodeForPath.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::PathString, crate::types::TimeSpec) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_path.clone(), arg_age.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceUnloadInodeForPathError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_path.clone(), arg_age.clone())))
         }
         fn flushStatsNow(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::FlushStatsNowError>> + Send + 'static>> {
             let mut closure = self.flushStatsNow.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceFlushStatsNowError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn invalidateKernelInodeCache(
             &self,
             arg_mountPoint: &crate::types::PathString,
             arg_path: &crate::types::PathString,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::InvalidateKernelInodeCacheError>> + Send + 'static>> {
             let mut closure = self.invalidateKernelInodeCache.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PathString, crate::types::PathString) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_path.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceInvalidateKernelInodeCacheError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_mountPoint.clone(), arg_path.clone())))
         }
         fn getStatInfo(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::InternalStats>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::InternalStats, crate::errors::eden_service::GetStatInfoError>> + Send + 'static>> {
             let mut closure = self.getStatInfo.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetStatInfoError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn enableTracing(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::EnableTracingError>> + Send + 'static>> {
             let mut closure = self.enableTracing.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceEnableTracingError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn disableTracing(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::DisableTracingError>> + Send + 'static>> {
             let mut closure = self.disableTracing.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceDisableTracingError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn getTracePoints(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<crate::types::TracePoint>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<crate::types::TracePoint>, crate::errors::eden_service::GetTracePointsError>> + Send + 'static>> {
             let mut closure = self.getTracePoints.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceGetTracePointsError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn injectFault(
             &self,
             arg_fault: &crate::types::FaultDefinition,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::eden_service::InjectFaultError>> + Send + 'static>> {
             let mut closure = self.injectFault.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::FaultDefinition) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_fault.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceInjectFaultError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_fault.clone())))
         }
         fn removeFault(
             &self,
             arg_fault: &crate::types::RemoveFaultArg,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<bool>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<bool, crate::errors::eden_service::RemoveFaultError>> + Send + 'static>> {
             let mut closure = self.removeFault.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::RemoveFaultArg) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_fault.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceRemoveFaultError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_fault.clone())))
         }
         fn unblockFault(
             &self,
             arg_info: &crate::types::UnblockFaultArg,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::eden_service::UnblockFaultError>> + Send + 'static>> {
             let mut closure = self.unblockFault.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::UnblockFaultArg) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_info.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::EdenServiceUnblockFaultError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_info.clone())))
         }
     }
 
@@ -16472,7 +16014,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     Vec<crate::types::MountInfo>,
-                    crate::services::eden_service::ListMountsExn,
+                    crate::errors::eden_service::ListMountsError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -16499,7 +16041,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::ListMountsExn>,
+                E: Into<crate::errors::eden_service::ListMountsError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -16511,7 +16053,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::MountArgument) -> Result<
                     (),
-                    crate::services::eden_service::MountExn,
+                    crate::errors::eden_service::MountError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -16538,7 +16080,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::MountExn>,
+                E: Into<crate::errors::eden_service::MountError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -16550,7 +16092,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString) -> Result<
                     (),
-                    crate::services::eden_service::UnmountExn,
+                    crate::errors::eden_service::UnmountError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -16577,7 +16119,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::UnmountExn>,
+                E: Into<crate::errors::eden_service::UnmountError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -16589,7 +16131,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, crate::types::BinaryHash, crate::types::CheckoutMode) -> Result<
                     Vec<crate::types::CheckoutConflict>,
-                    crate::services::eden_service::CheckOutRevisionExn,
+                    crate::errors::eden_service::CheckOutRevisionError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -16616,7 +16158,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::CheckOutRevisionExn>,
+                E: Into<crate::errors::eden_service::CheckOutRevisionError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -16628,7 +16170,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, crate::types::WorkingDirectoryParents) -> Result<
                     (),
-                    crate::services::eden_service::ResetParentCommitsExn,
+                    crate::errors::eden_service::ResetParentCommitsError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -16655,7 +16197,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::ResetParentCommitsExn>,
+                E: Into<crate::errors::eden_service::ResetParentCommitsError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -16667,7 +16209,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, Vec<crate::types::PathString>) -> Result<
                     Vec<crate::types::SHA1Result>,
-                    crate::services::eden_service::GetSHA1Exn,
+                    crate::errors::eden_service::GetSHA1Error,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -16694,7 +16236,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetSHA1Exn>,
+                E: Into<crate::errors::eden_service::GetSHA1Error>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -16706,7 +16248,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString) -> Result<
                     Vec<crate::types::PathString>,
-                    crate::services::eden_service::GetBindMountsExn,
+                    crate::errors::eden_service::GetBindMountsError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -16733,7 +16275,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetBindMountsExn>,
+                E: Into<crate::errors::eden_service::GetBindMountsError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -16745,7 +16287,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, crate::types::PathString, crate::types::PathString) -> Result<
                     (),
-                    crate::services::eden_service::AddBindMountExn,
+                    crate::errors::eden_service::AddBindMountError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -16772,7 +16314,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::AddBindMountExn>,
+                E: Into<crate::errors::eden_service::AddBindMountError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -16784,7 +16326,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, crate::types::PathString) -> Result<
                     (),
-                    crate::services::eden_service::RemoveBindMountExn,
+                    crate::errors::eden_service::RemoveBindMountError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -16811,7 +16353,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::RemoveBindMountExn>,
+                E: Into<crate::errors::eden_service::RemoveBindMountError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -16823,7 +16365,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString) -> Result<
                     crate::types::JournalPosition,
-                    crate::services::eden_service::GetCurrentJournalPositionExn,
+                    crate::errors::eden_service::GetCurrentJournalPositionError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -16850,7 +16392,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetCurrentJournalPositionExn>,
+                E: Into<crate::errors::eden_service::GetCurrentJournalPositionError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -16862,7 +16404,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, crate::types::JournalPosition) -> Result<
                     crate::types::FileDelta,
-                    crate::services::eden_service::GetFilesChangedSinceExn,
+                    crate::errors::eden_service::GetFilesChangedSinceError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -16889,7 +16431,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetFilesChangedSinceExn>,
+                E: Into<crate::errors::eden_service::GetFilesChangedSinceError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -16901,7 +16443,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, i64) -> Result<
                     (),
-                    crate::services::eden_service::SetJournalMemoryLimitExn,
+                    crate::errors::eden_service::SetJournalMemoryLimitError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -16928,7 +16470,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::SetJournalMemoryLimitExn>,
+                E: Into<crate::errors::eden_service::SetJournalMemoryLimitError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -16940,7 +16482,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString) -> Result<
                     i64,
-                    crate::services::eden_service::GetJournalMemoryLimitExn,
+                    crate::errors::eden_service::GetJournalMemoryLimitError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -16967,7 +16509,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetJournalMemoryLimitExn>,
+                E: Into<crate::errors::eden_service::GetJournalMemoryLimitError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -16979,7 +16521,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString) -> Result<
                     (),
-                    crate::services::eden_service::FlushJournalExn,
+                    crate::errors::eden_service::FlushJournalError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17006,7 +16548,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::FlushJournalExn>,
+                E: Into<crate::errors::eden_service::FlushJournalError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17018,7 +16560,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::DebugGetRawJournalParams) -> Result<
                     crate::types::DebugGetRawJournalResponse,
-                    crate::services::eden_service::DebugGetRawJournalExn,
+                    crate::errors::eden_service::DebugGetRawJournalError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17045,7 +16587,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::DebugGetRawJournalExn>,
+                E: Into<crate::errors::eden_service::DebugGetRawJournalError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17057,7 +16599,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, Vec<crate::types::PathString>) -> Result<
                     Vec<crate::types::FileInformationOrError>,
-                    crate::services::eden_service::GetFileInformationExn,
+                    crate::errors::eden_service::GetFileInformationError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17084,7 +16626,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetFileInformationExn>,
+                E: Into<crate::errors::eden_service::GetFileInformationError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17096,7 +16638,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, Vec<String>) -> Result<
                     Vec<crate::types::PathString>,
-                    crate::services::eden_service::GlobExn,
+                    crate::errors::eden_service::GlobError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17123,7 +16665,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GlobExn>,
+                E: Into<crate::errors::eden_service::GlobError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17135,7 +16677,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::GlobParams) -> Result<
                     crate::types::Glob,
-                    crate::services::eden_service::GlobFilesExn,
+                    crate::errors::eden_service::GlobFilesError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17162,7 +16704,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GlobFilesExn>,
+                E: Into<crate::errors::eden_service::GlobFilesError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17174,7 +16716,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, i32, i32) -> Result<
                     (),
-                    crate::services::eden_service::ChownExn,
+                    crate::errors::eden_service::ChownError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17201,7 +16743,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::ChownExn>,
+                E: Into<crate::errors::eden_service::ChownError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17213,7 +16755,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::GetScmStatusParams) -> Result<
                     crate::types::GetScmStatusResult,
-                    crate::services::eden_service::GetScmStatusV2Exn,
+                    crate::errors::eden_service::GetScmStatusV2Error,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17240,7 +16782,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetScmStatusV2Exn>,
+                E: Into<crate::errors::eden_service::GetScmStatusV2Error>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17252,7 +16794,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, bool, crate::types::BinaryHash) -> Result<
                     crate::types::ScmStatus,
-                    crate::services::eden_service::GetScmStatusExn,
+                    crate::errors::eden_service::GetScmStatusError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17279,7 +16821,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetScmStatusExn>,
+                E: Into<crate::errors::eden_service::GetScmStatusError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17291,7 +16833,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, crate::types::BinaryHash, crate::types::BinaryHash) -> Result<
                     crate::types::ScmStatus,
-                    crate::services::eden_service::GetScmStatusBetweenRevisionsExn,
+                    crate::errors::eden_service::GetScmStatusBetweenRevisionsError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17318,7 +16860,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetScmStatusBetweenRevisionsExn>,
+                E: Into<crate::errors::eden_service::GetScmStatusBetweenRevisionsError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17330,7 +16872,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, crate::types::PathString) -> Result<
                     crate::types::ManifestEntry,
-                    crate::services::eden_service::GetManifestEntryExn,
+                    crate::errors::eden_service::GetManifestEntryError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17357,7 +16899,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetManifestEntryExn>,
+                E: Into<crate::errors::eden_service::GetManifestEntryError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17369,7 +16911,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     crate::types::DaemonInfo,
-                    crate::services::eden_service::GetDaemonInfoExn,
+                    crate::errors::eden_service::GetDaemonInfoError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17396,7 +16938,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetDaemonInfoExn>,
+                E: Into<crate::errors::eden_service::GetDaemonInfoError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17408,7 +16950,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     i64,
-                    crate::services::eden_service::GetPidExn,
+                    crate::errors::eden_service::GetPidError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17435,7 +16977,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetPidExn>,
+                E: Into<crate::errors::eden_service::GetPidError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17447,7 +16989,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(String) -> Result<
                     (),
-                    crate::services::eden_service::InitiateShutdownExn,
+                    crate::errors::eden_service::InitiateShutdownError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17474,7 +17016,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::InitiateShutdownExn>,
+                E: Into<crate::errors::eden_service::InitiateShutdownError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17486,7 +17028,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::GetConfigParams) -> Result<
                     eden_config::types::EdenConfigData,
-                    crate::services::eden_service::GetConfigExn,
+                    crate::errors::eden_service::GetConfigError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17513,7 +17055,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetConfigExn>,
+                E: Into<crate::errors::eden_service::GetConfigError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17525,7 +17067,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     (),
-                    crate::services::eden_service::ReloadConfigExn,
+                    crate::errors::eden_service::ReloadConfigError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17552,7 +17094,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::ReloadConfigExn>,
+                E: Into<crate::errors::eden_service::ReloadConfigError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17564,7 +17106,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, crate::types::BinaryHash, bool) -> Result<
                     Vec<crate::types::ScmTreeEntry>,
-                    crate::services::eden_service::DebugGetScmTreeExn,
+                    crate::errors::eden_service::DebugGetScmTreeError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17591,7 +17133,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::DebugGetScmTreeExn>,
+                E: Into<crate::errors::eden_service::DebugGetScmTreeError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17603,7 +17145,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, crate::types::BinaryHash, bool) -> Result<
                     Vec<u8>,
-                    crate::services::eden_service::DebugGetScmBlobExn,
+                    crate::errors::eden_service::DebugGetScmBlobError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17630,7 +17172,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::DebugGetScmBlobExn>,
+                E: Into<crate::errors::eden_service::DebugGetScmBlobError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17642,7 +17184,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, crate::types::BinaryHash, bool) -> Result<
                     crate::types::ScmBlobMetadata,
-                    crate::services::eden_service::DebugGetScmBlobMetadataExn,
+                    crate::errors::eden_service::DebugGetScmBlobMetadataError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17669,7 +17211,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::DebugGetScmBlobMetadataExn>,
+                E: Into<crate::errors::eden_service::DebugGetScmBlobMetadataError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17681,7 +17223,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, crate::types::PathString) -> Result<
                     Vec<crate::types::TreeInodeDebugInfo>,
-                    crate::services::eden_service::DebugInodeStatusExn,
+                    crate::errors::eden_service::DebugInodeStatusError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17708,7 +17250,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::DebugInodeStatusExn>,
+                E: Into<crate::errors::eden_service::DebugInodeStatusError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17720,7 +17262,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString) -> Result<
                     Vec<crate::types::FuseCall>,
-                    crate::services::eden_service::DebugOutstandingFuseCallsExn,
+                    crate::errors::eden_service::DebugOutstandingFuseCallsError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17747,7 +17289,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::DebugOutstandingFuseCallsExn>,
+                E: Into<crate::errors::eden_service::DebugOutstandingFuseCallsError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17759,7 +17301,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, i64) -> Result<
                     crate::types::InodePathDebugInfo,
-                    crate::services::eden_service::DebugGetInodePathExn,
+                    crate::errors::eden_service::DebugGetInodePathError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17786,7 +17328,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::DebugGetInodePathExn>,
+                E: Into<crate::errors::eden_service::DebugGetInodePathError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17798,7 +17340,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(String, String) -> Result<
                     crate::types::SetLogLevelResult,
-                    crate::services::eden_service::DebugSetLogLevelExn,
+                    crate::errors::eden_service::DebugSetLogLevelError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17825,7 +17367,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::DebugSetLogLevelExn>,
+                E: Into<crate::errors::eden_service::DebugSetLogLevelError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17837,7 +17379,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(i64) -> Result<
                     crate::types::GetAccessCountsResult,
-                    crate::services::eden_service::GetAccessCountsExn,
+                    crate::errors::eden_service::GetAccessCountsError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17864,7 +17406,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetAccessCountsExn>,
+                E: Into<crate::errors::eden_service::GetAccessCountsError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17876,7 +17418,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     (),
-                    crate::services::eden_service::ClearAndCompactLocalStoreExn,
+                    crate::errors::eden_service::ClearAndCompactLocalStoreError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17903,7 +17445,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::ClearAndCompactLocalStoreExn>,
+                E: Into<crate::errors::eden_service::ClearAndCompactLocalStoreError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17915,7 +17457,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     (),
-                    crate::services::eden_service::DebugClearLocalStoreCachesExn,
+                    crate::errors::eden_service::DebugClearLocalStoreCachesError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17942,7 +17484,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::DebugClearLocalStoreCachesExn>,
+                E: Into<crate::errors::eden_service::DebugClearLocalStoreCachesError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17954,7 +17496,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     (),
-                    crate::services::eden_service::DebugCompactLocalStorageExn,
+                    crate::errors::eden_service::DebugCompactLocalStorageError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -17981,7 +17523,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::DebugCompactLocalStorageExn>,
+                E: Into<crate::errors::eden_service::DebugCompactLocalStorageError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -17993,7 +17535,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, crate::types::PathString, crate::types::TimeSpec) -> Result<
                     i64,
-                    crate::services::eden_service::UnloadInodeForPathExn,
+                    crate::errors::eden_service::UnloadInodeForPathError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -18020,7 +17562,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::UnloadInodeForPathExn>,
+                E: Into<crate::errors::eden_service::UnloadInodeForPathError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -18032,7 +17574,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     (),
-                    crate::services::eden_service::FlushStatsNowExn,
+                    crate::errors::eden_service::FlushStatsNowError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -18059,7 +17601,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::FlushStatsNowExn>,
+                E: Into<crate::errors::eden_service::FlushStatsNowError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -18071,7 +17613,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PathString, crate::types::PathString) -> Result<
                     (),
-                    crate::services::eden_service::InvalidateKernelInodeCacheExn,
+                    crate::errors::eden_service::InvalidateKernelInodeCacheError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -18098,7 +17640,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::InvalidateKernelInodeCacheExn>,
+                E: Into<crate::errors::eden_service::InvalidateKernelInodeCacheError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -18110,7 +17652,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     crate::types::InternalStats,
-                    crate::services::eden_service::GetStatInfoExn,
+                    crate::errors::eden_service::GetStatInfoError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -18137,7 +17679,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetStatInfoExn>,
+                E: Into<crate::errors::eden_service::GetStatInfoError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -18149,7 +17691,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     (),
-                    crate::services::eden_service::EnableTracingExn,
+                    crate::errors::eden_service::EnableTracingError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -18176,7 +17718,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::EnableTracingExn>,
+                E: Into<crate::errors::eden_service::EnableTracingError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -18188,7 +17730,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     (),
-                    crate::services::eden_service::DisableTracingExn,
+                    crate::errors::eden_service::DisableTracingError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -18215,7 +17757,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::DisableTracingExn>,
+                E: Into<crate::errors::eden_service::DisableTracingError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -18227,7 +17769,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     Vec<crate::types::TracePoint>,
-                    crate::services::eden_service::GetTracePointsExn,
+                    crate::errors::eden_service::GetTracePointsError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -18254,7 +17796,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::GetTracePointsExn>,
+                E: Into<crate::errors::eden_service::GetTracePointsError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -18266,7 +17808,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::FaultDefinition) -> Result<
                     (),
-                    crate::services::eden_service::InjectFaultExn,
+                    crate::errors::eden_service::InjectFaultError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -18293,7 +17835,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::InjectFaultExn>,
+                E: Into<crate::errors::eden_service::InjectFaultError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -18305,7 +17847,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::RemoveFaultArg) -> Result<
                     bool,
-                    crate::services::eden_service::RemoveFaultExn,
+                    crate::errors::eden_service::RemoveFaultError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -18332,7 +17874,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::RemoveFaultExn>,
+                E: Into<crate::errors::eden_service::RemoveFaultError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -18344,7 +17886,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::UnblockFaultArg) -> Result<
                     i64,
-                    crate::services::eden_service::UnblockFaultExn,
+                    crate::errors::eden_service::UnblockFaultError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -18371,7 +17913,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::eden_service::UnblockFaultExn>,
+                E: Into<crate::errors::eden_service::UnblockFaultError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -18382,116 +17924,1348 @@ pub mod mock {
 }
 
 pub mod errors {
-    use fbthrift::ApplicationException;
-    use thiserror::Error;
+    pub mod eden_service {
 
-    #[derive(Debug, Error)]
-    pub enum ErrorKind {
-        #[error("EdenService::listMounts failed with {0:?}")]
-        EdenServiceListMountsError(crate::services::eden_service::ListMountsExn),
-        #[error("EdenService::mount failed with {0:?}")]
-        EdenServiceMountError(crate::services::eden_service::MountExn),
-        #[error("EdenService::unmount failed with {0:?}")]
-        EdenServiceUnmountError(crate::services::eden_service::UnmountExn),
-        #[error("EdenService::checkOutRevision failed with {0:?}")]
-        EdenServiceCheckOutRevisionError(crate::services::eden_service::CheckOutRevisionExn),
-        #[error("EdenService::resetParentCommits failed with {0:?}")]
-        EdenServiceResetParentCommitsError(crate::services::eden_service::ResetParentCommitsExn),
-        #[error("EdenService::getSHA1 failed with {0:?}")]
-        EdenServiceGetSHA1Error(crate::services::eden_service::GetSHA1Exn),
-        #[error("EdenService::getBindMounts failed with {0:?}")]
-        EdenServiceGetBindMountsError(crate::services::eden_service::GetBindMountsExn),
-        #[error("EdenService::addBindMount failed with {0:?}")]
-        EdenServiceAddBindMountError(crate::services::eden_service::AddBindMountExn),
-        #[error("EdenService::removeBindMount failed with {0:?}")]
-        EdenServiceRemoveBindMountError(crate::services::eden_service::RemoveBindMountExn),
-        #[error("EdenService::getCurrentJournalPosition failed with {0:?}")]
-        EdenServiceGetCurrentJournalPositionError(crate::services::eden_service::GetCurrentJournalPositionExn),
-        #[error("EdenService::getFilesChangedSince failed with {0:?}")]
-        EdenServiceGetFilesChangedSinceError(crate::services::eden_service::GetFilesChangedSinceExn),
-        #[error("EdenService::setJournalMemoryLimit failed with {0:?}")]
-        EdenServiceSetJournalMemoryLimitError(crate::services::eden_service::SetJournalMemoryLimitExn),
-        #[error("EdenService::getJournalMemoryLimit failed with {0:?}")]
-        EdenServiceGetJournalMemoryLimitError(crate::services::eden_service::GetJournalMemoryLimitExn),
-        #[error("EdenService::flushJournal failed with {0:?}")]
-        EdenServiceFlushJournalError(crate::services::eden_service::FlushJournalExn),
-        #[error("EdenService::debugGetRawJournal failed with {0:?}")]
-        EdenServiceDebugGetRawJournalError(crate::services::eden_service::DebugGetRawJournalExn),
-        #[error("EdenService::getFileInformation failed with {0:?}")]
-        EdenServiceGetFileInformationError(crate::services::eden_service::GetFileInformationExn),
-        #[error("EdenService::glob failed with {0:?}")]
-        EdenServiceGlobError(crate::services::eden_service::GlobExn),
-        #[error("EdenService::globFiles failed with {0:?}")]
-        EdenServiceGlobFilesError(crate::services::eden_service::GlobFilesExn),
-        #[error("EdenService::chown failed with {0:?}")]
-        EdenServiceChownError(crate::services::eden_service::ChownExn),
-        #[error("EdenService::getScmStatusV2 failed with {0:?}")]
-        EdenServiceGetScmStatusV2Error(crate::services::eden_service::GetScmStatusV2Exn),
-        #[error("EdenService::getScmStatus failed with {0:?}")]
-        EdenServiceGetScmStatusError(crate::services::eden_service::GetScmStatusExn),
-        #[error("EdenService::getScmStatusBetweenRevisions failed with {0:?}")]
-        EdenServiceGetScmStatusBetweenRevisionsError(crate::services::eden_service::GetScmStatusBetweenRevisionsExn),
-        #[error("EdenService::getManifestEntry failed with {0:?}")]
-        EdenServiceGetManifestEntryError(crate::services::eden_service::GetManifestEntryExn),
-        #[error("EdenService::getDaemonInfo failed with {0:?}")]
-        EdenServiceGetDaemonInfoError(crate::services::eden_service::GetDaemonInfoExn),
-        #[error("EdenService::getPid failed with {0:?}")]
-        EdenServiceGetPidError(crate::services::eden_service::GetPidExn),
-        #[error("EdenService::initiateShutdown failed with {0:?}")]
-        EdenServiceInitiateShutdownError(crate::services::eden_service::InitiateShutdownExn),
-        #[error("EdenService::getConfig failed with {0:?}")]
-        EdenServiceGetConfigError(crate::services::eden_service::GetConfigExn),
-        #[error("EdenService::reloadConfig failed with {0:?}")]
-        EdenServiceReloadConfigError(crate::services::eden_service::ReloadConfigExn),
-        #[error("EdenService::debugGetScmTree failed with {0:?}")]
-        EdenServiceDebugGetScmTreeError(crate::services::eden_service::DebugGetScmTreeExn),
-        #[error("EdenService::debugGetScmBlob failed with {0:?}")]
-        EdenServiceDebugGetScmBlobError(crate::services::eden_service::DebugGetScmBlobExn),
-        #[error("EdenService::debugGetScmBlobMetadata failed with {0:?}")]
-        EdenServiceDebugGetScmBlobMetadataError(crate::services::eden_service::DebugGetScmBlobMetadataExn),
-        #[error("EdenService::debugInodeStatus failed with {0:?}")]
-        EdenServiceDebugInodeStatusError(crate::services::eden_service::DebugInodeStatusExn),
-        #[error("EdenService::debugOutstandingFuseCalls failed with {0:?}")]
-        EdenServiceDebugOutstandingFuseCallsError(crate::services::eden_service::DebugOutstandingFuseCallsExn),
-        #[error("EdenService::debugGetInodePath failed with {0:?}")]
-        EdenServiceDebugGetInodePathError(crate::services::eden_service::DebugGetInodePathExn),
-        #[error("EdenService::debugSetLogLevel failed with {0:?}")]
-        EdenServiceDebugSetLogLevelError(crate::services::eden_service::DebugSetLogLevelExn),
-        #[error("EdenService::getAccessCounts failed with {0:?}")]
-        EdenServiceGetAccessCountsError(crate::services::eden_service::GetAccessCountsExn),
-        #[error("EdenService::clearAndCompactLocalStore failed with {0:?}")]
-        EdenServiceClearAndCompactLocalStoreError(crate::services::eden_service::ClearAndCompactLocalStoreExn),
-        #[error("EdenService::debugClearLocalStoreCaches failed with {0:?}")]
-        EdenServiceDebugClearLocalStoreCachesError(crate::services::eden_service::DebugClearLocalStoreCachesExn),
-        #[error("EdenService::debugCompactLocalStorage failed with {0:?}")]
-        EdenServiceDebugCompactLocalStorageError(crate::services::eden_service::DebugCompactLocalStorageExn),
-        #[error("EdenService::unloadInodeForPath failed with {0:?}")]
-        EdenServiceUnloadInodeForPathError(crate::services::eden_service::UnloadInodeForPathExn),
-        #[error("EdenService::flushStatsNow failed with {0:?}")]
-        EdenServiceFlushStatsNowError(crate::services::eden_service::FlushStatsNowExn),
-        #[error("EdenService::invalidateKernelInodeCache failed with {0:?}")]
-        EdenServiceInvalidateKernelInodeCacheError(crate::services::eden_service::InvalidateKernelInodeCacheExn),
-        #[error("EdenService::getStatInfo failed with {0:?}")]
-        EdenServiceGetStatInfoError(crate::services::eden_service::GetStatInfoExn),
-        #[error("EdenService::enableTracing failed with {0:?}")]
-        EdenServiceEnableTracingError(crate::services::eden_service::EnableTracingExn),
-        #[error("EdenService::disableTracing failed with {0:?}")]
-        EdenServiceDisableTracingError(crate::services::eden_service::DisableTracingExn),
-        #[error("EdenService::getTracePoints failed with {0:?}")]
-        EdenServiceGetTracePointsError(crate::services::eden_service::GetTracePointsExn),
-        #[error("EdenService::injectFault failed with {0:?}")]
-        EdenServiceInjectFaultError(crate::services::eden_service::InjectFaultExn),
-        #[error("EdenService::removeFault failed with {0:?}")]
-        EdenServiceRemoveFaultError(crate::services::eden_service::RemoveFaultExn),
-        #[error("EdenService::unblockFault failed with {0:?}")]
-        EdenServiceUnblockFaultError(crate::services::eden_service::UnblockFaultExn),
-        #[error("Application exception: {0:?}")]
-        ApplicationException(ApplicationException),
-    }
-
-    impl From<ApplicationException> for ErrorKind {
-        fn from(exn: ApplicationException) -> Self {
-            ErrorKind::ApplicationException(exn)
+        #[derive(Debug, thiserror::Error)]
+        pub enum ListMountsError {
+            #[error("EdenService::listMounts failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
         }
+
+        impl From<crate::types::EdenError> for ListMountsError {
+            fn from(e: crate::types::EdenError) -> Self {
+                ListMountsError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for ListMountsError {
+            fn from(err: ::anyhow::Error) -> Self {
+                ListMountsError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for ListMountsError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                ListMountsError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum MountError {
+            #[error("EdenService::mount failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for MountError {
+            fn from(e: crate::types::EdenError) -> Self {
+                MountError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for MountError {
+            fn from(err: ::anyhow::Error) -> Self {
+                MountError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for MountError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                MountError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum UnmountError {
+            #[error("EdenService::unmount failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for UnmountError {
+            fn from(e: crate::types::EdenError) -> Self {
+                UnmountError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for UnmountError {
+            fn from(err: ::anyhow::Error) -> Self {
+                UnmountError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for UnmountError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                UnmountError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum CheckOutRevisionError {
+            #[error("EdenService::checkOutRevision failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for CheckOutRevisionError {
+            fn from(e: crate::types::EdenError) -> Self {
+                CheckOutRevisionError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for CheckOutRevisionError {
+            fn from(err: ::anyhow::Error) -> Self {
+                CheckOutRevisionError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for CheckOutRevisionError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                CheckOutRevisionError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum ResetParentCommitsError {
+            #[error("EdenService::resetParentCommits failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for ResetParentCommitsError {
+            fn from(e: crate::types::EdenError) -> Self {
+                ResetParentCommitsError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for ResetParentCommitsError {
+            fn from(err: ::anyhow::Error) -> Self {
+                ResetParentCommitsError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for ResetParentCommitsError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                ResetParentCommitsError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetSHA1Error {
+            #[error("EdenService::getSHA1 failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GetSHA1Error {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetSHA1Error::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GetSHA1Error {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetSHA1Error::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetSHA1Error {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetSHA1Error::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetBindMountsError {
+            #[error("EdenService::getBindMounts failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GetBindMountsError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetBindMountsError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GetBindMountsError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetBindMountsError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetBindMountsError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetBindMountsError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum AddBindMountError {
+            #[error("EdenService::addBindMount failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for AddBindMountError {
+            fn from(e: crate::types::EdenError) -> Self {
+                AddBindMountError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for AddBindMountError {
+            fn from(err: ::anyhow::Error) -> Self {
+                AddBindMountError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for AddBindMountError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                AddBindMountError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum RemoveBindMountError {
+            #[error("EdenService::removeBindMount failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for RemoveBindMountError {
+            fn from(e: crate::types::EdenError) -> Self {
+                RemoveBindMountError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for RemoveBindMountError {
+            fn from(err: ::anyhow::Error) -> Self {
+                RemoveBindMountError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for RemoveBindMountError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                RemoveBindMountError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetCurrentJournalPositionError {
+            #[error("EdenService::getCurrentJournalPosition failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GetCurrentJournalPositionError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetCurrentJournalPositionError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GetCurrentJournalPositionError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetCurrentJournalPositionError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetCurrentJournalPositionError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetCurrentJournalPositionError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetFilesChangedSinceError {
+            #[error("EdenService::getFilesChangedSince failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GetFilesChangedSinceError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetFilesChangedSinceError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GetFilesChangedSinceError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetFilesChangedSinceError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetFilesChangedSinceError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetFilesChangedSinceError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum SetJournalMemoryLimitError {
+            #[error("EdenService::setJournalMemoryLimit failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for SetJournalMemoryLimitError {
+            fn from(e: crate::types::EdenError) -> Self {
+                SetJournalMemoryLimitError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for SetJournalMemoryLimitError {
+            fn from(err: ::anyhow::Error) -> Self {
+                SetJournalMemoryLimitError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for SetJournalMemoryLimitError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                SetJournalMemoryLimitError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetJournalMemoryLimitError {
+            #[error("EdenService::getJournalMemoryLimit failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GetJournalMemoryLimitError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetJournalMemoryLimitError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GetJournalMemoryLimitError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetJournalMemoryLimitError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetJournalMemoryLimitError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetJournalMemoryLimitError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum FlushJournalError {
+            #[error("EdenService::flushJournal failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for FlushJournalError {
+            fn from(e: crate::types::EdenError) -> Self {
+                FlushJournalError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for FlushJournalError {
+            fn from(err: ::anyhow::Error) -> Self {
+                FlushJournalError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for FlushJournalError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                FlushJournalError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum DebugGetRawJournalError {
+            #[error("EdenService::debugGetRawJournal failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for DebugGetRawJournalError {
+            fn from(e: crate::types::EdenError) -> Self {
+                DebugGetRawJournalError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for DebugGetRawJournalError {
+            fn from(err: ::anyhow::Error) -> Self {
+                DebugGetRawJournalError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for DebugGetRawJournalError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                DebugGetRawJournalError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetFileInformationError {
+            #[error("EdenService::getFileInformation failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GetFileInformationError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetFileInformationError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GetFileInformationError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetFileInformationError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetFileInformationError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetFileInformationError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GlobError {
+            #[error("EdenService::glob failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GlobError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GlobError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GlobError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GlobError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GlobError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GlobError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GlobFilesError {
+            #[error("EdenService::globFiles failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GlobFilesError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GlobFilesError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GlobFilesError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GlobFilesError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GlobFilesError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GlobFilesError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum ChownError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for ChownError {
+            fn from(err: ::anyhow::Error) -> Self {
+                ChownError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for ChownError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                ChownError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetScmStatusV2Error {
+            #[error("EdenService::getScmStatusV2 failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GetScmStatusV2Error {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetScmStatusV2Error::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GetScmStatusV2Error {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetScmStatusV2Error::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetScmStatusV2Error {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetScmStatusV2Error::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetScmStatusError {
+            #[error("EdenService::getScmStatus failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GetScmStatusError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetScmStatusError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GetScmStatusError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetScmStatusError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetScmStatusError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetScmStatusError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetScmStatusBetweenRevisionsError {
+            #[error("EdenService::getScmStatusBetweenRevisions failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GetScmStatusBetweenRevisionsError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetScmStatusBetweenRevisionsError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GetScmStatusBetweenRevisionsError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetScmStatusBetweenRevisionsError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetScmStatusBetweenRevisionsError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetScmStatusBetweenRevisionsError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetManifestEntryError {
+            #[error("EdenService::getManifestEntry failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("EdenService::getManifestEntry failed with {0:?}")]
+            noValueForKeyError(crate::types::NoValueForKeyError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GetManifestEntryError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetManifestEntryError::ex(e)
+            }
+        }
+
+        impl From<crate::types::NoValueForKeyError> for GetManifestEntryError {
+            fn from(e: crate::types::NoValueForKeyError) -> Self {
+                GetManifestEntryError::noValueForKeyError(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GetManifestEntryError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetManifestEntryError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetManifestEntryError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetManifestEntryError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetDaemonInfoError {
+            #[error("EdenService::getDaemonInfo failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GetDaemonInfoError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetDaemonInfoError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GetDaemonInfoError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetDaemonInfoError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetDaemonInfoError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetDaemonInfoError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetPidError {
+            #[error("EdenService::getPid failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GetPidError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetPidError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GetPidError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetPidError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetPidError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetPidError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum InitiateShutdownError {
+            #[error("EdenService::initiateShutdown failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for InitiateShutdownError {
+            fn from(e: crate::types::EdenError) -> Self {
+                InitiateShutdownError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for InitiateShutdownError {
+            fn from(err: ::anyhow::Error) -> Self {
+                InitiateShutdownError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for InitiateShutdownError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                InitiateShutdownError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetConfigError {
+            #[error("EdenService::getConfig failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GetConfigError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetConfigError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GetConfigError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetConfigError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetConfigError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetConfigError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum ReloadConfigError {
+            #[error("EdenService::reloadConfig failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for ReloadConfigError {
+            fn from(e: crate::types::EdenError) -> Self {
+                ReloadConfigError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for ReloadConfigError {
+            fn from(err: ::anyhow::Error) -> Self {
+                ReloadConfigError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for ReloadConfigError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                ReloadConfigError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum DebugGetScmTreeError {
+            #[error("EdenService::debugGetScmTree failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for DebugGetScmTreeError {
+            fn from(e: crate::types::EdenError) -> Self {
+                DebugGetScmTreeError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for DebugGetScmTreeError {
+            fn from(err: ::anyhow::Error) -> Self {
+                DebugGetScmTreeError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for DebugGetScmTreeError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                DebugGetScmTreeError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum DebugGetScmBlobError {
+            #[error("EdenService::debugGetScmBlob failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for DebugGetScmBlobError {
+            fn from(e: crate::types::EdenError) -> Self {
+                DebugGetScmBlobError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for DebugGetScmBlobError {
+            fn from(err: ::anyhow::Error) -> Self {
+                DebugGetScmBlobError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for DebugGetScmBlobError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                DebugGetScmBlobError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum DebugGetScmBlobMetadataError {
+            #[error("EdenService::debugGetScmBlobMetadata failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for DebugGetScmBlobMetadataError {
+            fn from(e: crate::types::EdenError) -> Self {
+                DebugGetScmBlobMetadataError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for DebugGetScmBlobMetadataError {
+            fn from(err: ::anyhow::Error) -> Self {
+                DebugGetScmBlobMetadataError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for DebugGetScmBlobMetadataError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                DebugGetScmBlobMetadataError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum DebugInodeStatusError {
+            #[error("EdenService::debugInodeStatus failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for DebugInodeStatusError {
+            fn from(e: crate::types::EdenError) -> Self {
+                DebugInodeStatusError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for DebugInodeStatusError {
+            fn from(err: ::anyhow::Error) -> Self {
+                DebugInodeStatusError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for DebugInodeStatusError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                DebugInodeStatusError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum DebugOutstandingFuseCallsError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for DebugOutstandingFuseCallsError {
+            fn from(err: ::anyhow::Error) -> Self {
+                DebugOutstandingFuseCallsError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for DebugOutstandingFuseCallsError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                DebugOutstandingFuseCallsError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum DebugGetInodePathError {
+            #[error("EdenService::debugGetInodePath failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for DebugGetInodePathError {
+            fn from(e: crate::types::EdenError) -> Self {
+                DebugGetInodePathError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for DebugGetInodePathError {
+            fn from(err: ::anyhow::Error) -> Self {
+                DebugGetInodePathError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for DebugGetInodePathError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                DebugGetInodePathError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum DebugSetLogLevelError {
+            #[error("EdenService::debugSetLogLevel failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for DebugSetLogLevelError {
+            fn from(e: crate::types::EdenError) -> Self {
+                DebugSetLogLevelError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for DebugSetLogLevelError {
+            fn from(err: ::anyhow::Error) -> Self {
+                DebugSetLogLevelError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for DebugSetLogLevelError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                DebugSetLogLevelError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetAccessCountsError {
+            #[error("EdenService::getAccessCounts failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GetAccessCountsError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetAccessCountsError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GetAccessCountsError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetAccessCountsError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetAccessCountsError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetAccessCountsError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum ClearAndCompactLocalStoreError {
+            #[error("EdenService::clearAndCompactLocalStore failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for ClearAndCompactLocalStoreError {
+            fn from(e: crate::types::EdenError) -> Self {
+                ClearAndCompactLocalStoreError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for ClearAndCompactLocalStoreError {
+            fn from(err: ::anyhow::Error) -> Self {
+                ClearAndCompactLocalStoreError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for ClearAndCompactLocalStoreError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                ClearAndCompactLocalStoreError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum DebugClearLocalStoreCachesError {
+            #[error("EdenService::debugClearLocalStoreCaches failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for DebugClearLocalStoreCachesError {
+            fn from(e: crate::types::EdenError) -> Self {
+                DebugClearLocalStoreCachesError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for DebugClearLocalStoreCachesError {
+            fn from(err: ::anyhow::Error) -> Self {
+                DebugClearLocalStoreCachesError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for DebugClearLocalStoreCachesError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                DebugClearLocalStoreCachesError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum DebugCompactLocalStorageError {
+            #[error("EdenService::debugCompactLocalStorage failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for DebugCompactLocalStorageError {
+            fn from(e: crate::types::EdenError) -> Self {
+                DebugCompactLocalStorageError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for DebugCompactLocalStorageError {
+            fn from(err: ::anyhow::Error) -> Self {
+                DebugCompactLocalStorageError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for DebugCompactLocalStorageError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                DebugCompactLocalStorageError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum UnloadInodeForPathError {
+            #[error("EdenService::unloadInodeForPath failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for UnloadInodeForPathError {
+            fn from(e: crate::types::EdenError) -> Self {
+                UnloadInodeForPathError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for UnloadInodeForPathError {
+            fn from(err: ::anyhow::Error) -> Self {
+                UnloadInodeForPathError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for UnloadInodeForPathError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                UnloadInodeForPathError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum FlushStatsNowError {
+            #[error("EdenService::flushStatsNow failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for FlushStatsNowError {
+            fn from(e: crate::types::EdenError) -> Self {
+                FlushStatsNowError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for FlushStatsNowError {
+            fn from(err: ::anyhow::Error) -> Self {
+                FlushStatsNowError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for FlushStatsNowError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                FlushStatsNowError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum InvalidateKernelInodeCacheError {
+            #[error("EdenService::invalidateKernelInodeCache failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for InvalidateKernelInodeCacheError {
+            fn from(e: crate::types::EdenError) -> Self {
+                InvalidateKernelInodeCacheError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for InvalidateKernelInodeCacheError {
+            fn from(err: ::anyhow::Error) -> Self {
+                InvalidateKernelInodeCacheError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for InvalidateKernelInodeCacheError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                InvalidateKernelInodeCacheError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetStatInfoError {
+            #[error("EdenService::getStatInfo failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for GetStatInfoError {
+            fn from(e: crate::types::EdenError) -> Self {
+                GetStatInfoError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for GetStatInfoError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetStatInfoError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetStatInfoError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetStatInfoError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum EnableTracingError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for EnableTracingError {
+            fn from(err: ::anyhow::Error) -> Self {
+                EnableTracingError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for EnableTracingError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                EnableTracingError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum DisableTracingError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for DisableTracingError {
+            fn from(err: ::anyhow::Error) -> Self {
+                DisableTracingError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for DisableTracingError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                DisableTracingError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetTracePointsError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetTracePointsError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetTracePointsError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetTracePointsError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetTracePointsError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum InjectFaultError {
+            #[error("EdenService::injectFault failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for InjectFaultError {
+            fn from(e: crate::types::EdenError) -> Self {
+                InjectFaultError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for InjectFaultError {
+            fn from(err: ::anyhow::Error) -> Self {
+                InjectFaultError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for InjectFaultError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                InjectFaultError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum RemoveFaultError {
+            #[error("EdenService::removeFault failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for RemoveFaultError {
+            fn from(e: crate::types::EdenError) -> Self {
+                RemoveFaultError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for RemoveFaultError {
+            fn from(err: ::anyhow::Error) -> Self {
+                RemoveFaultError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for RemoveFaultError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                RemoveFaultError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum UnblockFaultError {
+            #[error("EdenService::unblockFault failed with {0:?}")]
+            ex(crate::types::EdenError),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::EdenError> for UnblockFaultError {
+            fn from(e: crate::types::EdenError) -> Self {
+                UnblockFaultError::ex(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for UnblockFaultError {
+            fn from(err: ::anyhow::Error) -> Self {
+                UnblockFaultError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for UnblockFaultError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                UnblockFaultError::ApplicationException(ae)
+            }
+        }
+
     }
+
 }

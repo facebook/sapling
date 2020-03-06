@@ -63,9 +63,8 @@ pub fn print_error(err: &anyhow::Error, io: &mut crate::io::IO) {
             // UX: Colorize the output once `io` can output colors.
             let _ = io.write_err(format!("     {}\n", possibility));
         }
-    } else if let Some(eden::ErrorKind::EdenServiceGetScmStatusV2Error(
-        eden::services::eden_service::GetScmStatusV2Exn::ex(e),
-    )) = err.downcast_ref::<eden::ErrorKind>()
+    } else if let Some(eden::errors::eden_service::GetScmStatusV2Error::ex(e)) =
+        err.downcast_ref::<eden::errors::eden_service::GetScmStatusV2Error>()
     {
         let _ = io.write_err(format!("abort: {}\n", e.message));
         let _ = io.flush();
@@ -85,14 +84,13 @@ mod tests {
         let error_msg = "cannot compute status while a checkout is currently in progress";
         let expected_error = format!("abort: {}\n", error_msg);
 
-        let error: anyhow::Error = eden::ErrorKind::EdenServiceGetScmStatusV2Error(
-            eden::services::eden_service::GetScmStatusV2Exn::ex(eden::EdenError {
+        let error: anyhow::Error =
+            eden::errors::eden_service::GetScmStatusV2Error::ex(eden::EdenError {
                 message: error_msg.to_string(),
                 errorCode: Some(255),
                 errorType: eden::EdenErrorType::CHECKOUT_IN_PROGRESS,
-            }),
-        )
-        .into();
+            })
+            .into();
 
         let tin = Cursor::new(Vec::new());
         let tout = Cursor::new(Vec::new());

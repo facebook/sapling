@@ -225,11 +225,8 @@ fn should_colorize_output(stdout: &io::Stdout) -> bool {
     false
 }
 
-fn is_unknown_method_error(error: &Error) -> bool {
-    if let Some(eden::ErrorKind::EdenServiceGetScmStatusV2Error(
-        eden::services::eden_service::GetScmStatusV2Exn::ApplicationException(ref e),
-    )) = error.downcast_ref::<eden::ErrorKind>()
-    {
+fn is_unknown_method_error(error: &eden::errors::eden_service::GetScmStatusV2Error) -> bool {
+    if let eden::errors::eden_service::GetScmStatusV2Error::ApplicationException(ref e) = error {
         e.type_ == ApplicationExceptionErrorCode::UnknownMethod
     } else {
         false
@@ -260,7 +257,7 @@ fn run_fallback_status(
 
             Ok(GetScmStatusResult { status, version })
         }
-        Err(error) => Err(error),
+        Err(error) => Err(error.into()),
     }
 }
 
@@ -293,7 +290,7 @@ fn get_status_helper(
                     ignored,
                 )
             } else {
-                Err(error)
+                Err(error.into())
             }
         }
     }

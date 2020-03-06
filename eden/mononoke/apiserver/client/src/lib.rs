@@ -57,6 +57,7 @@ impl MononokeAPIClient {
                 revision: rev,
                 path: path.into_bytes(),
             })
+            .map_err(Error::from)
             .compat()
             .boxify()
     }
@@ -67,6 +68,7 @@ impl MononokeAPIClient {
                 repo: self.repo.clone(),
                 revision: MononokeRevision::commit_hash(revision),
             })
+            .map_err(Error::from)
             .compat()
             .boxify()
     }
@@ -76,6 +78,7 @@ impl MononokeAPIClient {
             .get_branches(&MononokeGetBranchesParams {
                 repo: self.repo.clone(),
             })
+            .map_err(Error::from)
             .compat()
             .boxify()
     }
@@ -95,6 +98,7 @@ impl MononokeAPIClient {
                 limit,
                 skip,
             })
+            .map_err(Error::from)
             .compat()
             .boxify()
     }
@@ -110,6 +114,7 @@ impl MononokeAPIClient {
                 revision: MononokeRevision::commit_hash(revision),
                 path: path.into_bytes(),
             })
+            .map_err(Error::from)
             .compat()
             .boxify()
     }
@@ -125,6 +130,7 @@ impl MononokeAPIClient {
                 revision: MononokeRevision::commit_hash(revision),
                 path: path.into_bytes(),
             })
+            .map_err(Error::from)
             .compat()
             .boxify()
     }
@@ -140,6 +146,7 @@ impl MononokeAPIClient {
                 revision: MononokeRevision::commit_hash(revision),
                 path: path.into_bytes(),
             })
+            .map_err(Error::from)
             .compat()
             .boxify()
     }
@@ -151,6 +158,7 @@ impl MononokeAPIClient {
                 ancestor: MononokeRevision::commit_hash(ancestor),
                 descendant: MononokeRevision::commit_hash(descendant),
             })
+            .map_err(Error::from)
             .compat()
             .boxify()
     }
@@ -161,6 +169,7 @@ impl MononokeAPIClient {
                 repo: self.repo.clone(),
                 blob_hash: MononokeNodeHash { hash },
             })
+            .map_err(Error::from)
             .compat()
             .boxify()
     }
@@ -171,6 +180,7 @@ impl MononokeAPIClient {
                 repo: self.repo.clone(),
                 tree_hash: MononokeTreeHash { hash },
             })
+            .map_err(Error::from)
             .compat()
             .boxify()
     }

@@ -291,13 +291,6 @@ pub mod services {
         pub enum GetRegexCountersCompressedExn {
             Success(Vec<u8>),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetRegexCountersCompressedExn {
-            fn default() -> Self {
-                GetRegexCountersCompressedExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetRegexCountersCompressedExn {
@@ -328,11 +321,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetRegexCountersCompressedExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -385,13 +373,6 @@ pub mod services {
         pub enum GetCountersCompressedExn {
             Success(Vec<u8>),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetCountersCompressedExn {
-            fn default() -> Self {
-                GetCountersCompressedExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetCountersCompressedExn {
@@ -422,11 +403,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetCountersCompressedExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -479,13 +455,6 @@ pub mod services {
         pub enum GetCpuProfileExn {
             Success(String),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetCpuProfileExn {
-            fn default() -> Self {
-                GetCpuProfileExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetCpuProfileExn {
@@ -516,11 +485,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetCpuProfileExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -573,13 +537,6 @@ pub mod services {
         pub enum GetCpuProfileWithOptionsExn {
             Success(String),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetCpuProfileWithOptionsExn {
-            fn default() -> Self {
-                GetCpuProfileWithOptionsExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetCpuProfileWithOptionsExn {
@@ -610,11 +567,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetCpuProfileWithOptionsExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -667,13 +619,6 @@ pub mod services {
         pub enum GetHeapProfileExn {
             Success(String),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetHeapProfileExn {
-            fn default() -> Self {
-                GetHeapProfileExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetHeapProfileExn {
@@ -704,11 +649,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetHeapProfileExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -761,13 +701,6 @@ pub mod services {
         pub enum GetWallTimeProfileExn {
             Success(String),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetWallTimeProfileExn {
-            fn default() -> Self {
-                GetWallTimeProfileExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetWallTimeProfileExn {
@@ -798,11 +731,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetWallTimeProfileExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -855,13 +783,6 @@ pub mod services {
         pub enum GetMemoryUsageExn {
             Success(i64),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetMemoryUsageExn {
-            fn default() -> Self {
-                GetMemoryUsageExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetMemoryUsageExn {
@@ -892,11 +813,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetMemoryUsageExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -949,13 +865,6 @@ pub mod services {
         pub enum GetLoadExn {
             Success(f64),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetLoadExn {
-            fn default() -> Self {
-                GetLoadExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetLoadExn {
@@ -986,11 +895,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetLoadExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -1043,13 +947,6 @@ pub mod services {
         pub enum GetPidExn {
             Success(i64),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetPidExn {
-            fn default() -> Self {
-                GetPidExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetPidExn {
@@ -1080,11 +977,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetPidExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -1137,13 +1029,6 @@ pub mod services {
         pub enum GetCommandLineExn {
             Success(String),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetCommandLineExn {
-            fn default() -> Self {
-                GetCommandLineExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetCommandLineExn {
@@ -1174,11 +1059,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetCommandLineExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -1231,13 +1111,6 @@ pub mod services {
         pub enum ReinitializeExn {
             Success(()),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for ReinitializeExn {
-            fn default() -> Self {
-                ReinitializeExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for ReinitializeExn {
@@ -1268,11 +1141,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    ReinitializeExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -1319,13 +1187,6 @@ pub mod services {
         pub enum ShutdownExn {
             Success(()),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for ShutdownExn {
-            fn default() -> Self {
-                ShutdownExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for ShutdownExn {
@@ -1356,11 +1217,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    ShutdownExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -1407,13 +1263,6 @@ pub mod services {
         pub enum TranslateFramesExn {
             Success(Vec<String>),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for TranslateFramesExn {
-            fn default() -> Self {
-                TranslateFramesExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for TranslateFramesExn {
@@ -1444,11 +1293,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    TranslateFramesExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -1501,13 +1345,6 @@ pub mod services {
         pub enum GetPcapLoggingConfigExn {
             Success(crate::types::PcapLoggingConfig),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for GetPcapLoggingConfigExn {
-            fn default() -> Self {
-                GetPcapLoggingConfigExn::UnknownField(-1)
-            }
         }
 
         impl From<ApplicationException> for GetPcapLoggingConfigExn {
@@ -1538,11 +1375,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    GetPcapLoggingConfigExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -1596,13 +1428,6 @@ pub mod services {
             Success(()),
             e(crate::types::PcapLoggingConfigException),
             ApplicationException(::fbthrift::types::ApplicationException),
-            UnknownField(i32),
-        }
-
-        impl Default for SetPcapLoggingConfigExn {
-            fn default() -> Self {
-                SetPcapLoggingConfigExn::UnknownField(-1)
-            }
         }
 
         impl From<crate::types::PcapLoggingConfigException> for SetPcapLoggingConfigExn {
@@ -1648,11 +1473,6 @@ pub mod services {
                         "ApplicationException",
                         -2147483648i32,
                     ),
-                    SetPcapLoggingConfigExn::UnknownField(x) => {
-                        p.write_field_begin("UnknownField", TType::I32, *x as i16);
-                        x.write(p);
-                        p.write_field_end();
-                    }
                 }
                 p.write_field_stop();
                 p.write_struct_end();
@@ -1739,55 +1559,55 @@ pub mod client {
         fn getRegexCountersCompressed(
             &self,
             arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, crate::errors::facebook_service::GetRegexCountersCompressedError>> + Send + 'static>>;
         fn getCountersCompressed(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, crate::errors::facebook_service::GetCountersCompressedError>> + Send + 'static>>;
         fn getCpuProfile(
             &self,
             arg_profileDurationInSec: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetCpuProfileError>> + Send + 'static>>;
         fn getCpuProfileWithOptions(
             &self,
             arg_options: &crate::types::CpuProfileOptions,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetCpuProfileWithOptionsError>> + Send + 'static>>;
         fn getHeapProfile(
             &self,
             arg_profileDurationInSec: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetHeapProfileError>> + Send + 'static>>;
         fn getWallTimeProfile(
             &self,
             arg_profileDurationInSec: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetWallTimeProfileError>> + Send + 'static>>;
         fn getMemoryUsage(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::facebook_service::GetMemoryUsageError>> + Send + 'static>>;
         fn getLoad(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<f64>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<f64, crate::errors::facebook_service::GetLoadError>> + Send + 'static>>;
         fn getPid(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::facebook_service::GetPidError>> + Send + 'static>>;
         fn getCommandLine(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetCommandLineError>> + Send + 'static>>;
         fn reinitialize(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::facebook_service::ReinitializeError>> + Send + 'static>>;
         fn shutdown(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::facebook_service::ShutdownError>> + Send + 'static>>;
         fn translateFrames(
             &self,
             arg_pointers: &[i64],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<String>, crate::errors::facebook_service::TranslateFramesError>> + Send + 'static>>;
         fn getPcapLoggingConfig(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::PcapLoggingConfig>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::PcapLoggingConfig, crate::errors::facebook_service::GetPcapLoggingConfigError>> + Send + 'static>>;
         fn setPcapLoggingConfig(
             &self,
             arg_config: &crate::types::PcapLoggingConfig,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>>;
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::facebook_service::SetPcapLoggingConfigError>> + Send + 'static>>;
     }
 
     impl<P, T> FacebookService for FacebookServiceImpl<P, T>
@@ -1799,7 +1619,7 @@ pub mod client {
     {        fn getRegexCountersCompressed(
             &self,
             arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, crate::errors::facebook_service::GetRegexCountersCompressedError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -1820,26 +1640,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<Vec<u8>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<Vec<u8>, crate::errors::facebook_service::GetRegexCountersCompressedError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::facebook_service::GetRegexCountersCompressedExn::read(p)? {
-                                    crate::services::facebook_service::GetRegexCountersCompressedExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::FacebookServiceGetRegexCountersCompressedError(exn).into()),
+                                let exn = crate::services::facebook_service::GetRegexCountersCompressedExn::read(p)?;
+                                match exn {
+                                    crate::services::facebook_service::GetRegexCountersCompressedExn::Success(x) => Ok(x),
+                                    crate::services::facebook_service::GetRegexCountersCompressedExn::ApplicationException(ae) => {
+                                        Err(crate::errors::facebook_service::GetRegexCountersCompressedError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::FacebookServiceGetRegexCountersCompressedError(
-                                    crate::services::facebook_service::GetRegexCountersCompressedExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::facebook_service::GetRegexCountersCompressedError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::facebook_service::GetRegexCountersCompressedError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1850,7 +1673,7 @@ pub mod client {
         }
         fn getCountersCompressed(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, crate::errors::facebook_service::GetCountersCompressedError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -1868,26 +1691,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<Vec<u8>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<Vec<u8>, crate::errors::facebook_service::GetCountersCompressedError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::facebook_service::GetCountersCompressedExn::read(p)? {
-                                    crate::services::facebook_service::GetCountersCompressedExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::FacebookServiceGetCountersCompressedError(exn).into()),
+                                let exn = crate::services::facebook_service::GetCountersCompressedExn::read(p)?;
+                                match exn {
+                                    crate::services::facebook_service::GetCountersCompressedExn::Success(x) => Ok(x),
+                                    crate::services::facebook_service::GetCountersCompressedExn::ApplicationException(ae) => {
+                                        Err(crate::errors::facebook_service::GetCountersCompressedError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::FacebookServiceGetCountersCompressedError(
-                                    crate::services::facebook_service::GetCountersCompressedExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::facebook_service::GetCountersCompressedError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::facebook_service::GetCountersCompressedError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1899,7 +1725,7 @@ pub mod client {
         fn getCpuProfile(
             &self,
             arg_profileDurationInSec: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetCpuProfileError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -1920,26 +1746,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<String> {
+                    move |mut p: P::Deserializer| -> std::result::Result<String, crate::errors::facebook_service::GetCpuProfileError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::facebook_service::GetCpuProfileExn::read(p)? {
-                                    crate::services::facebook_service::GetCpuProfileExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::FacebookServiceGetCpuProfileError(exn).into()),
+                                let exn = crate::services::facebook_service::GetCpuProfileExn::read(p)?;
+                                match exn {
+                                    crate::services::facebook_service::GetCpuProfileExn::Success(x) => Ok(x),
+                                    crate::services::facebook_service::GetCpuProfileExn::ApplicationException(ae) => {
+                                        Err(crate::errors::facebook_service::GetCpuProfileError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::FacebookServiceGetCpuProfileError(
-                                    crate::services::facebook_service::GetCpuProfileExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::facebook_service::GetCpuProfileError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::facebook_service::GetCpuProfileError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -1951,7 +1780,7 @@ pub mod client {
         fn getCpuProfileWithOptions(
             &self,
             arg_options: &crate::types::CpuProfileOptions,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetCpuProfileWithOptionsError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -1972,26 +1801,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<String> {
+                    move |mut p: P::Deserializer| -> std::result::Result<String, crate::errors::facebook_service::GetCpuProfileWithOptionsError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::facebook_service::GetCpuProfileWithOptionsExn::read(p)? {
-                                    crate::services::facebook_service::GetCpuProfileWithOptionsExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::FacebookServiceGetCpuProfileWithOptionsError(exn).into()),
+                                let exn = crate::services::facebook_service::GetCpuProfileWithOptionsExn::read(p)?;
+                                match exn {
+                                    crate::services::facebook_service::GetCpuProfileWithOptionsExn::Success(x) => Ok(x),
+                                    crate::services::facebook_service::GetCpuProfileWithOptionsExn::ApplicationException(ae) => {
+                                        Err(crate::errors::facebook_service::GetCpuProfileWithOptionsError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::FacebookServiceGetCpuProfileWithOptionsError(
-                                    crate::services::facebook_service::GetCpuProfileWithOptionsExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::facebook_service::GetCpuProfileWithOptionsError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::facebook_service::GetCpuProfileWithOptionsError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2003,7 +1835,7 @@ pub mod client {
         fn getHeapProfile(
             &self,
             arg_profileDurationInSec: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetHeapProfileError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2024,26 +1856,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<String> {
+                    move |mut p: P::Deserializer| -> std::result::Result<String, crate::errors::facebook_service::GetHeapProfileError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::facebook_service::GetHeapProfileExn::read(p)? {
-                                    crate::services::facebook_service::GetHeapProfileExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::FacebookServiceGetHeapProfileError(exn).into()),
+                                let exn = crate::services::facebook_service::GetHeapProfileExn::read(p)?;
+                                match exn {
+                                    crate::services::facebook_service::GetHeapProfileExn::Success(x) => Ok(x),
+                                    crate::services::facebook_service::GetHeapProfileExn::ApplicationException(ae) => {
+                                        Err(crate::errors::facebook_service::GetHeapProfileError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::FacebookServiceGetHeapProfileError(
-                                    crate::services::facebook_service::GetHeapProfileExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::facebook_service::GetHeapProfileError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::facebook_service::GetHeapProfileError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2055,7 +1890,7 @@ pub mod client {
         fn getWallTimeProfile(
             &self,
             arg_profileDurationInSec: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetWallTimeProfileError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2076,26 +1911,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<String> {
+                    move |mut p: P::Deserializer| -> std::result::Result<String, crate::errors::facebook_service::GetWallTimeProfileError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::facebook_service::GetWallTimeProfileExn::read(p)? {
-                                    crate::services::facebook_service::GetWallTimeProfileExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::FacebookServiceGetWallTimeProfileError(exn).into()),
+                                let exn = crate::services::facebook_service::GetWallTimeProfileExn::read(p)?;
+                                match exn {
+                                    crate::services::facebook_service::GetWallTimeProfileExn::Success(x) => Ok(x),
+                                    crate::services::facebook_service::GetWallTimeProfileExn::ApplicationException(ae) => {
+                                        Err(crate::errors::facebook_service::GetWallTimeProfileError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::FacebookServiceGetWallTimeProfileError(
-                                    crate::services::facebook_service::GetWallTimeProfileExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::facebook_service::GetWallTimeProfileError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::facebook_service::GetWallTimeProfileError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2106,7 +1944,7 @@ pub mod client {
         }
         fn getMemoryUsage(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::facebook_service::GetMemoryUsageError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2124,26 +1962,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<i64> {
+                    move |mut p: P::Deserializer| -> std::result::Result<i64, crate::errors::facebook_service::GetMemoryUsageError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::facebook_service::GetMemoryUsageExn::read(p)? {
-                                    crate::services::facebook_service::GetMemoryUsageExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::FacebookServiceGetMemoryUsageError(exn).into()),
+                                let exn = crate::services::facebook_service::GetMemoryUsageExn::read(p)?;
+                                match exn {
+                                    crate::services::facebook_service::GetMemoryUsageExn::Success(x) => Ok(x),
+                                    crate::services::facebook_service::GetMemoryUsageExn::ApplicationException(ae) => {
+                                        Err(crate::errors::facebook_service::GetMemoryUsageError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::FacebookServiceGetMemoryUsageError(
-                                    crate::services::facebook_service::GetMemoryUsageExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::facebook_service::GetMemoryUsageError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::facebook_service::GetMemoryUsageError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2154,7 +1995,7 @@ pub mod client {
         }
         fn getLoad(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<f64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<f64, crate::errors::facebook_service::GetLoadError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2172,26 +2013,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<f64> {
+                    move |mut p: P::Deserializer| -> std::result::Result<f64, crate::errors::facebook_service::GetLoadError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::facebook_service::GetLoadExn::read(p)? {
-                                    crate::services::facebook_service::GetLoadExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::FacebookServiceGetLoadError(exn).into()),
+                                let exn = crate::services::facebook_service::GetLoadExn::read(p)?;
+                                match exn {
+                                    crate::services::facebook_service::GetLoadExn::Success(x) => Ok(x),
+                                    crate::services::facebook_service::GetLoadExn::ApplicationException(ae) => {
+                                        Err(crate::errors::facebook_service::GetLoadError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::FacebookServiceGetLoadError(
-                                    crate::services::facebook_service::GetLoadExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::facebook_service::GetLoadError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::facebook_service::GetLoadError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2202,7 +2046,7 @@ pub mod client {
         }
         fn getPid(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::facebook_service::GetPidError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2220,26 +2064,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<i64> {
+                    move |mut p: P::Deserializer| -> std::result::Result<i64, crate::errors::facebook_service::GetPidError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::facebook_service::GetPidExn::read(p)? {
-                                    crate::services::facebook_service::GetPidExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::FacebookServiceGetPidError(exn).into()),
+                                let exn = crate::services::facebook_service::GetPidExn::read(p)?;
+                                match exn {
+                                    crate::services::facebook_service::GetPidExn::Success(x) => Ok(x),
+                                    crate::services::facebook_service::GetPidExn::ApplicationException(ae) => {
+                                        Err(crate::errors::facebook_service::GetPidError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::FacebookServiceGetPidError(
-                                    crate::services::facebook_service::GetPidExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::facebook_service::GetPidError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::facebook_service::GetPidError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2250,7 +2097,7 @@ pub mod client {
         }
         fn getCommandLine(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetCommandLineError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2268,26 +2115,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<String> {
+                    move |mut p: P::Deserializer| -> std::result::Result<String, crate::errors::facebook_service::GetCommandLineError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::facebook_service::GetCommandLineExn::read(p)? {
-                                    crate::services::facebook_service::GetCommandLineExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::FacebookServiceGetCommandLineError(exn).into()),
+                                let exn = crate::services::facebook_service::GetCommandLineExn::read(p)?;
+                                match exn {
+                                    crate::services::facebook_service::GetCommandLineExn::Success(x) => Ok(x),
+                                    crate::services::facebook_service::GetCommandLineExn::ApplicationException(ae) => {
+                                        Err(crate::errors::facebook_service::GetCommandLineError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::FacebookServiceGetCommandLineError(
-                                    crate::services::facebook_service::GetCommandLineExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::facebook_service::GetCommandLineError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::facebook_service::GetCommandLineError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2298,7 +2148,7 @@ pub mod client {
         }
         fn reinitialize(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::facebook_service::ReinitializeError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2316,26 +2166,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::facebook_service::ReinitializeError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::facebook_service::ReinitializeExn::read(p)? {
-                                    crate::services::facebook_service::ReinitializeExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::FacebookServiceReinitializeError(exn).into()),
+                                let exn = crate::services::facebook_service::ReinitializeExn::read(p)?;
+                                match exn {
+                                    crate::services::facebook_service::ReinitializeExn::Success(x) => Ok(x),
+                                    crate::services::facebook_service::ReinitializeExn::ApplicationException(ae) => {
+                                        Err(crate::errors::facebook_service::ReinitializeError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::FacebookServiceReinitializeError(
-                                    crate::services::facebook_service::ReinitializeExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::facebook_service::ReinitializeError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::facebook_service::ReinitializeError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2346,7 +2199,7 @@ pub mod client {
         }
         fn shutdown(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::facebook_service::ShutdownError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2364,26 +2217,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::facebook_service::ShutdownError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::facebook_service::ShutdownExn::read(p)? {
-                                    crate::services::facebook_service::ShutdownExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::FacebookServiceShutdownError(exn).into()),
+                                let exn = crate::services::facebook_service::ShutdownExn::read(p)?;
+                                match exn {
+                                    crate::services::facebook_service::ShutdownExn::Success(x) => Ok(x),
+                                    crate::services::facebook_service::ShutdownExn::ApplicationException(ae) => {
+                                        Err(crate::errors::facebook_service::ShutdownError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::FacebookServiceShutdownError(
-                                    crate::services::facebook_service::ShutdownExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::facebook_service::ShutdownError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::facebook_service::ShutdownError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2395,7 +2251,7 @@ pub mod client {
         fn translateFrames(
             &self,
             arg_pointers: &[i64],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<String>, crate::errors::facebook_service::TranslateFramesError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2416,26 +2272,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<Vec<String>> {
+                    move |mut p: P::Deserializer| -> std::result::Result<Vec<String>, crate::errors::facebook_service::TranslateFramesError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::facebook_service::TranslateFramesExn::read(p)? {
-                                    crate::services::facebook_service::TranslateFramesExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::FacebookServiceTranslateFramesError(exn).into()),
+                                let exn = crate::services::facebook_service::TranslateFramesExn::read(p)?;
+                                match exn {
+                                    crate::services::facebook_service::TranslateFramesExn::Success(x) => Ok(x),
+                                    crate::services::facebook_service::TranslateFramesExn::ApplicationException(ae) => {
+                                        Err(crate::errors::facebook_service::TranslateFramesError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::FacebookServiceTranslateFramesError(
-                                    crate::services::facebook_service::TranslateFramesExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::facebook_service::TranslateFramesError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::facebook_service::TranslateFramesError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2446,7 +2305,7 @@ pub mod client {
         }
         fn getPcapLoggingConfig(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::PcapLoggingConfig>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::PcapLoggingConfig, crate::errors::facebook_service::GetPcapLoggingConfigError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2464,26 +2323,29 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<crate::types::PcapLoggingConfig> {
+                    move |mut p: P::Deserializer| -> std::result::Result<crate::types::PcapLoggingConfig, crate::errors::facebook_service::GetPcapLoggingConfigError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::facebook_service::GetPcapLoggingConfigExn::read(p)? {
-                                    crate::services::facebook_service::GetPcapLoggingConfigExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::FacebookServiceGetPcapLoggingConfigError(exn).into()),
+                                let exn = crate::services::facebook_service::GetPcapLoggingConfigExn::read(p)?;
+                                match exn {
+                                    crate::services::facebook_service::GetPcapLoggingConfigExn::Success(x) => Ok(x),
+                                    crate::services::facebook_service::GetPcapLoggingConfigExn::ApplicationException(ae) => {
+                                        Err(crate::errors::facebook_service::GetPcapLoggingConfigError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::FacebookServiceGetPcapLoggingConfigError(
-                                    crate::services::facebook_service::GetPcapLoggingConfigExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::facebook_service::GetPcapLoggingConfigError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::facebook_service::GetPcapLoggingConfigError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2495,7 +2357,7 @@ pub mod client {
         fn setPcapLoggingConfig(
             &self,
             arg_config: &crate::types::PcapLoggingConfig,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::facebook_service::SetPcapLoggingConfigError>> + Send + 'static>> {
             use futures::future::{FutureExt, TryFutureExt};
             let request = serialize!(P, |p| protocol::write_message(
                 p,
@@ -2516,26 +2378,32 @@ pub mod client {
             ));
             self.transport()
                 .call(request)
+                .map_err(From::from)
                 .and_then(|reply| futures::future::ready({
                     let de = P::deserializer(reply);
-                    move |mut p: P::Deserializer| -> anyhow::Result<()> {
+                    move |mut p: P::Deserializer| -> std::result::Result<(), crate::errors::facebook_service::SetPcapLoggingConfigError> {
                         let p = &mut p;
                         let (_, message_type, _) = p.read_message_begin(|_| ())?;
                         let result = match message_type {
                             MessageType::Reply => {
-                                match crate::services::facebook_service::SetPcapLoggingConfigExn::read(p)? {
-                                    crate::services::facebook_service::SetPcapLoggingConfigExn::Success(res) => Ok(res),
-                                    exn => Err(crate::errors::ErrorKind::FacebookServiceSetPcapLoggingConfigError(exn).into()),
+                                let exn = crate::services::facebook_service::SetPcapLoggingConfigExn::read(p)?;
+                                match exn {
+                                    crate::services::facebook_service::SetPcapLoggingConfigExn::Success(x) => Ok(x),
+                                    crate::services::facebook_service::SetPcapLoggingConfigExn::e(err) => {
+                                        Err(crate::errors::facebook_service::SetPcapLoggingConfigError::e(err))
+                                    }
+                                    crate::services::facebook_service::SetPcapLoggingConfigExn::ApplicationException(ae) => {
+                                        Err(crate::errors::facebook_service::SetPcapLoggingConfigError::ApplicationException(ae))
+                                    }
                                 }
                             }
                             MessageType::Exception => {
                                 let ae = ApplicationException::read(p)?;
-                                Err(crate::errors::ErrorKind::FacebookServiceSetPcapLoggingConfigError(
-                                    crate::services::facebook_service::SetPcapLoggingConfigExn::ApplicationException(ae),
-                                ).into())
+                                Err(crate::errors::facebook_service::SetPcapLoggingConfigError::ApplicationException(ae))
                             }
                             MessageType::Call | MessageType::Oneway | MessageType::InvalidMessageType => {
-                                anyhow::bail!("Unexpected message type {:?}", message_type)
+                                let err = anyhow::anyhow!("Unexpected message type {:?}", message_type);
+                                Err(crate::errors::facebook_service::SetPcapLoggingConfigError::ThriftError(err))
                             }
                         };
                         p.read_message_end()?;
@@ -2555,21 +2423,21 @@ pub mod client {
         fn getRegexCountersCompressed(
             &self,
             arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, crate::errors::facebook_service::GetRegexCountersCompressedError>> + Send + 'static>> {
             self.as_ref().getRegexCountersCompressed(
                 arg_regex,
             )
         }
         fn getCountersCompressed(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, crate::errors::facebook_service::GetCountersCompressedError>> + Send + 'static>> {
             self.as_ref().getCountersCompressed(
             )
         }
         fn getCpuProfile(
             &self,
             arg_profileDurationInSec: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetCpuProfileError>> + Send + 'static>> {
             self.as_ref().getCpuProfile(
                 arg_profileDurationInSec,
             )
@@ -2577,7 +2445,7 @@ pub mod client {
         fn getCpuProfileWithOptions(
             &self,
             arg_options: &crate::types::CpuProfileOptions,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetCpuProfileWithOptionsError>> + Send + 'static>> {
             self.as_ref().getCpuProfileWithOptions(
                 arg_options,
             )
@@ -2585,7 +2453,7 @@ pub mod client {
         fn getHeapProfile(
             &self,
             arg_profileDurationInSec: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetHeapProfileError>> + Send + 'static>> {
             self.as_ref().getHeapProfile(
                 arg_profileDurationInSec,
             )
@@ -2593,65 +2461,65 @@ pub mod client {
         fn getWallTimeProfile(
             &self,
             arg_profileDurationInSec: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetWallTimeProfileError>> + Send + 'static>> {
             self.as_ref().getWallTimeProfile(
                 arg_profileDurationInSec,
             )
         }
         fn getMemoryUsage(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::facebook_service::GetMemoryUsageError>> + Send + 'static>> {
             self.as_ref().getMemoryUsage(
             )
         }
         fn getLoad(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<f64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<f64, crate::errors::facebook_service::GetLoadError>> + Send + 'static>> {
             self.as_ref().getLoad(
             )
         }
         fn getPid(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::facebook_service::GetPidError>> + Send + 'static>> {
             self.as_ref().getPid(
             )
         }
         fn getCommandLine(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetCommandLineError>> + Send + 'static>> {
             self.as_ref().getCommandLine(
             )
         }
         fn reinitialize(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::facebook_service::ReinitializeError>> + Send + 'static>> {
             self.as_ref().reinitialize(
             )
         }
         fn shutdown(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::facebook_service::ShutdownError>> + Send + 'static>> {
             self.as_ref().shutdown(
             )
         }
         fn translateFrames(
             &self,
             arg_pointers: &[i64],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<String>, crate::errors::facebook_service::TranslateFramesError>> + Send + 'static>> {
             self.as_ref().translateFrames(
                 arg_pointers,
             )
         }
         fn getPcapLoggingConfig(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::PcapLoggingConfig>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::PcapLoggingConfig, crate::errors::facebook_service::GetPcapLoggingConfigError>> + Send + 'static>> {
             self.as_ref().getPcapLoggingConfig(
             )
         }
         fn setPcapLoggingConfig(
             &self,
             arg_config: &crate::types::PcapLoggingConfig,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::facebook_service::SetPcapLoggingConfigError>> + Send + 'static>> {
             self.as_ref().setPcapLoggingConfig(
                 arg_config,
             )
@@ -2933,7 +2801,6 @@ pub mod server {
                         "getRegexCountersCompressed",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -2976,7 +2843,6 @@ pub mod server {
                         "getCountersCompressed",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3027,7 +2893,6 @@ pub mod server {
                         "getCpuProfile",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3078,7 +2943,6 @@ pub mod server {
                         "getCpuProfileWithOptions",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3129,7 +2993,6 @@ pub mod server {
                         "getHeapProfile",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3180,7 +3043,6 @@ pub mod server {
                         "getWallTimeProfile",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3223,7 +3085,6 @@ pub mod server {
                         "getMemoryUsage",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3266,7 +3127,6 @@ pub mod server {
                         "getLoad",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3309,7 +3169,6 @@ pub mod server {
                         "getPid",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3352,7 +3211,6 @@ pub mod server {
                         "getCommandLine",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3395,7 +3253,6 @@ pub mod server {
                         "reinitialize",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3438,7 +3295,6 @@ pub mod server {
                         "shutdown",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3489,7 +3345,6 @@ pub mod server {
                         "translateFrames",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3532,7 +3387,6 @@ pub mod server {
                         "getPcapLoggingConfig",
                     )
                 }
-                Err(exn) => exn,
             };
             let res = serialize!(P, |p| fbthrift::protocol::write_message(
                 p,
@@ -3875,159 +3729,114 @@ pub mod mock {
         fn getRegexCountersCompressed(
             &self,
             arg_regex: &str,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, crate::errors::facebook_service::GetRegexCountersCompressedError>> + Send + 'static>> {
             let mut closure = self.getRegexCountersCompressed.closure.lock().unwrap();
             let closure: &mut dyn FnMut(String) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_regex.to_owned())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::FacebookServiceGetRegexCountersCompressedError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_regex.to_owned())))
         }
         fn getCountersCompressed(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<u8>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<u8>, crate::errors::facebook_service::GetCountersCompressedError>> + Send + 'static>> {
             let mut closure = self.getCountersCompressed.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::FacebookServiceGetCountersCompressedError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn getCpuProfile(
             &self,
             arg_profileDurationInSec: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetCpuProfileError>> + Send + 'static>> {
             let mut closure = self.getCpuProfile.closure.lock().unwrap();
             let closure: &mut dyn FnMut(i32) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_profileDurationInSec.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::FacebookServiceGetCpuProfileError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_profileDurationInSec.clone())))
         }
         fn getCpuProfileWithOptions(
             &self,
             arg_options: &crate::types::CpuProfileOptions,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetCpuProfileWithOptionsError>> + Send + 'static>> {
             let mut closure = self.getCpuProfileWithOptions.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::CpuProfileOptions) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_options.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::FacebookServiceGetCpuProfileWithOptionsError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_options.clone())))
         }
         fn getHeapProfile(
             &self,
             arg_profileDurationInSec: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetHeapProfileError>> + Send + 'static>> {
             let mut closure = self.getHeapProfile.closure.lock().unwrap();
             let closure: &mut dyn FnMut(i32) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_profileDurationInSec.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::FacebookServiceGetHeapProfileError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_profileDurationInSec.clone())))
         }
         fn getWallTimeProfile(
             &self,
             arg_profileDurationInSec: i32,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetWallTimeProfileError>> + Send + 'static>> {
             let mut closure = self.getWallTimeProfile.closure.lock().unwrap();
             let closure: &mut dyn FnMut(i32) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_profileDurationInSec.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::FacebookServiceGetWallTimeProfileError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_profileDurationInSec.clone())))
         }
         fn getMemoryUsage(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::facebook_service::GetMemoryUsageError>> + Send + 'static>> {
             let mut closure = self.getMemoryUsage.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::FacebookServiceGetMemoryUsageError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn getLoad(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<f64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<f64, crate::errors::facebook_service::GetLoadError>> + Send + 'static>> {
             let mut closure = self.getLoad.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::FacebookServiceGetLoadError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn getPid(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<i64>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<i64, crate::errors::facebook_service::GetPidError>> + Send + 'static>> {
             let mut closure = self.getPid.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::FacebookServiceGetPidError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn getCommandLine(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<String>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<String, crate::errors::facebook_service::GetCommandLineError>> + Send + 'static>> {
             let mut closure = self.getCommandLine.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::FacebookServiceGetCommandLineError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn reinitialize(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::facebook_service::ReinitializeError>> + Send + 'static>> {
             let mut closure = self.reinitialize.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::FacebookServiceReinitializeError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn shutdown(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::facebook_service::ShutdownError>> + Send + 'static>> {
             let mut closure = self.shutdown.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::FacebookServiceShutdownError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn translateFrames(
             &self,
             arg_pointers: &[i64],
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<Vec<String>>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<Vec<String>, crate::errors::facebook_service::TranslateFramesError>> + Send + 'static>> {
             let mut closure = self.translateFrames.closure.lock().unwrap();
             let closure: &mut dyn FnMut(Vec<i64>) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_pointers.to_owned())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::FacebookServiceTranslateFramesError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_pointers.to_owned())))
         }
         fn getPcapLoggingConfig(
             &self,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<crate::types::PcapLoggingConfig>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<crate::types::PcapLoggingConfig, crate::errors::facebook_service::GetPcapLoggingConfigError>> + Send + 'static>> {
             let mut closure = self.getPcapLoggingConfig.closure.lock().unwrap();
             let closure: &mut dyn FnMut() -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure()
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::FacebookServiceGetPcapLoggingConfigError(error),
-                ))))
+            Box::pin(futures::future::ready(closure()))
         }
         fn setPcapLoggingConfig(
             &self,
             arg_config: &crate::types::PcapLoggingConfig,
-        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = anyhow::Result<()>> + Send + 'static>> {
+        ) -> std::pin::Pin<Box<dyn std::future::Future<Output = std::result::Result<(), crate::errors::facebook_service::SetPcapLoggingConfigError>> + Send + 'static>> {
             let mut closure = self.setPcapLoggingConfig.closure.lock().unwrap();
             let closure: &mut dyn FnMut(crate::types::PcapLoggingConfig) -> _ = &mut **closure;
-            Box::pin(futures::future::ready(closure(arg_config.clone())
-                .map_err(|error| anyhow::Error::from(
-                    crate::errors::ErrorKind::FacebookServiceSetPcapLoggingConfigError(error),
-                ))))
+            Box::pin(futures::future::ready(closure(arg_config.clone())))
         }
     }
 
@@ -4046,7 +3855,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(String) -> Result<
                     Vec<u8>,
-                    crate::services::facebook_service::GetRegexCountersCompressedExn,
+                    crate::errors::facebook_service::GetRegexCountersCompressedError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4073,7 +3882,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::facebook_service::GetRegexCountersCompressedExn>,
+                E: Into<crate::errors::facebook_service::GetRegexCountersCompressedError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4085,7 +3894,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     Vec<u8>,
-                    crate::services::facebook_service::GetCountersCompressedExn,
+                    crate::errors::facebook_service::GetCountersCompressedError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4112,7 +3921,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::facebook_service::GetCountersCompressedExn>,
+                E: Into<crate::errors::facebook_service::GetCountersCompressedError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4124,7 +3933,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(i32) -> Result<
                     String,
-                    crate::services::facebook_service::GetCpuProfileExn,
+                    crate::errors::facebook_service::GetCpuProfileError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4151,7 +3960,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::facebook_service::GetCpuProfileExn>,
+                E: Into<crate::errors::facebook_service::GetCpuProfileError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4163,7 +3972,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::CpuProfileOptions) -> Result<
                     String,
-                    crate::services::facebook_service::GetCpuProfileWithOptionsExn,
+                    crate::errors::facebook_service::GetCpuProfileWithOptionsError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4190,7 +3999,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::facebook_service::GetCpuProfileWithOptionsExn>,
+                E: Into<crate::errors::facebook_service::GetCpuProfileWithOptionsError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4202,7 +4011,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(i32) -> Result<
                     String,
-                    crate::services::facebook_service::GetHeapProfileExn,
+                    crate::errors::facebook_service::GetHeapProfileError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4229,7 +4038,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::facebook_service::GetHeapProfileExn>,
+                E: Into<crate::errors::facebook_service::GetHeapProfileError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4241,7 +4050,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(i32) -> Result<
                     String,
-                    crate::services::facebook_service::GetWallTimeProfileExn,
+                    crate::errors::facebook_service::GetWallTimeProfileError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4268,7 +4077,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::facebook_service::GetWallTimeProfileExn>,
+                E: Into<crate::errors::facebook_service::GetWallTimeProfileError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4280,7 +4089,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     i64,
-                    crate::services::facebook_service::GetMemoryUsageExn,
+                    crate::errors::facebook_service::GetMemoryUsageError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4307,7 +4116,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::facebook_service::GetMemoryUsageExn>,
+                E: Into<crate::errors::facebook_service::GetMemoryUsageError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4319,7 +4128,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     f64,
-                    crate::services::facebook_service::GetLoadExn,
+                    crate::errors::facebook_service::GetLoadError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4346,7 +4155,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::facebook_service::GetLoadExn>,
+                E: Into<crate::errors::facebook_service::GetLoadError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4358,7 +4167,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     i64,
-                    crate::services::facebook_service::GetPidExn,
+                    crate::errors::facebook_service::GetPidError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4385,7 +4194,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::facebook_service::GetPidExn>,
+                E: Into<crate::errors::facebook_service::GetPidError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4397,7 +4206,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     String,
-                    crate::services::facebook_service::GetCommandLineExn,
+                    crate::errors::facebook_service::GetCommandLineError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4424,7 +4233,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::facebook_service::GetCommandLineExn>,
+                E: Into<crate::errors::facebook_service::GetCommandLineError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4436,7 +4245,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     (),
-                    crate::services::facebook_service::ReinitializeExn,
+                    crate::errors::facebook_service::ReinitializeError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4463,7 +4272,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::facebook_service::ReinitializeExn>,
+                E: Into<crate::errors::facebook_service::ReinitializeError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4475,7 +4284,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     (),
-                    crate::services::facebook_service::ShutdownExn,
+                    crate::errors::facebook_service::ShutdownError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4502,7 +4311,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::facebook_service::ShutdownExn>,
+                E: Into<crate::errors::facebook_service::ShutdownError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4514,7 +4323,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(Vec<i64>) -> Result<
                     Vec<String>,
-                    crate::services::facebook_service::TranslateFramesExn,
+                    crate::errors::facebook_service::TranslateFramesError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4541,7 +4350,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::facebook_service::TranslateFramesExn>,
+                E: Into<crate::errors::facebook_service::TranslateFramesError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4553,7 +4362,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut() -> Result<
                     crate::types::PcapLoggingConfig,
-                    crate::services::facebook_service::GetPcapLoggingConfigExn,
+                    crate::errors::facebook_service::GetPcapLoggingConfigError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4580,7 +4389,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::facebook_service::GetPcapLoggingConfigExn>,
+                E: Into<crate::errors::facebook_service::GetPcapLoggingConfigError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4592,7 +4401,7 @@ pub mod mock {
             pub(super) closure: Mutex<Box<
                 dyn FnMut(crate::types::PcapLoggingConfig) -> Result<
                     (),
-                    crate::services::facebook_service::SetPcapLoggingConfigExn,
+                    crate::errors::facebook_service::SetPcapLoggingConfigError,
                 > + Send + Sync + 'mock,
             >>,
         }
@@ -4619,7 +4428,7 @@ pub mod mock {
 
             pub fn throw<E>(&self, exception: E)
             where
-                E: Into<crate::services::facebook_service::SetPcapLoggingConfigExn>,
+                E: Into<crate::errors::facebook_service::SetPcapLoggingConfigError>,
                 E: Clone + Send + Sync + 'mock,
             {
                 let mut closure = self.closure.lock().unwrap();
@@ -4630,48 +4439,316 @@ pub mod mock {
 }
 
 pub mod errors {
-    use fbthrift::ApplicationException;
-    use thiserror::Error;
+    pub mod facebook_service {
 
-    #[derive(Debug, Error)]
-    pub enum ErrorKind {
-        #[error("FacebookService::getRegexCountersCompressed failed with {0:?}")]
-        FacebookServiceGetRegexCountersCompressedError(crate::services::facebook_service::GetRegexCountersCompressedExn),
-        #[error("FacebookService::getCountersCompressed failed with {0:?}")]
-        FacebookServiceGetCountersCompressedError(crate::services::facebook_service::GetCountersCompressedExn),
-        #[error("FacebookService::getCpuProfile failed with {0:?}")]
-        FacebookServiceGetCpuProfileError(crate::services::facebook_service::GetCpuProfileExn),
-        #[error("FacebookService::getCpuProfileWithOptions failed with {0:?}")]
-        FacebookServiceGetCpuProfileWithOptionsError(crate::services::facebook_service::GetCpuProfileWithOptionsExn),
-        #[error("FacebookService::getHeapProfile failed with {0:?}")]
-        FacebookServiceGetHeapProfileError(crate::services::facebook_service::GetHeapProfileExn),
-        #[error("FacebookService::getWallTimeProfile failed with {0:?}")]
-        FacebookServiceGetWallTimeProfileError(crate::services::facebook_service::GetWallTimeProfileExn),
-        #[error("FacebookService::getMemoryUsage failed with {0:?}")]
-        FacebookServiceGetMemoryUsageError(crate::services::facebook_service::GetMemoryUsageExn),
-        #[error("FacebookService::getLoad failed with {0:?}")]
-        FacebookServiceGetLoadError(crate::services::facebook_service::GetLoadExn),
-        #[error("FacebookService::getPid failed with {0:?}")]
-        FacebookServiceGetPidError(crate::services::facebook_service::GetPidExn),
-        #[error("FacebookService::getCommandLine failed with {0:?}")]
-        FacebookServiceGetCommandLineError(crate::services::facebook_service::GetCommandLineExn),
-        #[error("FacebookService::reinitialize failed with {0:?}")]
-        FacebookServiceReinitializeError(crate::services::facebook_service::ReinitializeExn),
-        #[error("FacebookService::shutdown failed with {0:?}")]
-        FacebookServiceShutdownError(crate::services::facebook_service::ShutdownExn),
-        #[error("FacebookService::translateFrames failed with {0:?}")]
-        FacebookServiceTranslateFramesError(crate::services::facebook_service::TranslateFramesExn),
-        #[error("FacebookService::getPcapLoggingConfig failed with {0:?}")]
-        FacebookServiceGetPcapLoggingConfigError(crate::services::facebook_service::GetPcapLoggingConfigExn),
-        #[error("FacebookService::setPcapLoggingConfig failed with {0:?}")]
-        FacebookServiceSetPcapLoggingConfigError(crate::services::facebook_service::SetPcapLoggingConfigExn),
-        #[error("Application exception: {0:?}")]
-        ApplicationException(ApplicationException),
-    }
-
-    impl From<ApplicationException> for ErrorKind {
-        fn from(exn: ApplicationException) -> Self {
-            ErrorKind::ApplicationException(exn)
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetRegexCountersCompressedError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
         }
+
+        impl From<::anyhow::Error> for GetRegexCountersCompressedError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetRegexCountersCompressedError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetRegexCountersCompressedError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetRegexCountersCompressedError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetCountersCompressedError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetCountersCompressedError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetCountersCompressedError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetCountersCompressedError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetCountersCompressedError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetCpuProfileError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetCpuProfileError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetCpuProfileError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetCpuProfileError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetCpuProfileError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetCpuProfileWithOptionsError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetCpuProfileWithOptionsError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetCpuProfileWithOptionsError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetCpuProfileWithOptionsError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetCpuProfileWithOptionsError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetHeapProfileError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetHeapProfileError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetHeapProfileError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetHeapProfileError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetHeapProfileError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetWallTimeProfileError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetWallTimeProfileError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetWallTimeProfileError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetWallTimeProfileError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetWallTimeProfileError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetMemoryUsageError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetMemoryUsageError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetMemoryUsageError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetMemoryUsageError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetMemoryUsageError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetLoadError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetLoadError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetLoadError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetLoadError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetLoadError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetPidError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetPidError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetPidError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetPidError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetPidError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetCommandLineError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetCommandLineError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetCommandLineError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetCommandLineError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetCommandLineError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum ReinitializeError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for ReinitializeError {
+            fn from(err: ::anyhow::Error) -> Self {
+                ReinitializeError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for ReinitializeError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                ReinitializeError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum ShutdownError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for ShutdownError {
+            fn from(err: ::anyhow::Error) -> Self {
+                ShutdownError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for ShutdownError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                ShutdownError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum TranslateFramesError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for TranslateFramesError {
+            fn from(err: ::anyhow::Error) -> Self {
+                TranslateFramesError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for TranslateFramesError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                TranslateFramesError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum GetPcapLoggingConfigError {
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<::anyhow::Error> for GetPcapLoggingConfigError {
+            fn from(err: ::anyhow::Error) -> Self {
+                GetPcapLoggingConfigError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for GetPcapLoggingConfigError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                GetPcapLoggingConfigError::ApplicationException(ae)
+            }
+        }
+
+        #[derive(Debug, thiserror::Error)]
+        pub enum SetPcapLoggingConfigError {
+            #[error("FacebookService::setPcapLoggingConfig failed with {0:?}")]
+            e(crate::types::PcapLoggingConfigException),
+            #[error("Application exception: {0:?}")]
+            ApplicationException(::fbthrift::types::ApplicationException),
+            #[error("{0}")]
+            ThriftError(::anyhow::Error),
+        }
+
+        impl From<crate::types::PcapLoggingConfigException> for SetPcapLoggingConfigError {
+            fn from(e: crate::types::PcapLoggingConfigException) -> Self {
+                SetPcapLoggingConfigError::e(e)
+            }
+        }
+
+        impl From<::anyhow::Error> for SetPcapLoggingConfigError {
+            fn from(err: ::anyhow::Error) -> Self {
+                SetPcapLoggingConfigError::ThriftError(err)
+            }
+        }
+
+        impl From<::fbthrift::ApplicationException> for SetPcapLoggingConfigError {
+            fn from(ae: ::fbthrift::ApplicationException) -> Self {
+                SetPcapLoggingConfigError::ApplicationException(ae)
+            }
+        }
+
     }
+
 }
