@@ -519,7 +519,7 @@ class changelog(revlog.revlog):
             fp2 = self._realopener(pendingfilename, "w")
             fp2.write(fp1.read())
             # add pending data
-            fp2.write("".join(self._delaybuf))
+            fp2.write(b"".join(self._delaybuf))
             fp2.close()
             # switch modes so finalize can simply rename
             self._delaybuf = None
