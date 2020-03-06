@@ -43,7 +43,7 @@ use context::CoreContext;
 use mercurial_types::{HgChangesetId, HgManifestId};
 use metaconfig_types::MetadataDBConfig;
 use mononoke_types::ChangesetId;
-use sql_ext::MysqlOptions;
+use sql_ext::facebook::{FbSqlConstructors, MysqlOptions};
 use stats::schedule_stats_aggregation_preview;
 
 pub const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";

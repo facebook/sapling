@@ -16,8 +16,7 @@ use mutable_counters::SqlMutableCounters;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use skiplist::fetch_skiplist_index;
-use sql_ext::MysqlOptions;
-use sql_ext::SqlConstructors;
+use sql_ext::facebook::{FbSqlConstructors, MysqlOptions};
 use std::sync::Arc;
 
 use crate::{streaming_clone, MononokeRepo};

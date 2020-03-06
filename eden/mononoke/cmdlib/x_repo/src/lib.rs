@@ -20,7 +20,7 @@ use futures::compat::Future01CompatExt;
 use futures_util::try_join;
 use metaconfig_types::RepoConfig;
 use slog::Logger;
-use sql_ext::MysqlOptions;
+use sql_ext::facebook::MysqlOptions;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
 // Creates commits syncer from source to target

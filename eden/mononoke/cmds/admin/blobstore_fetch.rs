@@ -31,7 +31,7 @@ use prefixblob::PrefixBlobstore;
 use redactedblobstore::{RedactedBlobstore, SqlRedactedContentStore};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, warn, Logger};
-use sql_ext::MysqlOptions;
+use sql_ext::facebook::MysqlOptions;
 use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::str::FromStr;

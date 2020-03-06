@@ -35,8 +35,12 @@ use readonlyblob::ReadOnlyBlobstore;
 use scuba::ScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::{
-    create_myrouter_connections, create_raw_xdb_connections, create_sqlite_connections,
-    myrouter_ready, MysqlOptions, PoolSizeConfig, SqlConnections, SqlConstructors,
+    create_sqlite_connections,
+    facebook::{
+        create_myrouter_connections, create_raw_xdb_connections, myrouter_ready, FbSqlConstructors,
+        MysqlOptions, PoolSizeConfig,
+    },
+    SqlConnections, SqlConstructors,
 };
 use sqlblob::Sqlblob;
 //use sqlfilenodes::{SqlConstructors, SqlFilenodes};

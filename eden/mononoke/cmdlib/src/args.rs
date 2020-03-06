@@ -39,7 +39,7 @@ use metaconfig_types::{
 };
 use mononoke_types::RepositoryId;
 use slog_logview::LogViewDrain;
-use sql_ext::MysqlOptions;
+use sql_ext::facebook::MysqlOptions;
 
 use crate::helpers::{
     create_runtime, init_cachelib_from_settings, open_sql_with_config_and_mysql_options,

@@ -25,7 +25,7 @@ use manifoldblob::ThriftManifoldBlob;
 use mononoke_types::{ContentMetadata, MononokeId};
 use prefixblob::PrefixBlobstore;
 use rand::Rng;
-use sql_ext::MysqlOptions;
+use sql_ext::facebook::MysqlOptions;
 use sqlblob::Sqlblob;
 use std::fmt::Debug;
 use std::io::BufReader;

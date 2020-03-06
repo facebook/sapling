@@ -19,7 +19,7 @@ use futures_old::{
     Future, IntoFuture,
 };
 use slog::{debug, info, o, Logger};
-use sql_ext::MysqlOptions;
+use sql_ext::facebook::MysqlOptions;
 use tokio_compat::runtime::TaskExecutor;
 
 use metaconfig_parser::RepoConfigs;

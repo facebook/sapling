@@ -12,7 +12,9 @@ use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::future::{join_all, Future, IntoFuture};
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::{
-    create_myrouter_connections, create_raw_xdb_connections, MysqlOptions, PoolSizeConfig,
+    facebook::{
+        create_myrouter_connections, create_raw_xdb_connections, MysqlOptions, PoolSizeConfig,
+    },
     SqlConnections, SqlConstructors,
 };
 use sql_facebook::{myrouter, raw};

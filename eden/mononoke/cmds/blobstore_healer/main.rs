@@ -41,7 +41,7 @@ use mononoke_types::DateTime;
 use replication_lag::wait_for_replication;
 use slog::{error, info, o, warn};
 use sql::Connection;
-use sql_ext::{open_sqlite_path, MysqlOptions};
+use sql_ext::{facebook::MysqlOptions, open_sqlite_path};
 use sql_facebook::{myrouter, raw};
 use std::collections::HashMap;
 use std::sync::Arc;

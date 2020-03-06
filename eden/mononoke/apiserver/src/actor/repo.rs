@@ -36,7 +36,7 @@ use manifest::{Entry as ManifestEntry, ManifestOps};
 use remotefilelog::create_getpack_v1_blob;
 use repo_client::gettreepack_entries;
 use slog::{debug, Logger};
-use sql_ext::MysqlOptions;
+use sql_ext::facebook::MysqlOptions;
 use time_ext::DurationExt;
 use tokio_compat::runtime::TaskExecutor;
 use unodes::RootUnodeManifestId;

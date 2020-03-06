@@ -48,7 +48,7 @@ use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
-use sql_ext::{MysqlOptions, SqlConstructors};
+use sql_ext::{facebook::MysqlOptions, SqlConstructors};
 use std::{collections::HashMap, iter::FromIterator, sync::Arc, time::Duration};
 use unodes::RootUnodeManifestId;
 

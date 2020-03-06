@@ -33,8 +33,7 @@ use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use repo_client::{MononokeRepo, MononokeRepoBuilder, PushRedirector, WireprotoLogging};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use sql_ext::MysqlOptions;
-use sql_ext::SqlConstructors;
+use sql_ext::facebook::{FbSqlConstructors, MysqlOptions};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 
 use crate::errors::ErrorKind;

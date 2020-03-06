@@ -21,7 +21,7 @@ use multiplexedblob::{LoggingScrubHandler, ScrubHandler};
 use prefixblob::PrefixBlobstore;
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
-use sql_ext::MysqlOptions;
+use sql_ext::facebook::MysqlOptions;
 use stats::prelude::*;
 use std::{convert::From, sync::Arc};
 

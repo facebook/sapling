@@ -41,7 +41,7 @@ use mononoke_types::{
 use revset::AncestorsNodeStream;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, Logger};
-use sql_ext::MysqlOptions;
+use sql_ext::facebook::MysqlOptions;
 #[cfg(test)]
 use sql_ext::SqlConstructors;
 use stats_facebook::service_data::{get_service_data_singleton, ServiceData};

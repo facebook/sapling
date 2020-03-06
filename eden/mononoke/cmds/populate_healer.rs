@@ -24,7 +24,7 @@ use context::CoreContext;
 use manifoldblob::{ManifoldRange, ThriftManifoldBlob};
 use metaconfig_types::{BlobConfig, BlobstoreId, MetadataDBConfig, MultiplexId, StorageConfig};
 use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
-use sql_ext::{MysqlOptions, SqlConstructors};
+use sql_ext::facebook::{FbSqlConstructors, MysqlOptions};
 
 /// Save manifold continuation token each once per `PRESERVE_STATE_RATIO` entries
 const PRESERVE_STATE_RATIO: usize = 10_000;

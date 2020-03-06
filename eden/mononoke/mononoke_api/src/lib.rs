@@ -20,7 +20,7 @@ use futures::future;
 use futures::future::try_join_all;
 use skiplist::SkiplistIndex;
 use slog::{debug, info, o, Logger};
-use sql_ext::MysqlOptions;
+use sql_ext::facebook::MysqlOptions;
 use synced_commit_mapping::SyncedCommitMapping;
 use warm_bookmarks_cache::WarmBookmarksCache;
 

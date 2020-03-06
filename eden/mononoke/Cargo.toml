@@ -2,6 +2,7 @@
 
 members = [
     "blobstore",
+    "common/rust/sql_ext",
     "common/scuba_ext",
     "lfs_protocol",
     "mononoke_types",

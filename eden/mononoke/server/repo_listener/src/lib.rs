@@ -27,7 +27,7 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_old::Future;
 use openssl::ssl::SslAcceptor;
 use slog::Logger;
-use sql_ext::MysqlOptions;
+use sql_ext::facebook::MysqlOptions;
 use std::collections::{HashMap, HashSet};
 use std::sync::{atomic::AtomicBool, Arc};
 
