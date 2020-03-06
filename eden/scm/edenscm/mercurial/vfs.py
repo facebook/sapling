@@ -391,6 +391,8 @@ class abstractvfs(pycompat.ABC):
             threading.currentThread(),
             threading._MainThread,  # pyre-fixme
         ):
+            # pyre-fixme[7]: Expected `ContextManager[backgroundfilecloser]` but got
+            #  `Generator[None, None, None]`.
             yield
             return
         vfs = getattr(self, "vfs", self)
