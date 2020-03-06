@@ -119,6 +119,27 @@ class HgBackingStoreStatsTest(testcase.EdenRepoTest):
             f"Reading {path} should increment store.hg.import_blob.count",
         )
 
+    def test_pending_import_counters_available(self) -> None:
+        counters = self.get_counters()
+
+        self.assertIn(
+            "store.hg.pending_import_count.blob",
+            counters,
+            "store.hg.pending_import_count.blob should be available",
+        )
+
+        self.assertIn(
+            "store.hg.pending_import_count.tree",
+            counters,
+            "store.hg.pending_import_count.tree should be available",
+        )
+
+        self.assertIn(
+            "store.hg.pending_import_count.prefetch",
+            counters,
+            "store.hg.pending_import_count.prefetch should available",
+        )
+
     def create_repo(self, name: str) -> HgRepository:
         return self.create_hg_repo(name)
 

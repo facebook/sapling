@@ -62,6 +62,7 @@ namespace facebook {
 namespace eden {
 
 class BackingStore;
+class HgBackingStore;
 class BlobCache;
 class Dirstate;
 class EdenServiceHandler;
@@ -471,6 +472,16 @@ class EdenServer : private TakeoverHandler {
   // Cancel all subscribers on all mounts so that we can tear
   // down the thrift server without blocking
   void shutdownSubscribers();
+
+  /**
+   * Look up all BackingStores which are HgBackingStore
+   *
+   * EdenServer maintains an internal cache of all known BackingStores,
+   * so that multiple mount points that use the same repository can
+   * share the same BackingStore object.
+   *
+   */
+  std::unordered_set<std::shared_ptr<HgBackingStore>> getHgBackingStores();
 
   /*
    * Member variables.

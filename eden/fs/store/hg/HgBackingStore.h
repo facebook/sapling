@@ -92,6 +92,10 @@ class HgBackingStore : public BackingStore {
    */
   folly::Future<std::unique_ptr<Tree>> importTreeManifest(const Hash& commitId);
 
+  size_t getPendingBlobImports() const;
+  size_t getPendingTreeImports() const;
+  size_t getPendingPrefetchImports() const;
+
  private:
   // Forbidden copy constructor and assignment operator
   HgBackingStore(HgBackingStore const&) = delete;

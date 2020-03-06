@@ -221,6 +221,12 @@ class EdenServer::ThriftServerEventHandler
 };
 
 static constexpr folly::StringPiece kBlobCacheMemory{"blob_cache.memory"};
+static constexpr folly::StringPiece kPendingBlobImportCount{
+    "store.hg.pending_import_count.blob"};
+static constexpr folly::StringPiece kPendingTreeImportCount{
+    "store.hg.pending_import_count.tree"};
+static constexpr folly::StringPiece kPendingPrefetchImportCount{
+    "store.hg.pending_import_count.prefetch"};
 
 EdenServer::EdenServer(
     std::vector<std::string> originalCommandLine,
@@ -248,11 +254,38 @@ EdenServer::EdenServer(
   counters->registerCallback(kBlobCacheMemory, [this] {
     return this->getBlobCache()->getStats().totalSizeInBytes;
   });
+  counters->registerCallback(kPendingBlobImportCount, [this] {
+    size_t pendingBlobImportCount{0};
+    auto hgBackingStores = this->getHgBackingStores();
+    for (const auto& store : hgBackingStores) {
+      pendingBlobImportCount += store->getPendingBlobImports();
+    }
+    return pendingBlobImportCount;
+  });
+  counters->registerCallback(kPendingTreeImportCount, [this] {
+    size_t pendingTreeImportCount{0};
+    auto hgBackingStores = this->getHgBackingStores();
+    for (const auto& store : hgBackingStores) {
+      pendingTreeImportCount += store->getPendingTreeImports();
+    }
+    return pendingTreeImportCount;
+  });
+  counters->registerCallback(kPendingPrefetchImportCount, [this] {
+    size_t pendingPrefetchImportCount{0};
+    auto hgBackingStores = this->getHgBackingStores();
+    for (const auto& store : hgBackingStores) {
+      pendingPrefetchImportCount += store->getPendingPrefetchImports();
+    }
+    return pendingPrefetchImportCount;
+  });
 }
 
 EdenServer::~EdenServer() {
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->unregisterCallback(kBlobCacheMemory);
+  counters->unregisterCallback(kPendingBlobImportCount);
+  counters->unregisterCallback(kPendingTreeImportCount);
+  counters->unregisterCallback(kPendingPrefetchImportCount);
 }
 
 Future<Unit> EdenServer::unmountAll() {
@@ -1224,6 +1257,21 @@ shared_ptr<BackingStore> EdenServer::getBackingStore(
   const auto store = createBackingStore(type, name);
   lockedStores->emplace(key, store);
   return store;
+}
+
+std::unordered_set<shared_ptr<HgBackingStore>>
+EdenServer::getHgBackingStores() {
+  std::unordered_set<std::shared_ptr<HgBackingStore>> hgBackingStores{};
+  {
+    auto lockedStores = this->backingStores_.rlock();
+    for (auto entry : *lockedStores) {
+      if (auto store =
+              std::dynamic_pointer_cast<HgBackingStore>(entry.second)) {
+        hgBackingStores.emplace(std::move(store));
+      }
+    }
+  }
+  return hgBackingStores;
 }
 
 shared_ptr<BackingStore> EdenServer::createBackingStore(

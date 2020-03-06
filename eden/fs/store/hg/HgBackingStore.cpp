@@ -854,6 +854,18 @@ folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::importTreeForCommit(
       });
 }
 
+size_t HgBackingStore::getPendingBlobImports() const {
+  return pendingImportBlobCount_.load(std::memory_order_relaxed);
+}
+
+size_t HgBackingStore::getPendingTreeImports() const {
+  return pendingImportTreeCount_.load(std::memory_order_relaxed);
+}
+
+size_t HgBackingStore::getPendingPrefetchImports() const {
+  return pendingImportPrefetchCount_.load(std::memory_order_relaxed);
+}
+
 void HgBackingStore::periodicManagementTask() {
 #ifdef EDEN_HAVE_RUST_DATAPACK
   if (datapackStore_) {
