@@ -379,7 +379,7 @@ def _debugphaseheads(ui, data, indent=0):
 
 def _quasirepr(thing):
     if isinstance(thing, (dict, util.sortdict, collections.OrderedDict)):
-        return "{%s}" % (b", ".join(b"%s: %s" % (k, thing[k]) for k in sorted(thing)))
+        return "{%s}" % (", ".join("%s: %s" % (k, thing[k]) for k in sorted(thing)))
     return pycompat.bytestr(repr(thing))
 
 
