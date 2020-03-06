@@ -1421,12 +1421,12 @@ fn test_multithread_sync() {
         vec![IndexOutput::Owned(data.to_vec().into_boxed_slice())]
     }
     let indexes = vec![
-        IndexDef::new("key1", index_ref).lag_threshold(1),
+        IndexDef::new("key1", index_ref).lag_threshold(10),
         IndexDef::new("key2", index_ref).lag_threshold(50),
-        IndexDef::new("key3", index_ref).lag_threshold(1000),
-        IndexDef::new("key4", index_copy).lag_threshold(1),
+        IndexDef::new("key3", index_ref).lag_threshold(100),
+        IndexDef::new("key4", index_copy).lag_threshold(10),
         IndexDef::new("key5", index_copy).lag_threshold(50),
-        IndexDef::new("key6", index_copy).lag_threshold(1000),
+        IndexDef::new("key6", index_copy).lag_threshold(100),
     ];
     let index_len = indexes.len();
     let open_opts = OpenOptions::new().create(true).index_defs(indexes);
@@ -1439,9 +1439,21 @@ fn test_multithread_sync() {
             let path = dir.path().to_path_buf();
             std::thread::spawn(move || {
                 barrier.wait();
-                let mut log = open_opts.open(path).unwrap();
+                let non_lag_open_opts = open_opts.clone().with_zero_index_lag();
+                let mut log = open_opts.clone().open(&path).unwrap();
                 for j in 1..=WRITE_COUNT_PER_THREAD {
                     let buf = [i, j];
+                    // Pick 1/4 threads to do "no_lag" opens.
+                    if i % 4 == 0 {
+                        if j % 8 == 0 {
+                            // Reload. This might trigger writes (updating lagging indexes).
+                            log.sync().unwrap();
+                            log = non_lag_open_opts.clone().open(&path).unwrap();
+                        } else if j % 8 == 4 {
+                            log.sync().unwrap();
+                            log = open_opts.clone().open(&path).unwrap();
+                        }
+                    }
                     log.append(&buf).unwrap();
                     if j % (i + 1) == 0 || j == WRITE_COUNT_PER_THREAD {
                         log.sync().unwrap();

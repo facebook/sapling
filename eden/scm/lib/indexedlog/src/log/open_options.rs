@@ -439,8 +439,8 @@ impl OpenOptions {
                 log.dir.write_meta(&log.meta, self.fsync)?;
             } else {
                 let lock = dir.lock()?;
-                log.flush_lagging_indexes(&lagging_index_ids, &lock)?;
-                log.dir.write_meta(&log.meta, self.fsync)?;
+                // At this time the Log might be changed on-disk. Reload them.
+                return self.open_internal(dir, reuse_indexes, Some(&lock));
             }
         }
         Ok(log)
