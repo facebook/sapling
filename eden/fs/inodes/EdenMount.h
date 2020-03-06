@@ -424,6 +424,7 @@ class EdenMount {
    * NOTE: a loop in the chain is handled by max depth length logic.
    */
   folly::Future<InodePtr> resolveSymlink(
+      ObjectFetchContext& fetchContext,
       InodePtr pInode,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain) const;
 
@@ -651,6 +652,7 @@ class EdenMount {
    * Recursive method used for resolveSymlink() implementation
    */
   folly::Future<InodePtr> resolveSymlinkImpl(
+      ObjectFetchContext& fetchContext,
       InodePtr pInode,
       RelativePath&& path,
       size_t depth,

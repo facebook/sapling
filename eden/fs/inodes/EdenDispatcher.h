@@ -8,6 +8,7 @@
 #pragma once
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/inodes/InodePtr.h"
+#include "eden/fs/store/IObjectStore.h"
 
 namespace facebook {
 namespace eden {

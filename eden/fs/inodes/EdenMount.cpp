@@ -310,7 +310,10 @@ Future<Unit> ensureDotEdenSymlink(
         }
 
         // Check if the symlink already has the desired contents.
-        return fileInode->readlink(CacheHint::LikelyNeededAgain)
+        return fileInode
+            ->readlink(
+                ObjectFetchContext::getNullContext(),
+                CacheHint::LikelyNeededAgain)
             .thenValue([=](std::string&& contents) {
               if (contents == symlinkTarget) {
                 // The symlink already contains the desired contents.
@@ -672,8 +675,7 @@ folly::Future<std::string> EdenMount::loadFileContents(
   }
 
   if (dtype_t::Symlink == fileInodePtr->getType()) {
-    // TODO: pass fetchContext into resolveSymlink to track loads it issues.
-    return resolveSymlink(fileInodePtr, cacheHint)
+    return resolveSymlink(fetchContext, fileInodePtr, cacheHint)
         .thenValue(
             [this, &fetchContext, cacheHint](
                 InodePtr pResolved) mutable -> folly::Future<std::string> {
@@ -687,6 +689,7 @@ folly::Future<std::string> EdenMount::loadFileContents(
 }
 
 folly::Future<InodePtr> EdenMount::resolveSymlink(
+    ObjectFetchContext& fetchContext,
     InodePtr pInode,
     CacheHint cacheHint) const {
   auto pathOptional = pInode->getPath();
@@ -695,10 +698,11 @@ folly::Future<InodePtr> EdenMount::resolveSymlink(
   }
   XLOG(DBG7) << "pathOptional.value() = " << pathOptional.value();
   return resolveSymlinkImpl(
-      pInode, std::move(pathOptional.value()), 0, cacheHint);
+      fetchContext, pInode, std::move(pathOptional.value()), 0, cacheHint);
 }
 
 folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
+    ObjectFetchContext& fetchContext,
     InodePtr pInode,
     RelativePath&& path,
     size_t depth,
@@ -718,9 +722,13 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
         << "all symlink inodes must be FileInodes: " << pInode->getLogPath();
   }
 
-  return fileInode->readlink(cacheHint).thenValue(
-      [this, pInode, path = std::move(path), depth, cacheHint](
-          std::string&& pointsTo) mutable {
+  return fileInode->readlink(fetchContext, cacheHint)
+      .thenValue([this,
+                  &fetchContext,
+                  pInode,
+                  path = std::move(path),
+                  depth,
+                  cacheHint](std::string&& pointsTo) mutable {
         // normalized path to symlink target
         auto joinedExpected = joinAndNormalize(path.dirname(), pointsTo);
         if (joinedExpected.hasError()) {
@@ -734,15 +742,16 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
         // before using it in LHS
         auto f =
             getInode(joinedExpected.value()); // get inode for symlink target
-        return std::move(f).thenValue(
-            [this,
-             joinedPath = std::move(joinedExpected.value()),
-             depth,
-             cacheHint](InodePtr target) mutable {
-              // follow the symlink chain recursively
-              return resolveSymlinkImpl(
-                  target, std::move(joinedPath), depth, cacheHint);
-            });
+        return std::move(f).thenValue([this,
+                                       &fetchContext,
+                                       joinedPath =
+                                           std::move(joinedExpected.value()),
+                                       depth,
+                                       cacheHint](InodePtr target) mutable {
+          // follow the symlink chain recursively
+          return resolveSymlinkImpl(
+              fetchContext, target, std::move(joinedPath), depth, cacheHint);
+        });
       });
 }
 

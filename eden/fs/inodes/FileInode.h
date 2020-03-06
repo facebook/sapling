@@ -148,6 +148,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   /// Throws InodeError EINVAL if inode is not a symbolic node.
   folly::Future<std::string> readlink(
+      ObjectFetchContext& fetchContext,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain);
 
   folly::Future<std::string> getxattr(folly::StringPiece name) override;

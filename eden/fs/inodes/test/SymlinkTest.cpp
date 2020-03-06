@@ -14,6 +14,7 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/store/IObjectStore.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestMount.h"
@@ -46,10 +47,13 @@ TEST_F(SymlinkTest, makeSymlink) {
   auto root = mount_.getTreeInode(RelativePathPiece());
   auto inode = root->symlink(PathComponentPiece{name}, target);
   EXPECT_EQ(dtype_t::Symlink, inode->getType());
-  EXPECT_EQ(inode->readlink().get(), target);
+  EXPECT_EQ(
+      inode->readlink(ObjectFetchContext::getNullContext()).get(), target);
   // Let's make sure that we can load it up and see the right results
   auto loadedInode = mount_.getFileInode(RelativePathPiece{name});
-  EXPECT_EQ(loadedInode->readlink().get(), target);
+  EXPECT_EQ(
+      loadedInode->readlink(ObjectFetchContext::getNullContext()).get(),
+      target);
 }
 
 TEST_F(SymlinkTest, makeSymlinkCollisionFile) {

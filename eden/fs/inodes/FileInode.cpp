@@ -476,14 +476,16 @@ folly::Future<Dispatcher::Attr> FileInode::setattr(
   }
 }
 
-folly::Future<std::string> FileInode::readlink(CacheHint cacheHint) {
+folly::Future<std::string> FileInode::readlink(
+    ObjectFetchContext& fetchContext,
+    CacheHint cacheHint) {
   if (dtype_t::Symlink != getType()) {
     // man 2 readlink says:  EINVAL The named file is not a symbolic link.
     throw InodeError(EINVAL, inodePtrFromThis(), "not a symlink");
   }
 
   // The symlink contents are simply the file contents!
-  return readAll(ObjectFetchContext::getNullContext(), cacheHint);
+  return readAll(fetchContext, cacheHint);
 }
 
 std::optional<bool> FileInode::isSameAsFast(

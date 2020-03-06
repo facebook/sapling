@@ -267,6 +267,7 @@ folly::Future<std::string> EdenDispatcher::readlink(
         // Only release the symlink blob after it's loaded if we can assume the
         // FUSE will cache the result in the kernel's page cache.
         return inode->readlink(
+            ObjectFetchContext::getNullContext(),
             kernelCachesReadlink ? CacheHint::NotNeededAgain
                                  : CacheHint::LikelyNeededAgain);
       });

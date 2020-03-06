@@ -272,7 +272,9 @@ TEST(EdenMount, resolveSymlink) {
   };
 
   const auto resolveSymlink = [edenMount](const InodePtr& pInode) {
-    return edenMount->resolveSymlink(pInode).get(1s);
+    return edenMount
+        ->resolveSymlink(ObjectFetchContext::getNullContext(), pInode)
+        .get(1s);
   };
 
   const InodePtr pDir{getInode("src")};
@@ -336,7 +338,8 @@ TEST(EdenMount, resolveSymlinkDelayed) {
       edenMount->getInode(RelativePathPiece{folly::StringPiece{"a"}}).get()};
   EXPECT_EQ(dtype_t::Symlink, pA->getType());
 
-  auto bFuture = edenMount->resolveSymlink(pA);
+  auto bFuture =
+      edenMount->resolveSymlink(ObjectFetchContext::getNullContext(), pA);
   EXPECT_FALSE(bFuture.isReady());
 
   builder.setReady("a2");
