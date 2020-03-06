@@ -316,29 +316,54 @@ class getpackclient(object):
             self.repo.fallbackpath, reason="prefetchpacks"
         )
 
+    def getpack(self, datastore, historystore, fileids):
+        with self._connect() as conn:
+            self.ui.metrics.gauge("ssh_getpack_revs", len(fileids))
+            self.ui.metrics.gauge("ssh_getpack_calls", 1)
+
+            getpackversion = self.ui.configint("remotefilelog", "getpackversion")
+
+            remote = conn.peer
+            remote._callstream("getpackv%d" % getpackversion)
+
+            self._sendpackrequest(remote, fileids)
+
+            pipei = shallowutil.trygetattr(remote, ("_pipei", "pipei"))
+
+            receiveddata, receivedhistory = wirepack.receivepack(
+                self.repo.ui, pipei, datastore, historystore, version=getpackversion
+            )
+
+            return len(receiveddata)
+
     def prefetch(self, datastore, historystore, fileids):
-        rcvd = 0
         total = len(fileids)
 
         try:
-            with self._connect() as conn:
-                self.ui.metrics.gauge("ssh_getpack_revs", len(fileids))
-                self.ui.metrics.gauge("ssh_getpack_calls", 1)
+            rcvd = None
+            if self.repo.ui.configbool("remotefilelog", "retryprefetch"):
+                for backoff in [1, 5, 10, 20]:
+                    try:
+                        rcvd = self.getpack(datastore, historystore, fileids)
+                        break
+                    except (error.BadResponseError, error.NetworkError):
+                        missingids = set()
+                        missingids.update(datastore.getmissing(fileids))
+                        missingids.update(historystore.getmissing(fileids))
 
-                getpackversion = self.ui.configint("remotefilelog", "getpackversion")
+                        fileids = missingids
 
-                remote = conn.peer
-                remote._callstream("getpackv%d" % getpackversion)
+                        self.ui.warn(
+                            _(
+                                "Network connection dropped while fetching data, retrying after %d seconds\n"
+                            )
+                            % backoff
+                        )
+                        time.sleep(backoff)
+                        continue
 
-                self._sendpackrequest(remote, fileids)
-
-                pipei = shallowutil.trygetattr(remote, ("_pipei", "pipei"))
-
-                receiveddata, receivedhistory = wirepack.receivepack(
-                    self.repo.ui, pipei, datastore, historystore, version=getpackversion
-                )
-
-                rcvd = len(receiveddata)
+            if rcvd is None:
+                rcvd = self.getpack(datastore, historystore, fileids)
 
             self.ui.log(
                 "remotefilefetchlog",
@@ -350,7 +375,7 @@ class getpackclient(object):
             self.ui.log(
                 "remotefilefetchlog",
                 "Fail(pack)\n",
-                fetched_files=rcvd,
+                fetched_files=total - len(fileids),
                 total_to_fetch=total,
             )
             raise

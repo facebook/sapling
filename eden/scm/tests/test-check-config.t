@@ -101,6 +101,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotefilelog.includepattern (list)
   undocumented: remotefilelog.pullprefetch (str)
   undocumented: remotefilelog.reponame (str)
+  undocumented: remotefilelog.retryprefetch (bool)
   undocumented: remotefilelog.server (bool)
   undocumented: remotefilelog.servercachepath (str)
   undocumented: remotefilelog.shallowtrees (bool)

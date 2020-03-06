@@ -63,9 +63,7 @@ def readexactly(stream, n):
     """read n bytes from stream.read and abort if less was available"""
     s = stream.read(n)
     if len(s) < n:
-        raise error.Abort(
-            _("stream ended unexpectedly" " (got %d bytes, expected %d)") % (len(s), n)
-        )
+        raise error.NetworkError(n, len(s))
     return s
 
 

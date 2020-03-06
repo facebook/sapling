@@ -1332,10 +1332,7 @@ def decodepayloadchunks(ui, fh):
         if chunksize >= 0:
             s = read(chunksize)
             if len(s) < chunksize:
-                raise error.Abort(
-                    _("stream ended unexpectedly " " (got %d bytes, expected %d)")
-                    % (len(s), chunksize)
-                )
+                raise error.NetworkError(chunksize, len(s))
 
             yield s
         elif chunksize == flaginterrupt:
@@ -1347,10 +1344,7 @@ def decodepayloadchunks(ui, fh):
 
         s = read(headersize)
         if len(s) < headersize:
-            raise error.Abort(
-                _("stream ended unexpectedly " " (got %d bytes, expected %d)")
-                % (len(s), chunksize)
-            )
+            raise error.NetworkError(headersize, len(s))
 
         chunksize = unpack(s)[0]
 

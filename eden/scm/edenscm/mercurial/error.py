@@ -227,6 +227,10 @@ class RequirementError(RepoError):
     """Exception raised if .hg/requires has an unknown entry."""
 
 
+class BadResponseError(RepoError):
+    """Exception raised on a network error."""
+
+
 class WorkingCopyRaced(Abort):
     """Raised when status detects writes in the working copy"""
 
@@ -480,4 +484,16 @@ class RetryFileMerge(Exception):
 
         super(RetryFileMerge, self).__init__(
             "ProgrammingError: RetryFileMerge should be handled"
+        )
+
+
+class NetworkError(Abort):
+    """Raised when failing to read from a network stream."""
+
+    def __init__(self, expected, read):
+        from .i18n import _
+
+        super(NetworkError, self).__init__(
+            _("stream ended unexpectedly (got %d bytes, expected %d)")
+            % (read, expected)
         )
