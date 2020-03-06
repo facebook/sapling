@@ -634,8 +634,16 @@ Do you want to run `eden mount %s` instead?"""
                 )
                 return 1
         except OSError as ex:
+            # - ENOENT is expected if the mount is not mounted.
+            # - We'll get ENOTCONN if the directory was not properly unmounted from a
+            #   previous EdenFS instance.  Remounting over this directory is okay (even
+            #   though ideally we would unmount the old stale mount point to clean it
+            #   up).
+            # - EINVAL can happen if .eden/root isn't a symlink.  This isn't expected
+            #   in most circumstances, but it does mean that the directory isn't
+            #   currently an EdenFS checkout.
             err = ex.errno
-            if err != errno.ENOENT and err != errno.EINVAL:
+            if err not in (errno.ENOENT, errno.ENOTCONN, errno.EINVAL):
                 raise
 
         # Ask eden to mount the path
