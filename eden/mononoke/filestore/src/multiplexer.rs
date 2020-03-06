@@ -6,8 +6,8 @@
  */
 
 use anyhow::{format_err, Error};
-use futures::{sync::mpsc, Future, Sink, Stream};
 use futures_ext::{self, BoxStream, FutureExt, StreamExt};
+use futures_old::{sync::mpsc, Future, Sink, Stream};
 
 use crate::spawn;
 

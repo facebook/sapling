@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use futures::{Future, Stream};
+use futures_old::{Future, Stream};
 
 use crate::incremental_hash::Hasher;
 
@@ -29,7 +29,7 @@ where
 mod test {
     use super::*;
     use bytes::Bytes;
-    use futures::stream;
+    use futures_old::stream;
 
     use crate::incremental_hash::{
         ContentIdIncrementalHasher, GitSha1IncrementalHasher, Sha1IncrementalHasher,

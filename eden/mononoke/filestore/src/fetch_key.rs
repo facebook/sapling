@@ -8,8 +8,8 @@
 use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
-use futures::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{Future, IntoFuture};
 use mononoke_types::{hash, ContentAlias, ContentId};
 
 /// Key for fetching - we can access with any of the supported key types

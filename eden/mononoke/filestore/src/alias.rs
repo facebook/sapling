@@ -7,7 +7,7 @@
 
 use anyhow::{Error, Result};
 use bytes::Bytes;
-use futures::{
+use futures_old::{
     future::{lazy, IntoFuture},
     Future, Stream,
 };

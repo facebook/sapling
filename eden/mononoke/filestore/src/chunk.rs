@@ -7,7 +7,7 @@
 
 use anyhow::{Error, Result};
 use bytes::{Bytes, BytesMut};
-use futures::{
+use futures_old::{
     future::{Future, Map},
     stream::{AndThen, Fold, Stream},
     try_ready, Async, Poll,
@@ -195,7 +195,7 @@ mod test {
     use super::*;
 
     use assert_matches::assert_matches;
-    use futures::stream;
+    use futures_old::stream;
     use quickcheck::quickcheck;
     use tokio_compat::runtime::Runtime;
 

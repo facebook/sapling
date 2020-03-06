@@ -7,15 +7,15 @@
 
 #![feature(never_type)]
 #![deny(warnings)]
-#![type_length_limit = "1658755"]
+#![type_length_limit = "2000000"]
 
 use bytes::{Bytes, BytesMut};
 use std::convert::TryInto;
 
 use anyhow::Error;
 use cloned::cloned;
-use futures::{Future, IntoFuture, Stream};
 use futures_ext::FutureExt;
+use futures_old::{stream, Future, IntoFuture, Stream};
 
 use blobstore::{Blobstore, Loadable, LoadableError};
 use context::CoreContext;
@@ -408,19 +408,31 @@ pub fn store<B: Blobstore + Clone>(
     })
 }
 
-/// Store a set of bytes, and immediately return FileContents. This function does NOT do chunking.
-/// This is intended as a transition function while we convert writers to streams and refactor them
-/// to not expect to be able to obtain the ContentId for the content they uploaded immediately.
-/// Avoid adding new callsites.
+/// Store a set of bytes, and immediately return their Contentid and size. This function is
+/// inefficient for large files, since it will hash the file twice if it's larger than the chunk
+/// size. This function is intended as a transition function while we convert writers to streams
+/// and refactor them to not expect to be able to obtain the ContentId for the content they
+/// uploaded immediately. Do NOT add new callsites.
 pub fn store_bytes<B: Blobstore + Clone>(
     blobstore: B,
+    config: FilestoreConfig,
     ctx: CoreContext,
     bytes: Bytes,
-) -> (FileContents, impl Future<Item = (), Error = Error>) {
-    let prepared = prepare::prepare_bytes(bytes);
+) -> ((ContentId, u64), impl Future<Item = (), Error = Error>) {
+    // NOTE: Like in other places in the Filestore, we assume that the size of buffers being passed
+    // in can be represented in 64 bits (which is OK for the world we live in).
 
-    (
-        prepared.contents.clone(),
-        finalize::finalize(blobstore, ctx, None, prepared).map(|_| ()),
+    let content_id = FileContents::content_id_for_bytes(&bytes);
+    let size: u64 = bytes.len().try_into().unwrap();
+
+    let upload = store(
+        blobstore,
+        config,
+        ctx,
+        &StoreRequest::with_canonical(size, content_id),
+        stream::once(Ok(bytes)),
     )
+    .map(|_| ());
+
+    ((content_id, size), upload)
 }

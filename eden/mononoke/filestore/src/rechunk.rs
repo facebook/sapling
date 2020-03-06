@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use futures::Future;
+use futures_old::Future;
 use thiserror::Error;
 
 use blobstore::{Blobstore, Loadable, LoadableError};

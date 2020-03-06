@@ -78,6 +78,12 @@ impl FileContents {
             FileContents::Chunked(chunked) => chunked.size(),
         }
     }
+
+    pub fn content_id_for_bytes(bytes: &Bytes) -> ContentId {
+        let mut context = ContentIdContext::new();
+        context.update(&bytes);
+        context.finish()
+    }
 }
 
 impl BlobstoreValue for FileContents {
@@ -85,12 +91,8 @@ impl BlobstoreValue for FileContents {
 
     fn into_blob(self) -> ContentBlob {
         let id = match &self {
-            FileContents::Bytes(bytes) => {
-                let mut context = ContentIdContext::new();
-                context.update(&bytes);
-                context.finish()
-            }
-            FileContents::Chunked(chunked) => chunked.content_id(),
+            Self::Bytes(bytes) => Self::content_id_for_bytes(&bytes),
+            Self::Chunked(chunked) => chunked.content_id(),
         };
 
         let thrift = self.into_thrift();

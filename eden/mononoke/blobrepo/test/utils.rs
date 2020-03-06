@@ -177,7 +177,7 @@ fn upload_hg_file_entry(
 
     let upload = UploadHgFileEntry {
         upload_node_id: UploadHgNodeHash::Checked(node_id),
-        contents: UploadHgFileContents::RawBytes(contents),
+        contents: UploadHgFileContents::RawBytes(contents, repo.filestore_config()),
         file_type,
         p1,
         p2,

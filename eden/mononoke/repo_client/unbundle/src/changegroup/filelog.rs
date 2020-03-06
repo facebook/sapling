@@ -78,7 +78,9 @@ impl UploadableHgBlob for Filelog {
 
         // If LFSMetaData
         let contents = match self.data {
-            FilelogData::RawBytes(bytes) => UploadHgFileContents::RawBytes(bytes),
+            FilelogData::RawBytes(bytes) => {
+                UploadHgFileContents::RawBytes(bytes, repo.filestore_config())
+            }
             FilelogData::LfsMetaData(meta) => UploadHgFileContents::ContentUploaded(meta),
         };
 

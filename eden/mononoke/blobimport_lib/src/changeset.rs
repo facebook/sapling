@@ -192,6 +192,7 @@ fn upload_entry(
             let (p1, p2) = parents.get_nodes();
             let upload_node_id = UploadHgNodeHash::Checked(entry.get_hash().into_nodehash());
             let blobstore = blobrepo.get_blobstore().boxed();
+            let filestore_config = blobrepo.filestore_config();
             match (ty, is_ext) {
                 (Type::Tree, false) => {
                     let upload = UploadHgTreeEntry {
@@ -210,7 +211,10 @@ fn upload_entry(
                 (Type::File(ft), false) => {
                     let upload = UploadHgFileEntry {
                         upload_node_id,
-                        contents: UploadHgFileContents::RawBytes(content.into_inner()),
+                        contents: UploadHgFileContents::RawBytes(
+                            content.into_inner(),
+                            filestore_config,
+                        ),
                         file_type: ft,
                         p1: p1.map(HgFileNodeId::new),
                         p2: p2.map(HgFileNodeId::new),

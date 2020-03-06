@@ -8,8 +8,8 @@
 use anyhow::Error;
 use blobstore::Blobstore;
 use context::CoreContext;
-use futures::future::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::future::IntoFuture;
 use mononoke_types::BlobstoreBytes;
 use rand::{thread_rng, Rng};
 use thiserror::Error;

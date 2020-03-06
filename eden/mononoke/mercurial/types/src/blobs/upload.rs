@@ -17,6 +17,7 @@ use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
+use filestore::FilestoreConfig;
 use filestore::{self, FetchKey};
 use futures::{future, stream, Future, IntoFuture, Stream};
 use futures_ext::{BoxFuture, FutureExt};
@@ -181,7 +182,7 @@ pub enum UploadHgFileContents {
     ContentUploaded(ContentBlobMeta),
     /// Raw bytes as would be sent by Mercurial, including any metadata prepended in the standard
     /// Mercurial format.
-    RawBytes(Bytes),
+    RawBytes(Bytes, FilestoreConfig),
 }
 
 impl UploadHgFileContents {
@@ -243,7 +244,7 @@ impl UploadHgFileContents {
 
                 (cbinfo, upload_fut.left_future(), compute_fut.left_future())
             }
-            UploadHgFileContents::RawBytes(raw_content) => {
+            UploadHgFileContents::RawBytes(raw_content, filestore_config) => {
                 let node_id = HgFileNodeId::new(
                     HgBlobNode::new(
                         raw_content.clone(),
@@ -265,8 +266,12 @@ impl UploadHgFileContents {
                 let file_bytes = f.file_contents();
 
                 STATS::upload_blob.add_value(1);
-                let (contents, upload_fut) =
-                    filestore::store_bytes(blobstore.clone(), ctx.clone(), file_bytes.into_bytes());
+                let ((id, size), upload_fut) = filestore::store_bytes(
+                    blobstore.clone(),
+                    filestore_config,
+                    ctx.clone(),
+                    file_bytes.into_bytes(),
+                );
 
                 let upload_fut = upload_fut.timed({
                     cloned!(path);
@@ -284,9 +289,6 @@ impl UploadHgFileContents {
                         Ok(())
                     }
                 });
-
-                let id = contents.content_id();
-                let size = contents.size();
 
                 let cbinfo = ContentBlobInfo {
                     path,

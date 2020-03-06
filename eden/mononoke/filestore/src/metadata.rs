@@ -9,8 +9,8 @@ use anyhow::Error;
 use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use cloned::cloned;
 use context::CoreContext;
-use futures::{Future, IntoFuture};
 use futures_ext::FutureExt;
+use futures_old::{Future, IntoFuture};
 use mononoke_types::{BlobstoreValue, ContentId, ContentMetadata, ContentMetadataId};
 use thiserror::Error;
 

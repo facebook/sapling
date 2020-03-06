@@ -10,11 +10,11 @@ use blobstore::Blobstore;
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{
+use futures_ext::FutureExt;
+use futures_old::{
     future::{lazy, IntoFuture},
     Future, Stream,
 };
-use futures_ext::FutureExt;
 use mononoke_types::{
     content_chunk::new_blob_and_pointer, hash, ChunkedFileContents, FileContents, MononokeId,
 };

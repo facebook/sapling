@@ -15,14 +15,12 @@ use assert_matches::assert_matches;
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{
+use futures_old::{
     future::Future,
     stream::{self, Stream},
 };
 use lazy_static::lazy_static;
-use mononoke_types::{
-    hash, typed_hash::MononokeId, BlobstoreValue, ContentMetadata, ContentMetadataId,
-};
+use mononoke_types::{hash, typed_hash::MononokeId, ContentMetadata, ContentMetadataId};
 use mononoke_types_mocks::contentid::ONES_CTID;
 
 const HELLO_WORLD: &'static [u8] = b"hello, world";
@@ -905,9 +903,12 @@ fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
 
     let ctx = CoreContext::test_mock(fb);
-    let (contents, fut) =
-        filestore::store_bytes(blob.clone(), ctx.clone(), Bytes::from(HELLO_WORLD));
-    let content_id = *contents.into_blob().id();
+    let ((content_id, _size), fut) = filestore::store_bytes(
+        blob.clone(),
+        DEFAULT_CONFIG,
+        ctx.clone(),
+        Bytes::from(HELLO_WORLD),
+    );
     assert_eq!(content_id, canonical(HELLO_WORLD));
 
     rt.block_on(fut)?;
