@@ -1894,6 +1894,10 @@ class atomictempfile(BinaryIO):
         # type: (bytes) -> None
         return self._fp.write(s)
 
+    def writeutf8(self, s):
+        # type: (str) -> None
+        return self.write(encodeutf8(s))
+
     def writelines(self, lines):
         # type: (Iterable[bytes]) -> None
         return self._fp.writelines(lines)

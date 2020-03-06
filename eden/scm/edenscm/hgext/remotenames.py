@@ -928,13 +928,13 @@ def expaths(orig, ui, repo, *args, **opts):
         foundpaths = False
         if not repo.localvfs.isfile("hgrc"):
             raise error.Abort(_("could not find hgrc file"))
-        oldhgrc = repo.localvfs.read("hgrc").splitlines(True)
+        oldhgrc = repo.localvfs.readutf8("hgrc").splitlines(True)
         f = repo.localvfs("hgrc", "w", atomictemp=True)
         for line in oldhgrc:
             if "[paths]" in line:
                 foundpaths = True
             if not (foundpaths and line.strip().startswith(delete)):
-                f.write(line)
+                f.writeutf8(line)
         f.close()
         saveremotenames(repo, {delete: {}})
         precachedistance(repo)
@@ -946,7 +946,7 @@ def expaths(orig, ui, repo, *args, **opts):
         foundpaths = False
         oldhgrc = []
         if repo.localvfs.isfile("hgrc"):
-            oldhgrc = repo.localvfs.read("hgrc").splitlines(True)
+            oldhgrc = repo.localvfs.readutf8("hgrc").splitlines(True)
         f = repo.localvfs("hgrc", "w", atomictemp=True)
         done = False
         for line in oldhgrc:
@@ -955,13 +955,13 @@ def expaths(orig, ui, repo, *args, **opts):
             if foundpaths and line.strip().startswith(add):
                 done = True
                 line = "%s = %s\n" % (add, args[0])
-            f.write(line)
+            f.writeutf8(line)
 
         # did we not find an existing path?
         if not done:
             done = True
-            f.write("[paths]\n")
-            f.write("%s = %s\n" % (add, args[0]))
+            f.writeutf8("[paths]\n")
+            f.writeutf8("%s = %s\n" % (add, args[0]))
 
         f.close()
         return
