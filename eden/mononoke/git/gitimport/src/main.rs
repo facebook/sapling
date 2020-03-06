@@ -131,7 +131,7 @@ fn do_upload(
     let req = StoreRequest::with_git_sha1(size, git_sha1);
     filestore::store(
         blobstore,
-        &FilestoreConfig::default(),
+        FilestoreConfig::default(),
         ctx,
         &req,
         stream::once(Ok(bytes)),

@@ -84,7 +84,7 @@ pub fn copy_content(
                         move |(store_request, byte_stream)| {
                             store(
                                 dst_blobstore,
-                                &dst_filestore_config,
+                                dst_filestore_config,
                                 ctx,
                                 &store_request,
                                 byte_stream,
@@ -208,7 +208,7 @@ mod test {
 
         rt.block_on(store(
             bs1.clone(),
-            &default_filestore_config,
+            default_filestore_config,
             ctx.clone(),
             &req,
             stream::once(Ok(Bytes::from(&bytes[..]))),

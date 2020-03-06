@@ -332,7 +332,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
                 let req = StoreRequest::new(len);
 
-                filestore::store(blob, &config, ctx, &req, data)
+                filestore::store(blob, config, ctx, &req, data)
                     .timed(move |stats, res| log_perf(stats, res, len))
             }
         })

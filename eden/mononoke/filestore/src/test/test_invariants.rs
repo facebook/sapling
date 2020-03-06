@@ -106,7 +106,7 @@ fn test_invariants(fb: FacebookInit) -> Result<()> {
         // Try to store with a broken blobstore. It doesn't matter if we succeed or not.
         let res = rt.block_on(filestore::store(
             blob.clone(),
-            &config,
+            config,
             ctx.clone(),
             &req,
             stream::once(Ok(bytes.clone())),

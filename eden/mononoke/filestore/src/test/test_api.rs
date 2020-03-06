@@ -27,6 +27,10 @@ use mononoke_types_mocks::contentid::ONES_CTID;
 
 const HELLO_WORLD: &'static [u8] = b"hello, world";
 const HELLO_WORLD_LENGTH: u64 = 12;
+const DEFAULT_CONFIG: FilestoreConfig = FilestoreConfig {
+    chunk_size: None,
+    concurrency: 1,
+};
 
 lazy_static! {
     static ref HELLO_WORLD_SHA1: hash::Sha1 = hash::Sha1::from_bytes([
@@ -49,7 +53,6 @@ lazy_static! {
         0x0d, 0x5b,
     ])
     .unwrap();
-    static ref DEFAULT_CONFIG: FilestoreConfig = FilestoreConfig::default();
 }
 
 #[fbinit::test]
@@ -64,7 +67,7 @@ fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
 
     rt.block_on(filestore::store(
         blob.clone(),
-        &DEFAULT_CONFIG,
+        DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -103,7 +106,7 @@ fn filestore_put_get_canon(fb: FacebookInit) -> Result<()> {
 
     rt.block_on(filestore::store(
         blob.clone(),
-        &DEFAULT_CONFIG,
+        DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -133,7 +136,7 @@ fn filestore_put_get_sha1(fb: FacebookInit) -> Result<()> {
 
     rt.block_on(filestore::store(
         blob.clone(),
-        &DEFAULT_CONFIG,
+        DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -162,7 +165,7 @@ fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
 
     rt.block_on(filestore::store(
         blob.clone(),
-        &DEFAULT_CONFIG,
+        DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -191,7 +194,7 @@ fn filestore_put_get_sha256(fb: FacebookInit) -> Result<()> {
 
     rt.block_on(filestore::store(
         blob.clone(),
-        &DEFAULT_CONFIG,
+        DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -226,7 +229,7 @@ fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
 
     rt.block_on(filestore::store(
         blob.clone(),
-        &config,
+        config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -270,7 +273,7 @@ fn filestore_chunked_put_get_nested(fb: FacebookInit) -> Result<()> {
     // Store in 3-byte chunks
     rt.block_on(filestore::store(
         blob.clone(),
-        &large,
+        large,
         ctx.clone(),
         &full_key,
         stream::once(Ok(Bytes::from(full_data))),
@@ -279,7 +282,7 @@ fn filestore_chunked_put_get_nested(fb: FacebookInit) -> Result<()> {
     // Now, go and split up one chunk into 1-byte parts.
     rt.block_on(filestore::store(
         blob.clone(),
-        &small,
+        small,
         ctx.clone(),
         &part_key,
         stream::once(Ok(Bytes::from(part_data))),
@@ -343,7 +346,7 @@ fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
 
     rt.block_on(filestore::store(
         blob.clone(),
-        &config,
+        config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(data))),
@@ -379,7 +382,7 @@ fn filestore_put_invalid_size(fb: FacebookInit) -> Result<()> {
 
     let res = rt.block_on(filestore::store(
         blob,
-        &config,
+        config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(data))),
@@ -407,7 +410,7 @@ fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
     let req = StoreRequest::with_canonical(HELLO_WORLD_LENGTH, ONES_CTID);
     let res = rt.block_on(filestore::store(
         blob.clone(),
-        &config,
+        config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -422,7 +425,7 @@ fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
     let req = StoreRequest::with_canonical(HELLO_WORLD_LENGTH, canonical(HELLO_WORLD));
     let res = rt.block_on(filestore::store(
         blob,
-        &config,
+        config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -448,7 +451,7 @@ fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
     let req = StoreRequest::with_sha1(HELLO_WORLD_LENGTH, hash::Sha1::from_byte_array([0x00; 20]));
     let res = rt.block_on(filestore::store(
         blob.clone(),
-        &config,
+        config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -463,7 +466,7 @@ fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
     let req = StoreRequest::with_sha1(HELLO_WORLD_LENGTH, *HELLO_WORLD_SHA1);
     let res = rt.block_on(filestore::store(
         blob,
-        &config,
+        config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -492,7 +495,7 @@ fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
     );
     let res = rt.block_on(filestore::store(
         blob.clone(),
-        &config,
+        config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -507,7 +510,7 @@ fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
     let req = StoreRequest::with_git_sha1(HELLO_WORLD_LENGTH, *HELLO_WORLD_GIT_SHA1);
     let res = rt.block_on(filestore::store(
         blob,
-        &config,
+        config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -536,7 +539,7 @@ fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
     );
     let res = rt.block_on(filestore::store(
         blob.clone(),
-        &config,
+        config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -551,7 +554,7 @@ fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
     let req = StoreRequest::with_sha256(HELLO_WORLD_LENGTH, *HELLO_WORLD_SHA256);
     let res = rt.block_on(filestore::store(
         blob,
-        &config,
+        config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -574,7 +577,7 @@ fn filestore_get_range(fb: FacebookInit) -> Result<()> {
 
     rt.block_on(filestore::store(
         blob.clone(),
-        &DEFAULT_CONFIG,
+        DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -621,7 +624,7 @@ fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     // Store in 3-byte chunks
     rt.block_on(filestore::store(
         blob.clone(),
-        &small,
+        small,
         ctx.clone(),
         &full_key,
         stream::once(Ok(Bytes::from(full_data))),
@@ -670,7 +673,7 @@ fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
 
     rt.block_on(filestore::store(
         blob.clone(),
-        &DEFAULT_CONFIG,
+        DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -774,7 +777,7 @@ fn filestore_test_peek(fb: FacebookInit) -> Result<()> {
 
     rt.block_on(filestore::store(
         blob.clone(),
-        &DEFAULT_CONFIG,
+        DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -811,7 +814,7 @@ fn filestore_test_chunked_peek(fb: FacebookInit) -> Result<()> {
 
     rt.block_on(filestore::store(
         blob.clone(),
-        &small,
+        small,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -843,7 +846,7 @@ fn filestore_test_short_peek(fb: FacebookInit) -> Result<()> {
 
     rt.block_on(filestore::store(
         blob.clone(),
-        &DEFAULT_CONFIG,
+        DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -876,7 +879,7 @@ fn filestore_test_empty_peek(fb: FacebookInit) -> Result<()> {
 
     rt.block_on(filestore::store(
         blob.clone(),
-        &DEFAULT_CONFIG,
+        DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(bytes.clone())),
@@ -935,7 +938,7 @@ fn filestore_store_error(fb: FacebookInit) -> Result<()> {
 
     let res = rt.block_on(filestore::store(
         blob,
-        &config,
+        config,
         CoreContext::test_mock(fb),
         &request(HELLO_WORLD),
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
@@ -972,7 +975,7 @@ fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
     // Store in 3-byte chunks
     rt.block_on(filestore::store(
         blob.clone(),
-        &large,
+        large,
         ctx.clone(),
         &full_key,
         stream::once(Ok(Bytes::from(full_data))),
@@ -1037,7 +1040,7 @@ fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
     // Store in 1 byte chunks
     rt.block_on(filestore::store(
         blob.clone(),
-        &small,
+        small,
         ctx.clone(),
         &full_key,
         stream::once(Ok(Bytes::from(full_data))),
@@ -1103,7 +1106,7 @@ fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
     // Don't chunk
     rt.block_on(filestore::store(
         blob.clone(),
-        &large,
+        large,
         ctx.clone(),
         &full_key,
         stream::once(Ok(Bytes::from(full_data))),
@@ -1183,7 +1186,7 @@ fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
 
     rt.block_on(filestore::store(
         blob.clone(),
-        &config,
+        config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),

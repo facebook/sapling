@@ -60,7 +60,7 @@ mod test;
 /// the same blobstore key structure and the same encoding schemes for existing files.
 /// Extensions (compression, chunking) will change this, but it will still allow backwards
 /// compatibility.
-#[derive(Debug, Clone)]
+#[derive(Debug, Copy, Clone)]
 pub struct FilestoreConfig {
     pub chunk_size: Option<u64>,
     pub concurrency: usize,
@@ -383,7 +383,7 @@ pub fn peek<B: Blobstore + Clone>(
 /// there's no guarantee that any partially written parts will be cleaned up).
 pub fn store<B: Blobstore + Clone>(
     blobstore: B,
-    config: &FilestoreConfig,
+    config: FilestoreConfig,
     ctx: CoreContext,
     req: &StoreRequest,
     data: impl Stream<Item = Bytes, Error = Error>,

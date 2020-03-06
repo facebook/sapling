@@ -44,6 +44,6 @@ pub fn rechunk<B: Blobstore + Clone>(
                 file_contents,
                 fetch::Range::All,
             );
-            store(blobstore, &config, ctx, &req, file_stream)
+            store(blobstore, config, ctx, &req, file_stream)
         })
 }

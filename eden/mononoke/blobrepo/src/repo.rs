@@ -739,8 +739,8 @@ impl BlobRepo {
         self.blobstore.clone()
     }
 
-    pub fn filestore_config(&self) -> &FilestoreConfig {
-        &self.filestore_config
+    pub fn filestore_config(&self) -> FilestoreConfig {
+        self.filestore_config
     }
 
     pub fn get_repoid(&self) -> RepositoryId {
