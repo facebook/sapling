@@ -102,6 +102,7 @@ impl WarmBookmarksCache {
         let warm_cs_ids = Arc::new(RwLock::new(HashSet::new()));
 
         async move {
+            info!(ctx.logger(), "Starting warm bookmark cache updater");
             let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
             let bookmarks = Arc::new(RwLock::new(bookmarks));
 
@@ -113,7 +114,6 @@ impl WarmBookmarksCache {
                 warmers.clone(),
                 warm_cs_ids.clone(),
             );
-            info!(ctx.logger(), "Started warm bookmark cache updater");
             Ok(Self {
                 bookmarks,
                 terminate: Some(sender),
@@ -268,7 +268,7 @@ fn spawn_bookmarks_updater(
 ) {
     // ignore JoinHandle, because we want it to run until `terminate` receives a signal
     let _ = tokio::spawn(async move {
-        info!(ctx.logger(), "Starting warm bookmark cache updater");
+        info!(ctx.logger(), "Started warm bookmark cache updater");
         let infinite_loop = async {
             loop {
                 let repoid = repo.get_repoid();
