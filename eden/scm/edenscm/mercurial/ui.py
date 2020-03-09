@@ -170,6 +170,8 @@ class ui(object):
         # When a buffer is active, defines whether we are expanding labels.
         # This exists to prevent an extra list lookup.
         self._bufferapplylabels = None
+        # Redirect output to an alternative ui object.
+        self._outputui = None
         self.callhooks = True
         # Insecure server connections requested.
         self.insecureconnections = False
@@ -187,6 +189,7 @@ class ui(object):
             self.pageractive = src.pageractive
             self._disablepager = src._disablepager
             self._tweaked = src._tweaked
+            self._outputui = src._outputui
 
             self.environ = src.environ
             self.callhooks = src.callhooks
@@ -629,7 +632,9 @@ class ui(object):
         is set.  The prefix will be labelled with the "ui.prefix.PREFIXNAME"
         label.
         """
-        if self._buffers and not opts.get(r"prompt", False):
+        if self._outputui is not None and not opts.get(r"prompt", False):
+            self._outputui.write(*args, **opts)
+        elif self._buffers and not opts.get(r"prompt", False):
             msgs = self._addprefixesandlabels(args, opts, bool(self._bufferapplylabels))
             self._buffers[-1].extend(msgs)
         else:
@@ -664,7 +669,9 @@ class ui(object):
         Can be used only when we're outputing the file contents to stdout,
         for example in diff, cat, or blame commands.
         """
-        if self._buffers and not opts.get(r"prompt", False):
+        if self._outputui is not None and not opts.get(r"prompt", False):
+            self._outputui.writebytes(*args, **opts)
+        elif self._buffers and not opts.get(r"prompt", False):
             msgs = self._addprefixesandlabels(
                 args, opts, self._bufferapplylabels, usebytes=True
             )
@@ -694,7 +701,9 @@ class ui(object):
 
     def write_err(self, *args, **opts):
         with progress.suspend():
-            if self._bufferstates and self._bufferstates[-1][0]:
+            if self._outputui is not None or (
+                self._bufferstates and self._bufferstates[-1][0]
+            ):
                 self.write(*args, **opts)
             else:
                 msgs = self._addprefixesandlabels(args, opts, self._colormode)

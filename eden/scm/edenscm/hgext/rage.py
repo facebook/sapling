@@ -30,6 +30,8 @@ from edenscm.mercurial import (
     commands,
     encoding,
     error,
+    extensions,
+    hg,
     progress,
     pycompat,
     registrar,
@@ -249,9 +251,18 @@ def _makerage(ui, repo, **opts):
         # If we failed to popbuffer for some reason, do not mess up with the
         # main `ui` object.
         newui = ui.copy()
-        newui.pushbuffer(error=True)
+        newui.pushbuffer(error=True, subproc=True)
+        newui._colormode = None
+
+        def remoteui(orig, src, opts):
+            rui = orig(src, opts)
+            rui._outputui = newui
+            return rui
+
         try:
-            with ui.configoverride(configoverrides, "rage"):
+            with newui.configoverride(
+                configoverrides, "rage"
+            ), extensions.wrappedfunction(hg, "remoteui", remoteui):
                 if cmd.norepo:
                     cmd(newui, *args, **opts)
                 else:
@@ -275,9 +286,6 @@ def _makerage(ui, repo, **opts):
         ),
         ("obsstore size", lambda: str(repo.svfs.stat("obsstore").st_size)),
     ]
-
-    oldcolormode = ui._colormode
-    ui._colormode = None
 
     detailed = [
         ("df -h", lambda: shcmd("df -h", check=False)),
@@ -336,6 +344,7 @@ def _makerage(ui, repo, **opts):
                 check=False,
             ),
         ),
+        ("hg debugnetwork", lambda: hgcmd("debugnetwork")),
         (
             "hg debugmutation -r 'draft() & date(-4)' -t 'since 4d ago'",
             lambda: hgcmd(
@@ -467,7 +476,6 @@ def _makerage(ui, repo, **opts):
     msg.extend(footnotes)
     msg = "".join(msg)
 
-    ui._colormode = oldcolormode
     encoding.encoding = oldencoding
     encoding.encodingmode = oldencodingmode
     return msg
