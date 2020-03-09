@@ -5,6 +5,10 @@
  * GNU General Public License version 2.
  */
 
+use std::cmp::min;
+
+use byteorder::{BigEndian, ByteOrder};
+
 // NULL is exported for convenience.
 use mercurial_types::hash::Sha1;
 pub use mercurial_types::hash::NULL;
@@ -32,6 +36,19 @@ pub const FS_ES: Sha1 = Sha1::from_byte_array([
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee,
     0xee, 0xee, 0xee, 0xee,
 ]);
+
+/// Synthesize a hash from a byte array prefix (of up to 12 bytes) and a number.
+///
+/// Generates a hash where the first 12 bytes are the byte array prefix padded
+/// with 0, and the following 8 bytes are the big-endian value of the number.
+pub fn make_hash(prefix: &'static [u8], number: u64) -> Sha1 {
+    let mut buffer = [0u8; 20];
+    const NUMBER_OFFSET: usize = 20 - std::mem::size_of::<u64>();
+    let prefix_len = min(prefix.len(), NUMBER_OFFSET);
+    buffer[..prefix_len].copy_from_slice(&prefix[..prefix_len]);
+    BigEndian::write_u64(&mut buffer[NUMBER_OFFSET..], number);
+    Sha1::from_byte_array(buffer)
+}
 
 #[cfg(test)]
 mod test {
@@ -102,6 +119,14 @@ mod test {
         assert_eq!(
             format!("{}", FS),
             "ffffffffffffffffffffffffffffffffffffffff"
+        );
+        assert_eq!(
+            format!("{}", make_hash(b"test", 0x123456)),
+            "7465737400000000000000000000000000123456"
+        );
+        assert_eq!(
+            format!("{}", make_hash(b"prefix-too-long", 0xabcdef)),
+            "7072656669782d746f6f2d6c0000000000abcdef"
         );
     }
 }

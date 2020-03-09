@@ -34,6 +34,11 @@ pub const FS_HASH: HgNodeHash = HgNodeHash::new(hash::FS);
 // Definition for the hash ff...ffee..eee
 pub const FS_ES_CSID_HASH: HgNodeHash = HgNodeHash::new(hash::FS_ES);
 
+/// Generate a node hash from a prefix and a number.
+pub fn make_hg_node_hash(prefix: &'static [u8], number: u64) -> HgNodeHash {
+    HgNodeHash::new(hash::make_hash(prefix, number))
+}
+
 // Definitions for changeset IDs 1111...ffff
 pub const ONES_CSID: HgChangesetId = HgChangesetId::new(ONES_HASH);
 pub const TWOS_CSID: HgChangesetId = HgChangesetId::new(TWOS_HASH);
@@ -53,6 +58,11 @@ pub const FS_CSID: HgChangesetId = HgChangesetId::new(FS_HASH);
 
 // Definition for the changeset ff...ffee..eee
 pub const FS_ES_CSID: HgChangesetId = HgChangesetId::new(FS_ES_CSID_HASH);
+
+/// Generate a changeset ID from a number.
+pub fn make_hg_cs_id(number: u64) -> HgChangesetId {
+    HgChangesetId::new(make_hg_node_hash(b"hg", number))
+}
 
 // Definitions for manifest IDs 1111...ffff
 pub const ONES_MID: HgManifestId = HgManifestId::new(ONES_HASH);
@@ -87,3 +97,8 @@ pub const CS_FNID: HgFileNodeId = HgFileNodeId::new(CS_HASH);
 pub const DS_FNID: HgFileNodeId = HgFileNodeId::new(DS_HASH);
 pub const ES_FNID: HgFileNodeId = HgFileNodeId::new(ES_HASH);
 pub const FS_FNID: HgFileNodeId = HgFileNodeId::new(FS_HASH);
+
+/// Generate a file node ID from a number.
+pub fn make_hg_file_node_id(number: u64) -> HgFileNodeId {
+    HgFileNodeId::new(make_hg_node_hash(b"hgfilenode", number))
+}
