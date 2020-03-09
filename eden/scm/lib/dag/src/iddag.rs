@@ -231,14 +231,7 @@ impl IdDag {
         }
     }
 
-    /// Return a [`SyncableIdDag`] instance that provides race-free
-    /// filesytem read and write access by taking an exclusive lock.
-    ///
-    /// The [`SyncableIdDag`] instance provides a `sync` method that
-    /// actually writes changes to disk.
-    ///
-    /// Block if another instance is taking the lock.
-    pub fn prepare_filesystem_sync(&self) -> Result<SyncableIdDag> {
+    fn get_lock_file(&self) -> Result<File> {
         // Take a filesystem lock. The file name 'lock' is taken by indexedlog
         // running on Windows, so we choose another file name here.
         let lock_file = {
@@ -252,6 +245,20 @@ impl IdDag {
             })?
         };
         lock_file.lock_exclusive()?;
+        Ok(lock_file)
+    }
+
+    /// Return a [`SyncableIdDag`] instance that provides race-free
+    /// filesytem read and write access by taking an exclusive lock.
+    ///
+    /// The [`SyncableIdDag`] instance provides a `sync` method that
+    /// actually writes changes to disk.
+    ///
+    /// Block if another instance is taking the lock.
+    pub fn prepare_filesystem_sync(&self) -> Result<SyncableIdDag> {
+        // Take a filesystem lock. The file name 'lock' is taken by indexedlog
+        // running on Windows, so we choose another file name here.
+        let lock_file = self.get_lock_file()?;
 
         // Clone. But drop in-memory data.
         let mut log = self.log.try_clone_without_dirty()?;
