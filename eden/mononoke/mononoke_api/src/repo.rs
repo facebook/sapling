@@ -151,10 +151,9 @@ impl Repo {
             config.filestore,
             readonly_storage,
             blobstore_options,
-            logger.clone(),
+            &logger,
             config.derived_data_config,
         )
-        .compat()
         .await?;
 
         let ctx = CoreContext::new_with_logger(fb, logger.clone());

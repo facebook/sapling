@@ -18,8 +18,8 @@ use cloned::cloned;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
 use futures_old::future::{err, ok, Future};
 use futures_old::stream::repeat;
 use futures_old::Stream;
@@ -99,9 +99,11 @@ fn main(fb: FacebookInit) -> Result<()> {
         config.filestore.clone(),
         readonly_storage,
         cmdlib::args::parse_blobstore_options(&matches),
-        logger.clone(),
+        &logger,
         config.derived_data_config.clone(),
-    );
+    )
+    .boxed()
+    .compat();
 
     let rc = RequestContext {
         bucket_name: "mononoke_prod".into(),

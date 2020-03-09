@@ -277,10 +277,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     config.filestore,
                     readonly_storage,
                     blobstore_options,
-                    logger.clone(),
+                    &logger,
                     config.derived_data_config,
-                )
-                .compat();
+                );
 
                 let (repo, aclchecker) = try_join!(blobrepo, aclchecker)?;
 

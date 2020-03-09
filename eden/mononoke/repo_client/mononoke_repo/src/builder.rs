@@ -53,10 +53,9 @@ impl MononokeRepoBuilder {
             config.filestore.clone(),
             readonly_storage,
             blobstore_options.clone(),
-            ctx.logger().clone(),
+            ctx.logger(),
             config.derived_data_config.clone(),
         )
-        .compat()
         .await?;
 
         Ok(Self {

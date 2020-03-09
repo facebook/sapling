@@ -144,21 +144,31 @@ impl MononokeRepo {
         }
         .boxed()
         .compat()
-        .join(open_blobrepo(
-            fb,
-            config.storage_config.clone(),
-            repoid,
-            mysql_options,
-            with_cachelib,
-            config.bookmarks_cache_ttl,
-            config.redaction,
-            common_config.scuba_censored_table,
-            config.filestore,
-            readonly_storage,
-            blobstore_options,
-            logger.clone(),
-            config.derived_data_config,
-        ))
+        .join(
+            {
+                cloned!(logger);
+                async move {
+                    open_blobrepo(
+                        fb,
+                        config.storage_config,
+                        repoid,
+                        mysql_options,
+                        with_cachelib,
+                        config.bookmarks_cache_ttl,
+                        config.redaction,
+                        common_config.scuba_censored_table,
+                        config.filestore,
+                        readonly_storage,
+                        blobstore_options,
+                        &logger,
+                        config.derived_data_config,
+                    )
+                    .await
+                }
+            }
+            .boxed()
+            .compat(),
+        )
         .map(move |(synced_commit_mapping, repo)| {
             let warm_bookmarks_cache = WarmBookmarksCache::new(ctx.clone(), repo.clone());
 

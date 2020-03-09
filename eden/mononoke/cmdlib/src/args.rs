@@ -19,7 +19,8 @@ use clap::{App, Arg, ArgGroup, ArgMatches};
 use cloned::cloned;
 use configerator_cached::{ConfigHandle, ConfigStore};
 use fbinit::FacebookInit;
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures::{FutureExt, TryFutureExt};
+use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
 use futures_old::Future;
 use lazy_static::lazy_static;
 use panichandler::{self, Fate};
@@ -1037,21 +1038,26 @@ fn open_repo_internal_with_repo_id<'a>(
     let readonly_storage = parse_readonly_storage(matches);
 
     cloned!(logger);
-    open_blobrepo(
-        fb,
-        config.storage_config,
-        repo_id,
-        mysql_options,
-        caching,
-        config.bookmarks_cache_ttl,
-        redaction_override.unwrap_or(config.redaction),
-        common_config.scuba_censored_table,
-        config.filestore,
-        readonly_storage,
-        blobstore_options,
-        logger,
-        config.derived_data_config,
-    )
+    async move {
+        open_blobrepo(
+            fb,
+            config.storage_config,
+            repo_id,
+            mysql_options,
+            caching,
+            config.bookmarks_cache_ttl,
+            redaction_override.unwrap_or(config.redaction),
+            common_config.scuba_censored_table,
+            config.filestore,
+            readonly_storage,
+            blobstore_options,
+            &logger,
+            config.derived_data_config,
+        )
+        .await
+    }
+    .boxed()
+    .compat()
     .boxify()
 }
 

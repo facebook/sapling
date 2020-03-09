@@ -102,10 +102,9 @@ async fn do_main<'a>(
                         filestore,
                         readonly_storage,
                         blobstore_options,
-                        logger,
+                        &logger,
                         derived_data_config,
                     )
-                    .compat()
                     .await?;
 
                     let warmup_repo = repo

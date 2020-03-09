@@ -31,6 +31,7 @@ use fbinit::FacebookInit;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use fsnodes::RootFsnodeId;
+use futures::compat::Future01CompatExt;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::{future::IntoFuture, Future};
 use git_types::TreeHandle;
@@ -71,7 +72,7 @@ const BLOBSTORE_PRESENCE_CACHE_POOL: &'static str = "blobstore-presence";
 /// The blobstore config is actually orthogonal to this, but it wouldn't make much sense to
 /// configure a local blobstore with a remote db, or vice versa. There's no error checking
 /// at this level (aside from disallowing a multiplexed blobstore with a local db).
-pub fn open_blobrepo(
+pub async fn open_blobrepo(
     fb: FacebookInit,
     storage_config: StorageConfig,
     repoid: RepositoryId,
@@ -83,14 +84,15 @@ pub fn open_blobrepo(
     filestore_params: Option<FilestoreParams>,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
-    logger: Logger,
+    logger: &Logger,
     derived_data_config: DerivedDataConfig,
-) -> BoxFuture<BlobRepo, Error> {
+) -> Result<BlobRepo, Error> {
     let sql_factory = make_sql_factory(
         fb,
         storage_config.dbconfig,
         mysql_options,
         readonly_storage,
+        // FIXME: remove clone when mysql_sql_factory is async-await
         logger.clone(),
     )
     .boxify();
@@ -101,7 +103,8 @@ pub fn open_blobrepo(
         mysql_options,
         readonly_storage,
         blobstore_options,
-        logger,
+        // FIXME: remove clone when make_blobstore is async-await
+        logger.clone(),
     )
     .boxify();
 
@@ -118,7 +121,8 @@ pub fn open_blobrepo(
         readonly_storage,
         derived_data_config,
     )
-    .boxify()
+    .compat()
+    .await
 }
 
 /// Expose for graph walker that has storage open already
