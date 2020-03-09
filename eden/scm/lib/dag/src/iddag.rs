@@ -431,6 +431,21 @@ impl IdDag {
         Ok(iter)
     }
 
+    fn iter_segments_with_parent(
+        &self,
+        parent: Id,
+    ) -> Result<impl Iterator<Item = Result<Segment>>> {
+        let mut key = Vec::with_capacity(8);
+        key.write_vlq(parent.0)
+            .expect("write to Vec should not fail");
+        let iter = self.log.lookup(Self::INDEX_PARENT, &key)?;
+        let iter = iter.map(|result| match result {
+            Ok(bytes) => Ok(Segment(bytes)),
+            Err(err) => Err(err.into()),
+        });
+        Ok(iter)
+    }
+
     /// Incrementally build high level segments at the given `level`.
     ///
     /// The new, high level segments are built on top of the lower level
@@ -818,10 +833,8 @@ impl IdDag {
             }
             // Can we use `head` in `seg` as `x`?
             let mut next_id = None;
-            let mut key = Vec::with_capacity(8);
-            key.write_vlq(head.0).expect("write to Vec should not fail");
-            for seg_bytes in self.log.lookup(Self::INDEX_PARENT, &key)? {
-                let child_seg = Segment(seg_bytes?);
+            for child_seg in self.iter_segments_with_parent(head)? {
+                let child_seg = child_seg?;
                 if child_seg.parents()?.len() > 1 {
                     // `child_seg.span().low` is a merge, so `head` is a parent of a merge.
                     // Therefore `head` can be used as `x`.
