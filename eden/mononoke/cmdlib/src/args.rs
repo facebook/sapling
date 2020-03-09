@@ -31,7 +31,7 @@ use slog_term::TermDecorator;
 use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV, GlogFormat};
 
 use blobrepo::BlobRepo;
-use blobrepo_factory::{open_blobrepo, Caching, ReadOnlyStorage};
+use blobrepo_factory::{BlobrepoBuilder, Caching, ReadOnlyStorage};
 use blobstore_factory::{BlobstoreOptions, ChaosOptions, Scrubbing, ThrottleOptions};
 use changesets::SqlConstructors;
 use metaconfig_parser::RepoConfigs;
@@ -1039,22 +1039,20 @@ fn open_repo_internal_with_repo_id<'a>(
 
     cloned!(logger);
     async move {
-        open_blobrepo(
+        let mut builder = BlobrepoBuilder::new(
             fb,
-            config.storage_config,
-            repo_id,
+            &config,
             mysql_options,
             caching,
-            config.bookmarks_cache_ttl,
-            redaction_override.unwrap_or(config.redaction),
             common_config.scuba_censored_table,
-            config.filestore,
             readonly_storage,
             blobstore_options,
             &logger,
-            config.derived_data_config,
-        )
-        .await
+        );
+        if let Some(redaction_override) = redaction_override {
+            builder.set_redaction(redaction_override);
+        }
+        builder.build().await
     }
     .boxed()
     .compat()

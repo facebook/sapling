@@ -7,7 +7,7 @@
 
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use blobrepo_factory::{open_blobrepo, BlobstoreOptions, Caching, ReadOnlyStorage};
+use blobrepo_factory::{BlobrepoBuilder, BlobstoreOptions, Caching, ReadOnlyStorage};
 use context::CoreContext;
 use futures::{compat::Future01CompatExt, future};
 use hooks::HookManager;
@@ -41,22 +41,17 @@ impl MononokeRepoBuilder {
         readonly_storage: ReadOnlyStorage,
         blobstore_options: BlobstoreOptions,
     ) -> Result<MononokeRepoBuilder, Error> {
-        let repo = open_blobrepo(
+        let builder = BlobrepoBuilder::new(
             ctx.fb,
-            config.storage_config.clone(),
-            config.repoid,
+            &config,
             mysql_options,
             caching,
-            config.bookmarks_cache_ttl,
-            config.redaction,
             scuba_censored_table.clone(),
-            config.filestore.clone(),
             readonly_storage,
             blobstore_options.clone(),
             ctx.logger(),
-            config.derived_data_config.clone(),
-        )
-        .await?;
+        );
+        let repo = builder.build().await?;
 
         Ok(Self {
             ctx,

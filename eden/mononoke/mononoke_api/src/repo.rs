@@ -14,7 +14,7 @@ use std::{
 use aclchecker::AclChecker;
 use anyhow::{bail, format_err, Error};
 use blobrepo::BlobRepo;
-use blobrepo_factory::{open_blobrepo, BlobstoreOptions, Caching, ReadOnlyStorage};
+use blobrepo_factory::{BlobrepoBuilder, BlobstoreOptions, Caching, ReadOnlyStorage};
 use blobstore::Loadable;
 use blobstore_factory::make_sql_factory;
 use bookmarks::{BookmarkName, BookmarkPrefix};
@@ -126,8 +126,6 @@ impl Repo {
     ) -> Result<Self, Error> {
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
-        let repoid = config.repoid;
-
         let synced_commit_mapping = open_synced_commit_mapping(
             fb,
             config.clone(),
@@ -139,22 +137,17 @@ impl Repo {
         let service_config = config.source_control_service.clone();
         let monitoring_config = config.source_control_service_monitoring.clone();
 
-        let blob_repo = open_blobrepo(
+        let builder = BlobrepoBuilder::new(
             fb,
-            config.storage_config.clone(),
-            repoid,
+            &config,
             mysql_options,
             with_cachelib,
-            config.bookmarks_cache_ttl,
-            config.redaction,
             common_config.scuba_censored_table,
-            config.filestore,
             readonly_storage,
             blobstore_options,
             &logger,
-            config.derived_data_config,
-        )
-        .await?;
+        );
+        let blob_repo = builder.build().await?;
 
         let ctx = CoreContext::new_with_logger(fb, logger.clone());
 

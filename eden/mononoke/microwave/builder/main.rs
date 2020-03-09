@@ -12,7 +12,7 @@ use ::changesets::Changesets;
 use ::filenodes::Filenodes;
 use anyhow::{format_err, Error};
 use blobrepo::DangerousOverride;
-use blobrepo_factory::open_blobrepo;
+use blobrepo_factory::BlobrepoBuilder;
 use clap::{Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, monitoring::AliveService};
@@ -20,7 +20,6 @@ use context::SessionContainer;
 use fbinit::FacebookInit;
 use futures::{channel::mpsc, compat::Future01CompatExt, future};
 use metaconfig_parser::RepoConfigs;
-use metaconfig_types::RepoConfig;
 use microwave::{Snapshot, SnapshotLocation};
 use slog::{info, o, Logger};
 use std::path::Path;
@@ -78,35 +77,20 @@ async fn do_main<'a>(
                 let (changesets_sender, changesets_receiver) = mpsc::channel(1000);
                 let warmup_ctx = ctx.clone();
 
-                let RepoConfig {
-                    storage_config,
-                    repoid,
-                    bookmarks_cache_ttl,
-                    redaction,
-                    filestore,
-                    derived_data_config,
-                    cache_warmup,
-                    ..
-                } = config;
-
                 let warmup = async move {
-                    let repo = open_blobrepo(
+                    let builder = BlobrepoBuilder::new(
                         fb,
-                        storage_config,
-                        repoid,
+                        &config,
                         mysql_options,
                         caching,
-                        bookmarks_cache_ttl,
-                        redaction,
                         scuba_censored_table,
-                        filestore,
                         readonly_storage,
                         blobstore_options,
                         &logger,
-                        derived_data_config,
-                    )
-                    .await?;
+                    );
+                    let repo = builder.build().await?;
 
+                    let repoid = config.repoid;
                     let warmup_repo = repo
                         .dangerous_override(|inner| -> Arc<dyn Filenodes> {
                             Arc::new(MicrowaveFilenodes::new(repoid, filenodes_sender, inner))
@@ -115,7 +99,7 @@ async fn do_main<'a>(
                             Arc::new(MicrowaveChangesets::new(repoid, changesets_sender, inner))
                         });
 
-                    cache_warmup::cache_warmup(warmup_ctx, warmup_repo, cache_warmup)
+                    cache_warmup::cache_warmup(warmup_ctx, warmup_repo, config.cache_warmup)
                         .compat()
                         .await?;
 

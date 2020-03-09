@@ -14,7 +14,7 @@ use std::{
 
 use anyhow::{format_err, Error};
 use blobrepo::{file_history::get_file_history, BlobRepo};
-use blobrepo_factory::{open_blobrepo, BlobstoreOptions, Caching, ReadOnlyStorage};
+use blobrepo_factory::{BlobrepoBuilder, BlobstoreOptions, Caching, ReadOnlyStorage};
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
@@ -130,7 +130,6 @@ impl MononokeRepo {
 
         let skiplist_index_blobstore_key = config.skiplist_index_blobstore_key.clone();
 
-        let repoid = config.repoid;
         let monitoring_config = config.source_control_service_monitoring.clone();
         let commit_sync_config = config.commit_sync_config.clone();
 
@@ -148,22 +147,17 @@ impl MononokeRepo {
             {
                 cloned!(logger);
                 async move {
-                    open_blobrepo(
+                    let builder = BlobrepoBuilder::new(
                         fb,
-                        config.storage_config,
-                        repoid,
+                        &config,
                         mysql_options,
                         with_cachelib,
-                        config.bookmarks_cache_ttl,
-                        config.redaction,
                         common_config.scuba_censored_table,
-                        config.filestore,
                         readonly_storage,
                         blobstore_options,
                         &logger,
-                        config.derived_data_config,
-                    )
-                    .await
+                    );
+                    builder.build().await
                 }
             }
             .boxed()

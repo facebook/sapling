@@ -38,7 +38,7 @@ use git_types::TreeHandle;
 use maplit::btreeset;
 use memblob::EagerMemblob;
 use metaconfig_types::{
-    self, DerivedDataConfig, FilestoreParams, Redaction, StorageConfig, UnodeVersion,
+    self, DerivedDataConfig, FilestoreParams, Redaction, RepoConfig, StorageConfig, UnodeVersion,
 };
 use mononoke_types::RepositoryId;
 use newfilenodes::NewFilenodesBuilder;
@@ -65,14 +65,7 @@ pub enum Caching {
 const BLOBSTORE_BLOBS_CACHE_POOL: &'static str = "blobstore-blobs";
 const BLOBSTORE_PRESENCE_CACHE_POOL: &'static str = "blobstore-presence";
 
-/// Construct a new BlobRepo with the given storage configuration. If the metadata DB is
-/// remote (ie, MySQL), then it configures a full set of caches. Otherwise with local storage
-/// it's assumed to be a test configuration.
-///
-/// The blobstore config is actually orthogonal to this, but it wouldn't make much sense to
-/// configure a local blobstore with a remote db, or vice versa. There's no error checking
-/// at this level (aside from disallowing a multiplexed blobstore with a local db).
-pub async fn open_blobrepo(
+pub struct BlobrepoBuilder<'a> {
     fb: FacebookInit,
     storage_config: StorageConfig,
     repoid: RepositoryId,
@@ -84,45 +77,102 @@ pub async fn open_blobrepo(
     filestore_params: Option<FilestoreParams>,
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
-    logger: &Logger,
+    logger: &'a Logger,
     derived_data_config: DerivedDataConfig,
-) -> Result<BlobRepo, Error> {
-    let sql_factory = make_sql_factory(
-        fb,
-        storage_config.dbconfig,
-        mysql_options,
-        readonly_storage,
-        // FIXME: remove clone when mysql_sql_factory is async-await
-        logger.clone(),
-    )
-    .boxify();
+}
 
-    let blobstore = make_blobstore(
-        fb,
-        storage_config.blobstore,
-        mysql_options,
-        readonly_storage,
-        blobstore_options,
-        // FIXME: remove clone when make_blobstore is async-await
-        logger.clone(),
-    )
-    .boxify();
+impl<'a> BlobrepoBuilder<'a> {
+    pub fn new(
+        fb: FacebookInit,
+        config: &RepoConfig,
+        mysql_options: MysqlOptions,
+        caching: Caching,
+        scuba_censored_table: Option<String>,
+        readonly_storage: ReadOnlyStorage,
+        blobstore_options: BlobstoreOptions,
+        logger: &'a Logger,
+    ) -> Self {
+        Self {
+            fb,
+            storage_config: config.storage_config.clone(),
+            repoid: config.repoid,
+            mysql_options,
+            caching,
+            bookmarks_cache_ttl: config.bookmarks_cache_ttl.clone(),
+            redaction: config.redaction.clone(),
+            scuba_censored_table,
+            filestore_params: config.filestore.clone(),
+            readonly_storage,
+            blobstore_options,
+            logger,
+            derived_data_config: config.derived_data_config.clone(),
+        }
+    }
 
-    open_blobrepo_given_datasources(
-        fb,
-        blobstore,
-        sql_factory,
-        repoid,
-        caching,
-        bookmarks_cache_ttl,
-        redaction,
-        scuba_censored_table,
-        filestore_params,
-        readonly_storage,
-        derived_data_config,
-    )
-    .compat()
-    .await
+    pub fn set_redaction(&mut self, redaction: Redaction) {
+        self.redaction = redaction;
+    }
+
+    /// remote (ie, MySQL), then it configures a full set of caches. Otherwise with local storage
+    /// it's assumed to be a test configuration.
+    ///
+    /// The blobstore config is actually orthogonal to this, but it wouldn't make much sense to
+    /// configure a local blobstore with a remote db, or vice versa. There's no error checking
+    /// at this level (aside from disallowing a multiplexed blobstore with a local db).
+    pub async fn build(self) -> Result<BlobRepo, Error> {
+        let BlobrepoBuilder {
+            fb,
+            storage_config,
+            repoid,
+            mysql_options,
+            caching,
+            bookmarks_cache_ttl,
+            redaction,
+            scuba_censored_table,
+            filestore_params,
+            readonly_storage,
+            blobstore_options,
+            logger,
+            derived_data_config,
+        } = self;
+
+        let sql_factory = make_sql_factory(
+            fb,
+            storage_config.dbconfig,
+            mysql_options,
+            readonly_storage,
+            // FIXME: remove clone when mysql_sql_factory is async-await
+            logger.clone(),
+        )
+        .boxify();
+
+        let blobstore = make_blobstore(
+            fb,
+            storage_config.blobstore,
+            mysql_options,
+            readonly_storage,
+            blobstore_options,
+            // FIXME: remove clone when make_blobstore is async-await
+            logger.clone(),
+        )
+        .boxify();
+
+        open_blobrepo_given_datasources(
+            fb,
+            blobstore,
+            sql_factory,
+            repoid,
+            caching,
+            bookmarks_cache_ttl,
+            redaction,
+            scuba_censored_table,
+            filestore_params,
+            readonly_storage,
+            derived_data_config,
+        )
+        .compat()
+        .await
+    }
 }
 
 /// Expose for graph walker that has storage open already

@@ -35,7 +35,7 @@ use tokio_old::net::TcpListener;
 use tokio_openssl::SslAcceptorExt;
 
 use blobrepo::BlobRepo;
-use blobrepo_factory::open_blobrepo;
+use blobrepo_factory::BlobrepoBuilder;
 use cmdlib::{
     args::{self, get_config_handle},
     helpers::serve_forever,
@@ -256,6 +256,17 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let scuba_censored_table = common.scuba_censored_table.clone();
             cloned!(blobstore_options, test_acl_checker, logger);
             async move {
+                let builder = BlobrepoBuilder::new(
+                    fb,
+                    &config,
+                    mysql_options,
+                    caching,
+                    scuba_censored_table,
+                    readonly_storage,
+                    blobstore_options,
+                    &logger,
+                );
+
                 let hipster_acl = config.hipster_acl;
                 let aclchecker = async {
                     if let Some(test_checker) = test_acl_checker {
@@ -265,23 +276,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     }
                 };
 
-                let blobrepo = open_blobrepo(
-                    fb,
-                    config.storage_config,
-                    config.repoid,
-                    mysql_options,
-                    caching,
-                    config.bookmarks_cache_ttl,
-                    config.redaction,
-                    scuba_censored_table,
-                    config.filestore,
-                    readonly_storage,
-                    blobstore_options,
-                    &logger,
-                    config.derived_data_config,
-                );
-
-                let (repo, aclchecker) = try_join!(blobrepo, aclchecker)?;
+                let (repo, aclchecker) = try_join!(builder.build(), aclchecker)?;
 
                 Result::<(String, (BlobRepo, LfsAclChecker)), Error>::Ok((name, (repo, aclchecker)))
             }

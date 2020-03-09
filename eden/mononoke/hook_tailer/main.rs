@@ -11,7 +11,7 @@
 pub mod tailer;
 
 use anyhow::{format_err, Error, Result};
-use blobrepo_factory::open_blobrepo;
+use blobrepo_factory::BlobrepoBuilder;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
@@ -87,23 +87,18 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let caching = cmdlib::args::init_cachelib(fb, &matches, None);
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
-    let blobrepo = open_blobrepo(
+    let builder = BlobrepoBuilder::new(
         fb,
-        config.storage_config.clone(),
-        config.repoid,
+        &config,
         cmdlib::args::parse_mysql_options(&matches),
         caching,
-        config.bookmarks_cache_ttl,
-        config.redaction,
         common_config.scuba_censored_table,
-        config.filestore.clone(),
         readonly_storage,
         cmdlib::args::parse_blobstore_options(&matches),
         &logger,
-        config.derived_data_config.clone(),
-    )
-    .boxed()
-    .compat();
+    );
+
+    let blobrepo = builder.build().boxed().compat();
 
     let rc = RequestContext {
         bucket_name: "mononoke_prod".into(),
