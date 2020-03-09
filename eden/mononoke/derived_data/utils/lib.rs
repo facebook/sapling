@@ -10,6 +10,7 @@ use blame::{BlameRoot, BlameRootMapping};
 use blobrepo::{BlobRepo, DangerousOverride};
 use blobstore::Blobstore;
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
+use changeset_info::{ChangesetInfo, ChangesetInfoMapping};
 use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
@@ -36,6 +37,7 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     MappedHgChangesetId::NAME,
     RootFsnodeId::NAME,
     BlameRoot::NAME,
+    ChangesetInfo::NAME,
     RootDeletedManifestId::NAME,
     FilenodesOnlyPublic::NAME,
 ];
@@ -281,6 +283,10 @@ fn derived_data_utils_impl(
         }
         BlameRoot::NAME => {
             let mapping = BlameRootMapping::new(repo.get_blobstore().boxed());
+            Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
+        }
+        ChangesetInfo::NAME => {
+            let mapping = ChangesetInfoMapping::new(repo.get_blobstore().boxed());
             Ok(Arc::new(DerivedUtilsFromMapping::new(mapping, mode)))
         }
         RootDeletedManifestId::NAME => {

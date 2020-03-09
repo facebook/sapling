@@ -11,3 +11,4 @@ mod changeset_info;
 mod derive;
 
 pub use changeset_info::{ChangesetInfo, ChangesetMessage};
+pub use derive::ChangesetInfoMapping;

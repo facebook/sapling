@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use std::{collections::HashMap, iter::FromIterator};
+use std::{collections::HashMap, iter::FromIterator, sync::Arc};
 
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
@@ -16,7 +16,6 @@ use fbthrift::compact_protocol;
 use futures::{future, stream::FuturesUnordered, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::{BlobstoreBytes, BonsaiChangeset, ChangesetId};
-use repo_blobstore::RepoBlobstore;
 
 use crate::ChangesetInfo;
 
@@ -25,7 +24,7 @@ impl BonsaiDerived for ChangesetInfo {
     type Mapping = ChangesetInfoMapping;
 
     fn mapping(_ctx: &CoreContext, repo: &BlobRepo) -> Self::Mapping {
-        ChangesetInfoMapping::new(repo.blobstore().clone())
+        ChangesetInfoMapping::new(repo.blobstore().boxed())
     }
 
     fn derive_from_parents(
@@ -41,11 +40,11 @@ impl BonsaiDerived for ChangesetInfo {
 
 #[derive(Clone)]
 pub struct ChangesetInfoMapping {
-    blobstore: RepoBlobstore,
+    blobstore: Arc<dyn Blobstore>,
 }
 
 impl ChangesetInfoMapping {
-    pub fn new(blobstore: RepoBlobstore) -> Self {
+    pub fn new(blobstore: Arc<dyn Blobstore>) -> Self {
         Self { blobstore }
     }
 
