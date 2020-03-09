@@ -15,6 +15,7 @@
 #
 # The configuration details can be found in the documentation of ui.log below
 import os
+import sys
 import weakref
 
 from edenscm.mercurial import encoding, json, localrepo, pycompat, registrar, util
@@ -125,11 +126,14 @@ def uisetup(ui):
                                 # message separately.
                                 opts["msg"] = " ".join(msg)
                     with open(script, "a") as outfile:
-                        outfile.write(json.dumps({"data": opts, "category": ref}))
+                        outfile.write(
+                            _toutf8lossy(json.dumps({"data": opts, "category": ref}))
+                        )
                         outfile.write("\0")
                     if debug:
                         ui.write_err(
-                            "%s\n" % json.dumps({"data": opts, "category": ref})
+                            "%s\n"
+                            % _toutf8lossy(json.dumps({"data": opts, "category": ref}))
                         )
                 except EnvironmentError:
                     pass
@@ -137,6 +141,20 @@ def uisetup(ui):
 
     # Replace the class for this instance and all clones created from it:
     ui.__class__ = logtofile
+
+
+if sys.version_info[0] >= 3:
+
+    def _toutf8lossy(jsonstr):
+        # type: (str) -> str
+        return jsonstr
+
+
+else:
+
+    def _toutf8lossy(jsonstr):
+        # type: (str) -> str
+        return jsonstr.decode("utf-8", "replace").encode("utf-8")
 
 
 def getrelativecwd(repo):
