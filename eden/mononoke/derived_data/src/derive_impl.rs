@@ -389,7 +389,7 @@ where
 
                     let derived_data_config = repo.get_derived_data_config();
                     let mut derived_data_scuba =
-                        init_derived_data_scuba(&ctx, &derived_data_config);
+                        init_derived_data_scuba::<Derived>(&ctx, &derived_data_config, &bcs_id);
 
                     log_derivation_start::<Derived>(&ctx, &mut derived_data_scuba, &bcs_id);
                     let (stats, res) = deriver.timed().await;
@@ -436,14 +436,17 @@ where
     }
 }
 
-fn init_derived_data_scuba(
+fn init_derived_data_scuba<Derived: BonsaiDerived>(
     ctx: &CoreContext,
     derived_data_config: &DerivedDataConfig,
+    bcs_id: &ChangesetId,
 ) -> ScubaSampleBuilder {
     match &derived_data_config.scuba_table {
         Some(scuba_table) => {
             let mut builder = ScubaSampleBuilder::new(ctx.fb, scuba_table);
             builder.add_common_server_data();
+            builder.add("derived_data", Derived::NAME);
+            builder.add("changeset", format!("{}", bcs_id));
             builder
         }
         None => ScubaSampleBuilder::with_discard(),
@@ -458,9 +461,11 @@ fn log_derivation_start<Derived>(
     Derived: BonsaiDerived,
 {
     let tag = "Generating derived data";
-    let msg = Some(format!("{} {}", Derived::NAME, bcs_id));
-    ctx.scuba().clone().log_with_msg(tag, msg.clone());
-    derived_data_scuba.log_with_msg(tag, msg)
+    ctx.scuba()
+        .clone()
+        .log_with_msg(tag, Some(format!("{} {}", Derived::NAME, bcs_id)));
+    // derived data name and bcs_id already logged as separate fields
+    derived_data_scuba.log_with_msg(tag, None);
 }
 
 fn log_derivation_end<Derived>(
@@ -486,7 +491,8 @@ fn log_derivation_end<Derived>(
 
     derived_data_scuba
         .add_future_stats(&stats)
-        .log_with_msg(tag, msg);
+        // derived data name and bcs_id already logged as separate fields
+        .log_with_msg(tag, None);
 
     STATS::derived_data_latency.add_value(
         stats.completion_time.as_millis_unchecked() as i64,
