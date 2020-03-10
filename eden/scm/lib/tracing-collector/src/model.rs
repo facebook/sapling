@@ -85,6 +85,10 @@ impl InternedStrings {
 struct Espan {
     /// Key-value metadata.
     meta: IndexMap<StringId, StringId>,
+
+    /// Metadata from the tracing eco-system.
+    #[serde(skip)]
+    metadata: Option<&'static tracing::Metadata<'static>>,
 }
 
 #[derive(Serialize, Deserialize, Clone)]
@@ -314,7 +318,8 @@ impl TracingData {
 
         espan.record_values(&mut self.strings, &mut meta);
 
-        let espan = Espan { meta };
+        let metadata = Some(espan.metadata());
+        let espan = Espan { meta, metadata };
 
         let result = EspanId(self.espans.len() as u64 + self.espan_id_offset.0);
         self.espans.push(espan);
@@ -412,6 +417,9 @@ trait EspanLike {
     /// Write key-value map to `strings` and `meta` that are not coupled with
     /// `tokio/tracing`.
     fn record_values(&self, strings: &mut InternedStrings, meta: &mut IndexMap<StringId, StringId>);
+
+    /// Obtain the static metadata.
+    fn metadata(&self) -> &'static tracing::Metadata<'static>;
 }
 
 impl EspanLike for tracing::span::Attributes<'_> {
@@ -428,6 +436,10 @@ impl EspanLike for tracing::span::Attributes<'_> {
         let mut visitor = FieldVisitor::new(strings, meta);
         self.record(&mut visitor)
     }
+
+    fn metadata(&self) -> &'static tracing::Metadata<'static> {
+        tracing::span::Attributes::metadata(self)
+    }
 }
 
 impl EspanLike for tracing::Event<'_> {
@@ -443,6 +455,10 @@ impl EspanLike for tracing::Event<'_> {
         record_tracing_metadata(self.metadata(), strings, meta);
         let mut visitor = FieldVisitor::new(strings, meta);
         self.record(&mut visitor)
+    }
+
+    fn metadata(&self) -> &'static tracing::Metadata<'static> {
+        tracing::Event::metadata(self)
     }
 }
 
@@ -506,7 +522,8 @@ impl TracingData {
             );
         }
 
-        let espan = Espan { meta };
+        let metadata = None;
+        let espan = Espan { meta, metadata };
 
         let result = EspanId(self.espans.len() as u64 + self.espan_id_offset.0);
         self.espans.push(espan);
@@ -580,7 +597,8 @@ impl TracingData {
                         (strings.id(key), strings.id(value))
                     })
                     .collect();
-                espans.push(Espan { meta });
+                let metadata = None;
+                espans.push(Espan { meta, metadata });
             }
 
             // Add Eventus
