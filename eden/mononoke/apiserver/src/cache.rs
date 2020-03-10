@@ -62,7 +62,7 @@ impl CacheManager {
             self.memcache
                 .get(key.clone())
                 .and_then(|result| match result {
-                    Some(cached) => Ok(Bytes::from(cached)),
+                    Some(cached) => Ok(Bytes::from(cached.as_ref())),
                     None => Err(()),
                 })
                 .map({
@@ -149,7 +149,7 @@ mod test {
             .block_on(manager.memcache.get(keygen_key))
             .unwrap()
             .unwrap();
-        assert_eq!(Bytes::from(result), serialized);
+        assert_eq!(Bytes::from(result.as_ref()), serialized);
     }
 
     #[test]

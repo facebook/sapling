@@ -25,7 +25,6 @@ use futures::{
     prelude::*,
 };
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use iobuf::IOBuf;
 use memcache::{KeyGen, MEMCACHE_VALUE_MAX_SIZE};
 use mononoke_types::RepositoryId;
 
@@ -66,7 +65,7 @@ pub struct GetOrFillMultipleFromCacheLayers<Key, T> {
     pub cachelib: CachelibHandler<T>,
     pub keygen: KeyGen,
     pub memcache: MemcacheHandler,
-    pub deserialize: Arc<dyn Fn(IOBuf) -> Result<T, ()> + Send + Sync + 'static>,
+    pub deserialize: Arc<dyn Fn(Bytes) -> Result<T, ()> + Send + Sync + 'static>,
     pub serialize: Arc<dyn Fn(&T) -> Bytes + Send + Sync + 'static>,
     pub report_mc_result: Arc<dyn Fn(McResult<()>) + Send + Sync + 'static>,
     pub get_from_db:
@@ -199,7 +198,7 @@ where
 fn get_multiple_from_memcache<Key, T>(
     keys: Vec<(Key, CachelibKey, MemcacheKey)>,
     memcache: &MemcacheHandler,
-    deserialize: Arc<dyn Fn(IOBuf) -> Result<T, ()> + Send + Sync + 'static>,
+    deserialize: Arc<dyn Fn(Bytes) -> Result<T, ()> + Send + Sync + 'static>,
     report_mc_result: Arc<dyn Fn(McResult<()>) + Send + Sync + 'static>,
 ) -> impl Future<
     Item = (
@@ -301,7 +300,7 @@ mod test {
         db_data_fetches: Arc<AtomicUsize>,
         db_data: HashMap<String, u8>,
     ) -> GetOrFillMultipleFromCacheLayers<String, u8> {
-        let deserialize = |_buf: IOBuf| -> Result<u8, ()> { Ok(0) };
+        let deserialize = |_buf: Bytes| -> Result<u8, ()> { Ok(0) };
 
         let serialize = |byte: &u8| -> Bytes { Bytes::from(vec![byte.clone()]) };
         let get_from_db = move |keys: HashSet<String>| -> BoxFuture<HashMap<String, u8>, Error> {

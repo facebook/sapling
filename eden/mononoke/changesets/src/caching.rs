@@ -20,7 +20,6 @@ use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
-use iobuf::IOBuf;
 use maplit::hashset;
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::{
@@ -205,9 +204,7 @@ impl Changesets for CachingChangesets {
     }
 }
 
-fn deserialize_changeset_entry(buf: IOBuf) -> Result<ChangesetEntry, ()> {
-    let bytes: Bytes = buf.into();
-
+fn deserialize_changeset_entry(bytes: Bytes) -> Result<ChangesetEntry, ()> {
     compact_protocol::deserialize(bytes)
         .and_then(|entry| ChangesetEntry::from_thrift(entry))
         .map_err(|_| ())

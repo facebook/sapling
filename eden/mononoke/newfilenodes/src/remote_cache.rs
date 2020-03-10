@@ -174,7 +174,7 @@ async fn get_single_filenode_from_memcache(
         }
     };
 
-    let thrift = match compact_protocol::deserialize(&Vec::from(serialized)) {
+    let thrift = match compact_protocol::deserialize(&serialized) {
         Ok(thrift) => thrift,
         Err(_) => {
             STATS::point_filenode_deserialize_err.add_value(1);
@@ -222,7 +222,7 @@ async fn get_history_from_memcache(
         }
     };
 
-    let thrift = match compact_protocol::deserialize(&Vec::from(serialized)) {
+    let thrift = match compact_protocol::deserialize(&serialized) {
         Ok(thrift) => thrift,
         Err(_) => {
             STATS::gaf_deserialize_err.add_value(1);
@@ -251,7 +251,10 @@ async fn get_history_from_memcache(
             });
 
             let blob = match try_join_all(read_chunks_fut).await {
-                Ok(chunks) => chunks.into_iter().flat_map(Vec::from).collect::<Vec<_>>(),
+                Ok(chunks) => chunks
+                    .into_iter()
+                    .flat_map(|b| b.into_iter())
+                    .collect::<Vec<u8>>(),
                 Err(_) => {
                     STATS::gaf_pointers_err.add_value(1);
                     return None;

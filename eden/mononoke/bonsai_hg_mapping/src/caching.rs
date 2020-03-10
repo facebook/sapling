@@ -21,7 +21,6 @@ use fbthrift::compact_protocol;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use heapsize_derive::HeapSizeOf;
-use iobuf::IOBuf;
 use memcache::{KeyGen, MemcacheClient};
 use mercurial_types::{HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -97,9 +96,7 @@ impl CachingBonsaiHgMapping {
     }
 }
 
-fn memcache_deserialize(buf: IOBuf) -> Result<BonsaiHgMappingEntry, ()> {
-    let bytes: Bytes = buf.into();
-
+fn memcache_deserialize(bytes: Bytes) -> Result<BonsaiHgMappingEntry, ()> {
     let thrift_entry = compact_protocol::deserialize(bytes).map_err(|_| ());
     thrift_entry.and_then(|entry| BonsaiHgMappingEntry::from_thrift(entry).map_err(|_| ()))
 }

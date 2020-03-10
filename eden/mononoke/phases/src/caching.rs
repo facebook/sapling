@@ -92,7 +92,7 @@ impl CachingPhases {
             cachelib: self.caches.cache_pool.clone().into(),
             keygen: self.caches.keygen.clone(),
             memcache: self.caches.memcache.clone().into(),
-            deserialize: Arc::new(|buf| buf.try_into().map_err(|_| ())),
+            deserialize: Arc::new(|buf| buf.as_ref().try_into().map_err(|_| ())),
             serialize: Arc::new(|phase| Bytes::from(phase.to_string())),
             report_mc_result: Arc::new(report_mc_result),
             get_from_db: Arc::new(get_from_db),

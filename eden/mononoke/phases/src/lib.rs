@@ -64,21 +64,20 @@ impl fmt::Display for Phase {
     }
 }
 
-impl TryFrom<iobuf::IOBuf> for Phase {
+impl TryFrom<&[u8]> for Phase {
     type Error = ErrorKind;
 
-    fn try_from(buf: iobuf::IOBuf) -> Result<Self, Self::Error> {
-        let v: Vec<u8> = buf.into();
-        match std::str::from_utf8(&v) {
+    fn try_from(buf: &[u8]) -> Result<Self, Self::Error> {
+        match std::str::from_utf8(&buf) {
             Ok("Draft") => Ok(Phase::Draft),
             Ok("Public") => Ok(Phase::Public),
             Ok(s) => Err(ErrorKind::PhasesError(
-                format!("Conversion error from IOBuf to Phase for {}", s).into(),
+                format!("Conversion error from &[u8] to Phase for {}", s).into(),
             )),
             _ => Err(ErrorKind::PhasesError(
                 format!(
-                    "Conversion error from IOBuf to Phase, received {} bytes",
-                    v.len()
+                    "Conversion error from &[u8] to Phase, received {} bytes",
+                    buf.len()
                 )
                 .into(),
             )),

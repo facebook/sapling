@@ -9,8 +9,7 @@ use crate::mock_store::MockStore;
 use bytes::Bytes;
 use futures::{future::ok, Future};
 use futures_ext::FutureExt;
-use iobuf::IOBuf;
-use memcache::MemcacheClient;
+use memcache::{MemcacheClient, MemcacheSetType};
 use std::{sync::atomic::Ordering, time::Duration};
 
 #[derive(Clone)]
@@ -27,25 +26,28 @@ impl From<MemcacheClient> for MemcacheHandler {
 }
 
 impl MemcacheHandler {
-    pub fn get(&self, key: String) -> impl Future<Item = Option<IOBuf>, Error = ()> {
+    pub fn get(&self, key: String) -> impl Future<Item = Option<Bytes>, Error = ()> {
         match self {
-            MemcacheHandler::Real(ref client) => client.get(key).left_future(),
+            MemcacheHandler::Real(ref client) => client
+                .get(key)
+                .map(|value| value.map(Bytes::from))
+                .left_future(),
             MemcacheHandler::Mock(store) => {
-                ok(store.get(&key).map(|value| value.clone().into())).right_future()
+                ok(store.get(&key).map(|value| value.clone())).right_future()
             }
         }
     }
 
     pub fn set<V>(&self, key: String, value: V) -> impl Future<Item = (), Error = ()>
     where
-        IOBuf: From<V>,
+        MemcacheSetType: From<V>,
         Bytes: From<V>,
         V: 'static,
     {
         match self {
             MemcacheHandler::Real(ref client) => client.set(key, value).left_future(),
             MemcacheHandler::Mock(store) => {
-                store.set(&key, Bytes::from(value).clone());
+                store.set(&key, value.into());
                 ok(()).right_future()
             }
         }
@@ -58,7 +60,7 @@ impl MemcacheHandler {
         duration: Duration,
     ) -> impl Future<Item = (), Error = ()>
     where
-        IOBuf: From<V>,
+        MemcacheSetType: From<V>,
         Bytes: From<V>,
         V: 'static,
     {
