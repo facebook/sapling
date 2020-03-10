@@ -79,10 +79,11 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
         exitcode = "",
     );
 
-    let exit_code = span.in_scope(|| {
+    let exit_code = {
+        let _guard = span.enter();
         let table = commands::table();
 
-        match dispatch::dispatch(&table, args[1..].to_vec(), io) {
+        let exit_code = match dispatch::dispatch(&table, args[1..].to_vec(), io) {
             Ok(ret) => ret as i32,
             Err(err) => {
                 let should_fallback = if err.downcast_ref::<errors::FallbackToPython>().is_some() {
@@ -110,10 +111,10 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
 
                 HgPython::new(&args).run_hg(args, io)
             }
-        }
-    });
-
-    span.record("exitcode", &exit_code);
+        };
+        span.record("exitcode", &exit_code);
+        exit_code
+    };
 
     let _ = maybe_write_trace(io, &tracing_data, trace_output_path);
 
