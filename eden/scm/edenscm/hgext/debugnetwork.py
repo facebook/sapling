@@ -21,7 +21,7 @@
 import os
 import socket
 
-from edenscm.mercurial import cmdutil, hg, progress, registrar, sshpeer, util
+from edenscm.mercurial import cmdutil, error, hg, progress, registrar, sshpeer, util
 from edenscm.mercurial.i18n import _
 
 
@@ -147,75 +147,123 @@ def checkhgspeed(ui, url, opts):
     download = ui.configbytes("debugnetwork", "speed-test-download-size", 10000000)
     upload = ui.configbytes("debugnetwork", "speed-test-upload-size", 1000000)
 
-    cmd = "%s %s %s" % (
-        sshcmd,
-        args,
-        util.shellquote(
-            "%s %s %s" % (sshpeer._serverquote(speedcmd), download, upload)
-        ),
-    )
+    cmd = "%s %s %s" % (sshcmd, args, util.shellquote(sshpeer._serverquote(speedcmd)))
     pipeo, pipei, pipee, sub = util.popen4(cmd, bufsize=0, env=sshenv)
     pipee = sshpeer.threadedstderr(rui, pipee)
     pipee.start()
-    while True:
-        l = pipei.readline()
-        if not l:
-            break
-        if l.startswith("download bytes"):
-            starttime = util.timer()
-            bytecount = int(l.split()[2])
-            with progress.bar(
-                ui, "testing download speed", total=bytecount, formatfunc=util.bytecount
-            ) as prog:
-                remaining = bytecount
-                while remaining > 0:
-                    data = pipei.read(min(remaining, BLOCK_SIZE))
-                    remaining -= len(data)
-                    prog.value = bytecount - remaining
-            l = pipei.readline()
-            if not l.startswith("download complete"):
-                return False
-            endtime = util.timer()
-            byterate = bytecount / (endtime - starttime)
-            ui.status(
-                _("Downloaded %s bytes in %0.3f seconds (%0.2f Mbit/s, %0.2f MiB/s)\n")
-                % (
-                    bytecount,
-                    endtime - starttime,
-                    8 * byterate / 1000000,
-                    byterate / (1024 * 1024),
-                ),
-                component="debugnetwork",
-            )
-        if l.startswith("upload bytes"):
-            starttime = util.timer()
-            bytecount = int(l.split()[2])
-            with progress.bar(
-                ui, "testing upload speed", total=bytecount, formatfunc=util.bytecount
-            ) as prog:
-                remaining = bytecount
-                while remaining > 0:
-                    data = os.urandom(min(remaining, BLOCK_SIZE))
-                    remaining -= len(data)
-                    pipeo.write(data)
-                    prog.value = bytecount - remaining
+
+    def latencytest(count):
+        # Use the upload endpoint for the latency test.  We will time how long it
+        # takes for the server to return the "upload complete" response for a
+        # single byte upload.
+        latencies = []
+        with progress.spinner(ui, "testing connection latency"):
+            for i in range(count):
+                pipeo.write("upload 1\n")
                 pipeo.flush()
+                l = pipei.readline()
+                if l != "upload bytes 1\n":
+                    raise error.Abort("invalid response from server: %r" % l)
+                starttime = util.timer()
+                pipeo.write("\n")
+                pipeo.flush()
+                l = pipei.readline()
+                endtime = util.timer()
+                if l != "upload complete\n":
+                    raise error.Abort("invalid response from server: %r" % l)
+                latencies.append(endtime - starttime)
+        return latencies
+
+    def downloadtest(description, bytecount):
+        pipeo.write("download %s\n" % bytecount)
+        pipeo.flush()
+        l = pipei.readline()
+        if not l or not l.startswith("download bytes"):
+            raise error.Abort("invalid response from server: %r" % l)
+        bytecount = int(l.split()[2])
+        with progress.bar(
+            ui, description, total=bytecount, formatfunc=util.bytecount
+        ) as prog:
+            starttime = util.timer()
+            remaining = bytecount
+            while remaining > 0:
+                data = pipei.read(min(remaining, BLOCK_SIZE))
+                if not data:
+                    raise error.Abort("premature end of speed-test download stream")
+                remaining -= len(data)
+                prog.value = bytecount - remaining
             l = pipei.readline()
-            if not l.startswith("upload complete"):
-                return False
+            if not l or not l.startswith("download complete"):
+                raise error.Abort("invalid response from server: %r" % l)
             endtime = util.timer()
-            byterate = bytecount / (endtime - starttime)
-            ui.status(
-                _("Uploaded %s bytes in %0.3f seconds (%0.2f Mbit/s, %0.2f MiB/s)\n")
-                % (
-                    bytecount,
-                    endtime - starttime,
-                    8 * byterate / 1000000,
-                    byterate / (1024 * 1024),
-                ),
-                component="debugnetwork",
-            )
-    return True
+        return endtime - starttime
+
+    def uploadtest(description, bytecount):
+        pipeo.write("upload %s\n" % bytecount)
+        pipeo.flush()
+        l = pipei.readline()
+        if not l or not l.startswith("upload bytes"):
+            raise error.Abort("invalid response from server: %r" % l)
+        bytecount = int(l.split()[2])
+        with progress.bar(
+            ui, description, total=bytecount, formatfunc=util.bytecount
+        ) as prog:
+            starttime = util.timer()
+            remaining = bytecount
+            while remaining > 0:
+                data = os.urandom(min(remaining, BLOCK_SIZE))
+                remaining -= len(data)
+                pipeo.write(data)
+                prog.value = bytecount - remaining
+            pipeo.flush()
+            l = pipei.readline()
+            if not l or not l.startswith("upload complete"):
+                raise error.Abort("invalid response from server: %r" % l)
+            endtime = util.timer()
+        return endtime - starttime
+
+    def printresult(testname, bytecount, testtime):
+        byterate = bytecount / testtime
+        ui.status(
+            _("Speed: %s %s in %s (%0.2f Mbit/s, %0.2f MiB/s)\n")
+            % (
+                testname,
+                util.bytecount(bytecount),
+                util.timecount(testtime),
+                8 * byterate / 1000000,
+                byterate / (1024 * 1024),
+            ),
+            component="debugnetwork",
+        )
+
+    try:
+        latencies = latencytest(5)
+        latency = sum(latencies, 0) / len(latencies)
+        ui.status(
+            _("Latency: %s (average of %s round-trips)\n")
+            % (util.timecount(latency), len(latencies)),
+            component="debugnetwork",
+        )
+
+        for testfunc, testname, bytecount in [
+            (downloadtest, "download", download),
+            (uploadtest, "upload", upload),
+        ]:
+            warmuptime = testfunc("warming up for %s test" % testname, bytecount)
+            if warmuptime < 0.2:
+                # The network is sufficiently fast that we warmed up in <200ms.
+                # To make the test more meaningful, increase the size of data
+                # 25x (which should give a maximum test time of 5s).
+                bytecount *= 25
+                warmuptime = testfunc(
+                    "warming up for large %s test" % testname, bytecount
+                )
+            printresult("(round 1) %sed" % testname, bytecount, warmuptime)
+            testtime = testfunc(testname, bytecount)
+            printresult("(round 2) %sed" % testname, bytecount, testtime)
+        return True
+    except Exception:
+        return False
 
 
 @command("debugnetwork", cmdutil.remoteopts, _("[REMOTE]"))
