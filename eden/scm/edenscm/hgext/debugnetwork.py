@@ -65,7 +65,7 @@ def checkreachability(ui, url, addrinfos):
             s.shutdown(socket.SHUT_RDWR)
             endtime = util.timer()
             ui.status(
-                _("Connected ok: %0.3f seconds\n") % (endtime - starttime),
+                _("Connected ok: %s\n") % util.timecount(endtime - starttime),
                 component="debugnetwork",
             )
             ok = True
@@ -90,7 +90,7 @@ def checksshcommand(ui, url, opts):
     endtime = util.timer()
     if res == 0:
         ui.status(
-            _("Connected ok: %0.3f seconds\n") % (endtime - starttime),
+            _("Connected ok: %s\n") % util.timecount(endtime - starttime),
             component="debugnetwork",
         )
         return True
@@ -104,6 +104,7 @@ def checkhgserver(ui, repo, opts, path):
         _("Testing connection to Mercurial on the server: querying master bookmark\n"),
         component="debugnetwork",
     )
+    starttime = util.timer()
     peer = None
     try:
         peer = hg.peer(repo, opts, path)
@@ -115,16 +116,18 @@ def checkhgserver(ui, repo, opts, path):
     finally:
         if peer:
             peer.close()
+    endtime = util.timer()
 
+    ui.status(
+        _("Connected ok: %s\n") % util.timecount(endtime - starttime),
+        component="debugnetwork",
+    )
     if master:
         ui.status(
-            _("Connected ok: server master bookmark is %s\n") % master,
-            component="debugnetwork",
+            _("Server master bookmark is %s\n") % master, component="debugnetwork"
         )
     else:
-        ui.status(
-            _("Connected ok: server has no master bookmark\n"), component="debugnetwork"
-        )
+        ui.status(_("Server has no master bookmark\n"), component="debugnetwork")
     return True
 
 
