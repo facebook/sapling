@@ -8,8 +8,9 @@
 use crate::changeset::{visit_changesets, ChangesetVisitMeta, ChangesetVisitor};
 use anyhow::{bail, Error};
 use blobrepo::derive_hg_manifest::derive_hg_manifest;
-use blobrepo::BlobRepo;
-use blobstore::Loadable;
+use blobrepo::{BlobRepo, DangerousOverride};
+use blobstore::{Blobstore, Loadable};
+use cacheblob::MemWritesBlobstore;
 use cloned::cloned;
 use context::CoreContext;
 use futures::{
@@ -135,7 +136,11 @@ impl BonsaiMFVerify {
         self,
         start_points: impl IntoIterator<Item = HgChangesetId>,
     ) -> impl Stream<Item = (BonsaiMFVerifyResult, ChangesetVisitMeta), Error = Error> + Send {
-        let repo = self.repo.in_memory_writes_READ_DOC_COMMENT();
+        let repo = self
+            .repo
+            .dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
+                Arc::new(MemWritesBlobstore::new(blobstore))
+            });
 
         visit_changesets(
             self.ctx,

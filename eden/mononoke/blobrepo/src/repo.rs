@@ -19,7 +19,7 @@ use bookmarks::{
     self, Bookmark, BookmarkName, BookmarkPrefix, BookmarkUpdateLogEntry, BookmarkUpdateReason,
     Bookmarks, Freshness,
 };
-use cacheblob::{LeaseOps, MemWritesBlobstore};
+use cacheblob::LeaseOps;
 use changeset_fetcher::{ChangesetFetcher, SimpleChangesetFetcher};
 use changesets::{ChangesetEntry, ChangesetInsert, Changesets};
 use cloned::cloned;
@@ -163,52 +163,6 @@ impl BlobRepo {
             phases_factory,
             derived_data_config,
         }
-    }
-
-    /// Convert this BlobRepo instance into one that only does writes in memory.
-    ///
-    /// ------------
-    /// IMPORTANT!!!
-    /// ------------
-    /// Currently this applies to the blobstore *ONLY*. A future improvement would be to also
-    /// do database writes in-memory.
-    /// This function produces a blobrepo which DOES NOT HAVE ANY REDACTION ENABLED
-    #[allow(non_snake_case)]
-    pub fn in_memory_writes_READ_DOC_COMMENT(self) -> BlobRepo {
-        let BlobRepo {
-            bookmarks,
-            blobstore,
-            filenodes,
-            changesets,
-            bonsai_git_mapping,
-            bonsai_globalrev_mapping,
-            bonsai_hg_mapping,
-            repoid,
-            derived_data_lease,
-            filestore_config,
-            phases_factory,
-            derived_data_config,
-            ..
-        } = self;
-
-        let repo_blobstore_args =
-            RepoBlobstoreArgs::new_with_wrapped_inner_blobstore(blobstore, repoid, |blobstore| {
-                Arc::new(MemWritesBlobstore::new(blobstore))
-            });
-
-        BlobRepo::new(
-            bookmarks,
-            repo_blobstore_args,
-            filenodes,
-            changesets,
-            bonsai_git_mapping,
-            bonsai_globalrev_mapping,
-            bonsai_hg_mapping,
-            derived_data_lease,
-            filestore_config,
-            phases_factory,
-            derived_data_config,
-        )
     }
 
     /// Get Mercurial heads, which we approximate as publishing Bonsai Bookmarks.
