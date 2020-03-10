@@ -18,6 +18,7 @@ twox-hash = "1"
 vlqencoding = { path = "../vlqencoding" }
 
 [dev-dependencies]
+dev-logger = { path = "../dev-logger" }
 minibench = { path = "../minibench" }
 quickcheck = "0.9"
 rand_chacha = "0.2"
