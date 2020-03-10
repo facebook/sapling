@@ -22,6 +22,7 @@
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
+#include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/win/mount/FsChannel.h"
@@ -38,6 +39,7 @@ class Future;
 namespace facebook {
 namespace eden {
 
+class BlobCache;
 class CheckoutConfig;
 class CheckoutConflict;
 class Clock;
@@ -102,6 +104,7 @@ class EdenMount {
   static std::shared_ptr<EdenMount> create(
       std::unique_ptr<CheckoutConfig> config,
       std::shared_ptr<ObjectStore> objectStore,
+      std::shared_ptr<BlobCache> blobCache,
       std::shared_ptr<ServerState> serverState,
       std::unique_ptr<Journal> journal);
 
@@ -147,6 +150,29 @@ class EdenMount {
    */
   const ObjectStore* getObjectStore() const {
     return objectStore_.get();
+  }
+
+  /**
+   * Return Eden's blob cache.
+   *
+   * It is guaranteed to be valid for the lifetime of the EdenMount.
+   */
+  BlobCache* getBlobCache() const {
+    return blobCache_.get();
+  }
+
+  FsChannel* getFsChannel() {
+    CHECK(fsChannel_);
+    return fsChannel_.get();
+  }
+
+  /**
+   * Return the BlobAccess used by this mount point.
+   *
+   * The BlobAccess is guaranteed to be valid for the lifetime of the EdenMount.
+   */
+  BlobAccess* getBlobAccess() {
+    return &blobAccess_;
   }
 
   Journal& getJournal() {
@@ -342,6 +368,7 @@ class EdenMount {
   EdenMount(
       std::unique_ptr<CheckoutConfig> config,
       std::shared_ptr<ObjectStore> objectStore,
+      std::shared_ptr<BlobCache> blobCache,
       std::shared_ptr<ServerState> serverState,
       std::unique_ptr<Journal> journal);
 
@@ -380,6 +407,9 @@ class EdenMount {
   std::shared_ptr<ObjectStore> objectStore_;
 
   std::unique_ptr<CurrentState> currentState_;
+
+  std::shared_ptr<BlobCache> blobCache_;
+  BlobAccess blobAccess_;
 
   /**
    * This is the channel between ProjectedFS and rest of Eden.

@@ -19,6 +19,7 @@ if (WIN32)
     eden_inodes
     PUBLIC
       eden_journal
+      eden_store
       Folly::folly
   )
 else()

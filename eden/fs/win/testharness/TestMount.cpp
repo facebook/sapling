@@ -48,11 +48,19 @@ using std::make_unique;
 using std::shared_ptr;
 using std::string;
 
+namespace {
+constexpr size_t kBlobCacheMaximumSize = 1000; // bytes
+constexpr size_t kBlobCacheMinimumEntries = 0;
+} // namespace
+
 namespace facebook {
 namespace eden {
 
 TestMount::TestMount()
-    : privHelper_{make_shared<PrivHelper>()},
+    : blobCache_{BlobCache::create(
+          kBlobCacheMaximumSize,
+          kBlobCacheMinimumEntries)},
+      privHelper_{make_shared<PrivHelper>()},
       serverExecutor_{make_shared<folly::ManualExecutor>()},
       testDir_{std::filesystem::temp_directory_path() /
                Guid::generate().toWString()} {
@@ -159,6 +167,7 @@ void TestMount::createMount() {
   edenMount_ = EdenMount::create(
       std::move(config_),
       std::move(objectStore),
+      blobCache_,
       serverState_,
       std::move(journal));
 
@@ -232,6 +241,7 @@ void TestMount::remount() {
   edenMount_ = EdenMount::create(
       std::move(config),
       std::move(objectStore),
+      blobCache_,
       serverState_,
       std::move(journal));
   edenMount_->initialize(std::move(std::make_unique<TestFsChannel>()));

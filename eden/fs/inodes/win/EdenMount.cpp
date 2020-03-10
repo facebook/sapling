@@ -46,12 +46,14 @@ static uint64_t generateLuid() {
 std::shared_ptr<EdenMount> EdenMount::create(
     std::unique_ptr<CheckoutConfig> config,
     std::shared_ptr<ObjectStore> objectStore,
+    std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal) {
   return std::shared_ptr<EdenMount>(
       new EdenMount(
           std::move(config),
           std::move(objectStore),
+          std::move(blobCache),
           std::move(serverState),
           std::move(journal)),
       EdenMountDeleter{});
@@ -60,11 +62,14 @@ std::shared_ptr<EdenMount> EdenMount::create(
 EdenMount::EdenMount(
     std::unique_ptr<CheckoutConfig> config,
     std::shared_ptr<ObjectStore> objectStore,
+    std::shared_ptr<BlobCache> blobCache,
     std::shared_ptr<ServerState> serverState,
     std::unique_ptr<Journal> journal)
     : config_{std::move(config)},
       serverState_{std::move(serverState)},
       objectStore_{std::move(objectStore)},
+      blobCache_{std::move(blobCache)},
+      blobAccess_{objectStore_, blobCache_},
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
       journal_{std::move(journal)},
       mountGeneration_{generateLuid()} {

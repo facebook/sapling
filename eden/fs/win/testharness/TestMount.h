@@ -136,6 +136,10 @@ class TestMount {
     return backingStore_;
   }
 
+  const std::shared_ptr<BlobCache>& getBlobCache() const {
+    return blobCache_;
+  }
+
   /**
    * Access to the TestMount's FakeClock which is referenced by the underlying
    * EdenMount (and thus inodes).
@@ -252,6 +256,7 @@ class TestMount {
   std::shared_ptr<LocalStore> localStore_;
   std::shared_ptr<FakeBackingStore> backingStore_;
   std::shared_ptr<EdenStats> stats_;
+  std::shared_ptr<BlobCache> blobCache_;
 
   std::unique_ptr<WinStore> winStore_;
 

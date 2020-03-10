@@ -1018,6 +1018,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   auto edenMount = EdenMount::create(
       std::move(initialConfig),
       std::move(objectStore),
+      blobCache_,
       serverState_,
       std::move(journal));
   edenMount->initialize(std::make_unique<PrjfsChannel>(edenMount.get()));
