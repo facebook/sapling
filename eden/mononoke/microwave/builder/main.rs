@@ -68,7 +68,7 @@ async fn do_main<'a>(
                 let logger = logger.new(o!("repo" => name.clone()));
 
                 let ctx = {
-                    scuba.add("reponame", name);
+                    scuba.add("reponame", name.clone());
                     let session = SessionContainer::new_with_defaults(fb);
                     session.new_context(logger.clone(), scuba)
                 };
@@ -80,6 +80,7 @@ async fn do_main<'a>(
                 let warmup = async move {
                     let builder = BlobrepoBuilder::new(
                         fb,
+                        name,
                         &config,
                         mysql_options,
                         caching,

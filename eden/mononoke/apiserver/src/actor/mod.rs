@@ -70,6 +70,7 @@ impl Mononoke {
                                 info!(logger, "Initializing repo: {}", &name);
                                 MononokeRepo::new(
                                     fb,
+                                    name.clone(),
                                     logger.new(o!("repo" => name.clone())),
                                     config,
                                     common_config,

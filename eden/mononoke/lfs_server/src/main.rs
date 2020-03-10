@@ -258,6 +258,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             async move {
                 let builder = BlobrepoBuilder::new(
                     fb,
+                    name.clone(),
                     &config,
                     mysql_options,
                     caching,

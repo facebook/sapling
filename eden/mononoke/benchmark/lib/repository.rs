@@ -152,6 +152,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
         FilestoreConfig::default(),
         phases_factory,
         init_all_derived_data(),
+        "benchmarkrepo".to_string(),
     ))
 }
 

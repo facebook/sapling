@@ -761,6 +761,7 @@ pub fn setup_common(
         config.filestore,
         readonly_storage,
         config.derived_data_config,
+        repo_name.clone(),
     )
     .compat()
     .boxed();

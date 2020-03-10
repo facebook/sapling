@@ -43,7 +43,6 @@ pub struct MononokeRepo {
     hook_manager: Arc<HookManager>,
     streaming_clone: Option<SqlStreamingCloneConfig>,
     lfs_params: LfsParams,
-    reponame: String,
     readonly_fetcher: RepoReadWriteFetcher,
     bookmark_attrs: BookmarkAttrs,
     infinitepush: InfinitepushParams,
@@ -61,7 +60,6 @@ impl MononokeRepo {
         hook_manager: Arc<HookManager>,
         streaming_clone: Option<SqlStreamingCloneConfig>,
         lfs_params: LfsParams,
-        reponame: String,
         readonly_fetcher: RepoReadWriteFetcher,
         infinitepush: InfinitepushParams,
         list_keys_patterns_max: u64,
@@ -74,7 +72,6 @@ impl MononokeRepo {
             hook_manager,
             streaming_clone,
             lfs_params,
-            reponame,
             readonly_fetcher,
             bookmark_attrs: BookmarkAttrs::new(bookmark_params),
             infinitepush,
@@ -110,7 +107,7 @@ impl MononokeRepo {
     }
 
     pub fn reponame(&self) -> &String {
-        &self.reponame
+        &self.blobrepo.name()
     }
 
     #[inline]

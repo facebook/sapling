@@ -67,6 +67,7 @@ const BLOBSTORE_PRESENCE_CACHE_POOL: &'static str = "blobstore-presence";
 
 pub struct BlobrepoBuilder<'a> {
     fb: FacebookInit,
+    reponame: String,
     storage_config: StorageConfig,
     repoid: RepositoryId,
     mysql_options: MysqlOptions,
@@ -84,6 +85,7 @@ pub struct BlobrepoBuilder<'a> {
 impl<'a> BlobrepoBuilder<'a> {
     pub fn new(
         fb: FacebookInit,
+        reponame: String,
         config: &RepoConfig,
         mysql_options: MysqlOptions,
         caching: Caching,
@@ -94,6 +96,7 @@ impl<'a> BlobrepoBuilder<'a> {
     ) -> Self {
         Self {
             fb,
+            reponame,
             storage_config: config.storage_config.clone(),
             repoid: config.repoid,
             mysql_options,
@@ -122,6 +125,7 @@ impl<'a> BlobrepoBuilder<'a> {
     pub async fn build(self) -> Result<BlobRepo, Error> {
         let BlobrepoBuilder {
             fb,
+            reponame,
             storage_config,
             repoid,
             mysql_options,
@@ -169,6 +173,7 @@ impl<'a> BlobrepoBuilder<'a> {
             filestore_params,
             readonly_storage,
             derived_data_config,
+            reponame,
         )
         .compat()
         .await
@@ -188,6 +193,7 @@ pub fn open_blobrepo_given_datasources(
     filestore_params: Option<FilestoreParams>,
     readonly_storage: ReadOnlyStorage,
     derived_data_config: DerivedDataConfig,
+    reponame: String,
 ) -> impl Future<Item = BlobRepo, Error = Error> {
     sql_factory.and_then(move |sql_factory| {
         let redacted_blobs = match redaction {
@@ -251,6 +257,7 @@ pub fn open_blobrepo_given_datasources(
                     filestore_config,
                     bookmarks_cache_ttl,
                     derived_data_config,
+                    reponame,
                 )
             }
             Caching::Enabled => new_production(
@@ -264,6 +271,7 @@ pub fn open_blobrepo_given_datasources(
                 filestore_config,
                 readonly_storage,
                 derived_data_config,
+                reponame,
             ),
         }
     })
@@ -318,6 +326,7 @@ pub fn new_memblob_empty_with_id(
         FilestoreConfig::default(),
         phases_factory,
         init_all_derived_data(),
+        "testrepo".to_string(),
     ))
 }
 
@@ -413,6 +422,7 @@ pub fn new_memblob_with_connection_with_id(
             FilestoreConfig::default(),
             phases_factory,
             init_all_derived_data(),
+            "testrepo".to_string(),
         ),
         con,
     ))
@@ -428,6 +438,7 @@ fn new_development(
     filestore_config: FilestoreConfig,
     bookmarks_cache_ttl: Option<Duration>,
     derived_data_config: DerivedDataConfig,
+    reponame: String,
 ) -> BoxFuture<BlobRepo, Error> {
     let bookmarks = sql_factory
         .open::<SqlBookmarks>()
@@ -515,6 +526,7 @@ fn new_development(
                     filestore_config,
                     phases_factory,
                     derived_data_config,
+                    reponame,
                 )
             }
         })
@@ -534,6 +546,7 @@ fn new_production(
     filestore_config: FilestoreConfig,
     readonly_storage: ReadOnlyStorage,
     derived_data_config: DerivedDataConfig,
+    reponame: String,
 ) -> BoxFuture<BlobRepo, Error> {
     fn get_volatile_pool(name: &str) -> Result<cachelib::VolatileLruCachePool> {
         let err = Error::from(ErrorKind::MissingCachePool(name.to_string()));
@@ -653,6 +666,7 @@ fn new_production(
                     filestore_config,
                     phases_factory,
                     derived_data_config,
+                    reponame,
                 )
             },
         )

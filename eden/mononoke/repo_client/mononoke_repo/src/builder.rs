@@ -23,7 +23,6 @@ use crate::{streaming_clone, MononokeRepo};
 
 pub struct MononokeRepoBuilder {
     ctx: CoreContext,
-    name: String,
     repo: BlobRepo,
     config: RepoConfig,
     mysql_options: MysqlOptions,
@@ -43,6 +42,7 @@ impl MononokeRepoBuilder {
     ) -> Result<MononokeRepoBuilder, Error> {
         let builder = BlobrepoBuilder::new(
             ctx.fb,
+            name,
             &config,
             mysql_options,
             caching,
@@ -55,7 +55,6 @@ impl MononokeRepoBuilder {
 
         Ok(Self {
             ctx,
-            name,
             repo,
             config,
             mysql_options,
@@ -66,7 +65,6 @@ impl MononokeRepoBuilder {
     pub async fn finalize(self, hook_manager: Arc<HookManager>) -> Result<MononokeRepo, Error> {
         let Self {
             ctx,
-            name,
             repo,
             config,
             mysql_options,
@@ -147,7 +145,7 @@ impl MononokeRepoBuilder {
             .await?;
 
         let read_write_fetcher =
-            RepoReadWriteFetcher::new(sql_read_write_status, readonly, name.clone());
+            RepoReadWriteFetcher::new(sql_read_write_status, readonly, repo.name().clone());
 
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = skiplist;
 
@@ -158,7 +156,6 @@ impl MononokeRepoBuilder {
             hook_manager,
             streaming_clone,
             lfs,
-            name,
             read_write_fetcher,
             infinitepush,
             list_keys_patterns_max,

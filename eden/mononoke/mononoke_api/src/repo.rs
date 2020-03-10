@@ -139,6 +139,7 @@ impl Repo {
 
         let builder = BlobrepoBuilder::new(
             fb,
+            name.clone(),
             &config,
             mysql_options,
             with_cachelib,

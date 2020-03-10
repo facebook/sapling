@@ -89,6 +89,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
     let builder = BlobrepoBuilder::new(
         fb,
+        repo_name,
         &config,
         cmdlib::args::parse_mysql_options(&matches),
         caching,

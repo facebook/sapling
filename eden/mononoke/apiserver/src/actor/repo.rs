@@ -116,6 +116,7 @@ pub struct MononokeRepo {
 impl MononokeRepo {
     pub fn new(
         fb: FacebookInit,
+        name: String,
         logger: Logger,
         config: RepoConfig,
         common_config: CommonConfig,
@@ -149,6 +150,7 @@ impl MononokeRepo {
                 async move {
                     let builder = BlobrepoBuilder::new(
                         fb,
+                        name,
                         &config,
                         mysql_options,
                         with_cachelib,

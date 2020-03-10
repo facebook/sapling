@@ -1041,6 +1041,7 @@ fn open_repo_internal_with_repo_id<'a>(
     async move {
         let mut builder = BlobrepoBuilder::new(
             fb,
+            reponame,
             &config,
             mysql_options,
             caching,

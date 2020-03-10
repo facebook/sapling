@@ -120,6 +120,7 @@ pub struct BlobRepo {
     filestore_config: FilestoreConfig,
     phases_factory: SqlPhasesFactory,
     derived_data_config: DerivedDataConfig,
+    reponame: String,
 }
 
 impl BlobRepo {
@@ -135,6 +136,7 @@ impl BlobRepo {
         filestore_config: FilestoreConfig,
         phases_factory: SqlPhasesFactory,
         derived_data_config: DerivedDataConfig,
+        reponame: String,
     ) -> Self {
         let (blobstore, repoid) = blobstore_args.into_blobrepo_parts();
 
@@ -162,6 +164,7 @@ impl BlobRepo {
             filestore_config,
             phases_factory,
             derived_data_config,
+            reponame,
         }
     }
 
@@ -708,6 +711,10 @@ impl BlobRepo {
     pub fn get_phases(&self) -> Arc<dyn Phases> {
         self.phases_factory
             .get_phases((self.changeset_fetcher_factory)(), self.get_heads_fetcher())
+    }
+
+    pub fn name(&self) -> &String {
+        &self.reponame
     }
 
     pub fn get_heads_fetcher(&self) -> HeadsFetcher {
@@ -1957,6 +1964,7 @@ impl Clone for BlobRepo {
             filestore_config: self.filestore_config.clone(),
             phases_factory: self.phases_factory.clone(),
             derived_data_config: self.derived_data_config.clone(),
+            reponame: self.reponame.clone(),
         }
     }
 }
