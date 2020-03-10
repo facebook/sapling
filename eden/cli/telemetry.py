@@ -178,7 +178,7 @@ class JsonTelemetrySample(TelemetrySample):
         self.ints: Dict[str, int] = {}
         self.strings: Dict[str, str] = {}
         self.doubles: Dict[str, float] = {}
-        self.tags: Dict[str, Set[str]] = {}
+        self.tags: Dict[str, List[str]] = {}
         self.logger: "BaseJsonTelemetryLogger" = logger
 
     def add_int(self, name: str, value: int) -> "JsonTelemetrySample":
@@ -194,14 +194,14 @@ class JsonTelemetrySample(TelemetrySample):
         return self
 
     def add_tags(self, name: str, value: Set[str]) -> "JsonTelemetrySample":
-        self.tags[name] = value
+        self.tags[name] = list(value)
         return self
 
     def get_json(self) -> str:
         data: Dict[
             str,
             Union[
-                Dict[str, str], Dict[str, int], Dict[str, float], Dict[str, Set[str]]
+                Dict[str, str], Dict[str, int], Dict[str, float], Dict[str, List[str]]
             ],
         ] = {}
         data["int"] = self.ints
