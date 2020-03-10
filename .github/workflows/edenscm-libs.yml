@@ -13,5 +13,87 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
-    - name: Run tests
-      run: cd eden/scm/lib && for i in */Cargo.toml; do grep -q fbthrift "$i" || echo Testing $i && cargo test -q --manifest-path "$i"; done
+    - name: Run auth tests
+      run: cargo test -q --manifest-path auth/Cargo.toml
+    - name: Run backingstore tests
+      run: cargo test -q --manifest-path backingstore/Cargo.toml
+    - name: Run blackbox tests
+      run: cargo test -q --manifest-path blackbox/Cargo.toml
+    - name: Run bookmarkstore tests
+      run: cargo test -q --manifest-path bookmarkstore/Cargo.toml
+    - name: Run cliparser tests
+      run: cargo test -q --manifest-path cliparser/Cargo.toml
+    - name: Run commitcloudsubscriber tests
+      run: cargo test -q --manifest-path commitcloudsubscriber/Cargo.toml
+    - name: Run configparser tests
+      run: cargo test -q --manifest-path configparser/Cargo.toml
+    - name: Run cpython-ext tests
+      run: cargo test -q --manifest-path cpython-ext/Cargo.toml
+    - name: Run dag tests
+      run: cargo test -q --manifest-path dag/Cargo.toml
+    - name: Run drawdag tests
+      run: cargo test -q --manifest-path drawdag/Cargo.toml
+    - name: Run edenapi tests
+      run: cargo test -q --manifest-path edenapi/Cargo.toml
+    - name: Run edenfs-client tests
+      run: cargo test -q --manifest-path edenfs-client/Cargo.toml
+    - name: Run encoding tests
+      run: cargo test -q --manifest-path encoding/Cargo.toml
+    - name: Run hgtime tests
+      run: cargo test -q --manifest-path hgtime/Cargo.toml
+    - name: Run indexedlog tests
+      run: cargo test -q --manifest-path indexedlog/Cargo.toml
+    - name: Run lz4-pyframe tests
+      run: cargo test -q --manifest-path lz4-pyframe/Cargo.toml
+    - name: Run manifest tests
+      run: cargo test -q --manifest-path manifest/Cargo.toml
+    - name: Run manifest-tree tests
+      run: cargo test -q --manifest-path manifest-tree/Cargo.toml
+    - name: Run metalog tests
+      run: cargo test -q --manifest-path metalog/Cargo.toml
+    - name: Run mincode tests
+      run: cargo test -q --manifest-path mincode/Cargo.toml
+    - name: Run minibench tests
+      run: cargo test -q --manifest-path minibench/Cargo.toml
+    - name: Run minibytes tests
+      run: cargo test -q --manifest-path minibytes/Cargo.toml
+    - name: Run mpatch tests
+      run: cargo test -q --manifest-path mpatch/Cargo.toml
+    - name: Run mpatch-sys tests
+      run: cargo test -q --manifest-path mpatch-sys/Cargo.toml
+    - name: Run mutationstore tests
+      run: cargo test -q --manifest-path mutationstore/Cargo.toml
+    - name: Run nodemap tests
+      run: cargo test -q --manifest-path nodemap/Cargo.toml
+    - name: Run pathmatcher tests
+      run: cargo test -q --manifest-path pathmatcher/Cargo.toml
+    - name: Run procinfo tests
+      run: cargo test -q --manifest-path procinfo/Cargo.toml
+    - name: Run radixbuf tests
+      run: cargo test -q --manifest-path radixbuf/Cargo.toml
+    - name: Run renderdag tests
+      run: cargo test -q --manifest-path renderdag/Cargo.toml
+    - name: Run revisionstore tests
+      run: cargo test -q --manifest-path revisionstore/Cargo.toml
+    - name: Run stackdesc tests
+      run: cargo test -q --manifest-path stackdesc/Cargo.toml
+    - name: Run tracing-collector tests
+      run: cargo test -q --manifest-path tracing-collector/Cargo.toml
+    - name: Run treestate tests
+      run: cargo test -q --manifest-path treestate/Cargo.toml
+    - name: Run types tests
+      run: cargo test -q --manifest-path types/Cargo.toml
+    - name: Run util tests
+      run: cargo test -q --manifest-path util/Cargo.toml
+    - name: Run vlqencoding tests
+      run: cargo test -q --manifest-path vlqencoding/Cargo.toml
+    - name: Run workingcopy tests
+      run: cargo test -q --manifest-path workingcopy/Cargo.toml
+    - name: Run xdiff tests
+      run: cargo test -q --manifest-path xdiff/Cargo.toml
+    - name: Run xdiff-sys tests
+      run: cargo test -q --manifest-path xdiff-sys/Cargo.toml
+    - name: Run zstdelta tests
+      run: cargo test -q --manifest-path zstdelta/Cargo.toml
+    - name: Run zstore tests
+      run: cargo test -q --manifest-path zstore/Cargo.toml
