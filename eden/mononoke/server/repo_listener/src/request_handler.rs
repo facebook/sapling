@@ -54,6 +54,8 @@ define_stats! {
     prefix = "mononoke.request_handler";
     wireproto_ms:
         histogram(500, 0, 100_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    request_success: timeseries(Rate, Sum),
+    request_failure: timeseries(Rate, Sum),
 }
 
 pub fn request_handler(
@@ -192,9 +194,17 @@ pub fn request_handler(
                 .add_future_stats(&stats)
                 .add("wireproto_commands", wireproto_calls);
 
+            // Populate stats no matter what to avoid dead detectors firing.
+            STATS::request_success.add_value(0);
+            STATS::request_failure.add_value(0);
+
             match result {
-                Ok(_) => scuba.log_with_msg("Request finished - Success", None),
+                Ok(_) => {
+                    STATS::request_success.add_value(1);
+                    scuba.log_with_msg("Request finished - Success", None)
+                }
                 Err(err) => {
+                    STATS::request_failure.add_value(1);
                     scuba.log_with_msg("Request finished - Failure", format!("{:#?}", err));
                 }
             }
