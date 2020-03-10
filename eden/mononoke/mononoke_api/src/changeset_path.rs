@@ -16,13 +16,10 @@ use cloned::cloned;
 use fastlog::list_file_history;
 use filestore::FetchKey;
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
-use futures::future::{ready, FutureExt, Shared};
+use futures::future::{FutureExt, Shared};
 use futures::stream::Stream;
 use futures_old::{stream::Stream as StreamLegacy, Future as FutureLegacy};
-use futures_util::{
-    stream::{StreamExt, TryStreamExt},
-    try_join,
-};
+use futures_util::{try_join, TryStreamExt};
 use manifest::{Entry, ManifestOps};
 use mononoke_types::{
     Blame, ChangesetId, ContentId, FileType, FileUnodeId, FsnodeId, ManifestUnodeId,
@@ -274,9 +271,6 @@ impl ChangesetPathContext {
     /// a history of the path.
     pub async fn history<'a>(
         &'a self,
-        skip: usize,
-        after_timestamp: Option<i64>,
-        before_timestamp: Option<i64>,
     ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + 'a, MononokeError>
     {
         let ctx = self.changeset.ctx().clone();
@@ -289,36 +283,10 @@ impl ChangesetPathContext {
         })?;
         let mpath = self.path.as_mpath();
 
-        if skip > 0 && (after_timestamp.is_some() || before_timestamp.is_some()) {
-            return Err(MononokeError::InvalidRequest(
-                "Time filters cannot be applied if skip is not 0".to_string(),
-            ));
-        }
-
         Ok(list_file_history(ctx, repo, mpath.cloned(), unode_entry)
             .map_err(|error| MononokeError::from(Error::from(error)))
             .compat()
-            .skip(skip)
-            .map(move |changeset_id| async move {
-                let changeset_id = changeset_id?;
-                let changeset = ChangesetContext::new(self.repo().clone(), changeset_id);
-                let date = changeset.author_date().await?;
-
-                if let Some(after) = after_timestamp {
-                    if after > date.timestamp() {
-                        return Ok(None);
-                    }
-                }
-                if let Some(before) = before_timestamp {
-                    if before < date.timestamp() {
-                        return Ok(None);
-                    }
-                }
-
-                Ok(Some(changeset))
-            })
-            .buffered(100)
-            .try_filter_map(|x| ready(Ok(x))))
+            .map_ok(move |changeset_id| ChangesetContext::new(self.repo().clone(), changeset_id)))
     }
 }
 

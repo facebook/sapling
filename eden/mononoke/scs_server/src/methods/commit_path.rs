@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use cloned::cloned;
 use context::CoreContext;
 use dedupmap::DedupMap;
 use futures_util::{
@@ -210,22 +211,62 @@ impl SourceControlServiceImpl {
         let number: usize = check_range_and_convert("limit", params.limit, 0..)?;
         let skip: usize = check_range_and_convert("skip", params.skip, 0..)?;
 
-        let history = path
-            .history(skip, params.after_timestamp, params.before_timestamp)
-            .await?;
+        cloned!(params.after_timestamp, params.before_timestamp);
+        let time_filters = after_timestamp.is_some() || before_timestamp.is_some();
+        if skip > 0 && time_filters {
+            return Err(errors::invalid_request(
+                "Time filters cannot be applied if skip is not 0".to_string(),
+            )
+            .into());
+        }
+
+        let history_stream = path.history().await?;
+        let history_stream = history_stream
+            .map_err(errors::ServiceError::from)
+            .skip(skip);
+
+        let history = if time_filters {
+            history_stream
+                .map(move |changeset| async move {
+                    let changeset = changeset?;
+                    let date = changeset.author_date().await?;
+
+                    if let Some(after) = after_timestamp {
+                        if after > date.timestamp() {
+                            return Ok(None);
+                        }
+                    }
+                    if let Some(before) = before_timestamp {
+                        if before < date.timestamp() {
+                            return Ok(None);
+                        }
+                    }
+
+                    Ok(Some(changeset))
+                })
+                // to check the date we need to fetch changeset first, that can be expensive
+                // better to try doing it in parallel
+                .buffered(100)
+                .try_filter_map(|x| {
+                    let res: Result<_, errors::ServiceError> = Ok(x);
+                    future::ready(res)
+                })
+                .take(number)
+                .left_stream()
+        } else {
+            history_stream.take(number).right_stream()
+        };
 
         match params.format {
             thrift::HistoryFormat::COMMIT_INFO => {
                 let history_resp = history
-                    .map_err(errors::ServiceError::from)
                     .map(|cs_ctx| async {
                         match cs_ctx {
                             Ok(cs) => (&repo, cs, &params.identity_schemes).into_response().await,
-                            Err(er) => Err(er),
+                            Err(err) => Err(err),
                         }
                     })
                     .buffered(100)
-                    .take(number)
                     .try_collect::<Vec<_>>()
                     .await?;
 
