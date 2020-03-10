@@ -91,9 +91,9 @@ fn bookmark_step(
     ctx: CoreContext,
     repo: BlobRepo,
     b: BookmarkName,
-    public_heads: Arc<HashMap<BookmarkName, ChangesetId>>,
+    published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
 ) -> impl Future<Output = Result<StepOutput, Error>> {
-    match public_heads.get(&b) {
+    match published_bookmarks.get(&b) {
         Some(csid) => future::ok(Some(csid.clone())).left_future(),
         // Just in case we have non-public bookmarks
         None => repo.get_bonsai_bookmark(ctx, &b).compat().right_future(),
@@ -114,6 +114,23 @@ fn bookmark_step(
         }
         None => future::err(format_err!("Unknown Bookmark {}", b)),
     })
+}
+
+fn published_bookmarks_step(
+    published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
+) -> impl Future<Output = Result<StepOutput, Error>> {
+    let mut recurse = vec![];
+    for (_, bcs_id) in published_bookmarks.iter() {
+        recurse.push(OutgoingEdge::new(
+            EdgeType::PublishedBookmarksToBonsaiChangeset,
+            Node::BonsaiChangeset(bcs_id.clone()),
+        ));
+        recurse.push(OutgoingEdge::new(
+            EdgeType::PublishedBookmarksToBonsaiHgMapping,
+            Node::BonsaiHgMapping(bcs_id.clone()),
+        ));
+    }
+    future::ok(StepOutput(NodeData::PublishedBookmarks, recurse))
 }
 
 fn bonsai_phase_step(
@@ -541,7 +558,7 @@ where
 
     // Build lookups
     let repoid = *(&repo.get_repoid());
-    let public_heads = repo
+    let published_bookmarks = repo
         .get_bookmarks_object()
         .list_publishing_by_prefix(
             ctx.clone(),
@@ -557,16 +574,16 @@ where
     let walk_roots: Vec<(Option<Route>, OutgoingEdge)> =
         walk_roots.into_iter().map(|e| (None, e)).collect();
 
-    public_heads
-        .map_ok(move |public_heads| {
-            let public_heads = Arc::new(public_heads);
+    published_bookmarks
+        .map_ok(move |published_bookmarks| {
+            let published_bookmarks = Arc::new(published_bookmarks);
             bounded_traversal_stream(scheduled_max, walk_roots, {
                 move |(via, walk_item)| {
                     cloned!(
                         ctx,
                         error_as_data_node_types,
                         error_as_data_edge_types,
-                        public_heads,
+                        published_bookmarks,
                         repo,
                         scuba,
                         visitor
@@ -583,10 +600,14 @@ where
                             error_as_data_node_types,
                             error_as_data_edge_types,
                             scuba,
-                            public_heads.clone(),
+                            published_bookmarks.clone(),
                             Arc::new(move |_ctx: &CoreContext| {
                                 future::ok(
-                                    public_heads.iter().map(|(_, csid)| csid).cloned().collect(),
+                                    published_bookmarks
+                                        .iter()
+                                        .map(|(_, csid)| csid)
+                                        .cloned()
+                                        .collect(),
                                 )
                                 .boxed()
                             }),
@@ -613,7 +634,7 @@ async fn walk_one<V, VOut, Route>(
     error_as_data_node_types: HashSet<NodeType>,
     error_as_data_edge_types: HashSet<EdgeType>,
     mut scuba: ScubaSampleBuilder,
-    public_heads: Arc<HashMap<BookmarkName, ChangesetId>>,
+    published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
     heads_fetcher: HeadsFetcher,
 ) -> Result<(VOut, Vec<(Option<Route>, OutgoingEdge)>), Error>
 where
@@ -632,7 +653,7 @@ where
                 ctx.clone(),
                 repo.clone(),
                 bookmark_name,
-                public_heads.clone(),
+                published_bookmarks.clone(),
             )
             .await
         }
@@ -640,13 +661,13 @@ where
         Node::BonsaiHgMapping(bcs_id) => {
             bonsai_to_hg_mapping_step(ctx, &repo, bcs_id, enable_derive).await
         }
-
         Node::BonsaiPhaseMapping(bcs_id) => {
             let phases_store = repo
                 .get_phases_factory()
                 .get_phases(repo.get_changeset_fetcher(), heads_fetcher.clone());
             bonsai_phase_step(ctx, phases_store, bcs_id).await
         }
+        Node::PublishedBookmarks => published_bookmarks_step(published_bookmarks.clone()).await,
         // Hg
         Node::HgBonsaiMapping(hg_csid) => hg_to_bonsai_mapping_step(ctx, &repo, hg_csid).await,
         Node::HgChangeset(hg_csid) => hg_changeset_step(ctx, &repo, hg_csid).await,

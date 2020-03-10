@@ -55,6 +55,7 @@ enum NodeType {
     BonsaiChangeset,
     BonsaiHgMapping,
     BonsaiPhaseMapping,
+    PublishedBookmarks,
     // Hg
     HgBonsaiMapping,
     HgChangeset,
@@ -83,6 +84,7 @@ impl NodeType {
             NodeType::BonsaiChangeset => Some(EdgeType::RootToBonsaiChangeset),
             NodeType::BonsaiHgMapping => Some(EdgeType::RootToBonsaiHgMapping),
             NodeType::BonsaiPhaseMapping => Some(EdgeType::RootToBonsaiPhaseMapping),
+            NodeType::PublishedBookmarks => Some(EdgeType::RootToPublishedBookmarks),
             // Hg
             NodeType::HgBonsaiMapping => Some(EdgeType::RootToHgBonsaiMapping),
             NodeType::HgChangeset => Some(EdgeType::RootToHgChangeset),
@@ -106,6 +108,7 @@ pub enum Node {
     BonsaiChangeset(ChangesetId),
     BonsaiHgMapping(ChangesetId),
     BonsaiPhaseMapping(ChangesetId),
+    PublishedBookmarks,
     // Hg
     HgBonsaiMapping(HgChangesetId),
     HgChangeset(HgChangesetId),
@@ -127,6 +130,7 @@ enum EdgeType {
     RootToBonsaiChangeset,
     RootToBonsaiHgMapping,
     RootToBonsaiPhaseMapping,
+    RootToPublishedBookmarks,
     // Hg Roots
     RootToHgBonsaiMapping,
     RootToHgChangeset,
@@ -145,6 +149,8 @@ enum EdgeType {
     BonsaiChangesetToBonsaiHgMapping,
     BonsaiChangesetToBonsaiPhaseMapping,
     BonsaiHgMappingToHgChangeset,
+    PublishedBookmarksToBonsaiChangeset,
+    PublishedBookmarksToBonsaiHgMapping,
     // Hg
     HgBonsaiMappingToBonsaiChangeset,
     HgChangesetToHgParent,
@@ -182,6 +188,7 @@ impl EdgeType {
             EdgeType::RootToBonsaiChangeset => None,
             EdgeType::RootToBonsaiHgMapping => None,
             EdgeType::RootToBonsaiPhaseMapping => None,
+            EdgeType::RootToPublishedBookmarks => None,
             // Hg Roots
             EdgeType::RootToHgBonsaiMapping => None,
             EdgeType::RootToHgChangeset => None,
@@ -200,6 +207,8 @@ impl EdgeType {
             EdgeType::BonsaiChangesetToBonsaiHgMapping => Some(NodeType::BonsaiChangeset),
             EdgeType::BonsaiChangesetToBonsaiPhaseMapping => Some(NodeType::BonsaiChangeset),
             EdgeType::BonsaiHgMappingToHgChangeset => Some(NodeType::BonsaiHgMapping),
+            EdgeType::PublishedBookmarksToBonsaiChangeset => Some(NodeType::PublishedBookmarks),
+            EdgeType::PublishedBookmarksToBonsaiHgMapping => Some(NodeType::PublishedBookmarks),
             // Hg
             EdgeType::HgBonsaiMappingToBonsaiChangeset => Some(NodeType::HgBonsaiMapping),
             EdgeType::HgChangesetToHgParent => Some(NodeType::HgChangeset),
@@ -227,6 +236,7 @@ impl EdgeType {
             EdgeType::RootToBonsaiChangeset => NodeType::BonsaiChangeset,
             EdgeType::RootToBonsaiHgMapping => NodeType::BonsaiHgMapping,
             EdgeType::RootToBonsaiPhaseMapping => NodeType::BonsaiPhaseMapping,
+            EdgeType::RootToPublishedBookmarks => NodeType::PublishedBookmarks,
             // Hg Roots
             EdgeType::RootToHgBonsaiMapping => NodeType::HgBonsaiMapping,
             EdgeType::RootToHgChangeset => NodeType::HgChangeset,
@@ -245,6 +255,8 @@ impl EdgeType {
             EdgeType::BonsaiChangesetToBonsaiHgMapping => NodeType::BonsaiHgMapping,
             EdgeType::BonsaiChangesetToBonsaiPhaseMapping => NodeType::BonsaiPhaseMapping,
             EdgeType::BonsaiHgMappingToHgChangeset => NodeType::HgChangeset,
+            EdgeType::PublishedBookmarksToBonsaiChangeset => NodeType::BonsaiChangeset,
+            EdgeType::PublishedBookmarksToBonsaiHgMapping => NodeType::BonsaiHgMapping,
             // Hg
             EdgeType::HgBonsaiMappingToBonsaiChangeset => NodeType::BonsaiChangeset,
             EdgeType::HgChangesetToHgParent => NodeType::HgChangeset,
@@ -289,6 +301,7 @@ pub enum NodeData {
     BonsaiChangeset(BonsaiChangeset),
     BonsaiHgMapping(Option<HgChangesetId>),
     BonsaiPhaseMapping(Option<Phase>),
+    PublishedBookmarks,
     // Hg
     HgBonsaiMapping(Option<ChangesetId>),
     HgChangeset(HgBlobChangeset),
@@ -310,6 +323,7 @@ impl Node {
             Node::BonsaiChangeset(_) => NodeType::BonsaiChangeset,
             Node::BonsaiHgMapping(_) => NodeType::BonsaiHgMapping,
             Node::BonsaiPhaseMapping(_) => NodeType::BonsaiPhaseMapping,
+            Node::PublishedBookmarks => NodeType::PublishedBookmarks,
             // Hg
             Node::HgBonsaiMapping(_) => NodeType::HgBonsaiMapping,
             Node::HgChangeset(_) => NodeType::HgChangeset,
@@ -331,6 +345,7 @@ impl Node {
             Node::BonsaiChangeset(k) => k.blobstore_key(),
             Node::BonsaiHgMapping(k) => k.blobstore_key(),
             Node::BonsaiPhaseMapping(k) => k.blobstore_key(),
+            Node::PublishedBookmarks => "published_bookmarks".to_string(),
             // Hg
             Node::HgBonsaiMapping(k) => k.blobstore_key(),
             Node::HgChangeset(k) => k.blobstore_key(),
@@ -353,6 +368,7 @@ impl Node {
             Node::BonsaiChangeset(_) => None,
             Node::BonsaiHgMapping(_) => None,
             Node::BonsaiPhaseMapping(_) => None,
+            Node::PublishedBookmarks => None,
             // Hg
             Node::HgBonsaiMapping(_) => None,
             Node::HgChangeset(_) => None,

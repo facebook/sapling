@@ -101,6 +101,7 @@ const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
     NodeType::BonsaiChangeset,
     NodeType::BonsaiHgMapping,
     NodeType::BonsaiPhaseMapping,
+    NodeType::PublishedBookmarks,
     NodeType::HgBonsaiMapping,
     NodeType::HgChangeset,
     NodeType::HgManifest,
@@ -119,6 +120,8 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::BonsaiChangesetToBonsaiParent,
     EdgeType::BonsaiChangesetToBonsaiHgMapping,
     EdgeType::BonsaiHgMappingToHgChangeset,
+    EdgeType::PublishedBookmarksToBonsaiChangeset,
+    EdgeType::PublishedBookmarksToBonsaiHgMapping,
     // Hg
     EdgeType::HgBonsaiMappingToBonsaiChangeset,
     EdgeType::HgChangesetToHgParent,
@@ -146,6 +149,8 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::BonsaiChangesetToFileContent,
     EdgeType::BonsaiChangesetToBonsaiHgMapping,
     EdgeType::BonsaiHgMappingToHgChangeset,
+    EdgeType::PublishedBookmarksToBonsaiChangeset,
+    EdgeType::PublishedBookmarksToBonsaiHgMapping,
     // Hg
     EdgeType::HgBonsaiMappingToBonsaiChangeset,
     EdgeType::HgChangesetToHgManifest,
@@ -166,6 +171,7 @@ const HG_EDGE_TYPES: &[EdgeType] = &[
     // Bonsai to Hg
     EdgeType::BookmarkToBonsaiHgMapping,
     EdgeType::BonsaiHgMappingToHgChangeset,
+    EdgeType::PublishedBookmarksToBonsaiHgMapping,
     // Hg
     EdgeType::HgChangesetToHgParent,
     EdgeType::HgChangesetToHgManifest,
@@ -184,6 +190,7 @@ const BONSAI_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::BookmarkToBonsaiChangeset,
     EdgeType::BonsaiChangesetToFileContent,
     EdgeType::BonsaiChangesetToBonsaiParent,
+    EdgeType::PublishedBookmarksToBonsaiChangeset,
 ];
 
 const CONTENT_META_EDGE_TYPES: &[EdgeType] = &[

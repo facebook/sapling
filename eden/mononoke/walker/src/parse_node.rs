@@ -39,11 +39,15 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
         return Err(format_err!("parse_node requires at least NodeType"));
     }
     let node_type = NodeType::from_str(parts[0])?;
-    if node_type != NodeType::Root && parts.len() < 2 {
-        return Err(format_err!(
-            "parse_node for {} requires at least NodeType:node_key",
-            node_type
-        ));
+    match (node_type, parts.len()) {
+        (NodeType::Root, 1) | (NodeType::PublishedBookmarks, 1) => (),
+        (_, l) if l < 2 => {
+            return Err(format_err!(
+                "parse_node for {} requires at least NodeType:node_key",
+                node_type
+            ))
+        }
+        _ => (),
     }
 
     let parts = &parts[1..];
@@ -60,6 +64,7 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
         NodeType::BonsaiPhaseMapping => {
             Node::BonsaiPhaseMapping(ChangesetId::from_str(&parts.join(NODE_SEP))?)
         }
+        NodeType::PublishedBookmarks => Node::PublishedBookmarks,
         // Hg
         NodeType::HgBonsaiMapping => {
             Node::HgBonsaiMapping(HgChangesetId::from_str(&parts.join(NODE_SEP))?)
@@ -133,6 +138,9 @@ mod tests {
                 &parse_node(&format!("BonsaiPhaseMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?
                     .get_type()
             ),
+            NodeType::PublishedBookmarks => {
+                assert_eq!(Node::PublishedBookmarks, parse_node("PublishedBookmarks")?)
+            }
             // Hg
             NodeType::HgBonsaiMapping => assert_eq!(
                 node_type,
