@@ -44,6 +44,60 @@ async fn test_add_and_get() -> Result<(), Error> {
 }
 
 #[fbinit::test]
+async fn test_add_duplicate() -> Result<(), Error> {
+    // Inserting duplicate entries should just be a successful no-op.
+    let mapping = SqlBonsaiGitMappingConnection::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
+
+    let entry = BonsaiGitMappingEntry {
+        bcs_id: bonsai::ONES_CSID,
+        git_sha1: ONES_GIT_SHA1,
+    };
+
+    mapping.bulk_add(&vec![entry.clone()]).await?;
+    mapping.bulk_add(&vec![entry.clone()]).await?;
+
+    let result = mapping.get_git_sha1_from_bonsai(bonsai::ONES_CSID).await?;
+    assert_eq!(result, Some(ONES_GIT_SHA1));
+
+    Ok(())
+}
+
+#[fbinit::test]
+async fn test_add_conflict() -> Result<(), Error> {
+    // Adding conflicting entries should fail. Other entries inserted in the
+    // same bulk_add should be inserted.
+    let mapping = SqlBonsaiGitMappingConnection::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
+
+    let entry = BonsaiGitMappingEntry {
+        bcs_id: bonsai::ONES_CSID,
+        git_sha1: ONES_GIT_SHA1,
+    };
+
+    mapping.bulk_add(&vec![entry.clone()]).await?;
+
+    let entries = vec![
+        BonsaiGitMappingEntry {
+            // This entry should be inserted normally.
+            bcs_id: bonsai::TWOS_CSID,
+            git_sha1: TWOS_GIT_SHA1,
+        },
+        BonsaiGitMappingEntry {
+            // Conflicting entry.
+            bcs_id: bonsai::ONES_CSID,
+            git_sha1: THREES_GIT_SHA1,
+        },
+    ];
+
+    let res = mapping.bulk_add(&entries).await;
+    assert_matches!(res, Err(AddGitMappingErrorKind::Conflict(_)));
+
+    let result = mapping.get_git_sha1_from_bonsai(bonsai::TWOS_CSID).await?;
+    assert_eq!(result, Some(TWOS_GIT_SHA1));
+
+    Ok(())
+}
+
+#[fbinit::test]
 async fn test_bulk_add() -> Result<(), Error> {
     let mapping = SqlBonsaiGitMappingConnection::with_sqlite_in_memory()?.with_repo_id(REPO_ZERO);
 

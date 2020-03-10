@@ -18,7 +18,7 @@ use sql::queries;
 use sql::{Connection, Transaction};
 use sql_ext::SqlConstructors;
 use stats::prelude::*;
-use std::collections::HashSet;
+use std::collections::{BTreeMap, HashSet};
 use std::convert::AsRef;
 use std::convert::TryInto;
 use std::sync::Arc;
@@ -197,7 +197,7 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
     ) -> Result<(), AddGitMappingErrorKind> {
         STATS::adds.add_value(entries.len().try_into().map_err(anyhow::Error::from)?);
         let rows: Vec<_> = entries
-            .into_iter()
+            .iter()
             .map(|BonsaiGitMappingEntry { git_sha1, bcs_id }| (&self.repo_id, git_sha1, bcs_id))
             .collect();
 
@@ -206,7 +206,30 @@ impl BonsaiGitMapping for SqlBonsaiGitMapping {
             .await?;
 
         if res.affected_rows() != rows.len() as u64 {
-            Err(AddGitMappingErrorKind::Conflict(entries.into()))?;
+            // Let's see if there are any conflicting entries in DB.
+            let git_shas = BonsaisOrGitShas::GitSha1(
+                entries
+                    .iter()
+                    .map(
+                        |BonsaiGitMappingEntry {
+                             git_sha1,
+                             bcs_id: _,
+                         }| git_sha1.clone(),
+                    )
+                    .collect(),
+            );
+            let mapping_from_db: BTreeMap<_, _> = self
+                .get(git_shas)
+                .await?
+                .into_iter()
+                .map(|BonsaiGitMappingEntry { git_sha1, bcs_id }| (git_sha1, bcs_id))
+                .collect();
+            for entry in entries.iter() {
+                match mapping_from_db.get(&entry.git_sha1) {
+                    Some(bcs_id) if bcs_id == &entry.bcs_id => (), // We've tried to insert a duplicate, proceed.
+                    _ => Err(AddGitMappingErrorKind::Conflict(vec![entry.clone()].into()))?, // A real conflict!
+                }
+            }
         }
         return Ok(());
     }
