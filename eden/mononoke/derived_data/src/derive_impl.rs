@@ -388,8 +388,12 @@ where
                     );
 
                     let derived_data_config = repo.get_derived_data_config();
-                    let mut derived_data_scuba =
-                        init_derived_data_scuba::<Derived>(&ctx, &derived_data_config, &bcs_id);
+                    let mut derived_data_scuba = init_derived_data_scuba::<Derived>(
+                        &ctx,
+                        repo.name(),
+                        &derived_data_config,
+                        &bcs_id,
+                    );
 
                     log_derivation_start::<Derived>(&ctx, &mut derived_data_scuba, &bcs_id);
                     let (stats, res) = deriver.timed().await;
@@ -438,6 +442,7 @@ where
 
 fn init_derived_data_scuba<Derived: BonsaiDerived>(
     ctx: &CoreContext,
+    name: &str,
     derived_data_config: &DerivedDataConfig,
     bcs_id: &ChangesetId,
 ) -> ScubaSampleBuilder {
@@ -446,6 +451,7 @@ fn init_derived_data_scuba<Derived: BonsaiDerived>(
             let mut builder = ScubaSampleBuilder::new(ctx.fb, scuba_table);
             builder.add_common_server_data();
             builder.add("derived_data", Derived::NAME);
+            builder.add("reponame", name);
             builder.add("changeset", format!("{}", bcs_id));
             builder
         }
