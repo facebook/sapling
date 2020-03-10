@@ -1,0 +1,17 @@
+name: EdenSCM Rust Libraries
+
+on:
+  push:
+    branches: [ master ]
+  pull_request:
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v2
+    - name: Run tests
+      run: cd eden/scm/lib && for i in */Cargo.toml; do cargo test -q --manifest-path $i; done
