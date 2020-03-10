@@ -70,14 +70,6 @@ static_assert(S_IFMT == 0xF000, "The S_IFMT on Windows should be 0xF000");
 struct dirent {
   unsigned char d_type;
 };
-
-enum class dtype_t : decltype(dirent::d_type) {
-  Unknown = DT_UNKNOWN,
-  Fifo = DT_FIFO,
-  Char = DT_CHR,
-  Dir = DT_DIR,
-  Regular = DT_REG,
-};
 #endif
 
 enum class dtype_t : decltype(dirent::d_type) {
