@@ -182,6 +182,10 @@ class DirEntry {
   static_assert(
       sizeof(mode_t) <= 2,
       "expected mode_t to be smaller than 30 bits on Mac OS X");
+#elif _WIN32
+  // Windows sdk doesn't define mode_t. We will use Folly's definition of
+  // mode_t, which defines it as unsigned short on Windows.
+  mode_t initialMode_ : 16;
 #else
   mode_t initialMode_ : 30;
 #endif

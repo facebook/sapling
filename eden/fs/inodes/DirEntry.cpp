@@ -9,6 +9,7 @@
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/TreeInode.h"
 
+#ifndef _WIN32
 /*
  * DirEntry relies on mode_t fitting in 30 bits. In practice, on every system
  * Eden is likely to run on, mode_t only uses around 17 bits.
@@ -22,6 +23,7 @@
 static_assert(
     uint32_t{S_IFMT | S_IRWXU | S_IRWXG | S_IRWXO} <= 0x3FFFFFFFu,
     "standard constants shouldn't use top two bits");
+#endif // !_WIN32
 
 namespace facebook {
 namespace eden {
