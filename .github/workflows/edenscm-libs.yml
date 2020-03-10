@@ -14,4 +14,4 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Run tests
-      run: cd eden/scm/lib && for i in */Cargo.toml; do cargo test -q --manifest-path $i; done
+      run: cd eden/scm/lib && for i in */Cargo.toml; do grep -q fbthrift "$i" || echo Testing $i && cargo test -q --manifest-path "$i"; done
