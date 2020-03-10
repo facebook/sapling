@@ -698,6 +698,7 @@ std::vector<Future<Unit>> EdenServer::prepareMountsTakeover(
                 logger->log("Successfully took over mount ", mountPath);
                 return makeFuture();
               } else {
+                incrementStartupMountFailures();
                 logger->warn(
                     "Failed to perform takeover for ",
                     mountPath,
@@ -721,6 +722,7 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
   try {
     dirs = CheckoutConfig::loadClientDirectoryMap(edenDir_.getPath());
   } catch (const std::exception& ex) {
+    incrementStartupMountFailures();
     logger->warn(
         "Could not parse config.json file: ",
         ex.what(),
@@ -755,6 +757,7 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
                 logger->log("Successfully remounted ", mountPath);
                 return makeFuture();
               } else {
+                incrementStartupMountFailures();
                 logger->warn(
                     "Failed to remount ",
                     mountPath,
@@ -766,6 +769,12 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
     mountFutures.push_back(std::move(mountFuture));
   }
   return mountFutures;
+}
+
+void EdenServer::incrementStartupMountFailures() {
+  // Increment a counter to track if there were any errors remounting checkouts
+  // during startup.
+  fb303::fbData->incrementCounter("startup_mount_failures");
 }
 
 void EdenServer::performCleanup() {

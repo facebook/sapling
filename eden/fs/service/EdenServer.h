@@ -402,6 +402,7 @@ class EdenServer : private TakeoverHandler {
       std::vector<TakeoverData::MountInfo>&& takeoverMounts);
   FOLLY_NODISCARD std::vector<folly::Future<folly::Unit>> prepareMounts(
       std::shared_ptr<StartupLogger> logger);
+  static void incrementStartupMountFailures();
 
   /**
    * Create config file if this the first time running the server, otherwise
