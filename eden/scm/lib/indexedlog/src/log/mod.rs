@@ -48,6 +48,7 @@ use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
 use tracing::debug_span;
+use tracing::trace;
 use vlqencoding::{VLQDecodeAt, VLQEncode};
 
 mod meta;
@@ -627,6 +628,11 @@ impl Log {
             let new_length = self.indexes[index_id].flush();
             let new_length = self.maybe_set_index_error(new_length.map_err(Into::into))?;
             self.meta.indexes.insert(metaname, new_length);
+            trace!(
+                name = "Log::flush_lagging_index",
+                index_name = self.open_options.index_defs[index_id].name,
+                new_index_length = new_length,
+            );
         }
         Ok(())
     }
@@ -643,6 +649,12 @@ impl Log {
                 let indexed_bytes = Self::get_index_log_len(&self.indexes[*i], false).unwrap_or(0);
                 let lag_bytes = log_bytes.max(indexed_bytes) - indexed_bytes;
                 let lag_threshold = def.lag_threshold;
+                trace!(
+                    name = "Log::is_index_lagging",
+                    index_name = def.name,
+                    lag = lag_bytes,
+                    threshold = lag_threshold
+                );
                 lag_bytes > lag_threshold
             })
             .map(|(i, _def)| i)

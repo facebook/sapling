@@ -18,7 +18,7 @@ use std::fmt;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
-use tracing::debug_span;
+use tracing::{debug_span, trace};
 
 /// A collection of [`Log`]s that get rotated or deleted automatically when they
 /// exceed size or count limits.
@@ -549,13 +549,21 @@ impl RotateLog {
                             open_options = open_options.with_zero_index_lag();
                         }
                         let log = load_log(&dir, id, open_options);
+                        trace!(
+                            name = "RotateLog::load_log",
+                            index = index,
+                            success = log.is_ok()
+                        );
                         log
                     })?))
                 } else {
                     Ok(cell.get())
                 }
             }
-            None => Ok(None),
+            None => {
+                trace!(name = "RotateLog::load_log", index = index, end = true);
+                Ok(None)
+            }
         }
     }
 
@@ -759,6 +767,11 @@ fn read_logs(
         }
         logs.push(OnceCell::new());
     }
+    trace!(
+        name = "RotateLog::read_logs",
+        max_log_count = open_options.max_log_count,
+        logs_len = logs.len()
+    );
 
     Ok(logs)
 }
