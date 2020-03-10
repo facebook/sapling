@@ -57,10 +57,9 @@ std::string InodeError::computeMessage() const {
   }
 
   if (message_.empty()) {
-    return path + ": " + folly::errnoStr(errnum()).toStdString();
+    return path + ": " + folly::errnoStr(errnum());
   }
-  return path + ": " + message_ + ": " +
-      folly::errnoStr(errnum()).toStdString();
+  return path + ": " + message_ + ": " + folly::errnoStr(errnum());
 }
 } // namespace eden
 } // namespace facebook
