@@ -67,6 +67,11 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
     };
 
     let (_tracing_level, tracing_data) = setup_tracing();
+
+    // env_logger cannot be inited twice. So this will fail (as expected)
+    // if hgcommands is nested (ex. for "hg continue").
+    let _ = env_logger::try_init();
+
     let span = span!(
         Level::INFO,
         "run_command",

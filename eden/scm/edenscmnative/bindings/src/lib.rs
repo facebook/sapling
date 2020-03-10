@@ -12,8 +12,6 @@ use cpython_ext::PyNone;
 
 /// Populate an existing empty module so it contains utilities.
 pub fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyNone> {
-    env_logger::init();
-
     let m = module;
     let name = m.get(py, "__name__")?.extract::<String>(py)?;
     m.add(py, "__doc__", "Mercurial Rust Bindings")?;

@@ -19,7 +19,6 @@ lto = false
 [dependencies]
 cpython = { version = "0.4", default-features = false }
 cpython-ext = { path = "../../lib/cpython-ext", default-features = false }
-env_logger = "0.7"
 pyblackbox = { path = "modules/pyblackbox" }
 pybookmarkstore = { path = "modules/pybookmarkstore" }
 pycliparser = { path = "modules/pycliparser" }

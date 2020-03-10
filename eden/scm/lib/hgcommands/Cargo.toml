@@ -19,6 +19,7 @@ cpython = { version = "0.4", default-features = false }
 edenapi = { path = "../edenapi" }
 edenfs-client = { path = "../edenfs-client"}
 encoding = { path = "../encoding" }
+env_logger = "0.7"
 flate2 = "1"
 hgtime = { path = "../hgtime"}
 indexedlog = { path = "../indexedlog" }
