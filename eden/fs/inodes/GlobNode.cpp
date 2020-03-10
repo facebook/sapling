@@ -391,7 +391,7 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateImpl(
   // we have really finished all computation before we return a result.
   // Our caller may destroy us after we return, so we can't let errors propagate
   // back to the caller early while some processing may still be occurring.
-  return folly::collectAll(futures).thenValue(
+  return folly::collectAllUnsafe(futures).thenValue(
       [shadowResults = std::move(results)](
           vector<folly::Try<vector<GlobNode::GlobResult>>>&&
               matchVector) mutable {
@@ -541,7 +541,7 @@ Future<vector<GlobNode::GlobResult>> GlobNode::evaluateRecursiveComponentImpl(
   // we have really finished all computation before we return a result.
   // Our caller may destroy us after we return, so we can't let errors propagate
   // back to the caller early while some processing may still be occurring.
-  return folly::collectAll(futures).thenValue(
+  return folly::collectAllUnsafe(futures).thenValue(
       [shadowResults = std::move(results)](
           vector<folly::Try<vector<GlobResult>>>&& matchVector) mutable {
         for (auto& matches : matchVector) {

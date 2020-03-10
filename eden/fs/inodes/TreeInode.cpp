@@ -1450,7 +1450,8 @@ Future<Unit> TreeInode::rename(
     auto destFuture = destParent->getOrLoadChild(destName);
     // folly::collect is safe here because onLoadFinish has captured strong
     // references.
-    return folly::collect(srcFuture, destFuture).thenValue(onLoadFinished);
+    return folly::collectUnsafe(srcFuture, destFuture)
+        .thenValue(onLoadFinished);
   } else if (needSrc) {
     return getOrLoadChild(name).thenValue(onLoadFinished);
   } else {
@@ -3304,7 +3305,7 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
           }));
     }
   }
-  auto fileSizeMappings = folly::collectAll(futures).get();
+  auto fileSizeMappings = folly::collectAllUnsafe(futures).get();
   for (const auto& future : fileSizeMappings) {
     auto [i, fileSize] = future.value();
 
@@ -3402,7 +3403,7 @@ void TreeInode::prefetch() {
           load.finish();
         }
 
-        return folly::collectAll(inodeFutures)
+        return folly::collectAllUnsafe(inodeFutures)
             .thenTry([lease = std::move(lease)](auto&&) {
               XLOG(DBG4) << "finished prefetch for "
                          << lease.getTreeInode()->getLogPath();

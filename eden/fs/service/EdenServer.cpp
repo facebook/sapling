@@ -580,7 +580,7 @@ Future<Unit> EdenServer::prepareImpl(
     // Return a future that will complete only when all mount points have
     // started and the thrift server is also running.
     mountFutures.emplace_back(std::move(thriftRunningFuture));
-    return folly::collectAll(mountFutures).unit();
+    return folly::collectAllUnsafe(mountFutures).unit();
   } else {
     // Don't wait for the mount futures.
     // Only return the thrift future.

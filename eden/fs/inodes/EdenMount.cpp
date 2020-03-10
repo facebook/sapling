@@ -378,7 +378,7 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
         // Wait until we finish setting up all of the symlinks.
         // Use collectAll() since we want to wait for everything to complete,
         // even if one of them fails early.
-        return folly::collectAll(futures).thenValue([=](auto&&) {
+        return folly::collectAllUnsafe(futures).thenValue([=](auto&&) {
           // Set the dotEdenInodeNumber_ as our final step.
           // We do this after all of the ensureDotEdenSymlink() calls have
           // finished, since the TreeInode code will refuse to allow any

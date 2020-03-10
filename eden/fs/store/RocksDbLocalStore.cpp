@@ -456,7 +456,7 @@ RocksDbLocalStore::getBatch(
             }));
   }
 
-  return folly::collect(futures).thenValue(
+  return folly::collectUnsafe(futures).thenValue(
       [](std::vector<std::vector<StoreResult>>&& tries) {
         std::vector<StoreResult> results;
         for (auto& batch : tries) {

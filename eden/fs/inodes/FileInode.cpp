@@ -537,9 +537,10 @@ folly::Future<bool> FileInode::isSameAs(
 
   auto f1 = getSha1(fetchContext);
   auto f2 = getMount()->getObjectStore()->getBlobSha1(blobID, fetchContext);
-  return folly::collect(f1, f2).thenValue([](std::tuple<Hash, Hash>&& result) {
-    return std::get<0>(result) == std::get<1>(result);
-  });
+  return folly::collectUnsafe(f1, f2).thenValue(
+      [](std::tuple<Hash, Hash>&& result) {
+        return std::get<0>(result) == std::get<1>(result);
+      });
 }
 
 mode_t FileInode::getMode() const {

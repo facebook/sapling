@@ -278,7 +278,8 @@ TEST_F(PrivHelperTest, multiplePendingFuseMounts) {
   defPromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
 
   // The responses should be available in the client now.
-  auto results = folly::collect(abcResult, defResult, foobarResult).get(1s);
+  auto results =
+      folly::collectUnsafe(abcResult, defResult, foobarResult).get(1s);
   (void)results;
 
   // Destroy the privhelper

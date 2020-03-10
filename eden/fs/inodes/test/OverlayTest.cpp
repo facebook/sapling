@@ -412,7 +412,7 @@ TEST_P(RawOverlayTest, closed_overlay_stress_test) {
   // Wake the waiting threads
   gate.wait();
 
-  auto finished = folly::collectAll(futures).get();
+  auto finished = folly::collectAllUnsafe(futures).get();
   for (auto& f : finished) {
     EXPECT_FALSE(f.hasException()) << f.exception().what();
   }

@@ -535,7 +535,7 @@ Future<Unit> TestMount::loadAllInodesFuture(const TreeInodePtr& treeInode) {
         });
     childFutures.emplace_back(std::move(childFuture));
   }
-  return folly::collect(childFutures).unit();
+  return folly::collectUnsafe(childFutures).unit();
 }
 
 std::shared_ptr<const Tree> TestMount::getRootTree() const {
