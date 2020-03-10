@@ -71,6 +71,13 @@ impl Subscriber for TracingCollector {
     }
 }
 
+/// Initialize tracing for adhoc logging.
+pub fn init() {
+    let data = Arc::new(Mutex::new(TracingData::new()));
+    let collector = TracingCollector::new(data, Level::INFO);
+    let _ = tracing::subscriber::set_global_default(collector);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

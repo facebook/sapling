@@ -1,0 +1,13 @@
+[package]
+name = "dev-logger"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+ctor = "0.1"
+env_logger = "0.7"
+tracing = "0.1"
+tracing-collector = { path = "../tracing-collector" }
+
+[[example]]
+name = "test"
