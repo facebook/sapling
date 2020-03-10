@@ -48,7 +48,7 @@
 #include "eden/fs/utils/ProcUtil.h"
 
 #ifdef _WIN32
-#include "eden/fs/win/mount/EdenMount.h" // @manual
+#include "eden/fs/inodes/win/EdenMount.h" // @manual
 #include "eden/fs/win/mount/PrjfsChannel.h" // @manual
 #include "eden/fs/win/service/StartupLogger.h" // @manual
 #include "eden/fs/win/utils/FileUtils.h" // @manual

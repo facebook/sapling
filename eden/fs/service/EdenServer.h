@@ -32,7 +32,7 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifdef _WIN32
-#include "eden/fs/win/mount/EdenMount.h" // @manual
+#include "eden/fs/inodes/win/EdenMount.h" // @manual
 #include "eden/fs/win/utils/Stub.h" // @manual
 #include "eden/fs/win/utils/UserInfo.h" // @manual
 #else

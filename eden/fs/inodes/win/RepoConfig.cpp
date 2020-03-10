@@ -11,7 +11,7 @@
 #include <iostream>
 #include <memory>
 #include <sstream>
-#include "eden/fs/win/mount/RepoConfig.h"
+#include "eden/fs/inodes/win/RepoConfig.h"
 #include "eden/fs/win/utils/FileUtils.h"
 #include "eden/fs/win/utils/Guid.h"
 #include "eden/fs/win/utils/WinError.h"

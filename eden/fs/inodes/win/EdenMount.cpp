@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/win/mount/EdenMount.h"
+#include "eden/fs/inodes/win/EdenMount.h"
 
 #include <folly/futures/SharedPromise.h>
 #include <folly/logging/xlog.h>
@@ -13,6 +13,7 @@
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/inodes/EdenMountError.h"
 #include "eden/fs/inodes/ServerState.h"
+#include "eden/fs/inodes/win/RepoConfig.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/git/GitIgnoreStack.h"
@@ -24,7 +25,6 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/win/mount/CurrentState.h"
 #include "eden/fs/win/mount/GenerateStatus.h"
-#include "eden/fs/win/mount/RepoConfig.h"
 
 namespace facebook {
 namespace eden {

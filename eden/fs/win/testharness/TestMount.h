@@ -14,10 +14,10 @@
 #include <optional>
 #include <vector>
 #include "eden/fs/inodes/ServerState.h"
+#include "eden/fs/inodes/win/EdenMount.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/testharness/FakeClock.h"
 #include "eden/fs/utils/PathFuncs.h"
-#include "eden/fs/win/mount/EdenMount.h"
 #include "eden/fs/win/utils/StringConv.h"
 
 namespace folly {

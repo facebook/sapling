@@ -10,12 +10,12 @@
 #include <folly/Format.h>
 #include <folly/logging/xlog.h>
 #include "ProjectedFSLib.h"
+#include "eden/fs/inodes/win/EdenMount.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/win/mount/CurrentState.h"
 #include "eden/fs/win/mount/EdenDispatcher.h"
-#include "eden/fs/win/mount/EdenMount.h"
 #include "eden/fs/win/store/WinStore.h"
 #include "eden/fs/win/utils/StringConv.h"
 #include "eden/fs/win/utils/WinError.h"

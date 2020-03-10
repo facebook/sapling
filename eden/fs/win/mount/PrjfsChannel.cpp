@@ -10,8 +10,8 @@
 
 #include <folly/logging/xlog.h>
 #include <string>
+#include "eden/fs/inodes/win/EdenMount.h"
 #include "eden/fs/win/mount/EdenDispatcher.h"
-#include "eden/fs/win/mount/EdenMount.h"
 #include "eden/fs/win/utils/Guid.h"
 #include "eden/fs/win/utils/StringConv.h"
 #include "eden/fs/win/utils/WinError.h"
