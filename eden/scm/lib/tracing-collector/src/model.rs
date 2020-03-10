@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use crate::log;
 use indexmap::{IndexMap, IndexSet};
 use serde::{Deserialize, Serialize};
 use std::cell::RefCell;
@@ -293,6 +294,9 @@ impl TracingData {
 
     /// Matches `tracing::Subscriber::event`.
     pub fn event(&mut self, event: &tracing::event::Event) {
+        if log::enabled(event.metadata()) {
+            log::log(log::DisplayEvent(event), event.metadata());
+        }
         let id = self.push_espan(event);
         self.push_eventus(Action::Event, id);
     }
@@ -300,12 +304,14 @@ impl TracingData {
     /// Matches `tracing::Subscriber::enter`.
     pub fn enter(&mut self, id: &tracing::span::Id) {
         let id = id.clone().into();
+        self.log_espan(id, ">> ");
         self.push_eventus(Action::EnterSpan, id);
     }
 
     /// Matches `tracing::Subscriber::exit`.
     pub fn exit(&mut self, id: &tracing::span::Id) {
         let id = id.clone().into();
+        self.log_espan(id, "<< ");
         self.push_eventus(Action::ExitSpan, id);
     }
 
@@ -326,6 +332,18 @@ impl TracingData {
         result.into()
     }
 
+    /// Send Span data to the `log` eco-system.
+    fn log_espan(&self, espan_id: EspanId, prefix: &'static str) {
+        if let Some(espan) = self.get_espan(espan_id) {
+            if let Some(metadata) = espan.metadata {
+                if log::enabled(metadata) {
+                    let display = DisplayEspan(&self.strings, &espan, prefix);
+                    log::log(display, metadata);
+                }
+            }
+        }
+    }
+
     /// Rewrite `moudle_path` and `line` information so they stay stable
     /// across tests.
     #[cfg(test)]
@@ -338,6 +356,30 @@ impl TracingData {
             meta.insert(self.strings.id("module_path"), module_path);
             meta.insert(self.strings.id("line"), line);
         }
+    }
+}
+
+/// Display implementation to display a Span's metadata
+pub(crate) struct DisplayEspan<'a>(&'a InternedStrings, &'a Espan, &'static str);
+
+impl<'a> fmt::Display for DisplayEspan<'a> {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let strings = self.0;
+        let mut padding = self.2;
+        for (&key_id, &value_id) in self.1.meta.iter() {
+            let key = strings.get(key_id);
+            if key == "module_path" || key == "line" {
+                // They are included in the static metadata.
+                continue;
+            }
+            if key == "name" {
+                write!(f, "{}{}", padding, strings.get(value_id))?;
+            } else {
+                write!(f, "{}{}={}", padding, key, strings.get(value_id))?;
+            }
+            padding = " ";
+        }
+        Ok(())
     }
 }
 

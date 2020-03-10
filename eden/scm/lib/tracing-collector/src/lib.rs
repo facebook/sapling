@@ -10,6 +10,7 @@
 #![allow(unused_variables)]
 #![allow(dead_code)]
 
+mod log;
 pub mod model;
 pub use model::TracingData;
 
@@ -36,7 +37,7 @@ impl TracingCollector {
 
 impl Subscriber for TracingCollector {
     fn enabled(&self, metadata: &Metadata) -> bool {
-        metadata.level() <= &self.level
+        metadata.level() <= &self.level || log::enabled(metadata)
     }
 
     fn new_span(&self, span: &Attributes) -> Id {
