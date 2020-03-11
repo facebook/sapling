@@ -388,7 +388,7 @@ py_class!(class writerworker |py| {
         let root = root.to_path_buf();
         let writer_state = WriterState::new(root, store);
 
-        let inner = Worker::new(numthreads, writer_state, |state, receiver| threaded_writer(state, receiver));
+        let inner = Worker::new(numthreads, writer_state, threaded_writer);
 
         writerworker::create_instance(py, RefCell::new(Some(inner)))
     }
@@ -506,7 +506,7 @@ py_class!(class removerworker |py| {
         let root = root.to_path_buf();
         let remover_state = RemoverState::new(root);
 
-        let inner = Worker::new(numthreads, remover_state, |state, chan| threaded_remover(state, chan));
+        let inner = Worker::new(numthreads, remover_state, threaded_remover);
 
         removerworker::create_instance(py, RefCell::new(Some(inner)))
     }
