@@ -662,7 +662,7 @@ mod tests {
             let localdir = TempDir::new()?;
             let config = make_config(&cachedir);
 
-            let k = key("a", "1");
+            let k = key("a", "1234");
             let data = Bytes::from(&[1, 2, 3, 4][..]);
 
             let mut map = HashMap::new();
@@ -697,7 +697,7 @@ mod tests {
             let localdir = TempDir::new()?;
             let config = make_config(&cachedir);
 
-            let k = key("a", "1");
+            let k = key("a", "abcd");
 
             let data = (0..10 * 1024 * 1024)
                 .map(|_| rand::random::<u8>())
