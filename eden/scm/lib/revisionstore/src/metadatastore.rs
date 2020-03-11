@@ -30,20 +30,15 @@ use crate::{
     },
 };
 
-struct MetadataStoreInner {
-    historystore: UnionHistoryStore<Arc<dyn HistoryStore>>,
-    local_mutablehistorystore: Option<Arc<dyn MutableHistoryStore>>,
-    shared_mutablehistorystore: Arc<dyn MutableHistoryStore>,
-    remote_store: Option<Arc<dyn RemoteHistoryStore>>,
-}
-
 /// A `MetadataStore` aggregate all the local and remote stores and expose them as one. Both local and
 /// remote stores can be queried and accessed via the `HistoryStore` trait. The local store can also
 /// be written to via the `MutableHistoryStore` trait, this is intended to be used to store local
 /// commit data.
-#[derive(Clone)]
 pub struct MetadataStore {
-    inner: Arc<MetadataStoreInner>,
+    historystore: UnionHistoryStore<Arc<dyn HistoryStore>>,
+    local_mutablehistorystore: Option<Arc<dyn MutableHistoryStore>>,
+    shared_mutablehistorystore: Arc<dyn MutableHistoryStore>,
+    remote_store: Option<Arc<dyn RemoteHistoryStore>>,
 }
 
 impl MetadataStore {
@@ -56,13 +51,13 @@ impl MetadataStore {
 
 impl HistoryStore for MetadataStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
-        self.inner.historystore.get_node_info(key)
+        self.historystore.get_node_info(key)
     }
 }
 
 impl RemoteHistoryStore for MetadataStore {
     fn prefetch(&self, keys: &[Key]) -> Result<()> {
-        if let Some(remote_store) = self.inner.remote_store.as_ref() {
+        if let Some(remote_store) = self.remote_store.as_ref() {
             let missing = self.get_missing(&keys)?;
             if missing == vec![] {
                 Ok(())
@@ -78,11 +73,11 @@ impl RemoteHistoryStore for MetadataStore {
 
 impl LocalStore for MetadataStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
-        self.inner.historystore.get_missing(keys)
+        self.historystore.get_missing(keys)
     }
 }
 
-impl Drop for MetadataStoreInner {
+impl Drop for MetadataStore {
     /// The shared store is a cache, so let's flush all pending data when the `MetadataStore` goes
     /// out of scope.
     fn drop(&mut self) {
@@ -92,16 +87,14 @@ impl Drop for MetadataStoreInner {
 
 impl MutableHistoryStore for MetadataStore {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
-        self.inner
-            .local_mutablehistorystore
+        self.local_mutablehistorystore
             .as_ref()
             .ok_or_else(|| format_err!("writing to a non-local MetadataStore is not allowed"))?
             .add(key, info)
     }
 
     fn flush(&self) -> Result<Option<PathBuf>> {
-        self.inner
-            .local_mutablehistorystore
+        self.local_mutablehistorystore
             .as_ref()
             .ok_or_else(|| format_err!("flushing a non-local MetadataStore is not allowed"))?
             .flush()
@@ -257,12 +250,10 @@ impl<'a> MetadataStoreBuilder<'a> {
         let shared_mutablehistorystore: Arc<dyn MutableHistoryStore> = shared_pack_store;
 
         Ok(MetadataStore {
-            inner: Arc::new(MetadataStoreInner {
-                historystore,
-                local_mutablehistorystore,
-                shared_mutablehistorystore,
-                remote_store,
-            }),
+            historystore,
+            local_mutablehistorystore,
+            shared_mutablehistorystore,
+            remote_store,
         })
     }
 }
@@ -470,11 +461,10 @@ mod tests {
             .build()?;
         store.get_node_info(&k)?;
         assert_eq!(
-            store.inner.shared_mutablehistorystore.get_node_info(&k)?,
+            store.shared_mutablehistorystore.get_node_info(&k)?,
             Some(nodeinfo)
         );
         assert!(store
-            .inner
             .local_mutablehistorystore
             .as_ref()
             .unwrap()
