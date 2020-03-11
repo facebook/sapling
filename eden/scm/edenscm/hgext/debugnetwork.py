@@ -269,9 +269,19 @@ def checkhgspeed(ui, url, opts):
         return False
 
 
-@command("debugnetwork", cmdutil.remoteopts, _("[REMOTE]"))
+@command(
+    "debugnetwork",
+    [
+        ("", "connection", False, _("run connection tests")),
+        ("", "speed", False, _("run speed tests")),
+    ]
+    + cmdutil.remoteopts,
+    _("[REMOTE]"),
+)
 def debugnetwork(ui, repo, remote="default", **opts):
     """debug the network connection to a remote"""
+
+    alltests = not any(opts.get(opt) for opt in ["connection", "speed"])
 
     ui.status(_("Remote name: %s\n") % remote, component="debugnetwork")
 
@@ -283,28 +293,30 @@ def debugnetwork(ui, repo, remote="default", **opts):
         ui.status(_("Not checking network as remote is not an ssh peer"))
         return 1
 
-    addrinfos = checkdnsresolution(ui, url)
-    if not addrinfos:
-        msg = _("Failed to look-up the server in DNS.\n")
-        ui.status(msg, component=_("debugnetwork"))
-        return 2
+    if alltests or opts.get("connection"):
+        addrinfos = checkdnsresolution(ui, url)
+        if not addrinfos:
+            msg = _("Failed to look-up the server in DNS.\n")
+            ui.status(msg, component=_("debugnetwork"))
+            return 2
 
-    if not checkreachability(ui, url, addrinfos):
-        msg = _("Failed to connect to the server on any address.\n")
-        ui.status(msg, component=_("debugnetwork"))
-        return 3
+        if not checkreachability(ui, url, addrinfos):
+            msg = _("Failed to connect to the server on any address.\n")
+            ui.status(msg, component=_("debugnetwork"))
+            return 3
 
-    if not checksshcommand(ui, url, opts):
-        msg = _("Failed to connect to SSH on the server.\n")
-        ui.status(msg, component=_("debugnetwork"))
-        return 4
+        if not checksshcommand(ui, url, opts):
+            msg = _("Failed to connect to SSH on the server.\n")
+            ui.status(msg, component=_("debugnetwork"))
+            return 4
 
-    if not checkhgserver(ui, repo, opts, path):
-        msg = _("Failed to connect to Mercurial on the server.\n")
-        ui.status(msg, component=_("debugnetwork"))
-        return 5
+        if not checkhgserver(ui, repo, opts, path):
+            msg = _("Failed to connect to Mercurial on the server.\n")
+            ui.status(msg, component=_("debugnetwork"))
+            return 5
 
-    if not checkhgspeed(ui, url, opts):
-        msg = _("Failed to check Mercurial server connection speed.\n")
-        ui.status(msg, component=_("debugnetwork"))
-        return 6
+    if alltests or opts.get("speed"):
+        if not checkhgspeed(ui, url, opts):
+            msg = _("Failed to check Mercurial server connection speed.\n")
+            ui.status(msg, component=_("debugnetwork"))
+            return 6
