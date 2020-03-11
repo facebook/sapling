@@ -22,6 +22,7 @@ use blobstore::ErrorKind;
 use blobstore::{Blobstore, DisabledBlob};
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use chaosblob::ChaosBlobstore;
+use context_concurrency_blobstore::ContextConcurrencyBlobstore;
 use fileblob::Fileblob;
 use itertools::Either;
 use manifoldblob::ThriftManifoldBlob;
@@ -476,6 +477,8 @@ pub fn make_blobstore(
     };
 
     store
+        .map(|inner| Arc::new(ContextConcurrencyBlobstore::new(inner)) as Arc<dyn Blobstore>)
+        .boxify()
 }
 
 pub fn make_blobstore_multiplexed(

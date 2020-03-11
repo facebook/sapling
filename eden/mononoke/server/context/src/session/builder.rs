@@ -10,6 +10,7 @@ use rand::{self, distributions::Alphanumeric, thread_rng, Rng};
 use session_id::SessionId;
 use sshrelay::SshEnvVars;
 use std::sync::Arc;
+use tokio::sync::Semaphore;
 use tracing::TraceContext;
 
 use super::{SessionContainer, SessionContainerInner};
@@ -43,6 +44,7 @@ impl SessionContainerBuilder {
                 user_unix_name: None,
                 source_hostname: None,
                 ssh_env_vars: SshEnvVars::default(),
+                blobstore_semaphore: None,
                 #[cfg(fbcode_build)]
                 facebook_data: SessionFacebookData::default(),
             },
@@ -71,6 +73,11 @@ impl SessionContainerBuilder {
 
     pub fn ssh_env_vars(mut self, value: SshEnvVars) -> Self {
         self.inner.ssh_env_vars = value;
+        self
+    }
+
+    pub fn blobstore_concurrency(mut self, concurrency: usize) -> Self {
+        self.inner.blobstore_semaphore = Some(Semaphore::new(concurrency));
         self
     }
 

@@ -11,6 +11,7 @@ use session_id::SessionId;
 use slog::Logger;
 use sshrelay::SshEnvVars;
 use std::sync::Arc;
+use tokio::sync::Semaphore;
 use tracing::TraceContext;
 
 pub use self::builder::{generate_session_id, SessionContainerBuilder};
@@ -34,6 +35,7 @@ struct SessionContainerInner {
     user_unix_name: Option<String>,
     source_hostname: Option<String>,
     ssh_env_vars: SshEnvVars,
+    blobstore_semaphore: Option<Semaphore>,
     #[cfg(fbcode_build)]
     facebook_data: SessionFacebookData,
 }
@@ -75,6 +77,10 @@ impl SessionContainer {
 
     pub fn ssh_env_vars(&self) -> &SshEnvVars {
         &self.inner.ssh_env_vars
+    }
+
+    pub fn blobstore_semaphore(&self) -> Option<&Semaphore> {
+        self.inner.blobstore_semaphore.as_ref()
     }
 
     #[cfg(fbcode_build)]
