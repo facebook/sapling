@@ -2632,7 +2632,13 @@ class localrepository(object):
                 visibility.automigrate(self)
         except errormod.LockHeld:
             self.ui.debug("skipping automigrate because lock is held\n")
-            pass
+        except errormod.AbandonedTransactionFoundError:
+            # Migration can fail if the repository has an abandoned transaction
+            # and needs to be manually recovered.  Ignore this for now and proceed,
+            # so that read-only operations in the repository still work.  The abandoned
+            # transaction will still block commands that need to modify the repository,
+            # but those will fail later.
+            self.ui.debug("skipping automigrate due to an abandoned transaction\n")
 
     def automigratefinish(self):
         """perform potentially expensive in-place migrations
