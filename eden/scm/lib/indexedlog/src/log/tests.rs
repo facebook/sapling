@@ -8,7 +8,9 @@
 use super::*;
 use quickcheck::quickcheck;
 use std::cell::RefCell;
+#[cfg(not(windows))]
 use std::io::Read;
+#[cfg(not(windows))]
 use std::ops::Range;
 use tempfile::tempdir;
 
@@ -1002,11 +1004,11 @@ fn test_repair_and_delete_content() {
         let message = open_opts.repair(path).unwrap();
         try_trigger_sigbus();
         message
-                .lines()
-                // Remove 'Backed up' lines since they have dynamic file names.
-                .filter(|l| !l.contains("Backed up"))
-                .collect::<Vec<_>>()
-                .join("\n")
+            .lines()
+            // Remove 'Backed up' lines since they have dynamic file names.
+            .filter(|l| !l.contains("Backed up"))
+            .collect::<Vec<_>>()
+            .join("\n")
     };
 
     // Repair is a no-op if log and indexes pass integirty check.
