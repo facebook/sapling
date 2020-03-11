@@ -21,7 +21,7 @@ use lazy_static::lazy_static;
 use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits, RateLimits};
 use maplit::{hashmap, hashset};
 use pushredirect_enable::types::MononokePushRedirectEnable;
-use slog::{self, error, o, Drain, Level, Logger};
+use slog::{self, error, info, o, warn, Drain, Level, Logger};
 use slog_ext::SimpleFormatWithError;
 use slog_kvfilter::KVFilter;
 use stats::prelude::*;
@@ -31,7 +31,7 @@ use tracing::{trace_args, TraceContext, TraceId, Traced};
 use hgproto::{sshproto, HgProtoHandler};
 use repo_client::RepoClient;
 use scuba_ext::ScubaSampleBuilderExt;
-use sshrelay::{SenderBytesWrite, SshEnvVars, Stdio};
+use sshrelay::{Priority, SenderBytesWrite, SshEnvVars, Stdio};
 
 use crate::repo_handlers::RepoHandler;
 
@@ -127,12 +127,31 @@ pub fn request_handler(
         Logger::root(drain, o!("session_uuid" => format!("{}", session_id)))
     };
 
+    let priority = match Priority::extract_from_preamble(&preamble) {
+        Ok(Some(p)) => {
+            info!(&conn_log, "Using priority: {}", p; "remote" => "true");
+            p
+        }
+        Ok(None) => Priority::Default,
+        Err(e) => {
+            warn!(&conn_log, "Could not parse priority: {}", e; "remote" => "true");
+            Priority::Default
+        }
+    };
+
+    scuba.add("priority", priority.to_string());
     scuba.log_with_msg("Connection established", None);
+
     let client_hostname = preamble
         .misc
         .get("source_hostname")
         .cloned()
         .unwrap_or("".to_string());
+
+    let blobstore_concurrency = match priority {
+        Priority::Wishlist => Some(1000),
+        _ => None,
+    };
 
     let ssh_env_vars = SshEnvVars::from_map(&preamble.misc);
     let load_limiter = load_limiting_config.map(|(config, category)| {
@@ -140,14 +159,20 @@ pub fn request_handler(
             loadlimiting_configs(config, client_hostname, &ssh_env_vars);
         LoadLimiter::new(fb, throttle_limits, rate_limits, category)
     });
-    let session = SessionContainer::builder(fb)
+
+    let mut session_builder = SessionContainer::builder(fb)
         .session_id(session_id)
         .trace(trace.clone())
         .user_unix_name(preamble.misc.get("unix_username").cloned())
         .source_hostname(preamble.misc.get("source_hostname").cloned())
         .ssh_env_vars(ssh_env_vars)
-        .load_limiter(load_limiter)
-        .build();
+        .load_limiter(load_limiter);
+
+    if let Some(blobstore_concurrency) = blobstore_concurrency {
+        session_builder = session_builder.blobstore_concurrency(blobstore_concurrency);
+    }
+
+    let session = session_builder.build();
 
     let logging = LoggingContainer::new(conn_log.clone(), scuba.clone());
 

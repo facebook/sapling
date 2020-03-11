@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+mod priority;
+
 use std::collections::HashMap;
 use std::env::var;
 use std::io;
@@ -18,6 +20,8 @@ use session_id::SessionId;
 use tokio_io::codec::{Decoder, Encoder};
 
 use netstring::{NetstringDecoder, NetstringEncoder};
+
+pub use priority::Priority;
 
 // Multiplex stdin/out/err over a single stream using netstring as framing
 #[derive(Debug)]

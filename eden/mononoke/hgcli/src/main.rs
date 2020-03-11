@@ -30,6 +30,13 @@ fn main(fb: FacebookInit) {
         .arg(Arg::from_usage(
             "--no-session-output 'disables the session uuid output'",
         ))
+        .arg(
+            Arg::with_name("priority")
+                .long("priority")
+                .takes_value(true)
+                .required(false)
+                .help("Set request priority"),
+        )
         .subcommand(
             SubCommand::with_name("serve")
                 .about("start server")

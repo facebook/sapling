@@ -35,7 +35,8 @@ use futures_stats::TimedFutureExt;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use secure_utils::{build_identity, read_x509};
 use sshrelay::{
-    Preamble, SenderBytesWrite, SshDecoder, SshEncoder, SshEnvVars, SshMsg, SshStream, Stdio,
+    Preamble, Priority, SenderBytesWrite, SshDecoder, SshEncoder, SshEnvVars, SshMsg, SshStream,
+    Stdio,
 };
 
 mod fdio;
@@ -54,6 +55,11 @@ pub async fn cmd(
         if let Some(repo) = main.value_of("repository") {
             let query_string = main.value_of("query-string").unwrap_or("");
             let mononoke_path = sub.value_of("mononoke-path").unwrap();
+            let priority = main
+                .value_of("priority")
+                .map(|p| p.parse())
+                .transpose()?
+                .unwrap_or(Priority::Default);
             let show_session_output = !main.is_present("no-session-output");
 
             let cert = sub
@@ -87,6 +93,7 @@ pub async fn cmd(
                 scuba_table,
                 mock_username,
                 show_session_output,
+                priority,
             }
             .run()
             .await;
@@ -110,6 +117,7 @@ struct StdioRelay<'a> {
     scuba_table: Option<&'a str>,
     mock_username: Option<&'a str>,
     show_session_output: bool,
+    priority: Priority,
 }
 
 impl<'a> StdioRelay<'a> {
@@ -142,13 +150,15 @@ impl<'a> StdioRelay<'a> {
                 .map(|hostname| hostname.to_owned())
         };
 
-        let preamble = Preamble::new(
+        let mut preamble = Preamble::new(
             self.repo.to_owned(),
             session_uuid.clone(),
             unix_username,
             source_hostname,
             SshEnvVars::new_from_env(),
         );
+
+        self.priority.add_to_preamble(&mut preamble);
 
         scuba_logger.add_preamble(&preamble);
 
