@@ -25,3 +25,4 @@ bytes = "0.5"
 quickcheck = "0.9"
 types = { path = "../../../../lib/types", default-features = false, features = ["for-tests"] }
 revisionstore = { path = "../../../../lib/revisionstore", default-features = false, features = ["for-tests"] }
+memmap = "0.7"

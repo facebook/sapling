@@ -431,14 +431,32 @@ fn remove(state: &RemoverState, path: &RepoPath) -> Result<()> {
     if let Ok(metadata) = symlink_metadata(&filepath) {
         let file_type = metadata.file_type();
         if file_type.is_file() || file_type.is_symlink() {
-            if let Err(e) =
-                remove_file(&filepath).with_context(|| format!("Can't remove file {:?}", filepath))
-            {
-                if let Some(io_error) = e.downcast_ref::<io::Error>() {
-                    ensure!(io_error.kind() == ErrorKind::NotFound, e);
-                } else {
-                    return Err(e);
-                };
+            let result =
+                remove_file(&filepath).with_context(|| format!("Can't remove file {:?}", filepath));
+            if cfg!(windows) {
+                // Windows is... an interesting beast. Some applications may
+                // open files in the working copy and completely disallowing
+                // sharing of the file[0] with others. On example of such
+                // application is the Windows Defender[1], so if for some reason
+                // it is scanning the working copy, Mercurial will be unable to
+                // remove that file, and there is nothing that we could do about it.
+                //
+                // We could think of various strategies to mitigate this. One
+                // being that we simply retry a bit later, but there is still no
+                // guarantee that it would work. For now, let's just ignore all failures
+                // on Windows.
+                //
+                // [0]: https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea?redirectedfrom=MSDN
+                // [1]: https://en.wikipedia.org/wiki/Windows_Defender
+                let _ = result;
+            } else {
+                if let Err(e) = result {
+                    if let Some(io_error) = e.downcast_ref::<io::Error>() {
+                        ensure!(io_error.kind() == ErrorKind::NotFound, e);
+                    } else {
+                        return Err(e);
+                    };
+                }
             }
         }
     }
@@ -518,8 +536,11 @@ mod tests {
     use super::*;
 
     use std::fs::{metadata, read_dir, read_link, read_to_string};
+    #[cfg(windows)]
+    use std::{fs::OpenOptions, os::windows::fs::OpenOptionsExt};
 
     use bytes::Bytes;
+    use memmap::MmapOptions;
     use quickcheck::{quickcheck, TestResult};
     use tempfile::TempDir;
 
@@ -806,6 +827,86 @@ mod tests {
         let state = RemoverState::new(root);
         remove(&state, RepoPath::from_str("THESE/ARE/DIRECTORIES/FILE")?)?;
         assert_eq!(read_dir(&workingdir)?.count(), 1);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_remove_while_open() -> Result<()> {
+        let workingdir = TempDir::new()?;
+
+        let root = workingdir.as_ref().to_path_buf();
+        let path = root.join("TEST");
+
+        let f = File::create(&path)?;
+
+        let state = RemoverState::new(root);
+        remove(&state, RepoPath::from_str("TEST")?)?;
+
+        drop(f);
+
+        assert_eq!(read_dir(&workingdir)?.count(), 0);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_remove_while_mapped() -> Result<()> {
+        let workingdir = TempDir::new()?;
+
+        let root = workingdir.as_ref().to_path_buf();
+        let path = root.join("TEST");
+
+        File::create(&path)?.write_all(b"CONTENT")?;
+        let f = File::open(&path)?;
+        let map = unsafe { MmapOptions::new().map(&f)? };
+
+        let state = RemoverState::new(root);
+        remove(&state, RepoPath::from_str("TEST")?)?;
+
+        drop(map);
+
+        if cfg!(windows) {
+            assert_eq!(read_dir(&workingdir)?.count(), 1);
+
+            // The file must have been removed
+            remove(&state, RepoPath::from_str("TEST")?)?;
+            assert_eq!(read_dir(&workingdir)?.count(), 1);
+        } else {
+            assert_eq!(read_dir(&workingdir)?.count(), 0);
+        }
+
+        Ok(())
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn test_remove_while_open_with_no_sharing() -> Result<()> {
+        let workingdir = TempDir::new()?;
+
+        let root = workingdir.as_ref().to_path_buf();
+        let path = root.join("TEST");
+
+        File::create(&path)?.write_all(b"CONTENT")?;
+
+        // No sharing for this file. remove should still succeed.
+        let f = OpenOptions::new().read(true).share_mode(0).open(&path)?;
+
+        let state = RemoverState::new(root);
+        // This will fail silently.
+        remove(&state, RepoPath::from_str("TEST")?)?;
+        drop(f);
+
+        assert_eq!(read_dir(&workingdir)?.count(), 1);
+
+        // The file is still there.
+        let f = File::open(&path)?;
+        drop(f);
+
+        // Now there is no longer a file handle to it, remove it.
+        remove(&state, RepoPath::from_str("TEST")?)?;
+
+        assert_eq!(read_dir(&workingdir)?.count(), 0);
 
         Ok(())
     }
