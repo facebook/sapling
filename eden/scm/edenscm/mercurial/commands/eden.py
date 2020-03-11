@@ -831,7 +831,7 @@ def runedenimporthelper(repo, **opts):
     get_manifest_node_arg = opts.get("get_manifest_node")
     if get_manifest_node_arg:
         node = server.get_manifest_node(get_manifest_node_arg)
-        print(hex(node))
+        repo.ui.write(hex(node) + "\n")
         return 0
 
     manifest_arg = opts.get("manifest")
@@ -845,7 +845,7 @@ def runedenimporthelper(repo, **opts):
         path, file_rev_str = cat_file_arg.rsplit(b":", -1)
         file_rev = binascii.unhexlify(file_rev_str)
         data = server.get_file(path, file_rev)
-        pycompat.stdout.write(data)
+        repo.ui.writebytes(data)
         return 0
 
     get_file_size_arg = opts.get("get_file_size")
@@ -853,7 +853,7 @@ def runedenimporthelper(repo, **opts):
         path, id_str = get_file_size_arg.rsplit(b":", -1)
         id = binascii.unhexlify(id_str)
         size = server.get_file_size(path, id)
-        sys.stdout.write("{}\n".format(size))
+        repo.ui.write("{}\n".format(size))
         return 0
 
     fetch_tree_arg = opts.get("fetch_tree")
