@@ -39,7 +39,7 @@ class connectionpool(object):
                 "remotecmd option being set\n"
             )
             peer = hg.peer(self._repo.ui, opts, path)
-            self.recordreason(reason, peer)
+            self.recordreason(reason, path, peer)
             return standaloneconnection(peer)
 
         pathpool = self._pool.get(path)
@@ -75,22 +75,26 @@ class connectionpool(object):
         else:
             self._repo.ui.debug("reusing connection from pool\n")
 
-        self.recordreason(reason, conn.peer)
+        self.recordreason(reason, path, conn.peer)
         return conn
 
-    def recordreason(self, reason, peer):
+    def recordreason(self, reason, path, peer):
         peersforreason = self._reasons.setdefault(reason, [])
-        if not util.safehasattr(peer, "_realhostname"):
-            # Non-clienttelemetry-capable peer
-            return
 
-        peersforreason.append(peer._realhostname)
+        realhostname = getattr(peer, "_realhostname", None)
+        peersforreason.append((path, realhostname))
 
     def reportreasons(self):
         ui = self._repo.ui
         nondefaultreasons = {}
+        serverpaths = {}
         for reason, peersforreason in self._reasons.items():
-            for peername in peersforreason:
+            for (path, peername) in peersforreason:
+                serverpaths[reason] = path
+
+                if peername is None:
+                    continue
+
                 if reason == "default":
                     # default reason logged directly, to support
                     # any existent queries
@@ -103,7 +107,13 @@ class connectionpool(object):
                 break
 
         nondefaultreasons = json.dumps(nondefaultreasons)
-        ui.log("connectionpool", server_realhostnames_other=nondefaultreasons)
+        serverpaths = json.dumps(serverpaths)
+
+        ui.log(
+            "connectionpool",
+            server_realhostnames_other=nondefaultreasons,
+            server_paths=serverpaths,
+        )
 
     def close(self):
         self.reportreasons()
