@@ -17,6 +17,8 @@ import hashlib
 import shutil
 import struct
 
+from bindings import worker as rustworker
+
 from . import (
     copies,
     edenfs,
@@ -1682,12 +1684,23 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
 
         # remove in parallel (must come before resolving path conflicts and
         # getting)
-        workerprog = worker.worker(
-            repo.ui, cost, batchremove, (repo, wctx), actions["r"]
-        )
-        for i, size, item in workerprog:
-            z += i
-            prog.value = (z, item)
+        if repo.ui.configbool("worker", "rustworkers"):
+            numworkers = worker._numworkers(repo.ui)
+            remover = rustworker.removerworker(repo.wvfs.base, numworkers)
+            for f, args, msg in actions["r"]:
+                # The remove method will either return immediately or block if
+                # the internal worker queue is full.
+                remover.remove(f)
+                z += 1
+                prog.value = (z, f)
+            remover.wait()
+        else:
+            workerprog = worker.worker(
+                repo.ui, cost, batchremove, (repo, wctx), actions["r"]
+            )
+            for i, size, item in workerprog:
+                z += i
+                prog.value = (z, item)
         removed = len(actions["r"])
 
         # resolve path conflicts (must come before getting)
@@ -1704,13 +1717,31 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
 
         # get in parallel
         writesize = 0
-        workerprog = worker.worker(
-            repo.ui, cost, batchget, (repo, mctx, wctx), actions["g"]
-        )
-        for i, size, item in workerprog:
-            z += i
-            writesize += size
-            prog.value = (z, item)
+
+        if repo.ui.configbool("worker", "rustworkers"):
+            numworkers = worker._numworkers(repo.ui)
+            writer = rustworker.writerworker(
+                repo.fileslog.contentstore, repo.wvfs.base, numworkers
+            )
+            fctx = mctx.filectx
+            for f, (flags, backup), msg in actions["g"]:
+                fnode = fctx(f).filenode()
+                # The write method will either return immediately or block if
+                # the internal worker queue is full.
+                writer.write(f, fnode)
+
+                z += 1
+                prog.value = (z, f)
+
+            writesize = writer.wait()
+        else:
+            workerprog = worker.worker(
+                repo.ui, cost, batchget, (repo, mctx, wctx), actions["g"]
+            )
+            for i, size, item in workerprog:
+                z += i
+                writesize += size
+                prog.value = (z, item)
         updated = len(actions["g"])
         perftrace.tracebytes("Disk Writes", writesize)
 

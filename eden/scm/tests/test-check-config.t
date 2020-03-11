@@ -132,4 +132,5 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: treemanifest.verifyautocreate (bool)
   undocumented: ui.editor.chunkselector (str)
   undocumented: ui.hyperlink (bool)
+  undocumented: worker.rustworkers (bool)
   undocumented: workingcopy.enablerustwalker (bool)

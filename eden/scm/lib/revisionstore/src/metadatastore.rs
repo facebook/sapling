@@ -277,33 +277,7 @@ mod tests {
 
     use types::testutil::*;
 
-    use crate::testutil::FakeRemoteStore;
-
-    fn make_config(dir: impl AsRef<Path>) -> ConfigSet {
-        let mut config = ConfigSet::new();
-
-        config.set(
-            "remotefilelog",
-            "reponame",
-            Some("test"),
-            &Default::default(),
-        );
-        config.set(
-            "remotefilelog",
-            "cachepath",
-            Some(dir.as_ref().to_str().unwrap()),
-            &Default::default(),
-        );
-
-        config.set(
-            "remotefilelog",
-            "cachekey",
-            Some("cca:hg:rust_unittest"),
-            &Default::default(),
-        );
-
-        config
-    }
+    use crate::testutil::{make_config, FakeRemoteStore};
 
     #[test]
     fn test_new() -> Result<()> {

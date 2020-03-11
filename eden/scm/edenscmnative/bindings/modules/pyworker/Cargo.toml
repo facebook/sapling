@@ -1,0 +1,26 @@
+[package]
+name = "pyworker"
+version = "0.1.0"
+edition = "2018"
+
+[features]
+default = []
+python2 = ["cpython/python27-sys", "cpython-ext/python2"]
+python3 = ["cpython/python3-sys", "cpython-ext/python3"]
+
+[dependencies]
+anyhow = "1.0.20"
+pyrevisionstore = { path = "../pyrevisionstore" }
+crossbeam = "0.7"
+revisionstore = { path = "../../../../lib/revisionstore" }
+cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
+cpython = { version = "0.4", default-features = false }
+types = { path = "../../../../lib/types" }
+util = { path = "../../../../lib/util" }
+
+[dev-dependencies]
+tempfile = "3.1"
+bytes = "0.5"
+quickcheck = "0.9"
+types = { path = "../../../../lib/types", default-features = false, features = ["for-tests"] }
+revisionstore = { path = "../../../../lib/revisionstore", default-features = false, features = ["for-tests"] }

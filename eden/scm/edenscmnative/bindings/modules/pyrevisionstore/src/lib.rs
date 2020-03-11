@@ -653,7 +653,7 @@ struct PyRemoteStoreInner {
 }
 
 #[derive(Clone)]
-struct PyRemoteStore {
+pub struct PyRemoteStore {
     inner: Arc<RwLock<PyRemoteStoreInner>>,
 }
 
@@ -798,7 +798,7 @@ impl LocalStore for PyRemoteHistoryStore {
     }
 }
 
-py_class!(class pyremotestore |py| {
+py_class!(pub class pyremotestore |py| {
     data remote: PyRemoteStore;
 
     def __new__(_cls, py_store: PyObject) -> PyResult<pyremotestore> {
@@ -813,7 +813,7 @@ impl pyremotestore {
     }
 }
 
-py_class!(class contentstore |py| {
+py_class!(pub class contentstore |py| {
     data store: ContentStore;
 
     def __new__(_cls, path: Option<PyPathBuf>, config: config, remote: pyremotestore, memcache: Option<memcachestore>) -> PyResult<contentstore> {
@@ -879,6 +879,12 @@ py_class!(class contentstore |py| {
     }
 });
 
+impl contentstore {
+    pub fn to_inner(&self, py: Python) -> ContentStore {
+        self.store(py).clone()
+    }
+}
+
 py_class!(class metadatastore |py| {
     data store: MetadataStore;
 
@@ -928,7 +934,7 @@ py_class!(class metadatastore |py| {
     }
 });
 
-py_class!(class memcachestore |py| {
+py_class!(pub class memcachestore |py| {
     data memcache: MemcacheStore;
 
     def __new__(_cls, config: config) -> PyResult<memcachestore> {

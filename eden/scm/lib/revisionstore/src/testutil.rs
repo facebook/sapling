@@ -5,11 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use std::{collections::HashMap, sync::Arc, time::Duration};
+use std::{collections::HashMap, path::Path, sync::Arc, time::Duration};
 
 use anyhow::{Error, Result};
 use bytes::Bytes;
 
+use configparser::config::ConfigSet;
 use edenapi::{ApiResult, DownloadStats, EdenApi, ProgressFn};
 use types::{HgId, HistoryEntry, Key, NodeInfo, RepoPathBuf};
 
@@ -233,4 +234,32 @@ impl EdenApi for FakeEdenApi {
 
 pub fn fake_edenapi(map: HashMap<Key, Bytes>) -> Arc<dyn EdenApi> {
     Arc::new(FakeEdenApi::new(map))
+}
+
+pub fn make_config(dir: impl AsRef<Path>) -> ConfigSet {
+    let mut config = ConfigSet::new();
+
+    config.set(
+        "remotefilelog",
+        "reponame",
+        Some("test"),
+        &Default::default(),
+    );
+    config.set(
+        "remotefilelog",
+        "cachepath",
+        Some(dir.as_ref().to_str().unwrap()),
+        &Default::default(),
+    );
+
+    config.set(
+        "remotefilelog",
+        "cachekey",
+        Some("cca:hg:rust_unittest"),
+        &Default::default(),
+    );
+
+    config.set("lfs", "threshold", Some("4"), &Default::default());
+
+    config
 }

@@ -43,6 +43,7 @@ pythreading = { path = "modules/pythreading" }
 pytracing = { path = "modules/pytracing", default-features = false }
 pytreestate = { path = "modules/pytreestate" }
 pyvlq = { path = "modules/pyvlq" }
+pyworker = { path = "modules/pyworker" }
 pyworkingcopy = { path = "modules/pyworkingcopy" }
 pyzstd = { path = "modules/pyzstd" }
 pyzstore = { path = "modules/pyzstore" }
