@@ -501,9 +501,8 @@ impl fmt::Debug for IdMap {
                 let id = data.read_u64::<BigEndian>().unwrap();
                 let mut name = Vec::with_capacity(20);
                 data.read_to_end(&mut name).unwrap();
-                let name = if name.len() == 20 {
-                    let id20 = types::Id20::from_slice(&name).unwrap();
-                    id20.to_hex()
+                let name = if name.len() >= 20 {
+                    VertexName::from(name).to_hex()
                 } else {
                     String::from_utf8_lossy(&name).to_string()
                 };
