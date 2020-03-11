@@ -11,7 +11,7 @@ use std::str::FromStr;
 use anyhow::Error;
 use bytes::Bytes;
 use futures::{
-    channel::mpsc,
+    channel::{mpsc, oneshot::Sender},
     stream::{Stream, StreamExt},
     task::{Context, Poll},
 };
@@ -24,7 +24,6 @@ use hyper::{
 use lazy_static::lazy_static;
 use mime::Mime;
 use std::pin::Pin;
-use tokio_old::sync::oneshot::Sender;
 
 use crate::errors::LfsServerContextErrorKind;
 use crate::middleware::RequestContext;

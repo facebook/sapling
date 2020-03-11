@@ -5,27 +5,20 @@
  * GNU General Public License version 2.
  */
 
-use std::fmt;
-
-use anyhow::Error;
 use configerator_cached::ConfigHandle;
 use context::{CoreContext, PerfCounters, SessionContainer};
 use dns_lookup::lookup_addr;
 use fbinit::FacebookInit;
-use futures::{future, prelude::*};
-use futures_ext::FutureExt;
-use futures_old::{future::ok, Future, IntoFuture};
+use futures::channel::oneshot::{self, Receiver, Sender};
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
 use hyper::{body::Body, Response};
 use scuba::ScubaSampleBuilder;
 use slog::{o, Logger};
+use std::fmt;
 use std::net::IpAddr;
 use std::time::{Duration, Instant};
-use tokio_old::{
-    self,
-    sync::oneshot::{channel, Receiver, Sender},
-};
+use tokio::task;
 
 use super::{ClientIdentity, Middleware};
 use crate::http::ResponseContentLength;
@@ -111,7 +104,7 @@ impl RequestContext {
     /// Delay post request until a callback has completed. This is useful to e.g. record how much data was sent.
     pub fn delay_post_request(&mut self) -> Sender<u64> {
         // NOTE: If this is called twice ... then the first one will be ignored
-        let (sender, receiver) = channel();
+        let (sender, receiver) = oneshot::channel();
         self.checkpoint = Some(receiver);
         sender
     }
@@ -130,65 +123,47 @@ impl RequestContext {
             ..
         } = self;
 
-        let run_callbacks =
-            move |elapsed, client_hostname, bytes_sent, perf_counters: &PerfCounters| {
-                for callback in post_request_callbacks.into_iter() {
-                    callback(&elapsed, &client_hostname, bytes_sent, perf_counters)
-                }
-            };
+        // We get the client hostname asynchronously in post request, because that might be a little slow.
+        let client_hostname = async move {
+            if disable_hostname_logging {
+                return None;
+            }
 
-        // We get the client hostname in post request, because that might be a little slow.
-        let client_hostname = match disable_hostname_logging {
-            true => ok(None).left_future(),
-            _ => tokio::task::spawn_blocking(move || -> Result<_, Error> {
-                let hostname = client_address
+            let hostname = task::spawn_blocking(move || {
+                client_address
                     .as_ref()
                     .map(lookup_addr)
                     .transpose()
                     .ok()
-                    .flatten();
-
-                Ok(hostname)
+                    .flatten()
             })
-            .map_err(|e| Error::new(e))
-            .and_then(|r| future::ready(r))
-            .compat()
-            .or_else(|_| -> Result<_, !> { Ok(None) })
-            .right_future(),
+            .await
+            .ok()
+            .flatten();
+
+            hostname
         };
 
-        let fut = if let Some(checkpoint) = checkpoint {
-            // NOTE: We use then() here: if the receiver was dropped, we still want to run our
-            // callbacks!
-            let request_complete =
-                checkpoint
-                    .into_future()
-                    .then(move |bytes_sent| -> Result<_, !> {
-                        Ok((start_time.elapsed(), bytes_sent.map(Some).unwrap_or(None)))
-                    });
+        let fut = async move {
+            let bytes_sent = if let Some(checkpoint) = checkpoint {
+                // NOTE: We don't use await? here, because we want to run callbacks even if the
+                // receiver was dropped!
+                checkpoint.await.map(Some).unwrap_or(None)
+            } else {
+                content_length
+            };
 
-            (request_complete, client_hostname)
-                .into_future()
-                .map(move |((elapsed, bytes_sent), client_hostname)| {
-                    run_callbacks(elapsed, client_hostname, bytes_sent, ctx.perf_counters());
-                })
-                .left_future()
-        } else {
+            // Capture elapsed time before waiting for the client hostname to resolve.
             let elapsed = start_time.elapsed();
 
-            client_hostname
-                .map(move |client_hostname| {
-                    run_callbacks(
-                        elapsed,
-                        client_hostname,
-                        content_length,
-                        ctx.perf_counters(),
-                    );
-                })
-                .right_future()
+            let client_hostname = client_hostname.await;
+
+            for callback in post_request_callbacks.into_iter() {
+                callback(&elapsed, &client_hostname, bytes_sent, ctx.perf_counters())
+            }
         };
 
-        tokio_old::spawn(fut.discard());
+        task::spawn(fut);
     }
 }
 
