@@ -36,11 +36,11 @@ def starttracking(repo):
 
 def stoptracking(repo):
     """stop tracking visibility information and revert to using obsmarkers"""
-    if "visibleheads" in repo.storerequirements:
-        with repo.lock():
+    with repo.lock(), repo.transaction("disable-visibility"):
+        if "visibleheads" in repo.storerequirements:
             repo.storerequirements.discard("visibleheads")
             repo._writestorerequirements()
-    repo.svfs.write("visibleheads", "")
+        repo.svfs.write("visibleheads", "")
 
 
 # Supported file format version.

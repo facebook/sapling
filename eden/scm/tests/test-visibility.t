@@ -695,3 +695,14 @@ Unamend and Uncommit
   |/
   @  0: df4f53cec30a 'base'
   
+Migration down
+  $ setconfig visibility.automigrate=stop
+  $ hg debugedenimporthelper --get-manifest-node .
+  reverting to tracking visibility through obsmarkers
+  4e7eb8574ed56675aa89d2b5abbced12d5688cef
+
+Migration up
+  $ setconfig visibility.automigrate=start
+  $ hg debugedenimporthelper --get-manifest-node .
+  switching to explicit tracking of visible commits
+  4e7eb8574ed56675aa89d2b5abbced12d5688cef
