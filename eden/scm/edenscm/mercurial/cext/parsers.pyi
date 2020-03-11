@@ -20,6 +20,16 @@ def make_file_foldmap(
     spec: int,
     normcase_fallback: Callable[[bytes], bytes],
 ) -> Dict[bytes, bytes]: ...
+def dict_new_presized(minsize: int) -> Dict[str, dirstatetuple]: ...
+def parse_dirstate(
+    dmap: Dict[str, dirstatetuple], copymap: Dict[str, str], st: bytes
+) -> Tuple[bytes, bytes]: ...
+def pack_dirstate(
+    dmap: Dict[str, dirstatetuple],
+    copymap: Dict[str, str],
+    pl: Tuple[bytes, bytes],
+    now: int,
+) -> bytes: ...
 
 class lazymanifest:
     def __init__(self, data: bytes) -> None: ...

@@ -512,7 +512,7 @@ unknown_files unsure_files why_not_eden wrap_pack wrap_unpack
 
 always_allow_pending always_allow_shared_pending chunked_paths cmd_cat_file
 cmd_fetch_tree cmd_function cmd_manifest cmd_manifest_node_for_commit
-cmd_old_cat_file data_fmt data_length dump_manifest eden_import_helper
+cmd_old_cat_file data_fmt data_length dict_new_presized dump_manifest eden_import_helper
 fetch_tree file_rev files_data get_manifest_node header_data header_fields
 is_last length_data lengths_fmt local_ui manifest_node node_hash num_paths
 options_chunk os_mode path_lengths prefetch_files repo_name repo_ui rev_hash
