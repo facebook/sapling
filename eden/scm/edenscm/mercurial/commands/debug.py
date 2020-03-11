@@ -911,6 +911,50 @@ def debugstate(ui, repo, **opts):
 
 
 @command(
+    "debugdifftree",
+    [("r", "rev", [], "revs to diff (2 revs)")]
+    + cmdutil.walkopts
+    + cmdutil.templateopts,
+)
+def debugdifftree(ui, repo, *pats, **opts):
+    """diff two trees
+    
+    Print changed paths.
+    """
+    revs = scmutil.revrange(repo, opts.get("rev"))
+    repo = repo.unfiltered()
+    oldrev = revs.first()
+    newrev = revs.last()
+    oldctx = repo[oldrev]
+    newctx = repo[newrev]
+
+    matcher = scmutil.match(newctx, pats, opts)
+    diff = oldctx.manifest().diff(newctx.manifest(), matcher)
+
+    fm = ui.formatter("debugdifftree", opts)
+    for path, ((oldnode, oldflags), (newnode, newflags)) in sorted(diff.items()):
+        fm.startitem()
+        if oldnode is None:
+            status = "A"
+        elif newnode is None:
+            status = "R"
+        else:
+            status = "M"
+        fm.write("status path", "%s %s\n", status, path)
+        oldhex = oldnode and hex(oldnode)
+        newhex = newnode and hex(newnode)
+        fm.data(
+            path=path,
+            status=status,
+            oldflags=oldflags,
+            newflags=newflags,
+            oldnode=oldhex,
+            newnode=newhex,
+        )
+    fm.end()
+
+
+@command(
     "debugdiscovery",
     [
         ("", "old", None, _("use old-style discovery")),

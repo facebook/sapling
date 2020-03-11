@@ -273,6 +273,15 @@ def _parseasciigraph(text):
 class simplefilectx(object):
     def __init__(self, path, data, renamed=None):
         assert isinstance(data, bytes)
+        if b" (executable)" in data:
+            data = data.replace(b" (executable)", b"")
+            flags = "x"
+        elif b" (symlink)" in data:
+            data = data.replace(b" (symlink)", b"")
+            flags = "l"
+        else:
+            flags = ""
+        self._flags = flags
         self._data = data
         self._path = path
         self._renamed = renamed
@@ -292,7 +301,7 @@ class simplefilectx(object):
         return None
 
     def flags(self):
-        return ""
+        return self._flags
 
 
 class simplecommitctx(context.committablectx):
