@@ -240,8 +240,6 @@
       "headers_duration_ms": *, (glob)
       "http_status": 200,
       "request_load": *, (glob)
-      "response_bytes_sent": *, (glob)
-      "response_content_length": *, (glob)
       "time": * (glob)
     },
     "normal": {

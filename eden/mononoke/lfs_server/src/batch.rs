@@ -6,10 +6,12 @@
  */
 
 use anyhow::Error;
-use futures::{compat::Future01CompatExt, compat::Stream01CompatExt, TryStreamExt};
+use futures::compat::Future01CompatExt;
 use futures_util::{future::try_join_all, pin_mut, select, try_join, FutureExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
+use gotham_ext::body_ext::BodyExt;
+use http::header::HeaderMap;
 use hyper::{Body, StatusCode};
 use maplit::hashmap;
 use scuba::ScubaValue;
@@ -449,13 +451,15 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
         start_time.elapsed().as_micros_unchecked(),
     );
 
-    let body = Body::take_from(state)
-        .compat()
-        .try_concat()
+    let body = Body::take_from(state);
+    let headers = HeaderMap::try_borrow_from(state);
+
+    let body = body
+        .try_concat_body_opt(headers)
+        .map_err(HttpError::e400)?
         .await
         .chain_err(ErrorKind::ClientCancelled)
-        .map_err(HttpError::e400)?
-        .into_bytes();
+        .map_err(HttpError::e400)?;
 
     let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
 

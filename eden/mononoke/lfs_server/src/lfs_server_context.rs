@@ -14,18 +14,18 @@ use std::sync::{
 
 use aclchecker::Identity;
 use anyhow::Error;
-use bytes_old::Bytes as BytesOld;
+use bytes::Bytes;
 use configerator_cached::ConfigHandle;
-use futures::Future;
-use futures_channel::oneshot;
-use futures_old::Future as Future01;
-use futures_util::{compat::Stream01CompatExt, TryStreamExt};
+use futures::{
+    channel::oneshot,
+    future::{self, Future, FutureExt},
+};
 use gotham::state::{FromState, State};
 use gotham_derive::StateData;
+use gotham_ext::body_ext::BodyExt;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use hyper::{Body, Request};
 use slog::Logger;
-use tokio_old::spawn;
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
@@ -70,8 +70,7 @@ impl LfsServerContext {
         will_exit: Arc<AtomicBool>,
         config_handle: ConfigHandle<ServerConfig>,
     ) -> Result<Self, Error> {
-        // TODO: Configure threads?
-        let connector = HttpsConnector::new(4)
+        let connector = HttpsConnector::new()
             .map_err(Error::from)
             .chain_err(ErrorKind::HttpClientInitializationFailed)?;
         let client = Client::builder().build(connector);
@@ -204,7 +203,7 @@ impl RepositoryRequestContext {
         self.max_upload_size
     }
 
-    pub fn dispatch(&self, request: Request<Body>) -> impl Future<Output = Result<Body, Error>> {
+    pub fn dispatch(&self, request: Request<Body>) -> impl Future<Output = Result<Bytes, Error>> {
         let (sender, receiver) = oneshot::channel();
 
         // NOTE: We spawn the request on an executor because we'd like to read the response even if
@@ -214,10 +213,10 @@ impl RepositoryRequestContext {
         // don't want to read all that later just to reuse a connection).
         let fut = self.client.request(request).then(move |r| {
             let _ = sender.send(r);
-            Ok(())
+            future::ready(())
         });
 
-        spawn(fut);
+        tokio::spawn(fut);
 
         async move {
             let res = receiver
@@ -226,10 +225,9 @@ impl RepositoryRequestContext {
                 .chain_err(ErrorKind::UpstreamDidNotRespond)?;
 
             let (head, body) = res.into_parts();
+            let body = body.try_concat_body(&head.headers)?.await?;
 
             if !head.status.is_success() {
-                let body = body.compat().try_concat().await?;
-
                 return Err(ErrorKind::UpstreamError(
                     head.status,
                     String::from_utf8_lossy(&body).to_string(),
@@ -237,6 +235,9 @@ impl RepositoryRequestContext {
                 .into());
             }
 
+            // NOTE: This buffers the response here, since all our callsites need a concatenated
+            // response. If we want to add callsites that need a streaming response, we should add
+            // our own wrapper type that wraps the response and the headers.
             Ok(body)
         }
     }
@@ -252,7 +253,7 @@ impl RepositoryRequestContext {
             }
         };
 
-        let body: BytesOld = serde_json::to_vec(&batch)
+        let body: Bytes = serde_json::to_vec(&batch)
             .chain_err(ErrorKind::SerializationFailed)?
             .into();
 
@@ -260,9 +261,6 @@ impl RepositoryRequestContext {
 
         let res = self
             .dispatch(req)
-            .await?
-            .compat()
-            .try_concat()
             .await
             .chain_err(ErrorKind::UpstreamBatchNoResponse)?;
 

@@ -8,13 +8,13 @@
 use aclchecker::Identity;
 use configerator_cached::ConfigHandle;
 use fbinit::FacebookInit;
-use futures_ext::FutureExt;
-use futures_old::future::Future;
+use futures::future::{self, FutureExt};
 use gotham::{handler::HandlerFuture, middleware::Middleware, state::State};
 use gotham_derive::NewMiddleware;
 use rand::Rng;
 use stats_facebook::service_data::{get_service_data_singleton, ServiceData, ServiceDataWrapper};
 use std::convert::TryInto;
+use std::pin::Pin;
 use std::time::Duration;
 
 use crate::config::{Limit, ServerConfig};
@@ -43,9 +43,9 @@ impl ThrottleMiddleware {
 }
 
 impl Middleware for ThrottleMiddleware {
-    fn call<Chain>(self, state: State, chain: Chain) -> Box<HandlerFuture>
+    fn call<Chain>(self, state: State, chain: Chain) -> Pin<Box<HandlerFuture>>
     where
-        Chain: FnOnce(State) -> Box<HandlerFuture>,
+        Chain: FnOnce(State) -> Pin<Box<HandlerFuture>>,
     {
         let identities = if let Some(client_ident) = state.try_borrow::<ClientIdentity>() {
             client_ident.identities().as_ref()
@@ -72,13 +72,13 @@ impl Middleware for ThrottleMiddleware {
 
                 let total_sleep_ms = sleep_ms + jitter;
 
-                return tokio_timer::sleep(Duration::from_millis(total_sleep_ms))
-                    .then(move |_| http_error_to_handler_error(err, state))
-                    .boxify();
+                return tokio::time::delay_for(Duration::from_millis(total_sleep_ms))
+                    .then(move |()| future::ready(http_error_to_handler_error(err, state)))
+                    .boxed();
             }
         }
 
-        chain(state).boxify()
+        chain(state)
     }
 }
 

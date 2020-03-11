@@ -6,8 +6,7 @@
  */
 
 use fbinit::FacebookInit;
-use futures::{FutureExt as Futures03Ext, TryFutureExt};
-use futures_ext::FutureExt;
+use futures::FutureExt;
 use gotham::{
     handler::HandlerFuture,
     helpers::http::response::{create_empty_response, create_response},
@@ -21,6 +20,7 @@ use gotham::{
 };
 use hyper::{Body, Response, StatusCode};
 use mime;
+use std::pin::Pin;
 
 use crate::batch;
 use crate::download;
@@ -32,44 +32,36 @@ use super::util::build_response;
 
 // These 3 methods are wrappers to go from async fn's to the implementations Gotham expects,
 // as well as creating HTTP responses using build_response().
-fn batch_handler(mut state: State) -> Box<HandlerFuture> {
+fn batch_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     async move {
         let res = batch::batch(&mut state).await;
         build_response(res, state)
     }
     .boxed()
-    .compat()
-    .boxify()
 }
 
-fn download_handler(mut state: State) -> Box<HandlerFuture> {
+fn download_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     async move {
         let res = download::download(&mut state).await;
         build_response(res, state)
     }
     .boxed()
-    .compat()
-    .boxify()
 }
 
-fn download_sha256_handler(mut state: State) -> Box<HandlerFuture> {
+fn download_sha256_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     async move {
         let res = download::download_sha256(&mut state).await;
         build_response(res, state)
     }
     .boxed()
-    .compat()
-    .boxify()
 }
 
-fn upload_handler(mut state: State) -> Box<HandlerFuture> {
+fn upload_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     async move {
         let res = upload::upload(&mut state).await;
         build_response(res, state)
     }
     .boxed()
-    .compat()
-    .boxify()
 }
 
 fn health_handler(state: State) -> (State, &'static str) {

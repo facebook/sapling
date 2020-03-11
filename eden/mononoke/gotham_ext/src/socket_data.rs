@@ -7,17 +7,17 @@
 
 use aclchecker::Identity;
 use bytes::Bytes;
-use gotham::{state::State, PreStateData};
+use gotham::{socket_data::SocketData, state::State};
 use gotham_derive::StateData;
 use openssl::ssl::SslRef;
 use x509::identity;
 
-pub struct TlsPreStateData {
+pub struct TlsSocketData {
     identities: Option<TlsCertificateIdentities>,
     session_data: Option<TlsSessionData>,
 }
 
-impl TlsPreStateData {
+impl TlsSocketData {
     pub fn from_ssl(ssl: &SslRef, capture_session_data: bool) -> Self {
         let identities = TlsCertificateIdentities::from_ssl(ssl);
 
@@ -34,8 +34,8 @@ impl TlsPreStateData {
     }
 }
 
-impl PreStateData for TlsPreStateData {
-    fn fill_state(&self, state: &mut State) {
+impl SocketData for TlsSocketData {
+    fn populate_state(&self, state: &mut State) {
         if let Some(ref identities) = self.identities {
             state.put(identities.clone());
         }

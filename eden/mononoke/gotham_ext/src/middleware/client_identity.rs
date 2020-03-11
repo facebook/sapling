@@ -18,7 +18,7 @@ use std::sync::Arc;
 
 use super::Middleware;
 
-use crate::pre_state_data::TlsCertificateIdentities;
+use crate::socket_data::TlsCertificateIdentities;
 
 const ENCODED_CLIENT_IDENTITY: &str = "x-fb-validated-client-encoded-identity";
 const CLIENT_IP: &str = "tfb-orig-client-ip";

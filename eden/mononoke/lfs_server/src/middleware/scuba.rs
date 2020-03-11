@@ -8,7 +8,6 @@
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
 use hyper::{
-    body::Payload,
     header::{self, AsHeaderName, HeaderMap},
     Method, StatusCode, Uri,
 };
@@ -17,6 +16,7 @@ use scuba::{ScubaSampleBuilder, ScubaValue};
 use time_ext::DurationExt;
 
 use super::{ClientIdentity, Middleware, RequestContext, RequestLoad as RequestLoadMiddleware};
+use crate::http::ResponseContentLength;
 
 #[derive(Copy, Clone, Debug)]
 pub enum ScubaKey {
@@ -197,14 +197,8 @@ fn log_stats(
         );
     }
 
-    // Set the response size to the content length, unless it was overridden earlier. This is
-    // helpful to ensure all our responses get a content length if Hyper can provide one, and only
-    // those responses where Hyper is unable to derive the content length need to provide it for
-    // themselves.
     if let Some(content_length) = content_length {
-        scuba
-            .entry(ScubaKey::ResponseContentLength)
-            .or_insert(content_length.into());
+        scuba.add(ScubaKey::ResponseContentLength, content_length);
     }
 
     if let Some(identity) = ClientIdentity::try_borrow_from(&state) {
@@ -302,6 +296,8 @@ impl Middleware for ScubaMiddleware {
             }
         }
 
-        log_stats(state, &response.status(), response.body().content_length());
+        let content_length = ResponseContentLength::try_borrow_from(&state).map(|l| l.0);
+
+        log_stats(state, &response.status(), content_length);
     }
 }

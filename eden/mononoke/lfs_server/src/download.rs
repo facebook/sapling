@@ -8,9 +8,10 @@
 use mononoke_types::hash::Sha256;
 
 use failure_ext::chain::ChainExt;
-use futures::compat::Future01CompatExt;
-use futures_ext::StreamExt;
-use futures_old::Stream;
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    stream::{StreamExt, TryStreamExt},
+};
 use gotham::state::State;
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
@@ -51,20 +52,22 @@ async fn fetch_by_key(
     key: FetchKey,
 ) -> Result<impl TryIntoResponse, HttpError> {
     // Query a stream out of the Filestore
-    let fetch_stream = filestore::fetch_with_size(ctx.repo.blobstore(), ctx.ctx.clone(), &key)
+    let fetched = filestore::fetch_with_size(ctx.repo.blobstore(), ctx.ctx.clone(), &key)
         .compat()
         .await
         .chain_err(ErrorKind::FilestoreReadFailure)
         .map_err(HttpError::e500)?;
 
     // Return a 404 if the stream doesn't exist.
-    let (stream, size) = fetch_stream
+    let (stream, size) = fetched
         .ok_or_else(|| ErrorKind::ObjectDoesNotExist(key))
         .map_err(HttpError::e404)?;
 
+    let stream = stream.compat();
+
     let stream = if ctx.config.track_bytes_sent() {
         stream
-            .inspect(|bytes| STATS::size_bytes_sent.add_value(bytes.len() as i64))
+            .inspect_ok(|bytes| STATS::size_bytes_sent.add_value(bytes.len() as i64))
             .left_stream()
     } else {
         stream.right_stream()

@@ -16,7 +16,7 @@ use std::sync::{Arc, Mutex};
 
 use super::Middleware;
 
-use crate::pre_state_data::TlsSessionData;
+use crate::socket_data::TlsSessionData;
 
 pub struct TlsSessionDataMiddleware {
     log_file: Option<Arc<Mutex<File>>>,

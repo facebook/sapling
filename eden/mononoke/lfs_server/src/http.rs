@@ -6,24 +6,31 @@
  */
 
 use std::convert::TryInto;
-use std::error::Error as StdError;
 use std::str::FromStr;
 
 use anyhow::Error;
 use bytes::Bytes;
-use futures_ext::StreamExt;
-use futures_old::{try_ready, Async, Poll, Stream};
+use futures::{
+    channel::mpsc,
+    stream::{Stream, StreamExt},
+    task::{Context, Poll},
+};
 use gotham::state::State;
+use gotham_derive::StateData;
 use hyper::{
     header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE},
     Body, Response, StatusCode,
 };
 use lazy_static::lazy_static;
 use mime::Mime;
+use std::pin::Pin;
 use tokio_old::sync::oneshot::Sender;
 
 use crate::errors::LfsServerContextErrorKind;
-use crate::middleware::{RequestContext, ScubaKey, ScubaMiddlewareState};
+use crate::middleware::RequestContext;
+
+#[derive(StateData)]
+pub struct ResponseContentLength(pub u64);
 
 // Provide an easy way to map from Error -> Http code
 pub struct HttpError {
@@ -81,7 +88,9 @@ pub trait TryIntoResponse {
 }
 
 impl TryIntoResponse for EmptyBody {
-    fn try_into_response(self, _state: &mut State) -> Result<Response<Body>, Error> {
+    fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
+        state.put(ResponseContentLength(0));
+
         Response::builder()
             .status(StatusCode::OK)
             .header(CONTENT_LENGTH, 0)
@@ -94,22 +103,23 @@ impl<B> TryIntoResponse for BytesBody<B>
 where
     B: Into<Bytes>,
 {
-    fn try_into_response(self, _state: &mut State) -> Result<Response<Body>, Error> {
+    fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
         let bytes = self.bytes.into();
         let mime_header: HeaderValue = self.mime.as_ref().parse()?;
+
+        state.put(ResponseContentLength(bytes.len().try_into()?));
 
         Response::builder()
             .header(CONTENT_TYPE, mime_header)
             .status(StatusCode::OK)
-            .body(bytes_ext::copy_from_new(bytes).into())
+            .body(bytes.into())
             .map_err(Error::from)
     }
 }
 
 impl<S> TryIntoResponse for StreamBody<S>
 where
-    S: Stream<Item = Bytes> + Send + 'static,
-    S::Error: Into<Box<dyn StdError + Send + Sync>>,
+    S: Stream<Item = Result<Bytes, Error>> + Send + 'static,
 {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
         let Self {
@@ -118,24 +128,24 @@ where
             mime,
         } = self;
 
-        // Provide a response size hint for this: stream length cannot be derived from a
-        // Response<Body> later!
-        ScubaMiddlewareState::try_borrow_add(
-            state,
-            ScubaKey::ResponseContentLength,
-            content_length,
-        );
+        state.put(ResponseContentLength(content_length));
 
         let mime_header: HeaderValue = mime.as_ref().parse()?;
 
+        // This is kind of annoying, but right now Hyper requires a Body's stream to be Sync (even
+        // though it doesn't actually need it). For now, we have to work around by spawning the
+        // stream on its own task, and giving Hyper a channel that receives from it. Note that the
+        // map(Ok) is here because we want to forward Result<Bytes, Error> instances over our
+        // stream.
+        let (sender, receiver) = mpsc::channel(0);
+        tokio::spawn(stream.map(Ok).forward(sender));
+
         let stream = if let Some(ctx) = state.try_borrow_mut::<RequestContext>() {
             let sender = ctx.delay_post_request();
-            SignalStream::new(stream, sender).left_stream()
+            SignalStream::new(receiver, sender).left_stream()
         } else {
-            stream.right_stream()
+            receiver.right_stream()
         };
-
-        let stream = stream.map(bytes_ext::copy_from_new);
 
         Response::builder()
             .header(CONTENT_TYPE, mime_header)
@@ -227,42 +237,63 @@ impl<S> SignalStream<S> {
             size_sent: 0,
         }
     }
+
+    fn pin_get_parts(self: Pin<&mut Self>) -> (Pin<&mut S>, &mut Option<Sender<u64>>, &mut u64) {
+        // Pinning is structural for stream, non-structural for sender and size_sent.
+        let this = unsafe { self.get_unchecked_mut() };
+        let stream = unsafe { Pin::new_unchecked(&mut this.stream) };
+        (stream, &mut this.sender, &mut this.size_sent)
+    }
+
+    fn pin_drop(self: Pin<&mut Self>) {
+        let (_, sender, size_sent) = self.pin_get_parts();
+
+        if let Some(sender) = sender.take() {
+            let _ = sender.send(*size_sent);
+        }
+    }
 }
 
-impl<S: Stream> Stream for SignalStream<S>
+impl<S, I, E> Stream for SignalStream<S>
 where
-    S::Item: Sizeable,
+    S: Stream<Item = Result<I, E>>,
+    I: Sizeable,
 {
-    type Item = S::Item;
-    type Error = S::Error;
+    type Item = Result<I, E>;
 
-    fn poll(&mut self) -> Poll<Option<Self::Item>, Self::Error> {
-        if self.sender.is_none() {
-            return Ok(Async::Ready(None));
+    fn poll_next(self: Pin<&mut Self>, ctx: &mut Context) -> Poll<Option<Self::Item>> {
+        let (stream, sender, size_sent) = self.pin_get_parts();
+
+        if sender.is_none() {
+            return Poll::Ready(None);
         }
 
-        let poll = try_ready!(self.stream.poll());
+        let poll = match stream.poll_next(ctx) {
+            Poll::Ready(poll) => poll,
+            Poll::Pending => {
+                return Poll::Pending;
+            }
+        };
 
-        if let Some(ref item) = poll {
+        if let Some(Ok(ref item)) = poll {
             // We have an item: increment the amount of data we sent.
-            self.size_sent += item.size();
+            *size_sent += item.size();
         } else {
             // No items left: signal our receiver.
-            let _ = self
-                .sender
+            let _ = sender
                 .take()
                 .expect("presence checked above")
-                .send(self.size_sent);
+                .send(*size_sent);
         }
 
-        Ok(Async::Ready(poll))
+        Poll::Ready(poll)
     }
 }
 
 impl<S> Drop for SignalStream<S> {
     fn drop(&mut self) {
-        if let Some(sender) = self.sender.take() {
-            let _ = sender.send(self.size_sent);
-        }
+        // `new_unchecked` is okay because we know this value is never used again after being
+        // dropped.
+        unsafe { Pin::new_unchecked(self) }.pin_drop();
     }
 }

@@ -17,10 +17,7 @@ use futures_ext::FutureExt;
 use futures_old::{future::ok, Future, IntoFuture};
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
-use hyper::{
-    body::{Body, Payload},
-    Response,
-};
+use hyper::{body::Body, Response};
 use scuba::ScubaSampleBuilder;
 use slog::{o, Logger};
 use std::net::IpAddr;
@@ -31,6 +28,7 @@ use tokio_old::{
 };
 
 use super::{ClientIdentity, Middleware};
+use crate::http::ResponseContentLength;
 
 use crate::config::ServerConfig;
 
@@ -233,12 +231,12 @@ impl Middleware for RequestContextMiddleware {
         None
     }
 
-    async fn outbound(&self, state: &mut State, response: &mut Response<Body>) {
+    async fn outbound(&self, state: &mut State, _response: &mut Response<Body>) {
         let client_address = ClientIdentity::try_borrow_from(&state)
             .map(|client_identity| *client_identity.address())
             .flatten();
 
-        let content_length = response.body().content_length();
+        let content_length = ResponseContentLength::try_borrow_from(&state).map(|l| l.0);
 
         let config = self.config_handle.get();
         if let Some(ctx) = state.try_take::<RequestContext>() {

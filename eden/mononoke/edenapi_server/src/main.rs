@@ -15,19 +15,16 @@ use std::sync::{
 
 use anyhow::{Context, Result};
 use clap::{Arg, ArgMatches};
+use cloned::cloned;
 use futures::{
     channel::oneshot,
-    compat::Future01CompatExt,
     future::{lazy, select, FutureExt, TryFutureExt},
 };
-use futures_ext::FutureExt as OldFutureExt;
-use futures_old::future;
 use gotham::bind_server;
 use hyper::header::HeaderValue;
 use openssl::ssl::SslAcceptor;
-use slog::{error, info, Logger};
-use tokio::{net::TcpListener, prelude::*};
-use tokio_openssl::SslAcceptorExt;
+use slog::{error, info, warn, Logger};
+use tokio::net::TcpListener;
 
 use cmdlib::{
     args,
@@ -209,7 +206,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     // Set up socket and TLS acceptor that this server will listen on.
     let addr = parse_server_addr(&matches)?;
-    let listener = TcpListener::bind(&addr)?;
+    let listener = runtime.block_on_std(TcpListener::bind(&addr))?;
     let acceptor = parse_tls_options(&matches)
         .map(|(config, ticket_seeds)| build_tls_acceptor(config, ticket_seeds, &logger))
         .transpose()?;
@@ -217,11 +214,28 @@ fn main(fb: FacebookInit) -> Result<()> {
     // Bind to the socket and set up the Future for the server's main loop.
     let scheme = if acceptor.is_some() { "https" } else { "http" };
     let server = match acceptor {
-        Some(acceptor) => bind_server(listener, handler, move |socket| {
-            acceptor.accept_async(socket).map_err(|_| ())
-        })
-        .left_future(),
-        None => bind_server(listener, handler, |socket| future::ok(socket)).right_future(),
+        Some(acceptor) => {
+            let acceptor = Arc::new(acceptor);
+            bind_server(listener, handler, {
+                cloned!(logger);
+                move |socket| {
+                    cloned!(acceptor, logger);
+                    async move {
+                        let ssl_socket = match tokio_openssl::accept(&acceptor, socket).await {
+                            Ok(ssl_socket) => ssl_socket,
+                            Err(e) => {
+                                warn!(&logger, "TLS handshake failed: {:?}", e);
+                                return Err(());
+                            }
+                        };
+
+                        Ok(ssl_socket)
+                    }
+                }
+            })
+            .left_future()
+        }
+        None => bind_server(listener, handler, |socket| async move { Ok(socket) }).right_future(),
     };
 
     // Spawn a basic FB303 Thrift server for stats reporting.
@@ -233,7 +247,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     serve_forever(
         runtime,
         select(
-            server.compat().map_err({
+            server.boxed().map_err({
                 let logger = logger.clone();
                 move |e| error!(&logger, "Unhandled error: {:?}", e)
             }),

@@ -8,10 +8,9 @@
 use anyhow::Error;
 use bytes::Bytes;
 use futures::{
-    channel::mpsc::channel, compat::Future01CompatExt, compat::Stream01CompatExt, future::ready,
-    SinkExt, Stream, StreamExt, TryStreamExt,
+    channel::mpsc::channel, compat::Future01CompatExt, future::ready, SinkExt, Stream, StreamExt,
+    TryStreamExt,
 };
-use futures_old::Future;
 use futures_util::try_join;
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
@@ -69,7 +68,7 @@ async fn upstream_upload<S>(
     data: S,
 ) -> Result<(), Error>
 where
-    S: Stream<Item = Result<Bytes, Error>> + Unpin + Send + 'static,
+    S: Stream<Item = Result<Bytes, Error>> + Unpin + Send + Sync + 'static,
 {
     let object = RequestObject {
         oid: LfsSha256(oid.into_inner()),
@@ -117,7 +116,7 @@ where
         STATS::upstream_uploads.add_value(1);
         let ObjectAction { href, .. } = action;
 
-        let body = Body::wrap_stream(data.map_ok(bytes_ext::copy_from_new).compat());
+        let body = Body::wrap_stream(data);
         let req = Request::put(href)
             .header("Content-Length", &size.to_string())
             .body(body.into())?;
@@ -126,9 +125,6 @@ where
         // be reused.
         let _ = ctx
             .dispatch(req)
-            .await?
-            .compat()
-            .try_concat()
             .await
             .chain_err(ErrorKind::UpstreamUploadError)?;
 
@@ -186,10 +182,10 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
             &StoreRequest::with_sha256(size, oid),
             internal_recv.compat(),
         )
-        .chain_err(ErrorKind::FilestoreWriteFailure)
-        .map_err(Error::from)
         .compat()
-        .await;
+        .await
+        .chain_err(ErrorKind::FilestoreWriteFailure)
+        .map_err(Error::from);
 
         if !res.is_err() {
             STATS::internal_success.add_value(1);
@@ -203,11 +199,9 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
     let mut received: usize = 0;
 
     let mut data = Body::take_from(state)
-        .compat()
         .map_ok(|chunk| {
-            let bytes = bytes_ext::copy_from_old(chunk.into_bytes());
-            received += bytes.len();
-            bytes
+            received += chunk.len();
+            chunk
         })
         .map_err(|_| ())
         .map(Ok);

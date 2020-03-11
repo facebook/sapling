@@ -5,16 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt, TryFutureExt},
-};
+use futures::future::FutureExt;
 use gotham::{
     handler::{Handler, HandlerFuture, IntoResponse, NewHandler},
     state::State,
 };
 use hyper::{Body, Response};
 use std::panic::RefUnwindSafe;
+use std::pin::Pin;
 use std::sync::Arc;
 
 use crate::middleware::Middleware;
@@ -59,7 +57,7 @@ async fn run_middleware(
 // instance of middleware. In contrast, our middleware stack is completely out of the way once it
 // has finished executing.
 impl<H: Handler + Send + Sync + 'static> Handler for MononokeHttpHandler<H> {
-    fn handle(self, mut state: State) -> Box<HandlerFuture> {
+    fn handle(self, mut state: State) -> Pin<Box<HandlerFuture>> {
         let fut = async move {
             // On request, middleware is called in order, then called the other way around on
             // response (this is what regular Router middleware in Gotham would do).
@@ -70,7 +68,7 @@ impl<H: Handler + Send + Sync + 'static> Handler for MononokeHttpHandler<H> {
                         // NOTE: It's a bit unfortunate that we have to return a HandlerFuture here
                         // when really we'd rather be working with just (State, HttpResponse<Body>)
                         // everywhere, but that's how it is in Gotham.
-                        let (state, res) = match self.inner.handle(state).compat().await {
+                        let (state, res) = match self.inner.handle(state).await {
                             Ok((state, res)) => (state, res),
                             Err((state, err)) => {
                                 let response = err.into_response(&state);
@@ -91,7 +89,7 @@ impl<H: Handler + Send + Sync + 'static> Handler for MononokeHttpHandler<H> {
             Ok((state, response))
         };
 
-        Box::new(fut.boxed().compat())
+        fut.boxed()
     }
 }
 
@@ -124,6 +122,7 @@ impl MononokeHttpHandlerBuilder {
 #[cfg(test)]
 mod test {
     use super::*;
+    use futures::future;
     use gotham::test::TestServer;
     use gotham_derive::StateData;
     use hyper::{http::StatusCode, Body};
@@ -134,12 +133,13 @@ mod test {
     struct TestHandler;
 
     impl Handler for TestHandler {
-        fn handle(self, state: State) -> Box<HandlerFuture> {
+        fn handle(self, state: State) -> Pin<Box<HandlerFuture>> {
             let response = Response::builder()
                 .status(StatusCode::OK)
                 .body(Body::empty())
                 .unwrap();
-            Box::new(futures_old::future::ok((state, response)))
+
+            future::ready(Ok((state, response))).boxed()
         }
     }
 
@@ -149,7 +149,7 @@ mod test {
     struct PanicHandler;
 
     impl Handler for PanicHandler {
-        fn handle(self, _state: State) -> Box<HandlerFuture> {
+        fn handle(self, _state: State) -> Pin<Box<HandlerFuture>> {
             panic!("PanicHandler::handle was called")
         }
     }
@@ -222,69 +222,59 @@ mod test {
 
     #[test]
     fn test_empty() -> Result<(), failure::Error> {
-        async_unit::tokio_unit_test(async {
-            let handler = MononokeHttpHandler::builder().build(TestHandler);
-            let server = TestServer::new(handler)?;
-            let res = server.client().get("http://host/").perform()?;
-            assert_eq!(res.status(), StatusCode::OK);
-            Ok(())
-        })
+        let handler = MononokeHttpHandler::builder().build(TestHandler);
+        let server = TestServer::new(handler)?;
+        let res = server.client().get("http://host/").perform()?;
+        assert_eq!(res.status(), StatusCode::OK);
+        Ok(())
     }
 
     #[test]
     fn test_noop() -> Result<(), failure::Error> {
-        async_unit::tokio_unit_test(async {
-            let handler = MononokeHttpHandler::builder()
-                .add(NoopMiddleware)
-                .add(NoopMiddleware)
-                .build(TestHandler);
-            let server = TestServer::new(handler)?;
-            let res = server.client().get("http://host/").perform()?;
-            assert_eq!(res.status(), StatusCode::OK);
-            Ok(())
-        })
+        let handler = MononokeHttpHandler::builder()
+            .add(NoopMiddleware)
+            .add(NoopMiddleware)
+            .build(TestHandler);
+        let server = TestServer::new(handler)?;
+        let res = server.client().get("http://host/").perform()?;
+        assert_eq!(res.status(), StatusCode::OK);
+        Ok(())
     }
 
     #[test]
     fn test_chain() -> Result<(), failure::Error> {
-        async_unit::tokio_unit_test(async {
-            let handler = MononokeHttpHandler::builder()
-                .add(MiddlewareValueMiddleware(None, 1))
-                .add(MiddlewareValueMiddleware(Some(1), 2))
-                .build(TestHandler);
-            let server = TestServer::new(handler)?;
-            let res = server.client().get("http://host/").perform()?;
-            assert_eq!(res.status(), StatusCode::OK);
-            Ok(())
-        })
+        let handler = MononokeHttpHandler::builder()
+            .add(MiddlewareValueMiddleware(None, 1))
+            .add(MiddlewareValueMiddleware(Some(1), 2))
+            .build(TestHandler);
+        let server = TestServer::new(handler)?;
+        let res = server.client().get("http://host/").perform()?;
+        assert_eq!(res.status(), StatusCode::OK);
+        Ok(())
     }
 
     #[test]
     fn test_intercept_alone() -> Result<(), failure::Error> {
-        async_unit::tokio_unit_test(async {
-            let handler = MononokeHttpHandler::builder()
-                .add(InterceptMiddleware)
-                .build(TestHandler);
-            let server = TestServer::new(handler)?;
-            let res = server.client().get("http://host/").perform()?;
-            assert_eq!(res.status(), StatusCode::NOT_FOUND);
-            Ok(())
-        })
+        let handler = MononokeHttpHandler::builder()
+            .add(InterceptMiddleware)
+            .build(TestHandler);
+        let server = TestServer::new(handler)?;
+        let res = server.client().get("http://host/").perform()?;
+        assert_eq!(res.status(), StatusCode::NOT_FOUND);
+        Ok(())
     }
 
     #[test]
     fn test_intercept_chain() -> Result<(), failure::Error> {
-        async_unit::tokio_unit_test(async {
-            let handler = MononokeHttpHandler::builder()
-                .add(MiddlewareValueMiddleware(None, 1))
-                .add(MiddlewareValueMiddleware(Some(1), 2))
-                .add(InterceptMiddleware)
-                .add(PanicMiddleware)
-                .build(PanicHandler);
-            let server = TestServer::new(handler)?;
-            let res = server.client().get("http://host/").perform()?;
-            assert_eq!(res.status(), StatusCode::NOT_FOUND);
-            Ok(())
-        })
+        let handler = MononokeHttpHandler::builder()
+            .add(MiddlewareValueMiddleware(None, 1))
+            .add(MiddlewareValueMiddleware(Some(1), 2))
+            .add(InterceptMiddleware)
+            .add(PanicMiddleware)
+            .build(PanicHandler);
+        let server = TestServer::new(handler)?;
+        let res = server.client().get("http://host/").perform()?;
+        assert_eq!(res.status(), StatusCode::NOT_FOUND);
+        Ok(())
     }
 }

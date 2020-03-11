@@ -16,23 +16,18 @@ use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{
     channel::oneshot,
-    compat::Future01CompatExt,
     future::{lazy, select, try_join_all},
     FutureExt, TryFutureExt,
 };
-use futures_ext::FutureExt as Futures01Ext;
-use futures_old::{Future, IntoFuture};
-// TODO: When we get rid of old futures, this can come from `futures` (can't while new futures is called `futures_preview`)
 use futures_util::try_join;
-use gotham::{bind_server, bind_server_with_pre_state};
-use gotham_ext::{handler::MononokeHttpHandler, pre_state_data::TlsPreStateData};
+use gotham::{bind_server, bind_server_with_socket_data};
+use gotham_ext::{handler::MononokeHttpHandler, socket_data::TlsSocketData};
 use hyper::header::HeaderValue;
 use slog::{error, info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
-use tokio_old::net::TcpListener;
-use tokio_openssl::SslAcceptorExt;
+use tokio::net::TcpListener;
 
 use blobrepo::BlobRepo;
 use blobrepo_factory::BlobrepoBuilder;
@@ -354,8 +349,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     start_fb303_server(fb, SERVICE_NAME, &logger, &matches, AliveService)?;
 
-    let listener =
-        TcpListener::bind(&addr).chain_err(Error::msg("Could not start TCP listener"))?;
+    let listener = runtime
+        .block_on_std(TcpListener::bind(&addr))
+        .chain_err(Error::msg("Could not start TCP listener"))?;
 
     let server = match (tls_certificate, tls_private_key, tls_ca, tls_ticket_seeds) {
         (Some(tls_certificate), Some(tls_private_key), Some(tls_ca), tls_ticket_seeds) => {
@@ -376,38 +372,34 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 tls_builder,
                 tls_ticket_seeds,
             )?;
-            let acceptor = fbs_tls_builder.build();
+            let acceptor = Arc::new(fbs_tls_builder.build());
 
             let capture_session_data = tls_session_data_log.is_some();
 
-            bind_server_with_pre_state(listener, root, {
+            bind_server_with_socket_data(listener, root, {
                 cloned!(logger);
                 move |socket| {
-                    acceptor
-                        .accept_async(socket)
-                        .map({
-                            move |ssl_stream| {
-                                let tpsd = TlsPreStateData::from_ssl(
-                                    ssl_stream.get_ref().ssl(),
-                                    capture_session_data,
-                                );
-
-                                (ssl_stream, tpsd)
-                            }
-                        })
-                        .map_err({
-                            cloned!(logger);
-                            move |e| {
+                    cloned!(acceptor, logger);
+                    async move {
+                        let ssl_socket = match tokio_openssl::accept(&acceptor, socket).await {
+                            Ok(ssl_socket) => ssl_socket,
+                            Err(e) => {
                                 warn!(&logger, "TLS handshake failed: {:?}", e);
-                                ()
+                                return Err(());
                             }
-                        })
+                        };
+
+                        let socket_data =
+                            TlsSocketData::from_ssl(ssl_socket.ssl(), capture_session_data);
+
+                        Ok((socket_data, ssl_socket))
+                    }
                 }
             })
             .left_future()
         }
         (None, None, None, None) => {
-            bind_server(listener, root, |socket| Ok(socket).into_future()).right_future()
+            bind_server(listener, root, |socket| async move { Ok(socket) }).right_future()
         }
         _ => bail!("TLS flags must be passed together"),
     };
@@ -417,7 +409,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     serve_forever(
         runtime,
         select(
-            server.compat().map_err({
+            server.boxed().map_err({
                 let logger = logger.clone();
                 move |e| error!(&logger, "Unhandled error: {:?}", e)
             }),

@@ -7,7 +7,7 @@
 
 use anyhow::{bail, Error, Result};
 use faster_hex::{hex_decode, hex_string};
-use hyper::Uri;
+use http::Uri;
 use quickcheck::{Arbitrary, Gen};
 use serde::{Deserialize, Serialize};
 use std::{
