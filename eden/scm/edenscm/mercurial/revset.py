@@ -17,7 +17,6 @@ import time
 
 from . import (
     dagop,
-    destutil,
     encoding,
     error,
     hbisect,
@@ -370,22 +369,6 @@ symbols = revsetlang.symbols
 safesymbols = set()
 
 predicate = registrar.revsetpredicate()
-
-
-@predicate("_destupdate")
-def _destupdate(repo, subset, x):
-    # experimental revset for update destination
-    args = getargsdict(x, "limit", "clean")
-    return subset & baseset([destutil.destupdate(repo, **args)[0]])
-
-
-@predicate("_destmerge")
-def _destmerge(repo, subset, x):
-    # experimental revset for merge destination
-    sourceset = None
-    if x is not None:
-        sourceset = getset(repo, fullreposet(repo), x)
-    return subset & baseset([destutil.destmerge(repo, sourceset=sourceset)])
 
 
 @predicate("adds(pattern)", safe=True, weight=30)

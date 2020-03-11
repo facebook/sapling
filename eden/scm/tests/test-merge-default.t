@@ -115,36 +115,3 @@ Merge preview not affected by common ancestor:
   4:f25cbe84d8b3
   5:a431fabd6039
   6:e88e33f3bf62
-
-Test experimental destination revset
-
-  $ hg log -r '_destmerge()'
-  abort: nothing to merge
-  (use 'hg update' instead)
-  [255]
-
-(on a branch with a two heads)
-
-  $ hg up 5
-  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  $ echo f >> a
-  $ hg commit -mf
-  $ hg log -r '_destmerge()'
-  changeset:   6:e88e33f3bf62
-  parent:      5:a431fabd6039
-  parent:      3:ea9ff125ff88
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     m2
-  
-
-(from the other head)
-
-  $ hg log -r '_destmerge(e88e33f3bf62)'
-  changeset:   7:b613918999e2
-  parent:      5:a431fabd6039
-  user:        test
-  date:        Thu Jan 01 00:00:00 1970 +0000
-  summary:     f
-  
-
