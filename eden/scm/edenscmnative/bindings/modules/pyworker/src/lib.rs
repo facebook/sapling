@@ -15,6 +15,7 @@ use std::{
     mem,
     path::{Path, PathBuf},
     str,
+    sync::Arc,
     thread::{self, JoinHandle},
 };
 #[cfg(not(windows))]
@@ -365,12 +366,12 @@ fn threaded_writer(
 #[derive(Clone)]
 struct WriterState {
     root: PathBuf,
-    store: ContentStore,
+    store: Arc<ContentStore>,
     auditor: PathAuditor,
 }
 
 impl WriterState {
-    pub fn new(root: PathBuf, store: ContentStore) -> Self {
+    pub fn new(root: PathBuf, store: Arc<ContentStore>) -> Self {
         let auditor = PathAuditor::new(&root);
         Self {
             root,
@@ -556,7 +557,7 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
-        let store = ContentStore::new(&localdir, &config)?;
+        let store = Arc::new(ContentStore::new(&localdir, &config)?);
 
         let k = key("a", "2");
         let delta = Delta {
@@ -581,7 +582,7 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
-        let store = ContentStore::new(&localdir, &config)?;
+        let store = Arc::new(ContentStore::new(&localdir, &config)?);
 
         let k = key("a", "2");
         let delta = Delta {
@@ -619,7 +620,7 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
-        let store = ContentStore::new(&localdir, &config)?;
+        let store = Arc::new(ContentStore::new(&localdir, &config)?);
 
         let k = key("a", "2");
         let delta = Delta {
@@ -653,7 +654,7 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
-        let store = ContentStore::new(&localdir, &config)?;
+        let store = Arc::new(ContentStore::new(&localdir, &config)?);
 
         let k = key("a/b/c/d/e", "2");
         let delta = Delta {
@@ -677,7 +678,7 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
-        let store = ContentStore::new(&localdir, &config)?;
+        let store = Arc::new(ContentStore::new(&localdir, &config)?);
 
         let k = key("a/b/c/d/e", "2");
         let delta = Delta {
@@ -712,7 +713,7 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
-        let store = ContentStore::new(&localdir, &config)?;
+        let store = Arc::new(ContentStore::new(&localdir, &config)?);
 
         let k = key("a/b/c/d/e", "2");
         let delta = Delta {
@@ -742,7 +743,7 @@ mod tests {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
-        let store = ContentStore::new(&localdir, &config)?;
+        let store = Arc::new(ContentStore::new(&localdir, &config)?);
 
         let k = key("a/b/c/d/e", "2");
         let delta = Delta {
@@ -979,7 +980,7 @@ mod tests {
             let cachedir = TempDir::new()?;
             let localdir = TempDir::new()?;
             let config = make_config(&cachedir);
-            let store = ContentStore::new(&localdir, &config)?;
+            let store = Arc::new(ContentStore::new(&localdir, &config)?);
 
             // Keys for an empty path are meaningless
             for key in keys.iter() {
@@ -1057,7 +1058,7 @@ mod tests {
             let cachedir = TempDir::new()?;
             let localdir = TempDir::new()?;
             let config = make_config(&cachedir);
-            let store = ContentStore::new(&localdir, &config)?;
+            let store = Arc::new(ContentStore::new(&localdir, &config)?);
 
             // Keys for an empty path are meaningless
             for key in keys.iter() {

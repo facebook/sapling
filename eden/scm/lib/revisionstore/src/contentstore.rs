@@ -35,20 +35,15 @@ use crate::{
     },
 };
 
-struct ContentStoreInner {
-    datastore: UnionDataStore<Arc<dyn DataStore>>,
-    local_mutabledatastore: Option<Arc<dyn MutableDeltaStore>>,
-    shared_mutabledatastore: Arc<dyn MutableDeltaStore>,
-    remote_store: Option<Arc<dyn RemoteDataStore>>,
-}
-
 /// A `ContentStore` aggregate all the local and remote stores and expose them as one. Both local and
 /// remote stores can be queried and accessed via the `DataStore` trait. The local store can also
 /// be written to via the `MutableDeltaStore` trait, this is intended to be used to store local
 /// commit data.
-#[derive(Clone)]
 pub struct ContentStore {
-    inner: Arc<ContentStoreInner>,
+    datastore: UnionDataStore<Arc<dyn DataStore>>,
+    local_mutabledatastore: Option<Arc<dyn MutableDeltaStore>>,
+    shared_mutabledatastore: Arc<dyn MutableDeltaStore>,
+    remote_store: Option<Arc<dyn RemoteDataStore>>,
 }
 
 impl ContentStore {
@@ -76,25 +71,25 @@ impl ContentStore {
 
 impl DataStore for ContentStore {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        self.inner.datastore.get(key)
+        self.datastore.get(key)
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        self.inner.datastore.get_delta(key)
+        self.datastore.get_delta(key)
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        self.inner.datastore.get_delta_chain(key)
+        self.datastore.get_delta_chain(key)
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        self.inner.datastore.get_meta(key)
+        self.datastore.get_meta(key)
     }
 }
 
 impl RemoteDataStore for ContentStore {
     fn prefetch(&self, keys: &[Key]) -> Result<()> {
-        if let Some(remote_store) = self.inner.remote_store.as_ref() {
+        if let Some(remote_store) = self.remote_store.as_ref() {
             let missing = self.get_missing(keys)?;
             if missing == vec![] {
                 Ok(())
@@ -110,11 +105,11 @@ impl RemoteDataStore for ContentStore {
 
 impl LocalStore for ContentStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
-        self.inner.datastore.get_missing(keys)
+        self.datastore.get_missing(keys)
     }
 }
 
-impl Drop for ContentStoreInner {
+impl Drop for ContentStore {
     /// The shared store is a cache, so let's flush all pending data when the `ContentStore` goes
     /// out of scope.
     fn drop(&mut self) {
@@ -129,8 +124,7 @@ impl Drop for ContentStoreInner {
 impl MutableDeltaStore for ContentStore {
     /// Add the data to the local store.
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
-        self.inner
-            .local_mutabledatastore
+        self.local_mutabledatastore
             .as_ref()
             .ok_or_else(|| format_err!("writing to a non-local ContentStore is not allowed"))?
             .add(delta, metadata)
@@ -138,8 +132,7 @@ impl MutableDeltaStore for ContentStore {
 
     /// Commit the data written to the local store.
     fn flush(&self) -> Result<Option<PathBuf>> {
-        self.inner
-            .local_mutabledatastore
+        self.local_mutabledatastore
             .as_ref()
             .ok_or_else(|| format_err!("flushing a non-local ContentStore is not allowed"))?
             .flush()
@@ -329,12 +322,10 @@ impl<'a> ContentStoreBuilder<'a> {
             };
 
         Ok(ContentStore {
-            inner: Arc::new(ContentStoreInner {
-                datastore,
-                local_mutabledatastore,
-                shared_mutabledatastore: shared_store,
-                remote_store,
-            }),
+            datastore,
+            local_mutabledatastore,
+            shared_mutabledatastore: shared_store,
+            remote_store,
         })
     }
 }
@@ -541,9 +532,8 @@ mod tests {
             .remotestore(Box::new(remotestore))
             .build()?;
         store.get(&k)?;
-        store.inner.shared_mutabledatastore.get(&k)?;
+        store.shared_mutabledatastore.get(&k)?;
         assert!(store
-            .inner
             .local_mutabledatastore
             .as_ref()
             .unwrap()

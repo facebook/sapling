@@ -814,7 +814,7 @@ impl pyremotestore {
 }
 
 py_class!(pub class contentstore |py| {
-    data store: ContentStore;
+    data store: Arc<ContentStore>;
 
     def __new__(_cls, path: Option<PyPathBuf>, config: config, remote: pyremotestore, memcache: Option<memcachestore>) -> PyResult<contentstore> {
         let remotestore = remote.into_inner(py);
@@ -835,7 +835,7 @@ py_class!(pub class contentstore |py| {
         };
 
         let contentstore = builder.build().map_pyerr(py)?;
-        contentstore::create_instance(py, contentstore)
+        contentstore::create_instance(py, Arc::new(contentstore))
     }
 
     def get(&self, name: PyPathBuf, node: &PyBytes) -> PyResult<PyBytes> {
@@ -880,7 +880,7 @@ py_class!(pub class contentstore |py| {
 });
 
 impl contentstore {
-    pub fn to_inner(&self, py: Python) -> ContentStore {
+    pub fn to_inner(&self, py: Python) -> Arc<ContentStore> {
         self.store(py).clone()
     }
 }
