@@ -1728,7 +1728,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 fnode = fctx(f).filenode()
                 # The write method will either return immediately or block if
                 # the internal worker queue is full.
-                writer.write(f, fnode)
+                writer.write(f, fnode, flags)
 
                 z += 1
                 prog.value = (z, f)

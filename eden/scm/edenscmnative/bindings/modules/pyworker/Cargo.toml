@@ -10,6 +10,7 @@ python3 = ["cpython/python3-sys", "cpython-ext/python3"]
 
 [dependencies]
 anyhow = "1.0.20"
+bytes = "0.5"
 pyrevisionstore = { path = "../pyrevisionstore" }
 crossbeam = "0.7"
 revisionstore = { path = "../../../../lib/revisionstore" }

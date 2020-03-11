@@ -13,10 +13,17 @@ use std::{
     io::{self, ErrorKind, Write},
     mem,
     path::{Path, PathBuf},
+    str,
     thread::{self, JoinHandle},
 };
+#[cfg(not(windows))]
+use std::{
+    fs::{set_permissions, Permissions},
+    os::unix::fs::PermissionsExt,
+};
 
-use anyhow::{ensure, format_err, Context, Result};
+use anyhow::{bail, ensure, format_err, Context, Result};
+use bytes::Bytes;
 use cpython::*;
 use crossbeam::channel::{bounded, Receiver, Sender};
 
@@ -136,59 +143,93 @@ fn audit_path(root: impl AsRef<Path>, path: &RepoPath) -> Result<PathBuf> {
     Ok(filepath)
 }
 
-/// Fetch the content of the passed in `hgid` and write it to `path`.
-fn update(state: &WriterState, path: &RepoPath, hgid: HgId) -> Result<usize> {
-    let key = Key::new(path.to_owned(), hgid);
+enum UpdateFlag {
+    Symlink,
+    Executable,
+}
 
-    let filepath = audit_path(&state.root, path)?;
+#[cfg(not(windows))]
+fn supports_symlinks() -> bool {
+    // XXX: placeholder
+    true
+}
 
-    let content = state
-        .store
-        .get_file_content(&key)?
-        .ok_or_else(|| format_err!("Can't find key: {}", key))?;
-    let size = content.len();
+/// On some OS/filesystems, symlinks aren't supported, we simply create a file where it's content
+/// is the symlink destination for these.
+fn plain_symlink_file(link_name: &Path, link_dest: &Path) -> Result<()> {
+    let link_dest = match link_dest.to_str() {
+        None => bail!("Not a valid UTF-8 path: {:?}", link_dest),
+        Some(s) => s,
+    };
 
+    Ok(File::create(link_name)?.write_all(link_dest.as_bytes())?)
+}
+
+/// Add a symlink `link_name` pointing to `link_dest`. On platforms that do not support symlinks,
+/// `link_name` will be a file containing the path to `link_dest`.
+fn symlink(link_name: impl AsRef<Path>, link_dest: impl AsRef<Path>) -> Result<()> {
+    let link_name = link_name.as_ref();
+    let link_dest = link_dest.as_ref();
+
+    #[cfg(windows)]
+    let result = plain_symlink_file(link_name, link_dest);
+
+    #[cfg(not(windows))]
+    let result = if supports_symlinks() {
+        Ok(std::os::unix::fs::symlink(link_dest, link_name)?)
+    } else {
+        plain_symlink_file(link_name, link_dest)
+    };
+
+    result.with_context(|| format!("Can't create symlink '{:?} -> {:?}'", link_name, link_dest))
+}
+
+/// The file `path` can't be written to, attempt to fixup the directories and files so the file can
+/// be created.
+///
+/// This is a slow operation, and should not be called before attempting to create `path`.
+fn clear_conflicts(filepath: &Path, root: &Path) -> Result<()> {
+    let mut path = filepath;
+    if let Ok(metadata) = symlink_metadata(path) {
+        let file_type = metadata.file_type();
+        if file_type.is_dir() {
+            remove_dir_all(path).with_context(|| format!("Can't remove directory {:?}", path))?;
+        }
+    }
+
+    loop {
+        if path == root {
+            break;
+        }
+
+        if let Ok(metadata) = symlink_metadata(path) {
+            let file_type = metadata.file_type();
+            if file_type.is_file() || file_type.is_symlink() {
+                remove_file(path).with_context(|| format!("Can't remove file {:?}", path))?;
+            }
+        }
+
+        // By virtue of the fact that we haven't reached the root, we are guaranteed to
+        // have a parent directory.
+        path = path.parent().unwrap();
+    }
+
+    let dir = filepath.parent().unwrap();
+    create_dir_all(dir).with_context(|| format!("Can't create directory {:?}", dir))?;
+
+    Ok(())
+}
+
+/// Write a plain file with `content` at `filepath`.
+fn write_regular(filepath: &Path, content: Bytes, root: &Path) -> Result<usize> {
     // Fast path: let's try to open the file directly, we'll handle the failure only if this fails.
     let mut f = match File::create(&filepath) {
         Ok(f) => f,
         Err(e) => {
-            (|| -> Result<File> {
-                // Slow path: let's go over the path and try to figure out what is conflicting to
-                // fix it.
-                let mut path = filepath.as_path();
-
-                if let Ok(metadata) = symlink_metadata(path) {
-                    let file_type = metadata.file_type();
-                    if file_type.is_dir() {
-                        remove_dir_all(&filepath)
-                            .with_context(|| format!("Can't remove directory {:?}", filepath))?;
-                    }
-                }
-
-                loop {
-                    if path == state.root {
-                        break;
-                    }
-
-                    if let Ok(metadata) = symlink_metadata(path) {
-                        let file_type = metadata.file_type();
-                        if file_type.is_file() || file_type.is_symlink() {
-                            remove_file(path)
-                                .with_context(|| format!("Can't remove file {:?}", path))?;
-                        }
-                    }
-
-                    // By virtue of the fact that we haven't reached the root, we are guaranteed to
-                    // have a parent directory.
-                    path = path.parent().unwrap();
-                }
-
-                let dir = filepath.parent().unwrap();
-                create_dir_all(dir).with_context(|| format!("Can't create directory {:?}", dir))?;
-
-                Ok(File::create(&filepath)?)
-            })()
-            .with_context(|| {
+            // Slow path: let's go over the path and try to figure out what is conflicting to
+            // fix it.
+            clear_conflicts(filepath, root)?;
+            File::create(&filepath).with_context(|| {
                 format!(
                     "Can't create file {:?}, after handling error \"{}\"",
                     filepath, e
@@ -197,14 +238,78 @@ fn update(state: &WriterState, path: &RepoPath, hgid: HgId) -> Result<usize> {
         }
     };
     f.write_all(&content)?;
-    Ok(size)
+    Ok(content.len())
 }
 
-fn threaded_writer(state: WriterState, chan: Receiver<Vec<(RepoPathBuf, HgId)>>) -> Result<usize> {
+/// Write an executable file with `content` as `filepath`.
+fn write_executable(filepath: &Path, content: Bytes, root: &Path) -> Result<usize> {
+    let size = write_regular(filepath, content, root)?;
+
+    #[cfg(windows)]
+    return Ok(size);
+
+    #[cfg(not(windows))]
+    {
+        let perms = Permissions::from_mode(0o755);
+        set_permissions(filepath, perms)?;
+        Ok(size)
+    }
+}
+
+/// Write a symlink file at `filepath`. The destination is represented by `content`.
+fn write_symlink(filepath: &Path, content: Bytes, root: &Path) -> Result<usize> {
+    let link_dest = Path::new(str::from_utf8(content.as_ref())?);
+
+    // Fast path: let's try to symlink the file directly
+    if let Err(e) = symlink(filepath, link_dest) {
+        // Slow path: that didn't work out, let's try to fix it up.
+        clear_conflicts(filepath, root)?;
+        symlink(filepath, link_dest)
+            .with_context(|| format!("Can't create symlink after handling error \"{}\"", e))?;
+    };
+    Ok(filepath.as_os_str().len())
+}
+
+fn write_file(
+    filepath: &Path,
+    content: Bytes,
+    root: &Path,
+    flag: Option<UpdateFlag>,
+) -> Result<usize> {
+    match flag {
+        None => write_regular(filepath, content, root),
+        Some(UpdateFlag::Executable) => write_executable(filepath, content, root),
+        Some(UpdateFlag::Symlink) => write_symlink(filepath, content, root),
+    }
+}
+
+/// Fetch the content of the passed in `hgid` and write it to `path`.
+fn update(
+    state: &WriterState,
+    path: &RepoPath,
+    hgid: HgId,
+    flag: Option<UpdateFlag>,
+) -> Result<usize> {
+    let key = Key::new(path.to_owned(), hgid);
+
+    let filepath = audit_path(&state.root, path)?;
+
+    let content = state
+        .store
+        .get_file_content(&key)?
+        .ok_or_else(|| format_err!("Can't find key: {}", key))?;
+
+    write_file(&filepath, content, state.root.as_path(), flag)
+}
+
+fn threaded_writer(
+    state: WriterState,
+    chan: Receiver<Vec<(RepoPathBuf, HgId, Option<UpdateFlag>)>>,
+) -> Result<usize> {
     let mut written = 0;
     while let Ok(vec) = chan.recv() {
-        for (path, hgid) in vec.into_iter() {
-            written += update(&state, path.as_repo_path(), hgid)
+        for (path, hgid, flag) in vec.into_iter() {
+            written += update(&state, path.as_repo_path(), hgid, flag)
                 .with_context(|| format!("Can't update {} at {}", path, hgid))?;
         }
     }
@@ -219,7 +324,7 @@ struct WriterState {
 }
 
 py_class!(class writerworker |py| {
-    data inner: RefCell<Option<Worker<usize, (RepoPathBuf, HgId)>>>;
+    data inner: RefCell<Option<Worker<usize, (RepoPathBuf, HgId, Option<UpdateFlag>)>>>;
 
     def __new__(_cls, contentstore: contentstore, root: &PyPath, numthreads: usize) -> PyResult<writerworker> {
         let store = contentstore.to_inner(py);
@@ -234,11 +339,19 @@ py_class!(class writerworker |py| {
     /// background thread which will write the content corresponding to `node` to
     /// the file `name`. May block and release the GIL when too much work is
     /// pending.
-    def write(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyNone> {
+    def write(&self, name: &PyPath, node: &PyBytes, flags: &str) -> PyResult<PyNone> {
         let path = name.to_repo_path_buf().map_pyerr(py)?;
         let node = HgId::from_slice(node.data(py)).map_pyerr(py)?;
 
-        self.inner(py).borrow_mut().as_mut().unwrap().push_work(py, (path, node)).map_pyerr(py)?;
+        let flags = if flags == "l" {
+            Some(UpdateFlag::Symlink)
+        } else if flags == "x" {
+            Some(UpdateFlag::Executable)
+        } else {
+            return Err(format_err!("Unknown flags: {}", flags)).map_pyerr(py);
+        };
+
+        self.inner(py).borrow_mut().as_mut().unwrap().push_work(py, (path, node, flags)).map_pyerr(py)?;
         Ok(PyNone)
     }
 
@@ -361,9 +474,81 @@ mod tests {
 
         let root = workingdir.as_ref().to_path_buf();
         let state = WriterState { root, store };
-        let written = update(&state, &k.path, k.hgid.clone())?;
+        let written = update(&state, &k.path, k.hgid.clone(), None)?;
 
         assert_eq!(written, 7);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_executable() -> Result<()> {
+        let workingdir = TempDir::new()?;
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let config = make_config(&cachedir);
+        let store = ContentStore::new(&localdir, &config)?;
+
+        let k = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from("CONTENT"),
+            base: None,
+            key: k.clone(),
+        };
+        store.add(&delta, &Default::default())?;
+
+        let root = workingdir.as_ref().to_path_buf();
+        let state = WriterState { root, store };
+        update(
+            &state,
+            &k.path,
+            k.hgid.clone(),
+            Some(UpdateFlag::Executable),
+        )?;
+
+        let mut file = workingdir.as_ref().to_path_buf();
+        file.push("a");
+
+        let perms = metadata(&file)?.permissions();
+
+        assert!(!perms.readonly());
+
+        #[cfg(not(windows))]
+        assert_eq!(perms.mode() & 0o755, 0o755);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_symlink() -> Result<()> {
+        let workingdir = TempDir::new()?;
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let config = make_config(&cachedir);
+        let store = ContentStore::new(&localdir, &config)?;
+
+        let k = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from("b"),
+            base: None,
+            key: k.clone(),
+        };
+        store.add(&delta, &Default::default())?;
+
+        let root = workingdir.as_ref().to_path_buf();
+        let state = WriterState { root, store };
+        update(&state, &k.path, k.hgid.clone(), Some(UpdateFlag::Symlink))?;
+
+        let mut file = workingdir.as_ref().to_path_buf();
+        file.push("a");
+
+        let file_type = symlink_metadata(&file)?.file_type();
+
+        if cfg!(windows) {
+            assert!(file_type.is_file());
+        } else {
+            assert!(file_type.is_symlink());
+        }
 
         Ok(())
     }
@@ -386,7 +571,7 @@ mod tests {
 
         let root = workingdir.as_ref().to_path_buf();
         let state = WriterState { root, store };
-        let written = update(&state, &k.path, k.hgid.clone())?;
+        let written = update(&state, &k.path, k.hgid.clone(), None)?;
         assert_eq!(written, 7);
 
         Ok(())
@@ -416,7 +601,7 @@ mod tests {
 
         let root = workingdir.as_ref().to_path_buf();
         let state = WriterState { root, store };
-        let written = update(&state, &k.path, k.hgid.clone())?;
+        let written = update(&state, &k.path, k.hgid.clone(), None)?;
         assert_eq!(written, 7);
 
         let mut path = workingdir.as_ref().to_path_buf();
@@ -452,7 +637,7 @@ mod tests {
 
         let root = workingdir.as_ref().to_path_buf();
         let state = WriterState { root, store };
-        let written = update(&state, &k.path, k.hgid.clone())?;
+        let written = update(&state, &k.path, k.hgid.clone(), None)?;
         assert_eq!(written, 7);
 
         let mut path = workingdir.as_ref().to_path_buf();
@@ -484,7 +669,7 @@ mod tests {
 
         let root = workingdir.as_ref().to_path_buf();
         let state = WriterState { root, store };
-        let written = update(&state, &k.path, k.hgid.clone())?;
+        let written = update(&state, &k.path, k.hgid.clone(), None)?;
         assert_eq!(written, 7);
 
         let mut path = workingdir.as_ref().to_path_buf();
@@ -587,7 +772,7 @@ mod tests {
 
             let mut written_size = 0;
             for key in keys.iter() {
-                written_size += update(&state, &key.path, key.hgid.clone())?;
+                written_size += update(&state, &key.path, key.hgid.clone(), None)?;
             }
 
             for key in keys.iter() {
@@ -660,7 +845,7 @@ mod tests {
             let state = WriterState { root, store };
 
             for key in keys.iter() {
-                update(&state, &key.path, key.hgid.clone())?;
+                update(&state, &key.path, key.hgid.clone(), None)?;
             }
 
             let root = workingdir.as_ref().to_path_buf();
