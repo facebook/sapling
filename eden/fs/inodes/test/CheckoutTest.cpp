@@ -1269,6 +1269,48 @@ TEST(Checkout, conflict_when_directory_containing_modified_file_is_removed) {
   }
 }
 
+TEST(Checkout, checkoutFailsOnInProgressCheckout) {
+  auto builder1 = FakeTreeBuilder();
+  builder1.setFile("src/main.c", "// Some code.\n");
+  TestMount testMount{makeTestHash("1"), builder1};
+  testMount.getServerState()->getFaultInjector().injectBlock("checkout", ".*");
+
+  auto builder2 = builder1.clone();
+  builder2.setFile("src/test.c", "// Unit test.\n");
+  builder2.finalize(testMount.getBackingStore(), true);
+  auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
+  commit2->setReady();
+
+  // Block checkout so the checkout is "in progress"
+  auto executor = testMount.getServerExecutor().get();
+  auto checkout1 = testMount.getEdenMount()->checkout(makeTestHash("2"));
+  EXPECT_FALSE(checkout1.isReady());
+
+  // Run another checkout and make sure it fails
+  try {
+    testMount.getEdenMount()
+        ->checkout(makeTestHash("2"), CheckoutMode::NORMAL)
+        .waitVia(executor)
+        .get();
+    FAIL() << "checkout should have failed with "
+              "EdenErrorType::CHECKOUT_IN_PROGRESS";
+  } catch (const EdenError& exception) {
+    ASSERT_EQ(exception.get_errorType(), EdenErrorType::CHECKOUT_IN_PROGRESS);
+  }
+
+  // Unblock original checkout and make sure it completes
+  testMount.getServerState()->getFaultInjector().unblock("checkout", ".*");
+
+  EXPECT_NO_THROW(std::move(checkout1).getVia(executor));
+
+  // Try to checkout again just to make sure we don't block again.
+  testMount.getServerState()->getFaultInjector().removeFault("checkout", ".*");
+  auto checkout2 =
+      testMount.getEdenMount()->checkout(makeTestHash("1")).waitVia(executor);
+  EXPECT_TRUE(checkout2.isReady());
+  EXPECT_NO_THROW(std::move(checkout2).get());
+}
+
 // TODO:
 // - remove subdirectory
 //   - with no untracked/ignored files, it should get removed entirely

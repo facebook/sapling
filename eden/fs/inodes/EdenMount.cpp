@@ -764,7 +764,24 @@ folly::Future<CheckoutResult> EdenMount::checkout(
   // Hold the snapshot lock for the duration of the entire checkout operation.
   //
   // This prevents multiple checkout operations from running in parallel.
-  auto parentsLock = parentInfo_.wlock();
+
+  auto parentsLock = parentInfo_.wlock(std::chrono::milliseconds{500});
+
+  if (!parentsLock) {
+    // We failed to get the lock, which generally means a checkout is in
+    // progress.
+    // Someone could be holding the lock in read-mode, but we normally only
+    // hold the lock very briefly in read mode.  If we ever changed
+    // EdenMount::diff() to hold the lock for the duration of the operation
+    // we would need to update this code to account for that.
+    //
+    // TODO: Report the pid of the client that requested the first checkout
+    // operation in this error
+    return makeFuture<CheckoutResult>(newEdenError(
+        EdenErrorType::CHECKOUT_IN_PROGRESS,
+        "another checkout operation is still in progress"));
+  }
+
   checkoutTimes->didAcquireParentsLock = stopWatch.elapsed();
 
   auto oldParents = parentsLock->parents;
