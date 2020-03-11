@@ -13,13 +13,16 @@ use std::{
 use anyhow::{format_err, Result};
 use bytes::Bytes;
 
-use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
+use configparser::{
+    config::ConfigSet,
+    hg::{ByteCount, ConfigSetHgExt},
+};
 use types::Key;
 
 use crate::{
     datastore::{strip_metadata, DataStore, Delta, Metadata, MutableDeltaStore, RemoteDataStore},
     indexedlogdatastore::IndexedLogDataStore,
-    lfs::LfsStore,
+    lfs::{LfsMultiplexer, LfsStore},
     localstore::LocalStore,
     memcache::MemcacheStore,
     multiplexstore::MultiplexDeltaStore,
@@ -222,18 +225,57 @@ impl<'a> ContentStoreBuilder<'a> {
         // The shared stores should precede the local one since we expect both the number of blobs,
         // and the number of requests satisfied by the shared cache to be significantly higher than
         // ones in the local store.
-        datastore.add(shared_pack_store.clone());
-        datastore.add(Arc::new(LfsStore::shared(&cache_path)?));
+
+        let lfs_threshold = if self.config.get_or_default::<bool>("remotefilelog", "lfs")? {
+            self.config.get_opt::<ByteCount>("lfs", "threshold")?
+        } else {
+            None
+        };
+
+        let shared_lfs_store = LfsStore::shared(&cache_path)?;
+
+        let shared_store: Arc<dyn MutableDeltaStore> = if let Some(lfs_threshold) = lfs_threshold {
+            let lfs_store = Arc::new(LfsMultiplexer::new(
+                shared_lfs_store,
+                shared_pack_store.clone(),
+                lfs_threshold.value() as usize,
+            ));
+
+            datastore.add(lfs_store.clone());
+
+            lfs_store
+        } else {
+            datastore.add(shared_pack_store.clone());
+            datastore.add(Arc::new(shared_lfs_store));
+            shared_pack_store
+        };
 
         let local_mutabledatastore: Option<Arc<dyn MutableDeltaStore>> =
-            if let Some(local_path) = self.local_path {
+            if let Some(unsuffixed_local_path) = self.local_path {
                 let local_pack_store = Arc::new(MutableDataPackStore::new(
-                    get_packs_path(&local_path, &self.suffix)?,
+                    get_packs_path(&unsuffixed_local_path, &self.suffix)?,
                     CorruptionPolicy::IGNORE,
                 )?);
-                datastore.add(local_pack_store.clone());
 
-                Some(local_pack_store)
+                let local_lfs_store = LfsStore::local(&local_path.unwrap())?;
+                let local_store: Arc<dyn MutableDeltaStore> =
+                    if let Some(lfs_threshold) = lfs_threshold {
+                        let local_store = Arc::new(LfsMultiplexer::new(
+                            local_lfs_store,
+                            local_pack_store,
+                            lfs_threshold.value() as usize,
+                        ));
+
+                        datastore.add(local_store.clone());
+
+                        local_store
+                    } else {
+                        datastore.add(local_pack_store.clone());
+                        datastore.add(Arc::new(local_lfs_store));
+                        local_pack_store
+                    };
+
+                Some(local_store)
             } else {
                 if !self.no_local_store {
                     return Err(format_err!(
@@ -242,10 +284,6 @@ impl<'a> ContentStoreBuilder<'a> {
                 }
                 None
             };
-
-        if let Some(local_path) = local_path {
-            datastore.add(Arc::new(LfsStore::local(&local_path)?));
-        }
 
         let remote_store: Option<Arc<dyn RemoteDataStore>> =
             if let Some(remotestore) = self.remotestore {
@@ -258,22 +296,19 @@ impl<'a> ContentStoreBuilder<'a> {
                     // store it will be written to the local cache, and will populate the memcache
                     // store, so other clients and future requests won't need to go to a network
                     // store.
-                    let memcachedatastore = memcachestore.datastore(shared_pack_store.clone());
+                    let memcachedatastore = memcachestore.datastore(shared_store.clone());
 
                     let mut multiplexstore: MultiplexDeltaStore<Arc<dyn MutableDeltaStore>> =
                         MultiplexDeltaStore::new();
                     multiplexstore.add_store(Arc::new(memcachestore));
-                    multiplexstore.add_store(shared_pack_store.clone());
+                    multiplexstore.add_store(shared_store.clone());
 
                     (
                         Some(memcachedatastore),
                         Arc::new(multiplexstore) as Arc<dyn MutableDeltaStore>,
                     )
                 } else {
-                    (
-                        None,
-                        shared_pack_store.clone() as Arc<dyn MutableDeltaStore>,
-                    )
+                    (None, shared_store.clone())
                 };
 
                 let store = remotestore.datastore(shared_store);
@@ -293,13 +328,11 @@ impl<'a> ContentStoreBuilder<'a> {
                 None
             };
 
-        let shared_mutabledatastore: Arc<dyn MutableDeltaStore> = shared_pack_store;
-
         Ok(ContentStore {
             inner: Arc::new(ContentStoreInner {
                 datastore,
                 local_mutabledatastore,
-                shared_mutabledatastore,
+                shared_mutabledatastore: shared_store,
                 remote_store,
             }),
         })
@@ -342,6 +375,8 @@ mod tests {
             Some("cca:hg:rust_unittest"),
             &Default::default(),
         );
+
+        config.set("lfs", "threshold", Some("4"), &Default::default());
 
         config
     }
@@ -617,6 +652,31 @@ mod tests {
 
         let store = ContentStore::new(&localdir, &config)?;
         assert_eq!(store.get(&k1)?, Some(delta.data.as_ref().to_vec()));
+        Ok(())
+    }
+
+    #[test]
+    fn test_lfs_multiplexer() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let mut config = make_config(&cachedir);
+
+        config.set("remotefilelog", "lfs", Some("true"), &Default::default());
+
+        let k1 = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4, 5][..]),
+            base: None,
+            key: k1.clone(),
+        };
+
+        let store = ContentStore::new(&localdir, &config)?;
+        store.add(&delta, &Default::default())?;
+        store.flush()?;
+
+        let lfs_store = LfsStore::local(&localdir)?;
+        assert_eq!(lfs_store.get_delta(&k1)?, Some(delta));
+
         Ok(())
     }
 
