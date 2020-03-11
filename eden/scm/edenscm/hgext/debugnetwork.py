@@ -85,14 +85,17 @@ def checksshcommand(ui, url, opts):
         _("Testing SSH connection to the server: running 'hostname'\n"),
         component="debugnetwork",
     )
+    ui.pushbuffer(subproc=True)
     starttime = util.timer()
     res = ui.system(cmd, blockedtag="debugnetwork", environ=sshenv)
     endtime = util.timer()
+    hostname = ui.popbuffer().strip()
     if res == 0:
         ui.status(
             _("Connected ok: %s\n") % util.timecount(endtime - starttime),
             component="debugnetwork",
         )
+        ui.status(_("Server hostname is %s\n") % hostname, component="debugnetwork")
         return True
     else:
         ui.status(_("Failed to connect: ssh returned %s\n") % res, error=_("error"))
