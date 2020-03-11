@@ -405,7 +405,7 @@ def _isfullcopytraceable(repo, c1, base):
         sourcecommitlimit = repo.ui.configint(
             "experimental", "copytrace.sourcecommitlimit"
         )
-        commits = len(repo.revs("%d::%d", base.rev(), c1.rev()))
+        commits = len(list(repo.nodes("%n::%n", base.node(), c1.node())))
         return commits < sourcecommitlimit
     return False
 
