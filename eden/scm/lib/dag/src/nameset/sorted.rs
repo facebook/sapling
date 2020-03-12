@@ -18,7 +18,7 @@ pub struct SortedSet(pub(crate) NameSet);
 
 impl SortedSet {
     pub fn from_set(set: NameSet) -> Self {
-        Self(set.clone())
+        Self(set)
     }
 }
 

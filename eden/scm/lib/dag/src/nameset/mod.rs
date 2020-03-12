@@ -19,7 +19,6 @@ use std::fmt::Debug;
 use std::ops::Deref;
 use std::sync::Arc;
 
-pub mod all;
 pub mod dag;
 pub mod difference;
 pub mod intersection;
@@ -40,11 +39,6 @@ pub struct NameSet(Arc<dyn NameSetQuery>);
 impl NameSet {
     pub(crate) fn from_query(query: impl NameSetQuery) -> Self {
         Self(Arc::new(query))
-    }
-
-    /// Creates a virtual "all" set that can intersect with other sets.
-    pub fn all() -> NameSet {
-        Self::from_query(all::AllSet)
     }
 
     /// Creates from a (short) list of known names.
@@ -85,6 +79,9 @@ impl NameSet {
 
     /// Calculates the intersection of two sets.
     pub fn intersection(&self, other: &NameSet) -> NameSet {
+        if self.is_all() {
+            return other.clone();
+        }
         if let (Some(this), Some(other)) = (
             self.as_any().downcast_ref::<DagSet>(),
             other.as_any().downcast_ref::<DagSet>(),
@@ -194,6 +191,14 @@ pub trait NameSetQuery: Any + Debug + Send + Sync {
     /// Returns true if this set is known topologically sorted (head first, root
     /// last).
     fn is_topo_sorted(&self) -> bool {
+        false
+    }
+
+    /// Returns true if this set is an "all" set.
+    ///
+    /// An "all" set will return X when intersection with X.
+    /// Otherwise it's not different from a normal set.
+    fn is_all(&self) -> bool {
         false
     }
 
@@ -311,14 +316,15 @@ pub(crate) mod tests {
 
     #[test]
     fn test_debug() {
-        let set = NameSet::all()
+        let set = NameSet::from_static_names(vec![to_name(2)])
             .union(&NameSet::from_static_names(vec![to_name(1)]))
             .difference(
-                &NameSet::all().intersection(&NameSet::from_static_names(vec![to_name(2)])),
+                &NameSet::from_static_names(vec![to_name(3)])
+                    .intersection(&NameSet::from_static_names(vec![to_name(2)])),
             );
         assert_eq!(
             format!("{:?}", set),
-            "<difference <or <all> <[0101]>> <and <all> <[0202]>>>"
+            "<difference <or <[0202]> <[0101]>> <and <[0303]> <[0202]>>>"
         );
     }
 

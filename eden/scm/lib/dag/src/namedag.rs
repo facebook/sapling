@@ -270,7 +270,8 @@ impl NameDag {
     /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
     pub fn all(&self) -> Result<NameSet> {
         let spans = self.dag.all()?;
-        Ok(NameSet::from_spans_idmap(spans, self.snapshot_map.clone()))
+        let query = DagSet::from_spans_idmap(spans, self.snapshot_map.clone()).mark_as_all();
+        Ok(NameSet::from_query(query))
     }
 
     /// Calculates all ancestors reachable from any name from the given set.

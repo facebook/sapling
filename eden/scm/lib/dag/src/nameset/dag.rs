@@ -20,6 +20,7 @@ use std::sync::Arc;
 pub struct DagSet {
     pub(crate) spans: SpanSet,
     pub(crate) map: Arc<IdMap>,
+    pub(crate) is_all: bool,
 }
 
 struct Iter {
@@ -46,13 +47,20 @@ impl NameIter for Iter {}
 
 impl fmt::Debug for DagSet {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "<dag [{:?}]>", &self.spans)
+        let all = if self.is_all { " (all)" } else { "" };
+        write!(f, "<dag{} [{:?}]>", all, &self.spans)
     }
 }
 
 impl DagSet {
     pub(crate) fn from_spans_idmap(spans: SpanSet, map: Arc<IdMap>) -> Self {
-        Self { spans, map }
+        let is_all = false;
+        Self { spans, map, is_all }
+    }
+
+    pub(crate) fn mark_as_all(mut self) -> Self {
+        self.is_all = true;
+        self
     }
 }
 
@@ -118,6 +126,10 @@ impl NameSetQuery for DagSet {
     fn is_topo_sorted(&self) -> bool {
         // SpanSet is always sorted.
         true
+    }
+
+    fn is_all(&self) -> bool {
+        self.is_all
     }
 
     fn as_any(&self) -> &dyn Any {
@@ -218,6 +230,20 @@ mod tests {
 
                 Ok(())
             })
+        })
+    }
+
+    #[test]
+    fn test_dag_all() -> Result<()> {
+        with_dag(|dag| {
+            let all = dag.all()?;
+            assert_eq!(format!("{:?}", &all), "<dag (all) [0..=6]>");
+
+            let ac = "A C".into();
+            let intersection = all.intersection(&ac);
+            // should not be "<and ...>"
+            assert_eq!(format!("{:?}", &intersection), "<[A C]>");
+            Ok(())
         })
     }
 }
