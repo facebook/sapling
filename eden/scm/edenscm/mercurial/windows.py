@@ -503,13 +503,6 @@ def syncdir(dirpath):
     # Do nothing.
 
 
-def getfstype(dirpath):
-    try:
-        return win32.getfstype(dirpath)
-    except (IOError, OSError):
-        return None
-
-
 def gethgcmd():
     return [sys.executable] + sys.argv[:1]
 
