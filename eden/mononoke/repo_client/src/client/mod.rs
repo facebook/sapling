@@ -180,6 +180,7 @@ fn wireprotocaps() -> Vec<String> {
         "streamreqs=generaldelta,lz4revlog,revlogv1".to_string(),
         "treeonly".to_string(),
         "knownnodes".to_string(),
+        "designatednodes".to_string(),
     ]
 }
 
@@ -1828,18 +1829,56 @@ pub fn gettreepack_entries(
     repo: &BlobRepo,
     params: GettreepackArgs,
 ) -> BoxStream<(HgManifestId, Option<MPath>), Error> {
-    if !params.directories.is_empty() {
-        // This param is not used by core hg, don't worry about implementing it now
-        return stream::once(Err(Error::msg("directories param is not supported"))).boxify();
-    }
-
     let GettreepackArgs {
         rootdir,
         mfnodes,
         basemfnodes,
         depth: fetchdepth,
-        directories: _,
+        directories,
     } = params;
+
+    if fetchdepth == Some(1) && directories.len() > 0 {
+        if directories.len() != mfnodes.len() {
+            let e = format_err!(
+                "invalid directories count ({}, expected {})",
+                directories.len(),
+                mfnodes.len()
+            );
+            return stream::once(Err(e)).boxify();
+        }
+
+        if !rootdir.is_empty() {
+            let e = Error::msg("rootdir must be empty");
+            return stream::once(Err(e)).boxify();
+        }
+
+        if !basemfnodes.is_empty() {
+            let e = Error::msg("basemfnodes must be empty");
+            return stream::once(Err(e)).boxify();
+        }
+
+        let entries = mfnodes
+            .into_iter()
+            .zip(directories.into_iter())
+            .map(|(node, path)| {
+                let path = if path.len() > 0 {
+                    Some(MPath::new(path.as_ref())?)
+                } else {
+                    None
+                };
+                Ok((node, path))
+            })
+            .collect::<Result<Vec<_>, Error>>();
+
+        let entries = try_boxstream!(entries);
+
+        return stream::iter_ok::<_, Error>(entries).boxify();
+    }
+
+    if !directories.is_empty() {
+        // This param is not used by core hg, don't worry about implementing it now
+        return stream::once(Err(Error::msg("directories param is not supported"))).boxify();
+    }
 
     // 65536 matches the default TREE_DEPTH_MAX value from Mercurial
     let fetchdepth = fetchdepth.unwrap_or(2 << 16);

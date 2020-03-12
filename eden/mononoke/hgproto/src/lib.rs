@@ -165,7 +165,7 @@ pub struct GettreepackArgs {
     /// "root of the repo".
     pub rootdir: Bytes,
     /// The manifest nodes of the specified root directory to send.
-    pub mfnodes: BTreeSet<HgManifestId>,
+    pub mfnodes: Vec<HgManifestId>,
     /// The manifest nodes of the rootdir that are already on the client.
     pub basemfnodes: BTreeSet<HgManifestId>,
     /// The fullpath (not relative path) of directories underneath

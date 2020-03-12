@@ -598,7 +598,7 @@ fn parse_with_params(
         | call!(parse_command, "gettreepack", parse_params, 0+1,
             |kv| Ok(Gettreepack(GettreepackArgs {
                 rootdir: parseval(&kv, "rootdir", bytes_complete)?,
-                mfnodes: parseval(&kv, "mfnodes", manifestlist)?.into_iter().collect(),
+                mfnodes: parseval(&kv, "mfnodes", manifestlist)?,
                 basemfnodes: parseval(&kv, "basemfnodes", manifestlist)?.into_iter().collect(),
                 directories: parseval(&kv, "directories", gettreepack_directories)?,
                 depth: parseval_option(&kv, "depth", closure!(
@@ -1413,7 +1413,7 @@ mod test_parse {
             inp,
             Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
                 rootdir: Bytes::new(),
-                mfnodes: btreeset![hash_ones_manifest()],
+                mfnodes: vec![hash_ones_manifest()],
                 basemfnodes: btreeset![hash_ones_manifest()],
                 directories: vec![],
                 depth: None,
@@ -1437,7 +1437,7 @@ mod test_parse {
             inp,
             Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
                 rootdir: Bytes::from("ololo".as_bytes()),
-                mfnodes: btreeset![hash_ones_manifest(), hash_twos_manifest()],
+                mfnodes: vec![hash_ones_manifest(), hash_twos_manifest()],
                 basemfnodes: btreeset![hash_twos_manifest(), hash_ones_manifest()],
                 directories: vec![Bytes::from(",".as_bytes()), Bytes::from(";".as_bytes())],
                 depth: Some(1),
