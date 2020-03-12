@@ -36,6 +36,7 @@ use load_limiter::Metric;
 use manifest::{Diff, Entry, ManifestOps};
 use maplit::hashmap;
 use mercurial_bundles::{create_bundle_stream, parts, wirepack, Bundle2Item};
+use mercurial_revlog::{self, RevlogChangeset};
 use mercurial_types::{
     blobs::HgBlobChangeset, calculate_hg_node_id, convert_parents_to_remotefilelog_format,
     fetch_manifest_envelope, percent_encode, Delta, HgChangesetId, HgChangesetIdPrefix,
@@ -57,6 +58,7 @@ use serde_json::{self, json};
 use slog::{debug, info, o};
 use stats::prelude::*;
 use std::collections::{BTreeMap, HashMap, HashSet};
+use std::fmt::Write;
 use std::mem;
 use std::str::FromStr;
 use std::sync::{Arc, Mutex};
@@ -115,6 +117,7 @@ mod ops {
     pub static GETPACKV1: &str = "getpackv1";
     pub static GETPACKV2: &str = "getpackv2";
     pub static STREAMOUTSHALLOW: &str = "stream_out_shallow";
+    pub static GETCOMMITDATA: &str = "getcommitdata";
 }
 
 fn format_nodes<'a>(nodes: impl IntoIterator<Item = &'a HgChangesetId>) -> String {
@@ -1818,6 +1821,19 @@ impl HgCommands for RepoClient {
         )
     }
 
+    // @wireprotocommand('getcommitdata', 'nodes *'), but the * is ignored
+    fn getcommitdata(&self, nodes: Vec<HgChangesetId>) -> BoxStream<BytesOld, Error> {
+        let (ctx, _command_logger) = self.start_command(ops::GETCOMMITDATA);
+        let blobrepo = self.repo.blobrepo().clone();
+        stream::iter_ok::<_, Error>(nodes.into_iter())
+            .map(move |hg_cs_id| {
+                RevlogChangeset::load(ctx.clone(), blobrepo.blobstore(), hg_cs_id)
+                    .and_then(move |revlog_cs| serialize_getcommitdata(hg_cs_id, revlog_cs))
+            })
+            .buffered(100)
+            .boxify()
+    }
+
     // whether raw bundle2 contents should be preverved in the blobstore
     fn should_preserve_raw_bundle2(&self) -> bool {
         self.preserve_raw_bundle2
@@ -2113,6 +2129,25 @@ fn parse_utf8_getbundle_caps(caps: &[u8]) -> Option<(String, HashMap<String, Has
             .map(|cap| (cap, HashMap::new()))
             .ok(),
     }
+}
+
+fn serialize_getcommitdata(
+    hg_cs_id: HgChangesetId,
+    revlog_changeset: Option<RevlogChangeset>,
+) -> Result<BytesOld> {
+    let mut revlog_commit = Vec::new();
+    // When we don't find a given changeset, we write an empty line for the result.
+    // For the NULLID the output will have content according to Mercurial description. For example
+    // the manifest hash will be 40*"0".
+    if let Some(real_changeset) = revlog_changeset {
+        mercurial_revlog::changeset::serialize_cs(&real_changeset, &mut revlog_commit)?;
+    }
+    // capacity = hash + " " + length + "\n" + content + "\n"
+    let mut buffer = BytesMutOld::with_capacity(40 + 1 + 10 + 1 + revlog_commit.len() + 1);
+    write!(buffer, "{} {}\n", hg_cs_id, revlog_commit.len())?;
+    buffer.extend_from_slice(&revlog_commit);
+    buffer.put("\n");
+    Ok(buffer.freeze())
 }
 
 #[cfg(test)]
