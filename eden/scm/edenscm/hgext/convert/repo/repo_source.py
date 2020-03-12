@@ -414,7 +414,7 @@ class repo(object):
 
     MANIFEST_FILENAME_DEFAULT = "default.xml"
 
-    def __init__(self, ui, path):
+    def __init__(self, ui, path, branchwhitelist=None):
         if not os.path.exists(os.path.join(path, ".repo")):
             raise common.NoRepo(_("%s does not look like a repo repository") % path)
 
@@ -423,6 +423,7 @@ class repo(object):
         self.branches = None
         self.repocommandline = repo_commandline(ui, path)
         self.gitcommandline = common.commandline(ui, "git")
+        self._branchwhitelist = branchwhitelist
 
         self.repobranchsingleregex = re.compile(
             r"^(?P<checkedout>[* ])(?P<published>[pP ]) (?P<name>\S+)\s+|"
@@ -447,7 +448,8 @@ class repo(object):
 
     def _fetchmanifestdata(self, manifestprojectpath):
         self.manifestbranchcommithashes = {}
-        for branchname in self.getbranches():
+        branches = self.getbranches()
+        for branchname in branches:
             projecthash, exitcode = self.gitcommandline.run(
                 "-C", self.manifestprojectpath, "rev-parse", branchname
             )
@@ -643,7 +645,12 @@ class repo(object):
 
     def _readbranches(self):
         outputlines, exitcode = self.gitcommandline.runlines(
-            "-C", self.manifestprojectpath, "branch", "--remote"
+            "-C",
+            self.manifestprojectpath,
+            "branch",
+            "--remote",
+            "--format",
+            "%(refname:short)",
         )
         if exitcode > 0:
             raise error.Abort(
@@ -651,8 +658,9 @@ class repo(object):
             )
         branches = set()
         for line in outputlines:
-            arrowindex = line.find(" ->")
-            branches.add(line[2:arrowindex])
+            branchname = line
+            if self._branchwhitelist is None or branchname in self._branchwhitelist:
+                branches.add(branchname)
         return branches
 
     def getmanifestdom(self, version="HEAD", filename="default.xml"):
@@ -730,6 +738,7 @@ class repo_source(common.converter_source):
     CONFIG_FULL_MERGE = "repo.fullmerge"  # Find a better name for this
     CONFIG_DIFFTREE_CACHE_ENABLED = "repo.difftreecache"
     CONFIG_DIRRED_ENABLED = "repo.enabledirred"
+    CONFIG_BRANCH_WHITELIST = "repo.branches"
 
     VARIANT_ROOTED = "R"  # Used for commits migrated to root directory
     VARIANT_DIRRED = "D"  # Used for commits migrated to manifest directory
@@ -755,10 +764,13 @@ class repo_source(common.converter_source):
         self._dirredenabled = self.ui.configbool(
             self.CONFIG_NAMESPACE, self.CONFIG_DIRRED_ENABLED, default=True
         )
+        self._branchwhitelist = self.ui.configlist(
+            self.CONFIG_NAMESPACE, self.CONFIG_BRANCH_WHITELIST, default=None
+        )
 
         self.srcencoding = "utf-8"  # TODO: Read from git source projects
         self.pprinter = pprint.PrettyPrinter()
-        self.repo = repo(ui, path)
+        self.repo = repo(ui, path, branchwhitelist=self._branchwhitelist)
         self.repocommandline = repo_commandline(ui, path)
         self.gitcommandline = common.commandline(ui, "git")
 
