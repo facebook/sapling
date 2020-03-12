@@ -563,48 +563,15 @@ class changelog(revlog.revlog):
         short version of read that only returns the files modified by the cset
         """
         text = self.revision(node)
-        if not text:
-            return []
-        last = text.index(b"\n\n")
-        l = decodeutf8(text[:last]).split("\n")
-        return l[3:]
+        return readfiles(text)
 
     def add(
         self, manifest, files, desc, transaction, p1, p2, user, date=None, extra=None
     ):
-        # Convert to UTF-8 encoded bytestrings as the very first
-        # thing: calling any method on a localstr object will turn it
-        # into a str object and the cached UTF-8 string is thus lost.
-        user, desc = encoding.fromlocal(user), encoding.fromlocal(desc)
-
-        user = user.strip()
-        # An empty username or a username with a "\n" will make the
-        # revision text contain two "\n\n" sequences -> corrupt
-        # repository since read cannot unpack the revision.
-        if not user:
-            raise error.RevlogError(_("empty username"))
-        if "\n" in user:
-            raise error.RevlogError(_("username %s contains a newline") % repr(user))
-
-        desc = stripdesc(desc)
-
-        if date:
-            parseddate = "%d %d" % util.parsedate(date)
-        else:
-            parseddate = "%d %d" % util.makedate()
-        if extra:
-            branch = extra.get("branch")
-            if branch in ("default", ""):
-                del extra["branch"]
-            elif branch in (".", "null", "tip"):
-                raise error.RevlogError(_("the name '%s' is reserved") % branch)
-        if extra:
-            extra = encodeextra(extra)
-            parseddate = "%s %s" % (parseddate, extra)
-        l = [hex(manifest), user, parseddate] + sorted(files) + ["", desc]
-        text = "\n".join(l)
+        text = hgcommittext(manifest, files, desc, user, date, extra)
         btext = encodeutf8(text)
         result = self.addrevision(btext, transaction, len(self), p1, p2)
+
         zstore = self.zstore
         if zstore is not None:
             zstore.flush()
@@ -710,6 +677,50 @@ class changelog(revlog.revlog):
                 raise error.LookupError(node, self.indexfile, _("no data for node"))
             # Strip the p1, p2 header
             return text[40:]
+
+
+def readfiles(text):
+    if not text:
+        return []
+    last = text.index(b"\n\n")
+    l = decodeutf8(text[:last]).split("\n")
+    return l[3:]
+
+
+def hgcommittext(manifest, files, desc, user, date, extra):
+    """Generate the 'text' of a commit"""
+    # Convert to UTF-8 encoded bytestrings as the very first
+    # thing: calling any method on a localstr object will turn it
+    # into a str object and the cached UTF-8 string is thus lost.
+    user, desc = encoding.fromlocal(user), encoding.fromlocal(desc)
+
+    user = user.strip()
+    # An empty username or a username with a "\n" will make the
+    # revision text contain two "\n\n" sequences -> corrupt
+    # repository since read cannot unpack the revision.
+    if not user:
+        raise error.RevlogError(_("empty username"))
+    if "\n" in user:
+        raise error.RevlogError(_("username %s contains a newline") % repr(user))
+
+    desc = stripdesc(desc)
+
+    if date:
+        parseddate = "%d %d" % util.parsedate(date)
+    else:
+        parseddate = "%d %d" % util.makedate()
+    if extra:
+        branch = extra.get("branch")
+        if branch in ("default", ""):
+            del extra["branch"]
+        elif branch in (".", "null", "tip"):
+            raise error.RevlogError(_("the name '%s' is reserved") % branch)
+    if extra:
+        extra = encodeextra(extra)
+        parseddate = "%s %s" % (parseddate, extra)
+    l = [hex(manifest), user, parseddate] + sorted(files) + ["", desc]
+    text = "\n".join(l)
+    return text
 
 
 def _remotenodes(changelog):
