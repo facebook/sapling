@@ -61,6 +61,7 @@ define_stats! {
     admitted: timeseries(Rate, Sum),
     processed: timeseries(Rate, Sum),
     skipped: timeseries(Rate, Sum),
+    replay_outcome_permille: timeseries(Average),
 }
 
 const ARG_NO_SKIPLIST: &str = "no-skiplist";
@@ -172,10 +173,12 @@ async fn dispatch(
 
     match res {
         Ok(size) => {
+            STATS::replay_outcome_permille.add_value(1000);
             scuba.add("replay_response_size", size);
             scuba.log_with_msg("Replay Succeeded", None);
         }
         Err(e) => {
+            STATS::replay_outcome_permille.add_value(0);
             scuba
                 .unsampled()
                 .log_with_msg("Replay Failed", format!("{:#?}", e));
