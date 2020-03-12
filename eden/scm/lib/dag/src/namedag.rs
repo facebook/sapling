@@ -32,7 +32,9 @@ use std::sync::Arc;
 pub struct NameDag {
     pub(crate) dag: IdDag,
     pub(crate) map: IdMap,
-    pub(crate) arc_map: Arc<IdMap>,
+
+    /// A read-only snapshot of the `IdMap` that will be shared in `NameSet`s.
+    pub(crate) snapshot_map: Arc<IdMap>,
 
     mlog: multi::MultiLog,
 
@@ -53,11 +55,11 @@ impl NameDag {
         let map_log = logs.pop().unwrap();
         let map = IdMap::open_from_log(map_log)?;
         let dag = IdDag::open_from_log(dag_log)?;
-        let arc_map = Arc::new(map.try_clone()?);
+        let snapshot_map = Arc::new(map.try_clone()?);
         Ok(Self {
             dag,
             map,
-            arc_map,
+            snapshot_map,
             mlog,
             pending_heads: Default::default(),
         })
@@ -116,8 +118,8 @@ impl NameDag {
         dag.sync(std::iter::once(&mut self.dag))?;
         self.mlog.write_meta(&lock)?;
 
-        // Update arc_map.
-        self.arc_map = Arc::new(self.map.try_clone()?);
+        // Update snapshot_map.
+        self.snapshot_map = Arc::new(self.map.try_clone()?);
         Ok(())
     }
 
@@ -268,13 +270,13 @@ impl NameDag {
     /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
     pub fn all(&self) -> Result<NameSet> {
         let spans = self.dag.all()?;
-        Ok(NameSet::from_spans_idmap(spans, self.arc_map.clone()))
+        Ok(NameSet::from_spans_idmap(spans, self.snapshot_map.clone()))
     }
 
     /// Calculates all ancestors reachable from any name from the given set.
     pub fn ancestors(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag.ancestors(self.to_span_set(set)?)?;
-        Ok(NameSet::from_spans_idmap(spans, self.arc_map.clone()))
+        Ok(NameSet::from_spans_idmap(spans, self.snapshot_map.clone()))
     }
 
     /// Calculates parents of the given set.
@@ -283,7 +285,7 @@ impl NameDag {
     /// to preserve order.
     pub fn parents(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag.parents(self.to_span_set(set)?)?;
-        Ok(NameSet::from_spans_idmap(spans, self.arc_map.clone()))
+        Ok(NameSet::from_spans_idmap(spans, self.snapshot_map.clone()))
     }
 
     /// Calculates the n-th first ancestor.
@@ -296,19 +298,19 @@ impl NameDag {
     /// Calculates heads of the given set.
     pub fn heads(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag.heads(self.to_span_set(set)?)?;
-        Ok(NameSet::from_spans_idmap(spans, self.arc_map.clone()))
+        Ok(NameSet::from_spans_idmap(spans, self.snapshot_map.clone()))
     }
 
     /// Calculates children of the given set.
     pub fn children(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag.children(self.to_span_set(set)?)?;
-        Ok(NameSet::from_spans_idmap(spans, self.arc_map.clone()))
+        Ok(NameSet::from_spans_idmap(spans, self.snapshot_map.clone()))
     }
 
     /// Calculates roots of the given set.
     pub fn roots(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag.roots(self.to_span_set(set)?)?;
-        Ok(NameSet::from_spans_idmap(spans, self.arc_map.clone()))
+        Ok(NameSet::from_spans_idmap(spans, self.snapshot_map.clone()))
     }
 
     /// Calculates one "greatest common ancestor" of the given set.
@@ -327,13 +329,13 @@ impl NameDag {
     /// `gca_one` is faster if an arbitrary answer is ok.
     pub fn gca_all(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag.gca_all(self.to_span_set(set)?)?;
-        Ok(NameSet::from_spans_idmap(spans, self.arc_map.clone()))
+        Ok(NameSet::from_spans_idmap(spans, self.snapshot_map.clone()))
     }
 
     /// Calculates all common ancestors of the given set.
     pub fn common_ancestors(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag.common_ancestors(self.to_span_set(set)?)?;
-        Ok(NameSet::from_spans_idmap(spans, self.arc_map.clone()))
+        Ok(NameSet::from_spans_idmap(spans, self.snapshot_map.clone()))
     }
 
     /// Tests if `ancestor` is an ancestor of `descendant`.
@@ -354,7 +356,7 @@ impl NameDag {
     /// Y while this function won't.
     pub fn heads_ancestors(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag.heads_ancestors(self.to_span_set(set)?)?;
-        Ok(NameSet::from_spans_idmap(spans, self.arc_map.clone()))
+        Ok(NameSet::from_spans_idmap(spans, self.snapshot_map.clone()))
     }
 
     /// Calculates the "dag range" - vertexes reachable from both sides.
@@ -362,20 +364,20 @@ impl NameDag {
         let roots = self.to_span_set(roots)?;
         let heads = self.to_span_set(heads)?;
         let spans = self.dag.range(roots, heads)?;
-        Ok(NameSet::from_spans_idmap(spans, self.arc_map.clone()))
+        Ok(NameSet::from_spans_idmap(spans, self.snapshot_map.clone()))
     }
 
     /// Calculates the descendants of the given set.
     pub fn descendants(&self, set: NameSet) -> Result<NameSet> {
         let spans = self.dag.descendants(self.to_span_set(set)?)?;
-        Ok(NameSet::from_spans_idmap(spans, self.arc_map.clone()))
+        Ok(NameSet::from_spans_idmap(spans, self.snapshot_map.clone()))
     }
 
     /// Converts [`NameSet`] to [`SpanSet`].
     fn to_span_set(&self, set: NameSet) -> Result<SpanSet> {
         // Fast path: extract SpanSet directly.
         if let Some(set) = set.as_any().downcast_ref::<DagSet>() {
-            if Arc::ptr_eq(&set.map, &self.arc_map) {
+            if Arc::ptr_eq(&set.map, &self.snapshot_map) {
                 return Ok(set.spans.clone());
             }
         }
