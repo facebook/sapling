@@ -81,6 +81,7 @@ class SyncState(object):
 
     def update(
         self,
+        tr,
         newversion,
         newheads,
         newbookmarks,
@@ -101,8 +102,11 @@ class SyncState(object):
             "lastupdatetime": time.time(),
             "remotebookmarks": newremotebookmarks,
         }
-        with self.repo.svfs.open(self.filename, "w", atomictemp=True) as f:
-            f.write(encodeutf8(json.dumps(data)))
+        tr.addfilegenerator(
+            self.filename,
+            [self.filename],
+            lambda f: f.write(encodeutf8(json.dumps(data))),
+        )
         self.prevstate = (self.version, self.heads, self.bookmarks, self.snapshots)
         self.version = newversion
         self.heads = newheads

@@ -207,12 +207,12 @@ def _sync(
                 )
 
             # Check if any omissions are now included in the repo
-            _checkomissions(repo, remotepath, lastsyncstate)
+            _checkomissions(repo, remotepath, lastsyncstate, tr)
 
             # Send updates to the cloud.  If this fails then we have lost the race
             # to update the server and must start again.
             synced, cloudrefs = _submitlocalchanges(
-                repo, reponame, workspacename, lastsyncstate, failed, serv
+                repo, reponame, workspacename, lastsyncstate, failed, serv, tr
             )
 
     # Update the backup bookmarks with any changes we have made by syncing.
@@ -545,6 +545,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         newsnapshots,
     )
     lastsyncstate.update(
+        tr,
         cloudrefs.version,
         cloudrefs.heads,
         cloudrefs.bookmarks,
@@ -800,7 +801,7 @@ def _mergeobsmarkers(repo, tr, obsmarkers):
 
 
 @perftrace.tracefunc("Check Omissions")
-def _checkomissions(repo, remotepath, lastsyncstate):
+def _checkomissions(repo, remotepath, lastsyncstate, tr):
     """check omissions are still not available locally
 
     Check that the commits that have been deliberately omitted are still not
@@ -828,6 +829,7 @@ def _checkomissions(repo, remotepath, lastsyncstate):
             omittedbookmarks.add(name)
     if omittedheads != lastomittedheads or omittedbookmarks != lastomittedbookmarks:
         lastsyncstate.update(
+            tr,
             lastsyncstate.version,
             lastsyncstate.heads,
             lastsyncstate.bookmarks,
@@ -842,7 +844,7 @@ def _checkomissions(repo, remotepath, lastsyncstate):
 
 
 @perftrace.tracefunc("Submit Local Changes")
-def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, serv):
+def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, serv, tr):
     localheads = _getheads(repo)
     localbookmarks = _getbookmarks(repo)
     localremotebookmarks = _getremotebookmarks(repo)
@@ -972,6 +974,7 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
             localsnapshots,
         )
         lastsyncstate.update(
+            tr,
             cloudrefs.version,
             newcloudheads,
             newcloudbookmarks,
