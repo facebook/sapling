@@ -16,10 +16,11 @@ use python27_sys as ffi;
 #[cfg(feature = "python3")]
 use python3_sys as ffi;
 use std::cell::Cell;
+use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
 use tracing_collector::{
-    model::{Action, EspanId},
+    model::{Action, EspanId, TreeSpans},
     TracingData,
 };
 
@@ -139,15 +140,15 @@ py_class!(class tracingdata |py| {
         Ok(self.data(py).lock().ascii(&opts).into())
     }
 
-    /// Export as TreeSpans.
+    /// Get the TreeSpans for all threads.
     ///
-    /// The return type is:
-    ///
-    /// {(pid, tid): {"start": micros, "duration": micros | null, "children": [index], **meta}}
-    def treespans(&self) -> PyResult<PyObject> {
+    /// Return {(pid, tid): treespans}.
+    def treespans(&self) -> PyResult<HashMap<(u64, u64), treespans>> {
         let data = self.data(py).lock();
-        let tree_spans = data.tree_spans::<&str>();
-        cpython_ext::ser::to_object(py, &tree_spans)
+        let spans = data.tree_spans().into_iter().map(|(k, v)|{
+            (k, treespans::create_instance(py, v).expect("create_instance should succeed"))
+        }).collect();
+        Ok(spans)
     }
 
     /// Swap with the global singleton.
@@ -549,3 +550,27 @@ impl PythonTypeWithInner for wrapiter {
         self.inner(py)
     }
 }
+
+py_class!(pub class treespans |py| {
+    data spans: TreeSpans<String>;
+
+    /// Convert into plain Python objects:
+    ///
+    /// [{"start": micros, "duration": micros | null, "children": [index], **meta}]
+    def flatten(&self) -> PyResult<PyObject> {
+        cpython_ext::ser::to_object(py, self.spans(py))
+    }
+
+    /// Get a "flat" list of spans by name.
+    def byname(&self, name: String) -> PyResult<PyObject> {
+        let spans = self.spans(py).walk().filter(move |walker, span| {
+            if span.meta.get("name") == Some(&name) {
+                walker.step_out();
+                true
+            } else {
+                false
+            }
+        }).collect::<Vec<_>>();
+        cpython_ext::ser::to_object(py, &spans)
+    }
+});

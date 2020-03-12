@@ -36,12 +36,12 @@ def collectprefetch(command):
         (sh % command).output
 
     ids = []
-    for span in list(d.treespans().values())[0]:
-        name = span.get(b"name")
-        if name == b"tree::store::prefetch":
-            ids += pycompat.decodeutf8(span[b"ids"]).split()
-        elif name == b"tree::store::get":
-            ids.append(pycompat.decodeutf8(span[b"id"]))
+    for span in d.treespans().values()[0].flatten():
+        name = span.get("name")
+        if name == "tree::store::prefetch":
+            ids += span["ids"].split()
+        elif name == "tree::store::get":
+            ids.append(span["id"])
     idtopath.update(getidtopath())
     paths = set(idtopath[id] for id in set(ids)) - {"/"}
 

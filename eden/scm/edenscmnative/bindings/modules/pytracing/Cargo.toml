@@ -5,8 +5,8 @@ edition = "2018"
 
 [features]
 default = []
-python2 = ["python27-sys"]
-python3 = ["python3-sys"]
+python2 = ["python27-sys", "cpython/python27-sys", "cpython-ext/python2"]
+python3 = ["python3-sys", "cpython/python3-sys", "cpython-ext/python3"]
 
 [dependencies]
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
