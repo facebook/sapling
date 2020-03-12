@@ -10,6 +10,7 @@
 #include <folly/File.h>
 #include <folly/container/Array.h>
 #include <folly/init/Init.h>
+#include <folly/net/NetworkSocket.h>
 #include <folly/synchronization/test/Barrier.h>
 #include <thrift/lib/cpp/async/TAsyncSocket.h>
 #include <thrift/lib/cpp2/async/HeaderClientChannel.h>
@@ -90,7 +91,7 @@ int main(int argc, char** argv) {
           }
           folly::EventBase eventBase;
           auto socket = apache::thrift::async::TAsyncSocket::newSocket(
-              &eventBase, sock_fd);
+              &eventBase, folly::NetworkSocket::fromFd(sock_fd));
           auto channel = folly::to_shared_ptr(
               apache::thrift::HeaderClientChannel::newChannel(socket));
           auto client = std::make_unique<EdenServiceAsyncClient>(channel);
