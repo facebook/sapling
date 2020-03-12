@@ -138,7 +138,7 @@ impl NameSetQuery for DagSet {
 }
 
 #[cfg(test)]
-mod tests {
+pub(crate) mod tests {
     use super::super::tests::*;
     use super::*;
     use crate::tests::build_segments;
@@ -146,7 +146,7 @@ mod tests {
     use std::ops::Deref;
 
     /// Test with a predefined DAG.
-    fn with_dag<R, F: Fn(&NameDag) -> R>(func: F) -> R {
+    pub(crate) fn with_dag<R, F: Fn(&NameDag) -> R>(func: F) -> R {
         let built = build_segments(
             r#"
             A--B--C--D

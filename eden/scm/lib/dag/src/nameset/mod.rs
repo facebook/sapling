@@ -23,6 +23,7 @@ pub mod dag;
 pub mod difference;
 pub mod intersection;
 pub mod lazy;
+pub mod legacy;
 pub mod sorted;
 pub mod r#static;
 pub mod union;
