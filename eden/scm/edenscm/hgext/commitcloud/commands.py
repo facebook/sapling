@@ -813,23 +813,34 @@ def cloudstatus(ui, repo, **opts):
     if workspacename is None:
         ui.write(_("You are not connected to any workspace\n"))
         return
+    ui.write(_("Workspace: %s\n") % workspacename)
 
     autosync = "ON" if background.autobackupenabled(repo) else "OFF"
-    currentsyncstate = syncstate.SyncState(repo, workspacename)
-    syncupdatetime = time.ctime(currentsyncstate.lastupdatetime)
-    if repo.localvfs.isfile("lastsync.log"):
-        state = repo.localvfs.read("lastsync.log")
-    else:
-        state = "Not logged"
+    ui.write(_("Automatic Sync: %s\n") % autosync)
+
+    state = syncstate.SyncState(repo, workspacename)
+
+    ui.write(_("Last Sync Version: %s\n") % state.version)
+    if state.maxage is not None:
+        ui.write(_("Last Sync Maximum Commit Age: %s days\n") % state.maxage)
     ui.write(
-        _(
-            "Workspace: %s\n"
-            "Automatic Sync: %s\n"
-            "Last Sync: %s\n"
-            "Last Sync State: %s\n"
-        )
-        % (workspacename, autosync, syncupdatetime, state)
+        _("Last Sync Heads: %d (%d omitted)\n")
+        % (len(state.heads), len(state.omittedheads))
     )
+    ui.write(
+        _("Last Sync Bookmarks: %d (%d omitted)\n")
+        % (len(state.bookmarks), len(state.omittedbookmarks))
+    )
+    ui.write(_("Last Sync Remote Bookmarks: %d\n") % (len(state.remotebookmarks)))
+    ui.write(_("Last Sync Snapshots: %d\n") % (len(state.snapshots)))
+
+    ui.write(_("Last Sync Time: %s\n") % time.ctime(state.lastupdatetime))
+
+    if repo.svfs.isfile(sync._syncstatusfile):
+        status = repo.svfs.read(sync._syncstatusfile)
+    else:
+        status = "Not logged"
+    ui.write(_("Last Sync Status: %s\n") % status)
 
 
 @command("debugwaitbackup", [("", "timeout", "", "timeout value")])

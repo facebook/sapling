@@ -161,6 +161,7 @@ from . import (
     dependencies,
     obsmarkers,
     status,
+    sync,
     syncstate,
     util as ccutil,
     workspace,
@@ -201,6 +202,7 @@ def extsetup(ui):
     localrepo.localrepository._wlockfreeprefix.add(backupstate.BackupState.prefix)
     localrepo.localrepository._wlockfreeprefix.add(background._autobackupstatefile)
     localrepo.localrepository._lockfreeprefix.add(syncstate.SyncState.prefix)
+    localrepo.localrepository._lockfreeprefix.add(sync._syncstatusfile)
 
     def wrapsmartlog(loaded):
         if not loaded:

@@ -42,6 +42,10 @@ from . import (
 )
 
 
+# Sync status file.  Contains whether the previous sync was successful or not.
+_syncstatusfile = "commitcloudsyncstatus"
+
+
 def _isremotebookmarkssyncenabled(ui):
     return ui.configbool("remotenames", "selectivepull") and ui.configbool(
         "commitcloud", "remotebookmarkssync"
@@ -92,7 +96,16 @@ def _getsnapshots(repo, lastsyncstate):
 @perftrace.tracefunc("Cloud Sync")
 def sync(repo, *args, **kwargs):
     with backuplock.lock(repo):
-        return _sync(repo, *args, **kwargs)
+        try:
+            rc, synced = _sync(repo, *args, **kwargs)
+            if synced is not None:
+                with repo.svfs(_syncstatusfile, "w+") as fp:
+                    fp.write(encodeutf8("Success" if synced else "Failed"))
+        except BaseException as e:
+            with repo.svfs(_syncstatusfile, "w+") as fp:
+                fp.write(encodeutf8("Exception (%s)" % repr(e)))
+            raise
+        return rc
 
 
 def _sync(
@@ -147,7 +160,7 @@ def _sync(
         # another is for edenfs checkout. If edenfs backing repo sync runs first then it will sync
         # all the commits and bookmarks but it won't move working copy of the checkout.
         # The line below makes sure that working copy is updated.
-        return _maybeupdateworkingcopy(repo, startnode)
+        return _maybeupdateworkingcopy(repo, startnode), None
 
     backupsnapshots = False
     try:
@@ -228,15 +241,7 @@ def _sync(
     # Check that Scm Service is running and a subscription exists
     subscription.check(repo)
 
-    # log whether the sync was successful
-    with repo.wlock():
-        fp = repo.localvfs("lastsync.log", "w+")
-        if synced and not failed:
-            fp.write(encodeutf8("Success"))
-        else:
-            fp.write(encodeutf8("Failed"))
-        fp.close()
-    return _maybeupdateworkingcopy(repo, startnode)
+    return _maybeupdateworkingcopy(repo, startnode), synced and not failed
 
 
 def logsyncop(

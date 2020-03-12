@@ -97,8 +97,13 @@ Run cloud status after setting a workspace
   $ hg cloud status
   Workspace: user/test/feature
   Automatic Sync: OFF
-  Last Sync: * (glob)
-  Last Sync State: Success
+  Last Sync Version: 1
+  Last Sync Heads: 0 (0 omitted)
+  Last Sync Bookmarks: 0 (0 omitted)
+  Last Sync Remote Bookmarks: 0
+  Last Sync Snapshots: 0
+  Last Sync Time: * (glob)
+  Last Sync Status: Success
 
   $ hg cloud leave
   commitcloud: this repository is now disconnected from Commit Cloud Sync
@@ -135,8 +140,13 @@ Run cloud status after setting workspace
   $ hg cloud status
   Workspace: user/test/default
   Automatic Sync: OFF
-  Last Sync: * (glob)
-  Last Sync State: Success
+  Last Sync Version: 1
+  Last Sync Heads: 0 (0 omitted)
+  Last Sync Bookmarks: 0 (0 omitted)
+  Last Sync Remote Bookmarks: 0
+  Last Sync Snapshots: 0
+  Last Sync Time: * (glob)
+  Last Sync Status: Success
 
 Enable autosync
   $ setconfig infinitepushbackup.autobackup=true
@@ -145,8 +155,13 @@ Run cloud status after enabling autosync
   $ hg cloud status
   Workspace: user/test/default
   Automatic Sync: ON
-  Last Sync: * (glob)
-  Last Sync State: Success
+  Last Sync Version: 1
+  Last Sync Heads: 0 (0 omitted)
+  Last Sync Bookmarks: 0 (0 omitted)
+  Last Sync Remote Bookmarks: 0
+  Last Sync Snapshots: 0
+  Last Sync Time: * (glob)
+  Last Sync Status: Success
 
 Disable autosync
   $ setconfig infinitepushbackup.autobackup=false
@@ -154,8 +169,13 @@ Run cloud status after disabling autosync
   $ hg cloud status
   Workspace: user/test/default
   Automatic Sync: OFF
-  Last Sync: * (glob)
-  Last Sync State: Success
+  Last Sync Version: 1
+  Last Sync Heads: 0 (0 omitted)
+  Last Sync Bookmarks: 0 (0 omitted)
+  Last Sync Remote Bookmarks: 0
+  Last Sync Snapshots: 0
+  Last Sync Time: * (glob)
+  Last Sync Status: Success
 
   $ cd ..
 
@@ -851,8 +871,13 @@ Run cloud status after failing to synchronize
   $ hg cloud status
   Workspace: user/test/default
   Automatic Sync: OFF
-  Last Sync: * (glob)
-  Last Sync State: Failed
+  Last Sync Version: 17
+  Last Sync Heads: 1 (0 omitted)
+  Last Sync Bookmarks: 1 (0 omitted)
+  Last Sync Remote Bookmarks: 0
+  Last Sync Snapshots: 0
+  Last Sync Time: * (glob)
+  Last Sync Status: Failed
 
   $ hg cloud check -r .
   9bd68ef10d6bdb8ebf3273a7b91bc4f3debe2a87 not backed up
