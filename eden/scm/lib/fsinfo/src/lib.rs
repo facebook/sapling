@@ -33,8 +33,8 @@ mod windows {
         }
     }
 
-    fn open_share<P: AsRef<Path>>(repo_root: P) -> io::Result<WinFileHandle> {
-        let mut root: Vec<u16> = repo_root.as_ref().as_os_str().encode_wide().collect();
+    fn open_share<P: AsRef<Path>>(path: P) -> io::Result<WinFileHandle> {
+        let mut root: Vec<u16> = path.as_ref().as_os_str().encode_wide().collect();
         // Need to make it 0 terminated,
         // otherwise might not get the correct
         // string
@@ -59,8 +59,8 @@ mod windows {
         }
     }
 
-    pub fn get_repo_file_system<P: AsRef<Path>>(repo_root: P) -> io::Result<String> {
-        let win_handle = open_share(repo_root)?;
+    pub fn fstype<P: AsRef<Path>>(path: P) -> io::Result<String> {
+        let win_handle = open_share(path)?;
 
         let mut fstype = [0u16; MAX_PATH];
         let exit_sts = unsafe {
@@ -95,8 +95,8 @@ mod unix {
     use std::os::unix::ffi::OsStrExt;
     use std::path::Path;
 
-    pub fn get_statfs<P: AsRef<Path>>(repo_root: P) -> io::Result<libc::statfs> {
-        let cstr = CString::new(repo_root.as_ref().as_os_str().as_bytes())?;
+    pub fn get_statfs<P: AsRef<Path>>(path: P) -> io::Result<libc::statfs> {
+        let cstr = CString::new(path.as_ref().as_os_str().as_bytes())?;
         let mut fs_stat: libc::statfs = unsafe { zeroed() };
         if unsafe { libc::statfs(cstr.as_ptr(), &mut fs_stat) } == 0 {
             Ok(fs_stat)
@@ -117,17 +117,17 @@ mod linux {
     const FUSE_SUPER_MAGIC: i64 = 0x65735546;
     const XFS_SUPER_MAGIC: i64 = 0x58465342;
 
-    fn get_type<P: AsRef<Path>>(f_type: i64, repo_root: P) -> &'static str {
+    fn get_type<P: AsRef<Path>>(f_type: i64, path: P) -> &'static str {
         match f_type {
             BTRFS_SUPER_MAGIC => "btrfs",
             CIFS_SUPER_MAGIC => "cifs",
             FUSE_SUPER_MAGIC => {
                 // Fuse system, check specifically if it is edenfs
-                // by running statfs on .eden in repo_root.
+                // by running statfs on .eden in path.
                 // .eden is present in all directories in an Eden mount.
-                let mut repo = PathBuf::from(repo_root.as_ref());
+                let mut repo = PathBuf::from(path.as_ref());
                 repo.push(".eden");
-                if super::unix::get_statfs(repo_root).is_ok() {
+                if super::unix::get_statfs(path).is_ok() {
                     "edenfs"
                 } else {
                     "fuse"
@@ -157,9 +157,9 @@ mod linux {
         }
     }
 
-    pub fn get_repo_file_system<P: AsRef<Path>>(repo_root: P) -> io::Result<String> {
-        let fs_stat = super::unix::get_statfs(repo_root.as_ref())?;
-        Ok(get_type(fs_stat.f_type, repo_root.as_ref()).into())
+    pub fn fstype<P: AsRef<Path>>(path: P) -> io::Result<String> {
+        let fs_stat = super::unix::get_statfs(path.as_ref())?;
+        Ok(get_type(fs_stat.f_type, path.as_ref()).into())
     }
 }
 
@@ -169,16 +169,16 @@ mod macos {
     use std::io;
     use std::path::Path;
 
-    pub fn get_repo_file_system<P: AsRef<Path>>(repo_root: P) -> io::Result<String> {
-        let fs_stat = super::unix::get_statfs(repo_root)?;
+    pub fn fstype<P: AsRef<Path>>(path: P) -> io::Result<String> {
+        let fs_stat = super::unix::get_statfs(path)?;
         let fs = unsafe { CStr::from_ptr(fs_stat.f_fstypename.as_ptr()) };
         return Ok(fs.to_string_lossy().into());
     }
 }
 
 #[cfg(target_os = "linux")]
-pub use self::linux::get_repo_file_system;
+pub use self::linux::fstype;
 #[cfg(target_os = "macos")]
-pub use self::macos::get_repo_file_system;
+pub use self::macos::fstype;
 #[cfg(windows)]
-pub use self::windows::get_repo_file_system;
+pub use self::windows::fstype;
