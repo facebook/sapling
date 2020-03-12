@@ -32,6 +32,7 @@ from edenscm.mercurial import (
 from edenscm.mercurial.i18n import _
 
 from . import bookmarks, constants
+from .constants import pathname
 
 
 _maybehash = re.compile(r"^[a-f0-9]+$").search
@@ -109,16 +110,35 @@ def preparepush(ui, dest):
     # Mercurial and Mononoke), then infinite pushes without a path OR with a
     # path of "default" will be routed to both of them. Put it another way: when
     # you do a scratch push, "default" means the infinitepush path.
-    if dest == "default":
+    if dest == pathname.default:
         try:
-            return (True, ui.paths.getpath("infinitepush"))
+            return (True, ui.paths.getpath(pathname.infinitepushwrite))
         except error.RepoError:
             # Fallthrough to the next block.
             pass
 
-    if dest is None or dest in ("default", "infinitepush"):
+        try:
+            return (True, ui.paths.getpath(pathname.infinitepush))
+        except error.RepoError:
+            # Fallthrough to the next block.
+            pass
+
+    if dest == pathname.infinitepush:
+        try:
+            return (True, ui.paths.getpath(pathname.infinitepushwrite))
+        except error.RepoError:
+            # Fallthrough to the next block.
+            pass
+
+    if dest in {None, pathname.default, pathname.infinitepush}:
         path = ui.paths.getpath(
-            dest, default=("infinitepush", "default-push", "default")
+            dest,
+            default=(
+                pathname.infinitepushwrite,
+                pathname.infinitepush,
+                pathname.defaultpush,
+                pathname.default,
+            ),
         )
         return (True, path)
 
@@ -201,11 +221,13 @@ def _push(orig, ui, repo, dest=None, *args, **opts):
             # the default infinitepush destination.
             if replicate:
                 try:
-                    otherpath = repo.ui.paths.getpath("infinitepush-other")
+                    otherpath = repo.ui.paths.getpath(pathname.infinitepushother)
                 except error.RepoError:
                     pass
         else:
-            path = ui.paths.getpath(dest, default=("default-push", "default"))
+            path = ui.paths.getpath(
+                dest, default=(pathname.defaultpush, pathname.default)
+            )
 
         # Copy-paste from `push` command
         if not path:
@@ -276,7 +298,7 @@ def _bookmarks(orig, ui, repo, *names, **opts):
     pattern = opts.get("list_remote")
     delete = opts.get("delete")
     remotepath = opts.get("remote_path")
-    path = ui.paths.getpath(remotepath or None, default=("default"))
+    path = ui.paths.getpath(remotepath or None, default=(pathname.default,))
 
     if pattern:
         destpath = path.pushloc or path.loc
@@ -306,7 +328,7 @@ def _bookmarks(orig, ui, repo, *names, **opts):
 
             if len(scratch_bms) > 0:
                 if remotepath == "":
-                    remotepath = "default"
+                    remotepath = pathname.default
                 bookmarks.deleteremotebookmarks(ui, repo, remotepath, scratch_bms)
 
             if len(other_bms) > 0 or len(scratch_bms) == 0:
@@ -357,8 +379,10 @@ def _resetinfinitepushpath(ui, **opts):
     """
 
     overrides = {}
-    infinitepushpath = "infinitepush"
-    infinitepushbookmarkpath = "infinitepushbookmark"
+    defaultpath = pathname.default
+    infinitepushpath = pathname.infinitepush
+    infinitepushwritepath = pathname.infinitepushwrite
+    infinitepushbookmarkpath = pathname.infinitepushbookmark
 
     pullingsinglecommithash = False
     if opts.get("rev"):
@@ -374,16 +398,23 @@ def _resetinfinitepushpath(ui, **opts):
         path = None
 
     if path is not None:
-        overrides[("paths", "default")] = ui.paths[path].loc
+        overrides[("paths", defaultpath)] = ui.paths[path].loc
         overrides[("paths", infinitepushpath)] = "!"
+        overrides[("paths", infinitepushwritepath)] = "!"
         overrides[("paths", infinitepushbookmarkpath)] = "!"
         with ui.configoverride(overrides, "infinitepush"):
-            loc, sub = ui.configsuboptions("paths", "default")
-            ui.paths["default"] = uimod.path(ui, "default", rawloc=loc, suboptions=sub)
-            if infinitepushpath in ui.paths:
-                del ui.paths[infinitepushpath]
-            if infinitepushbookmarkpath in ui.paths:
-                del ui.paths[infinitepushbookmarkpath]
+            loc, sub = ui.configsuboptions("paths", defaultpath)
+            ui.paths[defaultpath] = uimod.path(
+                ui, defaultpath, rawloc=loc, suboptions=sub
+            )
+            for p in [
+                infinitepushpath,
+                infinitepushbookmarkpath,
+                infinitepushwritepath,
+            ]:
+                if p not in ui.paths:
+                    continue
+                del ui.paths[p]
             yield
     else:
         yield

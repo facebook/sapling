@@ -7,3 +7,12 @@ scratchbranchparttype = "b2x:infinitepush"
 scratchbookmarksparttype = "b2x:infinitepushscratchbookmarks"
 scratchmutationparttype = "b2x:infinitepushmutation"
 pushrebaseparttype = "b2x:rebase"
+
+
+class pathname(object):
+    default = "default"
+    defaultpush = "default-push"
+    infinitepush = "infinitepush"
+    infinitepushother = "infinitepush-other"
+    infinitepushbookmark = "infinitepushbookmark"
+    infinitepushwrite = "infinitepush-write"
