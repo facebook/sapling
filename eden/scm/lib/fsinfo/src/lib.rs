@@ -6,6 +6,8 @@
  */
 
 #![deny(warnings)]
+use std::io;
+use std::path::Path;
 
 #[cfg(windows)]
 mod windows {
@@ -176,9 +178,27 @@ mod macos {
     }
 }
 
-#[cfg(target_os = "linux")]
-pub use self::linux::fstype;
-#[cfg(target_os = "macos")]
-pub use self::macos::fstype;
-#[cfg(windows)]
-pub use self::windows::fstype;
+/// Get filesystem type on the given `path`.
+///
+/// Return "unknown" on unsupported platform.
+pub fn fstype(path: impl AsRef<Path>) -> io::Result<String> {
+    #[cfg(target_os = "linux")]
+    {
+        return self::linux::fstype(path);
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        return self::macos::fstype(path);
+    }
+
+    #[cfg(windows)]
+    {
+        return self::windows::fstype(path);
+    }
+
+    #[allow(unreachable_code)]
+    {
+        return Ok("unknown".to_string());
+    }
+}
