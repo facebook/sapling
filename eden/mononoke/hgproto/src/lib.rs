@@ -87,6 +87,9 @@ pub enum SingleRequest {
     StreamOutShallow,
     GetpackV1,
     GetpackV2,
+    GetCommitData {
+        nodes: Vec<HgChangesetId>,
+    },
 }
 
 impl SingleRequest {
@@ -111,6 +114,7 @@ impl SingleRequest {
             &SingleRequest::GetpackV1 => "getpackv1",
             &SingleRequest::GetpackV2 => "getpackv2",
             &SingleRequest::ListKeysPatterns { .. } => "listkeyspatterns",
+            &SingleRequest::GetCommitData { .. } => "getcommitdata",
         }
     }
 }
@@ -227,6 +231,7 @@ pub enum SingleResponse {
     StreamOutShallow(Bytes),
     Getpackv1(Bytes),
     Getpackv2(Bytes),
+    GetCommitData(Bytes),
 }
 
 impl SingleResponse {

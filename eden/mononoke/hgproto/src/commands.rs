@@ -267,6 +267,13 @@ impl<H: HgCommands + Send + 'static> HgCommandHandler<H> {
                     instream,
                 )
             }
+            SingleRequest::GetCommitData { nodes } => (
+                hgcmds
+                    .getcommitdata(nodes)
+                    .map(SingleResponse::GetCommitData)
+                    .boxify(),
+                ok(instream).boxify(),
+            ),
         }
     }
 
@@ -727,6 +734,11 @@ pub trait HgCommands {
         _params: BoxStream<(MPath, Vec<HgFileNodeId>), Error>,
     ) -> BoxStream<Bytes, Error> {
         once(Err(ErrorKind::Unimplemented("getpackv2".into()).into())).boxify()
+    }
+
+    // @wireprotocommand('getcommitdata', 'nodes *')
+    fn getcommitdata(&self, _nodes: Vec<HgChangesetId>) -> BoxStream<Bytes, Error> {
+        once(Err(ErrorKind::Unimplemented("getcommitdata".into()).into())).boxify()
     }
 
     // whether raw bundle2 contents should be preverved in the blobstore

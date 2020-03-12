@@ -608,6 +608,9 @@ fn parse_with_params(
         | call!(parse_command, "stream_out_shallow", parse_params, 0+1, |_kv| Ok(StreamOutShallow))
         | command_star!("getpackv1", GetpackV1, parse_params, {})
         | command_star!("getpackv2", GetpackV2, parse_params, {})
+        | command!("getcommitdata", GetCommitData, parse_params, {
+            nodes => hg_changeset_list,
+        })
     )
 }
 
@@ -1593,6 +1596,19 @@ mod test_parse {
             Request::Single(SingleRequest::ListKeysPatterns {
                 namespace: "bookmarks".to_string(),
                 patterns: vec!["test/*".to_string(), "nuclide".to_string()],
+            }),
+        );
+    }
+
+    #[test]
+    fn test_parse_getcommitdata() {
+        let input = "getcommitdata\n\
+                     nodes 81\n\
+                     1111111111111111111111111111111111111111 2222222222222222222222222222222222222222";
+        test_parse(
+            input,
+            Request::Single(SingleRequest::GetCommitData {
+                nodes: vec![hash_ones(), hash_twos()],
             }),
         );
     }

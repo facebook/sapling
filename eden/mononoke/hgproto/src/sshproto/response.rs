@@ -173,6 +173,8 @@ fn encode_cmd(response: SingleResponse) -> Bytes {
         Getpackv1(res) => res,
         Getpackv2(res) => res,
 
+        GetCommitData(res) => res,
+
         r => panic!("Response for {:?} unimplemented", r),
     }
 }
