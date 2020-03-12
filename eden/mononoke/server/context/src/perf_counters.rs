@@ -71,6 +71,8 @@ define_perf_counters! {
         GetpackResponseSize,
         GettreepackNumTreepacks,
         GettreepackResponseSize,
+        GetcommitdataNumCommits,
+        GetcommitdataResponseSize,
         MemcacheHits,
         MemcacheMisses,
         SkiplistAncestorGen,

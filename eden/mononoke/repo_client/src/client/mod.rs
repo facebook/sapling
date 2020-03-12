@@ -84,6 +84,8 @@ define_stats! {
         histogram(5, 0, 500, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     getpack_ms:
         histogram(20, 0, 2_000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+    getcommitdata_ms:
+        histogram(2, 0, 200, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
     total_tree_count: timeseries(Rate, Sum),
     quicksand_tree_count: timeseries(Rate, Sum),
     total_tree_size: timeseries(Rate, Sum),
@@ -92,6 +94,7 @@ define_stats! {
     quicksand_fetched_file_size: timeseries(Rate, Sum),
     null_linknode_gettreepack: timeseries(Rate, Sum),
     null_linknode_getpack: timeseries(Rate, Sum),
+    getcommitdata_commit_count: timeseries(Rate, Sum),
 
     push_success: dynamic_timeseries("push_success.{}", (reponame: String); Rate, Sum),
     push_hook_failure: dynamic_timeseries("push_hook_failure.{}.{}", (reponame: String, hook_failure: String); Rate, Sum),
@@ -1823,15 +1826,54 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('getcommitdata', 'nodes *'), but the * is ignored
     fn getcommitdata(&self, nodes: Vec<HgChangesetId>) -> BoxStream<BytesOld, Error> {
-        let (ctx, _command_logger) = self.start_command(ops::GETCOMMITDATA);
+        let args = json!(nodes);
+        let (ctx, mut command_logger) = self.start_command(ops::GETCOMMITDATA);
         let blobrepo = self.repo.blobrepo().clone();
-        stream::iter_ok::<_, Error>(nodes.into_iter())
-            .map(move |hg_cs_id| {
-                RevlogChangeset::load(ctx.clone(), blobrepo.blobstore(), hg_cs_id)
-                    .and_then(move |revlog_cs| serialize_getcommitdata(hg_cs_id, revlog_cs))
+        ctx.scuba()
+            .clone()
+            .add("getcommitdata_nodes", nodes.len())
+            .log_with_msg("GetCommitData Params", None);
+        let s = stream::iter_ok::<_, Error>(nodes.into_iter())
+            .map({
+                cloned!(ctx);
+                move |hg_cs_id| {
+                    RevlogChangeset::load(ctx.clone(), blobrepo.blobstore(), hg_cs_id)
+                        .and_then(move |revlog_cs| serialize_getcommitdata(hg_cs_id, revlog_cs))
+                }
             })
             .buffered(100)
-            .boxify()
+            .whole_stream_timeout(*TIMEOUT)
+            .map_err(process_stream_timeout_error)
+            .inspect({
+                cloned!(ctx);
+                move |bytes| {
+                    ctx.perf_counters().add_to_counter(
+                        PerfCounterType::GetcommitdataResponseSize,
+                        bytes.len() as i64,
+                    );
+                    ctx.perf_counters()
+                        .increment_counter(PerfCounterType::GetcommitdataNumCommits);
+                    STATS::getcommitdata_commit_count.add_value(1);
+                }
+            })
+            .timed({
+                move |stats, _| {
+                    if stats.completion_time > *SLOW_REQUEST_THRESHOLD {
+                        command_logger.add_trimmed_scuba_extra("command_args", &args);
+                    }
+                    STATS::getcommitdata_ms
+                        .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                    command_logger.finalize_command(ctx, &stats, Some(&args));
+                    Ok(())
+                }
+            });
+
+        throttle_stream(
+            &self.session,
+            Metric::EgressCommits,
+            ops::GETCOMMITDATA,
+            move || s,
+        )
     }
 
     // whether raw bundle2 contents should be preverved in the blobstore
