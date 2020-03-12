@@ -974,6 +974,36 @@ mod tests {
         Ok(())
     }
 
+    fn validate_paths<'a>(paths: impl Iterator<Item = &'a RepoPath>) -> bool {
+        let mut files = HashSet::new();
+        let mut directories = HashSet::new();
+
+        for path in paths {
+            // Keys for an empty path are meaningless.
+            if path.as_str().trim() == "" {
+                return false;
+            }
+
+            // We cannot have a file also be a directory.
+            if directories.contains(path) {
+                return false;
+            }
+
+            // Make sure we do no have paths with directories and files with the same name.
+            for parent in path.parents().skip(1) {
+                if files.contains(parent) {
+                    return false;
+                }
+
+                directories.insert(parent);
+            }
+
+            files.insert(path);
+        }
+
+        true
+    }
+
     quickcheck! {
         fn update_only(keys: Vec<Key>) -> Result<TestResult> {
             let workingdir = TempDir::new()?;
@@ -982,11 +1012,8 @@ mod tests {
             let config = make_config(&cachedir);
             let store = Arc::new(ContentStore::new(&localdir, &config)?);
 
-            // Keys for an empty path are meaningless
-            for key in keys.iter() {
-                if key.path.as_str().trim() == "" {
-                    return Ok(TestResult::discard());
-                }
+            if !validate_paths(keys.iter().map(|k| k.path.as_ref())) {
+                return Ok(TestResult::discard());
             }
 
             let mut expected_size = 0;
@@ -1025,10 +1052,8 @@ mod tests {
         fn remove_only(paths: Vec<RepoPathBuf>) -> Result<TestResult> {
             let workingdir = TempDir::new()?;
 
-            for path in paths.iter() {
-                if path.as_str().trim() == "" {
-                    return Ok(TestResult::discard());
-                }
+            if !validate_paths(paths.iter().map(|path| path.as_ref())) {
+                return Ok(TestResult::discard());
             }
 
             for path in paths.iter() {
@@ -1036,12 +1061,7 @@ mod tests {
                 fullpath.push(path.as_str());
 
                 create_dir_all(fullpath.parent().unwrap())?;
-                // Discard failures, this can happen if quickhcheck passes the following:
-                // `vec!['a/b', 'a']`, the second file is already a directory, hence File::create
-                // failing. This is harmless so let's ignore.
-                if let Err(_) = File::create(&fullpath) {
-                    return Ok(TestResult::discard());
-                }
+                File::create(&fullpath)?;
             }
 
             let root = workingdir.as_ref().to_path_buf();
@@ -1060,11 +1080,8 @@ mod tests {
             let config = make_config(&cachedir);
             let store = Arc::new(ContentStore::new(&localdir, &config)?);
 
-            // Keys for an empty path are meaningless
-            for key in keys.iter() {
-                if key.path.as_str().trim() == "" {
-                    return Ok(TestResult::discard());
-                }
+            if !validate_paths(keys.iter().map(|k| k.path.as_ref())) {
+                return Ok(TestResult::discard());
             }
 
             for key in keys.iter() {
