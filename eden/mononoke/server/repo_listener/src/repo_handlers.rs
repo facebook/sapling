@@ -227,7 +227,9 @@ pub fn repo_handlers(
             // Clone the few things we're going to need later in our bootstrap.
             let cache_warmup_params = config.cache_warmup.clone();
             let scuba_table = config.scuba_table.clone();
+            let scuba_local_path = config.scuba_local_path.clone();
             let hooks_scuba_table = config.scuba_table_hooks.clone();
+            let hooks_scuba_local_path = config.scuba_local_path_hooks.clone();
             let hook_max_file_size = config.hook_max_file_size.clone();
             let db_config = config.storage_config.dbconfig.clone();
             let hash_validation_percentage = config.hash_validation_percentage.clone();
@@ -273,9 +275,15 @@ pub fn repo_handlers(
 
                 let mut scuba_logger = ScubaSampleBuilder::with_opt_table(fb, scuba_table);
                 scuba_logger.add_common_server_data();
+                if let Some(scuba_local_path) = scuba_local_path {
+                    scuba_logger = scuba_logger.with_log_file(scuba_local_path)?;
+                }
 
                 let mut hooks_scuba = ScubaSampleBuilder::with_opt_table(fb, hooks_scuba_table);
                 hooks_scuba.add("repo", reponame.clone());
+                if let Some(hooks_scuba_local_path) = hooks_scuba_local_path {
+                    hooks_scuba = hooks_scuba.with_log_file(hooks_scuba_local_path)?;
+                }
 
                 info!(logger, "Creating HookManager");
                 let mut hook_manager = HookManager::new(

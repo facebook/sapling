@@ -527,7 +527,9 @@ impl RepoConfigs {
                 .ok_or_else(|| anyhow!("missing repoid from configuration"))?,
         );
         let scuba_table = this.scuba_table;
+        let scuba_local_path = this.scuba_local_path;
         let scuba_table_hooks = this.scuba_table_hooks;
+        let scuba_local_path_hooks = this.scuba_local_path_hooks;
 
         let wireproto_logging = match this.wireproto_logging {
             Some(wireproto_logging) => {
@@ -828,7 +830,9 @@ impl RepoConfigs {
             generation_cache_size,
             repoid,
             scuba_table,
+            scuba_local_path,
             scuba_table_hooks,
+            scuba_local_path_hooks,
             cache_warmup,
             hook_manager_params,
             bookmarks,
@@ -1552,7 +1556,9 @@ mod test {
                 generation_cache_size: 1024 * 1024,
                 repoid: RepositoryId::new(0),
                 scuba_table: Some("scuba_table".to_string()),
+                scuba_local_path: None,
                 scuba_table_hooks: Some("scm_hooks".to_string()),
+                scuba_local_path_hooks: None,
                 cache_warmup: Some(CacheWarmupParams {
                     bookmark: BookmarkName::new("master").unwrap(),
                     commit_limit: 100,
@@ -1685,7 +1691,9 @@ mod test {
                 generation_cache_size: 10 * 1024 * 1024,
                 repoid: RepositoryId::new(1),
                 scuba_table: Some("scuba_table".to_string()),
+                scuba_local_path: None,
                 scuba_table_hooks: Some("scm_hooks".to_string()),
+                scuba_local_path_hooks: None,
                 cache_warmup: None,
                 hook_manager_params: None,
                 bookmarks: vec![],
