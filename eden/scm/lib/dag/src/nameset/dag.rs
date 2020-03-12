@@ -246,4 +246,14 @@ mod tests {
             Ok(())
         })
     }
+
+    #[test]
+    fn test_sort() -> Result<()> {
+        with_dag(|dag| -> Result<()> {
+            let set = "G C A E".into();
+            let sorted = dag.sort(&set)?;
+            assert_eq!(format!("{:?}", &sorted), "<dag [0 2 4 6]>");
+            Ok(())
+        })
+    }
 }

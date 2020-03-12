@@ -220,6 +220,20 @@ impl NameDag {
         Ok(())
     }
 
+    /// Sort a `NameSet` topologically.
+    pub fn sort(&self, set: &NameSet) -> Result<NameSet> {
+        if set.is_topo_sorted() {
+            Ok(set.clone())
+        } else {
+            let mut spans = SpanSet::empty();
+            for name in set.iter()? {
+                let id = self.snapshot_map.vertex_id(name?)?;
+                spans.push(id);
+            }
+            Ok(NameSet::from_spans_idmap(spans, self.snapshot_map.clone()))
+        }
+    }
+
     /// Get ordered parent vertexes.
     pub fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
         let id = match self.map.find_id_by_name(name.as_ref())? {
