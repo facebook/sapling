@@ -135,6 +135,7 @@ import functools
 import hashlib
 import os
 import re
+from typing import Any, Callable, Optional
 
 from edenscm.mercurial import (
     cmdutil,
@@ -156,6 +157,7 @@ from edenscm.mercurial import (
     pycompat,
     registrar,
     scmutil,
+    ui as uimod,
     util,
 )
 from edenscm.mercurial.i18n import _
@@ -201,8 +203,7 @@ def uisetup(ui):
 
 
 def extsetup(ui):
-    extensions.wrapfunction(dispatch, "runcommand", _trackdirstatesizes)
-    extensions.wrapfunction(dispatch, "runcommand", _tracksparseprofiles)
+    extensions.wrapfunction(dispatch, "runcommand", _tracktelemetry)
     _setupclone(ui)
     _setuplog(ui)
     _setupadd(ui)
@@ -440,38 +441,55 @@ def _setuplog(ui):
     extensions.wrapfunction(cmdutil, "_logrevs", _logrevs)
 
 
-def _tracksparseprofiles(runcommand, lui, repo, *args):
+def _tracktelemetry(
+    runcommand,  # type: Callable[[uimod.ui, localrepo.localrepository, Any], Optional[int]]
+    lui,  # type: uimod.ui
+    repo,  # type: localrepo.localrepository
+    *args  # type: Any
+):
+    # type: (...) -> Optional[int]
     res = runcommand(lui, repo, *args)
     if repo is not None and repo.local():
-        # Reading the sparse profile from the repo can potentially trigger
-        # tree or file fetchings that are quite expensive. Do not read
-        # them. Only read the sparse file on the filesystem.
-        if util.safehasattr(repo, "getactiveprofiles"):
-            profile = repo.localvfs.tryread("sparse")
-            lui.log("sparse_profiles", "", active_profiles=pycompat.decodeutf8(profile))
-    return res
-
-
-def _trackdirstatesizes(runcommand, lui, repo, *args):
-    res = runcommand(lui, repo, *args)
-    if repo is not None and repo.local():
-        dirstate = repo.dirstate
-        dirstatesize = None
         try:
-            # Eden and flat dirstate.
-            dirstatesize = len(dirstate._map._map)
-        except AttributeError:
-            # Treestate and treedirstate.
-            dirstatesize = len(dirstate._map)
-        if dirstatesize is not None:
-            lui.log("dirstate_size", dirstate_size=dirstatesize)
-            if (
-                repo.ui.configbool("sparse", "largecheckouthint")
-                and dirstatesize >= repo.ui.configint("sparse", "largecheckoutcount")
-                and _hassparse(repo)
-            ):
-                hintutil.trigger("sparse-largecheckout", dirstatesize, repo)
+            _tracksparseprofiles(lui, repo)
+            _trackdirstatesizes(lui, repo)
+        except error.Abort as ex:
+            # Ignore Abort errors that occur trying to compute the telemetry data, and
+            # don't let this fail the command.  For instance, reading the dirstate could
+            # fail with the error "working directory state may be changed parallelly"
+            lui.debug("error recording dirstate telemetry: %s\n" % (ex,))
+
     return res
+
+
+def _tracksparseprofiles(lui, repo):
+    # type: (uimod.ui, localrepo.localrepository) -> None
+    # Reading the sparse profile from the repo can potentially trigger
+    # tree or file fetchings that are quite expensive. Do not read
+    # them. Only read the sparse file on the filesystem.
+    if util.safehasattr(repo, "getactiveprofiles"):
+        profile = repo.localvfs.tryread("sparse")
+        lui.log("sparse_profiles", "", active_profiles=pycompat.decodeutf8(profile))
+
+
+def _trackdirstatesizes(lui, repo):
+    # type: (uimod.ui, localrepo.localrepository) -> None
+    dirstate = repo.dirstate
+    dirstatesize = None
+    try:
+        # Eden and flat dirstate.
+        dirstatesize = len(dirstate._map._map)
+    except AttributeError:
+        # Treestate and treedirstate.
+        dirstatesize = len(dirstate._map)  # pyre-fixme[6]
+    if dirstatesize is not None:
+        lui.log("dirstate_size", dirstate_size=dirstatesize)
+        if (
+            repo.ui.configbool("sparse", "largecheckouthint")
+            and dirstatesize >= repo.ui.configint("sparse", "largecheckoutcount")
+            and _hassparse(repo)
+        ):
+            hintutil.trigger("sparse-largecheckout", dirstatesize, repo)
 
 
 def _clonesparsecmd(orig, ui, repo, *args, **opts):

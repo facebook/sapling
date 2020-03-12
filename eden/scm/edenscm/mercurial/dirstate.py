@@ -1460,7 +1460,7 @@ class dirstatemap(object):
         fp, mode = txnutil.trypending(self._root, self._opener, self._filename)
         if self._pendingmode is not None and self._pendingmode != mode:
             fp.close()
-            raise error.Abort(_("working directory state may be " "changed parallelly"))
+            raise error.Abort(_("working directory state may be changed parallelly"))
         self._pendingmode = mode
         return fp
 
@@ -1482,7 +1482,7 @@ class dirstatemap(object):
             elif l == 0:
                 self._parents = [nullid, nullid]
             else:
-                raise error.Abort(_("working directory state appears " "damaged!"))
+                raise error.Abort(_("working directory state appears damaged!"))
 
         return self._parents
 
