@@ -728,7 +728,7 @@ TEST(
 
   auto fuse = std::make_shared<FakeFuse>();
   testMount.registerFakeFuse(fuse);
-  auto startFuseFuture = mount->startFuse();
+  auto startFuseFuture = mount->startFuse(false);
 
   mount.reset();
   fuse->close();
@@ -767,7 +767,8 @@ TEST(EdenMount, unmountDoesNothingIfPriorMountFailed) {
   mountDelegate->makeUnmountFail();
 
   ASSERT_THROW(
-      { mount.startFuse().get(kTimeout); }, MockMountDelegate::MountFailed);
+      { mount.startFuse(false).get(kTimeout); },
+      MockMountDelegate::MountFailed);
   EXPECT_NO_THROW({ mount.unmount().get(kTimeout); });
   EXPECT_FALSE(mountDelegate->wasFuseUnmountEverCalled())
       << "unmount should not call fuseUnmount";
@@ -783,7 +784,7 @@ TEST(EdenMount, unmountIsIdempotent) {
   mountDelegate->setMountFuseDevice(fuse->start());
   mountDelegate->makeUnmountSucceed();
 
-  auto startFuseFuture = mount.startFuse();
+  auto startFuseFuture = mount.startFuse(false);
   fuse->sendInitRequest();
   fuse->recvResponse();
   std::move(startFuseFuture)
@@ -812,7 +813,7 @@ TEST(EdenMount, concurrentUnmountCallsWaitForExactlyOneFuseUnmount) {
   auto fuse = std::make_shared<FakeFuse>();
   mountDelegate->setMountFuseDevice(fuse->start());
 
-  auto startFuseFuture = mount.startFuse();
+  auto startFuseFuture = mount.startFuse(false);
   fuse->sendInitRequest();
   fuse->recvResponse();
   std::move(startFuseFuture)
@@ -849,7 +850,7 @@ TEST(EdenMount, unmountUnmountsIfMounted) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  auto startFuseFuture = mount.startFuse();
+  auto startFuseFuture = mount.startFuse(false);
   fuse->sendInitRequest();
   fuse->recvResponse();
   std::move(startFuseFuture)
@@ -894,7 +895,7 @@ TEST(EdenMount, cancelledMountDoesNotUnmountIfMountingFails) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  auto startFuseFuture = mount.startFuse();
+  auto startFuseFuture = mount.startFuse(false);
   auto unmountFuture = mount.unmount();
 
   auto unmountCallCountBeforeMountFails =
@@ -919,7 +920,7 @@ TEST(EdenMount, unmountCancelsInProgressMount) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  auto startFuseFuture = mount.startFuse();
+  auto startFuseFuture = mount.startFuse(false);
   auto unmountFuture = mount.unmount();
   SCOPE_EXIT {
     std::move(unmountFuture).get(kTimeout);
@@ -948,7 +949,7 @@ TEST(EdenMount, cancelledMountWaitsForUnmountBeforeCompleting) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  auto startFuseFuture = mount.startFuse();
+  auto startFuseFuture = mount.startFuse(false);
   auto unmountFuture = mount.unmount();
   SCOPE_EXIT {
     std::move(unmountFuture).get(kTimeout);
@@ -973,7 +974,7 @@ TEST(EdenMount, unmountWaitsForInProgressMountBeforeUnmounting) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  auto startFuseFuture = mount.startFuse();
+  auto startFuseFuture = mount.startFuse(false);
   auto unmountFuture = mount.unmount();
 
   EXPECT_FALSE(mountDelegate->wasFuseUnmountEverCalled())
@@ -1002,7 +1003,7 @@ TEST(EdenMount, unmountingDuringFuseHandshakeCancelsStart) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  auto startFuseFuture = mount.startFuse();
+  auto startFuseFuture = mount.startFuse(false);
   ASSERT_FALSE(startFuseFuture.wait(kMicroTimeout).isReady())
       << "startFuse should not finish before FUSE handshake";
 
@@ -1026,7 +1027,7 @@ TEST(EdenMount, startingFuseFailsImmediatelyIfUnmountWasEverCalled) {
 
   mount.unmount().within(kTimeout).get();
 
-  EXPECT_THROW(mount.startFuse().get(kTimeout), EdenMountCancelled);
+  EXPECT_THROW(mount.startFuse(false).get(kTimeout), EdenMountCancelled);
   EXPECT_FALSE(mountDelegate->wasFuseMountEverCalled())
       << "startFuse should fail and not call fuseMount";
 }
@@ -1069,7 +1070,7 @@ TEST(EdenMountState, mountIsStartingBeforeMountCompletes) {
   testMount.getPrivHelper()->registerMountDelegate(
       mount.getPath(), mountDelegate);
 
-  auto startFuseFuture = mount.startFuse();
+  auto startFuseFuture = mount.startFuse(false);
   SCOPE_EXIT {
     mountPromise.setException(MockMountDelegate::MountFailed{});
     logAndSwallowExceptions([&] { std::move(startFuseFuture).get(kTimeout); });
@@ -1085,7 +1086,7 @@ TEST(EdenMountState, mountIsStartingBeforeFuseInitializationCompletes) {
   auto fuse = std::make_shared<FakeFuse>();
   testMount.registerFakeFuse(fuse);
 
-  auto startFuseFuture = mount.startFuse();
+  auto startFuseFuture = mount.startFuse(false);
   SCOPE_EXIT {
     fuse->close();
     logAndSwallowExceptions([&] { std::move(startFuseFuture).get(kTimeout); });
@@ -1131,7 +1132,7 @@ TEST(EdenMountState, mountIsFuseErrorAfterMountFails) {
       mount.getPath(), mountDelegate);
   mountDelegate->makeMountFail();
 
-  logAndSwallowExceptions([&] { mount.startFuse().get(kTimeout); });
+  logAndSwallowExceptions([&] { mount.startFuse(false).get(kTimeout); });
   EXPECT_EQ(mount.getState(), EdenMount::State::FUSE_ERROR);
 }
 
@@ -1141,7 +1142,7 @@ TEST(EdenMountState, mountIsFuseErrorAfterFuseInitializationFails) {
   auto fuse = std::make_shared<FakeFuse>();
   testMount.registerFakeFuse(fuse);
 
-  auto startFuseFuture = mount.startFuse();
+  auto startFuseFuture = mount.startFuse(false);
   EXPECT_FALSE(startFuseFuture.wait(kMicroTimeout).isReady())
       << "startFuse should not finish before FUSE mounting completes";
 

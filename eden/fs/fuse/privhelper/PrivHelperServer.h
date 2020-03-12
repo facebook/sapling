@@ -94,7 +94,7 @@ class PrivHelperServer : private UnixSocket::ReceiveCallback {
       UnixSocket::Message& request);
 
   // These methods are virtual so we can override them during unit tests
-  virtual folly::File fuseMount(const char* mountPath);
+  virtual folly::File fuseMount(const char* mountPath, bool readOnly);
   virtual void fuseUnmount(const char* mountPath);
   // Both clientPath and mountPath must be existing directories.
   virtual void bindMount(const char* clientPath, const char* mountPath);

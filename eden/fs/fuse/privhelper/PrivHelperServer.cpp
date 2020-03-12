@@ -245,7 +245,7 @@ void checkedSnprintf(
 } // namespace
 #endif
 
-folly::File PrivHelperServer::fuseMount(const char* mountPath) {
+folly::File PrivHelperServer::fuseMount(const char* mountPath, bool readOnly) {
 #ifdef __APPLE__
   auto [fuseDev, dindex] = allocateFuseDevice();
 
@@ -365,7 +365,10 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath) {
   // We do not use MS_NODEV.  MS_NODEV prevents mount points from being created
   // inside our filesystem.  We currently use bind mounts to point the buck-out
   // directory to an alternate location outside of eden.
-  const int mountFlags = MS_NOSUID;
+  int mountFlags = MS_NOSUID;
+  if (readOnly) {
+    mountFlags |= MS_RDONLY;
+  }
   const char* type = "fuse";
   int rc = mount("edenfs", mountPath, type, mountFlags, mountOpts.c_str());
   checkUnixError(rc, "failed to mount");
@@ -443,10 +446,11 @@ UnixSocket::Message PrivHelperServer::processTakeoverStartupMsg(
 
 UnixSocket::Message PrivHelperServer::processMountMsg(Cursor& cursor) {
   string mountPath;
-  PrivHelperConn::parseMountRequest(cursor, mountPath);
+  bool readOnly;
+  PrivHelperConn::parseMountRequest(cursor, mountPath, readOnly);
   XLOG(DBG3) << "mount \"" << mountPath << "\"";
 
-  auto fuseDev = fuseMount(mountPath.c_str());
+  auto fuseDev = fuseMount(mountPath.c_str(), readOnly);
   mountPoints_.insert(mountPath);
 
   return makeResponse(std::move(fuseDev));

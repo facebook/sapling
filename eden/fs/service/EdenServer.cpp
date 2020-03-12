@@ -690,7 +690,7 @@ std::vector<Future<Unit>> EdenServer::prepareMountsTakeover(
           auto initialConfig = CheckoutConfig::loadFromClientDirectory(
               AbsolutePathPiece{info.mountPath},
               AbsolutePathPiece{info.stateDirectory});
-          return mount(std::move(initialConfig), std::move(info));
+          return mount(std::move(initialConfig), false, std::move(info));
         })
             .thenTry([logger, mountPath = info.mountPath](
                          folly::Try<std::shared_ptr<EdenMount>>&& result) {
@@ -749,7 +749,7 @@ std::vector<Future<Unit>> EdenServer::prepareMounts(
           auto initialConfig = CheckoutConfig::loadFromClientDirectory(
               AbsolutePathPiece{mountInfo.mountPoint},
               AbsolutePathPiece{mountInfo.edenClientPath});
-          return mount(std::move(initialConfig));
+          return mount(std::move(initialConfig), false);
         })
             .thenTry([logger, mountPath = client.first.asString()](
                          folly::Try<std::shared_ptr<EdenMount>>&& result) {
@@ -962,9 +962,10 @@ void EdenServer::unregisterStats(EdenMount* edenMount) {
 
 #ifndef _WIN32
 folly::Future<folly::Unit> EdenServer::performFreshFuseStart(
-    std::shared_ptr<EdenMount> edenMount) {
+    std::shared_ptr<EdenMount> edenMount,
+    bool readOnly) {
   // Start up the fuse workers.
-  return edenMount->startFuse();
+  return edenMount->startFuse(readOnly);
 }
 #endif // !_WIN32
 
@@ -1000,6 +1001,7 @@ Future<Unit> EdenServer::completeTakeoverFuseStart(
 
 folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
     std::unique_ptr<CheckoutConfig> initialConfig,
+    bool readOnly,
     optional<TakeoverData::MountInfo>&& optionalTakeover) {
   folly::stop_watch<> mountStopWatch;
 
@@ -1046,6 +1048,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
   return std::move(initFuture)
       .thenTry([this,
                 doTakeover,
+                readOnly,
                 edenMount,
                 mountStopWatch,
                 optionalTakeover = std::move(optionalTakeover)](
@@ -1059,7 +1062,7 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
         }
         return (optionalTakeover ? performTakeoverFuseStart(
                                        edenMount, std::move(*optionalTakeover))
-                                 : performFreshFuseStart(edenMount))
+                                 : performFreshFuseStart(edenMount, readOnly))
             .thenTry([edenMount, doTakeover, this](
                          folly::Try<Unit>&& result) mutable {
               // Call mountFinished() if an error occurred during FUSE

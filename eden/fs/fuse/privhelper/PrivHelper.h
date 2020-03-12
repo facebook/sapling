@@ -65,7 +65,8 @@ class PrivHelper {
    * connection.
    */
   FOLLY_NODISCARD virtual folly::Future<folly::File> fuseMount(
-      folly::StringPiece mountPath) = 0;
+      folly::StringPiece mountPath,
+      bool readOnly) = 0;
 
   /**
    * Ask the priveleged helper process to perform a fuse unmount.

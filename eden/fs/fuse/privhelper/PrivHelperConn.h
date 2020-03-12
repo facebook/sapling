@@ -70,10 +70,12 @@ class PrivHelperConn {
    */
   static UnixSocket::Message serializeMountRequest(
       uint32_t xid,
-      folly::StringPiece mountPoint);
+      folly::StringPiece mountPoint,
+      bool readOnly);
   static void parseMountRequest(
       folly::io::Cursor& cursor,
-      std::string& mountPoint);
+      std::string& mountPoint,
+      bool& readOnly);
 
   static UnixSocket::Message serializeUnmountRequest(
       uint32_t xid,

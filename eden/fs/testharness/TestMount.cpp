@@ -247,7 +247,7 @@ void TestMount::startFuseAndWait(std::shared_ptr<FakeFuse> fuse) {
   constexpr auto kTimeout = 10s;
   CHECK(edenMount_) << "Call initialize() before calling " << __func__;
   registerFakeFuse(fuse);
-  auto startFuseFuture = edenMount_->startFuse();
+  auto startFuseFuture = edenMount_->startFuse(false);
   fuse->sendInitRequest();
   fuse->recvResponse();
   drainServerExecutor();

@@ -559,7 +559,7 @@ class EdenMount {
    * * The returned Future is fulfilled with an
    *   FuseDeviceUnmountedDuringInitialization exception
    */
-  FOLLY_NODISCARD folly::Future<folly::Unit> startFuse();
+  FOLLY_NODISCARD folly::Future<folly::Unit> startFuse(bool readOnly);
 
   /**
    * Take over a FUSE channel for an existing mount point.
@@ -731,7 +731,7 @@ class EdenMount {
   /**
    * Open the FUSE device and mount it using the mount(2) syscall.
    */
-  folly::Future<folly::File> fuseMount();
+  folly::Future<folly::File> fuseMount(bool readOnly);
 
   /**
    * Signal to unmount() that fuseMount() or takeoverFuse() has started.

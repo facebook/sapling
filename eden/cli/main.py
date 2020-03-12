@@ -524,6 +524,7 @@ class CloneCmd(Subcmd):
             action="store_true",
             help="Allow repo with null revision (no revisions)",
         )
+
         # Optional arguments to control how to start the daemon if clone needs
         # to start edenfs.  We do not show these in --help by default These
         # behave identically to the daemon arguments with the same name.
@@ -959,12 +960,15 @@ class MountCmd(Subcmd):
         parser.add_argument(
             "paths", nargs="+", metavar="path", help="The checkout mount path"
         )
+        parser.add_argument(
+            "--read-only", action="store_true", dest="read_only", help="Read only mount"
+        )
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
         for path in args.paths:
             try:
-                exitcode = instance.mount(path)
+                exitcode = instance.mount(path, args.read_only)
                 if exitcode:
                     return exitcode
             except EdenNotRunningError as ex:

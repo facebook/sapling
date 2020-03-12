@@ -83,7 +83,9 @@ void FakePrivHelper::attachEventBase(folly::EventBase* /* eventBase */) {}
 
 void FakePrivHelper::detachEventBase() {}
 
-Future<File> FakePrivHelper::fuseMount(folly::StringPiece mountPath) {
+Future<File> FakePrivHelper::fuseMount(
+    folly::StringPiece mountPath,
+    bool /*readOnly*/) {
   return getMountDelegate(mountPath)->fuseMount();
 }
 

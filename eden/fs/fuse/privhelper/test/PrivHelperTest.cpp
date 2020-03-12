@@ -120,7 +120,7 @@ class PrivHelperThreadedTestServer : public PrivHelperServer {
     return results;
   }
 
-  folly::File fuseMount(const char* mountPath) override {
+  folly::File fuseMount(const char* mountPath, bool /*readOnly*/) override {
     auto future = getResultFuture(data_.wlock()->fuseMountResults, mountPath);
     return std::move(future).get(1s);
   }
@@ -204,7 +204,7 @@ TEST_F(PrivHelperTest, fuseMount) {
 
   // Call fuseMount() this should return a future that is not ready yet,
   // since we have not fulfilled the promise.
-  auto result = client_->fuseMount("/foo/bar");
+  auto result = client_->fuseMount("/foo/bar", false);
   EXPECT_FALSE(result.isReady());
 
   // Create a temporary file to respond with
@@ -244,7 +244,7 @@ TEST_F(PrivHelperTest, fuseMountError) {
   // This will throw an error in the privhelper server thread.  Make sure the
   // error message is raised in the client correctly.
   EXPECT_THROW_RE(
-      client_->fuseMount("/foo/bar").get(),
+      client_->fuseMount("/foo/bar", false).get(),
       std::exception,
       "no result available for /foo/bar");
 }
@@ -262,9 +262,9 @@ TEST_F(PrivHelperTest, multiplePendingFuseMounts) {
   server_.setFuseUnmountResult("/foo/bar").setValue();
 
   // Make several fuseMount() calls
-  auto abcResult = client_->fuseMount("/mnt/abc");
-  auto defResult = client_->fuseMount("/mnt/def");
-  auto foobarResult = client_->fuseMount("/foo/bar");
+  auto abcResult = client_->fuseMount("/mnt/abc", false);
+  auto defResult = client_->fuseMount("/mnt/def", false);
+  auto foobarResult = client_->fuseMount("/foo/bar", false);
   EXPECT_FALSE(abcResult.isReady());
   EXPECT_FALSE(defResult.isReady());
   EXPECT_FALSE(foobarResult.isReady());
@@ -322,14 +322,14 @@ TEST_F(PrivHelperTest, bindMounts) {
   server_.setBindUnmountResult("/bind/never/actually/mounted").setValue();
 
   // Mount everything
-  client_->fuseMount("/data/users/foo/somerepo").get(1s);
+  client_->fuseMount("/data/users/foo/somerepo", false).get(1s);
   client_->bindMount("/bind/mount/source", "/data/users/foo/somerepo/buck-out")
       .get(1s);
 
-  client_->fuseMount("/mnt/abc").get(1s);
+  client_->fuseMount("/mnt/abc", false).get(1s);
   client_->bindMount("/bind/mount/source", "/mnt/abc/buck-out").get(1s);
   client_->bindMount("/bind/mount/source", "/mnt/abc/foo/buck-out").get(1s);
-  client_->fuseMount("/data/users/foo/somerepo2").get(1s);
+  client_->fuseMount("/data/users/foo/somerepo2", false).get(1s);
   client_->bindMount("/bind/mount/source", "/mnt/abc/bar/buck-out").get(1s);
 
   // Manually unmount /data/users/foo/somerepo
@@ -382,12 +382,12 @@ TEST_F(PrivHelperTest, takeoverShutdown) {
   server_.setBindUnmountResult("/mnt/somerepo2/buck-out").setValue();
 
   // Mount everything
-  client_->fuseMount("/mnt/abc").get(1s);
+  client_->fuseMount("/mnt/abc", false).get(1s);
   client_->bindMount("/bind/mount/source", "/mnt/abc/buck-out").get(1s);
   client_->bindMount("/bind/mount/source", "/mnt/abc/foo/buck-out").get(1s);
   client_->bindMount("/bind/mount/source", "/mnt/abc/bar/buck-out").get(1s);
-  client_->fuseMount("/mnt/somerepo").get(1s);
-  client_->fuseMount("/mnt/somerepo2").get(1s);
+  client_->fuseMount("/mnt/somerepo", false).get(1s);
+  client_->fuseMount("/mnt/somerepo2", false).get(1s);
   client_->bindMount("/bind/mount/source", "/mnt/somerepo2/buck-out").get(1s);
 
   // Indicate that /mnt/abc and /mnt/somerepo are being taken over.
@@ -424,7 +424,7 @@ TEST_F(PrivHelperTest, takeoverStartup) {
   // Manually mount one other mount point.
   server_.setFuseMountResult("/mnt/xyz").setValue(File(tempFile.fd(), false));
   server_.setBindMountResult("/mnt/xyz/buck-out").setValue();
-  client_->fuseMount("/mnt/xyz").get(1s);
+  client_->fuseMount("/mnt/xyz", false).get(1s);
   client_->bindMount("/bind/mount/source", "/mnt/xyz/buck-out").get(1s);
 
   // Manually unmount /mnt/repo_x
@@ -461,7 +461,7 @@ TEST_F(PrivHelperTest, detachEventBase) {
   // Perform one call using the current EventBase
   TemporaryFile tempFile;
   auto filePromise = server_.setFuseMountResult("/foo/bar");
-  auto result = client_->fuseMount("/foo/bar");
+  auto result = client_->fuseMount("/foo/bar", false);
   EXPECT_FALSE(result.isReady());
   filePromise.setValue(File(tempFile.fd(), /* ownsFD */ false));
   auto resultFile = std::move(result).get(1s);
@@ -477,7 +477,7 @@ TEST_F(PrivHelperTest, detachEventBase) {
 
     filePromise = server_.setFuseMountResult("/new/event/base");
     server_.setFuseUnmountResult("/new/event/base").setValue();
-    result = client_->fuseMount("/new/event/base");
+    result = client_->fuseMount("/new/event/base", false);
     // The result should not be immediately ready since we have not fulfilled
     // the promise yet.  It will only be ready if something unexpected failed.
     if (result.isReady()) {
@@ -574,8 +574,8 @@ TEST(PrivHelper, ForkedServerShutdownTest) {
         [&] { privHelper->attachEventBase(evbt.getEventBase()); });
 
     // Create a few mount points
-    privHelper->fuseMount(foo).get(50ms);
-    privHelper->fuseMount(bar).get(50ms);
+    privHelper->fuseMount(foo, /* readOnly= */ false).get(50ms);
+    privHelper->fuseMount(bar, /* readOnly= */ false).get(50ms);
     EXPECT_TRUE(server.isMounted(foo));
     EXPECT_TRUE(server.isMounted(bar));
     EXPECT_FALSE(server.isMounted(other));

@@ -201,7 +201,7 @@ class FakeEdenInstance:
     def get_mount_paths(self) -> Iterable[str]:
         return self._checkouts_by_path.keys()
 
-    def mount(self, path: str) -> int:
+    def mount(self, path: str, read_only: bool) -> int:
         assert self._status in (
             fb303_status.ALIVE,
             fb303_status.STARTING,

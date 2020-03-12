@@ -50,7 +50,9 @@ class FakePrivHelper : public PrivHelper {
   // PrivHelper functions
   void attachEventBase(folly::EventBase* eventBase) override;
   void detachEventBase() override;
-  folly::Future<folly::File> fuseMount(folly::StringPiece mountPath) override;
+  folly::Future<folly::File> fuseMount(
+      folly::StringPiece mountPath,
+      bool readOnly) override;
   folly::Future<folly::Unit> fuseUnmount(folly::StringPiece mountPath) override;
   folly::Future<folly::Unit> bindMount(
       folly::StringPiece clientPath,

@@ -1137,7 +1137,7 @@ folly::Future<TakeoverData::MountInfo> EdenMount::getFuseCompletionFuture() {
   return fuseCompletionPromise_.getFuture();
 }
 
-folly::Future<folly::Unit> EdenMount::startFuse() {
+folly::Future<folly::Unit> EdenMount::startFuse(bool readOnly) {
   return folly::makeFutureWith([&]() {
     transitionState(
         /*expected=*/State::INITIALIZED, /*newState=*/State::STARTING);
@@ -1147,7 +1147,7 @@ folly::Future<folly::Unit> EdenMount::startFuse() {
     boost::filesystem::path boostMountPath{getPath().value()};
     boost::filesystem::create_directories(boostMountPath);
 
-    return fuseMount()
+    return fuseMount(readOnly)
         .thenValue([this](folly::File&& fuseDevice) {
           createFuseChannel(std::move(fuseDevice));
           return channel_->initialize().thenValue(
@@ -1178,12 +1178,12 @@ void EdenMount::takeoverFuse(FuseChannelData takeoverData) {
   }
 }
 
-folly::Future<folly::File> EdenMount::fuseMount() {
+folly::Future<folly::File> EdenMount::fuseMount(bool readOnly) {
   return folly::makeFutureWith([&] { return &beginMount(); })
-      .thenValue([this](folly::Promise<folly::Unit>* mountPromise) {
+      .thenValue([this, readOnly](folly::Promise<folly::Unit>* mountPromise) {
         AbsolutePath mountPath = getPath();
         return serverState_->getPrivHelper()
-            ->fuseMount(mountPath.stringPiece())
+            ->fuseMount(mountPath.stringPiece(), readOnly)
             .thenTry(
                 [mountPath, mountPromise, this](Try<folly::File>&& fuseDevice)
                     -> folly::Future<folly::File> {

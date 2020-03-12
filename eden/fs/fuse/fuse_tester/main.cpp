@@ -112,7 +112,9 @@ int main(int argc, char** argv) {
   folly::EventBaseThread evbt;
   evbt.getEventBase()->runInEventBaseThreadAndWait(
       [&] { privHelper->attachEventBase(evbt.getEventBase()); });
-  auto fuseDevice = privHelper->fuseMount(mountPath.value()).get(100ms);
+  auto fuseDevice =
+      privHelper->fuseMount(mountPath.value(), /* readOnly= */ false)
+          .get(100ms);
 
   EdenStats stats;
   TestDispatcher dispatcher(&stats, identity);

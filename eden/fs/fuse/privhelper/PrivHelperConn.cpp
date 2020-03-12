@@ -61,6 +61,14 @@ std::string deserializeString(Cursor& cursor) {
   return cursor.readFixedString(length);
 }
 
+void serializeBool(Appender& a, bool b) {
+  a.writeBE<uint8_t>(b);
+}
+
+bool deserializeBool(Cursor& cursor) {
+  return static_cast<bool>(cursor.readBE<uint8_t>());
+}
+
 // Helper for setting close-on-exec.  Not needed on systems
 // that can atomically do this in socketpair
 void setCloExecIfNoSockCloExec(int fd) {
@@ -96,16 +104,22 @@ void PrivHelperConn::createConnPair(folly::File& client, folly::File& server) {
 
 UnixSocket::Message PrivHelperConn::serializeMountRequest(
     uint32_t xid,
-    StringPiece mountPoint) {
+    StringPiece mountPoint,
+    bool readOnly) {
   auto msg = serializeHeader(xid, REQ_MOUNT_FUSE);
   Appender appender(&msg.data, kDefaultBufferSize);
 
   serializeString(appender, mountPoint);
+  serializeBool(appender, readOnly);
   return msg;
 }
 
-void PrivHelperConn::parseMountRequest(Cursor& cursor, string& mountPoint) {
+void PrivHelperConn::parseMountRequest(
+    Cursor& cursor,
+    string& mountPoint,
+    bool& readOnly) {
   mountPoint = deserializeString(cursor);
+  readOnly = deserializeBool(cursor);
   checkAtEnd(cursor, "mount request");
 }
 

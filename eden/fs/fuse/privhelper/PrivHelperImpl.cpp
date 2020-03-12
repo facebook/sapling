@@ -81,7 +81,7 @@ class PrivHelperClientImpl : public PrivHelper,
     cancel();
   }
 
-  Future<File> fuseMount(folly::StringPiece mountPath) override;
+  Future<File> fuseMount(folly::StringPiece mountPath, bool readOnly) override;
   Future<Unit> fuseUnmount(StringPiece mountPath) override;
   Future<Unit> bindMount(StringPiece clientPath, StringPiece mountPath)
       override;
@@ -341,9 +341,12 @@ class PrivHelperClientImpl : public PrivHelper,
   UnixSocket::UniquePtr conn_;
 };
 
-Future<File> PrivHelperClientImpl::fuseMount(StringPiece mountPath) {
+Future<File> PrivHelperClientImpl::fuseMount(
+    StringPiece mountPath,
+    bool readOnly) {
   auto xid = getNextXid();
-  auto request = PrivHelperConn::serializeMountRequest(xid, mountPath);
+  auto request =
+      PrivHelperConn::serializeMountRequest(xid, mountPath, readOnly);
   return sendAndRecv(xid, std::move(request))
       .thenValue([](UnixSocket::Message&& response) {
         PrivHelperConn::parseEmptyResponse(

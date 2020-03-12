@@ -33,7 +33,7 @@ void PrivHelperTestServer::init(folly::File&& socket, uid_t uid, gid_t gid) {
 
 // FUSE mounts.
 
-File PrivHelperTestServer::fuseMount(const char* mountPath) {
+File PrivHelperTestServer::fuseMount(const char* mountPath, bool /*readOnly*/) {
   // Create a single file named "mounted" and write "mounted" into it.
   auto pathToNewFile = getPathToMountMarker(mountPath);
   File f(pathToNewFile, O_RDWR | O_CREAT | O_TRUNC);

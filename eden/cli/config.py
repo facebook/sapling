@@ -487,7 +487,9 @@ Do you want to run `eden mount %s` instead?"""
 
         # Prepare to mount
         mount_info = eden_ttypes.MountArgument(
-            mountPoint=os.fsencode(path), edenClientPath=os.fsencode(client_dir)
+            mountPoint=os.fsencode(path),
+            edenClientPath=os.fsencode(client_dir),
+            readOnly=False,
         )
         with self.get_thrift_client() as client:
             client.mount(mount_info)
@@ -598,7 +600,7 @@ Do you want to run `eden mount %s` instead?"""
                 ]
             )
 
-    def mount(self, path: Union[Path, str]) -> int:
+    def mount(self, path: Union[Path, str], read_only: bool) -> int:
         # Load the config info for this client, to make sure we
         # know about the client.
         path = Path(path).resolve(strict=False)
@@ -648,7 +650,7 @@ Do you want to run `eden mount %s` instead?"""
 
         # Ask eden to mount the path
         mount_info = eden_ttypes.MountArgument(
-            mountPoint=bytes(path), edenClientPath=bytes(client_dir)
+            mountPoint=bytes(path), edenClientPath=bytes(client_dir), readOnly=read_only
         )
         with self.get_thrift_client() as client:
             client.mount(mount_info)

@@ -385,7 +385,7 @@ class CheckoutNotMounted(FixableProblem):
 
     def perform_fix(self) -> None:
         try:
-            self._instance.mount(str(self._mount_path))
+            self._instance.mount(str(self._mount_path), False)
         except Exception as ex:
             if "is too short for header" in str(ex):
                 raise Exception(
