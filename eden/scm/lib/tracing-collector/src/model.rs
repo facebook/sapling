@@ -1497,6 +1497,7 @@ pub struct TreeSpan<S: Eq + Hash> {
     pub start: u64,
     pub duration: Option<u64>,
     pub children: Vec<RawTreeSpanId>,
+    pub is_event: bool,
 }
 
 impl<'a, S: From<&'a str> + Eq + Hash + 'a> TreeSpan<S> {
@@ -1526,6 +1527,7 @@ impl<'a, S: From<&'a str> + Eq + Hash + 'a> TreeSpan<S> {
                 Some(span.duration)
             },
             children: span.children,
+            is_event: span.is_event,
         }
     }
 }
@@ -1778,7 +1780,8 @@ Start Dur.ms | Name                         Source
     "duration": 0,
     "children": [
       1
-    ]
+    ],
+    "is_event": false
   },
   {
     "name": "foo",
@@ -1786,7 +1789,8 @@ Start Dur.ms | Name                         Source
     "line": "10",
     "start": 2000,
     "duration": 2000,
-    "children": []
+    "children": [],
+    "is_event": false
   }
 ]"#
         );
