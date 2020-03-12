@@ -19,7 +19,12 @@ _ALL_CAPS = {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: 
 _FS_CAP_TABLE = {
     "apfs": {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: False},
     "btrfs": _ALL_CAPS,
-    "eden": {SYMLINK: True, HARDLINK: False, EXECBIT: True, ALWAYSCASESENSITIVE: True},
+    "edenfs": {
+        SYMLINK: True,
+        HARDLINK: False,
+        EXECBIT: True,
+        ALWAYSCASESENSITIVE: True,
+    },
     "ext2": _ALL_CAPS,
     "ext3": _ALL_CAPS,
     "ext4": _ALL_CAPS,

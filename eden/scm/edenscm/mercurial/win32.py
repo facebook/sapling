@@ -584,51 +584,6 @@ def executablepath():
     return buf.value
 
 
-def getvolumename(path):
-    """Get the mount point of the filesystem from a directory or file
-    (best-effort)
-
-    Returns None if we are unsure. Raises OSError on ENOENT, EPERM, etc.
-    """
-    # realpath() calls GetFullPathName()
-    realpath = os.path.realpath(path)
-
-    # allocate at least MAX_PATH long since GetVolumePathName('c:\\', buf, 4)
-    # somehow fails on Windows XP
-    size = max(len(realpath), _MAX_PATH) + 1
-    buf = ctypes.create_string_buffer(size)
-
-    if not _kernel32.GetVolumePathNameA(realpath, ctypes.byref(buf), size):
-        raise ctypes.WinError()  # Note: WinError is a function
-
-    return buf.value
-
-
-def getfstype(path):
-    """Get the filesystem type name from a directory or file (best-effort)
-
-    Returns None if we are unsure. Raises OSError on ENOENT, EPERM, etc.
-    """
-    volume = getvolumename(path)
-
-    t = _kernel32.GetDriveTypeA(volume)
-
-    if t == _DRIVE_REMOTE:
-        return "cifs"
-    elif t not in (_DRIVE_REMOVABLE, _DRIVE_FIXED, _DRIVE_CDROM, _DRIVE_RAMDISK):
-        return None
-
-    size = _MAX_PATH + 1
-    name = ctypes.create_string_buffer(size)
-
-    if not _kernel32.GetVolumeInformationA(
-        volume, None, 0, None, None, None, ctypes.byref(name), size
-    ):
-        raise ctypes.WinError()  # Note: WinError is a function
-
-    return name.value
-
-
 def getuser():
     """return name of current user"""
     size = _DWORD(300)

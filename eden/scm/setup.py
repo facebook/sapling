@@ -1502,29 +1502,6 @@ for plat, func in [("bsd", "setproctitle")]:
     if re.search(plat, sys.platform) and hasfunction(new_compiler(), func):
         osutil_cflags.append("-DHAVE_%s" % func.upper())
 
-for plat, macro, code in [
-    (
-        "bsd|darwin",
-        "BSD_STATFS",
-        """
-     #include <sys/param.h>
-     #include <sys/mount.h>
-     int main() { struct statfs s; return sizeof(s.f_fstypename); }
-     """,
-    ),
-    (
-        "linux",
-        "LINUX_STATFS",
-        """
-     #include <linux/magic.h>
-     #include <sys/vfs.h>
-     int main() { struct statfs s; return sizeof(s.f_type); }
-     """,
-    ),
-]:
-    if re.search(plat, sys.platform) and cancompile(new_compiler(), code):
-        osutil_cflags.append("-DHAVE_%s" % macro)
-
 if "linux" in sys.platform and cancompile(
     new_compiler(),
     """

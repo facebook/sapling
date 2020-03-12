@@ -21,6 +21,7 @@ import sys
 import tempfile
 from typing import IO, Optional
 
+import bindings
 from edenscmnative import osutil
 
 from . import encoding, error, pycompat, win32, winutil
@@ -35,6 +36,8 @@ try:
 except ImportError:
     import winreg
 
+
+getfstype = bindings.fs.fstype
 
 executablepath = win32.executablepath
 getmaxrss = win32.getmaxmemoryusage

@@ -28,11 +28,15 @@ import tempfile
 import unicodedata
 from typing import Optional
 
+import bindings
 from edenscmnative import osutil
 
 from . import encoding, error, fscap, pycompat
 from .i18n import _
 from .pycompat import decodeutf8, encodeutf8
+
+
+getfstype = bindings.fs.fstype
 
 
 posixfile = open
@@ -417,83 +421,6 @@ def copymode(src, dst, mode=None):
             st_mode = ~umask
         st_mode &= 0o666
     os.chmod(dst, st_mode)
-
-
-def _findmountpoint(dirpath):
-    """Return the mount point of dirpath (best-effort)"""
-    path = os.path.abspath(dirpath)
-    while True:
-        if os.path.ismount(path):
-            return path
-        nextpath = os.path.dirname(path)
-        if nextpath == path:
-            return None
-        path = nextpath
-
-
-def _findstdev(mountpoint):
-    """Return st_dev major:minor (ex. "8:1") for the given mountpoint.
-
-    Linux-only. Require /proc to be mounted properly.
-    """
-    if mountpoint:
-        try:
-            for line in open("/proc/self/mountinfo"):
-                # Refer to "man 5 proc" for the format of mountinfo
-                columns = line.split(" ")
-                if len(columns) != 11:
-                    continue
-                if mountpoint == columns[4]:
-                    stdev = columns[2]
-                    return stdev
-        except (OSError, IOError):
-            return None
-    return None
-
-
-def _findudevprops(stdev):
-    """Return udev properties as a dict (best-effort) for a block device.
-
-    Linux-only. stdev is a string returned by _findstdev.
-    """
-    # "b": block device
-    udevpath = "/run/udev/data/b%s" % stdev
-    try:
-        return dict(l.rstrip().split("=", 1) for l in open(udevpath) if "=" in l)
-    except (OSError, IOError):
-        return {}
-
-
-def getfstype(dirpath):
-    """Get the filesystem type name from a directory (best-effort)
-
-    Returns None if we are unsure, or hit errors like ENOENT, EPERM, etc.
-    """
-    try:
-        if _iseden(dirpath):
-            return "eden"
-        result = osutil.getfstype(dirpath)
-        if result == "fuse" and pycompat.islinux:
-            # Spend some extra efforts to find out the actual filesystem
-            stdev = _findstdev(_findmountpoint(dirpath))
-            if stdev:
-                props = _findudevprops(stdev)
-                # The name is used in well-known projects: systemd (udev) and
-                # util-linux (libblkid). Although it does not seem to be
-                # documented publicly.
-                fstype = props.get("E:ID_FS_TYPE")
-                if fstype:
-                    result += ".%s" % fstype
-    except (IOError, OSError):
-        # Not fatal
-        result = None
-    return result
-
-
-def _iseden(dirpath):
-    """Returns True if the specified directory is the root directory of,
-    or is a sub-directory of an Eden mount."""
-    return os.path.islink(os.path.join(dirpath, ".eden", "root"))
 
 
 def _checkexec(path):
