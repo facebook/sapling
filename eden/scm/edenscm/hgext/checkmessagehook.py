@@ -5,7 +5,7 @@
 
 import string
 
-from edenscm.mercurial import pycompat, registrar
+from edenscm.mercurial import encoding, pycompat, registrar
 from edenscm.mercurial.i18n import _
 
 
@@ -23,20 +23,14 @@ def checkcommitmessage(ui, repo, **kwargs):
     """
     Checks a single commit message for adherence to commit message rules.
     """
-    hg_commit_message = repo["tip"].description()
-    try:
-        if isinstance(hg_commit_message, bytes):
-            hg_commit_message.decode("utf8")
-    except UnicodeDecodeError:
-        ui.warn(_("commit message is not utf-8\n"))
-        return True
+    message = encoding.fromlocal(repo["tip"].description())
 
     if ui.configbool("checkmessage", "allownonprintable"):
         return False
 
     printable = set(string.printable)
     badlines = []
-    for lnum, line in enumerate(hg_commit_message.splitlines()):
+    for lnum, line in enumerate(message.splitlines()):
         for c in line:
             if ord(c) < 128 and c not in printable:
                 badlines.append((lnum + 1, line))
