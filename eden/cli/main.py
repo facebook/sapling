@@ -180,7 +180,7 @@ from the backing repo directory!
             lfs_dir = hg_dir / "store" / "lfs"
             self.usage_for_dir("          .hg", hg_dir)
             if os.path.exists(lfs_dir):
-                self.usage_for_dir("    LFS cache", hg_dir)
+                self.usage_for_dir("    LFS cache", lfs_dir)
                 print(
                     """
 Reclaim space from the LFS cache directory by running:
