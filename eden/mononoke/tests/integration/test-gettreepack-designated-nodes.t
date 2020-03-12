@@ -1,0 +1,99 @@
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License found in the LICENSE file in the root
+# directory of this source tree.
+
+  $ . "${TEST_FIXTURES}/library.sh"
+
+Setup repo, and create test repo
+
+  $ export SCUBA_LOGGING_PATH="$TESTTMP/scuba.json"
+  $ BLOB_TYPE="blob_files" EMIT_OBSMARKERS=1 quiet default_setup
+
+  $ hg up -q 0
+
+  $ mkdir -p root/a
+  $ echo 'a/a' > root/a/a
+  $ hg commit -Aqm "commit a"
+
+  $ mkdir -p root/b
+  $ echo 'b/b' > root/b/b
+  $ hg commit -Aqm "commit b"
+
+  $ mkdir -p root/c root/c/cc root/c/cc/ccc
+  $ echo 'c/c' > root/c/c
+  $ echo 'c/cc/c' > root/c/cc/c
+  $ echo 'c/cc/ccc/c' > root/c/cc/ccc/c
+  $ hg commit -Aqm "commit c"
+
+Create the commit we'll look at later. Note the "," in the path name to test
+escaping.
+
+  $ mkdir -p root/d, root/d,/d root/d,/dd
+  $ echo 'd/d/d' > root/d,/d/d
+  $ echo 'd/dd/d' > root/d,/dd/d
+  $ hg commit -Aqm "commit d"
+
+  $ mkdir -p root/e
+  $ echo 'e/e' > root/e/e
+  $ echo 'd/dd/e' > root/d,/dd/e # Invalidate one of the trees from d
+  $ hg commit -Aqm "commit e"
+
+  $ mkdir -p root/f
+  $ echo 'f/f' > root/f/f
+  $ rm -r root/c # Remove all of c so it's not present locally
+  $ hg commit -Aqm "commit f"
+
+  $ hgmn push -q -r . --to master_bookmark
+
+Setup a client repo that doesn't have any of the manifests in its local store.
+
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg test_repo --noupdate --config extensions.remotenames= -q
+  $ cd test_repo
+  $ hgmn pull -q -B master_bookmark
+
+Setup some arguments to see debug output from remotefilelog
+
+  $ LOG_ARGS=(--config ui.interactive=True --config remotefilelog.debug=True)
+
+Fetch without designated nodes
+
+  $ hgmn "${LOG_ARGS[@]}" --config "remotefilelog.cachepath=$TESTTMP/cache1" --config treemanifest.ondemandfetch=False show "master_bookmark~2" >/dev/null
+  fetching tree '' 65b4f32575a18414983d65bbb6cdef3370aa582b, found via 0b5ea07e3544
+  7 trees fetched over 0.00s
+  fetching tree '' 1595f1646547518ea8bb6f15db03fcaed5f98ab0, based on 65b4f32575a18414983d65bbb6cdef3370aa582b, found via e1972bf883fd
+  5 trees fetched over * (glob)
+  2 files fetched over 1 fetches * (glob)
+
+Fetch with designated ndoes
+
+  $ hgmn "${LOG_ARGS[@]}" --config "remotefilelog.cachepath=$TESTTMP/cache2" --config treemanifest.ondemandfetch=True show "master_bookmark~2" >/dev/null
+  fetching tree for ('', 65b4f32575a18414983d65bbb6cdef3370aa582b)
+  1 trees fetched over * (glob)
+  fetching tree for ('', 1595f1646547518ea8bb6f15db03fcaed5f98ab0)
+  1 trees fetched over * (glob)
+  fetching tree for ('root', a36092105bfeca1ee6283de2b3027138e51f0a89)
+  1 trees fetched over * (glob)
+  fetching tree for ('root', 9aa1e4737597a611854828dcaca116ae50301412)
+  1 trees fetched over * (glob)
+  fetching tree for ('root/d,', 0bc6688f4a1b0dca0ef82474e5fc62048eed3c2c)
+  1 trees fetched over * (glob)
+  fetching 2 trees
+  2 trees fetched over * (glob)
+  2 files fetched over 1 fetches * (glob)
+
+Confirm that Mononoke logged commands, but didn't log any missing filenodes
+  $ grep "Command processed" "$SCUBA_LOGGING_PATH" | wc -l
+  37
+  $ grep NullLinknode "$SCUBA_LOGGING_PATH"
+  [1]
+
+And check that the proper linknode was returned. Run this using hg, as opposed to hgmn, so we crash if it's not there.
+  $ hg debugshell \
+  > --config "remotefilelog.cachepath=$TESTTMP/cache2" \
+  > -c 'ui.write("%s\n" % m.node.hex(mf.historystore.getnodeinfo("root/d,", m.node.bin("0bc6688f4a1b0dca0ef82474e5fc62048eed3c2c"))[2]))'
+  e1972bf883fd70e2bb3bb68fe027099329ee854d
+
+  $ hg log -r e1972bf883fd70e2bb3bb68fe027099329ee854d -T '{desc}\n'
+  commit d
