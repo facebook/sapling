@@ -49,7 +49,7 @@ pub use crate::legacy::get_content_by_path;
 
 pub use crate::changeset::ChangesetContext;
 pub use crate::changeset_path::{
-    unified_diff, ChangesetPathContext, CopyInfo, PathEntry, UnifiedDiff,
+    unified_diff, ChangesetPathContext, CopyInfo, PathEntry, UnifiedDiff, UnifiedDiffMode,
 };
 pub use crate::changeset_path_diff::ChangesetPathDiffContext;
 pub use crate::errors::MononokeError;

@@ -9,7 +9,7 @@ use std::convert::{TryFrom, TryInto};
 
 use context::CoreContext;
 use futures_util::{future, stream, try_join, StreamExt, TryStreamExt};
-use mononoke_api::{unified_diff, ChangesetSpecifier, CopyInfo, MononokePath};
+use mononoke_api::{unified_diff, ChangesetSpecifier, CopyInfo, MononokePath, UnifiedDiffMode};
 use source_control as thrift;
 
 use crate::commit_id::{map_commit_identity, CommitIdExt};
@@ -78,6 +78,11 @@ impl SourceControlServiceImpl {
             .paths
             .into_iter()
             .map(|path_pair| {
+                let mode = if path_pair.generate_placeholder_diff.unwrap_or(false) {
+                    UnifiedDiffMode::OmitContent
+                } else {
+                    UnifiedDiffMode::Inline
+                };
                 Ok((
                     match path_pair.base_path {
                         Some(path) => Some(base_commit.path(&path)?),
@@ -88,6 +93,7 @@ impl SourceControlServiceImpl {
                         None => None,
                     },
                     CopyInfo::from_request(&path_pair.copy_info)?,
+                    mode,
                 ))
             })
             .collect::<Result<Vec<_>, errors::ServiceError>>()?;
@@ -95,7 +101,11 @@ impl SourceControlServiceImpl {
         // Check the total file size limit
         let flat_paths = paths
             .iter()
-            .flat_map(|(base_path, other_path, _)| vec![base_path, other_path])
+            .filter_map(|(base_path, other_path, _, mode)| match mode {
+                UnifiedDiffMode::OmitContent => None,
+                UnifiedDiffMode::Inline => Some((base_path, other_path)),
+            })
+            .flat_map(|(base_path, other_path)| vec![base_path, other_path])
             .filter_map(|x| x.as_ref());
         let total_input_size: u64 = future::try_join_all(flat_paths.map(|path| async move {
             let r: Result<_, errors::ServiceError> = if let Some(file) = path.file().await? {
@@ -114,8 +124,9 @@ impl SourceControlServiceImpl {
         }
 
         let path_diffs = future::try_join_all(paths.into_iter().map(
-            |(base_path, other_path, copy_info)| async move {
-                let diff = unified_diff(&other_path, &base_path, copy_info, context_lines).await?;
+            |(base_path, other_path, copy_info, mode)| async move {
+                let diff =
+                    unified_diff(&other_path, &base_path, copy_info, context_lines, mode).await?;
                 let r: Result<_, errors::ServiceError> =
                     Ok(thrift::CommitFileDiffsResponseElement {
                         base_path: base_path.map(|p| p.path().to_string()),

@@ -290,19 +290,35 @@ impl ChangesetPathContext {
     }
 }
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub enum UnifiedDiffMode {
+    Inline,
+    /// Content is not fetched - instead a placeholder diff like
+    ///
+    /// diff --git a/file.txt b/file.txt
+    /// Binary file file.txt has changed
+    ///
+    /// is generated
+    OmitContent,
+}
+
 /// Renders the diff (in the git diff format) against some other path.
 /// Provided with copy_info will render the diff as copy or move as requested.
-// (does not do the copy-tracking on its own) async fn unified_diff(
+/// (does not do the copy-tracking on its own)
+/// If `omit_content` is set then unified_diff(...) doesn't fetch content, but just
+/// generates a placeholder diff that says that files differ.
 pub async fn unified_diff(
     // The diff applied to old_path with produce new_path
     old_path: &Option<ChangesetPathContext>,
     new_path: &Option<ChangesetPathContext>,
     copy_info: CopyInfo,
     context_lines: usize,
+    mode: UnifiedDiffMode,
 ) -> Result<UnifiedDiff, MononokeError> {
     // Helper for getting file information.
     async fn get_file_data(
         path: &Option<ChangesetPathContext>,
+        mode: UnifiedDiffMode,
     ) -> Result<Option<xdiff::DiffFile<String, Bytes>>, MononokeError> {
         match path {
             Some(path) => {
@@ -310,15 +326,26 @@ pub async fn unified_diff(
                     let file = path.file().await?.ok_or_else(|| {
                         MononokeError::from(Error::msg("assertion error: file should exist"))
                     })?;
-                    let contents = file.content_concat().await?;
                     let file_type = match file_type {
                         FileType::Regular => xdiff::FileType::Regular,
                         FileType::Executable => xdiff::FileType::Executable,
                         FileType::Symlink => xdiff::FileType::Symlink,
                     };
+                    let contents = match mode {
+                        UnifiedDiffMode::Inline => {
+                            let contents = file.content_concat().await?;
+                            xdiff::FileContent::Inline(contents)
+                        }
+                        UnifiedDiffMode::OmitContent => {
+                            let content_id = file.metadata().await?.content_id;
+                            xdiff::FileContent::Omitted {
+                                content_hash: format!("{}", content_id),
+                            }
+                        }
+                    };
                     Ok(Some(xdiff::DiffFile {
                         path: path.path().to_string(),
-                        contents: xdiff::FileContent::Inline(contents),
+                        contents,
                         file_type,
                     }))
                 } else {
@@ -329,8 +356,10 @@ pub async fn unified_diff(
         }
     }
 
-    let (old_diff_file, new_diff_file) =
-        try_join!(get_file_data(&old_path), get_file_data(&new_path))?;
+    let (old_diff_file, new_diff_file) = try_join!(
+        get_file_data(&old_path, mode),
+        get_file_data(&new_path, mode)
+    )?;
     let is_binary = xdiff::file_is_binary(&old_diff_file) || xdiff::file_is_binary(&new_diff_file);
     let copy_info = match copy_info {
         CopyInfo::None => xdiff::CopyInfo::None,
