@@ -144,6 +144,17 @@ This option has no effect unless treemanifest.usehttp is set to true.
 
     [treemanifest]
     bfsprefetch = True
+
+`treemanifest.ondemandfetch` causes treemanifest to use an on-demand tree fetching
+strategy. The client will only download the tree nodes needed to complete the desired
+operation, rather than fetching the entire tree. This setting only applies to SSH
+fetching; HTTP fetching already uses this fetching strategy. As such, this setting
+has no effect when HTTP fetching is enabled.
+
+::
+
+    [treemanifest]
+    ondemandfetch = True
 """
 from __future__ import absolute_import
 
@@ -234,6 +245,7 @@ configitem("treemanifest", "stickypushpath", default=True)
 configitem("treemanifest", "treeonly", default=True)
 configitem("treemanifest", "usehttp", default=False)
 configitem("treemanifest", "prefetchdraftparents", default=True)
+configitem("treemanifest", "ondemandfetch", default=False)
 
 PACK_CATEGORY = "manifests"
 
@@ -566,6 +578,43 @@ def wraprepo(repo):
             if self.svfs.treemanifestserver:
                 caps = _addservercaps(self, caps)
             return caps
+
+        @perftrace.tracefunc("On-Demand Fetch Trees")
+        def getdesignatednodes(self, keys):
+            """
+            Fetch the specified tree nodes over SSH.
+
+            This method requires the server to support the "designatednodes"
+            capability. This capability overloads the gettreepack wireprotocol
+            command to allow the client to specify an exact set of tree nodes
+            to fetch; the server will then provide only those nodes.
+
+            Returns False if the server does not support "designatednodes",
+            and True otherwise.
+            """
+            fallbackpath = getfallbackpath(self)
+            with self.connectionpool.get(fallbackpath) as conn:
+                if "designatednodes" not in conn.peer.capabilities():
+                    return False
+
+                debug = self.ui.configbool("remotefilelog", "debug")
+                if debug and self.ui.interactive():
+                    n = len(keys)
+                    (firstpath, firstnode) = keys[0]
+                    firstnode = hex(firstnode)
+                    singular = "fetching tree for ('%s', %s)" % (firstpath, firstnode)
+                    plural = "fetching %d trees" % n
+                    msg = _n(singular, plural, n)
+                    self.ui.write_err(("%s\n") % msg)
+
+                mfnodes = [node for path, node in keys]
+                directories = [path for path, node in keys]
+
+                start = util.timer()
+                with self.ui.timesection("getdesignatednodes"):
+                    _gettrees(self, conn.peer, "", mfnodes, [], directories, start, 1)
+
+            return True
 
         def _httpprefetchtrees(self, rootdir, mfnodes, basemfnodes, depth=None):
             if _usehttp(self.ui):
@@ -1964,8 +2013,20 @@ def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start, d
         receivednodes = op.records[RECEIVEDNODE_RECORD]
         count = 0
         missingnodes = set(mfnodes)
+
+        # If we're doing on-demand tree fetching, this means that we are not trying
+        # to fetch complete trees. Consequently, the set of mfnodes passed in are not
+        # all different versions of the same root directory -- instead they correspond
+        # to individual subdirectories within a single tree, which we are explicitly
+        # not downloading in its entirety. This means we should not check the directory
+        # path when checking for missing nodes in the response.
+        ondemandfetch = repo.ui.configbool("treemanifest", "ondemandfetch")
+
         for reply in receivednodes:
-            missingnodes.difference_update(n for d, n in reply if d == rootdir)
+            if ondemandfetch:
+                missingnodes.difference_update(n for d, n in reply)
+            else:
+                missingnodes.difference_update(n for d, n in reply if d == rootdir)
             count += len(reply)
         perftrace.tracevalue("Fetched", count)
         if op.repo.ui.configbool("remotefilelog", "debug"):
@@ -2556,6 +2617,14 @@ class remotetreestore(generatingdatastore):
         if self._repo.httpgettrees([(name, node)]):
             return
 
+        # If on-demand fetching is enabled, we should attempt to
+        # fetch the single tree node over SSH via gettreepack.
+        # If the server does not support calling gettreepack in
+        # this way, we must resort to a full fetch.
+        if self._repo.ui.configbool("treemanifest", "ondemandfetch"):
+            if self._repo.getdesignatednodes([(name, node)]):
+                return
+
         # Only look at the server if not root or is public
         basemfnodes = []
         linkrev = None
@@ -2595,9 +2664,21 @@ class remotetreestore(generatingdatastore):
         self._sharedhistory.markforrefresh()
 
     def prefetch(self, keys):
+        # Filter out keys for nodes already present locally.
+        keys = self._shareddata.getmissing(keys)
+        if not keys:
+            return
+
+        # If HTTP fetching is enabled, prefetch the nodes that way.
         if _usehttp(self._repo.ui):
-            keys = self._shareddata.getmissing(keys)
             self._repo._httpgettrees(keys)
+            return
+
+        # Otherwise, try to fetch the desired nodes via SSH. This
+        # depends on the server supporting the "designatednodes"
+        # capability, so the prefetch is not guaranteed to succeed.
+        if self._repo.ui.configbool("treemanifest", "ondemandfetch"):
+            self._repo.getdesignatednodes(keys)
 
 
 class ondemandtreedatastore(generatingdatastore):
