@@ -12,12 +12,14 @@ use cpython::*;
 use cpython_ext::{AnyhowResultExt, PyNone, PyPath, ResultPyErrExt};
 use dag::{
     id::{Id, VertexName},
+    namedag::LowLevelAccess,
+    nameset::dag::DagSet,
+    nameset::legacy::LegacyCodeNeedIdAccess,
     spanset::{SpanSet, SpanSetIter},
-    NameDag,
+    NameDag, NameSet,
 };
 use std::cell::RefCell;
-
-use dag::namedag::LowLevelAccess;
+use std::ops::Deref;
 
 mod nameset;
 
@@ -236,6 +238,31 @@ py_class!(class namedag |py| {
         }
     }
 
+    /// Translate a set using names to using ids. This is similar to `node2id` but works for a set.
+    /// Ideally this API does not exist. However the revset layer heavily uses ids.
+    def node2idset(&self, set: Names) -> PyResult<Spans> {
+        let set: NameSet = set.0;
+        if let Some(set) = set.as_any().downcast_ref::<DagSet>() {
+            let spans: SpanSet = (LegacyCodeNeedIdAccess, set).into();
+            Ok(Spans(spans))
+        } else {
+            let namedag = self.namedag(py).borrow();
+            let set = namedag.sort(&set).map_pyerr(py)?;
+            let set = set.as_any().downcast_ref::<DagSet>().expect("namedag.sort should return DagSet");
+            let spans: SpanSet = (LegacyCodeNeedIdAccess, set).into();
+            Ok(Spans(spans))
+        }
+    }
+
+    /// Translate a set using ids to using names. This is similar to `id2node` but works for a set.
+    /// Ideally this API does not exist. However the revset layer heavily uses ids.
+    def id2nodeset(&self, set: Spans) -> PyResult<Names> {
+        let namedag = self.namedag(py).borrow();
+        let spans: SpanSet = set.0;
+        let set: NameSet = (LegacyCodeNeedIdAccess, spans , namedag.deref()).into();
+        Ok(Names(set))
+    }
+
     /// Lookup nodes by hex prefix.
     def hexprefixmatch(&self, prefix: PyBytes, limit: usize = 5) -> PyResult<Vec<PyBytes>> {
         let prefix = prefix.data(py);
@@ -251,6 +278,12 @@ py_class!(class namedag |py| {
             .map(|s| PyBytes::new(py, &s))
             .collect();
         Ok(nodes)
+    }
+
+    /// Sort a set.
+    def sort(&self, set: Names) -> PyResult<Names> {
+        let namedag = self.namedag(py).borrow();
+        Ok(Names(namedag.sort(&set.0).map_pyerr(py)?))
     }
 
     def all(&self) -> PyResult<Names> {

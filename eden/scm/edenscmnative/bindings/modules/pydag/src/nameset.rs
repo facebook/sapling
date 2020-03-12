@@ -82,6 +82,17 @@ py_class!(pub class nameset |py| {
         Ok(self.inner(py).last().map_pyerr(py)?.map(|name| PyBytes::new(py, name.as_ref())))
     }
 
+    /// Test if the set is topologically sorted. A sorted set has heads first, roots last.
+    def issorted(&self) -> PyResult<bool> {
+        Ok(self.inner(py).is_topo_sorted())
+    }
+
+    /// Mark the set as sorted, and return the marked-sorted set.
+    /// This is usually useful for generator sets where the generator function
+    /// ensures the set is sorted.
+    def marksorted(&self) -> PyResult<Names> {
+        Ok(Names(self.inner(py).mark_sorted()))
+    }
 });
 
 // A wrapper to [`NameIter`].
