@@ -1,0 +1,10 @@
+[package]
+name = "fsinfo"
+version = "0.0.1"
+edition = "2018"
+
+[dependencies]
+libc = "0.2"
+
+[target.'cfg(windows)'.dependencies]
+winapi = { version = "0.3", features = ["handleapi", "fileapi", "minwindef"] }
