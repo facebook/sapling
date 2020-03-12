@@ -318,7 +318,7 @@ pub async fn unified_diff(
                     };
                     Ok(Some(xdiff::DiffFile {
                         path: path.path().to_string(),
-                        contents,
+                        contents: xdiff::FileContent::Inline(contents),
                         file_type,
                     }))
                 } else {
@@ -329,17 +329,9 @@ pub async fn unified_diff(
         }
     }
 
-    // Helper for checking if we should mark the diff as binary
-    fn is_binary(diff_file: &Option<xdiff::DiffFile<String, Bytes>>) -> bool {
-        diff_file
-            .as_ref()
-            .map(|f| f.contents.contains(&0))
-            .unwrap_or(false)
-    }
-
     let (old_diff_file, new_diff_file) =
         try_join!(get_file_data(&old_path), get_file_data(&new_path))?;
-    let is_binary = is_binary(&old_diff_file) || is_binary(&new_diff_file);
+    let is_binary = xdiff::file_is_binary(&old_diff_file) || xdiff::file_is_binary(&new_diff_file);
     let copy_info = match copy_info {
         CopyInfo::None => xdiff::CopyInfo::None,
         CopyInfo::Move => xdiff::CopyInfo::Move,

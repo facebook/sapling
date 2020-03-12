@@ -234,12 +234,12 @@ fn diff(
         .map(|(new, old)| {
             let new = xdiff::DiffFile {
                 path: "new",
-                contents: new,
+                contents: xdiff::FileContent::Inline(new),
                 file_type: xdiff::FileType::Regular,
             };
             let old = xdiff::DiffFile {
                 path: "old",
-                contents: old,
+                contents: xdiff::FileContent::Inline(old),
                 file_type: xdiff::FileType::Regular,
             };
             let diff = xdiff::diff_unified(

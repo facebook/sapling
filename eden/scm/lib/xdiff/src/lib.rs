@@ -434,6 +434,33 @@ pub enum FileType {
     Symlink,
 }
 
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub enum FileContent<C>
+where
+    C: AsRef<[u8]>,
+{
+    // The file content was not fetched (for example, if it's too large), though we still want to produce a placeholder diff for it.
+    // `content_id` is hash of a file file content.
+    Omitted { content_hash: String },
+    Inline(C),
+}
+
+impl<C: AsRef<[u8]>> FileContent<C> {
+    fn as_bytes(&self) -> Option<&[u8]> {
+        match self {
+            FileContent::Omitted { .. } => None,
+            FileContent::Inline(c) => Some(c.as_ref()),
+        }
+    }
+
+    fn is_omitted(&self) -> bool {
+        match self {
+            FileContent::Omitted { .. } => true,
+            FileContent::Inline(_) => false,
+        }
+    }
+}
+
 /// Struct representing the diffed file. Contains all the information
 /// needed for header-generation.
 #[derive(Clone, PartialEq, Eq, Debug)]
@@ -445,7 +472,7 @@ where
     /// file path (as [u8])
     pub path: P,
     /// file contents (as [u8])
-    pub contents: C,
+    pub contents: FileContent<C>,
     pub file_type: FileType,
 }
 
@@ -457,19 +484,34 @@ where
     pub fn new(path: P, contents: C, file_type: FileType) -> Self {
         Self {
             path,
-            contents,
+            contents: FileContent::Inline(contents),
             file_type,
         }
     }
 }
 
-fn file_is_binary<P, C>(file: &Option<DiffFile<P, C>>) -> bool
+pub fn file_is_binary<P, C>(file: &Option<DiffFile<P, C>>) -> bool
 where
     P: AsRef<[u8]>,
     C: AsRef<[u8]>,
 {
     match file {
-        Some(file) => file.contents.as_ref().contains(&0),
+        Some(file) => file
+            .contents
+            .as_bytes()
+            .map(|bytes| bytes.contains(&0))
+            .unwrap_or(false),
+        None => false,
+    }
+}
+
+fn file_is_omitted<P, C>(file: &Option<DiffFile<P, C>>) -> bool
+where
+    P: AsRef<[u8]>,
+    C: AsRef<[u8]>,
+{
+    match file {
+        Some(file) => file.contents.is_omitted(),
         None => false,
     }
 }
@@ -490,7 +532,7 @@ fn gen_diff_unified<P, C, F, S>(
 where
     P: AsRef<[u8]>,
     P: Clone,
-    C: AsRef<[u8]>,
+    C: AsRef<[u8]> + PartialEq + Eq,
     F: Fn(S, &[u8]) -> S,
 {
     let mut state = DiffState {
@@ -511,9 +553,7 @@ where
     // When the files have no content differences and no metadata differences the output should be empty.
     if let (Some(old_file), Some(new_file)) = (&old_file, &new_file) {
         if &old_file.file_type == &new_file.file_type && diff_opts.copy_info == CopyInfo::None {
-            let old_contents = old_file.contents.as_ref();
-            let new_contents = new_file.contents.as_ref();
-            if old_contents.len() == new_contents.len() && old_contents == new_contents {
+            if old_file.contents == new_file.contents {
                 return state.collect();
             }
         }
@@ -573,15 +613,17 @@ where
     // When the files have no differences we shouldn't print any further
     // headers - those are reserved for changed files.
     if let (Some(old_file), Some(new_file)) = (&old_file, &new_file) {
-        let old_contents = old_file.contents.as_ref();
-        let new_contents = new_file.contents.as_ref();
-        if old_contents.len() == new_contents.len() && old_contents == new_contents {
+        if old_file.contents == new_file.contents {
             return state.collect();
         }
     }
 
     // Header for binary files
-    if file_is_binary(&old_file) || file_is_binary(&new_file) {
+    if file_is_binary(&old_file)
+        || file_is_binary(&new_file)
+        || file_is_omitted(&old_file)
+        || file_is_omitted(&new_file)
+    {
         match (old_file, new_file) {
             (Some(old_file), None) => state.emit_binary_has_changed(old_file.path.as_ref()),
             (None, Some(new_file)) => state.emit_binary_has_changed(new_file.path.as_ref()),
@@ -615,23 +657,26 @@ where
     }
     // All headers emitted, now emit the actual diff.
     let (reduce, seed) = state.unwrap();
-    match (&old_file, &new_file) {
-        (Some(old_file), Some(new_file)) => {
+    match (
+        &old_file.map(|file| file.contents),
+        &new_file.map(|file| file.contents),
+    ) {
+        (Some(FileContent::Inline(old_file)), Some(FileContent::Inline(new_file))) => {
             // Typical case, we need to call actual diff function to get the diff.
             let opts = HeaderlessDiffOpts {
                 context: diff_opts.context,
             };
-            gen_diff_unified_headerless(&old_file.contents, &new_file.contents, opts, seed, reduce)
+            gen_diff_unified_headerless(old_file, new_file, opts, seed, reduce)
         }
-        (Some(old_file), None) => {
+        (Some(FileContent::Inline(old_file)), None) => {
             // Degenerated case of all-minus diff.
-            gen_diff_unified_headerless_entire_file(b'-', &old_file.contents, seed, reduce)
+            gen_diff_unified_headerless_entire_file(b'-', old_file, seed, reduce)
         }
-        (None, Some(new_file)) => {
+        (None, Some(FileContent::Inline(new_file))) => {
             // Degenerated case of all-plus diff.
-            gen_diff_unified_headerless_entire_file(b'+', &new_file.contents, seed, reduce)
+            gen_diff_unified_headerless_entire_file(b'+', new_file, seed, reduce)
         }
-        (None, None) => {
+        _ => {
             // There's nothing to diff.
             seed
         }
@@ -649,7 +694,7 @@ pub fn diff_unified<N, C>(
 ) -> Vec<u8>
 where
     N: AsRef<[u8]> + Clone,
-    C: AsRef<[u8]>,
+    C: AsRef<[u8]> + PartialEq + Eq,
 {
     gen_diff_unified(old_file, new_file, opts, Vec::new(), |mut v, part| {
         v.extend(part);
@@ -736,12 +781,12 @@ z"#;
         assert_eq!(
             String::from_utf8_lossy(&diff_unified(
                 Some(DiffFile {
-                    contents: &a,
+                    contents: FileContent::Inline(&a),
                     path: "x",
                     file_type: FileType::Regular,
                 }),
                 Some(DiffFile {
-                    contents: &b,
+                    contents: FileContent::Inline(&b),
                     path: "y",
                     file_type: FileType::Regular,
                 }),
@@ -779,7 +824,7 @@ d
         assert_eq!(
             String::from_utf8_lossy(&diff_unified(
                 Some(DiffFile {
-                    contents: &a,
+                    contents: FileContent::Inline(&a),
                     path: "x",
                     file_type: FileType::Regular,
                 }),
@@ -798,6 +843,39 @@ deleted file mode 100644
 -b
 -c
 -d
+"
+        );
+    }
+
+    #[test]
+    fn test_diff_unified_with_large() {
+        let hash1 = "hash1".to_string();
+        let content_type_first: FileContent<Vec<u8>> = FileContent::Omitted {
+            content_hash: hash1,
+        };
+        let hash2 = "hash2".to_string();
+        let content_type_second: FileContent<Vec<u8>> = FileContent::Omitted {
+            content_hash: hash2,
+        };
+        assert_eq!(
+            String::from_utf8_lossy(&diff_unified(
+                Some(DiffFile {
+                    contents: content_type_first,
+                    path: "x",
+                    file_type: FileType::Regular,
+                }),
+                Some(DiffFile {
+                    contents: content_type_second,
+                    path: "x",
+                    file_type: FileType::Regular,
+                }),
+                DiffOpts {
+                    context: 10,
+                    copy_info: CopyInfo::None,
+                }
+            )),
+            r"diff --git a/x b/x
+Binary file x has changed
 "
         );
     }
