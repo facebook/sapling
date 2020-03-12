@@ -10,7 +10,11 @@ use crate::{
     MPath, NULL_HASH,
 };
 use anyhow::{bail, Context, Error, Result};
+use blobstore::Blobstore;
 use bytes::Bytes;
+use context::CoreContext;
+use failure_ext::FutureFailureErrorExt;
+use futures::future::{Either, Future, IntoFuture};
 use mononoke_types::DateTime;
 use std::{
     collections::BTreeMap,
@@ -208,6 +212,45 @@ impl RevlogChangeset {
             envelope.p1.map(HgChangesetId::into_nodehash),
             envelope.p2.map(HgChangesetId::into_nodehash),
         )
+    }
+
+    pub fn load<B: Blobstore + Clone>(
+        ctx: CoreContext,
+        blobstore: &B,
+        changesetid: HgChangesetId,
+    ) -> impl Future<Item = Option<RevlogChangeset>, Error = Error> + Send + 'static {
+        if changesetid == HgChangesetId::new(NULL_HASH) {
+            let revlogcs = RevlogChangeset::new_null();
+            Either::A(Ok(Some(revlogcs)).into_future())
+        } else {
+            let key = changesetid.blobstore_key();
+
+            let fut = blobstore
+                .get(ctx, key.clone())
+                .and_then(move |got| match got {
+                    None => Ok(None),
+                    Some(bytes) => {
+                        let envelope = HgChangesetEnvelope::from_blob(bytes.into())?;
+                        if changesetid != envelope.node_id() {
+                            bail!(
+                                "Changeset ID mismatch (requested: {}, got: {})",
+                                changesetid,
+                                envelope.node_id()
+                            );
+                        }
+                        let revlogcs = RevlogChangeset::from_envelope(envelope)?;
+                        Ok(Some(revlogcs))
+                    }
+                })
+                .with_context(move || {
+                    format!(
+                        "Error while deserializing changeset retrieved from key '{}'",
+                        key
+                    )
+                })
+                .from_err();
+            Either::B(fut)
+        }
     }
 
     pub fn new_null() -> Self {

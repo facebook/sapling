@@ -7,15 +7,14 @@
 
 use super::revlog::{serialize_extras, Extra, RevlogChangeset};
 use crate::{
-    nodehash::{HgChangesetId, HgManifestId, NULL_HASH},
-    HgBlobNode, HgChangesetEnvelope, HgChangesetEnvelopeMut, HgNodeHash, HgParents, MPath,
+    nodehash::{HgChangesetId, HgManifestId},
+    HgBlobNode, HgChangesetEnvelopeMut, HgNodeHash, HgParents, MPath,
 };
-use anyhow::{bail, Error, Result};
+use anyhow::{Error, Result};
 use blobstore::{Blobstore, Loadable, LoadableError};
 use bytes::Bytes;
 use context::CoreContext;
-use failure_ext::FutureFailureErrorExt;
-use futures::future::{Either, Future, IntoFuture};
+use futures::future::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::DateTime;
 use std::fmt::{self, Display};
@@ -171,46 +170,14 @@ impl HgBlobChangeset {
         blobstore: &B,
         changesetid: HgChangesetId,
     ) -> impl Future<Item = Option<Self>, Error = Error> + Send + 'static {
-        if changesetid == HgChangesetId::new(NULL_HASH) {
-            let revlogcs = RevlogChangeset::new_null();
-            let cs = HgBlobChangeset::new_with_id(
-                changesetid,
-                HgChangesetContent::from_revlogcs(revlogcs),
-            );
-            Either::A(Ok(Some(cs)).into_future())
-        } else {
-            let key = changesetid.blobstore_key();
-
-            let fut = blobstore
-                .get(ctx, key.clone())
-                .and_then(move |got| match got {
-                    None => Ok(None),
-                    Some(bytes) => {
-                        let envelope = HgChangesetEnvelope::from_blob(bytes.into())?;
-                        if changesetid != envelope.node_id() {
-                            bail!(
-                                "Changeset ID mismatch (requested: {}, got: {})",
-                                changesetid,
-                                envelope.node_id()
-                            );
-                        }
-                        let revlogcs = RevlogChangeset::from_envelope(envelope)?;
-                        let cs = HgBlobChangeset::new_with_id(
-                            changesetid,
-                            HgChangesetContent::from_revlogcs(revlogcs),
-                        );
-                        Ok(Some(cs))
-                    }
-                })
-                .with_context(move || {
-                    format!(
-                        "Error while deserializing changeset retrieved from key '{}'",
-                        key
-                    )
-                })
-                .from_err();
-            Either::B(fut)
-        }
+        RevlogChangeset::load(ctx, blobstore, changesetid).map(move |got| {
+            got.map(|revlogcs| {
+                HgBlobChangeset::new_with_id(
+                    changesetid,
+                    HgChangesetContent::from_revlogcs(revlogcs),
+                )
+            })
+        })
     }
 
     pub fn save(
