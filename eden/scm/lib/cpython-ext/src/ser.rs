@@ -160,7 +160,11 @@ impl<'a, 'b> ser::Serializer for &'a Serializer<'b> {
     }
 
     fn serialize_str(self, v: &str) -> Result<PyObject> {
-        self.serialize_bytes(v.as_bytes())
+        if cfg!(feature = "python2") {
+            Ok(PyBytes::new(self.py, v.as_bytes()).into_object())
+        } else {
+            Ok(PyUnicode::new(self.py, v).into_object())
+        }
     }
 
     fn serialize_bytes(self, v: &[u8]) -> Result<PyObject> {
