@@ -20,7 +20,7 @@ from __future__ import absolute_import
 
 import errno
 
-from . import error, pycompat, util
+from . import encoding, error, pycompat, util
 from .i18n import _
 from .pycompat import decodeutf8, encodeutf8
 
@@ -584,7 +584,10 @@ class transaction(util.transactional):
         metalog = getattr(svfs, "metalog", None)
         if metalog:
             metalog.commit(
-                " ".join(map(util.shellquote, pycompat.sysargv[1:])), int(util.timer())
+                encoding.unifromlocal(
+                    " ".join(map(util.shellquote, pycompat.sysargv[1:]))
+                ),
+                int(util.timer()),
             )
             # Discard metalog state when exiting transaction.
             del svfs.__dict__["metalog"]
