@@ -4,6 +4,7 @@
 
   $ enable remotenames amend
   $ setconfig experimental.narrow-heads=true visibility.enabled=true mutation.record=true mutation.enabled=true mutation.date="0 0" experimental.evolution= remotenames.rename.default=remote
+  $ setconfig 'infinitepush.branchpattern=re:(^hack/.*)'
   $ shorttraceback
 
 Prepare the server repo
@@ -197,3 +198,32 @@ Visible heads got out of sync with "." or bookmarks
   |
   ~
 
+
+Prepare the server repo with draft branches
+
+  $ newrepo server1
+  $ setconfig treemanifest.server=true
+  $ drawdag << 'EOS'
+  > B C
+  > |/
+  > A
+  > EOS
+
+  $ hg bookmark -r $B master
+  $ hg bookmark -r $C hack/feature-foo
+
+Prepare the client repo
+
+  $ hg clone $TESTTMP/server1 $TESTTMP/client1 -q --pull
+  $ cd $TESTTMP/client1
+
+  $ hg log -r 'draft()' -T '{desc}\n'
+  C
+
+Check the draft branch can be hidden
+
+  $ hg hide $C
+  hiding commit dc0947a82db8 "C"
+  1 changeset hidden
+
+  $ hg log -r 'draft()' -T '{desc}\n'

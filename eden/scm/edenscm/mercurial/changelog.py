@@ -405,7 +405,10 @@ class changelog(revlog.revlog):
     def _headrevs(self, additionalheads, includepublic=True, includedraft=True):
         # This should only be used by repo.heads()
         if self._uiconfig.configbool("experimental", "narrow-heads"):
-            publicnodes, draftnodes = self._remotenodes()
+            # Do not treat the draft heads returned by remotenames as
+            # unconditionally visible. This makes it possible to hide
+            # them by "hg hide".
+            publicnodes, _draftnodes = self._remotenodes()
             torev = self.nodemap.__getitem__
             nodes = list(additionalheads)
             if includepublic:
@@ -415,7 +418,7 @@ class changelog(revlog.revlog):
                     visibleheads = self._visibleheads.allheads()
                 else:
                     visibleheads = self._visibleheads.heads
-                nodes += visibleheads + draftnodes
+                nodes += visibleheads
             revs = list(map(torev, nodes))
             r = self.index2.headsancestors(revs)
             return r
