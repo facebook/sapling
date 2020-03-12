@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crypto::{digest::Digest, sha1::Sha1};
+use digest::Digest;
 use mononoke_types::hash::RichGitSha1;
+use sha1::Sha1;
 use std::convert::TryInto;
 
 #[derive(Debug, Copy, Clone, Hash, Eq, PartialEq)]
@@ -41,12 +42,11 @@ impl ObjectKind {
             .expect("Object size must fit in a u64");
 
         let mut sha1 = Sha1::new();
-        sha1.input_str(&format!("{} {}", self.as_str(), size));
+        sha1.input(&format!("{} {}", self.as_str(), size));
         sha1.input(&[0]);
         sha1.input(object_buff.as_ref());
 
-        let mut hash = [0u8; 20];
-        sha1.result(&mut hash);
+        let hash: [u8; 20] = sha1.result().into();
 
         RichGitSha1::from_byte_array(hash, self.as_str(), size)
     }
