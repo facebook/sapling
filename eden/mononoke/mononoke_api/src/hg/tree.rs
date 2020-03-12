@@ -99,46 +99,43 @@ mod tests {
         specifiers::HgChangesetId,
     };
 
-    #[fbinit::test]
-    fn test_hg_tree_context(fb: FacebookInit) -> Result<(), MononokeError> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = Arc::new(Repo::new_test(ctx.clone(), linear::getrepo(fb).await).await?);
-            let rctx = RepoContext::new(ctx.clone(), repo.clone())?;
+    #[fbinit::compat_test]
+    async fn test_hg_tree_context(fb: FacebookInit) -> Result<(), MononokeError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(Repo::new_test(ctx.clone(), linear::getrepo(fb).await).await?);
+        let rctx = RepoContext::new(ctx.clone(), repo.clone())?;
 
-            // Get the HgManifestId of the root tree manifest for a commit in this repo.
-            // (Commit hash was found by inspecting the source of the `fixtures` crate.)
-            let hg_cs_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
-            let hg_cs = hg_cs_id
-                .load(ctx.clone(), rctx.blob_repo().blobstore())
-                .compat()
-                .await?;
-            let manifest_id = hg_cs.manifestid();
+        // Get the HgManifestId of the root tree manifest for a commit in this repo.
+        // (Commit hash was found by inspecting the source of the `fixtures` crate.)
+        let hg_cs_id = HgChangesetId::from_str("2d7d4ba9ce0a6ffd222de7785b249ead9c51c536")?;
+        let hg_cs = hg_cs_id
+            .load(ctx.clone(), rctx.blob_repo().blobstore())
+            .compat()
+            .await?;
+        let manifest_id = hg_cs.manifestid();
 
-            let hg = rctx.hg();
+        let hg = rctx.hg();
 
-            let tree = HgTreeContext::new(hg.clone(), manifest_id).await?;
-            assert_eq!(manifest_id, tree.node_id());
+        let tree = HgTreeContext::new(hg.clone(), manifest_id).await?;
+        assert_eq!(manifest_id, tree.node_id());
 
-            let content = tree.content();
+        let content = tree.content();
 
-            // The content here is the representation of the format in which 
-            // the Mercurial client would store a tree manifest node.
-            let expected = &b"1\0b8e02f6433738021a065f94175c7cd23db5f05be\nfiles\0b8e02f6433738021a065f94175c7cd23db5f05be\n"[..];
-            assert_eq!(content, expected);
+        // The content here is the representation of the format in which
+        // the Mercurial client would store a tree manifest node.
+        let expected = &b"1\0b8e02f6433738021a065f94175c7cd23db5f05be\nfiles\0b8e02f6433738021a065f94175c7cd23db5f05be\n"[..];
+        assert_eq!(content, expected);
 
-            let tree = HgTreeContext::new_check_exists(hg.clone(), manifest_id).await?;
-            assert!(tree.is_some());
+        let tree = HgTreeContext::new_check_exists(hg.clone(), manifest_id).await?;
+        assert!(tree.is_some());
 
-            let null_id = HgManifestId::new(NULL_HASH);
-            let null_tree = HgTreeContext::new(hg.clone(), null_id).await;
-            assert!(null_tree.is_err());
+        let null_id = HgManifestId::new(NULL_HASH);
+        let null_tree = HgTreeContext::new(hg.clone(), null_id).await;
+        assert!(null_tree.is_err());
 
-            let null_tree = HgTreeContext::new_check_exists(hg.clone(), null_id).await?;
-            assert!(null_tree.is_none());
+        let null_tree = HgTreeContext::new_check_exists(hg.clone(), null_id).await?;
+        assert!(null_tree.is_none());
 
-            Ok(())
-        })
+        Ok(())
     }
 }

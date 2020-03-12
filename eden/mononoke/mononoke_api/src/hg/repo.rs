@@ -66,18 +66,15 @@ mod tests {
 
     use crate::repo::Repo;
 
-    #[fbinit::test]
-    fn test_new_hg_context(fb: FacebookInit) -> Result<(), MononokeError> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = Repo::new_test(ctx.clone(), linear::getrepo(fb).await).await?;
-            let repo_ctx = RepoContext::new(ctx, Arc::new(repo))?;
+    #[fbinit::compat_test]
+    async fn test_new_hg_context(fb: FacebookInit) -> Result<(), MononokeError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Repo::new_test(ctx.clone(), linear::getrepo(fb).await).await?;
+        let repo_ctx = RepoContext::new(ctx, Arc::new(repo))?;
 
-            let hg = repo_ctx.hg();
-            assert_eq!(hg.repo().name(), "test");
+        let hg = repo_ctx.hg();
+        assert_eq!(hg.repo().name(), "test");
 
-            Ok(())
-        })
+        Ok(())
     }
 }

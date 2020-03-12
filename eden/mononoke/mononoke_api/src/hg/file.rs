@@ -141,84 +141,74 @@ mod tests {
 
     use crate::repo::{Repo, RepoContext};
 
-    #[fbinit::test]
-    fn test_hg_file_context(fb: FacebookInit) -> Result<(), MononokeError> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo =
-                Arc::new(Repo::new_test(ctx.clone(), many_files_dirs::getrepo(fb).await).await?);
+    #[fbinit::compat_test]
+    async fn test_hg_file_context(fb: FacebookInit) -> Result<(), MononokeError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(Repo::new_test(ctx.clone(), many_files_dirs::getrepo(fb).await).await?);
 
-            // The `many_files_dirs` test repo contains the following files (at tip):
-            //   $ hg manifest --debug
-            //   b8e02f6433738021a065f94175c7cd23db5f05be 644   1
-            //   5d9299349fc01ddd25d0070d149b124d8f10411e 644   2
-            //   e2ac7cbe1f85e0d8b416005e905aa2189434ce6c 644   dir1
-            //   0eb86721b74ed44cf176ee48b5e95f0192dc2824 644   dir2/file_1_in_dir2
+        // The `many_files_dirs` test repo contains the following files (at tip):
+        //   $ hg manifest --debug
+        //   b8e02f6433738021a065f94175c7cd23db5f05be 644   1
+        //   5d9299349fc01ddd25d0070d149b124d8f10411e 644   2
+        //   e2ac7cbe1f85e0d8b416005e905aa2189434ce6c 644   dir1
+        //   0eb86721b74ed44cf176ee48b5e95f0192dc2824 644   dir2/file_1_in_dir2
 
-            let repo_ctx = RepoContext::new(ctx, repo)?;
-            let hg = repo_ctx.hg();
+        let repo_ctx = RepoContext::new(ctx, repo)?;
+        let hg = repo_ctx.hg();
 
-            // Test HgFileContext::new.
-            let file_id =
-                HgFileNodeId::from_str("b8e02f6433738021a065f94175c7cd23db5f05be").unwrap();
-            let hg_file = HgFileContext::new(hg.clone(), file_id).await?;
+        // Test HgFileContext::new.
+        let file_id = HgFileNodeId::from_str("b8e02f6433738021a065f94175c7cd23db5f05be").unwrap();
+        let hg_file = HgFileContext::new(hg.clone(), file_id).await?;
 
-            assert_eq!(file_id, hg_file.node_id());
+        assert_eq!(file_id, hg_file.node_id());
 
-            let content = hg_file.content().await?;
-            assert_eq!(content, &b"1\n"[..]);
+        let content = hg_file.content().await?;
+        assert_eq!(content, &b"1\n"[..]);
 
-            // Test HgFileContext::new_check_exists.
-            let hg_file = HgFileContext::new_check_exists(hg.clone(), file_id).await?;
-            assert!(hg_file.is_some());
+        // Test HgFileContext::new_check_exists.
+        let hg_file = HgFileContext::new_check_exists(hg.clone(), file_id).await?;
+        assert!(hg_file.is_some());
 
-            let null_id = HgFileNodeId::new(NULL_HASH);
-            let null_file = HgFileContext::new(hg.clone(), null_id).await;
-            assert!(null_file.is_err());
+        let null_id = HgFileNodeId::new(NULL_HASH);
+        let null_file = HgFileContext::new(hg.clone(), null_id).await;
+        assert!(null_file.is_err());
 
-            let null_file = HgFileContext::new_check_exists(hg.clone(), null_id).await?;
-            assert!(null_file.is_none());
+        let null_file = HgFileContext::new_check_exists(hg.clone(), null_id).await?;
+        assert!(null_file.is_none());
 
-            Ok(())
-        })
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_hg_file_history(fb: FacebookInit) -> Result<(), MononokeError> {
-        let mut runtime = tokio_compat::runtime::Runtime::new().unwrap();
-        runtime.block_on_std(async move {
-            let ctx = CoreContext::test_mock(fb);
-            let repo =
-                Arc::new(Repo::new_test(ctx.clone(), many_files_dirs::getrepo(fb).await).await?);
+    #[fbinit::compat_test]
+    async fn test_hg_file_history(fb: FacebookInit) -> Result<(), MononokeError> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = Arc::new(Repo::new_test(ctx.clone(), many_files_dirs::getrepo(fb).await).await?);
 
-            // The `many_files_dirs` test repo contains the following files (at tip):
-            //   $ hg manifest --debug
-            //   b8e02f6433738021a065f94175c7cd23db5f05be 644   1
-            //   5d9299349fc01ddd25d0070d149b124d8f10411e 644   2
-            //   e2ac7cbe1f85e0d8b416005e905aa2189434ce6c 644   dir1
-            //   0eb86721b74ed44cf176ee48b5e95f0192dc2824 644   dir2/file_1_in_dir2
+        // The `many_files_dirs` test repo contains the following files (at tip):
+        //   $ hg manifest --debug
+        //   b8e02f6433738021a065f94175c7cd23db5f05be 644   1
+        //   5d9299349fc01ddd25d0070d149b124d8f10411e 644   2
+        //   e2ac7cbe1f85e0d8b416005e905aa2189434ce6c 644   dir1
+        //   0eb86721b74ed44cf176ee48b5e95f0192dc2824 644   dir2/file_1_in_dir2
 
-            let repo_ctx = RepoContext::new(ctx, repo)?;
-            let hg = repo_ctx.hg();
+        let repo_ctx = RepoContext::new(ctx, repo)?;
+        let hg = repo_ctx.hg();
 
-            // Test HgFileContext::new.
-            let file_id =
-                HgFileNodeId::from_str("b8e02f6433738021a065f94175c7cd23db5f05be").unwrap();
-            let hg_file = HgFileContext::new(hg.clone(), file_id).await?;
+        // Test HgFileContext::new.
+        let file_id = HgFileNodeId::from_str("b8e02f6433738021a065f94175c7cd23db5f05be").unwrap();
+        let hg_file = HgFileContext::new(hg.clone(), file_id).await?;
 
-            let path = MPath::new("1")?;
-            let history = hg_file.history(path, None).try_collect::<Vec<_>>().await?;
+        let path = MPath::new("1")?;
+        let history = hg_file.history(path, None).try_collect::<Vec<_>>().await?;
 
-            let expected = vec![HgFileHistoryEntry::new(
-                file_id,
-                HgParents::None,
-                HgChangesetId::new(NULL_HASH),
-                None,
-            )];
-            assert_eq!(history, expected);
+        let expected = vec![HgFileHistoryEntry::new(
+            file_id,
+            HgParents::None,
+            HgChangesetId::new(NULL_HASH),
+            None,
+        )];
+        assert_eq!(history, expected);
 
-            Ok(())
-        })
+        Ok(())
     }
 }
