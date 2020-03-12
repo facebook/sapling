@@ -222,6 +222,13 @@ mod macos {
 pub fn fstype(path: impl AsRef<Path>) -> io::Result<String> {
     let path = path.as_ref();
 
+    // Auto correct an empty path to ".".
+    let path = if path == Path::new("") {
+        Path::new(".")
+    } else {
+        path
+    };
+
     #[cfg(target_os = "linux")]
     {
         return self::linux::fstype(path);
