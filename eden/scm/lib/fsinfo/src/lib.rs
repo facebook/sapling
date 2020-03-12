@@ -110,7 +110,9 @@ mod unix {
 
 #[cfg(target_os = "linux")]
 mod linux {
+    use std::collections::HashMap;
     use std::io;
+    use std::os::linux::fs::MetadataExt;
     use std::path::Path;
 
     /// These filesystem types are not in libc yet
@@ -119,7 +121,23 @@ mod linux {
     const FUSE_SUPER_MAGIC: i64 = 0x65735546;
     const XFS_SUPER_MAGIC: i64 = 0x58465342;
 
-    fn get_type(f_type: i64, path: &Path) -> &'static str {
+    fn get_type(f_type: i64, path: &Path) -> String {
+        let result = get_static_type(f_type, path);
+        if result == "fuse" {
+            // Take some efforts to find out the actual filesystem.
+            // This works for Linux block devices.
+
+            if let Some(major_minor) = get_dev_major_minor(path) {
+                let props = find_udev_properties(&major_minor);
+                if let Some(name) = props.get("E:ID_FS_TYPE") {
+                    return format!("fuse.{}", name);
+                }
+            }
+        }
+        return result.to_string();
+    }
+
+    fn get_static_type(f_type: i64, path: &Path) -> &'static str {
         match f_type {
             BTRFS_SUPER_MAGIC => "btrfs",
             CIFS_SUPER_MAGIC => "cifs",
@@ -155,9 +173,33 @@ mod linux {
         }
     }
 
+    /// Find the udev properties for the block device. Best-effort.
+    fn find_udev_properties(major_minor: &str) -> HashMap<String, String> {
+        // The path is found by stracing `blkid`.
+        // To do this "properly", consider https://docs.rs/udev/0.3.0/udev/struct.Device.html
+        let path = format!("/run/udev/data/b{}", major_minor);
+        let mut result = HashMap::new();
+        for line in std::fs::read_to_string(path).unwrap_or_default().lines() {
+            if line.contains("=") {
+                let words: Vec<_> = line.splitn(2, "=").collect();
+                result.insert(words[0].into(), words[1].into());
+            }
+        }
+        result
+    }
+
+    /// Get the "st_dev". Return the major:minor form (ex. "8:1").
+    fn get_dev_major_minor(path: &Path) -> Option<String> {
+        path.symlink_metadata().ok().map(|m| {
+            let st_dev = m.st_dev();
+            let (major, minor) = unsafe { (libc::major(st_dev), libc::minor(st_dev)) };
+            format!("{}:{}", major, minor)
+        })
+    }
+
     pub fn fstype(path: &Path) -> io::Result<String> {
         let fs_stat = super::unix::get_statfs(path)?;
-        Ok(get_type(fs_stat.f_type, path).into())
+        Ok(get_type(fs_stat.f_type, path))
     }
 }
 
