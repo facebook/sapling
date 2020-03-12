@@ -27,6 +27,7 @@ pub fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyNone> {
     m.add(py, "dirs", pydirs::init_module(py, &name)?)?;
     m.add(py, "edenapi", pyedenapi::init_module(py, &name)?)?;
     m.add(py, "error", pyerror::init_module(py, &name)?)?;
+    m.add(py, "fs", pyfs::init_module(py, &name)?)?;
     m.add(py, "hgtime", pyhgtime::init_module(py, &name)?)?;
     m.add(py, "indexes", pyindexes::init_module(py, &name)?)?;
     m.add(py, "lz4", pylz4::init_module(py, &name)?)?;
