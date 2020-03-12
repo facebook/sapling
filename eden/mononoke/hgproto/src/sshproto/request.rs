@@ -14,7 +14,7 @@ use hex::FromHex;
 use mercurial_types::{HgChangesetId, HgManifestId};
 use nom::{
     alt, apply, call, closure, complete, do_parse, eof, error_position, is_alphanumeric, is_digit,
-    map, map_res, named, named_args, separated_list, separated_list_complete, tag, take,
+    many0, map, map_res, named, named_args, separated_list, separated_list_complete, tag, take,
     take_until_and_consume1, take_while, take_while1, try_parse, Err, ErrorKind, FindSubstring,
     IResult, Needed, Slice,
 };
@@ -88,12 +88,8 @@ named!(
 named!(
     batch_param_comma_separated<Bytes>,
     map_res!(
-        do_parse!(key: take_while!(notcomma) >> (key)),
-        |k: &[u8]| if k.is_empty() {
-            bail!("empty input while parsing batch params")
-        } else {
-            Ok::<_, Error>(Bytes::from(batch::unescape(k)?))
-        }
+        do_parse!(key: take_while!(notcomma) >> take!(1) >> (key)),
+        |k: &[u8]| { Ok::<_, Error>(Bytes::from(batch::unescape(k)?)) }
     )
 );
 
@@ -108,7 +104,7 @@ named!(
 // List of comma-separated values, each of which is encoded using batch param encoding.
 named!(
     gettreepack_directories<Vec<Bytes>>,
-    separated_list_complete!(tag!(","), batch_param_comma_separated)
+    complete!(many0!(batch_param_comma_separated))
 );
 
 // A named parameter is a name followed by a decimal integer of the number of
@@ -521,7 +517,7 @@ pub fn parse_request(buf: &mut BytesMut) -> Result<Option<Request>> {
             IResult::Done(rest, val) => Some((origlen - rest.len(), val)),
             IResult::Incomplete(_) => None,
             IResult::Error(err) => {
-                println!("{:?}", err);
+                println!("parse_request parsing error: {:?}", err);
                 Err(errors::ErrorKind::CommandParse(
                     String::from_utf8_lossy(buf.as_ref()).into_owned(),
                 ))?
@@ -1430,8 +1426,32 @@ mod test_parse {
              1111111111111111111111111111111111111111 2222222222222222222222222222222222222222\
              basemfnodes 81\n\
              2222222222222222222222222222222222222222 1111111111111111111111111111111111111111\
-             directories 5\n\
-             :o,:s";
+             directories 1\n\
+             ,";
+
+        test_parse(
+            inp,
+            Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
+                rootdir: Bytes::from("ololo".as_bytes()),
+                mfnodes: vec![hash_ones_manifest(), hash_twos_manifest()],
+                basemfnodes: btreeset![hash_twos_manifest(), hash_ones_manifest()],
+                directories: vec![Bytes::from("".as_bytes())],
+                depth: Some(1),
+            })),
+        );
+
+        let inp = "gettreepack\n\
+             * 5\n\
+             depth 1\n\
+             1\
+             rootdir 5\n\
+             ololo\
+             mfnodes 81\n\
+             1111111111111111111111111111111111111111 2222222222222222222222222222222222222222\
+             basemfnodes 81\n\
+             2222222222222222222222222222222222222222 1111111111111111111111111111111111111111\
+             directories 6\n\
+             :o,:s,";
 
         test_parse(
             inp,
@@ -1441,6 +1461,27 @@ mod test_parse {
                 basemfnodes: btreeset![hash_twos_manifest(), hash_ones_manifest()],
                 directories: vec![Bytes::from(",".as_bytes()), Bytes::from(";".as_bytes())],
                 depth: Some(1),
+            })),
+        );
+
+        let inp = "gettreepack\n\
+                   * 4\n\
+                   rootdir 0\n\
+                   mfnodes 40\n\
+                   1111111111111111111111111111111111111111\
+                   basemfnodes 40\n\
+                   1111111111111111111111111111111111111111\
+                   directories 5\n\
+                   ,foo,";
+
+        test_parse(
+            inp,
+            Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
+                rootdir: Bytes::new(),
+                mfnodes: vec![hash_ones_manifest()],
+                basemfnodes: btreeset![hash_ones_manifest()],
+                directories: vec![Bytes::from(b"".as_ref()), Bytes::from(b"foo".as_ref())],
+                depth: None,
             })),
         );
     }
