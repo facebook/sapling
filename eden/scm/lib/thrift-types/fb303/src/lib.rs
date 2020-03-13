@@ -4441,285 +4441,33 @@ pub mod mock {
 pub mod errors {
     pub mod facebook_service {
 
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetRegexCountersCompressedError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
+        pub type GetRegexCountersCompressedError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::anyhow::Error> for GetRegexCountersCompressedError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetRegexCountersCompressedError::ThriftError(err)
-            }
-        }
+        pub type GetCountersCompressedError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::fbthrift::ApplicationException> for GetRegexCountersCompressedError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetRegexCountersCompressedError::ApplicationException(ae)
-            }
-        }
+        pub type GetCpuProfileError = ::fbthrift::NonthrowingFunctionError;
 
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetCountersCompressedError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
+        pub type GetCpuProfileWithOptionsError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::anyhow::Error> for GetCountersCompressedError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetCountersCompressedError::ThriftError(err)
-            }
-        }
+        pub type GetHeapProfileError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::fbthrift::ApplicationException> for GetCountersCompressedError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetCountersCompressedError::ApplicationException(ae)
-            }
-        }
+        pub type GetWallTimeProfileError = ::fbthrift::NonthrowingFunctionError;
 
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetCpuProfileError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
+        pub type GetMemoryUsageError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::anyhow::Error> for GetCpuProfileError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetCpuProfileError::ThriftError(err)
-            }
-        }
+        pub type GetLoadError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::fbthrift::ApplicationException> for GetCpuProfileError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetCpuProfileError::ApplicationException(ae)
-            }
-        }
+        pub type GetPidError = ::fbthrift::NonthrowingFunctionError;
 
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetCpuProfileWithOptionsError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
+        pub type GetCommandLineError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::anyhow::Error> for GetCpuProfileWithOptionsError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetCpuProfileWithOptionsError::ThriftError(err)
-            }
-        }
+        pub type ReinitializeError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::fbthrift::ApplicationException> for GetCpuProfileWithOptionsError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetCpuProfileWithOptionsError::ApplicationException(ae)
-            }
-        }
+        pub type ShutdownError = ::fbthrift::NonthrowingFunctionError;
 
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetHeapProfileError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
+        pub type TranslateFramesError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::anyhow::Error> for GetHeapProfileError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetHeapProfileError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetHeapProfileError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetHeapProfileError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetWallTimeProfileError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetWallTimeProfileError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetWallTimeProfileError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetWallTimeProfileError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetWallTimeProfileError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetMemoryUsageError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetMemoryUsageError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetMemoryUsageError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetMemoryUsageError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetMemoryUsageError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetLoadError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetLoadError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetLoadError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetLoadError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetLoadError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetPidError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetPidError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetPidError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetPidError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetPidError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetCommandLineError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetCommandLineError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetCommandLineError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetCommandLineError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetCommandLineError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum ReinitializeError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for ReinitializeError {
-            fn from(err: ::anyhow::Error) -> Self {
-                ReinitializeError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for ReinitializeError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                ReinitializeError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum ShutdownError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for ShutdownError {
-            fn from(err: ::anyhow::Error) -> Self {
-                ShutdownError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for ShutdownError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                ShutdownError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum TranslateFramesError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for TranslateFramesError {
-            fn from(err: ::anyhow::Error) -> Self {
-                TranslateFramesError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for TranslateFramesError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                TranslateFramesError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetPcapLoggingConfigError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetPcapLoggingConfigError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetPcapLoggingConfigError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetPcapLoggingConfigError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetPcapLoggingConfigError::ApplicationException(ae)
-            }
-        }
+        pub type GetPcapLoggingConfigError = ::fbthrift::NonthrowingFunctionError;
 
         #[derive(Debug, thiserror::Error)]
         pub enum SetPcapLoggingConfigError {

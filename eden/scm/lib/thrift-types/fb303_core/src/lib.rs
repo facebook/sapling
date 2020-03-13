@@ -4504,325 +4504,37 @@ pub mod mock {
 pub mod errors {
     pub mod base_service {
 
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetStatusError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
+        pub type GetStatusError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::anyhow::Error> for GetStatusError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetStatusError::ThriftError(err)
-            }
-        }
+        pub type GetNameError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::fbthrift::ApplicationException> for GetStatusError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetStatusError::ApplicationException(ae)
-            }
-        }
+        pub type GetVersionError = ::fbthrift::NonthrowingFunctionError;
 
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetNameError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
+        pub type GetStatusDetailsError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::anyhow::Error> for GetNameError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetNameError::ThriftError(err)
-            }
-        }
+        pub type GetCountersError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::fbthrift::ApplicationException> for GetNameError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetNameError::ApplicationException(ae)
-            }
-        }
+        pub type GetRegexCountersError = ::fbthrift::NonthrowingFunctionError;
 
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetVersionError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
+        pub type GetSelectedCountersError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::anyhow::Error> for GetVersionError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetVersionError::ThriftError(err)
-            }
-        }
+        pub type GetCounterError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::fbthrift::ApplicationException> for GetVersionError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetVersionError::ApplicationException(ae)
-            }
-        }
+        pub type GetExportedValuesError = ::fbthrift::NonthrowingFunctionError;
 
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetStatusDetailsError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
+        pub type GetSelectedExportedValuesError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::anyhow::Error> for GetStatusDetailsError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetStatusDetailsError::ThriftError(err)
-            }
-        }
+        pub type GetRegexExportedValuesError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::fbthrift::ApplicationException> for GetStatusDetailsError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetStatusDetailsError::ApplicationException(ae)
-            }
-        }
+        pub type GetExportedValueError = ::fbthrift::NonthrowingFunctionError;
 
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetCountersError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
+        pub type SetOptionError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::anyhow::Error> for GetCountersError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetCountersError::ThriftError(err)
-            }
-        }
+        pub type GetOptionError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::fbthrift::ApplicationException> for GetCountersError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetCountersError::ApplicationException(ae)
-            }
-        }
+        pub type GetOptionsError = ::fbthrift::NonthrowingFunctionError;
 
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetRegexCountersError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetRegexCountersError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetRegexCountersError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetRegexCountersError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetRegexCountersError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetSelectedCountersError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetSelectedCountersError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetSelectedCountersError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetSelectedCountersError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetSelectedCountersError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetCounterError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetCounterError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetCounterError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetCounterError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetCounterError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetExportedValuesError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetExportedValuesError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetExportedValuesError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetExportedValuesError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetExportedValuesError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetSelectedExportedValuesError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetSelectedExportedValuesError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetSelectedExportedValuesError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetSelectedExportedValuesError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetSelectedExportedValuesError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetRegexExportedValuesError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetRegexExportedValuesError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetRegexExportedValuesError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetRegexExportedValuesError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetRegexExportedValuesError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetExportedValueError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetExportedValueError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetExportedValueError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetExportedValueError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetExportedValueError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum SetOptionError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for SetOptionError {
-            fn from(err: ::anyhow::Error) -> Self {
-                SetOptionError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for SetOptionError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                SetOptionError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetOptionError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetOptionError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetOptionError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetOptionError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetOptionError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetOptionsError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetOptionsError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetOptionsError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetOptionsError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetOptionsError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum AliveSinceError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for AliveSinceError {
-            fn from(err: ::anyhow::Error) -> Self {
-                AliveSinceError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for AliveSinceError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                AliveSinceError::ApplicationException(ae)
-            }
-        }
+        pub type AliveSinceError = ::fbthrift::NonthrowingFunctionError;
 
     }
 

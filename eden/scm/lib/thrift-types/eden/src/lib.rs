@@ -52,6 +52,7 @@ pub mod types {
     pub struct MountArgument {
         pub mountPoint: crate::types::PathString,
         pub edenClientPath: crate::types::PathString,
+        pub readOnly: bool,
     }
 
     #[derive(Clone, Debug, PartialEq)]
@@ -1123,6 +1124,7 @@ pub mod types {
             Self {
                 mountPoint: Default::default(),
                 edenClientPath: Default::default(),
+                readOnly: Default::default(),
             }
         }
     }
@@ -1140,6 +1142,9 @@ pub mod types {
             p.write_field_begin("edenClientPath", TType::String, 2);
             Serialize::write(&self.edenClientPath, p);
             p.write_field_end();
+            p.write_field_begin("readOnly", TType::Bool, 3);
+            Serialize::write(&self.readOnly, p);
+            p.write_field_end();
             p.write_field_stop();
             p.write_struct_end();
         }
@@ -1149,6 +1154,7 @@ pub mod types {
         fn read(p: &mut P) -> anyhow::Result<Self> {
             let mut field_mountPoint = None;
             let mut field_edenClientPath = None;
+            let mut field_readOnly = None;
             let _ = p.read_struct_begin(|_| ())?;
             loop {
                 let (_, fty, fid) = p.read_field_begin(|_| ())?;
@@ -1156,6 +1162,7 @@ pub mod types {
                     (TType::Stop, _) => break,
                     (TType::String, 1) => field_mountPoint = Some(Deserialize::read(p)?),
                     (TType::String, 2) => field_edenClientPath = Some(Deserialize::read(p)?),
+                    (TType::Bool, 3) => field_readOnly = Some(Deserialize::read(p)?),
                     (fty, _) => p.skip(fty)?,
                 }
                 p.read_field_end()?;
@@ -1164,6 +1171,7 @@ pub mod types {
             Ok(Self {
                 mountPoint: field_mountPoint.unwrap_or_default(),
                 edenClientPath: field_edenClientPath.unwrap_or_default(),
+                readOnly: field_readOnly.unwrap_or_default(),
             })
         }
     }
@@ -18430,25 +18438,7 @@ pub mod errors {
             }
         }
 
-        #[derive(Debug, thiserror::Error)]
-        pub enum ChownError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for ChownError {
-            fn from(err: ::anyhow::Error) -> Self {
-                ChownError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for ChownError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                ChownError::ApplicationException(ae)
-            }
-        }
+        pub type ChownError = ::fbthrift::NonthrowingFunctionError;
 
         #[derive(Debug, thiserror::Error)]
         pub enum GetScmStatusV2Error {
@@ -18822,25 +18812,7 @@ pub mod errors {
             }
         }
 
-        #[derive(Debug, thiserror::Error)]
-        pub enum DebugOutstandingFuseCallsError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for DebugOutstandingFuseCallsError {
-            fn from(err: ::anyhow::Error) -> Self {
-                DebugOutstandingFuseCallsError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for DebugOutstandingFuseCallsError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                DebugOutstandingFuseCallsError::ApplicationException(ae)
-            }
-        }
+        pub type DebugOutstandingFuseCallsError = ::fbthrift::NonthrowingFunctionError;
 
         #[derive(Debug, thiserror::Error)]
         pub enum DebugGetInodePathError {
@@ -19122,65 +19094,11 @@ pub mod errors {
             }
         }
 
-        #[derive(Debug, thiserror::Error)]
-        pub enum EnableTracingError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
+        pub type EnableTracingError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::anyhow::Error> for EnableTracingError {
-            fn from(err: ::anyhow::Error) -> Self {
-                EnableTracingError::ThriftError(err)
-            }
-        }
+        pub type DisableTracingError = ::fbthrift::NonthrowingFunctionError;
 
-        impl From<::fbthrift::ApplicationException> for EnableTracingError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                EnableTracingError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum DisableTracingError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for DisableTracingError {
-            fn from(err: ::anyhow::Error) -> Self {
-                DisableTracingError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for DisableTracingError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                DisableTracingError::ApplicationException(ae)
-            }
-        }
-
-        #[derive(Debug, thiserror::Error)]
-        pub enum GetTracePointsError {
-            #[error("Application exception: {0:?}")]
-            ApplicationException(::fbthrift::types::ApplicationException),
-            #[error("{0}")]
-            ThriftError(::anyhow::Error),
-        }
-
-        impl From<::anyhow::Error> for GetTracePointsError {
-            fn from(err: ::anyhow::Error) -> Self {
-                GetTracePointsError::ThriftError(err)
-            }
-        }
-
-        impl From<::fbthrift::ApplicationException> for GetTracePointsError {
-            fn from(ae: ::fbthrift::ApplicationException) -> Self {
-                GetTracePointsError::ApplicationException(ae)
-            }
-        }
+        pub type GetTracePointsError = ::fbthrift::NonthrowingFunctionError;
 
         #[derive(Debug, thiserror::Error)]
         pub enum InjectFaultError {
