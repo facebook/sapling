@@ -209,25 +209,23 @@ class GitHandler(object):
             map = self._map
 
             if self.ui.configbool("hggit", "indexedlognodemap", False):
-                # If using index log, also write the flat map, so we can roll
-                # back easily.
                 self._map_real.flush()
-
-            file = self.vfs(map_file, "a+", atomictemp=True)
-            buf = hgutil.stringio()
-            bwrite = buf.write
-            # Append new entries to the end of the file so we can search
-            # backwards from the end for recently added entries.
-            for hgnode in self._map_hg_modifications:
-                gitnode = map.lookupbysecond(hgnode)
-                if gitnode is None:
-                    raise KeyError(hex(hgnode))
-                bwrite("%s %s\n" % (hex(gitnode), hex(hgnode)))
+            else:
+                file = self.vfs(map_file, "a+", atomictemp=True)
+                buf = hgutil.stringio()
+                bwrite = buf.write
+                # Append new entries to the end of the file so we can search
+                # backwards from the end for recently added entries.
+                for hgnode in self._map_hg_modifications:
+                    gitnode = map.lookupbysecond(hgnode)
+                    if gitnode is None:
+                        raise KeyError(hex(hgnode))
+                    bwrite("%s %s\n" % (hex(gitnode), hex(hgnode)))
+                file.write(buf.getvalue())
+                buf.close()
+                # If this complains, atomictempfile no longer has close
+                file.close()
             self._map_hg_modifications.clear()
-            file.write(buf.getvalue())
-            buf.close()
-            # If this complains, atomictempfile no longer has close
-            file.close()
         finally:
             wlock.release()
 
