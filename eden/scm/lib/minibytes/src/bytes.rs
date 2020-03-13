@@ -8,25 +8,45 @@
 use std::ops::{Range, RangeBounds};
 use std::sync::Arc;
 
+pub type Bytes = AbstractBytes<[u8]>;
+pub trait BytesOwner: AsRef<[u8]> + Send + Sync + 'static {}
+
 /// Immutable bytes with zero-copy slicing and cloning.
-#[derive(Clone)]
-pub struct Bytes {
-    ptr: *const u8,
-    len: usize,
+pub struct AbstractBytes<T: ?Sized> {
+    pub(crate) ptr: *const u8,
+    pub(crate) len: usize,
 
     // Actual owner of the bytes. None for static buffers.
-    owner: Option<Arc<dyn BytesOwner>>,
+    owner: Option<Arc<dyn AbstractOwner<T>>>,
 }
 
 /// The actual storage owning the bytes.
-pub trait BytesOwner: AsRef<[u8]> + Send + Sync + 'static {}
+pub trait AbstractOwner<T: ?Sized>: AsRef<T> + Send + Sync + 'static {}
 
-// BytesOwner is Send + Sync and Bytes is immutable.
-unsafe impl Send for Bytes {}
-unsafe impl Sync for Bytes {}
+impl<T: BytesOwner> AbstractOwner<[u8]> for T {}
+
+// AbstractOwner<T> is Send + Sync and AbstractBytes<T> is immutable.
+unsafe impl<T: ?Sized> Send for AbstractBytes<T> {}
+unsafe impl<T: ?Sized> Sync for AbstractBytes<T> {}
+
+// #[derive(Clone)] does not work well with type parameters.
+// Therefore implement Clone manually.
+impl<T: ?Sized> Clone for AbstractBytes<T> {
+    fn clone(&self) -> Self {
+        Self {
+            ptr: self.ptr,
+            len: self.len,
+            owner: self.owner.clone(),
+        }
+    }
+}
 
 // Core implementation of Bytes.
-impl Bytes {
+impl<T> AbstractBytes<T>
+where
+    T: SliceLike + ?Sized,
+    T::Owned: AbstractOwner<T>,
+{
     /// Returns a slice of self for the provided range.
     /// This operation is `O(1)`.
     pub fn slice(&self, range: impl RangeBounds<usize>) -> Self {
@@ -46,6 +66,7 @@ impl Bytes {
         if start == end {
             Self::new()
         } else {
+            T::check_slice_bytes(self.as_bytes(), start, end);
             Self {
                 ptr: unsafe { self.ptr.offset(start as isize) },
                 len: end - start,
@@ -59,7 +80,7 @@ impl Bytes {
     ///
     /// This is similar to `bytes::Bytes::slice_ref` from `bytes 0.5.4`,
     /// but does not panic.
-    pub fn slice_to_bytes(&self, slice: &[u8]) -> Self {
+    pub fn slice_to_bytes(&self, slice: &T) -> Self {
         match self.range_of_slice(slice) {
             Some(range) => self.slice(range),
             None => Self::copy_from_slice(slice),
@@ -73,7 +94,7 @@ impl Bytes {
     /// `Bytes`.
     ///
     /// This operation is `O(1)`.
-    pub fn range_of_slice(&self, slice: &[u8]) -> Option<Range<usize>> {
+    pub fn range_of_slice(&self, slice: &T) -> Option<Range<usize>> {
         let slice_start = slice.as_ptr() as usize;
         let slice_end = slice_start + slice.len();
         let bytes_start = self.ptr as usize;
@@ -89,13 +110,18 @@ impl Bytes {
     /// Creates an empty `Bytes`.
     #[inline]
     pub fn new() -> Self {
-        Self::from_static(b"")
+        let empty = T::EMPTY.as_bytes();
+        Self {
+            ptr: empty.as_ptr(),
+            len: empty.len(),
+            owner: None,
+        }
     }
 
     /// Creates `Bytes` from a static slice.
     #[inline]
-    pub fn from_static(value: &'static [u8]) -> Self {
-        let slice: &[u8] = value.as_ref();
+    pub fn from_static(value: &'static T) -> Self {
+        let slice: &[u8] = value.as_bytes();
         Self {
             ptr: slice.as_ptr(),
             len: slice.len(),
@@ -104,22 +130,67 @@ impl Bytes {
     }
 
     /// Creates `Bytes` from a [`BytesOwner`] (for example, `Vec<u8>`).
-    pub fn from_owner(value: impl BytesOwner) -> Self {
-        let slice: &[u8] = value.as_ref();
+    pub fn from_owner(value: impl AbstractOwner<T>) -> Self {
+        let slice: &T = value.as_ref();
+        let bytes = slice.as_bytes();
         Self {
-            ptr: slice.as_ptr(),
-            len: slice.len(),
+            ptr: bytes.as_ptr(),
+            len: bytes.len(),
             owner: Some(Arc::new(value)),
         }
     }
 
     /// Creates `Bytes` instance from slice, by copying it.
-    pub fn copy_from_slice(data: &[u8]) -> Self {
-        Self::from_owner(data.to_vec())
+    pub fn copy_from_slice(data: &T) -> Self {
+        Self::from_owner(data.to_owned())
     }
 
     #[inline]
-    pub(crate) fn as_slice(&self) -> &[u8] {
+    pub(crate) fn as_bytes(&self) -> &[u8] {
         unsafe { std::slice::from_raw_parts(self.ptr, self.len) }
+    }
+}
+
+impl Bytes {
+    #[inline]
+    pub(crate) fn as_slice(&self) -> &[u8] {
+        self.as_bytes()
+    }
+}
+
+pub trait SliceLike: 'static {
+    type Owned;
+    const EMPTY: &'static Self;
+
+    fn as_bytes(&self) -> &[u8];
+    fn to_owned(&self) -> Self::Owned;
+
+    #[inline]
+    fn check_slice_bytes(bytes: &[u8], start: usize, end: usize) {
+        let _ = (bytes, start, end);
+    }
+
+    #[inline]
+    fn len(&self) -> usize {
+        self.as_bytes().len()
+    }
+
+    #[inline]
+    fn as_ptr(&self) -> *const u8 {
+        self.as_bytes().as_ptr()
+    }
+}
+
+impl SliceLike for [u8] {
+    type Owned = Vec<u8>;
+    const EMPTY: &'static Self = b"";
+
+    #[inline]
+    fn as_bytes(&self) -> &[u8] {
+        self
+    }
+    #[inline]
+    fn to_owned(&self) -> Self::Owned {
+        self.to_vec()
     }
 }
