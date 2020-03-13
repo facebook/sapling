@@ -40,7 +40,7 @@ const MAX_KEY_SIZE: usize = 200;
 // In order to store blobs that can be stored in Memcache as well use the same max size as memcache
 // does, but leave some extra bytes for metadata
 const CHUNK_SIZE: usize = MEMCACHE_VALUE_MAX_SIZE - 1000;
-const SQLITE_SHARD_NUM: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(100) };
+const SQLITE_SHARD_NUM: NonZeroUsize = unsafe { NonZeroUsize::new_unchecked(2) };
 
 const COUNTED_ID: &str = "sqlblob";
 pub type CountedSqlblob<C> = CountedBlobstore<Sqlblob<C>>;
