@@ -227,11 +227,16 @@ def readcommitcloudstate(repo):
 
 
 def _makerage(ui, repo, **opts):
-    # Make graphlog shorter, and force use of lines-square renderer, as the
-    # user's configuration may not render properly in a text file.
     configoverrides = {
+        # Make graphlog shorter.
         ("experimental", "graphshorten"): "1",
+        # Force use of lines-square renderer, as the user's configuration may
+        # not render properly in a text file.
         ("experimental", "graph.renderer"): "lines-square",
+        # Reduce the amount of data used for debugnetwork speed tests to
+        # increase the chance they complete within 20s.
+        ("debugnetwork", "speed-test-download-size"): "4M",
+        ("debugnetwork", "speed-test-upload-size"): "1M",
     }
 
     # Override the encoding to "UTF-8" to generate the rage in UTF-8.
