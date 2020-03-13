@@ -157,7 +157,7 @@ pub fn request_handler(
     let ssh_env_vars = SshEnvVars::from_map(&preamble.misc);
     let load_limiter = load_limiting_config.map(|(config, category)| {
         let (throttle_limits, rate_limits) =
-            loadlimiting_configs(config, client_hostname, &ssh_env_vars);
+            loadlimiting_configs(config, &client_hostname, &ssh_env_vars);
         LoadLimiter::new(fb, throttle_limits, rate_limits, category)
     });
 
@@ -248,7 +248,7 @@ pub fn request_handler(
 
 fn loadlimiting_configs(
     config: ConfigHandle<MononokeThrottleLimits>,
-    client_hostname: String,
+    client_hostname: &str,
     ssh_env_vars: &SshEnvVars,
 ) -> (MononokeThrottleLimit, RateLimits) {
     let is_quicksand = is_quicksand(&ssh_env_vars);
@@ -262,7 +262,7 @@ fn loadlimiting_configs(
     let host_scheme = hostname_scheme(client_hostname);
     let limit = config
         .hostprefixes
-        .get(&host_scheme)
+        .get(host_scheme)
         .unwrap_or(&config.defaults);
 
     let multiplier = if is_quicksand {
@@ -287,12 +287,23 @@ fn loadlimiting_configs(
 /// Translates a hostname in to a host scheme:
 ///   devvm001.lla1.facebook.com -> devvm
 ///   hg001.lla1.facebook.com -> hg
-fn hostname_scheme(hostname: String) -> String {
-    let mut hostprefix = hostname.clone();
-    let index = hostprefix.find(|c: char| !c.is_ascii_alphabetic());
+fn hostname_scheme(hostname: &str) -> &str {
+    let index = hostname.find(|c: char| !c.is_ascii_alphabetic());
     match index {
-        Some(index) => hostprefix.truncate(index),
-        None => {}
+        Some(index) => hostname.split_at(index).0,
+        None => hostname,
     }
-    hostprefix
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_hostname_scheme() {
+        assert_eq!(hostname_scheme("devvm001.lla1.facebook.com"), "devvm");
+        assert_eq!(hostname_scheme("hg001.lla1.facebook.com"), "hg");
+        assert_eq!(hostname_scheme("ololo"), "ololo");
+        assert_eq!(hostname_scheme(""), "");
+    }
 }
