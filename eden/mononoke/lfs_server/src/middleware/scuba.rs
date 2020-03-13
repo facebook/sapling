@@ -247,8 +247,8 @@ fn log_stats(
         move |duration, client_hostname, bytes_sent, perf_counters| {
             scuba.add(ScubaKey::DurationMs, duration.as_millis_unchecked());
 
-            if let Some(client_hostname) = client_hostname {
-                scuba.add(ScubaKey::ClientHostname, client_hostname.to_string());
+            if let Some(client_hostname) = client_hostname.as_deref() {
+                scuba.add(ScubaKey::ClientHostname, client_hostname);
             }
 
             if let Some(bytes_sent) = bytes_sent {

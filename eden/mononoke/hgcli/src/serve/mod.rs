@@ -146,8 +146,7 @@ impl<'a> StdioRelay<'a> {
             // hgcli is run locally, so the source_hostname is the host it is currently running on
             fbwhoami::FbWhoAmI::new()
                 .ok()
-                .and_then(|who| who.get_name())
-                .map(|hostname| hostname.to_owned())
+                .and_then(|who| who.name.clone())
         };
 
         let mut preamble = Preamble::new(

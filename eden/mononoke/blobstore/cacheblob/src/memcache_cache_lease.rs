@@ -123,9 +123,9 @@ impl MemcacheOps {
         backing_store_params: impl ToString,
     ) -> Result<Self, Error> {
         let hostname = FbWhoAmI::new()?
-            .get_name()
-            .ok_or(Error::msg("No hostname in fbwhoami"))?
-            .to_string();
+            .name
+            .clone()
+            .ok_or(Error::msg("No hostname in fbwhoami"))?;
 
         let blob_key = format!(
             "scm.mononoke.blobstore.{}.{}",

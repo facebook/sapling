@@ -42,9 +42,9 @@ lazy_static! {
     static ref DATACENTER_REGION_PREFIX: String = {
         FbWhoAmI::new()
             .expect("failed to init fbwhoami")
-            .get_region_data_center_prefix()
+            .region_datacenter_prefix
+            .clone()
             .expect("failed to get region from fbwhoami")
-            .to_string()
     };
 }
 

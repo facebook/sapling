@@ -873,11 +873,10 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('clienttelemetry')
     fn clienttelemetry(&self, args: HashMap<Vec<u8>, Vec<u8>>) -> HgCommandRes<String> {
-        let fallback_hostname = "<no hostname found>";
-        let hostname = match FbWhoAmI::new() {
-            Ok(fbwhoami) => fbwhoami.get_name().unwrap_or(fallback_hostname).to_string(),
-            Err(_) => fallback_hostname.to_string(),
-        };
+        let hostname = FbWhoAmI::new()
+            .ok()
+            .and_then(|who| who.name.clone())
+            .unwrap_or_else(|| "<no hostname found>".to_owned());
 
         let (_ctx, mut command_logger) = self.start_command(ops::CLIENTTELEMETRY);
 
