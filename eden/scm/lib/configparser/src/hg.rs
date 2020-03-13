@@ -14,7 +14,7 @@ use std::hash::Hash;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
-use minibytes::Bytes;
+use minibytes::Text;
 use util::path::expand_path;
 
 use crate::config::{ConfigSet, Options};
@@ -30,20 +30,18 @@ pub trait OptionsHgExt {
 
     /// Set read-only config items. `items` contains a list of tuple `(section, name)`.
     /// Setting those items to new value will be ignored.
-    fn readonly_items<S: Into<Bytes>, N: Into<Bytes>>(self, items: Vec<(S, N)>) -> Self;
+    fn readonly_items<S: Into<Text>, N: Into<Text>>(self, items: Vec<(S, N)>) -> Self;
 
     /// Set section remap. If a section name matches an entry key, it will be treated as if the
     /// name is the entry value. The remap wouldn't happen recursively. For example, with a
     /// `{"A": "B", "B": "C"}` map, section name "A" will be treated as "B", not "C".
     /// This is implemented via `append_filter`.
-    fn remap_sections<K: Eq + Hash + Into<Bytes>, V: Into<Bytes>>(
-        self,
-        remap: HashMap<K, V>,
-    ) -> Self;
+    fn remap_sections<K: Eq + Hash + Into<Text>, V: Into<Text>>(self, remap: HashMap<K, V>)
+        -> Self;
 
     /// Set section whitelist. Sections outside the whitelist won't be loaded.
     /// This is implemented via `append_filter`.
-    fn whitelist_sections<B: Clone + Into<Bytes>>(self, sections: Vec<B>) -> Self;
+    fn whitelist_sections<B: Clone + Into<Text>>(self, sections: Vec<B>) -> Self;
 }
 
 pub trait ConfigSetHgExt {
@@ -84,7 +82,7 @@ pub trait ConfigSetHgExt {
 }
 
 pub trait FromConfigValue: Sized {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self>;
+    fn try_from_str(s: &str) -> Result<Self>;
 }
 
 /// Load system, user config files.
@@ -112,19 +110,19 @@ impl OptionsHgExt for Options {
                     .collect();
 
                 // [defaults] and [commands] are always blacklisted.
-                let mut section_blacklist: HashSet<Bytes> =
+                let mut section_blacklist: HashSet<Text> =
                     ["defaults", "commands"].iter().map(|&s| s.into()).collect();
 
                 // [alias], [revsetalias], [templatealias] are blacklisted if they are outside
                 // HGPLAINEXCEPT.
                 for &name in ["alias", "revsetalias", "templatealias"].iter() {
                     if !plain_exceptions.contains(name) {
-                        section_blacklist.insert(Bytes::from(name));
+                        section_blacklist.insert(Text::from(name));
                     }
                 }
 
                 // These configs under [ui] are always blacklisted.
-                let mut ui_blacklist: HashSet<Bytes> = [
+                let mut ui_blacklist: HashSet<Text> = [
                     "debug",
                     "fallbackencoding",
                     "quiet",
@@ -146,9 +144,9 @@ impl OptionsHgExt for Options {
                 (section_blacklist, ui_blacklist)
             };
 
-            let filter = move |section: Bytes, name: Bytes, value: Option<Bytes>| {
+            let filter = move |section: Text, name: Text, value: Option<Text>| {
                 if section_blacklist.contains(&section)
-                    || (section.as_ref() == b"ui" && ui_blacklist.contains(&name))
+                    || (section.as_ref() == "ui" && ui_blacklist.contains(&name))
                 {
                     None
                 } else {
@@ -164,14 +162,14 @@ impl OptionsHgExt for Options {
 
     /// Set section whitelist. Sections outside the whitelist won't be loaded.
     /// This is implemented via `append_filter`.
-    fn whitelist_sections<B: Clone + Into<Bytes>>(self, sections: Vec<B>) -> Self {
-        let whitelist: HashSet<Bytes> = sections
+    fn whitelist_sections<B: Clone + Into<Text>>(self, sections: Vec<B>) -> Self {
+        let whitelist: HashSet<Text> = sections
             .iter()
             .cloned()
             .map(|section| section.into())
             .collect();
 
-        let filter = move |section: Bytes, name: Bytes, value: Option<Bytes>| {
+        let filter = move |section: Text, name: Text, value: Option<Text>| {
             if whitelist.contains(&section) {
                 Some((section, name, value))
             } else {
@@ -188,15 +186,15 @@ impl OptionsHgExt for Options {
     /// This is implemented via `append_filter`.
     fn remap_sections<K, V>(self, remap: HashMap<K, V>) -> Self
     where
-        K: Eq + Hash + Into<Bytes>,
-        V: Into<Bytes>,
+        K: Eq + Hash + Into<Text>,
+        V: Into<Text>,
     {
-        let remap: HashMap<Bytes, Bytes> = remap
+        let remap: HashMap<Text, Text> = remap
             .into_iter()
             .map(|(k, v)| (k.into(), v.into()))
             .collect();
 
-        let filter = move |section: Bytes, name: Bytes, value: Option<Bytes>| {
+        let filter = move |section: Text, name: Text, value: Option<Text>| {
             let section = remap.get(&section).cloned().unwrap_or(section);
             Some((section, name, value))
         };
@@ -204,13 +202,13 @@ impl OptionsHgExt for Options {
         self.append_filter(Box::new(filter))
     }
 
-    fn readonly_items<S: Into<Bytes>, N: Into<Bytes>>(self, items: Vec<(S, N)>) -> Self {
-        let readonly_items: HashSet<(Bytes, Bytes)> = items
+    fn readonly_items<S: Into<Text>, N: Into<Text>>(self, items: Vec<(S, N)>) -> Self {
+        let readonly_items: HashSet<(Text, Text)> = items
             .into_iter()
             .map(|(section, name)| (section.into(), name.into()))
             .collect();
 
-        let filter = move |section: Bytes, name: Bytes, value: Option<Bytes>| {
+        let filter = move |section: Text, name: Text, value: Option<Text>| {
             if readonly_items.contains(&(section.clone(), name.clone())) {
                 None
             } else {
@@ -318,14 +316,14 @@ impl ConfigSetHgExt for ConfigSet {
 
     fn get_opt<T: FromConfigValue>(&self, section: &str, name: &str) -> Result<Option<T>> {
         ConfigSet::get(self, section, name)
-            .map(|bytes| T::try_from_bytes(&bytes))
+            .map(|bytes| T::try_from_str(&bytes))
             .transpose()
     }
 }
 
 impl FromConfigValue for bool {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        let value = std::str::from_utf8(bytes)?.to_lowercase();
+    fn try_from_str(s: &str) -> Result<Self> {
+        let value = s.to_lowercase();
         match value.as_ref() {
             "1" | "yes" | "true" | "on" | "always" => Ok(true),
             "0" | "no" | "false" | "off" | "never" => Ok(false),
@@ -335,79 +333,78 @@ impl FromConfigValue for bool {
 }
 
 impl FromConfigValue for i8 {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        let value = std::str::from_utf8(bytes)?.parse()?;
+    fn try_from_str(s: &str) -> Result<Self> {
+        let value = s.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for i16 {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        let value = std::str::from_utf8(bytes)?.parse()?;
+    fn try_from_str(s: &str) -> Result<Self> {
+        let value = s.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for i32 {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        let value = std::str::from_utf8(bytes)?.parse()?;
+    fn try_from_str(s: &str) -> Result<Self> {
+        let value = s.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for i64 {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        let value = std::str::from_utf8(bytes)?.parse()?;
+    fn try_from_str(s: &str) -> Result<Self> {
+        let value = s.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for isize {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        let value = std::str::from_utf8(bytes)?.parse()?;
+    fn try_from_str(s: &str) -> Result<Self> {
+        let value = s.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for u8 {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        let value = std::str::from_utf8(bytes)?.parse()?;
+    fn try_from_str(s: &str) -> Result<Self> {
+        let value = s.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for u16 {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        let value = std::str::from_utf8(bytes)?.parse()?;
+    fn try_from_str(s: &str) -> Result<Self> {
+        let value = s.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for u32 {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        let value = std::str::from_utf8(bytes)?.parse()?;
+    fn try_from_str(s: &str) -> Result<Self> {
+        let value = s.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for u64 {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        let value = std::str::from_utf8(bytes)?.parse()?;
+    fn try_from_str(s: &str) -> Result<Self> {
+        let value = s.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for usize {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        let value = std::str::from_utf8(bytes)?.parse()?;
+    fn try_from_str(s: &str) -> Result<Self> {
+        let value = s.parse()?;
         Ok(value)
     }
 }
 
 impl FromConfigValue for String {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        String::from_utf8(bytes.to_vec())
-            .map_err(|_| Error::Convert(format!("{:?} is not utf8 encoded", bytes)).into())
+    fn try_from_str(s: &str) -> Result<Self> {
+        Ok(s.to_string())
     }
 }
 
@@ -429,7 +426,7 @@ impl From<u64> for ByteCount {
 }
 
 impl FromConfigValue for ByteCount {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
+    fn try_from_str(s: &str) -> Result<Self> {
         // This implementation matches mercurial/util.py:sizetoint
         let sizeunits = [
             ("kb", 1u64 << 10),
@@ -444,7 +441,7 @@ impl FromConfigValue for ByteCount {
             ("", 1),
         ];
 
-        let value = std::str::from_utf8(bytes)?.to_lowercase();
+        let value = s.to_lowercase();
         for (suffix, unit) in sizeunits.iter() {
             if value.ends_with(suffix) {
                 let number_str: &str = value[..value.len() - suffix.len()].trim();
@@ -466,23 +463,21 @@ impl FromConfigValue for ByteCount {
 }
 
 impl FromConfigValue for PathBuf {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        let st = std::str::from_utf8(&bytes)?;
-
-        Ok(expand_path(st))
+    fn try_from_str(s: &str) -> Result<Self> {
+        Ok(expand_path(s))
     }
 }
 
 impl<T: FromConfigValue> FromConfigValue for Vec<T> {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        let items = parse_list(bytes);
-        items.into_iter().map(|s| T::try_from_bytes(&s)).collect()
+    fn try_from_str(s: &str) -> Result<Self> {
+        let items = parse_list(s);
+        items.into_iter().map(|s| T::try_from_str(&s)).collect()
     }
 }
 
 impl<T: FromConfigValue> FromConfigValue for Option<T> {
-    fn try_from_bytes(bytes: &[u8]) -> Result<Self> {
-        T::try_from_bytes(&bytes).map(Option::Some)
+    fn try_from_str(s: &str) -> Result<Self> {
+        T::try_from_str(s).map(Option::Some)
     }
 }
 
@@ -497,11 +492,11 @@ impl<T: FromConfigValue> FromConfigValue for Option<T> {
 /// use configparser::hg::parse_list;
 ///
 /// assert_eq!(
-///     parse_list(b"this,is \"a small\" ,test"),
-///     vec![b"this".to_vec(), b"is".to_vec(), b"a small".to_vec(), b"test".to_vec()]
+///     parse_list("this,is \"a small\" ,test"),
+///     vec!["this".to_string(), "is".to_string(), "a small".to_string(), "test".to_string()]
 /// );
 /// ```
-pub fn parse_list<B: AsRef<[u8]>>(value: B) -> Vec<Bytes> {
+pub fn parse_list<B: AsRef<str>>(value: B) -> Vec<Text> {
     let mut value = value.as_ref();
 
     // ```python
@@ -509,17 +504,17 @@ pub fn parse_list<B: AsRef<[u8]>>(value: B) -> Vec<Bytes> {
     //     result = _configlist(value.lstrip(' ,\n'))
     // ```
 
-    while b" ,\n".iter().any(|b| value.starts_with(&[*b])) {
+    while [" ", ",", "\n"].iter().any(|b| value.starts_with(b)) {
         value = &value[1..]
     }
 
     parse_list_internal(value)
         .into_iter()
-        .map(Bytes::from)
+        .map(Text::from)
         .collect()
 }
 
-fn parse_list_internal(value: &[u8]) -> Vec<Vec<u8>> {
+fn parse_list_internal(value: &str) -> Vec<String> {
     let mut value = value;
 
     // ```python
@@ -533,9 +528,7 @@ fn parse_list_internal(value: &[u8]) -> Vec<Vec<u8>> {
     //     return parts
     // ```
 
-    while b" ,\n".iter().any(|b| value.ends_with(&[*b])) {
-        value = &value[..value.len() - 1]
-    }
+    value = value.trim_end_matches(|c| " ,\n".contains(c));
 
     if value.is_empty() {
         return Vec::new();
@@ -548,8 +541,9 @@ fn parse_list_internal(value: &[u8]) -> Vec<Vec<u8>> {
     };
 
     let mut offset = 0;
-    let mut parts: Vec<Vec<u8>> = vec![Vec::new()];
+    let mut parts: Vec<String> = vec![String::new()];
     let mut state = State::Plain;
+    let value: Vec<char> = value.chars().collect();
 
     loop {
         match state {
@@ -574,7 +568,7 @@ fn parse_list_internal(value: &[u8]) -> Vec<Vec<u8>> {
             // ```
             State::Plain => {
                 let mut whitespace = false;
-                while offset < value.len() && b" \n\r\t,".contains(&value[offset]) {
+                while offset < value.len() && " \n\r\t,".contains(value[offset]) {
                     whitespace = true;
                     offset += 1;
                 }
@@ -582,16 +576,16 @@ fn parse_list_internal(value: &[u8]) -> Vec<Vec<u8>> {
                     break;
                 }
                 if whitespace {
-                    parts.push(Vec::new());
+                    parts.push(Default::default());
                 }
-                if value[offset] == b'"' {
+                if value[offset] == '"' {
                     let branch = {
                         match parts.last() {
                             None => 1,
                             Some(last) => {
                                 if last.is_empty() {
                                     1
-                                } else if last.ends_with(b"\\") {
+                                } else if last.ends_with("\\") {
                                     2
                                 } else {
                                     3
@@ -658,52 +652,47 @@ fn parse_list_internal(value: &[u8]) -> Vec<Vec<u8>> {
             //     return _parse_plain, parts, offset
             // ```
             State::Quote => {
-                if offset < value.len() && value[offset] == b'"' {
-                    parts.push(Vec::new());
+                if offset < value.len() && value[offset] == '"' {
+                    parts.push(Default::default());
                     offset += 1;
-                    while offset < value.len() && b" \n\r\t,".contains(&value[offset]) {
+                    while offset < value.len() && " \n\r\t,".contains(value[offset]) {
                         offset += 1;
                     }
                     state = State::Plain;
                     continue;
                 }
-                while offset < value.len() && value[offset] != b'"' {
-                    if value[offset] == b'\\'
-                        && offset + 1 < value.len()
-                        && value[offset + 1] == b'"'
+                while offset < value.len() && value[offset] != '"' {
+                    if value[offset] == '\\' && offset + 1 < value.len() && value[offset + 1] == '"'
                     {
                         offset += 1;
-                        parts.last_mut().unwrap().push(b'"');
+                        parts.last_mut().unwrap().push('"');
                     } else {
                         parts.last_mut().unwrap().push(value[offset]);
                     }
                     offset += 1;
                 }
                 if offset >= value.len() {
-                    let mut real_parts: Vec<Vec<u8>> = parse_list_internal(parts.last().unwrap())
-                        .iter()
-                        .map(|b| b.to_vec())
-                        .collect();
+                    let mut real_parts: Vec<String> = parse_list_internal(parts.last().unwrap());
                     if real_parts.is_empty() {
                         parts.pop();
-                        parts.push(vec![b'"']);
+                        parts.push("\"".to_string());
                     } else {
-                        real_parts[0].insert(0, b'"');
+                        real_parts[0].insert(0, '"');
                         parts.pop();
                         parts.append(&mut real_parts);
                     }
                     break;
                 }
                 offset += 1;
-                while offset < value.len() && b" ,".contains(&value[offset]) {
+                while offset < value.len() && " ,".contains(value[offset]) {
                     offset += 1;
                 }
                 if offset < value.len() {
-                    if offset + 1 == value.len() && value[offset] == b'"' {
-                        parts.last_mut().unwrap().push(b'"');
+                    if offset + 1 == value.len() && value[offset] == '"' {
+                        parts.last_mut().unwrap().push('"');
                         offset += 1;
                     } else {
-                        parts.push(Vec::new());
+                        parts.push(Default::default());
                     }
                 } else {
                     break;
@@ -847,7 +836,7 @@ mod tests {
             &opts,
         );
 
-        assert_eq!(cfg.sections(), vec![Bytes::from("x"), Bytes::from("y")]);
+        assert_eq!(cfg.sections(), vec![Text::from("x"), Text::from("y")]);
         assert_eq!(cfg.get("z", "c"), None);
     }
 
@@ -895,40 +884,40 @@ mod tests {
 
     #[test]
     fn test_parse_list() {
-        fn b<B: AsRef<[u8]>>(bytes: B) -> Bytes {
-            Bytes::copy_from_slice(bytes.as_ref())
+        fn b<B: AsRef<str>>(bytes: B) -> Text {
+            Text::copy_from_slice(bytes.as_ref())
         }
 
         // From test-ui-config.py
-        assert_eq!(parse_list(b"foo"), vec![b("foo")]);
+        assert_eq!(parse_list("foo"), vec![b("foo")]);
         assert_eq!(
-            parse_list(b"foo bar baz"),
+            parse_list("foo bar baz"),
             vec![b("foo"), b("bar"), b("baz")]
         );
-        assert_eq!(parse_list(b"alice, bob"), vec![b("alice"), b("bob")]);
+        assert_eq!(parse_list("alice, bob"), vec![b("alice"), b("bob")]);
         assert_eq!(
-            parse_list(b"foo bar baz alice, bob"),
+            parse_list("foo bar baz alice, bob"),
             vec![b("foo"), b("bar"), b("baz"), b("alice"), b("bob")]
         );
         assert_eq!(
-            parse_list(b"abc d\"ef\"g \"hij def\""),
+            parse_list("abc d\"ef\"g \"hij def\""),
             vec![b("abc"), b("d\"ef\"g"), b("hij def")]
         );
         assert_eq!(
-            parse_list(b"\"hello world\", \"how are you?\""),
+            parse_list("\"hello world\", \"how are you?\""),
             vec![b("hello world"), b("how are you?")]
         );
         assert_eq!(
-            parse_list(b"Do\"Not\"Separate"),
+            parse_list("Do\"Not\"Separate"),
             vec![b("Do\"Not\"Separate")]
         );
-        assert_eq!(parse_list(b"\"Do\"Separate"), vec![b("Do"), b("Separate")]);
+        assert_eq!(parse_list("\"Do\"Separate"), vec![b("Do"), b("Separate")]);
         assert_eq!(
-            parse_list(b"\"Do\\\"NotSeparate\""),
+            parse_list("\"Do\\\"NotSeparate\""),
             vec![b("Do\"NotSeparate")]
         );
         assert_eq!(
-            parse_list(&b"string \"with extraneous\" quotation mark\""[..]),
+            parse_list("string \"with extraneous\" quotation mark\""),
             vec![
                 b("string"),
                 b("with extraneous"),
@@ -936,19 +925,19 @@ mod tests {
                 b("mark\""),
             ]
         );
-        assert_eq!(parse_list(b"x, y"), vec![b("x"), b("y")]);
-        assert_eq!(parse_list(b"\"x\", \"y\""), vec![b("x"), b("y")]);
+        assert_eq!(parse_list("x, y"), vec![b("x"), b("y")]);
+        assert_eq!(parse_list("\"x\", \"y\""), vec![b("x"), b("y")]);
         assert_eq!(
-            parse_list(b"\"\"\" key = \"x\", \"y\" \"\"\""),
+            parse_list("\"\"\" key = \"x\", \"y\" \"\"\""),
             vec![b(""), b(" key = "), b("x\""), b("y"), b(""), b("\"")]
         );
-        assert_eq!(parse_list(b",,,,     "), Vec::<Bytes>::new());
+        assert_eq!(parse_list(",,,,     "), Vec::<Text>::new());
         assert_eq!(
-            parse_list(b"\" just with starting quotation"),
+            parse_list("\" just with starting quotation"),
             vec![b("\""), b("just"), b("with"), b("starting"), b("quotation")]
         );
         assert_eq!(
-            parse_list(&b"\"longer quotation\" with \"no ending quotation"[..]),
+            parse_list("\"longer quotation\" with \"no ending quotation"),
             vec![
                 b("longer quotation"),
                 b("with"),
@@ -958,10 +947,10 @@ mod tests {
             ]
         );
         assert_eq!(
-            parse_list(&b"this is \\\" \"not a quotation mark\""[..]),
+            parse_list("this is \\\" \"not a quotation mark\""),
             vec![b("this"), b("is"), b("\""), b("not a quotation mark")]
         );
-        assert_eq!(parse_list(b"\n \n\nding\ndong"), vec![b("ding"), b("dong")]);
+        assert_eq!(parse_list("\n \n\nding\ndong"), vec![b("ding"), b("dong")]);
 
         // Other manually written cases
         assert_eq!(parse_list("a,b,,c"), vec![b("a"), b("b"), b("c")]);

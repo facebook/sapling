@@ -11,7 +11,7 @@ use std::ptr;
 use std::slice;
 use std::{os::raw::c_char, path::Path};
 
-use minibytes::Bytes;
+use minibytes::Text;
 
 use crate::config::{ConfigSet, Options};
 use crate::error::Error;
@@ -33,7 +33,7 @@ pub extern "C" fn hgrc_configset_free(cfg: *mut ConfigSet) {
     drop(cfg);
 }
 
-fn errors_to_bytes(errors: Vec<Error>) -> *mut Bytes {
+fn errors_to_bytes(errors: Vec<Error>) -> *mut Text {
     if errors.is_empty() {
         // Success!
         return ptr::null_mut();
@@ -51,7 +51,7 @@ fn errors_to_bytes(errors: Vec<Error>) -> *mut Bytes {
     Box::into_raw(Box::new(error_text.into()))
 }
 
-fn load_path(cfg: &mut ConfigSet, path: &Path) -> *mut Bytes {
+fn load_path(cfg: &mut ConfigSet, path: &Path) -> *mut Text {
     let errors = cfg.load_path(path, &Options::new().process_hgplain());
 
     errors_to_bytes(errors)
@@ -59,10 +59,10 @@ fn load_path(cfg: &mut ConfigSet, path: &Path) -> *mut Bytes {
 
 /// Attempt to load and parse the config file at the specified path.
 /// If successful, returns a nullptr.
-/// Returns a Bytes object containing the error reason on failure; the
+/// Returns a Text object containing the error reason on failure; the
 /// error object is UTF-8 encoded text, and errors can span multiple lines.
 #[no_mangle]
-pub extern "C" fn hgrc_configset_load_path(cfg: *mut ConfigSet, path: *const c_char) -> *mut Bytes {
+pub extern "C" fn hgrc_configset_load_path(cfg: *mut ConfigSet, path: *const c_char) -> *mut Text {
     debug_assert!(!path.is_null());
     debug_assert!(!cfg.is_null());
 
@@ -80,7 +80,7 @@ pub extern "C" fn hgrc_configset_load_path(cfg: *mut ConfigSet, path: *const c_c
 
 /// Load system config files
 #[no_mangle]
-pub extern "C" fn hgrc_configset_load_system(cfg: *mut ConfigSet) -> *mut Bytes {
+pub extern "C" fn hgrc_configset_load_system(cfg: *mut ConfigSet) -> *mut Text {
     debug_assert!(!cfg.is_null());
     let cfg = unsafe { &mut *cfg };
 
@@ -92,14 +92,14 @@ pub extern "C" fn hgrc_configset_load_system(cfg: *mut ConfigSet) -> *mut Bytes 
 
 /// Load user config files
 #[no_mangle]
-pub extern "C" fn hgrc_configset_load_user(cfg: *mut ConfigSet) -> *mut Bytes {
+pub extern "C" fn hgrc_configset_load_user(cfg: *mut ConfigSet) -> *mut Text {
     debug_assert!(!cfg.is_null());
     let cfg = unsafe { &mut *cfg };
 
     errors_to_bytes(cfg.load_user())
 }
 
-/// Returns a Bytes object holding the configuration value for the corresponding
+/// Returns a Text object holding the configuration value for the corresponding
 /// section name and key.   If there is no matching section/key pair, returns nullptr.
 #[no_mangle]
 pub extern "C" fn hgrc_configset_get(
@@ -108,13 +108,14 @@ pub extern "C" fn hgrc_configset_get(
     section_len: usize,
     name: *const u8,
     name_len: usize,
-) -> *mut Bytes {
+) -> *mut Text {
     debug_assert!(!section.is_null());
     debug_assert!(!name.is_null());
     debug_assert!(!cfg.is_null());
 
-    let section = unsafe { slice::from_raw_parts(section, section_len) };
-    let name = unsafe { slice::from_raw_parts(name, name_len) };
+    let section =
+        unsafe { std::str::from_utf8_unchecked(slice::from_raw_parts(section, section_len)) };
+    let name = unsafe { std::str::from_utf8_unchecked(slice::from_raw_parts(name, name_len)) };
     let cfg = unsafe { &*cfg };
 
     match cfg.get(section, name) {
@@ -129,10 +130,10 @@ pub struct ByteData {
     len: usize,
 }
 
-/// Returns the data pointer and length for a Bytes object, suitable for constructing
+/// Returns the data pointer and length for a Text object, suitable for constructing
 /// a folly::ByteRange.
 #[no_mangle]
-pub extern "C" fn hgrc_bytes_data(bytes: *const Bytes) -> ByteData {
+pub extern "C" fn hgrc_bytes_data(bytes: *const Text) -> ByteData {
     debug_assert!(!bytes.is_null());
     let bytes = unsafe { &*bytes };
     ByteData {
@@ -141,9 +142,9 @@ pub extern "C" fn hgrc_bytes_data(bytes: *const Bytes) -> ByteData {
     }
 }
 
-/// Frees a Bytes object, releasing any associated resources
+/// Frees a Text object, releasing any associated resources
 #[no_mangle]
-pub extern "C" fn hgrc_bytes_free(bytes: *mut Bytes) {
+pub extern "C" fn hgrc_bytes_free(bytes: *mut Text) {
     debug_assert!(!bytes.is_null());
     let bytes = unsafe { Box::from_raw(bytes) };
     drop(bytes);

@@ -22,7 +22,8 @@
   > EOF
 
   >>> from bindings import configparser
-  >>> cfg = configparser.config()
+  >>> from edenscm.mercurial.uiconfig import localrcfg
+  >>> cfg = localrcfg(configparser.config())
   >>> cfg.readpath("a.rc", "readpath", None, None, None)
   ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\xe2\x90\x8a\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> cfg.parse("[c]\nx=1", "parse")
@@ -40,11 +41,11 @@
   ...     print("%s = %r" % (item, cfg.get(section, name)))
   ...     print("  sources: %r" % (cfg.sources(section, name)))
   a.x = '1'
-    sources: [('1', ('*a.rc', 6, 7, 2), 'readpath')] (glob)
+    sources: [('1', ('$TESTTMP/a.rc', 6, 7, 2), 'readpath')]
   a.y = None
-    sources: [('2', ('*a.rc', 10, 11, 3), 'readpath'), (None, ('*b.rc', 29, 36, 5), 'readpath')] (glob)
+    sources: [('2', ('$TESTTMP/a.rc', 10, 11, 3), 'readpath'), (None, ('$TESTTMP/b.rc', 29, 36, 5), 'readpath')]
   b.z = '3'
-    sources: [('3', ('*b.rc', 22, 23, 3), 'readpath')] (glob)
+    sources: [('3', ('$TESTTMP/b.rc', 22, 23, 3), 'readpath')]
   c.x = '1'
     sources: [('1', ('<builtin>', 6, 7, 2), 'parse')]
   d.x = None
@@ -57,7 +58,8 @@
 Section whitelist
 
   >>> from bindings import configparser
-  >>> cfg = configparser.config()
+  >>> from edenscm.mercurial.uiconfig import localrcfg
+  >>> cfg = localrcfg(configparser.config())
   >>> cfg.readpath("a.rc", "readpath", ["a"], None, None)
   ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\xe2\x90\x8a\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> print(cfg.sections())
@@ -66,7 +68,8 @@ Section whitelist
 Section remap
 
   >>> from bindings import configparser
-  >>> cfg = configparser.config()
+  >>> from edenscm.mercurial.uiconfig import localrcfg
+  >>> cfg = localrcfg(configparser.config())
   >>> cfg.readpath("a.rc", "readpath", None, {'a': 'x'}.items(), None)
   ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\xe2\x90\x8a\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> print(cfg.sections())
@@ -75,7 +78,8 @@ Section remap
 Config whitelist
 
   >>> from bindings import configparser
-  >>> cfg = configparser.config()
+  >>> from edenscm.mercurial.uiconfig import localrcfg
+  >>> cfg = localrcfg(configparser.config())
   >>> cfg.readpath("a.rc", "readpath", None, None, [('a', 'y')])
   ['"*broken.rc":\n --> 1:2\n  |\n1 | %not-implemented\xe2\x90\x8a\n  |  ^---\n  |\n  = expected include or unset'] (glob)
   >>> print(cfg.get('a', 'y'))
@@ -86,7 +90,8 @@ Config whitelist
 Clone
 
   >>> from bindings import configparser
-  >>> cfg1 = configparser.config()
+  >>> from edenscm.mercurial.uiconfig import localrcfg
+  >>> cfg1 = localrcfg(configparser.config())
   >>> cfg1.set("a", "x", "1", "set1")
   >>> cfg2 = cfg1.clone()
   >>> cfg2.set("b", "y", "2", "set2")

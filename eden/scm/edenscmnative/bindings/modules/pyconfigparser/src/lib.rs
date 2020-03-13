@@ -70,26 +70,26 @@ py_class!(pub class config |py| {
         Ok(errors_to_str_vec(errors))
     }
 
-    def get(&self, section: String, name: String) -> PyResult<Option<Str>> {
+    def get(&self, section: String, name: String) -> PyResult<Option<PyUnicode>> {
         let cfg = self.cfg(py).borrow();
 
-        Ok(cfg.get(section, name).map(|v| v.to_vec().into()))
+        Ok(cfg.get(section, name).map(|v| PyUnicode::new(py, &v)))
     }
 
     def sources(
         &self, section: String, name: String
-    ) -> PyResult<Vec<(Option<Str>, Option<(PyPathBuf, usize, usize, usize)>, Str)>> {
+    ) -> PyResult<Vec<(Option<PyUnicode>, Option<(PyPathBuf, usize, usize, usize)>, PyUnicode)>> {
         // Return [(value, file_source, source)]
         // file_source is a tuple of (file_path, byte_start, byte_end, line)
         let cfg = self.cfg(py).borrow();
         let sources = cfg.get_sources(section, name);
         let mut result = Vec::with_capacity(sources.len());
         for source in sources {
-            let value = source.value().as_ref().map(|v| v.to_vec().into());
+            let value = source.value().as_ref().map(|v| PyUnicode::new(py, &v));
             let file = source.location().map(|(path, range)| {
                 // Calculate the line number - count "\n" till range.start
                 let file = source.file_content().unwrap();
-                let line = 1 + file.slice(0..range.start).iter().filter(|ch| **ch == b'\n').count();
+                let line = 1 + file.slice(0..range.start).chars().filter(|ch| *ch == '\n').count();
 
                 let pypath = if path.as_os_str().is_empty() {
                     PyPathBuf::from(String::from("<builtin>"))
@@ -99,8 +99,8 @@ py_class!(pub class config |py| {
                 };
                 (pypath, range.start, range.end, line)
             });
-            let source = source.source().clone().to_vec().into();
-            result.push((value.into(), file, source));
+            let source = PyUnicode::new(py, &source.source());
+            result.push((value, file, source));
         }
         Ok(result)
     }
@@ -114,14 +114,14 @@ py_class!(pub class config |py| {
         Ok(PyNone)
     }
 
-    def sections(&self) -> PyResult<Vec<Str>> {
+    def sections(&self) -> PyResult<Vec<PyUnicode>> {
         let cfg = self.cfg(py).borrow();
-        Ok(cfg.sections().iter().map(|s| s.to_vec().into()).collect())
+        Ok(cfg.sections().iter().map(|s| PyUnicode::new(py, &s)).collect())
     }
 
-    def names(&self, section: String) -> PyResult<Vec<Str>> {
+    def names(&self, section: String) -> PyResult<Vec<PyUnicode>> {
         let cfg = self.cfg(py).borrow();
-        Ok(cfg.keys(section).iter().map(|s| s.to_vec().into()).collect())
+        Ok(cfg.keys(section).iter().map(|s| PyUnicode::new(py, &s)).collect())
     }
 
     @staticmethod
@@ -145,10 +145,10 @@ impl config {
     }
 }
 
-fn parselist(_py: Python, value: String) -> PyResult<Vec<Str>> {
+fn parselist(py: Python, value: String) -> PyResult<Vec<PyUnicode>> {
     Ok(parse_list(value)
         .iter()
-        .map(|v| v.to_vec().into())
+        .map(|v| PyUnicode::new(py, &v))
         .collect())
 }
 

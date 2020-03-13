@@ -23,7 +23,7 @@ pub fn get_str_config(config: &ConfigSet, section: &str, name: &str) -> Result<S
     let name = config
         .get(section, name)
         .ok_or_else(|| Error::ConfigNotSet(format!("{}.{}", section, name).into()))?;
-    Ok(String::from_utf8(name.to_vec())?)
+    Ok(name.to_string())
 }
 
 pub fn get_repo_name(config: &ConfigSet) -> Result<String> {

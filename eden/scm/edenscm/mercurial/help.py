@@ -435,7 +435,7 @@ class _helpdispatch(object):
         try:
             # Try to expand 'name' as an alias
             resolvedargs = cliparser.expandargs(
-                ui._rcfg, list(self.commands.table), name.split(), False
+                ui._rcfg._rcfg, list(self.commands.table), name.split(), False
             )[0]
             if name == "debug":
                 raise cliparser.AmbiguousCommand()

@@ -12,16 +12,75 @@ from __future__ import absolute_import
 
 import contextlib
 import os
+from typing import List, Optional, Tuple
 
 from bindings import configparser
 
 from . import configitems, error, pycompat, util
+from .encoding import unifromlocal, unitolocal
 from .i18n import _
 
 
 # unique object used to detect no default value has been provided when
 # retrieving configuration value.
 _unset = object()
+
+
+def optional(func, s):
+    if s is None:
+        return None
+    else:
+        return func(s)
+
+
+class localrcfg(object):
+    """Wrapper to the Rust config object that does proper encoding translation.
+
+    Note: This is no longer needed once we migrate to Python 3.
+    """
+
+    def __init__(self, rcfg):
+        self._rcfg = rcfg
+
+    def get(self, section, name):
+        # type: (str, str) -> Optional[str]
+        usection = unifromlocal(section)
+        uname = unifromlocal(name)
+        uvalue = self._rcfg.get(usection, uname)
+        return optional(unitolocal, uvalue)
+
+    def sources(self, section, name):
+        # type: (str, str) -> List[Tuple[Optional[str], Optional[Tuple[str, int, int, int]], str]]
+        result = []
+        for (uvalue, info, usource) in self._rcfg.sources(section, name):
+            value = optional(unitolocal, uvalue)
+            source = optional(unitolocal, usource)
+            result.append((value, info, source))
+        return result
+
+    def set(self, section, name, value, source):
+        # type: (str, str, Optional[str], str) -> None
+        usection = unifromlocal(section)
+        uname = unifromlocal(name)
+        uvalue = optional(unifromlocal, value)
+        usource = optional(unifromlocal, source)
+        self._rcfg.set(usection, uname, uvalue, usource)
+
+    def sections(self):
+        # type: () -> List[str]
+        return [unitolocal(s) for s in self._rcfg.sections()]
+
+    def names(self, section):
+        # type: (str) -> List[str]
+        usection = unifromlocal(section)
+        return [unitolocal(s) for s in self._rcfg.names(usection)]
+
+    def clone(self):
+        # type: () -> localrcfg
+        return localrcfg(self._rcfg.clone())
+
+    def __getattr__(self, name):
+        return getattr(self._rcfg, name)
 
 
 class uiconfig(object):
@@ -44,7 +103,7 @@ class uiconfig(object):
 
             self.fixconfig()
         else:
-            self._rcfg = configparser.config()
+            self._rcfg = localrcfg(configparser.config())
             # map from IDs to unserializable Python objects.
             self._unserializable = {}
             # config "pinned" that cannot be loaded from files.
@@ -56,7 +115,8 @@ class uiconfig(object):
     def load(cls):
         """Create a uiconfig and load global and user configs"""
         u = cls()
-        u._rcfg, errors = configparser.config.load()
+        rcfg, errors = configparser.config.load()
+        u._rcfg = localrcfg(rcfg)
         if errors:
             raise error.ParseError("\n\n".join(errors))
         root = os.path.expanduser("~")
@@ -481,6 +541,6 @@ class uiconfig(object):
 
 def parselist(value):
     if isinstance(value, str):
-        return configparser.parselist(value)
+        return [unitolocal(v) for v in configparser.parselist(unifromlocal(value))]
     else:
         return value

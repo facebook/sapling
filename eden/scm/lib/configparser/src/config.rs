@@ -8,14 +8,13 @@
 use std::collections::HashSet;
 use std::convert::AsRef;
 use std::fs;
-use std::io::Read;
 use std::ops::Range;
 use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
 
 use indexmap::IndexMap;
-use minibytes::Bytes;
+use minibytes::Text;
 use pest::{self, Parser, Span};
 use util::path::expand_path;
 
@@ -27,20 +26,20 @@ type Pair<'a> = pest::iterators::Pair<'a, Rule>;
 /// Collection of config sections loaded from various sources.
 #[derive(Clone, Default, Debug)]
 pub struct ConfigSet {
-    sections: IndexMap<Bytes, Section>,
+    sections: IndexMap<Text, Section>,
 }
 
 /// Internal representation of a config section.
 #[derive(Clone, Default, Debug)]
 struct Section {
-    items: IndexMap<Bytes, Vec<ValueSource>>,
+    items: IndexMap<Text, Vec<ValueSource>>,
 }
 
 /// A config value with associated metadata like where it comes from.
 #[derive(Clone, Debug)]
 pub struct ValueSource {
-    value: Option<Bytes>,
-    source: Bytes, // global, user, repo, "--config", or an extension name, etc.
+    value: Option<Text>,
+    source: Text, // global, user, repo, "--config", or an extension name, etc.
     location: Option<ValueLocation>,
 }
 
@@ -49,7 +48,7 @@ pub struct ValueSource {
 #[derive(Clone, Debug)]
 struct ValueLocation {
     path: Arc<PathBuf>,
-    content: Bytes,
+    content: Text,
     location: Range<usize>,
 }
 
@@ -57,8 +56,8 @@ struct ValueLocation {
 /// and `set`.
 #[derive(Default)]
 pub struct Options {
-    source: Bytes,
-    filters: Vec<Box<dyn Fn(Bytes, Bytes, Option<Bytes>) -> Option<(Bytes, Bytes, Option<Bytes>)>>>,
+    source: Text,
+    filters: Vec<Box<dyn Fn(Text, Text, Option<Text>) -> Option<(Text, Text, Option<Text>)>>>,
 }
 
 impl ConfigSet {
@@ -108,7 +107,7 @@ impl ConfigSet {
     /// have an empty `path`.
     ///
     /// Return a list of errors.
-    pub fn parse<B: Into<Bytes>>(&mut self, content: B, opts: &Options) -> Vec<Error> {
+    pub fn parse<B: Into<Text>>(&mut self, content: B, opts: &Options) -> Vec<Error> {
         let mut visited = HashSet::new();
         let mut errors = Vec::new();
         let buf = content.into();
@@ -117,12 +116,12 @@ impl ConfigSet {
     }
 
     /// Get config sections.
-    pub fn sections(&self) -> Vec<Bytes> {
+    pub fn sections(&self) -> Vec<Text> {
         self.sections.keys().cloned().collect()
     }
 
     /// Get config names in the given section. Sorted by insertion order.
-    pub fn keys(&self, section: impl AsRef<[u8]>) -> Vec<Bytes> {
+    pub fn keys(&self, section: impl AsRef<str>) -> Vec<Text> {
         self.sections
             .get(section.as_ref())
             .map(|section| section.items.keys().cloned().collect())
@@ -131,7 +130,7 @@ impl ConfigSet {
 
     /// Get config value for a given config.
     /// Return `None` if the config item does not exist or is unset.
-    pub fn get(&self, section: impl AsRef<[u8]>, name: impl AsRef<[u8]>) -> Option<Bytes> {
+    pub fn get(&self, section: impl AsRef<str>, name: impl AsRef<str>) -> Option<Text> {
         self.sections.get(section.as_ref()).and_then(|section| {
             section
                 .items
@@ -144,11 +143,7 @@ impl ConfigSet {
     /// The last item in the returned vector is the latest value that is considered effective.
     ///
     /// Return an emtpy vector if the config does not exist.
-    pub fn get_sources(
-        &self,
-        section: impl AsRef<[u8]>,
-        name: impl AsRef<[u8]>,
-    ) -> Vec<ValueSource> {
+    pub fn get_sources(&self, section: impl AsRef<str>, name: impl AsRef<str>) -> Vec<ValueSource> {
         self.sections
             .get(section.as_ref())
             .and_then(|section| {
@@ -164,22 +159,22 @@ impl ConfigSet {
     /// `source` is some annotation about who set it, ex. "reporc", "userrc", "--config", etc.
     pub fn set(
         &mut self,
-        section: impl AsRef<[u8]>,
-        name: impl AsRef<[u8]>,
-        value: Option<impl AsRef<[u8]>>,
+        section: impl AsRef<str>,
+        name: impl AsRef<str>,
+        value: Option<impl AsRef<str>>,
         opts: &Options,
     ) {
-        let section = Bytes::copy_from_slice(section.as_ref());
-        let name = Bytes::copy_from_slice(name.as_ref());
-        let value = value.map(|v| Bytes::copy_from_slice(v.as_ref()));
+        let section = Text::copy_from_slice(section.as_ref());
+        let name = Text::copy_from_slice(name.as_ref());
+        let value = value.map(|v| Text::copy_from_slice(v.as_ref()));
         self.set_internal(section, name, value, None, &opts)
     }
 
     fn set_internal(
         &mut self,
-        section: Bytes,
-        name: Bytes,
-        value: Option<Bytes>,
+        section: Text,
+        name: Text,
+        value: Option<Text>,
         location: Option<ValueLocation>,
         opts: &Options,
     ) {
@@ -220,17 +215,11 @@ impl ConfigSet {
                 return;
             }
 
-            match fs::File::open(path) {
-                Ok(mut file) => {
-                    let mut buf = Vec::with_capacity(256);
-                    if let Err(error) = file.read_to_end(&mut buf) {
-                        errors.push(Error::Io(path.to_path_buf(), error));
-                        return;
-                    }
-                    buf.push(b'\n');
-                    let buf = Bytes::from(buf);
-
-                    self.load_file_content(path, buf, opts, visited, errors);
+            match fs::read_to_string(path) {
+                Ok(mut text) => {
+                    text.push('\n');
+                    let text = Text::from(text);
+                    self.load_file_content(path, text, opts, visited, errors);
                 }
                 Err(error) => errors.push(Error::Io(path.to_path_buf(), error)),
             }
@@ -260,20 +249,20 @@ impl ConfigSet {
     fn load_file_content(
         &mut self,
         path: &Path,
-        buf: Bytes,
+        buf: Text,
         opts: &Options,
         visited: &mut HashSet<PathBuf>,
         errors: &mut Vec<Error>,
     ) {
-        let mut section = Bytes::new();
+        let mut section = Text::new();
         let shared_path = Arc::new(path.to_path_buf()); // use Arc to do shallow copy
         let skip_include = path.parent().is_none(); // skip handling %include if path is empty
 
         // Utilities to avoid too much indentation.
         let handle_value = |this: &mut ConfigSet,
                             pair: Pair,
-                            section: Bytes,
-                            name: Bytes,
+                            section: Text,
+                            name: Text,
                             location: ValueLocation| {
             let pairs = pair.into_inner();
             let mut lines = Vec::with_capacity(1);
@@ -285,18 +274,16 @@ impl ConfigSet {
 
             let value = match lines.len() {
                 1 => lines[0].clone(),
-                _ => Bytes::from(lines.join(&b'\n')),
+                _ => Text::from(lines.join("\n")),
             };
 
-            let (start, end) = strip_offsets(&value, 0, value.len());
-            let value = value.slice(start..end);
-
+            let value = strip_whitespace(&value, 0, value.len());
             this.set_internal(section, name, value.into(), location.into(), opts)
         };
 
-        let handle_config_item = |this: &mut ConfigSet, pair: Pair, section: Bytes| {
+        let handle_config_item = |this: &mut ConfigSet, pair: Pair, section: Text| {
             let pairs = pair.into_inner();
-            let mut name = Bytes::new();
+            let mut name = Text::new();
             for pair in pairs {
                 match pair.as_rule() {
                     Rule::config_name => name = extract(&buf, pair.as_span()),
@@ -315,7 +302,7 @@ impl ConfigSet {
             unreachable!();
         };
 
-        let handle_section = |pair: Pair, section: &mut Bytes| {
+        let handle_section = |pair: Pair, section: &mut Text| {
             let pairs = pair.into_inner();
             for pair in pairs {
                 match pair.as_rule() {
@@ -346,7 +333,7 @@ impl ConfigSet {
             }
         };
 
-        let handle_unset = |this: &mut ConfigSet, pair: Pair, section: &Bytes| {
+        let handle_unset = |this: &mut ConfigSet, pair: Pair, section: &Text| {
             let unset_span = pair.as_span();
             let pairs = pair.into_inner();
             for pair in pairs {
@@ -373,7 +360,7 @@ impl ConfigSet {
         };
 
         let mut handle_directive =
-            |this: &mut ConfigSet, pair: Pair, section: &Bytes, errors: &mut Vec<Error>| {
+            |this: &mut ConfigSet, pair: Pair, section: &Text, errors: &mut Vec<Error>| {
                 let pairs = pair.into_inner();
                 for pair in pairs {
                     match pair.as_rule() {
@@ -384,11 +371,7 @@ impl ConfigSet {
                 }
             };
 
-        let text = match str::from_utf8(&buf) {
-            Ok(text) => text,
-            Err(error) => return errors.push(Error::Utf8(path.to_path_buf(), error)),
-        };
-
+        let text = &buf;
         let pairs = match ConfigParser::parse(Rule::file, &text) {
             Ok(pairs) => pairs,
             Err(error) => {
@@ -423,13 +406,13 @@ impl ConfigSet {
 
 impl ValueSource {
     /// Return the actual value stored in this config value, or `None` if uset.
-    pub fn value(&self) -> &Option<Bytes> {
+    pub fn value(&self) -> &Option<Text> {
         &self.value
     }
 
     /// Return the "source" information for the config value. It's usually who sets the config,
     /// like "--config", "user_hgrc", "system_hgrc", etc.
-    pub fn source(&self) -> &Bytes {
+    pub fn source(&self) -> &Text {
         &self.source
     }
 
@@ -445,7 +428,7 @@ impl ValueSource {
     }
 
     /// Return the file content. Or `None` if there is no such information.
-    pub fn file_content(&self) -> Option<Bytes> {
+    pub fn file_content(&self) -> Option<Text> {
         match self.location {
             Some(ref src) => Some(src.content.clone()),
             None => None,
@@ -467,7 +450,7 @@ impl Options {
     /// Filters inserted first will be executed first.
     pub fn append_filter(
         mut self,
-        filter: Box<dyn Fn(Bytes, Bytes, Option<Bytes>) -> Option<(Bytes, Bytes, Option<Bytes>)>>,
+        filter: Box<dyn Fn(Text, Text, Option<Text>) -> Option<(Text, Text, Option<Text>)>>,
     ) -> Self {
         self.filters.push(filter);
         self
@@ -477,14 +460,14 @@ impl Options {
     /// "user_hgrc" indicates it is from the user config file, "--config" indicates it is from the
     /// global "--config" command line flag, "env" indicates it is translated from an environment
     /// variable (ex.  "PAGER"), etc.
-    pub fn source<B: Into<Bytes>>(mut self, source: B) -> Self {
+    pub fn source<B: Into<Text>>(mut self, source: B) -> Self {
         self.source = source.into();
         self
     }
 }
 
 /// Convert a "source" string to an `Options`.
-impl<S: Into<Bytes>> From<S> for Options {
+impl<S: Into<Text>> From<S> for Options {
     fn from(source: S) -> Options {
         Options::new().source(source.into())
     }
@@ -492,24 +475,19 @@ impl<S: Into<Bytes>> From<S> for Options {
 
 /// Remove space characters from both ends. Remove newline characters from the end.
 /// `start` position is inclusive, `end` is exclusive.
-/// Return the stripped `start` and `end` offsets.
+/// Return the stripped `Text`.
 #[inline]
-fn strip_offsets(buf: &Bytes, start: usize, end: usize) -> (usize, usize) {
-    let mut start = start;
-    let mut end = end;
-    while start < end && b" \t".contains(&buf[start]) {
-        start += 1
-    }
-    while start < end && b" \t\r\n".contains(&buf[end - 1]) {
-        end -= 1
-    }
-    (start, end)
+fn strip_whitespace(buf: &Text, start: usize, end: usize) -> Text {
+    let slice: &str = &buf.as_ref()[start..end];
+    let trimmed = slice
+        .trim_start_matches(|c| c == '\t' || c == ' ')
+        .trim_end_matches(|c| " \t\r\n".contains(c));
+    buf.slice_to_bytes(trimmed)
 }
 
 #[inline]
-fn extract<'a>(buf: &Bytes, span: Span<'a>) -> Bytes {
-    let (start, end) = strip_offsets(buf, span.start(), span.end());
-    buf.slice(start..end)
+fn extract<'a>(buf: &Text, span: Span<'a>) -> Text {
+    strip_whitespace(buf, span.start(), span.end())
 }
 
 #[cfg(test)]
@@ -534,16 +512,16 @@ pub(crate) mod tests {
         cfg.set("y", "b", Some("2"), &"set2".into());
         cfg.set("y", "a", Some("3"), &"set3".into());
         cfg.set("z", "p", Some("4"), &"set4".into());
-        cfg.set("z", "p", None::<Bytes>, &"set5".into());
-        assert_eq!(cfg.sections(), vec![Bytes::from("y"), Bytes::from("z")]);
-        assert_eq!(cfg.keys("y"), vec![Bytes::from("b"), Bytes::from("a")]);
-        assert_eq!(cfg.get("y", "b"), Some(Bytes::from("2")));
-        assert_eq!(cfg.get("y", "a"), Some(Bytes::from("3")));
+        cfg.set("z", "p", None::<Text>, &"set5".into());
+        assert_eq!(cfg.sections(), vec![Text::from("y"), Text::from("z")]);
+        assert_eq!(cfg.keys("y"), vec![Text::from("b"), Text::from("a")]);
+        assert_eq!(cfg.get("y", "b"), Some(Text::from("2")));
+        assert_eq!(cfg.get("y", "a"), Some(Text::from("3")));
         assert_eq!(cfg.get("z", "p"), None);
 
         let sources = cfg.get_sources("z", "p");
         assert_eq!(sources.len(), 2);
-        assert_eq!(sources[0].value(), &Some(Bytes::from("4")));
+        assert_eq!(sources[0].value(), &Some(Text::from("4")));
         assert_eq!(sources[1].value(), &None);
         assert_eq!(sources[0].source(), &"set4");
         assert_eq!(sources[1].source(), &"set5");
@@ -557,7 +535,7 @@ pub(crate) mod tests {
         let mut cfg = ConfigSet::new();
         assert!(cfg.clone().sections().is_empty());
         cfg.set("x", "a", Some("1"), &"set1".into());
-        assert_eq!(cfg.clone().sections(), vec![Bytes::from("x")]);
+        assert_eq!(cfg.clone().sections(), vec![Text::from("x")]);
         assert_eq!(cfg.clone().get("x", "a"), Some("1".into()));
     }
 
@@ -580,22 +558,22 @@ pub(crate) mod tests {
             &"test_parse_basic".into(),
         );
 
-        assert_eq!(cfg.sections(), vec![Bytes::from("y"), Bytes::from("x")]);
-        assert_eq!(cfg.keys("y"), vec![Bytes::from("a"), Bytes::from("b")]);
-        assert_eq!(cfg.keys("x"), vec![Bytes::from("m"), Bytes::from("n")]);
+        assert_eq!(cfg.sections(), vec![Text::from("y"), Text::from("x")]);
+        assert_eq!(cfg.keys("y"), vec![Text::from("a"), Text::from("b")]);
+        assert_eq!(cfg.keys("x"), vec![Text::from("m"), Text::from("n")]);
 
-        assert_eq!(cfg.get("y", "a"), Some(Bytes::from("2")));
-        assert_eq!(cfg.get("y", "b"), Some(Bytes::from("1")));
-        assert_eq!(cfg.get("x", "n"), Some(Bytes::new()));
+        assert_eq!(cfg.get("y", "a"), Some(Text::from("2")));
+        assert_eq!(cfg.get("y", "b"), Some(Text::from("1")));
+        assert_eq!(cfg.get("x", "n"), Some(Text::new()));
         assert_eq!(
             cfg.get("x", "m"),
-            Some(Bytes::from(&b"this\nvalue has\nmulti lines"[..]))
+            Some(Text::from(&"this\nvalue has\nmulti lines"[..]))
         );
 
         let sources = cfg.get_sources("y", "a");
         assert_eq!(sources.len(), 2);
-        assert_eq!(sources[0].value(), &Some(Bytes::from("0")));
-        assert_eq!(sources[1].value(), &Some(Bytes::from("2")));
+        assert_eq!(sources[0].value(), &Some(Text::from("0")));
+        assert_eq!(sources[1].value(), &Some(Text::from("2")));
         assert_eq!(sources[0].source(), &"test_parse_basic");
         assert_eq!(sources[1].source(), &"test_parse_basic");
         assert_eq!(sources[0].location().unwrap(), (PathBuf::new(), 8..9));
@@ -796,8 +774,8 @@ pub(crate) mod tests {
         );
 
         assert_eq!(cfg.get("x", "a"), None);
-        assert_eq!(cfg.get("x", "b"), Some(Bytes::from("2")));
-        assert_eq!(cfg.get("x", "c"), Some(Bytes::from("3")));
+        assert_eq!(cfg.get("x", "b"), Some(Text::from("2")));
+        assert_eq!(cfg.get("x", "c"), Some(Text::from("3")));
         assert_eq!(cfg.get("x", "d"), None);
 
         let sources = cfg.get_sources("x", "a");
@@ -809,11 +787,11 @@ pub(crate) mod tests {
     #[test]
     fn test_filters() {
         fn blacklist_section_x(
-            section: Bytes,
-            name: Bytes,
-            value: Option<Bytes>,
-        ) -> Option<(Bytes, Bytes, Option<Bytes>)> {
-            if section.as_ref() == b"x" {
+            section: Text,
+            name: Text,
+            value: Option<Text>,
+        ) -> Option<(Text, Text, Option<Text>)> {
+            if section.as_ref() == "x" {
                 None
             } else {
                 Some((section, name, value))
@@ -821,18 +799,18 @@ pub(crate) mod tests {
         }
 
         fn swap_name_value(
-            section: Bytes,
-            name: Bytes,
-            value: Option<Bytes>,
-        ) -> Option<(Bytes, Bytes, Option<Bytes>)> {
+            section: Text,
+            name: Text,
+            value: Option<Text>,
+        ) -> Option<(Text, Text, Option<Text>)> {
             Some((section, value.unwrap(), name.into()))
         }
 
         fn rename_section_to_z(
-            _section: Bytes,
-            name: Bytes,
-            value: Option<Bytes>,
-        ) -> Option<(Bytes, Bytes, Option<Bytes>)> {
+            _section: Text,
+            name: Text,
+            value: Option<Text>,
+        ) -> Option<(Text, Text, Option<Text>)> {
             Some(("z".into(), name, value))
         }
 
@@ -850,7 +828,7 @@ pub(crate) mod tests {
         );
         assert_eq!(cfg.get("x", "a"), None);
         assert_eq!(cfg.get("y", "b"), None);
-        assert_eq!(cfg.get("z", "c"), Some(Bytes::from("b")));
+        assert_eq!(cfg.get("z", "c"), Some(Text::from("b")));
     }
 
     pub(crate) fn write_file(path: PathBuf, content: &str) {
@@ -907,21 +885,21 @@ pub(crate) mod tests {
         let errors = cfg.load_path(dir.path().join("rootrc"), &"test_parse_include".into());
         assert!(errors.is_empty());
 
-        assert_eq!(cfg.sections(), vec![Bytes::from("x"), Bytes::from("y")]);
+        assert_eq!(cfg.sections(), vec![Text::from("x"), Text::from("y")]);
         assert_eq!(
             cfg.keys("x"),
             vec![
-                Bytes::from("b"),
-                Bytes::from("a"),
-                Bytes::from("e"),
-                Bytes::from("f"),
+                Text::from("b"),
+                Text::from("a"),
+                Text::from("e"),
+                Text::from("f"),
             ]
         );
-        assert_eq!(cfg.get("x", "a"), Some(Bytes::from("2")));
-        assert_eq!(cfg.get("x", "b"), Some(Bytes::from("4")));
-        assert_eq!(cfg.get("x", "e"), Some(Bytes::from("e")));
+        assert_eq!(cfg.get("x", "a"), Some(Text::from("2")));
+        assert_eq!(cfg.get("x", "b"), Some(Text::from("4")));
+        assert_eq!(cfg.get("x", "e"), Some(Text::from("e")));
         assert_eq!(cfg.get("x", "f"), None);
-        assert_eq!(cfg.get("y", "b"), Some(Bytes::from("1")));
+        assert_eq!(cfg.get("y", "b"), Some(Text::from("1")));
     }
 
     #[test]
@@ -943,7 +921,7 @@ pub(crate) mod tests {
         let errors = cfg.load_path(dir.path().join("rootrc"), &"include_expand".into());
         assert!(errors.is_empty());
 
-        assert_eq!(cfg.get("x", "a"), Some(Bytes::from("1")));
-        assert_eq!(cfg.get("y", "b"), Some(Bytes::from("2")));
+        assert_eq!(cfg.get("x", "a"), Some(Text::from("1")));
+        assert_eq!(cfg.get("y", "b"), Some(Text::from("2")));
     }
 }

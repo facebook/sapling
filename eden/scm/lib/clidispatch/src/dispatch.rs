@@ -190,22 +190,14 @@ pub fn dispatch(command_table: &CommandTable, args: Vec<String>, io: &mut IO) ->
 
         match (config.get("alias", name), config.get("defaults", name)) {
             (None, None) => None,
-            (Some(v), None) => String::from_utf8(v.to_vec()).ok(),
-            (None, Some(v)) => String::from_utf8(v.to_vec())
-                .ok()
-                .map(|v| format!("{} {}", name, v)),
+            (Some(v), None) => Some(v.to_string()),
+            (None, Some(v)) => Some(format!("{} {}", name, v.as_ref())),
             (Some(a), Some(d)) => {
-                if let (Ok(a), Ok(d)) =
-                    (String::from_utf8(a.to_vec()), String::from_utf8(d.to_vec()))
-                {
-                    // XXX: This makes defaults override alias if there are conflicted
-                    // flags. The desired behavior is to make alias override defaults.
-                    // However, [defaults] is deprecated and is likely only used
-                    // by tests. So this might be fine.
-                    Some(format!("{} {}", a, d))
-                } else {
-                    None
-                }
+                // XXX: This makes defaults override alias if there are conflicted
+                // flags. The desired behavior is to make alias override defaults.
+                // However, [defaults] is deprecated and is likely only used
+                // by tests. So this might be fine.
+                Some(format!("{} {}", a.as_ref(), d.as_ref()))
             }
         }
     };

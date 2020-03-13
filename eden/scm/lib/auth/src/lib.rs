@@ -11,7 +11,7 @@ use anyhow::{Error, Result};
 use indexmap::IndexMap;
 use url::Url;
 
-use configparser::{config::ConfigSet, Bytes};
+use configparser::{config::ConfigSet, Text};
 use util::path::expand_path;
 
 /// A group of client authentiation settings from the user's config.
@@ -26,49 +26,29 @@ pub struct Auth {
     pub priority: i32,
 }
 
-impl TryFrom<(&str, HashMap<&str, Bytes>)> for Auth {
+impl TryFrom<(&str, HashMap<&str, Text>)> for Auth {
     type Error = Error;
 
-    fn try_from((group, settings): (&str, HashMap<&str, Bytes>)) -> Result<Self> {
+    fn try_from((group, settings): (&str, HashMap<&str, Text>)) -> Result<Self> {
         let group = group.into();
 
         let prefix = settings
             .get("prefix")
-            .map(bytes_to_str)
-            .transpose()?
-            .map(String::from)
+            .map(|s| s.to_string())
             .ok_or_else(|| Error::msg("auth prefix missing"))?;
 
-        let cert = settings
-            .get("cert")
-            .map(bytes_to_str)
-            .transpose()?
-            .map(expand_path);
-
-        let key = settings
-            .get("key")
-            .map(bytes_to_str)
-            .transpose()?
-            .map(expand_path);
-
-        let username = settings
-            .get("username")
-            .map(bytes_to_str)
-            .transpose()?
-            .map(String::from);
+        let cert = settings.get("cert").map(expand_path);
+        let key = settings.get("key").map(expand_path);
+        let username = settings.get("username").map(|s| s.to_string());
 
         let schemes = settings
             .get("schemes")
-            .map(bytes_to_str)
-            .transpose()?
             .map(|line| line.split(" ").map(String::from).collect())
             .unwrap_or_else(|| vec!["https".into()]);
 
         let priority = settings
             .get("priority")
-            .map(bytes_to_str)
-            .transpose()?
-            .map(str::parse)
+            .map(|s| s.parse())
             .transpose()?
             .unwrap_or_default();
 
@@ -105,10 +85,6 @@ impl AuthConfig {
         for key in &keys {
             // Skip keys that aren't valid UTF-8 or that don't match
             // the expected auth key format of `group.setting`.
-            let key = match str::from_utf8(&key) {
-                Ok(key) => key,
-                Err(_) => continue,
-            };
             let (group, setting) = match key.find('.') {
                 Some(i) => (&key[..i], &key[i + 1..]),
                 None => continue,
@@ -208,12 +184,6 @@ fn strip_scheme_and_user(url: &Url) -> String {
         None => url,
     }
     .to_string()
-}
-
-/// Trivial function to convert Bytes to &str; factored out to help with type inference.
-#[inline]
-fn bytes_to_str(bytes: &Bytes) -> Result<&str> {
-    Ok(str::from_utf8(&bytes)?)
 }
 
 #[cfg(test)]

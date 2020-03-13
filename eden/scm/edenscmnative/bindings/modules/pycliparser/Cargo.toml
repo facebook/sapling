@@ -9,3 +9,7 @@ cliparser = { path = "../../../../lib/cliparser", features = ["python"] }
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.4", default-features = false }
 pyconfigparser = { path = "../pyconfigparser" }
+
+[features]
+python2 = ["cpython/python27-sys", "cpython-ext/python2"]
+python3 = ["cpython/python3-sys", "cpython-ext/python3"]

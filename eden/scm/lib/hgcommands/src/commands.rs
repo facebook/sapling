@@ -185,15 +185,13 @@ pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Result<u8> {
     let hgid = HgId::from_str(&opts.hgid)?;
     let config = repo.config();
     let cachepath = match config.get("remotefilelog", "cachepath") {
-        Some(c) => c,
+        Some(c) => c.to_string(),
         None => return Err(errors::Abort("remotefilelog.cachepath is not set".into()).into()),
     };
     let reponame = match config.get("remotefilelog", "reponame") {
-        Some(c) => c,
+        Some(c) => c.to_string(),
         None => return Err(errors::Abort("remotefilelog.reponame is not set".into()).into()),
     };
-    let cachepath = String::from_utf8_lossy(&cachepath[..]);
-    let reponame = String::from_utf8_lossy(&reponame[..]);
     let fullpath = format!("{}/{}/packs", cachepath, reponame);
     let packstore = Box::new(DataPackStore::new(fullpath, CorruptionPolicy::IGNORE));
     let fullpath = format!("{}/{}/indexedlogdatastore", cachepath, reponame);
