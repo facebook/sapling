@@ -398,6 +398,7 @@ log
   Parent: 323afe77a1b1e632e54e8d5a683ba2cc8511f299
   Date: 1970-01-01 00:00:00 +00:00
   Author: test
+  Generation: 3
   
   C
   
@@ -405,6 +406,7 @@ log
   Parent: 0ff73aedebab61e96d59d9fbe12b543b8f05b7af
   Date: 1970-01-01 00:00:00 +00:00
   Author: test
+  Generation: 2
   
   B
   
@@ -416,6 +418,7 @@ log
       "date": "1970-01-01T00:00:00+00:00",
       "extra": {},
       "extra_hex": {},
+      "generation": 3,
       "ids": {
         "bonsai": "d5ded5e738f4fc36b03c3e09db9cdd9259d167352a03fb6130f5ee138b52972f",
         "hg": "c29e0e474e30ae40ed639fa6292797a7502bc590"
@@ -436,6 +439,7 @@ log
       "date": "1970-01-01T00:00:00+00:00",
       "extra": {},
       "extra_hex": {},
+      "generation": 2,
       "ids": {
         "bonsai": "c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb",
         "hg": "323afe77a1b1e632e54e8d5a683ba2cc8511f299"
@@ -458,6 +462,7 @@ log
   Parent: 5ccaf7758262599ea5975cf7e6fd06d7a18568ca
   Date: 2019-01-01 00:00:00 +00:00
   Author: test
+  Generation: 6
   
   log-check-3
   
@@ -465,6 +470,7 @@ log
   Parent: e77022c308dc96fa1c521e59ca1d2f719fdf1ca2
   Date: 2017-01-01 00:00:00 +00:00
   Author: test
+  Generation: 5
   
   log-check-2
   
@@ -475,6 +481,7 @@ log between 2000/01/01 and 2018/01/01
   Parent: e77022c308dc96fa1c521e59ca1d2f719fdf1ca2
   Date: 2017-01-01 00:00:00 +00:00
   Author: test
+  Generation: 5
   
   log-check-2
   
@@ -482,6 +489,7 @@ log between 2000/01/01 and 2018/01/01
   Parent: c29e0e474e30ae40ed639fa6292797a7502bc590
   Date: 2015-01-01 00:00:00 +00:00
   Author: test
+  Generation: 4
   
   log-check-1
   
@@ -491,6 +499,7 @@ log between 2000/01/01 and 2018/01/01
   Parent: e77022c308dc96fa1c521e59ca1d2f719fdf1ca2
   Date: 2017-01-01 00:00:00 +00:00
   Author: test
+  Generation: 5
   
   log-check-2
   
@@ -498,6 +507,7 @@ log between 2000/01/01 and 2018/01/01
   Parent: c29e0e474e30ae40ed639fa6292797a7502bc590
   Date: 2015-01-01 00:00:00 +00:00
   Author: test
+  Generation: 4
   
   log-check-1
   
@@ -508,6 +518,7 @@ log check the timezone parsing
   Parent: 29012511b62d6aab72218098bc5a9e1de1ad308f
   Date: 2020-01-01 00:00:00 +00:00
   Author: test
+  Generation: 7
   
   log-check-4
   
@@ -515,6 +526,7 @@ log check the timezone parsing
   Parent: 5ccaf7758262599ea5975cf7e6fd06d7a18568ca
   Date: 2019-01-01 00:00:00 +00:00
   Author: test
+  Generation: 6
   
   log-check-3
   
@@ -522,6 +534,7 @@ log check the timezone parsing
   Parent: e77022c308dc96fa1c521e59ca1d2f719fdf1ca2
   Date: 2017-01-01 00:00:00 +00:00
   Author: test
+  Generation: 5
   
   log-check-2
   
@@ -542,6 +555,7 @@ log request a single commit
   Parent: 29012511b62d6aab72218098bc5a9e1de1ad308f
   Date: 2020-01-01 00:00:00 +00:00
   Author: test
+  Generation: 7
   
   log-check-4
   
@@ -629,6 +643,7 @@ show commit info
   Parent: c29e0e474e30ae40ed639fa6292797a7502bc590
   Date: 1970-01-01 00:00:00 +00:00
   Author: test
+  Generation: 4
   Extra:
       global_rev=9999999999
   
@@ -644,6 +659,7 @@ show commit info
       hg=c29e0e474e30ae40ed639fa6292797a7502bc590
   Date: 1970-01-01 00:00:00 +00:00
   Author: test
+  Generation: 4
   Extra:
       global_rev=9999999999
   
@@ -661,6 +677,7 @@ show commit info for git commit
       hg=ee87eb8cfeb218e7352a94689b241ea973b80402
   Date: 1970-01-01 00:00:00 +00:00
   Author: test
+  Generation: 5
   Extra:
       convert_revision=37b0a167e07f2b84149c918cec818ffeb183dddd
       hg-git-rename-source=git

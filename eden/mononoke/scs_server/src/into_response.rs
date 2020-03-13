@@ -182,13 +182,14 @@ impl AsyncIntoResponse<thrift::CommitInfo>
                 .collect())
         }
 
-        let (ids, message, date, author, parents, extra) = try_join!(
+        let (ids, message, date, author, parents, extra, generation) = try_join!(
             map_commit_identity(&changeset, identity_schemes),
             changeset.message(),
             changeset.author_date(),
             changeset.author(),
             map_parent_identities(&repo, &changeset, identity_schemes),
             changeset.extras(),
+            changeset.generation(),
         )?;
         Ok(thrift::CommitInfo {
             ids,
@@ -198,6 +199,7 @@ impl AsyncIntoResponse<thrift::CommitInfo>
             author,
             parents,
             extra: extra.into_iter().collect(),
+            generation: generation.value() as i64,
         })
     }
 }
