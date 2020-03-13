@@ -47,7 +47,7 @@ mod test;
 
 pub use crate::legacy::get_content_by_path;
 
-pub use crate::changeset::ChangesetContext;
+pub use crate::changeset::{ChangesetContext, Generation};
 pub use crate::changeset_path::{
     unified_diff, ChangesetPathContext, CopyInfo, PathEntry, UnifiedDiff, UnifiedDiffMode,
 };

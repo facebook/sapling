@@ -24,6 +24,7 @@ use futures_util::future::{self, try_join, try_join_all, FutureExt, Shared};
 use futures_util::stream::{StreamExt, TryStreamExt};
 use manifest::{Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, PathOrPrefix};
 use mercurial_types::Globalrev;
+pub use mononoke_types::Generation;
 use mononoke_types::{BonsaiChangeset, MPath, MPathElement};
 use reachabilityindex::ReachabilityIndex;
 use unodes::RootUnodeManifestId;
@@ -246,6 +247,18 @@ impl ChangesetContext {
     /// The commit message.
     pub async fn message(&self) -> Result<String, MononokeError> {
         Ok(self.bonsai_changeset().await?.message().to_string())
+    }
+
+    /// The generation number of the given changeset
+    pub async fn generation(&self) -> Result<Generation, MononokeError> {
+        self.repo()
+            .blob_repo()
+            .get_generation_number(self.ctx().clone(), self.id)
+            .compat()
+            .await?
+            .ok_or_else(|| {
+                MononokeError::NotAvailable(format!("Generation number missing for {:?}", &self.id))
+            })
     }
 
     /// All commit extras as (name, value) pairs.

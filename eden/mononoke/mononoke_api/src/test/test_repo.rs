@@ -56,6 +56,7 @@ async fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
         cs.author_date().await?,
         FixedOffset::west(7 * 3600).timestamp(1504041761, 0)
     );
+    assert_eq!(cs.generation().await?.value(), 11);
 
     Ok(())
 }
