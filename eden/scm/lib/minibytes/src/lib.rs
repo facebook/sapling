@@ -20,8 +20,10 @@ mod bytes;
 mod impls;
 mod owners;
 mod serde;
+mod text;
 
 #[cfg(test)]
 mod tests;
 
-pub use crate::bytes::{Bytes, BytesOwner};
+pub use bytes::{Bytes, BytesOwner};
+pub use text::{Text, TextOwner};
