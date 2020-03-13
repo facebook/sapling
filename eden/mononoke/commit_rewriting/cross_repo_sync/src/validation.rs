@@ -21,14 +21,14 @@ use futures_util::{
     try_join,
 };
 use manifest::{Entry, ManifestOps};
-use mercurial_types::{HgFileNodeId, HgManifestId};
+use mercurial_types::{FileType, HgFileNodeId, HgManifestId};
 use mononoke_types::{ChangesetId, MPath};
 use movers::Mover;
 use slog::{debug, error, info};
 use std::collections::{HashMap, HashSet};
 use synced_commit_mapping::SyncedCommitMapping;
 
-pub type PathToFileNodeIdMapping = HashMap<MPath, HgFileNodeId>;
+pub type PathToFileNodeIdMapping = HashMap<MPath, (FileType, HgFileNodeId)>;
 
 pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
@@ -43,7 +43,7 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
 
     let moved_source_repo_entries = get_maybe_moved_filenode_ids(
         ctx.clone(),
-        source_repo.clone(),
+        &source_repo,
         source_hash.clone(),
         if source_hash != target_hash {
             Some(commit_syncer.get_mover())
@@ -53,7 +53,7 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
         },
     );
     let target_repo_entries =
-        get_maybe_moved_filenode_ids(ctx.clone(), target_repo.clone(), target_hash.clone(), None);
+        get_maybe_moved_filenode_ids(ctx.clone(), &target_repo, target_hash.clone(), None);
 
     let (moved_source_repo_entries, target_repo_entries) =
         try_join!(moved_source_repo_entries, target_repo_entries)?;
@@ -123,12 +123,12 @@ pub async fn verify_filenode_mapping_equivalence<'a>(
 /// potentially applying a `Mover` to all file paths
 pub async fn get_maybe_moved_filenode_ids(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: &BlobRepo,
     hash: ChangesetId,
     maybe_mover: Option<&Mover>,
 ) -> Result<PathToFileNodeIdMapping, Error> {
-    let root_mf_id = fetch_root_mf_id(ctx.clone(), repo.clone(), hash.clone()).await?;
-    let repo_entries = list_all_filenode_ids(ctx.clone(), repo, root_mf_id)
+    let root_mf_id = fetch_root_mf_id(ctx.clone(), repo, hash).await?;
+    let repo_entries = list_all_filenode_ids(ctx, repo, root_mf_id)
         .compat()
         .await?;
     if let Some(mover) = maybe_mover {
@@ -222,21 +222,20 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
 
 fn list_all_filenode_ids(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: &BlobRepo,
     mf_id: HgManifestId,
 ) -> BoxFuture<PathToFileNodeIdMapping, Error> {
+    let repoid = repo.get_repoid();
     info!(
         ctx.logger(),
-        "fetching filenode ids for {:?} in {}",
-        mf_id,
-        repo.get_repoid()
+        "fetching filenode ids for {:?} in {}", mf_id, repoid,
     );
     mf_id
         .list_all_entries(ctx.clone(), repo.get_blobstore())
         .filter_map(move |(path, entry)| match entry {
-            Entry::Leaf((_, filenode_id)) => {
+            Entry::Leaf(leaf_payload) => {
                 match path {
-                    Some(path) => Some((path, filenode_id)),
+                    Some(path) => Some((path, leaf_payload)),
                     None => {
                         // Leaf shouldn't normally be None
                         None
@@ -251,7 +250,7 @@ fn list_all_filenode_ids(
                 ctx.logger(),
                 "fetched {} filenode ids for {}",
                 res.len(),
-                repo.get_repoid()
+                repoid,
             );
         })
         .boxify()
@@ -264,8 +263,16 @@ pub async fn compare_contents(
     large_hash: ChangesetId,
 ) -> Result<(), Error> {
     let mut different_filenodes = HashSet::new();
-    for (path, left_filenode_id) in large_filenodes {
-        let maybe_right_filenode_id = small_filenodes.get(&path);
+    for (path, (_left_file_type, left_filenode_id)) in large_filenodes {
+        let maybe_right_type_and_filenode_id = small_filenodes.get(&path);
+        let (_maybe_right_file_type, maybe_right_filenode_id) =
+            match maybe_right_type_and_filenode_id {
+                Some((right_type, right_filenode_id)) => {
+                    (Some(right_type), Some(right_filenode_id))
+                }
+                None => (None, None),
+            };
+
         if maybe_right_filenode_id != Some(&left_filenode_id) {
             match maybe_right_filenode_id {
                 Some(right_filenode_id) => {
@@ -370,19 +377,16 @@ async fn get_synced_commit<M: SyncedCommitMapping + Clone + 'static>(
     }
 }
 
-async fn fetch_root_mf_id(
+pub async fn fetch_root_mf_id(
     ctx: CoreContext,
-    repo: BlobRepo,
+    repo: &BlobRepo,
     cs_id: ChangesetId,
 ) -> Result<HgManifestId, Error> {
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
         .compat()
         .await?;
-    let changeset = hg_cs_id
-        .load(ctx.clone(), repo.blobstore())
-        .compat()
-        .await?;
+    let changeset = hg_cs_id.load(ctx, repo.blobstore()).compat().await?;
     Ok(changeset.manifestid())
 }
 
