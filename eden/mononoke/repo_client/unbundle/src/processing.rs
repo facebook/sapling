@@ -714,7 +714,7 @@ fn log_commits_to_scribe(
     let futs = changesets.into_iter().map(move |changeset_id| {
         cloned!(ctx, repo, queue, changeset_id);
         let generation = repo
-            .get_generation_number_by_bonsai(ctx.clone(), changeset_id)
+            .get_generation_number(ctx.clone(), changeset_id)
             .and_then(|maybe_gen| maybe_gen.ok_or(Error::msg("No generation number found")));
         let parents = repo.get_changeset_parents_by_bonsai(ctx, changeset_id);
         let repo_id = repo.get_repoid();

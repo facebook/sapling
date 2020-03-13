@@ -35,7 +35,7 @@ impl ChangesetFetcher for TestChangesetFetcher {
         cs_id: ChangesetId,
     ) -> BoxFuture<Generation, Error> {
         self.repo
-            .get_generation_number_by_bonsai(ctx, cs_id)
+            .get_generation_number(ctx, cs_id)
             .and_then(move |genopt| genopt.ok_or_else(|| format_err!("{} not found", cs_id)))
             .boxify()
     }

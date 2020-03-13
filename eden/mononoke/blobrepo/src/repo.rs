@@ -96,7 +96,6 @@ define_stats! {
     get_linknode_opt: timeseries(Rate, Sum),
     get_all_filenodes: timeseries(Rate, Sum),
     get_generation_number: timeseries(Rate, Sum),
-    get_generation_number_by_bonsai: timeseries(Rate, Sum),
     create_changeset: timeseries(Rate, Sum),
     create_changeset_compute_cf: timeseries("create_changeset.compute_changed_files"; Rate, Sum),
     create_changeset_expected_cf: timeseries("create_changeset.expected_changed_files"; Rate, Sum),
@@ -670,13 +669,14 @@ impl BlobRepo {
         // TODO(stash, luk): T37303879 also need to check that entries exist in changeset table
     }
 
-    // TODO(stash): rename to get_generation_number
-    pub fn get_generation_number_by_bonsai(
+    // Returns the generation number of a changeset
+    // note: it returns Option because changeset might not exist
+    pub fn get_generation_number(
         &self,
         ctx: CoreContext,
         cs: ChangesetId,
     ) -> impl Future<Item = Option<Generation>, Error = Error> {
-        STATS::get_generation_number_by_bonsai.add_value(1);
+        STATS::get_generation_number.add_value(1);
         let repo = self.clone();
         let repoid = self.repoid.clone();
         repo.changesets
