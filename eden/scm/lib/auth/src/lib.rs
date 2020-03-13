@@ -8,11 +8,10 @@
 use std::{collections::HashMap, convert::TryFrom, path::PathBuf, str};
 
 use anyhow::{Error, Result};
-use bytes::Bytes;
 use indexmap::IndexMap;
 use url::Url;
 
-use configparser::config::ConfigSet;
+use configparser::{config::ConfigSet, Bytes};
 use util::path::expand_path;
 
 /// A group of client authentiation settings from the user's config.

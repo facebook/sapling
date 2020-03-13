@@ -5,9 +5,9 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.19"
-bytes = "0.5"
 dirs = "1.0.4"
 indexmap = "1.0.1"
+minibytes = { path = "../minibytes" }
 parking_lot = "0.9"
 pest = "2.1.0"
 pest_derive = "2.1.0"

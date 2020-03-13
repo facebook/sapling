@@ -14,8 +14,8 @@ use std::path::{Path, PathBuf};
 use std::str;
 use std::sync::Arc;
 
-use bytes::Bytes;
 use indexmap::IndexMap;
+use minibytes::Bytes;
 use pest::{self, Parser, Span};
 use util::path::expand_path;
 
@@ -545,8 +545,8 @@ pub(crate) mod tests {
         assert_eq!(sources.len(), 2);
         assert_eq!(sources[0].value(), &Some(Bytes::from("4")));
         assert_eq!(sources[1].value(), &None);
-        assert_eq!(sources[0].source(), "set4");
-        assert_eq!(sources[1].source(), "set5");
+        assert_eq!(sources[0].source(), &"set4");
+        assert_eq!(sources[1].source(), &"set5");
         assert_eq!(sources[0].location(), None);
         assert_eq!(sources[1].location(), None);
         assert_eq!(sources[1].file_content(), None);
@@ -596,8 +596,8 @@ pub(crate) mod tests {
         assert_eq!(sources.len(), 2);
         assert_eq!(sources[0].value(), &Some(Bytes::from("0")));
         assert_eq!(sources[1].value(), &Some(Bytes::from("2")));
-        assert_eq!(sources[0].source(), "test_parse_basic");
-        assert_eq!(sources[1].source(), "test_parse_basic");
+        assert_eq!(sources[0].source(), &"test_parse_basic");
+        assert_eq!(sources[1].source(), &"test_parse_basic");
         assert_eq!(sources[0].location().unwrap(), (PathBuf::new(), 8..9));
         assert_eq!(sources[1].location().unwrap(), (PathBuf::new(), 38..40));
         assert_eq!(sources[1].file_content().unwrap().len(), 100);

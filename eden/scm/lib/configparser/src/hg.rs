@@ -14,7 +14,7 @@ use std::hash::Hash;
 use std::path::{Path, PathBuf};
 
 use anyhow::Result;
-use bytes::Bytes;
+use minibytes::Bytes;
 use util::path::expand_path;
 
 use crate::config::{ConfigSet, Options};

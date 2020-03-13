@@ -11,7 +11,7 @@ use std::ptr;
 use std::slice;
 use std::{os::raw::c_char, path::Path};
 
-use bytes::Bytes;
+use minibytes::Bytes;
 
 use crate::config::{ConfigSet, Options};
 use crate::error::Error;
