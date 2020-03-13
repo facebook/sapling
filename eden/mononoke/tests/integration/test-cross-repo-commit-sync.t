@@ -177,3 +177,60 @@ Disable bookmarks cache because bookmarks are modified by two separate processes
    e0cb430152c2dcc47b93a516344e3814ece60d4b fbsource commit 10
   default/fbsource/somebook d692e38644b938ccccc4192bd2f507955f3888c5 non-master commit
   default/master_bookmark 8d01dd2e0e909e21d3131b7929787db006de999e fbsource commit resume
+
+-- Validate the synced entries
+  $ REPOIDLARGE=0 validate_commit_sync 17
+  * enabled stdlog * (glob)
+  * using repo * (glob)
+  * using repo * (glob)
+  * using repo * (glob)
+  * Validation helpers are: * (glob)
+  * BookmarkUpdateLogEntry 17 has been expanded into 1 commits (glob)
+  * Mapping small cs_ids * (glob)
+  * Commit * is rewritten as follows: {RepositoryId(1): (ChangesetId(Blake2(*)), Some(BookmarkName { bookmark: "master_bookmark" }))} (glob)
+  * Preparing entry Entry 17(0/1); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
+  * validating topological order * (glob)
+  * done validating topological order * (glob)
+  * Validated entry: Entry 17(0/1) (glob)
+
+  $ REPOIDLARGE=0 validate_commit_sync 18
+  * enabled stdlog * (glob)
+  * using repo * (glob)
+  * using repo * (glob)
+  * using repo * (glob)
+  * Validation helpers are: * (glob)
+  * BookmarkUpdateLogEntry 18 has been expanded into 1 commits (glob)
+  * Mapping small cs_ids * (glob)
+  * Commit * is rewritten as follows: {RepositoryId(1): (ChangesetId(Blake2(*)), Some(BookmarkName { bookmark: "somebook" }))} (glob)
+  * Preparing entry Entry 18(0/1); book: fbsource/somebook; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
+  * validating topological order * (glob)
+  * done validating topological order * (glob)
+  * Validated entry: Entry 18(0/1) (glob)
+
+  $ REPOIDLARGE=0 validate_commit_sync 19
+  * enabled stdlog * (glob)
+  * using repo * (glob)
+  * using repo * (glob)
+  * using repo * (glob)
+  * Validation helpers are: * (glob)
+  * BookmarkUpdateLogEntry 19 has been expanded into 1 commits (glob)
+  * Mapping small cs_ids * (glob)
+  * Commit * is rewritten as follows: {RepositoryId(2): (ChangesetId(Blake2(*)), Some(BookmarkName { bookmark: "master_bookmark" }))} (glob)
+  * Preparing entry Entry 19(0/1); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
+  * validating topological order * (glob)
+  * done validating topological order * (glob)
+  * Validated entry: Entry 19(0/1) (glob)
+
+  $ REPOIDLARGE=0 validate_commit_sync 21
+  * enabled stdlog * (glob)
+  * using repo * (glob)
+  * using repo * (glob)
+  * using repo * (glob)
+  * Validation helpers are: * (glob)
+  * BookmarkUpdateLogEntry 21 has been expanded into 1 commits (glob)
+  * Mapping small cs_ids * (glob)
+  * Commit * is rewritten as follows: {RepositoryId(1): (ChangesetId(Blake2(*)), Some(BookmarkName { bookmark: "master_bookmark" }))} (glob)
+  * Preparing entry Entry 21(0/1); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
+  * validating topological order for *<->* (glob)
+  * done validating topological order for *<->* (glob)
+  * Validated entry: Entry 21(0/1) (glob)

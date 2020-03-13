@@ -26,6 +26,7 @@ use mononoke_types::{ChangesetId, MPath};
 use movers::Mover;
 use slog::{debug, error, info};
 use std::collections::{HashMap, HashSet};
+use std::fmt::Debug;
 use synced_commit_mapping::SyncedCommitMapping;
 
 pub type PathToFileNodeIdMapping = HashMap<MPath, (FileType, HgFileNodeId)>;
@@ -220,7 +221,7 @@ pub async fn find_bookmark_diff<M: SyncedCommitMapping + Clone + 'static>(
     Ok(diff)
 }
 
-fn list_all_filenode_ids(
+pub fn list_all_filenode_ids(
     ctx: CoreContext,
     repo: &BlobRepo,
     mf_id: HgManifestId,
@@ -262,24 +263,28 @@ pub async fn compare_contents(
     (small_repo, small_filenodes): (BlobRepo, &PathToFileNodeIdMapping),
     large_hash: ChangesetId,
 ) -> Result<(), Error> {
+    // Both of these sets have three-element tuples as their elements:
+    // `(MPath, SmallThing, LargeThing)`, where `Thing` is a `FileType`
+    // or a `HgFileNodeId` for different sets
     let mut different_filenodes = HashSet::new();
-    for (path, (_left_file_type, left_filenode_id)) in large_filenodes {
-        let maybe_right_type_and_filenode_id = small_filenodes.get(&path);
-        let (_maybe_right_file_type, maybe_right_filenode_id) =
-            match maybe_right_type_and_filenode_id {
-                Some((right_type, right_filenode_id)) => {
-                    (Some(right_type), Some(right_filenode_id))
+    let mut different_filetypes = HashSet::new();
+    for (path, (large_file_type, large_filenode_id)) in large_filenodes {
+        let maybe_small_type_and_filenode_id = small_filenodes.get(&path);
+        let (maybe_small_file_type, maybe_small_filenode_id) =
+            match maybe_small_type_and_filenode_id {
+                Some((small_file_type, small_filenode_id)) => {
+                    (Some(small_file_type), Some(small_filenode_id))
                 }
                 None => (None, None),
             };
 
-        if maybe_right_filenode_id != Some(&left_filenode_id) {
-            match maybe_right_filenode_id {
-                Some(right_filenode_id) => {
+        if maybe_small_filenode_id != Some(&large_filenode_id) {
+            match maybe_small_filenode_id {
+                Some(small_filenode_id) => {
                     different_filenodes.insert((
                         path.clone(),
-                        *left_filenode_id,
-                        *right_filenode_id,
+                        *small_filenode_id,
+                        *large_filenode_id,
                     ));
                 }
                 None => {
@@ -290,7 +295,25 @@ pub async fn compare_contents(
                 }
             }
         }
+
+        if maybe_small_file_type != Some(&large_file_type) {
+            match maybe_small_file_type {
+                Some(small_file_type) => {
+                    different_filetypes.insert((path.clone(), *small_file_type, *large_file_type));
+                }
+                None => {
+                    // This should really be unreachable, as we should've early
+                    // exited on the previous iteration
+                    return Err(format_err!(
+                        "{:?} exists in large repo but not in small repo",
+                        path
+                    ));
+                }
+            };
+        }
     }
+
+    report_different(&ctx, different_filetypes, &large_hash, "filetype")?;
 
     info!(
         ctx.logger(),
@@ -298,21 +321,41 @@ pub async fn compare_contents(
         different_filenodes.len(),
     );
 
-    let fetched_content_ids = stream::iter_ok(different_filenodes)
+    verify_filenodes_have_same_contents(
+        &ctx,
+        &small_repo,
+        &large_repo,
+        &large_hash,
+        different_filenodes,
+    )
+    .await
+}
+
+pub async fn verify_filenodes_have_same_contents<
+    // item is a tuple: (MPath, large filenode id, small filenode id)
+    I: IntoIterator<Item = (MPath, HgFileNodeId, HgFileNodeId)>,
+>(
+    ctx: &CoreContext,
+    small_repo: &BlobRepo,
+    large_repo: &BlobRepo,
+    large_hash: &ChangesetId,
+    should_be_equivalent: I,
+) -> Result<(), Error> {
+    let fetched_content_ids = stream::iter_ok(should_be_equivalent)
         .map({
             cloned!(ctx, large_repo, small_repo);
-            move |(path, left_filenode_id, right_filenode_id)| {
+            move |(path, small_filenode_id, large_filenode_id)| {
                 debug!(
                     ctx.logger(),
                     "checking content for different filenodes: {} vs {}",
-                    left_filenode_id,
-                    right_filenode_id,
+                    small_filenode_id,
+                    large_filenode_id,
                 );
-                let f1 = left_filenode_id
-                    .load(ctx.clone(), large_repo.blobstore())
-                    .map(|e| e.content_id());
-                let f2 = right_filenode_id
+                let f1 = small_filenode_id
                     .load(ctx.clone(), small_repo.blobstore())
+                    .map(|e| e.content_id());
+                let f2 = large_filenode_id
+                    .load(ctx.clone(), large_repo.blobstore())
                     .map(|e| e.content_id());
 
                 f1.join(f2).map(move |(c1, c2)| (path, c1, c2))
@@ -323,19 +366,67 @@ pub async fn compare_contents(
         .compat()
         .await?;
 
-    for (path, small_content_id, large_content_id) in fetched_content_ids {
-        if small_content_id != large_content_id {
-            return Err(format_err!(
-                "different contents for {:?}: {} vs {}, {}",
-                path,
-                small_content_id,
-                large_content_id,
-                large_hash,
-            ));
-        }
-    }
+    let different_contents: Vec<_> = fetched_content_ids
+        .into_iter()
+        .filter(|(_mpath, c1, c2)| c1 != c2)
+        .collect();
 
-    Ok(())
+    report_different(ctx, different_contents, large_hash, "contents")
+}
+
+/// Given a list of differences of a given type (`T`)
+/// report them in the logs and return an appropriate result
+pub fn report_different<
+    T: Debug,
+    E: ExactSizeIterator<Item = (MPath, T, T)>,
+    I: IntoIterator<IntoIter = E, Item = <E as Iterator>::Item>,
+>(
+    ctx: &CoreContext,
+    different_things: I,
+    large_hash: &ChangesetId,
+    name: &str,
+) -> Result<(), Error> {
+    let mut different_things = different_things.into_iter();
+    let len = different_things.len();
+    if len > 0 {
+        // The very first value is preserved for error formatting
+        let (mpath, small_thing, large_thing) = match different_things.next() {
+            None => unreachable!("length of iterator is guaranteed to be >0"),
+            Some((mpath, small_thing, large_thing)) => (mpath, small_thing, large_thing),
+        };
+
+        // And we also want a debug print of it
+        debug!(
+            ctx.logger(),
+            "Different {} for path {:?}: small repo: {:?} large repo: {:?}",
+            name,
+            mpath,
+            small_thing,
+            large_thing
+        );
+
+        let mut rest_of_different_things = different_things.take(9);
+        while let Some((mpath, small_thing, large_thing)) = rest_of_different_things.next() {
+            debug!(
+                ctx.logger(),
+                "Different {} for path {:?}: small repo: {:?} large repo: {:?}",
+                name,
+                mpath,
+                small_thing,
+                large_thing
+            );
+        }
+
+        return Err(format_err!(
+            "Found {} files with different {} in large repo cs {} (example: {:?})",
+            len,
+            name,
+            large_hash,
+            (mpath, small_thing, large_thing),
+        ));
+    } else {
+        Ok(())
+    }
 }
 
 pub fn move_all_paths(

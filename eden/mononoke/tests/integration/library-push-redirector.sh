@@ -16,6 +16,16 @@ function verify_wc() {
      crossrepo verify-wc "$large_repo_commit"
 }
 
+function validate_commit_sync() {
+  local entry_id
+  entry_id="$1"
+  shift
+  "$COMMIT_VALIDATOR" "${COMMON_ARGS[@]}" --debug --repo-id "$REPOIDLARGE" \
+   --mononoke-config-path "$TESTTMP/mononoke-config" \
+   --master-bookmark=master_bookmark \
+   once --entry-id "$entry_id" "$@"
+}
+
 function create_large_small_repo() {
   REPOTYPE="blob_files"
   ENABLE_PRESERVE_BUNDLE2=1 REPOID=0 REPONAME=large-mon setup_common_config "$REPOTYPE"
