@@ -406,6 +406,8 @@ py_class!(class writerworker |py| {
             Some(UpdateFlag::Symlink)
         } else if flags == "x" {
             Some(UpdateFlag::Executable)
+        } else if flags == "" {
+            None
         } else {
             return Err(format_err!("Unknown flags: {}", flags)).map_pyerr(py);
         };
