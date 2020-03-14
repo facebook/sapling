@@ -50,6 +50,10 @@ impl Sha256 {
         fixed_bytes.copy_from_slice(bytes);
         Ok(Sha256(fixed_bytes))
     }
+
+    pub fn into_inner(self) -> [u8; Sha256::len()] {
+        self.0
+    }
 }
 
 impl Display for Sha256 {
