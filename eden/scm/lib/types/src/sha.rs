@@ -60,7 +60,7 @@ impl Display for Sha256 {
 
 impl Debug for Sha256 {
     fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
-        write!(fmt, "HgId({:?})", &self.to_hex())
+        write!(fmt, "Sha256({:?})", &self.to_hex())
     }
 }
 
