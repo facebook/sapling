@@ -492,7 +492,7 @@ class remotefileslog(filelog.fileslog):
     def memcachestore(self, repo):
         if self._memcachestore is None:
             if repo.ui.config("remotefilelog", "cachekey") is not None:
-                self._memcachestore = revisionstore.memcachestore(repo.ui._rcfg)
+                self._memcachestore = revisionstore.memcachestore(repo.ui._rcfg._rcfg)
 
         return self._memcachestore
 
@@ -512,10 +512,10 @@ class remotefileslog(filelog.fileslog):
         memcachestore = self.memcachestore(repo)
 
         sharedonlycontentstore = revisionstore.contentstore(
-            None, repo.ui._rcfg, sharedonlyremotestore, memcachestore
+            None, repo.ui._rcfg._rcfg, sharedonlyremotestore, memcachestore
         )
         sharedonlymetadatastore = revisionstore.metadatastore(
-            None, repo.ui._rcfg, sharedonlyremotestore, memcachestore
+            None, repo.ui._rcfg._rcfg, sharedonlyremotestore, memcachestore
         )
 
         return sharedonlycontentstore, sharedonlymetadatastore
@@ -526,10 +526,10 @@ class remotefileslog(filelog.fileslog):
         memcachestore = self.memcachestore(repo)
 
         self.contentstore = revisionstore.contentstore(
-            repo.svfs.vfs.base, repo.ui._rcfg, remotestore, memcachestore
+            repo.svfs.vfs.base, repo.ui._rcfg._rcfg, remotestore, memcachestore
         )
         self.metadatastore = revisionstore.metadatastore(
-            repo.svfs.vfs.base, repo.ui._rcfg, remotestore, memcachestore
+            repo.svfs.vfs.base, repo.ui._rcfg._rcfg, remotestore, memcachestore
         )
 
     def getmutablelocalpacks(self):
