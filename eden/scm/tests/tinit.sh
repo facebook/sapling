@@ -33,7 +33,7 @@ newserver() {
     setconfig \
        remotefilelog.reponame="$reponame" remotefilelog.server=True \
        treemanifest.flatcompat=False treemanifest.rustmanifest=True \
-       treemanifest.server=True treemanifiest.treeonly=True
+       treemanifest.server=True treemanifest.treeonly=True
   fi
 }
 
