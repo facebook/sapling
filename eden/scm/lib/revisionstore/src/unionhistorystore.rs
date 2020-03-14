@@ -11,13 +11,13 @@ use anyhow::Result;
 use types::{Key, NodeInfo};
 
 use crate::{
-    historystore::{HistoryStore, RemoteHistoryStore},
+    historystore::{HgIdHistoryStore, RemoteHistoryStore},
     unionstore::UnionStore,
 };
 
-pub type UnionHistoryStore<T> = UnionStore<T>;
+pub type UnionHgIdHistoryStore<T> = UnionStore<T>;
 
-impl<T: HistoryStore> HistoryStore for UnionHistoryStore<T> {
+impl<T: HgIdHistoryStore> HgIdHistoryStore for UnionHgIdHistoryStore<T> {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         for store in self {
             match store.get_node_info(key)? {
@@ -30,7 +30,7 @@ impl<T: HistoryStore> HistoryStore for UnionHistoryStore<T> {
     }
 }
 
-impl<T: RemoteHistoryStore> RemoteHistoryStore for UnionHistoryStore<T> {
+impl<T: RemoteHistoryStore> RemoteHistoryStore for UnionHgIdHistoryStore<T> {
     fn prefetch(&self, keys: &[Key]) -> Result<()> {
         let initial_keys = Ok(keys.to_vec());
         self.into_iter()
@@ -59,49 +59,49 @@ mod tests {
 
     use crate::localstore::HgIdLocalStore;
 
-    struct BadHistoryStore;
+    struct BadHgIdHistoryStore;
 
-    struct EmptyHistoryStore;
+    struct EmptyHgIdHistoryStore;
 
     #[derive(Debug, Error)]
     #[error("Bad history store always has error which is not KeyError")]
-    struct BadHistoryStoreError;
+    struct BadHgIdHistoryStoreError;
 
-    impl HistoryStore for EmptyHistoryStore {
+    impl HgIdHistoryStore for EmptyHgIdHistoryStore {
         fn get_node_info(&self, _key: &Key) -> Result<Option<NodeInfo>> {
             Ok(None)
         }
     }
 
-    impl HgIdLocalStore for EmptyHistoryStore {
+    impl HgIdLocalStore for EmptyHgIdHistoryStore {
         fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
             Ok(keys.iter().cloned().collect())
         }
     }
 
-    impl HistoryStore for BadHistoryStore {
+    impl HgIdHistoryStore for BadHgIdHistoryStore {
         fn get_node_info(&self, _key: &Key) -> Result<Option<NodeInfo>> {
-            Err(BadHistoryStoreError.into())
+            Err(BadHgIdHistoryStoreError.into())
         }
     }
 
-    impl HgIdLocalStore for BadHistoryStore {
+    impl HgIdLocalStore for BadHgIdHistoryStore {
         fn get_missing(&self, _keys: &[Key]) -> Result<Vec<Key>> {
-            Err(BadHistoryStoreError.into())
+            Err(BadHgIdHistoryStoreError.into())
         }
     }
 
     quickcheck! {
         fn test_empty_unionstore_get_node_info(key: Key) -> bool {
-            match UnionHistoryStore::<EmptyHistoryStore>::new().get_node_info(&key) {
+            match UnionHgIdHistoryStore::<EmptyHgIdHistoryStore>::new().get_node_info(&key) {
                 Ok(None) => true,
                 _ => false,
             }
         }
 
         fn test_empty_historystore_get_node_info(key: Key) -> bool {
-            let mut unionstore = UnionHistoryStore::new();
-            unionstore.add(EmptyHistoryStore);
+            let mut unionstore = UnionHgIdHistoryStore::new();
+            unionstore.add(EmptyHgIdHistoryStore);
             match unionstore.get_node_info(&key) {
                 Ok(None) => true,
                 _ => false,
@@ -109,8 +109,8 @@ mod tests {
         }
 
         fn test_bad_historystore_get_node_info(key: Key) -> bool {
-            let mut unionstore = UnionHistoryStore::new();
-            unionstore.add(BadHistoryStore);
+            let mut unionstore = UnionHgIdHistoryStore::new();
+            unionstore.add(BadHgIdHistoryStore);
             match unionstore.get_node_info(&key) {
                 Err(_) => true,
                 _ => false,
@@ -118,18 +118,18 @@ mod tests {
         }
 
         fn test_empty_unionstore_get_missing(keys: Vec<Key>) -> bool {
-            keys == UnionHistoryStore::<EmptyHistoryStore>::new().get_missing(&keys).unwrap()
+            keys == UnionHgIdHistoryStore::<EmptyHgIdHistoryStore>::new().get_missing(&keys).unwrap()
         }
 
         fn test_empty_historystore_get_missing(keys: Vec<Key>) -> bool {
-            let mut unionstore = UnionHistoryStore::new();
-            unionstore.add(EmptyHistoryStore);
+            let mut unionstore = UnionHgIdHistoryStore::new();
+            unionstore.add(EmptyHgIdHistoryStore);
             keys == unionstore.get_missing(&keys).unwrap()
         }
 
         fn test_bad_historystore_get_missing(keys: Vec<Key>) -> bool {
-            let mut unionstore = UnionHistoryStore::new();
-            unionstore.add(BadHistoryStore);
+            let mut unionstore = UnionHgIdHistoryStore::new();
+            unionstore.add(BadHgIdHistoryStore);
             match unionstore.get_missing(&keys) {
                 Err(_) => true,
                 _ => false,

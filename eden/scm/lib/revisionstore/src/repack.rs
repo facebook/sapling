@@ -18,7 +18,7 @@ use types::Key;
 use crate::datapack::{DataPack, DataPackVersion};
 use crate::datastore::{HgIdDataStore, HgIdMutableDeltaStore};
 use crate::historypack::{HistoryPack, HistoryPackVersion};
-use crate::historystore::{HistoryStore, MutableHistoryStore};
+use crate::historystore::{HgIdHistoryStore, HgIdMutableHistoryStore};
 use crate::localstore::HgIdLocalStore;
 use crate::mutabledatapack::MutableDataPack;
 use crate::mutablehistorypack::MutableHistoryPack;

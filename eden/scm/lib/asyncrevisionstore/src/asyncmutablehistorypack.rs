@@ -14,9 +14,9 @@ use tokio_threadpool::blocking;
 
 use revisionstore::{HistoryPackVersion, MutableHistoryPack};
 
-use crate::asyncmutablehistorystore::AsyncMutableHistoryStore;
+use crate::asyncmutablehistorystore::AsyncHgIdMutableHistoryStore;
 
-pub type AsyncMutableHistoryPack = AsyncMutableHistoryStore<MutableHistoryPack>;
+pub type AsyncMutableHistoryPack = AsyncHgIdMutableHistoryStore<MutableHistoryPack>;
 
 impl AsyncMutableHistoryPack {
     /// Build an AsyncMutableHistoryPack.
@@ -27,7 +27,7 @@ impl AsyncMutableHistoryPack {
         poll_fn(move || blocking(|| MutableHistoryPack::new(&dir, version.clone())))
             .from_err()
             .and_then(move |res| res)
-            .map(move |historypack| AsyncMutableHistoryStore::new_(historypack))
+            .map(move |historypack| AsyncHgIdMutableHistoryStore::new_(historypack))
     }
 }
 
@@ -38,7 +38,7 @@ mod tests {
     use tempfile::tempdir;
     use tokio::runtime::Runtime;
 
-    use revisionstore::{HistoryPack, HistoryStore};
+    use revisionstore::{HgIdHistoryStore, HistoryPack};
     use types::{testutil::*, NodeInfo};
 
     #[test]

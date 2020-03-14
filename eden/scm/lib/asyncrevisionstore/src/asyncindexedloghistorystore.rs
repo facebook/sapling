@@ -12,18 +12,19 @@ use futures::future::poll_fn;
 use tokio::prelude::*;
 use tokio_threadpool::blocking;
 
-use revisionstore::IndexedLogHistoryStore;
+use revisionstore::IndexedLogHgIdHistoryStore;
 
-use crate::asyncmutablehistorystore::AsyncMutableHistoryStore;
+use crate::asyncmutablehistorystore::AsyncHgIdMutableHistoryStore;
 
-pub type AsyncMutableIndexedLogHistoryStore = AsyncMutableHistoryStore<IndexedLogHistoryStore>;
+pub type AsyncMutableIndexedLogHgIdHistoryStore =
+    AsyncHgIdMutableHistoryStore<IndexedLogHgIdHistoryStore>;
 
-impl AsyncMutableIndexedLogHistoryStore {
+impl AsyncMutableIndexedLogHgIdHistoryStore {
     pub fn new(dir: PathBuf) -> impl Future<Item = Self, Error = Error> + Send + 'static {
-        poll_fn(move || blocking(|| IndexedLogHistoryStore::new(&dir)))
+        poll_fn(move || blocking(|| IndexedLogHgIdHistoryStore::new(&dir)))
             .from_err()
             .and_then(move |res| res)
-            .map(move |res| AsyncMutableHistoryStore::new_(res))
+            .map(move |res| AsyncHgIdMutableHistoryStore::new_(res))
     }
 }
 
@@ -34,7 +35,7 @@ mod tests {
     use tempfile::tempdir;
     use tokio::runtime::Runtime;
 
-    use revisionstore::HistoryStore;
+    use revisionstore::HgIdHistoryStore;
     use types::{testutil::*, NodeInfo};
 
     #[test]
@@ -52,7 +53,7 @@ mod tests {
         let infocloned = info.clone();
 
         let mutablehistorystore =
-            AsyncMutableIndexedLogHistoryStore::new(tempdir.path().to_path_buf());
+            AsyncMutableIndexedLogHgIdHistoryStore::new(tempdir.path().to_path_buf());
         let work = mutablehistorystore.and_then(move |historystore| {
             historystore
                 .add(&keycloned, &infocloned)
@@ -62,7 +63,7 @@ mod tests {
 
         let _ = runtime.block_on(work).unwrap();
 
-        let store = IndexedLogHistoryStore::new(tempdir.path().to_path_buf()).unwrap();
+        let store = IndexedLogHgIdHistoryStore::new(tempdir.path().to_path_buf()).unwrap();
 
         assert_eq!(store.get_node_info(&my_key).unwrap().unwrap(), info);
     }

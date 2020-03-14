@@ -27,7 +27,7 @@ use types::{Key, NodeInfo, RepoPath, RepoPathBuf};
 use crate::error::EmptyMutablePack;
 use crate::historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
 use crate::historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
-use crate::historystore::{HistoryStore, MutableHistoryStore};
+use crate::historystore::{HgIdHistoryStore, HgIdMutableHistoryStore};
 use crate::localstore::HgIdLocalStore;
 use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
@@ -125,7 +125,7 @@ impl MutableHistoryPack {
     }
 }
 
-impl MutableHistoryStore for MutableHistoryPack {
+impl HgIdMutableHistoryStore for MutableHistoryPack {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
         let mut inner = self.inner.lock();
         // Loops in the graph aren't allowed. Since this is a logic error in the code, let's
@@ -295,7 +295,7 @@ fn topo_sort(hgid_map: &HashMap<Key, NodeInfo>) -> Result<Vec<(&Key, &NodeInfo)>
     Ok(results)
 }
 
-impl HistoryStore for MutableHistoryPack {
+impl HgIdHistoryStore for MutableHistoryPack {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         let inner = self.inner.lock();
         Ok(inner

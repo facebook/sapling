@@ -12,20 +12,20 @@ use futures::future::poll_fn;
 use tokio::prelude::*;
 use tokio_threadpool::blocking;
 
-use revisionstore::{unionhistorystore::UnionHistoryStore, HistoryPack, HistoryStore};
+use revisionstore::{unionhistorystore::UnionHgIdHistoryStore, HgIdHistoryStore, HistoryPack};
 
-use crate::asynchistorystore::AsyncHistoryStore;
+use crate::asynchistorystore::AsyncHgIdHistoryStore;
 
-pub type AsyncUnionHistoryStore<T> = AsyncHistoryStore<UnionHistoryStore<T>>;
+pub type AsyncUnionHgIdHistoryStore<T> = AsyncHgIdHistoryStore<UnionHgIdHistoryStore<T>>;
 
-fn new_store<T: HistoryStore + Send + Sync + 'static>(
+fn new_store<T: HgIdHistoryStore + Send + Sync + 'static>(
     packs: Vec<PathBuf>,
     builder: impl Fn(&Path) -> Result<T> + Send + 'static,
-) -> impl Future<Item = AsyncUnionHistoryStore<T>, Error = Error> + Send + 'static {
+) -> impl Future<Item = AsyncUnionHgIdHistoryStore<T>, Error = Error> + Send + 'static {
     poll_fn({
         move || {
             blocking(|| {
-                let mut store = UnionHistoryStore::new();
+                let mut store = UnionHgIdHistoryStore::new();
 
                 for pack in packs.iter() {
                     store.add(builder(&pack)?);
@@ -37,13 +37,13 @@ fn new_store<T: HistoryStore + Send + Sync + 'static>(
     })
     .from_err()
     .and_then(|res| res)
-    .map(move |unionstore| AsyncUnionHistoryStore::new_(unionstore))
+    .map(move |unionstore| AsyncUnionHgIdHistoryStore::new_(unionstore))
 }
 
-impl AsyncUnionHistoryStore<HistoryPack> {
+impl AsyncUnionHgIdHistoryStore<HistoryPack> {
     pub fn new(
         packs: Vec<PathBuf>,
-    ) -> impl Future<Item = AsyncUnionHistoryStore<HistoryPack>, Error = Error> + Send + 'static
+    ) -> impl Future<Item = AsyncUnionHgIdHistoryStore<HistoryPack>, Error = Error> + Send + 'static
     {
         new_store(packs, |path| HistoryPack::new(&path))
     }

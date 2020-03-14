@@ -10,24 +10,24 @@ use futures::{future::ok, stream::iter_ok};
 use tokio::prelude::*;
 
 use cloned::cloned;
-use revisionstore::{HistoryStore, ToKeys};
+use revisionstore::{HgIdHistoryStore, ToKeys};
 use types::{Key, NodeInfo};
 
 use crate::util::AsyncWrapper;
 
-/// Allow a `HistoryStore` to be used in an asynchronous context
-pub struct AsyncHistoryStore<T: HistoryStore> {
+/// Allow a `HgIdHistoryStore` to be used in an asynchronous context
+pub struct AsyncHgIdHistoryStore<T: HgIdHistoryStore> {
     history: AsyncWrapper<T>,
 }
 
-impl<T: HistoryStore + Send + Sync> AsyncHistoryStore<T> {
+impl<T: HgIdHistoryStore + Send + Sync> AsyncHgIdHistoryStore<T> {
     pub(crate) fn new_(store: T) -> Self {
-        AsyncHistoryStore {
+        AsyncHgIdHistoryStore {
             history: AsyncWrapper::new(store),
         }
     }
 
-    /// Asynchronously call the HistoryStore::get_missing method.
+    /// Asynchronously call the HgIdHistoryStore::get_missing method.
     pub fn get_missing(
         &self,
         keys: Vec<Key>,
@@ -35,7 +35,7 @@ impl<T: HistoryStore + Send + Sync> AsyncHistoryStore<T> {
         self.history.block(move |store| store.get_missing(&keys))
     }
 
-    /// Asynchronously call the HistoryStore::get_node_info method.
+    /// Asynchronously call the HgIdHistoryStore::get_node_info method.
     pub fn get_node_info(
         &self,
         key: &Key,
@@ -45,7 +45,7 @@ impl<T: HistoryStore + Send + Sync> AsyncHistoryStore<T> {
     }
 }
 
-impl<T: HistoryStore + ToKeys + Send + Sync> AsyncHistoryStore<T> {
+impl<T: HgIdHistoryStore + ToKeys + Send + Sync> AsyncHgIdHistoryStore<T> {
     /// Iterate over all the keys of this historystore.
     pub fn iter(&self) -> impl Stream<Item = Key, Error = Error> + Send {
         let keysfut = self.history.block(move |store| Ok(store.to_keys()));

@@ -16,14 +16,14 @@ use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 use types::{Key, NodeInfo};
 
 use crate::{
-    historystore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore},
-    indexedloghistorystore::IndexedLogHistoryStore,
+    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
+    indexedloghistorystore::IndexedLogHgIdHistoryStore,
     localstore::HgIdLocalStore,
     memcache::MemcacheStore,
-    multiplexstore::MultiplexHistoryStore,
+    multiplexstore::MultiplexHgIdHistoryStore,
     packstore::{CorruptionPolicy, MutableHistoryPackStore},
     remotestore::HgIdRemoteStore,
-    unionhistorystore::UnionHistoryStore,
+    unionhistorystore::UnionHgIdHistoryStore,
     util::{
         get_cache_packs_path, get_cache_path, get_indexedloghistorystore_path, get_local_path,
         get_packs_path,
@@ -31,13 +31,13 @@ use crate::{
 };
 
 /// A `MetadataStore` aggregate all the local and remote stores and expose them as one. Both local and
-/// remote stores can be queried and accessed via the `HistoryStore` trait. The local store can also
-/// be written to via the `MutableHistoryStore` trait, this is intended to be used to store local
+/// remote stores can be queried and accessed via the `HgIdHistoryStore` trait. The local store can also
+/// be written to via the `HgIdMutableHistoryStore` trait, this is intended to be used to store local
 /// commit data.
 pub struct MetadataStore {
-    historystore: UnionHistoryStore<Arc<dyn HistoryStore>>,
-    local_mutablehistorystore: Option<Arc<dyn MutableHistoryStore>>,
-    shared_mutablehistorystore: Arc<dyn MutableHistoryStore>,
+    historystore: UnionHgIdHistoryStore<Arc<dyn HgIdHistoryStore>>,
+    local_mutablehistorystore: Option<Arc<dyn HgIdMutableHistoryStore>>,
+    shared_mutablehistorystore: Arc<dyn HgIdMutableHistoryStore>,
     remote_store: Option<Arc<dyn RemoteHistoryStore>>,
 }
 
@@ -49,7 +49,7 @@ impl MetadataStore {
     }
 }
 
-impl HistoryStore for MetadataStore {
+impl HgIdHistoryStore for MetadataStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         self.historystore.get_node_info(key)
     }
@@ -85,7 +85,7 @@ impl Drop for MetadataStore {
     }
 }
 
-impl MutableHistoryStore for MetadataStore {
+impl HgIdMutableHistoryStore for MetadataStore {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
         self.local_mutablehistorystore
             .as_ref()
@@ -163,13 +163,14 @@ impl<'a> MetadataStoreBuilder<'a> {
             &cache_packs_path,
             CorruptionPolicy::REMOVE,
         )?);
-        let mut historystore: UnionHistoryStore<Arc<dyn HistoryStore>> = UnionHistoryStore::new();
+        let mut historystore: UnionHgIdHistoryStore<Arc<dyn HgIdHistoryStore>> =
+            UnionHgIdHistoryStore::new();
 
         if self
             .config
             .get_or_default::<bool>("remotefilelog", "indexedloghistorystore")?
         {
-            let shared_indexedloghistorystore = Arc::new(IndexedLogHistoryStore::new(
+            let shared_indexedloghistorystore = Arc::new(IndexedLogHgIdHistoryStore::new(
                 get_indexedloghistorystore_path(&cache_path)?,
             )?);
             historystore.add(shared_indexedloghistorystore);
@@ -183,7 +184,7 @@ impl<'a> MetadataStoreBuilder<'a> {
         //    will be correct.
         historystore.add(shared_pack_store.clone());
 
-        let local_mutablehistorystore: Option<Arc<dyn MutableHistoryStore>> =
+        let local_mutablehistorystore: Option<Arc<dyn HgIdMutableHistoryStore>> =
             if let Some(local_path) = self.local_path {
                 let local_pack_store = Arc::new(MutableHistoryPackStore::new(
                     get_packs_path(&local_path, &self.suffix)?,
@@ -214,26 +215,27 @@ impl<'a> MetadataStoreBuilder<'a> {
                 // other clients and future requests won't need to go to a network store.
                 let memcachehistorystore = memcachestore.historystore(shared_pack_store.clone());
 
-                let mut multiplexstore: MultiplexHistoryStore<Arc<dyn MutableHistoryStore>> =
-                    MultiplexHistoryStore::new();
+                let mut multiplexstore: MultiplexHgIdHistoryStore<
+                    Arc<dyn HgIdMutableHistoryStore>,
+                > = MultiplexHgIdHistoryStore::new();
                 multiplexstore.add_store(Arc::new(memcachestore));
                 multiplexstore.add_store(shared_pack_store.clone());
 
                 (
                     Some(memcachehistorystore),
-                    Arc::new(multiplexstore) as Arc<dyn MutableHistoryStore>,
+                    Arc::new(multiplexstore) as Arc<dyn HgIdMutableHistoryStore>,
                 )
             } else {
                 (
                     None,
-                    shared_pack_store.clone() as Arc<dyn MutableHistoryStore>,
+                    shared_pack_store.clone() as Arc<dyn HgIdMutableHistoryStore>,
                 )
             };
 
             let store = remotestore.historystore(shared_store);
 
             let remotestores = if let Some(cache) = cache {
-                let mut remotestores = UnionHistoryStore::new();
+                let mut remotestores = UnionHgIdHistoryStore::new();
                 remotestores.add(cache.clone());
                 remotestores.add(store.clone());
                 Arc::new(remotestores)
@@ -247,7 +249,7 @@ impl<'a> MetadataStoreBuilder<'a> {
             None
         };
 
-        let shared_mutablehistorystore: Arc<dyn MutableHistoryStore> = shared_pack_store;
+        let shared_mutablehistorystore: Arc<dyn HgIdMutableHistoryStore> = shared_pack_store;
 
         Ok(MetadataStore {
             historystore,

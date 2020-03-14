@@ -13,23 +13,23 @@ use cpython::{
 };
 
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
-use revisionstore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore, ToKeys};
+use revisionstore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore, ToKeys};
 use types::{Key, NodeInfo};
 
 use crate::pythonutil::{
     from_key, from_key_to_tuple, from_tuple_to_key, key_error, to_key, to_node, to_path,
 };
 
-pub trait HistoryStorePyExt {
+pub trait HgIdHistoryStorePyExt {
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
     fn get_node_info_py(&self, py: Python, name: &PyPathBuf, node: &PyBytes) -> PyResult<PyTuple>;
 }
 
-pub trait IterableHistoryStorePyExt {
+pub trait IterableHgIdHistoryStorePyExt {
     fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>>;
 }
 
-pub trait MutableHistoryStorePyExt: HistoryStorePyExt {
+pub trait HgIdMutableHistoryStorePyExt: HgIdHistoryStorePyExt {
     fn add_py(
         &self,
         py: Python,
@@ -47,7 +47,7 @@ pub trait RemoteHistoryStorePyExt: RemoteHistoryStore {
     fn prefetch_py(&self, py: Python, keys: PyList) -> PyResult<PyObject>;
 }
 
-impl<T: HistoryStore + ?Sized> HistoryStorePyExt for T {
+impl<T: HgIdHistoryStore + ?Sized> HgIdHistoryStorePyExt for T {
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList> {
         // Copy the PyObjects into a vector so we can get a reference iterator.
         // This lets us get a Vector of Keys without copying the strings.
@@ -131,7 +131,7 @@ fn to_node_info(
     Ok(NodeInfo { parents, linknode })
 }
 
-impl<T: ToKeys + HistoryStore + ?Sized> IterableHistoryStorePyExt for T {
+impl<T: ToKeys + HgIdHistoryStore + ?Sized> IterableHgIdHistoryStorePyExt for T {
     fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>> {
         let iter = self.to_keys().into_iter().map(|res| {
             let key = res?;
@@ -161,7 +161,7 @@ impl<T: ToKeys + HistoryStore + ?Sized> IterableHistoryStorePyExt for T {
     }
 }
 
-impl<T: MutableHistoryStore + ?Sized> MutableHistoryStorePyExt for T {
+impl<T: HgIdMutableHistoryStore + ?Sized> HgIdMutableHistoryStorePyExt for T {
     fn add_py(
         &self,
         py: Python,

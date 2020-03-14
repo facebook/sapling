@@ -26,18 +26,18 @@ use types::{
 };
 
 use crate::{
-    historystore::{HistoryStore, MutableHistoryStore},
+    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
     localstore::HgIdLocalStore,
     repack::ToKeys,
     sliceext::SliceExt,
 };
 
-struct IndexedLogHistoryStoreInner {
+struct IndexedLogHgIdHistoryStoreInner {
     log: RotateLog,
 }
 
-pub struct IndexedLogHistoryStore {
-    inner: RwLock<IndexedLogHistoryStoreInner>,
+pub struct IndexedLogHgIdHistoryStore {
+    inner: RwLock<IndexedLogHgIdHistoryStoreInner>,
 }
 
 struct Entry {
@@ -184,18 +184,18 @@ impl Entry {
     }
 }
 
-impl IndexedLogHistoryStore {
-    /// Create or open an `IndexedLogHistoryStore`.
+impl IndexedLogHgIdHistoryStore {
+    /// Create or open an `IndexedLogHgIdHistoryStore`.
     pub fn new(path: impl AsRef<Path>) -> Result<Self> {
         let open_options = Self::default_open_options();
         let log = open_options.open(&path)?;
-        Ok(IndexedLogHistoryStore {
-            inner: RwLock::new(IndexedLogHistoryStoreInner { log }),
+        Ok(IndexedLogHgIdHistoryStore {
+            inner: RwLock::new(IndexedLogHgIdHistoryStoreInner { log }),
         })
     }
 }
 
-impl DefaultOpenOptions<OpenOptions> for IndexedLogHistoryStore {
+impl DefaultOpenOptions<OpenOptions> for IndexedLogHgIdHistoryStore {
     /// Default configuration: 4 x 0.5GB.
     fn default_open_options() -> OpenOptions {
         OpenOptions::new()
@@ -208,9 +208,9 @@ impl DefaultOpenOptions<OpenOptions> for IndexedLogHistoryStore {
     }
 }
 
-impl HgIdLocalStore for IndexedLogHistoryStore {
+impl HgIdLocalStore for IndexedLogHgIdHistoryStore {
     fn from_path(path: &Path) -> Result<Self> {
-        IndexedLogHistoryStore::new(path)
+        IndexedLogHgIdHistoryStore::new(path)
     }
 
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
@@ -226,7 +226,7 @@ impl HgIdLocalStore for IndexedLogHistoryStore {
     }
 }
 
-impl HistoryStore for IndexedLogHistoryStore {
+impl HgIdHistoryStore for IndexedLogHgIdHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         let inner = self.inner.read().unwrap();
         let entry = match Entry::from_log(key, &inner.log)? {
@@ -237,7 +237,7 @@ impl HistoryStore for IndexedLogHistoryStore {
     }
 }
 
-impl MutableHistoryStore for IndexedLogHistoryStore {
+impl HgIdMutableHistoryStore for IndexedLogHgIdHistoryStore {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
         let mut inner = self.inner.write().unwrap();
         let entry = Entry::new(key, info);
@@ -250,7 +250,7 @@ impl MutableHistoryStore for IndexedLogHistoryStore {
     }
 }
 
-impl ToKeys for IndexedLogHistoryStore {
+impl ToKeys for IndexedLogHgIdHistoryStore {
     fn to_keys(&self) -> Vec<Result<Key>> {
         self.inner
             .read()
@@ -280,7 +280,7 @@ mod tests {
     #[test]
     fn test_empty() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir)?;
         log.flush()?;
         Ok(())
     }
@@ -288,7 +288,7 @@ mod tests {
     #[test]
     fn test_add() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir)?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
@@ -303,7 +303,7 @@ mod tests {
     #[test]
     fn test_add_get_node_info() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir)?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],
@@ -312,7 +312,7 @@ mod tests {
         log.add(&k, &nodeinfo)?;
         log.flush()?;
 
-        let log = IndexedLogHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir)?;
         let read_nodeinfo = log.get_node_info(&k)?;
         assert_eq!(Some(nodeinfo), read_nodeinfo);
         Ok(())
@@ -321,7 +321,7 @@ mod tests {
     #[test]
     fn test_corrupted() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir)?;
         let mut rng = ChaChaRng::from_seed([0u8; 32]);
 
         let nodes = get_nodes(&mut rng);
@@ -337,7 +337,7 @@ mod tests {
         rotate_log_path.push("log");
         remove_file(rotate_log_path)?;
 
-        let log = IndexedLogHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir)?;
         for (key, info) in nodes.iter() {
             log.add(&key, &info)?;
         }
@@ -350,7 +350,7 @@ mod tests {
     #[test]
     fn test_iter() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogHistoryStore::new(&tempdir)?;
+        let log = IndexedLogHgIdHistoryStore::new(&tempdir)?;
         let k = key("a", "1");
         let nodeinfo = NodeInfo {
             parents: [key("a", "2"), null_key("a")],

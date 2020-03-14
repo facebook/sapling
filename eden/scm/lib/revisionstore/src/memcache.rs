@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! Adapters around Memcache to be transparently used as HgIdDataStore or HistoryStore.
+//! Adapters around Memcache to be transparently used as HgIdDataStore or HgIdHistoryStore.
 
 use std::{mem::size_of, path::PathBuf, sync::Arc};
 
@@ -18,7 +18,7 @@ use types::{Key, NodeInfo};
 
 use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore},
-    historystore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore},
+    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
     localstore::HgIdLocalStore,
     remotestore::HgIdRemoteStore,
 };
@@ -126,14 +126,14 @@ impl HgIdMutableDeltaStore for MemcacheStore {
     }
 }
 
-impl HistoryStore for MemcacheStore {
+impl HgIdHistoryStore for MemcacheStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         self.get_hist(key)
             .map(|opt| opt.map(|mchist| mchist.nodeinfo))
     }
 }
 
-impl MutableHistoryStore for MemcacheStore {
+impl HgIdMutableHistoryStore for MemcacheStore {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
         self.add_hist(key, info);
         Ok(())
@@ -155,8 +155,8 @@ impl HgIdRemoteStore for MemcacheStore {
         Arc::new(MemcacheHgIdDataStore::new(self.clone(), store))
     }
 
-    fn historystore(&self, store: Arc<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
-        Arc::new(MemcacheHistoryStore::new(self.clone(), store))
+    fn historystore(&self, store: Arc<dyn HgIdMutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
+        Arc::new(MemcacheHgIdHistoryStore::new(self.clone(), store))
     }
 }
 
@@ -231,33 +231,33 @@ impl RemoteDataStore for MemcacheHgIdDataStore {
     }
 }
 
-struct MemcacheHistoryStore {
-    store: Arc<dyn MutableHistoryStore>,
+struct MemcacheHgIdHistoryStore {
+    store: Arc<dyn HgIdMutableHistoryStore>,
     memcache: MemcacheStore,
 }
 
-impl MemcacheHistoryStore {
-    pub fn new(memcache: MemcacheStore, store: Arc<dyn MutableHistoryStore>) -> Self {
+impl MemcacheHgIdHistoryStore {
+    pub fn new(memcache: MemcacheStore, store: Arc<dyn HgIdMutableHistoryStore>) -> Self {
         Self { memcache, store }
     }
 }
 
-impl HistoryStore for MemcacheHistoryStore {
+impl HgIdHistoryStore for MemcacheHgIdHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         self.memcache.get_node_info(key)
     }
 }
 
-impl HgIdLocalStore for MemcacheHistoryStore {
+impl HgIdLocalStore for MemcacheHgIdHistoryStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         self.store.get_missing(keys)
     }
 }
 
-impl RemoteHistoryStore for MemcacheHistoryStore {
+impl RemoteHistoryStore for MemcacheHgIdHistoryStore {
     fn prefetch(&self, keys: &[Key]) -> Result<()> {
         let span = info_span!(
-            "MemcacheHistoryStore::prefetch",
+            "MemcacheHgIdHistoryStore::prefetch",
             key_count = keys.len(),
             hit_count = &0,
             size = &0

@@ -12,7 +12,7 @@ use anyhow::{format_err, Result};
 use types::{Key, NodeInfo};
 
 use crate::datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata};
-use crate::historystore::{HistoryStore, MutableHistoryStore};
+use crate::historystore::{HgIdHistoryStore, HgIdMutableHistoryStore};
 use crate::localstore::HgIdLocalStore;
 
 /// A `MultiplexDeltaStore` is a store that will duplicate all the writes to all the
@@ -21,9 +21,9 @@ pub struct MultiplexDeltaStore<T: HgIdMutableDeltaStore> {
     stores: Vec<T>,
 }
 
-/// A `MultiplexHistoryStore` is a store that will duplicate all the writes to all the
+/// A `MultiplexHgIdHistoryStore` is a store that will duplicate all the writes to all the
 /// history stores that it is made of.
-pub struct MultiplexHistoryStore<T: MutableHistoryStore> {
+pub struct MultiplexHgIdHistoryStore<T: HgIdMutableHistoryStore> {
     stores: Vec<T>,
 }
 
@@ -37,7 +37,7 @@ impl<T: HgIdMutableDeltaStore> MultiplexDeltaStore<T> {
     }
 }
 
-impl<T: MutableHistoryStore> MultiplexHistoryStore<T> {
+impl<T: HgIdMutableHistoryStore> MultiplexHgIdHistoryStore<T> {
     pub fn new() -> Self {
         Self { stores: Vec::new() }
     }
@@ -114,7 +114,7 @@ impl<T: HgIdMutableDeltaStore> HgIdLocalStore for MultiplexDeltaStore<T> {
     }
 }
 
-impl<T: MutableHistoryStore> MutableHistoryStore for MultiplexHistoryStore<T> {
+impl<T: HgIdMutableHistoryStore> HgIdMutableHistoryStore for MultiplexHgIdHistoryStore<T> {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
         for store in self.stores.iter() {
             store.add(key, info)?;
@@ -132,7 +132,7 @@ impl<T: MutableHistoryStore> MutableHistoryStore for MultiplexHistoryStore<T> {
     }
 }
 
-impl<T: MutableHistoryStore> HistoryStore for MultiplexHistoryStore<T> {
+impl<T: HgIdMutableHistoryStore> HgIdHistoryStore for MultiplexHgIdHistoryStore<T> {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         for store in self.stores.iter() {
             if let Some(nodeinfo) = store.get_node_info(key)? {
@@ -144,7 +144,7 @@ impl<T: MutableHistoryStore> HistoryStore for MultiplexHistoryStore<T> {
     }
 }
 
-impl<T: MutableHistoryStore> HgIdLocalStore for MultiplexHistoryStore<T> {
+impl<T: HgIdMutableHistoryStore> HgIdLocalStore for MultiplexHgIdHistoryStore<T> {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let initial_keys = Ok(keys.iter().cloned().collect());
         self.stores
@@ -168,7 +168,7 @@ mod tests {
     use crate::datapack::DataPackVersion;
     use crate::datastore::HgIdDataStore;
     use crate::historypack::HistoryPackVersion;
-    use crate::historystore::HistoryStore;
+    use crate::historystore::HgIdHistoryStore;
     use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
     use crate::mutabledatapack::MutableDataPack;
     use crate::mutablehistorypack::MutableHistoryPack;
@@ -230,7 +230,7 @@ mod tests {
     fn test_history_add_static() -> Result<()> {
         let tempdir = TempDir::new()?;
         let mut pack = MutableHistoryPack::new(&tempdir, HistoryPackVersion::One)?;
-        let mut multiplex = MultiplexHistoryStore::new();
+        let mut multiplex = MultiplexHgIdHistoryStore::new();
         multiplex.add_store(Box::new(&mut pack));
 
         let k = key("a", "1");
@@ -254,7 +254,7 @@ mod tests {
         let tempdir = TempDir::new()?;
         let mut pack1 = MutableHistoryPack::new(&tempdir, HistoryPackVersion::One)?;
         let mut pack2 = MutableHistoryPack::new(&tempdir, HistoryPackVersion::One)?;
-        let mut multiplex = MultiplexHistoryStore::new();
+        let mut multiplex = MultiplexHgIdHistoryStore::new();
         multiplex.add_store(Box::new(&mut pack1));
         multiplex.add_store(Box::new(&mut pack2));
 

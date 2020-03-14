@@ -16,7 +16,7 @@ use types::{HgId, HistoryEntry, Key, NodeInfo, RepoPathBuf};
 
 use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore},
-    historystore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore},
+    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
     localstore::HgIdLocalStore,
     remotestore::HgIdRemoteStore,
 };
@@ -61,7 +61,7 @@ impl HgIdRemoteStore for FakeHgIdRemoteStore {
         })
     }
 
-    fn historystore(&self, store: Arc<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
+    fn historystore(&self, store: Arc<dyn HgIdMutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
         assert!(self.hist.is_some());
 
         Arc::new(FakeRemoteHistoryStore {
@@ -126,7 +126,7 @@ impl HgIdLocalStore for FakeRemoteDataStore {
 }
 
 struct FakeRemoteHistoryStore {
-    store: Arc<dyn MutableHistoryStore>,
+    store: Arc<dyn HgIdMutableHistoryStore>,
     map: HashMap<Key, NodeInfo>,
 }
 
@@ -141,7 +141,7 @@ impl RemoteHistoryStore for FakeRemoteHistoryStore {
     }
 }
 
-impl HistoryStore for FakeRemoteHistoryStore {
+impl HgIdHistoryStore for FakeRemoteHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         match self.prefetch(&[key.clone()]) {
             Err(_) => Ok(None),

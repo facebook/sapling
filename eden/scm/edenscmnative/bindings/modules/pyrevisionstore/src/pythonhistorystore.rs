@@ -12,22 +12,22 @@ use cpython::{
 };
 
 use cpython_ext::{PyErr, PyPathBuf};
-use revisionstore::{HgIdLocalStore, HistoryStore};
+use revisionstore::{HgIdHistoryStore, HgIdLocalStore};
 use types::{Key, NodeInfo};
 
 use crate::pythonutil::{bytes_from_tuple, from_key_to_tuple, from_tuple_to_key, to_node_info};
 
-pub struct PythonHistoryStore {
+pub struct PythonHgIdHistoryStore {
     py_store: PyObject,
 }
 
-impl PythonHistoryStore {
+impl PythonHgIdHistoryStore {
     pub fn new(py_store: PyObject) -> Self {
-        PythonHistoryStore { py_store }
+        PythonHgIdHistoryStore { py_store }
     }
 }
 
-impl HistoryStore for PythonHistoryStore {
+impl HgIdHistoryStore for PythonHgIdHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
@@ -65,7 +65,7 @@ impl HistoryStore for PythonHistoryStore {
     }
 }
 
-impl HgIdLocalStore for PythonHistoryStore {
+impl HgIdLocalStore for PythonHgIdHistoryStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let gil = Python::acquire_gil();
         let py = gil.python();

@@ -20,7 +20,7 @@ use edenapi::{
     ProgressStats,
 };
 use pyrevisionstore::{mutabledeltastore, mutablehistorystore};
-use revisionstore::{Delta, HgIdMutableDeltaStore, Metadata, MutableHistoryStore};
+use revisionstore::{Delta, HgIdMutableDeltaStore, HgIdMutableHistoryStore, Metadata};
 use types::{Key, Node, RepoPathBuf};
 
 mod exceptions {
@@ -75,7 +75,10 @@ fn get_deltastore(py: Python, store: PyObject) -> PyResult<Box<dyn HgIdMutableDe
     }
 }
 
-fn get_historystore(py: Python, store: PyObject) -> PyResult<Box<dyn MutableHistoryStore + Send>> {
+fn get_historystore(
+    py: Python,
+    store: PyObject,
+) -> PyResult<Box<dyn HgIdMutableHistoryStore + Send>> {
     if let Ok(store) = store.extract::<mutablehistorystore>(py) {
         Ok(Box::new(store))
     } else {

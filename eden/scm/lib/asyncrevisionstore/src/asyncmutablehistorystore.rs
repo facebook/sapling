@@ -13,16 +13,16 @@ use tokio::prelude::*;
 use tokio_threadpool::blocking;
 
 use cloned::cloned;
-use revisionstore::MutableHistoryStore;
+use revisionstore::HgIdMutableHistoryStore;
 use types::{HistoryEntry, Key, NodeInfo};
 
-pub struct AsyncMutableHistoryStore<T: MutableHistoryStore> {
+pub struct AsyncHgIdMutableHistoryStore<T: HgIdMutableHistoryStore> {
     inner: Option<T>,
 }
 
-/// Wraps a MutableHistoryStore to be used in an asynchronous context.
+/// Wraps a HgIdMutableHistoryStore to be used in an asynchronous context.
 ///
-/// The API is designed to consume the `AsyncMutableHistoryStore` and return it, this allows chaining
+/// The API is designed to consume the `AsyncHgIdMutableHistoryStore` and return it, this allows chaining
 /// the Futures with `and_then()`.
 ///
 /// # Examples
@@ -33,9 +33,9 @@ pub struct AsyncMutableHistoryStore<T: MutableHistoryStore> {
 ///     .and_then(move |datapack| datapack.add_entry(&entry2))
 ///     .and_then(move |datapack| datapack.close()
 /// ```
-impl<T: MutableHistoryStore + Send> AsyncMutableHistoryStore<T> {
+impl<T: HgIdMutableHistoryStore + Send> AsyncHgIdMutableHistoryStore<T> {
     pub(crate) fn new_(store: T) -> Self {
-        AsyncMutableHistoryStore { inner: Some(store) }
+        AsyncHgIdMutableHistoryStore { inner: Some(store) }
     }
 
     /// Add the `NodeInfo` to this store.
@@ -56,7 +56,7 @@ impl<T: MutableHistoryStore + Send> AsyncMutableHistoryStore<T> {
         })
         .from_err()
         .and_then(|res| res)
-        .map(move |inner| AsyncMutableHistoryStore { inner: Some(inner) })
+        .map(move |inner| AsyncHgIdMutableHistoryStore { inner: Some(inner) })
     }
 
     /// Convenience function for adding a `types::PackHistoryEntry`.

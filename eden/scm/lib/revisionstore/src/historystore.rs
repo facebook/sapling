@@ -13,11 +13,11 @@ use types::{HistoryEntry, Key, NodeInfo};
 
 use crate::localstore::HgIdLocalStore;
 
-pub trait HistoryStore: HgIdLocalStore + Send + Sync {
+pub trait HgIdHistoryStore: HgIdLocalStore + Send + Sync {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>>;
 }
 
-pub trait MutableHistoryStore: HistoryStore + Send + Sync {
+pub trait HgIdMutableHistoryStore: HgIdHistoryStore + Send + Sync {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()>;
     fn flush(&self) -> Result<Option<PathBuf>>;
 
@@ -29,7 +29,7 @@ pub trait MutableHistoryStore: HistoryStore + Send + Sync {
 /// The `RemoteHistoryStore` trait indicates that data can fetched over the network. Care must be
 /// taken to avoid serially fetching data and instead data should be fetched in bulk via the
 /// `prefetch` API.
-pub trait RemoteHistoryStore: HistoryStore + Send + Sync {
+pub trait RemoteHistoryStore: HgIdHistoryStore + Send + Sync {
     /// Attempt to bring the data corresponding to the passed in keys to a local store.
     ///
     /// When implemented on a pure remote store, like the `EdenApi`, the method will always fetch
@@ -38,15 +38,15 @@ pub trait RemoteHistoryStore: HistoryStore + Send + Sync {
     fn prefetch(&self, keys: &[Key]) -> Result<()>;
 }
 
-/// Implement `HistoryStore` for all types that can be `Deref` into a `HistoryStore`.
-impl<T: HistoryStore + ?Sized, U: Deref<Target = T> + Send + Sync> HistoryStore for U {
+/// Implement `HgIdHistoryStore` for all types that can be `Deref` into a `HgIdHistoryStore`.
+impl<T: HgIdHistoryStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdHistoryStore for U {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         T::get_node_info(self, key)
     }
 }
 
-impl<T: MutableHistoryStore + ?Sized, U: Deref<Target = T> + Send + Sync> MutableHistoryStore
-    for U
+impl<T: HgIdMutableHistoryStore + ?Sized, U: Deref<Target = T> + Send + Sync>
+    HgIdMutableHistoryStore for U
 {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
         T::add(self, key, info)

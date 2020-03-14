@@ -9,12 +9,12 @@ use std::{ops::Deref, sync::Arc};
 
 use crate::{
     datastore::{HgIdMutableDeltaStore, RemoteDataStore},
-    historystore::{MutableHistoryStore, RemoteHistoryStore},
+    historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
 };
 
 pub trait HgIdRemoteStore: Send + Sync {
     fn datastore(&self, store: Arc<dyn HgIdMutableDeltaStore>) -> Arc<dyn RemoteDataStore>;
-    fn historystore(&self, store: Arc<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore>;
+    fn historystore(&self, store: Arc<dyn HgIdMutableHistoryStore>) -> Arc<dyn RemoteHistoryStore>;
 }
 
 impl<T: HgIdRemoteStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdRemoteStore for U {
@@ -22,7 +22,7 @@ impl<T: HgIdRemoteStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdRemote
         T::datastore(self, store)
     }
 
-    fn historystore(&self, store: Arc<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
+    fn historystore(&self, store: Arc<dyn HgIdMutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
         T::historystore(self, store)
     }
 }

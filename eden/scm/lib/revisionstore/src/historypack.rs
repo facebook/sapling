@@ -99,7 +99,7 @@ use types::{HgId, Key, NodeInfo, RepoPath, RepoPathBuf};
 use util::path::remove_file;
 
 use crate::historyindex::HistoryIndex;
-use crate::historystore::HistoryStore;
+use crate::historystore::HgIdHistoryStore;
 use crate::localstore::HgIdLocalStore;
 use crate::repack::{Repackable, ToKeys};
 use crate::sliceext::SliceExt;
@@ -329,7 +329,7 @@ impl HistoryPack {
     }
 }
 
-impl HistoryStore for HistoryPack {
+impl HgIdHistoryStore for HistoryPack {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         let hgid_location = match self.index.get_hgid_entry(key)? {
             None => return Ok(None),
@@ -459,7 +459,7 @@ pub mod tests {
 
     use types::{testutil::*, RepoPathBuf};
 
-    use crate::{historystore::MutableHistoryStore, mutablehistorypack::MutableHistoryPack};
+    use crate::{historystore::HgIdMutableHistoryStore, mutablehistorypack::MutableHistoryPack};
 
     pub fn make_historypack(tempdir: &TempDir, nodes: &HashMap<Key, NodeInfo>) -> HistoryPack {
         let mutpack = MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();

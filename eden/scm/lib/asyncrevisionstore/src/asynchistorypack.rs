@@ -14,9 +14,9 @@ use tokio_threadpool::blocking;
 
 use revisionstore::HistoryPack;
 
-use crate::asynchistorystore::AsyncHistoryStore;
+use crate::asynchistorystore::AsyncHgIdHistoryStore;
 
-pub type AsyncHistoryPack = AsyncHistoryStore<HistoryPack>;
+pub type AsyncHistoryPack = AsyncHgIdHistoryStore<HistoryPack>;
 
 impl AsyncHistoryPack {
     pub fn new(
@@ -25,7 +25,7 @@ impl AsyncHistoryPack {
         poll_fn({ move || blocking(|| HistoryPack::new(&path)) })
             .from_err()
             .and_then(|res| res)
-            .map(move |historypack| AsyncHistoryStore::new_(historypack))
+            .map(move |historypack| AsyncHgIdHistoryStore::new_(historypack))
     }
 }
 
@@ -40,7 +40,7 @@ mod tests {
 
     use cloned::cloned;
     use futures_ext::FutureExt;
-    use revisionstore::{HistoryPackVersion, MutableHistoryPack, MutableHistoryStore};
+    use revisionstore::{HgIdMutableHistoryStore, HistoryPackVersion, MutableHistoryPack};
     use types::{testutil::*, Key, NodeInfo};
 
     fn make_historypack(

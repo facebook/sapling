@@ -50,13 +50,13 @@ pub use crate::datastore::{
 };
 pub use crate::edenapi::EdenApiHgIdRemoteStore;
 pub use crate::historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};
-pub use crate::historystore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore};
+pub use crate::historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore};
 pub use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
-pub use crate::indexedloghistorystore::IndexedLogHistoryStore;
+pub use crate::indexedloghistorystore::IndexedLogHgIdHistoryStore;
 pub use crate::localstore::HgIdLocalStore;
 pub use crate::memcache::MemcacheStore;
 pub use crate::metadatastore::{MetadataStore, MetadataStoreBuilder};
-pub use crate::multiplexstore::{MultiplexDeltaStore, MultiplexHistoryStore};
+pub use crate::multiplexstore::{MultiplexDeltaStore, MultiplexHgIdHistoryStore};
 pub use crate::mutabledatapack::MutableDataPack;
 pub use crate::mutablehistorypack::MutableHistoryPack;
 pub use crate::packstore::{

@@ -14,7 +14,7 @@ use types::Key;
 
 use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore},
-    historystore::{MutableHistoryStore, RemoteHistoryStore},
+    historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
     localstore::HgIdLocalStore,
     remotestore::HgIdRemoteStore,
 };
@@ -59,7 +59,10 @@ impl HgIdRemoteStore for EdenApiHgIdRemoteStore {
         })
     }
 
-    fn historystore(&self, _store: Arc<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
+    fn historystore(
+        &self,
+        _store: Arc<dyn HgIdMutableHistoryStore>,
+    ) -> Arc<dyn RemoteHistoryStore> {
         unimplemented!()
     }
 }

@@ -24,13 +24,13 @@ use types::{Key, NodeInfo};
 use crate::datapack::{DataPack, DataPackVersion};
 use crate::datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata};
 use crate::historypack::{HistoryPack, HistoryPackVersion};
-use crate::historystore::{HistoryStore, MutableHistoryStore};
+use crate::historystore::{HgIdHistoryStore, HgIdMutableHistoryStore};
 use crate::localstore::HgIdLocalStore;
 use crate::mutabledatapack::MutableDataPack;
 use crate::mutablehistorypack::MutableHistoryPack;
 use crate::repack::Repackable;
 use crate::uniondatastore::UnionHgIdDataStore;
-use crate::unionhistorystore::UnionHistoryStore;
+use crate::unionhistorystore::UnionHgIdHistoryStore;
 
 /// Naive implementation of a store that order its underlying stores based on how recently we found
 /// data in them. This helps in reducing the number of stores that are iterated on.
@@ -360,7 +360,7 @@ impl HgIdDataStore for DataPackStore {
     }
 }
 
-impl HistoryStore for HistoryPackStore {
+impl HgIdHistoryStore for HistoryPackStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         self.inner.lock().run(|store| store.get_node_info(key))
     }
@@ -439,7 +439,7 @@ impl HgIdMutableDeltaStore for MutableDataPackStore {
 struct MutableHistoryPackStoreInner {
     pack_store: Arc<HistoryPackStore>,
     mutable_pack: Arc<MutableHistoryPack>,
-    union_store: UnionHistoryStore<Arc<dyn HistoryStore>>,
+    union_store: UnionHgIdHistoryStore<Arc<dyn HgIdHistoryStore>>,
 }
 
 /// A `MutableHistoryPackStore` allows both reading and writing to history packfiles.
@@ -451,7 +451,8 @@ impl MutableHistoryPackStore {
     pub fn new(pack_dir: impl AsRef<Path>, corruption_policy: CorruptionPolicy) -> Result<Self> {
         let pack_store = Arc::new(HistoryPackStore::new(pack_dir.as_ref(), corruption_policy));
         let mutable_pack = Arc::new(MutableHistoryPack::new(pack_dir, HistoryPackVersion::One)?);
-        let mut union_store: UnionHistoryStore<Arc<dyn HistoryStore>> = UnionHistoryStore::new();
+        let mut union_store: UnionHgIdHistoryStore<Arc<dyn HgIdHistoryStore>> =
+            UnionHgIdHistoryStore::new();
         union_store.add(pack_store.clone());
         union_store.add(mutable_pack.clone());
 
@@ -465,7 +466,7 @@ impl MutableHistoryPackStore {
     }
 }
 
-impl HistoryStore for MutableHistoryPackStore {
+impl HgIdHistoryStore for MutableHistoryPackStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         self.inner.union_store.get_node_info(key)
     }
@@ -477,7 +478,7 @@ impl HgIdLocalStore for MutableHistoryPackStore {
     }
 }
 
-impl MutableHistoryStore for MutableHistoryPackStore {
+impl HgIdMutableHistoryStore for MutableHistoryPackStore {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
         self.inner.mutable_pack.add(key, info)
     }

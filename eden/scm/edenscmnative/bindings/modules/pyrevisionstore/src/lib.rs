@@ -25,11 +25,11 @@ use pyconfigparser::config;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
     ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion,
-    Delta, HgIdDataStore, HgIdLocalStore, HgIdMutableDeltaStore, HgIdRemoteStore, HistoryPack,
-    HistoryPackStore, HistoryPackVersion, HistoryStore, IndexedLogHgIdDataStore,
-    IndexedLogHistoryStore, IndexedlogRepair, MemcacheStore, Metadata, MetadataStore,
-    MetadataStoreBuilder, MutableDataPack, MutableHistoryPack, MutableHistoryStore,
-    RemoteDataStore, RemoteHistoryStore,
+    Delta, HgIdDataStore, HgIdHistoryStore, HgIdLocalStore, HgIdMutableDeltaStore,
+    HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack, HistoryPackStore, HistoryPackVersion,
+    IndexedLogHgIdDataStore, IndexedLogHgIdHistoryStore, IndexedlogRepair, MemcacheStore, Metadata,
+    MetadataStore, MetadataStoreBuilder, MutableDataPack, MutableHistoryPack, RemoteDataStore,
+    RemoteHistoryStore,
 };
 use types::{Key, NodeInfo};
 
@@ -39,7 +39,7 @@ use crate::{
         RemoteDataStorePyExt,
     },
     historystorepyext::{
-        HistoryStorePyExt, IterableHistoryStorePyExt, MutableHistoryStorePyExt,
+        HgIdHistoryStorePyExt, HgIdMutableHistoryStorePyExt, IterableHgIdHistoryStorePyExt,
         RemoteHistoryStorePyExt,
     },
     pythonutil::from_key,
@@ -423,18 +423,18 @@ py_class!(class indexedlogdatastore |py| {
 });
 
 py_class!(class indexedloghistorystore |py| {
-    data store: Box<IndexedLogHistoryStore>;
+    data store: Box<IndexedLogHgIdHistoryStore>;
 
     def __new__(_cls, path: &PyPath) -> PyResult<indexedloghistorystore> {
         indexedloghistorystore::create_instance(
             py,
-            Box::new(IndexedLogHistoryStore::new(path.as_path()).map_pyerr(py)?),
+            Box::new(IndexedLogHgIdHistoryStore::new(path.as_path()).map_pyerr(py)?),
         )
     }
 
     @staticmethod
     def repair(path: &PyPath) -> PyResult<PyUnicode> {
-        IndexedLogHistoryStore::repair(path.as_path()).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
+        IndexedLogHgIdHistoryStore::repair(path.as_path()).map_pyerr(py).map(|s| PyUnicode::new(py, &s))
     }
 
     def getmissing(&self, keys: &PyObject) -> PyResult<PyList> {
@@ -572,8 +572,8 @@ impl HgIdMutableDeltaStore for mutabledeltastore {
 
 fn make_mutablehistorystore(
     packfilepath: Option<PyPathBuf>,
-) -> Result<Arc<dyn MutableHistoryStore + Send>> {
-    let store: Arc<dyn MutableHistoryStore + Send> = if let Some(packfilepath) = packfilepath {
+) -> Result<Arc<dyn HgIdMutableHistoryStore + Send>> {
+    let store: Arc<dyn HgIdMutableHistoryStore + Send> = if let Some(packfilepath) = packfilepath {
         Arc::new(MutableHistoryPack::new(
             packfilepath.as_path(),
             HistoryPackVersion::One,
@@ -586,7 +586,7 @@ fn make_mutablehistorystore(
 }
 
 py_class!(pub class mutablehistorystore |py| {
-    data store: Arc<dyn MutableHistoryStore>;
+    data store: Arc<dyn HgIdMutableHistoryStore>;
 
     def __new__(_cls, packfilepath: Option<PyPathBuf>) -> PyResult<mutablehistorystore> {
         let store = make_mutablehistorystore(packfilepath).map_pyerr(py)?;
@@ -614,7 +614,7 @@ py_class!(pub class mutablehistorystore |py| {
     }
 });
 
-impl HistoryStore for mutablehistorystore {
+impl HgIdHistoryStore for mutablehistorystore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
@@ -632,7 +632,7 @@ impl HgIdLocalStore for mutablehistorystore {
     }
 }
 
-impl MutableHistoryStore for mutablehistorystore {
+impl HgIdMutableHistoryStore for mutablehistorystore {
     fn add(&self, key: &Key, info: &NodeInfo) -> Result<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
@@ -701,7 +701,7 @@ impl HgIdRemoteStore for PyHgIdRemoteStore {
         Arc::new(PyRemoteDataStore(self.clone()))
     }
 
-    fn historystore(&self, store: Arc<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
+    fn historystore(&self, store: Arc<dyn HgIdMutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -778,7 +778,7 @@ impl RemoteHistoryStore for PyRemoteHistoryStore {
     }
 }
 
-impl HistoryStore for PyRemoteHistoryStore {
+impl HgIdHistoryStore for PyRemoteHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
         match self.prefetch(&[key.clone()]) {
             Ok(()) => self
