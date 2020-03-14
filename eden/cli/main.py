@@ -122,8 +122,8 @@ class DiskUsageCmd(Subcmd):
         if clean:
             print(
                 """
-WARNING: --clean option is incomplete.
-Currently, it only reduces the space used by the storage engine.
+WARNING: --clean option doesn't remove ignored files.
+Please use `hg clean --all` to remove them.
 """
             )
         instance = None
@@ -139,7 +139,7 @@ Currently, it only reduces the space used by the storage engine.
             config = checkout.get_config()
             backing_repos.add(config.backing_repo)
 
-            self.usage_for_mount(mount, args)
+            self.usage_for_mount(mount, args, clean)
 
         for backing in backing_repos:
             self.backing_usage(backing)
@@ -213,7 +213,7 @@ space by running:
         else:
             print("\nRun `eden gc` to reduce the space used by the storage engine.")
 
-    def usage_for_redirections(self, checkout: EdenCheckout) -> None:
+    def usage_for_redirections(self, checkout: EdenCheckout, clean: bool) -> None:
         redirections = redirect_mod.get_effective_redirections(checkout, mtab.new())
         seen_paths = set()
         if len(redirections) > 0:
@@ -223,13 +223,23 @@ space by running:
                 target = redir.expand_target_abspath(checkout)
                 seen_paths.add(target)
                 self.usage_for_dir(f"    {redir.repo_path}", target)
+                if clean:
+                    dirname, basename = os.path.split(redir.repo_path)
+                    parent = os.path.join(checkout.path, dirname)
+                    if basename == "buck-out":
+                        print(
+                            f"\nReclaiming space from redirection: {os.path.join(checkout.path, redir.repo_path)}"
+                        )
+                        subprocess.check_call(["buck", "clean"], cwd=parent)
+                        print("Space reclaimed.\n")
 
-            print(
-                """
+            if not clean:
+                print(
+                    """
 To reclaim space from buck-out directories, run `buck clean` from the
 parent of the buck-out directory.
 """
-            )
+                )
 
         # Deal with any legacy bind mounts that may have been made
         # obsolete by being migrated to redirections
@@ -250,7 +260,9 @@ Legacy bind mount dirs listed above are unused and can be removed!
 """
             )
 
-    def usage_for_mount(self, mount: str, args: argparse.Namespace) -> None:
+    def usage_for_mount(
+        self, mount: str, args: argparse.Namespace, clean: bool
+    ) -> None:
         self.underlined(f"Mount: {mount}")
 
         instance, checkout, _rel_path = require_checkout(args, mount)
@@ -315,7 +327,7 @@ directory to reclaim the disk space.
 """
             )
 
-        self.usage_for_redirections(checkout)
+        self.usage_for_redirections(checkout, clean)
 
 
 @subcmd("status", "Check the health of the Eden service", aliases=["health"])
