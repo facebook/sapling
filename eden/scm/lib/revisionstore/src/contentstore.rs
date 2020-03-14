@@ -452,7 +452,7 @@ mod tests {
         let data = Bytes::from(&[1, 2, 3, 4][..]);
 
         let mut map = HashMap::new();
-        map.insert(k.clone(), data.clone());
+        map.insert(k.clone(), (data.clone(), None));
         let mut remotestore = FakeHgIdRemoteStore::new();
         remotestore.data(map);
 
@@ -476,7 +476,7 @@ mod tests {
         let data = Bytes::from(&[1, 2, 3, 4][..]);
 
         let mut map = HashMap::new();
-        map.insert(k.clone(), data.clone());
+        map.insert(k.clone(), (data.clone(), None));
 
         let mut remotestore = FakeHgIdRemoteStore::new();
         remotestore.data(map);
@@ -526,7 +526,7 @@ mod tests {
         let data = Bytes::from(&[1, 2, 3, 4][..]);
 
         let mut map = HashMap::new();
-        map.insert(k.clone(), data.clone());
+        map.insert(k.clone(), (data.clone(), None));
 
         let mut remotestore = FakeHgIdRemoteStore::new();
         remotestore.data(map);
@@ -670,7 +670,7 @@ mod tests {
             let data = Bytes::from(&[1, 2, 3, 4][..]);
 
             let mut map = HashMap::new();
-            map.insert(k.clone(), data.clone());
+            map.insert(k.clone(), (data.clone(), None));
             let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.data(map);
 
@@ -709,7 +709,7 @@ mod tests {
             assert_eq!(data.len(), 10 * 1024 * 1024);
 
             let mut map = HashMap::new();
-            map.insert(k.clone(), data.clone());
+            map.insert(k.clone(), (data.clone(), None));
             let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.data(map);
 
@@ -745,7 +745,7 @@ mod tests {
             let data = Bytes::from(&[1, 2, 3, 4][..]);
 
             let mut map = HashMap::new();
-            map.insert(k.clone(), data.clone());
+            map.insert(k.clone(), (data.clone(), None));
             let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.data(map);
 

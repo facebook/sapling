@@ -31,7 +31,7 @@ pub fn delta(data: &str, base: Option<Key>, key: Key) -> Delta {
 }
 
 pub struct FakeHgIdRemoteStore {
-    data: Option<HashMap<Key, Bytes>>,
+    data: Option<HashMap<Key, (Bytes, Option<u64>)>>,
     hist: Option<HashMap<Key, NodeInfo>>,
 }
 
@@ -43,7 +43,7 @@ impl FakeHgIdRemoteStore {
         }
     }
 
-    pub fn data(&mut self, map: HashMap<Key, Bytes>) {
+    pub fn data(&mut self, map: HashMap<Key, (Bytes, Option<u64>)>) {
         self.data = Some(map)
     }
 
@@ -74,7 +74,7 @@ impl HgIdRemoteStore for FakeHgIdRemoteStore {
 
 struct FakeRemoteDataStore {
     store: Arc<dyn HgIdMutableDeltaStore>,
-    map: HashMap<Key, Bytes>,
+    map: HashMap<Key, (Bytes, Option<u64>)>,
 }
 
 impl RemoteDataStore for FakeRemoteDataStore {
@@ -82,13 +82,19 @@ impl RemoteDataStore for FakeRemoteDataStore {
         for k in keys {
             match k {
                 StoreKey::HgId(k) => {
-                    let data = self.map.get(&k).ok_or_else(|| Error::msg("Not found"))?;
+                    let (data, flags) = self.map.get(&k).ok_or_else(|| Error::msg("Not found"))?;
                     let delta = Delta {
                         data: data.clone(),
                         base: None,
                         key: k.clone(),
                     };
-                    self.store.add(&delta, &Default::default())?;
+                    self.store.add(
+                        &delta,
+                        &Metadata {
+                            size: Some(data.len() as u64),
+                            flags: *flags,
+                        },
+                    )?;
                 }
                 StoreKey::Content(_) => continue,
             }
