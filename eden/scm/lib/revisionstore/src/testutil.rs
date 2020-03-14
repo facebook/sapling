@@ -17,8 +17,9 @@ use types::{HgId, HistoryEntry, Key, NodeInfo, RepoPathBuf};
 use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore},
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
-    localstore::HgIdLocalStore,
+    localstore::LocalStore,
     remotestore::HgIdRemoteStore,
+    types::StoreKey,
 };
 
 pub fn delta(data: &str, base: Option<Key>, key: Key) -> Delta {
@@ -77,15 +78,20 @@ struct FakeRemoteDataStore {
 }
 
 impl RemoteDataStore for FakeRemoteDataStore {
-    fn prefetch(&self, keys: &[Key]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         for k in keys {
-            let data = self.map.get(&k).ok_or_else(|| Error::msg("Not found"))?;
-            let delta = Delta {
-                data: data.clone(),
-                base: None,
-                key: k.clone(),
-            };
-            self.store.add(&delta, &Default::default())?;
+            match k {
+                StoreKey::HgId(k) => {
+                    let data = self.map.get(&k).ok_or_else(|| Error::msg("Not found"))?;
+                    let delta = Delta {
+                        data: data.clone(),
+                        base: None,
+                        key: k.clone(),
+                    };
+                    self.store.add(&delta, &Default::default())?;
+                }
+                StoreKey::Content(_) => continue,
+            }
         }
 
         Ok(())
@@ -98,29 +104,29 @@ impl HgIdDataStore for FakeRemoteDataStore {
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        match self.prefetch(&[key.clone()]) {
+        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
             Err(_) => Ok(None),
             Ok(()) => self.store.get_delta(key),
         }
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        match self.prefetch(&[key.clone()]) {
+        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
             Err(_) => Ok(None),
             Ok(()) => self.store.get_delta_chain(key),
         }
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        match self.prefetch(&[key.clone()]) {
+        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
             Err(_) => Ok(None),
             Ok(()) => self.store.get_meta(key),
         }
     }
 }
 
-impl HgIdLocalStore for FakeRemoteDataStore {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for FakeRemoteDataStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         Ok(keys.to_vec())
     }
 }
@@ -131,10 +137,14 @@ struct FakeRemoteHistoryStore {
 }
 
 impl RemoteHistoryStore for FakeRemoteHistoryStore {
-    fn prefetch(&self, keys: &[Key]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         for k in keys {
-            self.store
-                .add(&k, self.map.get(&k).ok_or_else(|| Error::msg("Not found"))?)?
+            match k {
+                StoreKey::HgId(k) => self
+                    .store
+                    .add(&k, self.map.get(&k).ok_or_else(|| Error::msg("Not found"))?)?,
+                StoreKey::Content(_) => continue,
+            }
         }
 
         Ok(())
@@ -143,15 +153,15 @@ impl RemoteHistoryStore for FakeRemoteHistoryStore {
 
 impl HgIdHistoryStore for FakeRemoteHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
-        match self.prefetch(&[key.clone()]) {
+        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
             Err(_) => Ok(None),
             Ok(()) => self.store.get_node_info(key),
         }
     }
 }
 
-impl HgIdLocalStore for FakeRemoteHistoryStore {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for FakeRemoteHistoryStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         Ok(keys.to_vec())
     }
 }

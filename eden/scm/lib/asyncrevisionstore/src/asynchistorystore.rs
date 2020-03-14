@@ -27,14 +27,6 @@ impl<T: HgIdHistoryStore + Send + Sync> AsyncHgIdHistoryStore<T> {
         }
     }
 
-    /// Asynchronously call the HgIdHistoryStore::get_missing method.
-    pub fn get_missing(
-        &self,
-        keys: Vec<Key>,
-    ) -> impl Future<Item = Vec<Key>, Error = Error> + Send {
-        self.history.block(move |store| store.get_missing(&keys))
-    }
-
     /// Asynchronously call the HgIdHistoryStore::get_node_info method.
     pub fn get_node_info(
         &self,

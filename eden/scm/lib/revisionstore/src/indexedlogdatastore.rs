@@ -25,9 +25,10 @@ use types::{hgid::ReadHgIdExt, HgId, Key, RepoPath};
 
 use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata},
-    localstore::HgIdLocalStore,
+    localstore::LocalStore,
     repack::ToKeys,
     sliceext::SliceExt,
+    types::StoreKey,
 };
 
 struct IndexedLogHgIdDataStoreInner {
@@ -190,18 +191,21 @@ impl HgIdMutableDeltaStore for IndexedLogHgIdDataStore {
     }
 }
 
-impl HgIdLocalStore for IndexedLogHgIdDataStore {
+impl LocalStore for IndexedLogHgIdDataStore {
     fn from_path(path: &Path) -> Result<Self> {
         IndexedLogHgIdDataStore::new(path)
     }
 
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let inner = self.inner.read();
         Ok(keys
             .iter()
-            .filter(|k| match Entry::from_log(k, &inner.log) {
-                Ok(None) | Err(_) => true,
-                Ok(Some(_)) => false,
+            .filter(|k| match k {
+                StoreKey::HgId(k) => match Entry::from_log(k, &inner.log) {
+                    Ok(None) | Err(_) => true,
+                    Ok(Some(_)) => false,
+                },
+                StoreKey::Content(_) => true,
             })
             .map(|k| k.clone())
             .collect())

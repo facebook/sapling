@@ -24,13 +24,16 @@ use thiserror::Error;
 
 use types::{Key, NodeInfo, RepoPath, RepoPathBuf};
 
-use crate::error::EmptyMutablePack;
-use crate::historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
-use crate::historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
-use crate::historystore::{HgIdHistoryStore, HgIdMutableHistoryStore};
-use crate::localstore::HgIdLocalStore;
-use crate::mutablepack::MutablePack;
-use crate::packwriter::PackWriter;
+use crate::{
+    error::EmptyMutablePack,
+    historyindex::{FileSectionLocation, HistoryIndex, NodeLocation},
+    historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion},
+    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
+    localstore::LocalStore,
+    mutablepack::MutablePack,
+    packwriter::PackWriter,
+    types::StoreKey,
+};
 
 #[derive(Debug, Error)]
 #[error("Mutable History Pack Error: {0:?}")]
@@ -306,14 +309,17 @@ impl HgIdHistoryStore for MutableHistoryPack {
     }
 }
 
-impl HgIdLocalStore for MutableHistoryPack {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for MutableHistoryPack {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let inner = self.inner.lock();
         Ok(keys
             .iter()
-            .filter(|k| match inner.mem_index.get(&k.path) {
-                Some(e) => e.get(k).is_none(),
-                None => true,
+            .filter(|k| match k {
+                StoreKey::HgId(k) => match inner.mem_index.get(&k.path) {
+                    Some(e) => e.get(k).is_none(),
+                    None => true,
+                },
+                StoreKey::Content(_) => true,
             })
             .map(|k| k.clone())
             .collect())
@@ -460,7 +466,7 @@ mod tests {
             true
         }
 
-        fn test_get_missing(insert: HashMap<Key, NodeInfo>, notinsert: Vec<Key>) -> bool {
+        fn test_get_missing(insert: HashMap<Key, NodeInfo>, notinsert: Vec<StoreKey>) -> bool {
             let tempdir = tempdir().unwrap();
             let muthistorypack =
                 MutableHistoryPack::new(tempdir.path(), HistoryPackVersion::One).unwrap();
@@ -470,7 +476,7 @@ mod tests {
             }
 
             let mut lookup = notinsert.clone();
-            lookup.extend(insert.keys().map(|k| k.clone()));
+            lookup.extend(insert.keys().map(|k| StoreKey::from(k)));
 
             let missing = muthistorypack.get_missing(&lookup).unwrap();
             missing == notinsert

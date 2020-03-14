@@ -19,7 +19,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use types::{HgId, Key, RepoPath};
 
-use crate::localstore::HgIdLocalStore;
+use crate::{localstore::LocalStore, types::StoreKey};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Delta {
@@ -34,7 +34,7 @@ pub struct Metadata {
     pub flags: Option<u64>,
 }
 
-pub trait HgIdDataStore: HgIdLocalStore + Send + Sync {
+pub trait HgIdDataStore: LocalStore + Send + Sync {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>>;
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>>;
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>>;
@@ -50,7 +50,7 @@ pub trait RemoteDataStore: HgIdDataStore + Send + Sync {
     /// When implemented on a pure remote store, like the `EdenApi`, the method will always fetch
     /// everything that was asked. On a higher level store, such as the `ContentStore`, this will
     /// avoid fetching data that is already present locally.
-    fn prefetch(&self, keys: &[Key]) -> Result<()>;
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<()>;
 }
 
 pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
@@ -78,7 +78,7 @@ impl<T: HgIdDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdDataStor
 /// Implement `RemoteDataStore` for all types that can be `Deref` into a `RemoteDataStore`. This
 /// includes all the smart pointers like `Box`, `Rc`, `Arc`.
 impl<T: RemoteDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> RemoteDataStore for U {
-    fn prefetch(&self, keys: &[Key]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         T::prefetch(self, keys)
     }
 }

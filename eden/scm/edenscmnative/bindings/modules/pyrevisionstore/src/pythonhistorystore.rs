@@ -12,7 +12,7 @@ use cpython::{
 };
 
 use cpython_ext::{PyErr, PyPathBuf};
-use revisionstore::{HgIdHistoryStore, HgIdLocalStore};
+use revisionstore::{HgIdHistoryStore, LocalStore, StoreKey};
 use types::{Key, NodeInfo};
 
 use crate::pythonutil::{bytes_from_tuple, from_key_to_tuple, from_tuple_to_key, to_node_info};
@@ -65,15 +65,20 @@ impl HgIdHistoryStore for PythonHgIdHistoryStore {
     }
 }
 
-impl HgIdLocalStore for PythonHgIdHistoryStore {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for PythonHgIdHistoryStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
         let py_missing = PyList::new(py, &[]);
         for key in keys.iter() {
-            let py_key = from_key_to_tuple(py, &key);
-            py_missing.insert_item(py, py_missing.len(py), py_key.into_object());
+            match key {
+                StoreKey::HgId(key) => {
+                    let py_key = from_key_to_tuple(py, &key);
+                    py_missing.insert(py, py_missing.len(py), py_key.into_object());
+                }
+                StoreKey::Content(_) => continue,
+            }
         }
 
         let py_missing = self
@@ -83,8 +88,12 @@ impl HgIdLocalStore for PythonHgIdHistoryStore {
         let py_list = PyList::extract(py, &py_missing).map_err(|e| PyErr::from(e))?;
         let missing = py_list
             .iter(py)
-            .map(|k| from_tuple_to_key(py, &k).map_err(|e| PyErr::from(e).into()))
-            .collect::<Result<Vec<Key>>>()?;
+            .map(|k| {
+                Ok(StoreKey::from(
+                    from_tuple_to_key(py, &k).map_err(|e| PyErr::from(e))?,
+                ))
+            })
+            .collect::<Result<Vec<StoreKey>>>()?;
         Ok(missing)
     }
 }

@@ -15,14 +15,17 @@ use thiserror::Error;
 
 use types::Key;
 
-use crate::datapack::{DataPack, DataPackVersion};
-use crate::datastore::{HgIdDataStore, HgIdMutableDeltaStore};
-use crate::historypack::{HistoryPack, HistoryPackVersion};
-use crate::historystore::{HgIdHistoryStore, HgIdMutableHistoryStore};
-use crate::localstore::HgIdLocalStore;
-use crate::mutabledatapack::MutableDataPack;
-use crate::mutablehistorypack::MutableHistoryPack;
-use crate::mutablepack::MutablePack;
+use crate::{
+    datapack::{DataPack, DataPackVersion},
+    datastore::{HgIdDataStore, HgIdMutableDeltaStore},
+    historypack::{HistoryPack, HistoryPackVersion},
+    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
+    localstore::LocalStore,
+    mutabledatapack::MutableDataPack,
+    mutablehistorypack::MutableHistoryPack,
+    mutablepack::MutablePack,
+    types::StoreKey,
+};
 
 pub trait ToKeys {
     fn to_keys(&self) -> Vec<Result<Key>>;
@@ -38,7 +41,7 @@ fn repack_datapack(data_pack: &DataPack, mut_pack: &mut MutableDataPack) -> Resu
 
         if let Some(chain) = data_pack.get_delta_chain(&key)? {
             for delta in chain.iter() {
-                if mut_pack.contains(&delta.key)? {
+                if mut_pack.contains(&StoreKey::hgid(delta.key.clone()))? {
                     break;
                 }
 
@@ -63,7 +66,7 @@ enum RepackFailure {
 
 /// Repack all pack files in the paths iterator. Once repacked, the repacked packs will be removed
 /// from the filesystem.
-fn repack_packs<'a, T: MutablePack, U: HgIdLocalStore + Repackable + ToKeys>(
+fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable + ToKeys>(
     paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     mut mut_pack: T,
     repack_pack: impl Fn(&U, &mut T) -> Result<()>,
@@ -116,7 +119,8 @@ fn repack_packs<'a, T: MutablePack, U: HgIdLocalStore + Repackable + ToKeys>(
                 .to_keys()
                 .into_iter()
                 .filter_map(|res| res.ok())
-                .collect::<Vec<Key>>();
+                .map(|k| StoreKey::hgid(k))
+                .collect::<Vec<_>>();
             let missing = new_pack.get_missing(&keys)?;
 
             if missing.len() == 0 {

@@ -98,11 +98,14 @@ use thiserror::Error;
 use types::{HgId, Key, NodeInfo, RepoPath, RepoPathBuf};
 use util::path::remove_file;
 
-use crate::historyindex::HistoryIndex;
-use crate::historystore::HgIdHistoryStore;
-use crate::localstore::HgIdLocalStore;
-use crate::repack::{Repackable, ToKeys};
-use crate::sliceext::SliceExt;
+use crate::{
+    historyindex::HistoryIndex,
+    historystore::HgIdHistoryStore,
+    localstore::LocalStore,
+    repack::{Repackable, ToKeys},
+    sliceext::SliceExt,
+    types::StoreKey,
+};
 
 #[derive(Debug, Error)]
 #[error("Historypack Error: {0:?}")]
@@ -339,17 +342,20 @@ impl HgIdHistoryStore for HistoryPack {
     }
 }
 
-impl HgIdLocalStore for HistoryPack {
+impl LocalStore for HistoryPack {
     fn from_path(path: &Path) -> Result<Self> {
         HistoryPack::new(path)
     }
 
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         Ok(keys
             .iter()
-            .filter(|k| match self.index.get_hgid_entry(&k) {
-                Ok(None) | Err(_) => true,
-                Ok(Some(_)) => false,
+            .filter(|k| match k {
+                StoreKey::HgId(k) => match self.index.get_hgid_entry(k) {
+                    Ok(None) | Err(_) => true,
+                    Ok(Some(_)) => false,
+                },
+                StoreKey::Content(_) => true,
             })
             .map(|k| k.clone())
             .collect())
@@ -542,12 +548,12 @@ pub mod tests {
 
         let pack = make_historypack(&tempdir, &nodes);
 
-        let mut test_keys: Vec<Key> = nodes.keys().map(|k| k.clone()).collect();
+        let mut test_keys: Vec<StoreKey> = nodes.keys().map(|k| StoreKey::from(k)).collect();
         let missing_key = key("missing", "f0f0f0");
-        test_keys.push(missing_key.clone());
+        test_keys.push(StoreKey::from(&missing_key));
 
         let missing = pack.get_missing(&test_keys[..]).unwrap();
-        assert_eq!(vec![missing_key], missing);
+        assert_eq!(vec![StoreKey::from(missing_key)], missing);
     }
 
     #[test]

@@ -11,9 +11,9 @@ use std::{ops::Deref, path::Path};
 
 use anyhow::Result;
 
-use types::Key;
+use crate::types::StoreKey;
 
-pub trait HgIdLocalStore: Send + Sync {
+pub trait LocalStore: Send + Sync {
     /// Builds a Store from a filepath. The default implementation panics.
     fn from_path(_path: &Path) -> Result<Self>
     where
@@ -23,17 +23,17 @@ pub trait HgIdLocalStore: Send + Sync {
     }
 
     /// Returns all the keys that aren't present in this `Store`.
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>>;
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>>;
 
     /// Test whether this `Store` contains a specific key.
-    fn contains(&self, key: &Key) -> Result<bool> {
+    fn contains(&self, key: &StoreKey) -> Result<bool> {
         Ok(self.get_missing(&[key.clone()])?.is_empty())
     }
 }
 
 /// All the types that can `Deref` into a `Store` implements `Store`.
-impl<T: HgIdLocalStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdLocalStore for U {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl<T: LocalStore + ?Sized, U: Deref<Target = T> + Send + Sync> LocalStore for U {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         T::get_missing(self, keys)
     }
 }

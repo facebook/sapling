@@ -24,13 +24,16 @@ use thiserror::Error;
 use lz4_pyframe::compress;
 use types::{HgId, Key};
 
-use crate::dataindex::{DataIndex, DeltaLocation};
-use crate::datapack::{DataEntry, DataPackVersion};
-use crate::datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata};
-use crate::error::EmptyMutablePack;
-use crate::localstore::HgIdLocalStore;
-use crate::mutablepack::MutablePack;
-use crate::packwriter::PackWriter;
+use crate::{
+    dataindex::{DataIndex, DeltaLocation},
+    datapack::{DataEntry, DataPackVersion},
+    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata},
+    error::EmptyMutablePack,
+    localstore::LocalStore,
+    mutablepack::MutablePack,
+    packwriter::PackWriter,
+    types::StoreKey,
+};
 
 struct MutableDataPackInner {
     dir: PathBuf,
@@ -267,12 +270,15 @@ impl HgIdDataStore for MutableDataPack {
     }
 }
 
-impl HgIdLocalStore for MutableDataPack {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for MutableDataPack {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let inner = self.inner.lock();
         Ok(keys
             .iter()
-            .filter(|k| inner.mem_index.get(&k.hgid).is_none())
+            .filter(|k| match k {
+                StoreKey::HgId(k) => inner.mem_index.get(&k.hgid).is_none(),
+                StoreKey::Content(_) => true,
+            })
             .map(|k| k.clone())
             .collect())
     }
@@ -432,9 +438,9 @@ mod tests {
 
         let not = key("not", "10000");
         let missing = mutdatapack
-            .get_missing(&vec![delta.key.clone(), not.clone()])
+            .get_missing(&vec![StoreKey::from(delta.key), StoreKey::from(&not)])
             .unwrap();
-        assert_eq!(missing, vec![not.clone()]);
+        assert_eq!(missing, vec![StoreKey::from(not)]);
     }
 
     #[test]

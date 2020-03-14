@@ -11,9 +11,12 @@ use anyhow::{format_err, Result};
 
 use types::{Key, NodeInfo};
 
-use crate::datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata};
-use crate::historystore::{HgIdHistoryStore, HgIdMutableHistoryStore};
-use crate::localstore::HgIdLocalStore;
+use crate::{
+    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata},
+    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
+    localstore::LocalStore,
+    types::StoreKey,
+};
 
 /// A `MultiplexDeltaStore` is a store that will duplicate all the writes to all the
 /// delta stores that it is made of.
@@ -102,8 +105,8 @@ impl<T: HgIdMutableDeltaStore> HgIdDataStore for MultiplexDeltaStore<T> {
     }
 }
 
-impl<T: HgIdMutableDeltaStore> HgIdLocalStore for MultiplexDeltaStore<T> {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl<T: HgIdMutableDeltaStore> LocalStore for MultiplexDeltaStore<T> {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let initial_keys = Ok(keys.iter().cloned().collect());
         self.stores
             .iter()
@@ -144,8 +147,8 @@ impl<T: HgIdMutableHistoryStore> HgIdHistoryStore for MultiplexHgIdHistoryStore<
     }
 }
 
-impl<T: HgIdMutableHistoryStore> HgIdLocalStore for MultiplexHgIdHistoryStore<T> {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl<T: HgIdMutableHistoryStore> LocalStore for MultiplexHgIdHistoryStore<T> {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let initial_keys = Ok(keys.iter().cloned().collect());
         self.stores
             .iter()

@@ -15,8 +15,9 @@ use types::Key;
 use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore},
     historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
-    localstore::HgIdLocalStore,
+    localstore::LocalStore,
     remotestore::HgIdRemoteStore,
+    types::StoreKey,
 };
 
 #[derive(Clone)]
@@ -77,11 +78,19 @@ struct EdenApiRemoteDataStore {
 }
 
 impl RemoteDataStore for EdenApiRemoteDataStore {
-    fn prefetch(&self, keys: &[Key]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         let edenapi = &self.inner.edenapi;
+
+        let keys = keys
+            .iter()
+            .filter_map(|k| match k {
+                StoreKey::HgId(k) => Some(k.clone()),
+                StoreKey::Content(_) => None,
+            })
+            .collect::<Vec<_>>();
         let (entries, _) = match edenapi.kind {
-            EdenApiHgIdRemoteStoreKind::File => edenapi.edenapi.get_files(keys.to_vec(), None)?,
-            EdenApiHgIdRemoteStoreKind::Tree => edenapi.edenapi.get_trees(keys.to_vec(), None)?,
+            EdenApiHgIdRemoteStoreKind::File => edenapi.edenapi.get_files(keys, None)?,
+            EdenApiHgIdRemoteStoreKind::Tree => edenapi.edenapi.get_trees(keys, None)?,
         };
         for entry in entries {
             let key = entry.0.clone();
@@ -107,29 +116,29 @@ impl HgIdDataStore for EdenApiRemoteDataStore {
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        match self.prefetch(&[key.clone()]) {
+        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
             Ok(()) => self.inner.store.get_delta(key),
             Err(_) => Ok(None),
         }
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        match self.prefetch(&[key.clone()]) {
+        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
             Ok(()) => self.inner.store.get_delta_chain(key),
             Err(_) => Ok(None),
         }
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        match self.prefetch(&[key.clone()]) {
+        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
             Ok(()) => self.inner.store.get_meta(key),
             Err(_) => Ok(None),
         }
     }
 }
 
-impl HgIdLocalStore for EdenApiRemoteDataStore {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for EdenApiRemoteDataStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         Ok(keys.to_vec())
     }
 }

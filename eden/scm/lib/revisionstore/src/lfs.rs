@@ -16,7 +16,6 @@ use std::{
 
 use anyhow::{bail, ensure, Result};
 use bytes::{Bytes, BytesMut};
-use crypto::{digest::Digest, sha2::Sha256 as CryptoSha256};
 use parking_lot::RwLock;
 use serde_derive::{Deserialize, Serialize};
 
@@ -28,7 +27,8 @@ use util::path::create_dir;
 use crate::{
     datastore::{strip_metadata, Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata},
     indexedlogutil::{Store, StoreOpenOptions},
-    localstore::HgIdLocalStore,
+    localstore::LocalStore,
+    types::{ContentHash, StoreKey},
     uniondatastore::UnionHgIdDataStore,
     util::{get_lfs_blobs_path, get_lfs_pointers_path},
 };
@@ -78,24 +78,6 @@ struct LfsPointersEntry {
     is_binary: bool,
     copy_from: Option<Key>,
     content_hash: ContentHash,
-}
-
-/// Kind of content hash stored in the LFS pointer. Adding new types is acceptable, re-ordering or
-/// removal is forbidden.
-#[derive(Serialize, Deserialize, PartialEq, Eq, Debug)]
-enum ContentHash {
-    Sha256(Sha256),
-}
-
-impl ContentHash {
-    fn sha256(data: &Bytes) -> Result<Self> {
-        let mut hash = CryptoSha256::new();
-        hash.input(data);
-
-        let mut bytes = [0; Sha256::len()];
-        hash.result(&mut bytes);
-        Ok(ContentHash::Sha256(Sha256::from_slice(&bytes)?))
-    }
 }
 
 impl LfsPointersStore {
@@ -231,18 +213,34 @@ impl LfsStore {
     }
 }
 
-impl HgIdLocalStore for LfsStore {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for LfsStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let inner = self.inner.read();
         Ok(keys
             .iter()
-            .filter(|k| match inner.pointers.get(k) {
-                Ok(None) | Err(_) => true,
-                Ok(Some(entry)) => match entry.content_hash {
-                    ContentHash::Sha256(hash) => !inner.blobs.contains(&hash),
+            .filter_map(|k| match k {
+                StoreKey::HgId(key) => match inner.pointers.get(key) {
+                    Ok(None) | Err(_) => Some(k.clone()),
+                    Ok(Some(entry)) => match entry.content_hash {
+                        ContentHash::Sha256(hash) => {
+                            if inner.blobs.contains(&hash) {
+                                None
+                            } else {
+                                Some(StoreKey::Content(entry.content_hash))
+                            }
+                        }
+                    },
+                },
+                StoreKey::Content(content_hash) => match content_hash {
+                    ContentHash::Sha256(hash) => {
+                        if inner.blobs.contains(&hash) {
+                            None
+                        } else {
+                            Some(k.clone())
+                        }
+                    }
                 },
             })
-            .map(|k| k.clone())
             .collect())
     }
 }
@@ -386,8 +384,8 @@ impl HgIdDataStore for LfsMultiplexer {
     }
 }
 
-impl HgIdLocalStore for LfsMultiplexer {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for LfsMultiplexer {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.union.get_missing(keys)
     }
 }
@@ -583,9 +581,12 @@ mod tests {
             key: k1.clone(),
         };
 
-        assert_eq!(store.get_missing(&[k1.clone()])?, vec![k1.clone()]);
+        assert_eq!(
+            store.get_missing(&[StoreKey::from(&k1)])?,
+            vec![StoreKey::from(&k1)]
+        );
         store.add(&delta, &Default::default())?;
-        assert_eq!(store.get_missing(&[k1.clone()])?, vec![]);
+        assert_eq!(store.get_missing(&[StoreKey::from(k1)])?, vec![]);
 
         Ok(())
     }
@@ -671,7 +672,7 @@ mod tests {
 
         multiplexer.add(&delta, &Default::default())?;
         assert_eq!(multiplexer.get_delta(&k1)?, Some(delta));
-        assert_eq!(indexedlog.get_missing(&[k1.clone()])?, vec![]);
+        assert_eq!(indexedlog.get_missing(&[k1.into()])?, vec![]);
 
         Ok(())
     }
@@ -695,7 +696,10 @@ mod tests {
 
         multiplexer.add(&delta, &Default::default())?;
         assert_eq!(multiplexer.get_delta(&k1)?, Some(delta));
-        assert_eq!(indexedlog.get_missing(&[k1.clone()])?, vec![k1.clone()]);
+        assert_eq!(
+            indexedlog.get_missing(&[StoreKey::from(&k1)])?,
+            vec![StoreKey::from(&k1)]
+        );
 
         Ok(())
     }
@@ -734,7 +738,10 @@ mod tests {
                 flags: Some(0x2000),
             },
         )?;
-        assert_eq!(indexedlog.get_missing(&[k1.clone()])?, vec![k1.clone()]);
+        assert_eq!(
+            indexedlog.get_missing(&[StoreKey::from(&k1)])?,
+            vec![StoreKey::from(&k1)]
+        );
         // The blob isn't present, so we cannot get it.
         assert_eq!(multiplexer.get(&k1)?, None);
 
@@ -793,7 +800,10 @@ mod tests {
                 flags: Some(0x2000),
             },
         )?;
-        assert_eq!(indexedlog.get_missing(&[k1.clone()])?, vec![k1.clone()]);
+        assert_eq!(
+            indexedlog.get_missing(&[StoreKey::from(&k1)])?,
+            vec![StoreKey::from(&k1)]
+        );
         // The blob isn't present, so we cannot get it.
         assert_eq!(multiplexer.get(&k1)?, None);
 

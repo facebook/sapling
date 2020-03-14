@@ -19,8 +19,9 @@ use types::{Key, NodeInfo};
 use crate::{
     datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore},
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
-    localstore::HgIdLocalStore,
+    localstore::LocalStore,
     remotestore::HgIdRemoteStore,
+    types::StoreKey,
 };
 
 /// Type of blobs stored in Memcache.
@@ -144,8 +145,8 @@ impl HgIdMutableHistoryStore for MemcacheStore {
     }
 }
 
-impl HgIdLocalStore for MemcacheStore {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for MemcacheStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         Ok(keys.to_vec())
     }
 }
@@ -189,14 +190,14 @@ impl HgIdDataStore for MemcacheHgIdDataStore {
     }
 }
 
-impl HgIdLocalStore for MemcacheHgIdDataStore {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for MemcacheHgIdDataStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.store.get_missing(keys)
     }
 }
 
 impl RemoteDataStore for MemcacheHgIdDataStore {
-    fn prefetch(&self, keys: &[Key]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         let span = info_span!(
             "MemcacheHgIdDataStore::prefetch",
             key_count = keys.len(),
@@ -208,7 +209,15 @@ impl RemoteDataStore for MemcacheHgIdDataStore {
         let mut hits = 0;
         let mut size = 0;
 
-        for mcdata in self.memcache.get_data_iter(keys) {
+        let keys = keys
+            .iter()
+            .filter_map(|k| match k {
+                StoreKey::HgId(k) => Some(k.clone()),
+                StoreKey::Content(_) => None,
+            })
+            .collect::<Vec<_>>();
+
+        for mcdata in self.memcache.get_data_iter(&keys) {
             if let Ok(mcdata) = mcdata {
                 let metadata = mcdata.metadata;
                 let delta = Delta {
@@ -248,14 +257,14 @@ impl HgIdHistoryStore for MemcacheHgIdHistoryStore {
     }
 }
 
-impl HgIdLocalStore for MemcacheHgIdHistoryStore {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for MemcacheHgIdHistoryStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.store.get_missing(keys)
     }
 }
 
 impl RemoteHistoryStore for MemcacheHgIdHistoryStore {
-    fn prefetch(&self, keys: &[Key]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         let span = info_span!(
             "MemcacheHgIdHistoryStore::prefetch",
             key_count = keys.len(),
@@ -264,10 +273,18 @@ impl RemoteHistoryStore for MemcacheHgIdHistoryStore {
         );
         let _guard = span.enter();
 
+        let keys = keys
+            .iter()
+            .filter_map(|k| match k {
+                StoreKey::HgId(k) => Some(k.clone()),
+                StoreKey::Content(_) => None,
+            })
+            .collect::<Vec<_>>();
+
         let mut hits = 0;
         let mut size = 0;
 
-        for mchist in self.memcache.get_hist_iter(keys) {
+        for mchist in self.memcache.get_hist_iter(&keys) {
             if let Ok(mchist) = mchist {
                 self.store.add(&mchist.key, &mchist.nodeinfo)?;
 

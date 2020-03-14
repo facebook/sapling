@@ -12,7 +12,7 @@ use cpython::{
 };
 
 use cpython_ext::{PyErr, PyPathBuf};
-use revisionstore::{Delta, HgIdDataStore, HgIdLocalStore, Metadata, RemoteDataStore};
+use revisionstore::{Delta, HgIdDataStore, LocalStore, Metadata, RemoteDataStore, StoreKey};
 use types::Key;
 
 use crate::pythonutil::{
@@ -147,15 +147,18 @@ impl HgIdDataStore for PythonHgIdDataStore {
 }
 
 impl RemoteDataStore for PythonHgIdDataStore {
-    fn prefetch(&self, keys: &[Key]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
         let keys = keys
             .into_iter()
-            .map(|key| {
-                let py_name = PyPathBuf::from(key.path.as_repo_path());
-                let py_node = PyBytes::new(py, key.hgid.as_ref());
-                (py_name, py_node)
+            .filter_map(|key| match key {
+                StoreKey::HgId(key) => {
+                    let py_name = PyPathBuf::from(key.path.as_repo_path());
+                    let py_node = PyBytes::new(py, key.hgid.as_ref());
+                    Some((py_name, py_node))
+                }
+                StoreKey::Content(_) => None,
             })
             .collect::<Vec<_>>();
 
@@ -167,15 +170,20 @@ impl RemoteDataStore for PythonHgIdDataStore {
     }
 }
 
-impl HgIdLocalStore for PythonHgIdDataStore {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for PythonHgIdDataStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
         let py_missing = PyList::new(py, &[]);
         for key in keys.iter() {
-            let py_key = from_key_to_tuple(py, &key);
-            py_missing.append(py, py_key.into_object());
+            match key {
+                StoreKey::HgId(key) => {
+                    let py_key = from_key_to_tuple(py, &key);
+                    py_missing.insert(py, py_missing.len(py), py_key.into_object());
+                }
+                StoreKey::Content(_) => continue,
+            }
         }
 
         let py_missing = self
@@ -185,8 +193,12 @@ impl HgIdLocalStore for PythonHgIdDataStore {
         let py_list = PyList::extract(py, &py_missing).map_err(|e| PyErr::from(e))?;
         let missing = py_list
             .iter(py)
-            .map(|k| from_tuple_to_key(py, &k).map_err(|e| PyErr::from(e).into()))
-            .collect::<Result<Vec<Key>>>()?;
+            .map(|k| {
+                Ok(StoreKey::from(
+                    from_tuple_to_key(py, &k).map_err(|e| PyErr::from(e))?,
+                ))
+            })
+            .collect::<Result<Vec<StoreKey>>>()?;
         Ok(missing)
     }
 }

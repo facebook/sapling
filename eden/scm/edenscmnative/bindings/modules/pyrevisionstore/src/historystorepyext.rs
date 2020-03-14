@@ -7,13 +7,15 @@
 
 use std::convert::TryInto;
 
-use anyhow::Result;
+use anyhow::{format_err, Result};
 use cpython::{
     PyBytes, PyIterator, PyList, PyObject, PyResult, PyTuple, Python, PythonObject, ToPyObject,
 };
 
 use cpython_ext::{PyPathBuf, ResultPyErrExt};
-use revisionstore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore, ToKeys};
+use revisionstore::{
+    HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore, StoreKey, ToKeys,
+};
 use types::{Key, NodeInfo};
 
 use crate::pythonutil::{
@@ -52,14 +54,24 @@ impl<T: HgIdHistoryStore + ?Sized> HgIdHistoryStorePyExt for T {
         // Copy the PyObjects into a vector so we can get a reference iterator.
         // This lets us get a Vector of Keys without copying the strings.
         let keys = keys
-            .map(|k| k.and_then(|k| from_tuple_to_key(py, &k)))
-            .collect::<PyResult<Vec<Key>>>()?;
-        let missing = self.get_missing(&keys[..]).map_pyerr(py)?;
+            .map(|k| match k {
+                Ok(k) => Ok(StoreKey::from(from_tuple_to_key(py, &k)?)),
+                Err(e) => Err(e),
+            })
+            .collect::<PyResult<Vec<StoreKey>>>()?;
+        let missing = self.get_missing(&keys).map_pyerr(py)?;
 
         let results = PyList::new(py, &[]);
         for key in missing {
-            let key_tuple = from_key_to_tuple(py, &key);
-            results.append(py, key_tuple.into_object());
+            match key {
+                StoreKey::HgId(key) => {
+                    let key_tuple = from_key_to_tuple(py, &key);
+                    results.append(py, key_tuple.into_object());
+                }
+                StoreKey::Content(_) => {
+                    return Err(format_err!("Unsupported key: {:?}", key)).map_pyerr(py)
+                }
+            }
         }
 
         Ok(results)
@@ -189,8 +201,8 @@ impl<T: RemoteHistoryStore + ?Sized> RemoteHistoryStorePyExt for T {
     fn prefetch_py(&self, py: Python, keys: PyList) -> PyResult<PyObject> {
         let keys = keys
             .iter(py)
-            .map(|tuple| from_tuple_to_key(py, &tuple))
-            .collect::<PyResult<Vec<Key>>>()?;
+            .map(|tuple| Ok(StoreKey::from(from_tuple_to_key(py, &tuple)?)))
+            .collect::<PyResult<Vec<StoreKey>>>()?;
         self.prefetch(&keys).map_pyerr(py)?;
         Ok(Python::None(py))
     }

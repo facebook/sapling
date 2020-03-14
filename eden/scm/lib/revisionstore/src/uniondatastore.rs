@@ -14,6 +14,7 @@ use types::Key;
 
 use crate::{
     datastore::{Delta, HgIdDataStore, Metadata, RemoteDataStore},
+    types::StoreKey,
     unionstore::UnionStore,
 };
 
@@ -96,7 +97,7 @@ impl<T: HgIdDataStore> HgIdDataStore for UnionHgIdDataStore<T> {
 }
 
 impl<T: RemoteDataStore> RemoteDataStore for UnionHgIdDataStore<T> {
-    fn prefetch(&self, keys: &[Key]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         let initial_keys = Ok(keys.to_vec());
         self.into_iter()
             .fold(initial_keys, |missing_keys, store| match missing_keys {
@@ -122,7 +123,7 @@ mod tests {
     use quickcheck::quickcheck;
     use thiserror::Error;
 
-    use crate::localstore::HgIdLocalStore;
+    use crate::{localstore::LocalStore, types::StoreKey};
 
     struct BadHgIdDataStore;
 
@@ -150,8 +151,8 @@ mod tests {
         }
     }
 
-    impl HgIdLocalStore for EmptyHgIdDataStore {
-        fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+    impl LocalStore for EmptyHgIdDataStore {
+        fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
             Ok(keys.iter().cloned().collect())
         }
     }
@@ -174,8 +175,8 @@ mod tests {
         }
     }
 
-    impl HgIdLocalStore for BadHgIdDataStore {
-        fn get_missing(&self, _keys: &[Key]) -> Result<Vec<Key>> {
+    impl LocalStore for BadHgIdDataStore {
+        fn get_missing(&self, _keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
             Err(BadHgIdDataStoreError.into())
         }
     }
@@ -256,17 +257,17 @@ mod tests {
             }
         }
 
-        fn test_empty_unionstore_get_missing(keys: Vec<Key>) -> bool {
+        fn test_empty_unionstore_get_missing(keys: Vec<StoreKey>) -> bool {
             keys == UnionHgIdDataStore::<EmptyHgIdDataStore>::new().get_missing(&keys).unwrap()
         }
 
-        fn test_empty_datastore_get_missing(keys: Vec<Key>) -> bool {
+        fn test_empty_datastore_get_missing(keys: Vec<StoreKey>) -> bool {
             let mut unionstore = UnionHgIdDataStore::new();
             unionstore.add(EmptyHgIdDataStore);
             keys == unionstore.get_missing(&keys).unwrap()
         }
 
-        fn test_bad_datastore_get_missing(keys: Vec<Key>) -> bool {
+        fn test_bad_datastore_get_missing(keys: Vec<StoreKey>) -> bool {
             let mut unionstore = UnionHgIdDataStore::new();
             unionstore.add(BadHgIdDataStore);
             match unionstore.get_missing(&keys) {

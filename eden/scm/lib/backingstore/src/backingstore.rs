@@ -14,7 +14,7 @@ use log::warn;
 use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
 use revisionstore::{
-    ContentStore, ContentStoreBuilder, EdenApiHgIdRemoteStore, HgIdDataStore, HgIdLocalStore,
+    ContentStore, ContentStoreBuilder, EdenApiHgIdRemoteStore, HgIdDataStore, LocalStore,
     MemcacheStore,
 };
 use std::path::Path;

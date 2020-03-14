@@ -21,16 +21,19 @@ use parking_lot::Mutex;
 
 use types::{Key, NodeInfo};
 
-use crate::datapack::{DataPack, DataPackVersion};
-use crate::datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata};
-use crate::historypack::{HistoryPack, HistoryPackVersion};
-use crate::historystore::{HgIdHistoryStore, HgIdMutableHistoryStore};
-use crate::localstore::HgIdLocalStore;
-use crate::mutabledatapack::MutableDataPack;
-use crate::mutablehistorypack::MutableHistoryPack;
-use crate::repack::Repackable;
-use crate::uniondatastore::UnionHgIdDataStore;
-use crate::unionhistorystore::UnionHgIdHistoryStore;
+use crate::{
+    datapack::{DataPack, DataPackVersion},
+    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata},
+    historypack::{HistoryPack, HistoryPackVersion},
+    historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
+    localstore::LocalStore,
+    mutabledatapack::MutableDataPack,
+    mutablehistorypack::MutableHistoryPack,
+    repack::Repackable,
+    types::StoreKey,
+    uniondatastore::UnionHgIdDataStore,
+    unionhistorystore::UnionHgIdHistoryStore,
+};
 
 /// Naive implementation of a store that order its underlying stores based on how recently we found
 /// data in them. This helps in reducing the number of stores that are iterated on.
@@ -224,7 +227,7 @@ impl HistoryPackStore {
     }
 }
 
-impl<T: HgIdLocalStore + Repackable> PackStoreInner<T> {
+impl<T: LocalStore + Repackable> PackStoreInner<T> {
     /// Open new on-disk packfiles, and close removed ones.
     fn rescan(&self) -> Result<()> {
         let mut new_packs = Vec::new();
@@ -323,8 +326,8 @@ impl<T: HgIdLocalStore + Repackable> PackStoreInner<T> {
     }
 }
 
-impl<T: HgIdLocalStore + Repackable> HgIdLocalStore for PackStore<T> {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl<T: LocalStore + Repackable> LocalStore for PackStore<T> {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         // Since the packfiles are loaded lazily, it's possible that `get_missing` is called before
         // any packfiles have been loaded. Let's tentatively scan the store before iterating over
         // all the known packs.
@@ -413,8 +416,8 @@ impl HgIdDataStore for MutableDataPackStore {
     }
 }
 
-impl HgIdLocalStore for MutableDataPackStore {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for MutableDataPackStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.inner.union_store.get_missing(keys)
     }
 }
@@ -472,8 +475,8 @@ impl HgIdHistoryStore for MutableHistoryPackStore {
     }
 }
 
-impl HgIdLocalStore for MutableHistoryPackStore {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for MutableHistoryPackStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.inner.union_store.get_missing(keys)
     }
 }
@@ -548,7 +551,7 @@ mod tests {
         make_datapack(&tempdir, &vec![revision.clone()]);
 
         let store = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
-        let missing = store.get_missing(&vec![k])?;
+        let missing = store.get_missing(&vec![StoreKey::from(k)])?;
         assert_eq!(missing.len(), 0);
         Ok(())
     }

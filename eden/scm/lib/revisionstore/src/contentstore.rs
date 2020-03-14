@@ -25,11 +25,12 @@ use crate::{
     },
     indexedlogdatastore::IndexedLogHgIdDataStore,
     lfs::{LfsMultiplexer, LfsStore},
-    localstore::HgIdLocalStore,
+    localstore::LocalStore,
     memcache::MemcacheStore,
     multiplexstore::MultiplexDeltaStore,
     packstore::{CorruptionPolicy, MutableDataPackStore},
     remotestore::HgIdRemoteStore,
+    types::StoreKey,
     uniondatastore::UnionHgIdDataStore,
     util::{
         get_cache_packs_path, get_cache_path, get_indexedlogdatastore_path, get_local_path,
@@ -90,7 +91,7 @@ impl HgIdDataStore for ContentStore {
 }
 
 impl RemoteDataStore for ContentStore {
-    fn prefetch(&self, keys: &[Key]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         if let Some(remote_store) = self.remote_store.as_ref() {
             let missing = self.get_missing(keys)?;
             if missing == vec![] {
@@ -105,8 +106,8 @@ impl RemoteDataStore for ContentStore {
     }
 }
 
-impl HgIdLocalStore for ContentStore {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for ContentStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.datastore.get_missing(keys)
     }
 }

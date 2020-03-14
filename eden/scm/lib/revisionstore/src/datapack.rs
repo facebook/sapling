@@ -99,11 +99,14 @@ use lz4_pyframe::decompress;
 use types::{HgId, Key, RepoPath};
 use util::path::remove_file;
 
-use crate::dataindex::{DataIndex, DeltaBaseOffset};
-use crate::datastore::{Delta, HgIdDataStore, Metadata};
-use crate::localstore::HgIdLocalStore;
-use crate::repack::{Repackable, ToKeys};
-use crate::sliceext::SliceExt;
+use crate::{
+    dataindex::{DataIndex, DeltaBaseOffset},
+    datastore::{Delta, HgIdDataStore, Metadata},
+    localstore::LocalStore,
+    repack::{Repackable, ToKeys},
+    sliceext::SliceExt,
+    types::StoreKey,
+};
 
 #[derive(Debug, Error)]
 #[error("Datapack Error: {0:?}")]
@@ -382,17 +385,20 @@ impl HgIdDataStore for DataPack {
     }
 }
 
-impl HgIdLocalStore for DataPack {
+impl LocalStore for DataPack {
     fn from_path(path: &Path) -> Result<Self> {
         DataPack::new(path)
     }
 
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         Ok(keys
             .iter()
-            .filter(|k| match self.index.get_entry(&k.hgid) {
-                Ok(None) | Err(_) => true,
-                Ok(Some(_)) => false,
+            .filter(|k| match k {
+                StoreKey::HgId(k) => match self.index.get_entry(&k.hgid) {
+                    Ok(None) | Err(_) => true,
+                    Ok(Some(_)) => false,
+                },
+                StoreKey::Content(_) => true,
             })
             .map(|k| k.clone())
             .collect())
@@ -499,13 +505,13 @@ pub mod tests {
         )];
         let pack = make_datapack(&tempdir, &revisions);
         for &(ref delta, ref _metadata) in revisions.iter() {
-            let missing = pack.get_missing(&[delta.key.clone()]).unwrap();
+            let missing = pack.get_missing(&[StoreKey::from(&delta.key)]).unwrap();
             assert_eq!(missing.len(), 0);
         }
 
         let not = key("b", "3");
-        let missing = pack.get_missing(&vec![not.clone()]).unwrap();
-        assert_eq!(missing, vec![not.clone()]);
+        let missing = pack.get_missing(&vec![StoreKey::from(&not)]).unwrap();
+        assert_eq!(missing, vec![StoreKey::from(not)]);
     }
 
     #[test]

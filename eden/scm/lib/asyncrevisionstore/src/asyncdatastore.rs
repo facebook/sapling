@@ -56,14 +56,6 @@ impl<T: HgIdDataStore + Send + Sync> AsyncHgIdDataStore<T> {
         cloned!(key);
         self.data.block(move |store| store.get_meta(&key))
     }
-
-    /// Asynchronously call the HgIdDataStore::get_missing method.
-    pub fn get_missing(
-        &self,
-        keys: &'static [Key],
-    ) -> impl Future<Item = Vec<Key>, Error = Error> + Send {
-        self.data.block(move |store| store.get_missing(keys))
-    }
 }
 
 impl<T: HgIdDataStore + ToKeys + Send + Sync> AsyncHgIdDataStore<T> {

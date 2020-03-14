@@ -18,11 +18,12 @@ use types::{Key, NodeInfo};
 use crate::{
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore, RemoteHistoryStore},
     indexedloghistorystore::IndexedLogHgIdHistoryStore,
-    localstore::HgIdLocalStore,
+    localstore::LocalStore,
     memcache::MemcacheStore,
     multiplexstore::MultiplexHgIdHistoryStore,
     packstore::{CorruptionPolicy, MutableHistoryPackStore},
     remotestore::HgIdRemoteStore,
+    types::StoreKey,
     unionhistorystore::UnionHgIdHistoryStore,
     util::{
         get_cache_packs_path, get_cache_path, get_indexedloghistorystore_path, get_local_path,
@@ -56,7 +57,7 @@ impl HgIdHistoryStore for MetadataStore {
 }
 
 impl RemoteHistoryStore for MetadataStore {
-    fn prefetch(&self, keys: &[Key]) -> Result<()> {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         if let Some(remote_store) = self.remote_store.as_ref() {
             let missing = self.get_missing(&keys)?;
             if missing == vec![] {
@@ -71,8 +72,8 @@ impl RemoteHistoryStore for MetadataStore {
     }
 }
 
-impl HgIdLocalStore for MetadataStore {
-    fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
+impl LocalStore for MetadataStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.historystore.get_missing(keys)
     }
 }

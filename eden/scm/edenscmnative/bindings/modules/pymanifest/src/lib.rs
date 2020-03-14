@@ -20,7 +20,7 @@ use manifest_tree::TreeManifest;
 use pathmatcher::{AlwaysMatcher, Matcher, TreeMatcher};
 use pypathmatcher::PythonMatcher;
 use pyrevisionstore::PythonHgIdDataStore;
-use revisionstore::{HgIdDataStore, RemoteDataStore};
+use revisionstore::{HgIdDataStore, RemoteDataStore, StoreKey};
 use types::{Key, Node, RepoPath, RepoPathBuf};
 
 type Result<T, E = Error> = std::result::Result<T, E>;
@@ -51,6 +51,7 @@ impl<T: HgIdDataStore + RemoteDataStore> manifest_tree::TreeStore for ManifestSt
     }
 
     fn prefetch(&self, keys: Vec<Key>) -> Result<()> {
+        let keys = keys.iter().map(|k| StoreKey::from(k)).collect::<Vec<_>>();
         self.underlying.prefetch(&keys)
     }
 }
