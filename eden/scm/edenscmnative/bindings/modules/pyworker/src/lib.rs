@@ -989,6 +989,11 @@ mod tests {
                 return false;
             }
 
+            // Files have to be unique
+            if files.contains(path) {
+                return false;
+            }
+
             // Make sure we do no have paths with directories and files with the same name.
             for parent in path.parents().skip(1) {
                 if files.contains(parent) {
