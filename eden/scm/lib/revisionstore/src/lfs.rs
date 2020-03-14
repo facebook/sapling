@@ -26,7 +26,7 @@ use util::path::create_dir;
 
 use crate::{
     datastore::{strip_metadata, Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata},
-    indexedlogutil::{Store, StoreOpenOptions},
+    indexedlogutil::{LookupIter, Store, StoreOpenOptions},
     localstore::LocalStore,
     types::{ContentHash, StoreKey},
     uniondatastore::UnionHgIdDataStore,
@@ -81,12 +81,22 @@ struct LfsPointersEntry {
 }
 
 impl LfsPointersStore {
+    const INDEX_NODE: usize = 0;
+    const INDEX_SHA256: usize = 1;
+
     fn open_options() -> StoreOpenOptions {
         StoreOpenOptions::new()
             .max_log_count(4)
             .max_bytes_per_log(10_000_000)
             .index("node", |_| {
                 vec![IndexOutput::Reference(0..HgId::len() as u64)]
+            })
+            .index("sha256", |buf| {
+                let pointer = LfsPointersStore::get_from_slice(buf).unwrap();
+
+                match pointer.content_hash {
+                    ContentHash::Sha256(hash) => vec![IndexOutput::Owned(Box::from(hash.as_ref()))],
+                }
             })
     }
 
@@ -107,14 +117,28 @@ impl LfsPointersStore {
         Ok(deserialize(data)?)
     }
 
-    fn get(&self, key: &Key) -> Result<Option<LfsPointersEntry>> {
-        let mut log_entry = self.0.lookup(0, key.hgid)?;
-        let buf = match log_entry.nth(0) {
+    fn get_by_iter<'a>(mut iter: LookupIter<'a>) -> Result<Option<LfsPointersEntry>> {
+        let buf = match iter.nth(0) {
             None => return Ok(None),
             Some(buf) => buf?,
         };
 
         Self::get_from_slice(buf).map(Some)
+    }
+
+    /// Find the pointer corresponding to the passed in `Key`.
+    fn get(&self, key: &Key) -> Result<Option<LfsPointersEntry>> {
+        let log_entry = self.0.lookup(Self::INDEX_NODE, key.hgid)?;
+        LfsPointersStore::get_by_iter(log_entry)
+    }
+
+    /// Find the pointer corresponding to the passed in `ContentHash`
+    fn get_by_content(&self, hash: &ContentHash) -> Result<Option<LfsPointersEntry>> {
+        let log_entry = match hash {
+            ContentHash::Sha256(hash) => self.0.lookup(Self::INDEX_SHA256, hash)?,
+        };
+
+        LfsPointersStore::get_by_iter(log_entry)
     }
 
     fn add(&mut self, entry: LfsPointersEntry) -> Result<()> {
