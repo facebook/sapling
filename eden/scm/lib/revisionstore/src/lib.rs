@@ -45,13 +45,15 @@ pub mod unionhistorystore;
 
 pub use crate::contentstore::{ContentStore, ContentStoreBuilder};
 pub use crate::datapack::{DataEntry, DataPack, DataPackVersion};
-pub use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore, RemoteDataStore};
-pub use crate::edenapi::EdenApiRemoteStore;
+pub use crate::datastore::{
+    Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore,
+};
+pub use crate::edenapi::EdenApiHgIdRemoteStore;
 pub use crate::historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};
 pub use crate::historystore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore};
-pub use crate::indexedlogdatastore::IndexedLogDataStore;
+pub use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 pub use crate::indexedloghistorystore::IndexedLogHistoryStore;
-pub use crate::localstore::LocalStore;
+pub use crate::localstore::HgIdLocalStore;
 pub use crate::memcache::MemcacheStore;
 pub use crate::metadatastore::{MetadataStore, MetadataStoreBuilder};
 pub use crate::multiplexstore::{MultiplexDeltaStore, MultiplexHistoryStore};
@@ -61,9 +63,9 @@ pub use crate::packstore::{
     CorruptionPolicy, DataPackStore, HistoryPackStore, MutableDataPackStore,
     MutableHistoryPackStore,
 };
-pub use crate::remotestore::RemoteStore;
+pub use crate::remotestore::HgIdRemoteStore;
 pub use crate::repack::ToKeys;
-pub use crate::uniondatastore::UnionDataStore;
+pub use crate::uniondatastore::UnionHgIdDataStore;
 pub use crate::util::Error;
 
 pub use indexedlog::Repair as IndexedlogRepair;

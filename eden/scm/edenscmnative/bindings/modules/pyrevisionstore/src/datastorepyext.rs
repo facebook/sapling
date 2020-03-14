@@ -14,7 +14,7 @@ use cpython::{
 };
 
 use cpython_ext::{PyPath, PyPathBuf, ResultPyErrExt};
-use revisionstore::{DataStore, MutableDeltaStore, RemoteDataStore, ToKeys};
+use revisionstore::{HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore, ToKeys};
 use types::{Key, Node};
 
 use crate::pythonutil::{
@@ -22,7 +22,7 @@ use crate::pythonutil::{
     to_delta, to_key, to_metadata,
 };
 
-pub trait DataStorePyExt {
+pub trait HgIdDataStorePyExt {
     fn get_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes>;
     fn get_delta_chain_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyList>;
     fn get_delta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyObject>;
@@ -30,11 +30,11 @@ pub trait DataStorePyExt {
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
 }
 
-pub trait IterableDataStorePyExt {
+pub trait IterableHgIdDataStorePyExt {
     fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>>;
 }
 
-pub trait MutableDeltaStorePyExt: DataStorePyExt {
+pub trait HgIdMutableDeltaStorePyExt: HgIdDataStorePyExt {
     fn add_py(
         &self,
         py: Python,
@@ -51,7 +51,7 @@ pub trait RemoteDataStorePyExt: RemoteDataStore {
     fn prefetch_py(&self, py: Python, keys: PyList) -> PyResult<PyObject>;
 }
 
-impl<T: DataStore + ?Sized> DataStorePyExt for T {
+impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
     fn get_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {
         let key = to_key(py, name, node)?;
         let result = self
@@ -143,7 +143,7 @@ impl<T: DataStore + ?Sized> DataStorePyExt for T {
     }
 }
 
-impl<T: ToKeys + DataStore + ?Sized> IterableDataStorePyExt for T {
+impl<T: ToKeys + HgIdDataStore + ?Sized> IterableHgIdDataStorePyExt for T {
     fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>> {
         let iter = self.to_keys().into_iter().map(|res| {
             let key = res?;
@@ -163,7 +163,7 @@ impl<T: ToKeys + DataStore + ?Sized> IterableDataStorePyExt for T {
     }
 }
 
-impl<T: MutableDeltaStore + ?Sized> MutableDeltaStorePyExt for T {
+impl<T: HgIdMutableDeltaStore + ?Sized> HgIdMutableDeltaStorePyExt for T {
     fn add_py(
         &self,
         py: Python,

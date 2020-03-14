@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-//! Adapters around Memcache to be transparently used as DataStore or HistoryStore.
+//! Adapters around Memcache to be transparently used as HgIdDataStore or HistoryStore.
 
 use std::{mem::size_of, path::PathBuf, sync::Arc};
 
@@ -17,10 +17,10 @@ use tracing::info_span;
 use types::{Key, NodeInfo};
 
 use crate::{
-    datastore::{DataStore, Delta, Metadata, MutableDeltaStore, RemoteDataStore},
+    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore},
     historystore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore},
-    localstore::LocalStore,
-    remotestore::RemoteStore,
+    localstore::HgIdLocalStore,
+    remotestore::HgIdRemoteStore,
 };
 
 /// Type of blobs stored in Memcache.
@@ -89,7 +89,7 @@ pub use crate::facebook::MemcacheStore;
 #[cfg(not(fbcode_build))]
 pub use dummy::MemcacheStore;
 
-impl DataStore for MemcacheStore {
+impl HgIdDataStore for MemcacheStore {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         self.get_data(key)
             .map(|opt| opt.map(|mcdata| mcdata.data.as_ref().to_vec()))
@@ -115,7 +115,7 @@ impl DataStore for MemcacheStore {
     }
 }
 
-impl MutableDeltaStore for MemcacheStore {
+impl HgIdMutableDeltaStore for MemcacheStore {
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         self.add_data(delta, metadata);
         Ok(())
@@ -144,15 +144,15 @@ impl MutableHistoryStore for MemcacheStore {
     }
 }
 
-impl LocalStore for MemcacheStore {
+impl HgIdLocalStore for MemcacheStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         Ok(keys.to_vec())
     }
 }
 
-impl RemoteStore for MemcacheStore {
-    fn datastore(&self, store: Arc<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
-        Arc::new(MemcacheDataStore::new(self.clone(), store))
+impl HgIdRemoteStore for MemcacheStore {
+    fn datastore(&self, store: Arc<dyn HgIdMutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+        Arc::new(MemcacheHgIdDataStore::new(self.clone(), store))
     }
 
     fn historystore(&self, store: Arc<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
@@ -160,18 +160,18 @@ impl RemoteStore for MemcacheStore {
     }
 }
 
-struct MemcacheDataStore {
-    store: Arc<dyn MutableDeltaStore>,
+struct MemcacheHgIdDataStore {
+    store: Arc<dyn HgIdMutableDeltaStore>,
     memcache: MemcacheStore,
 }
 
-impl MemcacheDataStore {
-    pub fn new(memcache: MemcacheStore, store: Arc<dyn MutableDeltaStore>) -> Self {
+impl MemcacheHgIdDataStore {
+    pub fn new(memcache: MemcacheStore, store: Arc<dyn HgIdMutableDeltaStore>) -> Self {
         Self { memcache, store }
     }
 }
 
-impl DataStore for MemcacheDataStore {
+impl HgIdDataStore for MemcacheHgIdDataStore {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         self.memcache.get(key)
     }
@@ -189,16 +189,16 @@ impl DataStore for MemcacheDataStore {
     }
 }
 
-impl LocalStore for MemcacheDataStore {
+impl HgIdLocalStore for MemcacheHgIdDataStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         self.store.get_missing(keys)
     }
 }
 
-impl RemoteDataStore for MemcacheDataStore {
+impl RemoteDataStore for MemcacheHgIdDataStore {
     fn prefetch(&self, keys: &[Key]) -> Result<()> {
         let span = info_span!(
-            "MemcacheDataStore::prefetch",
+            "MemcacheHgIdDataStore::prefetch",
             key_count = keys.len(),
             hit_count = &0,
             size = &0
@@ -248,7 +248,7 @@ impl HistoryStore for MemcacheHistoryStore {
     }
 }
 
-impl LocalStore for MemcacheHistoryStore {
+impl HgIdLocalStore for MemcacheHistoryStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         self.store.get_missing(keys)
     }

@@ -22,14 +22,14 @@ use parking_lot::Mutex;
 use types::{Key, NodeInfo};
 
 use crate::datapack::{DataPack, DataPackVersion};
-use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore};
+use crate::datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata};
 use crate::historypack::{HistoryPack, HistoryPackVersion};
 use crate::historystore::{HistoryStore, MutableHistoryStore};
-use crate::localstore::LocalStore;
+use crate::localstore::HgIdLocalStore;
 use crate::mutabledatapack::MutableDataPack;
 use crate::mutablehistorypack::MutableHistoryPack;
 use crate::repack::Repackable;
-use crate::uniondatastore::UnionDataStore;
+use crate::uniondatastore::UnionHgIdDataStore;
 use crate::unionhistorystore::UnionHistoryStore;
 
 /// Naive implementation of a store that order its underlying stores based on how recently we found
@@ -224,7 +224,7 @@ impl HistoryPackStore {
     }
 }
 
-impl<T: LocalStore + Repackable> PackStoreInner<T> {
+impl<T: HgIdLocalStore + Repackable> PackStoreInner<T> {
     /// Open new on-disk packfiles, and close removed ones.
     fn rescan(&self) -> Result<()> {
         let mut new_packs = Vec::new();
@@ -323,7 +323,7 @@ impl<T: LocalStore + Repackable> PackStoreInner<T> {
     }
 }
 
-impl<T: LocalStore + Repackable> LocalStore for PackStore<T> {
+impl<T: HgIdLocalStore + Repackable> HgIdLocalStore for PackStore<T> {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         // Since the packfiles are loaded lazily, it's possible that `get_missing` is called before
         // any packfiles have been loaded. Let's tentatively scan the store before iterating over
@@ -342,7 +342,7 @@ impl<T: LocalStore + Repackable> LocalStore for PackStore<T> {
     }
 }
 
-impl DataStore for DataPackStore {
+impl HgIdDataStore for DataPackStore {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         self.inner.lock().run(|store| store.get(key))
     }
@@ -369,7 +369,7 @@ impl HistoryStore for HistoryPackStore {
 struct MutableDataPackStoreInner {
     pack_store: Arc<DataPackStore>,
     mutable_pack: Arc<MutableDataPack>,
-    union_store: UnionDataStore<Arc<dyn DataStore>>,
+    union_store: UnionHgIdDataStore<Arc<dyn HgIdDataStore>>,
 }
 
 /// A `MutableDataPackStore` allows both reading and writing to data packfiles.
@@ -381,7 +381,7 @@ impl MutableDataPackStore {
     pub fn new(pack_dir: impl AsRef<Path>, corruption_policy: CorruptionPolicy) -> Result<Self> {
         let pack_store = Arc::new(DataPackStore::new(pack_dir.as_ref(), corruption_policy));
         let mutable_pack = Arc::new(MutableDataPack::new(pack_dir, DataPackVersion::One)?);
-        let mut union_store: UnionDataStore<Arc<dyn DataStore>> = UnionDataStore::new();
+        let mut union_store: UnionHgIdDataStore<Arc<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
         union_store.add(pack_store.clone());
         union_store.add(mutable_pack.clone());
 
@@ -395,7 +395,7 @@ impl MutableDataPackStore {
     }
 }
 
-impl DataStore for MutableDataPackStore {
+impl HgIdDataStore for MutableDataPackStore {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         self.inner.union_store.get(key)
     }
@@ -413,13 +413,13 @@ impl DataStore for MutableDataPackStore {
     }
 }
 
-impl LocalStore for MutableDataPackStore {
+impl HgIdLocalStore for MutableDataPackStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         self.inner.union_store.get_missing(keys)
     }
 }
 
-impl MutableDeltaStore for MutableDataPackStore {
+impl HgIdMutableDeltaStore for MutableDataPackStore {
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         self.inner.mutable_pack.add(delta, metadata)
     }
@@ -471,7 +471,7 @@ impl HistoryStore for MutableHistoryPackStore {
     }
 }
 
-impl LocalStore for MutableHistoryPackStore {
+impl HgIdLocalStore for MutableHistoryPackStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         self.inner.union_store.get_missing(keys)
     }

@@ -13,13 +13,13 @@ use mpatch::mpatch::get_full_text;
 use types::Key;
 
 use crate::{
-    datastore::{DataStore, Delta, Metadata, RemoteDataStore},
+    datastore::{Delta, HgIdDataStore, Metadata, RemoteDataStore},
     unionstore::UnionStore,
 };
 
-pub type UnionDataStore<T> = UnionStore<T>;
+pub type UnionHgIdDataStore<T> = UnionStore<T>;
 
-impl<T: DataStore> UnionDataStore<T> {
+impl<T: HgIdDataStore> UnionHgIdDataStore<T> {
     fn get_partial_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         for store in self {
             match store.get_delta_chain(key)? {
@@ -32,7 +32,7 @@ impl<T: DataStore> UnionDataStore<T> {
     }
 }
 
-impl<T: DataStore> DataStore for UnionDataStore<T> {
+impl<T: HgIdDataStore> HgIdDataStore for UnionHgIdDataStore<T> {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         let delta_chain = self.get_delta_chain(key)?;
         let delta_chain = match delta_chain {
@@ -95,7 +95,7 @@ impl<T: DataStore> DataStore for UnionDataStore<T> {
     }
 }
 
-impl<T: RemoteDataStore> RemoteDataStore for UnionDataStore<T> {
+impl<T: RemoteDataStore> RemoteDataStore for UnionHgIdDataStore<T> {
     fn prefetch(&self, keys: &[Key]) -> Result<()> {
         let initial_keys = Ok(keys.to_vec());
         self.into_iter()
@@ -122,17 +122,17 @@ mod tests {
     use quickcheck::quickcheck;
     use thiserror::Error;
 
-    use crate::localstore::LocalStore;
+    use crate::localstore::HgIdLocalStore;
 
-    struct BadDataStore;
+    struct BadHgIdDataStore;
 
     #[derive(Debug, Error)]
     #[error("Bad data store always has error which is not KeyError")]
-    struct BadDataStoreError;
+    struct BadHgIdDataStoreError;
 
-    struct EmptyDataStore;
+    struct EmptyHgIdDataStore;
 
-    impl DataStore for EmptyDataStore {
+    impl HgIdDataStore for EmptyHgIdDataStore {
         fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
             Ok(None)
         }
@@ -150,47 +150,47 @@ mod tests {
         }
     }
 
-    impl LocalStore for EmptyDataStore {
+    impl HgIdLocalStore for EmptyHgIdDataStore {
         fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
             Ok(keys.iter().cloned().collect())
         }
     }
 
-    impl DataStore for BadDataStore {
+    impl HgIdDataStore for BadHgIdDataStore {
         fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
-            Err(BadDataStoreError.into())
+            Err(BadHgIdDataStoreError.into())
         }
 
         fn get_delta(&self, _key: &Key) -> Result<Option<Delta>> {
-            Err(BadDataStoreError.into())
+            Err(BadHgIdDataStoreError.into())
         }
 
         fn get_delta_chain(&self, _key: &Key) -> Result<Option<Vec<Delta>>> {
-            Err(BadDataStoreError.into())
+            Err(BadHgIdDataStoreError.into())
         }
 
         fn get_meta(&self, _key: &Key) -> Result<Option<Metadata>> {
-            Err(BadDataStoreError.into())
+            Err(BadHgIdDataStoreError.into())
         }
     }
 
-    impl LocalStore for BadDataStore {
+    impl HgIdLocalStore for BadHgIdDataStore {
         fn get_missing(&self, _keys: &[Key]) -> Result<Vec<Key>> {
-            Err(BadDataStoreError.into())
+            Err(BadHgIdDataStoreError.into())
         }
     }
 
     quickcheck! {
         fn test_empty_unionstore_get(key: Key) -> bool {
-            match UnionDataStore::<EmptyDataStore>::new().get(&key) {
+            match UnionHgIdDataStore::<EmptyHgIdDataStore>::new().get(&key) {
                 Ok(None) => true,
                 _ => false,
             }
         }
 
         fn test_empty_datastore_get(key: Key) -> bool {
-            let mut unionstore = UnionDataStore::new();
-            unionstore.add(EmptyDataStore);
+            let mut unionstore = UnionHgIdDataStore::new();
+            unionstore.add(EmptyHgIdDataStore);
             match unionstore.get(&key) {
                 Ok(None) => true,
                 _ => false,
@@ -198,8 +198,8 @@ mod tests {
         }
 
         fn test_bad_datastore_get(key: Key) -> bool {
-            let mut unionstore = UnionDataStore::new();
-            unionstore.add(BadDataStore);
+            let mut unionstore = UnionHgIdDataStore::new();
+            unionstore.add(BadHgIdDataStore);
             match unionstore.get(&key) {
                 Err(_) => true,
                 _ => false,
@@ -207,15 +207,15 @@ mod tests {
         }
 
         fn test_empty_unionstore_get_delta_chain(key: Key) -> bool {
-            match UnionDataStore::<EmptyDataStore>::new().get_delta_chain(&key) {
+            match UnionHgIdDataStore::<EmptyHgIdDataStore>::new().get_delta_chain(&key) {
                 Ok(None) => true,
                 _ => false,
             }
         }
 
         fn test_empty_datastore_get_delta_chain(key: Key) -> bool {
-            let mut unionstore = UnionDataStore::new();
-            unionstore.add(EmptyDataStore);
+            let mut unionstore = UnionHgIdDataStore::new();
+            unionstore.add(EmptyHgIdDataStore);
             match unionstore.get_delta_chain(&key) {
                 Ok(None) => true,
                 _ => false,
@@ -223,8 +223,8 @@ mod tests {
         }
 
         fn test_bad_datastore_get_delta_chain(key: Key) -> bool {
-            let mut unionstore = UnionDataStore::new();
-            unionstore.add(BadDataStore);
+            let mut unionstore = UnionHgIdDataStore::new();
+            unionstore.add(BadHgIdDataStore);
             match unionstore.get_delta_chain(&key) {
                 Err(_) => true,
                 _ => false,
@@ -232,15 +232,15 @@ mod tests {
         }
 
         fn test_empty_unionstore_get_meta(key: Key) -> bool {
-            match UnionDataStore::<EmptyDataStore>::new().get_meta(&key) {
+            match UnionHgIdDataStore::<EmptyHgIdDataStore>::new().get_meta(&key) {
                 Ok(None) => true,
                 _ => false,
             }
         }
 
         fn test_empty_datastore_get_meta(key: Key) -> bool {
-            let mut unionstore = UnionDataStore::new();
-            unionstore.add(EmptyDataStore);
+            let mut unionstore = UnionHgIdDataStore::new();
+            unionstore.add(EmptyHgIdDataStore);
             match unionstore.get_meta(&key) {
                 Ok(None) => true,
                 _ => false,
@@ -248,8 +248,8 @@ mod tests {
         }
 
         fn test_bad_datastore_get_meta(key: Key) -> bool {
-            let mut unionstore = UnionDataStore::new();
-            unionstore.add(BadDataStore);
+            let mut unionstore = UnionHgIdDataStore::new();
+            unionstore.add(BadHgIdDataStore);
             match unionstore.get_meta(&key) {
                 Err(_) => true,
                 _ => false,
@@ -257,18 +257,18 @@ mod tests {
         }
 
         fn test_empty_unionstore_get_missing(keys: Vec<Key>) -> bool {
-            keys == UnionDataStore::<EmptyDataStore>::new().get_missing(&keys).unwrap()
+            keys == UnionHgIdDataStore::<EmptyHgIdDataStore>::new().get_missing(&keys).unwrap()
         }
 
         fn test_empty_datastore_get_missing(keys: Vec<Key>) -> bool {
-            let mut unionstore = UnionDataStore::new();
-            unionstore.add(EmptyDataStore);
+            let mut unionstore = UnionHgIdDataStore::new();
+            unionstore.add(EmptyHgIdDataStore);
             keys == unionstore.get_missing(&keys).unwrap()
         }
 
         fn test_bad_datastore_get_missing(keys: Vec<Key>) -> bool {
-            let mut unionstore = UnionDataStore::new();
-            unionstore.add(BadDataStore);
+            let mut unionstore = UnionHgIdDataStore::new();
+            unionstore.add(BadHgIdDataStore);
             match unionstore.get_missing(&keys) {
                 Ok(_) => false,
                 Err(_) => true,

@@ -26,9 +26,9 @@ use types::{HgId, Key};
 
 use crate::dataindex::{DataIndex, DeltaLocation};
 use crate::datapack::{DataEntry, DataPackVersion};
-use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore};
+use crate::datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata};
 use crate::error::EmptyMutablePack;
-use crate::localstore::LocalStore;
+use crate::localstore::HgIdLocalStore;
 use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
 
@@ -163,7 +163,7 @@ impl MutableDataPack {
     }
 }
 
-impl MutableDeltaStore for MutableDataPack {
+impl HgIdMutableDeltaStore for MutableDataPack {
     /// Adds the given entry to the mutable datapack.
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         self.inner.lock().add(delta, metadata)
@@ -213,7 +213,7 @@ impl MutablePack for MutableDataPack {
     }
 }
 
-impl DataStore for MutableDataPack {
+impl HgIdDataStore for MutableDataPack {
     fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         Err(
             MutableDataPackError("DataPack doesn't support raw get(), only getdeltachain".into())
@@ -267,7 +267,7 @@ impl DataStore for MutableDataPack {
     }
 }
 
-impl LocalStore for MutableDataPack {
+impl HgIdLocalStore for MutableDataPack {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let inner = self.inner.lock();
         Ok(keys

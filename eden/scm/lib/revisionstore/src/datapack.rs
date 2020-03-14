@@ -100,8 +100,8 @@ use types::{HgId, Key, RepoPath};
 use util::path::remove_file;
 
 use crate::dataindex::{DataIndex, DeltaBaseOffset};
-use crate::datastore::{DataStore, Delta, Metadata};
-use crate::localstore::LocalStore;
+use crate::datastore::{Delta, HgIdDataStore, Metadata};
+use crate::localstore::HgIdLocalStore;
 use crate::repack::{Repackable, ToKeys};
 use crate::sliceext::SliceExt;
 
@@ -315,7 +315,7 @@ impl DataPack {
     }
 }
 
-impl DataStore for DataPack {
+impl HgIdDataStore for DataPack {
     fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         Err(format_err!(
             "DataPack doesn't support raw get(), only getdeltachain"
@@ -382,7 +382,7 @@ impl DataStore for DataPack {
     }
 }
 
-impl LocalStore for DataPack {
+impl HgIdLocalStore for DataPack {
     fn from_path(path: &Path) -> Result<Self> {
         DataPack::new(path)
     }
@@ -471,7 +471,7 @@ pub mod tests {
 
     use types::testutil::*;
 
-    use crate::datastore::{Delta, Metadata, MutableDeltaStore};
+    use crate::datastore::{Delta, HgIdMutableDeltaStore, Metadata};
     use crate::mutabledatapack::MutableDataPack;
 
     pub fn make_datapack(tempdir: &TempDir, deltas: &Vec<(Delta, Metadata)>) -> DataPack {

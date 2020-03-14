@@ -57,7 +57,7 @@ mod tests {
     use quickcheck::quickcheck;
     use thiserror::Error;
 
-    use crate::localstore::LocalStore;
+    use crate::localstore::HgIdLocalStore;
 
     struct BadHistoryStore;
 
@@ -73,7 +73,7 @@ mod tests {
         }
     }
 
-    impl LocalStore for EmptyHistoryStore {
+    impl HgIdLocalStore for EmptyHistoryStore {
         fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
             Ok(keys.iter().cloned().collect())
         }
@@ -85,7 +85,7 @@ mod tests {
         }
     }
 
-    impl LocalStore for BadHistoryStore {
+    impl HgIdLocalStore for BadHistoryStore {
         fn get_missing(&self, _keys: &[Key]) -> Result<Vec<Key>> {
             Err(BadHistoryStoreError.into())
         }

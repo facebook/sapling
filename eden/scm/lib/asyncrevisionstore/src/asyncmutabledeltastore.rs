@@ -13,15 +13,15 @@ use tokio::prelude::*;
 use tokio_threadpool::blocking;
 
 use cloned::cloned;
-use revisionstore::{Delta, Metadata, MutableDeltaStore};
+use revisionstore::{Delta, HgIdMutableDeltaStore, Metadata};
 
-pub struct AsyncMutableDeltaStore<T: MutableDeltaStore> {
+pub struct AsyncHgIdMutableDeltaStore<T: HgIdMutableDeltaStore> {
     inner: Option<T>,
 }
 
-/// Wraps a MutableDeltaStore to be used in an asynchronous context.
+/// Wraps a HgIdMutableDeltaStore to be used in an asynchronous context.
 ///
-/// The API is designed to consume the `AsyncMutableDeltaStore` and return it, this allows chaining
+/// The API is designed to consume the `AsyncHgIdMutableDeltaStore` and return it, this allows chaining
 /// the Futures with `and_then()`.
 ///
 /// # Examples
@@ -32,9 +32,9 @@ pub struct AsyncMutableDeltaStore<T: MutableDeltaStore> {
 ///     .and_then(move |datapack| datapack.add(&delta2, &meta2))
 ///     .and_then(move |datapack| datapack.close()
 /// ```
-impl<T: MutableDeltaStore + Send> AsyncMutableDeltaStore<T> {
+impl<T: HgIdMutableDeltaStore + Send> AsyncHgIdMutableDeltaStore<T> {
     pub(crate) fn new_(store: T) -> Self {
-        AsyncMutableDeltaStore { inner: Some(store) }
+        AsyncHgIdMutableDeltaStore { inner: Some(store) }
     }
 
     /// Add the `Delta` to this store.
@@ -55,7 +55,7 @@ impl<T: MutableDeltaStore + Send> AsyncMutableDeltaStore<T> {
         })
         .from_err()
         .and_then(|res| res)
-        .map(move |inner| AsyncMutableDeltaStore { inner: Some(inner) })
+        .map(move |inner| AsyncHgIdMutableDeltaStore { inner: Some(inner) })
     }
 
     /// Close the store. Once this Future finishes, all the added delta becomes visible to other

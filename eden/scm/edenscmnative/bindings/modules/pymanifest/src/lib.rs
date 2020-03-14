@@ -19,8 +19,8 @@ use manifest::{DiffType, File, FileMetadata, FileType, FsNodeMetadata, Manifest}
 use manifest_tree::TreeManifest;
 use pathmatcher::{AlwaysMatcher, Matcher, TreeMatcher};
 use pypathmatcher::PythonMatcher;
-use pyrevisionstore::PythonDataStore;
-use revisionstore::{DataStore, RemoteDataStore};
+use pyrevisionstore::PythonHgIdDataStore;
+use revisionstore::{HgIdDataStore, RemoteDataStore};
 use types::{Key, Node, RepoPath, RepoPathBuf};
 
 type Result<T, E = Error> = std::result::Result<T, E>;
@@ -35,7 +35,7 @@ impl<T> ManifestStore<T> {
     }
 }
 
-impl<T: DataStore + RemoteDataStore> manifest_tree::TreeStore for ManifestStore<T> {
+impl<T: HgIdDataStore + RemoteDataStore> manifest_tree::TreeStore for ManifestStore<T> {
     fn get(&self, path: &RepoPath, node: Node) -> Result<Bytes> {
         let key = Key::new(path.to_owned(), node);
         self.underlying
@@ -98,7 +98,7 @@ py_class!(class treemanifest |py| {
         store: PyObject,
         node: Option<&PyBytes> = None
     ) -> PyResult<treemanifest> {
-        let store = PythonDataStore::new(store);
+        let store = PythonHgIdDataStore::new(store);
         let manifest_store = Arc::new(ManifestStore::new(store));
         let underlying = match node {
             None => TreeManifest::ephemeral(manifest_store),
@@ -469,7 +469,7 @@ pub fn subdir_diff(
     other_binnodes: &PyList,
     depth: i32,
 ) -> PyResult<PyObject> {
-    let store = PythonDataStore::new(store);
+    let store = PythonHgIdDataStore::new(store);
     let manifest_store = Arc::new(ManifestStore::new(store));
     let mut others = vec![];
     for pybytes in other_binnodes.iter(py) {
@@ -508,7 +508,7 @@ pub fn prefetch(
     path: PyPathBuf,
     depth: Option<usize>,
 ) -> PyResult<PyNone> {
-    let store = Arc::new(ManifestStore::new(PythonDataStore::new(store)));
+    let store = Arc::new(ManifestStore::new(PythonHgIdDataStore::new(store)));
     let node = pybytes_to_node(py, node)?;
     let repo_path_buf = path.to_repo_path_buf().map_pyerr(py)?;
     let key = Key::new(repo_path_buf, node);

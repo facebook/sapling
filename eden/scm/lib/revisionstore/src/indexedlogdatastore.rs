@@ -24,18 +24,18 @@ use lz4_pyframe::{compress, decompress};
 use types::{hgid::ReadHgIdExt, HgId, Key, RepoPath};
 
 use crate::{
-    datastore::{DataStore, Delta, Metadata, MutableDeltaStore},
-    localstore::LocalStore,
+    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata},
+    localstore::HgIdLocalStore,
     repack::ToKeys,
     sliceext::SliceExt,
 };
 
-struct IndexedLogDataStoreInner {
+struct IndexedLogHgIdDataStoreInner {
     log: RotateLog,
 }
 
-pub struct IndexedLogDataStore {
-    inner: RwLock<IndexedLogDataStoreInner>,
+pub struct IndexedLogHgIdDataStore {
+    inner: RwLock<IndexedLogHgIdDataStoreInner>,
 }
 
 struct Entry {
@@ -151,18 +151,18 @@ impl Entry {
     }
 }
 
-impl IndexedLogDataStore {
-    /// Create or open an `IndexedLogDataStore`.
+impl IndexedLogHgIdDataStore {
+    /// Create or open an `IndexedLogHgIdDataStore`.
     pub fn new(path: impl AsRef<Path>) -> Result<Self> {
         let open_options = Self::default_open_options();
         let log = open_options.open(&path)?;
-        Ok(IndexedLogDataStore {
-            inner: RwLock::new(IndexedLogDataStoreInner { log }),
+        Ok(IndexedLogHgIdDataStore {
+            inner: RwLock::new(IndexedLogHgIdDataStoreInner { log }),
         })
     }
 }
 
-impl DefaultOpenOptions<OpenOptions> for IndexedLogDataStore {
+impl DefaultOpenOptions<OpenOptions> for IndexedLogHgIdDataStore {
     /// Default configuration: 4 x 2.5GB.
     fn default_open_options() -> OpenOptions {
         OpenOptions::new()
@@ -175,7 +175,7 @@ impl DefaultOpenOptions<OpenOptions> for IndexedLogDataStore {
     }
 }
 
-impl MutableDeltaStore for IndexedLogDataStore {
+impl HgIdMutableDeltaStore for IndexedLogHgIdDataStore {
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         ensure!(delta.base.is_none(), "Deltas aren't supported.");
 
@@ -190,9 +190,9 @@ impl MutableDeltaStore for IndexedLogDataStore {
     }
 }
 
-impl LocalStore for IndexedLogDataStore {
+impl HgIdLocalStore for IndexedLogHgIdDataStore {
     fn from_path(path: &Path) -> Result<Self> {
-        IndexedLogDataStore::new(path)
+        IndexedLogHgIdDataStore::new(path)
     }
 
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
@@ -208,7 +208,7 @@ impl LocalStore for IndexedLogDataStore {
     }
 }
 
-impl DataStore for IndexedLogDataStore {
+impl HgIdDataStore for IndexedLogHgIdDataStore {
     fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         unreachable!()
     }
@@ -237,7 +237,7 @@ impl DataStore for IndexedLogDataStore {
     }
 }
 
-impl ToKeys for IndexedLogDataStore {
+impl ToKeys for IndexedLogHgIdDataStore {
     fn to_keys(&self) -> Vec<Result<Key>> {
         self.inner
             .read()
@@ -263,14 +263,14 @@ mod tests {
     #[test]
     fn test_empty() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogDataStore::new(&tempdir).unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir).unwrap();
         log.flush().unwrap();
     }
 
     #[test]
     fn test_add() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogDataStore::new(&tempdir).unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir).unwrap();
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -286,7 +286,7 @@ mod tests {
     #[test]
     fn test_add_get() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogDataStore::new(&tempdir).unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir).unwrap();
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -298,7 +298,7 @@ mod tests {
         log.add(&delta, &metadata).unwrap();
         log.flush().unwrap();
 
-        let log = IndexedLogDataStore::new(&tempdir).unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir).unwrap();
         let read_delta = log.get_delta(&delta.key).unwrap();
         assert_eq!(Some(delta), read_delta);
     }
@@ -306,7 +306,7 @@ mod tests {
     #[test]
     fn test_lookup_failure() {
         let tempdir = TempDir::new().unwrap();
-        let log = IndexedLogDataStore::new(&tempdir).unwrap();
+        let log = IndexedLogHgIdDataStore::new(&tempdir).unwrap();
 
         let key = key("a", "1");
         assert!(log.get_delta(&key).unwrap().is_none());
@@ -315,7 +315,7 @@ mod tests {
     #[test]
     fn test_add_chain() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogDataStore::new(&tempdir)?;
+        let log = IndexedLogHgIdDataStore::new(&tempdir)?;
 
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -331,7 +331,7 @@ mod tests {
     #[test]
     fn test_iter() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogDataStore::new(&tempdir)?;
+        let log = IndexedLogHgIdDataStore::new(&tempdir)?;
 
         let k = key("a", "2");
         let delta = Delta {
@@ -349,7 +349,7 @@ mod tests {
     #[test]
     fn test_corrupted() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let log = IndexedLogDataStore::new(&tempdir)?;
+        let log = IndexedLogHgIdDataStore::new(&tempdir)?;
 
         let k = key("a", "2");
         let delta = Delta {
@@ -369,7 +369,7 @@ mod tests {
         rotate_log_path.push("log");
         remove_file(rotate_log_path)?;
 
-        let log = IndexedLogDataStore::new(&tempdir)?;
+        let log = IndexedLogHgIdDataStore::new(&tempdir)?;
         let k = key("a", "3");
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),

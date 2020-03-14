@@ -11,13 +11,13 @@ use anyhow::{format_err, Result};
 
 use types::{Key, NodeInfo};
 
-use crate::datastore::{DataStore, Delta, Metadata, MutableDeltaStore};
+use crate::datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata};
 use crate::historystore::{HistoryStore, MutableHistoryStore};
-use crate::localstore::LocalStore;
+use crate::localstore::HgIdLocalStore;
 
 /// A `MultiplexDeltaStore` is a store that will duplicate all the writes to all the
 /// delta stores that it is made of.
-pub struct MultiplexDeltaStore<T: MutableDeltaStore> {
+pub struct MultiplexDeltaStore<T: HgIdMutableDeltaStore> {
     stores: Vec<T>,
 }
 
@@ -27,7 +27,7 @@ pub struct MultiplexHistoryStore<T: MutableHistoryStore> {
     stores: Vec<T>,
 }
 
-impl<T: MutableDeltaStore> MultiplexDeltaStore<T> {
+impl<T: HgIdMutableDeltaStore> MultiplexDeltaStore<T> {
     pub fn new() -> Self {
         Self { stores: Vec::new() }
     }
@@ -47,7 +47,7 @@ impl<T: MutableHistoryStore> MultiplexHistoryStore<T> {
     }
 }
 
-impl<T: MutableDeltaStore> MutableDeltaStore for MultiplexDeltaStore<T> {
+impl<T: HgIdMutableDeltaStore> HgIdMutableDeltaStore for MultiplexDeltaStore<T> {
     /// Write the `Delta` and `Metadata` to all the stores
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         for store in self.stores.iter() {
@@ -66,7 +66,7 @@ impl<T: MutableDeltaStore> MutableDeltaStore for MultiplexDeltaStore<T> {
     }
 }
 
-impl<T: MutableDeltaStore> DataStore for MultiplexDeltaStore<T> {
+impl<T: HgIdMutableDeltaStore> HgIdDataStore for MultiplexDeltaStore<T> {
     fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         Err(format_err!("MultiplexDeltaStore doesn't support raw get()"))
     }
@@ -102,7 +102,7 @@ impl<T: MutableDeltaStore> DataStore for MultiplexDeltaStore<T> {
     }
 }
 
-impl<T: MutableDeltaStore> LocalStore for MultiplexDeltaStore<T> {
+impl<T: HgIdMutableDeltaStore> HgIdLocalStore for MultiplexDeltaStore<T> {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let initial_keys = Ok(keys.iter().cloned().collect());
         self.stores
@@ -144,7 +144,7 @@ impl<T: MutableHistoryStore> HistoryStore for MultiplexHistoryStore<T> {
     }
 }
 
-impl<T: MutableHistoryStore> LocalStore for MultiplexHistoryStore<T> {
+impl<T: MutableHistoryStore> HgIdLocalStore for MultiplexHistoryStore<T> {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let initial_keys = Ok(keys.iter().cloned().collect());
         self.stores
@@ -166,17 +166,17 @@ mod tests {
     use types::testutil::*;
 
     use crate::datapack::DataPackVersion;
-    use crate::datastore::DataStore;
+    use crate::datastore::HgIdDataStore;
     use crate::historypack::HistoryPackVersion;
     use crate::historystore::HistoryStore;
-    use crate::indexedlogdatastore::IndexedLogDataStore;
+    use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
     use crate::mutabledatapack::MutableDataPack;
     use crate::mutablehistorypack::MutableHistoryPack;
 
     #[test]
     fn test_delta_add_static() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let mut log = IndexedLogDataStore::new(&tempdir)?;
+        let mut log = IndexedLogHgIdDataStore::new(&tempdir)?;
         let mut multiplex = MultiplexDeltaStore::new();
         multiplex.add_store(Box::new(&mut log));
 
@@ -198,9 +198,9 @@ mod tests {
     #[test]
     fn test_delta_add_dynamic() -> Result<()> {
         let tempdir = TempDir::new()?;
-        let mut log = IndexedLogDataStore::new(&tempdir)?;
+        let mut log = IndexedLogHgIdDataStore::new(&tempdir)?;
         let mut pack = MutableDataPack::new(&tempdir, DataPackVersion::One)?;
-        let mut multiplex: MultiplexDeltaStore<Box<dyn MutableDeltaStore>> =
+        let mut multiplex: MultiplexDeltaStore<Box<dyn HgIdMutableDeltaStore>> =
             MultiplexDeltaStore::new();
         multiplex.add_store(Box::new(&mut log));
         multiplex.add_store(Box::new(&mut pack));

@@ -23,14 +23,14 @@ pub mod asyncuniondatastore;
 pub mod asyncunionhistorystore;
 
 pub use crate::asyncdatapack::AsyncDataPack;
-pub use crate::asyncdatastore::AsyncDataStore;
+pub use crate::asyncdatastore::AsyncHgIdDataStore;
 pub use crate::asynchistorypack::AsyncHistoryPack;
 pub use crate::asynchistorystore::AsyncHistoryStore;
-pub use crate::asyncindexedlogdatastore::AsyncMutableIndexedLogDataStore;
+pub use crate::asyncindexedlogdatastore::AsyncMutableIndexedLogHgIdDataStore;
 pub use crate::asyncindexedloghistorystore::AsyncMutableIndexedLogHistoryStore;
 pub use crate::asyncmutabledatapack::AsyncMutableDataPack;
-pub use crate::asyncmutabledeltastore::AsyncMutableDeltaStore;
+pub use crate::asyncmutabledeltastore::AsyncHgIdMutableDeltaStore;
 pub use crate::asyncmutablehistorypack::AsyncMutableHistoryPack;
 pub use crate::asyncmutablehistorystore::AsyncMutableHistoryStore;
-pub use crate::asyncuniondatastore::AsyncUnionDataStore;
+pub use crate::asyncuniondatastore::AsyncUnionHgIdDataStore;
 pub use crate::asyncunionhistorystore::AsyncUnionHistoryStore;

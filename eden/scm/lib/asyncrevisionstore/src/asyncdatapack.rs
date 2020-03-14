@@ -14,9 +14,9 @@ use tokio_threadpool::blocking;
 
 use revisionstore::DataPack;
 
-use crate::asyncdatastore::AsyncDataStore;
+use crate::asyncdatastore::AsyncHgIdDataStore;
 
-pub type AsyncDataPack = AsyncDataStore<DataPack>;
+pub type AsyncDataPack = AsyncHgIdDataStore<DataPack>;
 
 impl AsyncDataPack {
     /// Opens the datapack at `path`.
@@ -24,7 +24,7 @@ impl AsyncDataPack {
         poll_fn({ move || blocking(|| DataPack::new(&path)) })
             .from_err()
             .and_then(|res| res)
-            .map(move |datapack| AsyncDataStore::new_(datapack))
+            .map(move |datapack| AsyncHgIdDataStore::new_(datapack))
     }
 }
 
@@ -36,7 +36,7 @@ mod tests {
     use tokio::runtime::Runtime;
 
     use revisionstore::{
-        testutil::*, DataPackVersion, Delta, Metadata, MutableDataPack, MutableDeltaStore,
+        testutil::*, DataPackVersion, Delta, HgIdMutableDeltaStore, Metadata, MutableDataPack,
     };
     use types::testutil::*;
 

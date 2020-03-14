@@ -11,9 +11,9 @@ use anyhow::Result;
 
 use types::{HistoryEntry, Key, NodeInfo};
 
-use crate::localstore::LocalStore;
+use crate::localstore::HgIdLocalStore;
 
-pub trait HistoryStore: LocalStore + Send + Sync {
+pub trait HistoryStore: HgIdLocalStore + Send + Sync {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>>;
 }
 

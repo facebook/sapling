@@ -546,7 +546,7 @@ mod tests {
     use tempfile::TempDir;
 
     use revisionstore::{
-        datastore::{Delta, MutableDeltaStore},
+        datastore::{Delta, HgIdMutableDeltaStore},
         testutil::make_config,
     };
     use types::testutil::key;

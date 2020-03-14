@@ -18,11 +18,11 @@ use types::{Key, NodeInfo};
 use crate::{
     historystore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore},
     indexedloghistorystore::IndexedLogHistoryStore,
-    localstore::LocalStore,
+    localstore::HgIdLocalStore,
     memcache::MemcacheStore,
     multiplexstore::MultiplexHistoryStore,
     packstore::{CorruptionPolicy, MutableHistoryPackStore},
-    remotestore::RemoteStore,
+    remotestore::HgIdRemoteStore,
     unionhistorystore::UnionHistoryStore,
     util::{
         get_cache_packs_path, get_cache_path, get_indexedloghistorystore_path, get_local_path,
@@ -71,7 +71,7 @@ impl RemoteHistoryStore for MetadataStore {
     }
 }
 
-impl LocalStore for MetadataStore {
+impl HgIdLocalStore for MetadataStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         self.historystore.get_missing(keys)
     }
@@ -107,7 +107,7 @@ pub struct MetadataStoreBuilder<'a> {
     local_path: Option<PathBuf>,
     no_local_store: bool,
     config: &'a ConfigSet,
-    remotestore: Option<Box<dyn RemoteStore>>,
+    remotestore: Option<Box<dyn HgIdRemoteStore>>,
     suffix: Option<PathBuf>,
     memcachestore: Option<MemcacheStore>,
 }
@@ -139,7 +139,7 @@ impl<'a> MetadataStoreBuilder<'a> {
         self
     }
 
-    pub fn remotestore(mut self, remotestore: Box<dyn RemoteStore>) -> Self {
+    pub fn remotestore(mut self, remotestore: Box<dyn HgIdRemoteStore>) -> Self {
         self.remotestore = Some(remotestore);
         self
     }
@@ -268,7 +268,7 @@ mod tests {
 
     use types::testutil::*;
 
-    use crate::testutil::{make_config, FakeRemoteStore};
+    use crate::testutil::{make_config, FakeHgIdRemoteStore};
 
     #[test]
     fn test_new() -> Result<()> {
@@ -378,7 +378,7 @@ mod tests {
 
         let mut map = HashMap::new();
         map.insert(k.clone(), nodeinfo.clone());
-        let mut remotestore = FakeRemoteStore::new();
+        let mut remotestore = FakeHgIdRemoteStore::new();
         remotestore.hist(map);
 
         let store = MetadataStoreBuilder::new(&config)
@@ -403,7 +403,7 @@ mod tests {
 
         let mut map = HashMap::new();
         map.insert(k.clone(), nodeinfo.clone());
-        let mut remotestore = FakeRemoteStore::new();
+        let mut remotestore = FakeHgIdRemoteStore::new();
         remotestore.hist(map);
 
         let store = MetadataStoreBuilder::new(&config)
@@ -425,7 +425,7 @@ mod tests {
         let config = make_config(&cachedir);
 
         let map = HashMap::new();
-        let mut remotestore = FakeRemoteStore::new();
+        let mut remotestore = FakeHgIdRemoteStore::new();
         remotestore.hist(map);
 
         let store = MetadataStoreBuilder::new(&config)
@@ -452,7 +452,7 @@ mod tests {
 
         let mut map = HashMap::new();
         map.insert(k.clone(), nodeinfo.clone());
-        let mut remotestore = FakeRemoteStore::new();
+        let mut remotestore = FakeHgIdRemoteStore::new();
         remotestore.hist(map);
 
         let store = MetadataStoreBuilder::new(&config)
@@ -531,7 +531,7 @@ mod tests {
 
             let mut map = HashMap::new();
             map.insert(k.clone(), nodeinfo.clone());
-            let mut remotestore = FakeRemoteStore::new();
+            let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.hist(map);
 
             let memcache = MemcacheStore::new(&config)?;

@@ -16,10 +16,10 @@ use thiserror::Error;
 use types::Key;
 
 use crate::datapack::{DataPack, DataPackVersion};
-use crate::datastore::{DataStore, MutableDeltaStore};
+use crate::datastore::{HgIdDataStore, HgIdMutableDeltaStore};
 use crate::historypack::{HistoryPack, HistoryPackVersion};
 use crate::historystore::{HistoryStore, MutableHistoryStore};
-use crate::localstore::LocalStore;
+use crate::localstore::HgIdLocalStore;
 use crate::mutabledatapack::MutableDataPack;
 use crate::mutablehistorypack::MutableHistoryPack;
 use crate::mutablepack::MutablePack;
@@ -63,7 +63,7 @@ enum RepackFailure {
 
 /// Repack all pack files in the paths iterator. Once repacked, the repacked packs will be removed
 /// from the filesystem.
-fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable + ToKeys>(
+fn repack_packs<'a, T: MutablePack, U: HgIdLocalStore + Repackable + ToKeys>(
     paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
     mut mut_pack: T,
     repack_pack: impl Fn(&U, &mut T) -> Result<()>,

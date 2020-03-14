@@ -19,7 +19,7 @@ use serde_derive::{Deserialize, Serialize};
 
 use types::{HgId, Key, RepoPath};
 
-use crate::localstore::LocalStore;
+use crate::localstore::HgIdLocalStore;
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Delta {
@@ -34,7 +34,7 @@ pub struct Metadata {
     pub flags: Option<u64>,
 }
 
-pub trait DataStore: LocalStore + Send + Sync {
+pub trait HgIdDataStore: HgIdLocalStore + Send + Sync {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>>;
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>>;
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>>;
@@ -44,7 +44,7 @@ pub trait DataStore: LocalStore + Send + Sync {
 /// The `RemoteDataStore` trait indicates that data can fetched over the network. Care must be
 /// taken to avoid serially fetching data and instead data should be fetched in bulk via the
 /// `prefetch` API.
-pub trait RemoteDataStore: DataStore + Send + Sync {
+pub trait RemoteDataStore: HgIdDataStore + Send + Sync {
     /// Attempt to bring the data corresponding to the passed in keys to a local store.
     ///
     /// When implemented on a pure remote store, like the `EdenApi`, the method will always fetch
@@ -53,14 +53,14 @@ pub trait RemoteDataStore: DataStore + Send + Sync {
     fn prefetch(&self, keys: &[Key]) -> Result<()>;
 }
 
-pub trait MutableDeltaStore: DataStore + Send + Sync {
+pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()>;
     fn flush(&self) -> Result<Option<PathBuf>>;
 }
 
-/// Implement `DataStore` for all types that can be `Deref` into a `DataStore`. This includes all
+/// Implement `HgIdDataStore` for all types that can be `Deref` into a `HgIdDataStore`. This includes all
 /// the smart pointers like `Box`, `Rc`, `Arc`.
-impl<T: DataStore + ?Sized, U: Deref<Target = T> + Send + Sync> DataStore for U {
+impl<T: HgIdDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdDataStore for U {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         T::get(self, key)
     }
@@ -83,7 +83,9 @@ impl<T: RemoteDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> RemoteData
     }
 }
 
-impl<T: MutableDeltaStore + ?Sized, U: Deref<Target = T> + Send + Sync> MutableDeltaStore for U {
+impl<T: HgIdMutableDeltaStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdMutableDeltaStore
+    for U
+{
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         T::add(self, delta, metadata)
     }

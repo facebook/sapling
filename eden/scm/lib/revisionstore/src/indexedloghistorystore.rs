@@ -27,7 +27,7 @@ use types::{
 
 use crate::{
     historystore::{HistoryStore, MutableHistoryStore},
-    localstore::LocalStore,
+    localstore::HgIdLocalStore,
     repack::ToKeys,
     sliceext::SliceExt,
 };
@@ -208,7 +208,7 @@ impl DefaultOpenOptions<OpenOptions> for IndexedLogHistoryStore {
     }
 }
 
-impl LocalStore for IndexedLogHistoryStore {
+impl HgIdLocalStore for IndexedLogHistoryStore {
     fn from_path(path: &Path) -> Result<Self> {
         IndexedLogHistoryStore::new(path)
     }

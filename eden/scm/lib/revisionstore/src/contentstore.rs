@@ -20,15 +20,17 @@ use configparser::{
 use types::Key;
 
 use crate::{
-    datastore::{strip_metadata, DataStore, Delta, Metadata, MutableDeltaStore, RemoteDataStore},
-    indexedlogdatastore::IndexedLogDataStore,
+    datastore::{
+        strip_metadata, Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore,
+    },
+    indexedlogdatastore::IndexedLogHgIdDataStore,
     lfs::{LfsMultiplexer, LfsStore},
-    localstore::LocalStore,
+    localstore::HgIdLocalStore,
     memcache::MemcacheStore,
     multiplexstore::MultiplexDeltaStore,
     packstore::{CorruptionPolicy, MutableDataPackStore},
-    remotestore::RemoteStore,
-    uniondatastore::UnionDataStore,
+    remotestore::HgIdRemoteStore,
+    uniondatastore::UnionHgIdDataStore,
     util::{
         get_cache_packs_path, get_cache_path, get_indexedlogdatastore_path, get_local_path,
         get_packs_path,
@@ -36,13 +38,13 @@ use crate::{
 };
 
 /// A `ContentStore` aggregate all the local and remote stores and expose them as one. Both local and
-/// remote stores can be queried and accessed via the `DataStore` trait. The local store can also
-/// be written to via the `MutableDeltaStore` trait, this is intended to be used to store local
+/// remote stores can be queried and accessed via the `HgIdDataStore` trait. The local store can also
+/// be written to via the `HgIdMutableDeltaStore` trait, this is intended to be used to store local
 /// commit data.
 pub struct ContentStore {
-    datastore: UnionDataStore<Arc<dyn DataStore>>,
-    local_mutabledatastore: Option<Arc<dyn MutableDeltaStore>>,
-    shared_mutabledatastore: Arc<dyn MutableDeltaStore>,
+    datastore: UnionHgIdDataStore<Arc<dyn HgIdDataStore>>,
+    local_mutabledatastore: Option<Arc<dyn HgIdMutableDeltaStore>>,
+    shared_mutabledatastore: Arc<dyn HgIdMutableDeltaStore>,
     remote_store: Option<Arc<dyn RemoteDataStore>>,
 }
 
@@ -69,7 +71,7 @@ impl ContentStore {
     }
 }
 
-impl DataStore for ContentStore {
+impl HgIdDataStore for ContentStore {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         self.datastore.get(key)
     }
@@ -103,7 +105,7 @@ impl RemoteDataStore for ContentStore {
     }
 }
 
-impl LocalStore for ContentStore {
+impl HgIdLocalStore for ContentStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         self.datastore.get_missing(keys)
     }
@@ -117,11 +119,11 @@ impl Drop for ContentStore {
     }
 }
 
-/// MutableDeltaStore is only implemented for the local store and not for the remote ones. The
-/// remote stores will be automatically written to while calling the various `DataStore` methods.
+/// HgIdMutableDeltaStore is only implemented for the local store and not for the remote ones. The
+/// remote stores will be automatically written to while calling the various `HgIdDataStore` methods.
 ///
 /// These methods can only be used when the ContentStore was created with a local store.
-impl MutableDeltaStore for ContentStore {
+impl HgIdMutableDeltaStore for ContentStore {
     /// Add the data to the local store.
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         self.local_mutabledatastore
@@ -141,13 +143,13 @@ impl MutableDeltaStore for ContentStore {
 
 /// Builder for `ContentStore`. An `impl AsRef<Path>` represents the path to the store and a
 /// `ConfigSet` of the Mercurial configuration are required to build a `ContentStore`. Users can
-/// use this builder to add optional `RemoteStore` to enable remote data fetching， and a `Path`
+/// use this builder to add optional `HgIdRemoteStore` to enable remote data fetching， and a `Path`
 /// suffix to specify other type of stores.
 pub struct ContentStoreBuilder<'a> {
     local_path: Option<PathBuf>,
     no_local_store: bool,
     config: &'a ConfigSet,
-    remotestore: Option<Box<dyn RemoteStore>>,
+    remotestore: Option<Box<dyn HgIdRemoteStore>>,
     suffix: Option<PathBuf>,
     memcachestore: Option<MemcacheStore>,
 }
@@ -179,7 +181,7 @@ impl<'a> ContentStoreBuilder<'a> {
         self
     }
 
-    pub fn remotestore(mut self, remotestore: Box<dyn RemoteStore>) -> Self {
+    pub fn remotestore(mut self, remotestore: Box<dyn HgIdRemoteStore>) -> Self {
         self.remotestore = Some(remotestore);
         self
     }
@@ -203,13 +205,13 @@ impl<'a> ContentStoreBuilder<'a> {
             &cache_packs_path,
             CorruptionPolicy::REMOVE,
         )?);
-        let mut datastore: UnionDataStore<Arc<dyn DataStore>> = UnionDataStore::new();
+        let mut datastore: UnionHgIdDataStore<Arc<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
 
         if self
             .config
             .get_or_default::<bool>("remotefilelog", "indexedlogdatastore")?
         {
-            let shared_indexedlogdatastore = Arc::new(IndexedLogDataStore::new(
+            let shared_indexedlogdatastore = Arc::new(IndexedLogHgIdDataStore::new(
                 get_indexedlogdatastore_path(&cache_path)?,
             )?);
             datastore.add(shared_indexedlogdatastore);
@@ -227,23 +229,24 @@ impl<'a> ContentStoreBuilder<'a> {
 
         let shared_lfs_store = LfsStore::shared(&cache_path)?;
 
-        let shared_store: Arc<dyn MutableDeltaStore> = if let Some(lfs_threshold) = lfs_threshold {
-            let lfs_store = Arc::new(LfsMultiplexer::new(
-                shared_lfs_store,
-                shared_pack_store.clone(),
-                lfs_threshold.value() as usize,
-            ));
+        let shared_store: Arc<dyn HgIdMutableDeltaStore> =
+            if let Some(lfs_threshold) = lfs_threshold {
+                let lfs_store = Arc::new(LfsMultiplexer::new(
+                    shared_lfs_store,
+                    shared_pack_store.clone(),
+                    lfs_threshold.value() as usize,
+                ));
 
-            datastore.add(lfs_store.clone());
+                datastore.add(lfs_store.clone());
 
-            lfs_store
-        } else {
-            datastore.add(shared_pack_store.clone());
-            datastore.add(Arc::new(shared_lfs_store));
-            shared_pack_store
-        };
+                lfs_store
+            } else {
+                datastore.add(shared_pack_store.clone());
+                datastore.add(Arc::new(shared_lfs_store));
+                shared_pack_store
+            };
 
-        let local_mutabledatastore: Option<Arc<dyn MutableDeltaStore>> =
+        let local_mutabledatastore: Option<Arc<dyn HgIdMutableDeltaStore>> =
             if let Some(unsuffixed_local_path) = self.local_path {
                 let local_pack_store = Arc::new(MutableDataPackStore::new(
                     get_packs_path(&unsuffixed_local_path, &self.suffix)?,
@@ -251,7 +254,7 @@ impl<'a> ContentStoreBuilder<'a> {
                 )?);
 
                 let local_lfs_store = LfsStore::local(&local_path.unwrap())?;
-                let local_store: Arc<dyn MutableDeltaStore> =
+                let local_store: Arc<dyn HgIdMutableDeltaStore> =
                     if let Some(lfs_threshold) = lfs_threshold {
                         let local_store = Arc::new(LfsMultiplexer::new(
                             local_lfs_store,
@@ -291,14 +294,14 @@ impl<'a> ContentStoreBuilder<'a> {
                     // store.
                     let memcachedatastore = memcachestore.datastore(shared_store.clone());
 
-                    let mut multiplexstore: MultiplexDeltaStore<Arc<dyn MutableDeltaStore>> =
+                    let mut multiplexstore: MultiplexDeltaStore<Arc<dyn HgIdMutableDeltaStore>> =
                         MultiplexDeltaStore::new();
                     multiplexstore.add_store(Arc::new(memcachestore));
                     multiplexstore.add_store(shared_store.clone());
 
                     (
                         Some(memcachedatastore),
-                        Arc::new(multiplexstore) as Arc<dyn MutableDeltaStore>,
+                        Arc::new(multiplexstore) as Arc<dyn HgIdMutableDeltaStore>,
                     )
                 } else {
                     (None, shared_store.clone())
@@ -307,7 +310,7 @@ impl<'a> ContentStoreBuilder<'a> {
                 let store = remotestore.datastore(shared_store);
 
                 let remotestores = if let Some(cache) = cache {
-                    let mut remotestores = UnionDataStore::new();
+                    let mut remotestores = UnionHgIdDataStore::new();
                     remotestores.add(cache.clone());
                     remotestores.add(store.clone());
                     Arc::new(remotestores)
@@ -342,7 +345,7 @@ mod tests {
     use types::testutil::*;
     use util::path::create_dir;
 
-    use crate::testutil::{make_config, FakeRemoteStore};
+    use crate::testutil::{make_config, FakeHgIdRemoteStore};
 
     #[test]
     fn test_new() -> Result<()> {
@@ -449,7 +452,7 @@ mod tests {
 
         let mut map = HashMap::new();
         map.insert(k.clone(), data.clone());
-        let mut remotestore = FakeRemoteStore::new();
+        let mut remotestore = FakeHgIdRemoteStore::new();
         remotestore.data(map);
 
         let store = ContentStoreBuilder::new(&config)
@@ -474,7 +477,7 @@ mod tests {
         let mut map = HashMap::new();
         map.insert(k.clone(), data.clone());
 
-        let mut remotestore = FakeRemoteStore::new();
+        let mut remotestore = FakeHgIdRemoteStore::new();
         remotestore.data(map);
 
         let store = ContentStoreBuilder::new(&config)
@@ -499,7 +502,7 @@ mod tests {
         let config = make_config(&cachedir);
 
         let map = HashMap::new();
-        let mut remotestore = FakeRemoteStore::new();
+        let mut remotestore = FakeHgIdRemoteStore::new();
         remotestore.data(map);
 
         let store = ContentStoreBuilder::new(&config)
@@ -524,7 +527,7 @@ mod tests {
         let mut map = HashMap::new();
         map.insert(k.clone(), data.clone());
 
-        let mut remotestore = FakeRemoteStore::new();
+        let mut remotestore = FakeHgIdRemoteStore::new();
         remotestore.data(map);
 
         let store = ContentStoreBuilder::new(&config)
@@ -667,7 +670,7 @@ mod tests {
 
             let mut map = HashMap::new();
             map.insert(k.clone(), data.clone());
-            let mut remotestore = FakeRemoteStore::new();
+            let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.data(map);
 
             let memcache = MemcacheStore::new(&config)?;
@@ -706,7 +709,7 @@ mod tests {
 
             let mut map = HashMap::new();
             map.insert(k.clone(), data.clone());
-            let mut remotestore = FakeRemoteStore::new();
+            let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.data(map);
 
             let memcache = MemcacheStore::new(&config)?;
@@ -742,7 +745,7 @@ mod tests {
 
             let mut map = HashMap::new();
             map.insert(k.clone(), data.clone());
-            let mut remotestore = FakeRemoteStore::new();
+            let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.data(map);
 
             let memcache = MemcacheStore::new(&config)?;

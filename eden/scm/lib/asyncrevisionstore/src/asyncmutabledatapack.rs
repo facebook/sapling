@@ -14,9 +14,9 @@ use tokio_threadpool::blocking;
 
 use revisionstore::{DataPackVersion, MutableDataPack};
 
-use crate::asyncmutabledeltastore::AsyncMutableDeltaStore;
+use crate::asyncmutabledeltastore::AsyncHgIdMutableDeltaStore;
 
-pub type AsyncMutableDataPack = AsyncMutableDeltaStore<MutableDataPack>;
+pub type AsyncMutableDataPack = AsyncHgIdMutableDeltaStore<MutableDataPack>;
 
 impl AsyncMutableDataPack {
     pub fn new(
@@ -26,7 +26,7 @@ impl AsyncMutableDataPack {
         poll_fn({ move || blocking(|| MutableDataPack::new(&dir, version.clone())) })
             .from_err()
             .and_then(|res| res)
-            .map(move |datapack| AsyncMutableDeltaStore::new_(datapack))
+            .map(move |datapack| AsyncHgIdMutableDeltaStore::new_(datapack))
     }
 }
 
@@ -38,7 +38,7 @@ mod tests {
     use tempfile::tempdir;
     use tokio::runtime::Runtime;
 
-    use revisionstore::{DataPack, DataStore, Delta};
+    use revisionstore::{DataPack, Delta, HgIdDataStore};
     use types::{Key, RepoPathBuf};
 
     #[test]

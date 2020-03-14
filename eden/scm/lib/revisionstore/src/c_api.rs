@@ -24,13 +24,13 @@ use anyhow::Result;
 use types::{HgId, Key, RepoPath};
 
 use crate::datapack::DataPack;
-use crate::datastore::DataStore;
-use crate::uniondatastore::UnionDataStore;
+use crate::datastore::HgIdDataStore;
+use crate::uniondatastore::UnionHgIdDataStore;
 
 pub struct DataPackUnion {
     paths: Vec<PathBuf>,
     packs: HashMap<PathBuf, Arc<DataPack>>,
-    store: UnionDataStore<Arc<DataPack>>,
+    store: UnionHgIdDataStore<Arc<DataPack>>,
 }
 
 /// Returns true if the supplied path has a .datapack extension
@@ -52,7 +52,7 @@ impl DataPackUnion {
         Self {
             paths,
             packs: HashMap::new(),
-            store: UnionDataStore::new(),
+            store: UnionHgIdDataStore::new(),
         }
     }
 
@@ -82,9 +82,9 @@ impl DataPackUnion {
 
         // Re-create the union portion; while we can add elements, there isn't
         // a way to remove them, so we build a new one and populate it.
-        // The UnionDataStore is just a Vec of Arc's to our packs, so this is
+        // The UnionHgIdDataStore is just a Vec of Arc's to our packs, so this is
         // relatively cheap.
-        self.store = UnionDataStore::new();
+        self.store = UnionHgIdDataStore::new();
 
         for pack in self.packs.values() {
             self.store.add(pack.clone());

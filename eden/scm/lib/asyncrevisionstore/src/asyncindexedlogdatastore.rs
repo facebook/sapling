@@ -12,18 +12,18 @@ use futures::future::poll_fn;
 use tokio::prelude::*;
 use tokio_threadpool::blocking;
 
-use revisionstore::IndexedLogDataStore;
+use revisionstore::IndexedLogHgIdDataStore;
 
-use crate::asyncmutabledeltastore::AsyncMutableDeltaStore;
+use crate::asyncmutabledeltastore::AsyncHgIdMutableDeltaStore;
 
-pub type AsyncMutableIndexedLogDataStore = AsyncMutableDeltaStore<IndexedLogDataStore>;
+pub type AsyncMutableIndexedLogHgIdDataStore = AsyncHgIdMutableDeltaStore<IndexedLogHgIdDataStore>;
 
-impl AsyncMutableIndexedLogDataStore {
+impl AsyncMutableIndexedLogHgIdDataStore {
     pub fn new(dir: PathBuf) -> impl Future<Item = Self, Error = Error> + Send + 'static {
-        poll_fn(move || blocking(|| IndexedLogDataStore::new(&dir)))
+        poll_fn(move || blocking(|| IndexedLogHgIdDataStore::new(&dir)))
             .from_err()
             .and_then(move |res| res)
-            .map(move |res| AsyncMutableDeltaStore::new_(res))
+            .map(move |res| AsyncHgIdMutableDeltaStore::new_(res))
     }
 }
 
@@ -35,14 +35,14 @@ mod tests {
     use tempfile::tempdir;
     use tokio::runtime::Runtime;
 
-    use revisionstore::{DataStore, Delta};
+    use revisionstore::{Delta, HgIdDataStore};
     use types::{Key, RepoPathBuf};
 
     #[test]
     fn test_add() {
         let tempdir = tempdir().unwrap();
 
-        let log = AsyncMutableIndexedLogDataStore::new(tempdir.path().to_path_buf());
+        let log = AsyncMutableIndexedLogHgIdDataStore::new(tempdir.path().to_path_buf());
 
         let delta = Delta {
             data: Bytes::from(&[0, 1, 2][..]),
@@ -57,7 +57,7 @@ mod tests {
         let mut runtime = Runtime::new().unwrap();
         runtime.block_on(work).unwrap();
 
-        let log = IndexedLogDataStore::new(tempdir.path()).unwrap();
+        let log = IndexedLogHgIdDataStore::new(tempdir.path()).unwrap();
         let stored_delta = log.get_delta(&cloned_delta.key).unwrap().unwrap();
         assert_eq!(stored_delta, cloned_delta);
     }

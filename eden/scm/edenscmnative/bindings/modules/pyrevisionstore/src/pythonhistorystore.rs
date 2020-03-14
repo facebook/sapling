@@ -12,7 +12,7 @@ use cpython::{
 };
 
 use cpython_ext::{PyErr, PyPathBuf};
-use revisionstore::{HistoryStore, LocalStore};
+use revisionstore::{HgIdLocalStore, HistoryStore};
 use types::{Key, NodeInfo};
 
 use crate::pythonutil::{bytes_from_tuple, from_key_to_tuple, from_tuple_to_key, to_node_info};
@@ -65,7 +65,7 @@ impl HistoryStore for PythonHistoryStore {
     }
 }
 
-impl LocalStore for PythonHistoryStore {
+impl HgIdLocalStore for PythonHistoryStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let gil = Python::acquire_gil();
         let py = gil.python();

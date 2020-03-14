@@ -17,7 +17,7 @@ use cliparser::define_flags;
 use blackbox::{event::Event, json, SessionId};
 use edenapi::{Config as EdenApiConfig, EdenApi, EdenApiCurlClient};
 use revisionstore::{
-    CorruptionPolicy, DataPackStore, DataStore, IndexedLogDataStore, UnionDataStore,
+    CorruptionPolicy, DataPackStore, HgIdDataStore, IndexedLogHgIdDataStore, UnionHgIdDataStore,
 };
 use std::path::Path;
 use types::{HgId, Key, RepoPathBuf};
@@ -195,8 +195,8 @@ pub fn debugstore(opts: DebugstoreOpts, io: &mut IO, repo: Repo) -> Result<u8> {
     let fullpath = format!("{}/{}/packs", cachepath, reponame);
     let packstore = Box::new(DataPackStore::new(fullpath, CorruptionPolicy::IGNORE));
     let fullpath = format!("{}/{}/indexedlogdatastore", cachepath, reponame);
-    let indexedstore = Box::new(IndexedLogDataStore::new(fullpath).unwrap());
-    let mut unionstore: UnionDataStore<Box<dyn DataStore>> = UnionDataStore::new();
+    let indexedstore = Box::new(IndexedLogHgIdDataStore::new(fullpath).unwrap());
+    let mut unionstore: UnionHgIdDataStore<Box<dyn HgIdDataStore>> = UnionHgIdDataStore::new();
     unionstore.add(packstore);
     unionstore.add(indexedstore);
     let k = Key::new(path, hgid);

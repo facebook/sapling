@@ -100,7 +100,7 @@ use util::path::remove_file;
 
 use crate::historyindex::HistoryIndex;
 use crate::historystore::HistoryStore;
-use crate::localstore::LocalStore;
+use crate::localstore::HgIdLocalStore;
 use crate::repack::{Repackable, ToKeys};
 use crate::sliceext::SliceExt;
 
@@ -339,7 +339,7 @@ impl HistoryStore for HistoryPack {
     }
 }
 
-impl LocalStore for HistoryPack {
+impl HgIdLocalStore for HistoryPack {
     fn from_path(path: &Path) -> Result<Self> {
         HistoryPack::new(path)
     }

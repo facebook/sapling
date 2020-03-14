@@ -8,7 +8,7 @@
 use anyhow::{format_err, Result};
 use bytes::Bytes;
 use manifest_tree::TreeStore;
-use revisionstore::{ContentStore, DataStore};
+use revisionstore::{ContentStore, HgIdDataStore};
 use types::{HgId, Key, RepoPath};
 
 pub(crate) struct TreeContentStore {

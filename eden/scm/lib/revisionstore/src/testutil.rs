@@ -15,10 +15,10 @@ use edenapi::{ApiResult, DownloadStats, EdenApi, ProgressFn};
 use types::{HgId, HistoryEntry, Key, NodeInfo, RepoPathBuf};
 
 use crate::{
-    datastore::{DataStore, Delta, Metadata, MutableDeltaStore, RemoteDataStore},
+    datastore::{Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore},
     historystore::{HistoryStore, MutableHistoryStore, RemoteHistoryStore},
-    localstore::LocalStore,
-    remotestore::RemoteStore,
+    localstore::HgIdLocalStore,
+    remotestore::HgIdRemoteStore,
 };
 
 pub fn delta(data: &str, base: Option<Key>, key: Key) -> Delta {
@@ -29,13 +29,13 @@ pub fn delta(data: &str, base: Option<Key>, key: Key) -> Delta {
     }
 }
 
-pub struct FakeRemoteStore {
+pub struct FakeHgIdRemoteStore {
     data: Option<HashMap<Key, Bytes>>,
     hist: Option<HashMap<Key, NodeInfo>>,
 }
 
-impl FakeRemoteStore {
-    pub fn new() -> FakeRemoteStore {
+impl FakeHgIdRemoteStore {
+    pub fn new() -> FakeHgIdRemoteStore {
         Self {
             data: None,
             hist: None,
@@ -51,8 +51,8 @@ impl FakeRemoteStore {
     }
 }
 
-impl RemoteStore for FakeRemoteStore {
-    fn datastore(&self, store: Arc<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+impl HgIdRemoteStore for FakeHgIdRemoteStore {
+    fn datastore(&self, store: Arc<dyn HgIdMutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
         assert!(self.data.is_some());
 
         Arc::new(FakeRemoteDataStore {
@@ -72,7 +72,7 @@ impl RemoteStore for FakeRemoteStore {
 }
 
 struct FakeRemoteDataStore {
-    store: Arc<dyn MutableDeltaStore>,
+    store: Arc<dyn HgIdMutableDeltaStore>,
     map: HashMap<Key, Bytes>,
 }
 
@@ -92,7 +92,7 @@ impl RemoteDataStore for FakeRemoteDataStore {
     }
 }
 
-impl DataStore for FakeRemoteDataStore {
+impl HgIdDataStore for FakeRemoteDataStore {
     fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         unreachable!();
     }
@@ -119,7 +119,7 @@ impl DataStore for FakeRemoteDataStore {
     }
 }
 
-impl LocalStore for FakeRemoteDataStore {
+impl HgIdLocalStore for FakeRemoteDataStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         Ok(keys.to_vec())
     }
@@ -150,7 +150,7 @@ impl HistoryStore for FakeRemoteHistoryStore {
     }
 }
 
-impl LocalStore for FakeRemoteHistoryStore {
+impl HgIdLocalStore for FakeRemoteHistoryStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         Ok(keys.to_vec())
     }

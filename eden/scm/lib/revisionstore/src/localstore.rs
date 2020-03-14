@@ -13,7 +13,7 @@ use anyhow::Result;
 
 use types::Key;
 
-pub trait LocalStore: Send + Sync {
+pub trait HgIdLocalStore: Send + Sync {
     /// Builds a Store from a filepath. The default implementation panics.
     fn from_path(_path: &Path) -> Result<Self>
     where
@@ -32,7 +32,7 @@ pub trait LocalStore: Send + Sync {
 }
 
 /// All the types that can `Deref` into a `Store` implements `Store`.
-impl<T: LocalStore + ?Sized, U: Deref<Target = T> + Send + Sync> LocalStore for U {
+impl<T: HgIdLocalStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdLocalStore for U {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         T::get_missing(self, keys)
     }

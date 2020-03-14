@@ -28,7 +28,7 @@ use crate::error::EmptyMutablePack;
 use crate::historyindex::{FileSectionLocation, HistoryIndex, NodeLocation};
 use crate::historypack::{FileSectionHeader, HistoryEntry, HistoryPackVersion};
 use crate::historystore::{HistoryStore, MutableHistoryStore};
-use crate::localstore::LocalStore;
+use crate::localstore::HgIdLocalStore;
 use crate::mutablepack::MutablePack;
 use crate::packwriter::PackWriter;
 
@@ -306,7 +306,7 @@ impl HistoryStore for MutableHistoryPack {
     }
 }
 
-impl LocalStore for MutableHistoryPack {
+impl HgIdLocalStore for MutableHistoryPack {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let inner = self.inner.lock();
         Ok(keys

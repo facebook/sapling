@@ -13,7 +13,7 @@ use anyhow::Result;
 
 use types::Key;
 
-use crate::{localstore::LocalStore, repack::ToKeys};
+use crate::{localstore::HgIdLocalStore, repack::ToKeys};
 
 pub struct UnionStore<T> {
     stores: Vec<T>,
@@ -29,7 +29,7 @@ impl<T> UnionStore<T> {
     }
 }
 
-impl<T: LocalStore> LocalStore for UnionStore<T> {
+impl<T: HgIdLocalStore> HgIdLocalStore for UnionStore<T> {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let initial_keys = Ok(keys.iter().cloned().collect());
         self.into_iter()

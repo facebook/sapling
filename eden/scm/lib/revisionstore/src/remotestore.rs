@@ -8,17 +8,17 @@
 use std::{ops::Deref, sync::Arc};
 
 use crate::{
-    datastore::{MutableDeltaStore, RemoteDataStore},
+    datastore::{HgIdMutableDeltaStore, RemoteDataStore},
     historystore::{MutableHistoryStore, RemoteHistoryStore},
 };
 
-pub trait RemoteStore: Send + Sync {
-    fn datastore(&self, store: Arc<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore>;
+pub trait HgIdRemoteStore: Send + Sync {
+    fn datastore(&self, store: Arc<dyn HgIdMutableDeltaStore>) -> Arc<dyn RemoteDataStore>;
     fn historystore(&self, store: Arc<dyn MutableHistoryStore>) -> Arc<dyn RemoteHistoryStore>;
 }
 
-impl<T: RemoteStore + ?Sized, U: Deref<Target = T> + Send + Sync> RemoteStore for U {
-    fn datastore(&self, store: Arc<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+impl<T: HgIdRemoteStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdRemoteStore for U {
+    fn datastore(&self, store: Arc<dyn HgIdMutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
         T::datastore(self, store)
     }
 

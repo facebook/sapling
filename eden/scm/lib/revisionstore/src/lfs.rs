@@ -26,10 +26,10 @@ use types::{HgId, Key, RepoPath, Sha256};
 use util::path::create_dir;
 
 use crate::{
-    datastore::{strip_metadata, DataStore, Delta, Metadata, MutableDeltaStore},
+    datastore::{strip_metadata, Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata},
     indexedlogutil::{Store, StoreOpenOptions},
-    localstore::LocalStore,
-    uniondatastore::UnionDataStore,
+    localstore::HgIdLocalStore,
+    uniondatastore::UnionHgIdDataStore,
     util::{get_lfs_blobs_path, get_lfs_pointers_path},
 };
 
@@ -58,15 +58,15 @@ pub struct LfsStore {
 }
 
 /// When a blob is added to the `LfsMultiplexer`, is will either be written to an `LfsStore`, or to
-/// a regular `MutableDeltaStore`. The choice is made based on whether the blob is larger than a
+/// a regular `HgIdMutableDeltaStore`. The choice is made based on whether the blob is larger than a
 /// user defined threshold, or on whether the blob being added represents an LFS pointer.
 pub struct LfsMultiplexer {
     lfs: Arc<LfsStore>,
-    non_lfs: Arc<dyn MutableDeltaStore>,
+    non_lfs: Arc<dyn HgIdMutableDeltaStore>,
 
     threshold: usize,
 
-    union: UnionDataStore<Arc<dyn MutableDeltaStore>>,
+    union: UnionHgIdDataStore<Arc<dyn HgIdMutableDeltaStore>>,
 }
 
 /// On-disk format of an LFS pointer. This is directly serialized with the mincode encoding, and
@@ -231,7 +231,7 @@ impl LfsStore {
     }
 }
 
-impl LocalStore for LfsStore {
+impl HgIdLocalStore for LfsStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let inner = self.inner.read();
         Ok(keys
@@ -275,7 +275,7 @@ fn rebuild_metadata(data: Bytes, entry: &LfsPointersEntry) -> Bytes {
     }
 }
 
-impl DataStore for LfsStore {
+impl HgIdDataStore for LfsStore {
     fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         unreachable!()
     }
@@ -320,7 +320,7 @@ impl DataStore for LfsStore {
     }
 }
 
-impl MutableDeltaStore for LfsStore {
+impl HgIdMutableDeltaStore for LfsStore {
     fn add(&self, delta: &Delta, _metadata: &Metadata) -> Result<()> {
         ensure!(delta.base.is_none(), "Deltas aren't supported.");
 
@@ -352,10 +352,10 @@ impl MutableDeltaStore for LfsStore {
 impl LfsMultiplexer {
     /// Build an `LfsMultiplexer`. All blobs bigger than `threshold` will be written to the `lfs`
     /// store, the others to the `non_lfs` store.
-    pub fn new(lfs: LfsStore, non_lfs: Arc<dyn MutableDeltaStore>, threshold: usize) -> Self {
+    pub fn new(lfs: LfsStore, non_lfs: Arc<dyn HgIdMutableDeltaStore>, threshold: usize) -> Self {
         let lfs = Arc::new(lfs);
 
-        let mut union_store = UnionDataStore::new();
+        let mut union_store = UnionHgIdDataStore::new();
         union_store.add(non_lfs.clone());
         union_store.add(lfs.clone());
 
@@ -368,7 +368,7 @@ impl LfsMultiplexer {
     }
 }
 
-impl DataStore for LfsMultiplexer {
+impl HgIdDataStore for LfsMultiplexer {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         self.union.get(key)
     }
@@ -386,7 +386,7 @@ impl DataStore for LfsMultiplexer {
     }
 }
 
-impl LocalStore for LfsMultiplexer {
+impl HgIdLocalStore for LfsMultiplexer {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         self.union.get_missing(keys)
     }
@@ -471,7 +471,7 @@ impl LfsPointersEntry {
     }
 }
 
-impl MutableDeltaStore for LfsMultiplexer {
+impl HgIdMutableDeltaStore for LfsMultiplexer {
     /// Add the blob to the store.
     ///
     /// Depending on whether the blob represents an LFS pointer, or if it is large enough, it will
@@ -511,7 +511,7 @@ mod tests {
 
     use types::testutil::*;
 
-    use crate::indexedlogdatastore::IndexedLogDataStore;
+    use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
 
     #[test]
     fn test_new_shared() -> Result<()> {
@@ -658,7 +658,7 @@ mod tests {
         let lfs = LfsStore::shared(&dir)?;
 
         let dir = TempDir::new()?;
-        let indexedlog = Arc::new(IndexedLogDataStore::new(&dir)?);
+        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 10);
 
@@ -682,7 +682,7 @@ mod tests {
         let lfs = LfsStore::shared(&dir)?;
 
         let dir = TempDir::new()?;
-        let indexedlog = Arc::new(IndexedLogDataStore::new(&dir)?);
+        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
 
@@ -706,7 +706,7 @@ mod tests {
         let lfs = LfsStore::shared(&lfsdir)?;
 
         let dir = TempDir::new()?;
-        let indexedlog = Arc::new(IndexedLogDataStore::new(&dir)?);
+        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
 
@@ -762,7 +762,7 @@ mod tests {
         let lfs = LfsStore::shared(&lfsdir)?;
 
         let dir = TempDir::new()?;
-        let indexedlog = Arc::new(IndexedLogDataStore::new(&dir)?);
+        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog.clone(), 4);
 
@@ -821,7 +821,7 @@ mod tests {
         let lfs = LfsStore::shared(&lfsdir)?;
 
         let dir = TempDir::new()?;
-        let indexedlog = Arc::new(IndexedLogDataStore::new(&dir)?);
+        let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
 
         let blob = Bytes::from(&b"\x01\nTHIS IS A BLOB WITH A HEADER"[..]);
         let sha256 = match ContentHash::sha256(&blob)? {

@@ -12,7 +12,7 @@ use cpython::{
 };
 
 use cpython_ext::{PyErr, PyPathBuf};
-use revisionstore::{DataStore, Delta, LocalStore, Metadata, RemoteDataStore};
+use revisionstore::{Delta, HgIdDataStore, HgIdLocalStore, Metadata, RemoteDataStore};
 use types::Key;
 
 use crate::pythonutil::{
@@ -20,17 +20,17 @@ use crate::pythonutil::{
     to_key, to_metadata,
 };
 
-pub struct PythonDataStore {
+pub struct PythonHgIdDataStore {
     py_store: PyObject,
 }
 
-impl PythonDataStore {
+impl PythonHgIdDataStore {
     pub fn new(py_store: PyObject) -> Self {
-        PythonDataStore { py_store }
+        PythonHgIdDataStore { py_store }
     }
 }
 
-impl DataStore for PythonDataStore {
+impl HgIdDataStore for PythonHgIdDataStore {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
@@ -146,7 +146,7 @@ impl DataStore for PythonDataStore {
     }
 }
 
-impl RemoteDataStore for PythonDataStore {
+impl RemoteDataStore for PythonHgIdDataStore {
     fn prefetch(&self, keys: &[Key]) -> Result<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
@@ -167,7 +167,7 @@ impl RemoteDataStore for PythonDataStore {
     }
 }
 
-impl LocalStore for PythonDataStore {
+impl HgIdLocalStore for PythonHgIdDataStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let gil = Python::acquire_gil();
         let py = gil.python();

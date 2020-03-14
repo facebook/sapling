@@ -25,16 +25,18 @@ use pyconfigparser::config;
 use revisionstore::{
     repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
     ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion,
-    DataStore, Delta, HistoryPack, HistoryPackStore, HistoryPackVersion, HistoryStore,
-    IndexedLogDataStore, IndexedLogHistoryStore, IndexedlogRepair, LocalStore, MemcacheStore,
-    Metadata, MetadataStore, MetadataStoreBuilder, MutableDataPack, MutableDeltaStore,
-    MutableHistoryPack, MutableHistoryStore, RemoteDataStore, RemoteHistoryStore, RemoteStore,
+    Delta, HgIdDataStore, HgIdLocalStore, HgIdMutableDeltaStore, HgIdRemoteStore, HistoryPack,
+    HistoryPackStore, HistoryPackVersion, HistoryStore, IndexedLogHgIdDataStore,
+    IndexedLogHistoryStore, IndexedlogRepair, MemcacheStore, Metadata, MetadataStore,
+    MetadataStoreBuilder, MutableDataPack, MutableHistoryPack, MutableHistoryStore,
+    RemoteDataStore, RemoteHistoryStore,
 };
 use types::{Key, NodeInfo};
 
 use crate::{
     datastorepyext::{
-        DataStorePyExt, IterableDataStorePyExt, MutableDeltaStorePyExt, RemoteDataStorePyExt,
+        HgIdDataStorePyExt, HgIdMutableDeltaStorePyExt, IterableHgIdDataStorePyExt,
+        RemoteDataStorePyExt,
     },
     historystorepyext::{
         HistoryStorePyExt, IterableHistoryStorePyExt, MutableHistoryStorePyExt,
@@ -50,7 +52,7 @@ mod pythonutil;
 
 type Result<T, E = Error> = std::result::Result<T, E>;
 
-pub use crate::pythondatastore::PythonDataStore;
+pub use crate::pythondatastore::PythonHgIdDataStore;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "revisionstore"].join(".");
@@ -374,18 +376,18 @@ py_class!(class historypackstore |py| {
 });
 
 py_class!(class indexedlogdatastore |py| {
-    data store: Box<IndexedLogDataStore>;
+    data store: Box<IndexedLogHgIdDataStore>;
 
     def __new__(_cls, path: &PyPath) -> PyResult<indexedlogdatastore> {
         indexedlogdatastore::create_instance(
             py,
-            Box::new(IndexedLogDataStore::new(path.as_path()).map_pyerr(py)?),
+            Box::new(IndexedLogHgIdDataStore::new(path.as_path()).map_pyerr(py)?),
         )
     }
 
     @staticmethod
     def repair(path: &PyPath) -> PyResult<Str> {
-        py.allow_threads(|| IndexedLogDataStore::repair(path.as_path())).map_pyerr(py).map(Into::into)
+        py.allow_threads(|| IndexedLogHgIdDataStore::repair(path.as_path())).map_pyerr(py).map(Into::into)
     }
 
     def getdelta(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyObject> {
@@ -460,14 +462,14 @@ py_class!(class indexedloghistorystore |py| {
 fn make_mutabledeltastore(
     packfilepath: Option<PyPathBuf>,
     indexedlogpath: Option<PyPathBuf>,
-) -> Result<Arc<dyn MutableDeltaStore + Send>> {
-    let store: Arc<dyn MutableDeltaStore + Send> = if let Some(packfilepath) = packfilepath {
+) -> Result<Arc<dyn HgIdMutableDeltaStore + Send>> {
+    let store: Arc<dyn HgIdMutableDeltaStore + Send> = if let Some(packfilepath) = packfilepath {
         Arc::new(MutableDataPack::new(
             packfilepath.as_path(),
             DataPackVersion::One,
         )?)
     } else if let Some(indexedlogpath) = indexedlogpath {
-        Arc::new(IndexedLogDataStore::new(indexedlogpath.as_path())?)
+        Arc::new(IndexedLogHgIdDataStore::new(indexedlogpath.as_path())?)
     } else {
         return Err(format_err!("Foo"));
     };
@@ -475,7 +477,7 @@ fn make_mutabledeltastore(
 }
 
 py_class!(pub class mutabledeltastore |py| {
-    data store: Arc<dyn MutableDeltaStore>;
+    data store: Arc<dyn HgIdMutableDeltaStore>;
 
     def __new__(_cls, packfilepath: Option<PyPathBuf> = None, indexedlogpath: Option<PyPathBuf> = None) -> PyResult<mutabledeltastore> {
         let store = make_mutabledeltastore(packfilepath, indexedlogpath).map_pyerr(py)?;
@@ -513,7 +515,7 @@ py_class!(pub class mutabledeltastore |py| {
     }
 });
 
-impl DataStore for mutabledeltastore {
+impl HgIdDataStore for mutabledeltastore {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
@@ -543,7 +545,7 @@ impl DataStore for mutabledeltastore {
     }
 }
 
-impl LocalStore for mutabledeltastore {
+impl HgIdLocalStore for mutabledeltastore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
@@ -552,7 +554,7 @@ impl LocalStore for mutabledeltastore {
     }
 }
 
-impl MutableDeltaStore for mutabledeltastore {
+impl HgIdMutableDeltaStore for mutabledeltastore {
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
@@ -621,7 +623,7 @@ impl HistoryStore for mutablehistorystore {
     }
 }
 
-impl LocalStore for mutablehistorystore {
+impl HgIdLocalStore for mutablehistorystore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
@@ -646,18 +648,18 @@ impl MutableHistoryStore for mutablehistorystore {
     }
 }
 
-struct PyRemoteStoreInner {
+struct PyHgIdRemoteStoreInner {
     py_store: PyObject,
     datastore: Option<mutabledeltastore>,
     historystore: Option<mutablehistorystore>,
 }
 
 #[derive(Clone)]
-pub struct PyRemoteStore {
-    inner: Arc<RwLock<PyRemoteStoreInner>>,
+pub struct PyHgIdRemoteStore {
+    inner: Arc<RwLock<PyHgIdRemoteStoreInner>>,
 }
 
-impl PyRemoteStore {
+impl PyHgIdRemoteStore {
     fn prefetch(&self, keys: &[Key]) -> Result<()> {
         let gil = Python::acquire_gil();
         let py = gil.python();
@@ -685,11 +687,11 @@ impl PyRemoteStore {
     }
 }
 
-struct PyRemoteDataStore(PyRemoteStore);
-struct PyRemoteHistoryStore(PyRemoteStore);
+struct PyRemoteDataStore(PyHgIdRemoteStore);
+struct PyRemoteHistoryStore(PyHgIdRemoteStore);
 
-impl RemoteStore for PyRemoteStore {
-    fn datastore(&self, store: Arc<dyn MutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+impl HgIdRemoteStore for PyHgIdRemoteStore {
+    fn datastore(&self, store: Arc<dyn HgIdMutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
@@ -716,7 +718,7 @@ impl RemoteDataStore for PyRemoteDataStore {
     }
 }
 
-impl DataStore for PyRemoteDataStore {
+impl HgIdDataStore for PyRemoteDataStore {
     fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         unreachable!();
     }
@@ -764,7 +766,7 @@ impl DataStore for PyRemoteDataStore {
     }
 }
 
-impl LocalStore for PyRemoteDataStore {
+impl HgIdLocalStore for PyRemoteDataStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         Ok(keys.to_vec())
     }
@@ -792,23 +794,23 @@ impl HistoryStore for PyRemoteHistoryStore {
     }
 }
 
-impl LocalStore for PyRemoteHistoryStore {
+impl HgIdLocalStore for PyRemoteHistoryStore {
     fn get_missing(&self, keys: &[Key]) -> Result<Vec<Key>> {
         Ok(keys.to_vec())
     }
 }
 
 py_class!(pub class pyremotestore |py| {
-    data remote: PyRemoteStore;
+    data remote: PyHgIdRemoteStore;
 
     def __new__(_cls, py_store: PyObject) -> PyResult<pyremotestore> {
-        let store = PyRemoteStore { inner: Arc::new(RwLock::new(PyRemoteStoreInner { py_store, datastore: None, historystore: None })) };
+        let store = PyHgIdRemoteStore { inner: Arc::new(RwLock::new(PyHgIdRemoteStoreInner { py_store, datastore: None, historystore: None })) };
         pyremotestore::create_instance(py, store)
     }
 });
 
 impl pyremotestore {
-    fn into_inner(&self, py: Python) -> PyRemoteStore {
+    fn into_inner(&self, py: Python) -> PyHgIdRemoteStore {
         self.remote(py).clone()
     }
 }
