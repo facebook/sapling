@@ -108,7 +108,7 @@ impl LfsPointersStore {
     }
 
     fn get(&self, key: &Key) -> Result<Option<LfsPointersEntry>> {
-        let mut log_entry = self.0.lookup(key.hgid)?;
+        let mut log_entry = self.0.lookup(0, key.hgid)?;
         let buf = match log_entry.nth(0) {
             None => return Ok(None),
             Some(buf) => buf?,

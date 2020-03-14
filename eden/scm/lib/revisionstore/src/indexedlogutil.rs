@@ -26,12 +26,12 @@ pub enum Store {
 impl Store {
     /// Find the key in the store. Returns an `Iterator` over all the values that this store
     /// contains for the key.
-    pub fn lookup(&self, key: impl AsRef<[u8]>) -> Result<LookupIter> {
+    pub fn lookup(&self, index_id: usize, key: impl AsRef<[u8]>) -> Result<LookupIter> {
         let key = key.as_ref();
         match self {
-            Store::Local(log) => Ok(LookupIter::Local(log.lookup(0, key)?)),
+            Store::Local(log) => Ok(LookupIter::Local(log.lookup(index_id, key)?)),
             Store::Shared(log) => Ok(LookupIter::Shared(
-                log.lookup(0, Bytes::copy_from_slice(key))?,
+                log.lookup(index_id, Bytes::copy_from_slice(key))?,
             )),
         }
     }
@@ -160,7 +160,7 @@ mod tests {
         store.append(b"aabcd")?;
 
         assert_eq!(
-            store.lookup(b"aa")?.collect::<Result<Vec<_>>>()?,
+            store.lookup(0, b"aa")?.collect::<Result<Vec<_>>>()?,
             vec![b"aabcd"]
         );
         Ok(())
@@ -177,7 +177,7 @@ mod tests {
         store.append(b"aabcd")?;
 
         assert_eq!(
-            store.lookup(b"aa")?.collect::<Result<Vec<_>>>()?,
+            store.lookup(0, b"aa")?.collect::<Result<Vec<_>>>()?,
             vec![b"aabcd"]
         );
         Ok(())
@@ -200,7 +200,7 @@ mod tests {
         store.append(b"adbcd")?;
         store.flush()?;
 
-        assert_eq!(store.lookup(b"aa")?.count(), 1);
+        assert_eq!(store.lookup(0, b"aa")?.count(), 1);
         Ok(())
     }
 
@@ -221,7 +221,7 @@ mod tests {
         store.append(b"adbcd")?;
         store.flush()?;
 
-        assert_eq!(store.lookup(b"aa")?.count(), 0);
+        assert_eq!(store.lookup(0, b"aa")?.count(), 0);
         Ok(())
     }
 }
