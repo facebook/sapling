@@ -19,7 +19,7 @@ use edenapi::{Config as EdenApiConfig, EdenApi, EdenApiCurlClient};
 use revisionstore::{
     CorruptionPolicy, DataPackStore, HgIdDataStore, IndexedLogHgIdDataStore, UnionHgIdDataStore,
 };
-use std::path::Path;
+use std::{path::Path, str::FromStr};
 use types::{HgId, Key, RepoPathBuf};
 
 use crate::status;

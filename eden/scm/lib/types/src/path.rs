@@ -36,7 +36,7 @@ use std::{
     borrow::{Borrow, ToOwned},
     cmp::Ordering,
     convert::AsRef,
-    fmt, mem,
+    fmt,
     ops::Deref,
     str::Utf8Error,
 };
@@ -218,7 +218,7 @@ impl PartialOrd for RepoPathBuf {
 impl Deref for RepoPathBuf {
     type Target = RepoPath;
     fn deref(&self) -> &Self::Target {
-        unsafe { mem::transmute(&*self.0) }
+        unsafe { &*(&*self.0 as *const str as *const RepoPath) }
     }
 }
 
@@ -268,7 +268,7 @@ impl RepoPath {
 
     /// Constructs a `RepoPath` from a byte slice. It will fail when the bytes are are not valid
     /// utf8 or when the string does not respect the `RepoPath` rules.
-    pub fn from_utf8<'a, S: AsRef<[u8]> + ?Sized>(s: &'a S) -> Result<&'a RepoPath, ParseError> {
+    pub fn from_utf8<S: AsRef<[u8]> + ?Sized>(s: &S) -> Result<&RepoPath, ParseError> {
         let utf8_str = std::str::from_utf8(s.as_ref())
             .map_err(|e| ParseError::InvalidUtf8(s.as_ref().to_vec(), e))?;
         RepoPath::from_str(utf8_str)
@@ -282,7 +282,7 @@ impl RepoPath {
     }
 
     fn from_str_unchecked(s: &str) -> &RepoPath {
-        unsafe { mem::transmute(s) }
+        unsafe { &*(s as *const str as *const RepoPath) }
     }
 
     /// Returns the underlying bytes of the `RepoPath`.
@@ -337,19 +337,19 @@ impl RepoPath {
     /// If you don't want to handle the empty path, then you can use `parents().skip(1)`.
     /// It is possible to get iterate over parents with elements in paralel using:
     /// `path.parents().zip(path.components())`.
-    pub fn parents<'a>(&'a self) -> Parents<'a> {
+    pub fn parents(&'_ self) -> Parents<'_> {
         Parents::new(self)
     }
 
     /// Returns an iterator over the components of the path.
-    pub fn components<'a>(&'a self) -> Components<'a> {
+    pub fn components(&'_ self) -> Components<'_> {
         Components::new(self)
     }
 
     /// Returns an iterator over the ancestors of the current path.
     ///
     /// This should be strictly equivalent to: `self.parents().rev()`.
-    pub fn ancestors<'a>(&'a self) -> Ancestors<'a> {
+    pub fn ancestors(&'_ self) -> Ancestors<'_> {
         Ancestors::new(self)
     }
 }
@@ -427,7 +427,7 @@ impl PathComponentBuf {
 impl Deref for PathComponentBuf {
     type Target = PathComponent;
     fn deref(&self) -> &Self::Target {
-        unsafe { mem::transmute(&*self.0) }
+        unsafe { &*(&*self.0 as *const str as *const PathComponent) }
     }
 }
 
@@ -466,7 +466,7 @@ impl PathComponent {
     }
 
     fn from_str_unchecked(s: &str) -> &PathComponent {
-        unsafe { mem::transmute(s) }
+        unsafe { &*(s as *const str as *const PathComponent) }
     }
 
     /// Returns the underlying bytes of the `PathComponent`.
@@ -488,7 +488,7 @@ impl AsRef<PathComponent> for PathComponent {
 
 impl AsRef<RepoPath> for PathComponent {
     fn as_ref(&self) -> &RepoPath {
-        unsafe { mem::transmute(&self.0) }
+        unsafe { &*(&self.0 as *const str as *const RepoPath) }
     }
 }
 

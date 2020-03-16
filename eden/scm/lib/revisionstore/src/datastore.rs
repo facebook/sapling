@@ -9,7 +9,7 @@ use std::{
     io::{Cursor, Write},
     ops::Deref,
     path::PathBuf,
-    str,
+    str::{self, FromStr},
 };
 
 use anyhow::{bail, format_err, Result};

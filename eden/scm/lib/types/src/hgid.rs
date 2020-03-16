@@ -8,6 +8,7 @@
 use std::{
     fmt::{self, Debug, Display},
     io::{self, Read, Write},
+    str::FromStr,
 };
 
 use anyhow::Result;
@@ -76,24 +77,6 @@ impl HgId {
         HgId(bytes)
     }
 
-    // Taken from Mononoke
-    pub fn from_str(s: &str) -> Result<Self> {
-        if s.len() != HgId::hex_len() {
-            return Err(HgIdError(format!("invalid string length {:?}", s.len())).into());
-        }
-
-        let mut ret = HgId([0u8; HgId::len()]);
-
-        for idx in 0..ret.0.len() {
-            ret.0[idx] = match u8::from_str_radix(&s[(idx * 2)..(idx * 2 + 2)], 16) {
-                Ok(v) => v,
-                Err(_) => return Err(HgIdError(format!("bad digit")).into()),
-            }
-        }
-
-        Ok(ret)
-    }
-
     pub fn to_hex(&self) -> String {
         to_hex(self.0.as_ref())
     }
@@ -152,6 +135,28 @@ impl<'a> From<&'a [u8; HgId::len()]> for HgId {
 impl AsRef<[u8]> for HgId {
     fn as_ref(&self) -> &[u8] {
         &self.0
+    }
+}
+
+impl FromStr for HgId {
+    type Err = anyhow::Error;
+
+    // Taken from Mononoke
+    fn from_str(s: &str) -> Result<Self> {
+        if s.len() != HgId::hex_len() {
+            return Err(HgIdError(format!("invalid string length {:?}", s.len())).into());
+        }
+
+        let mut ret = HgId([0u8; HgId::len()]);
+
+        for idx in 0..ret.0.len() {
+            ret.0[idx] = match u8::from_str_radix(&s[(idx * 2)..(idx * 2 + 2)], 16) {
+                Ok(v) => v,
+                Err(_) => return Err(HgIdError("bad digit".to_string()).into()),
+            }
+        }
+
+        Ok(ret)
     }
 }
 

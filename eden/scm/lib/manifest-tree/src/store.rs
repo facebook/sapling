@@ -5,7 +5,10 @@
  * GNU General Public License version 2.
  */
 
-use std::{str::from_utf8, sync::Arc};
+use std::{
+    str::{from_utf8, FromStr},
+    sync::Arc,
+};
 
 use anyhow::{format_err, Result};
 use bytes::{Bytes, BytesMut};

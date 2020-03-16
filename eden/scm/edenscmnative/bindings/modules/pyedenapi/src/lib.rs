@@ -9,7 +9,7 @@
 
 #![allow(non_camel_case_types)]
 
-use std::str;
+use std::str::{self, FromStr};
 
 use bytes::Bytes;
 use cpython::*;

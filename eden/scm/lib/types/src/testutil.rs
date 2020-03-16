@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::HashSet;
+use std::{collections::HashSet, str::FromStr};
 
 use bytes::Bytes;
 use quickcheck::{Arbitrary, Gen};
@@ -21,18 +21,14 @@ use crate::{
 
 pub fn repo_path(s: &str) -> &RepoPath {
     if s == "" {
-        panic!(format!(
-            "the empty repo path is special, use RepoPath::empty() to build"
-        ));
+        panic!("the empty repo path is special, use RepoPath::empty() to build");
     }
     RepoPath::from_str(s).unwrap()
 }
 
 pub fn repo_path_buf(s: &str) -> RepoPathBuf {
     if s == "" {
-        panic!(format!(
-            "the empty repo path is special, use RepoPathBuf::new() to build"
-        ));
+        panic!("the empty repo path is special, use RepoPathBuf::new() to build");
     }
     RepoPathBuf::from_string(s.to_owned()).unwrap()
 }
@@ -50,7 +46,7 @@ pub fn hgid(hex: &str) -> HgId {
         panic!(format!("invalid length for hex hgid: {}", hex));
     }
     if hex == "0" {
-        panic!(format!("hgid 0 is special, use HgId::null_id() to build"));
+        panic!("hgid 0 is special, use HgId::null_id() to build");
     }
     let mut buffer = String::new();
     for _i in 0..HgId::hex_len() - hex.len() {
@@ -85,7 +81,7 @@ pub fn generate_repo_paths<G: Gen>(count: usize, qc_gen: &mut G) -> Vec<RepoPath
         qc_gen: &'a mut G,
     }
     impl<'a, G: Gen> Generator<'a, G> {
-        fn generate_directory<'b>(&'b mut self) {
+        fn generate_directory(&mut self) {
             let dir_components_cnt = if self.current_component_length == 0 {
                 std::usize::MAX
             } else {

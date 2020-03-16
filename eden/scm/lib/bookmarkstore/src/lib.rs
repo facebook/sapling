@@ -189,6 +189,7 @@ mod tests {
     use super::*;
     use std::collections::HashSet;
     use std::iter::FromIterator;
+    use std::str::FromStr;
     use tempfile::TempDir;
 
     fn new_indexed_log_bookmark_store() -> (BookmarkStore, TempDir) {

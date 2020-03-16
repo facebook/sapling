@@ -10,7 +10,7 @@ use std::{
     fs::File,
     io::{ErrorKind, Read, Write},
     path::{Path, PathBuf},
-    str,
+    str::{self, FromStr},
     sync::Arc,
 };
 
