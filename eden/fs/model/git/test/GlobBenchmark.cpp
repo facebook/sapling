@@ -14,7 +14,7 @@
 
 using namespace facebook::eden;
 
-std::vector<folly::StringPiece> basenameCorpus = {
+std::vector<std::string> basenameCorpus = {
     "README",
     "README.txt",
     "test.c",
@@ -26,7 +26,7 @@ std::vector<folly::StringPiece> basenameCorpus = {
     "BUCK",
 };
 
-std::vector<folly::StringPiece> fullnameCorpus = {
+std::vector<std::string> fullnameCorpus = {
     "kernel/irq/manage.c",
     "kernel/power/console.c",
     "kernel/time/tick-internal.h",
@@ -75,7 +75,7 @@ class GlobMatcherImpl {
     matcher_ = GlobMatcher::create(glob, GlobOptions::DEFAULT).value();
   }
 
-  bool match(folly::StringPiece input) {
+  bool match(const std::string& input) {
     return matcher_.match(input);
   }
 
@@ -90,11 +90,8 @@ class WildmatchImpl {
     pattern_ = glob.str();
   }
 
-  bool match(folly::StringPiece input) {
-    // wildmatch only supports null terminated strings, so we really
-    // require that the StringPiece point at data that is null terminated.
-    assert(input[input.size()] == '\0');
-    return wildmatch(pattern_.c_str(), input.data(), WM_PATHNAME, nullptr);
+  bool match(const std::string& input) {
+    return wildmatch(pattern_.c_str(), input.c_str(), WM_PATHNAME, nullptr);
   }
 
  private:
@@ -108,7 +105,7 @@ class FixedStringImpl {
     pattern_ = match.str();
   }
 
-  bool match(folly::StringPiece input) {
+  bool match(const std::string& input) {
     return input.size() == pattern_.size() &&
         memcmp(pattern_.data(), input.data(), input.size()) == 0;
   }
