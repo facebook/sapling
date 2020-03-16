@@ -53,7 +53,7 @@ impl WalkError {
 pub struct Walker<M> {
     root: PathBuf,
     dir_matches: Vec<RepoPathBuf>,
-    file_matches: Vec<Result<RepoPathBuf>>,
+    results: Vec<Result<RepoPathBuf>>,
     matcher: M,
 }
 
@@ -69,7 +69,7 @@ where
         Walker {
             root,
             dir_matches,
-            file_matches: Vec::new(),
+            results: Vec::new(),
             matcher,
         }
     }
@@ -91,7 +91,7 @@ where
         candidate_path.push(filename);
         if filetype.is_file() || filetype.is_symlink() {
             if self.matcher.matches_file(candidate_path.as_repo_path()) {
-                self.file_matches.push(Ok(candidate_path));
+                self.results.push(Ok(candidate_path));
             }
         } else if filetype.is_dir() {
             if filename.as_str() != ".hg"
@@ -110,7 +110,7 @@ where
 
     /// Lazy traversal to find matching files
     fn walk(&mut self) -> Result<()> {
-        while self.file_matches.is_empty() && !self.dir_matches.is_empty() {
+        while self.results.is_empty() && !self.dir_matches.is_empty() {
             let next_dir = self.dir_matches.pop().unwrap();
             let abs_next_dir = self.root.join(next_dir.as_str());
             // Don't process the directory if it contains a .hg directory, unless it's the root.
@@ -120,7 +120,7 @@ where
                 {
                     let entry = entry.map_err(|e| WalkError::IOError(next_dir.clone(), e))?;
                     if let Err(e) = self.match_entry(&next_dir, entry) {
-                        self.file_matches.push(Err(e));
+                        self.results.push(Err(e));
                     }
                 }
             }
@@ -137,7 +137,7 @@ where
     fn next(&mut self) -> Option<Self::Item> {
         match self.walk() {
             Err(e) => Some(Err(e)),
-            Ok(()) => self.file_matches.pop(),
+            Ok(()) => self.results.pop(),
         }
     }
 }
