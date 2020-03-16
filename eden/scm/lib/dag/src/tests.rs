@@ -8,7 +8,6 @@
 use crate::id::{Group, Id, VertexName};
 use crate::iddag::FirstAncestorConstraint;
 use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
-use crate::IdDag;
 use crate::IdMap;
 use crate::NameDag;
 use crate::NameSet;
@@ -848,13 +847,6 @@ impl IdMap {
     }
 }
 
-impl IdDag {
-    /// Dump segments in a compact string form.
-    fn dump(&self) -> String {
-        format!("{:?}", self)
-    }
-}
-
 /// Result of `build_segments`.
 pub(crate) struct BuildSegmentResult {
     pub(crate) ascii: Vec<String>,
@@ -892,7 +884,7 @@ pub(crate) fn build_segments(text: &str, heads: &str, segment_size: usize) -> Bu
             name_dag.add_heads(&parents_by_name, &master).unwrap();
             name_dag.add_heads(&parents_by_name, &other).unwrap();
             name_dag.flush(&master).unwrap();
-            format!("{}\n{}", name_dag.map.replace(text), name_dag.dag.dump())
+            format!("{}\n{:?}", name_dag.map.replace(text), name_dag.dag)
         })
         .collect();
 

@@ -18,6 +18,7 @@
 
 use crate::id::VertexName;
 use crate::iddag::{FirstAncestorConstraint, IdDag};
+use crate::iddagstore::IdDagStore;
 use crate::idmap::IdMapLike;
 use crate::spanset::SpanSet;
 use crate::{Id, IdMap};
@@ -103,7 +104,9 @@ pub(crate) trait Process<I, O> {
 
 // Name -> Id, step 1: Name -> RequestNameToLocation
 // Works on an incomplete IdMap, client-side.
-impl<M: IdMapLike> Process<Vec<VertexName>, RequestNameToLocation> for (&M, &IdDag) {
+impl<M: IdMapLike, DagStore: IdDagStore> Process<Vec<VertexName>, RequestNameToLocation>
+    for (&M, &IdDag<DagStore>)
+{
     fn process(self, names: Vec<VertexName>) -> Result<RequestNameToLocation> {
         let map = &self.0;
         let dag = &self.1;
@@ -120,7 +123,9 @@ impl<M: IdMapLike> Process<Vec<VertexName>, RequestNameToLocation> for (&M, &IdD
 
 // Id -> Name, step 1: Id -> RequestLocationToName
 // Works on an incomplete IdMap, client-side.
-impl<M: IdMapLike> Process<Vec<Id>, RequestLocationToName> for (&M, &IdDag) {
+impl<M: IdMapLike, DagStore: IdDagStore> Process<Vec<Id>, RequestLocationToName>
+    for (&M, &IdDag<DagStore>)
+{
     fn process(self, ids: Vec<Id>) -> Result<RequestLocationToName> {
         let map = &self.0;
         let dag = &self.1;
@@ -152,7 +157,9 @@ impl<M: IdMapLike> Process<Vec<Id>, RequestLocationToName> for (&M, &IdDag) {
 
 // Name -> Id, step 2: RequestNameToLocation -> ResponseIdNamePair
 // Works on a complete IdMap, server-side.
-impl<M: IdMapLike> Process<RequestNameToLocation, ResponseIdNamePair> for (&M, &IdDag) {
+impl<M: IdMapLike, DagStore: IdDagStore> Process<RequestNameToLocation, ResponseIdNamePair>
+    for (&M, &IdDag<DagStore>)
+{
     fn process(self, request: RequestNameToLocation) -> Result<ResponseIdNamePair> {
         let map = &self.0;
         let dag = &self.1;
@@ -192,7 +199,9 @@ impl<M: IdMapLike> Process<RequestNameToLocation, ResponseIdNamePair> for (&M, &
 
 // Id -> Name, step 2: RequestLocationToName -> ResponseIdNamePair
 // Works on a complete IdMap, server-side.
-impl<M: IdMapLike> Process<RequestLocationToName, ResponseIdNamePair> for (&M, &IdDag) {
+impl<M: IdMapLike, DagStore: IdDagStore> Process<RequestLocationToName, ResponseIdNamePair>
+    for (&M, &IdDag<DagStore>)
+{
     fn process(self, request: RequestLocationToName) -> Result<ResponseIdNamePair> {
         let map = &self.0;
         let dag = &self.1;
@@ -221,7 +230,9 @@ impl<M: IdMapLike> Process<RequestLocationToName, ResponseIdNamePair> for (&M, &
 
 // Name -> Id or Id -> Name, step 3: Apply RequestNameToLocation to a local IdMap.
 // Works on an incomplete IdMap, client-side.
-impl<'a> Process<&ResponseIdNamePair, ()> for (&'a mut IdMap, &'a IdDag) {
+impl<'a, DagStore: IdDagStore> Process<&ResponseIdNamePair, ()>
+    for (&'a mut IdMap, &'a IdDag<DagStore>)
+{
     fn process(mut self, res: &ResponseIdNamePair) -> Result<()> {
         let map = &mut self.0;
         let dag = &self.1;

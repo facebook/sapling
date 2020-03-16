@@ -7,7 +7,7 @@
 
 use crate::{parse_bindag, ParentRevs};
 use anyhow::Result;
-use dag::{namedag::LowLevelAccess, spanset::SpanSet, Id, IdDag, NameDag, VertexName};
+use dag::{namedag::LowLevelAccess, spanset::SpanSet, Id, NameDag, VertexName};
 use std::collections::HashSet;
 use std::ops::Range;
 use tempfile::TempDir;
@@ -100,11 +100,6 @@ impl<T> GeneralTestContext<T> {
             self.parents.truncate(size);
         }
         self
-    }
-
-    /// Get the IdDag reference.
-    pub fn id_dag(&self) -> &IdDag {
-        self.dag.dag()
     }
 
     /// Convert a SpanSet (used by IdDag) to plain revs (used by `parents`).

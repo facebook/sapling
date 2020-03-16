@@ -51,6 +51,8 @@ pub trait IdDagStore {
     fn reload(&mut self) -> Result<()>;
 
     fn remove_non_master(&mut self) -> Result<()>;
+
+    fn sync(&mut self) -> Result<()>;
 }
 
 pub trait GetLock {
@@ -224,6 +226,11 @@ impl IdDagStore for IndexedLogStore {
         }
         Ok(())
     }
+
+    fn sync(&mut self) -> Result<()> {
+        self.log.sync()?;
+        Ok(())
+    }
 }
 
 impl GetLock for IndexedLogStore {
@@ -347,10 +354,5 @@ impl IndexedLogStore {
             path: self.path.clone(),
         };
         Ok(store)
-    }
-
-    pub fn sync(&mut self) -> Result<()> {
-        self.log.sync()?;
-        Ok(())
     }
 }

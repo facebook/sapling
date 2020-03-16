@@ -36,19 +36,19 @@ use std::path::Path;
 /// [`IdDag`] is often used together with [`IdMap`] to allow customized names
 /// on vertexes. The [`NameDag`] type provides an easy-to-use interface to
 /// keep [`IdDag`] and [`IdMap`] in sync.
-pub struct IdDag {
-    store: IndexedLogStore,
+pub struct IdDag<Store> {
+    store: Store,
     max_level: Level,
     new_seg_size: usize,
 }
 
 /// Guard to make sure [`IdDag`] on-disk writes are race-free.
-pub struct SyncableIdDag {
-    dag: IdDag,
+pub struct SyncableIdDag<Store> {
+    dag: IdDag<Store>,
     lock_file: File,
 }
 
-impl IdDag {
+impl IdDag<IndexedLogStore> {
     /// Open [`IdDag`] at the given directory. Create it on demand.
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let store = IndexedLogStore::open(path)?;
@@ -73,7 +73,7 @@ impl IdDag {
     /// actually writes changes to disk.
     ///
     /// Block if another instance is taking the lock.
-    pub fn prepare_filesystem_sync(&self) -> Result<SyncableIdDag> {
+    pub fn prepare_filesystem_sync(&self) -> Result<SyncableIdDag<IndexedLogStore>> {
         let lock_file = self.store.get_lock()?;
         // Clone. But drop in-memory data.
         let mut store = self.store.try_clone_without_dirty()?;
@@ -103,7 +103,7 @@ impl IdDag {
     }
 }
 
-impl IdDag {
+impl<Store: IdDagStore> IdDag<Store> {
     pub(crate) fn max_level(&self) -> Result<Level> {
         self.store.max_level()
     }
@@ -168,7 +168,7 @@ impl IdDag {
 }
 
 // Build segments.
-impl IdDag {
+impl<Store: IdDagStore> IdDag<Store> {
     /// Make sure the [`IdDag`] contains the given id (and all ids smaller than
     /// `high`) by building up segments on demand.
     ///
@@ -403,7 +403,7 @@ impl IdDag {
 }
 
 // Reload.
-impl IdDag {
+impl<Store: IdDagStore> IdDag<Store> {
     /// Reload from the filesystem. Discard pending changes.
     pub fn reload(&mut self) -> Result<()> {
         self.store.reload()?;
@@ -414,7 +414,7 @@ impl IdDag {
 }
 
 // User-facing DAG-related algorithms.
-impl IdDag {
+impl<Store: IdDagStore> IdDag<Store> {
     /// Return a [`SpanSet`] that covers all ids stored in this [`IdDag`].
     pub fn all(&self) -> Result<SpanSet> {
         let mut result = SpanSet::empty();
@@ -682,14 +682,18 @@ impl IdDag {
         //     - Yes: Figure out children in the flat segment.
         //            Push them to the result.
 
-        struct Context<'a> {
-            this: &'a IdDag,
+        struct Context<'a, Store> {
+            this: &'a IdDag<Store>,
             set: SpanSet,
             result_lower_bound: Id,
             result: SpanSet,
         }
 
-        fn visit_segments(ctx: &mut Context, range: Span, level: Level) -> Result<()> {
+        fn visit_segments<S: IdDagStore>(
+            ctx: &mut Context<S>,
+            range: Span,
+            level: Level,
+        ) -> Result<()> {
             for seg in ctx.this.iter_segments_descending(range.high, level)? {
                 let seg = seg?;
                 let span = seg.span()?;
@@ -874,8 +878,8 @@ impl IdDag {
         //   If above fast paths do not work, then go deeper:
         //     - Iterate through level N-1 segments covered by S.
 
-        struct Context<'a> {
-            this: &'a IdDag,
+        struct Context<'a, Store> {
+            this: &'a IdDag<Store>,
             roots: SpanSet,
             ancestors: SpanSet,
             roots_min: Id,
@@ -883,7 +887,11 @@ impl IdDag {
             result: SpanSet,
         }
 
-        fn visit_segments(ctx: &mut Context, range: Span, level: Level) -> Result<()> {
+        fn visit_segments<S: IdDagStore>(
+            ctx: &mut Context<S>,
+            range: Span,
+            level: Level,
+        ) -> Result<()> {
             for seg in ctx.this.iter_segments_descending(range.high, level)? {
                 let seg = seg?;
                 let span = seg.span()?;
@@ -974,14 +982,18 @@ impl IdDag {
             return Ok(SpanSet::empty());
         }
 
-        struct Context<'a> {
-            this: &'a IdDag,
+        struct Context<'a, Store> {
+            this: &'a IdDag<Store>,
             roots: SpanSet,
             roots_min: Id,
             result: SpanSet,
         }
 
-        fn visit_segments(ctx: &mut Context, range: Span, level: Level) -> Result<()> {
+        fn visit_segments<S: IdDagStore>(
+            ctx: &mut Context<S>,
+            range: Span,
+            level: Level,
+        ) -> Result<()> {
             for seg in ctx.this.iter_segments_descending(range.high, level)? {
                 let seg = seg?;
                 let span = seg.span()?;
@@ -1041,7 +1053,7 @@ impl IdDag {
 }
 
 // Full IdMap -> Sparse IdMap
-impl IdDag {
+impl<Store: IdDagStore> IdDag<Store> {
     /// Copy a subset of "Universal" mapping from `full_idmap` to
     /// `sparse_idmap`. See [`IdDag::universal`].
     pub fn write_sparse_idmap(
@@ -1102,7 +1114,7 @@ pub enum FirstAncestorConstraint {
     KnownUniversally { heads: SpanSet },
 }
 
-impl SyncableIdDag {
+impl<Store: IdDagStore> SyncableIdDag<Store> {
     /// Make sure the [`SyncableIdDag`] contains the given id (and all ids smaller
     /// than `high`) by building up segments on demand.
     ///
@@ -1125,7 +1137,10 @@ impl SyncableIdDag {
     ///
     /// To avoid races, [`IdDag`]s in the `reload_dags` list will be
     /// reloaded while [`SyncableIdDag`] still holds the lock.
-    pub fn sync<'a>(mut self, reload_dags: impl IntoIterator<Item = &'a mut IdDag>) -> Result<()> {
+    pub fn sync<'a, IterStore: 'a + IdDagStore>(
+        mut self,
+        reload_dags: impl IntoIterator<Item = &'a mut IdDag<IterStore>>,
+    ) -> Result<()> {
         self.dag.store.sync()?;
         for dag in reload_dags {
             dag.reload()?;
@@ -1158,7 +1173,7 @@ impl SyncableIdDag {
     }
 }
 
-impl Debug for IdDag {
+impl<Store: IdDagStore> Debug for IdDag<Store> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         let mut first = true;
         for level in 0..=self.max_level {
