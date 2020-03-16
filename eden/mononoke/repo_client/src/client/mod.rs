@@ -639,10 +639,26 @@ impl RepoClient {
                         });
                         for (filenode, content, metadata) in contents {
                             let content = content.to_vec();
+                            let length = content.len() as u64;
+
                             ctx.perf_counters().set_max_counter(
                                 PerfCounterType::GetpackMaxFileSize,
-                                content.len() as i64,
+                                length as i64,
                             );
+
+                            if let Some(lfs_threshold) = lfs_threshold {
+                                if length >= lfs_threshold {
+                                    ctx.perf_counters().add_to_counter(
+                                        PerfCounterType::GetpackPossibleLFSFilesSumSize,
+                                        length as i64,
+                                    );
+
+                                    ctx.perf_counters().increment_counter(
+                                        PerfCounterType::GetpackNumPossibleLFSFiles,
+                                    );
+                                }
+                            }
+
                             res.push(wirepack::Part::Data(wirepack::DataEntry {
                                 node: filenode.into_nodehash(),
                                 delta_base: NULL_HASH,

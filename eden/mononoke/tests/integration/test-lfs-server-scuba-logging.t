@@ -45,6 +45,8 @@
       "BlobPutsMaxLatency": *, (glob)
       "CachelibHits": 0,
       "CachelibMisses": 0,
+      "GetpackNumPossibleLFSFiles": 0,
+      "GetpackPossibleLFSFilesSumSize": 0,
       "MemcacheHits": 0,
       "MemcacheMisses": 0,
       "SqlReadsMaster": 0,
@@ -93,6 +95,8 @@
       "BlobPutsMaxLatency": *, (glob)
       "CachelibHits": 0,
       "CachelibMisses": 0,
+      "GetpackNumPossibleLFSFiles": 0,
+      "GetpackPossibleLFSFilesSumSize": 0,
       "MemcacheHits": 0,
       "MemcacheMisses": 0,
       "SqlReadsMaster": 0,
@@ -137,6 +141,8 @@
       "BlobPutsMaxLatency": *, (glob)
       "CachelibHits": 0,
       "CachelibMisses": 0,
+      "GetpackNumPossibleLFSFiles": 0,
+      "GetpackPossibleLFSFilesSumSize": 0,
       "MemcacheHits": 0,
       "MemcacheMisses": 0,
       "SqlReadsMaster": 0,
@@ -189,6 +195,8 @@
       "BlobPutsMaxLatency": *, (glob)
       "CachelibHits": 0,
       "CachelibMisses": 0,
+      "GetpackNumPossibleLFSFiles": 0,
+      "GetpackPossibleLFSFilesSumSize": 0,
       "MemcacheHits": 0,
       "MemcacheMisses": 0,
       "SqlReadsMaster": 0,
@@ -231,6 +239,8 @@
       "BlobPutsMaxLatency": *, (glob)
       "CachelibHits": 0,
       "CachelibMisses": 0,
+      "GetpackNumPossibleLFSFiles": 0,
+      "GetpackPossibleLFSFilesSumSize": 0,
       "MemcacheHits": 0,
       "MemcacheMisses": 0,
       "SqlReadsMaster": 0,

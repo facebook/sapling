@@ -69,6 +69,8 @@ define_perf_counters! {
         GetpackMaxFileSize,
         GetpackNumFiles,
         GetpackResponseSize,
+        GetpackPossibleLFSFilesSumSize,
+        GetpackNumPossibleLFSFiles,
         GettreepackNumTreepacks,
         GettreepackResponseSize,
         GetcommitdataNumCommits,
@@ -101,6 +103,8 @@ impl PerfCounterType {
             | BlobPutsMaxLatency
             | CachelibHits
             | CachelibMisses
+            | GetpackPossibleLFSFilesSumSize
+            | GetpackNumPossibleLFSFiles
             | MemcacheHits
             | MemcacheMisses
             | SqlReadsMaster
