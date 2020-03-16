@@ -266,12 +266,17 @@ class physicalfilesystem(object):
                     return origmatch.bad(path, msg)
 
             match = normalizematcher()
+            match.traversedir = origmatch.traversedir
 
-        walker = workingcopy.walker(join(""), match)
+        traversedir = bool(match.traversedir)
+        walker = workingcopy.walker(join(""), match, traversedir)
         for fn in walker:
             fn = self.dirstate.normalize(fn)
             st = util.lstat(join(fn))
-            yield fn, st
+            if traversedir and stat.S_ISDIR(st.st_mode):
+                match.traversedir(fn)
+            else:
+                yield fn, st
 
         for path, walkerror in walker.errors():
             path = encoding.unitolocal(path)

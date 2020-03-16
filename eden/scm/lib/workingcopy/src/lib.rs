@@ -48,20 +48,35 @@ impl WalkError {
     }
 }
 
+pub enum WalkEntry {
+    File(RepoPathBuf),
+    Directory(RepoPathBuf),
+}
+
+impl AsRef<RepoPath> for WalkEntry {
+    fn as_ref(&self) -> &RepoPath {
+        match self {
+            WalkEntry::File(f) => f,
+            WalkEntry::Directory(d) => d,
+        }
+    }
+}
+
 /// Walker traverses the working copy, starting at the root of the repo,
 /// finding files matched by matcher
 pub struct Walker<M> {
     root: PathBuf,
     dir_matches: Vec<RepoPathBuf>,
-    results: Vec<Result<RepoPathBuf>>,
+    results: Vec<Result<WalkEntry>>,
     matcher: M,
+    include_directories: bool,
 }
 
 impl<M> Walker<M>
 where
     M: Matcher,
 {
-    pub fn new(root: PathBuf, matcher: M) -> Self {
+    pub fn new(root: PathBuf, matcher: M, include_directories: bool) -> Self {
         let mut dir_matches = vec![];
         if matcher.matches_directory(&RepoPathBuf::new()) != DirectoryMatch::Nothing {
             dir_matches.push(RepoPathBuf::new());
@@ -71,6 +86,7 @@ where
             dir_matches,
             results: Vec::new(),
             matcher,
+            include_directories,
         }
     }
 
@@ -91,7 +107,7 @@ where
         candidate_path.push(filename);
         if filetype.is_file() || filetype.is_symlink() {
             if self.matcher.matches_file(candidate_path.as_repo_path()) {
-                self.results.push(Ok(candidate_path));
+                self.results.push(Ok(WalkEntry::File(candidate_path)));
             }
         } else if filetype.is_dir() {
             if filename.as_str() != ".hg"
@@ -112,6 +128,10 @@ where
     fn walk(&mut self) -> Result<()> {
         while self.results.is_empty() && !self.dir_matches.is_empty() {
             let next_dir = self.dir_matches.pop().unwrap();
+            if self.include_directories {
+                self.results
+                    .push(Ok(WalkEntry::Directory(next_dir.clone())));
+            }
             let abs_next_dir = self.root.join(next_dir.as_str());
             // Don't process the directory if it contains a .hg directory, unless it's the root.
             if next_dir.is_empty() || !Path::exists(&abs_next_dir.join(".hg")) {
@@ -133,7 +153,7 @@ impl<M> Iterator for Walker<M>
 where
     M: Matcher,
 {
-    type Item = Result<RepoPathBuf>;
+    type Item = Result<WalkEntry>;
     fn next(&mut self) -> Option<Self::Item> {
         match self.walk() {
             Err(e) => Some(Err(e)),
@@ -177,12 +197,12 @@ mod tests {
         let files = vec!["dirA/a.txt", "dirA/b.txt", "dirB/dirC/dirD/c.txt"];
         let root_dir = create_directory(&directories, &files)?;
         let root_path = PathBuf::from(root_dir.path());
-        let walker = Walker::new(root_path, AlwaysMatcher::new());
+        let walker = Walker::new(root_path, AlwaysMatcher::new(), false);
         let walked_files: Result<Vec<_>> = walker.collect();
         let walked_files = walked_files?;
         assert_eq!(walked_files.len(), 3);
         for file in walked_files {
-            assert!(files.contains(&file.into_string().as_str()));
+            assert!(files.contains(&file.as_ref().to_string().as_str()));
         }
         Ok(())
     }
@@ -193,7 +213,7 @@ mod tests {
         let files = vec!["dirA/a.txt", "b.txt"];
         let root_dir = create_directory(&directories, &files)?;
         let root_path = PathBuf::from(root_dir.path());
-        let walker = Walker::new(root_path, NeverMatcher::new());
+        let walker = Walker::new(root_path, NeverMatcher::new(), false);
         let walked_files: Vec<_> = walker.collect();
         assert!(walked_files.is_empty());
         Ok(())

@@ -26,9 +26,9 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 py_class!(class walker |py| {
     data walker: RefCell<Walker<UnsafePythonMatcher>>;
     data _errors: RefCell<Vec<Error>>;
-    def __new__(_cls, root: PyPathBuf, pymatcher: PyObject) -> PyResult<walker> {
+    def __new__(_cls, root: PyPathBuf, pymatcher: PyObject, include_directories: bool) -> PyResult<walker> {
         let matcher = UnsafePythonMatcher::new(pymatcher);
-        walker::create_instance(py, RefCell::new(Walker::new(root.to_path_buf(), matcher)), RefCell::new(Vec::new()))
+        walker::create_instance(py, RefCell::new(Walker::new(root.to_path_buf(), matcher, include_directories)), RefCell::new(Vec::new()))
     }
 
     def __iter__(&self) -> PyResult<Self> {
@@ -39,7 +39,7 @@ py_class!(class walker |py| {
         loop {
             match self.walker(py).borrow_mut().next() {
                 Some(Ok(path)) => {
-                    return Ok(Some(path.into()))
+                    return Ok(Some(PyPathBuf::from(path.as_ref())))
                 },
                 Some(Err(e)) => {
                     self._errors(py).borrow_mut().push(e)
