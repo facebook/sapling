@@ -175,16 +175,16 @@ impl HgTime {
                     None
                 }
             }),
-            date if date.starts_with(">") => {
+            date if date.starts_with('>') => {
                 Self::parse(&date[1..]).map(|start| start..Self::max_value())
             }
             date if date.starts_with("since ") => {
                 Self::parse(&date[6..]).map(|start| start..Self::max_value())
             }
-            date if date.starts_with("<") => Self::parse(&date[1..])
+            date if date.starts_with('<') => Self::parse(&date[1..])
                 .and_then(|end| end + 1)
                 .map(|end| Self::min_value()..end),
-            date if date.starts_with("-") => {
+            date if date.starts_with('-') => {
                 // This does not really make much sense. But is supported by hg
                 // (see 'hg help dates').
                 Self::parse_range(&format!("since {} days ago", &date[1..]))
@@ -233,7 +233,7 @@ impl HgTime {
         let date = date.trim();
 
         // Hg internal format. "unixtime offset"
-        let parts: Vec<_> = date.split(" ").collect();
+        let parts: Vec<_> = date.split(' ').collect();
         if parts.len() == 2 {
             if let Ok(unixtime) = parts[0].parse() {
                 if let Ok(offset) = parts[1].parse() {
@@ -271,7 +271,7 @@ impl HgTime {
                     // "now" for "Y-m" (year, month).
                     use_now = true;
                 } else {
-                    let format_char = part.chars().nth(0).unwrap();
+                    let format_char = part.chars().next().unwrap();
                     default_format += &format!(" @%{}", format_char);
                     if use_now {
                         // For example, if the user only specified "month/day",
@@ -445,11 +445,11 @@ impl TryFrom<NaiveDateTime> for HgTime {
         match FixedOffset::west_opt(offset) {
             Some(offset) => match offset.from_local_datetime(&time) {
                 LocalResult::Single(datetime) => HgTime::try_from(datetime),
-                _ => return Err(()),
+                _ => Err(()),
             },
             None => match Local.from_local_datetime(&time) {
                 LocalResult::Single(local) => HgTime::try_from(local),
-                _ => return Err(()),
+                _ => Err(()),
             },
         }
     }
