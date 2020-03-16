@@ -122,7 +122,10 @@ async fn dispatch(
         .context("While parsing request")?;
 
     scuba.add("reponame", reponame);
-    let client = dispatcher.client(scuba.clone());
+    let client = dispatcher.client(
+        scuba.clone(),
+        req.normal.client_hostname.clone().map(|s| s.into_owned()),
+    );
 
     let stream = match parsed_req {
         Request::Gettreepack(args) => client.gettreepack(args.0).compat(),

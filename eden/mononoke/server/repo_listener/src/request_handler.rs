@@ -165,7 +165,7 @@ pub fn request_handler(
         .session_id(session_id)
         .trace(trace.clone())
         .user_unix_name(preamble.misc.get("unix_username").cloned())
-        .source_hostname(preamble.misc.get("source_hostname").cloned())
+        .source_hostname(client_hostname)
         .ssh_env_vars(ssh_env_vars)
         .load_limiter(load_limiter);
 

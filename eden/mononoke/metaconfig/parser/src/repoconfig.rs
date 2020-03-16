@@ -692,8 +692,12 @@ impl RepoConfigs {
         let lfs = match this.lfs {
             Some(lfs_params) => LfsParams {
                 threshold: lfs_params.threshold.map(|v| v.try_into()).transpose()?,
+                rollout_percentage: lfs_params.rollout_percentage.unwrap_or(0).try_into()?,
+                generate_lfs_blob_in_hg_sync_job: lfs_params
+                    .generate_lfs_blob_in_hg_sync_job
+                    .unwrap_or(false),
             },
-            None => LfsParams { threshold: None },
+            None => LfsParams::default(),
         };
 
         let hash_validation_percentage = this
@@ -1460,6 +1464,8 @@ mod test {
 
             [lfs]
             threshold = 1000
+            rollout_percentage = 56
+            generate_lfs_blob_in_hg_sync_job = true
 
             [bundle2_replay_params]
             preserve_raw_bundle2 = true
@@ -1629,6 +1635,8 @@ mod test {
                 },
                 lfs: LfsParams {
                     threshold: Some(1000),
+                    rollout_percentage: 56,
+                    generate_lfs_blob_in_hg_sync_job: true,
                 },
                 wireproto_logging: WireprotoLoggingConfig {
                     scribe_category: Some("category".to_string()),

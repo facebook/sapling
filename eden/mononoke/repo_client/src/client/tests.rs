@@ -11,7 +11,19 @@ use configerator_cached::ConfigHandle;
 use fbinit::FacebookInit;
 use fixtures::many_files_dirs;
 use futures::compat::Future01CompatExt;
+use hooks::HookManager;
+use hooks_content_stores::{InMemoryChangesetStore, InMemoryFileContentStore};
+use manifest::{Entry, ManifestOps};
 use maplit::hashset;
+use mercurial_types::HgFileNodeId;
+use metaconfig_types::{HookManagerParams, InfinitepushParams, LfsParams, PushrebaseParams};
+use mononoke_repo::MononokeRepo;
+use mutable_counters::SqlMutableCounters;
+use repo_read_write_status::RepoReadWriteFetcher;
+use scuba_ext::ScubaSampleBuilder;
+use skiplist::SkiplistIndex;
+use sql_ext::SqlConstructors;
+use tests_utils::CreateCommitContext;
 
 use mononoke_types_mocks::changesetid::ONES_CSID;
 use std::collections::HashSet;
@@ -375,6 +387,145 @@ async fn get_changed_manifests_stream_test_base_path_impl(fb: FacebookInit) -> R
     }
 
     Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_lfs_rollout(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let repo = blobrepo_factory::new_memblob_empty(None)?;
+    let commit = CreateCommitContext::new_root(&ctx, &repo)
+        .add_file("largefile", "11111_11111")
+        .commit()
+        .await?;
+
+    let hg_cs_id = repo
+        .get_hg_from_bonsai_changeset(ctx.clone(), commit)
+        .compat()
+        .await?;
+
+    let hg_cs = hg_cs_id
+        .load(ctx.clone(), &repo.get_blobstore())
+        .compat()
+        .await?;
+
+    let path = MPath::new("largefile")?;
+    let maybe_entry = hg_cs
+        .manifestid()
+        .find_entry(ctx.clone(), repo.get_blobstore(), Some(path.clone()))
+        .compat()
+        .await?
+        .unwrap();
+
+    let filenode_id = match maybe_entry {
+        Entry::Leaf((_, filenode_id)) => filenode_id,
+        Entry::Tree(_) => {
+            panic!("should be a leaf");
+        }
+    };
+    assert_eq!(
+        run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, LfsParams::default()).await?,
+        false
+    );
+
+    // Rollout percentage is 100 and threshold is set - enable lfs
+    let lfs_params = LfsParams {
+        threshold: Some(5),
+        rollout_percentage: 100,
+        ..Default::default()
+    };
+    assert_eq!(
+        run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, lfs_params).await?,
+        true
+    );
+
+    // Rollout percentage is 0 - no lfs is enabled
+    let lfs_params = LfsParams {
+        threshold: Some(5),
+        rollout_percentage: 0,
+        ..Default::default()
+    };
+    assert_eq!(
+        run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, lfs_params).await?,
+        false
+    );
+
+    // Rollout percentage is 100, but threshold is too high
+    let lfs_params = LfsParams {
+        threshold: Some(500),
+        rollout_percentage: 100,
+        ..Default::default()
+    };
+    assert_eq!(
+        run_and_check_if_lfs(&ctx, &repo, &path, &filenode_id, lfs_params).await?,
+        false
+    );
+    Ok(())
+}
+
+async fn run_and_check_if_lfs(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    path: &MPath,
+    filenode_id: &HgFileNodeId,
+    lfs_params: LfsParams,
+) -> Result<bool, Error> {
+    let pushrebase_params = PushrebaseParams::default();
+
+    let mononoke_repo = MononokeRepo::new(
+        repo.clone(),
+        &pushrebase_params,
+        vec![],
+        Arc::new(HookManager::new(
+            ctx.fb,
+            Box::new(InMemoryChangesetStore::new()),
+            Arc::new(InMemoryFileContentStore::new()),
+            HookManagerParams {
+                disable_acl_checker: true,
+            },
+            ScubaSampleBuilder::with_discard(),
+        )),
+        None,
+        lfs_params,
+        RepoReadWriteFetcher::new(
+            None,
+            RepoReadOnly::ReadOnly("".to_string()),
+            "repo".to_string(),
+        ),
+        InfinitepushParams::default(),
+        0,
+        Arc::new(SkiplistIndex::new()),
+        Arc::new(SqlMutableCounters::with_sqlite_in_memory()?),
+    );
+
+    let logging = LoggingContainer::new(ctx.logger().clone(), ScubaSampleBuilder::with_discard());
+
+    let noop_wireproto =
+        WireprotoLogging::new(ctx.fb, mononoke_repo.reponame().clone(), None, None, None)?;
+
+    let repo_client = RepoClient::new(
+        mononoke_repo,
+        ctx.session().clone(),
+        logging,
+        100,   // hash validation percentage
+        false, // Don't preserve raw bundle 2 (we don't push)
+        false, // Don't allow pushes (we don't push)
+        true,  // Support bundle2_listkeys
+        Arc::new(noop_wireproto),
+        None, // Don't push redirect (we don't push)
+        None, // Don't push redirect (we don't push)
+    );
+
+    let bytes = repo_client
+        .getpackv2(stream::iter_ok(vec![(path.clone(), vec![*filenode_id])]).boxify())
+        .concat2()
+        .compat()
+        .await?;
+
+    let lfs_url: &[u8] = b"version https://git-lfs.github.com/spec/v1";
+
+    let found = bytes.windows(lfs_url.len()).any(|w| w == lfs_url);
+
+    Ok(found)
 }
 
 async fn fetch_mfs(

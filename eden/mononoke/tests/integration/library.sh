@@ -755,6 +755,8 @@ if [[ -v LFS_THRESHOLD ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [lfs]
 threshold=$LFS_THRESHOLD
+rollout_percentage=100
+generate_lfs_blob_in_hg_sync_job=${LFS_BLOB_HG_SYNC_JOB:-true}
 CONFIG
 fi
 

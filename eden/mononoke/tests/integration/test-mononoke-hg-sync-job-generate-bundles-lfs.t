@@ -43,6 +43,9 @@ blobimport them into Mononoke storage and start Mononoke
   $ cd ..
   $ blobimport repo-hg/.hg repo
 
+Make a copy to be used later
+  $ cp -r repo-hg repo-hg-2
+
 start mononoke with LFS enabled
   $ mononoke
   $ lfs_uri="$(lfs_server)/repo"
@@ -202,3 +205,16 @@ Setup another client and update to latest commit from mercurial
   smallfile
   $ cat smallfile
   1
+
+Sync a pushrebase with lfs hg sync disabled
+  $ cd "$TESTTMP"
+  $ rm -rf mononoke-config
+  $ LFS_THRESHOLD="20" LFS_BLOB_HG_SYNC_JOB=false setup_common_config blob_files
+  $ cd "$TESTTMP"
+  $ mononoke_hg_sync repo-hg-2 1 --generate-bundles 2>&1 | grep 'successful sync'
+  * successful sync of entries [2] (glob)
+  $ cd "$TESTTMP/repo-hg-2"
+  $ hg debugfilerev lfs-largefile -v -r master_bookmark
+  b2a5e71d6d8d: add lfs-large files
+   lfs-largefile: bin=0 lnk=0 flag=0 size=40 copied='' chain=860e3f333d61
+    rawdata: 'A\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\n'

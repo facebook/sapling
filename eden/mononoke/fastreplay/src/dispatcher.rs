@@ -45,9 +45,11 @@ impl FastReplayDispatcher {
         })
     }
 
-    pub fn client(&self, scuba: ScubaSampleBuilder) -> RepoClient {
+    pub fn client(&self, scuba: ScubaSampleBuilder, source_hostname: Option<String>) -> RepoClient {
         let logging = LoggingContainer::new(self.logger.clone(), scuba);
-        let session = SessionContainer::new_with_defaults(self.fb);
+        let session = SessionContainer::builder(self.fb)
+            .source_hostname(source_hostname)
+            .build();
 
         RepoClient::new(
             self.repo.clone(),

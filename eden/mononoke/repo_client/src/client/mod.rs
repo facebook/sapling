@@ -27,7 +27,9 @@ use futures_old::future::ok;
 use futures_old::{future, stream, try_ready, Async, Future, IntoFuture, Poll, Stream};
 use futures_stats::{Timed, TimedStreamTrait};
 use futures_util::{FutureExt, TryFutureExt};
-use getbundle_response::{create_getbundle_response, DraftsInBundlesPolicy, PhasesPart};
+use getbundle_response::{
+    create_getbundle_response, DraftsInBundlesPolicy, PhasesPart, SessionLfsParams,
+};
 use hgproto::{GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
 use hooks::HookExecution;
 use itertools::Itertools;
@@ -319,7 +321,7 @@ impl RepoClient {
         maybe_push_redirector: Option<PushRedirector>,
         pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
     ) -> Self {
-        RepoClient {
+        Self {
             repo,
             session,
             logging,
@@ -380,7 +382,9 @@ impl RepoClient {
     }
 
     fn create_bundle(&self, ctx: CoreContext, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
-        let lfs_params = self.repo.lfs_params();
+        let lfs_params = self
+            .repo
+            .lfs_params(ctx.session().source_hostname().as_deref());
         let blobrepo = self.repo.blobrepo().clone();
         let reponame = self.repo.reponame().clone();
         let mut bundle2_parts = vec![];
@@ -506,7 +510,7 @@ impl RepoClient {
         WeightedContent: Future<Item = (u64, Content), Error = Error> + Send + 'static,
         Content:
             Future<Item = (HgFileNodeId, Bytes, Option<Metadata>), Error = Error> + Send + 'static,
-        GetpackHandler: Fn(CoreContext, BlobRepo, HgFileNodeId, Option<u64>, bool) -> WeightedContent
+        GetpackHandler: Fn(CoreContext, BlobRepo, HgFileNodeId, SessionLfsParams, bool) -> WeightedContent
             + Send
             + 'static,
     {
@@ -517,7 +521,9 @@ impl RepoClient {
         let getpack_params = Arc::new(Mutex::new(vec![]));
         let repo = self.repo.blobrepo().clone();
 
-        let lfs_threshold = self.repo.lfs_params().threshold;
+        let lfs_params = self
+            .repo
+            .lfs_params(ctx.session().source_hostname().as_deref());
 
         let validate_hash =
             rand::thread_rng().gen_ratio(self.hash_validation_percentage as u32, 100);
@@ -557,7 +563,7 @@ impl RepoClient {
                                     ctx.clone(),
                                     repo.clone(),
                                     *filenode,
-                                    lfs_threshold,
+                                    lfs_params.clone(),
                                     validate_hash,
                                 )
                             })
@@ -1344,7 +1350,9 @@ impl HgCommands for RepoClient {
             .expect("lock poisoned")
             .take();
 
-        let lfs_params = self.repo.lfs_params();
+        let lfs_params = self
+            .repo
+            .lfs_params(self.session.source_hostname().as_deref());
         self.repo
             .readonly()
             // Assume read only if we have an error.
@@ -1557,6 +1565,9 @@ impl HgCommands for RepoClient {
         let getfiles_params = Arc::new(Mutex::new(vec![]));
 
         let validate_hash = rand::random::<usize>() % 100 < self.hash_validation_percentage;
+        let lfs_params = self
+            .repo
+            .lfs_params(ctx.session().source_hostname().as_deref());
 
         let request_stream = move || {
             cloned!(ctx);
@@ -1579,7 +1590,7 @@ impl HgCommands for RepoClient {
                             repo.blobrepo().clone(),
                             node,
                             path.clone(),
-                            repo.lfs_params().threshold,
+                            lfs_params.clone(),
                             validate_hash,
                         )
                         .traced(

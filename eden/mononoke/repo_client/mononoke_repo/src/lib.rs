@@ -18,12 +18,17 @@ use metaconfig_types::{
 };
 use mononoke_types::RepositoryId;
 use mutable_counters::MutableCounters;
+use rand::Rng;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use repo_read_write_status::RepoReadWriteFetcher;
 use sql_ext::facebook::{FbSqlConstructors, MysqlOptions};
 use std::fmt::{self, Debug};
 use std::sync::Arc;
+use std::{
+    collections::hash_map::DefaultHasher,
+    hash::{Hash, Hasher},
+};
 use streaming_clone::SqlStreamingChunksFetcher;
 
 pub use builder::MononokeRepoBuilder;
@@ -103,9 +108,27 @@ impl MononokeRepo {
         &self.streaming_clone
     }
 
-    pub fn lfs_params(&self) -> SessionLfsParams {
-        SessionLfsParams {
-            threshold: self.lfs_params.threshold,
+    pub fn lfs_params(&self, client_hostname: Option<&str>) -> SessionLfsParams {
+        let percentage = self.lfs_params.rollout_percentage;
+        let allowed = match client_hostname {
+            Some(client_hostname) => {
+                let mut hasher = DefaultHasher::new();
+                client_hostname.hash(&mut hasher);
+                hasher.finish() % 100 < percentage.into()
+            }
+            None => {
+                // Randomize in case source hostname is not set to avoid
+                // sudden jumps in traffic
+                rand::thread_rng().gen_ratio(percentage.into(), 100)
+            }
+        };
+
+        if allowed {
+            SessionLfsParams {
+                threshold: self.lfs_params.threshold,
+            }
+        } else {
+            SessionLfsParams { threshold: None }
         }
     }
 

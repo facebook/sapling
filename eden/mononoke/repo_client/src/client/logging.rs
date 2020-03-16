@@ -221,6 +221,10 @@ fn do_wireproto_logging<'a>(
         .add("mononoke_session_uuid", session_id.into_string())
         .add("reponame", wireproto.reponame.clone());
 
+    if let Some(client_hostname) = ctx.session().source_hostname() {
+        builder.add("client_hostname", client_hostname.clone());
+    }
+
     let f = future::lazy(move || {
         let prepare_fut = match wireproto.blobstore_and_threshold {
             Some((ref blobstore, ref remote_arg_size_threshold)) => {

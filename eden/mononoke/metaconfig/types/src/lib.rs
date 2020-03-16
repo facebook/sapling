@@ -514,16 +514,14 @@ impl Default for PushrebaseParams {
 }
 
 /// LFS configuration options
-#[derive(Debug, Clone, Eq, PartialEq)]
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct LfsParams {
     /// threshold in bytes, If None, Lfs is disabled
     pub threshold: Option<u64>,
-}
-
-impl Default for LfsParams {
-    fn default() -> Self {
-        LfsParams { threshold: None }
-    }
+    /// What percentage of clients should receive lfs pointers
+    pub rollout_percentage: u32,
+    /// Whether hg sync job should generate lfs blobs
+    pub generate_lfs_blob_in_hg_sync_job: bool,
 }
 
 /// Id used to discriminate diffirent underlying blobstore instances

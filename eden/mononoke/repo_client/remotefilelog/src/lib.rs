@@ -24,6 +24,7 @@ use context::CoreContext;
 use filestore::FetchKey;
 use futures_ext::{select_all, BoxFuture, FutureExt};
 use futures_old::{Future, IntoFuture, Stream};
+use getbundle_response::SessionLfsParams;
 use mercurial_types::{
     blobs::File, calculate_hg_node_id, FileBytes, HgFileEnvelopeMut, HgFileHistoryEntry,
     HgFileNodeId, HgParents, MPath, RevFlags,
@@ -78,27 +79,24 @@ pub fn create_getfiles_blob(
     repo: BlobRepo,
     node: HgFileNodeId,
     path: MPath,
-    lfs_threshold: Option<u64>,
+    lfs_params: SessionLfsParams,
     validate_hash: bool,
 ) -> impl Future<Item = Bytes, Error = Error> {
-    let raw_content_bytes = prepare_blob(
-        ctx.clone(),
-        repo.clone(),
-        node,
-        lfs_threshold,
-        validate_hash,
-    )
-    .and_then(|RemotefilelogBlob { kind, data }| (Ok(kind).into_future(), data.rescue_redacted()))
-    .and_then(move |(kind, (_meta_bytes, file_bytes))| {
-        use RemotefilelogBlobKind::*;
+    let raw_content_bytes =
+        prepare_blob(ctx.clone(), repo.clone(), node, lfs_params, validate_hash)
+            .and_then(|RemotefilelogBlob { kind, data }| {
+                (Ok(kind).into_future(), data.rescue_redacted())
+            })
+            .and_then(move |(kind, (_meta_bytes, file_bytes))| {
+                use RemotefilelogBlobKind::*;
 
-        let revlog_flags = match kind {
-            Inline(_) => RevFlags::REVIDX_DEFAULT_FLAGS,
-            Lfs => RevFlags::REVIDX_EXTSTORED,
-        };
+                let revlog_flags = match kind {
+                    Inline(_) => RevFlags::REVIDX_DEFAULT_FLAGS,
+                    Lfs => RevFlags::REVIDX_EXTSTORED,
+                };
 
-        encode_getfiles_file_content(file_bytes, revlog_flags)
-    });
+                encode_getfiles_file_content(file_bytes, revlog_flags)
+            });
 
     let file_history_bytes = get_file_history(ctx, repo, node, path, None)
         .collect()
@@ -156,27 +154,31 @@ pub fn create_getpack_v1_blob(
     ),
     Error = Error,
 > {
-    prepare_blob(ctx, repo, node, None, validate_hash).map(
-        move |RemotefilelogBlob { kind, data }| {
-            use RemotefilelogBlobKind::*;
-
-            let weight = match kind {
-                Inline(size) => size,
-                Lfs => unreachable!(), // lfs_threshold = None implies no LFS blobs.
-            };
-
-            let fut = data.rescue_redacted().map(move |(meta_bytes, file_bytes)| {
-                // TODO (T30456231): Avoid this copy
-                let mut buff =
-                    BytesMut::with_capacity(meta_bytes.len() + file_bytes.as_bytes().len());
-                buff.extend_from_slice(&meta_bytes);
-                buff.extend_from_slice(file_bytes.as_bytes());
-                (node, buff.freeze())
-            });
-
-            (weight, fut)
-        },
+    prepare_blob(
+        ctx,
+        repo,
+        node,
+        SessionLfsParams { threshold: None },
+        validate_hash,
     )
+    .map(move |RemotefilelogBlob { kind, data }| {
+        use RemotefilelogBlobKind::*;
+
+        let weight = match kind {
+            Inline(size) => size,
+            Lfs => unreachable!(), // lfs_threshold = None implies no LFS blobs.
+        };
+
+        let fut = data.rescue_redacted().map(move |(meta_bytes, file_bytes)| {
+            // TODO (T30456231): Avoid this copy
+            let mut buff = BytesMut::with_capacity(meta_bytes.len() + file_bytes.as_bytes().len());
+            buff.extend_from_slice(&meta_bytes);
+            buff.extend_from_slice(file_bytes.as_bytes());
+            (node, buff.freeze())
+        });
+
+        (weight, fut)
+    })
 }
 
 /// Create a blob for getpack v2. See v1 above for general details. This also returns Metadata,
@@ -185,7 +187,7 @@ pub fn create_getpack_v2_blob(
     ctx: CoreContext,
     repo: BlobRepo,
     node: HgFileNodeId,
-    lfs_threshold: Option<u64>,
+    lfs_params: SessionLfsParams,
     validate_hash: bool,
 ) -> impl Future<
     Item = (
@@ -194,7 +196,7 @@ pub fn create_getpack_v2_blob(
     ),
     Error = Error,
 > {
-    prepare_blob(ctx, repo, node, lfs_threshold, validate_hash).map(
+    prepare_blob(ctx, repo, node, lfs_params, validate_hash).map(
         move |RemotefilelogBlob { kind, data }| {
             use RemotefilelogBlobKind::*;
 
@@ -234,24 +236,30 @@ pub fn create_raw_filenode_blob(
     node: HgFileNodeId,
     validate_hash: bool,
 ) -> impl Future<Item = Bytes, Error = Error> {
-    prepare_blob(ctx, repo, node, None, validate_hash)
-        .and_then(|RemotefilelogBlob { kind, data }| {
-            use RemotefilelogBlobKind::*;
+    prepare_blob(
+        ctx,
+        repo,
+        node,
+        SessionLfsParams { threshold: None },
+        validate_hash,
+    )
+    .and_then(|RemotefilelogBlob { kind, data }| {
+        use RemotefilelogBlobKind::*;
 
-            match kind {
-                Inline(_) => data.left_future(),
-                kind @ _ => Err(ErrorKind::InvalidKind { kind }.into())
-                    .into_future()
-                    .right_future(),
-            }
-        })
-        .map(|(meta_bytes, file_bytes)| {
-            // TODO (T30456231): Avoid this copy
-            let mut buff = BytesMut::with_capacity(meta_bytes.len() + file_bytes.as_bytes().len());
-            buff.extend_from_slice(&meta_bytes);
-            buff.extend_from_slice(file_bytes.as_bytes());
-            buff.freeze()
-        })
+        match kind {
+            Inline(_) => data.left_future(),
+            kind @ _ => Err(ErrorKind::InvalidKind { kind }.into())
+                .into_future()
+                .right_future(),
+        }
+    })
+    .map(|(meta_bytes, file_bytes)| {
+        // TODO (T30456231): Avoid this copy
+        let mut buff = BytesMut::with_capacity(meta_bytes.len() + file_bytes.as_bytes().len());
+        buff.extend_from_slice(&meta_bytes);
+        buff.extend_from_slice(file_bytes.as_bytes());
+        buff.freeze()
+    })
 }
 
 /// Get ancestors of all filenodes
@@ -292,7 +300,7 @@ fn prepare_blob(
     ctx: CoreContext,
     repo: BlobRepo,
     node: HgFileNodeId,
-    lfs_threshold: Option<u64>,
+    lfs_params: SessionLfsParams,
     validate_hash: bool,
 ) -> impl Future<Item = RemotefilelogBlob, Error = Error> {
     node.load(ctx.clone(), repo.blobstore()).from_err().map({
@@ -300,7 +308,7 @@ fn prepare_blob(
         move |envelope| {
             let file_size = envelope.content_size();
 
-            let inline_file = match lfs_threshold {
+            let inline_file = match lfs_params.threshold {
                 Some(lfs_threshold) => (file_size <= lfs_threshold),
                 None => true,
             };
@@ -431,9 +439,15 @@ mod test {
             }
         };
 
-        let blob = prepare_blob(ctx.clone(), repo.clone(), filenode, None, true)
-            .compat()
-            .await?;
+        let blob = prepare_blob(
+            ctx.clone(),
+            repo.clone(),
+            filenode,
+            SessionLfsParams { threshold: None },
+            true,
+        )
+        .compat()
+        .await?;
 
         let RemotefilelogBlob { kind, data } = blob;
         data.compat().await?; // Await the blob data to make sure hash validation passes.
