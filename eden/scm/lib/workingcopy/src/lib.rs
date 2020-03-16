@@ -24,6 +24,8 @@ pub enum WalkError {
     IOError(RepoPathBuf, #[source] io::Error),
     #[error("path error at '{0}': {1}")]
     RepoPathError(String, #[source] ParseError),
+    #[error("invalid file type at '{0}'")]
+    InvalidFileType(RepoPathBuf),
 }
 
 impl WalkError {
@@ -32,6 +34,7 @@ impl WalkError {
             WalkError::FsUtf8Error(path) => path.to_string(),
             WalkError::IOError(path, _) => path.to_string(),
             WalkError::RepoPathError(path, _) => path.to_string(),
+            WalkError::InvalidFileType(path) => path.to_string(),
         }
     }
 
@@ -40,6 +43,7 @@ impl WalkError {
             WalkError::FsUtf8Error(_) => "invalid file name encoding".to_string(),
             WalkError::IOError(_, error) => error.to_string(),
             WalkError::RepoPathError(_, error) => error.to_string(),
+            WalkError::InvalidFileType(_) => "invalid file type".to_string(),
         }
     }
 }
@@ -98,6 +102,8 @@ where
             {
                 self.dir_matches.push(candidate_path);
             }
+        } else if self.matcher.matches_file(candidate_path.as_repo_path()) {
+            return Err(WalkError::InvalidFileType(filename.to_owned()).into());
         }
         Ok(())
     }
