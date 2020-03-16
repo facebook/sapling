@@ -380,7 +380,7 @@ impl RepoClient {
     }
 
     fn create_bundle(&self, ctx: CoreContext, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
-        let lfs_params = self.repo.lfs_params().clone();
+        let lfs_params = self.repo.lfs_params();
         let blobrepo = self.repo.blobrepo().clone();
         let reponame = self.repo.reponame().clone();
         let mut bundle2_parts = vec![];
@@ -1344,7 +1344,7 @@ impl HgCommands for RepoClient {
             .expect("lock poisoned")
             .take();
 
-        let lfs_params = self.repo.lfs_params().clone();
+        let lfs_params = self.repo.lfs_params();
         self.repo
             .readonly()
             // Assume read only if we have an error.

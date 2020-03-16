@@ -44,7 +44,6 @@ use mercurial_types::{
     FileBytes, HgBlobNode, HgChangesetId, HgFileNodeId, HgManifestId, HgParents, HgPhase, MPath,
     RevFlags, NULL_CSID,
 };
-use metaconfig_types::LfsParams;
 use mononoke_types::{hash::Sha256, ChangesetId, ContentId};
 use phases::Phases;
 use reachabilityindex::LeastCommonAncestorsHint;
@@ -86,6 +85,11 @@ pub enum DraftsInBundlesPolicy {
     WithTreesAndFiles,
 }
 
+#[derive(Clone)]
+pub struct SessionLfsParams {
+    pub threshold: Option<u64>,
+}
+
 pub async fn create_getbundle_response(
     ctx: CoreContext,
     blobrepo: BlobRepo,
@@ -94,7 +98,7 @@ pub async fn create_getbundle_response(
     heads: Vec<HgChangesetId>,
     lca_hint: Arc<dyn LeastCommonAncestorsHint>,
     return_phases: PhasesPart,
-    lfs_params: LfsParams,
+    lfs_params: SessionLfsParams,
     drafts_in_bundles_policy: DraftsInBundlesPolicy,
 ) -> Result<Vec<PartEncodeBuilder>, Error> {
     let return_phases = return_phases == PhasesPart::Yes;
@@ -154,7 +158,7 @@ pub async fn create_getbundle_response(
             &blobrepo,
             commits_to_send.clone(),
             maybe_filenodes,
-            lfs_params,
+            &lfs_params,
         )
         .await?;
         parts.push(cg_part);
@@ -328,7 +332,7 @@ async fn create_hg_changeset_part(
     blobrepo: &BlobRepo,
     nodes_to_send: Vec<ChangesetId>,
     maybe_prepared_filenode_entries: Option<HashMap<MPath, Vec<PreparedFilenodeEntry>>>,
-    lfs_params: LfsParams,
+    lfs_params: &SessionLfsParams,
 ) -> Result<PartEncodeBuilder> {
     let map_chunk_size = 100;
     let load_buffer_size = 1000;
@@ -662,7 +666,7 @@ fn prepare_filenode_entries_stream<'a>(
     ctx: &'a CoreContext,
     repo: &'a BlobRepo,
     filenodes: Vec<(MPath, HgFileNodeId, HgChangesetId)>,
-    lfs_params: &'a LfsParams,
+    lfs_session: &'a SessionLfsParams,
 ) -> impl Stream<Item = Result<(MPath, Vec<PreparedFilenodeEntry>), Error>> + 'a {
     stream::iter(filenodes.into_iter())
         .map({
@@ -674,7 +678,7 @@ fn prepare_filenode_entries_stream<'a>(
 
                 let file_size = envelope.content_size();
 
-                let content = match lfs_params.threshold {
+                let content = match lfs_session.threshold {
                     None => FilenodeEntryContent::InlineV2(envelope.content_id()),
                     Some(lfs_threshold) if file_size <= lfs_threshold => {
                         FilenodeEntryContent::InlineV3(envelope.content_id())
@@ -881,7 +885,7 @@ pub async fn get_manifests_and_filenodes(
     ctx: &CoreContext,
     repo: &BlobRepo,
     commits: Vec<HgChangesetId>,
-    lfs_params: &LfsParams,
+    lfs_params: &SessionLfsParams,
 ) -> Result<
     (
         Vec<(Option<MPath>, HgManifestId, HgChangesetId)>,

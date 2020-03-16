@@ -11,6 +11,7 @@ use blobrepo::BlobRepo;
 use fbinit::FacebookInit;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::Future;
+use getbundle_response::SessionLfsParams;
 use hooks::HookManager;
 use metaconfig_types::{
     BookmarkAttrs, BookmarkParams, InfinitepushParams, LfsParams, PushrebaseParams, RepoReadOnly,
@@ -102,8 +103,10 @@ impl MononokeRepo {
         &self.streaming_clone
     }
 
-    pub fn lfs_params(&self) -> &LfsParams {
-        &self.lfs_params
+    pub fn lfs_params(&self) -> SessionLfsParams {
+        SessionLfsParams {
+            threshold: self.lfs_params.threshold,
+        }
     }
 
     pub fn reponame(&self) -> &String {

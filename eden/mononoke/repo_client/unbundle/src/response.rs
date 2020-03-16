@@ -16,9 +16,10 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
 use futures_old::{Future, Stream};
 use futures_stats::Timed;
 use futures_util::{FutureExt, TryFutureExt};
-use getbundle_response::{create_getbundle_response, DraftsInBundlesPolicy, PhasesPart};
+use getbundle_response::{
+    create_getbundle_response, DraftsInBundlesPolicy, PhasesPart, SessionLfsParams,
+};
 use mercurial_bundles::{create_bundle_stream, parts, Bundle2EncodeBuilder, PartId};
-use metaconfig_types::LfsParams;
 use metaconfig_types::PushrebaseParams;
 use mononoke_types::ChangesetId;
 use obsolete;
@@ -123,7 +124,7 @@ impl UnbundleResponse {
         reponame: String,
         pushrebase_params: PushrebaseParams,
         lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-        lfs_params: LfsParams,
+        lfs_params: SessionLfsParams,
     ) -> BoxFuture<Bytes, Error> {
         let UnbundlePushRebaseResponse {
             commonheads,
@@ -249,7 +250,7 @@ impl UnbundleResponse {
         reponame: String,
         pushrebase_params: PushrebaseParams,
         lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-        lfs_params: LfsParams,
+        lfs_params: SessionLfsParams,
     ) -> BoxFuture<Bytes, Error> {
         match self {
             UnbundleResponse::Push(data) => Self::generate_push_response_bytes(ctx, data),
