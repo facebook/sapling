@@ -37,7 +37,7 @@ Create a repo with non-ascii paths
 ..Create files with utf8 encoded unicode characters
 
   $ python2 2>/dev/null << EOF
-  > for i in range(1, 256):
+  > for i in range(2, 256):
   >     if chr(i) in '/.\n\r':
   >         continue
   >     name = (unichr(i) * (i % 7 + 1)).encode('utf8')
@@ -54,7 +54,7 @@ Create a repo with non-ascii paths
   $ hg commit -m 'nonascii paths' -q
 
   $ hg log -T '{rev}:{node} {desc}\n'
-  1:c1a12d91b750b584bafe0299c27a4ae596e29c01 nonascii paths
+  1:a03fe2c5c0c917d545f5026260290c25e311871f nonascii paths
   0:c2d59fc1ca219a78013735473161145cb4d7d7fc tailing spaces
 
   $ hg bookmark nonasciipath
@@ -67,7 +67,7 @@ Create the master repo
   $ hg pull -q ../client1
 
   $ hg log -T '{rev}:{node} {desc}\n'
-  1:c1a12d91b750b584bafe0299c27a4ae596e29c01 nonascii paths
+  1:a03fe2c5c0c917d545f5026260290c25e311871f nonascii paths
   0:c2d59fc1ca219a78013735473161145cb4d7d7fc tailing spaces
 
   $ cd ..
@@ -77,11 +77,11 @@ Create another master repo, it should synchronize from the database
   $ initserver master2 sqlreponame
   $ cd master2
   $ hg log -T '{rev}:{node} {desc}\n'
-  1:c1a12d91b750b584bafe0299c27a4ae596e29c01 nonascii paths
+  1:a03fe2c5c0c917d545f5026260290c25e311871f nonascii paths
   0:c2d59fc1ca219a78013735473161145cb4d7d7fc tailing spaces
 
   $ hg bookmark
-     nonasciipath              1:c1a12d91b750
+     nonasciipath              1:a03fe2c5c0c9
 
   $ hg up nonasciipath -q
   $ [[ -f 'a    ' ]] && echo good
@@ -92,6 +92,6 @@ Create another master repo, it should synchronize from the database
   checking manifests
   crosschecking files in changesets and manifests
   checking files
-  252 files, 2 changesets, 252 total revisions
+  251 files, 2 changesets, 251 total revisions
 
   $ cd ..
