@@ -16,8 +16,12 @@
 
 export PREFIX=/usr/local
 
+ifeq ($(OS),Windows_NT)
 PYTHON := python
-PYTHON3 := python36
+else
+PYTHON := python2
+endif
+PYTHON3 := python3.6
 
 $(eval HGROOT := $(shell pwd))
 HGPYTHONS ?= $(HGROOT)/build/pythons
