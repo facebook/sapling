@@ -16,7 +16,7 @@ import stat
 from typing import Callable, Iterable, Optional, Tuple
 
 from bindings import workingcopy
-from edenscm.mercurial import registrar
+from edenscm.mercurial import match as matchmod, registrar
 
 from . import encoding, error, pathutil, util, vfs as vfsmod
 from .i18n import _
@@ -247,6 +247,13 @@ class physicalfilesystem(object):
     @util.timefunction("fswalk", 0, "ui")
     def _rustwalk(self, match, listignored=False):
         join = self.opener.join
+        if not listignored:
+            # Have the matcher skip ignored files. Technically exact files
+            # provided by the user should be returned even if they're ignored.
+            # The differencematcher handles this and returns True for exact
+            # matches, even if they should be subtracted.
+            match = matchmod.differencematcher(match, self.dirstate._ignore)
+
         walker = workingcopy.walker(join(""), match)
         for fn in walker:
             st = util.lstat(join(fn))
