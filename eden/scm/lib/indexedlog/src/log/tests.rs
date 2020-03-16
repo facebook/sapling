@@ -286,6 +286,39 @@ fn test_slice_to_bytes() {
 }
 
 #[test]
+fn test_fmt_debug() -> crate::Result<()> {
+    let dir = tempdir().unwrap();
+    let mut log = OpenOptions::new().create(true).open(dir.path())?;
+    let entries = [
+        "Indexed Log provides an integrity-checked, append-only storage with index support.",
+        "Indexed Log 提供一种支持索引和完整性检查的仅追加存储。",
+    ];
+    for entry in &entries {
+        log.append(entry)?;
+    }
+    assert_eq!(
+        format!("\n{:?}", log),
+        r#"
+# Entry 1:
+0000000c: 49 6e 64 65 78 65 64 20 4c 6f 67 20 70 72 6f 76  Indexed Log prov
+0000001c: 69 64 65 73 20 61 6e 20 69 6e 74 65 67 72 69 74  ides an integrit
+0000002c: 79 2d 63 68 65 63 6b 65 64 2c 20 61 70 70 65 6e  y-checked, appen
+0000003c: 64 2d 6f 6e 6c 79 20 73 74 6f 72 61 67 65 20 77  d-only storage w
+0000004c: 69 74 68 20 69 6e 64 65 78 20 73 75 70 70 6f 72  ith index suppor
+0000005c: 74 2e                                            t.
+
+# Entry 2:
+00000064: 49 6e 64 65 78 65 64 20 4c 6f 67 20 e6 8f 90 e4  Indexed Log ....
+00000074: be 9b e4 b8 80 e7 a7 8d e6 94 af e6 8c 81 e7 b4  ................
+00000084: a2 e5 bc 95 e5 92 8c e5 ae 8c e6 95 b4 e6 80 a7  ................
+00000094: e6 a3 80 e6 9f a5 e7 9a 84 e4 bb 85 e8 bf bd e5  ................
+000000a4: 8a a0 e5 ad 98 e5 82 a8 e3 80 82                 ...........
+"#
+    );
+    Ok(())
+}
+
+#[test]
 fn test_index_manual() {
     // Test index lookups with these combinations:
     // - Index key: Reference and Owned.
