@@ -125,7 +125,7 @@ impl ConfigSet {
         self.sections
             .get(section.as_ref())
             .map(|section| section.items.keys().cloned().collect())
-            .unwrap_or(Vec::new())
+            .unwrap_or_default()
     }
 
     /// Get config value for a given config.
@@ -146,13 +146,8 @@ impl ConfigSet {
     pub fn get_sources(&self, section: impl AsRef<str>, name: impl AsRef<str>) -> Vec<ValueSource> {
         self.sections
             .get(section.as_ref())
-            .and_then(|section| {
-                section
-                    .items
-                    .get(name.as_ref())
-                    .map(|values| values.clone())
-            })
-            .unwrap_or(Vec::new())
+            .and_then(|section| section.items.get(name.as_ref()).cloned())
+            .unwrap_or_default()
     }
 
     /// Set a config item directly. `section`, `name` locates the config. `value` is the new value.
@@ -187,7 +182,7 @@ impl ConfigSet {
         if let Some((section, name, value)) = filtered {
             self.sections
                 .entry(section)
-                .or_insert_with(|| Default::default())
+                .or_insert_with(Default::default)
                 .items
                 .entry(name)
                 .or_insert_with(|| Vec::with_capacity(1))
@@ -305,12 +300,9 @@ impl ConfigSet {
         let handle_section = |pair: Pair, section: &mut Text| {
             let pairs = pair.into_inner();
             for pair in pairs {
-                match pair.as_rule() {
-                    Rule::section_name => {
-                        *section = extract(&buf, pair.as_span());
-                        return;
-                    }
-                    _ => (),
+                if let Rule::section_name = pair.as_rule() {
+                    *section = extract(&buf, pair.as_span());
+                    return;
                 }
             }
             unreachable!();
@@ -319,16 +311,13 @@ impl ConfigSet {
         let mut handle_include = |this: &mut ConfigSet, pair: Pair, errors: &mut Vec<Error>| {
             let pairs = pair.into_inner();
             for pair in pairs {
-                match pair.as_rule() {
-                    Rule::line => {
-                        if !skip_include {
-                            let include_path = pair.as_str();
-                            let full_include_path =
-                                path.parent().unwrap().join(expand_path(include_path));
-                            this.load_file(&full_include_path, opts, visited, errors);
-                        }
+                if let Rule::line = pair.as_rule() {
+                    if !skip_include {
+                        let include_path = pair.as_str();
+                        let full_include_path =
+                            path.parent().unwrap().join(expand_path(include_path));
+                        this.load_file(&full_include_path, opts, visited, errors);
                     }
-                    _ => (),
                 }
             }
         };
@@ -337,23 +326,14 @@ impl ConfigSet {
             let unset_span = pair.as_span();
             let pairs = pair.into_inner();
             for pair in pairs {
-                match pair.as_rule() {
-                    Rule::config_name => {
-                        let name = extract(&buf, pair.as_span());
-                        let location = ValueLocation {
-                            path: shared_path.clone(),
-                            content: buf.clone(),
-                            location: unset_span.start()..unset_span.end(),
-                        };
-                        return this.set_internal(
-                            section.clone(),
-                            name,
-                            None,
-                            location.into(),
-                            opts,
-                        );
-                    }
-                    _ => (),
+                if let Rule::config_name = pair.as_rule() {
+                    let name = extract(&buf, pair.as_span());
+                    let location = ValueLocation {
+                        path: shared_path.clone(),
+                        content: buf.clone(),
+                        location: unset_span.start()..unset_span.end(),
+                    };
+                    return this.set_internal(section.clone(), name, None, location.into(), opts);
                 }
             }
             unreachable!();

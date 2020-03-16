@@ -585,7 +585,7 @@ fn parse_list_internal(value: &str) -> Vec<String> {
                             Some(last) => {
                                 if last.is_empty() {
                                     1
-                                } else if last.ends_with("\\") {
+                                } else if last.ends_with('\\') {
                                     2
                                 } else {
                                     3
