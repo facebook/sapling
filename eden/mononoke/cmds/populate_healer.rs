@@ -254,19 +254,21 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
     })
 }
 
-fn get_resume_state(
-    manifold: &ThriftManifoldBlob,
-    config: &Config,
-) -> impl Future<Item = State, Error = Error> {
+async fn get_resume_state(manifold: &ThriftManifoldBlob, config: &Config) -> Result<State, Error> {
     let resume_state = match &config.state_key {
-        Some(state_key) => manifold
-            .get(config.ctx.clone(), state_key.clone())
-            .map(|data| {
-                data.and_then(|data| serde_json::from_slice::<StateSerde>(&*data.into_bytes()).ok())
+        Some(state_key) => {
+            manifold
+                .get(config.ctx.clone(), state_key.clone())
+                .map(|data| {
+                    data.and_then(|data| {
+                        serde_json::from_slice::<StateSerde>(&*data.into_bytes()).ok()
+                    })
                     .map(State::from)
-            })
-            .left_future(),
-        None => future::ok(None).right_future(),
+                })
+                .compat()
+                .await
+        }
+        None => Ok(None),
     };
 
     let init_state = {
@@ -331,54 +333,52 @@ async fn populate_healer_queue(
     queue: Arc<dyn BlobstoreSyncQueue>,
     config: Arc<Config>,
 ) -> Result<State, Error> {
-    get_resume_state(&manifold, &config)
-        .and_then(move |state| {
-            manifold
-                .enumerate((*state.current_range).clone())
-                .and_then(|mut entry| {
-                    // We are enumerating Manifold's flat/ namespace
-                    // and all the keys contain the flat/ prefix, which
-                    // we need to strip
-                    if !entry.key.starts_with(FLAT_NAMESPACE_PREFIX) {
-                        future::err(format_err!(
-                            "Key {} is expected to start with {}, but does not",
-                            entry.key,
-                            FLAT_NAMESPACE_PREFIX
-                        ))
-                    } else {
-                        // safe to unwrap here, since we know exactly how the string starts
-                        entry.key = entry.key.get(FLAT_NAMESPACE_PREFIX.len()..).unwrap().into();
-                        future::ok(entry)
-                    }
-                })
-                .chunks(CHUNK_SIZE)
-                .fold(state, move |state, entries| {
-                    let range = entries[0].range.clone();
-                    let state = state.with_current_many(range, entries.len());
-                    let src_blobstore_id = config.src_blobstore_id;
-                    let multiplex_id = config.multiplex_id;
+    let state = get_resume_state(&manifold, &config).await?;
+    manifold
+        .enumerate((*state.current_range).clone())
+        .and_then(|mut entry| {
+            // We are enumerating Manifold's flat/ namespace
+            // and all the keys contain the flat/ prefix, which
+            // we need to strip
+            if !entry.key.starts_with(FLAT_NAMESPACE_PREFIX) {
+                future::err(format_err!(
+                    "Key {} is expected to start with {}, but does not",
+                    entry.key,
+                    FLAT_NAMESPACE_PREFIX
+                ))
+            } else {
+                // safe to unwrap here, since we know exactly how the string starts
+                entry.key = entry.key.get(FLAT_NAMESPACE_PREFIX.len()..).unwrap().into();
+                future::ok(entry)
+            }
+        })
+        .chunks(CHUNK_SIZE)
+        .fold(state, move |state, entries| {
+            let range = entries[0].range.clone();
+            let state = state.with_current_many(range, entries.len());
+            let src_blobstore_id = config.src_blobstore_id;
+            let multiplex_id = config.multiplex_id;
 
-                    let enqueue = if config.dry_run {
-                        future::ok(()).left_future()
-                    } else {
-                        let iterator_box = Box::new(entries.into_iter().map(move |entry| {
-                            BlobstoreSyncQueueEntry::new(
-                                entry.key,
-                                src_blobstore_id,
-                                multiplex_id,
-                                DateTime::now(),
-                            )
-                        }));
-                        queue
-                            .add_many(config.ctx.clone(), iterator_box)
-                            .right_future()
-                    };
+            let enqueue = if config.dry_run {
+                future::ok(()).left_future()
+            } else {
+                let iterator_box = Box::new(entries.into_iter().map(move |entry| {
+                    BlobstoreSyncQueueEntry::new(
+                        entry.key,
+                        src_blobstore_id,
+                        multiplex_id,
+                        DateTime::now(),
+                    )
+                }));
+                queue
+                    .add_many(config.ctx.clone(), iterator_box)
+                    .right_future()
+            };
 
-                    enqueue.and_then({
-                        cloned!(manifold, config);
-                        move |_| put_resume_state(&manifold, &config, state)
-                    })
-                })
+            enqueue.and_then({
+                cloned!(manifold, config);
+                move |_| put_resume_state(&manifold, &config, state)
+            })
         })
         .compat()
         .await
