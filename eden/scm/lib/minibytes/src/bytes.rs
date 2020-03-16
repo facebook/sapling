@@ -68,7 +68,7 @@ where
         } else {
             T::check_slice_bytes(self.as_bytes(), start, end);
             Self {
-                ptr: unsafe { self.ptr.offset(start as isize) },
+                ptr: unsafe { self.ptr.add(start) },
                 len: end - start,
                 owner: self.owner.clone(),
             }
