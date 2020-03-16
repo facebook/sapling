@@ -24,6 +24,10 @@ impl<T: Blobstore + Clone> ContextConcurrencyBlobstore<T> {
     pub fn new(blobstore: T) -> Self {
         Self { blobstore }
     }
+
+    pub fn into_inner(self) -> T {
+        self.blobstore
+    }
 }
 
 impl<T: Blobstore + Clone> Blobstore for ContextConcurrencyBlobstore<T> {

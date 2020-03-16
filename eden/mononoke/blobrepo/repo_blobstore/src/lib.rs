@@ -6,6 +6,7 @@
  */
 
 use blobstore::Blobstore;
+use context_concurrency_blobstore::ContextConcurrencyBlobstore;
 use mononoke_types::RepositoryId;
 use prefixblob::PrefixBlobstore;
 use redactedblobstore::RedactedBlobstore;
@@ -20,7 +21,8 @@ use std::sync::Arc;
 /// 1. It ensures that the prefix applies first, which is important for shared caches like
 ///    memcache.
 /// 2. It ensures that all possible blobrepos use a prefix.
-pub type RepoBlobstore = RedactedBlobstore<PrefixBlobstore<Arc<dyn Blobstore>>>;
+pub type RepoBlobstore =
+    RedactedBlobstore<PrefixBlobstore<ContextConcurrencyBlobstore<Arc<dyn Blobstore>>>>;
 
 pub struct RepoBlobstoreArgs {
     blobstore: RepoBlobstore,
@@ -35,11 +37,9 @@ impl RepoBlobstoreArgs {
         scuba_builder: ScubaSampleBuilder,
     ) -> Self {
         let blobstore: Arc<dyn Blobstore> = Arc::new(blobstore);
-        let blobstore = RedactedBlobstore::new(
-            PrefixBlobstore::new(blobstore, repoid.prefix()),
-            redacted_blobs,
-            scuba_builder,
-        );
+        let blobstore = ContextConcurrencyBlobstore::new(blobstore);
+        let blobstore = PrefixBlobstore::new(blobstore, repoid.prefix());
+        let blobstore = RedactedBlobstore::new(blobstore, redacted_blobs, scuba_builder);
         Self { blobstore, repoid }
     }
 
@@ -52,8 +52,8 @@ impl RepoBlobstoreArgs {
         wrapper: F,
     ) -> Self {
         let (blobstore, redacted_blobs, scuba_builder) = blobstore.into_parts();
-        let non_prefixed_blobstore = blobstore.into_inner();
-        let new_inner_blobstore = wrapper(non_prefixed_blobstore);
+        let blobstore = blobstore.into_inner().into_inner();
+        let new_inner_blobstore = wrapper(blobstore);
         Self::new(new_inner_blobstore, redacted_blobs, repoid, scuba_builder)
     }
 

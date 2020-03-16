@@ -108,9 +108,10 @@ mod test {
     use fbinit::FacebookInit;
     use futures::stream;
     use memblob::EagerMemblob;
-    use mononoke_types::{typed_hash, BlobstoreBytes, ContentMetadata};
+    use mononoke_types::{typed_hash, BlobstoreBytes, ContentMetadata, RepositoryId};
     use prefixblob::PrefixBlobstore;
     use redactedblobstore::RedactedBlobstore;
+    use repo_blobstore::RepoBlobstoreArgs;
     use scuba_ext::ScubaSampleBuilder;
     use std::collections::HashMap;
     use std::sync::Arc;
@@ -135,17 +136,23 @@ mod test {
         let inner1 = Arc::new(EagerMemblob::new());
         let inner2 = Arc::new(EagerMemblob::new());
 
-        let bs1: RepoBlobstore = RedactedBlobstore::new(
-            PrefixBlobstore::new(inner1, "prefix1"),
-            Some(HashMap::new()),
+        let bs1 = RepoBlobstoreArgs::new(
+            inner1,
+            None,
+            RepositoryId::new(1),
             ScubaSampleBuilder::with_discard(),
-        );
+        )
+        .into_blobrepo_parts()
+        .0;
 
-        let bs2: RepoBlobstore = RedactedBlobstore::new(
-            PrefixBlobstore::new(inner2, "prefix2"),
-            Some(HashMap::new()),
+        let bs2 = RepoBlobstoreArgs::new(
+            inner2,
+            None,
+            RepositoryId::new(2),
             ScubaSampleBuilder::with_discard(),
-        );
+        )
+        .into_blobrepo_parts()
+        .0;
 
         let key: String = "key".into();
         let blob = BlobstoreBytes::from_bytes("blob");
@@ -188,17 +195,24 @@ mod test {
         let ctx = CoreContext::test_mock(fb);
         let inner1 = Arc::new(EagerMemblob::new());
         let inner2 = Arc::new(EagerMemblob::new());
-        let bs1: RepoBlobstore = RedactedBlobstore::new(
-            PrefixBlobstore::new(inner1, "prefix1"),
-            Some(HashMap::new()),
-            ScubaSampleBuilder::with_discard(),
-        );
 
-        let bs2: RepoBlobstore = RedactedBlobstore::new(
-            PrefixBlobstore::new(inner2, "prefix2"),
-            Some(HashMap::new()),
+        let bs1 = RepoBlobstoreArgs::new(
+            inner1,
+            None,
+            RepositoryId::new(1),
             ScubaSampleBuilder::with_discard(),
-        );
+        )
+        .into_blobrepo_parts()
+        .0;
+
+        let bs2 = RepoBlobstoreArgs::new(
+            inner2,
+            None,
+            RepositoryId::new(2),
+            ScubaSampleBuilder::with_discard(),
+        )
+        .into_blobrepo_parts()
+        .0;
 
         let default_filestore_config = FilestoreConfig::default();
 
