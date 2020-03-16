@@ -252,10 +252,24 @@ class physicalfilesystem(object):
             # provided by the user should be returned even if they're ignored.
             # The differencematcher handles this and returns True for exact
             # matches, even if they should be subtracted.
-            match = matchmod.differencematcher(match, self.dirstate._ignore)
+            origmatch = matchmod.differencematcher(match, self.dirstate._ignore)
+            normalize = self.dirstate.normalize
+
+            class normalizematcher(object):
+                def visitdir(self, path):
+                    return origmatch.visitdir(normalize(path))
+
+                def __call__(self, path):
+                    return origmatch(normalize(path))
+
+                def bad(self, path, msg):
+                    return origmatch.bad(path, msg)
+
+            match = normalizematcher()
 
         walker = workingcopy.walker(join(""), match)
         for fn in walker:
+            fn = self.dirstate.normalize(fn)
             st = util.lstat(join(fn))
             yield fn, st
 
