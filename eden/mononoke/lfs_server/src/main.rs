@@ -26,6 +26,7 @@ use hyper::header::HeaderValue;
 use slog::{error, info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
+use std::str::FromStr;
 use std::sync::{atomic::AtomicBool, atomic::Ordering, Arc};
 use tokio::net::TcpListener;
 
@@ -436,16 +437,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
 fn idents_from_values<'a>(matches: Option<Values<'a>>) -> Result<Vec<Identity>, Error> {
     match matches {
-        Some(matches) => matches
-            .map(|ident| {
-                let mut parts = ident.split(":");
-
-                match (parts.next(), parts.next(), parts.next()) {
-                    (Some(ty), Some(data), None) => Ok(Identity::new(&ty, &data)),
-                    _ => bail!("Invalid identity format, expected TYPE:DATA"),
-                }
-            })
-            .collect(),
+        Some(matches) => matches.map(FromStr::from_str).collect(),
         None => Ok(vec![]),
     }
 }
