@@ -5,19 +5,20 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, format_err, Result};
+use anyhow::{bail, format_err, Error, Result};
+use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{self, Alias, FetchKey, StoreRequest};
-use futures::compat::Future01CompatExt;
-use futures_ext::FutureExt;
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
+use futures_ext::FutureExt as OldFutureExt;
 use futures_old::{Future, IntoFuture, Stream};
 use mononoke_types::{
     hash::{Sha1, Sha256},
-    ContentId,
+    ContentId, FileContents,
 };
 use slog::{info, Logger};
 use std::convert::TryInto;
@@ -30,6 +31,7 @@ use crate::error::SubcommandError;
 const COMMAND_METADATA: &str = "metadata";
 const COMMAND_STORE: &str = "store";
 const COMMAND_VERIFY: &str = "verify";
+const COMMAND_IS_CHUNKED: &str = "is-chunked";
 
 const ARG_KIND: &str = "kind";
 const ARG_ID: &str = "id";
@@ -67,6 +69,11 @@ pub fn build_subcommand(name: &str) -> App {
         )
         .subcommand(
             SubCommand::with_name(COMMAND_VERIFY)
+                .arg(kind_arg.clone())
+                .arg(id_arg.clone()),
+        )
+        .subcommand(
+            SubCommand::with_name(COMMAND_IS_CHUNKED)
                 .arg(kind_arg.clone())
                 .arg(id_arg.clone()),
         )
@@ -188,6 +195,41 @@ pub async fn execute_command<'a>(
             })
             .from_err()
             .boxify(),
+        (COMMAND_IS_CHUNKED, Some(matches)) => {
+            let fetch_key = extract_fetch_key(matches)?;
+            async move {
+                let repo = blobrepo.compat().await?;
+                let maybe_metadata =
+                    filestore::get_metadata(&repo.get_blobstore(), ctx.clone(), &fetch_key)
+                        .compat()
+                        .await?;
+                match maybe_metadata {
+                    Some(metadata) => {
+                        let file_contents = metadata
+                            .content_id
+                            .load(ctx, &repo.get_blobstore())
+                            .map_err(Error::from)
+                            .compat()
+                            .await?;
+                        match file_contents {
+                            FileContents::Bytes(_) => {
+                                println!("not chunked");
+                            }
+                            FileContents::Chunked(_) => {
+                                println!("chunked");
+                            }
+                        }
+                    }
+                    None => {
+                        println!("contentid not found");
+                    }
+                }
+                Ok(())
+            }
+            .boxed()
+            .compat()
+            .boxify()
+        }
         _ => Err(SubcommandError::InvalidArgs).into_future().boxify(),
     }
     .compat()
