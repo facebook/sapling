@@ -10,7 +10,7 @@ from typing import Set, Tuple
 
 from .. import cmdutil, graphmod, phases, util
 from ..i18n import _
-from ..node import bin, short
+from ..node import bin, hex, short
 from .cmdtable import command
 
 
@@ -120,3 +120,34 @@ class displayer(object):
         # The graph renderer will call self.hunk.pop(ctx.rev()) to get the
         # content.
         self.hunk[ctx.rev()] = content
+
+
+@command("debugmetalogroots", [] + cmdutil.templateopts)
+def debugmetalogroots(ui, repo, **opts):
+    """list roots stored in metalog"""
+    repo = repo.unfiltered()
+    metalog = repo.svfs.metalog
+    metalogpath = repo.svfs.join("metalog")
+    roots = metalog.listroots(metalogpath)
+    _now, tzoffset = util.parsedate("now")
+    ui.pager("debugmetalogroots")
+    fm = ui.formatter("debugmetalogroots", opts)
+    # from the newest to the oldest
+    for i, root in reversed(list(enumerate(roots))):
+        meta = metalog.__class__(metalogpath, root)
+        timestamp = meta.timestamp()
+        desc = meta.message()
+        shortdesc = util.ellipsis(desc, 60)
+        datestr = util.datestr((timestamp, tzoffset), "%Y-%m-%d %H:%M:%S %1%2")
+        hexroot = hex(root)
+        fm.startitem()
+        fm.write(
+            "index datestr root shortdesc",
+            "%5s %s %s %s\n",
+            i,
+            datestr,
+            hexroot,
+            shortdesc,
+        )
+        fm.data(root=hexroot, date=timestamp, desc=desc, index=i)
+    fm.end()

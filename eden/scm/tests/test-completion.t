@@ -132,6 +132,7 @@ Show debug commands if there are no other candidates
   debugmanifestdirs
   debugmergestate
   debugmetalog
+  debugmetalogroots
   debugmutation
   debugmutationfromobsmarkers
   debugnamecomplete
@@ -332,6 +333,7 @@ Show all commands + options
   debugmanifestdirs: rev
   debugmergestate: 
   debugmetalog: time-range
+  debugmetalogroots: style, template
   debugmutation: rev, successors, time-range
   debugmutationfromobsmarkers: 
   debugnamecomplete: 

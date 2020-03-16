@@ -1010,6 +1010,8 @@ Test list of internal help commands
    debugmergestate
                  print merge state
    debugmetalog  show changes in commit graph over time
+   debugmetalogroots
+                 list roots stored in metalog
    debugmutation
                  display the mutation history (or future) of a commit
    debugmutationfromobsmarkers
