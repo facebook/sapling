@@ -17,14 +17,52 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use vlqencoding::VLQEncode;
 
+pub trait IdDagStore<Lock> {
+    fn max_level(&self) -> Result<Level>;
+
+    fn find_segment_by_head_and_level(&self, head: Id, level: u8) -> Result<Option<Segment>>;
+
+    fn find_flat_segment_including_id(&self, id: Id) -> Result<Option<Segment>>;
+
+    fn insert(
+        &mut self,
+        flags: SegmentFlags,
+        level: Level,
+        low: Id,
+        high: Id,
+        parents: &[Id],
+    ) -> Result<()>;
+
+    fn next_free_id(&self, level: Level, group: Group) -> Result<Id>;
+
+    fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>>;
+
+    fn iter_segments_descending<'a>(
+        &'a self,
+        max_high_id: Id,
+        level: Level,
+    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>>;
+
+    fn iter_segments_with_parent<'a>(
+        &'a self,
+        parent: Id,
+    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>>;
+
+    fn reload(&mut self) -> Result<()>;
+
+    fn remove_non_master(&mut self) -> Result<()>;
+
+    fn get_lock(&self) -> Result<Lock>;
+}
+
 pub struct IndexedLogStore {
     log: log::Log,
     path: PathBuf,
 }
 
 // Required functionality
-impl IndexedLogStore {
-    pub fn max_level(&self) -> Result<Level> {
+impl IdDagStore<File> for IndexedLogStore {
+    fn max_level(&self) -> Result<Level> {
         let max_level = match self
             .log
             .lookup_range(Self::INDEX_LEVEL_HEAD, ..)?
@@ -37,11 +75,7 @@ impl IndexedLogStore {
         Ok(max_level)
     }
 
-    pub(crate) fn find_segment_by_head_and_level(
-        &self,
-        head: Id,
-        level: u8,
-    ) -> Result<Option<Segment>> {
+    fn find_segment_by_head_and_level(&self, head: Id, level: u8) -> Result<Option<Segment>> {
         let key = Self::serialize_head_level_lookup_key(head, level);
         match self.log.lookup(Self::INDEX_LEVEL_HEAD, &key)?.nth(0) {
             None => Ok(None),
@@ -49,7 +83,7 @@ impl IndexedLogStore {
         }
     }
 
-    pub(crate) fn find_flat_segment_including_id(&self, id: Id) -> Result<Option<Segment>> {
+    fn find_flat_segment_including_id(&self, id: Id) -> Result<Option<Segment>> {
         let level = 0;
         let low = Self::serialize_head_level_lookup_key(id, level);
         let high = [level + 1];
@@ -72,7 +106,7 @@ impl IndexedLogStore {
         Ok(None)
     }
 
-    pub fn insert(
+    fn insert(
         &mut self,
         flags: SegmentFlags,
         level: Level,
@@ -85,7 +119,7 @@ impl IndexedLogStore {
         Ok(())
     }
 
-    pub fn next_free_id(&self, level: Level, group: Group) -> Result<Id> {
+    fn next_free_id(&self, level: Level, group: Group) -> Result<Id> {
         let lower_bound = group.min_id().to_prefixed_bytearray(level);
         let upper_bound = group.max_id().to_prefixed_bytearray(level);
         let range = &lower_bound[..]..=&upper_bound[..];
@@ -113,7 +147,7 @@ impl IndexedLogStore {
         }
     }
 
-    pub(crate) fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>> {
+    fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>> {
         let lower_bound = Self::serialize_head_level_lookup_key(id, level);
         let upper_bound = Self::serialize_head_level_lookup_key(id.group().max_id(), level);
         let mut result = Vec::new();
@@ -129,11 +163,11 @@ impl IndexedLogStore {
         Ok(result)
     }
 
-    pub(crate) fn iter_segments_descending(
-        &self,
+    fn iter_segments_descending<'a>(
+        &'a self,
         max_high_id: Id,
         level: Level,
-    ) -> Result<impl Iterator<Item = Result<Segment>>> {
+    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
         let lower_bound = Self::serialize_head_level_lookup_key(Id::MIN, level);
         let upper_bound = Self::serialize_head_level_lookup_key(max_high_id, level);
         let iter = self
@@ -150,13 +184,13 @@ impl IndexedLogStore {
                 .collect(),
             Err(err) => vec![Err(err.into())],
         });
-        Ok(iter)
+        Ok(Box::new(iter))
     }
 
-    pub(crate) fn iter_segments_with_parent(
-        &self,
+    fn iter_segments_with_parent<'a>(
+        &'a self,
         parent: Id,
-    ) -> Result<impl Iterator<Item = Result<Segment>>> {
+    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
         let mut key = Vec::with_capacity(8);
         key.write_vlq(parent.0)
             .expect("write to Vec should not fail");
@@ -165,17 +199,17 @@ impl IndexedLogStore {
             Ok(bytes) => Ok(Segment(bytes)),
             Err(err) => Err(err.into()),
         });
-        Ok(iter)
+        Ok(Box::new(iter))
     }
 
-    pub fn reload(&mut self) -> Result<()> {
+    fn reload(&mut self) -> Result<()> {
         self.log.clear_dirty()?;
         self.log.sync()?;
         Ok(())
     }
 
     /// Mark non-master ids as "removed".
-    pub fn remove_non_master(&mut self) -> Result<()> {
+    fn remove_non_master(&mut self) -> Result<()> {
         self.log.append(Self::MAGIC_CLEAR_NON_MASTER)?;
         // As an optimization, we could pass a max_level hint from iddag.
         // Doesn't seem necessary though.
@@ -188,21 +222,7 @@ impl IndexedLogStore {
         Ok(())
     }
 
-    // Used internally to generate the index key for lookup
-    fn serialize_head_level_lookup_key(value: Id, level: u8) -> [u8; Self::KEY_LEVEL_HEAD_LEN] {
-        let mut buf = [0u8; Self::KEY_LEVEL_HEAD_LEN];
-        {
-            let mut cur = Cursor::new(&mut buf[..]);
-            cur.write_u8(level).unwrap();
-            cur.write_u64::<BigEndian>(value.0).unwrap();
-            debug_assert_eq!(cur.position(), Self::KEY_LEVEL_HEAD_LEN as u64);
-        }
-        buf
-    }
-}
-
-impl IndexedLogStore {
-    pub fn get_lock(&self) -> Result<File> {
+    fn get_lock(&self) -> Result<File> {
         // Take a filesystem lock. The file name 'lock' is taken by indexedlog
         // running on Windows, so we choose another file name here.
         let lock_file = {
@@ -217,6 +237,20 @@ impl IndexedLogStore {
         };
         lock_file.lock_exclusive()?;
         Ok(lock_file)
+    }
+}
+
+impl IndexedLogStore {
+    // Used internally to generate the index key for lookup
+    fn serialize_head_level_lookup_key(value: Id, level: u8) -> [u8; Self::KEY_LEVEL_HEAD_LEN] {
+        let mut buf = [0u8; Self::KEY_LEVEL_HEAD_LEN];
+        {
+            let mut cur = Cursor::new(&mut buf[..]);
+            cur.write_u8(level).unwrap();
+            cur.write_u64::<BigEndian>(value.0).unwrap();
+            debug_assert_eq!(cur.position(), Self::KEY_LEVEL_HEAD_LEN as u64);
+        }
+        buf
     }
 }
 

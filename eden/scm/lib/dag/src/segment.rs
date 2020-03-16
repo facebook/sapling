@@ -26,7 +26,7 @@ use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
 /// [`Segment`] provides access to fields of a node in a [`IdDag`] graph.
 /// [`Segment`] reads directly from the byte slice, without a full parsing.
-pub(crate) struct Segment<'a>(pub(crate) &'a [u8]);
+pub struct Segment<'a>(pub(crate) &'a [u8]);
 
 // Serialization format for Segment:
 //
