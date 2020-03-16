@@ -32,6 +32,11 @@ hinttable = {
         "Please use commit hashes instead."
     )
     % rev,
+    "metalog-root-override": lambda root: _(
+        "MetaLog root was overridden to %s by an environment variable. "
+        "This should only be used for debugging."
+    )
+    % root,
 }
 messages = []
 triggered = set()

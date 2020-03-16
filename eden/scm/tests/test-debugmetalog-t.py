@@ -16,6 +16,7 @@ sh.setconfig(
     "visibility.enabled=true",
     "experimental.narrow-heads=1",
     "remotenames.selectivepull=1",
+    "mutation.date=0 0",
 )
 sh.newrepo()
 sh.enable("remotenames", "amend")
@@ -90,3 +91,17 @@ sh % "hg debugmetalogroots" == r"""
      2 1970-01-01 00:00:00 +0000 4a37b9ad6ab30c699a0271bb1a9e6fc67bd3acef debugdrawdag
      1 1970-01-01 00:00:00 +0000 b996330fd2940eb3710fcce9f286564498f7e1d0 migrate from vfs
      0 1970-01-01 00:00:00 +0000 29e2dcfbb16f63bb0254df7585a15bb6fb5e927d"""
+
+sh % "hg up -q null"
+
+sh % "HGFORCEMETALOGROOT=b996330fd2940eb3710fcce9f286564498f7e1d0 hg log -G -r 'all()' -T '{desc} {bookmarks}'" == r"""
+    hint[metalog-root-override]: MetaLog root was overridden to b996330fd2940eb3710fcce9f286564498f7e1d0 by an environment variable. This should only be used for debugging.
+    hint[hint-ack]: use 'hg hint --ack metalog-root-override' to silence these hints"""
+
+sh.setconfig("hint.ack=*")
+sh % "HGFORCEMETALOGROOT=dcc2c00fe5550d688fc176f50ebec67f80064825 hg log -G -r 'all()' -T '{desc} {bookmarks}'" == r"""
+    o  C C
+    |
+    o  B B
+    |
+    o  A A"""

@@ -21,8 +21,9 @@ from typing import Optional
 import bindings
 from edenscmnative import parsers
 
-from . import error, pycompat, util, vfs as vfsmod
+from . import encoding, error, hintutil, pycompat, util, vfs as vfsmod
 from .i18n import _
+from .node import bin
 from .pycompat import decodeutf8, encodeutf8, range
 
 
@@ -588,7 +589,13 @@ class metavfs(object):
     @util.propertycache
     def metalog(self):
         vfs = self.vfs
-        metalog = bindings.metalog.metalog(vfs.join("metalog"))
+        metarootenv = encoding.environ.get("HGFORCEMETALOGROOT")
+        if metarootenv:
+            hintutil.trigger("metalog-root-override", metarootenv)
+            metaroot = bin(metarootenv)
+        else:
+            metaroot = None
+        metalog = bindings.metalog.metalog(vfs.join("metalog"), metaroot)
 
         # Keys that are previously tracked in metalog.
         tracked = set((metalog.get("tracked") or "").split())
