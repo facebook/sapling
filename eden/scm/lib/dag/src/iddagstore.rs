@@ -17,7 +17,7 @@ use std::io::Cursor;
 use std::path::{Path, PathBuf};
 use vlqencoding::VLQEncode;
 
-pub trait IdDagStore<Lock> {
+pub trait IdDagStore {
     fn max_level(&self) -> Result<Level>;
 
     fn find_segment_by_head_and_level(&self, head: Id, level: u8) -> Result<Option<Segment>>;
@@ -51,8 +51,11 @@ pub trait IdDagStore<Lock> {
     fn reload(&mut self) -> Result<()>;
 
     fn remove_non_master(&mut self) -> Result<()>;
+}
 
-    fn get_lock(&self) -> Result<Lock>;
+pub trait GetLock {
+    type LockT;
+    fn get_lock(&self) -> Result<Self::LockT>;
 }
 
 pub struct IndexedLogStore {
@@ -61,7 +64,7 @@ pub struct IndexedLogStore {
 }
 
 // Required functionality
-impl IdDagStore<File> for IndexedLogStore {
+impl IdDagStore for IndexedLogStore {
     fn max_level(&self) -> Result<Level> {
         let max_level = match self
             .log
@@ -221,6 +224,10 @@ impl IdDagStore<File> for IndexedLogStore {
         }
         Ok(())
     }
+}
+
+impl GetLock for IndexedLogStore {
+    type LockT = File;
 
     fn get_lock(&self) -> Result<File> {
         // Take a filesystem lock. The file name 'lock' is taken by indexedlog

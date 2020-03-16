@@ -6,7 +6,7 @@
  */
 
 use crate::id::{Group, Id};
-use crate::iddagstore::{IdDagStore, IndexedLogStore};
+use crate::iddagstore::{GetLock, IdDagStore, IndexedLogStore};
 use crate::segment::{Segment, SegmentFlags};
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
