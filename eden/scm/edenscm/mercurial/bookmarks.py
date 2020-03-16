@@ -175,7 +175,7 @@ class bmstore(dict):
         self._aclean = True
 
     def _write(self, fp):
-        for name, node in pycompat.iteritems(self):
+        for name, node in sorted(pycompat.iteritems(self)):
             name = encoding.fromlocal(name)
             fp.write(encodeutf8("%s %s\n" % (hex(node), name)))
         self._clean = True
