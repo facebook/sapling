@@ -82,7 +82,10 @@ impl Iterator for Iter {
                 State::Complete if inner.visited.len() <= self.index => break None,
                 State::Complete | State::Incomplete => {
                     match inner.visited.get_index(self.index) {
-                        Some(value) => break Some(Ok(value.clone())),
+                        Some(value) => {
+                            self.index += 1;
+                            break Some(Ok(value.clone()));
+                        }
                         None => {
                             // Data not available. Load more.
                             if let Err(err) = inner.load_more(1, None) {
@@ -172,5 +175,50 @@ impl NameSetQuery for LazySet {
 
     fn as_any(&self) -> &dyn Any {
         self
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::super::tests::*;
+    use super::*;
+    use std::collections::HashSet;
+
+    fn lazy_set(a: &[u8]) -> LazySet {
+        LazySet::from_iter(a.to_vec().into_iter().map(|b| Ok(to_name(b))))
+    }
+
+    #[test]
+    fn test_lazy_basic() -> Result<()> {
+        let set = lazy_set(b"\x11\x33\x22\x77\x22\x55\x11");
+        check_invariants(&set)?;
+        assert_eq!(shorten_iter(set.iter()), ["11", "33", "22", "77", "55"]);
+        assert_eq!(shorten_iter(set.iter_rev()), ["55", "77", "22", "33", "11"]);
+        assert!(!set.is_empty()?);
+        assert_eq!(set.count()?, 5);
+        assert_eq!(shorten_name(set.first()?.unwrap()), "11");
+        assert_eq!(shorten_name(set.last()?.unwrap()), "55");
+        Ok(())
+    }
+
+    #[test]
+    fn test_debug() {
+        let set = lazy_set(b"");
+        assert_eq!(format!("{:?}", set), "<lazy>");
+    }
+
+    quickcheck::quickcheck! {
+        fn test_lazy_quickcheck(a: Vec<u8>) -> bool {
+            let set = lazy_set(&a);
+            check_invariants(&set).unwrap();
+
+            let count = set.count().unwrap();
+            assert!(count <= a.len());
+
+            let set2: HashSet<_> = a.iter().cloned().collect();
+            assert_eq!(count, set2.len());
+
+            true
+        }
     }
 }
