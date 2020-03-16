@@ -6,23 +6,19 @@
  */
 
 use crate::id::{Group, Id};
+use crate::iddagstore::IndexedLogStore;
 use crate::segment::{Segment, SegmentFlags};
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
 use crate::Level;
 use anyhow::{bail, ensure, format_err, Result};
-use byteorder::{BigEndian, WriteBytesExt};
-use fs2::FileExt;
-use indexedlog::log;
 use indexmap::set::IndexSet;
 use std::collections::HashMap;
 use std::collections::HashSet;
 use std::collections::{BTreeSet, BinaryHeap};
 use std::fmt::{self, Debug, Formatter};
-use std::fs::{self, File};
-use std::io::Cursor;
-use std::path::{Path, PathBuf};
-use vlqencoding::VLQEncode;
+use std::fs::File;
+use std::path::Path;
 
 /// Structure to store a DAG of integers, with indexes to speed up ancestry queries.
 ///
@@ -41,9 +37,8 @@ use vlqencoding::VLQEncode;
 /// on vertexes. The [`NameDag`] type provides an easy-to-use interface to
 /// keep [`IdDag`] and [`IdMap`] in sync.
 pub struct IdDag {
-    pub(crate) log: log::Log,
-    path: PathBuf,
-    pub(crate) max_level: Level,
+    store: IndexedLogStore,
+    max_level: Level,
     new_seg_size: usize,
 }
 
@@ -54,198 +49,21 @@ pub struct SyncableIdDag {
 }
 
 impl IdDag {
-    const INDEX_LEVEL_HEAD: usize = 0;
-    const INDEX_PARENT: usize = 1;
-    const KEY_LEVEL_HEAD_LEN: usize = Segment::OFFSET_DELTA - Segment::OFFSET_LEVEL;
-
-    /// Magic bytes in `Log` that indicates "remove all non-master segments".
-    /// A Segment entry has at least KEY_LEVEL_HEAD_LEN (9) bytes so it does
-    /// not conflict with this.
-    const MAGIC_CLEAR_NON_MASTER: &'static [u8] = b"CLRNM";
-
     /// Open [`IdDag`] at the given directory. Create it on demand.
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
-        let path = path.as_ref();
-        let log = Self::log_open_options().open(path)?;
-        Self::open_from_log(log)
+        let store = IndexedLogStore::open(path)?;
+        Self::open_from_store(store)
     }
 
-    pub(crate) fn open_from_log(log: log::Log) -> Result<Self> {
-        let path = log.path().as_opt_path().unwrap().to_path_buf();
-        let max_level = Self::max_level_from_log(&log)?;
+    pub(crate) fn open_from_store(store: IndexedLogStore) -> Result<Self> {
+        let max_level = store.max_level()?;
         let mut dag = Self {
-            log,
-            path,
+            store,
             max_level,
             new_seg_size: 16, // see D16660078 for this default setting
         };
         dag.build_all_high_level_segments(false)?;
         Ok(dag)
-    }
-
-    pub(crate) fn log_open_options() -> log::OpenOptions {
-        log::OpenOptions::new()
-            .create(true)
-            .index("level-head", |data| {
-                // (level, high)
-                assert!(Self::MAGIC_CLEAR_NON_MASTER.len() < Segment::OFFSET_DELTA);
-                assert!(Group::BITS == 8);
-                if data.len() < Segment::OFFSET_DELTA {
-                    if data == Self::MAGIC_CLEAR_NON_MASTER {
-                        let max_level = 255;
-                        (0..=max_level)
-                            .map(|level| {
-                                log::IndexOutput::RemovePrefix(Box::new([
-                                    level,
-                                    Group::NON_MASTER.0 as u8,
-                                ]))
-                            })
-                            .collect()
-                    } else {
-                        panic!("bug: invalid segment {:?}", &data);
-                    }
-                } else {
-                    vec![log::IndexOutput::Reference(
-                        Segment::OFFSET_LEVEL as u64..Segment::OFFSET_DELTA as u64,
-                    )]
-                }
-            })
-            .index("parent", |data| {
-                // parent -> child for flat segments
-                let seg = Segment(data);
-                let mut result = Vec::new();
-                if seg.level().ok() == Some(0) {
-                    // This should never pass since MAGIC_CLEAR_NON_MASTER[0] != 0.
-                    assert_ne!(
-                        data,
-                        Self::MAGIC_CLEAR_NON_MASTER,
-                        "bug: MAGIC_CLEAR_NON_MASTER conflicts with data"
-                    );
-                    if let Ok(parents) = seg.parents() {
-                        for id in parents {
-                            let mut bytes = Vec::with_capacity(8);
-                            bytes.write_vlq(id.0).expect("write to Vec should not fail");
-                            // Attempt to use IndexOutput::Reference instead of
-                            // IndexOutput::Owned to reduce index size.
-                            match data.windows(bytes.len()).position(|w| w == &bytes[..]) {
-                                Some(pos) => result.push(log::IndexOutput::Reference(
-                                    pos as u64..(pos + bytes.len()) as u64,
-                                )),
-                                None => panic!("bug: {:?} should contain {:?}", &data, &bytes),
-                            }
-                        }
-                    }
-                }
-                result
-            })
-    }
-
-    fn max_level_from_log(log: &log::Log) -> Result<Level> {
-        // The first byte of the largest key is the maximum level.
-        let max_level = match log.lookup_range(Self::INDEX_LEVEL_HEAD, ..)?.rev().nth(0) {
-            None => 0,
-            Some(key) => key?.0.get(0).cloned().unwrap_or(0),
-        };
-        Ok(max_level)
-    }
-
-    /// Find segment by level and head.
-    fn find_segment_by_head_and_level(&self, head: Id, level: u8) -> Result<Option<Segment>> {
-        let key = Self::serialize_head_level_lookup_key(head, level);
-        match self.log.lookup(Self::INDEX_LEVEL_HEAD, &key)?.nth(0) {
-            None => Ok(None),
-            Some(bytes) => Ok(Some(Segment(bytes?))),
-        }
-    }
-
-    /// Find flat segment containing the given id.
-    fn find_flat_segment_including_id(&self, id: Id) -> Result<Option<Segment>> {
-        let level = 0;
-        let low = Self::serialize_head_level_lookup_key(id, level);
-        let high = [level + 1];
-        let iter = self
-            .log
-            .lookup_range(Self::INDEX_LEVEL_HEAD, &low[..]..&high[..])?;
-        for entry in iter {
-            let (_, entries) = entry?;
-            for entry in entries {
-                let entry = entry?;
-                let seg = Segment(entry);
-                if seg.span()?.low > id {
-                    return Ok(None);
-                }
-                // low <= rev
-                debug_assert!(seg.high()? >= id); // by range query
-                return Ok(Some(seg));
-            }
-        }
-        Ok(None)
-    }
-
-    /// Add a new segment.
-    ///
-    /// For simplicity, it does not check if the new segment overlaps with
-    /// an existing segment (which is a logic error). Those checks can be
-    /// offline.
-    pub fn insert(
-        &mut self,
-        flags: SegmentFlags,
-        level: Level,
-        low: Id,
-        high: Id,
-        parents: &[Id],
-    ) -> Result<()> {
-        let buf = Segment::serialize(flags, level, low, high, parents);
-        self.log.append(buf)?;
-        Ok(())
-    }
-
-    /// Return the next unused id for segments of the specified level.
-    ///
-    /// Useful for building segments incrementally.
-    pub fn next_free_id(&self, level: Level, group: Group) -> Result<Id> {
-        let lower_bound = group.min_id().to_prefixed_bytearray(level);
-        let upper_bound = group.max_id().to_prefixed_bytearray(level);
-        let range = &lower_bound[..]..=&upper_bound[..];
-        match self
-            .log
-            .lookup_range(Self::INDEX_LEVEL_HEAD, range)?
-            .rev()
-            .nth(0)
-        {
-            None => Ok(group.min_id()),
-            Some(result) => {
-                let (key, mut values) = result?;
-                // PERF: The "next id" information can be also extracted from
-                // `key` without going through values. Right now the code path
-                // goes through values so `Segment` format changes wouldn't
-                // break the logic here. If perf is really needed, we can change
-                // logic here to not checking values.
-                if let Some(bytes) = values.next() {
-                    let seg = Segment(bytes?);
-                    Ok(seg.high()? + 1)
-                } else {
-                    bail!("key {:?} should have some values", key);
-                }
-            }
-        }
-    }
-
-    fn get_lock_file(&self) -> Result<File> {
-        // Take a filesystem lock. The file name 'lock' is taken by indexedlog
-        // running on Windows, so we choose another file name here.
-        let lock_file = {
-            let mut path = self.path.clone();
-            path.push("wlock");
-            File::open(&path).or_else(|_| {
-                fs::OpenOptions::new()
-                    .write(true)
-                    .create_new(true)
-                    .open(&path)
-            })?
-        };
-        lock_file.lock_exclusive()?;
-        Ok(lock_file)
     }
 
     /// Return a [`SyncableIdDag`] instance that provides race-free
@@ -256,21 +74,17 @@ impl IdDag {
     ///
     /// Block if another instance is taking the lock.
     pub fn prepare_filesystem_sync(&self) -> Result<SyncableIdDag> {
-        // Take a filesystem lock. The file name 'lock' is taken by indexedlog
-        // running on Windows, so we choose another file name here.
-        let lock_file = self.get_lock_file()?;
-
+        let lock_file = self.store.get_lock()?;
         // Clone. But drop in-memory data.
-        let mut log = self.log.try_clone_without_dirty()?;
+        let mut store = self.store.try_clone_without_dirty()?;
 
         // Read new entries from filesystem.
-        log.sync()?;
-        let max_level = Self::max_level_from_log(&log)?;
+        store.sync()?;
+        let max_level = store.max_level()?;
 
         Ok(SyncableIdDag {
             dag: IdDag {
-                log,
-                path: self.path.clone(),
+                store,
                 max_level,
                 new_seg_size: self.new_seg_size,
             },
@@ -287,17 +101,69 @@ impl IdDag {
     pub fn set_new_segment_size(&mut self, size: usize) {
         self.new_seg_size = size.max(2);
     }
+}
 
-    // Used internally to generate the index key for lookup
-    fn serialize_head_level_lookup_key(value: Id, level: u8) -> [u8; Self::KEY_LEVEL_HEAD_LEN] {
-        let mut buf = [0u8; Self::KEY_LEVEL_HEAD_LEN];
-        {
-            let mut cur = Cursor::new(&mut buf[..]);
-            cur.write_u8(level).unwrap();
-            cur.write_u64::<BigEndian>(value.0).unwrap();
-            debug_assert_eq!(cur.position(), Self::KEY_LEVEL_HEAD_LEN as u64);
-        }
-        buf
+impl IdDag {
+    pub(crate) fn max_level(&self) -> Result<Level> {
+        self.store.max_level()
+    }
+
+    /// Find segment by level and head.
+    pub(crate) fn find_segment_by_head_and_level(
+        &self,
+        head: Id,
+        level: u8,
+    ) -> Result<Option<Segment>> {
+        self.store.find_segment_by_head_and_level(head, level)
+    }
+
+    /// Find flat segment containing the given id.
+    pub(crate) fn find_flat_segment_including_id(&self, id: Id) -> Result<Option<Segment>> {
+        self.store.find_flat_segment_including_id(id)
+    }
+
+    /// Add a new segment.
+    ///
+    /// For simplicity, it does not check if the new segment overlaps with
+    /// an existing segment (which is a logic error). Those checks can be
+    /// offline.
+    pub(crate) fn insert(
+        &mut self,
+        flags: SegmentFlags,
+        level: Level,
+        low: Id,
+        high: Id,
+        parents: &[Id],
+    ) -> Result<()> {
+        self.store.insert(flags, level, low, high, parents)
+    }
+
+    /// Return the next unused id for segments of the specified level.
+    ///
+    /// Useful for building segments incrementally.
+    pub(crate) fn next_free_id(&self, level: Level, group: Group) -> Result<Id> {
+        self.store.next_free_id(level, group)
+    }
+
+    /// Find segments that covers `id..` range at the given level, within a same group.
+    pub(crate) fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>> {
+        self.store.next_segments(id, level)
+    }
+
+    /// Iterate through segments at the given level in descending order.
+    pub(crate) fn iter_segments_descending(
+        &self,
+        max_high_id: Id,
+        level: Level,
+    ) -> Result<impl Iterator<Item = Result<Segment>>> {
+        self.store.iter_segments_descending(max_high_id, level)
+    }
+
+    pub(crate) fn iter_segments_with_parent(
+        &self,
+        parent: Id,
+    ) -> Result<impl Iterator<Item = Result<Segment>>> {
+        self.store.iter_segments_with_parent(parent)
     }
 }
 
@@ -394,63 +260,6 @@ impl IdDag {
         }
 
         Ok(insert_count)
-    }
-
-    /// Find segments that covers `id..` range at the given level, within a same group.
-    fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>> {
-        let lower_bound = Self::serialize_head_level_lookup_key(id, level);
-        let upper_bound = Self::serialize_head_level_lookup_key(id.group().max_id(), level);
-        let mut result = Vec::new();
-        for entry in self
-            .log
-            .lookup_range(Self::INDEX_LEVEL_HEAD, &lower_bound[..]..=&upper_bound)?
-        {
-            let (_, values) = entry?;
-            for value in values {
-                result.push(Segment(value?));
-            }
-        }
-        Ok(result)
-    }
-
-    /// Iterate through segments at the given level in descending order.
-    fn iter_segments_descending(
-        &self,
-        max_high_id: Id,
-        level: Level,
-    ) -> Result<impl Iterator<Item = Result<Segment>>> {
-        let lower_bound = Self::serialize_head_level_lookup_key(Id::MIN, level);
-        let upper_bound = Self::serialize_head_level_lookup_key(max_high_id, level);
-        let iter = self
-            .log
-            .lookup_range(Self::INDEX_LEVEL_HEAD, &lower_bound[..]..=&upper_bound[..])?
-            .rev();
-        let iter = iter.flat_map(|entry| match entry {
-            Ok((_key, values)) => values
-                .into_iter()
-                .map(|value| {
-                    let value = value?;
-                    Ok(Segment(value))
-                })
-                .collect(),
-            Err(err) => vec![Err(err.into())],
-        });
-        Ok(iter)
-    }
-
-    fn iter_segments_with_parent(
-        &self,
-        parent: Id,
-    ) -> Result<impl Iterator<Item = Result<Segment>>> {
-        let mut key = Vec::with_capacity(8);
-        key.write_vlq(parent.0)
-            .expect("write to Vec should not fail");
-        let iter = self.log.lookup(Self::INDEX_PARENT, &key)?;
-        let iter = iter.map(|result| match result {
-            Ok(bytes) => Ok(Segment(bytes)),
-            Err(err) => Err(err.into()),
-        });
-        Ok(iter)
     }
 
     /// Incrementally build high level segments at the given `level`.
@@ -597,25 +406,9 @@ impl IdDag {
 impl IdDag {
     /// Reload from the filesystem. Discard pending changes.
     pub fn reload(&mut self) -> Result<()> {
-        self.log.clear_dirty()?;
-        self.log.sync()?;
-        self.max_level = Self::max_level_from_log(&self.log)?;
+        self.store.reload()?;
+        self.max_level = self.store.max_level()?;
         self.build_all_high_level_segments(false)?;
-        Ok(())
-    }
-}
-
-// Remove data.
-impl IdDag {
-    /// Mark non-master ids as "removed".
-    pub fn remove_non_master(&mut self) -> Result<()> {
-        self.log.append(Self::MAGIC_CLEAR_NON_MASTER)?;
-        for level in 0..=self.max_level {
-            ensure!(
-                self.next_free_id(level, Group::NON_MASTER)? == Group::NON_MASTER.min_id(),
-                "bug: remove_non_master did not take effect"
-            );
-        }
         Ok(())
     }
 }
@@ -1333,7 +1126,7 @@ impl SyncableIdDag {
     /// To avoid races, [`IdDag`]s in the `reload_dags` list will be
     /// reloaded while [`SyncableIdDag`] still holds the lock.
     pub fn sync<'a>(mut self, reload_dags: impl IntoIterator<Item = &'a mut IdDag>) -> Result<()> {
-        self.dag.log.sync()?;
+        self.dag.store.sync()?;
         for dag in reload_dags {
             dag.reload()?;
         }
@@ -1361,7 +1154,7 @@ impl SyncableIdDag {
 
     /// Mark non-master segments as "removed".
     pub fn remove_non_master(&mut self) -> Result<()> {
-        self.dag.remove_non_master()
+        self.dag.store.remove_non_master()
     }
 }
 

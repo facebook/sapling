@@ -13,6 +13,7 @@
 
 pub mod id;
 mod iddag;
+mod iddagstore;
 pub mod idmap;
 pub mod namedag;
 pub mod nameset;

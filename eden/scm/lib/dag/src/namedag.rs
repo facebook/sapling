@@ -13,6 +13,7 @@ use crate::id::Group;
 use crate::id::VertexName;
 use crate::iddag::IdDag;
 use crate::iddag::SyncableIdDag;
+use crate::iddagstore::IndexedLogStore;
 use crate::idmap::IdMap;
 use crate::idmap::IdMapLike;
 use crate::idmap::SyncableIdMap;
@@ -47,14 +48,14 @@ impl NameDag {
         let path = path.as_ref();
         let opts = multi::OpenOptions::from_name_opts(vec![
             ("idmap", IdMap::log_open_options()),
-            ("iddag", IdDag::log_open_options()),
+            ("iddag", IndexedLogStore::log_open_options()),
         ]);
         let mut mlog = opts.open(path)?;
         let mut logs = mlog.detach_logs();
         let dag_log = logs.pop().unwrap();
         let map_log = logs.pop().unwrap();
         let map = IdMap::open_from_log(map_log)?;
-        let dag = IdDag::open_from_log(dag_log)?;
+        let dag = IdDag::open_from_store(IndexedLogStore::open_from_log(dag_log))?;
         let snapshot_map = Arc::new(map.try_clone()?);
         Ok(Self {
             dag,
