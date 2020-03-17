@@ -28,6 +28,19 @@ from .systemd import (
 from .util import ShutdownError, poll_until, print_stderr
 
 
+# The amount of time to wait for the EdenFS process to exit after we send SIGKILL.
+# We normally expect the process to be killed and reaped fairly quickly in this
+# situation.  However, in rare cases on very heavily loaded systems it can take a while
+# for init/systemd to wait on the process and for everything to be fully cleaned up.
+# Therefore we wait up to 30 seconds by default.  (I've seen it take up to a couple
+# minutes on systems with extremely high disk I/O load.)
+#
+# If this timeout does expire this can cause `edenfsctl restart` to fail after
+# killing the old process but without starting the new process, which is
+# generally undesirable if we can avoid it.
+DEFAULT_SIGKILL_TIMEOUT = 30.0
+
+
 def wait_for_process_exit(pid: int, timeout: float) -> bool:
     """Wait for the specified process ID to exit.
 
@@ -48,7 +61,9 @@ def wait_for_process_exit(pid: int, timeout: float) -> bool:
         return False
 
 
-def wait_for_shutdown(pid: int, timeout: float, kill_timeout: float = 5.0) -> bool:
+def wait_for_shutdown(
+    pid: int, timeout: float, kill_timeout: float = DEFAULT_SIGKILL_TIMEOUT
+) -> bool:
     """Wait for a process to exit.
 
     If it does not exit within `timeout` seconds kill it with SIGKILL.
@@ -74,7 +89,7 @@ def wait_for_shutdown(pid: int, timeout: float, kill_timeout: float = 5.0) -> bo
     return False
 
 
-def sigkill_process(pid: int, timeout: float = 5.0) -> None:
+def sigkill_process(pid: int, timeout: float = DEFAULT_SIGKILL_TIMEOUT) -> None:
     """Send SIGKILL to a process, and wait for it to exit.
 
     If timeout is greater than 0, this waits for the process to exit after sending the
