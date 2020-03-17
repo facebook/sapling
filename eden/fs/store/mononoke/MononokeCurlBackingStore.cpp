@@ -90,7 +90,8 @@ MononokeCurlBackingStore::MononokeCurlBackingStore(
       serverExecutor_(std::move(executor)) {}
 
 folly::SemiFuture<std::unique_ptr<Tree>> MononokeCurlBackingStore::getTree(
-    const Hash& id) {
+    const Hash& id,
+    ImportPriority /* priority */) {
   return folly::via(
              clientThreadPool_.get(),
              [this, id] {
@@ -104,7 +105,8 @@ folly::SemiFuture<std::unique_ptr<Tree>> MononokeCurlBackingStore::getTree(
 }
 
 folly::SemiFuture<std::unique_ptr<Blob>> MononokeCurlBackingStore::getBlob(
-    const Hash& id) {
+    const Hash& id,
+    ImportPriority /* priority */) {
   return folly::via(
              clientThreadPool_.get(),
              [this, id] {

@@ -72,7 +72,9 @@ const char* GitBackingStore::getPath() const {
   return git_repository_path(repo_);
 }
 
-SemiFuture<unique_ptr<Tree>> GitBackingStore::getTree(const Hash& id) {
+SemiFuture<unique_ptr<Tree>> GitBackingStore::getTree(
+    const Hash& id,
+    ImportPriority /* priority */) {
   // TODO: Use a separate thread pool to do the git I/O
   return makeSemiFuture(getTreeImpl(id));
 }
@@ -124,7 +126,9 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
   return tree;
 }
 
-SemiFuture<unique_ptr<Blob>> GitBackingStore::getBlob(const Hash& id) {
+SemiFuture<unique_ptr<Blob>> GitBackingStore::getBlob(
+    const Hash& id,
+    ImportPriority /* priority */) {
   // TODO: Use a separate thread pool to do the git I/O
   return makeSemiFuture(getBlobImpl(id));
 }

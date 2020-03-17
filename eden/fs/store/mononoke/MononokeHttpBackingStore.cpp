@@ -179,7 +179,8 @@ MononokeHttpBackingStore::MononokeHttpBackingStore(
 MononokeHttpBackingStore::~MononokeHttpBackingStore() {}
 
 folly::SemiFuture<std::unique_ptr<Tree>> MononokeHttpBackingStore::getTree(
-    const Hash& id) {
+    const Hash& id,
+    ImportPriority /* priority */) {
   return folly::via(executor_)
       .thenValue([this, id](auto&&) { return sendRequest("tree", id); })
       .thenValue([id](std::unique_ptr<folly::IOBuf>&& buf) {
@@ -188,7 +189,8 @@ folly::SemiFuture<std::unique_ptr<Tree>> MononokeHttpBackingStore::getTree(
 }
 
 folly::SemiFuture<std::unique_ptr<Blob>> MononokeHttpBackingStore::getBlob(
-    const Hash& id) {
+    const Hash& id,
+    ImportPriority /* priority */) {
   return folly::via(executor_)
       .thenValue([this, id](auto&&) { return sendRequest("blob", id); })
       .thenValue([id](std::unique_ptr<folly::IOBuf>&& buf) {
@@ -265,8 +267,7 @@ folly::Future<std::unique_ptr<IOBuf>> MononokeHttpBackingStore::sendRequestImpl(
   auto connector =
       std::make_unique<proxygen::HTTPConnector>(callback, timer.get());
 
-  static const folly::SocketOptionMap opts{
-      {{SOL_SOCKET, SO_REUSEADDR}, 1}};
+  static const folly::SocketOptionMap opts{{{SOL_SOCKET, SO_REUSEADDR}, 1}};
 
   if (sslContext_ != nullptr) {
     connector->connectSSL(

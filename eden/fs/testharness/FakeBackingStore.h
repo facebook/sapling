@@ -16,6 +16,7 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/store/BackingStore.h"
+#include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/testharness/StoredObject.h"
 
 namespace facebook {
@@ -38,8 +39,12 @@ class FakeBackingStore : public BackingStore {
    * BackingStore APIs
    */
 
-  folly::SemiFuture<std::unique_ptr<Tree>> getTree(const Hash& id) override;
-  folly::SemiFuture<std::unique_ptr<Blob>> getBlob(const Hash& id) override;
+  folly::SemiFuture<std::unique_ptr<Tree>> getTree(
+      const Hash& id,
+      ImportPriority priority = ImportPriority::kNormal) override;
+  folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
+      const Hash& id,
+      ImportPriority priority = ImportPriority::kNormal) override;
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) override;
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(

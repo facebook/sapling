@@ -23,12 +23,16 @@ EmptyBackingStore::EmptyBackingStore() {}
 
 EmptyBackingStore::~EmptyBackingStore() {}
 
-SemiFuture<unique_ptr<Tree>> EmptyBackingStore::getTree(const Hash& /* id */) {
+SemiFuture<unique_ptr<Tree>> EmptyBackingStore::getTree(
+    const Hash& /* id */,
+    ImportPriority /* priority */) {
   return makeSemiFuture<unique_ptr<Tree>>(
       std::domain_error("empty backing store"));
 }
 
-SemiFuture<unique_ptr<Blob>> EmptyBackingStore::getBlob(const Hash& /* id */) {
+SemiFuture<unique_ptr<Blob>> EmptyBackingStore::getBlob(
+    const Hash& /* id */,
+    ImportPriority /* priority */) {
   return makeSemiFuture<unique_ptr<Blob>>(
       std::domain_error("empty backing store"));
 }

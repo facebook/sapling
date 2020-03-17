@@ -391,7 +391,9 @@ std::unique_ptr<BackingStore> HgBackingStore::initializeMononoke() {
   return nullptr;
 }
 
-SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(const Hash& id) {
+SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
+    const Hash& id,
+    ImportPriority /* priority */) {
   HgProxyHash pathInfo(localStore_, id, "importTree");
   return importTreeImpl(
       pathInfo.revHash(), // this is really the manifest node
@@ -686,7 +688,9 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
       });
 }
 
-SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(const Hash& id) {
+SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
+    const Hash& id,
+    ImportPriority /* priority */) {
   auto edenConfig = config_->getEdenConfig();
 
   // Look up the mercurial path and file revision hash,

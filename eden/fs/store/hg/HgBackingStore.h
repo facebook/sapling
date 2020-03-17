@@ -74,8 +74,12 @@ class HgBackingStore : public BackingStore {
 
   ~HgBackingStore() override;
 
-  folly::SemiFuture<std::unique_ptr<Tree>> getTree(const Hash& id) override;
-  folly::SemiFuture<std::unique_ptr<Blob>> getBlob(const Hash& id) override;
+  folly::SemiFuture<std::unique_ptr<Tree>> getTree(
+      const Hash& id,
+      ImportPriority priority = ImportPriority::kNormal) override;
+  folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
+      const Hash& id,
+      ImportPriority priority = ImportPriority::kNormal) override;
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) override;
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(

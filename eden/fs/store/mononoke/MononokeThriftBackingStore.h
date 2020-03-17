@@ -31,9 +31,11 @@ class MononokeThriftBackingStore : public BackingStore {
   virtual ~MononokeThriftBackingStore() override;
 
   virtual folly::SemiFuture<std::unique_ptr<Tree>> getTree(
-      const Hash& id) override;
+      const Hash& id,
+      ImportPriority priority = ImportPriority::kNormal) override;
   virtual folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
-      const Hash& id) override;
+      const Hash& id,
+      ImportPriority priority = ImportPriority::kNormal) override;
   virtual folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) override;
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(

@@ -68,7 +68,8 @@ MononokeThriftBackingStore::MononokeThriftBackingStore(
 MononokeThriftBackingStore::~MononokeThriftBackingStore() {}
 
 folly::SemiFuture<std::unique_ptr<Tree>> MononokeThriftBackingStore::getTree(
-    const Hash& id) {
+    const Hash& id,
+    ImportPriority /* priority */) {
   const auto& treeHashString = id.toString();
 
   XLOG(DBG6) << "importing tree '" << treeHashString << "' from mononoke";
@@ -110,7 +111,8 @@ folly::SemiFuture<std::unique_ptr<Tree>> MononokeThriftBackingStore::getTree(
       });
 }
 folly::SemiFuture<std::unique_ptr<Blob>> MononokeThriftBackingStore::getBlob(
-    const Hash& id) {
+    const Hash& id,
+    ImportPriority /* priority */) {
   const auto& blobHashString = id.toString();
 
   XLOG(DBG6) << "importing blob '" << blobHashString << "' from mononoke";

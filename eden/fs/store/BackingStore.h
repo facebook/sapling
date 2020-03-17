@@ -10,6 +10,8 @@
 #include <folly/futures/Future.h>
 #include <memory>
 
+#include "eden/fs/store/ImportPriority.h"
+
 namespace folly {
 template <typename T>
 class Future;
@@ -36,8 +38,13 @@ class BackingStore {
   BackingStore() {}
   virtual ~BackingStore() {}
 
-  virtual folly::SemiFuture<std::unique_ptr<Tree>> getTree(const Hash& id) = 0;
-  virtual folly::SemiFuture<std::unique_ptr<Blob>> getBlob(const Hash& id) = 0;
+  virtual folly::SemiFuture<std::unique_ptr<Tree>> getTree(
+      const Hash& id,
+      ImportPriority priority = ImportPriority::kNormal) = 0;
+  virtual folly::SemiFuture<std::unique_ptr<Blob>> getBlob(
+      const Hash& id,
+      ImportPriority priority = ImportPriority::kNormal) = 0;
+
   virtual folly::SemiFuture<std::unique_ptr<Tree>> getTreeForCommit(
       const Hash& commitID) = 0;
   virtual folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(
