@@ -547,7 +547,7 @@ impl RepoClient {
                 })
                 .flatten_stream()
                 .map({
-                    cloned!(ctx, getpack_params, repo);
+                    cloned!(ctx, getpack_params, repo, lfs_params);
                     move |(path, filenodes)| {
                         {
                             let mut getpack_params = getpack_params.lock().unwrap();
@@ -646,7 +646,7 @@ impl RepoClient {
                                 length as i64,
                             );
 
-                            if let Some(lfs_threshold) = lfs_threshold {
+                            if let Some(lfs_threshold) = lfs_params.threshold {
                                 if length >= lfs_threshold {
                                     ctx.perf_counters().add_to_counter(
                                         PerfCounterType::GetpackPossibleLFSFilesSumSize,
