@@ -1651,6 +1651,8 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     numupdates = sum(len(l) for m, l in actions.items() if m != "k")
     z = 0
 
+    rustworkers = repo.ui.configbool("worker", "rustworkers") and not wctx.isinmemory()
+
     # record path conflicts
     with progress.bar(
         repo.ui, _("updating"), _("files"), numupdates
@@ -1684,7 +1686,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
 
         # remove in parallel (must come before resolving path conflicts and
         # getting)
-        if repo.ui.configbool("worker", "rustworkers"):
+        if rustworkers:
             numworkers = worker._numworkers(repo.ui)
             remover = rustworker.removerworker(repo.wvfs.base, numworkers)
             for f, args, msg in actions["r"]:
@@ -1718,7 +1720,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         # get in parallel
         writesize = 0
 
-        if repo.ui.configbool("worker", "rustworkers"):
+        if rustworkers:
             numworkers = worker._numworkers(repo.ui)
             writer = rustworker.writerworker(
                 repo.fileslog.contentstore, repo.wvfs.base, numworkers
