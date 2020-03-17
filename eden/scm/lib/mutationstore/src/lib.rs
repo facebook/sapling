@@ -51,7 +51,7 @@ pub struct MutationEntry {
     pub split: Vec<Node>,
     pub op: String,
     pub user: String,
-    pub time: f64,
+    pub time: i64,
     pub tz: i32,
     pub extra: Vec<(Box<[u8]>, Box<[u8]>)>,
 }
@@ -65,7 +65,7 @@ pub struct MutationEntry {
 ///   * Predecessor hash (20 bytes) - most entries have only one predecessor
 ///   * Operation (~7 bytes) - e.g. amend, rebase
 ///   * User (~40 bytes)
-///   * Time (8 bytes)
+///   * Time (4-8 bytes)
 ///   * Timezone (~2 bytes)
 ///   * Extra count (1 byte)
 pub const DEFAULT_ENTRY_SIZE: usize = 100;
@@ -87,7 +87,7 @@ impl MutationEntry {
         w.write_all(self.op.as_bytes())?;
         w.write_vlq(self.user.len())?;
         w.write_all(&self.user.as_bytes())?;
-        w.write_f64::<BigEndian>(self.time)?;
+        w.write_f64::<BigEndian>(self.time as f64)?;
         w.write_vlq(self.tz)?;
         w.write_vlq(self.extra.len())?;
         for (key, value) in self.extra.iter() {
@@ -100,9 +100,17 @@ impl MutationEntry {
     }
 
     pub fn deserialize(r: &mut dyn Read) -> Result<Self> {
-        match r.read_u8()? {
+        enum EntryFormat {
+            FloatDate,
+            Latest,
+        };
+        let format = match r.read_u8()? {
             0 => return Err(anyhow!("invalid mutation entry version: 0")),
-            1..=4 => (),
+            1..=4 => {
+                // These versions stored the date as an f64.
+                EntryFormat::FloatDate
+            }
+            5 => EntryFormat::Latest,
             v => return Err(anyhow!("unsupported mutation entry version: {}", v)),
         };
         let succ = r.read_node()?;
@@ -124,7 +132,14 @@ impl MutationEntry {
         let mut user = vec![0; user_len];
         r.read_exact(&mut user)?;
         let user = String::from_utf8(user)?;
-        let time = r.read_f64::<BigEndian>()?;
+        let time = match format {
+            EntryFormat::FloatDate => {
+                // The date was stored as a floating point number.  We
+                // actually want an integer, so truncate and convert.
+                r.read_f64::<BigEndian>()?.trunc() as i64
+            }
+            _ => r.read_vlq()?,
+        };
         let tz = r.read_vlq()?;
         let extra_count = r.read_vlq()?;
         let mut extra = Vec::with_capacity(extra_count);
@@ -286,7 +301,7 @@ mod tests {
                 split: vec![],
                 op: "fold".into(),
                 user: "test".into(),
-                time: 123456789.5,
+                time: 123456789,
                 tz: -7200,
                 extra: vec![(
                     Box::from(&b"note"[..]),
@@ -300,7 +315,7 @@ mod tests {
                 split: vec![nodes[5], nodes[6]],
                 op: "split".into(),
                 user: "test".into(),
-                time: 123456789.5,
+                time: 123456789,
                 tz: -7200,
                 extra: vec![],
             })

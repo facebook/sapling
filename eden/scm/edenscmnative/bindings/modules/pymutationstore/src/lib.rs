@@ -90,7 +90,7 @@ py_class!(class mutationentry |py| {
         split: Option<Vec<PyBytes>>,
         op: &PyString,
         user: &PyString,
-        time: f64,
+        time: i64,
         tz: i32,
         extra: Option<Vec<(PyBytes, PyBytes)>>
     ) -> PyResult<mutationentry> {
@@ -155,7 +155,7 @@ py_class!(class mutationentry |py| {
         Ok(self.entry(py).user.clone().into())
     }
 
-    def time(&self) -> PyResult<f64> {
+    def time(&self) -> PyResult<i64> {
         Ok(self.entry(py).time)
     }
 

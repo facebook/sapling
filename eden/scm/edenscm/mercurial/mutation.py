@@ -113,10 +113,10 @@ def createentry(node, mutinfo):
     if mutinfo is not None:
         try:
             time, tz = mutinfo["mutdate"].split()
-            time = float(time)
+            time = int(time)
             tz = int(tz)
         except (IndexError, ValueError):
-            time, tz = 0.0, 0
+            time, tz = 0, 0
         return mutationstore.mutationentry(
             node,
             nodesfrominfo(mutinfo.get("mutpred")),
@@ -137,7 +137,7 @@ def createsyntheticentry(repo, preds, succ, op, splitting=None, user=None, date=
     else:
         date = util.parsedate(date)
     return mutationstore.mutationentry(
-        succ, preds, splitting, op, user, date[0], date[1], None
+        succ, preds, splitting, op, user, int(date[0]), int(date[1]), None
     )
 
 
