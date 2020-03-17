@@ -300,7 +300,11 @@ TEST_F(CurlTest, InvalidClientCertificate) {
     client.get("/");
     EXPECT_TRUE(false); // request should throw an exception
   } catch (const std::runtime_error& ex) {
+#if LIBCURL_VERSION_NUM >= 0x074200 /* Since 7.66.0 */
+    EXPECT_THAT(ex.what(), HasSubstr("Failure when receiving"));
+#else
     EXPECT_THAT(ex.what(), HasSubstr("SSL connect error"));
+#endif
   }
 }
 
