@@ -723,7 +723,6 @@ def perfdirs(ui, repo, **opts):
 
     def d():
         dirstate.hasdir("a")
-        del dirstate._map._dirs
 
     timer(d)
     fm.end()
@@ -749,7 +748,6 @@ def perfdirstatedirs(ui, repo, **opts):
 
     def d():
         repo.dirstate.hasdir("a")
-        del repo.dirstate._map._dirs
 
     timer(d)
     fm.end()
@@ -763,7 +761,7 @@ def perfdirstatefoldmap(ui, repo, **opts):
 
     def d():
         dirstate._map.filefoldmap.get("a")
-        del dirstate._map.filefoldmap
+        dirstate._map.filefoldmap.clear()
 
     timer(d)
     fm.end()
@@ -777,8 +775,7 @@ def perfdirfoldmap(ui, repo, **opts):
 
     def d():
         dirstate._map.dirfoldmap.get("a")
-        del dirstate._map.dirfoldmap
-        del dirstate._map._dirs
+        dirstate._map.dirfoldmap.clear()
 
     timer(d)
     fm.end()
