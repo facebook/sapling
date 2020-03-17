@@ -27,7 +27,7 @@
 //! an error to refer to later commits, and any entry that causes a cycle will
 //! be ignored.
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use indexedlog::{
     log::{self as ilog, IndexDef, IndexOutput, Log},
@@ -35,31 +35,17 @@ use indexedlog::{
 };
 use std::io::{Cursor, Read, Write};
 use std::path::Path;
-use thiserror::Error;
 use types::node::{Node, ReadNodeExt, WriteNodeExt};
 use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 
 pub use indexedlog::Repair;
-
-#[derive(Debug, Error)]
-#[error("Invalid Mutation Entry Origin: {0}")]
-struct InvalidMutationEntryOrigin(u8);
 
 pub struct MutationStore {
     log: Log,
 }
 
 #[derive(Clone, PartialEq, PartialOrd)]
-pub enum MutationEntryOrigin {
-    Commit,
-    Obsmarker,
-    Synthetic,
-    Local,
-}
-
-#[derive(Clone, PartialEq, PartialOrd)]
 pub struct MutationEntry {
-    pub origin: MutationEntryOrigin,
     pub succ: Node,
     pub preds: Vec<Node>,
     pub split: Vec<Node>,
@@ -70,15 +56,10 @@ pub struct MutationEntry {
     pub extra: Vec<(Box<[u8]>, Box<[u8]>)>,
 }
 
-pub const ORIGIN_COMMIT: u8 = 1u8;
-pub const ORIGIN_OBSMARKER: u8 = 2u8;
-pub const ORIGIN_SYNTHETIC: u8 = 3u8;
-pub const ORIGIN_LOCAL: u8 = 4u8;
-
 /// Default size for a buffer that will be used for serializing a mutation entry.
 ///
 /// This is:
-///   * Origin (1 byte)
+///   * Version (1 byte)
 ///   * Successor hash (20 bytes)
 ///   * Predecessor count (1 byte)
 ///   * Predecessor hash (20 bytes) - most entries have only one predecessor
@@ -88,31 +69,11 @@ pub const ORIGIN_LOCAL: u8 = 4u8;
 ///   * Timezone (~2 bytes)
 ///   * Extra count (1 byte)
 pub const DEFAULT_ENTRY_SIZE: usize = 100;
-
-impl MutationEntryOrigin {
-    pub fn get_id(&self) -> u8 {
-        match self {
-            MutationEntryOrigin::Commit => ORIGIN_COMMIT,
-            MutationEntryOrigin::Obsmarker => ORIGIN_OBSMARKER,
-            MutationEntryOrigin::Synthetic => ORIGIN_SYNTHETIC,
-            MutationEntryOrigin::Local => ORIGIN_LOCAL,
-        }
-    }
-
-    pub fn from_id(id: u8) -> Result<Self> {
-        match id {
-            ORIGIN_COMMIT => Ok(MutationEntryOrigin::Commit),
-            ORIGIN_OBSMARKER => Ok(MutationEntryOrigin::Obsmarker),
-            ORIGIN_SYNTHETIC => Ok(MutationEntryOrigin::Synthetic),
-            ORIGIN_LOCAL => Ok(MutationEntryOrigin::Local),
-            t => Err(InvalidMutationEntryOrigin(t))?,
-        }
-    }
-}
+const DEFAULT_VERSION: u8 = 1;
 
 impl MutationEntry {
     pub fn serialize(&self, w: &mut dyn Write) -> Result<()> {
-        w.write_u8(self.origin.get_id())?;
+        w.write_u8(DEFAULT_VERSION)?;
         w.write_node(&self.succ)?;
         w.write_vlq(self.preds.len())?;
         for pred in self.preds.iter() {
@@ -139,7 +100,11 @@ impl MutationEntry {
     }
 
     pub fn deserialize(r: &mut dyn Read) -> Result<Self> {
-        let origin = MutationEntryOrigin::from_id(r.read_u8()?)?;
+        match r.read_u8()? {
+            0 => return Err(anyhow!("invalid mutation entry version: 0")),
+            1..=4 => (),
+            v => return Err(anyhow!("unsupported mutation entry version: {}", v)),
+        };
         let succ = r.read_node()?;
         let pred_count = r.read_vlq()?;
         let mut preds = Vec::with_capacity(pred_count);
@@ -173,7 +138,6 @@ impl MutationEntry {
             extra.push((key.into_boxed_slice(), value.into_boxed_slice()));
         }
         Ok(MutationEntry {
-            origin,
             succ,
             preds,
             split,
@@ -317,7 +281,6 @@ mod tests {
         {
             let mut ms = MutationStore::open(dir.path()).expect("can open the store");
             ms.add(&MutationEntry {
-                origin: MutationEntryOrigin::Commit,
                 succ: nodes[1],
                 preds: vec![nodes[0], nodes[2], nodes[3]],
                 split: vec![],
@@ -332,7 +295,6 @@ mod tests {
             })
             .expect("can add to the store");
             ms.add(&MutationEntry {
-                origin: MutationEntryOrigin::Synthetic,
                 succ: nodes[4],
                 preds: vec![nodes[0]],
                 split: vec![nodes[5], nodes[6]],

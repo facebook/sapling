@@ -2383,7 +2383,7 @@ class localrepository(object):
                 visibility.add(self, [n])
             mutinfo = ctx.mutinfo()
             if mutinfo is not None:
-                entry = mutation.createentry(n, mutinfo, mutation.ORIGIN_LOCAL)
+                entry = mutation.createentry(n, mutinfo)
                 mutation.recordentries(self, [entry], skipexisting=False)
             tr.close()
 

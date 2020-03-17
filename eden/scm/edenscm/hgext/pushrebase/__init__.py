@@ -517,9 +517,7 @@ def _push(orig, ui, repo, *args, **opts):
                 entries = []
                 for pred, succ in tracker.mapping.items():
                     entries.append(
-                        mutation.createsyntheticentry(
-                            repo, mutation.ORIGIN_SYNTHETIC, [pred], succ, "pushrebase"
-                        )
+                        mutation.createsyntheticentry(repo, [pred], succ, "pushrebase")
                     )
                 mutation.recordentries(repo, entries, skipexisting=False)
 

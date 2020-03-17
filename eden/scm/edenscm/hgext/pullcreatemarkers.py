@@ -97,9 +97,7 @@ def _cleanuplanded(repo, dryrun=False):
         for draftnode in draftnodes:
             tohide.add(draftnode)
             mutationentries.append(
-                mutation.createsyntheticentry(
-                    unfi, mutation.ORIGIN_SYNTHETIC, [draftnode], publicnode, "land"
-                )
+                mutation.createsyntheticentry(unfi, [draftnode], publicnode, "land")
             )
     if markedcount:
         ui.status(
@@ -183,11 +181,7 @@ def createmarkers(pullres, repo, start, stop, fromdrafts=True):
                 if succs and not mutation.lookup(unfi, succs[0].node()):
                     mutationentries.append(
                         mutation.createsyntheticentry(
-                            unfi,
-                            mutation.ORIGIN_SYNTHETIC,
-                            [pred.node()],
-                            succs[0].node(),
-                            "land",
+                            unfi, [pred.node()], succs[0].node(), "land"
                         )
                     )
                 tohide.append(pred.node())

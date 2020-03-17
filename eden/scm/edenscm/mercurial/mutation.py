@@ -16,12 +16,6 @@ from .i18n import _
 from .node import nullid
 
 
-ORIGIN_COMMIT = mutationstore.ORIGIN_COMMIT
-ORIGIN_OBSMARKER = mutationstore.ORIGIN_OBSMARKER
-ORIGIN_SYNTHETIC = mutationstore.ORIGIN_SYNTHETIC
-ORIGIN_LOCAL = mutationstore.ORIGIN_LOCAL
-
-
 def identfromnode(node):
     return "hg/%s" % nodemod.hex(node)
 
@@ -111,7 +105,7 @@ class bundlemutationstore(object):
         pass
 
 
-def createentry(node, mutinfo, origin):
+def createentry(node, mutinfo):
     def nodesfrominfo(info):
         if info is not None:
             return [nodefromident(x) for x in info.split(",")]
@@ -124,7 +118,6 @@ def createentry(node, mutinfo, origin):
         except (IndexError, ValueError):
             time, tz = 0.0, 0
         return mutationstore.mutationentry(
-            origin,
             node,
             nodesfrominfo(mutinfo.get("mutpred")),
             nodesfrominfo(mutinfo.get("mutsplit")),
@@ -136,9 +129,7 @@ def createentry(node, mutinfo, origin):
         )
 
 
-def createsyntheticentry(
-    repo, origin, preds, succ, op, splitting=None, user=None, date=None
-):
+def createsyntheticentry(repo, preds, succ, op, splitting=None, user=None, date=None):
     user = user or repo.ui.config("mutation", "user") or repo.ui.username()
     date = date or repo.ui.config("mutation", "date")
     if date is None:
@@ -146,7 +137,7 @@ def createsyntheticentry(
     else:
         date = util.parsedate(date)
     return mutationstore.mutationentry(
-        origin, succ, preds, splitting, op, user, date[0], date[1], None
+        succ, preds, splitting, op, user, date[0], date[1], None
     )
 
 
@@ -791,9 +782,7 @@ def convertfromobsmarkers(repo):
                 mutdate = obsdate
 
         entries.append(
-            createsyntheticentry(
-                repo, ORIGIN_OBSMARKER, preds, succ, mutop, split, mutuser, mutdate
-            )
+            createsyntheticentry(repo, preds, succ, mutop, split, mutuser, mutdate)
         )
 
     with repo.lock():

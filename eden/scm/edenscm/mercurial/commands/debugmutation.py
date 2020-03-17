@@ -38,14 +38,6 @@ def debugmutation(ui, repo, **opts):
         mutdate = util.shortdatetime((entry.time(), entry.tz()))
         mutpreds = entry.preds()
         mutsplit = entry.split() or None
-        origin = entry.origin()
-        origin = {
-            None: "",
-            mutation.ORIGIN_LOCAL: "",
-            mutation.ORIGIN_COMMIT: " (from remote commit)",
-            mutation.ORIGIN_OBSMARKER: " (from obsmarker)",
-            mutation.ORIGIN_SYNTHETIC: " (synthetic)",
-        }.get(origin, " (unknown origin %s)" % origin)
         extra = ""
         if showsplit and mutsplit is not None:
             extra += " (split into this and: %s)" % ", ".join(
@@ -57,7 +49,7 @@ def debugmutation(ui, repo, **opts):
                 extra += " (folded with: %s)" % ", ".join(
                     [nodemod.hex(n) for n in foldwith]
                 )
-        return ("%s by %s at %s%s%s") % (mutop, mutuser, mutdate, extra, origin)
+        return ("%s by %s at %s%s") % (mutop, mutuser, mutdate, extra)
 
     def expandhistory(node):
         entry = mutation.lookup(unfi, node)

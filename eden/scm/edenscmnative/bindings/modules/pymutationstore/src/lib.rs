@@ -15,7 +15,7 @@ use cpython::*;
 use cpython_ext::{PyNone, PyPath, ResultPyErrExt, Str};
 use thiserror::Error;
 
-use ::mutationstore::{MutationEntry, MutationEntryOrigin, MutationStore, Repair};
+use ::mutationstore::{MutationEntry, MutationStore, Repair};
 use types::node::Node;
 use vlqencoding::{VLQDecode, VLQEncode};
 
@@ -29,10 +29,6 @@ const BUNDLE_FORMAT_VERSION: u8 = 1u8;
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "mutationstore"].join(".");
     let m = PyModule::new(py, &name)?;
-    m.add(py, "ORIGIN_COMMIT", ::mutationstore::ORIGIN_COMMIT)?;
-    m.add(py, "ORIGIN_OBSMARKER", ::mutationstore::ORIGIN_OBSMARKER)?;
-    m.add(py, "ORIGIN_SYNTHETIC", ::mutationstore::ORIGIN_SYNTHETIC)?;
-    m.add(py, "ORIGIN_LOCAL", ::mutationstore::ORIGIN_LOCAL)?;
     m.add_class::<mutationentry>(py)?;
     m.add_class::<mutationstore>(py)?;
     m.add(
@@ -89,7 +85,6 @@ py_class!(class mutationentry |py| {
 
     def __new__(
         _cls,
-        origin: u8,
         succ: &PyBytes,
         preds: Option<Vec<PyBytes>>,
         split: Option<Vec<PyBytes>>,
@@ -99,7 +94,6 @@ py_class!(class mutationentry |py| {
         tz: i32,
         extra: Option<Vec<(PyBytes, PyBytes)>>
     ) -> PyResult<mutationentry> {
-        let origin = MutationEntryOrigin::from_id(origin).map_pyerr(py)?;
         let succ = Node::from_slice(succ.data(py))
             .map_err(InvalidNode::Successor)
             .map_pyerr(py)?;
@@ -137,12 +131,8 @@ py_class!(class mutationentry |py| {
             items
         };
         mutationentry::create_instance(py, MutationEntry {
-            origin, succ, preds, split, op, user, time, tz, extra
+            succ, preds, split, op, user, time, tz, extra
         })
-    }
-
-    def origin(&self) -> PyResult<u8> {
-        Ok(self.entry(py).origin.get_id())
     }
 
     def succ(&self) -> PyResult<PyBytes> {

@@ -26,7 +26,7 @@
 Loops are not normally possible, but they can sneak in through backfilling complex
 obsmarker graphs.  Create a fake one to check behaviour.
 
-  $ hg debugsh -c "with repo.lock(): m.mutation.recordentries(repo, [m.mutation.createsyntheticentry(repo, m.mutation.ORIGIN_OBSMARKER, [m.node.bin(\"e6c779c67aa947c951f334f4f312bd2b21d27e55\"), m.node.bin(\"672a4910c364d425231d2dd2fb0486f32a2d88f4\")], m.node.bin(\"932f02c9fad3fa46e55b62560c88eb67528b02f0\"), \"loop\")], skipexisting=False)"
+  $ hg debugsh -c "with repo.lock(): m.mutation.recordentries(repo, [m.mutation.createsyntheticentry(repo, [m.node.bin(\"e6c779c67aa947c951f334f4f312bd2b21d27e55\"), m.node.bin(\"672a4910c364d425231d2dd2fb0486f32a2d88f4\")], m.node.bin(\"932f02c9fad3fa46e55b62560c88eb67528b02f0\"), \"loop\")], skipexisting=False)"
   $ tglogm --hidden
   @  5: 21c93100b04c 'commit5'
   |
