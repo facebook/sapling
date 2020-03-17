@@ -113,22 +113,95 @@ impl HgRepoContext {
 mod tests {
     use super::*;
 
+    use std::collections::BTreeSet;
     use std::sync::Arc;
 
+    use anyhow::Error;
+    use blobstore::Loadable;
     use fbinit::FacebookInit;
-    use fixtures::linear;
+    use futures::compat::Future01CompatExt;
+    use mononoke_types::ChangesetId;
+    use tests_utils::CreateCommitContext;
 
     use crate::repo::Repo;
 
     #[fbinit::compat_test]
     async fn test_new_hg_context(fb: FacebookInit) -> Result<(), MononokeError> {
         let ctx = CoreContext::test_mock(fb);
-        let repo = Repo::new_test(ctx.clone(), linear::getrepo(fb).await).await?;
+
+        let blob_repo = blobrepo_factory::new_memblob_empty(None)?;
+        let repo = Repo::new_test(ctx.clone(), blob_repo).await?;
         let repo_ctx = RepoContext::new(ctx, Arc::new(repo))?;
 
         let hg = repo_ctx.hg();
         assert_eq!(hg.repo().name(), "test");
 
         Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_trees_under_path(fb: FacebookInit) -> Result<(), MononokeError> {
+        let ctx = CoreContext::test_mock(fb);
+        let blob_repo = blobrepo_factory::new_memblob_empty(None)?;
+
+        // Create test stack; child commit modifies 2 directories.
+        let commit_1 = CreateCommitContext::new_root(&ctx, &blob_repo)
+            .add_file("dir1/a", "1")
+            .add_file("dir2/b", "1")
+            .add_file("dir3/c", "1")
+            .commit()
+            .await?;
+        let commit_2 = CreateCommitContext::new(&ctx, &blob_repo, vec![commit_1])
+            .add_file("dir1/a", "2")
+            .add_file("dir3/a/b/c", "1")
+            .commit()
+            .await?;
+
+        let root_mfid_1 = root_manifest_id(ctx.clone(), &blob_repo, commit_1).await?;
+        let root_mfid_2 = root_manifest_id(ctx.clone(), &blob_repo, commit_2).await?;
+
+        let repo = Repo::new_test(ctx.clone(), blob_repo).await?;
+        let repo_ctx = RepoContext::new(ctx, Arc::new(repo))?;
+        let hg = repo_ctx.hg();
+
+        let trees = hg
+            .trees_under_path(
+                MononokePath::new(None),
+                vec![root_mfid_2],
+                vec![root_mfid_1],
+                Some(2),
+            )
+            .try_collect::<Vec<_>>()
+            .await?;
+
+        let paths = trees
+            .into_iter()
+            .map(|(_, path)| format!("{}", path))
+            .collect::<BTreeSet<_>>();
+        let expected = vec!["".into(), "dir3".into(), "dir1".into(), "dir3/a".into()]
+            .into_iter()
+            .map(ToString::to_string)
+            .collect::<BTreeSet<_>>();
+
+        assert_eq!(paths, expected);
+
+        Ok(())
+    }
+
+    /// Get the HgManifestId of the root tree manifest for the given commit.
+    async fn root_manifest_id(
+        ctx: CoreContext,
+        blob_repo: &BlobRepo,
+        csid: ChangesetId,
+    ) -> Result<HgManifestId, Error> {
+        let hg_cs_id = blob_repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), csid)
+            .compat()
+            .await?;
+        let hg_cs = hg_cs_id
+            .load(ctx, &blob_repo.get_blobstore())
+            .compat()
+            .await?;
+        Ok(hg_cs.manifestid())
     }
 }
