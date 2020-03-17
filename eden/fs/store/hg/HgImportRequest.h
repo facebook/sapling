@@ -64,6 +64,10 @@ class HgImportRequest {
     }
   }
 
+  void setException(std::exception&& except) {
+    promise_.setException(std::move(except));
+  }
+
  private:
   using ResponseType =
       std::variant<std::unique_ptr<Blob>, std::unique_ptr<Tree>>;
