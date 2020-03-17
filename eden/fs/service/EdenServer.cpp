@@ -40,6 +40,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/store/SqliteLocalStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
+#include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
@@ -258,7 +259,8 @@ EdenServer::EdenServer(
     size_t pendingBlobImportCount{0};
     auto hgBackingStores = this->getHgBackingStores();
     for (const auto& store : hgBackingStores) {
-      pendingBlobImportCount += store->getPendingBlobImports();
+      pendingBlobImportCount +=
+          store->getHgBackingStore()->getPendingBlobImports();
     }
     return pendingBlobImportCount;
   });
@@ -266,7 +268,8 @@ EdenServer::EdenServer(
     size_t pendingTreeImportCount{0};
     auto hgBackingStores = this->getHgBackingStores();
     for (const auto& store : hgBackingStores) {
-      pendingTreeImportCount += store->getPendingTreeImports();
+      pendingTreeImportCount +=
+          store->getHgBackingStore()->getPendingTreeImports();
     }
     return pendingTreeImportCount;
   });
@@ -274,7 +277,8 @@ EdenServer::EdenServer(
     size_t pendingPrefetchImportCount{0};
     auto hgBackingStores = this->getHgBackingStores();
     for (const auto& store : hgBackingStores) {
-      pendingPrefetchImportCount += store->getPendingPrefetchImports();
+      pendingPrefetchImportCount +=
+          store->getHgBackingStore()->getPendingPrefetchImports();
     }
     return pendingPrefetchImportCount;
   });
@@ -1272,14 +1276,14 @@ shared_ptr<BackingStore> EdenServer::getBackingStore(
   return store;
 }
 
-std::unordered_set<shared_ptr<HgBackingStore>>
+std::unordered_set<shared_ptr<HgQueuedBackingStore>>
 EdenServer::getHgBackingStores() {
-  std::unordered_set<std::shared_ptr<HgBackingStore>> hgBackingStores{};
+  std::unordered_set<std::shared_ptr<HgQueuedBackingStore>> hgBackingStores{};
   {
     auto lockedStores = this->backingStores_.rlock();
     for (auto entry : *lockedStores) {
       if (auto store =
-              std::dynamic_pointer_cast<HgBackingStore>(entry.second)) {
+              std::dynamic_pointer_cast<HgQueuedBackingStore>(entry.second)) {
         hgBackingStores.emplace(std::move(store));
       }
     }
@@ -1294,13 +1298,14 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
     return make_shared<EmptyBackingStore>();
   } else if (type == "hg") {
     const auto repoPath = realpath(name);
-    return make_shared<HgBackingStore>(
+    auto store = std::make_unique<HgBackingStore>(
         repoPath,
         localStore_.get(),
         serverState_->getThreadPool().get(),
         shared_ptr<ReloadableConfig>(
             serverState_, &serverState_->getReloadableConfig()),
         getSharedStats());
+    return make_shared<HgQueuedBackingStore>(std::move(store));
   } else if (type == "git") {
 #ifdef EDEN_HAVE_GIT
     const auto repoPath = realpath(name);
