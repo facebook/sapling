@@ -145,19 +145,3 @@ issue 4481: revert across case only renames
   a/B/c/D
   a/B/c/D/e
   a/B/c/D/e.orig
-
-#if osx
-
-We assume anyone running the tests on a case-insensitive volume on OS
-X will be using HFS+. If that's not true, this test will fail.
-
-  $ echo a >> Z
-  $ hg commit -Aqm 'add z'
-  $ rm Z
-  >>> _ = open(u'z\u200c'.encode('utf-8'), 'w').write('unicode is fun')
-  $ hg status
-  M Z
-
-#endif
-
-  $ cd ..

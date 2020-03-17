@@ -1562,6 +1562,8 @@ class Test(unittest.TestCase):
             hgrc.write(b"[web]\n")
             hgrc.write(b"address = localhost\n")
             hgrc.write(b"ipv6 = %s\n" % str(self._useipv6).encode("ascii"))
+            hgrc.write(b"[workingcopy]\n")
+            hgrc.write(b"enablerustwalker=True\n")
 
             # treemanifest
             hgrc.write(b"[extensions]\n")

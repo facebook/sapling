@@ -71,12 +71,13 @@ test what happens if we want to trick hg
 it should show a.c, dir/a.o and dir/b.o deleted
 
   $ hg status
+  a.c: invalid file type (no-fsmonitor !)
   M dir/b.o
   ! a.c
   ! dir/a.o
   ? .gitignore
   $ hg status a.c
-  a.c: unsupported file type (type is fifo) (no-fsmonitor !)
+  a.c: invalid file type (no-fsmonitor !)
   ! a.c
   $ cd ..
 

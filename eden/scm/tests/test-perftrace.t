@@ -27,8 +27,8 @@
      50   +115    | Timed Function: mergeupdate                                           edenscm.mercurial.merge line _
      55    +35     \ Status                                                               edenscm.mercurial.dirstate line _
      60     +5      \ Timed Function: fswalk                                              edenscm.mercurial.filesystem line _
-     70     +5      \ _walk.next                                                          (generator)
-     80     +5      \ _walk.next                                                          (generator)
+     70     +5      \ _rustwalk.next                                                      (generator)
+     80     +5      \ _rustwalk.next                                                      (generator)
      95    +25     \ Progress Bar: calculating                                            (progressbar)
     100    +15      | Calculate Updates                                                   edenscm.mercurial.merge line _
     105     +5      | Check Unknown Files                                                 edenscm.mercurial.merge line _

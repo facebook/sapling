@@ -23,6 +23,7 @@ Create a repository:
   ui.promptecho=True
   web.address=localhost
   web\.ipv6=(?:True|False) (re)
+  workingcopy.enablerustwalker=True
   $ hg init t
   $ cd t
 

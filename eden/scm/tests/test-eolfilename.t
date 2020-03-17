@@ -26,33 +26,40 @@ test issue352
   $ echo foo > "hell
   > o"
   $ hg add
-  adding hell
-  o
-  abort: '\n' and '\r' disallowed in filenames: 'hell\no'
-  [255]
+  hell
+  o: Failed to validate "hell\no". Invalid byte: 10.
+  [1]
   $ hg ci -A -m m
-  adding hell
-  o
-  abort: '\n' and '\r' disallowed in filenames: 'hell\no'
+  abort: hell
+  o: Failed to validate "hell\no". Invalid byte: 10.
   [255]
   $ echo foo > "$A"
   $ hg debugwalk
   matcher: <alwaysmatcher>
+  hell
+  o: Failed to validate "hell\no". Invalid byte: 10.
   f  he\r (no-eol) (esc)
   llo  he\r (no-eol) (esc)
   llo
-  f  hell
-  o  hell
-  o
 
   $ echo bla > quickfox
   $ hg add quickfox
+  hell
+  o: Failed to validate "hell\no". Invalid byte: 10.
+  [1]
   $ hg ci -m 2
+  abort: hell
+  o: Failed to validate "hell\no". Invalid byte: 10.
+  [255]
   $ A=`printf 'quick\rfox'`
   $ hg cp quickfox "$A"
+  hell
+  o: Failed to validate "hell\no". Invalid byte: 10.
   abort: '\n' and '\r' disallowed in filenames: 'quick\rfox'
   [255]
   $ hg mv quickfox "$A"
+  hell
+  o: Failed to validate "hell\no". Invalid byte: 10.
   abort: '\n' and '\r' disallowed in filenames: 'quick\rfox'
   [255]
 
@@ -74,10 +81,20 @@ test issue2039
   $ B=`printf 'foo\nbar.baz'`
   $ touch "$A"
   $ touch "$B"
+
+#if no-windows no-osx
   $ hg status --color=always
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mfoo\x1b[0m (esc)
-  \x1b[0;35;1;4mbar\x1b[0m (esc)
-  \x1b[0;35;1;4m? \x1b[0m\x1b[0;35;1;4mfoo\x1b[0m (esc)
-  \x1b[0;35;1;4mbar.baz\x1b[0m (esc)
+  foo
+  bar: Failed to validate "foo\nbar". Invalid byte: 10.
+  foo
+  bar.baz: Failed to validate "foo\nbar.baz". Invalid byte: 10.
+#else
+  $ hg status --color=always
+  foo
+  bar.baz: Failed to validate "foo\nbar.baz". Invalid byte: 10.
+  foo
+  bar: Failed to validate "foo\nbar". Invalid byte: 10.
+#endif
+
 
   $ cd ..

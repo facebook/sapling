@@ -279,8 +279,12 @@ class physicalfilesystem(object):
                 yield fn, st
 
         for path, walkerror in walker.errors():
-            path = encoding.unitolocal(path)
-            walkerror = encoding.unitolocal(walkerror)
+            # Warn about non-utf8 errors, but don't report them as bad.
+            # Ideally we'd inspect the error type, but it's lost coming from
+            # Rust. When this moves to Rust it will get easier.
+            if walkerror == "invalid file name encoding":
+                self.ui.warn(_("skipping invalid utf-8 filename: '%s'\n") % path)
+                continue
             match.bad(path, walkerror)
 
     def _processlookups(self, lookups):

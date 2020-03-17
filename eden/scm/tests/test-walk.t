@@ -454,7 +454,8 @@ Test patterns:
   $ mkfifo fifo
   $ hg debugwalk fifo
   matcher: <patternmatcher patterns='(?:fifo(?:/|$))'>
-  fifo: unsupported file type (type is fifo) (no-fsmonitor !)
+  fifo: invalid file type (no-fsmonitor !)
+  fifo: unsupported file type (type is fifo) (fsmonitor !)
 #endif
 
   $ rm fenugreek
