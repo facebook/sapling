@@ -13,9 +13,12 @@
 
 #![deny(warnings)]
 
+use anyhow::Error;
 use bytes_old::Bytes;
 use mercurial_types::{HgChangesetId, HgManifestId};
+use mononoke_types::MPath;
 use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
+use std::convert::TryFrom;
 use std::fmt::{self, Debug};
 use std::sync::Mutex;
 use types::api::TreeRequest;
@@ -165,9 +168,9 @@ impl Debug for GetbundleArgs {
 /// the convenience of callers.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct GettreepackArgs {
-    /// The directory of the tree to send (including its subdirectories). Can be empty, that means
-    /// "root of the repo".
-    pub rootdir: Bytes,
+    /// The directory of the tree to send (including its subdirectories).
+    /// If set to `None`, that means "root of the repo".
+    pub rootdir: Option<MPath>,
     /// The manifest nodes of the specified root directory to send.
     pub mfnodes: Vec<HgManifestId>,
     /// The manifest nodes of the rootdir that are already on the client.
@@ -179,8 +182,10 @@ pub struct GettreepackArgs {
     pub depth: Option<usize>,
 }
 
-impl From<TreeRequest> for GettreepackArgs {
-    fn from(req: TreeRequest) -> Self {
+impl TryFrom<TreeRequest> for GettreepackArgs {
+    type Error = Error;
+
+    fn try_from(req: TreeRequest) -> Result<Self, Self::Error> {
         let mfnodes = req
             .mfnodes
             .into_iter()
@@ -191,15 +196,14 @@ impl From<TreeRequest> for GettreepackArgs {
             .into_iter()
             .map(|node| HgManifestId::new(node.into()))
             .collect();
-        let rootdir: &[u8] = req.rootdir.as_ref();
 
-        Self {
-            rootdir: rootdir.into(),
+        Ok(Self {
+            rootdir: MPath::new_opt(req.rootdir)?,
             mfnodes,
             basemfnodes,
             directories: Vec::new(),
             depth: req.depth,
-        }
+        })
     }
 }
 

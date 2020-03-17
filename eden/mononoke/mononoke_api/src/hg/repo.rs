@@ -84,13 +84,8 @@ impl HgRepoContext {
     ) -> impl TryStream<Ok = (HgTreeContext, MononokePath), Error = MononokeError> {
         let ctx = self.ctx().clone();
         let blob_repo = self.blob_repo();
-        let path_bytes = path
-            .into_mpath()
-            .map(|mpath| mpath.to_vec().into())
-            .unwrap_or_default();
-
         let args = GettreepackArgs {
-            rootdir: path_bytes,
+            rootdir: path.into_mpath(),
             mfnodes: root_versions.into_iter().collect(),
             basemfnodes: base_versions.into_iter().collect(),
             directories: vec![], // Not supported.

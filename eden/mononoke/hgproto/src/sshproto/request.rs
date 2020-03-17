@@ -12,6 +12,7 @@ use anyhow::{bail, Error, Result};
 use bytes_old::{Bytes, BytesMut};
 use hex::FromHex;
 use mercurial_types::{HgChangesetId, HgManifestId};
+use mononoke_types::MPath;
 use nom::{
     alt, apply, call, closure, complete, do_parse, eof, error_position, is_alphanumeric, is_digit,
     many0, map, map_res, named, named_args, separated_list, separated_list_complete, tag, take,
@@ -23,6 +24,7 @@ use std::iter;
 use std::str::{self, FromStr};
 
 const BAD_UTF8_ERR_CODE: u32 = 111;
+const BAD_PATH_ERR_CODE: u32 = 222;
 
 /// Parse an unsigned decimal integer. If it reaches the end of input, it returns Incomplete,
 /// as there may be more digits following
@@ -415,9 +417,12 @@ fn utf8_string_complete(inp: &[u8]) -> IResult<&[u8], String> {
     }
 }
 
-fn bytes_complete(inp: &[u8]) -> IResult<&[u8], Bytes> {
-    let res = Bytes::from(inp);
-    IResult::Done(b"", res)
+/// Parse an Option<MPath>; assumes that input is complete.
+fn path_complete(inp: &[u8]) -> IResult<&[u8], Option<MPath>> {
+    match MPath::new_opt(inp) {
+        Ok(path) => IResult::Done(b"", path),
+        Err(_) => IResult::Error(Err::Code(ErrorKind::Custom(BAD_PATH_ERR_CODE))),
+    }
 }
 
 macro_rules! replace_expr {
@@ -593,7 +598,7 @@ fn parse_with_params(
           })
         | call!(parse_command, "gettreepack", parse_params, 0+1,
             |kv| Ok(Gettreepack(GettreepackArgs {
-                rootdir: parseval(&kv, "rootdir", bytes_complete)?,
+                rootdir: parseval(&kv, "rootdir", path_complete)?,
                 mfnodes: parseval(&kv, "mfnodes", manifestlist)?,
                 basemfnodes: parseval(&kv, "basemfnodes", manifestlist)?.into_iter().collect(),
                 directories: parseval(&kv, "directories", gettreepack_directories)?,
@@ -1411,7 +1416,7 @@ mod test_parse {
         test_parse(
             inp,
             Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
-                rootdir: Bytes::new(),
+                rootdir: None,
                 mfnodes: vec![hash_ones_manifest()],
                 basemfnodes: btreeset![hash_ones_manifest()],
                 directories: vec![],
@@ -1435,7 +1440,7 @@ mod test_parse {
         test_parse(
             inp,
             Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
-                rootdir: Bytes::from("ololo".as_bytes()),
+                rootdir: MPath::new_opt("ololo").unwrap(),
                 mfnodes: vec![hash_ones_manifest(), hash_twos_manifest()],
                 basemfnodes: btreeset![hash_twos_manifest(), hash_ones_manifest()],
                 directories: vec![Bytes::from("".as_bytes())],
@@ -1459,7 +1464,7 @@ mod test_parse {
         test_parse(
             inp,
             Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
-                rootdir: Bytes::from("ololo".as_bytes()),
+                rootdir: MPath::new_opt("ololo").unwrap(),
                 mfnodes: vec![hash_ones_manifest(), hash_twos_manifest()],
                 basemfnodes: btreeset![hash_twos_manifest(), hash_ones_manifest()],
                 directories: vec![Bytes::from(",".as_bytes()), Bytes::from(";".as_bytes())],
@@ -1480,7 +1485,7 @@ mod test_parse {
         test_parse(
             inp,
             Request::Single(SingleRequest::Gettreepack(GettreepackArgs {
-                rootdir: Bytes::new(),
+                rootdir: None,
                 mfnodes: vec![hash_ones_manifest()],
                 basemfnodes: btreeset![hash_ones_manifest()],
                 directories: vec![Bytes::from(b"".as_ref()), Bytes::from(b"foo".as_ref())],

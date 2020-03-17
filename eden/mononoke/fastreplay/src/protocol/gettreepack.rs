@@ -7,6 +7,7 @@
 
 use anyhow::Error;
 use hgproto::GettreepackArgs;
+use mononoke_types::MPath;
 use serde::Deserialize;
 use std::borrow::Cow;
 use std::str::FromStr;
@@ -39,7 +40,7 @@ impl FromStr for RequestGettreepackArgs {
             .collect::<Result<_, _>>()?;
 
         let args = GettreepackArgs {
-            rootdir: json.rootdir.as_bytes().clone().into(),
+            rootdir: MPath::new_opt(&*json.rootdir)?,
             mfnodes: extract_separated_list(json.mfnodes.as_ref(), " ")?,
             basemfnodes: extract_separated_list(json.basemfnodes.as_ref(), " ")?,
             directories,

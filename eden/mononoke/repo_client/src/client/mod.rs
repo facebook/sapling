@@ -125,6 +125,13 @@ mod ops {
     pub static GETCOMMITDATA: &str = "getcommitdata";
 }
 
+fn format_path(path: &Option<MPath>) -> String {
+    match path {
+        Some(p) => format!("{}", p),
+        None => String::new(),
+    }
+}
+
 fn format_nodes<'a>(nodes: impl IntoIterator<Item = &'a HgChangesetId>) -> String {
     nodes.into_iter().map(|node| format!("{}", node)).join(" ")
 }
@@ -1516,7 +1523,7 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
     fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<BytesOld, Error> {
         let args = json!({
-            "rootdir": String::from_utf8_lossy(&params.rootdir),
+            "rootdir": format_path(&params.rootdir),
             "mfnodes": format_manifests(&params.mfnodes),
             "basemfnodes": format_manifests(&params.basemfnodes),
             "directories": format_utf8_bytes_list(&params.directories),
@@ -1931,7 +1938,7 @@ pub fn gettreepack_entries(
             return stream::once(Err(e)).boxify();
         }
 
-        if !rootdir.is_empty() {
+        if rootdir.is_some() {
             let e = Error::msg("rootdir must be empty");
             return stream::once(Err(e)).boxify();
         }
@@ -1971,12 +1978,6 @@ pub fn gettreepack_entries(
     // already has can be sent to the client.
     let mut basemfnode = basemfnodes.iter().next().cloned();
 
-    let rootpath = if rootdir.is_empty() {
-        None
-    } else {
-        Some(try_boxstream!(MPath::new(rootdir)))
-    };
-
     cloned!(repo);
     stream::iter_ok::<_, Error>(
         mfnodes
@@ -1998,7 +1999,7 @@ pub fn gettreepack_entries(
                     &repo,
                     mfnode,
                     cur_basemfnode,
-                    rootpath.clone(),
+                    rootdir.clone(),
                     fetchdepth,
                 )
             }),

@@ -32,6 +32,7 @@ use futures_old::{
     Future, IntoFuture, Stream,
 };
 use futures_stats::{FutureStats, Timed};
+use hgproto::GettreepackArgs;
 use manifest::{Entry as ManifestEntry, ManifestOps};
 use remotefilelog::create_getpack_v1_blob;
 use repo_client::gettreepack_entries;
@@ -1079,7 +1080,8 @@ impl MononokeRepo {
     ) -> BoxFuture<MononokeRepoResponse, ErrorKind> {
         STATS::eden_prefetch_trees.add_value(1);
         cloned!(self.repo);
-        let entries = gettreepack_entries(ctx.clone(), &self.repo, req.into()).and_then(
+        let args = try_boxfuture!(GettreepackArgs::try_from(req));
+        let entries = gettreepack_entries(ctx.clone(), &self.repo, args).and_then(
             move |(hg_mf_id, full_path)| {
                 let path_bytes = full_path
                     .clone()

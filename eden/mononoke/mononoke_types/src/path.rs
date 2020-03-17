@@ -329,6 +329,16 @@ impl MPath {
         Ok(MPath { elements })
     }
 
+    /// Same as `MPath::new`, except the input bytes may be empty.
+    pub fn new_opt<P: AsRef<[u8]>>(p: P) -> Result<Option<MPath>> {
+        let p = p.as_ref();
+        if p.is_empty() {
+            Ok(None)
+        } else {
+            Ok(Some(MPath::new(p)?))
+        }
+    }
+
     pub fn from_thrift(mpath: thrift::MPath) -> Result<MPath> {
         let elements: Result<Vec<_>> = mpath
             .0
