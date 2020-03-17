@@ -195,6 +195,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         msg: Optional[str] = None,
         op: Optional[str] = None,
         check_ignored: bool = True,
+        rev: Optional[str] = None,
     ) -> None:
         """Asserts the output of `hg status` matches the expected state.
 
@@ -204,7 +205,7 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
 
         'C' is not currently supported.
         """
-        actual_status = self.repo.status(include_ignored=check_ignored)
+        actual_status = self.repo.status(include_ignored=check_ignored, rev=rev)
         self.assertDictEqual(expected, actual_status, msg=msg)
         self.assert_unfinished_operation(op)
 

@@ -132,7 +132,9 @@ class HgRepository(repobase.Repository):
             cwd=cwd,
             check=check,
         )
-        return typing.cast(str, completed_process.stdout.decode(encoding))
+        return typing.cast(
+            str, completed_process.stdout.decode(encoding, errors="replace")
+        )
 
     def init(self, hgrc: Optional[configparser.ConfigParser] = None) -> None:
         """
@@ -259,7 +261,9 @@ class HgRepository(repobase.Repository):
         json_data = json.loads(output)
         return typing.cast(List[Dict[str, Any]], json_data)
 
-    def status(self, include_ignored: bool = False) -> Dict[str, str]:
+    def status(
+        self, include_ignored: bool = False, rev: Optional[str] = None
+    ) -> Dict[str, str]:
         """Returns the output of `hg status` as a dictionary of {path: status char}.
 
         The status characters are the same as the ones documented by `hg help status`
@@ -267,6 +271,9 @@ class HgRepository(repobase.Repository):
         args = ["status", "--print0"]
         if include_ignored:
             args.append("-mardui")
+        if rev is not None:
+            args.append("--rev")
+            args.append(rev)
 
         output = self.hg(*args)
         status = {}

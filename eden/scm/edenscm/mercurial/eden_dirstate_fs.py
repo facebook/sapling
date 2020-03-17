@@ -9,6 +9,7 @@ from typing import Callable, Iterable, Optional, Tuple
 
 from . import filesystem, perftrace, pycompat, util
 from .EdenThriftClient import ScmFileStatus
+from .i18n import _
 from .pycompat import decodeutf8
 
 
@@ -30,6 +31,10 @@ class eden_filesystem(filesystem.physicalfilesystem):
         IGNORED = ScmFileStatus.IGNORED
 
         for path, code in pycompat.iteritems(edenstatus):
+            if not util.isvalidutf8(path):
+                self.ui.warn(_("skipping invalid utf-8 filename: '%s'\n") % path)
+                continue
+
             path = decodeutf8(path)
             if not match(path):
                 continue
