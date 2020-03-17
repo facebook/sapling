@@ -14,6 +14,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BlobMetadata.h"
+#include "eden/fs/store/ImportPriority.h"
 
 namespace facebook {
 namespace eden {
@@ -37,8 +38,8 @@ class FakeObjectStore : public IObjectStore {
           ObjectFetchContext::getNullContext()) const override;
   folly::Future<std::shared_ptr<const Blob>> getBlob(
       const Hash& id,
-      ObjectFetchContext& context =
-          ObjectFetchContext::getNullContext()) const override;
+      ObjectFetchContext& context = ObjectFetchContext::getNullContext(),
+      ImportPriority priority = ImportPriority::kNormal) const override;
   folly::Future<std::shared_ptr<const Tree>> getTreeForCommit(
       const Hash& commitID,
       ObjectFetchContext& context =

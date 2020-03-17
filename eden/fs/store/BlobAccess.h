@@ -10,6 +10,7 @@
 #include <folly/futures/Future.h>
 #include <memory>
 #include "eden/fs/store/BlobCache.h"
+#include "eden/fs/store/ImportPriority.h"
 
 namespace facebook {
 namespace eden {
@@ -58,7 +59,8 @@ class BlobAccess {
   folly::Future<BlobCache::GetResult> getBlob(
       const Hash& hash,
       ObjectFetchContext& context,
-      BlobCache::Interest interest = BlobCache::Interest::LikelyNeededAgain);
+      BlobCache::Interest interest = BlobCache::Interest::LikelyNeededAgain,
+      ImportPriority priority = ImportPriority::kNormal);
 
  private:
   BlobAccess(const BlobAccess&) = delete;

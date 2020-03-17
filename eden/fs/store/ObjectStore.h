@@ -15,6 +15,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/IObjectStore.h"
+#include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/telemetry/EdenStats.h"
 
 namespace facebook {
@@ -85,7 +86,8 @@ class ObjectStore : public IObjectStore,
    */
   folly::Future<std::shared_ptr<const Blob>> getBlob(
       const Hash& id,
-      ObjectFetchContext& context) const override;
+      ObjectFetchContext& context,
+      ImportPriority priority = ImportPriority::kNormal) const override;
 
   /**
    * Returns the size of the contents of the blob with the given ID.

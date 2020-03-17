@@ -17,6 +17,7 @@
 #include "eden/fs/inodes/OverlayFileAccess.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BlobCache.h"
+#include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/utils/CoverageSet.h"
 
 namespace folly {
@@ -256,6 +257,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       LockedState state,
       BlobCache::Interest interest,
       ObjectFetchContext& fetchContext,
+      ImportPriority priority,
       std::shared_ptr<const Blob> blob,
       Fn&& fn);
 
@@ -300,7 +302,8 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   FOLLY_NODISCARD folly::Future<std::shared_ptr<const Blob>> startLoadingData(
       LockedState state,
       BlobCache::Interest interest,
-      ObjectFetchContext& fetchContext);
+      ObjectFetchContext& fetchContext,
+      ImportPriority priority);
 
   /**
    * Materialize the file as an empty file in the overlay.
