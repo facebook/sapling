@@ -210,7 +210,7 @@ class eden_dirstate(dirstate.dirstate):
             # if this file is already normal.
             entry = self._map._map.get(f)
             if entry is not None:
-                status, mode, merge_state = entry
+                status, mode, merge_state, _dummy_mtime = entry
                 if status == "r" and merge_state in (
                     MERGE_STATE_BOTH_PARENTS,
                     MERGE_STATE_OTHER_PARENT,
