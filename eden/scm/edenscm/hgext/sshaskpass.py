@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -161,8 +161,8 @@ def _validaterepo(orig, self, sshcmd, args, remotecmd, sshenv=None):
         scriptpath = sockpath + ".sh"
         with open(scriptpath, "w") as f:
             f.write(
-                '#!/bin/bash\nexec %s %s "$@"'
-                % (util.shellquote("python2"), util.shellquote(__file__))
+                '#!/bin/bash\nexec %s debugpython -- %s "$@"'
+                % (util.shellquote(sys.executable), util.shellquote(__file__))
             )
         os.chmod(scriptpath, 0o755)
         env = {
