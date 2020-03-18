@@ -392,7 +392,7 @@ impl RotateLog {
                 return Ok(0);
             }
 
-            if self.writable_log().iter_dirty().nth(0).is_none() {
+            if self.writable_log().iter_dirty().next().is_none() {
                 // Read-only path, no need to take directory lock.
                 if let Ok(latest) = read_latest(self.dir.as_ref().unwrap()) {
                     if latest != self.latest {

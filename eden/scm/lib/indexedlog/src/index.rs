@@ -1637,7 +1637,7 @@ impl MemChecksum {
         // See the comment in `read_from` for `start_chunk_index`.
         // It is the starting index for
         let start_chunk_index = (self.start >> self.chunk_size_logarithm) as usize;
-        return &self.xxhash_list[start_chunk_index..];
+        &self.xxhash_list[start_chunk_index..]
     }
 
     /// Reset the `chunk_size_logarithm`.

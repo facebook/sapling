@@ -83,12 +83,11 @@ impl OpenOptions {
         let result: crate::Result<_> = (|| {
             let meta_path = multi_meta_path(path);
             let mut multimeta = MultiMeta::default();
-            match multimeta.read_file(&meta_path) {
-                Err(e) => match e.kind() {
+            if let Err(e) = multimeta.read_file(&meta_path) {
+                match e.kind() {
                     io::ErrorKind::NotFound => (), // not fatal.
                     _ => return Err(e).context(&meta_path, "when opening MultiLog"),
-                },
-                Ok(_) => (),
+                }
             };
 
             let locked = if self
@@ -107,7 +106,7 @@ impl OpenOptions {
             let mut logs = Vec::with_capacity(self.name_open_options.len());
             for (name, opts) in self.name_open_options.iter() {
                 let fspath = path.join(name);
-                let name_ref: &str = name.as_ref();
+                let name_ref: &str = name;
                 if !multimeta.metas.contains_key(name_ref) {
                     // Create a new Log if it does not exist in MultiMeta.
                     utils::mkdir_p(&fspath)?;
@@ -160,7 +159,7 @@ impl MultiLog {
     /// A lock must be provided to prove that there is no race condition.
     /// The lock is usually obtained via `lock()`.
     pub fn write_meta(&mut self, lock: &LockGuard) -> crate::Result<()> {
-        if lock.0.path() != &self.path {
+        if lock.0.path() != self.path {
             let msg = format!(
                 "Invalid lock used to write_meta (Lock path = {:?}, MultiLog path = {:?})",
                 lock.0.path(),

@@ -81,9 +81,7 @@ pub fn mmap_path(path: &Path, len: u64) -> crate::Result<Bytes> {
                     Err(err).context(path, "cannot open for mmap")
                 }
             })?;
-        Ok(Bytes::from(
-            mmap_bytes(&file, Some(len)).context(path, "cannot mmap")?,
-        ))
+        Ok(mmap_bytes(&file, Some(len)).context(path, "cannot mmap")?)
     }
 }
 
@@ -141,7 +139,7 @@ pub fn atomic_write(
         // should also result in a non-empty file. However, we have seen empty
         // files sometimes without OS crashes (see https://fburl.com/bky2zu9e).
         if SYMLINK_ATOMIC_WRITE.load(atomic::Ordering::SeqCst) {
-            if let Ok(_) = atomic_write_symlink(path, content) {
+            if atomic_write_symlink(path, content).is_ok() {
                 return Ok(());
             }
         }

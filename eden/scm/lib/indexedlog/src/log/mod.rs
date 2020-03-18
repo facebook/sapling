@@ -694,8 +694,7 @@ impl Log {
     pub(crate) fn finalize_indexes(&mut self) -> crate::Result<()> {
         let result: crate::Result<_> = (|| {
             let dir = self.dir.clone();
-            if let Some(ref dir) = dir.as_opt_path() {
-                let dir = dir.clone();
+            if let Some(dir) = dir.as_opt_path() {
                 if !self.mem_buf.is_empty() {
                     return Err(crate::Error::programming(
                         "sync() should be called before finalize_indexes()",
