@@ -16,15 +16,17 @@ ALWAYSCASESENSITIVE = "alwayscasesensitive"
 
 _ALL_CAPS = {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: True}
 
-_FS_CAP_TABLE = {
-    "apfs": {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: False},
-    "btrfs": _ALL_CAPS,
-    "edenfs": {
+_EDENFS_POSIX_CAPS = {
         SYMLINK: True,
         HARDLINK: False,
         EXECBIT: True,
         ALWAYSCASESENSITIVE: True,
-    },
+}
+
+_FS_CAP_TABLE = {
+    "apfs": {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: False},
+    "btrfs": _ALL_CAPS,
+    "edenfs": _EDENFS_POSIX_CAPS,
     "ext2": _ALL_CAPS,
     "ext3": _ALL_CAPS,
     "ext4": _ALL_CAPS,
@@ -36,6 +38,7 @@ _FS_CAP_TABLE = {
     },
     "hfs": {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: False},
     "jfs": _ALL_CAPS,
+    "osxfuse_eden": _EDENFS_POSIX_CAPS,
     "reiserfs": _ALL_CAPS,
     "tmpfs": _ALL_CAPS,
     "ufs": _ALL_CAPS,
