@@ -26,7 +26,7 @@ fn gen_buf(size: usize) -> Vec<u8> {
 /// Default open options: 4K checksum chunk
 fn open_opts() -> OpenOptions {
     let mut open_opts = OpenOptions::new();
-    open_opts.checksum_chunk_size_log(12);
+    open_opts.checksum_chunk_size_logarithm(12);
     open_opts
 }
 
