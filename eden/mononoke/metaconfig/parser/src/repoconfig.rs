@@ -29,11 +29,10 @@ use maplit::hashmap;
 use metaconfig_types::{
     BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, CommitSyncConfig,
     CommitSyncDirection, CommonConfig, DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig,
-    HookBypass, HookCode, HookConfig, HookManagerParams, HookParams, HookType,
-    InfinitepushNamespace, InfinitepushParams, LfsParams, PushParams, PushrebaseFlags,
-    PushrebaseParams, Redaction, RepoConfig, RepoReadOnly, SmallRepoCommitSyncConfig,
-    SourceControlServiceParams, StorageConfig, UnodeVersion, WhitelistEntry,
-    WireprotoLoggingConfig,
+    HookBypass, HookConfig, HookManagerParams, HookParams, HookType, InfinitepushNamespace,
+    InfinitepushParams, LfsParams, PushParams, PushrebaseFlags, PushrebaseParams, Redaction,
+    RepoConfig, RepoReadOnly, SmallRepoCommitSyncConfig, SourceControlServiceParams, StorageConfig,
+    UnodeVersion, WhitelistEntry, WireprotoLoggingConfig,
 };
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
@@ -78,7 +77,6 @@ impl RepoConfigs {
                 raw_repo_config.clone(),
                 &storage,
                 &commit_sync,
-                config_path,
             )?;
 
             if !repoids.insert(config.repoid) {
@@ -375,42 +373,8 @@ impl RepoConfigs {
         raw_config: RawRepoConfig,
         storage_config: &HashMap<String, RawStorageConfig>,
         commit_sync: &HashMap<String, CommitSyncConfig>,
-        config_root_path: &Path,
     ) -> Result<RepoConfig> {
         let hooks = raw_config.hooks.clone().unwrap_or_default();
-
-        let base_hook_loading_path = if config_root_path.starts_with(CONFIGERATOR_PREFIX) {
-            // When we load main config from configerator, we expect to find our
-            // configuration relative to the main folder where the Mononoke binary
-            // is executed from.
-            std::env::current_exe()?
-                .parent()
-                .expect("expected to get base dir of mononoke executable")
-                .to_path_buf()
-        } else if config_root_path.is_file() {
-            // JSON config directories are expected to look like:
-            // $ tree /tmp/mononoke_configs_4vUi2g
-            // └── config
-            //     ├── hooks
-            //     │   ├── block_cross_repo_commits.lua
-            //     │   ├── <snip>
-            //     └── tiers
-            //         ├── apiserver.json
-            //         ├── <snip>
-            //
-            // When invoking Mononoke, we expect the path to point directly
-            // at the JSON file and paths in JSON config files are expected
-            // to refer to hooks as 'config/hooks/...', so we need to go 3
-            // parents up to get to the right place.
-            config_root_path
-                .ancestors()
-                .skip(3)
-                .next()
-                .expect("invalid config path structure")
-                .to_path_buf()
-        } else {
-            config_root_path.to_path_buf()
-        };
 
         let mut all_hook_params = vec![];
         for raw_hook_config in hooks {
@@ -420,29 +384,10 @@ impl RepoConfigs {
                 ints: raw_hook_config.config_ints.unwrap_or_default(),
             };
 
-            let hook_params = if raw_hook_config.name.starts_with("rust:") {
-                // No need to load lua code for rust hook
-                HookParams {
-                    name: raw_hook_config.name,
-                    code: None,
-                    hook_type: HookType::from_str(&raw_hook_config.hook_type)?,
-                    config,
-                }
-            } else {
-                let hook_path = raw_hook_config.path.clone();
-                let hook_path = match hook_path {
-                    Some(hook_path) => base_hook_loading_path.join(hook_path),
-                    None => {
-                        return Err(ErrorKind::MissingPath().into());
-                    }
-                };
-
-                HookParams {
-                    name: raw_hook_config.name,
-                    code: Some(HookCode::Path(hook_path.clone())),
-                    hook_type: HookType::from_str(&raw_hook_config.hook_type)?,
-                    config,
-                }
+            let hook_params = HookParams {
+                name: raw_hook_config.name,
+                hook_type: HookType::from_str(&raw_hook_config.hook_type)?,
+                config,
             };
 
             all_hook_params.push(hook_params);
@@ -1593,9 +1538,6 @@ mod test {
                 hooks: vec![
                     HookParams {
                         name: "hook1".to_string(),
-                        code: Some(HookCode::Path(
-                            tmp_dir.path().join(PathBuf::from("common/hooks/hook1.lua")),
-                        )),
                         hook_type: HookType::PerAddedOrModifiedFile,
                         config: HookConfig {
                             bypass: Some(HookBypass::CommitMessage("@allow_hook1".into())),
@@ -1605,7 +1547,6 @@ mod test {
                     },
                     HookParams {
                         name: "rust:rusthook".to_string(),
-                        code: None,
                         hook_type: HookType::PerChangeset,
                         config: HookConfig {
                             bypass: None,

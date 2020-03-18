@@ -6,10 +6,9 @@
  */
 
 use anyhow::Error;
+use async_trait::async_trait;
 use bytes::Bytes;
 use context::CoreContext;
-use futures::IntoFuture;
-use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{blobs::HgBlobChangeset, FileBytes, HgChangesetId, HgFileNodeId, MPath};
 use mononoke_types::FileType;
 use std::collections::HashMap;
@@ -22,31 +21,28 @@ pub struct InMemoryChangesetStore {
     map_cs: HashMap<HgChangesetId, HgBlobChangeset>,
 }
 
+#[async_trait]
 impl ChangesetStore for InMemoryChangesetStore {
-    fn get_changeset_by_changesetid(
-        &self,
-        _ctx: CoreContext,
+    async fn get_changeset_by_changesetid<'a, 'b: 'a>(
+        &'a self,
+        _ctx: &'b CoreContext,
         changesetid: HgChangesetId,
-    ) -> BoxFuture<HgBlobChangeset, Error> {
+    ) -> Result<HgBlobChangeset, Error> {
         match self.map_cs.get(&changesetid) {
             Some(cs) => Ok(cs.clone()),
             None => Err(ErrorKind::NoSuchChangeset(changesetid.to_string()).into()),
         }
-        .into_future()
-        .boxify()
     }
 
-    fn get_changed_files(
-        &self,
-        _ctx: CoreContext,
+    async fn get_changed_files<'a, 'b: 'a>(
+        &'a self,
+        _ctx: &'b CoreContext,
         changesetid: HgChangesetId,
-    ) -> BoxFuture<Vec<(String, ChangedFileType, Option<(HgFileNodeId, FileType)>)>, Error> {
+    ) -> Result<Vec<(String, ChangedFileType, Option<(HgFileNodeId, FileType)>)>, Error> {
         match self.map_files.get(&changesetid) {
             Some(files) => Ok(files.clone()),
             None => Err(ErrorKind::NoSuchChangeset(changesetid.to_string()).into()),
         }
-        .into_future()
-        .boxify()
     }
 }
 
@@ -102,22 +98,22 @@ pub struct InMemoryFileContentStore {
     path_to_filenode: HashMap<(HgChangesetId, MPath), HgFileNodeId>,
 }
 
+#[async_trait]
 impl FileContentStore for InMemoryFileContentStore {
-    fn resolve_path(
-        &self,
-        _ctx: CoreContext,
+    async fn resolve_path<'a, 'b: 'a>(
+        &'a self,
+        _ctx: &'b CoreContext,
         cs_id: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Option<HgFileNodeId>, Error> {
-        let filenode = self.path_to_filenode.get(&(cs_id, path)).cloned();
-        Ok(filenode).into_future().boxify()
+    ) -> Result<Option<HgFileNodeId>, Error> {
+        Ok(self.path_to_filenode.get(&(cs_id, path)).cloned())
     }
 
-    fn get_file_text(
-        &self,
-        _ctx: CoreContext,
+    async fn get_file_text<'a, 'b: 'a>(
+        &'a self,
+        _ctx: &'b CoreContext,
         id: HgFileNodeId,
-    ) -> BoxFuture<Option<FileBytes>, Error> {
+    ) -> Result<Option<FileBytes>, Error> {
         self.id_to_text
             .get(&id)
             .ok_or(Error::msg("file not found"))
@@ -125,11 +121,13 @@ impl FileContentStore for InMemoryFileContentStore {
                 InMemoryFileText::Present(ref bytes) => Some(bytes.clone()),
                 InMemoryFileText::Elided(_) => None,
             })
-            .into_future()
-            .boxify()
     }
 
-    fn get_file_size(&self, _ctx: CoreContext, id: HgFileNodeId) -> BoxFuture<u64, Error> {
+    async fn get_file_size<'a, 'b: 'a>(
+        &'a self,
+        _ctx: &'b CoreContext,
+        id: HgFileNodeId,
+    ) -> Result<u64, Error> {
         self.id_to_text
             .get(&id)
             .ok_or(Error::msg("file not found"))
@@ -137,8 +135,6 @@ impl FileContentStore for InMemoryFileContentStore {
                 InMemoryFileText::Present(ref bytes) => bytes.size() as u64,
                 InMemoryFileText::Elided(size) => *size,
             })
-            .into_future()
-            .boxify()
     }
 }
 

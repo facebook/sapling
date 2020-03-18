@@ -435,8 +435,6 @@ pub struct HookParams {
     pub name: String,
     /// The type of the hook
     pub hook_type: HookType,
-    /// The code of the hook
-    pub code: Option<HookCode>,
     /// Configs that should be passed to hook
     pub config: HookConfig,
 }

@@ -5,10 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use hlua::{AnyLuaString, AnyLuaValue};
 use lazy_static::lazy_static;
 use regex::{Regex, RegexBuilder};
-use std::collections::{HashMap, HashSet};
+use std::collections::HashSet;
 use std::mem;
 
 const TITLE: &'static str = "title";
@@ -133,49 +132,6 @@ impl PhabricatorMessage {
         parsed
     }
 
-    pub fn to_lua(self) -> HashMap<&'static str, AnyLuaValue> {
-        let mut map = HashMap::new();
-        let PhabricatorMessage {
-            title,
-            cc,
-            subscribers,
-            differential_revision,
-            revert_plan,
-            reviewed_by,
-            reviewers,
-            summary,
-            signature,
-            tasks,
-            test_plan,
-        } = self;
-
-        let insert_str = |map: &mut HashMap<&str, AnyLuaValue>, name, value| {
-            if let Some(v) = value {
-                map.insert(name, to_lua_string(v));
-            }
-        };
-
-        let insert_array = |map: &mut HashMap<&str, AnyLuaValue>, name, value| {
-            if let Some(v) = value {
-                map.insert(name, to_lua_array(v));
-            }
-        };
-
-        insert_str(&mut map, TITLE, title);
-        insert_array(&mut map, CC, cc);
-        insert_array(&mut map, SUBSCRIBERS, subscribers);
-        insert_str(&mut map, DIFFERENTIAL_REVISION, differential_revision);
-        insert_str(&mut map, REVERT_PLAN, revert_plan);
-        insert_array(&mut map, REVIEWED_BY, reviewed_by);
-        insert_array(&mut map, REVIEWERS, reviewers);
-        insert_str(&mut map, SUMMARY, summary);
-        insert_str(&mut map, SIGNATURE, signature);
-        insert_array(&mut map, TASKS, tasks);
-        insert_str(&mut map, TEST_PLAN, test_plan);
-
-        map
-    }
-
     fn add(&mut self, tag: String, value: Vec<&str>) {
         let value = itertools::join(value, "\n").trim().to_string();
 
@@ -209,28 +165,9 @@ impl PhabricatorMessage {
     }
 }
 
-fn to_lua_string(s: String) -> AnyLuaValue {
-    AnyLuaValue::LuaAnyString(AnyLuaString(s.as_bytes().to_vec()))
-}
-
-fn to_lua_array<'a, T: IntoIterator<Item = String>>(v: T) -> AnyLuaValue {
-    let v: Vec<_> = v
-        .into_iter()
-        .enumerate()
-        .map(|(i, val)| {
-            (
-                AnyLuaValue::LuaNumber((i + 1) as f64),
-                AnyLuaValue::LuaString(val),
-            )
-        })
-        .collect();
-    AnyLuaValue::LuaArray(v)
-}
-
 #[cfg(test)]
 mod test {
     use super::*;
-    use maplit::hashmap;
 
     fn s(v: &str) -> String {
         v.to_string()
@@ -242,14 +179,9 @@ mod test {
 
     #[test]
     fn test_parse_commit_msg() {
-        fn check_parse_commit(
-            commit_msg: &str,
-            expected_msg: PhabricatorMessage,
-            expected_lua: HashMap<&'static str, AnyLuaValue>,
-        ) {
+        fn check_parse_commit(commit_msg: &str, expected_msg: PhabricatorMessage) {
             let msg = PhabricatorMessage::parse_message(commit_msg);
             assert_eq!(msg, expected_msg);
-            assert_eq!(msg.to_lua(), expected_lua);
         }
 
         check_parse_commit(
@@ -259,11 +191,6 @@ mod test {
                 summary: ss("fix"),
                 test_plan: ss("testinprod"),
                 ..Default::default()
-            },
-            hashmap! {
-                TITLE => to_lua_string(s("mononoke: fix bug")),
-                SUMMARY => to_lua_string(s("fix")),
-                TEST_PLAN => to_lua_string(s("testinprod")),
             },
         );
 
@@ -276,11 +203,6 @@ mod test {
                 test_plan: ss("testinprod"),
                 ..Default::default()
             },
-            hashmap! {
-                TITLE => to_lua_string(s("mononoke: fix bug\nsecondline")),
-                SUMMARY => to_lua_string(s("fix")),
-                TEST_PLAN => to_lua_string(s("testinprod")),
-            },
         );
 
         check_parse_commit(
@@ -290,11 +212,6 @@ mod test {
                 summary: ss("fix"),
                 test_plan: ss("testinprod"),
                 ..Default::default()
-            },
-            hashmap! {
-                TITLE => to_lua_string(s("")),
-                SUMMARY => to_lua_string(s("fix")),
-                TEST_PLAN => to_lua_string(s("testinprod")),
             },
         );
 
@@ -306,10 +223,6 @@ mod test {
                 summary: ss("fix\n Test Plan: testinprod"),
                 ..Default::default()
             },
-            hashmap! {
-                TITLE => to_lua_string(s("")),
-                SUMMARY => to_lua_string(s("fix\n Test Plan: testinprod")),
-            },
         );
 
         check_parse_commit(
@@ -319,10 +232,6 @@ mod test {
                 summary: ss("fix\nnot a tag: testinprod"),
                 ..Default::default()
             },
-            hashmap! {
-                TITLE => to_lua_string(s("")),
-                SUMMARY => to_lua_string(s("fix\nnot a tag: testinprod")),
-            },
         );
 
         check_parse_commit(
@@ -331,10 +240,6 @@ mod test {
                 title: ss(""),
                 summary: ss("fix\nFixed\na\nbug"),
                 ..Default::default()
-            },
-            hashmap! {
-                TITLE => to_lua_string(s("")),
-                SUMMARY => to_lua_string(s("fix\nFixed\na\nbug")),
             },
         );
 
@@ -346,11 +251,6 @@ mod test {
                 cc: Some(vec![]),
                 ..Default::default()
             },
-            hashmap! {
-                TITLE => to_lua_string(s("")),
-                SUMMARY => to_lua_string(s("fix")),
-                CC => to_lua_array(vec![]),
-            },
         );
 
         check_parse_commit(
@@ -360,10 +260,6 @@ mod test {
                 cc: Some(vec![s("user1"), s("user2"), s("user3")]),
                 ..Default::default()
             },
-            hashmap! {
-                TITLE => to_lua_string(s("")),
-                CC => to_lua_array(vec![s("user1"), s("user2"), s("user3")]),
-            },
         );
 
         check_parse_commit(
@@ -372,10 +268,6 @@ mod test {
                 title: ss(""),
                 tasks: Some(vec![s("T1111"), s("T2222"), s("T3333")]),
                 ..Default::default()
-            },
-            hashmap! {
-                TITLE => to_lua_string(s("")),
-                TASKS => to_lua_array(vec![s("T1111"), s("T2222"), s("T3333")]),
             },
         );
 
@@ -387,12 +279,6 @@ mod test {
                 test_plan: ss("testinprod"),
                 reviewed_by: Some(vec![s("stash"), s("luk"), s("simonfar")]),
                 ..Default::default()
-            },
-            hashmap! {
-                TITLE => to_lua_string(s("")),
-                SUMMARY => to_lua_string(s("fix")),
-                TEST_PLAN => to_lua_string(s("testinprod")),
-                REVIEWED_BY => to_lua_array(vec![s("stash"), s("luk"), s("simonfar")]),
             },
         );
 
@@ -421,16 +307,6 @@ Differential Revision: https://url/D123
                 tasks: Some(vec![s("T1234")]),
                 differential_revision: ss("https://url/D123"),
                 ..Default::default()
-            },
-            hashmap! {
-                TITLE => to_lua_string(s("mononoke: fix fixovich")),
-                SUMMARY => to_lua_string(s("fix\nof a mononoke\nbug")),
-                TEST_PLAN => to_lua_string(s("testinprod")),
-                REVIEWED_BY => to_lua_array(vec![s("stash")]),
-                REVIEWERS => to_lua_array(vec![s("#mononoke")]),
-                CC => to_lua_array(vec![s("jsgf")]),
-                TASKS => to_lua_array(vec![s("T1234")]),
-                DIFFERENTIAL_REVISION =>  to_lua_string(s("https://url/D123")),
             },
         );
 
@@ -469,19 +345,6 @@ Signature: 111111111:1111111111:bbbbbbbbbbbbbbbb",
                 differential_revision: ss("https://phabricator.intern.facebook.com/D1111111"),
                 signature: ss("111111111:1111111111:bbbbbbbbbbbbbbbb"),
                 ..Default::default()
-            },
-            hashmap! {
-                TITLE => to_lua_string(s("mononoke: log error only once")),
-                SUMMARY => to_lua_string(s("Previously `log_with_msg()` was logged twice if msg wasn't None - with and\n\
-            without the message. This diff fixes it.\n\
-            \n\
-            #accept2ship")),
-                TEST_PLAN => to_lua_string(s("buck check")),
-                REVIEWED_BY => to_lua_array(vec![s("simonfar")]),
-                REVIEWERS => to_lua_array(vec![s("simonfar"), s("#mononoke")]),
-                SUBSCRIBERS => to_lua_array(vec![s("jsgf")]),
-                DIFFERENTIAL_REVISION =>  to_lua_string(s("https://phabricator.intern.facebook.com/D1111111")),
-                SIGNATURE =>  to_lua_string(s("111111111:1111111111:bbbbbbbbbbbbbbbb")),
             },
         );
     }

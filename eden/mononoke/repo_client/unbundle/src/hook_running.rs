@@ -13,9 +13,9 @@ use crate::{
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::future::ok;
-use futures_old::{stream, Future, Stream};
+use futures::{future, stream::futures_unordered, FutureExt, TryFutureExt, TryStreamExt};
+use futures_ext::{BoxFuture, FutureExt as _};
+use futures_old::future::{ok, Future};
 use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookManager};
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -41,38 +41,51 @@ fn run_pushrebase_hooks(
     let changesets = action.uploaded_hg_changeset_ids.clone();
     let maybe_pushvars = action.maybe_pushvars.clone();
     let bookmark = action.bookmark_spec.get_bookmark_name();
-    run_pushrebase_hooks_impl(ctx, changesets, maybe_pushvars, &bookmark, hook_manager)
+    run_pushrebase_hooks_impl(ctx, changesets, maybe_pushvars, bookmark, hook_manager)
 }
 
 fn run_pushrebase_hooks_impl(
     ctx: CoreContext,
     changesets: UploadedHgChangesetIds,
     pushvars: Option<HashMap<String, Bytes>>,
-    onto_bookmark: &BookmarkName,
+    onto_bookmark: BookmarkName,
     hook_manager: Arc<HookManager>,
 ) -> BoxFuture<(), BundleResolverError> {
     // TODO: should we also accept the Option<HgBookmarkPush> and run hooks on that?
-    let mut futs = stream::FuturesUnordered::new();
-    for hg_cs_id in changesets {
-        futs.push(
-            hook_manager
-                .run_changeset_hooks_for_bookmark(
-                    ctx.clone(),
-                    hg_cs_id.clone(),
-                    onto_bookmark,
-                    pushvars.clone(),
-                )
-                .join(hook_manager.run_file_hooks_for_bookmark(
-                    ctx.clone(),
-                    hg_cs_id,
-                    onto_bookmark,
-                    pushvars.clone(),
-                )),
-        )
-    }
-    futs.collect()
+    let futs: futures_unordered::FuturesUnordered<_> = changesets
+        .into_iter()
+        .map({
+            |hg_cs_id| {
+                let ctx = ctx.clone();
+                let hook_manager = hook_manager.clone();
+                let onto_bookmark = onto_bookmark.clone();
+                let pushvars = pushvars.clone();
+                async move {
+                    future::try_join(
+                        hook_manager.run_changeset_hooks_for_bookmark(
+                            &ctx,
+                            hg_cs_id.clone(),
+                            &onto_bookmark,
+                            pushvars.as_ref(),
+                        ),
+                        hook_manager.run_file_hooks_for_bookmark(
+                            &ctx,
+                            hg_cs_id,
+                            &onto_bookmark,
+                            pushvars.as_ref(),
+                        ),
+                    )
+                    .await
+                }
+                .boxed()
+            }
+        })
+        .collect();
+    futs.try_collect()
+        .boxed()
+        .compat()
         .from_err()
-        .and_then(|res| {
+        .and_then(|res: Vec<_>| {
             let (cs_hook_results, file_hook_results): (Vec<_>, Vec<_>) = res.into_iter().unzip();
             let cs_hook_failures: Vec<(ChangesetHookExecutionID, HookExecution)> = cs_hook_results
                 .into_iter()

@@ -10,18 +10,23 @@
 #![deny(warnings)]
 
 use crate::errors::*;
-use crate::facebook::rust_hooks::check_nocommit::CheckNocommitHook;
-use crate::facebook::rust_hooks::check_unittests::CheckUnittestsHook;
-use crate::facebook::rust_hooks::ensure_valid_email::EnsureValidEmailHook;
-use crate::facebook::rust_hooks::limit_commit_message_length::LimitCommitMessageLength;
-use crate::facebook::rust_hooks::limit_path_length::LimitPathLengthHook;
-use crate::facebook::rust_hooks::signed_source::SignedSourceHook;
-use crate::facebook::rust_hooks::verify_integrity::VerifyIntegrityHook;
-use crate::lua_hook::LuaHook;
+use crate::facebook::rust_hooks::{
+    always_fail_changeset::AlwaysFailChangeset, block_cross_repo_commits::BlockCrossRepoCommits,
+    block_empty_commit::BlockEmptyCommit, check_nocommit::CheckNocommitHook,
+    check_unittests::CheckUnittestsHook, conflict_markers::ConflictMarkers, deny_files::DenyFiles,
+    ensure_valid_email::EnsureValidEmailHook,
+    gitattributes_textdirectives::GitattributesTextDirectives,
+    limit_commit_message_length::LimitCommitMessageLength, limit_commitsize::LimitCommitsize,
+    limit_filesize::LimitFilesize, limit_path_length::LimitPathLengthHook,
+    no_bad_filenames::NoBadFilenames, no_insecure_filenames::NoInsecureFilenames,
+    no_questionable_filenames::NoQuestionableFilenames, signed_source::SignedSourceHook,
+    tp2_symlinks_only::TP2SymlinksOnly, verify_integrity::VerifyIntegrityHook,
+    verify_reviewedby_info::VerifyReviewedbyInfo,
+};
 use crate::{Hook, HookChangeset, HookFile, HookManager};
-use anyhow::{format_err, Error};
+use anyhow::Error;
 use fbinit::FacebookInit;
-use metaconfig_types::{HookType, RepoConfig};
+use metaconfig_types::RepoConfig;
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -40,6 +45,7 @@ pub fn load_hooks(
 
     let mut hook_set = HashSet::new();
     for hook in config.hooks {
+        use LoadedRustHook::*;
         let name = hook.name;
 
         if disabled_hooks.contains(&name) {
@@ -47,53 +53,52 @@ pub fn load_hooks(
             continue;
         }
 
-        if name.starts_with("rust:") {
-            use LoadedRustHook::*;
-
-            let rust_name = &name[5..];
-            let rust_name = rust_name.to_string();
-            let rust_hook = match rust_name.as_ref() {
-                "check_unittests" => {
-                    ChangesetHook(Arc::new(CheckUnittestsHook::new(&hook.config)?))
-                }
-                "verify_integrity" => {
-                    ChangesetHook(Arc::new(VerifyIntegrityHook::new(&hook.config)?))
-                }
-                "ensure_valid_email" => {
-                    ChangesetHook(Arc::new(EnsureValidEmailHook::new(fb, &hook.config)))
-                }
-                "limit_commit_message_length" => {
-                    ChangesetHook(Arc::new(LimitCommitMessageLength::new(&hook.config)?))
-                }
-                "limit_path_length" => FileHook(Arc::new(LimitPathLengthHook::new(&hook.config)?)),
-                "signed_source" => FileHook(Arc::new(SignedSourceHook::new(&hook.config)?)),
-                "check_nocommit" => FileHook(Arc::new(CheckNocommitHook::new(&hook.config)?)),
-                _ => return Err(ErrorKind::InvalidRustHook(name.clone()).into()),
-            };
-
-            match rust_hook {
-                FileHook(rust_hook) => {
-                    hook_manager.register_file_hook(&name, rust_hook, hook.config)
-                }
-                ChangesetHook(rust_hook) => {
-                    hook_manager.register_changeset_hook(&name, rust_hook, hook.config)
-                }
-            }
+        // Backwards compatibility only
+        let hook_name = if name.starts_with("rust:") {
+            name[5..].to_string()
         } else {
-            let code = hook
-                .code
-                .ok_or(format_err!("Lua Hook must have path: {}", name))?
-                .load()?;
-            let lua_hook = LuaHook::new(name.clone(), code);
-            match hook.hook_type {
-                HookType::PerAddedOrModifiedFile => {
-                    hook_manager.register_file_hook(&name, Arc::new(lua_hook), hook.config)
-                }
-                HookType::PerChangeset => {
-                    hook_manager.register_changeset_hook(&name, Arc::new(lua_hook), hook.config)
-                }
+            name.clone()
+        };
+
+        let rust_hook = match hook_name.as_ref() {
+            "always_fail_changeset" => ChangesetHook(Arc::new(AlwaysFailChangeset::new())),
+            "block_cross_repo_commits" => FileHook(Arc::new(BlockCrossRepoCommits::new())),
+            "block_empty_commit" => ChangesetHook(Arc::new(BlockEmptyCommit::new())),
+            "check_nocommit" => FileHook(Arc::new(CheckNocommitHook::new(&hook.config)?)),
+            "check_unittests" => ChangesetHook(Arc::new(CheckUnittestsHook::new(&hook.config)?)),
+            "conflict_markers" => FileHook(Arc::new(ConflictMarkers::new())),
+            "deny_files" => FileHook(Arc::new(DenyFiles::new()?)),
+            "ensure_valid_email" => {
+                ChangesetHook(Arc::new(EnsureValidEmailHook::new(fb, &hook.config)?))
+            }
+            "gitattributes-textdirectives" => {
+                FileHook(Arc::new(GitattributesTextDirectives::new()?))
+            }
+            "limit_commit_message_length" => {
+                ChangesetHook(Arc::new(LimitCommitMessageLength::new(&hook.config)?))
+            }
+            "limit_commitsize" => ChangesetHook(Arc::new(LimitCommitsize::new(&hook.config))),
+            "limit_filesize" => FileHook(Arc::new(LimitFilesize::new(&hook.config))),
+            "limit_path_length" => FileHook(Arc::new(LimitPathLengthHook::new(&hook.config)?)),
+            "no_bad_filenames" => FileHook(Arc::new(NoBadFilenames::new()?)),
+            "no_insecure_filenames" => FileHook(Arc::new(NoInsecureFilenames::new()?)),
+            "no_questionable_filenames" => FileHook(Arc::new(NoQuestionableFilenames::new()?)),
+            "signed_source" => FileHook(Arc::new(SignedSourceHook::new(&hook.config)?)),
+            "tp2_symlinks_only" => FileHook(Arc::new(TP2SymlinksOnly::new())),
+            "verify_integrity" => ChangesetHook(Arc::new(VerifyIntegrityHook::new(&hook.config)?)),
+            "verify_reviewedby_info" => {
+                ChangesetHook(Arc::new(VerifyReviewedbyInfo::new(&hook.config)?))
+            }
+            _ => return Err(ErrorKind::InvalidRustHook(name.clone()).into()),
+        };
+
+        match rust_hook {
+            FileHook(rust_hook) => hook_manager.register_file_hook(&name, rust_hook, hook.config),
+            ChangesetHook(rust_hook) => {
+                hook_manager.register_changeset_hook(&name, rust_hook, hook.config)
             }
         }
+
         hook_set.insert(name);
     }
 

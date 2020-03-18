@@ -22,13 +22,7 @@ setup configuration
   > name="master_bookmark"
   > CONFIG
 
-  $ mkdir -p common/hooks
-  $ cat > common/hooks/failing_hook.lua <<CONFIG
-  > hook = function (ctx)
-  >  return false, "failed"
-  > end
-  > CONFIG
-  $ register_hook failing_hook common/hooks/failing_hook.lua PerChangeset <(
+  $ register_hook always_fail_changeset  PerChangeset <(
   >   echo 'bypass_pushvar="BYPASS_REVIEW=true"'
   > )
 
@@ -89,9 +83,9 @@ Unsuccessful push creates a draft commit on the server
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     failing_hook for 812eca0823f97743f8d85cdef5cf338b54cebb01: failed
+  remote:     always_fail_changeset for 812eca0823f97743f8d85cdef5cf338b54cebb01: This hook always fails
   remote:   Root cause:
-  remote:     "hooks failed:\nfailing_hook for 812eca0823f97743f8d85cdef5cf338b54cebb01: failed"
+  remote:     "hooks failed:\nalways_fail_changeset for 812eca0823f97743f8d85cdef5cf338b54cebb01: This hook always fails"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 

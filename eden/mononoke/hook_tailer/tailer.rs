@@ -13,7 +13,8 @@ use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use futures_ext::{spawn_future, BoxFuture, FutureExt};
+use futures::{FutureExt, TryFutureExt};
+use futures_ext::{spawn_future, BoxFuture, FutureExt as OldFutureExt};
 use futures_old::{Future, Stream};
 use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::{blobrepo_text_only_store, BlobRepoChangesetStore};
@@ -285,24 +286,29 @@ fn run_hooks_for_changeset(
 ) -> impl Future<Item = (HgChangesetId, HookResults), Error = Error> {
     repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
         .and_then(move |hg_cs| {
-            debug!(ctx.logger(), "Running file hooks for changeset {:?}", hg_cs);
-            hm.run_file_hooks_for_bookmark(ctx.clone(), hg_cs.clone(), &bm, None)
-                .map(move |res| (hg_cs, res))
-                .and_then(move |(hg_cs, file_res)| {
-                    let hg_cs = hg_cs.clone();
-                    debug!(
-                        ctx.logger(),
-                        "Running changeset hooks for changeset {:?}", hg_cs
-                    );
-                    hm.run_changeset_hooks_for_bookmark(ctx, hg_cs.clone(), &bm, None)
-                        .map(move |res| {
-                            let hook_results = HookResults {
-                                file_hooks_results: file_res,
-                                cs_hooks_result: res,
-                            };
-                            (hg_cs, hook_results)
-                        })
-                })
+            let ctx = ctx.clone();
+            let hm = hm.clone();
+            let bm = bm.clone();
+            async move {
+                debug!(ctx.logger(), "Running file hooks for changeset {:?}", hg_cs);
+                let file_hooks_results = hm
+                    .run_file_hooks_for_bookmark(&ctx, hg_cs, &bm, None)
+                    .await?;
+                debug!(
+                    ctx.logger(),
+                    "Running changeset hooks for changeset {:?}", hg_cs
+                );
+                let cs_hooks_result = hm
+                    .run_changeset_hooks_for_bookmark(&ctx, hg_cs.clone(), &bm, None)
+                    .await?;
+                let hook_results = HookResults {
+                    file_hooks_results,
+                    cs_hooks_result,
+                };
+                Ok((hg_cs, hook_results))
+            }
+            .boxed()
+            .compat()
         })
 }
 

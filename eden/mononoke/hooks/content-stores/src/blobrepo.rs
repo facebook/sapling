@@ -6,12 +6,15 @@
  */
 
 use anyhow::Error;
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use cloned::cloned;
 use context::CoreContext;
-use futures::{Future, Stream};
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future,
+    stream::TryStreamExt,
+};
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{blobs::HgBlobChangeset, FileBytes, HgChangesetId, HgFileNodeId, MPath};
 use mononoke_types::FileType;
@@ -29,46 +32,46 @@ pub struct BlobRepoChangesetStore {
     pub repo: BlobRepo,
 }
 
+#[async_trait]
 impl FileContentStore for BlobRepoFileContentStore {
-    fn resolve_path(
-        &self,
-        ctx: CoreContext,
+    async fn resolve_path<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
         changeset_id: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Option<HgFileNodeId>, Error> {
-        changeset_id
+    ) -> Result<Option<HgFileNodeId>, Error> {
+        let cs = changeset_id
             .load(ctx.clone(), self.repo.blobstore())
-            .from_err()
-            .and_then({
-                cloned!(self.repo, ctx);
-                move |changeset| {
-                    changeset
-                        .manifestid()
-                        .find_entry(ctx, repo.get_blobstore(), Some(path))
-                        .map(|entry| Some(entry?.into_leaf()?.1))
-                }
-            })
-            .boxify()
+            .compat()
+            .await?;
+        let entry = cs
+            .manifestid()
+            .find_entry(ctx.clone(), self.repo.get_blobstore(), Some(path))
+            .compat()
+            .await?;
+        Ok(entry.and_then(|entry| entry.into_leaf()).map(|leaf| leaf.1))
     }
 
-    fn get_file_text(
-        &self,
-        ctx: CoreContext,
+    async fn get_file_text<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
         id: HgFileNodeId,
-    ) -> BoxFuture<Option<FileBytes>, Error> {
+    ) -> Result<Option<FileBytes>, Error> {
         let store = self.repo.get_blobstore();
-        id.load(ctx.clone(), &store)
-            .from_err()
-            .and_then(move |envelope| filestore::fetch_concat(&store, ctx, envelope.content_id()))
-            .map(|content| Some(FileBytes(content)))
-            .boxify()
+        let envelope = id.load(ctx.clone(), &store).compat().await?;
+        let content = filestore::fetch_concat(&store, ctx.clone(), envelope.content_id())
+            .compat()
+            .await?;
+        Ok(Some(FileBytes(content)))
     }
 
-    fn get_file_size(&self, ctx: CoreContext, id: HgFileNodeId) -> BoxFuture<u64, Error> {
-        id.load(ctx, self.repo.blobstore())
-            .from_err()
-            .map(|envelope| envelope.content_size())
-            .boxify()
+    async fn get_file_size<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
+        id: HgFileNodeId,
+    ) -> Result<u64, Error> {
+        let envelope = id.load(ctx.clone(), self.repo.blobstore()).compat().await?;
+        Ok(envelope.content_size())
     }
 }
 
@@ -78,94 +81,88 @@ impl BlobRepoFileContentStore {
     }
 }
 
+#[async_trait]
 impl ChangesetStore for BlobRepoChangesetStore {
-    fn get_changeset_by_changesetid(
-        &self,
-        ctx: CoreContext,
+    async fn get_changeset_by_changesetid<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
         changesetid: HgChangesetId,
-    ) -> BoxFuture<HgBlobChangeset, Error> {
-        changesetid
-            .load(ctx, self.repo.blobstore())
-            .from_err()
-            .boxify()
-    }
-
-    fn get_changed_files(
-        &self,
-        ctx: CoreContext,
-        changesetid: HgChangesetId,
-    ) -> BoxFuture<Vec<(String, ChangedFileType, Option<(HgFileNodeId, FileType)>)>, Error> {
-        cloned!(self.repo);
+    ) -> Result<HgBlobChangeset, Error> {
         changesetid
             .load(ctx.clone(), self.repo.blobstore())
-            .from_err()
-            .map({
-                cloned!(ctx);
-                move |cs| {
-                    let mf_id = cs.manifestid();
-                    let parents = cs.parents();
-                    let (maybe_p1, _) = parents.get_nodes();
-                    match maybe_p1 {
-                        Some(p1) => HgChangesetId::new(p1)
-                            .load(ctx.clone(), repo.blobstore())
-                            .from_err()
-                            .map(|p1| p1.manifestid())
-                            .map({
-                                cloned!(repo);
-                                move |p_mf_id| {
-                                    p_mf_id.diff(ctx.clone(), repo.get_blobstore(), mf_id)
-                                }
-                            })
-                            .flatten_stream()
-                            .filter_map(|diff| {
-                                let (path, entry) = match diff.clone() {
-                                    Diff::Added(path, entry) => (path, entry),
-                                    Diff::Removed(path, entry) => (path, entry),
-                                    Diff::Changed(path, .., entry) => (path, entry),
-                                };
+            .compat()
+            .await
+            .map_err(|e| e.into())
+    }
 
-                                let hash_and_type = match entry {
-                                    Entry::Leaf((ty, hash)) => (hash, ty),
-                                    Entry::Tree(_) => {
-                                        return None;
-                                    }
-                                };
+    async fn get_changed_files<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
+        changesetid: HgChangesetId,
+    ) -> Result<Vec<(String, ChangedFileType, Option<(HgFileNodeId, FileType)>)>, Error> {
+        let cs = changesetid
+            .load(ctx.clone(), self.repo.blobstore())
+            .compat()
+            .await?;
+        let mf_id = cs.manifestid();
+        let parents = cs.parents();
+        let (maybe_p1, _) = parents.get_nodes();
+        match maybe_p1 {
+            Some(p1) => {
+                let p1 = HgChangesetId::new(p1)
+                    .load(ctx.clone(), self.repo.blobstore())
+                    .compat()
+                    .await?;
+                let p_mf_id = p1.manifestid();
+                p_mf_id
+                    .diff(ctx.clone(), self.repo.get_blobstore(), mf_id)
+                    .compat()
+                    .try_filter_map(|diff| {
+                        let (path, change_type, entry) = match diff {
+                            Diff::Added(path, entry) => (path, ChangedFileType::Added, entry),
+                            Diff::Removed(path, entry) => (path, ChangedFileType::Deleted, entry),
+                            Diff::Changed(path, .., entry) => {
+                                (path, ChangedFileType::Modified, entry)
+                            }
+                        };
 
-                                match diff {
-                                    Diff::Added(..) => {
-                                        Some((path, ChangedFileType::Added, Some(hash_and_type)))
-                                    }
-                                    Diff::Changed(..) => {
-                                        Some((path, ChangedFileType::Modified, Some(hash_and_type)))
-                                    }
-                                    Diff::Removed(..) => {
-                                        Some((path, ChangedFileType::Deleted, None))
-                                    }
-                                }
-                            })
-                            .filter_map(|(maybe_path, ty, hash_and_type)| {
-                                maybe_path.map(|path| (path, ty, hash_and_type))
-                            })
-                            .boxify(),
-                        None => mf_id
-                            .list_leaf_entries(ctx.clone(), repo.get_blobstore())
-                            .map(|(path, (ty, filenode))| {
-                                (path, ChangedFileType::Added, Some((filenode, ty)))
-                            })
-                            .boxify(),
-                    }
-                }
-            })
-            .flatten_stream()
-            .map(|(path, ty, hash_and_type)| {
-                (
-                    String::from_utf8_lossy(&path.to_vec()).into_owned(),
-                    ty,
-                    hash_and_type,
-                )
-            })
-            .collect()
-            .boxify()
+                        match (change_type, entry) {
+                            (ChangedFileType::Deleted, Entry::Leaf(_)) => {
+                                future::ok(Some((path, ChangedFileType::Deleted, None)))
+                            }
+                            (change_type, Entry::Leaf((ty, hash))) => {
+                                future::ok(Some((path, change_type, Some((hash, ty)))))
+                            }
+                            (_, Entry::Tree(_)) => future::ok(None),
+                        }
+                    })
+                    .try_filter_map(|(maybe_path, ty, hash_and_type)| {
+                        future::ok(maybe_path.map(|path| {
+                            (
+                                String::from_utf8_lossy(&path.to_vec()).into_owned(),
+                                ty,
+                                hash_and_type,
+                            )
+                        }))
+                    })
+                    .try_collect()
+                    .await
+            }
+            None => {
+                mf_id
+                    .list_leaf_entries(ctx.clone(), self.repo.get_blobstore())
+                    .compat()
+                    .map_ok(|(path, (ty, filenode))| {
+                        (
+                            String::from_utf8_lossy(&path.to_vec()).into_owned(),
+                            ChangedFileType::Added,
+                            Some((filenode, ty)),
+                        )
+                    })
+                    .try_collect()
+                    .await
+            }
+        }
     }
 }
 

@@ -15,45 +15,11 @@ setup configuration
   > name="master_bookmark"
   > CONFIG
 
-  $ mkdir -p common/hooks
-  $ cat > common/hooks/file_size_hook.lua <<CONFIG
-  > hook = function (ctx)
-  >  if ctx.file.len() > 10 then
-  >    return false, "File is too large"
-  >  end
-  >  return true
-  > end
-  > CONFIG
-  $ register_hook file_size_hook common/hooks/file_size_hook.lua PerAddedOrModifiedFile <(
-  >   echo 'bypass_commit_string="@allow_large_files"'
-  > )
-
-  $ cat > common/hooks/no_owners_file_deletes.lua <<CONFIG
-  > hook = function (ctx)
-  >   for _, f in ipairs(ctx.files) do
-  >     if f.is_deleted() and string.match(f.path, ".*OWNERS$") then
-  >       return false, "Deletion of OWNERS files is not allowed"
-  >     end
-  >   end
-  >   return true
-  > end
-  > CONFIG
-  $ register_hook no_owners_file_deletes common/hooks/no_owners_file_deletes.lua PerChangeset <(
-  >   echo 'bypass_commit_string="@allow_delete_owners"'
-  > )
-
-  $ cat > common/hooks/no_owners2_file_deletes_pushvars.lua <<CONFIG
-  > hook = function (ctx)
-  >   for _, f in ipairs(ctx.files) do
-  >     if f.is_deleted() and string.match(f.path, ".*OWNERS2$") then
-  >       return false, "Deletion of OWNERS files is not allowed"
-  >     end
-  >   end
-  >   return true
-  > end
-  > CONFIG
-  $ register_hook no_owners2_file_deletes_pushvars common/hooks/no_owners2_file_deletes_pushvars.lua PerChangeset <(
-  >   echo 'bypass_pushvar="ALLOW_DELETE_OWNERS=true"'
+  $ register_hook limit_filesize PerAddedOrModifiedFile <(
+  >   cat <<CONF 
+  > bypass_commit_string="@allow_large_files"
+  > config_ints={filesizelimit=10}
+  > CONF
   > )
 
   $ setup_common_hg_configs
@@ -64,6 +30,8 @@ setup common configuration
   $ cat >> $HGRCPATH <<EOF
   > [ui]
   > ssh="$DUMMYSSH"
+  > [extensions]
+  > amend=
   > EOF
 
 setup repo
@@ -117,63 +85,6 @@ Delete a file, make sure that file_size_hook is not called on deleted files
   added 0 changesets with 0 changes to 0 files
   updating bookmark master_bookmark
 
-Add OWNERS file, then delete it. Make sure deletion is not allowed
-  $ touch OWNERS && hg add OWNERS && hg ci -m 'add OWNERS'
-  $ hgmn push -r . --to master_bookmark -q
-  $ hg rm OWNERS
-  $ hg ci -m 'remove OWNERS'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 2d1a0bcf73ee to destination ssh://user@dummy/repo bookmark master_bookmark
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote:     hooks failed:
-  remote:     no_owners_file_deletes for 2d1a0bcf73ee48cde9073fd52b6bbb71e4459c9b: Deletion of OWNERS files is not allowed
-  remote:   Root cause:
-  remote:     "hooks failed:\nno_owners_file_deletes for 2d1a0bcf73ee48cde9073fd52b6bbb71e4459c9b: Deletion of OWNERS files is not allowed"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
-  [255]
-
-Bypass owners check
-  $ cat >> .hg/hgrc <<CONFIG
-  > [extensions]
-  > amend=
-  > CONFIG
-  $ hg amend -m 'remove OWNERS\n@allow_delete_owners'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 67730b0d6122 to destination ssh://user@dummy/repo bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 0 changes to 0 files
-  updating bookmark master_bookmark
-
-Add OWNERS2 file. This time bypass it with pushvars
-  $ touch OWNERS2 && hg ci -Aqm 'add OWNERS2'
-  $ hgmn push -r . --to master_bookmark -q
-  $ hg rm OWNERS2
-  $ hg ci -m 'remove OWNERS2'
-  $ hgmn push -r . --to master_bookmark
-  pushing rev 55334cb4e1e4 to destination ssh://user@dummy/repo bookmark master_bookmark
-  searching for changes
-  remote: Command failed
-  remote:   Error:
-  remote:     hooks failed:
-  remote:     no_owners2_file_deletes_pushvars for 55334cb4e1e487f6de665629326eb1aaddccde53: Deletion of OWNERS files is not allowed
-  remote:   Root cause:
-  remote:     "hooks failed:\nno_owners2_file_deletes_pushvars for 55334cb4e1e487f6de665629326eb1aaddccde53: Deletion of OWNERS files is not allowed"
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
-  [255]
-  $ hgmn push -r . --to master_bookmark --pushvars "ALLOW_DELETE_OWNERS=true"
-  pushing rev 55334cb4e1e4 to destination ssh://user@dummy/repo bookmark master_bookmark
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 0 changesets with 0 changes to 0 files
-  updating bookmark master_bookmark
-
 Send large file
   $ hg up -q 0
   $ echo 'aaaaaaaaaaa' > largefile
@@ -184,9 +95,9 @@ Send large file
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     file_size_hook for 3e0db158edcc82d93b971f44c13ac74836db5714: File is too large
+  remote:     limit_filesize for 3e0db158edcc82d93b971f44c13ac74836db5714: File size limit is 10 bytes. You tried to push file largefile that is over the limit (12 bytes).  See https://fburl.com/landing_big_diffs for instructions.
   remote:   Root cause:
-  remote:     "hooks failed:\nfile_size_hook for 3e0db158edcc82d93b971f44c13ac74836db5714: File is too large"
+  remote:     "hooks failed:\nlimit_filesize for 3e0db158edcc82d93b971f44c13ac74836db5714: File size limit is 10 bytes. You tried to push file largefile that is over the limit (12 bytes).  See https://fburl.com/landing_big_diffs for instructions."
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
@@ -212,8 +123,8 @@ Send large file inside a directory
   remote: Command failed
   remote:   Error:
   remote:     hooks failed:
-  remote:     file_size_hook for cbc62a724366fbea4663ca3e1f1a834af9f2f992: File is too large
+  remote:     limit_filesize for cbc62a724366fbea4663ca3e1f1a834af9f2f992: File size limit is 10 bytes. You tried to push file dir/largefile that is over the limit (12 bytes).  See https://fburl.com/landing_big_diffs for instructions.
   remote:   Root cause:
-  remote:     "hooks failed:\nfile_size_hook for cbc62a724366fbea4663ca3e1f1a834af9f2f992: File is too large"
+  remote:     "hooks failed:\nlimit_filesize for cbc62a724366fbea4663ca3e1f1a834af9f2f992: File size limit is 10 bytes. You tried to push file dir/largefile that is over the limit (12 bytes).  See https://fburl.com/landing_big_diffs for instructions."
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

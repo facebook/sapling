@@ -8,20 +8,21 @@
 #![deny(warnings)]
 
 use anyhow::Error;
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use fixtures::many_files_dirs;
-use futures::compat::Future01CompatExt;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::future::ok;
-use futures_old::Future;
-use futures_old::{stream, Stream};
+use futures::{
+    compat::Future01CompatExt,
+    future,
+    stream::{futures_unordered, TryStreamExt},
+};
 use hooks::{
-    hook_loader::load_hooks, ErrorKind, FileHookExecutionID, Hook, HookChangeset,
-    HookChangesetParents, HookContext, HookExecution, HookFile, HookManager, HookRejectionInfo,
+    hook_loader::load_hooks, ErrorKind, Hook, HookChangeset, HookChangesetParents, HookContext,
+    HookExecution, HookFile, HookManager, HookRejectionInfo,
 };
 use hooks_content_stores::{
     BlobRepoChangesetStore, BlobRepoFileContentStore, ChangedFileType, InMemoryChangesetStore,
@@ -31,9 +32,9 @@ use maplit::{btreemap, hashmap, hashset};
 use mercurial_types::{HgChangesetId, MPath};
 use mercurial_types_mocks::nodehash::{ONES_FNID, THREES_FNID, TWOS_FNID};
 use metaconfig_types::{
-    BlobConfig, BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, DerivedDataConfig, HookCode,
-    HookConfig, HookParams, HookType, InfinitepushParams, MetadataDBConfig, Redaction, RepoConfig,
-    RepoReadOnly, SourceControlServiceParams, StorageConfig,
+    BlobConfig, BookmarkParams, Bundle2ReplayParams, DerivedDataConfig, HookConfig, HookParams,
+    HookType, InfinitepushParams, MetadataDBConfig, Redaction, RepoConfig, RepoReadOnly,
+    SourceControlServiceParams, StorageConfig,
 };
 use mononoke_types::{FileType, RepositoryId};
 use regex::Regex;
@@ -55,13 +56,14 @@ impl FnChangesetHook {
     }
 }
 
+#[async_trait]
 impl Hook<HookChangeset> for FnChangesetHook {
-    fn run(
+    async fn run(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         context: HookContext<HookChangeset>,
-    ) -> BoxFuture<HookExecution, Error> {
-        ok((self.f)(context)).boxify()
+    ) -> Result<HookExecution, Error> {
+        Ok((self.f)(context))
     }
 }
 
@@ -80,14 +82,15 @@ struct ContextMatchingChangesetHook {
     expected_context: HookContext<HookChangeset>,
 }
 
+#[async_trait]
 impl Hook<HookChangeset> for ContextMatchingChangesetHook {
-    fn run(
+    async fn run(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         context: HookContext<HookChangeset>,
-    ) -> BoxFuture<HookExecution, Error> {
+    ) -> Result<HookExecution, Error> {
         assert_eq!(self.expected_context, context);
-        Box::new(ok(HookExecution::Accepted))
+        Ok(HookExecution::Accepted)
     }
 }
 
@@ -102,51 +105,48 @@ struct FileContentMatchingChangesetHook {
     expected_content: HashMap<String, Option<String>>,
 }
 
+#[async_trait]
 impl Hook<HookChangeset> for FileContentMatchingChangesetHook {
-    fn run(
+    async fn run(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         context: HookContext<HookChangeset>,
-    ) -> BoxFuture<HookExecution, Error> {
-        let mut futs = stream::FuturesUnordered::new();
+    ) -> Result<HookExecution, Error> {
+        let futs = futures_unordered::FuturesUnordered::new();
         for file in context.data.files {
-            let fut = match self.expected_content.get(&file.path) {
-                Some(expected_content) => {
-                    let expected_content = expected_content.clone();
-                    file.file_text(ctx.clone())
-                        .map(move |content| {
-                            let content = content
-                                .map(|c| std::str::from_utf8(c.as_bytes()).unwrap().to_string());
+            let fut = async move {
+                match self.expected_content.get(&file.path) {
+                    Some(expected_content) => {
+                        let content = file.file_text(ctx).await?;
+                        let content =
+                            content.map(|c| std::str::from_utf8(c.as_bytes()).unwrap().to_string());
 
-                            match (content, expected_content) {
-                                (Some(content), Some(expected_content)) => {
-                                    if content.contains(&expected_content) {
-                                        true
-                                    } else {
-                                        false
-                                    }
+                        Ok(match (content, expected_content.as_ref()) {
+                            (Some(content), Some(expected_content)) => {
+                                if content.contains(expected_content) {
+                                    true
+                                } else {
+                                    false
                                 }
-                                (None, None) => true,
-                                _ => false,
                             }
+                            (None, None) => true,
+                            _ => false,
                         })
-                        .boxify()
+                    }
+                    None => Ok(false),
                 }
-                None => Box::new(ok(false)),
             };
             futs.push(fut);
         }
-        futs.skip_while(|b| Ok(*b))
-            .into_future()
-            .map(|(opt_item, _)| {
-                if opt_item.is_some() {
-                    default_rejection()
-                } else {
-                    HookExecution::Accepted
-                }
-            })
-            .map_err(|(e, _)| e)
-            .boxify()
+        let opt_item = futs
+            .try_skip_while(|b: &bool| future::ok::<_, Error>(*b))
+            .try_next()
+            .await?;
+        Ok(if opt_item.is_some() {
+            default_rejection()
+        } else {
+            HookExecution::Accepted
+        })
     }
 }
 
@@ -161,36 +161,36 @@ struct LengthMatchingChangesetHook {
     expected_lengths: HashMap<String, u64>,
 }
 
+#[async_trait]
 impl Hook<HookChangeset> for LengthMatchingChangesetHook {
-    fn run(
+    async fn run(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         context: HookContext<HookChangeset>,
-    ) -> BoxFuture<HookExecution, Error> {
-        let mut futs = stream::FuturesUnordered::new();
+    ) -> Result<HookExecution, Error> {
+        let futs = futures_unordered::FuturesUnordered::new();
         for file in context.data.files {
-            let fut = match self.expected_lengths.get(&file.path) {
-                Some(expected_length) => {
-                    let expected_length = *expected_length;
-                    file.len(ctx.clone())
-                        .map(move |length| length == expected_length)
-                        .boxify()
+            let fut = async move {
+                match self.expected_lengths.get(&file.path) {
+                    Some(expected_length) => {
+                        let expected_length = *expected_length;
+                        let length = file.len(ctx).await?;
+                        Ok(length == expected_length)
+                    }
+                    None => Ok(false),
                 }
-                None => Box::new(ok(false)),
             };
             futs.push(fut);
         }
-        futs.skip_while(|b| Ok(*b))
-            .into_future()
-            .map(|(opt_item, _)| {
-                if opt_item.is_some() {
-                    default_rejection()
-                } else {
-                    HookExecution::Accepted
-                }
-            })
-            .map_err(|(e, _)| e)
-            .boxify()
+        let opt_item = futs
+            .try_skip_while(|b: &bool| future::ok::<_, Error>(*b))
+            .try_next()
+            .await?;
+        Ok(if opt_item.is_some() {
+            default_rejection()
+        } else {
+            HookExecution::Accepted
+        })
     }
 }
 
@@ -206,27 +206,23 @@ struct OtherFileMatchingChangesetHook {
     expected_content: Option<String>,
 }
 
+#[async_trait]
 impl Hook<HookChangeset> for OtherFileMatchingChangesetHook {
-    fn run(
+    async fn run(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         context: HookContext<HookChangeset>,
-    ) -> BoxFuture<HookExecution, Error> {
-        let expected_content = self.expected_content.clone();
-        context
+    ) -> Result<HookExecution, Error> {
+        let opt = context
             .data
             .file_text(ctx, self.file_path.clone())
-            .map(|opt| {
-                opt.map(|content| std::str::from_utf8(content.as_bytes()).unwrap().to_string())
-            })
-            .map(move |opt| {
-                if opt == expected_content {
-                    HookExecution::Accepted
-                } else {
-                    default_rejection()
-                }
-            })
-            .boxify()
+            .await?
+            .map(|content| std::str::from_utf8(content.as_bytes()).unwrap().to_string());
+        Ok(if opt == self.expected_content {
+            HookExecution::Accepted
+        } else {
+            default_rejection()
+        })
     }
 }
 
@@ -251,13 +247,14 @@ impl FnFileHook {
     }
 }
 
+#[async_trait]
 impl Hook<HookFile> for FnFileHook {
-    fn run(
+    async fn run(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         context: HookContext<HookFile>,
-    ) -> BoxFuture<HookExecution, Error> {
-        ok((self.f)(context)).boxify()
+    ) -> Result<HookExecution, Error> {
+        Ok((self.f)(context))
     }
 }
 
@@ -276,18 +273,18 @@ struct PathMatchingFileHook {
     paths: HashSet<String>,
 }
 
+#[async_trait]
 impl Hook<HookFile> for PathMatchingFileHook {
-    fn run(
+    async fn run(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         context: HookContext<HookFile>,
-    ) -> BoxFuture<HookExecution, Error> {
-        ok(if self.paths.contains(&context.data.path) {
+    ) -> Result<HookExecution, Error> {
+        Ok(if self.paths.contains(&context.data.path) {
             HookExecution::Accepted
         } else {
             default_rejection()
         })
-        .boxify()
     }
 }
 
@@ -300,32 +297,26 @@ struct FileContentMatchingFileHook {
     expected_content: Option<String>,
 }
 
+#[async_trait]
 impl Hook<HookFile> for FileContentMatchingFileHook {
-    fn run(
+    async fn run(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         context: HookContext<HookFile>,
-    ) -> BoxFuture<HookExecution, Error> {
-        let expected_content = self.expected_content.clone();
-        context
-            .data
-            .file_text(ctx)
-            .map(move |content| {
-                let content =
-                    content.map(|c| std::str::from_utf8(c.as_bytes()).unwrap().to_string());
-                match (content, expected_content) {
-                    (Some(content), Some(expected_content)) => {
-                        if content.contains(&expected_content) {
-                            HookExecution::Accepted
-                        } else {
-                            default_rejection()
-                        }
-                    }
-                    (None, None) => HookExecution::Accepted,
-                    _ => default_rejection(),
+    ) -> Result<HookExecution, Error> {
+        let content = context.data.file_text(ctx).await?;
+        let content = content.map(|c| std::str::from_utf8(c.as_bytes()).unwrap().to_string());
+        Ok(match (content, self.expected_content.as_ref()) {
+            (Some(content), Some(expected_content)) => {
+                if content.contains(expected_content) {
+                    HookExecution::Accepted
+                } else {
+                    default_rejection()
                 }
-            })
-            .boxify()
+            }
+            (None, None) => HookExecution::Accepted,
+            _ => default_rejection(),
+        })
     }
 }
 
@@ -338,28 +329,23 @@ struct IsSymLinkMatchingFileHook {
     is_symlink: bool,
 }
 
+#[async_trait]
 impl Hook<HookFile> for IsSymLinkMatchingFileHook {
-    fn run(
+    async fn run(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         context: HookContext<HookFile>,
-    ) -> BoxFuture<HookExecution, Error> {
-        let is_symlink = self.is_symlink;
-        context
-            .data
-            .file_type(ctx)
-            .map(move |file_type| {
-                let actual = match file_type {
-                    FileType::Symlink => true,
-                    _ => false,
-                };
-                if is_symlink == actual {
-                    HookExecution::Accepted
-                } else {
-                    default_rejection()
-                }
-            })
-            .boxify()
+    ) -> Result<HookExecution, Error> {
+        let file_type = context.data.file_type(ctx)?;
+        let actual = match file_type {
+            FileType::Symlink => true,
+            _ => false,
+        };
+        Ok(if self.is_symlink == actual {
+            HookExecution::Accepted
+        } else {
+            default_rejection()
+        })
     }
 }
 
@@ -372,24 +358,19 @@ struct LengthMatchingFileHook {
     length: u64,
 }
 
+#[async_trait]
 impl Hook<HookFile> for LengthMatchingFileHook {
-    fn run(
+    async fn run(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         context: HookContext<HookFile>,
-    ) -> BoxFuture<HookExecution, Error> {
-        let exp_length = self.length;
-        context
-            .data
-            .len(ctx)
-            .map(move |length| {
-                if length == exp_length {
-                    HookExecution::Accepted
-                } else {
-                    default_rejection()
-                }
-            })
-            .boxify()
+    ) -> Result<HookExecution, Error> {
+        let length = context.data.len(ctx).await?;
+        Ok(if length == self.length {
+            HookExecution::Accepted
+        } else {
+            default_rejection()
+        })
     }
 }
 
@@ -1091,13 +1072,15 @@ async fn run_changeset_hooks_with_mgr(
     for (hook_name, hook) in hooks {
         hook_manager.register_changeset_hook(&hook_name, hook.into(), Default::default());
     }
-    let fut = hook_manager.run_changeset_hooks_for_bookmark(
-        ctx,
-        default_changeset_id(),
-        &BookmarkName::new(bookmark_name).unwrap(),
-        None,
-    );
-    let res = fut.compat().await.unwrap();
+    let res = hook_manager
+        .run_changeset_hooks_for_bookmark(
+            &ctx,
+            default_changeset_id(),
+            &BookmarkName::new(bookmark_name).unwrap(),
+            None,
+        )
+        .await
+        .unwrap();
     let map: HashMap<String, HookExecution> = res
         .into_iter()
         .map(|(exec_id, exec)| (exec_id.hook_name, exec))
@@ -1169,14 +1152,15 @@ async fn run_file_hooks_with_mgr(
     for (hook_name, hook) in hooks {
         hook_manager.register_file_hook(&hook_name, hook.into(), Default::default());
     }
-    let fut: BoxFuture<Vec<(FileHookExecutionID, HookExecution)>, Error> = hook_manager
+    let res = hook_manager
         .run_file_hooks_for_bookmark(
-            ctx,
+            &ctx,
             hg_cs_id,
             &BookmarkName::new(bookmark_name).unwrap(),
             None,
-        );
-    let res = fut.compat().await.unwrap();
+        )
+        .await
+        .unwrap();
     let map: HashMap<String, HashMap<String, HookExecution>> =
         res.into_iter()
             .fold(HashMap::new(), |mut m, (exec_id, exec)| {
@@ -1212,7 +1196,7 @@ async fn setup_hook_manager(
 fn default_rejection() -> HookExecution {
     HookExecution::Rejected(HookRejectionInfo::new_long(
         "desc".into(),
-        "long_desc".into(),
+        "long_desc".to_string(),
     ))
 }
 
@@ -1345,56 +1329,6 @@ fn default_repo_config() -> RepoConfig {
 }
 
 #[fbinit::test]
-fn test_load_hooks(fb: FacebookInit) {
-    async_unit::tokio_unit_test(async move {
-        let mut config = default_repo_config();
-        config.bookmarks = vec![
-            BookmarkParams {
-                bookmark: BookmarkName::new("bm1").unwrap().into(),
-                hooks: vec!["hook1".into(), "hook2".into()],
-                only_fast_forward: false,
-                allowed_users: None,
-                rewrite_dates: None,
-            },
-            BookmarkParams {
-                bookmark: Regex::new("bm2").unwrap().into(),
-                hooks: vec!["hook2".into(), "hook3".into()],
-                only_fast_forward: false,
-                allowed_users: None,
-                rewrite_dates: None,
-            },
-        ];
-
-        config.hooks = vec![
-            HookParams {
-                name: "hook1".into(),
-                code: Some(HookCode::Code("hook1 code".into())),
-                hook_type: HookType::PerAddedOrModifiedFile,
-                config: Default::default(),
-            },
-            HookParams {
-                name: "hook2".into(),
-                code: Some(HookCode::Code("hook2 code".into())),
-                hook_type: HookType::PerAddedOrModifiedFile,
-                config: Default::default(),
-            },
-            HookParams {
-                name: "hook3".into(),
-                code: Some(HookCode::Code("hook3 code".into())),
-                hook_type: HookType::PerChangeset,
-                config: Default::default(),
-            },
-        ];
-
-        let mut hm = hook_manager_many_files_dirs_blobrepo(fb).await;
-        match load_hooks(fb, &mut hm, config, &hashset![]) {
-            Err(e) => assert!(false, format!("Failed to load hooks {}", e)),
-            Ok(()) => (),
-        };
-    });
-}
-
-#[fbinit::test]
 fn test_verify_integrity_fast_failure(fb: FacebookInit) {
     async_unit::tokio_unit_test(async move {
         let mut config = default_repo_config();
@@ -1407,7 +1341,6 @@ fn test_verify_integrity_fast_failure(fb: FacebookInit) {
         }];
         config.hooks = vec![HookParams {
             name: "rust:verify_integrity".into(),
-            code: Some(HookCode::Code("whateva".into())),
             hook_type: HookType::PerChangeset,
             config: HookConfig {
                 strings: hashmap! {String::from("verify_integrity_path") => String::from("bad_nonexisting_filename")},
@@ -1418,40 +1351,6 @@ fn test_verify_integrity_fast_failure(fb: FacebookInit) {
         let mut hm = hook_manager_many_files_dirs_blobrepo(fb).await;
         load_hooks(fb, &mut hm, config, &hashset![])
             .expect_err("`verify_integrity` hook loading should have failed");
-    });
-}
-
-#[fbinit::test]
-fn test_load_hooks_no_such_hook(fb: FacebookInit) {
-    async_unit::tokio_unit_test(async move {
-        let book_or_rex = BookmarkOrRegex::Bookmark(BookmarkName::new("bm1").unwrap());
-        let mut config = default_repo_config();
-        config.bookmarks = vec![BookmarkParams {
-            bookmark: book_or_rex.clone(),
-            hooks: vec!["hook1".into(), "hook2".into()],
-            only_fast_forward: false,
-            allowed_users: None,
-            rewrite_dates: None,
-        }];
-
-        config.hooks = vec![HookParams {
-            name: "hook1".into(),
-            code: Some(HookCode::Code("hook1 code".into())),
-            hook_type: HookType::PerAddedOrModifiedFile,
-            config: Default::default(),
-        }];
-
-        let mut hm = hook_manager_many_files_dirs_blobrepo(fb).await;
-
-        match load_hooks(fb, &mut hm, config, &hashset![])
-            .unwrap_err()
-            .downcast::<ErrorKind>()
-        {
-            Ok(ErrorKind::NoSuchBookmarkHook(bookmark, _)) => {
-                assert_eq!(book_or_rex, bookmark);
-            }
-            _ => assert!(false, "Unexpected err type"),
-        };
     });
 }
 
@@ -1469,7 +1368,6 @@ fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
 
         config.hooks = vec![HookParams {
             name: "rust:hook1".into(),
-            code: Some(HookCode::Code("hook1 code".into())),
             hook_type: HookType::PerChangeset,
             config: Default::default(),
         }];
@@ -1497,7 +1395,6 @@ fn test_load_disabled_hooks(fb: FacebookInit) {
 
         config.hooks = vec![HookParams {
             name: "hook1".into(),
-            code: None,
             hook_type: HookType::PerChangeset,
             config: Default::default(),
         }];
@@ -1524,7 +1421,6 @@ fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
 
         config.hooks = vec![HookParams {
             name: "hook1".into(),
-            code: None,
             hook_type: HookType::PerChangeset,
             config: Default::default(),
         }];

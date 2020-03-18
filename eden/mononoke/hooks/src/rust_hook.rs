@@ -12,20 +12,20 @@
 
 use super::{Hook, HookChangeset, HookContext, HookExecution};
 use anyhow::Error;
+use async_trait::async_trait;
 use context::CoreContext;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::future::ok;
 
 pub struct RustHook {
     pub name: String,
 }
 
+#[async_trait]
 impl Hook<HookChangeset> for RustHook {
-    fn run(
+    async fn run(
         &self,
-        _ctx: CoreContext,
+        _ctx: &CoreContext,
         _context: HookContext<HookChangeset>,
-    ) -> BoxFuture<HookExecution, Error> {
-        ok(HookExecution::Accepted).boxify()
+    ) -> Result<HookExecution, Error> {
+        Ok(HookExecution::Accepted)
     }
 }

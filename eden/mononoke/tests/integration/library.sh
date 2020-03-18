@@ -794,10 +794,9 @@ CONFIG
 
 function register_hook {
   hook_name="$1"
-  path="$2"
-  hook_type="$3"
+  hook_type="$2"
 
-  shift 3
+  shift 2
   EXTRA_CONFIG_DESCRIPTOR=""
   if [[ $# -gt 0 ]]; then
     EXTRA_CONFIG_DESCRIPTOR="$1"
@@ -809,7 +808,6 @@ function register_hook {
 hook_name="$hook_name"
 [[hooks]]
 name="$hook_name"
-path="$path"
 hook_type="$hook_type"
 CONFIG
     [ -n "$EXTRA_CONFIG_DESCRIPTOR" ] && cat "$EXTRA_CONFIG_DESCRIPTOR"
@@ -1184,23 +1182,16 @@ function hook_test_setup() {
 name="$HOOKBOOKMARK"
 CONFIG
 
-  HOOK_FILE="$1"
-  HOOK_NAME="$2"
-  HOOK_TYPE="$3"
-  shift 3
+  HOOK_NAME="$1"
+  HOOK_TYPE="$2"
+  shift 2
   EXTRA_CONFIG_DESCRIPTOR=""
   if [[ $# -gt 0 ]]; then
     EXTRA_CONFIG_DESCRIPTOR="$1"
   fi
 
 
-  if [[ ! -z "$HOOK_FILE" ]] ; then
-    mkdir -p common/hooks
-    cp "$HOOK_FILE" common/hooks/"$HOOK_NAME".lua
-    register_hook "$HOOK_NAME" common/hooks/"$HOOK_NAME".lua "$HOOK_TYPE" "$EXTRA_CONFIG_DESCRIPTOR"
-  else
-    register_hook "$HOOK_NAME" "" "$HOOK_TYPE" "$EXTRA_CONFIG_DESCRIPTOR"
-  fi
+  register_hook "$HOOK_NAME" "$HOOK_TYPE" "$EXTRA_CONFIG_DESCRIPTOR"
 
   setup_common_hg_configs
   cd "$TESTTMP" || exit 1

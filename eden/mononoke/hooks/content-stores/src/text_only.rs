@@ -6,10 +6,8 @@
  */
 
 use anyhow::Error;
-use cloned::cloned;
+use async_trait::async_trait;
 use context::CoreContext;
-use futures::{Future, IntoFuture};
-use futures_ext::{BoxFuture, FutureExt};
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, MPath};
 use std::sync::Arc;
 
@@ -31,45 +29,42 @@ impl<T> TextOnlyFileContentStore<T> {
     }
 }
 
+#[async_trait]
 impl<T: FileContentStore + 'static> FileContentStore for TextOnlyFileContentStore<T> {
-    fn resolve_path(
-        &self,
-        ctx: CoreContext,
+    async fn resolve_path<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
         changeset_id: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Option<HgFileNodeId>, Error> {
-        self.inner.resolve_path(ctx, changeset_id, path)
+    ) -> Result<Option<HgFileNodeId>, Error> {
+        self.inner.resolve_path(ctx, changeset_id, path).await
     }
 
     /// Override the inner store's get_file_text by filtering out files that are to large or
     /// contain null bytes (those are assumed to be binary).
-    fn get_file_text(
-        &self,
-        ctx: CoreContext,
+    async fn get_file_text<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
         id: HgFileNodeId,
-    ) -> BoxFuture<Option<FileBytes>, Error> {
-        self.get_file_size(ctx.clone(), id)
-            .and_then({
-                cloned!(self.inner, self.max_size);
-                move |file_size| {
-                    if file_size > max_size {
-                        return Ok(None).into_future().left_future();
-                    }
+    ) -> Result<Option<FileBytes>, Error> {
+        let file_size = self.get_file_size(ctx, id).await?;
+        if file_size > self.max_size {
+            return Ok(None);
+        }
 
-                    inner
-                        .get_file_text(ctx, id)
-                        .map(|file_bytes| match file_bytes {
-                            Some(ref file_bytes) if looks_like_binary(&file_bytes) => None,
-                            _ => file_bytes,
-                        })
-                        .right_future()
-                }
-            })
-            .boxify()
+        let file_bytes = self.inner.get_file_text(ctx, id).await?;
+        Ok(match file_bytes {
+            Some(ref file_bytes) if looks_like_binary(file_bytes) => None,
+            _ => file_bytes,
+        })
     }
 
-    fn get_file_size(&self, ctx: CoreContext, id: HgFileNodeId) -> BoxFuture<u64, Error> {
-        self.inner.get_file_size(ctx, id)
+    async fn get_file_size<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
+        id: HgFileNodeId,
+    ) -> Result<u64, Error> {
+        self.inner.get_file_size(ctx, id).await
     }
 }
 
@@ -94,7 +89,9 @@ mod test {
         inner.insert(ONES_CSID, MPath::new("f1").unwrap(), TWOS_FNID, "foobar");
 
         let store = TextOnlyFileContentStore::new(inner, 10);
-        let ret = rt.block_on(store.get_file_text(ctx, TWOS_FNID)).unwrap();
+        let ret = rt
+            .block_on_std(store.get_file_text(&ctx, TWOS_FNID))
+            .unwrap();
         assert_eq!(ret, Some(FileBytes("foobar".into())));
     }
 
@@ -107,7 +104,9 @@ mod test {
         inner.insert(ONES_CSID, MPath::new("f1").unwrap(), TWOS_FNID, "foobar");
 
         let store = TextOnlyFileContentStore::new(inner, 2);
-        let ret = rt.block_on(store.get_file_text(ctx, TWOS_FNID)).unwrap();
+        let ret = rt
+            .block_on_std(store.get_file_text(&ctx, TWOS_FNID))
+            .unwrap();
         assert_eq!(ret, None);
     }
 
@@ -120,7 +119,9 @@ mod test {
         inner.insert(ONES_CSID, MPath::new("f1").unwrap(), TWOS_FNID, "foo\0");
 
         let store = TextOnlyFileContentStore::new(inner, 10);
-        let ret = rt.block_on(store.get_file_text(ctx, TWOS_FNID)).unwrap();
+        let ret = rt
+            .block_on_std(store.get_file_text(&ctx, TWOS_FNID))
+            .unwrap();
         assert_eq!(ret, None);
     }
 }

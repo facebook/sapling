@@ -6,45 +6,51 @@
  */
 
 use anyhow::Error;
+use async_trait::async_trait;
 use context::CoreContext;
-use futures_ext::BoxFuture;
 use mercurial_types::{blobs::HgBlobChangeset, FileBytes, HgChangesetId, HgFileNodeId, MPath};
 use mononoke_types::FileType;
 
-#[derive(Clone)]
+#[derive(Clone, PartialEq, Eq)]
 pub enum ChangedFileType {
     Added,
     Deleted,
     Modified,
 }
 
+#[async_trait]
 pub trait FileContentStore: Send + Sync {
-    fn resolve_path(
-        &self,
-        ctx: CoreContext,
+    async fn resolve_path<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
         changeset_id: HgChangesetId,
         path: MPath,
-    ) -> BoxFuture<Option<HgFileNodeId>, Error>;
+    ) -> Result<Option<HgFileNodeId>, Error>;
 
-    fn get_file_text(
-        &self,
-        ctx: CoreContext,
+    async fn get_file_text<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
         id: HgFileNodeId,
-    ) -> BoxFuture<Option<FileBytes>, Error>;
+    ) -> Result<Option<FileBytes>, Error>;
 
-    fn get_file_size(&self, ctx: CoreContext, id: HgFileNodeId) -> BoxFuture<u64, Error>;
+    async fn get_file_size<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
+        id: HgFileNodeId,
+    ) -> Result<u64, Error>;
 }
 
+#[async_trait]
 pub trait ChangesetStore: Send + Sync {
-    fn get_changeset_by_changesetid(
-        &self,
-        ctx: CoreContext,
+    async fn get_changeset_by_changesetid<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
         changesetid: HgChangesetId,
-    ) -> BoxFuture<HgBlobChangeset, Error>;
+    ) -> Result<HgBlobChangeset, Error>;
 
-    fn get_changed_files(
-        &self,
-        ctx: CoreContext,
+    async fn get_changed_files<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
         changesetid: HgChangesetId,
-    ) -> BoxFuture<Vec<(String, ChangedFileType, Option<(HgFileNodeId, FileType)>)>, Error>;
+    ) -> Result<Vec<(String, ChangedFileType, Option<(HgFileNodeId, FileType)>)>, Error>;
 }
