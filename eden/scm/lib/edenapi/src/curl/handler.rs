@@ -114,8 +114,8 @@ impl Handler for Collector {
 
 impl Drop for Collector {
     fn drop(&mut self) {
-        let url = self.event.url.take().unwrap_or(String::default());
-        let session_id = self.event.session_id.take().unwrap_or(String::default());
+        let url = self.event.url.take().unwrap_or_default();
+        let session_id = self.event.session_id.take().unwrap_or_default();
 
         let event = Event::Network {
             op: NetworkOp::EdenApiRequest,

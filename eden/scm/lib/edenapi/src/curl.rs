@@ -96,12 +96,12 @@ impl EdenApiCurlClient {
     pub fn new(config: Config) -> ApiResult<Self> {
         let base_url = match config.base_url {
             Some(url) => url,
-            None => Err(ApiErrorKind::BadConfig("No base URL specified".into()))?,
+            None => return Err(ApiErrorKind::BadConfig("No base URL specified".into()).into()),
         };
 
         let repo = match config.repo {
             Some(repo) => repo,
-            None => Err(ApiErrorKind::BadConfig("No repo name specified".into()))?,
+            None => return Err(ApiErrorKind::BadConfig("No repo name specified".into()).into()),
         };
 
         Ok(Self {
@@ -190,7 +190,9 @@ impl EdenApi for EdenApiCurlClient {
             url.set_query(Some("stream=true"));
         }
 
-        let batch_size = self.history_batch_size.unwrap_or(cmp::max(keys.len(), 1));
+        let batch_size = self
+            .history_batch_size
+            .unwrap_or_else(|| cmp::max(keys.len(), 1));
         let num_requests = (keys.len() + batch_size - 1) / batch_size;
 
         log::debug!("Using batch size: {}", batch_size);
@@ -198,7 +200,7 @@ impl EdenApi for EdenApiCurlClient {
 
         let chunks = keys.into_iter().chunks(batch_size);
         let requests = (&chunks).into_iter().map(|batch| HistoryRequest {
-            keys: batch.into_iter().collect(),
+            keys: batch.collect(),
             depth: max_depth,
         });
 
@@ -312,7 +314,6 @@ impl EdenApi for EdenApiCurlClient {
             .map(|entry| {
                 check_data(&entry, self.validate)
                     .context(ApiErrorKind::BadResponse)
-                    .map_err(|e| e.into())
                     .map(|data| (entry.key().clone(), data))
             })
             .collect::<ApiResult<Vec<(Key, Bytes)>>>()?;
@@ -339,7 +340,9 @@ impl EdenApiCurlClient {
             url.set_query(Some("stream=true"));
         }
 
-        let batch_size = self.data_batch_size.unwrap_or(cmp::max(keys.len(), 1));
+        let batch_size = self
+            .data_batch_size
+            .unwrap_or_else(|| cmp::max(keys.len(), 1));
         let num_requests = (keys.len() + batch_size - 1) / batch_size;
 
         log::debug!("Using batch size: {}", batch_size);
@@ -347,7 +350,7 @@ impl EdenApiCurlClient {
 
         let mut requests = Vec::with_capacity(num_requests);
         for batch in &keys.into_iter().chunks(batch_size) {
-            let keys = batch.into_iter().collect();
+            let keys = batch.collect();
             requests.push(DataRequest { keys });
         }
 
@@ -398,7 +401,6 @@ impl EdenApiCurlClient {
             .map(|entry| {
                 check_data(&entry, self.validate)
                     .context(ApiErrorKind::BadResponse)
-                    .map_err(|e| e.into())
                     .map(|data| (entry.key().clone(), data))
             })
             .collect::<ApiResult<Vec<(Key, Bytes)>>>()?;
