@@ -19,7 +19,7 @@ use anyhow::Result;
 use tempfile::Builder;
 
 /// Removes the UNC prefix `\\?\` on Windows. Does nothing on unices.
-pub fn strip_unc_prefix<'a>(path: &'a Path) -> &'a Path {
+pub fn strip_unc_prefix(path: &Path) -> &Path {
     path.strip_prefix(r"\\?\").unwrap_or(path)
 }
 
