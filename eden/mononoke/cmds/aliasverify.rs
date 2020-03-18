@@ -37,14 +37,11 @@ use mononoke_types::{
 };
 
 pub fn get_sha256(contents: &Bytes) -> hash::Sha256 {
-    use crypto::digest::Digest;
-    use crypto::sha2::Sha256;
-
+    use sha2::Digest;
+    use sha2::Sha256;
     let mut hasher = Sha256::new();
     hasher.input(contents);
-    let mut hash_buffer: [u8; 32] = [0; 32];
-    hasher.result(&mut hash_buffer);
-    hash::Sha256::from_byte_array(hash_buffer)
+    hash::Sha256::from_byte_array(hasher.result().into())
 }
 
 #[derive(Debug, Clone)]
