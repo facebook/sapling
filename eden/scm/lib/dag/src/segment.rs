@@ -123,13 +123,13 @@ impl Segment {
         Ok(result)
     }
 
-    pub(crate) fn serialize(
+    pub(crate) fn new(
         flags: SegmentFlags,
         level: Level,
         low: Id,
         high: Id,
         parents: &[Id],
-    ) -> Vec<u8> {
+    ) -> Self {
         debug_assert!(high >= low);
         let mut buf = Vec::with_capacity(1 + 8 + (parents.len() + 2) * 4);
         buf.write_u8(flags.bits()).unwrap();
@@ -140,7 +140,7 @@ impl Segment {
         for parent in parents {
             buf.write_vlq(parent.0).unwrap();
         }
-        buf
+        Self(buf.into())
     }
 }
 
@@ -176,8 +176,7 @@ mod tests {
             let low = Id(low);
             let high = Id(high);
             let parents: Vec<Id> = parents.into_iter().map(Id).collect();
-            let buf = Segment::serialize(flags, level, low, high, &parents);
-            let node = Segment(buf.into());
+            let node = Segment::new(flags, level, low, high, &parents);
             node.flags().unwrap() == flags
                 && node.level().unwrap() == level
                 && node.span().unwrap() == (low..=high).into()

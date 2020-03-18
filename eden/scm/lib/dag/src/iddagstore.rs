@@ -120,8 +120,8 @@ impl IdDagStore for IndexedLogStore {
         high: Id,
         parents: &[Id],
     ) -> Result<()> {
-        let buf = Segment::serialize(flags, level, low, high, parents);
-        self.log.append(buf)?;
+        let segment = Segment::new(flags, level, low, high, parents);
+        self.log.append(&segment.0)?;
         Ok(())
     }
 
