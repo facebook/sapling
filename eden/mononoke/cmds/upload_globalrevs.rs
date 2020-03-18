@@ -19,6 +19,7 @@ use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
+use futures::future::try_join;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::{Future, IntoFuture};
 use futures_old::stream;
@@ -70,7 +71,6 @@ pub fn upload<P: AsRef<Path>>(
         })
         .boxify()
 }
-
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = setup_app().get_matches();
@@ -81,19 +81,20 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
     let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, &matches);
 
-    let run = args::open_repo(fb, &logger, &matches)
-        .join(globalrevs_store)
-        .and_then({
-            let matches = matches.clone();
-            move |(repo, globalrevs_store)| {
-                let in_filename = matches.value_of("IN_FILENAME").unwrap();
-                let globalrevs_store = Arc::new(globalrevs_store);
-                upload(ctx, repo, in_filename, globalrevs_store)
-            }
-        });
+    let blobrepo = args::open_repo(fb, &logger, &matches);
+    let run = async {
+        let (repo, globalrevs_store) =
+            try_join(blobrepo.compat(), globalrevs_store.compat()).await?;
+        let in_filename = matches.value_of("IN_FILENAME").unwrap();
+        let globalrevs_store = Arc::new(globalrevs_store);
+        upload(ctx, repo, in_filename, globalrevs_store)
+            .compat()
+            .await?;
+        Ok(())
+    };
 
     block_execute(
-        run.compat(),
+        run,
         fb,
         "upload_globalrevs",
         &logger,
