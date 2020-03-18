@@ -82,19 +82,10 @@ test issue2039
   $ touch "$A"
   $ touch "$B"
 
-#if no-windows no-osx
   $ hg status --color=always
   foo
   bar: Failed to validate "foo\nbar". Invalid byte: 10.
   foo
   bar.baz: Failed to validate "foo\nbar.baz". Invalid byte: 10.
-#else
-  $ hg status --color=always
-  foo
-  bar.baz: Failed to validate "foo\nbar.baz". Invalid byte: 10.
-  foo
-  bar: Failed to validate "foo\nbar". Invalid byte: 10.
-#endif
-
 
   $ cd ..
