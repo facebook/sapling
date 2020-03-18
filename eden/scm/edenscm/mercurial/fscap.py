@@ -17,10 +17,10 @@ ALWAYSCASESENSITIVE = "alwayscasesensitive"
 _ALL_CAPS = {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: True}
 
 _EDENFS_POSIX_CAPS = {
-        SYMLINK: True,
-        HARDLINK: False,
-        EXECBIT: True,
-        ALWAYSCASESENSITIVE: True,
+    SYMLINK: True,
+    HARDLINK: False,
+    EXECBIT: True,
+    ALWAYSCASESENSITIVE: True,
 }
 
 _FS_CAP_TABLE = {

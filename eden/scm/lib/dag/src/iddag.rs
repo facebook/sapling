@@ -151,18 +151,19 @@ impl<Store: IdDagStore> IdDag<Store> {
     }
 
     /// Iterate through segments at the given level in descending order.
-    pub(crate) fn iter_segments_descending(
-        &self,
+    pub(crate) fn iter_segments_descending<'a>(
+        &'a self,
         max_high_id: Id,
         level: Level,
-    ) -> Result<impl Iterator<Item = Result<Segment>>> {
+    ) -> Result<impl Iterator<Item = Result<Segment>> + 'a> {
         self.store.iter_segments_descending(max_high_id, level)
     }
 
-    pub(crate) fn iter_segments_with_parent(
-        &self,
+    /// Iterate through segments that have the given parent.
+    pub(crate) fn iter_segments_with_parent<'a>(
+        &'a self,
         parent: Id,
-    ) -> Result<impl Iterator<Item = Result<Segment>>> {
+    ) -> Result<impl Iterator<Item = Result<Segment>> + 'a> {
         self.store.iter_segments_with_parent(parent)
     }
 }

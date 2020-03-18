@@ -12,6 +12,7 @@ use anyhow::{bail, ensure, Result};
 use byteorder::{BigEndian, WriteBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
+use minibytes::Bytes;
 use std::fs::{self, File};
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
@@ -84,7 +85,7 @@ impl IdDagStore for IndexedLogStore {
         let key = Self::serialize_head_level_lookup_key(head, level);
         match self.log.lookup(Self::INDEX_LEVEL_HEAD, &key)?.nth(0) {
             None => Ok(None),
-            Some(bytes) => Ok(Some(Segment(bytes?))),
+            Some(bytes) => Ok(Some(Segment(self.log.slice_to_bytes(bytes?)))),
         }
     }
 
@@ -99,7 +100,7 @@ impl IdDagStore for IndexedLogStore {
             let (_, entries) = entry?;
             for entry in entries {
                 let entry = entry?;
-                let seg = Segment(entry);
+                let seg = Segment(self.log.slice_to_bytes(entry));
                 if seg.span()?.low > id {
                     return Ok(None);
                 }
@@ -143,7 +144,7 @@ impl IdDagStore for IndexedLogStore {
                 // break the logic here. If perf is really needed, we can change
                 // logic here to not checking values.
                 if let Some(bytes) = values.next() {
-                    let seg = Segment(bytes?);
+                    let seg = Segment(self.log.slice_to_bytes(bytes?));
                     Ok(seg.high()? + 1)
                 } else {
                     bail!("key {:?} should have some values", key);
@@ -162,7 +163,7 @@ impl IdDagStore for IndexedLogStore {
         {
             let (_, values) = entry?;
             for value in values {
-                result.push(Segment(value?));
+                result.push(Segment(self.log.slice_to_bytes(value?)));
             }
         }
         Ok(result)
@@ -179,12 +180,12 @@ impl IdDagStore for IndexedLogStore {
             .log
             .lookup_range(Self::INDEX_LEVEL_HEAD, &lower_bound[..]..=&upper_bound[..])?
             .rev();
-        let iter = iter.flat_map(|entry| match entry {
+        let iter = iter.flat_map(move |entry| match entry {
             Ok((_key, values)) => values
                 .into_iter()
                 .map(|value| {
                     let value = value?;
-                    Ok(Segment(value))
+                    Ok(Segment(self.log.slice_to_bytes(value)))
                 })
                 .collect(),
             Err(err) => vec![Err(err.into())],
@@ -200,8 +201,8 @@ impl IdDagStore for IndexedLogStore {
         key.write_vlq(parent.0)
             .expect("write to Vec should not fail");
         let iter = self.log.lookup(Self::INDEX_PARENT, &key)?;
-        let iter = iter.map(|result| match result {
-            Ok(bytes) => Ok(Segment(bytes)),
+        let iter = iter.map(move |result| match result {
+            Ok(bytes) => Ok(Segment(self.log.slice_to_bytes(bytes))),
             Err(err) => Err(err.into()),
         });
         Ok(Box::new(iter))
@@ -308,7 +309,7 @@ impl IndexedLogStore {
             })
             .index("parent", |data| {
                 // parent -> child for flat segments
-                let seg = Segment(data);
+                let seg = Segment(Bytes::copy_from_slice(data));
                 let mut result = Vec::new();
                 if seg.level().ok() == Some(0) {
                     // This should never pass since MAGIC_CLEAR_NON_MASTER[0] != 0.
