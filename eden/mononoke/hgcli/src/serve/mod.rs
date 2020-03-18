@@ -144,7 +144,7 @@ impl<'a> StdioRelay<'a> {
                 .and_then(|ip| lookup_addr(&ip).ok())
         } else {
             // hgcli is run locally, so the source_hostname is the host it is currently running on
-            fbwhoami::FbWhoAmI::new()
+            fbwhoami::FbWhoAmI::get()
                 .ok()
                 .and_then(|who| who.name.clone())
         };

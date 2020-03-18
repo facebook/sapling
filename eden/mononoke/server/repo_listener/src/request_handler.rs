@@ -40,7 +40,7 @@ use load_limiter::{LoadLimiter, Metric};
 
 lazy_static! {
     static ref DATACENTER_REGION_PREFIX: String = {
-        FbWhoAmI::new()
+        FbWhoAmI::get()
             .expect("failed to init fbwhoami")
             .region_datacenter_prefix
             .clone()

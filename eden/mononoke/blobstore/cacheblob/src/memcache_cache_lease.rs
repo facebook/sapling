@@ -122,7 +122,7 @@ impl MemcacheOps {
         lease_type: &'static str,
         backing_store_params: impl ToString,
     ) -> Result<Self, Error> {
-        let hostname = FbWhoAmI::new()?
+        let hostname = FbWhoAmI::get()?
             .name
             .clone()
             .ok_or(Error::msg("No hostname in fbwhoami"))?;

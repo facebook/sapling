@@ -901,7 +901,7 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('clienttelemetry')
     fn clienttelemetry(&self, args: HashMap<Vec<u8>, Vec<u8>>) -> HgCommandRes<String> {
-        let hostname = FbWhoAmI::new()
+        let hostname = FbWhoAmI::get()
             .ok()
             .and_then(|who| who.name.clone())
             .unwrap_or_else(|| "<no hostname found>".to_owned());
