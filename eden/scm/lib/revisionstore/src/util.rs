@@ -22,7 +22,7 @@ pub enum Error {
 pub fn get_str_config(config: &ConfigSet, section: &str, name: &str) -> Result<String> {
     let name = config
         .get(section, name)
-        .ok_or_else(|| Error::ConfigNotSet(format!("{}.{}", section, name).into()))?;
+        .ok_or_else(|| Error::ConfigNotSet(format!("{}.{}", section, name)))?;
     Ok(name.to_string())
 }
 

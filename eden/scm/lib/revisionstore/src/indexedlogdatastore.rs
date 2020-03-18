@@ -100,7 +100,7 @@ impl Entry {
     /// Read an entry from the IndexedLog and deserialize it.
     pub fn from_log(key: &Key, log: &RotateLog) -> Result<Option<Self>> {
         let mut log_entry = log.lookup(0, key.hgid.as_ref().to_vec())?;
-        let buf = match log_entry.nth(0) {
+        let buf = match log_entry.next() {
             None => return Ok(None),
             Some(buf) => buf?,
         };
@@ -207,7 +207,7 @@ impl LocalStore for IndexedLogHgIdDataStore {
                 },
                 StoreKey::Content(_) => true,
             })
-            .map(|k| k.clone())
+            .cloned()
             .collect())
     }
 }
@@ -224,11 +224,11 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
             Some(entry) => entry,
         };
         let content = entry.content()?;
-        return Ok(Some(Delta {
+        Ok(Some(Delta {
             data: content,
             base: None,
             key: key.clone(),
-        }));
+        }))
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {

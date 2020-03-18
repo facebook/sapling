@@ -114,10 +114,10 @@ impl DeltaBaseOffset {
     }
 
     fn to_i32(&self) -> i32 {
-        match self {
-            &DeltaBaseOffset::Offset(value) => value as i32,
-            &DeltaBaseOffset::FullText => -1,
-            &DeltaBaseOffset::Missing => -2,
+        match *self {
+            DeltaBaseOffset::Offset(value) => value as i32,
+            DeltaBaseOffset::FullText => -1,
+            DeltaBaseOffset::Missing => -2,
         }
     }
 }
@@ -250,8 +250,9 @@ impl DataIndex {
                     .map_or(DeltaBaseOffset::FullText, |delta_base| {
                         nodelocations
                             .get(&delta_base)
-                            .map(|x| DeltaBaseOffset::Offset(*x as u32))
-                            .unwrap_or(DeltaBaseOffset::Missing)
+                            .map_or(DeltaBaseOffset::Missing, |x| {
+                                DeltaBaseOffset::Offset(*x as u32)
+                            })
                     });
 
             let entry = IndexEntry::new(hgid.clone(), delta_base_offset, value.offset, value.size);

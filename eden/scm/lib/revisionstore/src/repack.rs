@@ -95,7 +95,7 @@ fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable + ToKeys>(
         }
     }
 
-    if repacked.len() == 0 {
+    if repacked.is_empty() {
         return Err(RepackFailure::Total(errors).into());
     }
 
@@ -119,11 +119,11 @@ fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable + ToKeys>(
                 .to_keys()
                 .into_iter()
                 .filter_map(|res| res.ok())
-                .map(|k| StoreKey::hgid(k))
+                .map(StoreKey::hgid)
                 .collect::<Vec<_>>();
             let missing = new_pack.get_missing(&keys)?;
 
-            if missing.len() == 0 {
+            if missing.is_empty() {
                 let _ = pack.delete();
                 successfully_repacked += 1;
             } else {
@@ -136,7 +136,7 @@ fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable + ToKeys>(
 
     if successfully_repacked == 0 {
         Err(RepackFailure::Total(errors).into())
-    } else if errors.len() != 0 {
+    } else if !errors.is_empty() {
         Err(RepackFailure::Partial(new_pack_path, errors).into())
     } else {
         Ok(new_pack_path)
@@ -194,14 +194,15 @@ pub fn list_packs(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
 /// Select all the packs from `packs` that needs to be repacked during an incremental repack.
 ///
 /// The filtering is fairly basic and is intended to reduce the fragmentation of pack files.
-pub fn filter_incrementalpacks<'a>(packs: Vec<PathBuf>, extension: &str) -> Result<Vec<PathBuf>> {
+pub fn filter_incrementalpacks(packs: Vec<PathBuf>, extension: &str) -> Result<Vec<PathBuf>> {
     // XXX: Read these from the configuration.
-    let mut repackmaxpacksize = 4 * 1024 * 1024 * 1024;
-    if extension == "histpack" {
+    let repackmaxpacksize = if extension == "histpack" {
         // Per 100MB of histpack size, the memory consumption is over 1GB, thus repacking 4GB
         // would need over 40GB of RAM.
-        repackmaxpacksize = 400 * 1024 * 1024;
-    }
+        400 * 1024 * 1024
+    } else {
+        4 * 1024 * 1024 * 1024
+    };
     let repacksizelimit = 100 * 1024 * 1024;
     let min_packs = 50;
 

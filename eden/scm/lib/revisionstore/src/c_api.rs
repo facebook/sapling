@@ -112,7 +112,7 @@ impl DataPackUnion {
     /// Lookup Key. If the key is missing, scan for changes in the pack files and try once more.
     fn get(&mut self, key: &Key) -> Result<Option<Vec<u8>>> {
         match self.store.get(key)? {
-            Some(data) => return Ok(Some(data)),
+            Some(data) => Ok(Some(data)),
             None => match self.rescan_paths() {
                 ScanResult::ChangesDetected => self.store.get(key),
                 ScanResult::NoChanges => Ok(None),

@@ -85,7 +85,7 @@
 use std::{
     fs::File,
     io::{Cursor, Read, Write},
-    mem::{drop, replace},
+    mem::{drop, take},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -232,13 +232,13 @@ impl<'a> HistoryEntry<'a> {
         writer.write_all(p1.as_ref())?;
         writer.write_all(p2.as_ref())?;
         writer.write_all(linknode.as_ref())?;
-        match copy_from {
-            &Some(file_name) => {
+        match *copy_from {
+            Some(file_name) => {
                 let file_name_slice = file_name.as_byte_slice();
                 writer.write_u16::<BigEndian>(file_name_slice.len() as u16)?;
                 writer.write_all(file_name_slice)?;
             }
-            &None => writer.write_u16::<BigEndian>(0)?,
+            None => writer.write_u16::<BigEndian>(0)?,
         };
 
         Ok(())
@@ -357,7 +357,7 @@ impl LocalStore for HistoryPack {
                 },
                 StoreKey::Content(_) => true,
             })
-            .map(|k| k.clone())
+            .cloned()
             .collect())
     }
 }
@@ -372,8 +372,8 @@ impl Repackable for HistoryPack {
     fn delete(mut self) -> Result<()> {
         // On some platforms, removing a file can fail if it's still opened or mapped, let's make
         // sure we close and unmap them before deletion.
-        let pack_path = replace(&mut self.pack_path, Default::default());
-        let index_path = replace(&mut self.index_path, Default::default());
+        let pack_path = take(&mut self.pack_path);
+        let index_path = take(&mut self.index_path);
         drop(self);
 
         let result1 = remove_file(&pack_path);

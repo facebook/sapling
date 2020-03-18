@@ -73,7 +73,7 @@ impl MutableDataPackInner {
         let tempfile = Builder::new().append(true).tempfile_in(&dir)?;
         let mut data_file = PackWriter::new(tempfile);
         let mut hasher = Sha1::new();
-        let version_u8: u8 = version.clone().into();
+        let version_u8: u8 = version.into();
         data_file.write_u8(version_u8)?;
         hasher.input(&[version_u8]);
 
@@ -148,7 +148,7 @@ impl MutableDataPackInner {
         self.hasher.input(&buf);
 
         let delta_location = DeltaLocation {
-            delta_base: delta.base.as_ref().map_or(None, |k| Some(k.hgid.clone())),
+            delta_base: delta.base.as_ref().map(|k| k.hgid.clone()),
             offset,
             size: buf.len() as u64,
         };
@@ -279,7 +279,7 @@ impl LocalStore for MutableDataPack {
                 StoreKey::HgId(k) => inner.mem_index.get(&k.hgid).is_none(),
                 StoreKey::Content(_) => true,
             })
-            .map(|k| k.clone())
+            .cloned()
             .collect())
     }
 }

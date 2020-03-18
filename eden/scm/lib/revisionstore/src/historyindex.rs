@@ -172,15 +172,16 @@ impl HistoryIndex {
         let fanout_size = FanoutTable::get_size(options.large);
         let mut index_start = 2 + fanout_size;
 
-        let mut index_end = mmap.len();
         // Version one records the number of entries in the index
-        if version == HistoryPackVersion::One {
+        let index_end = if version == HistoryPackVersion::One {
             let mut cursor = Cursor::new(&mmap);
             cursor.set_position(index_start as u64);
             let file_count = cursor.read_u64::<BigEndian>()? as usize;
             index_start += 8;
-            index_end = index_start + (file_count * FILE_ENTRY_LEN);
-        }
+            index_start + (file_count * FILE_ENTRY_LEN)
+        } else {
+            mmap.len()
+        };
 
         Ok(HistoryIndex {
             mmap,
@@ -235,7 +236,7 @@ impl HistoryIndex {
     fn write_file_index<T: Write>(
         writer: &mut T,
         options: &HistoryIndexOptions,
-        file_sections: &Vec<(&RepoPath, HgId, FileSectionLocation)>,
+        file_sections: &[(&RepoPath, HgId, FileSectionLocation)],
         nodes: &HashMap<&RepoPath, HashMap<Key, NodeLocation>>,
     ) -> Result<()> {
         // For each file, keep track of where its hgid index will start.
@@ -317,9 +318,7 @@ impl HistoryIndex {
         let filename_hgid = sha1(key.path.as_byte_slice());
         let (start, end) = FanoutTable::get_bounds(self.get_fanout_slice(), &filename_hgid)?;
         let start = start + self.index_start;
-        let end = end
-            .map(|pos| pos + self.index_start)
-            .unwrap_or(self.index_end);
+        let end = end.map_or(self.index_end, |pos| pos + self.index_start);
 
         let buf = self.mmap.get_err(start..end)?;
         let entry_offset = match self.binary_search_files(&filename_hgid, buf) {

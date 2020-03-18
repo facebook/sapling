@@ -234,7 +234,7 @@ impl<'a> ContentStoreBuilder<'a> {
             if let Some(lfs_threshold) = lfs_threshold {
                 let lfs_store = Arc::new(LfsMultiplexer::new(
                     shared_lfs_store,
-                    shared_pack_store.clone(),
+                    shared_pack_store,
                     lfs_threshold.value() as usize,
                 ));
 

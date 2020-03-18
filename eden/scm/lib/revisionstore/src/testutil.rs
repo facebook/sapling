@@ -212,7 +212,7 @@ impl EdenApi for FakeEdenApi {
             .map(|key| {
                 self.map
                     .get(&key)
-                    .ok_or("Not found".into())
+                    .ok_or_else(|| "Not found".into())
                     .map(|data| (key, data.clone()))
             })
             .collect::<ApiResult<Vec<(Key, Bytes)>>>()?;

@@ -31,7 +31,7 @@ impl<T> UnionStore<T> {
 
 impl<T: LocalStore> LocalStore for UnionStore<T> {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        let initial_keys = Ok(keys.iter().cloned().collect());
+        let initial_keys = Ok(keys.to_vec());
         self.into_iter()
             .fold(initial_keys, |missing_keys, store| match missing_keys {
                 Ok(missing_keys) => store.get_missing(&missing_keys),

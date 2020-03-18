@@ -84,7 +84,7 @@ use std::{
     fmt,
     fs::File,
     io::{Cursor, Read},
-    mem::{drop, replace},
+    mem::{drop, take},
     path::{Path, PathBuf},
     sync::Arc,
 };
@@ -194,13 +194,11 @@ impl<'a> DataEntry<'a> {
         cur.set_position(cur_pos + delta_len);
 
         // Metadata
-        let mut metadata = Metadata {
-            flags: None,
-            size: None,
+        let metadata = if version == DataPackVersion::One {
+            Metadata::read(&mut cur)?
+        } else {
+            Default::default()
         };
-        if version == DataPackVersion::One {
-            metadata = Metadata::read(&mut cur)?;
-        }
 
         let next_offset = cur.position();
 
@@ -400,7 +398,7 @@ impl LocalStore for DataPack {
                 },
                 StoreKey::Content(_) => true,
             })
-            .map(|k| k.clone())
+            .cloned()
             .collect())
     }
 }
@@ -415,8 +413,8 @@ impl Repackable for DataPack {
     fn delete(mut self) -> Result<()> {
         // On some platforms, removing a file can fail if it's still opened or mapped, let's make
         // sure we close and unmap them before deletion.
-        let pack_path = replace(&mut self.pack_path, Default::default());
-        let index_path = replace(&mut self.index_path, Default::default());
+        let pack_path = take(&mut self.pack_path);
+        let index_path = take(&mut self.index_path);
         drop(self);
 
         let result1 = remove_file(&pack_path);

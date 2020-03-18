@@ -143,7 +143,7 @@ impl HgIdMutableHistoryStore for MutableHistoryPack {
         let entries = inner
             .mem_index
             .entry(key.path.clone())
-            .or_insert_with(|| HashMap::new());
+            .or_insert_with(HashMap::new);
         entries.insert(key.clone(), info.clone());
         Ok(())
     }
@@ -191,7 +191,7 @@ impl MutablePack for MutableHistoryPackInner {
                 &mut nodes,
             )?;
             hasher.input(&section_buf);
-            data_file.write_all(&mut section_buf)?;
+            data_file.write_all(&section_buf)?;
 
             let section_location = FileSectionLocation {
                 offset: section_offset,
@@ -321,7 +321,7 @@ impl LocalStore for MutableHistoryPack {
                 },
                 StoreKey::Content(_) => true,
             })
-            .map(|k| k.clone())
+            .cloned()
             .collect())
     }
 }

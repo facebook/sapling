@@ -334,7 +334,7 @@ impl<T: LocalStore + Repackable> LocalStore for PackStore<T> {
         let packstore = self.inner.lock();
         packstore.try_scan()?;
 
-        let initial_keys = Ok(keys.iter().cloned().collect());
+        let initial_keys = Ok(keys.to_vec());
         let packs = packstore.packs.try_borrow()?;
         packs
             .into_iter()

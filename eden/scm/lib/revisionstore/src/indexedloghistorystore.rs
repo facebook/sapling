@@ -139,7 +139,7 @@ impl Entry {
     pub fn from_log(key: &Key, log: &RotateLog) -> Result<Option<Self>> {
         let index_key = Self::key_to_index_key(key);
         let mut log_entry = log.lookup(0, index_key)?;
-        let buf = match log_entry.nth(0) {
+        let buf = match log_entry.next() {
             None => return Ok(None),
             Some(buf) => buf?,
         };
@@ -225,7 +225,7 @@ impl LocalStore for IndexedLogHgIdHistoryStore {
                 },
                 StoreKey::Content(_) => true,
             })
-            .map(|k| k.clone())
+            .cloned()
             .collect())
     }
 }

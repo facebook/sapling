@@ -40,9 +40,7 @@ fn get_fanout_index(table_size: usize, hgid: &HgId) -> Result<u64> {
     match table_size {
         SMALL_RAW_SIZE => Ok(cursor.read_u8()? as u64),
         LARGE_RAW_SIZE => Ok(cursor.read_u16::<BigEndian>()? as u64),
-        _ => Err(
-            FanoutTableError(format!("invalid fanout table size ({:?})", table_size).into()).into(),
-        ),
+        _ => Err(FanoutTableError(format!("invalid fanout table size ({:?})", table_size)).into()),
     }
 }
 
@@ -96,9 +94,10 @@ impl FanoutTable {
             SMALL_FANOUT_FACTOR => SMALL_RAW_SIZE,
             LARGE_FANOUT_FACTOR => LARGE_RAW_SIZE,
             _ => {
-                return Err(FanoutTableError(
-                    format!("invalid fanout factor ({:?})", fanout_factor).into(),
-                )
+                return Err(FanoutTableError(format!(
+                    "invalid fanout factor ({:?})",
+                    fanout_factor
+                ))
                 .into());
             }
         };
@@ -106,9 +105,10 @@ impl FanoutTable {
             SMALL_FANOUT_FACTOR => SMALL_FANOUT_LENGTH,
             LARGE_FANOUT_FACTOR => LARGE_FANOUT_LENGTH,
             _ => {
-                return Err(FanoutTableError(
-                    format!("invalid fanout factor ({:?})", fanout_factor).into(),
-                )
+                return Err(FanoutTableError(format!(
+                    "invalid fanout factor ({:?})",
+                    fanout_factor
+                ))
                 .into());
             }
         };
@@ -131,8 +131,8 @@ impl FanoutTable {
         // Serialize the fanout table. For fanout keys that have no value, use the previous valid
         // value.
         let mut last_offset = 0;
-        for i in 0..fanout_table_length {
-            let offset = match fanout_table[i] {
+        for offset in fanout_table.into_iter() {
+            let offset = match offset {
                 Some(offset) => {
                     last_offset = offset;
                     offset
@@ -147,9 +147,10 @@ impl FanoutTable {
     }
 
     pub fn get_size(large: bool) -> usize {
-        match large {
-            true => LARGE_RAW_SIZE,
-            false => SMALL_RAW_SIZE,
+        if large {
+            LARGE_RAW_SIZE
+        } else {
+            SMALL_RAW_SIZE
         }
     }
 }

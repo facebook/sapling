@@ -117,8 +117,8 @@ impl LfsPointersStore {
         Ok(deserialize(data)?)
     }
 
-    fn get_by_iter<'a>(mut iter: LookupIter<'a>) -> Result<Option<LfsPointersEntry>> {
-        let buf = match iter.nth(0) {
+    fn get_by_iter(mut iter: LookupIter<'_>) -> Result<Option<LfsPointersEntry>> {
+        let buf = match iter.next() {
             None => return Ok(None),
             Some(buf) => buf?,
         };
@@ -201,7 +201,7 @@ impl LfsBlobsStore {
         create_dir(path.parent().unwrap())?;
 
         let mut file = File::create(path)?;
-        file.write(&blob)?;
+        file.write_all(&blob)?;
 
         if self.1 {
             file.sync_all()?;
