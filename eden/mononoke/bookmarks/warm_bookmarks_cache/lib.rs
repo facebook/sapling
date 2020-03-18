@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
@@ -28,19 +28,18 @@ use futures::{
 };
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::Future;
-use futures_stats::futures03::TimedFutureExt;
 use itertools::Itertools;
 use lock_ext::RwLockExt;
 use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::ChangesetId;
 use slog::{debug, info, warn};
 use stats::prelude::*;
-use time_ext::DurationExt;
 use unodes::RootUnodeManifestId;
 
 define_stats! {
-    prefix = "mononoke.bookmarks.warm_bookmarks_cache";
-    cached_bookmark_update_time_ms: dynamic_timeseries("{}.update_time", (repo: String); Average, Sum),
+    prefix = "mononoke.warm_bookmarks_cache";
+    bookmarks_fetch_failures: timeseries(Rate, Sum),
+    bookmark_update_failures: timeseries(Rate, Sum),
 }
 
 pub struct WarmBookmarksCache {
@@ -99,20 +98,20 @@ impl WarmBookmarksCache {
 
         let warmers = Arc::new(warmers);
         let (sender, receiver) = oneshot::channel();
-        let warm_cs_ids = Arc::new(RwLock::new(HashSet::new()));
 
         async move {
             info!(ctx.logger(), "Starting warm bookmark cache updater");
             let bookmarks = init_bookmarks(&ctx, &repo, &warmers).await?;
             let bookmarks = Arc::new(RwLock::new(bookmarks));
 
-            spawn_bookmarks_updater(
+            let loop_sleep = Duration::from_millis(1000);
+            spawn_bookmarks_coordinator(
                 bookmarks.clone(),
                 receiver,
                 ctx.clone(),
                 repo.clone(),
                 warmers.clone(),
-                warm_cs_ids.clone(),
+                loop_sleep,
             );
             Ok(Self {
                 bookmarks,
@@ -196,17 +195,69 @@ async fn is_derived(
         .await
 }
 
+async fn derive_all(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: &ChangesetId,
+    warmers: &Arc<Vec<Warmer>>,
+) -> Result<(), Error> {
+    stream::iter(warmers.iter().map(Ok))
+        .try_for_each_concurrent(100, |warmer| {
+            (*warmer.warmer)(ctx.clone(), repo.clone(), *cs_id).compat()
+        })
+        .await
+}
+
 async fn move_bookmark_back_in_history_until_derived(
     ctx: &CoreContext,
     repo: &BlobRepo,
     book: &BookmarkName,
     warmers: &Arc<Vec<Warmer>>,
 ) -> Result<Option<ChangesetId>, Error> {
+    info!(ctx.logger(), "moving {} bookmark back in history...", book);
+
+    let (latest_derived_entry, _) =
+        find_all_underived_and_latest_derived(ctx, repo, book, warmers).await?;
+
+    match latest_derived_entry {
+        LatestDerivedBookmarkEntry::Found(maybe_cs_id) => Ok(maybe_cs_id),
+        LatestDerivedBookmarkEntry::NotFound => {
+            let cur_bookmark_value = repo.get_bonsai_bookmark(ctx.clone(), book).compat().await?;
+            warn!(
+                ctx.logger(),
+                "cannot find previous derived version of {}, returning current version {:?}",
+                book,
+                cur_bookmark_value
+            );
+            Ok(cur_bookmark_value)
+        }
+    }
+}
+
+enum LatestDerivedBookmarkEntry {
+    Found(Option<ChangesetId>),
+    /// Latest derived bookmark entry is too far away
+    NotFound,
+}
+
+/// Searches bookmark log for latest entry for which everything is derived. Note that we consider log entry that
+/// deletes a bookmark to be derived. Returns this entry if it was found and changesets for all underived entries after that
+/// OLDEST ENTRIES FIRST.
+async fn find_all_underived_and_latest_derived(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    book: &BookmarkName,
+    warmers: &Arc<Vec<Warmer>>,
+) -> Result<(LatestDerivedBookmarkEntry, VecDeque<ChangesetId>), Error> {
+    let mut res = VecDeque::new();
     let history_depth_limits = vec![0, 10, 50, 100, 1000, 10000];
 
-    info!(ctx.logger(), "moving {} bookmark back in history...", book);
     for (prev_limit, limit) in history_depth_limits.into_iter().tuple_windows() {
         debug!(ctx.logger(), "{} bookmark, limit {}", book, limit);
+        // Note that since new entries might be inserted to the bookmark log,
+        // the next call to `list_bookmark_log_entries(...)` might return
+        // entries that were already returned on the previous call `list_bookmark_log_entries(...)`.
+        // That means that the same entry might be rechecked, but that shouldn't be a big problem.
         let log_entries = repo
             .list_bookmark_log_entries(
                 ctx.clone(),
@@ -220,68 +271,120 @@ async fn move_bookmark_back_in_history_until_derived(
             .await?;
 
         let log_entries_fetched = log_entries.len();
-        let mut maybe_derived = stream::iter(log_entries
-            .into_iter()
-            .map(|(maybe_cs_id, _, _)| async move {
+        let mut maybe_derived = stream::iter(log_entries.into_iter().map(
+            |(maybe_cs_id, _, _)| async move {
                 match maybe_cs_id {
-                Some(cs_id) =>  {
-                    let derived = is_derived(ctx, repo, &cs_id, warmers).await;
-                    (Some(cs_id), derived)
+                    Some(cs_id) => {
+                        let derived = is_derived(ctx, repo, &cs_id, warmers).await;
+                        (Some(cs_id), derived)
+                    }
+                    None => (None, true),
                 }
-                None => {
-                    (None, true)
-                }
-            }})
-        )
-        // At most 100 blobstore fetches at a time
+            },
+        ))
         .buffered(100);
 
         while let Some((maybe_cs_id, is_derived)) = maybe_derived.next().await {
             if is_derived {
-                return Ok(maybe_cs_id.clone());
+                return Ok((LatestDerivedBookmarkEntry::Found(maybe_cs_id), res));
+            } else {
+                if let Some(cs_id) = maybe_cs_id {
+                    res.push_front(cs_id);
+                }
             }
         }
 
         // Bookmark has been created recently and wasn't derived at all
         if (log_entries_fetched as u32) < limit {
-            return Ok(None);
+            return Ok((LatestDerivedBookmarkEntry::Found(None), res));
         }
     }
 
-    let cur_bookmark_value = repo.get_bonsai_bookmark(ctx.clone(), book).compat().await?;
-    warn!(
-        ctx.logger(),
-        "cannot find previous derived version of {}, returning current version {:?}",
-        book,
-        cur_bookmark_value
-    );
-    Ok(cur_bookmark_value)
+    Ok((LatestDerivedBookmarkEntry::NotFound, res))
 }
 
-fn spawn_bookmarks_updater(
+// Loop that finds bookmarks that were modified and spawns separate bookmark updaters for them
+fn spawn_bookmarks_coordinator(
     bookmarks: Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
     terminate: oneshot::Receiver<()>,
     ctx: CoreContext,
     repo: BlobRepo,
     warmers: Arc<Vec<Warmer>>,
-    warm_cs_ids: Arc<RwLock<HashSet<ChangesetId>>>,
+    loop_sleep: Duration,
 ) {
     // ignore JoinHandle, because we want it to run until `terminate` receives a signal
     let _ = tokio::spawn(async move {
         info!(ctx.logger(), "Started warm bookmark cache updater");
         let infinite_loop = async {
+            // This set is used to keep track of which bookmark is being updated
+            // and make sure that we don't have more than a single updater for a bookmark.
+            let live_updaters = Arc::new(RwLock::new(HashSet::<BookmarkName>::new()));
             loop {
-                let repoid = repo.get_repoid();
-                let (stats, _) = update_bookmarks(&bookmarks, &ctx, &repo, &warmers, &warm_cs_ids)
-                    .timed()
+                let cur_bookmarks = bookmarks.with_read(|bookmarks| bookmarks.clone());
+
+                let res = repo
+                    .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+                    .compat()
+                    .map_ok(|(book, cs_id)| (book.into_name(), cs_id))
+                    .try_collect::<HashMap<_, _>>()
                     .await;
 
-                STATS::cached_bookmark_update_time_ms.add_value(
-                    stats.completion_time.as_millis_unchecked() as i64,
-                    (repoid.id().to_string(),),
-                );
+                let new_bookmarks = match res {
+                    Ok(bookmarks) => bookmarks,
+                    Err(err) => {
+                        STATS::bookmarks_fetch_failures.add_value(1);
+                        warn!(ctx.logger(), "failed to fetch bookmarks {}", err);
+                        continue;
+                    }
+                };
 
-                let _ = tokio::time::delay_for(Duration::from_millis(1000)).await;
+                let mut changed_bookmarks = vec![];
+                // Find bookmarks that were moved/created and spawn an updater
+                // for them
+                for (key, value) in &new_bookmarks {
+                    if cur_bookmarks.get(key) != Some(value) {
+                        changed_bookmarks.push(key);
+                    }
+                }
+
+                // Find bookmarks that were deleted
+                for key in cur_bookmarks.keys() {
+                    if !new_bookmarks.contains_key(&key) {
+                        changed_bookmarks.push(key);
+                    }
+                }
+
+                for book in changed_bookmarks {
+                    let need_spawning =
+                        live_updaters.with_write(|spawned| spawned.insert(book.clone()));
+                    // It's possible that bookmark updater removes a bookmark right after
+                    // we tried to insert it. That means we won't spawn a new updater,
+                    // but that's not a big deal though - we'll do it on the next iteration
+                    // of the loop
+                    if need_spawning {
+                        cloned!(ctx, repo, book, bookmarks, live_updaters, warmers);
+                        let _ = tokio::spawn(async move {
+                            scopeguard::defer! {
+                                live_updaters.with_write(|live_updaters| live_updaters.remove(&book));
+                            };
+
+                            let res = single_bookmark_updater(
+                                &ctx,
+                                &repo,
+                                &book,
+                                &bookmarks,
+                                &warmers,
+                            )
+                            .await;
+                            if let Err(err) = res {
+                                STATS::bookmark_update_failures.add_value(1);
+                                warn!(ctx.logger(), "update of {} failed: {}", book, err);
+                            }
+                        });
+                    }
+                }
+
+                tokio::time::delay_for(loop_sleep).await;
             }
         }
         .boxed();
@@ -294,96 +397,72 @@ fn spawn_bookmarks_updater(
     });
 }
 
-async fn update_bookmarks<'a>(
-    bookmarks: &'a Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
-    ctx: &'a CoreContext,
-    repo: &'a BlobRepo,
-    warmers: &'a Arc<Vec<Warmer>>,
-    warm_cs_ids: &'a Arc<RwLock<HashSet<ChangesetId>>>,
+async fn single_bookmark_updater(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bookmark: &BookmarkName,
+    bookmarks: &Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
+    warmers: &Arc<Vec<Warmer>>,
 ) -> Result<(), Error> {
-    let warmed_bookmarks = repo
-        .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-        .compat()
-        .map_ok({
-            cloned!(warm_cs_ids);
-            move |(bookmark, cs_id)| {
-                let success = if warm_cs_ids.read().unwrap().contains(&cs_id) {
-                    // This changeset was warmed on the previous iteration.
-                    async { Ok(true) }.left_future()
-                } else {
-                    // Derive all the necessary data to make the changeset
-                    // warm. This makes sure the read path doesn't have to
-                    // generate derived data if a bookmark is requested
-                    // (which is the most common case).  Ignore any errors
-                    // during derivation - we don't want that to affect
-                    // the set of bookmarks - but keep track of which ones
-                    // succeeded, and only count successfully warmed
-                    // bookmarks as warm. Changesets that fail derivation
-                    // will be tried again on the next iteration if they are
-                    // still bookmarked.
-                    //
-                    // Spawn each warmer into a separate task so that they
-                    // run in parallel.
-                    let mut warmers = warmers
-                        .iter()
-                        .map(|warmer| {
-                            let join_handle = tokio::spawn(
-                                (*warmer.warmer)(ctx.clone(), repo.clone(), cs_id).compat(),
-                            );
-                            async move {
-                                let res: Result<_, Error> = match join_handle.await {
-                                    Ok(Ok(_)) => Ok(true),
-                                    Ok(Err(_)) | Err(_) => Ok(false),
-                                };
-                                res
-                            }
-                        })
-                        .collect::<FuturesUnordered<_>>();
-                    async move {
-                        let mut res = true;
-                        while let Some(newres) = warmers.next().await {
-                            res &= newres?;
-                        }
-                        Ok(res)
-                    }
-                    .right_future()
-                };
+    let (latest_derived, underived_history) =
+        find_all_underived_and_latest_derived(&ctx, &repo, &bookmark, &warmers).await?;
 
-                success.map_ok(move |success| (bookmark.into_name(), cs_id, success))
+    match latest_derived {
+        // Move bookmark to the latest derived commit or delete the bookmark completely
+        LatestDerivedBookmarkEntry::Found(maybe_cs_id) => match maybe_cs_id {
+            Some(cs_id) => {
+                bookmarks.with_write(|bookmarks| bookmarks.insert(bookmark.clone(), cs_id));
             }
-        })
-        .try_buffer_unordered(100)
-        .try_collect::<Vec<_>>()
-        .await?;
+            None => {
+                bookmarks.with_write(|bookmarks| bookmarks.remove(&bookmark));
+            }
+        },
+        LatestDerivedBookmarkEntry::NotFound => {
+            warn!(
+                ctx.logger(),
+                "Haven't found previous derived version of {}! Will try to derive anyway", bookmark
+            );
+        }
+    }
 
-    // The new set of warm changesets are those which were
-    // already warm, or for which all derivations succeeded.
-    let new_warm_cs_ids: HashSet<_> = warmed_bookmarks
-        .iter()
-        .filter(|(_name, _cs_id, success)| *success)
-        .map(|(_name, cs_id, _success)| cs_id.clone())
-        .collect();
-    warm_cs_ids.with_write(|warm_cs_ids| *warm_cs_ids = new_warm_cs_ids);
-    // The new bookmarks are all the bookmarks, regardless of
-    // whether derivation succeeded.
-    let new_bookmarks: HashMap<_, _> = warmed_bookmarks
-        .into_iter()
-        .map(|(name, cs_id, _success)| (name, cs_id))
-        .collect();
-    bookmarks.with_write(|bookmarks| *bookmarks = new_bookmarks);
+    for underived_cs_id in underived_history {
+        let res = derive_all(&ctx, &repo, &underived_cs_id, &warmers).await;
+        match res {
+            Ok(()) => {
+                bookmarks
+                    .with_write(|bookmarks| bookmarks.insert(bookmark.clone(), underived_cs_id));
+            }
+            Err(err) => {
+                warn!(
+                    ctx.logger(),
+                    "failed to derive data for {} while updating {}: {}",
+                    underived_cs_id,
+                    bookmark,
+                    err
+                );
+                break;
+            }
+        }
+    }
+
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use anyhow::anyhow;
     use blobrepo::DangerousOverride;
     use blobstore::Blobstore;
+    use cloned::cloned;
     use delayblob::DelayedBlobstore;
     use fbinit::FacebookInit;
     use fixtures::linear;
     use maplit::hashmap;
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
+    use tokio::time;
+
+    const TEST_LOOP_SLEEP: Duration = Duration::from_millis(1);
 
     #[fbinit::compat_test]
     async fn test_simple(fb: FacebookInit) -> Result<(), Error> {
@@ -531,6 +610,309 @@ mod tests {
             bookmarks,
             hashmap! {BookmarkName::new("master")? => derived_master}
         );
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_spawn_bookmarks_coordinator_simple(fb: FacebookInit) -> Result<(), Error> {
+        let repo = linear::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+
+        let bookmarks = repo
+            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .compat()
+            .map_ok(|(book, cs_id)| (book.into_name(), cs_id))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        let bookmarks = Arc::new(RwLock::new(bookmarks));
+
+        let mut warmers: Vec<Warmer> = Vec::new();
+        warmers.push(create_warmer::<RootUnodeManifestId>(&ctx));
+        let warmers = Arc::new(warmers);
+
+        let master = CreateCommitContext::new(&ctx, &repo, vec!["master"])
+            .add_file("somefile", "content")
+            .commit()
+            .await?;
+        bookmark(&ctx, &repo, "master").set_to(master).await?;
+
+        let (cancel, receiver_cancel) = oneshot::channel();
+        spawn_bookmarks_coordinator(
+            bookmarks.clone(),
+            receiver_cancel,
+            ctx.clone(),
+            repo.clone(),
+            warmers,
+            TEST_LOOP_SLEEP,
+        );
+
+        let master_book = BookmarkName::new("master")?;
+        wait_for_bookmark(&bookmarks, &master_book, Some(master)).await?;
+
+        bookmark(&ctx, &repo, "master").delete().await?;
+        wait_for_bookmark(&bookmarks, &master_book, None).await?;
+
+        let _ = cancel.send(());
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_single_bookmarks_coordinator_many_updates(fb: FacebookInit) -> Result<(), Error> {
+        let repo = linear::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+
+        let bookmarks = repo
+            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .compat()
+            .map_ok(|(book, cs_id)| (book.into_name(), cs_id))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        let bookmarks = Arc::new(RwLock::new(bookmarks));
+
+        let mut warmers: Vec<Warmer> = Vec::new();
+        warmers.push(create_warmer::<RootUnodeManifestId>(&ctx));
+        let warmers = Arc::new(warmers);
+
+        info!(ctx.logger(), "created stack of commits");
+        for i in 1..10 {
+            let master = CreateCommitContext::new(&ctx, &repo, vec!["master"])
+                .add_file(format!("somefile{}", i), "content")
+                .commit()
+                .await?;
+            info!(ctx.logger(), "created {}", master);
+            bookmark(&ctx, &repo, "master").set_to(master).await?;
+        }
+        let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+        info!(ctx.logger(), "created the whole stack of commits");
+
+        let master_book = BookmarkName::new("master")?;
+        single_bookmark_updater(&ctx, &repo, &master_book, &bookmarks, &warmers).await?;
+
+        assert_eq!(
+            bookmarks.with_read(|bookmarks| bookmarks.get(&master_book).cloned()),
+            Some(master_cs_id)
+        );
+
+        Ok(())
+    }
+
+    async fn wait_for_bookmark(
+        bookmarks: &Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
+        book: &BookmarkName,
+        expected_value: Option<ChangesetId>,
+    ) -> Result<(), Error> {
+        wait(|| async move {
+            Ok(bookmarks.with_read(|bookmarks| bookmarks.get(book).cloned()) == expected_value)
+        })
+        .await
+    }
+
+    async fn wait<F, Fut>(func: F) -> Result<(), Error>
+    where
+        F: Fn() -> Fut,
+        Fut: futures::future::Future<Output = Result<bool, Error>>,
+    {
+        let timeout_ms = 4000;
+        let res = time::timeout(Duration::from_millis(timeout_ms), async {
+            loop {
+                if func().await? {
+                    break;
+                }
+                let sleep_ms = 10;
+                time::delay_for(Duration::from_millis(sleep_ms)).await;
+            }
+
+            Ok(())
+        })
+        .await?;
+        res
+    }
+
+    #[fbinit::compat_test]
+    async fn test_spawn_bookmarks_coordinator_failing_warmer(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let repo = linear::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+
+        let bookmarks = repo
+            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .compat()
+            .map_ok(|(book, cs_id)| (book.into_name(), cs_id))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        let bookmarks = Arc::new(RwLock::new(bookmarks));
+
+        let failing_cs_id = CreateCommitContext::new(&ctx, &repo, vec!["master"])
+            .add_file("failed", "failed")
+            .commit()
+            .await?;
+        bookmark(&ctx, &repo, "failingbook")
+            .set_to(failing_cs_id)
+            .await?;
+
+        let master = CreateCommitContext::new(&ctx, &repo, vec!["master"])
+            .add_file("somefile", "content")
+            .commit()
+            .await?;
+        bookmark(&ctx, &repo, "master").set_to(master).await?;
+
+        let warmer = Warmer {
+            warmer: Box::new({
+                cloned!(failing_cs_id);
+                move |ctx, repo, cs_id| {
+                    if cs_id == failing_cs_id {
+                        futures_old::future::err(anyhow!("failed")).boxify()
+                    } else {
+                        RootUnodeManifestId::derive(ctx, repo, cs_id)
+                            .map(|_| ())
+                            .from_err()
+                            .boxify()
+                    }
+                }
+            }),
+            is_derived: Box::new(|ctx, repo, cs_id| {
+                RootUnodeManifestId::is_derived(ctx, repo, cs_id)
+                    .from_err()
+                    .boxify()
+            }),
+        };
+        let mut warmers: Vec<Warmer> = Vec::new();
+        warmers.push(warmer);
+        let warmers = Arc::new(warmers);
+
+        let (cancel, receiver_cancel) = oneshot::channel();
+        spawn_bookmarks_coordinator(
+            bookmarks.clone(),
+            receiver_cancel,
+            ctx.clone(),
+            repo.clone(),
+            warmers,
+            TEST_LOOP_SLEEP,
+        );
+
+        let master_book = BookmarkName::new("master")?;
+        wait_for_bookmark(&bookmarks, &master_book, Some(master)).await?;
+        let _ = cancel.send(());
+
+        let failing_book = BookmarkName::new("failingbook")?;
+        bookmarks.with_read(|bookmarks| assert_eq!(bookmarks.get(&failing_book), None));
+
+        // Give a chance to first coordinator to finish
+        tokio::time::delay_for(TEST_LOOP_SLEEP * 5).await;
+
+        // Now change the warmer and make sure it derives successfully
+        let mut warmers: Vec<Warmer> = Vec::new();
+        warmers.push(create_warmer::<RootUnodeManifestId>(&ctx));
+        let warmers = Arc::new(warmers);
+
+        let (cancel, receiver_cancel) = oneshot::channel();
+        spawn_bookmarks_coordinator(
+            bookmarks.clone(),
+            receiver_cancel,
+            ctx,
+            repo,
+            warmers,
+            TEST_LOOP_SLEEP,
+        );
+        wait_for_bookmark(&bookmarks, &failing_book, Some(failing_cs_id)).await?;
+
+        let _ = cancel.send(());
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_spawn_bookmarks_coordinator_check_single_updater(
+        fb: FacebookInit,
+    ) -> Result<(), Error> {
+        let repo = linear::getrepo(fb).await;
+        let ctx = CoreContext::test_mock(fb);
+
+        RootUnodeManifestId::derive(
+            ctx.clone(),
+            repo.clone(),
+            repo.get_bonsai_bookmark(ctx.clone(), &BookmarkName::new("master")?)
+                .compat()
+                .await?
+                .unwrap(),
+        )
+        .compat()
+        .await?;
+
+        let derive_sleep_time_ms = 100;
+        let how_many_derived = Arc::new(RwLock::new(HashMap::new()));
+        let warmer = Warmer {
+            warmer: Box::new({
+                cloned!(how_many_derived);
+                move |ctx, repo, cs_id| {
+                    how_many_derived.with_write(|map| {
+                        *map.entry(cs_id).or_insert(0) += 1;
+                    });
+                    tokio::time::delay_for(Duration::from_millis(derive_sleep_time_ms))
+                        .map(|_| {
+                            let res: Result<_, Error> = Ok(());
+                            res
+                        })
+                        .compat()
+                        .and_then(move |_| RootUnodeManifestId::derive(ctx, repo, cs_id).from_err())
+                        .map(|_| ())
+                        .boxify()
+                }
+            }),
+            is_derived: Box::new(|ctx, repo, cs_id| {
+                RootUnodeManifestId::is_derived(ctx, repo, cs_id)
+                    .from_err()
+                    .boxify()
+            }),
+        };
+        let mut warmers: Vec<Warmer> = Vec::new();
+        warmers.push(warmer);
+        let warmers = Arc::new(warmers);
+
+        let bookmarks = repo
+            .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
+            .compat()
+            .map_ok(|(book, cs_id)| (book.into_name(), cs_id))
+            .try_collect::<HashMap<_, _>>()
+            .await?;
+        let bookmarks = Arc::new(RwLock::new(bookmarks));
+
+        let master = CreateCommitContext::new(&ctx, &repo, vec!["master"])
+            .add_file("somefile", "content")
+            .commit()
+            .await?;
+        bookmark(&ctx, &repo, "master").set_to(master).await?;
+
+        let (cancel, receiver_cancel) = oneshot::channel();
+        spawn_bookmarks_coordinator(
+            bookmarks.clone(),
+            receiver_cancel,
+            ctx.clone(),
+            repo.clone(),
+            warmers.clone(),
+            TEST_LOOP_SLEEP,
+        );
+        // Give it a chance to derive
+        wait({
+            move || {
+                cloned!(ctx, repo, master, warmers);
+                async move {
+                    let res: Result<_, Error> =
+                        Ok(is_derived(&ctx, &repo, &master, &warmers).await);
+                    res
+                }
+            }
+        })
+        .await?;
+
+        let _ = cancel.send(());
+
+        how_many_derived.with_read(|derived| {
+            assert_eq!(derived.get(&master), Some(&1));
+        });
 
         Ok(())
     }
