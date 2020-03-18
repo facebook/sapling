@@ -73,6 +73,7 @@ define_perf_counters! {
         GetpackNumPossibleLFSFiles,
         GettreepackNumTreepacks,
         GettreepackResponseSize,
+        GettreepackDesignatedNodes,
         GetcommitdataNumCommits,
         GetcommitdataResponseSize,
         MemcacheHits,
@@ -105,6 +106,7 @@ impl PerfCounterType {
             | CachelibMisses
             | GetpackPossibleLFSFilesSumSize
             | GetpackNumPossibleLFSFiles
+            | GettreepackDesignatedNodes
             | MemcacheHits
             | MemcacheMisses
             | SqlReadsMaster

@@ -89,6 +89,10 @@ Confirm that Mononoke logged commands, but didn't log any missing filenodes
   $ grep NullLinknode "$SCUBA_LOGGING_PATH"
   [1]
 
+Confirm that we logged some reporting identifying designated nodes fetching too
+  $ grep "Command processed" "$SCUBA_LOGGING_PATH" | jq .int.GettreepackDesignatedNodes | grep -Eqv '^0'
+  $ grep "Gettreepack Params" "$SCUBA_LOGGING_PATH" | jq .int.gettreepack_directories | grep -Eqv '^0'
+
 And check that the proper linknode was returned. Run this using hg, as opposed to hgmn, so we crash if it's not there.
   $ hg debugshell \
   > --config "remotefilelog.cachepath=$TESTTMP/cache2" \

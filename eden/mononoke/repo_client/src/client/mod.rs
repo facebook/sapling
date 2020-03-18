@@ -1523,6 +1523,7 @@ impl HgCommands for RepoClient {
         ctx.scuba()
             .clone()
             .add("gettreepack_mfnodes", params.mfnodes.len())
+            .add("gettreepack_directories", params.directories.len())
             .log_with_msg("Gettreepack Params", None);
 
         let s = self
@@ -1951,6 +1952,11 @@ pub fn gettreepack_entries(
             .collect::<Result<Vec<_>, Error>>();
 
         let entries = try_boxstream!(entries);
+
+        ctx.perf_counters().set_counter(
+            PerfCounterType::GettreepackDesignatedNodes,
+            entries.len() as i64,
+        );
 
         return stream::iter_ok::<_, Error>(entries).boxify();
     }
