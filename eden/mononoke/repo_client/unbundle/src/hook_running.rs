@@ -7,17 +7,12 @@
 
 #![deny(warnings)]
 
-use crate::{
-    BundleResolverError, PostResolveAction, PostResolvePushRebase, UploadedHgChangesetIds,
-};
-use bookmarks::BookmarkName;
-use bytes::Bytes;
+use crate::{BundleResolverError, PostResolveAction, PostResolvePushRebase};
 use context::CoreContext;
-use futures::{future, stream::futures_unordered, FutureExt, TryFutureExt, TryStreamExt};
+use futures::{FutureExt, TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt as _};
-use futures_old::future::{ok, Future};
-use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution, HookManager};
-use std::collections::HashMap;
+use futures_old::future::ok;
+use hooks::{HookManager, HookOutcome};
 use std::sync::Arc;
 
 pub fn run_hooks(
@@ -26,6 +21,7 @@ pub fn run_hooks(
     action: &PostResolveAction,
 ) -> BoxFuture<(), BundleResolverError> {
     match action {
+        // TODO: Need to run hooks on Push, not just PushRebase
         PostResolveAction::Push(_) => ok(()).boxify(),
         PostResolveAction::InfinitePush(_) => ok(()).boxify(),
         PostResolveAction::PushRebase(action) => run_pushrebase_hooks(ctx, action, hook_manager),
@@ -41,76 +37,21 @@ fn run_pushrebase_hooks(
     let changesets = action.uploaded_hg_changeset_ids.clone();
     let maybe_pushvars = action.maybe_pushvars.clone();
     let bookmark = action.bookmark_spec.get_bookmark_name();
-    run_pushrebase_hooks_impl(ctx, changesets, maybe_pushvars, bookmark, hook_manager)
-}
 
-fn run_pushrebase_hooks_impl(
-    ctx: CoreContext,
-    changesets: UploadedHgChangesetIds,
-    pushvars: Option<HashMap<String, Bytes>>,
-    onto_bookmark: BookmarkName,
-    hook_manager: Arc<HookManager>,
-) -> BoxFuture<(), BundleResolverError> {
-    // TODO: should we also accept the Option<HgBookmarkPush> and run hooks on that?
-    let futs: futures_unordered::FuturesUnordered<_> = changesets
-        .into_iter()
-        .map({
-            |hg_cs_id| {
-                let ctx = ctx.clone();
-                let hook_manager = hook_manager.clone();
-                let onto_bookmark = onto_bookmark.clone();
-                let pushvars = pushvars.clone();
-                async move {
-                    future::try_join(
-                        hook_manager.run_changeset_hooks_for_bookmark(
-                            &ctx,
-                            hg_cs_id.clone(),
-                            &onto_bookmark,
-                            pushvars.as_ref(),
-                        ),
-                        hook_manager.run_file_hooks_for_bookmark(
-                            &ctx,
-                            hg_cs_id,
-                            &onto_bookmark,
-                            pushvars.as_ref(),
-                        ),
-                    )
-                    .await
-                }
-                .boxed()
-            }
-        })
-        .collect();
-    futs.try_collect()
-        .boxed()
-        .compat()
-        .from_err()
-        .and_then(|res: Vec<_>| {
-            let (cs_hook_results, file_hook_results): (Vec<_>, Vec<_>) = res.into_iter().unzip();
-            let cs_hook_failures: Vec<(ChangesetHookExecutionID, HookExecution)> = cs_hook_results
-                .into_iter()
-                .flatten()
-                .filter(|(_, exec)| match exec {
-                    HookExecution::Accepted => false,
-                    HookExecution::Rejected(_) => true,
-                })
-                .collect();
-            let file_hook_failures: Vec<(FileHookExecutionID, HookExecution)> = file_hook_results
-                .into_iter()
-                .flatten()
-                .filter(|(_, exec)| match exec {
-                    HookExecution::Accepted => false,
-                    HookExecution::Rejected(_) => true,
-                })
-                .collect();
-            if cs_hook_failures.len() > 0 || file_hook_failures.len() > 0 {
-                Err(BundleResolverError::HookError((
-                    cs_hook_failures,
-                    file_hook_failures,
-                )))
-            } else {
-                Ok(())
-            }
-        })
-        .boxify()
+    async move {
+        let hook_failures: Vec<_> = hook_manager
+            .run_hooks_for_bookmark(&ctx, changesets, &bookmark, maybe_pushvars.as_ref())
+            .await?
+            .into_iter()
+            .filter(HookOutcome::is_rejection)
+            .collect();
+        if hook_failures.is_empty() {
+            Ok(())
+        } else {
+            Err(BundleResolverError::HookError(hook_failures))
+        }
+    }
+    .boxed()
+    .compat()
+    .boxify()
 }

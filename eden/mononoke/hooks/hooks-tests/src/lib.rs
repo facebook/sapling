@@ -1073,9 +1073,9 @@ async fn run_changeset_hooks_with_mgr(
         hook_manager.register_changeset_hook(&hook_name, hook.into(), Default::default());
     }
     let res = hook_manager
-        .run_changeset_hooks_for_bookmark(
+        .run_hooks_for_bookmark(
             &ctx,
-            default_changeset_id(),
+            vec![default_changeset_id()],
             &BookmarkName::new(bookmark_name).unwrap(),
             None,
         )
@@ -1083,7 +1083,7 @@ async fn run_changeset_hooks_with_mgr(
         .unwrap();
     let map: HashMap<String, HookExecution> = res
         .into_iter()
-        .map(|(exec_id, exec)| (exec_id.hook_name, exec))
+        .map(|outcome| (outcome.get_hook_name().to_string(), outcome.into()))
         .collect();
     assert_eq!(expected, map);
 }
@@ -1153,23 +1153,23 @@ async fn run_file_hooks_with_mgr(
         hook_manager.register_file_hook(&hook_name, hook.into(), Default::default());
     }
     let res = hook_manager
-        .run_file_hooks_for_bookmark(
+        .run_hooks_for_bookmark(
             &ctx,
-            hg_cs_id,
+            vec![hg_cs_id],
             &BookmarkName::new(bookmark_name).unwrap(),
             None,
         )
         .await
         .unwrap();
     let map: HashMap<String, HashMap<String, HookExecution>> =
-        res.into_iter()
-            .fold(HashMap::new(), |mut m, (exec_id, exec)| {
-                match m.entry(exec_id.hook_name) {
-                    Entry::Vacant(v) => v.insert(HashMap::new()).insert(exec_id.file.path, exec),
-                    Entry::Occupied(mut v) => v.get_mut().insert(exec_id.file.path, exec),
-                };
-                m
-            });
+        res.into_iter().fold(HashMap::new(), |mut m, outcome| {
+            let path = outcome.get_file_path().expect("Changeset hook").to_string();
+            match m.entry(outcome.get_hook_name().to_string()) {
+                Entry::Vacant(v) => v.insert(HashMap::new()).insert(path, outcome.into()),
+                Entry::Occupied(mut v) => v.get_mut().insert(path, outcome.into()),
+            };
+            m
+        });
     assert_eq!(expected, map);
 }
 

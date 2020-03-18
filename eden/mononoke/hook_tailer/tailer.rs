@@ -7,7 +7,6 @@
 
 #![deny(warnings)]
 
-use super::HookResults;
 use anyhow::{format_err, Error, Result};
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
@@ -16,7 +15,7 @@ use context::CoreContext;
 use futures::{FutureExt, TryFutureExt};
 use futures_ext::{spawn_future, BoxFuture, FutureExt as OldFutureExt};
 use futures_old::{Future, Stream};
-use hooks::{hook_loader::load_hooks, HookManager};
+use hooks::{hook_loader::load_hooks, HookManager, HookOutcome};
 use hooks_content_stores::{blobrepo_text_only_store, BlobRepoChangesetStore};
 use manifold::{ManifoldHttpClient, PayloadRange};
 use mercurial_types::HgChangesetId;
@@ -88,7 +87,7 @@ impl Tailer {
         end_rev: HgChangesetId,
         bm: BookmarkName,
         excludes: HashSet<ChangesetId>,
-    ) -> BoxFuture<Vec<HookResults>, Error> {
+    ) -> BoxFuture<Vec<HookOutcome>, Error> {
         debug!(ctx.logger(), "Running in range {} to {}", last_rev, end_rev);
         nodehash_to_bonsai(ctx.clone(), &repo, end_rev)
             .and_then(move |end_rev| {
@@ -107,7 +106,7 @@ impl Tailer {
                         Ok(*hg_cs != last_rev)
                     })
                     .map(|(_, res)| res)
-                    .collect()
+                    .concat2()
             })
             .boxify()
     }
@@ -116,7 +115,7 @@ impl Tailer {
         &self,
         last_rev: HgChangesetId,
         end_rev: HgChangesetId,
-    ) -> BoxFuture<Vec<HookResults>, Error> {
+    ) -> BoxFuture<Vec<HookOutcome>, Error> {
         cloned!(
             self.ctx,
             self.repo,
@@ -138,7 +137,7 @@ impl Tailer {
     pub fn run_single_changeset(
         &self,
         changeset: HgChangesetId,
-    ) -> BoxFuture<Vec<HookResults>, Error> {
+    ) -> BoxFuture<Vec<HookOutcome>, Error> {
         cloned!(self.ctx, self.repo, self.hook_manager, self.bookmark,);
         repo.get_bonsai_from_hg(ctx, changeset)
             .and_then(move |maybe_bonsai| {
@@ -151,11 +150,11 @@ impl Tailer {
                 cloned!(self.ctx);
                 move |bonsai| run_hooks_for_changeset(ctx, repo, hook_manager, bookmark, bonsai)
             })
-            .map(|(_, result)| vec![result])
+            .map(|(_, result)| result)
             .boxify()
     }
 
-    pub fn run_with_limit(&self, limit: u64) -> BoxFuture<Vec<HookResults>, Error> {
+    pub fn run_with_limit(&self, limit: u64) -> BoxFuture<Vec<HookOutcome>, Error> {
         let ctx = self.ctx.clone();
         let bm = self.bookmark.clone();
         let hm = self.hook_manager.clone();
@@ -188,12 +187,12 @@ impl Tailer {
                     .map(spawn_future)
                     .buffered(100)
                     .map(|(_, res)| res)
-                    .collect()
+                    .concat2()
             })
             .boxify()
     }
 
-    pub fn run(&self) -> BoxFuture<Vec<HookResults>, Error> {
+    pub fn run(&self) -> BoxFuture<Vec<HookOutcome>, Error> {
         info!(
             self.ctx.logger(),
             "Running tailer on bookmark {}",
@@ -283,28 +282,17 @@ fn run_hooks_for_changeset(
     hm: Arc<HookManager>,
     bm: BookmarkName,
     cs: ChangesetId,
-) -> impl Future<Item = (HgChangesetId, HookResults), Error = Error> {
+) -> impl Future<Item = (HgChangesetId, Vec<HookOutcome>), Error = Error> {
     repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
         .and_then(move |hg_cs| {
             let ctx = ctx.clone();
             let hm = hm.clone();
             let bm = bm.clone();
             async move {
-                debug!(ctx.logger(), "Running file hooks for changeset {:?}", hg_cs);
-                let file_hooks_results = hm
-                    .run_file_hooks_for_bookmark(&ctx, hg_cs, &bm, None)
+                debug!(ctx.logger(), "Running hooks for changeset {:?}", hg_cs);
+                let hook_results = hm
+                    .run_hooks_for_bookmark(&ctx, vec![hg_cs], &bm, None)
                     .await?;
-                debug!(
-                    ctx.logger(),
-                    "Running changeset hooks for changeset {:?}", hg_cs
-                );
-                let cs_hooks_result = hm
-                    .run_changeset_hooks_for_bookmark(&ctx, hg_cs.clone(), &bm, None)
-                    .await?;
-                let hook_results = HookResults {
-                    file_hooks_results,
-                    cs_hooks_result,
-                };
                 Ok((hg_cs, hook_results))
             }
             .boxed()

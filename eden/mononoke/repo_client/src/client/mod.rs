@@ -31,7 +31,6 @@ use getbundle_response::{
     create_getbundle_response, DraftsInBundlesPolicy, PhasesPart, SessionLfsParams,
 };
 use hgproto::{GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
-use hooks::HookExecution;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use load_limiter::Metric;
@@ -1475,18 +1474,8 @@ impl HgCommands for RepoClient {
                         move |err| {
                             use unbundle::BundleResolverError::*;
                             match err {
-                                HookError((cs_hooks, file_hooks)) => {
-                                    let mut failed_hooks = HashSet::new();
-                                    for (exec_id, exec_info) in cs_hooks {
-                                        if let HookExecution::Rejected(_) = exec_info {
-                                            failed_hooks.insert(exec_id.hook_name.clone());
-                                        }
-                                    }
-                                    for (exec_id, exec_info) in file_hooks {
-                                        if let HookExecution::Rejected(_) = exec_info {
-                                            failed_hooks.insert(exec_id.hook_name.clone());
-                                        }
-                                    }
+                                HookError(hooks) => {
+                                    let failed_hooks: HashSet<String> = hooks.into_iter().filter_map(|res| if res.is_rejection() { Some(res.get_hook_name().to_string())} else {None}).collect();
 
                                     for failed_hook in failed_hooks {
                                         STATS::push_hook_failure.add_value(

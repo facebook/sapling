@@ -31,6 +31,7 @@ pub use errors::*;
 use fbinit::FacebookInit;
 use futures::{
     future::{try_join, try_join_all},
+    stream::{futures_unordered::FuturesUnordered, TryStreamExt},
     Future, TryFutureExt,
 };
 use futures_stats::TimedFutureExt;
@@ -188,38 +189,57 @@ impl HookManager {
             .collect()
     }
 
-    // Changeset hooks
+    pub async fn run_hooks_for_bookmark(
+        &self,
+        ctx: &CoreContext,
+        changesets: impl IntoIterator<Item = HgChangesetId>,
+        bookmark: &BookmarkName,
+        maybe_pushvars: Option<&HashMap<String, Bytes>>,
+    ) -> Result<Vec<HookOutcome>, Error> {
+        debug!(ctx.logger(), "Running hooks for bookmark {:?}", bookmark);
 
-    pub fn run_changeset_hooks_for_bookmark<'a, 'b: 'a, 'c: 'a, 'd: 'a>(
-        &'a self,
-        ctx: &'b CoreContext,
-        changeset_id: HgChangesetId,
-        bookmark: &'c BookmarkName,
-        maybe_pushvars: Option<&'d HashMap<String, Bytes>>,
-    ) -> impl Future<Output = Result<Vec<(ChangesetHookExecutionID, HookExecution)>, Error>> + 'a
-    {
-        debug!(
-            ctx.logger(),
-            "Running changeset hooks for bookmark {:?}", bookmark
-        );
+        let cs_hooks = self.changeset_hooks_for_bookmark(bookmark);
+        let file_hooks = self.file_hooks_for_bookmark(bookmark);
 
-        self.run_changeset_hooks_for_changeset_id(
-            ctx,
-            changeset_id,
-            self.changeset_hooks_for_bookmark(bookmark),
-            maybe_pushvars,
-            bookmark,
-        )
+        let cs_futs = FuturesUnordered::new();
+        let file_futs = FuturesUnordered::new();
+
+        for cs_id in changesets {
+            cs_futs.push(self.run_changeset_hooks_for_changeset_id(
+                ctx,
+                cs_id.clone(),
+                &cs_hooks,
+                maybe_pushvars,
+                bookmark,
+            ));
+            file_futs.push(self.run_file_hooks_for_changeset_id(
+                ctx,
+                cs_id,
+                &file_hooks,
+                maybe_pushvars,
+                bookmark,
+            ));
+        }
+
+        let (cs_hook_results, file_hook_results): (Vec<_>, Vec<_>) =
+            try_join(cs_futs.try_collect(), file_futs.try_collect()).await?;
+        Ok(cs_hook_results
+            .into_iter()
+            .flat_map(|r| r.into_iter())
+            .chain(file_hook_results.into_iter().flat_map(|r| r.into_iter()))
+            .collect())
     }
+
+    // Changeset hooks
 
     async fn run_changeset_hooks_for_changeset_id(
         &self,
         ctx: &CoreContext,
         changeset_id: HgChangesetId,
-        hooks: Vec<String>,
+        hooks: &Vec<String>,
         maybe_pushvars: Option<&HashMap<String, Bytes>>,
         bookmark: &BookmarkName,
-    ) -> Result<Vec<(ChangesetHookExecutionID, HookExecution)>, Error> {
+    ) -> Result<Vec<HookOutcome>, Error> {
         debug!(
             ctx.logger(),
             "Running changeset hooks for changeset id {:?}", changeset_id
@@ -246,7 +266,7 @@ impl HookManager {
         Ok(res
             .into_iter()
             .map(|(hook_name, exec)| {
-                (
+                HookOutcome::ChangesetHook(
                     ChangesetHookExecutionID {
                         cs_id: changeset_id,
                         hook_name,
@@ -277,38 +297,14 @@ impl HookManager {
 
     // File hooks
 
-    pub async fn run_file_hooks_for_bookmark(
-        &self,
-        ctx: &CoreContext,
-        changeset_id: HgChangesetId,
-        bookmark: &BookmarkName,
-        maybe_pushvars: Option<&HashMap<String, Bytes>>,
-    ) -> Result<Vec<(FileHookExecutionID, HookExecution)>, Error> {
-        debug!(
-            ctx.logger(),
-            "Running file hooks for bookmark {:?}", bookmark
-        );
-
-        let file_hooks = self.file_hooks_for_bookmark(&bookmark);
-
-        self.run_file_hooks_for_changeset_id(
-            &ctx,
-            changeset_id,
-            file_hooks,
-            maybe_pushvars,
-            &bookmark,
-        )
-        .await
-    }
-
     async fn run_file_hooks_for_changeset_id(
         &self,
         ctx: &CoreContext,
         changeset_id: HgChangesetId,
-        hooks: Vec<String>,
+        hooks: &Vec<String>,
         maybe_pushvars: Option<&HashMap<String, Bytes>>,
         bookmark: &BookmarkName,
-    ) -> Result<Vec<(FileHookExecutionID, HookExecution)>, Error> {
+    ) -> Result<Vec<HookOutcome>, Error> {
         debug!(
             ctx.logger(),
             "Running file hooks for changeset id {:?}", changeset_id
@@ -341,7 +337,7 @@ impl HookManager {
         hooks: Vec<(String, Arc<dyn Hook<HookFile>>, HookConfig)>,
         bookmark: &'book BookmarkName,
         scuba: ScubaSampleBuilder,
-    ) -> impl Future<Output = Result<Vec<(FileHookExecutionID, HookExecution)>, Error>> + 'cs {
+    ) -> impl Future<Output = Result<Vec<HookOutcome>, Error>> + 'cs {
         let v: Vec<_> = changeset
             .files
             .iter()
@@ -372,7 +368,7 @@ impl HookManager {
         hooks: Vec<(String, Arc<dyn Hook<HookFile>>, HookConfig)>,
         bookmark: &'book BookmarkName,
         scuba: ScubaSampleBuilder,
-    ) -> Result<Vec<(FileHookExecutionID, HookExecution)>, Error> {
+    ) -> Result<Vec<HookOutcome>, Error> {
         let hook_futs = hooks.into_iter().map(move |(hook_name, hook, config)| {
             let hook_context =
                 HookContext::new(hook_name.to_string(), config, file.clone(), bookmark);
@@ -383,7 +379,7 @@ impl HookManager {
             HookManager::run_hook(ctx, hook, hook_context, scuba).map_ok({
                 cloned!(file, bookmark);
                 move |(hook_name, exec)| {
-                    (
+                    HookOutcome::FileHook(
                         FileHookExecutionID {
                             cs_id,
                             hook_name,
@@ -687,16 +683,87 @@ impl HookChangeset {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+pub enum HookOutcome {
+    ChangesetHook(ChangesetHookExecutionID, HookExecution),
+    FileHook(FileHookExecutionID, HookExecution),
+}
+
+impl fmt::Display for HookOutcome {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        match self {
+            HookOutcome::ChangesetHook(id, exec) => {
+                write!(f, "{} for {}: {}", id.hook_name, id.cs_id, exec)
+            }
+            HookOutcome::FileHook(id, exec) => write!(
+                f,
+                "{} for {} file {}: {}",
+                id.hook_name, id.cs_id, id.file.path, exec
+            ),
+        }
+    }
+}
+
+impl HookOutcome {
+    pub fn is_rejection(&self) -> bool {
+        let exec = match self {
+            HookOutcome::ChangesetHook(_, exec) => exec,
+            HookOutcome::FileHook(_, exec) => exec,
+        };
+        match exec {
+            HookExecution::Accepted => false,
+            HookExecution::Rejected(_) => true,
+        }
+    }
+
+    pub fn get_hook_name(&self) -> &str {
+        match self {
+            HookOutcome::ChangesetHook(id, _) => &id.hook_name,
+            HookOutcome::FileHook(id, _) => &id.hook_name,
+        }
+    }
+
+    pub fn get_file_path(&self) -> Option<&str> {
+        match self {
+            HookOutcome::ChangesetHook(..) => None,
+            HookOutcome::FileHook(id, _) => Some(&id.file.path),
+        }
+    }
+
+    pub fn get_cs_id(&self) -> HgChangesetId {
+        match self {
+            HookOutcome::ChangesetHook(id, _) => id.cs_id,
+            HookOutcome::FileHook(id, _) => id.cs_id,
+        }
+    }
+
+    pub fn get_execution(&self) -> &HookExecution {
+        match self {
+            HookOutcome::ChangesetHook(_, exec) => exec,
+            HookOutcome::FileHook(_, exec) => exec,
+        }
+    }
+}
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum HookExecution {
     Accepted,
     Rejected(HookRejectionInfo),
+}
+
+impl From<HookOutcome> for HookExecution {
+    fn from(outcome: HookOutcome) -> Self {
+        match outcome {
+            HookOutcome::ChangesetHook(_, r) => r,
+            HookOutcome::FileHook(_, r) => r,
+        }
+    }
 }
 
 impl fmt::Display for HookExecution {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
             HookExecution::Accepted => write!(f, "Accepted"),
-            HookExecution::Rejected(reason) => write!(f, "Rejected: {}", reason.description),
+            HookExecution::Rejected(reason) => write!(f, "Rejected: {}", reason.long_description),
         }
     }
 }

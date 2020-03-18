@@ -27,7 +27,7 @@ use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_old::future::{self, err, ok, Shared};
 use futures_old::stream;
 use futures_old::{Future, IntoFuture, Stream};
-use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution};
+use hooks::{HookExecution, HookOutcome};
 use lazy_static::lazy_static;
 use limits::types::RateLimit;
 use mercurial_bundles::{Bundle2Item, PartHeader, PartHeaderInner, PartHeaderType, PartId};
@@ -79,12 +79,7 @@ impl From<bool> for NonFastForwardPolicy {
 }
 
 pub enum BundleResolverError {
-    HookError(
-        (
-            Vec<(ChangesetHookExecutionID, HookExecution)>,
-            Vec<(FileHookExecutionID, HookExecution)>,
-        ),
-    ),
+    HookError(Vec<HookOutcome>),
     PushrebaseConflicts(Vec<pushrebase::PushrebaseConflict>),
     Error(Error),
     RateLimitExceeded {
@@ -105,24 +100,22 @@ impl From<BundleResolverError> for Error {
         // DO NOT CHANGE FORMATTING WITHOUT UPDATING https://fburl.com/diffusion/bs9fys78 first!!
         use BundleResolverError::*;
         match error {
-            HookError((cs_hook_failures, file_hook_failures)) => {
-                let mut err_msgs = vec![];
-                for (exec_id, exec_info) in cs_hook_failures {
-                    if let HookExecution::Rejected(info) = exec_info {
-                        err_msgs.push(format!(
-                            "{} for {}: {}",
-                            exec_id.hook_name, exec_id.cs_id, info.long_description
-                        ));
-                    }
-                }
-                for (exec_id, exec_info) in file_hook_failures {
-                    if let HookExecution::Rejected(info) = exec_info {
-                        err_msgs.push(format!(
-                            "{} for {}: {}",
-                            exec_id.hook_name, exec_id.cs_id, info.long_description
-                        ));
-                    }
-                }
+            HookError(hook_outcomes) => {
+                let err_msgs: Vec<_> = hook_outcomes
+                    .into_iter()
+                    .filter_map(|outcome| {
+                        let exec = outcome.get_execution();
+                        match exec {
+                            HookExecution::Accepted => None,
+                            HookExecution::Rejected(info) => Some(format!(
+                                "{} for {}: {}",
+                                outcome.get_hook_name(),
+                                outcome.get_cs_id(),
+                                info.long_description
+                            )),
+                        }
+                    })
+                    .collect();
                 format_err!("hooks failed:\n{}", err_msgs.join("\n"))
             }
             PushrebaseConflicts(conflicts) => {

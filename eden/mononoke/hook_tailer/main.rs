@@ -18,12 +18,17 @@ use cloned::cloned;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::{FutureExt, TryFutureExt},
+};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
-use futures_old::future::{err, ok, Future};
-use futures_old::stream::repeat;
-use futures_old::Stream;
-use hooks::{ChangesetHookExecutionID, FileHookExecutionID, HookExecution};
+use futures_old::{
+    future::{err, ok},
+    stream::repeat,
+    Future, Stream,
+};
+use hooks::HookOutcome;
 use manifold::{ManifoldHttpClient, RequestContext};
 use mercurial_types::{HgChangesetId, HgNodeHash};
 use slog::{debug, info, o, Drain, Level, Logger};
@@ -37,11 +42,6 @@ use std::time::Duration;
 use tailer::Tailer;
 use thiserror::Error;
 use tokio_timer::sleep;
-
-pub struct HookResults {
-    file_hooks_results: Vec<(FileHookExecutionID, HookExecution)>,
-    cs_hooks_result: Vec<(ChangesetHookExecutionID, HookExecution)>,
-}
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
@@ -194,55 +194,27 @@ fn main(fb: FacebookInit) -> Result<()> {
 }
 
 fn process_hook_results(
-    fut: BoxFuture<Vec<HookResults>, Error>,
+    fut: BoxFuture<Vec<HookOutcome>, Error>,
     logger: Logger,
 ) -> BoxFuture<(), Error> {
     fut.and_then(move |res| {
-        let mut file_hooks_stat = HookExecutionStat::new();
-        let mut cs_hooks_stat = HookExecutionStat::new();
+        let mut hooks_stat = HookExecutionStat::new();
 
-        res.into_iter().for_each(|hook_results| {
-            let HookResults {
-                file_hooks_results,
-                cs_hooks_result,
-            } = hook_results;
-            debug!(logger, "==== File hooks results ====");
-            file_hooks_results.into_iter().for_each(|(exec_id, exec)| {
-                file_hooks_stat.record_hook_execution(&exec);
-                let output = format!(
-                    "changeset:{} hook_name:{} path:{} result: {}",
-                    exec_id.cs_id, exec_id.hook_name, exec_id.file.path, exec
-                );
+        debug!(logger, "==== Hooks results ====");
+        res.into_iter().for_each(|outcome| {
+            hooks_stat.record_hook_execution(&outcome);
 
-                match exec {
-                    HookExecution::Accepted => debug!(logger, "{}", output),
-                    HookExecution::Rejected(_) => info!(logger, "{}", output),
-                }
-            });
-            debug!(logger, "==== Changeset hooks results ====");
-            cs_hooks_result.into_iter().for_each(|(exec_id, exec)| {
-                cs_hooks_stat.record_hook_execution(&exec);
-                let output = format!(
-                    "changeset:{} hook_name:{} result: {}",
-                    exec_id.cs_id, exec_id.hook_name, exec
-                );
-
-                match exec {
-                    HookExecution::Accepted => debug!(logger, "{}", output),
-                    HookExecution::Rejected(_) => info!(logger, "{}", output),
-                }
-            });
+            if outcome.is_rejection() {
+                info!(logger, "{}", outcome);
+            } else {
+                debug!(logger, "{}", outcome);
+            }
         });
 
-        info!(logger, "==== File hooks stat: {} ====", file_hooks_stat);
-        info!(logger, "==== Changeset hooks stat: {} ====", cs_hooks_stat);
+        info!(logger, "==== Hooks stat: {} ====", hooks_stat);
 
-        if cs_hooks_stat.rejected > 0 || file_hooks_stat.rejected > 0 {
-            err(format_err!(
-                "Hook rejections: changeset: {} file: {}",
-                cs_hooks_stat.rejected,
-                file_hooks_stat.rejected
-            ))
+        if hooks_stat.rejected > 0 {
+            err(format_err!("Hook rejections: {}", hooks_stat.rejected,))
         } else {
             ok(())
         }
@@ -263,15 +235,12 @@ impl HookExecutionStat {
         }
     }
 
-    pub fn record_hook_execution(&mut self, exec: &hooks::HookExecution) {
-        match exec {
-            hooks::HookExecution::Accepted => {
-                self.accepted += 1;
-            }
-            hooks::HookExecution::Rejected(_) => {
-                self.rejected += 1;
-            }
-        };
+    pub fn record_hook_execution(&mut self, outcome: &hooks::HookOutcome) {
+        if outcome.is_rejection() {
+            self.rejected += 1;
+        } else {
+            self.accepted += 1;
+        }
     }
 }
 
