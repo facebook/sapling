@@ -328,7 +328,7 @@ impl Blackbox {
                         None
                     } else {
                         let bytes = name.as_bytes().to_vec().into_boxed_slice();
-                        Some((INDEX_EVENT_TAG_NAME, bytes.clone(), bytes.clone()))
+                        Some((INDEX_EVENT_TAG_NAME, bytes.clone(), bytes))
                     }
                 })
             });

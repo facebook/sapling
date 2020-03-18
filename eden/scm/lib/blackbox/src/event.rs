@@ -646,7 +646,7 @@ impl fmt::Display for Event {
                 is_fresh,
             } => {
                 let msg = if *is_error {
-                    format!("query failed")
+                    "query failed".to_string()
                 } else if *is_fresh {
                     format!(
                         "clock: {:?} -> {:?}; need check: {} + all files",

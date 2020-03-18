@@ -23,7 +23,7 @@ pub fn serde_alt(_attr: TokenStream, item: TokenStream) -> TokenStream {
                 }
                 TokenTree::Ident(id) => {
                     let name = id.to_string();
-                    let new_name = if name.chars().nth(0).unwrap().is_uppercase()
+                    let new_name = if name.chars().next().unwrap().is_uppercase()
                         && name != "BTreeMap"
                         && name != "Clone"
                         && name != "Copy"
@@ -57,7 +57,7 @@ pub fn serde_alt(_attr: TokenStream, item: TokenStream) -> TokenStream {
                     };
                     Ident::new(&new_name, id.span()).into()
                 }
-                _ => tt.clone().into(),
+                _ => tt.into(),
             };
             let new_stream: TokenStream = new_tt.into();
             result.extend(new_stream);
