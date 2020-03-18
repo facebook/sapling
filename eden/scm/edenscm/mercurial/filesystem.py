@@ -278,7 +278,8 @@ class physicalfilesystem(object):
             else:
                 yield fn, st
 
-        for path, walkerror in walker.errors():
+        # Sorted for test stability
+        for path, walkerror in sorted(walker.errors()):
             # Warn about non-utf8 errors, but don't report them as bad.
             # Ideally we'd inspect the error type, but it's lost coming from
             # Rust. When this moves to Rust it will get easier.
