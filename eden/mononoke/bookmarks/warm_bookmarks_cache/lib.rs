@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, VecDeque};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
 
@@ -31,9 +31,10 @@ use futures_old::Future;
 use itertools::Itertools;
 use lock_ext::RwLockExt;
 use mercurial_derived_data::MappedHgChangesetId;
-use mononoke_types::ChangesetId;
+use mononoke_types::{ChangesetId, Timestamp};
 use slog::{debug, info, warn};
 use stats::prelude::*;
+use stats_facebook::service_data::{get_service_data_singleton, ServiceData};
 use unodes::RootUnodeManifestId;
 
 define_stats! {
@@ -248,7 +249,13 @@ async fn find_all_underived_and_latest_derived(
     repo: &BlobRepo,
     book: &BookmarkName,
     warmers: &Arc<Vec<Warmer>>,
-) -> Result<(LatestDerivedBookmarkEntry, VecDeque<ChangesetId>), Error> {
+) -> Result<
+    (
+        LatestDerivedBookmarkEntry,
+        VecDeque<(ChangesetId, Timestamp)>,
+    ),
+    Error,
+> {
     let mut res = VecDeque::new();
     let history_depth_limits = vec![0, 10, 50, 100, 1000, 10000];
 
@@ -272,11 +279,11 @@ async fn find_all_underived_and_latest_derived(
 
         let log_entries_fetched = log_entries.len();
         let mut maybe_derived = stream::iter(log_entries.into_iter().map(
-            |(maybe_cs_id, _, _)| async move {
+            |(maybe_cs_id, _, ts)| async move {
                 match maybe_cs_id {
                     Some(cs_id) => {
                         let derived = is_derived(ctx, repo, &cs_id, warmers).await;
-                        (Some(cs_id), derived)
+                        (Some((cs_id, ts)), derived)
                     }
                     None => (None, true),
                 }
@@ -284,12 +291,13 @@ async fn find_all_underived_and_latest_derived(
         ))
         .buffered(100);
 
-        while let Some((maybe_cs_id, is_derived)) = maybe_derived.next().await {
+        while let Some((maybe_cs_and_ts, is_derived)) = maybe_derived.next().await {
             if is_derived {
-                return Ok((LatestDerivedBookmarkEntry::Found(maybe_cs_id), res));
+                let maybe_cs = maybe_cs_and_ts.map(|(cs, _)| cs);
+                return Ok((LatestDerivedBookmarkEntry::Found(maybe_cs), res));
             } else {
-                if let Some(cs_id) = maybe_cs_id {
-                    res.push_front(cs_id);
+                if let Some(cs_and_ts) = maybe_cs_and_ts {
+                    res.push_front(cs_and_ts);
                 }
             }
         }
@@ -318,8 +326,13 @@ fn spawn_bookmarks_coordinator(
         let infinite_loop = async {
             // This set is used to keep track of which bookmark is being updated
             // and make sure that we don't have more than a single updater for a bookmark.
-            let live_updaters = Arc::new(RwLock::new(HashSet::<BookmarkName>::new()));
+            let live_updaters = Arc::new(RwLock::new(
+                HashMap::<BookmarkName, BookmarkUpdaterState>::new(),
+            ));
             loop {
+                // Report delay and remove finished updaters
+                report_delay_and_remove_finished_updaters(&ctx, &live_updaters, &repo.name());
+
                 let cur_bookmarks = bookmarks.with_read(|bookmarks| bookmarks.clone());
 
                 let res = repo
@@ -355,8 +368,14 @@ fn spawn_bookmarks_coordinator(
                 }
 
                 for book in changed_bookmarks {
-                    let need_spawning =
-                        live_updaters.with_write(|spawned| spawned.insert(book.clone()));
+                    let need_spawning = live_updaters.with_write(|live_updaters| {
+                        if !live_updaters.contains_key(&book) {
+                            live_updaters.insert(book.clone(), BookmarkUpdaterState::Started);
+                            true
+                        } else {
+                            false
+                        }
+                    });
                     // It's possible that bookmark updater removes a bookmark right after
                     // we tried to insert it. That means we won't spawn a new updater,
                     // but that's not a big deal though - we'll do it on the next iteration
@@ -364,22 +383,35 @@ fn spawn_bookmarks_coordinator(
                     if need_spawning {
                         cloned!(ctx, repo, book, bookmarks, live_updaters, warmers);
                         let _ = tokio::spawn(async move {
-                            scopeguard::defer! {
-                                live_updaters.with_write(|live_updaters| live_updaters.remove(&book));
-                            };
-
                             let res = single_bookmark_updater(
                                 &ctx,
                                 &repo,
                                 &book,
                                 &bookmarks,
                                 &warmers,
+                                |ts: Timestamp| {
+                                    live_updaters.with_write(|live_updaters| {
+                                        live_updaters.insert(
+                                            book.clone(),
+                                            BookmarkUpdaterState::InProgress {
+                                                oldest_underived_ts: ts,
+                                            },
+                                        );
+                                    });
+                                },
                             )
                             .await;
-                            if let Err(err) = res {
+                            if let Err(ref err) = res {
                                 STATS::bookmark_update_failures.add_value(1);
                                 warn!(ctx.logger(), "update of {} failed: {}", book, err);
-                            }
+                            };
+
+                            live_updaters.with_write(|live_updaters| {
+                                let maybe_state = live_updaters.remove(&book);
+                                if let Some(state) = maybe_state {
+                                    live_updaters.insert(book.clone(), state.into_finished(&res));
+                                }
+                            });
                         });
                     }
                 }
@@ -397,12 +429,109 @@ fn spawn_bookmarks_coordinator(
     });
 }
 
+fn report_delay_and_remove_finished_updaters(
+    ctx: &CoreContext,
+    live_updaters: &Arc<RwLock<HashMap<BookmarkName, BookmarkUpdaterState>>>,
+    reponame: &str,
+) {
+    let mut max_staleness = 0;
+    live_updaters.with_write(|live_updaters| {
+        let new_updaters = live_updaters
+            .drain()
+            .filter_map(|(key, value)| {
+                use BookmarkUpdaterState::*;
+                match value {
+                    Started => {}
+                    InProgress {
+                        oldest_underived_ts,
+                    } => {
+                        max_staleness =
+                            ::std::cmp::max(max_staleness, oldest_underived_ts.since_seconds());
+                    }
+                    Finished {
+                        oldest_underived_ts,
+                    } => {
+                        if let Some(oldest_underived_ts) = oldest_underived_ts {
+                            let staleness_secs = oldest_underived_ts.since_seconds();
+                            max_staleness = ::std::cmp::max(max_staleness, staleness_secs);
+                        }
+                    }
+                };
+
+                if value.is_finished() {
+                    None
+                } else {
+                    Some((key, value))
+                }
+            })
+            .collect();
+        *live_updaters = new_updaters;
+    });
+
+    let counter_name = format!("warm_bookmark_cache.{}.max_staleness_secs", reponame,);
+    get_service_data_singleton(ctx.fb).set_counter(&counter_name, max_staleness as i64);
+}
+
+#[derive(Clone)]
+enum BookmarkUpdaterState {
+    // Updater has started but it hasn't yet fetched bookmark update log
+    Started,
+    // Updater is deriving right now
+    InProgress {
+        oldest_underived_ts: Timestamp,
+    },
+    // Updater is finished. it might report staleness it it failed.
+    Finished {
+        oldest_underived_ts: Option<Timestamp>,
+    },
+}
+
+impl BookmarkUpdaterState {
+    fn into_finished(self, bookmark_updater_res: &Result<(), Error>) -> BookmarkUpdaterState {
+        use BookmarkUpdaterState::*;
+
+        let oldest_underived_ts = match self {
+            // That might happen if by the time updater started everything was already derived
+            // or updater failed before it started deriving
+            Started => None,
+            InProgress {
+                oldest_underived_ts,
+            } => {
+                if bookmark_updater_res.is_err() {
+                    Some(oldest_underived_ts)
+                } else {
+                    None
+                }
+            }
+            // That shouldn't really happen in practice
+            // but return anyway
+            Finished {
+                oldest_underived_ts,
+            } => oldest_underived_ts,
+        };
+
+        Finished {
+            oldest_underived_ts,
+        }
+    }
+}
+
+impl BookmarkUpdaterState {
+    fn is_finished(&self) -> bool {
+        match self {
+            Self::Started | Self::InProgress { .. } => false,
+            Self::Finished { .. } => true,
+        }
+    }
+}
+
 async fn single_bookmark_updater(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark: &BookmarkName,
     bookmarks: &Arc<RwLock<HashMap<BookmarkName, ChangesetId>>>,
     warmers: &Arc<Vec<Warmer>>,
+    mut staleness_reporter: impl FnMut(Timestamp),
 ) -> Result<(), Error> {
     let (latest_derived, underived_history) =
         find_all_underived_and_latest_derived(&ctx, &repo, &bookmark, &warmers).await?;
@@ -425,7 +554,8 @@ async fn single_bookmark_updater(
         }
     }
 
-    for underived_cs_id in underived_history {
+    for (underived_cs_id, ts) in underived_history {
+        staleness_reporter(ts);
         let res = derive_all(&ctx, &repo, &underived_cs_id, &warmers).await;
         match res {
             Ok(()) => {
@@ -688,7 +818,7 @@ mod tests {
         info!(ctx.logger(), "created the whole stack of commits");
 
         let master_book = BookmarkName::new("master")?;
-        single_bookmark_updater(&ctx, &repo, &master_book, &bookmarks, &warmers).await?;
+        single_bookmark_updater(&ctx, &repo, &master_book, &bookmarks, &warmers, |_| {}).await?;
 
         assert_eq!(
             bookmarks.with_read(|bookmarks| bookmarks.get(&master_book).cloned()),
