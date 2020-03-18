@@ -81,7 +81,7 @@ impl Drop for StreamEncoder {
 
 /// Read decompressed size from a u32 header.
 pub fn decompress_size(data: &[u8]) -> Result<usize> {
-    if data.len() == 0 {
+    if data.is_empty() {
         Ok(0)
     } else {
         let mut cur = Cursor::new(data);
@@ -117,7 +117,7 @@ pub fn decompress_into(data: &[u8], dest: &mut [u8]) -> Result<()> {
         }
         .into());
     }
-    if dest.len() > 0 {
+    if !dest.is_empty() {
         let data = &data[HEADER_LEN..];
         let source = data.as_ptr();
         let read: i32 = check_error(unsafe {
@@ -167,13 +167,13 @@ pub fn compress(data: &[u8]) -> Result<Vec<u8>> {
     let mut dest = Vec::<u8>::with_capacity(max_compressed_size);
     dest.write_u32::<LittleEndian>(data.len() as u32)?;
 
-    if data.len() > 0 {
+    if !data.is_empty() {
         unsafe { dest.set_len(max_compressed_size) };
         let written: i32 = check_error(unsafe {
             LZ4_compress_continue(
                 stream.0,
                 source,
-                dest.as_mut_ptr().offset(HEADER_LEN as isize),
+                dest.as_mut_ptr().add(HEADER_LEN),
                 data.len() as i32,
             )
         })?;
@@ -200,13 +200,13 @@ pub fn compresshc(data: &[u8]) -> Result<Vec<u8>> {
     let mut dest = Vec::<u8>::with_capacity(max_compressed_size);
     dest.write_u32::<LittleEndian>(data.len() as u32)?;
 
-    if data.len() > 0 {
+    if !data.is_empty() {
         unsafe { dest.set_len(max_compressed_size) };
         let written: i32 = check_error(unsafe {
             LZ4_compress_HC_continue(
                 stream.0,
                 source,
-                dest.as_mut_ptr().offset(HEADER_LEN as isize),
+                dest.as_mut_ptr().add(HEADER_LEN),
                 data.len() as c_int,
                 (max_compressed_size - HEADER_LEN) as c_int,
             )
