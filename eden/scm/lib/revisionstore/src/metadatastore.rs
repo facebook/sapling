@@ -514,14 +514,14 @@ mod tests {
 
         use memcache::MockMemcache;
 
-        use lazy_static::lazy_static;
+        use once_cell::sync::Lazy;
 
-        lazy_static! {
-            static ref MOCK: Arc<MockMemcache> = Arc::new(MockMemcache::new());
-        }
+        static MOCK: Lazy<MockMemcache> = Lazy::new(|| MockMemcache::new());
 
         #[fbinit::test]
         fn test_memcache_get() -> Result<()> {
+            let _mock = Lazy::force(&MOCK);
+
             let cachedir = TempDir::new()?;
             let localdir = TempDir::new()?;
             let config = make_config(&cachedir);
