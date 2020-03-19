@@ -16,10 +16,12 @@ use blobstore::Blobstore;
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use fbinit::FacebookInit;
+use futures_ext::{BoxFuture as OldBoxFuture, FutureExt as OldFutureExt};
 use futures_old::{
     future::Future,
     stream::{self, Stream},
 };
+use futures_util::compat::Future01CompatExt;
 use lazy_static::lazy_static;
 use mononoke_types::{hash, typed_hash::MononokeId, ContentId, ContentMetadata, ContentMetadataId};
 use mononoke_types_mocks::contentid::ONES_CTID;
@@ -54,28 +56,27 @@ lazy_static! {
     .unwrap();
 }
 
-#[fbinit::test]
-fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock(fb);
 
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ))?;
-    let res = rt.block_on(filestore::get_metadata(
-        &blob,
-        ctx,
-        &FetchKey::Canonical(content_id),
-    ));
+    )
+    .boxify()
+    .compat()
+    .await?;
+    let fut: OldBoxFuture<_, _> =
+        filestore::get_metadata(&blob, ctx, &FetchKey::Canonical(content_id)).boxify();
+    let res = fut.compat().await;
 
     println!("res = {:#?}", res);
 
@@ -93,29 +94,28 @@ fn filestore_put_alias(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_put_get_canon(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_put_get_canon(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock(fb);
 
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ))?;
+    )
+    .boxify()
+    .compat()
+    .await?;
 
-    let res = rt.block_on(filestore::fetch_concat_opt(
-        &blob,
-        ctx,
-        &FetchKey::Canonical(content_id),
-    ));
+    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id))
+        .compat()
+        .await;
 
     println!("res = {:#?}", res);
 
@@ -124,28 +124,31 @@ fn filestore_put_get_canon(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_put_get_sha1(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_put_get_sha1(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock(fb);
 
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ))?;
+    )
+    .boxify()
+    .compat()
+    .await?;
 
-    let res = rt.block_on(filestore::fetch_concat_opt(
+    let res = filestore::fetch_concat_opt(
         &blob,
         ctx,
         &FetchKey::Aliased(Alias::Sha1(*HELLO_WORLD_SHA1)),
-    ));
+    )
+    .compat()
+    .await;
 
     println!("res = {:#?}", res);
 
@@ -153,28 +156,31 @@ fn filestore_put_get_sha1(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock(fb);
 
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ))?;
+    )
+    .boxify()
+    .compat()
+    .await?;
 
-    let res = rt.block_on(filestore::fetch_concat_opt(
+    let res = filestore::fetch_concat_opt(
         &blob,
         ctx,
         &FetchKey::Aliased(Alias::GitSha1(HELLO_WORLD_GIT_SHA1.sha1())),
-    ));
+    )
+    .compat()
+    .await;
 
     println!("res = {:#?}", res);
 
@@ -182,28 +188,31 @@ fn filestore_put_get_git_sha1(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_put_get_sha256(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_put_get_sha256(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock(fb);
 
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ))?;
+    )
+    .boxify()
+    .compat()
+    .await?;
 
-    let res = rt.block_on(filestore::fetch_concat_opt(
+    let res = filestore::fetch_concat_opt(
         &blob,
         ctx,
         &FetchKey::Aliased(Alias::Sha256(*HELLO_WORLD_SHA256)),
-    ));
+    )
+    .compat()
+    .await;
 
     println!("res = {:#?}", res);
 
@@ -211,10 +220,8 @@ fn filestore_put_get_sha256(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
@@ -226,19 +233,20 @@ fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
 
     let ctx = CoreContext::test_mock(fb);
 
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ))?;
+    )
+    .boxify()
+    .compat()
+    .await?;
 
-    let res = rt.block_on(filestore::fetch_concat_opt(
-        &blob,
-        ctx,
-        &FetchKey::Canonical(content_id),
-    ));
+    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id))
+        .compat()
+        .await;
 
     println!("res = {:#?}", res);
 
@@ -246,10 +254,8 @@ fn filestore_chunked_put_get(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_chunked_put_get_nested(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_chunked_put_get_nested(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
 
     let small = FilestoreConfig {
@@ -270,31 +276,35 @@ fn filestore_chunked_put_get_nested(fb: FacebookInit) -> Result<()> {
     let part_key = request(part_data);
 
     // Store in 3-byte chunks
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         large,
         ctx.clone(),
         &full_key,
         stream::once(Ok(Bytes::from(full_data))),
-    ))?;
+    )
+    .boxify()
+    .compat()
+    .await?;
 
     // Now, go and split up one chunk into 1-byte parts.
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         small,
         ctx.clone(),
         &part_key,
         stream::once(Ok(Bytes::from(part_data))),
-    ))?;
+    )
+    .boxify()
+    .compat()
+    .await?;
 
-    assert_fetches_as(&mut rt, ctx, &blob, full_id, vec!["foo", "bar"])?;
+    assert_fetches_as(ctx, &blob, full_id, vec!["foo", "bar"]).await?;
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_content_not_found(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_content_not_found(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock(fb);
 
@@ -304,21 +314,17 @@ fn filestore_content_not_found(fb: FacebookInit) -> Result<()> {
     let content_id = canonical(data);
 
     // Verify that we can still read the full thing.
-    let res = rt.block_on(filestore::fetch_concat_opt(
-        &blob,
-        ctx,
-        &FetchKey::Canonical(content_id),
-    ));
+    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id))
+        .compat()
+        .await;
 
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
         chunk_size: Some(3),
@@ -333,32 +339,31 @@ fn filestore_chunk_not_found(fb: FacebookInit) -> Result<()> {
     let part = &b"foo"[..];
     let part_id = chunk(part);
 
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(data))),
-    ))?;
+    )
+    .boxify()
+    .compat()
+    .await?;
 
     assert!(blob.remove(&part_id.blobstore_key()).is_some());
 
     // This should fail
-    let res = rt.block_on(filestore::fetch_concat_opt(
-        &blob,
-        ctx,
-        &FetchKey::Canonical(content_id),
-    ));
+    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id))
+        .compat()
+        .await;
 
     println!("res = {:#?}", res);
     assert!(res.is_err());
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_put_invalid_size(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_put_invalid_size(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
         chunk_size: Some(3),
@@ -369,13 +374,16 @@ fn filestore_put_invalid_size(fb: FacebookInit) -> Result<()> {
     let data = &b"foobar"[..];
     let req = StoreRequest::new(123);
 
-    let res = rt.block_on(filestore::store(
+    let res = filestore::store(
         blob,
         config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(data))),
-    ));
+    )
+    .boxify()
+    .compat()
+    .await;
     println!("res = {:#?}", res);
     assert_matches!(
         res.unwrap_err().downcast::<errors::ErrorKind>(),
@@ -384,10 +392,8 @@ fn filestore_put_invalid_size(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
         chunk_size: Some(3),
@@ -397,13 +403,16 @@ fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
 
     // Bad Content Id should fail
     let req = StoreRequest::with_canonical(HELLO_WORLD_LENGTH, ONES_CTID);
-    let res = rt.block_on(filestore::store(
+    let res = filestore::store(
         blob.clone(),
         config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ));
+    )
+    .boxify()
+    .compat()
+    .await;
     println!("res = {:#?}", res);
     assert_matches!(
         res.unwrap_err().downcast::<errors::ErrorKind>(),
@@ -412,23 +421,24 @@ fn filestore_put_content_id(fb: FacebookInit) -> Result<()> {
 
     // Correct content Id should succeed
     let req = StoreRequest::with_canonical(HELLO_WORLD_LENGTH, canonical(HELLO_WORLD));
-    let res = rt.block_on(filestore::store(
+    let res = filestore::store(
         blob,
         config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ));
+    )
+    .boxify()
+    .compat()
+    .await;
     println!("res = {:#?}", res);
     assert!(res.is_ok());
 
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
         chunk_size: Some(3),
@@ -438,13 +448,16 @@ fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
 
     // Bad Content Id should fail
     let req = StoreRequest::with_sha1(HELLO_WORLD_LENGTH, hash::Sha1::from_byte_array([0x00; 20]));
-    let res = rt.block_on(filestore::store(
+    let res = filestore::store(
         blob.clone(),
         config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ));
+    )
+    .boxify()
+    .compat()
+    .await;
     println!("res = {:#?}", res);
     assert_matches!(
         res.unwrap_err().downcast::<errors::ErrorKind>(),
@@ -453,23 +466,24 @@ fn filestore_put_sha1(fb: FacebookInit) -> Result<()> {
 
     // Correct content Id should succeed
     let req = StoreRequest::with_sha1(HELLO_WORLD_LENGTH, *HELLO_WORLD_SHA1);
-    let res = rt.block_on(filestore::store(
+    let res = filestore::store(
         blob,
         config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ));
+    )
+    .boxify()
+    .compat()
+    .await;
     println!("res = {:#?}", res);
     assert!(res.is_ok());
 
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
         chunk_size: Some(3),
@@ -482,13 +496,16 @@ fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
         HELLO_WORLD_LENGTH,
         hash::RichGitSha1::from_byte_array([0x00; 20], "blob", HELLO_WORLD_LENGTH),
     );
-    let res = rt.block_on(filestore::store(
+    let res = filestore::store(
         blob.clone(),
         config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ));
+    )
+    .boxify()
+    .compat()
+    .await;
     println!("res = {:#?}", res);
     assert_matches!(
         res.unwrap_err().downcast::<errors::ErrorKind>(),
@@ -497,23 +514,24 @@ fn filestore_put_git_sha1(fb: FacebookInit) -> Result<()> {
 
     // Correct content Id should succeed
     let req = StoreRequest::with_git_sha1(HELLO_WORLD_LENGTH, *HELLO_WORLD_GIT_SHA1);
-    let res = rt.block_on(filestore::store(
+    let res = filestore::store(
         blob,
         config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ));
+    )
+    .boxify()
+    .compat()
+    .await;
     println!("res = {:#?}", res);
     assert!(res.is_ok());
 
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
     let config = FilestoreConfig {
         chunk_size: Some(3),
@@ -526,13 +544,16 @@ fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
         HELLO_WORLD_LENGTH,
         hash::Sha256::from_byte_array([0x00; 32]),
     );
-    let res = rt.block_on(filestore::store(
+    let res = filestore::store(
         blob.clone(),
         config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ));
+    )
+    .boxify()
+    .compat()
+    .await;
     println!("res = {:#?}", res);
     assert_matches!(
         res.unwrap_err().downcast::<errors::ErrorKind>(),
@@ -541,51 +562,55 @@ fn filestore_put_sha256(fb: FacebookInit) -> Result<()> {
 
     // Correct content Id should succeed
     let req = StoreRequest::with_sha256(HELLO_WORLD_LENGTH, *HELLO_WORLD_SHA256);
-    let res = rt.block_on(filestore::store(
+    let res = filestore::store(
         blob,
         config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ));
+    )
+    .boxify()
+    .compat()
+    .await;
     println!("res = {:#?}", res);
     assert!(res.is_ok());
 
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_get_range(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_get_range(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock(fb);
 
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ))?;
+    )
+    .boxify()
+    .compat()
+    .await?;
 
-    let res = rt.block_on(
-        filestore::fetch_range_with_size(&blob, ctx, &FetchKey::Canonical(content_id), 7, 5)
-            .map(|maybe_stream| {
-                maybe_stream.map(|(stream, _size)| {
-                    stream
-                        .fold(BytesMut::new(), |mut buff, chunk| {
-                            buff.extend_from_slice(&chunk);
-                            Result::<_, Error>::Ok(buff)
-                        })
-                        .map(BytesMut::freeze)
-                })
+    let res = filestore::fetch_range_with_size(&blob, ctx, &FetchKey::Canonical(content_id), 7, 5)
+        .map(|maybe_stream| {
+            maybe_stream.map(|(stream, _size)| {
+                stream
+                    .fold(BytesMut::new(), |mut buff, chunk| {
+                        buff.extend_from_slice(&chunk);
+                        Result::<_, Error>::Ok(buff)
+                    })
+                    .map(BytesMut::freeze)
             })
-            .flatten(),
-    );
+        })
+        .flatten()
+        .compat()
+        .await;
 
     println!("res = {:#?}", res);
 
@@ -594,10 +619,8 @@ fn filestore_get_range(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     let small = FilestoreConfig {
         chunk_size: Some(3),
         concurrency: 5,
@@ -611,28 +634,31 @@ fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     let full_id = canonical(full_data);
 
     // Store in 3-byte chunks
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         small,
         ctx.clone(),
         &full_key,
         stream::once(Ok(Bytes::from(full_data))),
-    ))?;
+    )
+    .boxify()
+    .compat()
+    .await?;
 
-    let res = rt.block_on(
-        filestore::fetch_range_with_size(&blob, ctx, &FetchKey::Canonical(full_id), 4, 6)
-            .map(|maybe_stream| {
-                maybe_stream.map(|(stream, _size)| {
-                    stream
-                        .fold(BytesMut::new(), |mut buff, chunk| {
-                            buff.extend_from_slice(&chunk);
-                            Result::<_, Error>::Ok(buff)
-                        })
-                        .map(BytesMut::freeze)
-                })
+    let res = filestore::fetch_range_with_size(&blob, ctx, &FetchKey::Canonical(full_id), 4, 6)
+        .map(|maybe_stream| {
+            maybe_stream.map(|(stream, _size)| {
+                stream
+                    .fold(BytesMut::new(), |mut buff, chunk| {
+                        buff.extend_from_slice(&chunk);
+                        Result::<_, Error>::Ok(buff)
+                    })
+                    .map(BytesMut::freeze)
             })
-            .flatten(),
-    );
+        })
+        .flatten()
+        .compat()
+        .await;
 
     println!("res = {:#?}", res);
 
@@ -641,10 +667,8 @@ fn filestore_get_chunked_range(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
     let metadata: ContentMetadataId = content_id.clone().into();
@@ -660,23 +684,24 @@ fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock(fb);
 
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ))?;
+    )
+    .boxify()
+    .compat()
+    .await?;
 
     // Remove the metadata
     assert!(blob.remove(&metadata.blobstore_key()).is_some());
 
     // Getting the metadata should cause it to get recomputed
-    let res = rt.block_on(filestore::get_metadata(
-        &blob,
-        ctx.clone(),
-        &FetchKey::Canonical(content_id),
-    ));
+    let fut: OldBoxFuture<_, _> =
+        filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).boxify();
+    let res = fut.compat().await;
     println!("res = {:#?}", res);
     assert_eq!(res?, expected);
 
@@ -684,11 +709,9 @@ fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
     assert!(blob.remove(&content_id.blobstore_key()).is_some());
 
     // Query the metadata again. It should succeed because it's saved.
-    let res = rt.block_on(filestore::get_metadata(
-        &blob,
-        ctx.clone(),
-        &FetchKey::Canonical(content_id),
-    ));
+    let fut: OldBoxFuture<_, _> =
+        filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).boxify();
+    let res = fut.compat().await;
     println!("res = {:#?}", res);
     assert_eq!(res?, expected);
 
@@ -697,21 +720,17 @@ fn filestore_rebuild_metadata(fb: FacebookInit) -> Result<()> {
 
     // And then, query it again. This should now return None, because the metadata isn't there,
     // and we can't recreate it.
-    let res = rt.block_on(filestore::get_metadata(
-        &blob,
-        ctx.clone(),
-        &FetchKey::Canonical(content_id),
-    ));
+    let fut: OldBoxFuture<_, _> =
+        filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).boxify();
+    let res = fut.compat().await;
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
     let content_id = canonical(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
@@ -719,65 +738,67 @@ fn filestore_test_missing_metadata(fb: FacebookInit) -> Result<()> {
 
     // No matter the Fetchkey, querying the metadata should return None.
 
-    let res = rt.block_on(filestore::get_metadata(
-        &blob,
-        ctx.clone(),
-        &FetchKey::Canonical(content_id),
-    ));
+    let fut: OldBoxFuture<_, _> =
+        filestore::get_metadata(&blob, ctx.clone(), &FetchKey::Canonical(content_id)).boxify();
+    let res = fut.compat().await;
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
-    let res = rt.block_on(filestore::get_metadata(
+    let fut: OldBoxFuture<_, _> = filestore::get_metadata(
         &blob,
         ctx.clone(),
         &FetchKey::Aliased(Alias::Sha1(*HELLO_WORLD_SHA1)),
-    ));
+    )
+    .boxify();
+    let res = fut.compat().await;
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
-    let res = rt.block_on(filestore::get_metadata(
+    let fut: OldBoxFuture<_, _> = filestore::get_metadata(
         &blob,
         ctx.clone(),
         &FetchKey::Aliased(Alias::Sha256(*HELLO_WORLD_SHA256)),
-    ));
+    )
+    .boxify();
+    let res = fut.compat().await;
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
-    let res = rt.block_on(filestore::get_metadata(
+    let fut: OldBoxFuture<_, _> = filestore::get_metadata(
         &blob,
         ctx.clone(),
         &FetchKey::Aliased(Alias::GitSha1(HELLO_WORLD_GIT_SHA1.sha1())),
-    ));
+    )
+    .boxify();
+    let res = fut.compat().await;
     println!("res = {:#?}", res);
     assert_eq!(res?, None);
 
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_test_peek(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_test_peek(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock(fb);
 
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ))?;
+    )
+    .boxify()
+    .compat()
+    .await?;
 
-    let res = rt.block_on(filestore::peek(
-        &blob,
-        ctx,
-        &FetchKey::Canonical(content_id),
-        3,
-    ));
+    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 3)
+        .compat()
+        .await;
     println!("res = {:#?}", res);
 
     let expected: &[u8] = b"hel";
@@ -786,10 +807,8 @@ fn filestore_test_peek(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_test_chunked_peek(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_test_chunked_peek(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
@@ -801,20 +820,20 @@ fn filestore_test_chunked_peek(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock(fb);
 
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         small,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ))?;
+    )
+    .boxify()
+    .compat()
+    .await?;
 
-    let res = rt.block_on(filestore::peek(
-        &blob,
-        ctx,
-        &FetchKey::Canonical(content_id),
-        3,
-    ));
+    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 3)
+        .compat()
+        .await;
     println!("res = {:#?}", res);
 
     let expected: &[u8] = b"hel";
@@ -823,30 +842,28 @@ fn filestore_test_chunked_peek(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_test_short_peek(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_test_short_peek(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
     let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock(fb);
 
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ))?;
+    )
+    .boxify()
+    .compat()
+    .await?;
 
-    let res = rt.block_on(filestore::peek(
-        &blob,
-        ctx,
-        &FetchKey::Canonical(content_id),
-        128,
-    ));
+    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 128)
+        .compat()
+        .await;
     println!("res = {:#?}", res);
 
     assert_eq!(res?, Some(Bytes::from(HELLO_WORLD)));
@@ -854,10 +871,8 @@ fn filestore_test_short_peek(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_test_empty_peek(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_test_empty_peek(fb: FacebookInit) -> Result<()> {
     let bytes = Bytes::new();
 
     let req = request(&bytes);
@@ -866,20 +881,20 @@ fn filestore_test_empty_peek(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
     let ctx = CoreContext::test_mock(fb);
 
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         DEFAULT_CONFIG,
         ctx.clone(),
         &req,
         stream::once(Ok(bytes.clone())),
-    ))?;
+    )
+    .boxify()
+    .compat()
+    .await?;
 
-    let res = rt.block_on(filestore::peek(
-        &blob,
-        ctx,
-        &FetchKey::Canonical(content_id),
-        128,
-    ));
+    let res = filestore::peek(&blob, ctx, &FetchKey::Canonical(content_id), 128)
+        .compat()
+        .await;
     println!("res = {:#?}", res);
 
     assert_eq!(res?, Some(bytes.clone()));
@@ -887,10 +902,8 @@ fn filestore_test_empty_peek(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
 
     let ctx = CoreContext::test_mock(fb);
@@ -902,13 +915,11 @@ fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
     );
     assert_eq!(content_id, canonical(HELLO_WORLD));
 
-    rt.block_on(fut)?;
+    fut.boxify().compat().await?;
 
-    let res = rt.block_on(filestore::fetch_concat_opt(
-        &blob,
-        ctx,
-        &FetchKey::Canonical(content_id),
-    ));
+    let res = filestore::fetch_concat_opt(&blob, ctx, &FetchKey::Canonical(content_id))
+        .compat()
+        .await;
 
     println!("res = {:#?}", res);
 
@@ -916,10 +927,8 @@ fn filestore_store_bytes(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_store_error(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_store_error(fb: FacebookInit) -> Result<()> {
     let memblob = memblob::LazyMemblob::new();
     let blob = FailingBlobstore::new(memblob.clone(), 1.0, 0.0); // Blobstore you can't write to.
 
@@ -928,13 +937,15 @@ fn filestore_store_error(fb: FacebookInit) -> Result<()> {
         concurrency: 5,
     };
 
-    let res = rt.block_on(filestore::store(
+    let res = filestore::store(
         blob,
         config,
         CoreContext::test_mock(fb),
         &request(HELLO_WORLD),
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ));
+    )
+    .compat()
+    .await;
 
     println!("res = {:#?}", res);
     assert_matches!(
@@ -944,10 +955,8 @@ fn filestore_store_error(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
 
     let small = FilestoreConfig {
@@ -965,37 +974,28 @@ fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
     let full_id = canonical(full_data);
 
     // Store in 3-byte chunks
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         large,
         ctx.clone(),
         &full_key,
         stream::once(Ok(Bytes::from(full_data))),
-    ))?;
+    )
+    .compat()
+    .await?;
 
-    assert_fetches_as(&mut rt, ctx.clone(), &blob, full_id, vec!["foo", "bar"])?;
+    assert_fetches_as(ctx.clone(), &blob, full_id, vec!["foo", "bar"]).await?;
 
     // Rechunk the file into 1 byte sections
-    rt.block_on(filestore::rechunk::force_rechunk(
-        blob.clone(),
-        small,
-        ctx.clone(),
-        full_id,
-    ))?;
+    let fut: OldBoxFuture<ContentMetadata, Error> =
+        filestore::rechunk::force_rechunk(blob.clone(), small, ctx.clone(), full_id).boxify();
+    fut.compat().await?;
 
-    assert_fetches_as(
-        &mut rt,
-        ctx,
-        &blob,
-        full_id,
-        vec!["f", "o", "o", "b", "a", "r"],
-    )
+    assert_fetches_as(ctx, &blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
 }
 
-#[fbinit::test]
-fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
 
     let small = FilestoreConfig {
@@ -1013,37 +1013,34 @@ fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
     let full_id = canonical(full_data);
 
     // Store in 1 byte chunks
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         small,
         ctx.clone(),
         &full_key,
         stream::once(Ok(Bytes::from(full_data))),
-    ))?;
+    )
+    .compat()
+    .await?;
 
     assert_fetches_as(
-        &mut rt,
         ctx.clone(),
         &blob,
         full_id,
         vec!["f", "o", "o", "b", "a", "r"],
-    )?;
+    )
+    .await?;
 
     // Rechunk the file into 3 byte sections
-    rt.block_on(filestore::rechunk::force_rechunk(
-        blob.clone(),
-        large,
-        ctx.clone(),
-        full_id,
-    ))?;
+    let fut: OldBoxFuture<ContentMetadata, Error> =
+        filestore::rechunk::force_rechunk(blob.clone(), large, ctx.clone(), full_id).boxify();
+    fut.compat().await?;
 
-    assert_fetches_as(&mut rt, ctx, &blob, full_id, vec!["foo", "bar"])
+    assert_fetches_as(ctx, &blob, full_id, vec!["foo", "bar"]).await
 }
 
-#[fbinit::test]
-fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
 
     let small = FilestoreConfig {
@@ -1062,35 +1059,26 @@ fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
     let full_id = canonical(full_data);
 
     // Don't chunk
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         large,
         ctx.clone(),
         &full_key,
         stream::once(Ok(Bytes::from(full_data))),
-    ))?;
+    )
+    .compat()
+    .await?;
 
     // Rechunk the file into 1 byte sections
-    rt.block_on(filestore::rechunk::force_rechunk(
-        blob.clone(),
-        small,
-        ctx.clone(),
-        full_id,
-    ))?;
+    let fut: OldBoxFuture<ContentMetadata, Error> =
+        filestore::rechunk::force_rechunk(blob.clone(), small, ctx.clone(), full_id).boxify();
+    fut.compat().await?;
 
-    assert_fetches_as(
-        &mut rt,
-        ctx,
-        &blob,
-        full_id,
-        vec!["f", "o", "o", "b", "a", "r"],
-    )
+    assert_fetches_as(ctx, &blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
 }
 
-#[fbinit::test]
-fn filestore_test_rechunk_missing_content(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_test_rechunk_missing_content(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
 
     let conf = FilestoreConfig {
@@ -1103,12 +1091,9 @@ fn filestore_test_rechunk_missing_content(fb: FacebookInit) -> Result<()> {
     let full_id = canonical(full_data);
 
     // Attempt to rechunk the file into 1 byte sections
-    let res = rt.block_on(filestore::rechunk::force_rechunk(
-        blob.clone(),
-        conf,
-        ctx.clone(),
-        full_id,
-    ));
+    let fut: OldBoxFuture<ContentMetadata, Error> =
+        filestore::rechunk::force_rechunk(blob.clone(), conf, ctx.clone(), full_id).boxify();
+    let res = fut.compat().await;
 
     println!("res = {:#?}", res);
     assert_matches!(
@@ -1119,10 +1104,8 @@ fn filestore_test_rechunk_missing_content(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
-fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
     let req = request(HELLO_WORLD);
     let content_id = canonical(HELLO_WORLD);
 
@@ -1134,19 +1117,20 @@ fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
 
     let ctx = CoreContext::test_mock(fb);
 
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         config,
         ctx.clone(),
         &req,
         stream::once(Ok(Bytes::from(HELLO_WORLD))),
-    ))?;
+    )
+    .compat()
+    .await?;
 
-    let res = rt.block_on(filestore::fetch_with_size(
-        &blob,
-        ctx,
-        &FetchKey::Canonical(content_id),
-    ));
+    let res = filestore::fetch_with_size(&blob, ctx, &FetchKey::Canonical(content_id))
+        .boxify()
+        .compat()
+        .await;
 
     let (stream, size) = res?.unwrap();
 
@@ -1157,7 +1141,7 @@ fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
         })
         .map(BytesMut::freeze);
 
-    let bytes = rt.block_on(fut);
+    let bytes = fut.compat().await;
 
     println!("{:?}", bytes);
 
@@ -1166,12 +1150,10 @@ fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
     Ok(())
 }
 
-#[fbinit::test]
+#[fbinit::compat_test]
 /// Test a case, where both old and new filestore config do not require
 /// chunking of the file (e.g. file size is smaller than a single chunk)
-fn filestore_test_rechunk_if_needed_tiny_unchunked_file(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+async fn filestore_test_rechunk_if_needed_tiny_unchunked_file(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
 
     let large1 = FilestoreConfig {
@@ -1189,31 +1171,33 @@ fn filestore_test_rechunk_if_needed_tiny_unchunked_file(fb: FacebookInit) -> Res
     let full_id = canonical(full_data);
 
     // Don't chunk
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         large1,
         ctx.clone(),
         &full_key,
         stream::once(Ok(Bytes::from(full_data))),
-    ))?;
+    )
+    .compat()
+    .await?;
 
-    assert_fetches_as(&mut rt, ctx.clone(), &blob, full_id, vec!["foobar"])?;
+    assert_fetches_as(ctx.clone(), &blob, full_id, vec!["foobar"]).await?;
 
     // We expect that rechunk is not needed
-    rt.block_on(filestore::rechunk::rechunk(
+    filestore::rechunk::rechunk(
         FailingBlobstore::new(blob.clone(), 1.0, 0.0),
         large2,
         ctx.clone(),
         full_id,
-    ))?;
+    )
+    .compat()
+    .await?;
 
-    assert_fetches_as(&mut rt, ctx, &blob, full_id, vec!["foobar"])
+    assert_fetches_as(ctx, &blob, full_id, vec!["foobar"]).await
 }
 
-#[fbinit::test]
-fn filestore_test_rechunk_if_needed_large_unchunked_file(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_test_rechunk_if_needed_large_unchunked_file(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
 
     let large = FilestoreConfig {
@@ -1231,38 +1215,29 @@ fn filestore_test_rechunk_if_needed_large_unchunked_file(fb: FacebookInit) -> Re
     let full_id = canonical(full_data);
 
     // Don't chunk
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         large,
         ctx.clone(),
         &full_key,
         stream::once(Ok(Bytes::from(full_data))),
-    ))?;
+    )
+    .compat()
+    .await?;
 
-    assert_fetches_as(&mut rt, ctx.clone(), &blob, full_id, vec!["foobar"])?;
+    assert_fetches_as(ctx.clone(), &blob, full_id, vec!["foobar"]).await?;
 
     // We expect the rechunk is needed
-    let (_, rechunked) = rt.block_on(filestore::rechunk::rechunk(
-        blob.clone(),
-        small,
-        ctx.clone(),
-        full_id,
-    ))?;
+    let (_, rechunked) = filestore::rechunk::rechunk(blob.clone(), small, ctx.clone(), full_id)
+        .compat()
+        .await?;
     assert!(rechunked);
 
-    assert_fetches_as(
-        &mut rt,
-        ctx,
-        &blob,
-        full_id,
-        vec!["f", "o", "o", "b", "a", "r"],
-    )
+    assert_fetches_as(ctx, &blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
 }
 
-#[fbinit::test]
-fn filestore_test_rechunk_if_needed_large_chunks(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_test_rechunk_if_needed_large_chunks(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
 
     let large = FilestoreConfig {
@@ -1280,38 +1255,29 @@ fn filestore_test_rechunk_if_needed_large_chunks(fb: FacebookInit) -> Result<()>
     let full_id = canonical(full_data);
 
     // Chunk with larger chunks
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         large,
         ctx.clone(),
         &full_key,
         stream::once(Ok(Bytes::from(full_data))),
-    ))?;
+    )
+    .compat()
+    .await?;
 
-    assert_fetches_as(&mut rt, ctx.clone(), &blob, full_id, vec!["fooba", "r"])?;
+    assert_fetches_as(ctx.clone(), &blob, full_id, vec!["fooba", "r"]).await?;
 
     // We expect the rechunk is needed
-    let (_, rechunked) = rt.block_on(filestore::rechunk::rechunk(
-        blob.clone(),
-        small,
-        ctx.clone(),
-        full_id,
-    ))?;
+    let (_, rechunked) = filestore::rechunk::rechunk(blob.clone(), small, ctx.clone(), full_id)
+        .compat()
+        .await?;
     assert!(rechunked);
 
-    assert_fetches_as(
-        &mut rt,
-        ctx,
-        &blob,
-        full_id,
-        vec!["f", "o", "o", "b", "a", "r"],
-    )
+    assert_fetches_as(ctx, &blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
 }
 
-#[fbinit::test]
-fn filestore_test_rechunk_if_needed_tiny_chunks(fb: FacebookInit) -> Result<()> {
-    let mut rt = tokio_compat::runtime::Runtime::new()?;
-
+#[fbinit::compat_test]
+async fn filestore_test_rechunk_if_needed_tiny_chunks(fb: FacebookInit) -> Result<()> {
     let blob = memblob::LazyMemblob::new();
 
     let large = FilestoreConfig {
@@ -1325,39 +1291,41 @@ fn filestore_test_rechunk_if_needed_tiny_chunks(fb: FacebookInit) -> Result<()> 
     let full_id = canonical(full_data);
 
     // Chunk
-    rt.block_on(filestore::store(
+    filestore::store(
         blob.clone(),
         large,
         ctx.clone(),
         &full_key,
         stream::once(Ok(Bytes::from(full_data))),
-    ))?;
-
-    assert_fetches_as(&mut rt, ctx.clone(), &blob, full_id, vec!["foob", "ar"])?;
+    )
+    .compat()
+    .await?;
+    assert_fetches_as(ctx.clone(), &blob, full_id, vec!["foob", "ar"]).await?;
 
     // We expect the rechunk is not needed
-    let (_, rechunked) = rt.block_on(filestore::rechunk::rechunk(
+    let (_, rechunked) = filestore::rechunk::rechunk(
         FailingBlobstore::new(blob.clone(), 1.0, 0.0),
         large,
         ctx.clone(),
         full_id,
-    ))?;
+    )
+    .compat()
+    .await?;
     assert!(!rechunked);
-    assert_fetches_as(&mut rt, ctx, &blob, full_id, vec!["foob", "ar"])
+    assert_fetches_as(ctx, &blob, full_id, vec!["foob", "ar"]).await
 }
 
-fn assert_fetches_as<B: Blobstore + Clone>(
-    rt: &mut tokio_compat::runtime::Runtime,
+async fn assert_fetches_as<B: Blobstore + Clone>(
     ctx: CoreContext,
     blobstore: &B,
     content_id: ContentId,
     expected: Vec<&'static str>,
 ) -> Result<()> {
-    let res = rt.block_on(
-        filestore::fetch(blobstore, ctx, &FetchKey::Canonical(content_id))
-            .map(|maybe_stream| maybe_stream.map(|s| s.collect()))
-            .flatten(),
-    );
+    let res = filestore::fetch(blobstore, ctx, &FetchKey::Canonical(content_id))
+        .map(|maybe_stream| maybe_stream.map(|s| s.collect()))
+        .flatten()
+        .compat()
+        .await;
     println!("res = {:#?}", res);
     let expected = expected.into_iter().map(Bytes::from).collect();
     assert_eq!(res?, Some(expected));
