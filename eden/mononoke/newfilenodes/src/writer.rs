@@ -22,7 +22,7 @@ use futures::compat::Future01CompatExt;
 
 define_stats! {
     prefix = "mononoke.filenodes";
-    adds: timeseries(Rate, Sum),
+    adds: timeseries(Rate, Sum, Count),
 }
 
 #[derive(Debug, Eq, DeriveError, PartialEq)]
@@ -57,7 +57,7 @@ impl FilenodesWriter {
         filenodes: Vec<PreparedFilenode>,
         replace: bool,
     ) -> Result<(), Error> {
-        STATS::adds.add_value(1);
+        STATS::adds.add_value(filenodes.len() as i64);
 
         let shard_count = self.write_connections.len();
 
