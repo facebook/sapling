@@ -230,7 +230,7 @@ fn accept(
                     if security_checker.check_if_connections_allowed(&identities) {
                         request_handler(
                             fb,
-                            handler.clone(),
+                            handler,
                             stdio,
                             load_limiting_config,
                             pushredirect_config,
@@ -303,7 +303,7 @@ impl ConnectionsSecurityChecker {
         })
     }
 
-    fn check_if_connections_allowed(&self, identities: &Vec<Identity>) -> bool {
+    fn check_if_connections_allowed(&self, identities: &[Identity]) -> bool {
         if let Some(ref aclchecker) = self.tier_aclchecker {
             let action = "tupperware";
             if aclchecker.check(identities.as_ref(), &[action]) {

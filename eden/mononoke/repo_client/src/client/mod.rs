@@ -1362,7 +1362,7 @@ impl HgCommands for RepoClient {
             self.support_bundle2_listkeys
         );
 
-        let hook_manager = self.repo.hook_manager().clone();
+        let hook_manager = self.repo.hook_manager();
 
         // Kill the saved set of bookmarks here - the unbundle may change them, and the next
         // command in sequence will need to fetch a new set
@@ -2017,7 +2017,7 @@ fn get_changed_manifests_stream(
 
     basemfid
         .filtered_diff(
-            ctx.clone(),
+            ctx,
             repo.get_blobstore(),
             mfid,
             |output_diff| {

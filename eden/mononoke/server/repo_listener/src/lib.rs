@@ -64,7 +64,7 @@ pub fn create_repo_listeners(
         disabled_hooks,
         common_config.scuba_censored_table.clone(),
         readonly_storage,
-        blobstore_options.clone(),
+        blobstore_options,
         &root_log,
     )
     .and_then(move |handlers| {

@@ -141,21 +141,15 @@ fn create_push_redirector(
 
     let repo = target_incomplete_repo_handler.repo.clone();
 
-    open_backsyncer_dbs_compat(
-        ctx.clone(),
-        small_repo,
-        db_config,
-        mysql_options,
-        readonly_storage,
-    )
-    .map(move |target_repo_dbs| PushRedirector {
-        repo,
-        small_to_large_commit_syncer,
-        large_to_small_commit_syncer,
-        target_repo_dbs,
-        commit_sync_config,
-    })
-    .boxify()
+    open_backsyncer_dbs_compat(ctx, small_repo, db_config, mysql_options, readonly_storage)
+        .map(move |target_repo_dbs| PushRedirector {
+            repo,
+            small_to_large_commit_syncer,
+            large_to_small_commit_syncer,
+            target_repo_dbs,
+            commit_sync_config,
+        })
+        .boxify()
 }
 
 fn get_maybe_create_push_redirector_fut(
@@ -222,7 +216,7 @@ pub fn repo_handlers(
             let logger = root_log.new(o!("repo" => reponame.clone()));
             let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-            let disabled_hooks = disabled_hooks.remove(&reponame).unwrap_or(HashSet::new());
+            let disabled_hooks = disabled_hooks.remove(&reponame).unwrap_or_default();
 
             // Clone the few things we're going to need later in our bootstrap.
             let cache_warmup_params = config.cache_warmup.clone();
@@ -290,7 +284,7 @@ pub fn repo_handlers(
                     ctx.fb,
                     Box::new(BlobRepoChangesetStore::new(blobrepo.clone())),
                     blobrepo_text_only_store(blobrepo.clone(), hook_max_file_size),
-                    hook_manager_params.unwrap_or(Default::default()),
+                    hook_manager_params.unwrap_or_default(),
                     hooks_scuba,
                 );
 
@@ -411,7 +405,7 @@ fn build_repo_handlers(
                 let maybe_push_redirector_fut = match maybe_push_redirector_args {
                     None => future::ok(None).boxify(),
                     Some(push_redirector_args) => get_maybe_create_push_redirector_fut(
-                        ctx.clone(),
+                        ctx,
                         &incomplete_repo_handler,
                         push_redirector_args,
                         &lookup_table,

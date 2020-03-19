@@ -56,8 +56,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
     let app = cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */);
     let app = cmdlib::args::add_disabled_hooks_args(app);
     let app = cmdlib::args::add_logger_args(app);
-    let app = cmdlib::args::add_blobstore_args(app);
-    app
+    cmdlib::args::add_blobstore_args(app)
 }
 
 fn get_config<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
@@ -90,13 +89,9 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let mut acceptor = secure_utils::build_tls_acceptor_builder(ssl.clone())
         .expect("failed to build tls acceptor");
-    acceptor = secure_utils::fb_tls::tls_acceptor_builder(
-        root_log.clone(),
-        ssl.clone(),
-        acceptor,
-        ticket_seed,
-    )
-    .expect("failed to build fb_tls acceptor");
+    acceptor =
+        secure_utils::fb_tls::tls_acceptor_builder(root_log.clone(), ssl, acceptor, ticket_seed)
+            .expect("failed to build fb_tls acceptor");
 
     let test_instance = matches.is_present("test-instance");
     let config_source = if test_instance {

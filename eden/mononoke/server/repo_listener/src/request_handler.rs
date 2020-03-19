@@ -182,7 +182,7 @@ pub fn request_handler(
         conn_log.clone(),
         stdin,
         RepoClient::new(
-            repo.clone(),
+            repo,
             session.clone(),
             logging,
             hash_validation_percentage,
