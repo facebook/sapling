@@ -6,9 +6,12 @@
  */
 
 use anyhow::Error;
-use cloned::cloned;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future::IntoFuture, Future};
+use futures_ext::{
+    BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, FutureExt as OldFutureExt,
+    StreamExt as OldStreamExt,
+};
+use futures_old::Future as OldFuture;
+use futures_util::compat::Future01CompatExt;
 use slog::debug;
 use thiserror::Error;
 
@@ -27,21 +30,21 @@ pub enum ErrorKind {
 /// Fetch a file from the blobstore and reupload it in a chunked form.
 /// NOTE: This could actually unchunk a file if the chunk size threshold
 /// is increased after the file is written.
-pub fn force_rechunk<B: Blobstore + Clone>(
+pub async fn force_rechunk<B: Blobstore + Clone>(
     blobstore: B,
     config: FilestoreConfig,
     ctx: CoreContext,
     content_id: ContentId,
-) -> impl Future<Item = ContentMetadata, Error = Error> {
-    content_id
+) -> Result<ContentMetadata, Error> {
+    let file_contents: FileContents = content_id
         .load(ctx.clone(), &blobstore)
         .map_err(move |err| match err {
             LoadableError::Error(err) => err,
             LoadableError::Missing(_) => ErrorKind::ContentNotFound(content_id).into(),
         })
-        .and_then(move |file_contents| {
-            do_rechunk_file_contents(blobstore, config, ctx, file_contents, content_id)
-        })
+        .compat()
+        .await?;
+    do_rechunk_file_contents(blobstore, config, ctx, file_contents, content_id).await
 }
 
 /// Fetch a file from the blobstore and reupload it in a chunked form
@@ -51,39 +54,36 @@ pub fn force_rechunk<B: Blobstore + Clone>(
 /// this fn won't do anything.
 /// Returns a future, resolving to the `ContentMetadata` of the
 /// processed `ContentId` and whether it was *actually* rechunked
-pub fn rechunk<B: Blobstore + Clone>(
+pub async fn rechunk<B: Blobstore + Clone>(
     blobstore: B,
     filestore_config: FilestoreConfig,
     ctx: CoreContext,
     content_id: ContentId,
-) -> BoxFuture<(ContentMetadata, bool), Error> {
+) -> Result<(ContentMetadata, bool), Error> {
     let fetch_key = FetchKey::Canonical(content_id.clone());
     let chunk_size = filestore_config.chunk_size;
-    get_metadata(&blobstore, ctx.clone(), &fetch_key)
-        .and_then({
-            cloned!(content_id);
-            move |maybe_content_metadata| match maybe_content_metadata {
-                Some(content_metadata) => Ok(content_metadata),
-                None => Err(ErrorKind::ContentNotFound(content_id).into()),
-            }
-        })
-        .and_then({
-            cloned!(ctx, blobstore);
-            move |content_metadata| match chunk_size {
-                Some(chunk_size) if content_metadata.total_size > chunk_size => {
-                    rechunk_if_uses_larger_chunk_size(
-                        blobstore,
-                        chunk_size,
-                        filestore_config.concurrency,
-                        ctx.clone(),
-                        content_metadata,
-                    )
-                    .left_future()
-                }
-                _ => Ok((content_metadata, false)).into_future().right_future(),
-            }
-        })
-        .boxify()
+    let metadata_fut: OldBoxFuture<Option<ContentMetadata>, _> =
+        get_metadata(&blobstore, ctx.clone(), &fetch_key).boxify();
+    let content_metadata: ContentMetadata = match metadata_fut.compat().await? {
+        Some(content_metadata) => content_metadata,
+        None => return Err(ErrorKind::ContentNotFound(content_id).into()),
+    };
+
+    match chunk_size {
+        Some(chunk_size) if content_metadata.total_size > chunk_size => {
+            let r: Result<(ContentMetadata, bool), Error> = rechunk_if_uses_larger_chunk_size(
+                blobstore,
+                chunk_size,
+                filestore_config.concurrency,
+                ctx.clone(),
+                content_metadata,
+            )
+            .await;
+
+            r
+        }
+        _ => Ok((content_metadata, false)),
+    }
 }
 
 /// Return true if stored `chunked_file_contents` uses chunks larger
@@ -130,73 +130,70 @@ fn uses_larger_chunks(
 /// Note: this fn expects `expected_chunk_size` and `concurrency`
 /// instead of `FilestoreConfig` to emphasize that it can only be
 /// called, if the filestore's chunk size is not `None`
-fn rechunk_if_uses_larger_chunk_size<B: Blobstore + Clone>(
+async fn rechunk_if_uses_larger_chunk_size<B: Blobstore + Clone>(
     blobstore: B,
     expected_chunk_size: u64,
     concurrency: usize,
     ctx: CoreContext,
-    contend_metadata: ContentMetadata,
-) -> BoxFuture<(ContentMetadata, bool), Error> {
-    let content_id = contend_metadata.content_id.clone();
+    content_metadata: ContentMetadata,
+) -> Result<(ContentMetadata, bool), Error> {
+    let content_id = content_metadata.content_id.clone();
 
-    content_id
+    let file_contents: FileContents = content_id
         .load(ctx.clone(), &blobstore)
         .map_err(move |err| match err {
             LoadableError::Error(err) => err,
             LoadableError::Missing(_) => ErrorKind::ContentNotFound(content_id).into(),
         })
-        .and_then({
-            cloned!(ctx, blobstore);
-            move |file_contents| {
-                let should_rechunk = match file_contents {
-                    FileContents::Bytes(_) => true,
-                    FileContents::Chunked(ref chunked_file_contents) => uses_larger_chunks(
-                        &ctx,
-                        chunked_file_contents,
-                        expected_chunk_size,
-                        &content_id,
-                    ),
-                };
+        .compat()
+        .await?;
 
-                if should_rechunk {
-                    let filestore_config = FilestoreConfig {
-                        chunk_size: Some(expected_chunk_size),
-                        concurrency,
-                    };
+    let should_rechunk = match file_contents {
+        FileContents::Bytes(_) => true,
+        FileContents::Chunked(ref chunked_file_contents) => uses_larger_chunks(
+            &ctx,
+            chunked_file_contents,
+            expected_chunk_size,
+            &content_id,
+        ),
+    };
 
-                    do_rechunk_file_contents(
-                        blobstore,
-                        filestore_config,
-                        ctx,
-                        file_contents,
-                        content_id,
-                    )
-                    .map(|v| (v, true))
-                    .left_future()
-                } else {
-                    Ok((contend_metadata, false)).into_future().right_future()
-                }
-            }
-        })
-        .boxify()
+    if should_rechunk {
+        let filestore_config = FilestoreConfig {
+            chunk_size: Some(expected_chunk_size),
+            concurrency,
+        };
+
+        let content_metadata: ContentMetadata =
+            do_rechunk_file_contents(blobstore, filestore_config, ctx, file_contents, content_id)
+                .await?;
+
+        Ok((content_metadata, true))
+    } else {
+        Ok((content_metadata, false))
+    }
 }
 
 /// Unconditionally rechunk `file_contents` using the `filestore_config`
 /// NOTE: This could actually unchunk a file if the chunk size threshold
 /// is increased after the file is written.
-fn do_rechunk_file_contents<B: Blobstore + Clone>(
+async fn do_rechunk_file_contents<B: Blobstore + Clone>(
     blobstore: B,
     filestore_config: FilestoreConfig,
     ctx: CoreContext,
     file_contents: FileContents,
     content_id: ContentId,
-) -> impl Future<Item = ContentMetadata, Error = Error> {
+) -> Result<ContentMetadata, Error> {
     let req = StoreRequest::with_canonical(file_contents.size(), content_id);
-    let file_stream = fetch::stream_file_bytes(
+    let file_stream: OldBoxStream<_, _> = fetch::stream_file_bytes(
         blobstore.clone(),
         ctx.clone(),
         file_contents,
         fetch::Range::All,
-    );
-    store(blobstore, filestore_config, ctx, &req, file_stream)
+    )
+    .boxify();
+    let stored: OldBoxFuture<_, _> =
+        store(blobstore, filestore_config, ctx, &req, file_stream).boxify();
+
+    stored.compat().await
 }

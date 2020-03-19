@@ -87,7 +87,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         ctx,
                         content_id,
                     )
-                    .compat()
                     .await
                     .map(|_| ())
                 }

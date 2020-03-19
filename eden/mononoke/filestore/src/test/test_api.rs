@@ -987,9 +987,7 @@ async fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
     assert_fetches_as(ctx.clone(), &blob, full_id, vec!["foo", "bar"]).await?;
 
     // Rechunk the file into 1 byte sections
-    let fut: OldBoxFuture<ContentMetadata, Error> =
-        filestore::rechunk::force_rechunk(blob.clone(), small, ctx.clone(), full_id).boxify();
-    fut.compat().await?;
+    filestore::rechunk::force_rechunk(blob.clone(), small, ctx.clone(), full_id).await?;
 
     assert_fetches_as(ctx, &blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
 }
@@ -1032,9 +1030,7 @@ async fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
     .await?;
 
     // Rechunk the file into 3 byte sections
-    let fut: OldBoxFuture<ContentMetadata, Error> =
-        filestore::rechunk::force_rechunk(blob.clone(), large, ctx.clone(), full_id).boxify();
-    fut.compat().await?;
+    filestore::rechunk::force_rechunk(blob.clone(), large, ctx.clone(), full_id).await?;
 
     assert_fetches_as(ctx, &blob, full_id, vec!["foo", "bar"]).await
 }
@@ -1070,9 +1066,7 @@ async fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
     .await?;
 
     // Rechunk the file into 1 byte sections
-    let fut: OldBoxFuture<ContentMetadata, Error> =
-        filestore::rechunk::force_rechunk(blob.clone(), small, ctx.clone(), full_id).boxify();
-    fut.compat().await?;
+    filestore::rechunk::force_rechunk(blob.clone(), small, ctx.clone(), full_id).await?;
 
     assert_fetches_as(ctx, &blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
 }
@@ -1091,9 +1085,7 @@ async fn filestore_test_rechunk_missing_content(fb: FacebookInit) -> Result<()> 
     let full_id = canonical(full_data);
 
     // Attempt to rechunk the file into 1 byte sections
-    let fut: OldBoxFuture<ContentMetadata, Error> =
-        filestore::rechunk::force_rechunk(blob.clone(), conf, ctx.clone(), full_id).boxify();
-    let res = fut.compat().await;
+    let res = filestore::rechunk::force_rechunk(blob.clone(), conf, ctx.clone(), full_id).await;
 
     println!("res = {:#?}", res);
     assert_matches!(
@@ -1190,7 +1182,6 @@ async fn filestore_test_rechunk_if_needed_tiny_unchunked_file(fb: FacebookInit) 
         ctx.clone(),
         full_id,
     )
-    .compat()
     .await?;
 
     assert_fetches_as(ctx, &blob, full_id, vec!["foobar"]).await
@@ -1228,9 +1219,8 @@ async fn filestore_test_rechunk_if_needed_large_unchunked_file(fb: FacebookInit)
     assert_fetches_as(ctx.clone(), &blob, full_id, vec!["foobar"]).await?;
 
     // We expect the rechunk is needed
-    let (_, rechunked) = filestore::rechunk::rechunk(blob.clone(), small, ctx.clone(), full_id)
-        .compat()
-        .await?;
+    let (_, rechunked) =
+        filestore::rechunk::rechunk(blob.clone(), small, ctx.clone(), full_id).await?;
     assert!(rechunked);
 
     assert_fetches_as(ctx, &blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
@@ -1268,9 +1258,8 @@ async fn filestore_test_rechunk_if_needed_large_chunks(fb: FacebookInit) -> Resu
     assert_fetches_as(ctx.clone(), &blob, full_id, vec!["fooba", "r"]).await?;
 
     // We expect the rechunk is needed
-    let (_, rechunked) = filestore::rechunk::rechunk(blob.clone(), small, ctx.clone(), full_id)
-        .compat()
-        .await?;
+    let (_, rechunked) =
+        filestore::rechunk::rechunk(blob.clone(), small, ctx.clone(), full_id).await?;
     assert!(rechunked);
 
     assert_fetches_as(ctx, &blob, full_id, vec!["f", "o", "o", "b", "a", "r"]).await
@@ -1309,7 +1298,6 @@ async fn filestore_test_rechunk_if_needed_tiny_chunks(fb: FacebookInit) -> Resul
         ctx.clone(),
         full_id,
     )
-    .compat()
     .await?;
     assert!(!rechunked);
     assert_fetches_as(ctx, &blob, full_id, vec!["foob", "ar"]).await
