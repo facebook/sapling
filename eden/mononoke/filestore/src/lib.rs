@@ -319,7 +319,7 @@ pub fn fetch_concat_opt<B: Blobstore + Clone>(
     })
 }
 
-/// Similar to fetch_concat, but requires the blob to be present, or errors out.
+/// Similar to `fetch_concat_opt`, but requires the blob to be present, or errors out.
 pub fn fetch_concat<B: Blobstore + Clone>(
     blobstore: &B,
     ctx: CoreContext,
