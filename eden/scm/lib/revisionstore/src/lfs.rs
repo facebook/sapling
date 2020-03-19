@@ -51,6 +51,7 @@ struct LfsPointersStore(Store);
 
 /// The `LfsBlobsStore` holds the actual blobs. Lookup is done via the content hash (sha256) of the
 /// blob.
+#[derive(Clone)]
 struct LfsBlobsStore(PathBuf, bool);
 
 struct LfsStoreInner {
@@ -59,14 +60,24 @@ struct LfsStoreInner {
 }
 
 #[derive(Clone)]
-pub struct LfsRemote {
+struct HttpLfsRemote {
     url: Url,
     user_agent: String,
     concurrent_fetches: usize,
     client: Client,
     rt: Arc<Mutex<Runtime>>,
+}
 
-    store: Arc<LfsStore>,
+#[derive(Clone)]
+enum LfsRemoteInner {
+    Http(HttpLfsRemote),
+    File(LfsBlobsStore),
+}
+
+#[derive(Clone)]
+pub struct LfsRemote {
+    local: Arc<LfsStore>,
+    remote: LfsRemoteInner,
 }
 
 /// Main LFS store to be used within the `ContentStore`.
@@ -161,11 +172,6 @@ impl LfsPointersStore {
     /// Find the pointer corresponding to the passed in `Key`.
     fn get(&self, key: &Key) -> Result<Option<LfsPointersEntry>> {
         self.entry(&StoreKey::from(key))
-    }
-
-    /// Find the pointer corresponding to the passed in `ContentHash`
-    fn get_by_content(&self, hash: &ContentHash) -> Result<Option<LfsPointersEntry>> {
-        self.entry(&StoreKey::from(hash))
     }
 
     fn add(&mut self, entry: LfsPointersEntry) -> Result<()> {
@@ -580,50 +586,22 @@ impl HgIdMutableDeltaStore for LfsMultiplexer {
     }
 }
 
-impl LfsRemote {
-    pub fn new(store: Arc<LfsStore>, config: &ConfigSet) -> Result<Self> {
-        let mut url = get_str_config(config, "lfs", "url")?;
-        // A trailing '/' needs to be present so that `Url::join` doesn't remove the reponame
-        // present at the end of the config.
-        url.push('/');
-
-        let user_agent = config.get_or("experimental", "lfs.user-agent", || {
-            "mercurial/revisionstore".to_string()
-        })?;
-
-        let concurrent_fetches = config.get_or("lfs", "concurrentfetches", || 1)?;
-
-        let url = Url::parse(&url)?;
-
-        if !["http", "https"].contains(&url.scheme()) {
-            bail!("Unsupported url: {}", url);
+impl LfsRemoteInner {
+    fn batch(
+        &self,
+        objs: &[(Sha256, usize)],
+    ) -> Result<Box<dyn Iterator<Item = Result<(Sha256, Bytes)>>>> {
+        match self {
+            LfsRemoteInner::Http(http) => Ok(Box::new(Self::batch_http(http, objs)?)),
+            LfsRemoteInner::File(file) => Ok(Box::new(Self::batch_file(file, objs)?)),
         }
-
-        let rt = Arc::new(Mutex::new(Runtime::new()?));
-        let client = Client::new();
-        Ok(Self {
-            url,
-            user_agent,
-            concurrent_fetches,
-            client,
-            rt,
-            store,
-        })
-    }
-
-    fn make_request(&self, method: Method, url: impl IntoUrl) -> RequestBuilder {
-        self.client
-            .request(method, url)
-            .header("Accept", "application/vnd.git-lfs+json")
-            .header("Content-Type", "application/vnd.git-lfs+json")
-            .header("User-Agent", &self.user_agent)
     }
 
     /// Fetch blobs from the LFS server.
     ///
     /// The protocol is described at: https://github.com/git-lfs/git-lfs/blob/master/docs/api/batch.md
-    fn batch(
-        &self,
+    fn batch_http(
+        http: &HttpLfsRemote,
         objs: &[(Sha256, usize)],
     ) -> Result<impl Iterator<Item = Result<(Sha256, Bytes)>>> {
         let objects = objs
@@ -643,12 +621,19 @@ impl LfsRemote {
 
         let batch_json = serde_json::to_string(&batch)?;
 
-        let req = self
-            .make_request(Method::POST, self.url.join("objects/batch")?)
+        fn make_request(http: &HttpLfsRemote, method: Method, url: impl IntoUrl) -> RequestBuilder {
+            http.client
+                .request(method, url)
+                .header("Accept", "application/vnd.git-lfs+json")
+                .header("Content-Type", "application/vnd.git-lfs+json")
+                .header("User-Agent", &http.user_agent)
+        }
+
+        let req = make_request(http, Method::POST, http.url.join("objects/batch")?)
             .body(batch_json)
             .send();
 
-        let response = self
+        let response = http
             .rt
             .lock()
             .block_on(async { req.await?.error_for_status()?.bytes().await })?;
@@ -668,7 +653,7 @@ impl LfsRemote {
             };
 
             if let Some(action) = actions.get(&Operation::Download) {
-                let mut req = self.make_request(Method::GET, &action.href.to_string());
+                let mut req = make_request(http, Method::GET, &action.href.to_string());
                 if let Some(header) = action.header.as_ref() {
                     for (key, val) in header {
                         req = req.header(key, val)
@@ -682,15 +667,85 @@ impl LfsRemote {
         }
 
         // Request a couple of blobs concurrently.
-        let mut stream = iter(futures).buffer_unordered(self.concurrent_fetches);
+        let mut stream = iter(futures).buffer_unordered(http.concurrent_fetches);
 
-        let rt = self.rt.clone();
+        let rt = http.rt.clone();
         Ok(iter::from_fn(move || {
             let next = stream.next();
             rt.lock()
                 .block_on(async { next.await })
                 .map(|res| res.map(|(sha, bytes)| ((&sha.0).into(), bytes)))
         }))
+    }
+
+    /// Fetch files from the filesystem.
+    ///
+    /// The implementation is inefficient and will read all the blobs from the disk before
+    /// returning. Since file backed LFS servers are only intended for tests purposes this is an
+    /// appropriate solution.
+    fn batch_file(
+        file: &LfsBlobsStore,
+        objs: &[(Sha256, usize)],
+    ) -> Result<impl Iterator<Item = Result<(Sha256, Bytes)>>> {
+        let ret = objs.iter().filter_map(|(hash, _)| {
+            file.get(&hash)
+                .transpose()
+                .map(|data| data.map(|data| (*hash, data)))
+        });
+
+        // Avoid lifetime issues by collecting everything.
+        Ok(ret.collect::<Vec<_>>().into_iter())
+    }
+}
+
+impl LfsRemote {
+    pub fn new(store: Arc<LfsStore>, config: &ConfigSet) -> Result<Self> {
+        let mut url = get_str_config(config, "lfs", "url")?;
+        // A trailing '/' needs to be present so that `Url::join` doesn't remove the reponame
+        // present at the end of the config.
+        url.push('/');
+
+        let url = Url::parse(&url)?;
+
+        if url.scheme() == "file" {
+            let path = url.to_file_path().unwrap();
+            create_dir(&path)?;
+            let file = LfsBlobsStore::shared(&path)?;
+            Ok(Self {
+                local: store,
+                remote: LfsRemoteInner::File(file),
+            })
+        } else {
+            if !["http", "https"].contains(&url.scheme()) {
+                bail!("Unsupported url: {}", url);
+            }
+
+            let user_agent = config.get_or("experimental", "lfs.user-agent", || {
+                "mercurial/revisionstore".to_string()
+            })?;
+
+            let concurrent_fetches = config.get_or("lfs", "concurrentfetches", || 1)?;
+
+            let rt = Arc::new(Mutex::new(Runtime::new()?));
+            let client = Client::new();
+            Ok(Self {
+                local: store,
+                remote: LfsRemoteInner::Http(HttpLfsRemote {
+                    url,
+                    user_agent,
+                    concurrent_fetches,
+                    client,
+                    rt,
+                }),
+            })
+        }
+    }
+
+    fn batch(
+        &self,
+        objs: &[(Sha256, usize)],
+    ) -> Result<impl Iterator<Item = Result<(Sha256, Bytes)>>> {
+        self.remote.batch(objs)
     }
 }
 
@@ -720,14 +775,9 @@ impl RemoteDataStore for LfsRemoteStore {
         let objs = keys
             .iter()
             .map(|k| {
-                let guard = self.remote.store.inner.read();
+                let guard = self.remote.local.inner.read();
 
-                let pointer = match k {
-                    StoreKey::HgId(key) => guard.pointers.get(key)?,
-                    StoreKey::Content(hash) => guard.pointers.get_by_content(hash)?,
-                };
-
-                if let Some(pointer) = pointer {
+                if let Some(pointer) = guard.pointers.entry(k)? {
                     let oid = match pointer.content_hash {
                         ContentHash::Sha256(hash) => hash,
                     };
@@ -743,7 +793,7 @@ impl RemoteDataStore for LfsRemoteStore {
         for response in self.remote.batch(&objs)? {
             let (sha256, content) = response?;
             self.remote
-                .store
+                .local
                 .inner
                 .write()
                 .blobs
@@ -1199,6 +1249,44 @@ mod tests {
             6,
             Bytes::from(&b"1.44.0"[..]),
         );
+
+        let resp = remote
+            .batch(&[(blob1.0, blob1.1), (blob2.0, blob2.1)])?
+            .collect::<Result<Vec<_>>>()?
+            .sort();
+        assert_eq!(resp, vec![(blob1.0, blob1.2), (blob2.0, blob2.2)].sort());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_lfs_remote_file() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let lfsdir = TempDir::new()?;
+        let lfs = Arc::new(LfsStore::shared(&lfsdir)?);
+
+        let remote = TempDir::new()?;
+        let mut remote_lfs_file_store = LfsBlobsStore::shared(remote.path())?;
+
+        let blob1 = (
+            Sha256::from_str("fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9")?,
+            6,
+            Bytes::from(&b"master"[..]),
+        );
+        let blob2 = (
+            Sha256::from_str("ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24")?,
+            6,
+            Bytes::from(&b"1.44.0"[..]),
+        );
+
+        remote_lfs_file_store.add(&blob1.0, blob1.2.clone())?;
+        remote_lfs_file_store.add(&blob2.0, blob2.2.clone())?;
+
+        let mut config = make_lfs_config(&cachedir);
+        let url = Url::from_file_path(&remote).unwrap();
+        config.set("lfs", "url", Some(url.as_str()), &Default::default());
+
+        let remote = LfsRemote::new(lfs, &config)?;
 
         let resp = remote
             .batch(&[(blob1.0, blob1.1), (blob2.0, blob2.1)])?
