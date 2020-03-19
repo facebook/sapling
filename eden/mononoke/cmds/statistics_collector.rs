@@ -11,7 +11,7 @@ use blobstore::{Blobstore, Loadable};
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use changesets::{deserialize_cs_entries, ChangesetEntry};
-use clap::{App, Arg, SubCommand};
+use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
@@ -27,7 +27,7 @@ use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{FileType, RepositoryId};
 use scuba_ext::ScubaSampleBuilder;
-use slog::info;
+use slog::{info, Logger};
 use stats::prelude::*;
 use std::collections::HashMap;
 use std::fs;
@@ -471,6 +471,157 @@ enum Operation {
     Sub,
 }
 
+async fn run_statistics<'a>(
+    fb: FacebookInit,
+    ctx: CoreContext,
+    logger: &Logger,
+    scuba_logger: ScubaSampleBuilder,
+    matches: ArgMatches<'a>,
+    repo_name: String,
+    bookmark: BookmarkName,
+) -> Result<(), Error> {
+    let repo = args::open_repo(fb, &logger, &matches).compat().await?;
+
+    if let (SUBCOMMAND_STATISTICS_FROM_FILE, Some(sub_m)) = matches.subcommand() {
+        // Both arguments are set to be required
+        let in_filename = sub_m
+            .value_of(ARG_IN_FILENAME)
+            .expect("missing required argument");
+        return Ok(
+            generate_statistics_from_file(ctx.clone(), repo.clone(), in_filename)
+                .compat()
+                .await?,
+        );
+    }
+
+    let blobstore = Arc::new(repo.get_blobstore());
+    let changeset = repo
+        .get_bookmark(ctx.clone(), &bookmark)
+        .compat()
+        .await?
+        .ok_or(Error::msg("cannot load bookmark"))?;
+    let run = loop_fn::<_, (), _, _>(
+        (Pass::FirstPass(changeset), RepoStatistics::default()),
+        move |(pass, statistics)| {
+            cloned!(ctx, repo, blobstore, bookmark);
+            match pass {
+                Pass::FirstPass(changeset) => get_statistics_from_changeset(
+                    ctx.clone(),
+                    repo.clone(),
+                    blobstore.clone(),
+                    changeset.clone(),
+                )
+                .and_then({
+                    cloned!(repo, repo_name, scuba_logger, ctx);
+                    move |statistics| {
+                        get_changeset_timestamp_from_changeset(ctx.clone(), repo, changeset).map(
+                            move |cs_timestamp| {
+                                log_statistics(
+                                    ctx,
+                                    scuba_logger,
+                                    cs_timestamp,
+                                    repo_name,
+                                    changeset,
+                                    statistics,
+                                );
+                                STATS::calculated_changesets.add_value(1);
+                                (changeset, statistics)
+                            },
+                        )
+                    }
+                })
+                .boxify(),
+                Pass::NextPass(prev_changeset, cur_changeset) => {
+                    if prev_changeset == cur_changeset {
+                        let duration = Duration::from_millis(1000);
+                        info!(
+                            ctx.logger(),
+                            "Changeset hasn't changed, sleeping {:?}", duration
+                        );
+                        tokio_timer::sleep(duration)
+                            .from_err()
+                            .map(move |()| (cur_changeset, statistics))
+                            .boxify()
+                    } else {
+                        info!(
+                            ctx.logger(),
+                            "Found new changeset: {}, updating statistics", cur_changeset
+                        );
+                        get_manifest_from_changeset(
+                            ctx.clone(),
+                            repo.clone(),
+                            prev_changeset.clone(),
+                        )
+                        .join(get_manifest_from_changeset(
+                            ctx.clone(),
+                            repo.clone(),
+                            cur_changeset.clone(),
+                        ))
+                        .and_then({
+                            cloned!(ctx, repo, repo_name, scuba_logger);
+                            move |(prev_manifest_id, cur_manifest_id)| {
+                                update_statistics(
+                                    ctx.clone(),
+                                    repo.clone(),
+                                    statistics.clone(),
+                                    prev_manifest_id.diff(
+                                        ctx.clone(),
+                                        blobstore.clone(),
+                                        cur_manifest_id.clone(),
+                                    ),
+                                )
+                                .and_then({
+                                    cloned!(ctx);
+                                    info!(ctx.logger(), "Statistics for new changeset updated.");
+                                    move |statistics| {
+                                        get_changeset_timestamp_from_changeset(
+                                            ctx.clone(),
+                                            repo,
+                                            cur_changeset,
+                                        )
+                                        .map(
+                                            move |cs_timestamp| {
+                                                log_statistics(
+                                                    ctx,
+                                                    scuba_logger,
+                                                    cs_timestamp,
+                                                    repo_name,
+                                                    cur_changeset,
+                                                    statistics,
+                                                );
+                                                STATS::calculated_changesets.add_value(1);
+                                                (cur_changeset, statistics)
+                                            },
+                                        )
+                                    }
+                                })
+                            }
+                        })
+                        .boxify()
+                    }
+                }
+            }
+            .and_then(move |(cur_changeset, statistics)| {
+                repo.get_bookmark(ctx.clone(), &bookmark)
+                    .and_then(move |new_changeset| {
+                        new_changeset.ok_or(Error::msg("cannot load bookmark"))
+                    })
+                    .and_then(move |new_changeset| {
+                        future::ok(Loop::Continue((
+                            Pass::NextPass(cur_changeset, new_changeset),
+                            statistics,
+                        )))
+                    })
+            })
+        },
+    )
+    .boxify()
+    .compat()
+    .await?;
+
+    Ok(run)
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = setup_app().get_matches();
@@ -491,155 +642,16 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         ScubaSampleBuilder::with_discard()
     };
 
-    let run = args::open_repo(fb, &logger, &matches).and_then({
-        cloned!(matches);
-        move |repo| {
-            if let (SUBCOMMAND_STATISTICS_FROM_FILE, Some(sub_m)) = matches.subcommand() {
-                cloned!(ctx);
-                // Both arguments are set to be required
-                let in_filename = sub_m
-                    .value_of(ARG_IN_FILENAME)
-                    .expect("missing required argument");
-                generate_statistics_from_file(ctx.clone(), repo.clone(), in_filename)
-            } else {
-                let blobstore = Arc::new(repo.get_blobstore());
-                repo.get_bookmark(ctx.clone(), &bookmark)
-                    .and_then(move |changeset| changeset.ok_or(Error::msg("cannot load bookmark")))
-                    .and_then(move |changeset| {
-                        loop_fn::<_, (), _, _>(
-                            (Pass::FirstPass(changeset), RepoStatistics::default()),
-                            move |(pass, statistics)| {
-                                cloned!(ctx, repo, blobstore, bookmark);
-                                match pass {
-                                    Pass::FirstPass(changeset) => {
-                                        get_statistics_from_changeset(
-                                            ctx.clone(),
-                                            repo.clone(),
-                                            blobstore.clone(),
-                                            changeset.clone(),
-                                        )
-                                        .and_then({
-                                            cloned!(repo, repo_name, scuba_logger, ctx);
-                                            move |statistics| {
-                                                get_changeset_timestamp_from_changeset(
-                                                    ctx.clone(),
-                                                    repo,
-                                                    changeset,
-                                                )
-                                                .map(move |cs_timestamp| {
-                                                    log_statistics(
-                                                        ctx,
-                                                        scuba_logger,
-                                                        cs_timestamp,
-                                                        repo_name,
-                                                        changeset,
-                                                        statistics,
-                                                    );
-                                                    STATS::calculated_changesets.add_value(1);
-                                                    (changeset, statistics)
-                                                })
-                                            }
-                                        })
-                                        .boxify()
-                                    }
-                                    Pass::NextPass(prev_changeset, cur_changeset) => {
-                                        if prev_changeset == cur_changeset {
-                                            let duration = Duration::from_millis(1000);
-                                            info!(
-                                                ctx.logger(),
-                                                "Changeset hasn't changed, sleeping {:?}", duration
-                                            );
-                                            tokio_timer::sleep(duration)
-                                                .from_err()
-                                                .map(move |()| (cur_changeset, statistics))
-                                                .boxify()
-                                        } else {
-                                            info!(
-                                                ctx.logger(),
-                                                "Found new changeset: {}, updating statistics",
-                                                cur_changeset
-                                            );
-                                            get_manifest_from_changeset(
-                                                ctx.clone(),
-                                                repo.clone(),
-                                                prev_changeset.clone(),
-                                            )
-                                            .join(get_manifest_from_changeset(
-                                                ctx.clone(),
-                                                repo.clone(),
-                                                cur_changeset.clone(),
-                                            ))
-                                            .and_then({
-                                                cloned!(ctx, repo, repo_name, scuba_logger);
-                                                move |(prev_manifest_id, cur_manifest_id)| {
-                                                    update_statistics(
-                                                        ctx.clone(),
-                                                        repo.clone(),
-                                                        statistics.clone(),
-                                                        prev_manifest_id.diff(
-                                                            ctx.clone(),
-                                                            blobstore.clone(),
-                                                            cur_manifest_id.clone(),
-                                                        ),
-                                                    )
-                                                    .and_then({
-                                                        cloned!(ctx);
-                                                        info!(
-                                                            ctx.logger(),
-                                                            "Statistics for new changeset updated."
-                                                        );
-                                                        move |statistics| {
-                                                            get_changeset_timestamp_from_changeset(
-                                                                ctx.clone(),
-                                                                repo,
-                                                                cur_changeset,
-                                                            )
-                                                            .map(move |cs_timestamp| {
-                                                                log_statistics(
-                                                                    ctx,
-                                                                    scuba_logger,
-                                                                    cs_timestamp,
-                                                                    repo_name,
-                                                                    cur_changeset,
-                                                                    statistics,
-                                                                );
-                                                                STATS::calculated_changesets
-                                                                    .add_value(1);
-                                                                (cur_changeset, statistics)
-                                                            })
-                                                        }
-                                                    })
-                                                }
-                                            })
-                                            .boxify()
-                                        }
-                                    }
-                                }
-                                .and_then(
-                                    move |(cur_changeset, statistics)| {
-                                        repo.get_bookmark(ctx.clone(), &bookmark)
-                                            .and_then(move |new_changeset| {
-                                                new_changeset
-                                                    .ok_or(Error::msg("cannot load bookmark"))
-                                            })
-                                            .and_then(move |new_changeset| {
-                                                future::ok(Loop::Continue((
-                                                    Pass::NextPass(cur_changeset, new_changeset),
-                                                    statistics,
-                                                )))
-                                            })
-                                    },
-                                )
-                            },
-                        )
-                    })
-                    .boxify()
-            }
-        }
-    });
-
     block_execute(
-        run.compat(),
+        run_statistics(
+            fb,
+            ctx,
+            &logger,
+            scuba_logger,
+            matches.clone(),
+            repo_name,
+            bookmark,
+        ),
         fb,
         "statistics_collector",
         &logger,
