@@ -16,8 +16,7 @@ use futures::{
     future,
     stream::{StreamExt, TryStreamExt},
 };
-use futures_ext::FutureExt;
-use futures_old::{future as future_old, Future, IntoFuture};
+use futures_old::{Future, IntoFuture};
 use serde_derive::{Deserialize, Serialize};
 use tokio_compat::runtime;
 
@@ -299,11 +298,11 @@ async fn get_resume_state(manifold: &ThriftManifoldBlob, config: &Config) -> Res
     })
 }
 
-fn put_resume_state(
+async fn put_resume_state(
     manifold: &ThriftManifoldBlob,
     config: &Config,
     state: State,
-) -> impl Future<Item = State, Error = Error> {
+) -> Result<State, Error> {
     match &config.state_key {
         Some(state_key) if state.count % PRESERVE_STATE_RATIO == INIT_COUNT_VALUE => {
             let started_at = config.started_at;
@@ -326,9 +325,10 @@ fn put_resume_state(
                     }
                     state
                 })
-                .left_future()
+                .compat()
+                .await
         }
-        _ => future_old::ok(state).right_future(),
+        _ => Ok(state),
     }
 }
 
@@ -384,7 +384,7 @@ async fn populate_healer_queue(
                     .await?;
             }
 
-            put_resume_state(&manifold, &config, state).compat().await
+            put_resume_state(&manifold, &config, state).await
         })
         .await
 }
