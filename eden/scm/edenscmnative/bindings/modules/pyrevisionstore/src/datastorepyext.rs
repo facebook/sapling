@@ -14,7 +14,10 @@ use cpython::{
 };
 
 use cpython_ext::{PyPath, PyPathBuf, ResultPyErrExt};
-use revisionstore::{HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore, StoreKey, ToKeys};
+use revisionstore::{
+    ContentDataStore, ContentHash, HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore, StoreKey,
+    ToKeys,
+};
 use types::Node;
 
 use crate::pythonutil::{
@@ -28,6 +31,11 @@ pub trait HgIdDataStorePyExt {
     fn get_delta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyObject>;
     fn get_meta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict>;
     fn get_missing_py(&self, py: Python, keys: &mut PyIterator) -> PyResult<PyList>;
+}
+
+pub trait ContentDataStorePyExt {
+    fn blob_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes>;
+    fn metadata_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict>;
 }
 
 pub trait IterableHgIdDataStorePyExt {
@@ -147,6 +155,36 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
         }
 
         Ok(results)
+    }
+}
+
+impl<T: ContentDataStore + ?Sized> ContentDataStorePyExt for T {
+    fn blob_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {
+        let key = to_key(py, name, node)?;
+        let result = self
+            .blob(&StoreKey::from(&key))
+            .map_pyerr(py)?
+            .ok_or_else(|| key_error(py, &key))?;
+        Ok(PyBytes::new(py, result.as_ref()))
+    }
+
+    fn metadata_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
+        let key = to_key(py, name, node)?;
+        let meta = self
+            .metadata(&StoreKey::from(&key))
+            .map_pyerr(py)?
+            .ok_or_else(|| key_error(py, &key))?;
+
+        let metadict = PyDict::new(py);
+        metadict.set_item(py, "size", meta.size)?;
+        match meta.hash {
+            ContentHash::Sha256(hash) => {
+                metadict.set_item(py, "sha256", PyBytes::new(py, hash.as_ref()))?
+            }
+        }
+        metadict.set_item(py, "isbinary", meta.is_binary)?;
+
+        Ok(metadict)
     }
 }
 

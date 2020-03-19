@@ -35,8 +35,8 @@ use types::{Key, NodeInfo};
 
 use crate::{
     datastorepyext::{
-        HgIdDataStorePyExt, HgIdMutableDeltaStorePyExt, IterableHgIdDataStorePyExt,
-        RemoteDataStorePyExt,
+        ContentDataStorePyExt, HgIdDataStorePyExt, HgIdMutableDeltaStorePyExt,
+        IterableHgIdDataStorePyExt, RemoteDataStorePyExt,
     },
     historystorepyext::{
         HgIdHistoryStorePyExt, HgIdMutableHistoryStorePyExt, IterableHgIdHistoryStorePyExt,
@@ -881,6 +881,16 @@ py_class!(pub class contentstore |py| {
     def prefetch(&self, keys: PyList) -> PyResult<PyObject> {
         let store = self.store(py);
         store.prefetch_py(py, keys)
+    }
+
+    def blob(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {
+        let store = self.store(py);
+        store.blob_py(py, name, node)
+    }
+
+    def metadata(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyDict> {
+        let store = self.store(py);
+        store.metadata_py(py, name, node)
     }
 });
 
