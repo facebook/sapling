@@ -57,6 +57,38 @@ class remotefilectx(context.filectx):
     def size(self):
         return self._filelog.size(self._filenode)
 
+    def cmp(self, fctx):
+        fileslog = self.repo().fileslog
+
+        # If we're comparing against a file context that isn't yet committed, a
+        # full comparison is always necessary.
+        if (
+            fileslog._ruststore
+            and self._filenode is not None
+            and fctx.filenode() is not None
+        ):
+            try:
+                selfmeta = fileslog.contentstore.metadata(self._path, self._filenode)
+                othermeta = fileslog.contentstore.metadata(fctx._path, fctx._filenode)
+
+                return selfmeta["sha256"] != othermeta["sha256"]
+            except KeyError:
+                pass
+
+        return super(remotefilectx, self).cmp(fctx)
+
+    def isbinary(self):
+        fileslog = self.repo().fileslog
+
+        if fileslog._ruststore and self._filenode is not None:
+            try:
+                meta = fileslog.contentstore.metadata(self._path, self._filenode)
+                return meta["isbinary"]
+            except KeyError:
+                pass
+
+        return super(remotefilectx, self).isbinary()
+
     @propertycache
     def _changeid(self):
         if "_changeid" in self.__dict__:

@@ -158,6 +158,13 @@ class remotefilelog(object):
 
     def size(self, node):
         """return the size of a given revision"""
+        if self.repo.fileslog._ruststore:
+            try:
+                meta = self.repo.fileslog.contentstore.metadata(self.filename, node)
+                return meta["size"]
+            except KeyError:
+                pass
+
         return len(self.read(node))
 
     rawsize = size
