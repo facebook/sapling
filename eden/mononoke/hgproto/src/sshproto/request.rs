@@ -95,18 +95,20 @@ named!(
     )
 );
 
-// A "*" parameter is a meta-parameter - its argument is a count of
-// a number of other parameters. (We accept nested/recursive star parameters,
-// but I don't know if that ever happens in practice.)
-named!(
-    param_star<HashMap<Vec<u8>, Vec<u8>>>,
-    do_parse!(tag!(b"* ") >> count: integer >> tag!(b"\n") >> res: apply!(params, count) >> (res))
-);
-
 // List of comma-separated values, each of which is encoded using batch param encoding.
 named!(
     gettreepack_directories<Vec<Bytes>>,
     complete!(many0!(batch_param_comma_separated))
+);
+
+// A "*" parameter is a meta-parameter - its argument is a count of
+// a number of other parameters. (We accept nested/recursive star parameters,
+// but I don't know if that ever happens in practice.)
+named!(
+    param_star<HashMap<&[u8], &[u8]>>,
+    do_parse!(
+        tag!(b"* ") >> count: integer >> tag!(b"\n") >> res: apply!(params_ref, count) >> (res)
+    )
 );
 
 // A named parameter is a name followed by a decimal integer of the number of
@@ -114,14 +116,14 @@ named!(
 // ident <bytelen>\n
 // <bytelen bytes>
 named!(
-    param_kv<HashMap<Vec<u8>, Vec<u8>>>,
+    param_kv<HashMap<&[u8], &[u8]>>,
     do_parse!(
         key: ident
             >> tag!(b" ")
             >> len: integer
             >> tag!(b"\n")
             >> val: take!(len)
-            >> (iter::once((key.to_vec(), val.to_vec())).collect())
+            >> (iter::once((key, val)).collect())
     )
 );
 
@@ -130,7 +132,7 @@ named!(
 /// or a named parameter whose value bytes follow.
 /// "count" is the number of required parameters, including the "*" parameter - but *not*
 /// the parameters that the "*" parameter expands to.
-fn params(inp: &[u8], count: usize) -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>> {
+fn params_ref(inp: &[u8], count: usize) -> IResult<&[u8], HashMap<&[u8], &[u8]>> {
     let mut inp = inp;
     let mut have = 0;
 
@@ -154,6 +156,28 @@ fn params(inp: &[u8], count: usize) -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>>
     }
 
     IResult::Done(inp, ret)
+}
+
+fn params(inp: &[u8], count: usize) -> IResult<&[u8], HashMap<Vec<u8>, Vec<u8>>> {
+    // Parsing of params is down first by extracting references, then converting them to owned
+    // Vecs, if sucessful. This ensures that validating inputs (i.e. making sure we have all the
+    // data we need) is not dependent on the length of the arguments, and instead is only dependent
+    // on the complexity of what is being parsed (i.e. the count of arguments). This is important
+    // because this is hooked into a Tokio decoder, so it'll get called in a loop every time new
+    // data is received (e.g. ~8KiB intervals, since that is the buffer size).
+    match params_ref(inp, count) {
+        // Convert to owned if successful.
+        IResult::Done(rest, ret) => {
+            let ret = ret
+                .into_iter()
+                .map(|(k, v)| (k.to_vec(), v.to_vec()))
+                .collect();
+            IResult::Done(rest, ret)
+        }
+        // Re-emit errors otherwise
+        IResult::Incomplete(err) => IResult::Incomplete(err),
+        IResult::Error(err) => IResult::Error(err),
+    }
 }
 
 fn notcomma(b: u8) -> bool {
@@ -659,7 +683,7 @@ mod test {
             IResult::Done(
                 &b"trailer"[..],
                 hashmap! {
-                    b"foo".to_vec() => b"hello world!".to_vec(),
+                    b"foo".as_ref() => b"hello world!".as_ref(),
                 }
             )
         );
@@ -674,8 +698,8 @@ mod test {
             IResult::Done(
                 &b"trailer"[..],
                 hashmap! {
-                    b"foo".to_vec() => b"hello world!".to_vec(),
-                    b"bar".to_vec() => b"blop".to_vec(),
+                    b"foo".as_ref() => b"hello world!".as_ref(),
+                    b"bar".as_ref() => b"blop".as_ref(),
                 }
             )
         );
@@ -692,7 +716,7 @@ mod test {
             IResult::Done(
                 &b""[..],
                 hashmap! {
-                    b"foo".to_vec() => b"hello world!".to_vec(),
+                    b"foo".as_ref() => b"hello world!".as_ref(),
                 }
             )
         );
@@ -707,7 +731,7 @@ mod test {
             IResult::Done(
                 &b"trailer"[..],
                 hashmap! {
-                    b"foo".to_vec() => b"hello world!".to_vec(),
+                    b"foo".as_ref() => b"hello world!".as_ref(),
                 }
             )
         );
@@ -719,7 +743,7 @@ mod test {
             IResult::Done(
                 &b""[..],
                 hashmap! {
-                    b"foo".to_vec() => b"hello world!".to_vec(),
+                    b"foo".as_ref() => b"hello world!".as_ref(),
                 }
             )
         );
