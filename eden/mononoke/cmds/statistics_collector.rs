@@ -19,7 +19,6 @@ use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_old::future;
-use futures_old::future::{loop_fn, Loop};
 use futures_old::future::{Future, IntoFuture};
 use futures_old::stream;
 use futures_old::stream::Stream;
@@ -35,6 +34,7 @@ use std::ops::{Add, Sub};
 use std::path::Path;
 use std::sync::Arc;
 use std::time::Duration;
+use tokio::time::delay_for;
 
 define_stats! {
     prefix = "mononoke.statistics_collector";
@@ -274,12 +274,12 @@ pub fn update_statistics(
 }
 
 pub fn log_statistics(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     mut scuba_logger: ScubaSampleBuilder,
     cs_timestamp: i64,
-    repo_name: String,
-    hg_cs_id: HgChangesetId,
-    statistics: RepoStatistics,
+    repo_name: &String,
+    hg_cs_id: &HgChangesetId,
+    statistics: &RepoStatistics,
 ) {
     info!(
         ctx.logger(),
@@ -291,7 +291,7 @@ pub fn log_statistics(
         statistics.num_lines
     );
     scuba_logger
-        .add("repo_name", repo_name)
+        .add("repo_name", repo_name.clone())
         .add("num_files", statistics.num_files)
         .add("total_file_size", statistics.total_file_size)
         .add("num_lines", statistics.num_lines)
@@ -461,16 +461,12 @@ pub fn generate_statistics_from_file<P: AsRef<Path>>(
         .boxify()
 }
 
-enum Pass {
-    FirstPass(HgChangesetId),
-    NextPass(HgChangesetId, HgChangesetId),
-}
-
 enum Operation {
     Add,
     Sub,
 }
 
+#[allow(unreachable_code)]
 async fn run_statistics<'a>(
     fb: FacebookInit,
     ctx: CoreContext,
@@ -495,131 +491,106 @@ async fn run_statistics<'a>(
     }
 
     let blobstore = Arc::new(repo.get_blobstore());
-    let changeset = repo
+    let mut changeset = repo
         .get_bookmark(ctx.clone(), &bookmark)
         .compat()
         .await?
         .ok_or(Error::msg("cannot load bookmark"))?;
-    let run = loop_fn::<_, (), _, _>(
-        (Pass::FirstPass(changeset), RepoStatistics::default()),
-        move |(pass, statistics)| {
-            cloned!(ctx, repo, blobstore, bookmark);
-            match pass {
-                Pass::FirstPass(changeset) => get_statistics_from_changeset(
-                    ctx.clone(),
-                    repo.clone(),
-                    blobstore.clone(),
-                    changeset.clone(),
-                )
-                .and_then({
-                    cloned!(repo, repo_name, scuba_logger, ctx);
-                    move |statistics| {
-                        get_changeset_timestamp_from_changeset(ctx.clone(), repo, changeset).map(
-                            move |cs_timestamp| {
-                                log_statistics(
-                                    ctx,
-                                    scuba_logger,
-                                    cs_timestamp,
-                                    repo_name,
-                                    changeset,
-                                    statistics,
-                                );
-                                STATS::calculated_changesets.add_value(1);
-                                (changeset, statistics)
-                            },
-                        )
-                    }
-                })
-                .boxify(),
-                Pass::NextPass(prev_changeset, cur_changeset) => {
-                    if prev_changeset == cur_changeset {
-                        let duration = Duration::from_millis(1000);
-                        info!(
-                            ctx.logger(),
-                            "Changeset hasn't changed, sleeping {:?}", duration
-                        );
-                        tokio_timer::sleep(duration)
-                            .from_err()
-                            .map(move |()| (cur_changeset, statistics))
-                            .boxify()
-                    } else {
-                        info!(
-                            ctx.logger(),
-                            "Found new changeset: {}, updating statistics", cur_changeset
-                        );
-                        get_manifest_from_changeset(
-                            ctx.clone(),
-                            repo.clone(),
-                            prev_changeset.clone(),
-                        )
-                        .join(get_manifest_from_changeset(
-                            ctx.clone(),
-                            repo.clone(),
-                            cur_changeset.clone(),
-                        ))
-                        .and_then({
-                            cloned!(ctx, repo, repo_name, scuba_logger);
-                            move |(prev_manifest_id, cur_manifest_id)| {
-                                update_statistics(
-                                    ctx.clone(),
-                                    repo.clone(),
-                                    statistics.clone(),
-                                    prev_manifest_id.diff(
-                                        ctx.clone(),
-                                        blobstore.clone(),
-                                        cur_manifest_id.clone(),
-                                    ),
-                                )
-                                .and_then({
-                                    cloned!(ctx);
-                                    info!(ctx.logger(), "Statistics for new changeset updated.");
-                                    move |statistics| {
-                                        get_changeset_timestamp_from_changeset(
-                                            ctx.clone(),
-                                            repo,
-                                            cur_changeset,
-                                        )
-                                        .map(
-                                            move |cs_timestamp| {
-                                                log_statistics(
-                                                    ctx,
-                                                    scuba_logger,
-                                                    cs_timestamp,
-                                                    repo_name,
-                                                    cur_changeset,
-                                                    statistics,
-                                                );
-                                                STATS::calculated_changesets.add_value(1);
-                                                (cur_changeset, statistics)
-                                            },
-                                        )
-                                    }
-                                })
-                            }
-                        })
-                        .boxify()
-                    }
-                }
-            }
-            .and_then(move |(cur_changeset, statistics)| {
-                repo.get_bookmark(ctx.clone(), &bookmark)
-                    .and_then(move |new_changeset| {
-                        new_changeset.ok_or(Error::msg("cannot load bookmark"))
-                    })
-                    .and_then(move |new_changeset| {
-                        future::ok(Loop::Continue((
-                            Pass::NextPass(cur_changeset, new_changeset),
-                            statistics,
-                        )))
-                    })
-            })
-        },
+
+    // initialize the loop
+
+    let mut statistics = get_statistics_from_changeset(
+        ctx.clone(),
+        repo.clone(),
+        blobstore.clone(),
+        changeset.clone(),
     )
-    .boxify()
     .compat()
     .await?;
 
-    Ok(run)
+    let cs_timestamp =
+        get_changeset_timestamp_from_changeset(ctx.clone(), repo.clone(), changeset.clone())
+            .compat()
+            .await?;
+
+    log_statistics(
+        &ctx,
+        scuba_logger.clone(),
+        cs_timestamp,
+        &repo_name,
+        &changeset,
+        &statistics,
+    );
+
+    STATS::calculated_changesets.add_value(1);
+
+    // run the loop
+    loop {
+        let prev_changeset = changeset;
+        changeset = repo
+            .get_bookmark(ctx.clone(), &bookmark)
+            .compat()
+            .await?
+            .ok_or(Error::msg("cannot load bookmark"))?;
+
+        if prev_changeset == changeset {
+            let duration = Duration::from_millis(1000);
+            info!(
+                ctx.logger(),
+                "Changeset hasn't changed, sleeping {:?}", duration
+            );
+
+            delay_for(duration).await;
+        } else {
+            info!(
+                ctx.logger(),
+                "Found new changeset: {}, updating statistics", changeset
+            );
+
+            let (prev_manifest_id, cur_manifest_id) =
+                get_manifest_from_changeset(ctx.clone(), repo.clone(), prev_changeset.clone())
+                    .join(get_manifest_from_changeset(
+                        ctx.clone(),
+                        repo.clone(),
+                        changeset.clone(),
+                    ))
+                    .compat()
+                    .await?;
+
+            statistics = update_statistics(
+                ctx.clone(),
+                repo.clone(),
+                statistics.clone(),
+                prev_manifest_id.diff(ctx.clone(), blobstore.clone(), cur_manifest_id.clone()),
+            )
+            .compat()
+            .await?;
+
+            info!(ctx.logger(), "Statistics for new changeset updated.");
+
+            let cs_timestamp = get_changeset_timestamp_from_changeset(
+                ctx.clone(),
+                repo.clone(),
+                changeset.clone(),
+            )
+            .compat()
+            .await?;
+
+            log_statistics(
+                &ctx,
+                scuba_logger.clone(),
+                cs_timestamp,
+                &repo_name,
+                &changeset,
+                &statistics,
+            );
+            STATS::calculated_changesets.add_value(1);
+        }
+    }
+
+    // unreachable, but needed so that the future has type Result
+    // which lets us propagate Errors to main.
+    Ok(())
 }
 
 #[fbinit::main]
