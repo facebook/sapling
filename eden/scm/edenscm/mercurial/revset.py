@@ -1219,7 +1219,7 @@ def getall(repo, subset, x):
 
 
 @predicate("_all()", safe=True)
-def getall(repo, subset, x):
+def _all(repo, subset, x):
     """All changesets regardless of visibility"""
     return subset
 

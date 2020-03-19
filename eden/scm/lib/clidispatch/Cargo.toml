@@ -12,6 +12,7 @@ cliparser = { path = "../cliparser" }
 indexedlog = { path = "../indexedlog" }
 thiserror = "1.0.5"
 thrift-types = { path = "../thrift-types" }
+tracing = "0.1"
 util = { path = "../util" }
 
 [dev-dependencies]

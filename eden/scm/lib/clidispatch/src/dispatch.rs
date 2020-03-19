@@ -232,6 +232,10 @@ pub fn dispatch(command_table: &CommandTable, args: Vec<String>, io: &mut IO) ->
     let (command_name, command_arg_len) =
         find_command_name(|name| command_table.get(name).is_some(), &expanded)
             .ok_or_else(|| errors::UnknownCommand(command_name))?;
+    tracing::info!(
+        name = "log:command-row",
+        command = AsRef::<str>::as_ref(&command_name)
+    );
 
     let mut new_args = Vec::with_capacity(args.len());
     new_args.extend_from_slice(&args[..first_arg_index]);

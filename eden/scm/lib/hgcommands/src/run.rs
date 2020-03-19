@@ -7,6 +7,7 @@
 
 use crate::{commands, HgPython};
 use anyhow::Result;
+use blackbox::serde_json;
 use clidispatch::{dispatch, errors};
 use parking_lot::Mutex;
 use std::env;
@@ -19,7 +20,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use std::time::SystemTime;
 use tracing::dispatcher::{self, Dispatch};
-use tracing::{span, Level};
+use tracing::Level;
 use tracing_collector::{TracingCollector, TracingData};
 
 /// Run a Rust or Python command.
@@ -37,6 +38,10 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
         return HgPython::new(&args).run_hg(args, io);
     }
 
+    // Setup tracing early since "log_start" will use it immediately.
+    // The tracing clock starts ticking from here.
+    let (_tracing_level, tracing_data) = setup_tracing();
+
     // This is intended to be "process start". "exec/hgmain" seems to be
     // a better place for it. However, chg makes it tricky. Because if hgmain
     // decides to use chg, then there is no way to figure out which `blackbox`
@@ -47,7 +52,7 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
     // which is a bit more desiable. Since run_command is very close to process
     // start, it should reflect the duration of the command relatively
     // accurately, at least for non-chg cases.
-    log_start(args.clone(), now);
+    let span = log_start(args.clone(), now);
 
     // Ad-hoc environment variable: EDENSCM_TRACE_OUTPUT. A more standard way
     // to access the data is via the blackbox interface.
@@ -71,13 +76,6 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
     // env_logger cannot be inited twice. So this will fail (as expected)
     // if hgcommands is nested (ex. for "hg continue").
     let _ = env_logger::try_init();
-
-    let span = span!(
-        Level::INFO,
-        "run_command",
-        name = AsRef::<str>::as_ref(&args[1..args.len().min(64)].join(" ")),
-        exitcode = "",
-    );
 
     let exit_code = {
         let _guard = span.enter();
@@ -112,13 +110,13 @@ pub fn run_command(args: Vec<String>, io: &mut clidispatch::io::IO) -> i32 {
                 HgPython::new(&args).run_hg(args, io)
             }
         };
-        span.record("exitcode", &exit_code);
+        span.record("exit_code", &exit_code);
         exit_code
     };
 
     let _ = maybe_write_trace(io, &tracing_data, trace_output_path);
 
-    log_end(exit_code as u8, now, tracing_data);
+    log_end(exit_code as u8, now, tracing_data, &span);
 
     // Sync the blackbox before returning: this exit code is going to be used to process::exit(),
     // so we need to flush now.
@@ -234,7 +232,7 @@ pub(crate) fn write_trace(
         }
         Format::SpansJSON => {
             let spans = data.tree_spans::<&str>();
-            blackbox::serde_json::to_writer(&mut out, &spans)?;
+            serde_json::to_writer(&mut out, &spans)?;
             out.flush()?;
         }
         Format::TraceEventGzip => {
@@ -254,7 +252,7 @@ pub(crate) fn write_trace(
     Ok(())
 }
 
-fn log_start(args: Vec<String>, now: SystemTime) {
+fn log_start(args: Vec<String>, now: SystemTime) -> tracing::Span {
     let inside_test = is_inside_test();
     let (uid, pid, nice) = if inside_test {
         (0, 0, 0)
@@ -275,15 +273,8 @@ fn log_start(args: Vec<String>, now: SystemTime) {
         }
     };
 
-    blackbox::log(&blackbox::event::Event::Start {
-        pid,
-        uid,
-        nice,
-        args,
-        timestamp_ms: epoch_ms(now),
-    });
-
     if let Ok(tags) = std::env::var("EDENSCM_BLACKBOX_TAGS") {
+        tracing::info!(name = "blackbox_tags", tags = AsRef::<str>::as_ref(&tags));
         let names: Vec<String> = tags.split_whitespace().map(ToString::to_string).collect();
         blackbox::log(&blackbox::event::Event::Tags { names });
     }
@@ -303,13 +294,42 @@ fn log_start(args: Vec<String>, now: SystemTime) {
             ppid = procinfo::parent_pid(ppid);
         }
     }
+
+    let span = tracing::info_span!(
+        "Run Command",
+        pid = pid,
+        uid = uid,
+        nice = nice,
+        args = AsRef::<str>::as_ref(&serde_json::to_string(&args).unwrap()),
+        parent_pids = AsRef::<str>::as_ref(&serde_json::to_string(&parent_pids).unwrap()),
+        parent_names = AsRef::<str>::as_ref(&serde_json::to_string(&parent_names).unwrap()),
+        // Reserved for log_end.
+        exit_code = 0,
+        max_rss = 0,
+    );
+
+    blackbox::log(&blackbox::event::Event::Start {
+        pid,
+        uid,
+        nice,
+        args,
+        timestamp_ms: epoch_ms(now),
+    });
+
     blackbox::log(&blackbox::event::Event::ProcessTree {
         names: parent_names,
         pids: parent_pids,
     });
+
+    span
 }
 
-fn log_end(exit_code: u8, now: SystemTime, tracing_data: Arc<Mutex<TracingData>>) {
+fn log_end(
+    exit_code: u8,
+    now: SystemTime,
+    tracing_data: Arc<Mutex<TracingData>>,
+    span: &tracing::Span,
+) {
     let inside_test = is_inside_test();
     let duration_ms = if inside_test {
         0
@@ -324,6 +344,9 @@ fn log_end(exit_code: u8, now: SystemTime, tracing_data: Arc<Mutex<TracingData>>
     } else {
         procinfo::max_rss_bytes()
     };
+
+    span.record("exit_code", &exit_code);
+    span.record("max_rss", &max_rss);
 
     blackbox::log(&blackbox::event::Event::Finish {
         exit_code,
