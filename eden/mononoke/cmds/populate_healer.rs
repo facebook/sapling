@@ -11,9 +11,13 @@ use anyhow::{bail, format_err, Error};
 use clap::Arg;
 use cloned::cloned;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future,
+    stream::{StreamExt, TryStreamExt},
+};
 use futures_ext::FutureExt;
-use futures_old::{future, stream::Stream, Future, IntoFuture};
+use futures_old::{future as future_old, Future, IntoFuture};
 use serde_derive::{Deserialize, Serialize};
 use tokio_compat::runtime;
 
@@ -21,7 +25,7 @@ use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, SqlBlobstoreSyncQueue};
 use cmdlib::args;
 use context::CoreContext;
-use manifoldblob::{ManifoldRange, ThriftManifoldBlob};
+use manifoldblob::{ManifoldEntry, ManifoldRange, ThriftManifoldBlob};
 use metaconfig_types::{BlobConfig, BlobstoreId, MetadataDBConfig, MultiplexId, StorageConfig};
 use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
 use sql_ext::facebook::{FbSqlConstructors, MysqlOptions};
@@ -324,7 +328,7 @@ fn put_resume_state(
                 })
                 .left_future()
         }
-        _ => future::ok(state).right_future(),
+        _ => future_old::ok(state).right_future(),
     }
 }
 
@@ -336,6 +340,7 @@ async fn populate_healer_queue(
     let state = get_resume_state(&manifold, &config).await?;
     manifold
         .enumerate((*state.current_range).clone())
+        .compat()
         .and_then(|mut entry| {
             // We are enumerating Manifold's flat/ namespace
             // and all the keys contain the flat/ prefix, which
@@ -353,15 +358,18 @@ async fn populate_healer_queue(
             }
         })
         .chunks(CHUNK_SIZE)
-        .fold(state, move |state, entries| {
+        .then(|chunk| async {
+            chunk
+                .into_iter()
+                .collect::<Result<Vec<ManifoldEntry>, Error>>()
+        })
+        .try_fold(state, |state, entries| async {
             let range = entries[0].range.clone();
             let state = state.with_current_many(range, entries.len());
             let src_blobstore_id = config.src_blobstore_id;
             let multiplex_id = config.multiplex_id;
 
-            let enqueue = if config.dry_run {
-                future::ok(()).left_future()
-            } else {
+            if !config.dry_run {
                 let iterator_box = Box::new(entries.into_iter().map(move |entry| {
                     BlobstoreSyncQueueEntry::new(
                         entry.key,
@@ -372,15 +380,12 @@ async fn populate_healer_queue(
                 }));
                 queue
                     .add_many(config.ctx.clone(), iterator_box)
-                    .right_future()
-            };
+                    .compat()
+                    .await?;
+            }
 
-            enqueue.and_then({
-                cloned!(manifold, config);
-                move |_| put_resume_state(&manifold, &config, state)
-            })
+            put_resume_state(&manifold, &config, state).compat().await
         })
-        .compat()
         .await
 }
 
