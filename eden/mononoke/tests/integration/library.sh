@@ -770,7 +770,7 @@ CONFIG
 else
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [derived_data_config]
-derived_data_types=["blame", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes"]
+derived_data_types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes"]
 CONFIG
 fi
 }

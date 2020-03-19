@@ -18,8 +18,10 @@ use blobrepo_factory::{BlobrepoBuilder, BlobstoreOptions, Caching, ReadOnlyStora
 use blobstore::Loadable;
 use blobstore_factory::make_sql_factory;
 use bookmarks::{BookmarkName, BookmarkPrefix};
+use changeset_info::ChangesetInfo;
 use context::CoreContext;
 use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
+use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
@@ -561,6 +563,13 @@ impl RepoContext {
     /// The warm bookmarks cache for the referenced repository.
     pub(crate) fn warm_bookmarks_cache(&self) -> &Arc<WarmBookmarksCache> {
         &self.repo.warm_bookmarks_cache
+    }
+
+    pub(crate) fn derive_changeset_info_enabled(&self) -> bool {
+        self.blob_repo()
+            .get_derived_data_config()
+            .derived_data_types
+            .contains(ChangesetInfo::NAME)
     }
 
     /// Look up a changeset specifier to find the canonical bonsai changeset

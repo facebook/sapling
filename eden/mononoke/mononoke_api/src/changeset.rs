@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet};
 use std::convert::TryInto;
 use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
 use blobstore::Loadable;
+use changeset_info::ChangesetInfo;
 use chrono::{DateTime, FixedOffset};
 use cloned::cloned;
 use context::CoreContext;
@@ -19,13 +20,12 @@ use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::stream::Stream;
-use futures_old::Future as OldFuture;
 use futures_util::future::{self, try_join, try_join_all, FutureExt, Shared};
 use futures_util::stream::{StreamExt, TryStreamExt};
 use manifest::{Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, PathOrPrefix};
 use mercurial_types::Globalrev;
 pub use mononoke_types::Generation;
-use mononoke_types::{BonsaiChangeset, MPath, MPathElement};
+use mononoke_types::{BonsaiChangeset, FileChange, MPath, MPathElement};
 use reachabilityindex::ReachabilityIndex;
 use unodes::RootUnodeManifestId;
 
@@ -42,6 +42,8 @@ pub struct ChangesetContext {
     id: ChangesetId,
     bonsai_changeset:
         Shared<Pin<Box<dyn Future<Output = Result<BonsaiChangeset, MononokeError>> + Send>>>,
+    changeset_info:
+        Shared<Pin<Box<dyn Future<Output = Result<ChangesetInfo, MononokeError>> + Send>>>,
     root_fsnode_id:
         Shared<Pin<Box<dyn Future<Output = Result<RootFsnodeId, MononokeError>> + Send>>>,
     root_unode_manifest_id:
@@ -64,12 +66,26 @@ impl ChangesetContext {
     /// Construct a new `MononokeChangeset`.  The changeset must exist
     /// in the repo.
     pub(crate) fn new(repo: RepoContext, id: ChangesetId) -> Self {
-        let bonsai_changeset = id
-            .load(repo.ctx().clone(), repo.blob_repo().blobstore())
-            .from_err()
-            .compat()
-            .boxed()
-            .shared();
+        let bonsai_changeset = {
+            cloned!(repo);
+            async move {
+                id.load(repo.ctx().clone(), repo.blob_repo().blobstore())
+                    .compat()
+                    .await
+                    .map_err(MononokeError::from)
+            }
+        };
+        let bonsai_changeset = bonsai_changeset.boxed().shared();
+        let changeset_info = {
+            cloned!(repo);
+            async move {
+                ChangesetInfo::derive(repo.ctx().clone(), repo.blob_repo().clone(), id)
+                    .compat()
+                    .await
+                    .map_err(MononokeError::from)
+            }
+        };
+        let changeset_info = changeset_info.boxed().shared();
         let root_fsnode_id = {
             cloned!(repo);
             async move {
@@ -93,6 +109,7 @@ impl ChangesetContext {
         Self {
             repo,
             id,
+            changeset_info,
             bonsai_changeset,
             root_fsnode_id,
             root_unode_manifest_id,
@@ -204,20 +221,30 @@ impl ChangesetContext {
         self.bonsai_changeset.clone().await
     }
 
+    /// Get the `ChangesetInfo` for this changeset.
+    async fn changeset_info(&self) -> Result<ChangesetInfo, MononokeError> {
+        if self.repo.derive_changeset_info_enabled() {
+            self.changeset_info.clone().await
+        } else {
+            let bonsai = self.bonsai_changeset().await?;
+            Ok(ChangesetInfo::new(self.id(), bonsai))
+        }
+    }
+
     /// The IDs of the parents of the changeset.
     pub async fn parents(&self) -> Result<Vec<ChangesetId>, MononokeError> {
-        Ok(self.bonsai_changeset().await?.parents().collect())
+        Ok(self.changeset_info().await?.parents().collect())
     }
 
     /// The author of the changeset.
     pub async fn author(&self) -> Result<String, MononokeError> {
-        Ok(self.bonsai_changeset().await?.author().to_string())
+        Ok(self.changeset_info().await?.author().to_string())
     }
 
     /// The date the changeset was authored.
     pub async fn author_date(&self) -> Result<DateTime<FixedOffset>, MononokeError> {
         Ok(self
-            .bonsai_changeset()
+            .changeset_info()
             .await?
             .author_date()
             .as_chrono()
@@ -228,7 +255,7 @@ impl ChangesetContext {
     /// is not tracked.
     pub async fn committer(&self) -> Result<Option<String>, MononokeError> {
         Ok(self
-            .bonsai_changeset()
+            .changeset_info()
             .await?
             .committer()
             .map(|s| s.to_string()))
@@ -238,7 +265,7 @@ impl ChangesetContext {
     /// committer is not tracked.
     pub async fn committer_date(&self) -> Result<Option<DateTime<FixedOffset>>, MononokeError> {
         Ok(self
-            .bonsai_changeset()
+            .changeset_info()
             .await?
             .committer_date()
             .map(|d| d.as_chrono().clone()))
@@ -246,7 +273,7 @@ impl ChangesetContext {
 
     /// The commit message.
     pub async fn message(&self) -> Result<String, MononokeError> {
-        Ok(self.bonsai_changeset().await?.message().to_string())
+        Ok(self.changeset_info().await?.message().to_string())
     }
 
     /// The generation number of the given changeset
@@ -264,11 +291,18 @@ impl ChangesetContext {
     /// All commit extras as (name, value) pairs.
     pub async fn extras(&self) -> Result<Vec<(String, Vec<u8>)>, MononokeError> {
         Ok(self
-            .bonsai_changeset()
+            .changeset_info()
             .await?
             .extra()
             .map(|(name, value)| (name.to_string(), Vec::from(value)))
             .collect())
+    }
+
+    /// File changes associated with the commit.
+    pub async fn file_changes(&self) -> Result<BTreeMap<MPath, Option<FileChange>>, MononokeError> {
+        let bonsai = self.bonsai_changeset().await?;
+        let bonsai = bonsai.into_mut();
+        Ok(bonsai.file_changes)
     }
 
     /// Returns `true` if this commit is an ancestor of `other_commit`.
@@ -311,18 +345,17 @@ impl ChangesetContext {
             })
         }
         let other = ChangesetContext::new(self.repo.clone(), other);
-        let bonsai = self.bonsai_changeset().await?;
 
         // map from from_path to to_path
         let mut copy_path_map = HashMap::new();
         // map from to_path to from_path
         let mut inv_copy_path_map = HashMap::new();
-        let file_changes;
+        let file_changes = self.file_changes().await?;
         // For now we only consider copies when comparing with parent.
         if include_copies_renames && self.parents().await?.contains(&other.id) {
-            file_changes = bonsai.file_changes().collect::<Vec<_>>();
             for (to_path, file_change) in file_changes.iter() {
-                if let Some((from_path, csid)) = file_change.and_then(|fc| fc.copy_from()) {
+                if let Some((from_path, csid)) = file_change.as_ref().and_then(|fc| fc.copy_from())
+                {
                     if *csid == other.id {
                         copy_path_map.insert(from_path, to_path);
                         inv_copy_path_map.insert(to_path, from_path);
