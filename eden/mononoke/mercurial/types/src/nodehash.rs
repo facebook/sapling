@@ -20,8 +20,9 @@ use std::{
     str::FromStr,
 };
 
-/// Node hash type from Mercurial's Rust code (essentially equivalent to [HgNodeHash]).
-use types::Node as HgTypesNode;
+/// Type used to represent a node hash in the Mercurial client's Rust code.
+/// Equivalent to HgNodeHash;
+use types::HgId;
 
 use crate::hash::{self, Sha1, Sha1Prefix};
 use crate::manifest::Type;
@@ -123,15 +124,15 @@ impl From<Option<HgNodeHash>> for HgNodeHash {
     }
 }
 
-impl From<HgNodeHash> for HgTypesNode {
+impl From<HgNodeHash> for HgId {
     fn from(node: HgNodeHash) -> Self {
-        HgTypesNode::from_byte_array(node.0.into_byte_array())
+        HgId::from_byte_array(node.0.into_byte_array())
     }
 }
 
-impl From<HgTypesNode> for HgNodeHash {
-    fn from(node: HgTypesNode) -> Self {
-        Self::from_bytes(node.as_ref()).unwrap()
+impl From<HgId> for HgNodeHash {
+    fn from(hgid: HgId) -> Self {
+        Self::from_bytes(hgid.as_ref()).unwrap()
     }
 }
 
