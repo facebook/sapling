@@ -8,12 +8,15 @@
 // Union data store
 use anyhow::{Error, Result};
 
+use bytes::Bytes;
 use mpatch::mpatch::get_full_text;
 
 use types::Key;
 
 use crate::{
-    datastore::{Delta, HgIdDataStore, Metadata, RemoteDataStore},
+    datastore::{
+        ContentDataStore, ContentMetadata, Delta, HgIdDataStore, Metadata, RemoteDataStore,
+    },
     types::StoreKey,
     unionstore::UnionStore,
 };
@@ -113,6 +116,30 @@ impl<T: RemoteDataStore> RemoteDataStore for UnionHgIdDataStore<T> {
             })?;
 
         Ok(())
+    }
+}
+
+pub type UnionContentDataStore<T> = UnionStore<T>;
+
+impl<T: ContentDataStore> ContentDataStore for UnionContentDataStore<T> {
+    fn blob(&self, key: &StoreKey) -> Result<Option<Bytes>> {
+        for store in self {
+            if let Some(data) = store.blob(key)? {
+                return Ok(Some(data));
+            }
+        }
+
+        Ok(None)
+    }
+
+    fn metadata(&self, key: &StoreKey) -> Result<Option<ContentMetadata>> {
+        for store in self {
+            if let Some(meta) = store.metadata(key)? {
+                return Ok(Some(meta));
+            }
+        }
+
+        Ok(None)
     }
 }
 

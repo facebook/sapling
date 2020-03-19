@@ -19,7 +19,10 @@ use serde_derive::{Deserialize, Serialize};
 
 use types::{HgId, Key, RepoPath};
 
-use crate::{localstore::LocalStore, types::StoreKey};
+use crate::{
+    localstore::LocalStore,
+    types::{ContentHash, StoreKey},
+};
 
 #[derive(Clone, Debug, PartialEq, Serialize, Deserialize)]
 pub struct Delta {
@@ -58,6 +61,29 @@ pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
     fn flush(&self) -> Result<Option<PathBuf>>;
 }
 
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub struct ContentMetadata {
+    pub size: usize,
+    pub hash: ContentHash,
+    pub is_binary: bool,
+}
+
+/// The `ContentDataStore` is intended for pure content only stores
+///
+/// Overtime, this new trait will replace the need for the `HgIdDataStore`, for now, only the LFS
+/// store can implement it. Non content only stores could implement it, but the cost of the
+/// `metadata` method will become linear over the blob size, reducing the benefit. A caching layer
+/// will need to be put in place to avoid this.
+pub trait ContentDataStore: Send + Sync {
+    /// Read the blob from the store, the blob returned is the pure blob and will not contain any
+    /// Mercurial copy_from header.
+    fn blob(&self, key: &StoreKey) -> Result<Option<Bytes>>;
+
+    /// Read the blob metadata from the store.
+    fn metadata(&self, key: &StoreKey) -> Result<Option<ContentMetadata>>;
+    // XXX: Add write operations.
+}
+
 /// Implement `HgIdDataStore` for all types that can be `Deref` into a `HgIdDataStore`. This includes all
 /// the smart pointers like `Box`, `Rc`, `Arc`.
 impl<T: HgIdDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdDataStore for U {
@@ -92,6 +118,17 @@ impl<T: HgIdMutableDeltaStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgId
 
     fn flush(&self) -> Result<Option<PathBuf>> {
         T::flush(self)
+    }
+}
+
+/// Implement `ContentDataStore` for all types that can be `Deref` into a `ContentDataStore`.
+impl<T: ContentDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> ContentDataStore for U {
+    fn blob(&self, key: &StoreKey) -> Result<Option<Bytes>> {
+        T::blob(self, key)
+    }
+
+    fn metadata(&self, key: &StoreKey) -> Result<Option<ContentMetadata>> {
+        T::metadata(self, key)
     }
 }
 

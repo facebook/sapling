@@ -21,7 +21,8 @@ use types::Key;
 
 use crate::{
     datastore::{
-        strip_metadata, Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore,
+        strip_metadata, ContentDataStore, ContentMetadata, Delta, HgIdDataStore,
+        HgIdMutableDeltaStore, Metadata, RemoteDataStore,
     },
     indexedlogdatastore::IndexedLogHgIdDataStore,
     lfs::{LfsMultiplexer, LfsRemote, LfsStore},
@@ -31,7 +32,7 @@ use crate::{
     packstore::{CorruptionPolicy, MutableDataPackStore},
     remotestore::HgIdRemoteStore,
     types::StoreKey,
-    uniondatastore::UnionHgIdDataStore,
+    uniondatastore::{UnionContentDataStore, UnionHgIdDataStore},
     util::{
         get_cache_packs_path, get_cache_path, get_indexedlogdatastore_path, get_local_path,
         get_packs_path,
@@ -47,6 +48,8 @@ pub struct ContentStore {
     local_mutabledatastore: Option<Arc<dyn HgIdMutableDeltaStore>>,
     shared_mutabledatastore: Arc<dyn HgIdMutableDeltaStore>,
     remote_store: Option<Arc<dyn RemoteDataStore>>,
+
+    blob_stores: UnionContentDataStore<Arc<dyn ContentDataStore>>,
 }
 
 impl ContentStore {
@@ -142,6 +145,17 @@ impl HgIdMutableDeltaStore for ContentStore {
     }
 }
 
+impl ContentDataStore for ContentStore {
+    /// Fetch a raw blob from the LFS stores.
+    fn blob(&self, key: &StoreKey) -> Result<Option<Bytes>> {
+        self.blob_stores.blob(key)
+    }
+
+    fn metadata(&self, key: &StoreKey) -> Result<Option<ContentMetadata>> {
+        self.blob_stores.metadata(key)
+    }
+}
+
 /// Builder for `ContentStore`. An `impl AsRef<Path>` represents the path to the store and a
 /// `ConfigSet` of the Mercurial configuration are required to build a `ContentStore`. Users can
 /// use this builder to add optional `HgIdRemoteStore` to enable remote data fetching， and a `Path`
@@ -218,6 +232,9 @@ impl<'a> ContentStoreBuilder<'a> {
             datastore.add(shared_indexedlogdatastore);
         }
 
+        let mut blob_stores: UnionContentDataStore<Arc<dyn ContentDataStore>> =
+            UnionContentDataStore::new();
+
         // The shared stores should precede the local one since we expect both the number of blobs,
         // and the number of requests satisfied by the shared cache to be significantly higher than
         // ones in the local store.
@@ -231,6 +248,7 @@ impl<'a> ContentStoreBuilder<'a> {
         };
 
         let shared_lfs_store = Arc::new(LfsStore::shared(&cache_path)?);
+        blob_stores.add(shared_lfs_store.clone());
 
         let shared_store: Arc<dyn HgIdMutableDeltaStore> =
             if let Some(lfs_threshold) = lfs_threshold {
@@ -257,6 +275,8 @@ impl<'a> ContentStoreBuilder<'a> {
                 )?);
 
                 let local_lfs_store = Arc::new(LfsStore::local(&local_path.unwrap())?);
+                blob_stores.add(local_lfs_store.clone());
+
                 let local_store: Arc<dyn HgIdMutableDeltaStore> =
                     if let Some(lfs_threshold) = lfs_threshold {
                         let local_store = Arc::new(LfsMultiplexer::new(
@@ -340,6 +360,7 @@ impl<'a> ContentStoreBuilder<'a> {
             local_mutabledatastore,
             shared_mutabledatastore: shared_store,
             remote_store,
+            blob_stores,
         })
     }
 }
@@ -356,7 +377,10 @@ mod tests {
     use types::{testutil::*, Sha256};
     use util::path::create_dir;
 
-    use crate::testutil::{make_config, make_lfs_config, FakeHgIdRemoteStore};
+    use crate::{
+        testutil::{make_config, make_lfs_config, FakeHgIdRemoteStore},
+        types::ContentHash,
+    };
 
     #[test]
     fn test_new() -> Result<()> {
@@ -628,6 +652,59 @@ mod tests {
 
         let store = ContentStore::new(&localdir, &config)?;
         assert_eq!(store.get(&k1)?, Some(delta.data.as_ref().to_vec()));
+        Ok(())
+    }
+
+    #[test]
+    fn test_lfs_blob() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let config = make_lfs_config(&cachedir);
+
+        let k1 = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4, 5][..]),
+            base: None,
+            key: k1.clone(),
+        };
+
+        let store = ContentStore::new(&localdir, &config)?;
+        store.add(&delta, &Default::default())?;
+
+        let blob = store.blob(&StoreKey::from(k1))?;
+        assert_eq!(blob, Some(delta.data));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_lfs_metadata() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let config = make_lfs_config(&cachedir);
+
+        let k1 = key("a", "2");
+        let data = Bytes::from(&[1, 2, 3, 4, 5][..]);
+        let hash = ContentHash::sha256(&data)?;
+        let delta = Delta {
+            data,
+            base: None,
+            key: k1.clone(),
+        };
+
+        let store = ContentStore::new(&localdir, &config)?;
+        store.add(&delta, &Default::default())?;
+
+        let metadata = store.metadata(&StoreKey::from(k1))?;
+        assert_eq!(
+            metadata,
+            Some(ContentMetadata {
+                size: 5,
+                is_binary: false,
+                hash,
+            })
+        );
+
         Ok(())
     }
 

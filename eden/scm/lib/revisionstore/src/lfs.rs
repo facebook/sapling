@@ -34,10 +34,11 @@ use util::path::create_dir;
 
 use crate::{
     datastore::{
-        strip_metadata, Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore,
+        strip_metadata, ContentDataStore, ContentMetadata, Delta, HgIdDataStore,
+        HgIdMutableDeltaStore, Metadata, RemoteDataStore,
     },
     historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
-    indexedlogutil::{LookupIter, Store, StoreOpenOptions},
+    indexedlogutil::{Store, StoreOpenOptions},
     localstore::LocalStore,
     remotestore::HgIdRemoteStore,
     types::{ContentHash, StoreKey},
@@ -140,7 +141,15 @@ impl LfsPointersStore {
         Ok(deserialize(data)?)
     }
 
-    fn get_by_iter(mut iter: LookupIter<'_>) -> Result<Option<LfsPointersEntry>> {
+    /// Find the pointer corresponding to the passed in `StoreKey`.
+    fn entry(&self, key: &StoreKey) -> Result<Option<LfsPointersEntry>> {
+        let mut iter = match key {
+            StoreKey::HgId(key) => self.0.lookup(Self::INDEX_NODE, key.hgid)?,
+            StoreKey::Content(hash) => match hash {
+                ContentHash::Sha256(hash) => self.0.lookup(Self::INDEX_SHA256, hash)?,
+            },
+        };
+
         let buf = match iter.next() {
             None => return Ok(None),
             Some(buf) => buf?,
@@ -151,17 +160,12 @@ impl LfsPointersStore {
 
     /// Find the pointer corresponding to the passed in `Key`.
     fn get(&self, key: &Key) -> Result<Option<LfsPointersEntry>> {
-        let log_entry = self.0.lookup(Self::INDEX_NODE, key.hgid)?;
-        LfsPointersStore::get_by_iter(log_entry)
+        self.entry(&StoreKey::from(key))
     }
 
     /// Find the pointer corresponding to the passed in `ContentHash`
     fn get_by_content(&self, hash: &ContentHash) -> Result<Option<LfsPointersEntry>> {
-        let log_entry = match hash {
-            ContentHash::Sha256(hash) => self.0.lookup(Self::INDEX_SHA256, hash)?,
-        };
-
-        LfsPointersStore::get_by_iter(log_entry)
+        self.entry(&StoreKey::from(hash))
     }
 
     fn add(&mut self, entry: LfsPointersEntry) -> Result<()> {
@@ -258,6 +262,19 @@ impl LfsStore {
         let blobs = LfsBlobsStore::shared(path)?;
         LfsStore::new(pointers, blobs)
     }
+
+    fn blob_impl(&self, key: &StoreKey) -> Result<Option<(LfsPointersEntry, Bytes)>> {
+        let inner = self.inner.read();
+
+        let pointer = inner.pointers.entry(key)?;
+
+        match pointer {
+            None => Ok(None),
+            Some(entry) => match entry.content_hash {
+                ContentHash::Sha256(hash) => Ok(inner.blobs.get(&hash)?.map(|blob| (entry, blob))),
+            },
+        }
+    }
 }
 
 impl LocalStore for LfsStore {
@@ -326,24 +343,17 @@ impl HgIdDataStore for LfsStore {
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        let inner = self.inner.read();
-
-        let entry = inner.pointers.get(key)?;
-        if let Some(entry) = entry {
-            let content = match entry.content_hash {
-                ContentHash::Sha256(hash) => inner.blobs.get(&hash)?,
-            };
-            if let Some(content) = content {
+        match self.blob_impl(&StoreKey::from(key))? {
+            Some((entry, content)) => {
                 let content = rebuild_metadata(content, &entry);
-                return Ok(Some(Delta {
+                Ok(Some(Delta {
                     data: content,
                     base: None,
                     key: key.clone(),
-                }));
+                }))
             }
+            None => Ok(None),
         }
-
-        Ok(None)
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
@@ -391,6 +401,29 @@ impl HgIdMutableDeltaStore for LfsStore {
     fn flush(&self) -> Result<Option<PathBuf>> {
         self.inner.write().pointers.0.flush()?;
         Ok(None)
+    }
+}
+
+impl From<LfsPointersEntry> for ContentMetadata {
+    fn from(pointer: LfsPointersEntry) -> Self {
+        ContentMetadata {
+            size: pointer.size as usize,
+            hash: pointer.content_hash,
+            is_binary: pointer.is_binary,
+        }
+    }
+}
+
+impl ContentDataStore for LfsStore {
+    fn blob(&self, key: &StoreKey) -> Result<Option<Bytes>> {
+        Ok(self.blob_impl(key)?.map(|(_, blob)| blob))
+    }
+
+    fn metadata(&self, key: &StoreKey) -> Result<Option<ContentMetadata>> {
+        let inner = self.inner.read();
+        let pointer = inner.pointers.entry(key)?;
+
+        Ok(pointer.map(Into::into))
     }
 }
 
@@ -1209,6 +1242,56 @@ mod tests {
         };
 
         assert_eq!(remotedatastore.get_delta(&key)?, Some(expected_delta));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_blob() -> Result<()> {
+        let dir = TempDir::new()?;
+        let store = LfsStore::shared(&dir)?;
+
+        let data = Bytes::from(&[1, 2, 3, 4][..]);
+        let k1 = key("a", "2");
+        let delta = Delta {
+            data,
+            base: None,
+            key: k1.clone(),
+        };
+
+        store.add(&delta, &Default::default())?;
+
+        let blob = store.blob(&StoreKey::from(k1))?;
+        assert_eq!(blob, Some(delta.data));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_metadata() -> Result<()> {
+        let dir = TempDir::new()?;
+        let store = LfsStore::shared(&dir)?;
+
+        let k1 = key("a", "2");
+        let data = Bytes::from(&[1, 2, 3, 4][..]);
+        let hash = ContentHash::sha256(&data)?;
+        let delta = Delta {
+            data,
+            base: None,
+            key: k1.clone(),
+        };
+
+        store.add(&delta, &Default::default())?;
+
+        let metadata = store.metadata(&StoreKey::from(k1))?;
+        assert_eq!(
+            metadata,
+            Some(ContentMetadata {
+                size: 4,
+                is_binary: false,
+                hash,
+            })
+        );
 
         Ok(())
     }
