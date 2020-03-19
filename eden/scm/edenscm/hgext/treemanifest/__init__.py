@@ -612,7 +612,17 @@ def wraprepo(repo):
 
                 start = util.timer()
                 with self.ui.timesection("getdesignatednodes"):
-                    _gettrees(self, conn.peer, "", mfnodes, [], directories, start, 1)
+                    _gettrees(
+                        self,
+                        conn.peer,
+                        "",
+                        mfnodes,
+                        [],
+                        directories,
+                        start,
+                        depth=1,
+                        ondemandfetch=True,
+                    )
 
             return True
 
@@ -2002,7 +2012,17 @@ def _prefetchonlytrees(repo, opts):
     repo.prefetchtrees(mfnodes, basemfnodes=basemfnode)
 
 
-def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start, depth):
+def _gettrees(
+    repo,
+    remote,
+    rootdir,
+    mfnodes,
+    basemfnodes,
+    directories,
+    start,
+    depth,
+    ondemandfetch=False,
+):
     if "gettreepack" not in shallowutil.peercapabilities(remote):
         raise error.Abort(_("missing gettreepack capability on remote"))
     bundle = remote.gettreepack(rootdir, mfnodes, basemfnodes, directories, depth)
@@ -2014,15 +2034,14 @@ def _gettrees(repo, remote, rootdir, mfnodes, basemfnodes, directories, start, d
         count = 0
         missingnodes = set(mfnodes)
 
-        # If we're doing on-demand tree fetching, this means that we are not trying
-        # to fetch complete trees. Consequently, the set of mfnodes passed in are not
-        # all different versions of the same root directory -- instead they correspond
-        # to individual subdirectories within a single tree, which we are explicitly
-        # not downloading in its entirety. This means we should not check the directory
-        # path when checking for missing nodes in the response.
-        ondemandfetch = repo.ui.configbool("treemanifest", "ondemandfetch")
-
         for reply in receivednodes:
+            # If we're doing on-demand tree fetching, this means that we are not
+            # trying to fetch complete trees. Consequently, the set of mfnodes
+            # passed in are not all different versions of the same root
+            # directory -- instead they correspond to individual subdirectories
+            # within a single tree, which we are explicitly not downloading in
+            # its entirety. This means we should not check the directory path
+            # when checking for missing nodes in the response.
             if ondemandfetch:
                 missingnodes.difference_update(n for d, n in reply)
             else:
