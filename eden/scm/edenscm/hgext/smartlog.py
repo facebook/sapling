@@ -626,7 +626,7 @@ def getrevs(ui, repo, masterstring, **opts):
         headspec = revsetlang.formatspec("%lr", headrevs)
     else:
         if opts.get("all"):
-            datefilter = "all()"
+            datefilter = "_all()"
         else:
             before = ui.config("smartlog", "hide-before")
             if before:

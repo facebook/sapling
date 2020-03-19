@@ -1218,6 +1218,12 @@ def getall(repo, subset, x):
     return subset & spanset(repo)  # drop "null" if any
 
 
+@predicate("_all()", safe=True)
+def getall(repo, subset, x):
+    """All changesets regardless of visibility"""
+    return subset
+
+
 @predicate("grep(regex)", weight=10)
 def grep(repo, subset, x):
     """Like ``keyword(string)`` but accepts a regex. Use ``grep(r'...')``
