@@ -468,7 +468,10 @@ fn report_delay_and_remove_finished_updaters(
         *live_updaters = new_updaters;
     });
 
-    let counter_name = format!("warm_bookmark_cache.{}.max_staleness_secs", reponame,);
+    let counter_name = format!(
+        "mononoke.warm_bookmark_cache.{}.max_staleness_secs",
+        reponame,
+    );
     get_service_data_singleton(ctx.fb).set_counter(&counter_name, max_staleness as i64);
 }
 
