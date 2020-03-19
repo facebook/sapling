@@ -12,6 +12,7 @@ use crate::{errors, Alias, FetchKey, FilestoreConfig, StoreRequest};
 use super::failing_blobstore::{FailingBlobstore, FailingBlobstoreError};
 use anyhow::{Error, Result};
 use assert_matches::assert_matches;
+use blobstore::Blobstore;
 use bytes::{Bytes, BytesMut};
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -20,7 +21,7 @@ use futures_old::{
     stream::{self, Stream},
 };
 use lazy_static::lazy_static;
-use mononoke_types::{hash, typed_hash::MononokeId, ContentMetadata, ContentMetadataId};
+use mononoke_types::{hash, typed_hash::MononokeId, ContentId, ContentMetadata, ContentMetadataId};
 use mononoke_types_mocks::contentid::ONES_CTID;
 
 const HELLO_WORLD: &'static [u8] = b"hello, world";
@@ -286,17 +287,7 @@ fn filestore_chunked_put_get_nested(fb: FacebookInit) -> Result<()> {
         stream::once(Ok(Bytes::from(part_data))),
     ))?;
 
-    // Verify that we can still read the full thing.
-    let res = rt.block_on(
-        filestore::fetch(&blob, ctx, &FetchKey::Canonical(full_id))
-            .map(|maybe_str| maybe_str.map(|s| s.collect()))
-            .flatten(),
-    );
-
-    let expected: Vec<_> = vec!["foo", "bar"].into_iter().map(Bytes::from).collect();
-
-    println!("res = {:#?}", res);
-    assert_eq!(res?, Some(expected));
+    assert_fetches_as(&mut rt, ctx, &blob, full_id, vec!["foo", "bar"])?;
     Ok(())
 }
 
@@ -982,40 +973,23 @@ fn filestore_test_rechunk(fb: FacebookInit) -> Result<()> {
         stream::once(Ok(Bytes::from(full_data))),
     ))?;
 
-    // Verify that the chunks are 3 bytes in size.
-    let res = rt.block_on(
-        filestore::fetch(&blob, ctx.clone(), &FetchKey::Canonical(full_id))
-            .map(|maybe_str| maybe_str.map(|s| s.collect()))
-            .flatten(),
-    );
-
-    let expected: Vec<_> = vec!["foo", "bar"].into_iter().map(Bytes::from).collect();
-
-    assert_eq!(res?, Some(expected));
+    assert_fetches_as(&mut rt, ctx.clone(), &blob, full_id, vec!["foo", "bar"])?;
 
     // Rechunk the file into 1 byte sections
-    rt.block_on(filestore::rechunk::rechunk(
+    rt.block_on(filestore::rechunk::force_rechunk(
         blob.clone(),
         small,
         ctx.clone(),
         full_id,
     ))?;
 
-    // Verify that we can still read the full thing.
-    let res = rt.block_on(
-        filestore::fetch(&blob, ctx, &FetchKey::Canonical(full_id))
-            .map(|maybe_str| maybe_str.map(|s| s.collect()))
-            .flatten(),
-    );
-
-    let expected: Vec<_> = vec!["f", "o", "o", "b", "a", "r"]
-        .into_iter()
-        .map(Bytes::from)
-        .collect();
-
-    println!("res = {:#?}", res);
-    assert_eq!(res?, Some(expected));
-    Ok(())
+    assert_fetches_as(
+        &mut rt,
+        ctx,
+        &blob,
+        full_id,
+        vec!["f", "o", "o", "b", "a", "r"],
+    )
 }
 
 #[fbinit::test]
@@ -1047,40 +1021,23 @@ fn filestore_test_rechunk_larger(fb: FacebookInit) -> Result<()> {
         stream::once(Ok(Bytes::from(full_data))),
     ))?;
 
-    // Verify that the chunks are 1 byte in size.
-    let res = rt.block_on(
-        filestore::fetch(&blob, ctx.clone(), &FetchKey::Canonical(full_id))
-            .map(|maybe_str| maybe_str.map(|s| s.collect()))
-            .flatten(),
-    );
-
-    let expected: Vec<_> = vec!["f", "o", "o", "b", "a", "r"]
-        .into_iter()
-        .map(Bytes::from)
-        .collect();
-
-    assert_eq!(res?, Some(expected));
+    assert_fetches_as(
+        &mut rt,
+        ctx.clone(),
+        &blob,
+        full_id,
+        vec!["f", "o", "o", "b", "a", "r"],
+    )?;
 
     // Rechunk the file into 3 byte sections
-    rt.block_on(filestore::rechunk::rechunk(
+    rt.block_on(filestore::rechunk::force_rechunk(
         blob.clone(),
         large,
         ctx.clone(),
         full_id,
     ))?;
 
-    // Verify that we can still read the full thing.
-    let res = rt.block_on(
-        filestore::fetch(&blob, ctx, &FetchKey::Canonical(full_id))
-            .map(|maybe_str| maybe_str.map(|s| s.collect()))
-            .flatten(),
-    );
-
-    let expected: Vec<_> = vec!["foo", "bar"].into_iter().map(Bytes::from).collect();
-
-    println!("res = {:#?}", res);
-    assert_eq!(res?, Some(expected));
-    Ok(())
+    assert_fetches_as(&mut rt, ctx, &blob, full_id, vec!["foo", "bar"])
 }
 
 #[fbinit::test]
@@ -1114,28 +1071,20 @@ fn filestore_test_rechunk_unchunked(fb: FacebookInit) -> Result<()> {
     ))?;
 
     // Rechunk the file into 1 byte sections
-    rt.block_on(filestore::rechunk::rechunk(
+    rt.block_on(filestore::rechunk::force_rechunk(
         blob.clone(),
         small,
         ctx.clone(),
         full_id,
     ))?;
 
-    // Verify that we can still read the full thing.
-    let res = rt.block_on(
-        filestore::fetch(&blob, ctx, &FetchKey::Canonical(full_id))
-            .map(|maybe_str| maybe_str.map(|s| s.collect()))
-            .flatten(),
-    );
-
-    let expected: Vec<_> = vec!["f", "o", "o", "b", "a", "r"]
-        .into_iter()
-        .map(Bytes::from)
-        .collect();
-
-    println!("res = {:#?}", res);
-    assert_eq!(res?, Some(expected));
-    Ok(())
+    assert_fetches_as(
+        &mut rt,
+        ctx,
+        &blob,
+        full_id,
+        vec!["f", "o", "o", "b", "a", "r"],
+    )
 }
 
 #[fbinit::test]
@@ -1154,7 +1103,7 @@ fn filestore_test_rechunk_missing_content(fb: FacebookInit) -> Result<()> {
     let full_id = canonical(full_data);
 
     // Attempt to rechunk the file into 1 byte sections
-    let res = rt.block_on(filestore::rechunk::rechunk(
+    let res = rt.block_on(filestore::rechunk::force_rechunk(
         blob.clone(),
         conf,
         ctx.clone(),
@@ -1214,5 +1163,203 @@ fn filestore_chunked_put_get_with_size(fb: FacebookInit) -> Result<()> {
 
     assert_eq!(bytes?, Bytes::from(HELLO_WORLD));
     assert_eq!(size, HELLO_WORLD_LENGTH);
+    Ok(())
+}
+
+#[fbinit::test]
+/// Test a case, where both old and new filestore config do not require
+/// chunking of the file (e.g. file size is smaller than a single chunk)
+fn filestore_test_rechunk_if_needed_tiny_unchunked_file(fb: FacebookInit) -> Result<()> {
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
+
+    let blob = memblob::LazyMemblob::new();
+
+    let large1 = FilestoreConfig {
+        chunk_size: Some(100),
+        concurrency: 5,
+    };
+    let large2 = FilestoreConfig {
+        chunk_size: Some(200),
+        concurrency: 5,
+    };
+    let ctx = CoreContext::test_mock(fb);
+
+    let full_data = &b"foobar"[..];
+    let full_key = request(full_data);
+    let full_id = canonical(full_data);
+
+    // Don't chunk
+    rt.block_on(filestore::store(
+        blob.clone(),
+        large1,
+        ctx.clone(),
+        &full_key,
+        stream::once(Ok(Bytes::from(full_data))),
+    ))?;
+
+    assert_fetches_as(&mut rt, ctx.clone(), &blob, full_id, vec!["foobar"])?;
+
+    // We expect that rechunk is not needed
+    rt.block_on(filestore::rechunk::rechunk(
+        FailingBlobstore::new(blob.clone(), 1.0, 0.0),
+        large2,
+        ctx.clone(),
+        full_id,
+    ))?;
+
+    assert_fetches_as(&mut rt, ctx, &blob, full_id, vec!["foobar"])
+}
+
+#[fbinit::test]
+fn filestore_test_rechunk_if_needed_large_unchunked_file(fb: FacebookInit) -> Result<()> {
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
+
+    let blob = memblob::LazyMemblob::new();
+
+    let large = FilestoreConfig {
+        chunk_size: Some(100),
+        concurrency: 5,
+    };
+    let small = FilestoreConfig {
+        chunk_size: Some(1),
+        concurrency: 5,
+    };
+    let ctx = CoreContext::test_mock(fb);
+
+    let full_data = &b"foobar"[..];
+    let full_key = request(full_data);
+    let full_id = canonical(full_data);
+
+    // Don't chunk
+    rt.block_on(filestore::store(
+        blob.clone(),
+        large,
+        ctx.clone(),
+        &full_key,
+        stream::once(Ok(Bytes::from(full_data))),
+    ))?;
+
+    assert_fetches_as(&mut rt, ctx.clone(), &blob, full_id, vec!["foobar"])?;
+
+    // We expect the rechunk is needed
+    let (_, rechunked) = rt.block_on(filestore::rechunk::rechunk(
+        blob.clone(),
+        small,
+        ctx.clone(),
+        full_id,
+    ))?;
+    assert!(rechunked);
+
+    assert_fetches_as(
+        &mut rt,
+        ctx,
+        &blob,
+        full_id,
+        vec!["f", "o", "o", "b", "a", "r"],
+    )
+}
+
+#[fbinit::test]
+fn filestore_test_rechunk_if_needed_large_chunks(fb: FacebookInit) -> Result<()> {
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
+
+    let blob = memblob::LazyMemblob::new();
+
+    let large = FilestoreConfig {
+        chunk_size: Some(5),
+        concurrency: 5,
+    };
+    let small = FilestoreConfig {
+        chunk_size: Some(1),
+        concurrency: 5,
+    };
+    let ctx = CoreContext::test_mock(fb);
+
+    let full_data = &b"foobar"[..];
+    let full_key = request(full_data);
+    let full_id = canonical(full_data);
+
+    // Chunk with larger chunks
+    rt.block_on(filestore::store(
+        blob.clone(),
+        large,
+        ctx.clone(),
+        &full_key,
+        stream::once(Ok(Bytes::from(full_data))),
+    ))?;
+
+    assert_fetches_as(&mut rt, ctx.clone(), &blob, full_id, vec!["fooba", "r"])?;
+
+    // We expect the rechunk is needed
+    let (_, rechunked) = rt.block_on(filestore::rechunk::rechunk(
+        blob.clone(),
+        small,
+        ctx.clone(),
+        full_id,
+    ))?;
+    assert!(rechunked);
+
+    assert_fetches_as(
+        &mut rt,
+        ctx,
+        &blob,
+        full_id,
+        vec!["f", "o", "o", "b", "a", "r"],
+    )
+}
+
+#[fbinit::test]
+fn filestore_test_rechunk_if_needed_tiny_chunks(fb: FacebookInit) -> Result<()> {
+    let mut rt = tokio_compat::runtime::Runtime::new()?;
+
+    let blob = memblob::LazyMemblob::new();
+
+    let large = FilestoreConfig {
+        chunk_size: Some(4),
+        concurrency: 5,
+    };
+    let ctx = CoreContext::test_mock(fb);
+
+    let full_data = &b"foobar"[..];
+    let full_key = request(full_data);
+    let full_id = canonical(full_data);
+
+    // Chunk
+    rt.block_on(filestore::store(
+        blob.clone(),
+        large,
+        ctx.clone(),
+        &full_key,
+        stream::once(Ok(Bytes::from(full_data))),
+    ))?;
+
+    assert_fetches_as(&mut rt, ctx.clone(), &blob, full_id, vec!["foob", "ar"])?;
+
+    // We expect the rechunk is not needed
+    let (_, rechunked) = rt.block_on(filestore::rechunk::rechunk(
+        FailingBlobstore::new(blob.clone(), 1.0, 0.0),
+        large,
+        ctx.clone(),
+        full_id,
+    ))?;
+    assert!(!rechunked);
+    assert_fetches_as(&mut rt, ctx, &blob, full_id, vec!["foob", "ar"])
+}
+
+fn assert_fetches_as<B: Blobstore + Clone>(
+    rt: &mut tokio_compat::runtime::Runtime,
+    ctx: CoreContext,
+    blobstore: &B,
+    content_id: ContentId,
+    expected: Vec<&'static str>,
+) -> Result<()> {
+    let res = rt.block_on(
+        filestore::fetch(blobstore, ctx, &FetchKey::Canonical(content_id))
+            .map(|maybe_stream| maybe_stream.map(|s| s.collect()))
+            .flatten(),
+    );
+    println!("res = {:#?}", res);
+    let expected = expected.into_iter().map(Bytes::from).collect();
+    assert_eq!(res?, Some(expected));
     Ok(())
 }

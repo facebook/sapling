@@ -37,7 +37,7 @@ mod spawn;
 mod streamhash;
 
 pub use fetch_key::{Alias, AliasBlob, FetchKey};
-pub use rechunk::rechunk;
+pub use rechunk::{force_rechunk, rechunk};
 
 #[cfg(test)]
 mod test;

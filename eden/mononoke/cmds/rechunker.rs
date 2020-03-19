@@ -81,7 +81,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 async move {
                     let env = fid.load(ctx.clone(), blobrepo.blobstore()).compat().await?;
                     let content_id = env.content_id();
-                    filestore::rechunk(
+                    filestore::force_rechunk(
                         blobrepo.get_blobstore(),
                         blobrepo.filestore_config().clone(),
                         ctx,

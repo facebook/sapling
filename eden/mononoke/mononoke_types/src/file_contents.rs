@@ -192,6 +192,14 @@ impl ChunkedFileContents {
         self.chunks
     }
 
+    pub fn num_chunks(&self) -> usize {
+        self.chunks.len()
+    }
+
+    pub fn iter_chunks(&self) -> impl Iterator<Item = &ContentChunkPointer> {
+        self.chunks.iter()
+    }
+
     pub fn content_id(&self) -> ContentId {
         self.content_id
     }
