@@ -24,7 +24,7 @@ use crate::{
         strip_metadata, Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore,
     },
     indexedlogdatastore::IndexedLogHgIdDataStore,
-    lfs::{LfsMultiplexer, LfsStore},
+    lfs::{LfsMultiplexer, LfsRemote, LfsStore},
     localstore::LocalStore,
     memcache::MemcacheStore,
     multiplexstore::MultiplexDeltaStore,
@@ -222,18 +222,20 @@ impl<'a> ContentStoreBuilder<'a> {
         // and the number of requests satisfied by the shared cache to be significantly higher than
         // ones in the local store.
 
-        let lfs_threshold = if self.config.get_or_default::<bool>("remotefilelog", "lfs")? {
+        let enable_lfs = self.config.get_or_default::<bool>("remotefilelog", "lfs")?;
+
+        let lfs_threshold = if enable_lfs {
             self.config.get_opt::<ByteCount>("lfs", "threshold")?
         } else {
             None
         };
 
-        let shared_lfs_store = LfsStore::shared(&cache_path)?;
+        let shared_lfs_store = Arc::new(LfsStore::shared(&cache_path)?);
 
         let shared_store: Arc<dyn HgIdMutableDeltaStore> =
             if let Some(lfs_threshold) = lfs_threshold {
                 let lfs_store = Arc::new(LfsMultiplexer::new(
-                    shared_lfs_store,
+                    shared_lfs_store.clone(),
                     shared_pack_store,
                     lfs_threshold.value() as usize,
                 ));
@@ -243,7 +245,7 @@ impl<'a> ContentStoreBuilder<'a> {
                 lfs_store
             } else {
                 datastore.add(shared_pack_store.clone());
-                datastore.add(Arc::new(shared_lfs_store));
+                datastore.add(shared_lfs_store.clone());
                 shared_pack_store
             };
 
@@ -254,7 +256,7 @@ impl<'a> ContentStoreBuilder<'a> {
                     CorruptionPolicy::IGNORE,
                 )?);
 
-                let local_lfs_store = LfsStore::local(&local_path.unwrap())?;
+                let local_lfs_store = Arc::new(LfsStore::local(&local_path.unwrap())?);
                 let local_store: Arc<dyn HgIdMutableDeltaStore> =
                     if let Some(lfs_threshold) = lfs_threshold {
                         let local_store = Arc::new(LfsMultiplexer::new(
@@ -268,7 +270,7 @@ impl<'a> ContentStoreBuilder<'a> {
                         local_store
                     } else {
                         datastore.add(local_pack_store.clone());
-                        datastore.add(Arc::new(local_lfs_store));
+                        datastore.add(local_lfs_store);
                         local_pack_store
                     };
 
@@ -308,18 +310,26 @@ impl<'a> ContentStoreBuilder<'a> {
                     (None, shared_store.clone())
                 };
 
-                let store = remotestore.datastore(shared_store);
+                let mut remotestores = UnionHgIdDataStore::new();
 
-                let remotestores = if let Some(cache) = cache {
-                    let mut remotestores = UnionHgIdDataStore::new();
+                // First, the fast memcache store
+                if let Some(cache) = cache {
                     remotestores.add(cache.clone());
-                    remotestores.add(store.clone());
-                    Arc::new(remotestores)
-                } else {
-                    store
                 };
 
-                datastore.add(Arc::new(remotestores.clone()));
+                // Second, the slower remotestore. For LFS blobs, the LFS pointers will be fetched
+                // at this step and be written to the LFS store.
+                remotestores.add(remotestore.datastore(shared_store.clone()));
+
+                // Third, the LFS remote store. The previously fetched LFS pointers will be used to
+                // fetch the actual blobs in this store.
+                if enable_lfs {
+                    let lfs_remote_store = LfsRemote::new(shared_lfs_store.clone(), self.config)?;
+                    remotestores.add(lfs_remote_store.datastore(shared_store.clone()));
+                }
+
+                let remotestores = Arc::new(remotestores);
+                datastore.add(remotestores.clone());
                 Some(remotestores)
             } else {
                 None
@@ -338,15 +348,15 @@ impl<'a> ContentStoreBuilder<'a> {
 mod tests {
     use super::*;
 
-    use std::collections::HashMap;
+    use std::{collections::HashMap, str::FromStr};
 
     use bytes::Bytes;
     use tempfile::TempDir;
 
-    use types::testutil::*;
+    use types::{testutil::*, Sha256};
     use util::path::create_dir;
 
-    use crate::testutil::{make_config, FakeHgIdRemoteStore};
+    use crate::testutil::{make_config, make_lfs_config, FakeHgIdRemoteStore};
 
     #[test]
     fn test_new() -> Result<()> {
@@ -625,9 +635,7 @@ mod tests {
     fn test_lfs_multiplexer() -> Result<()> {
         let cachedir = TempDir::new()?;
         let localdir = TempDir::new()?;
-        let mut config = make_config(&cachedir);
-
-        config.set("remotefilelog", "lfs", Some("true"), &Default::default());
+        let config = make_lfs_config(&cachedir);
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -642,6 +650,42 @@ mod tests {
 
         let lfs_store = LfsStore::local(&localdir)?;
         assert_eq!(lfs_store.get_delta(&k1)?, Some(delta));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_lfs_remote() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let config = make_lfs_config(&cachedir);
+
+        let k = key("a", "1");
+        let sha256 =
+            Sha256::from_str("fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9")?;
+        let size = 6;
+
+        let pointer = format!(
+            "version https://git-lfs.github.com/spec/v1\noid sha256:{}\nsize {}\nx-is-binary 0\n",
+            sha256.to_hex(),
+            size
+        );
+
+        let data = Bytes::from(pointer);
+
+        let mut map = HashMap::new();
+        map.insert(k.clone(), (data, Some(0x2000)));
+        let mut remotestore = FakeHgIdRemoteStore::new();
+        remotestore.data(map);
+
+        let store = ContentStoreBuilder::new(&config)
+            .local_path(&localdir)
+            .remotestore(Box::new(remotestore))
+            .build()?;
+
+        let data = store.get(&k)?.map(|vec| Bytes::from(vec));
+
+        assert_eq!(data, Some(Bytes::from(&b"master"[..])));
 
         Ok(())
     }

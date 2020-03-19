@@ -9,6 +9,7 @@ use std::{
     convert::TryInto,
     fs::File,
     io::{ErrorKind, Read, Write},
+    iter,
     path::{Path, PathBuf},
     str::{self, FromStr},
     sync::Arc,
@@ -16,21 +17,32 @@ use std::{
 
 use anyhow::{bail, ensure, Result};
 use bytes::{Bytes, BytesMut};
-use parking_lot::RwLock;
+use futures::stream::{iter, StreamExt};
+use parking_lot::{Mutex, RwLock};
+use reqwest::{Client, IntoUrl, Method, RequestBuilder, Url};
 use serde_derive::{Deserialize, Serialize};
+use tokio::runtime::Runtime;
 
+use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 use indexedlog::log::IndexOutput;
+use lfs_protocol::{
+    ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch, Sha256 as LfsSha256,
+};
 use mincode::{deserialize, serialize};
 use types::{HgId, Key, RepoPath, Sha256};
 use util::path::create_dir;
 
 use crate::{
-    datastore::{strip_metadata, Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata},
+    datastore::{
+        strip_metadata, Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata, RemoteDataStore,
+    },
+    historystore::{HgIdMutableHistoryStore, RemoteHistoryStore},
     indexedlogutil::{LookupIter, Store, StoreOpenOptions},
     localstore::LocalStore,
+    remotestore::HgIdRemoteStore,
     types::{ContentHash, StoreKey},
     uniondatastore::UnionHgIdDataStore,
-    util::{get_lfs_blobs_path, get_lfs_pointers_path},
+    util::{get_lfs_blobs_path, get_lfs_pointers_path, get_str_config},
 };
 
 /// The `LfsPointersStore` holds the mapping between a `HgId` and the content hash (sha256) of the LFS blob.
@@ -43,6 +55,17 @@ struct LfsBlobsStore(PathBuf, bool);
 struct LfsStoreInner {
     pointers: LfsPointersStore,
     blobs: LfsBlobsStore,
+}
+
+#[derive(Clone)]
+pub struct LfsRemote {
+    url: Url,
+    user_agent: String,
+    concurrent_fetches: usize,
+    client: Client,
+    rt: Arc<Mutex<Runtime>>,
+
+    store: Arc<LfsStore>,
 }
 
 /// Main LFS store to be used within the `ContentStore`.
@@ -374,9 +397,11 @@ impl HgIdMutableDeltaStore for LfsStore {
 impl LfsMultiplexer {
     /// Build an `LfsMultiplexer`. All blobs bigger than `threshold` will be written to the `lfs`
     /// store, the others to the `non_lfs` store.
-    pub fn new(lfs: LfsStore, non_lfs: Arc<dyn HgIdMutableDeltaStore>, threshold: usize) -> Self {
-        let lfs = Arc::new(lfs);
-
+    pub fn new(
+        lfs: Arc<LfsStore>,
+        non_lfs: Arc<dyn HgIdMutableDeltaStore>,
+        threshold: usize,
+    ) -> Self {
         let mut union_store = UnionHgIdDataStore::new();
         union_store.add(non_lfs.clone());
         union_store.add(lfs.clone());
@@ -522,6 +547,210 @@ impl HgIdMutableDeltaStore for LfsMultiplexer {
     }
 }
 
+impl LfsRemote {
+    pub fn new(store: Arc<LfsStore>, config: &ConfigSet) -> Result<Self> {
+        let mut url = get_str_config(config, "lfs", "url")?;
+        // A trailing '/' needs to be present so that `Url::join` doesn't remove the reponame
+        // present at the end of the config.
+        url.push('/');
+
+        let user_agent = config.get_or("experimental", "lfs.user-agent", || {
+            "mercurial/revisionstore".to_string()
+        })?;
+
+        let concurrent_fetches = config.get_or("lfs", "concurrentfetches", || 1)?;
+
+        let url = Url::parse(&url)?;
+
+        if !["http", "https"].contains(&url.scheme()) {
+            bail!("Unsupported url: {}", url);
+        }
+
+        let rt = Arc::new(Mutex::new(Runtime::new()?));
+        let client = Client::new();
+        Ok(Self {
+            url,
+            user_agent,
+            concurrent_fetches,
+            client,
+            rt,
+            store,
+        })
+    }
+
+    fn make_request(&self, method: Method, url: impl IntoUrl) -> RequestBuilder {
+        self.client
+            .request(method, url)
+            .header("Accept", "application/vnd.git-lfs+json")
+            .header("Content-Type", "application/vnd.git-lfs+json")
+            .header("User-Agent", &self.user_agent)
+    }
+
+    /// Fetch blobs from the LFS server.
+    ///
+    /// The protocol is described at: https://github.com/git-lfs/git-lfs/blob/master/docs/api/batch.md
+    fn batch(
+        &self,
+        objs: &[(Sha256, usize)],
+    ) -> Result<impl Iterator<Item = Result<(Sha256, Bytes)>>> {
+        let objects = objs
+            .iter()
+            .map(|(oid, size)| RequestObject {
+                oid: LfsSha256(oid.into_inner()),
+                size: *size as u64,
+            })
+            .collect::<Vec<_>>();
+
+        let batch = RequestBatch {
+            operation: Operation::Download,
+            transfers: vec![Default::default()],
+            r#ref: None,
+            objects,
+        };
+
+        let batch_json = serde_json::to_string(&batch)?;
+
+        let req = self
+            .make_request(Method::POST, self.url.join("objects/batch")?)
+            .body(batch_json)
+            .send();
+
+        let response = self
+            .rt
+            .lock()
+            .block_on(async { req.await?.error_for_status()?.bytes().await })?;
+
+        let response: ResponseBatch = serde_json::from_slice(response.as_ref())?;
+
+        let mut futures = Vec::new();
+
+        for object in response.objects {
+            let oid = object.object.oid;
+            let actions = match object.status {
+                ObjectStatus::Ok {
+                    authenticated: _,
+                    actions,
+                } => actions,
+                ObjectStatus::Err { error: e } => bail!("Couldn't fetch oid {}: {:?}", oid, e),
+            };
+
+            if let Some(action) = actions.get(&Operation::Download) {
+                let mut req = self.make_request(Method::GET, &action.href.to_string());
+                if let Some(header) = action.header.as_ref() {
+                    for (key, val) in header {
+                        req = req.header(key, val)
+                    }
+                }
+
+                let fut =
+                    async move { Ok((oid, req.send().await?.error_for_status()?.bytes().await?)) };
+                futures.push(fut);
+            }
+        }
+
+        // Request a couple of blobs concurrently.
+        let mut stream = iter(futures).buffer_unordered(self.concurrent_fetches);
+
+        let rt = self.rt.clone();
+        Ok(iter::from_fn(move || {
+            let next = stream.next();
+            rt.lock()
+                .block_on(async { next.await })
+                .map(|res| res.map(|(sha, bytes)| ((&sha.0).into(), bytes)))
+        }))
+    }
+}
+
+impl HgIdRemoteStore for LfsRemote {
+    fn datastore(&self, store: Arc<dyn HgIdMutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+        Arc::new(LfsRemoteStore {
+            store,
+            remote: self.clone(),
+        })
+    }
+
+    fn historystore(
+        &self,
+        _store: Arc<dyn HgIdMutableHistoryStore>,
+    ) -> Arc<dyn RemoteHistoryStore> {
+        unreachable!()
+    }
+}
+
+struct LfsRemoteStore {
+    store: Arc<dyn HgIdMutableDeltaStore>,
+    remote: LfsRemote,
+}
+
+impl RemoteDataStore for LfsRemoteStore {
+    fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
+        let objs = keys
+            .iter()
+            .map(|k| {
+                let guard = self.remote.store.inner.read();
+
+                let pointer = match k {
+                    StoreKey::HgId(key) => guard.pointers.get(key)?,
+                    StoreKey::Content(hash) => guard.pointers.get_by_content(hash)?,
+                };
+
+                if let Some(pointer) = pointer {
+                    let oid = match pointer.content_hash {
+                        ContentHash::Sha256(hash) => hash,
+                    };
+
+                    Ok(Some((oid, pointer.size.try_into()?)))
+                } else {
+                    Ok(None)
+                }
+            })
+            .filter_map(|res| res.transpose())
+            .collect::<Result<Vec<_>>>()?;
+
+        for response in self.remote.batch(&objs)? {
+            let (sha256, content) = response?;
+            self.remote
+                .store
+                .inner
+                .write()
+                .blobs
+                .add(&sha256, content)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl HgIdDataStore for LfsRemoteStore {
+    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
+        unreachable!();
+    }
+
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
+        match self.prefetch(&[StoreKey::from(key)]) {
+            Ok(()) => self.store.get_delta(key),
+            Err(_) => Ok(None),
+        }
+    }
+
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
+        match self.prefetch(&[StoreKey::from(key)]) {
+            Ok(()) => self.store.get_delta_chain(key),
+            Err(_) => Ok(None),
+        }
+    }
+
+    fn get_meta(&self, _key: &Key) -> Result<Option<Metadata>> {
+        unreachable!();
+    }
+}
+
+impl LocalStore for LfsRemoteStore {
+    fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        Ok(keys.to_vec())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -533,7 +762,7 @@ mod tests {
 
     use types::testutil::*;
 
-    use crate::indexedlogdatastore::IndexedLogHgIdDataStore;
+    use crate::{indexedlogdatastore::IndexedLogHgIdDataStore, testutil::make_lfs_config};
 
     #[test]
     fn test_new_shared() -> Result<()> {
@@ -680,7 +909,7 @@ mod tests {
     #[test]
     fn test_multiplexer_smaller_than_threshold() -> Result<()> {
         let dir = TempDir::new()?;
-        let lfs = LfsStore::shared(&dir)?;
+        let lfs = Arc::new(LfsStore::shared(&dir)?);
 
         let dir = TempDir::new()?;
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
@@ -704,7 +933,7 @@ mod tests {
     #[test]
     fn test_multiplexer_larger_than_threshold() -> Result<()> {
         let dir = TempDir::new()?;
-        let lfs = LfsStore::shared(&dir)?;
+        let lfs = Arc::new(LfsStore::shared(&dir)?);
 
         let dir = TempDir::new()?;
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
@@ -731,7 +960,7 @@ mod tests {
     #[test]
     fn test_multiplexer_add_pointer() -> Result<()> {
         let lfsdir = TempDir::new()?;
-        let lfs = LfsStore::shared(&lfsdir)?;
+        let lfs = Arc::new(LfsStore::shared(&lfsdir)?);
 
         let dir = TempDir::new()?;
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
@@ -790,7 +1019,7 @@ mod tests {
     #[test]
     fn test_multiplexer_add_copy_from_pointer() -> Result<()> {
         let lfsdir = TempDir::new()?;
-        let lfs = LfsStore::shared(&lfsdir)?;
+        let lfs = Arc::new(LfsStore::shared(&lfsdir)?);
 
         let dir = TempDir::new()?;
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
@@ -852,7 +1081,7 @@ mod tests {
     #[test]
     fn test_multiplexer_blob_with_header() -> Result<()> {
         let lfsdir = TempDir::new()?;
-        let lfs = LfsStore::shared(&lfsdir)?;
+        let lfs = Arc::new(LfsStore::shared(&lfsdir)?);
 
         let dir = TempDir::new()?;
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
@@ -892,6 +1121,94 @@ mod tests {
             &b"\x01\n\x01\n\x01\nTHIS IS A BLOB WITH A HEADER"[..],
         ));
         assert_eq!(read_blob, expected_blob);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_lfs_non_present() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let lfsdir = TempDir::new()?;
+        let lfs = Arc::new(LfsStore::shared(&lfsdir)?);
+
+        let config = make_lfs_config(&cachedir);
+        let remote = LfsRemote::new(lfs, &config)?;
+
+        let blob = (
+            Sha256::from_str("0000000000000000000000000000000000000000000000000000000000000000")?,
+            1,
+            Bytes::from(&b"nothing"[..]),
+        );
+
+        let resp = remote.batch(&[(blob.0, blob.1)]);
+        let err = resp.err().unwrap();
+        assert_eq!(err.to_string(), "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }");
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_lfs_remote() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let lfsdir = TempDir::new()?;
+        let lfs = Arc::new(LfsStore::shared(&lfsdir)?);
+
+        let config = make_lfs_config(&cachedir);
+        let remote = LfsRemote::new(lfs, &config)?;
+
+        let blob1 = (
+            Sha256::from_str("fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9")?,
+            6,
+            Bytes::from(&b"master"[..]),
+        );
+        let blob2 = (
+            Sha256::from_str("ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24")?,
+            6,
+            Bytes::from(&b"1.44.0"[..]),
+        );
+
+        let resp = remote
+            .batch(&[(blob1.0, blob1.1), (blob2.0, blob2.1)])?
+            .collect::<Result<Vec<_>>>()?
+            .sort();
+        assert_eq!(resp, vec![(blob1.0, blob1.2), (blob2.0, blob2.2)].sort());
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_lfs_remote_datastore() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let lfsdir = TempDir::new()?;
+        let lfs = Arc::new(LfsStore::shared(&lfsdir)?);
+
+        let config = make_lfs_config(&cachedir);
+        let remote = LfsRemote::new(lfs.clone(), &config)?;
+
+        let key = key("a/b", "1234");
+
+        let pointer = LfsPointersEntry {
+            hgid: key.hgid.clone(),
+            size: 6,
+            is_binary: false,
+            copy_from: None,
+            content_hash: ContentHash::Sha256(Sha256::from_str(
+                "ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24",
+            )?),
+        };
+
+        // Populate the pointer store. Usually, this would be done via a previous remotestore call.
+        lfs.inner.write().pointers.add(pointer)?;
+
+        let remotedatastore = remote.datastore(lfs.clone());
+
+        let expected_delta = Delta {
+            data: Bytes::from(&b"1.44.0"[..]),
+            base: None,
+            key: key.clone(),
+        };
+
+        assert_eq!(remotedatastore.get_delta(&key)?, Some(expected_delta));
 
         Ok(())
     }

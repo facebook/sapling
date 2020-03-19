@@ -275,7 +275,29 @@ pub fn make_config(dir: impl AsRef<Path>) -> ConfigSet {
         &Default::default(),
     );
 
+    config
+}
+
+pub fn make_lfs_config(dir: impl AsRef<Path>) -> ConfigSet {
+    let mut config = make_config(dir);
+
+    config.set(
+        "lfs",
+        "url",
+        Some("https://mononoke-lfs.internal.tfbnw.net/ovrsource"),
+        &Default::default(),
+    );
+
+    config.set(
+        "experimental",
+        "lfs.user-agent",
+        Some("mercurial/revisionstore/unittests"),
+        &Default::default(),
+    );
+
     config.set("lfs", "threshold", Some("4"), &Default::default());
+
+    config.set("remotefilelog", "lfs", Some("true"), &Default::default());
 
     config
 }

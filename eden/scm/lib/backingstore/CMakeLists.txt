@@ -37,6 +37,15 @@ if (WIN32)
   )
 endif()
 
+# Reqwest links against the security framework.
+if (APPLE)
+  target_link_libraries(
+    backingstore
+    PRIVATE
+    "-framework Security"
+  )
+endif()
+
 install(
   TARGETS backingstore
   EXPORT mercurial
