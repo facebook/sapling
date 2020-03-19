@@ -9,13 +9,13 @@ use crate::{BundleResolverError, PostResolveAction, PostResolvePush, PostResolve
 use anyhow::format_err;
 use cloned::cloned;
 use context::CoreContext;
-use crypto::{digest::Digest, sha2::Sha256};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future::join_all, Future, IntoFuture};
 use limits::types::{RateLimit, RateLimitStatus};
 use mononoke_types::BonsaiChangeset;
 use ratelim::time_window_counter::TimeWindowCounter;
 use scuba_ext::ScubaSampleBuilderExt;
+use sha2::{Digest, Sha256};
 use slog::debug;
 use std::collections::HashMap;
 use std::time::Duration;
@@ -176,6 +176,7 @@ fn dispatch_counter_checks_and_bumps(
 
 fn make_key(prefix: &str, author: &str) -> String {
     let mut hasher = Sha256::new();
-    hasher.input(author.as_ref());
-    format!("{}.{}", prefix, hasher.result_str())
+    hasher.input(author);
+    let key = format!("{}.{}", prefix, hex::encode(hasher.result()));
+    return key;
 }
