@@ -67,20 +67,8 @@ def _getcreds(ui, url):
     return (auth["cert"], auth["key"])
 
 
-def _logconfig(ui):
-    """Log various HTTPS fetching config values for debugging."""
-    ui.log(
-        "edenapi",
-        "",
-        http_data_batch_size=ui.configint("edenapi", "databatchsize"),
-        http_history_batch_size=ui.configint("edenapi", "historybatchsize"),
-        http_enabled=ui.configbool("edenapi", "enabled"),
-    )
-
-
 def _initclient(ui, repo):
     """Initialize a new Eden API client using the user's config."""
-    _logconfig(ui)
     url = _getbaseurl(ui)
     kwargs = {
         "url": url,
