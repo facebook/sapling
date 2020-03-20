@@ -318,12 +318,25 @@ class EdenFS(object):
         """
         Run "eden shutdown" to stop the eden daemon.
         """
-        assert self._process is not None
+        process = self._process
+        assert process is not None
 
-        self.run_cmd("shutdown", "-t", "30")
-        # pyre-fixme[16]: `Optional` has no attribute `wait`.
-        return_code = self._process.wait()
+        # Run "edenfsctl stop" with a timeout of 0 to tell it not to wait for the EdenFS
+        # process to exit.  Since we are running it directly (self._process) we will
+        # need to wait on it.  Depending on exactly how it is being run the process may
+        # not go away until we wait on it.
+        self.run_cmd("stop", "-t", "0")
+
+        # Wait up to 30 seconds for EdenFS to exit.
         self._process = None
+        try:
+            return_code = process.wait(timeout=30)
+        except subprocess.TimeoutExpired:
+            # EdenFS did not exit normally on its own.
+            process.kill()
+            return_code = process.wait(timeout=10)
+            raise Exception("EdenFS did not exit on its own; had to send SIGKILL")
+
         if return_code != 0:
             raise Exception(
                 "eden exited unsuccessfully with status {}".format(return_code)

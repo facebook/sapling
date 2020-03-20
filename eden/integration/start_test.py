@@ -96,7 +96,7 @@ class StartTest(testcase.EdenTestCase):
         self.assertEqual("", proc.stdout)
 
         # If we stop eden, `eden start --if-not-running` should start it
-        self.eden.run_cmd("stop")
+        self.eden.shutdown()
         self.assertFalse(self.eden.is_healthy())
         self.eden.run_cmd("start", "--if-not-running", "--", "--allowRoot")
         self.assertTrue(self.eden.is_healthy())

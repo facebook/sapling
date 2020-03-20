@@ -1696,9 +1696,10 @@ class StopCmd(Subcmd):
             print_stderr("Error: " + str(ex))
             return SHUTDOWN_EXIT_CODE_ERROR
 
-    def __thrift_timeout(self, args: argparse.Namespace) -> Optional[float]:
+    def __thrift_timeout(self, args: argparse.Namespace) -> float:
         if args.timeout == 0:
-            return None
+            # Default to a 15 second timeout on the thrift call
+            return 15.0
         else:
             return args.timeout
 
