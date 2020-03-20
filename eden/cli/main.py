@@ -1297,11 +1297,8 @@ class StartCmd(Subcmd):
     def start(self, args: argparse.Namespace, instance: EdenInstance) -> int:
         if os.name == "nt":
             winproc.start_process(instance, args.daemon_binary, args.edenfs_args)
-
-            # Return success if no is exception is raised
-            return 0
         else:
-            return daemon.exec_daemon(
+            daemon.exec_daemon(
                 instance,
                 args.daemon_binary,
                 args.edenfs_args,
@@ -1311,6 +1308,9 @@ class StartCmd(Subcmd):
                 strace_file=args.strace,
                 foreground=args.foreground,
             )
+
+        # Return success if no is exception is raised
+        return 0
 
     def start_using_systemd(
         self, args: argparse.Namespace, instance: EdenInstance
@@ -1481,7 +1481,7 @@ class RestartCmd(Subcmd):
                 "TODO(T33122320): Implement 'eden restart --graceful'"
             )
         else:
-            return daemon.exec_daemon(
+            return daemon.start_daemon(
                 instance, daemon_binary=self.args.daemon_binary, takeover=True
             )
 
@@ -1492,7 +1492,7 @@ class RestartCmd(Subcmd):
                 instance=instance, daemon_binary=self.args.daemon_binary
             )
         else:
-            return daemon.exec_daemon(instance, daemon_binary=self.args.daemon_binary)
+            return daemon.start_daemon(instance, daemon_binary=self.args.daemon_binary)
 
     def _full_restart(self, instance: EdenInstance, old_pid: int) -> int:
         print(

@@ -182,7 +182,7 @@ def exec_daemon(
     gdb_args: Optional[List[str]] = None,
     strace_file: Optional[str] = None,
     foreground: bool = False,
-) -> int:
+) -> NoReturn:
     """Execute the edenfs daemon.
 
     This method uses os.exec() to replace the current process with the edenfs daemon.
@@ -203,33 +203,25 @@ def exec_daemon(
         print_stderr(f"error: {e}")
         os._exit(1)
 
-    # Call os.setsid() in the child to prevent double-delivering SIGINT
-    # if we are run in a terminal and the user hits Ctrl-C
-    proc = subprocess.Popen(cmd, env=env, preexec_fn=os.setsid)
-
-    while True:
-        try:
-            return proc.wait()
-        except KeyboardInterrupt:
-            # Explicitly forward SIGINT to the child
-            # and keep waiting for it to exit.
-            # We kill the entire child process group, since this mimics
-            # what would normally happen if we had not spawned edenfs
-            # in a separate group from us.  This is also necessary when
-            # running edenfs via sudo, as we won't have permission to
-            # kill the immediate child process (sudo).
-            os.killpg(os.getpgid(proc.pid), signal.SIGINT)
+    os.execve(cmd[0], cmd, env)
+    # Throw an exception just to let mypy know that we should never reach here
+    # and will never return normally.
+    raise Exception("execve should never return")
 
 
 def start_daemon(
     instance: EdenInstance,
     daemon_binary: Optional[str] = None,
     edenfs_args: Optional[List[str]] = None,
+    takeover: bool = False,
 ) -> int:
     """Start the edenfs daemon."""
     try:
         cmd, env = _get_daemon_args(
-            instance=instance, daemon_binary=daemon_binary, edenfs_args=edenfs_args
+            instance=instance,
+            daemon_binary=daemon_binary,
+            edenfs_args=edenfs_args,
+            takeover=takeover,
         )
     except DaemonBinaryNotFound as e:
         print_stderr(f"error: {e}")
