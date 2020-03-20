@@ -88,7 +88,7 @@ class OverlayCmd(subcmd_mod.Subcmd):
 
         return 0
 
-    def _process_root(self, inode_number: int, initial_path: Path):
+    def _process_root(self, inode_number: int, initial_path: Path) -> None:
         output_path: Optional[Path] = None
         if self.args.output_path is not None:
             output_path = Path(self.args.output_path)
