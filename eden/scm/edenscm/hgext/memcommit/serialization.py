@@ -94,7 +94,7 @@ def deserialize(inputstream):
         # type: (BinaryIO, bool) -> Any
         data = readexactly(stream, readunsignedint(stream))
         if utf8decode:
-            data = data.decode("utf-8")
+            return data.decode("utf-8")
         return data
 
     def tobytes(data):
