@@ -18,7 +18,6 @@ use bytes_old::{BufMut as BufMutOld, Bytes as BytesOld, BytesMut as BytesMutOld}
 use cloned::cloned;
 use configerator_cached::ConfigHandle;
 use context::{CoreContext, LoggingContainer, PerfCounterType, SessionContainer};
-use fbwhoami::FbWhoAmI;
 use futures_ext::{
     spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams,
     FutureExt as OldFutureExt, StreamExt, StreamTimeoutError,
@@ -31,6 +30,7 @@ use getbundle_response::{
     create_getbundle_response, DraftsInBundlesPolicy, PhasesPart, SessionLfsParams,
 };
 use hgproto::{GetbundleArgs, GettreepackArgs, HgCommandRes, HgCommands};
+use hostname::get_hostname;
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use load_limiter::Metric;
@@ -901,10 +901,7 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('clienttelemetry')
     fn clienttelemetry(&self, args: HashMap<Vec<u8>, Vec<u8>>) -> HgCommandRes<String> {
-        let hostname = FbWhoAmI::get()
-            .ok()
-            .and_then(|who| who.name.clone())
-            .unwrap_or_else(|| "<no hostname found>".to_owned());
+        let hostname = get_hostname().unwrap_or_else(|_| "<no hostname found>".to_owned());
 
         let (_ctx, mut command_logger) = self.start_command(ops::CLIENTTELEMETRY);
 

@@ -20,7 +20,7 @@ use memcache::{KeyGen, MemcacheClient};
 
 use blobstore::{Blobstore, CountedBlobstore};
 use context::{CoreContext, PerfCounterType};
-use fbwhoami::FbWhoAmI;
+use hostname::get_hostname;
 use mononoke_types::BlobstoreBytes;
 use stats::prelude::*;
 
@@ -122,10 +122,7 @@ impl MemcacheOps {
         lease_type: &'static str,
         backing_store_params: impl ToString,
     ) -> Result<Self, Error> {
-        let hostname = FbWhoAmI::get()?
-            .name
-            .clone()
-            .ok_or(Error::msg("No hostname in fbwhoami"))?;
+        let hostname = get_hostname()?;
 
         let blob_key = format!(
             "scm.mononoke.blobstore.{}.{}",

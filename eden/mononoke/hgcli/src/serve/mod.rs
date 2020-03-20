@@ -14,6 +14,7 @@ use bytes::Bytes;
 use context::generate_session_id;
 use fbinit::FacebookInit;
 use futures_old::{future, stream, Future, Sink, Stream};
+use hostname::get_hostname;
 use slog::{debug, error, o, Drain, Logger};
 
 use dns_lookup::lookup_addr;
@@ -144,9 +145,7 @@ impl<'a> StdioRelay<'a> {
                 .and_then(|ip| lookup_addr(&ip).ok())
         } else {
             // hgcli is run locally, so the source_hostname is the host it is currently running on
-            fbwhoami::FbWhoAmI::get()
-                .ok()
-                .and_then(|who| who.name.clone())
+            get_hostname().ok()
         };
 
         let mut preamble = Preamble::new(
