@@ -14,7 +14,7 @@ use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
 use context::CoreContext;
-use crypto::digest::Digest;
+use digest::Digest;
 use failure_ext::FutureFailureExt;
 use filestore::{get_metadata, FetchKey};
 use futures_ext::{BoxFuture, FutureExt};
@@ -250,25 +250,23 @@ fn create_fsnode(
         // Build a summary of the entries and store it as the new fsnode.
         let entries: BTreeMap<_, _> = entries.into_iter().collect();
         let simple_format_sha1 = {
-            let mut bytes = [0; 20];
-            let mut digest = generate_simple_format_digest(
-                crypto::sha1::Sha1::new(),
+            let digest = generate_simple_format_digest(
+                sha1::Sha1::new(),
                 &entries,
                 |fsnode_file| fsnode_file.content_sha1().to_hex(),
                 |fsnode_dir| fsnode_dir.summary().simple_format_sha1.to_hex(),
             );
-            digest.result(&mut bytes);
+            let bytes = digest.result().into();
             Sha1::from_byte_array(bytes)
         };
         let simple_format_sha256 = {
-            let mut bytes = [0; 32];
-            let mut digest = generate_simple_format_digest(
-                crypto::sha2::Sha256::new(),
+            let digest = generate_simple_format_digest(
+                sha2::Sha256::new(),
                 &entries,
                 |fsnode_file| fsnode_file.content_sha256().to_hex(),
                 |fsnode_dir| fsnode_dir.summary().simple_format_sha256.to_hex(),
             );
-            digest.result(&mut bytes);
+            let bytes = digest.result().into();
             Sha256::from_byte_array(bytes)
         };
         let mut summary = FsnodeSummary {
@@ -605,10 +603,9 @@ mod test {
                     "be0dface7b74d8a69b39fb4691ef9eee36077ede tree dir1\0",
                     "ad02b5a5f778d9ad6afd42fcc8e0b889254b5215 tree dir2\0",
                 );
-                let mut digest = crypto::sha1::Sha1::new();
-                digest.input_str(&text);
-                let mut bytes = [0; 20];
-                digest.result(&mut bytes);
+                let mut digest = sha1::Sha1::new();
+                digest.input(&text);
+                let bytes = digest.result().into();
                 Sha1::from_byte_array(bytes)
             };
             let simple_format_sha256 = {
@@ -618,10 +615,9 @@ mod test {
                     "eebf7e41f348db6b31c11fe7adf577bd0951300436a1fd37e53d628127b3517e tree dir1\0",
                     "583c3d388efb78eb9dec46626662d6657bb53706c1ee10770c0fb3e859bd36e1 tree dir2\0",
                 );
-                let mut digest = crypto::sha2::Sha256::new();
-                digest.input_str(&text);
-                let mut bytes = [0; 32];
-                digest.result(&mut bytes);
+                let mut digest = sha2::Sha256::new();
+                digest.input(&text);
+                let bytes = digest.result().into();
                 Sha256::from_byte_array(bytes)
             };
 
