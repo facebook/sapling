@@ -6,7 +6,9 @@
  */
 
 use bytes::Bytes;
-use crypto::{digest::Digest, sha1::Sha1, sha2::Sha256};
+use digest::Digest;
+use sha1::Sha1;
+use sha2::Sha256;
 use std::convert::TryInto;
 
 use mononoke_types::{hash, typed_hash, ContentId};
@@ -68,9 +70,8 @@ impl Hasher<hash::Sha1> for Sha1IncrementalHasher {
         self.0.input(bytes.as_ref())
     }
 
-    fn finish(mut self) -> hash::Sha1 {
-        let mut hash = [0u8; 20];
-        self.0.result(&mut hash);
+    fn finish(self) -> hash::Sha1 {
+        let hash = self.0.result().into();
         hash::Sha1::from_byte_array(hash)
     }
 }
@@ -88,9 +89,8 @@ impl Hasher<hash::Sha256> for Sha256IncrementalHasher {
         self.0.input(bytes.as_ref())
     }
 
-    fn finish(mut self) -> hash::Sha256 {
-        let mut hash = [0u8; 32];
-        self.0.result(&mut hash);
+    fn finish(self) -> hash::Sha256 {
+        let hash = self.0.result().into();
         hash::Sha256::from_byte_array(hash)
     }
 }
@@ -112,9 +112,8 @@ impl Hasher<hash::RichGitSha1> for GitSha1IncrementalHasher {
         self.0.input(bytes.as_ref())
     }
 
-    fn finish(mut self) -> hash::RichGitSha1 {
-        let mut hash = [0u8; 20];
-        self.0.result(&mut hash);
+    fn finish(self) -> hash::RichGitSha1 {
+        let hash = self.0.result().into();
         hash::RichGitSha1::from_byte_array(hash, "blob", self.1)
     }
 }
