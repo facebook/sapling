@@ -107,7 +107,7 @@ class DirEntry {
    * Note: when the mode_t for an inode changes, this value does not update.
    */
   mode_t getInitialMode() const {
-    return initialMode_;
+    return static_cast<mode_t>(initialMode_);
   }
 
   /**
@@ -117,7 +117,7 @@ class DirEntry {
    * loaded.  The file type for an existing entry never changes.
    */
   dtype_t getDtype() const {
-    return mode_to_dtype(initialMode_);
+    return mode_to_dtype(getInitialMode());
   }
 
   /**
@@ -176,30 +176,18 @@ class DirEntry {
    * Overlay Dir storage. After the InodeMetadataTable is in use for a while,
    * this should be replaced with dtype_t and the bitfields can go away.
    */
-#ifdef __APPLE__
-  // macOS: mode_t is only 16 bits wide, so use its full width here
-  mode_t initialMode_;
-  static_assert(
-      sizeof(mode_t) <= 2,
-      "expected mode_t to be smaller than 30 bits on Mac OS X");
-#elif _WIN32
-  // Windows sdk doesn't define mode_t. We will use Folly's definition of
-  // mode_t, which defines it as unsigned short on Windows.
-  mode_t initialMode_ : 16;
-#else
-  mode_t initialMode_ : 30;
-#endif
+  uint32_t initialMode_ : 30;
 
   /**
    * Whether the hash_ field matches the contents from source control. If
    * hasHash_ is false, the entry is materialized.
    */
-  bool hasHash_ : 1;
+  uint32_t hasHash_ : 1;
 
   /**
    * If true, the inode_ field is valid. If false, inodeNumber_ is valid.
    */
-  bool hasInodePointer_ : 1;
+  uint32_t hasInodePointer_ : 1;
 
   /**
    * If the entry is not materialized, this contains the hash
