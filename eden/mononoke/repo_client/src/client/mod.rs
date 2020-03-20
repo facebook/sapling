@@ -1121,7 +1121,7 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('known', 'nodes *'), but the '*' is ignored
     fn known(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
-        let (ctx, mut command_logger) = self.start_command(ops::KNOWN);
+        let (ctx, command_logger) = self.start_command(ops::KNOWN);
 
         let blobrepo = self.repo.blobrepo().clone();
 
@@ -1164,12 +1164,12 @@ impl HgCommands for RepoClient {
             .traced(self.session.trace(), ops::KNOWN, trace_args!())
             .timed(move |stats, known_nodes| {
                 if let Ok(known) = known_nodes {
-                    let extra_context = json!({
-                        "num_known": known.len(),
-                        "num_unknown": nodes_len - known.len(),
-                    })
-                    .to_string();
-                    command_logger.add_scuba_extra("extra_context", extra_context);
+                    ctx.perf_counters()
+                        .add_to_counter(PerfCounterType::NumKnown, known.len() as i64);
+                    ctx.perf_counters().add_to_counter(
+                        PerfCounterType::NumUnknown,
+                        (nodes_len - known.len()) as i64,
+                    );
                 }
                 command_logger.without_wireproto().finalize_command(&stats);
                 Ok(())
@@ -1178,7 +1178,7 @@ impl HgCommands for RepoClient {
     }
 
     fn knownnodes(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
-        let (ctx, mut command_logger) = self.start_command(ops::KNOWNNODES);
+        let (ctx, command_logger) = self.start_command(ops::KNOWNNODES);
 
         let blobrepo = self.repo.blobrepo().clone();
 
@@ -1198,12 +1198,12 @@ impl HgCommands for RepoClient {
             .traced(self.session.trace(), ops::KNOWNNODES, trace_args!())
             .timed(move |stats, known_nodes| {
                 if let Ok(known) = known_nodes {
-                    let extra_context = json!({
-                        "num_known": known.len(),
-                        "num_unknown": nodes_len - known.len(),
-                    })
-                    .to_string();
-                    command_logger.add_scuba_extra("extra_context", extra_context);
+                    ctx.perf_counters()
+                        .add_to_counter(PerfCounterType::NumKnown, known.len() as i64);
+                    ctx.perf_counters().add_to_counter(
+                        PerfCounterType::NumUnknown,
+                        (nodes_len - known.len()) as i64,
+                    );
                 }
                 command_logger.without_wireproto().finalize_command(&stats);
                 Ok(())

@@ -6,7 +6,6 @@
  */
 
 use scuba_ext::ScubaSampleBuilder;
-use std::collections::HashMap;
 use std::sync::atomic::{AtomicI64, Ordering};
 
 macro_rules! define_perf_counters {
@@ -88,11 +87,14 @@ define_perf_counters! {
         SqlWrites,
         SumManifoldPollTime,
         NullLinknode,
+        NumKnown,
+        NumUnknown,
     }
 }
 
 impl PerfCounterType {
-    pub(crate) fn log_in_separate_column(&self) -> bool {
+    /// Whether to log the zero value of the counter
+    fn always_log(&self) -> bool {
         use PerfCounterType::*;
 
         match self {
@@ -148,29 +150,13 @@ impl PerfCounters {
     }
 
     pub fn insert_perf_counters(&self, builder: &mut ScubaSampleBuilder) {
-        let mut extra = HashMap::new();
-
-        // NOTE: we log 0 to separate scuba columns mainly so that we can distinguish
-        // nulls i.e. "not logged" and 0 as in "zero calls to blobstore". Logging 0 allows
-        // counting avg, p50 etc statistic.
-        // However we do not log 0 in extras to save space
+        // NOTE: we log 0 mainly so that we can distinguish
+        // nulls i.e. "not logged" and 0 as in "zero calls to blobstore".
+        // Logging 0 allows counting avg, p50 etc statistic.
         for key in PERF_COUNTERS.iter() {
             let value = self.get_counter(*key);
-
-            if key.log_in_separate_column() {
+            if value != 0 || key.always_log() {
                 builder.add(key.name(), value);
-            } else {
-                if value != 0 {
-                    extra.insert(key.name(), value);
-                }
-            }
-        }
-
-        if !extra.is_empty() {
-            if let Ok(extra) = serde_json::to_string(&extra) {
-                // Scuba does not support columns that are too long, we have to trim it
-                let limit = ::std::cmp::min(extra.len(), 1000);
-                builder.add("extra_context", &extra[..limit]);
             }
         }
     }
