@@ -26,8 +26,10 @@ Contents:
    internals/HandlingLargeFiles
    internals/Manifest
    internals/MercurialApi
+   internals/Mutation
    internals/RequiresFile
    internals/RevlogNG
    internals/UnlinkingFilesOnWindows
+   internals/Visibility
    internals/WhatGoesWhere
    internals/WireProtocol
