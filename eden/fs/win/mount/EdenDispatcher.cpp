@@ -81,7 +81,7 @@ HRESULT EdenDispatcher::startEnumeration(
             enumerationId, std::move(path), std::move(list)));
     DCHECK(inserted);
     return S_OK;
-  } catch (const std::exception& ex) {
+  } catch (const std::exception&) {
     return exceptionToHResult();
   }
 }
@@ -90,7 +90,7 @@ void EdenDispatcher::endEnumeration(const GUID& enumerationId) noexcept {
   try {
     auto erasedCount = enumSessions_.wlock()->erase(enumerationId);
     DCHECK(erasedCount == 1);
-  } catch (const std::exception& ex) {
+  } catch (const std::exception&) {
     // Don't need to return result here - exceptionToHResult() will log the
     // error.
     (void)exceptionToHResult();
@@ -155,7 +155,7 @@ HRESULT EdenDispatcher::getEnumerationData(
       }
     }
     return S_OK;
-  } catch (const std::exception& ex) {
+  } catch (const std::exception&) {
     return exceptionToHResult();
   }
 }
@@ -206,7 +206,7 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
         callbackData.FilePathName, metadata);
 
     return result;
-  } catch (const std::exception& ex) {
+  } catch (const std::exception&) {
     return exceptionToHResult();
   }
 }
@@ -220,7 +220,7 @@ EdenDispatcher::queryFileName(const PRJ_CALLBACK_DATA& callbackData) noexcept {
     }
 
     return S_OK;
-  } catch (const std::exception& ex) {
+  } catch (const std::exception&) {
     return exceptionToHResult();
   }
 }
@@ -303,7 +303,7 @@ EdenDispatcher::getFileData(
           /*length=*/length,
           /*chunkSize=*/chunkSize);
     }
-  } catch (const std::exception& ex) {
+  } catch (const std::exception&) {
     return exceptionToHResult();
   }
 }
