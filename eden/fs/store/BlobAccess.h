@@ -60,7 +60,7 @@ class BlobAccess {
       const Hash& hash,
       ObjectFetchContext& context,
       BlobCache::Interest interest = BlobCache::Interest::LikelyNeededAgain,
-      ImportPriority priority = ImportPriority::kNormal);
+      ImportPriority priority = ImportPriority::kNormal());
 
  private:
   BlobAccess(const BlobAccess&) = delete;

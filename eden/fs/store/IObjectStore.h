@@ -87,7 +87,7 @@ class IObjectStore {
   virtual folly::Future<std::shared_ptr<const Blob>> getBlob(
       const Hash& id,
       ObjectFetchContext& context,
-      ImportPriority priority = ImportPriority::kNormal) const = 0;
+      ImportPriority priority = ImportPriority::kNormal()) const = 0;
   virtual folly::Future<std::shared_ptr<const Tree>> getTreeForCommit(
       const Hash& commitID,
       ObjectFetchContext& context) const = 0;

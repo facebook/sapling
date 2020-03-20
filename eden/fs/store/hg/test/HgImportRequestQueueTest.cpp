@@ -73,7 +73,7 @@ TEST(HgImportRequestQueueTest, getRequestByPriorityReverse) {
   }
 
   auto [largeHash, largeRequest] =
-      makeImportRequest(ImportPriority(ImportPriority::kHigh));
+      makeImportRequest(ImportPriority(ImportPriority::kHigh()));
   queue.enqueue(std::move(largeRequest));
   EXPECT_EQ(largeHash, queue.dequeue()->getHash());
 

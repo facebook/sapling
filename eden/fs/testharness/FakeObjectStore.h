@@ -39,7 +39,7 @@ class FakeObjectStore : public IObjectStore {
   folly::Future<std::shared_ptr<const Blob>> getBlob(
       const Hash& id,
       ObjectFetchContext& context = ObjectFetchContext::getNullContext(),
-      ImportPriority priority = ImportPriority::kNormal) const override;
+      ImportPriority priority = ImportPriority::kNormal()) const override;
   folly::Future<std::shared_ptr<const Tree>> getTreeForCommit(
       const Hash& commitID,
       ObjectFetchContext& context =

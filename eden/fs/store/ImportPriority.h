@@ -18,8 +18,13 @@ struct ImportPriority {
   ImportPriorityKind kind;
   uint64_t offset : 48;
 
-  static const ImportPriority kNormal;
-  static const ImportPriority kHigh;
+  static constexpr ImportPriority kNormal() {
+    return ImportPriority{ImportPriorityKind::Normal};
+  }
+
+  static constexpr ImportPriority kHigh() {
+    return ImportPriority{ImportPriorityKind::High};
+  }
 
   explicit constexpr ImportPriority()
       : kind(ImportPriorityKind::Normal), offset(0) {}
@@ -39,9 +44,6 @@ struct ImportPriority {
     return lhs.value() < rhs.value();
   }
 };
-
-constexpr ImportPriority ImportPriority::kNormal{ImportPriorityKind::Normal};
-constexpr ImportPriority ImportPriority::kHigh{ImportPriorityKind::High};
 
 } // namespace eden
 } // namespace facebook

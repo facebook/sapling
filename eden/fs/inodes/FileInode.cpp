@@ -261,7 +261,7 @@ typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
           std::move(state),
           BlobCache::Interest::UnlikelyNeededAgain,
           ObjectFetchContext::getNullContext(),
-          ImportPriority::kNormal);
+          ImportPriority::kNormal());
       break;
     case State::BLOB_LOADING:
       // If we're already loading, latch on to the in-progress load
@@ -682,7 +682,7 @@ Future<string> FileInode::readAll(
       LockedState{this},
       interest,
       fetchContext,
-      ImportPriority::kNormal,
+      ImportPriority::kNormal(),
       nullptr,
       [self = inodePtrFromThis()](
           LockedState&& state, std::shared_ptr<const Blob> blob) -> string {
@@ -718,7 +718,7 @@ Future<BufVec> FileInode::read(size_t size, off_t off) {
       BlobCache::Interest::WantHandle,
       // This function is only called by FUSE.
       ObjectFetchContext::getNullContext(),
-      ImportPriority::kHigh,
+      ImportPriority::kHigh(),
       nullptr,
       [size, off, self = inodePtrFromThis()](
           LockedState&& state, std::shared_ptr<const Blob> blob) -> BufVec {
