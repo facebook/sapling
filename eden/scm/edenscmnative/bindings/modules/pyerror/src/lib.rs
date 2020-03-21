@@ -38,22 +38,22 @@ fn register_error_handlers() {
         if let Some(e) = e.downcast_ref::<indexedlog::Error>() {
             Some(PyErr::new::<IndexedLogError, _>(
                 py,
-                cpython_ext::Str::from(e.to_string()),
+                cpython_ext::Str::from(format!("{:?}", e)),
             ))
         } else if let Some(e) = e.downcast_ref::<metalog::Error>() {
             Some(PyErr::new::<MetaLogError, _>(
                 py,
-                cpython_ext::Str::from(e.to_string()),
+                cpython_ext::Str::from(format!("{:?}", e)),
             ))
         } else if let Some(e) = e.downcast_ref::<revisionstore::Error>() {
             Some(PyErr::new::<RevisionstoreError, _>(
                 py,
-                cpython_ext::Str::from(e.to_string()),
+                cpython_ext::Str::from(format!("{:?}", e)),
             ))
         } else if let Some(e) = e.downcast_ref::<cpython_ext::Error>() {
             Some(PyErr::new::<NonUTF8Path, _>(
                 py,
-                cpython_ext::Str::from(e.to_string()),
+                cpython_ext::Str::from(format!("{:?}", e)),
             ))
         } else {
             None
@@ -61,7 +61,7 @@ fn register_error_handlers() {
     }
 
     fn fallback_error_handler(py: Python, e: &error::Error) -> Option<PyErr> {
-        Some(PyErr::new::<RustError, _>(py, e.to_string()))
+        Some(PyErr::new::<RustError, _>(py, format!("{:?}", e)))
     }
 
     error::register("010-specific", specific_error_handler);
