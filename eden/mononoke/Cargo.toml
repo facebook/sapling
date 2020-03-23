@@ -9,6 +9,7 @@ members = [
     "blobstore/prefixblob",
     "blobstore/readonlyblob",
     "blobstore/redactedblobstore",
+    "blobstore/samplingblob",
     "blobstore/throttledblob",
     "common/async_limiter",
     "common/async_limiter/examples/tokio_v1",

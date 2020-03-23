@@ -1,0 +1,23 @@
+[package]
+name = "samplingblob"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/*.rs"]
+
+[dependencies]
+blobstore = { path = ".." }
+context = { path = "../../server/context" }
+mononoke_types = { path = "../../mononoke_types" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+bytes = { version = "0.5", features = ["serde"] }
+futures = "0.1"
+slog = { version="2.5", features=["max_level_debug"] }
+thiserror = "1.0"
+
+[dev-dependencies]
+memblob = { path = "../memblob" }
