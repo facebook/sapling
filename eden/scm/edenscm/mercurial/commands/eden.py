@@ -716,7 +716,12 @@ class HgServer(object):
                 # does not have a contentstore. So fail immediately
                 raise ResetRepoError(e)
 
-            self.repo.fileslog.contentstore.markforrefresh()
+            if self.repo.fileslog._ruststore:
+                # Committing the contentstore will force it to be rebuilt,
+                # effectively refreshing the store.
+                self.repo.fileslog.contentstore.commitpending()
+            else:
+                self.repo.fileslog.contentstore.markforrefresh()
 
             try:
                 return attr_of(fctx)
