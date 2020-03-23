@@ -77,21 +77,33 @@ mod test {
     use futures::Future;
     use std::sync::atomic::{AtomicBool, Ordering};
 
+    use context::SamplingKey;
     use memblob::EagerMemblob;
 
     #[derive(Debug)]
     struct TestSamplingHandler {
         sampled: AtomicBool,
+        looking_for: SamplingKey,
     }
+    impl TestSamplingHandler {
+        fn check_sample(&self, ctx: &CoreContext) {
+            ctx.sampling_key().map(|sampling_key| {
+                if sampling_key == &self.looking_for {
+                    self.sampled.store(true, Ordering::Relaxed);
+                }
+            });
+        }
+    }
+
     impl SamplingHandler for TestSamplingHandler {
-        fn sample_get(&self, _ctx: CoreContext, _key: String, _value: Option<&BlobstoreBytes>) {
-            self.sampled.store(true, Ordering::Relaxed);
+        fn sample_get(&self, ctx: CoreContext, _key: String, _value: Option<&BlobstoreBytes>) {
+            self.check_sample(&ctx);
         }
-        fn sample_put(&self, _ctx: &CoreContext, _key: &str, _value: &BlobstoreBytes) {
-            self.sampled.store(true, Ordering::Relaxed);
+        fn sample_put(&self, ctx: &CoreContext, _key: &str, _value: &BlobstoreBytes) {
+            self.check_sample(ctx);
         }
-        fn sample_is_present(&self, _ctx: CoreContext, _key: String, _value: bool) {
-            self.sampled.store(true, Ordering::Relaxed);
+        fn sample_is_present(&self, ctx: CoreContext, _key: String, _value: bool) {
+            self.check_sample(&ctx);
         }
     }
 
@@ -99,8 +111,10 @@ mod test {
     fn test_sample_called(fb: FacebookInit) {
         let ctx = CoreContext::test_mock(fb);
         let base = EagerMemblob::new();
+        let sample_this = SamplingKey::new();
         let handler = Arc::new(TestSamplingHandler {
             sampled: AtomicBool::new(false),
+            looking_for: sample_this,
         });
         let wrapper =
             SamplingBlobstore::new(base.clone(), handler.clone() as Arc<dyn SamplingHandler>);
@@ -115,8 +129,16 @@ mod test {
             )
             .wait();
         assert!(r.is_ok());
-        assert!(handler.sampled.load(Ordering::Relaxed));
-        let base_present = base.is_present(ctx, key.clone()).wait().unwrap();
+        let was_sampled = handler.sampled.load(Ordering::Relaxed);
+        assert!(!was_sampled);
+        let ctx = ctx.clone_and_sample(sample_this);
+        let base_present = base.is_present(ctx.clone(), key.clone()).wait().unwrap();
         assert!(base_present);
+        let was_sampled = handler.sampled.load(Ordering::Relaxed);
+        assert!(!was_sampled);
+        let wrapper_present = wrapper.is_present(ctx, key.clone()).wait().unwrap();
+        assert!(wrapper_present);
+        let was_sampled = handler.sampled.load(Ordering::Relaxed);
+        assert!(was_sampled);
     }
 }

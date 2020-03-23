@@ -14,7 +14,7 @@ pub use session_id::SessionId;
 pub use crate::core::CoreContext;
 #[cfg(fbcode_build)]
 pub use crate::facebook::prelude::*;
-pub use crate::logging::LoggingContainer;
+pub use crate::logging::{LoggingContainer, SamplingKey};
 pub use crate::perf_counters::{PerfCounterType, PerfCounters};
 pub use crate::session::{generate_session_id, SessionContainer};
 

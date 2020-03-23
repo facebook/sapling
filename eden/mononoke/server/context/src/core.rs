@@ -13,7 +13,7 @@ use slog_glog_fmt::default_drain;
 use sshrelay::SshEnvVars;
 use tracing::TraceContext;
 
-use crate::logging::LoggingContainer;
+use crate::logging::{LoggingContainer, SamplingKey};
 use crate::perf_counters::PerfCounters;
 use crate::session::SessionContainer;
 
@@ -43,6 +43,14 @@ impl CoreContext {
             .new_context(self.logger().clone(), self.scuba().clone())
     }
 
+    pub fn clone_and_sample(&self, sampling_key: SamplingKey) -> Self {
+        Self {
+            fb: self.fb,
+            session: self.session.clone(),
+            logging: self.logging.clone_and_sample(sampling_key),
+        }
+    }
+
     pub fn with_mutated_scuba(
         &self,
         sample: impl FnOnce(ScubaSampleBuilder) -> ScubaSampleBuilder,
@@ -69,6 +77,10 @@ impl CoreContext {
 
     pub fn logger(&self) -> &Logger {
         &self.logging.logger()
+    }
+
+    pub fn sampling_key(&self) -> Option<&SamplingKey> {
+        self.logging.sampling_key()
     }
 
     pub fn scuba(&self) -> &ScubaSampleBuilder {
