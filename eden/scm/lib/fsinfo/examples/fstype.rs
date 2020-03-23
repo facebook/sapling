@@ -5,8 +5,11 @@
  * GNU General Public License version 2.
  */
 
-fn main() {
+use anyhow::Result;
+
+fn main() -> Result<()> {
     for arg in std::env::args().skip(1) {
-        println!("{}: {}", &arg, fsinfo::fstype(&arg).unwrap());
+        println!("{}: {}", &arg, fsinfo::fstype(&arg)?.to_string());
     }
+    Ok(())
 }

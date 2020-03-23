@@ -5,6 +5,7 @@ edition = "2018"
 
 [dependencies]
 libc = "0.2"
+anyhow = "1"
 
 [target.'cfg(windows)'.dependencies]
 winapi = { version = "0.3", features = ["handleapi", "fileapi", "minwindef"] }

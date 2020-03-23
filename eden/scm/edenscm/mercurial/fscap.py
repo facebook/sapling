@@ -24,26 +24,19 @@ _EDENFS_POSIX_CAPS = {
 }
 
 _FS_CAP_TABLE = {
-    "apfs": {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: False},
-    "btrfs": _ALL_CAPS,
-    "edenfs": _EDENFS_POSIX_CAPS,
-    "ext2": _ALL_CAPS,
-    "ext3": _ALL_CAPS,
+    "APFS": {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: False},
+    "Btrfs": _ALL_CAPS,
+    "EdenFS": _EDENFS_POSIX_CAPS,
     "ext4": _ALL_CAPS,
-    "fuse.ntfs": {
+    "NTFS": {
         SYMLINK: False,
         HARDLINK: True,
         EXECBIT: False,
         ALWAYSCASESENSITIVE: False,
     },
-    "hfs": {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: False},
-    "jfs": _ALL_CAPS,
-    "osxfuse_eden": _EDENFS_POSIX_CAPS,
-    "reiserfs": _ALL_CAPS,
+    "HFS": {SYMLINK: True, HARDLINK: True, EXECBIT: True, ALWAYSCASESENSITIVE: False},
+    "XFS": _ALL_CAPS,
     "tmpfs": _ALL_CAPS,
-    "ufs": _ALL_CAPS,
-    "xfs": _ALL_CAPS,
-    "zfs": _ALL_CAPS,
 }
 
 

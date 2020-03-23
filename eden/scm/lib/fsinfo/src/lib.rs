@@ -6,22 +6,65 @@
  */
 
 #![deny(warnings)]
-use std::io;
-use std::path::Path;
+
+use std::{fmt, io, path::Path};
+
+use anyhow::{Context, Result};
+
+#[cfg(target_os = "linux")]
+use self::linux::fstype as fstype_imp;
+#[cfg(target_os = "macos")]
+use self::macos::fstype as fstype_imp;
+#[cfg(windows)]
+use self::windows::fstype as fstype_imp;
+
+#[derive(Clone, Eq, PartialEq, Ord, PartialOrd, Debug)]
+pub enum FsType {
+    EDENFS,
+    NTFS,
+    APFS,
+    HFS,
+    EXT4,
+    BTRFS,
+    XFS,
+    NFS,
+    FUSE,
+    TMPFS,
+    /// The catch-all type for the unknown filesystems. The content of the string is as returned
+    /// from the OS and cannot be relied upon.
+    Unknown(String),
+}
+
+impl fmt::Display for FsType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            FsType::EDENFS => write!(f, "EdenFS"),
+            FsType::NTFS => write!(f, "NTFS"),
+            FsType::APFS => write!(f, "APFS"),
+            FsType::HFS => write!(f, "HFS"),
+            FsType::EXT4 => write!(f, "ext4"),
+            FsType::BTRFS => write!(f, "Btrfs"),
+            FsType::XFS => write!(f, "XFS"),
+            FsType::NFS => write!(f, "NFS"),
+            FsType::FUSE => write!(f, "FUSE"),
+            FsType::TMPFS => write!(f, "tmpfs"),
+            FsType::Unknown(fstype) => write!(f, "Unknown({})", fstype),
+        }
+    }
+}
 
 #[cfg(windows)]
 mod windows {
+    use super::*;
+
+    use std::{os::windows::ffi::OsStrExt, ptr::null_mut};
+
     use winapi::shared::minwindef::{DWORD, MAX_PATH};
     use winapi::um::fileapi::{CreateFileW, GetVolumeInformationByHandleW, OPEN_EXISTING};
     use winapi::um::handleapi::{CloseHandle, INVALID_HANDLE_VALUE};
     use winapi::um::winnt::{
         FILE_GENERIC_READ, FILE_SHARE_DELETE, FILE_SHARE_READ, FILE_SHARE_WRITE, HANDLE,
     };
-
-    use std::io;
-    use std::os::windows::ffi::OsStrExt;
-    use std::path::Path;
-    use std::ptr::null_mut;
 
     const FILE_ATTRIBUTE_NORMAL: u32 = 0x02000000;
 
@@ -35,7 +78,7 @@ mod windows {
         }
     }
 
-    fn open_share(path: &Path) -> io::Result<WinFileHandle> {
+    fn open_share(path: &Path) -> Result<WinFileHandle> {
         let mut root: Vec<u16> = path.as_os_str().encode_wide().collect();
         // Need to make it 0 terminated,
         // otherwise might not get the correct
@@ -55,13 +98,22 @@ mod windows {
         };
 
         if handle == INVALID_HANDLE_VALUE {
-            Err(io::Error::last_os_error())
+            Err(io::Error::last_os_error().into())
         } else {
             Ok(WinFileHandle { handle })
         }
     }
 
-    pub fn fstype(path: &Path) -> io::Result<String> {
+    impl From<String> for FsType {
+        fn from(value: String) -> Self {
+            match value.as_ref() {
+                "NTFS" => FsType::NTFS,
+                _ => FsType::Unknown(value),
+            }
+        }
+    }
+
+    pub fn fstype(path: &Path) -> Result<FsType> {
         let win_handle = open_share(path)?;
 
         let mut fstype = [0u16; MAX_PATH];
@@ -79,98 +131,103 @@ mod windows {
         };
 
         if exit_sts == 0 {
-            return Err(io::Error::last_os_error());
+            return Err(io::Error::last_os_error().into());
         }
         // Take until the first 0 byte
         let terminator = fstype.iter().position(|&x| x == 0).unwrap();
-        let fstype = &fstype[0..terminator];
+        let fstype = String::from_utf16(&fstype[0..terminator])?;
 
-        Ok(String::from_utf16_lossy(&fstype))
+        Ok(fstype.into())
     }
 }
 
 #[cfg(unix)]
 mod unix {
+    use super::*;
+
     use std::ffi::CString;
-    use std::io;
     use std::mem::zeroed;
     use std::os::unix::ffi::OsStrExt;
-    use std::path::Path;
 
-    pub fn get_statfs(path: &Path) -> io::Result<libc::statfs> {
+    pub fn get_statfs(path: &Path) -> Result<libc::statfs> {
         let cstr = CString::new(path.as_os_str().as_bytes())?;
         let mut fs_stat: libc::statfs = unsafe { zeroed() };
         if unsafe { libc::statfs(cstr.as_ptr(), &mut fs_stat) } == 0 {
             Ok(fs_stat)
         } else {
-            Err(io::Error::last_os_error())
+            Err(io::Error::last_os_error().into())
         }
     }
 }
 
 #[cfg(target_os = "linux")]
 mod linux {
+    use super::*;
+
     use std::collections::HashMap;
-    use std::io;
     use std::os::linux::fs::MetadataExt;
-    use std::path::Path;
 
     /// These filesystem types are not in libc yet
     const BTRFS_SUPER_MAGIC: i64 = 0x9123683e;
-    const CIFS_SUPER_MAGIC: i64 = 0xff534d42;
     const FUSE_SUPER_MAGIC: i64 = 0x65735546;
     const XFS_SUPER_MAGIC: i64 = 0x58465342;
 
-    fn get_type(f_type: i64, path: &Path) -> String {
-        let result = get_static_type(f_type, path);
-        if result == "fuse" {
-            // Take some efforts to find out the actual filesystem.
-            // This works for Linux block devices.
-
-            if let Some(major_minor) = get_dev_major_minor(path) {
-                let props = find_udev_properties(&major_minor);
-                if let Some(name) = props.get("E:ID_FS_TYPE") {
-                    return format!("fuse.{}", name);
+    impl From<i64> for FsType {
+        fn from(f_type: i64) -> Self {
+            match f_type {
+                BTRFS_SUPER_MAGIC => FsType::BTRFS,
+                FUSE_SUPER_MAGIC => FsType::FUSE,
+                XFS_SUPER_MAGIC => FsType::XFS,
+                libc::EXT4_SUPER_MAGIC => FsType::EXT4,
+                libc::NFS_SUPER_MAGIC => FsType::NFS,
+                libc::TMPFS_MAGIC => FsType::TMPFS,
+                libc::CODA_SUPER_MAGIC => FsType::Unknown("coda".to_string()),
+                libc::CRAMFS_MAGIC => FsType::Unknown("cramfs".to_string()),
+                libc::EFS_SUPER_MAGIC => FsType::Unknown("efs".to_string()),
+                libc::HPFS_SUPER_MAGIC => FsType::Unknown("hpfs".to_string()),
+                libc::HUGETLBFS_MAGIC => FsType::Unknown("hugetlbfs".to_string()),
+                libc::ISOFS_SUPER_MAGIC => FsType::Unknown("isofs".to_string()),
+                libc::JFFS2_SUPER_MAGIC => FsType::Unknown("jffs2".to_string()),
+                libc::MINIX2_SUPER_MAGIC | libc::MINIX2_SUPER_MAGIC2 => {
+                    FsType::Unknown("minix2".to_string())
                 }
+                libc::MINIX_SUPER_MAGIC | libc::MINIX_SUPER_MAGIC2 => {
+                    FsType::Unknown("minix".to_string())
+                }
+                libc::NCP_SUPER_MAGIC => FsType::Unknown("ncp".to_string()),
+                libc::OPENPROM_SUPER_MAGIC => FsType::Unknown("openprom".to_string()),
+                libc::PROC_SUPER_MAGIC => FsType::Unknown("proc".to_string()),
+                libc::QNX4_SUPER_MAGIC => FsType::Unknown("qnx4".to_string()),
+                libc::REISERFS_SUPER_MAGIC => FsType::Unknown("reiserfs".to_string()),
+                libc::SMB_SUPER_MAGIC => FsType::Unknown("smb".to_string()),
+                libc::USBDEVICE_SUPER_MAGIC => FsType::Unknown("usbdevice".to_string()),
+                _ => FsType::Unknown(format!("{:#X}", f_type)),
             }
         }
-        return result.to_string();
     }
 
-    fn get_static_type(f_type: i64, path: &Path) -> &'static str {
-        match f_type {
-            BTRFS_SUPER_MAGIC => "btrfs",
-            CIFS_SUPER_MAGIC => "cifs",
-            FUSE_SUPER_MAGIC => {
-                // .eden is present in all directories in an EdenFS mount.
-                if path.join(".eden").exists() {
-                    "edenfs"
-                } else {
-                    "fuse"
+    fn get_type(f_type: i64, path: &Path) -> Result<FsType> {
+        let result = FsType::from(f_type);
+        if result == FsType::FUSE {
+            // .eden is present in all directories in an EdenFS mount.
+            if path.join(".eden").exists() {
+                return Ok(FsType::EDENFS);
+            } else {
+                // Take some efforts to find out the actual filesystem.
+                // This works for Linux block devices.
+                if let Some(major_minor) = get_dev_major_minor(path) {
+                    let props = find_udev_properties(&major_minor);
+                    if let Some(name) = props.get("E:ID_FS_TYPE") {
+                        if name == "ntfs" {
+                            return Ok(FsType::NTFS);
+                        } else {
+                            return Ok(FsType::Unknown(format!("fuse.{}", name)));
+                        }
+                    }
                 }
             }
-            XFS_SUPER_MAGIC => "xfs",
-            libc::CODA_SUPER_MAGIC => "coda",
-            libc::CRAMFS_MAGIC => "cramfs",
-            libc::EFS_SUPER_MAGIC => "efs",
-            libc::EXT4_SUPER_MAGIC => "ext4",
-            libc::HPFS_SUPER_MAGIC => "hpfs",
-            libc::HUGETLBFS_MAGIC => "hugetlbfs",
-            libc::ISOFS_SUPER_MAGIC => "isofs",
-            libc::JFFS2_SUPER_MAGIC => "jffs2",
-            libc::MINIX_SUPER_MAGIC | libc::MINIX_SUPER_MAGIC2 => "minix",
-            libc::MINIX2_SUPER_MAGIC | libc::MINIX2_SUPER_MAGIC2 => "minix2",
-            libc::NCP_SUPER_MAGIC => "ncp",
-            libc::NFS_SUPER_MAGIC => "nfs",
-            libc::OPENPROM_SUPER_MAGIC => "openprom",
-            libc::PROC_SUPER_MAGIC => "proc",
-            libc::QNX4_SUPER_MAGIC => "qnx4",
-            libc::REISERFS_SUPER_MAGIC => "reiserfs",
-            libc::SMB_SUPER_MAGIC => "smb",
-            libc::TMPFS_MAGIC => "tmpfs",
-            libc::USBDEVICE_SUPER_MAGIC => "usbdevice",
-            _ => "unknown",
         }
+        Ok(result)
     }
 
     /// Find the udev properties for the block device. Best-effort.
@@ -197,29 +254,39 @@ mod linux {
         })
     }
 
-    pub fn fstype(path: &Path) -> io::Result<String> {
+    pub fn fstype(path: &Path) -> Result<FsType> {
         let fs_stat = super::unix::get_statfs(path)?;
-        Ok(get_type(fs_stat.f_type, path))
+        get_type(fs_stat.f_type, path)
     }
 }
 
 #[cfg(target_os = "macos")]
 mod macos {
-    use std::ffi::CStr;
-    use std::io;
-    use std::path::Path;
+    use super::*;
 
-    pub fn fstype(path: &Path) -> io::Result<String> {
+    use std::ffi::CStr;
+
+    impl<'a> From<&'a str> for FsType {
+        fn from(value: &'a str) -> Self {
+            match value {
+                "apfs" => FsType::APFS,
+                "hfs" => FsType::HFS,
+                "osxfuse_eden" => FsType::EDENFS,
+                _ => FsType::Unknown(value.to_string()),
+            }
+        }
+    }
+
+    pub fn fstype(path: &Path) -> Result<FsType> {
         let fs_stat = super::unix::get_statfs(path)?;
         let fs = unsafe { CStr::from_ptr(fs_stat.f_fstypename.as_ptr()) };
-        return Ok(fs.to_string_lossy().into());
+
+        Ok(fs.to_str()?.into())
     }
 }
 
 /// Get filesystem type on the given `path`.
-///
-/// Return "unknown" on unsupported platform.
-pub fn fstype(path: impl AsRef<Path>) -> io::Result<String> {
+pub fn fstype(path: impl AsRef<Path>) -> Result<FsType> {
     let path = path.as_ref();
 
     // Auto correct an empty path to ".".
@@ -229,23 +296,5 @@ pub fn fstype(path: impl AsRef<Path>) -> io::Result<String> {
         path
     };
 
-    #[cfg(target_os = "linux")]
-    {
-        return self::linux::fstype(path);
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        return self::macos::fstype(path);
-    }
-
-    #[cfg(windows)]
-    {
-        return self::windows::fstype(path);
-    }
-
-    #[allow(unreachable_code)]
-    {
-        return Ok("unknown".to_string());
-    }
+    fstype_imp(path).with_context(|| format!("Cannot determine filesystem type for {:?}", path))
 }

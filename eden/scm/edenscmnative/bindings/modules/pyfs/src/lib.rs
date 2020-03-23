@@ -17,5 +17,5 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
 fn fstype(py: Python, path: &PyPath) -> PyResult<Str> {
     let fstype = fsinfo::fstype(path).map_pyerr(py)?;
-    Ok(fstype.into())
+    Ok(fstype.to_string().into())
 }
