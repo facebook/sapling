@@ -7,8 +7,8 @@
 
 use anyhow::{format_err, Error};
 use bytes::Bytes;
-use crypto::{digest::Digest, sha1::Sha1};
 use serde_derive::{Deserialize, Serialize};
+use sha1::{Digest, Sha1};
 
 use crate::{hgid::HgId, key::Key, parents::Parents};
 
@@ -94,12 +94,11 @@ impl DataEntry {
             (p1, p2) => (p1, p2),
         };
 
-        let mut hash = [0u8; 20];
         let mut hasher = Sha1::new();
         hasher.input(p1.as_ref());
         hasher.input(p2.as_ref());
         hasher.input(&self.data);
-        hasher.result(&mut hash);
+        let hash: [u8; 20] = hasher.result().into();
 
         let computed = HgId::from_byte_array(hash);
         let expected = &self.key.hgid;
