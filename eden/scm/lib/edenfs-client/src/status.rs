@@ -11,11 +11,11 @@ use crate::path_relativizer::PathRelativizer;
 use anyhow::{bail, ensure, Error, Result};
 use byteorder::{BigEndian, ByteOrder};
 use clidispatch::{errors::FallbackToPython, io::IO};
-use crypto::{digest::Digest, sha2::Sha256};
 use eden::client::EdenService;
 use eden::{GetScmStatusParams, GetScmStatusResult, ScmFileStatus, ScmStatus};
 #[cfg(unix)]
 use fbthrift_socket::SocketTransport;
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 use std::default::Default;
 use std::fs::read_link;
@@ -659,8 +659,7 @@ impl DirstateReader {
         let mut binary_checksum = [0; 32];
         self.reader.read_exact(&mut binary_checksum)?;
 
-        let mut observed_digest = [0; 32];
-        self.sha256.result(&mut observed_digest);
+        let observed_digest: [u8; 32] = self.sha256.clone().result().into();
 
         if binary_checksum != observed_digest {
             return Err(io::Error::new(

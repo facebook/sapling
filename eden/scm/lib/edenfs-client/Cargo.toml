@@ -9,7 +9,7 @@ byteorder = "1.2"
 chrono = "0.4"
 clidispatch = { path = "../clidispatch" }
 libc = "0.2"
-rust-crypto = "0.2"
+sha2 = "0.8"
 thrift-types = { path = "../thrift-types" }
 tokio-core = "0.1"
 tokio-uds = "0.1"
