@@ -16,9 +16,8 @@ use std::{
 
 use anyhow::Result;
 use byteorder::WriteBytesExt;
-use crypto::digest::Digest;
-use crypto::sha1::Sha1;
 use parking_lot::Mutex;
+use sha1::{Digest, Sha1};
 use tempfile::NamedTempFile;
 use thiserror::Error;
 
@@ -210,7 +209,7 @@ impl MutablePack for MutableHistoryPackInner {
         Ok((
             data_file.into_inner()?,
             index_file.into_inner()?,
-            self.dir.join(hasher.result_str()),
+            self.dir.join(hex::encode(hasher.result())),
         ))
     }
 

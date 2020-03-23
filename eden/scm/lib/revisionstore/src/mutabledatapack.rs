@@ -15,9 +15,8 @@ use std::{
 
 use anyhow::{format_err, Result};
 use byteorder::{BigEndian, WriteBytesExt};
-use crypto::digest::Digest;
-use crypto::sha1::Sha1;
 use parking_lot::Mutex;
+use sha1::{Digest, Sha1};
 use tempfile::{Builder, NamedTempFile};
 use thiserror::Error;
 
@@ -182,7 +181,7 @@ impl HgIdMutableDeltaStore for MutableDataPack {
 }
 
 impl MutablePack for MutableDataPackInner {
-    fn build_files(mut self) -> Result<(NamedTempFile, NamedTempFile, PathBuf)> {
+    fn build_files(self) -> Result<(NamedTempFile, NamedTempFile, PathBuf)> {
         if self.mem_index.is_empty() {
             return Err(EmptyMutablePack.into());
         }
@@ -193,7 +192,7 @@ impl MutablePack for MutableDataPackInner {
         Ok((
             self.data_file.into_inner()?,
             index_file.into_inner()?,
-            self.dir.join(&self.hasher.result_str()),
+            self.dir.join(&hex::encode(self.hasher.result())),
         ))
     }
 
@@ -326,7 +325,7 @@ mod tests {
         let mut buf = vec![];
         file.read_to_end(&mut buf).expect("read to end");
         hasher.input(&buf);
-        let hash = hasher.result_str();
+        let hash = hex::encode(hasher.result());
         assert!(hash == filename_hash);
     }
 

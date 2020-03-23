@@ -7,8 +7,8 @@
 
 use anyhow::Result;
 use bytes::Bytes;
-use crypto::{digest::Digest, sha2::Sha256 as CryptoSha256};
 use serde_derive::{Deserialize, Serialize};
+use sha2::Digest;
 
 #[cfg(any(test, feature = "for-tests"))]
 use rand::Rng;
@@ -40,11 +40,10 @@ pub enum StoreKey {
 
 impl ContentHash {
     pub fn sha256(data: &Bytes) -> Result<Self> {
-        let mut hash = CryptoSha256::new();
+        let mut hash = sha2::Sha256::new();
         hash.input(data);
 
-        let mut bytes = [0; Sha256::len()];
-        hash.result(&mut bytes);
+        let bytes: [u8; Sha256::len()] = hash.result().into();
         Ok(ContentHash::Sha256(Sha256::from_slice(&bytes)?))
     }
 }

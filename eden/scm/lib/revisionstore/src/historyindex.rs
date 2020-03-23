@@ -15,9 +15,8 @@ use std::{
 
 use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use crypto::digest::Digest;
-use crypto::sha1::Sha1;
 use memmap::{Mmap, MmapOptions};
+use sha1::{Digest, Sha1};
 use thiserror::Error;
 
 use types::{HgId, Key, RepoPath};
@@ -403,8 +402,7 @@ impl HistoryIndex {
 fn sha1(value: &[u8]) -> HgId {
     let mut hasher = Sha1::new();
     hasher.input(value);
-    let mut buf: [u8; 20] = Default::default();
-    hasher.result(&mut buf);
+    let buf: [u8; 20] = hasher.result().into();
     (&buf).into()
 }
 

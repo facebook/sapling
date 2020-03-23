@@ -13,7 +13,7 @@ use std::{
 
 use anyhow::Result;
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
-use crypto::{digest::Digest, sha1::Sha1};
+use sha1::{Digest, Sha1};
 
 use indexedlog::{
     log::IndexOutput,
@@ -74,9 +74,9 @@ impl Entry {
 
     fn key_to_index_key(key: &Key) -> Vec<u8> {
         let mut hasher = Sha1::new();
-        hasher.input(key.path.as_ref());
-        let mut buf: [u8; 20] = Default::default();
-        hasher.result(&mut buf);
+        let path_buf: &[u8] = key.path.as_ref();
+        hasher.input(path_buf);
+        let buf: [u8; 20] = hasher.result().into();
 
         let mut index_key = Vec::with_capacity(HgId::len() * 2);
         index_key.extend_from_slice(key.hgid.as_ref());

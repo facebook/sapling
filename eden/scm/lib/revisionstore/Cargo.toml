@@ -15,6 +15,7 @@ byteorder = "1.2.7"
 configparser = { path = "../configparser" }
 edenapi = { path = "../edenapi" }
 futures = "0.3"
+hex = "0.4"
 indexedlog = { path = "../indexedlog" }
 lz4-pyframe = { path = "../lz4-pyframe" }
 memmap = "0.7.0"
@@ -24,10 +25,11 @@ mpatch = { path = "../mpatch" }
 lfs_protocol = { path = "../../../mononoke/lfs_protocol" }
 parking_lot = "0.9"
 reqwest = "0.10"
-rust-crypto = "*"
 serde = "1.0.84"
 serde_derive = "1.0.84"
 serde_json = "1.0"
+sha-1 = "0.8"
+sha2 = "0.8"
 tempfile = "3.0.4"
 thiserror = "1.0.5"
 tokio = "0.2"
