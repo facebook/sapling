@@ -17,7 +17,7 @@ pathmatcher = { path = "../pathmatcher" }
 quickcheck = { version = "0.9", optional = true }
 parking_lot = { version = "0.9", optional = true }
 rand = { version = "0.7", optional = true }
-rust-crypto = "0.2"
+sha-1 = "0.8"
 thiserror = "1.0"
 tracing = "0.1"
 types = { path = "../types" }

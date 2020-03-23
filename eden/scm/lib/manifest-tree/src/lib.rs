@@ -20,8 +20,8 @@ use std::{
 
 use anyhow::Result;
 use bytes::Bytes;
-use crypto::{digest::Digest, sha1::Sha1};
 use once_cell::sync::OnceCell;
+use sha1::{Digest, Sha1};
 use thiserror::Error;
 
 use manifest::{DiffEntry, Directory, File, FileMetadata, FsNodeMetadata, List, Manifest};
@@ -227,8 +227,7 @@ impl Manifest for TreeManifest {
         fn compute_hgid<C: AsRef<[u8]>>(content: C) -> HgId {
             let mut hasher = Sha1::new();
             hasher.input(content.as_ref());
-            let mut buf = [0u8; HgId::len()];
-            hasher.result(&mut buf);
+            let buf: [u8; HgId::len()] = hasher.result().into();
             (&buf).into()
         }
         fn do_flush<'a, 'b, 'c>(
@@ -380,8 +379,7 @@ impl TreeManifest {
                 hasher.input(p1.as_ref());
             }
             hasher.input(content.as_ref());
-            let mut buf = [0u8; HgId::len()];
-            hasher.result(&mut buf);
+            let buf: [u8; HgId::len()] = hasher.result().into();
             (&buf).into()
         }
         struct Executor<'a> {
