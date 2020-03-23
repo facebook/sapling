@@ -29,6 +29,7 @@ use anyhow::{format_err, Error};
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
+use derive_more::AddAssign;
 use fbinit::FacebookInit;
 use futures::{
     future::{self, BoxFuture, FutureExt},
@@ -46,7 +47,6 @@ use std::{
     fmt,
     hash::Hash,
     iter::FromIterator,
-    ops::AddAssign,
     result::Result,
     str::FromStr,
     time::{Duration, Instant},
@@ -171,21 +171,11 @@ fn check_linknode_populated(outgoing: &[OutgoingEdge]) -> CheckStatus {
     }
 }
 
-#[derive(Clone, Copy, Default, Debug)]
+#[derive(AddAssign, Clone, Copy, Default, Debug)]
 struct CheckStats {
     pass: u64,
     fail: u64,
     edges: u64,
-}
-
-impl AddAssign for CheckStats {
-    fn add_assign(&mut self, other: Self) {
-        *self = Self {
-            pass: self.pass + other.pass,
-            fail: self.fail + other.fail,
-            edges: self.edges + other.edges,
-        };
-    }
 }
 
 struct CheckData {

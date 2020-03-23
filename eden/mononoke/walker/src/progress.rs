@@ -10,6 +10,7 @@ use crate::state::StepStats;
 use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
+use derive_more::{Add, Div, Mul, Sub};
 use futures::{
     future::FutureExt,
     stream::{Stream, StreamExt, TryStreamExt},
@@ -19,7 +20,7 @@ use slog::{info, Logger};
 use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
-    ops::{Add, Div, Mul, Sub},
+    ops::Add,
     sync::{Arc, Mutex},
     time::{Duration, Instant},
 };
@@ -85,60 +86,12 @@ where
     }
 }
 
-#[derive(Clone, Copy, Default, Debug)]
+#[derive(Add, Sub, Mul, Div, Clone, Copy, Default, Debug)]
 struct ProgressSummary {
     walked: u64,
     checked: u64,
     queued: u64,
     errors: u64,
-}
-
-impl Add<ProgressSummary> for ProgressSummary {
-    type Output = Self;
-    fn add(self, other: Self) -> Self {
-        Self {
-            walked: self.walked + other.walked,
-            checked: self.checked + other.checked,
-            queued: self.queued + other.queued,
-            errors: self.errors + other.errors,
-        }
-    }
-}
-
-impl Sub<ProgressSummary> for ProgressSummary {
-    type Output = Self;
-    fn sub(self, other: Self) -> Self {
-        Self {
-            walked: self.walked - other.walked,
-            checked: self.checked - other.checked,
-            queued: self.queued - other.queued,
-            errors: self.errors - other.errors,
-        }
-    }
-}
-
-impl Mul<u64> for ProgressSummary {
-    type Output = Self;
-    fn mul(self, other: u64) -> Self {
-        Self {
-            walked: self.walked * other,
-            checked: self.checked * other,
-            queued: self.queued * other,
-            errors: self.errors * other,
-        }
-    }
-}
-
-impl Div<u64> for ProgressSummary {
-    type Output = Self;
-    fn div(self, other: u64) -> Self {
-        Self {
-            walked: self.walked / other,
-            checked: self.checked / other,
-            queued: self.queued / other,
-            errors: self.errors / other,
-        }
-    }
 }
 
 struct ProgressStateReporting {

@@ -19,6 +19,7 @@ use async_compression::{metered::MeteredWrite, Compressor, CompressorType};
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
+use derive_more::Add;
 use fbinit::FacebookInit;
 use futures::{
     future::{self, BoxFuture, FutureExt, TryFutureExt},
@@ -30,11 +31,10 @@ use slog::{info, Logger};
 use std::{
     cmp::min,
     io::{Cursor, Write},
-    ops::Add,
     time::{Duration, Instant},
 };
 
-#[derive(Clone, Copy, Default, Debug)]
+#[derive(Add, Clone, Copy, Default, Debug)]
 struct SizingStats {
     raw: usize,
     compressed: usize,
@@ -46,16 +46,6 @@ impl SizingStats {
             0
         } else {
             100 * (self.raw - self.compressed) / self.raw
-        }
-    }
-}
-
-impl Add<SizingStats> for SizingStats {
-    type Output = Self;
-    fn add(self, other: Self) -> Self {
-        Self {
-            raw: self.raw + other.raw,
-            compressed: self.compressed + other.compressed,
         }
     }
 }
