@@ -6,6 +6,7 @@
  */
 
 use anyhow::Error;
+use blobstore::StoreLoadable;
 use cloned::cloned;
 use context::CoreContext;
 use futures_ext::StreamExt;
@@ -14,7 +15,6 @@ use mononoke_types::{FileType, MPath};
 use std::collections::HashSet;
 use std::hash::Hash;
 
-use crate::types::StoreLoadable;
 use crate::{Entry, Manifest, ManifestOps};
 
 /// Get implicit directory deletes

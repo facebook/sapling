@@ -6,11 +6,11 @@
  */
 
 pub(crate) use crate::{
-    bonsai::BonsaiEntry, derive_manifest, find_intersection_of_diffs, types::StoreLoadable, Diff,
-    Entry, Manifest, ManifestOps, PathOrPrefix, PathTree, TreeInfo,
+    bonsai::BonsaiEntry, derive_manifest, find_intersection_of_diffs, Diff, Entry, Manifest,
+    ManifestOps, PathOrPrefix, PathTree, TreeInfo,
 };
 use anyhow::{format_err, Error};
-use blobstore::{Blobstore, Loadable, LoadableError, Storable};
+use blobstore::{Blobstore, Loadable, LoadableError, Storable, StoreLoadable};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxFuture, FutureExt};
@@ -906,12 +906,16 @@ pub(crate) struct ManifestStore(pub HashMap<TestManifestIdStr, TestManifestStr>)
 impl StoreLoadable<ManifestStore> for TestManifestIdStr {
     type Value = TestManifestStr;
 
-    fn load(&self, _ctx: CoreContext, store: &ManifestStore) -> BoxFuture<Self::Value, Error> {
+    fn load(
+        &self,
+        _ctx: CoreContext,
+        store: &ManifestStore,
+    ) -> BoxFuture<Self::Value, LoadableError> {
         store
             .0
             .get(&self)
             .cloned()
-            .ok_or(format_err!("manifest not in store {}", self.0))
+            .ok_or(LoadableError::Missing(format!("missing {}", self.0)))
             .into_future()
             .boxify()
     }

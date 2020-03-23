@@ -21,8 +21,8 @@ use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use std::hash::Hash;
 
-use crate::types::StoreLoadable;
 use crate::{Entry, Manifest};
+use blobstore::StoreLoadable;
 
 pub(crate) type BonsaiEntry<ManifestId, FileId> = Entry<ManifestId, (FileType, FileId)>;
 

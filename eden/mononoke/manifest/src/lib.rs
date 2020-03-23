@@ -14,7 +14,8 @@ pub use crate::ops::{
     find_intersection_of_diffs, find_intersection_of_diffs_and_parents, Diff, ManifestOps,
     PathOrPrefix,
 };
-pub use crate::types::{Entry, Manifest, PathTree, StoreLoadable, Traced};
+pub use crate::types::{Entry, Manifest, PathTree, Traced};
+pub use blobstore::StoreLoadable;
 
 mod bonsai;
 mod derive;

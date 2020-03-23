@@ -27,7 +27,7 @@ use std::path::Path;
 use std::sync::{Arc, Mutex};
 
 use blobrepo::save_bonsai_changesets;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, LoadableError};
 use clap::Arg;
 use cmdlib::args;
 use context::CoreContext;
@@ -106,9 +106,13 @@ impl StoreLoadable<Arc<Mutex<Repository>>> for GitTree {
         &self,
         _ctx: CoreContext,
         store: &Arc<Mutex<Repository>>,
-    ) -> BoxFuture<Self::Value, Error> {
+    ) -> BoxFuture<Self::Value, LoadableError> {
         let repo = store.lock().expect("Poisoned lock");
-        load_git_tree(self.0, &repo).into_future().boxify()
+        // XXX - maybe return LoadableError::Missing if not found
+        load_git_tree(self.0, &repo)
+            .map_err(LoadableError::Error)
+            .into_future()
+            .boxify()
     }
 }
 
