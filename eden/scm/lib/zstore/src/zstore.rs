@@ -9,11 +9,10 @@
 //!
 //! See [Zstore] for the main structure.
 
-use crypto::digest::Digest;
-use crypto::sha1::Sha1;
 use indexedlog::{log as ilog, DefaultOpenOptions};
 use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
+use sha1::{Digest, Sha1};
 use std::borrow::Cow;
 use std::fmt;
 use std::path::{Path, PathBuf};
@@ -396,8 +395,7 @@ pub fn sha1(data: &[u8]) -> Id20 {
     trace_span!("sha1", data_len = data.len()).in_scope(|| {
         let mut hasher = Sha1::new();
         hasher.input(data);
-        let mut id = [0u8; 20];
-        hasher.result(&mut id);
+        let id: [u8; 20] = hasher.result().into();
         Id20::from_byte_array(id)
     })
 }
