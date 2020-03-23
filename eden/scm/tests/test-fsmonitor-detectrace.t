@@ -21,14 +21,15 @@ Create a race by write files by writing files if context._dirstatestatus is call
   $ mkdir c
   $ touch e f g
   $ cat > $TESTTMP/racy.py << EOF
-  > from edenscm.mercurial import context, extensions
+  > from edenscm.hgext import fsmonitor
+  > from edenscm.mercurial import extensions
   > def _race(orig, *args, **kwargs):
   >     open('a', 'w').close()
   >     open('f', 'w').close()
   >     open('c/d.txt', 'w').close()
   >     return orig(*args, **kwargs)
   > def uisetup(ui):
-  >     extensions.wrapfunction(context.workingctx, "_dirstatestatus", _race)
+  >     extensions.wrapfunction(fsmonitor, "_walk", _race)
   > EOF
 
   $ hg status --config extensions.racy=$TESTTMP/racy.py
@@ -39,14 +40,22 @@ Create a race by write files by writing files if context._dirstatestatus is call
   (this is an error because HGDETECTRACE or fsmonitor.detectrace is set to true)
   [75]
 
-  $ hg status -i --config extensions.racy=$TESTTMP/racy.py
+The race detector does not check files outside specified patterns:
+
+  $ hg status --config extensions.racy=$TESTTMP/racy.py y
+  ? y
+
+  $ hg status --config extensions.racy=$TESTTMP/racy.py y a
   abort: [race-detector] files changed when scanning changes in working copy:
     a
-    c/d.txt
-    f
   
   (this is an error because HGDETECTRACE or fsmonitor.detectrace is set to true)
   [75]
+
+Ignored files do not use fsmonitor. So race detector does not detect it:
+
+  $ hg status -i --config extensions.racy=$TESTTMP/racy.py
+  I f
 
 Race detector can be turned off:
 

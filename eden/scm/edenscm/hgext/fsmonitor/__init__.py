@@ -165,6 +165,7 @@ operation. (default = true)
 from __future__ import absolute_import
 
 import codecs
+import contextlib
 import hashlib
 import os
 import stat
@@ -850,7 +851,9 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
         if not self._watchmanclient.available():
             return bail("client unavailable")
 
-        with progress.spinner(self._ui, "scanning working copy"):
+        with progress.spinner(self._ui, "scanning working copy"), self._detectrace(
+            match
+        ):
             try:
                 # Ideally we'd return the result incrementally, but we need to
                 # be able to fall back if watchman fails. So let's consume the
@@ -858,6 +861,61 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
                 return list(self._fspendingchanges(match))
             except fsmonitorfallback as ex:
                 return bail(str(ex))
+
+    @contextlib.contextmanager
+    def _detectrace(self, match=None):
+        ui = self._ui
+        detectrace = ui.configbool("fsmonitor", "detectrace") or util.parsebool(
+            encoding.environ.get("HGDETECTRACE", "")
+        )
+        if detectrace:
+            state = self._fsmonitorstate
+            client = self._watchmanclient
+            try:
+                startclock = client.command(
+                    "clock", {"sync_timeout": int(state.timeout * 1000)}
+                )["clock"]
+            except Exception as ex:
+                ui.warn(_("cannot detect status race: %s\n") % ex)
+                detectrace = False
+
+        yield
+
+        if detectrace:
+            raceresult = client.command(
+                "query",
+                {
+                    "fields": ["name"],
+                    "since": startclock,
+                    "expression": [
+                        "allof",
+                        ["type", "f"],
+                        ["not", ["anyof", ["dirname", ".hg"]]],
+                    ],
+                    "sync_timeout": int(state.timeout * 1000),
+                    "empty_on_fresh_instance": True,
+                },
+            )
+            ignore = self._repo.dirstate._ignore
+            racenames = [
+                name
+                for name in raceresult["files"]
+                # hg-checklink*, hg-checkexec* are ignored.
+                # Ignored files are allowed. "listignore" was checked before.
+                if not name.startswith("hg-check")
+                and not ignore(name)
+                and (match is None or match(name))
+            ]
+            if racenames:
+                msg = _(
+                    "[race-detector] files changed when scanning changes in working copy:\n%s"
+                ) % "".join("  %s\n" % name for name in sorted(racenames))
+                raise error.WorkingCopyRaced(
+                    msg,
+                    hint=_(
+                        "this is an error because HGDETECTRACE or fsmonitor.detectrace is set to true"
+                    ),
+                )
 
     def _fspendingchanges(self, match=None):
         if match is None:
@@ -1027,57 +1085,6 @@ def wrapdirstate(orig, self):
     return ds
 
 
-def _racedetect(orig, self, other, s, match, listignored, listclean, listunknown):
-    repo = self._repo
-    detectrace = repo.ui.configbool("fsmonitor", "detectrace") or util.parsebool(
-        encoding.environ.get("HGDETECTRACE", "")
-    )
-    if detectrace and util.safehasattr(repo.dirstate._fs, "_watchmanclient"):
-        state = repo.dirstate._fs._fsmonitorstate
-        try:
-            startclock = repo.dirstate._fs._watchmanclient.command(
-                "clock", {"sync_timeout": int(state.timeout * 1000)}
-            )["clock"]
-        except Exception as ex:
-            repo.ui.warn(_("cannot detect status race: %s\n") % ex)
-            detectrace = False
-    result = orig(self, other, s, match, listignored, listclean, listunknown)
-    if detectrace and util.safehasattr(repo.dirstate._fs, "_fsmonitorstate"):
-        raceresult = repo._watchmanclient.command(
-            "query",
-            {
-                "fields": ["name"],
-                "since": startclock,
-                "expression": [
-                    "allof",
-                    ["type", "f"],
-                    ["not", ["anyof", ["dirname", ".hg"]]],
-                ],
-                "sync_timeout": int(state.timeout * 1000),
-                "empty_on_fresh_instance": True,
-            },
-        )
-        ignore = repo.dirstate._ignore
-        racenames = [
-            name
-            for name in raceresult["files"]
-            # hg-checklink*, hg-checkexec* are ignored.
-            # Ignored files are allowed unless listignored is set.
-            if not name.startswith("hg-check") and (listignored or not ignore(name))
-        ]
-        if racenames:
-            msg = _(
-                "[race-detector] files changed when scanning changes in working copy:\n%s"
-            ) % "".join("  %s\n" % name for name in sorted(racenames))
-            raise error.WorkingCopyRaced(
-                msg,
-                hint=_(
-                    "this is an error because HGDETECTRACE or fsmonitor.detectrace is set to true"
-                ),
-            )
-    return result
-
-
 def extsetup(ui):
     extensions.wrapfilecache(localrepo.localrepository, "dirstate", wrapdirstate)
     if pycompat.isdarwin:
@@ -1085,7 +1092,6 @@ def extsetup(ui):
         extensions.wrapfunction(os, "symlink", wrapsymlink)
 
     extensions.wrapfunction(filesystem, "findthingstopurge", wrappurge)
-    extensions.wrapfunction(context.workingctx, "_buildstatus", _racedetect)
 
 
 def wrapsymlink(orig, source, link_name):
