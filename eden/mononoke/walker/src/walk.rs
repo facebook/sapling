@@ -75,6 +75,14 @@ impl ResolvedNode {
 }
 
 pub trait WalkVisitor<VOut, Route> {
+    // Called before the step is attempted
+    fn start_step(
+        &self,
+        ctx: CoreContext,
+        route: Option<&Route>,
+        step: &OutgoingEdge,
+    ) -> CoreContext;
+
     // This can mutate the internal state.  Takes ownership and returns data, plus next step
     fn visit(
         &self,
@@ -579,8 +587,8 @@ where
             let published_bookmarks = Arc::new(published_bookmarks);
             bounded_traversal_stream(scheduled_max, walk_roots, {
                 move |(via, walk_item)| {
+                    let ctx = visitor.start_step(ctx.clone(), via.as_ref(), &walk_item);
                     cloned!(
-                        ctx,
                         error_as_data_node_types,
                         error_as_data_edge_types,
                         published_bookmarks,

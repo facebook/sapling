@@ -29,6 +29,7 @@ use anyhow::{format_err, Error};
 use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
+use context::CoreContext;
 use derive_more::AddAssign;
 use fbinit::FacebookInit;
 use futures::{
@@ -185,6 +186,15 @@ struct CheckData {
 }
 
 impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), Node> for ValidatingVisitor {
+    fn start_step(
+        &self,
+        ctx: CoreContext,
+        route: Option<&Node>,
+        step: &OutgoingEdge,
+    ) -> CoreContext {
+        self.inner.start_step(ctx, route.map(|_| &()), step)
+    }
+
     fn visit(
         &self,
         current: ResolvedNode,

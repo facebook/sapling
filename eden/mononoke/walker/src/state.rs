@@ -8,6 +8,7 @@
 use crate::graph::{EdgeType, Node, NodeData, NodeType};
 use crate::walk::{expand_checked_nodes, OutgoingEdge, ResolvedNode, WalkVisitor};
 use chashmap::CHashMap;
+use context::CoreContext;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{ChangesetId, ContentId, MPath, MPathHash};
 use phases::Phase;
@@ -147,6 +148,15 @@ impl WalkStateCHashMap {
 }
 
 impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), ()> for WalkStateCHashMap {
+    fn start_step(
+        &self,
+        ctx: CoreContext,
+        _route: Option<&()>,
+        _step: &OutgoingEdge,
+    ) -> CoreContext {
+        ctx
+    }
+
     fn visit(
         &self,
         source: ResolvedNode,
@@ -216,6 +226,15 @@ where
     Inner: WalkVisitor<VOut, Route>,
     VOut: Send,
 {
+    fn start_step(
+        &self,
+        ctx: CoreContext,
+        route: Option<&Route>,
+        step: &OutgoingEdge,
+    ) -> CoreContext {
+        self.inner.start_step(ctx, route, step)
+    }
+
     fn visit(
         &self,
         current: ResolvedNode,
