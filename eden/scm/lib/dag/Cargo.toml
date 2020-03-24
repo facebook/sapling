@@ -20,6 +20,7 @@ tempfile = "3.0.7"
 bindag = { path = "bindag" }
 drawdag = { path = "../drawdag" }
 minibench = { path = "../minibench" }
+once_cell = "1"
 quickcheck = "0.9"
 
 [[bench]]

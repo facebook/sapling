@@ -28,7 +28,7 @@ use vlqencoding::{VLQDecode, VLQDecodeAt, VLQEncode};
 /// [`Segment`] represents a range of [`Id`]s in an [`IdDag`] graph.
 /// It provides methods to access properties of the segments, including the range itself,
 /// parents, and level information.
-#[derive(Clone)]
+#[derive(Clone, Eq)]
 pub struct Segment(pub(crate) Bytes);
 
 // Serialization format for Segment:
@@ -141,6 +141,12 @@ impl Segment {
             buf.write_vlq(parent.0).unwrap();
         }
         Self(buf.into())
+    }
+}
+
+impl PartialEq for Segment {
+    fn eq(&self, other: &Self) -> bool {
+        self.0[..] == other.0[..]
     }
 }
 

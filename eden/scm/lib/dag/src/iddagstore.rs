@@ -13,6 +13,7 @@ use byteorder::{BigEndian, WriteBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
 use minibytes::Bytes;
+use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::io::Cursor;
 use std::path::{Path, PathBuf};
@@ -40,7 +41,12 @@ pub trait IdDagStore {
         low: Id,
         high: Id,
         parents: &[Id],
-    ) -> Result<()>;
+    ) -> Result<()> {
+        let segment = Segment::new(flags, level, low, high, parents);
+        self.insert_segment(segment)
+    }
+
+    fn insert_segment(&mut self, segment: Segment) -> Result<()>;
 
     /// Return the next unused id for segments of the specified level.
     ///
@@ -129,15 +135,7 @@ impl IdDagStore for IndexedLogStore {
         Ok(None)
     }
 
-    fn insert(
-        &mut self,
-        flags: SegmentFlags,
-        level: Level,
-        low: Id,
-        high: Id,
-        parents: &[Id],
-    ) -> Result<()> {
-        let segment = Segment::new(flags, level, low, high, parents);
+    fn insert_segment(&mut self, segment: Segment) -> Result<()> {
         self.log.append(&segment.0)?;
         Ok(())
     }
@@ -372,5 +370,290 @@ impl IndexedLogStore {
             path: self.path.clone(),
         };
         Ok(store)
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+enum StoreId {
+    Master(usize),
+    NonMaster(usize),
+}
+
+pub struct InProcessStore {
+    master_segments: Vec<Segment>,
+    non_master_segments: Vec<Segment>,
+    // level -> head -> serialized Segment
+    level_head_index: Vec<BTreeMap<Id, StoreId>>,
+    // parent -> serialized Segment
+    parent_index: BTreeMap<Id, Vec<StoreId>>,
+}
+
+impl IdDagStore for InProcessStore {
+    fn max_level(&self) -> Result<Level> {
+        Ok((self.level_head_index.len().max(1) - 1) as Level)
+    }
+
+    fn find_segment_by_head_and_level(&self, head: Id, level: Level) -> Result<Option<Segment>> {
+        let answer = self
+            .get_head_index(level)
+            .and_then(|head_index| head_index.get(&head))
+            .map(|store_id| self.get_segment(store_id));
+        Ok(answer)
+    }
+
+    fn find_flat_segment_including_id(&self, id: Id) -> Result<Option<Segment>> {
+        let level = 0;
+        let answer = self
+            .get_head_index(level)
+            .and_then(|head_index| head_index.range(id..).next())
+            .map(|(_, store_id)| self.get_segment(store_id));
+        Ok(answer)
+    }
+
+    fn insert_segment(&mut self, segment: Segment) -> Result<()> {
+        let high = segment.high()?;
+        let level = segment.level()?;
+        let parents = segment.parents()?;
+
+        let store_id = match high.group() {
+            Group::MASTER => {
+                self.master_segments.push(segment);
+                StoreId::Master(self.master_segments.len() - 1)
+            }
+            _ => {
+                self.non_master_segments.push(segment);
+                StoreId::NonMaster(self.non_master_segments.len() - 1)
+            }
+        };
+        for parent in parents {
+            let children = self.parent_index.entry(parent).or_insert(vec![]);
+            children.push(store_id);
+        }
+        self.get_head_index_mut(level).insert(high, store_id);
+        Ok(())
+    }
+
+    fn next_free_id(&self, level: Level, group: Group) -> Result<Id> {
+        match self.get_head_index(level).and_then(|head_index| {
+            head_index
+                .range(group.min_id()..=group.max_id())
+                .rev()
+                .next()
+        }) {
+            None => Ok(group.min_id()),
+            Some((_, store_id)) => {
+                let segment = self.get_segment(store_id);
+                Ok(segment.high()? + 1)
+            }
+        }
+    }
+
+    fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>> {
+        match self.get_head_index(level) {
+            None => Ok(vec![]),
+            Some(head_index) => {
+                let segments = head_index
+                    .range(id..id.group().max_id())
+                    .map(|(_, store_id)| self.get_segment(store_id))
+                    .collect();
+                Ok(segments)
+            }
+        }
+    }
+
+    fn iter_segments_descending<'a>(
+        &'a self,
+        _max_high_id: Id,
+        _level: Level,
+    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
+        unimplemented!();
+    }
+
+    fn iter_segments_with_parent<'a>(
+        &'a self,
+        _parent: Id,
+    ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
+        unimplemented!();
+    }
+
+    fn reload(&mut self) -> Result<()> {
+        Ok(())
+    }
+
+    fn remove_non_master(&mut self) -> Result<()> {
+        unimplemented!();
+    }
+
+    fn sync(&mut self) -> Result<()> {
+        Ok(())
+    }
+}
+
+impl InProcessStore {
+    fn get_head_index(&self, level: Level) -> Option<&BTreeMap<Id, StoreId>> {
+        self.level_head_index.get(level as usize)
+    }
+
+    fn get_head_index_mut(&mut self, level: Level) -> &mut BTreeMap<Id, StoreId> {
+        if self.level_head_index.len() <= level as usize {
+            self.level_head_index
+                .resize(level as usize + 1, BTreeMap::new());
+        }
+        &mut self.level_head_index[level as usize]
+    }
+
+    fn get_segment(&self, store_id: &StoreId) -> Segment {
+        match store_id {
+            &StoreId::Master(offset) => self.master_segments[offset].clone(),
+            &StoreId::NonMaster(offset) => self.non_master_segments[offset].clone(),
+        }
+    }
+}
+
+impl InProcessStore {
+    pub fn new() -> Self {
+        InProcessStore {
+            master_segments: Vec::new(),
+            non_master_segments: Vec::new(),
+            level_head_index: Vec::new(),
+            parent_index: BTreeMap::new(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use once_cell::sync::Lazy;
+    use std::ops::Deref;
+
+    //  0---2--3--4--5--10--11--13
+    //   \-1 \-6--8--9-/      \-12
+    //          \-7
+    static LEVEL0_HEAD2: Lazy<Segment> =
+        Lazy::new(|| Segment::new(SegmentFlags::HAS_ROOT, 0 as Level, Id(0), Id(2), &[]));
+    static LEVEL0_HEAD5: Lazy<Segment> =
+        Lazy::new(|| Segment::new(SegmentFlags::ONLY_HEAD, 0 as Level, Id(3), Id(5), &[Id(2)]));
+    static LEVEL0_HEAD9: Lazy<Segment> =
+        Lazy::new(|| Segment::new(SegmentFlags::empty(), 0 as Level, Id(6), Id(9), &[Id(2)]));
+    static LEVEL0_HEAD13: Lazy<Segment> = Lazy::new(|| {
+        Segment::new(
+            SegmentFlags::empty(),
+            0 as Level,
+            Id(10),
+            Id(13),
+            &[Id(5), Id(9)],
+        )
+    });
+    static LEVEL1_HEAD13: Lazy<Segment> =
+        Lazy::new(|| Segment::new(SegmentFlags::HAS_ROOT, 1 as Level, Id(0), Id(13), &[]));
+
+    fn get_in_process_store() -> InProcessStore {
+        let mut store = InProcessStore::new();
+        let segments: Vec<&Segment> = vec![
+            &LEVEL0_HEAD2,
+            &LEVEL0_HEAD5,
+            &LEVEL0_HEAD9,
+            &LEVEL0_HEAD13,
+            &LEVEL1_HEAD13,
+        ];
+        for segment in segments {
+            store.insert_segment(segment.clone()).unwrap();
+        }
+        store
+    }
+
+    #[test]
+    fn test_in_process_store_insert() {
+        let _store = get_in_process_store();
+        // `get_in_process_stores` does inserts, we care that nothings panics.
+    }
+
+    #[test]
+    fn test_in_process_store_find_segment_by_head_and_level() {
+        let store = get_in_process_store();
+        let segment = store
+            .find_segment_by_head_and_level(Id(13), 1 as Level)
+            .unwrap()
+            .unwrap();
+        assert_eq!(&segment, LEVEL1_HEAD13.deref());
+
+        let segment = store
+            .find_segment_by_head_and_level(Id(5), 0 as Level)
+            .unwrap()
+            .unwrap();
+        assert_eq!(&segment, LEVEL0_HEAD5.deref());
+    }
+
+    #[test]
+    fn test_in_process_store_find_flat_segment_including_id() {
+        let store = get_in_process_store();
+        let segment = store
+            .find_flat_segment_including_id(Id(10))
+            .unwrap()
+            .unwrap();
+        assert_eq!(&segment, LEVEL0_HEAD13.deref());
+
+        let segment = store
+            .find_flat_segment_including_id(Id(0))
+            .unwrap()
+            .unwrap();
+        assert_eq!(&segment, LEVEL0_HEAD2.deref());
+    }
+
+    #[test]
+    fn test_in_process_store_next_free_id() {
+        let store = get_in_process_store();
+        assert_eq!(
+            store.next_free_id(0 as Level, Group::MASTER).unwrap(),
+            Id(14)
+        );
+        assert_eq!(
+            store.next_free_id(0 as Level, Group::NON_MASTER).unwrap(),
+            Group::NON_MASTER.min_id()
+        );
+        assert_eq!(
+            store.next_free_id(1 as Level, Group::MASTER).unwrap(),
+            Id(14)
+        );
+        assert_eq!(
+            store.next_free_id(2 as Level, Group::MASTER).unwrap(),
+            Group::MASTER.min_id()
+        );
+    }
+
+    #[test]
+    fn test_in_process_store_next_segments() {
+        let store = get_in_process_store();
+        let ref_to_owned = |items: &[&Segment]| -> Vec<Segment> {
+            items
+                .into_iter()
+                .map(|&item: &&Segment| item.clone())
+                .collect()
+        };
+        let segments = store.next_segments(Id(4), 0 as Level).unwrap();
+        let expected = ref_to_owned(&[&LEVEL0_HEAD5, &LEVEL0_HEAD9, &LEVEL0_HEAD13]);
+        assert_eq!(segments, expected);
+
+        let segments = store.next_segments(Id(14), 0 as Level).unwrap();
+        let expected = ref_to_owned(&[]);
+        assert_eq!(segments, expected);
+
+        let segments = store.next_segments(Id(0), 1 as Level).unwrap();
+        let expected = ref_to_owned(&[&LEVEL1_HEAD13]);
+        assert_eq!(segments, expected);
+
+        let segments = store.next_segments(Id(0), 2 as Level).unwrap();
+        let expected = ref_to_owned(&[]);
+        assert_eq!(segments, expected);
+    }
+
+    #[test]
+    fn test_in_process_store_max_level() {
+        let store = get_in_process_store();
+        assert_eq!(store.max_level().unwrap(), 1);
+
+        let store = InProcessStore::new();
+        assert_eq!(store.max_level().unwrap(), 0);
     }
 }
