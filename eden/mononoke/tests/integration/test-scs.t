@@ -90,17 +90,19 @@ lookup using bookmark
   $ scsc lookup --repo repo -B BOOKMARK_C -S bonsai
   006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b
 
-check the scuba logs
+check the scuba methods and perf counters logs 
   $ summarize_scuba_json "Request.*" < "$TESTTMP/scuba.json" \
   >     .normal.log_tag .normal.msg .normal.method \
   >     .normal.commit .normal.other_commit .normal.path \
   >     .normal.bookmark_name .normvector.identity_schemes \
-  >     .normal.status .normal.error
+  >     .normal.status .normal.error \
+  >     .int.BlobGets
   {
     "log_tag": "Request start",
     "method": "list_repos"
   }
   {
+    "BlobGets": 0,
     "log_tag": "Request complete",
     "method": "list_repos",
     "status": "SUCCESS"
@@ -114,6 +116,7 @@ check the scuba logs
     "method": "repo_resolve_bookmark"
   }
   {
+    "BlobGets": 0,
     "bookmark_name": "BOOKMARK_C",
     "identity_schemes": [
       "BONSAI"
@@ -131,6 +134,7 @@ check the scuba logs
     "method": "commit_lookup"
   }
   {
+    "BlobGets": 0,
     "commit": "006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b",
     "identity_schemes": [
       "BONSAI"
@@ -148,6 +152,7 @@ check the scuba logs
     "method": "repo_resolve_bookmark"
   }
   {
+    "BlobGets": 0,
     "bookmark_name": "BOOKMARK_B",
     "identity_schemes": [
       "BONSAI"
@@ -166,6 +171,7 @@ check the scuba logs
     "other_commit": "c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb"
   }
   {
+    "BlobGets": 0,
     "commit": "006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b",
     "identity_schemes": [
       "BONSAI"

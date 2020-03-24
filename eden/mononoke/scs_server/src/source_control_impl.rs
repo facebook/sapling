@@ -241,6 +241,9 @@ fn log_result<T>(ctx: CoreContext, stats: &FutureStats, result: &Result<T, error
         Err(errors::ServiceError::Internal(e)) => ("INTERNAL_ERROR", Some(format!("{:?}", e))),
     };
     let mut scuba = ctx.scuba().clone();
+
+    ctx.perf_counters().insert_perf_counters(&mut scuba);
+
     scuba.add_future_stats(stats);
     scuba.add("status", status);
     if let Some(error) = error {
