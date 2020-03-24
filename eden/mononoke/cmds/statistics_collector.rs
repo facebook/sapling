@@ -17,11 +17,12 @@ use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
-use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
+use futures::stream::{self, StreamExt, TryStreamExt};
+use futures_ext::{BoxStream, FutureExt, StreamExt as OldStreamExt};
 use futures_old::future;
-use futures_old::future::{Future, IntoFuture};
-use futures_old::stream;
+use futures_old::future::Future;
 use futures_old::stream::Stream;
+use futures_util::try_join;
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{FileType, RepositoryId};
@@ -304,11 +305,11 @@ fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntr
     deserialize_cs_entries(&Bytes::from(data))
 }
 
-pub fn generate_statistics_from_file<P: AsRef<Path>>(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    in_path: P,
-) -> BoxFuture<(), Error> {
+pub async fn generate_statistics_from_file<P: AsRef<Path>>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    in_path: &P,
+) -> Result<(), Error> {
     // 1 day in seconds
     const REQUIRED_COMMITS_DISTANCE: i64 = 60 * 60 * 24;
     let blobstore = Arc::new(repo.get_blobstore());
@@ -316,149 +317,117 @@ pub fn generate_statistics_from_file<P: AsRef<Path>>(
     // e.g. serde deserialize. To avoid saving fields separately it may be necessary to add new
     // fields to RepoStatistics struct, like cs_timestamp, hg_cs_id, repo_id and refactor code.
     println!("repo_id,hg_cs_id,cs_timestamp,num_files,total_file_size,num_lines");
-    parse_serialized_commits(in_path)
-        .into_future()
-        .and_then(move |changesets| {
-            info!(ctx.logger(), "Started calculating changesets timestamps");
-            stream::iter_ok(changesets.clone())
-                .map({
-                    cloned!(ctx, repo);
-                    move |cs_id| {
-                        let repo_id = cs_id.repo_id;
-                        repo.get_hg_from_bonsai_changeset(ctx.clone(), cs_id.cs_id)
-                            .and_then({
-                                cloned!(ctx, repo);
-                                move |hg_cs_id| {
-                                    get_changeset_timestamp_from_changeset(
-                                        ctx.clone(),
-                                        repo.clone(),
-                                        hg_cs_id,
-                                    )
-                                    .map(move |cs_timestamp| (hg_cs_id, cs_timestamp, repo_id))
-                                }
-                            })
-                    }
-                })
-                .buffered(100)
-                .collect()
-                .map({
-                    cloned!(ctx);
-                    move |mut changesets| {
-                        info!(
-                            ctx.logger(),
-                            "Timestamps calculated, sorting them and starting calculating statistics"
-                        );
-                        changesets.sort_by_key(|(_, cs_timestamp, _)| cs_timestamp.clone());
-                        stream::iter_ok(changesets)
-                    }
-                })
-                .flatten_stream()
-                .fold(
-                    // Mapping repo-id => (cs_creation_timestamp, hg_cs_id, statistics)
-                    HashMap::<RepositoryId, (i64, HgChangesetId, RepoStatistics)>::new(),
-                    move |repo_stats_map, (hg_cs_id, cs_timestamp, repo_id)| {
-                        cloned!(ctx, repo, blobstore);
-                        match repo_stats_map.get(&repo_id).cloned() {
-                            Some((old_cs_timestamp, old_hg_cs_id, old_stats)) => {
-                                // Calculate statistics for changeset only if changeset
-                                // was created at least REQUIRED_COMMITS_DISTANCE seconds after
-                                // changeset we used previously to calculate statistics.
-                                if cs_timestamp - old_cs_timestamp > REQUIRED_COMMITS_DISTANCE {
-                                    info!(
-                                        ctx.logger(),
-                                        "Changeset {} with timestamp {} was created more than {} seconds after previous, calculating statistics for it",
-                                        hg_cs_id, cs_timestamp, REQUIRED_COMMITS_DISTANCE
-                                    );
-                                    get_manifest_from_changeset(
-                                        ctx.clone(),
-                                        repo.clone(),
-                                        old_hg_cs_id.clone(),
-                                    )
-                                    .join(get_manifest_from_changeset(
-                                        ctx.clone(),
-                                        repo.clone(),
-                                        hg_cs_id.clone(),
-                                    ))
-                                    .and_then({
-                                        cloned!(mut repo_stats_map);
-                                        move |(old_manifest, manifest)| {
-                                            update_statistics(
-                                                ctx.clone(),
-                                                repo.clone(),
-                                                old_stats.clone(),
-                                                old_manifest.diff(
-                                                    ctx.clone(),
-                                                    blobstore.clone(),
-                                                    manifest.clone(),
-                                                ),
-                                            )
-                                            .map(move |statistics| {
-                                                info!(
-                                                    ctx.logger(),
-                                                    "Statistics for changeset {} calculated",
-                                                    hg_cs_id
-                                                );
-                                                println!(
-                                                    "{},{},{},{},{},{}",
-                                                    repo_id.id(),
-                                                    hg_cs_id.to_hex(),
-                                                    cs_timestamp,
-                                                    statistics.num_files,
-                                                    statistics.total_file_size,
-                                                    statistics.num_lines
-                                                );
-                                                repo_stats_map
-                                                    .insert(repo_id, (cs_timestamp, hg_cs_id, statistics));
-                                                repo_stats_map
-                                            })
-                                        }
-                                    })
-                                    .boxify()
-                                } else {
-                                    // Skip this changeset
-                                    future::ok(repo_stats_map.clone()).boxify()
-                                }
-                            }
-                            None => {
-                                info!(
-                                    ctx.logger(),
-                                    "Found first changeset for repo_id {}", repo_id.id()
-                                );
-                                get_statistics_from_changeset(
-                                    ctx.clone(),
-                                    repo.clone(),
-                                    blobstore.clone(),
-                                    hg_cs_id,
-                                )
-                                .map({
-                                    cloned!(mut repo_stats_map);
-                                    move |statistics| {
-                                        info!(
-                                            ctx.logger(),
-                                            "First changeset for repo_id {} calculated", repo_id.id()
-                                        );
-                                        println!(
-                                            "{},{},{},{},{},{}",
-                                            repo_id.id(),
-                                            hg_cs_id.to_hex().to_string(),
-                                            cs_timestamp,
-                                            statistics.num_files,
-                                            statistics.total_file_size,
-                                            statistics.num_lines
-                                        );
-                                        repo_stats_map
-                                            .insert(repo_id, (cs_timestamp, hg_cs_id, statistics));
-                                        repo_stats_map
-                                    }
-                                })
-                                .boxify()
-                            }
-                        }
-                    },
-                )
-                .map(move |_| ())
+    let changesets = parse_serialized_commits(in_path)?;
+    info!(ctx.logger(), "Started calculating changesets timestamps");
+
+    let mut changeset_info_vec = stream::iter(changesets)
+        .map({
+            move |changeset| async move {
+                let ChangesetEntry { repo_id, cs_id, .. } = changeset;
+                let hg_cs_id = repo
+                    .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+                    .compat()
+                    .await?;
+                let cs_timestamp =
+                    get_changeset_timestamp_from_changeset(ctx.clone(), repo.clone(), hg_cs_id)
+                        .compat()
+                        .await?;
+                // the error type annotation in principle should be inferred,
+                // but the compiler currently needs it. See https://fburl.com/n1s2ujjb
+                Ok::<(HgChangesetId, i64, RepositoryId), Error>((hg_cs_id, cs_timestamp, repo_id))
+            }
         })
-        .boxify()
+        .buffered(100)
+        .try_collect::<Vec<_>>()
+        .await?;
+
+    info!(
+        ctx.logger(),
+        "Timestamps calculated, sorting them and starting calculating statistics"
+    );
+    changeset_info_vec.sort_by_key(|(_, cs_timestamp, _)| cs_timestamp.clone());
+
+    // accumulate stats into a map
+    let mut repo_stats_map = HashMap::<RepositoryId, (i64, HgChangesetId, RepoStatistics)>::new();
+    for (hg_cs_id, cs_timestamp, repo_id) in changeset_info_vec {
+        match repo_stats_map.get(&repo_id).cloned() {
+            Some((old_cs_timestamp, old_hg_cs_id, old_stats)) => {
+                // Calculate statistics for changeset only if changeset
+                // was created at least REQUIRED_COMMITS_DISTANCE seconds after
+                // changeset we used previously to calculate statistics.
+                if cs_timestamp - old_cs_timestamp <= REQUIRED_COMMITS_DISTANCE {
+                    continue;
+                }
+                info!(
+                    ctx.logger(),
+                    "Changeset {} with timestamp {} was created more than {} seconds after previous, calculating statistics for it",
+                    hg_cs_id, cs_timestamp, REQUIRED_COMMITS_DISTANCE
+                );
+                let (old_manifest, manifest) = try_join!(
+                    get_manifest_from_changeset(ctx.clone(), repo.clone(), old_hg_cs_id.clone(),)
+                        .compat(),
+                    get_manifest_from_changeset(ctx.clone(), repo.clone(), hg_cs_id.clone())
+                        .compat(),
+                )?;
+
+                let statistics = update_statistics(
+                    ctx.clone(),
+                    repo.clone(),
+                    old_stats.clone(),
+                    old_manifest.diff(ctx.clone(), blobstore.clone(), manifest.clone()),
+                )
+                .compat()
+                .await?;
+
+                info!(
+                    ctx.logger(),
+                    "Statistics for changeset {} calculated", hg_cs_id
+                );
+                println!(
+                    "{},{},{},{},{},{}",
+                    repo_id.id(),
+                    hg_cs_id.to_hex(),
+                    cs_timestamp,
+                    statistics.num_files,
+                    statistics.total_file_size,
+                    statistics.num_lines
+                );
+                repo_stats_map.insert(repo_id, (cs_timestamp, hg_cs_id, statistics));
+            }
+            None => {
+                info!(
+                    ctx.logger(),
+                    "Found first changeset for repo_id {}",
+                    repo_id.id()
+                );
+                let statistics = get_statistics_from_changeset(
+                    ctx.clone(),
+                    repo.clone(),
+                    blobstore.clone(),
+                    hg_cs_id,
+                )
+                .compat()
+                .await?;
+
+                info!(
+                    ctx.logger(),
+                    "First changeset for repo_id {} calculated",
+                    repo_id.id()
+                );
+                println!(
+                    "{},{},{},{},{},{}",
+                    repo_id.id(),
+                    hg_cs_id.to_hex().to_string(),
+                    cs_timestamp,
+                    statistics.num_files,
+                    statistics.total_file_size,
+                    statistics.num_lines
+                );
+                repo_stats_map.insert(repo_id, (cs_timestamp, hg_cs_id, statistics));
+            }
+        }
+    }
+    Ok(())
 }
 
 enum Operation {
@@ -483,11 +452,7 @@ async fn run_statistics<'a>(
         let in_filename = sub_m
             .value_of(ARG_IN_FILENAME)
             .expect("missing required argument");
-        return Ok(
-            generate_statistics_from_file(ctx.clone(), repo.clone(), in_filename)
-                .compat()
-                .await?,
-        );
+        return Ok(generate_statistics_from_file(&ctx, &repo, &in_filename).await?);
     }
 
     let blobstore = Arc::new(repo.get_blobstore());
@@ -636,7 +601,7 @@ mod tests {
     use super::*;
     use bytes::Bytes;
     use fixtures::linear;
-    use futures_old::stream;
+    use futures_old::stream as old_stream;
     use maplit::btreemap;
     use std::str::FromStr;
     use tests_utils::{create_commit, store_files};
@@ -647,7 +612,7 @@ mod tests {
         let mut rt = Runtime::new().unwrap();
 
         let stream: BoxStream<FileBytes, Error> =
-            Box::new(stream::once(Ok(FileBytes(Bytes::from(&b""[..])))));
+            Box::new(old_stream::once(Ok(FileBytes(Bytes::from(&b""[..])))));
         let result = rt.block_on(number_of_lines(stream))?;
         assert_eq!(result, 0);
         Ok(())
@@ -657,7 +622,7 @@ mod tests {
     fn test_number_of_lines_one_line() -> Result<(), Error> {
         let mut rt = Runtime::new().unwrap();
 
-        let stream: BoxStream<FileBytes, Error> = Box::new(stream::once(Ok(FileBytes(
+        let stream: BoxStream<FileBytes, Error> = Box::new(old_stream::once(Ok(FileBytes(
             Bytes::from(&b"First line\n"[..]),
         ))));
         let result = rt.block_on(number_of_lines(stream))?;
@@ -669,7 +634,7 @@ mod tests {
     fn test_number_of_lines_many_lines() -> Result<(), Error> {
         let mut rt = Runtime::new().unwrap();
 
-        let stream: BoxStream<FileBytes, Error> = Box::new(stream::once(Ok(FileBytes(
+        let stream: BoxStream<FileBytes, Error> = Box::new(old_stream::once(Ok(FileBytes(
             Bytes::from(&b"First line\nSecond line\nThird line\n"[..]),
         ))));
         let result = rt.block_on(number_of_lines(stream))?;
@@ -686,7 +651,7 @@ mod tests {
             FileBytes(Bytes::from(&b""[..])),
             FileBytes(Bytes::from(&b"First line\nSecond line\nThird line\n"[..])),
         ];
-        let stream: BoxStream<FileBytes, Error> = Box::new(stream::iter_ok(vec));
+        let stream: BoxStream<FileBytes, Error> = Box::new(old_stream::iter_ok(vec));
         let result = rt.block_on(number_of_lines(stream))?;
         assert_eq!(result, 4);
         Ok(())
