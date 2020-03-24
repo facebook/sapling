@@ -759,18 +759,14 @@ void EdenServiceHandler::debugGetRawJournal(
 #endif // !_WIN32
 }
 
-folly::Future<std::unique_ptr<std::vector<FileInformationOrError>>>
-EdenServiceHandler::future_getFileInformation(
+folly::SemiFuture<std::unique_ptr<std::vector<FileInformationOrError>>>
+EdenServiceHandler::semifuture_getFileInformation(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths) {
 #ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*paths));
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
-
-  // Remember the current thrift worker thread so that we can
-  // perform the final result transformation in an appropriate thread.
-  auto threadMgr = getThreadManager();
 
   return collectAllSemiFuture(applyToInodes(
                                   rootInode,
@@ -791,8 +787,7 @@ EdenServiceHandler::future_getFileInformation(
                                           return result;
                                         });
                                   }))
-      .via(threadMgr)
-      .thenValue([](vector<Try<FileInformationOrError>>&& done) {
+      .deferValue([](vector<Try<FileInformationOrError>>&& done) {
         auto out = std::make_unique<vector<FileInformationOrError>>();
         out->reserve(done.size());
         for (auto& item : done) {
