@@ -3184,7 +3184,10 @@ def rustdisplaygraph(
 ):
     props = props or {}
     formatnode = _graphnodeformatter(ui, displayer)
-    renderername = ui.config("experimental", "graph.renderer")
+    if ui.plain("graph"):
+        renderername = "ascii"
+    else:
+        renderername = ui.config("experimental", "graph.renderer")
     if renderername == "lines":
         # Find which renderer can render to the current output encoding.  If
         # none are supported we will fall back to the ASCII renderer.
