@@ -17,13 +17,11 @@ use anyhow::Result;
 use futures::compat::Future01CompatExt;
 use maplit::{hashmap, hashset};
 
+use dag::Id as SegmentedChangelogId;
+
 use blobrepo::BlobRepo;
 use context::CoreContext;
 use mononoke_types::ChangesetId;
-
-/// An identifier in Segmented Changelog
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-pub struct SegmentedChangelogId(u64);
 
 /// Assign an id for a head in a DAG. This implies ancestors of the
 /// head will also have ids assigned.
@@ -54,7 +52,7 @@ pub async fn build_idmap(
     let mut todo_stack = vec![Todo::Visit(head)];
     let mut seen = hashset![head];
     let mut idmap = hashmap![];
-    let mut next_segmented_changelog_id = 1;
+    let mut next_segmented_changelog_id = dag::Group::MASTER.min_id().0;
 
     while let Some(todo) = todo_stack.pop() {
         match todo {
