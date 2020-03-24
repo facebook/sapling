@@ -19,7 +19,7 @@ use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
 use futures::{compat::Future01CompatExt, future::lazy};
 use futures_ext::StreamExt;
 use futures_old::{stream::iter_ok, Future, Stream};
-use futures_stats::{FutureStats, Timed};
+use futures_stats::{FutureStats, TimedFutureExt};
 use manifoldblob::ThriftManifoldBlob;
 use mononoke_types::{ContentMetadata, MononokeId};
 use prefixblob::PrefixBlobstore;
@@ -56,7 +56,7 @@ const ARG_RANDOMIZE: &str = "randomize";
 const ARG_READ_QPS: &str = "read-qps";
 const ARG_WRITE_QPS: &str = "write-qps";
 
-fn log_perf<I, E: Debug>(stats: FutureStats, res: Result<&I, &E>, len: u64) -> Result<(), ()> {
+fn log_perf<I, E: Debug>(stats: FutureStats, res: &Result<I, E>, len: u64) {
     match res {
         Ok(_) => {
             let bytes_per_ns = (len as f64) / (stats.completion_time.as_nanos() as f64);
@@ -71,33 +71,32 @@ fn log_perf<I, E: Debug>(stats: FutureStats, res: Result<&I, &E>, len: u64) -> R
             eprintln!("Failure: {:?}", e);
         }
     };
-
-    Ok(())
 }
 
-fn read<B: Blobstore + Clone>(
-    blob: B,
-    ctx: CoreContext,
-    content_metadata: ContentMetadata,
-) -> impl Future<Item = ContentMetadata, Error = Error> {
-    let ContentMetadata {
-        content_id,
-        total_size,
-        ..
-    } = content_metadata.clone();
+async fn read<B: Blobstore + Clone>(
+    blob: &B,
+    ctx: &CoreContext,
+    content_metadata: &ContentMetadata,
+) -> Result<(), Error> {
+    let key = FetchKey::Canonical(content_metadata.content_id);
+    eprintln!(
+        "Fetch start: {:?} ({:?} B)",
+        key, content_metadata.total_size
+    );
 
-    let key = FetchKey::Canonical(content_id);
-    eprintln!("Fetch start: {:?} ({:?} B)", key, total_size);
+    let stream = filestore::fetch(blob, ctx.clone(), &key)
+        .compat()
+        .await?
+        .ok_or(format_err!("Fetch failed: no stream"))?;
 
-    filestore::fetch(&blob, ctx, &key)
-        .and_then(|maybe_stream| match maybe_stream {
-            Some(stream) => Ok(stream),
-            None => Err(format_err!("Fetch failed: no stream")),
-        })
-        .flatten_stream()
-        .for_each(|_| Ok(()))
-        .timed(move |stats, res| log_perf(stats, res, total_size))
-        .map(move |_| content_metadata)
+    let (stats, res) = stream.for_each(|_| Ok(())).compat().timed().await;
+    log_perf(stats, &res, content_metadata.total_size);
+
+    // ignore errors - all we do is log them in `log_perf`
+    match res {
+        Ok(_) => Ok(()),
+        Err(_) => Ok(()),
+    }
 }
 
 async fn run_benchmark_filestore<'a>(
@@ -159,10 +158,13 @@ async fn run_benchmark_filestore<'a>(
 
     let req = StoreRequest::new(len);
 
-    let metadata = filestore::store(blob.clone(), config, ctx.clone(), &req, data)
-        .timed(move |stats, res| log_perf(stats, res, len))
+    let (stats, res) = filestore::store(blob.clone(), config, ctx.clone(), &req, data)
         .compat()
-        .await?;
+        .timed()
+        .await;
+    log_perf(stats, &res, len);
+
+    let metadata = res?;
 
     match delay {
         Some(delay) => {
@@ -173,10 +175,8 @@ async fn run_benchmark_filestore<'a>(
 
     eprintln!("Write committed: {:?}", metadata.content_id.blobstore_key());
 
-    let _metadata = read(blob.clone(), ctx.clone(), metadata.clone())
-        .compat()
-        .await?;
-    let _metadata = read(blob, ctx.clone(), metadata.clone()).compat().await?;
+    read(&blob, ctx, &metadata).await?;
+    read(&blob, ctx, &metadata).await?;
 
     Ok(())
 }
