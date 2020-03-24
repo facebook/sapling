@@ -31,7 +31,7 @@ DEPS = ["future", "six", "toml"]
 # python sources are found, and the rhs is the destination path
 MODULES = [
     # Eden python libraries
-    ("eden/py/eden", "eden"),
+    ("eden/fs/py/eden", "eden"),
     # The cli
     ("eden/cli", "eden/cli"),
 ]

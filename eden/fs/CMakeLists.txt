@@ -42,6 +42,7 @@ add_subdirectory(store)
 add_subdirectory(telemetry)
 add_subdirectory(utils)
 add_subdirectory(testharness)
+add_subdirectory(py)
 
 
 # Platform specific code

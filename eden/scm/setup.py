@@ -803,7 +803,7 @@ class fetchbuilddeps(Command):
                 "thrift/util/tests/__init__.py",
             ],
         ),
-        fbsourcepylibrary("eden", "../../eden/py/eden"),
+        fbsourcepylibrary("eden", "../../eden/fs/py/eden"),
     ]
     pyassets += [
         edenpythrift(name="eden-rust-deps-e0fd3d6d06542b491712b6e7fdedfae9b6e7ad15.zip")
