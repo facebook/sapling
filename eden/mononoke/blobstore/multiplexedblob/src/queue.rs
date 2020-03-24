@@ -8,7 +8,7 @@
 use crate::base::{ErrorKind, MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use anyhow::Error;
 use blobstore::Blobstore;
-use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
+use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey};
 use cloned::cloned;
 use context::CoreContext;
 use futures_ext::{BoxFuture, FutureExt};
@@ -68,12 +68,19 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
         ctx: CoreContext,
         blobstore_id: BlobstoreId,
         multiplex_id: MultiplexId,
+        operation_key: OperationKey,
         key: String,
     ) -> BoxFuture<(), Error> {
         self.queue
             .add(
                 ctx,
-                BlobstoreSyncQueueEntry::new(key, blobstore_id, multiplex_id, DateTime::now()),
+                BlobstoreSyncQueueEntry::new(
+                    key,
+                    blobstore_id,
+                    multiplex_id,
+                    DateTime::now(),
+                    operation_key,
+                ),
             )
             .map(|_| ())
             .boxify()

@@ -7,7 +7,7 @@
 
 use anyhow::Error;
 use blobstore::Blobstore;
-use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry};
+use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey};
 use cloned::cloned;
 use context::CoreContext;
 use failure_ext::chain::ChainExt;
@@ -205,6 +205,9 @@ fn heal_blob(
     multiplex_id: MultiplexId,
     entries: &[BlobstoreSyncQueueEntry],
 ) -> Option<impl Future<Item = HealStats, Error = Error>> {
+    if entries.len() == 0 {
+        return None;
+    }
     // This is needed as we load by key, and a given key may have entries both before and after
     // the deadline.  We leave the key rather than re-add to avoid entries always being too new.
     if !entries.iter().all(|e| e.timestamp < healing_deadline) {
@@ -212,6 +215,8 @@ fn heal_blob(
     }
 
     let num_entries: usize = entries.len();
+
+    let operation_key = entries[0].operation_key.clone();
 
     let (seen_blobstores, unknown_seen_blobstores): (HashSet<_>, HashSet<_>) =
         entries.iter().partition_map(|entry| {
@@ -249,8 +254,15 @@ fn heal_blob(
             if unknown_seen_blobstores.is_empty() {
                 futures_old::future::ok(()).left_future()
             } else {
-                requeue_partial_heal(ctx, sync_queue, key, unknown_seen_blobstores, multiplex_id)
-                    .right_future()
+                requeue_partial_heal(
+                    ctx,
+                    sync_queue,
+                    key,
+                    unknown_seen_blobstores,
+                    multiplex_id,
+                    operation_key,
+                )
+                .right_future()
             }
             .map(move |()| HealStats {
                 queue_del: num_entries,
@@ -337,9 +349,16 @@ fn heal_blob(
                     unhealed_stores,
                     key,
                 );
-                requeue_partial_heal(ctx, sync_queue, key, healed_stores, multiplex_id)
-                    .map(|()| heal_stats)
-                    .left_future()
+                requeue_partial_heal(
+                    ctx,
+                    sync_queue,
+                    key,
+                    healed_stores,
+                    multiplex_id,
+                    operation_key,
+                )
+                .map(|()| heal_stats)
+                .left_future()
             } else {
                 let heal_stats = HealStats {
                     queue_del: num_entries,
@@ -448,6 +467,7 @@ fn requeue_partial_heal(
     blobstore_key: String,
     source_blobstores: impl IntoIterator<Item = BlobstoreId>,
     multiplex_id: MultiplexId,
+    operation_key: OperationKey,
 ) -> impl Future<Item = (), Error = Error> {
     let timestamp = DateTime::now();
     let new_entries: Vec<_> = source_blobstores
@@ -459,6 +479,7 @@ fn requeue_partial_heal(
                 blobstore_id,
                 multiplex_id,
                 timestamp,
+                operation_key: operation_key.clone(),
                 id: None,
             }
         })
@@ -614,9 +635,10 @@ mod tests {
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let mp = MultiplexId::new(1);
 
+        let op0 = OperationKey::gen();
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0),
         ];
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         let fut = heal_blob(
@@ -675,9 +697,10 @@ mod tests {
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let mp = MultiplexId::new(1);
 
+        let op0 = OperationKey::gen();
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0),
         ];
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         let fut = heal_blob(
@@ -746,10 +769,11 @@ mod tests {
         let t1 = DateTime::from_rfc3339("2019-07-01T12:00:35.00Z")?;
         let mp = MultiplexId::new(1);
 
+        let op0 = OperationKey::gen();
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t1),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t1, op0.clone()),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0, op0),
         ];
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         let fut = heal_blob(
@@ -787,10 +811,11 @@ mod tests {
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let mp = MultiplexId::new(1);
 
+        let op0 = OperationKey::gen();
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0.clone()),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0, op0),
         ];
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         let fut = heal_blob(
@@ -827,11 +852,13 @@ mod tests {
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let mp = MultiplexId::new(1);
 
+        let op0 = OperationKey::gen();
         let entries = vec![BlobstoreSyncQueueEntry::new(
             "specialk".to_string(),
             bids_from_different_config[4],
             mp,
             t0,
+            op0,
         )];
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         let fut = heal_blob(
@@ -874,13 +901,15 @@ mod tests {
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let mp = MultiplexId::new(1);
 
+        let op0 = OperationKey::gen();
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
             BlobstoreSyncQueueEntry::new(
                 "specialk".to_string(),
                 bids_from_different_config[4],
                 mp,
                 t0,
+                op0,
             ),
         ];
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
@@ -949,9 +978,10 @@ mod tests {
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let mp = MultiplexId::new(1);
 
+        let op0 = OperationKey::gen();
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[2], mp, t0, op0),
         ];
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
         let fut = heal_blob(
@@ -1005,9 +1035,10 @@ mod tests {
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let mp = MultiplexId::new(1);
 
+        let op0 = OperationKey::gen();
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0),
         ];
         underlying_stores.get(&bids[2]).unwrap().fail_puts();
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
@@ -1065,9 +1096,10 @@ mod tests {
         let t0 = DateTime::from_rfc3339("2018-11-29T12:00:00.00Z")?;
         let mp = MultiplexId::new(1);
 
+        let op0 = OperationKey::gen();
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0.clone()),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[1], mp, t0, op0),
         ];
         underlying_stores.get(&bids[1]).unwrap().fail_puts();
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
@@ -1127,11 +1159,13 @@ mod tests {
 
         // Insert one entry in the queue for the blobstore that inserted successfully
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);
+        let op0 = OperationKey::gen();
         let entries = vec![BlobstoreSyncQueueEntry::new(
             "specialk".to_string(),
             bids[0],
             mp,
             t0,
+            op0,
         )];
         sync_queue
             .add_many(ctx.clone(), Box::new(entries.into_iter()))
@@ -1182,9 +1216,11 @@ mod tests {
 
         put_value(&ctx, stores.get(&bids[0]), "specialk", "specialv");
 
+        let op0 = OperationKey::gen();
+        let op1 = OperationKey::gen();
         let entries = vec![
-            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0),
-            BlobstoreSyncQueueEntry::new("specialk_mp".to_string(), bids[1], old_mp, t0),
+            BlobstoreSyncQueueEntry::new("specialk".to_string(), bids[0], mp, t0, op0),
+            BlobstoreSyncQueueEntry::new("specialk_mp".to_string(), bids[1], old_mp, t0, op1),
         ];
 
         let sync_queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory()?);

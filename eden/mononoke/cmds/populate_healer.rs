@@ -21,7 +21,9 @@ use serde_derive::{Deserialize, Serialize};
 use tokio_compat::runtime;
 
 use blobstore::Blobstore;
-use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, SqlBlobstoreSyncQueue};
+use blobstore_sync_queue::{
+    BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey, SqlBlobstoreSyncQueue,
+};
 use cmdlib::args;
 use context::CoreContext;
 use manifoldblob::{ManifoldEntry, ManifoldRange, ThriftManifoldBlob};
@@ -376,6 +378,7 @@ async fn populate_healer_queue(
                         src_blobstore_id,
                         multiplex_id,
                         DateTime::now(),
+                        OperationKey::gen(),
                     )
                 }));
                 queue

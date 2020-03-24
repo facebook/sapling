@@ -7,6 +7,7 @@
 
 use anyhow::Error;
 use blobstore::Blobstore;
+use blobstore_sync_queue::OperationKey;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use futures_ext::{BoxFuture, FutureExt};
@@ -62,6 +63,7 @@ pub trait MultiplexedBlobstorePutHandler: Send + Sync {
         ctx: CoreContext,
         blobstore_id: BlobstoreId,
         multiplex_id: MultiplexId,
+        operation_key: OperationKey,
         key: String,
     ) -> BoxFuture<(), Error>;
 }
@@ -274,6 +276,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobPuts);
         let write_order = Arc::new(AtomicUsize::new(0));
+        let operation_key = OperationKey::gen();
         let puts = self
             .blobstores
             .iter()
@@ -297,6 +300,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
             self.handler.clone(),
             key,
             self.multiplex_id,
+            operation_key,
             puts,
         )
         .timed(move |stats, _| {
@@ -441,10 +445,19 @@ fn multiplexed_put<F: Future<Item = BlobstoreId, Error = Error> + Send + 'static
     handler: Arc<dyn MultiplexedBlobstorePutHandler>,
     key: String,
     multiplex_id: MultiplexId,
+    operation_key: OperationKey,
     puts: Vec<F>,
 ) -> impl Future<Item = (), Error = Error> {
     future::select_ok(puts).and_then(move |(blobstore_id, other_puts)| {
-        finish_put(ctx, handler, key, blobstore_id, multiplex_id, other_puts)
+        finish_put(
+            ctx,
+            handler,
+            key,
+            blobstore_id,
+            multiplex_id,
+            operation_key,
+            other_puts,
+        )
     })
 }
 
@@ -454,6 +467,7 @@ fn finish_put<F: Future<Item = BlobstoreId, Error = Error> + Send + 'static>(
     key: String,
     blobstore_id: BlobstoreId,
     multiplex_id: MultiplexId,
+    operation_key: OperationKey,
     other_puts: Vec<F>,
 ) -> BoxFuture<(), Error> {
     // Ocne we finished a put in one blobstore, we want to return once this blob is in a position
@@ -463,10 +477,16 @@ fn finish_put<F: Future<Item = BlobstoreId, Error = Error> + Send + 'static>(
     // As soon as either of those things happen, we can report the put as successful.
     use futures_old::future::Either;
 
-    let queue_write = handler.on_put(ctx.clone(), blobstore_id, multiplex_id, key.clone());
+    let queue_write = handler.on_put(
+        ctx.clone(),
+        blobstore_id,
+        multiplex_id,
+        operation_key.clone(),
+        key.clone(),
+    );
 
     let rest_put = if other_puts.len() > 0 {
-        multiplexed_put(ctx, handler, key, multiplex_id, other_puts).left_future()
+        multiplexed_put(ctx, handler, key, multiplex_id, operation_key, other_puts).left_future()
     } else {
         // We have no remaining puts to perform, which means we've successfully written to all
         // blobstores.

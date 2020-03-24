@@ -14,7 +14,9 @@ use crate::queue::MultiplexedBlobstore;
 use crate::scrub::{LoggingScrubHandler, ScrubBlobstore, ScrubHandler};
 use anyhow::{bail, Error};
 use blobstore::Blobstore;
-use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue, SqlConstructors};
+use blobstore_sync_queue::{
+    BlobstoreSyncQueue, OperationKey, SqlBlobstoreSyncQueue, SqlConstructors,
+};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -28,9 +30,11 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::{Future, IntoFuture};
 use futures_old::sync::oneshot;
 use lock_ext::LockExt;
+use memblob::LazyMemblob;
 use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
 use mononoke_types::BlobstoreBytes;
 use nonzero_ext::nonzero;
+use readonlyblob::ReadOnlyBlobstore;
 use scuba::ScubaSampleBuilder;
 
 pub struct Tickable<T> {
@@ -103,6 +107,7 @@ impl MultiplexedBlobstorePutHandler for Tickable<BlobstoreId> {
         _ctx: CoreContext,
         blobstore_id: BlobstoreId,
         _multiplex_id: MultiplexId,
+        _operation_key: OperationKey,
         key: String,
     ) -> BoxFuture<(), Error> {
         let storage = self.storage.clone();
@@ -137,6 +142,7 @@ impl MultiplexedBlobstorePutHandler for LogHandler {
         _ctx: CoreContext,
         blobstore_id: BlobstoreId,
         _multiplex_id: MultiplexId,
+        _operation_key: OperationKey,
         key: String,
     ) -> BoxFuture<(), Error> {
         self.log.with(move |log| log.push((blobstore_id, key)));
@@ -392,6 +398,58 @@ fn multiplexed(fb: FacebookInit) {
             assert!(get_fut.await.is_err());
         }
     });
+}
+
+#[fbinit::compat_test]
+async fn multiplexed_operation_keys(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
+
+    let bid0 = BlobstoreId::new(0);
+    let bs0 = Arc::new(LazyMemblob::new());
+    let bid1 = BlobstoreId::new(1);
+    let bs1 = Arc::new(LazyMemblob::new());
+    let bid2 = BlobstoreId::new(2);
+    // we need writes to fail there so there's something on the queue
+    let bs2 = Arc::new(ReadOnlyBlobstore::new(LazyMemblob::new()));
+    let bs = MultiplexedBlobstore::new(
+        MultiplexId::new(1),
+        vec![
+            (bid0, bs0.clone()),
+            (bid1, bs1.clone()),
+            (bid2, bs2.clone()),
+        ],
+        queue.clone(),
+        ScubaSampleBuilder::with_discard(),
+        nonzero!(1u64),
+    );
+
+    // two replicas succeed, one fails the operation keys are equal and non-null
+    {
+        let k3 = String::from("k3");
+        let v3 = make_value("v3");
+
+        bs.put(ctx.clone(), k3.clone(), v3.clone())
+            .map_err(|_| ())
+            .compat()
+            .await
+            .expect("test multiplexed_operation_keys, put failed");
+
+        match queue
+            .get(ctx.clone(), k3.clone())
+            .compat()
+            .await
+            .expect("test multiplexed_operation_keys, get failed")
+            .as_slice()
+        {
+            [entry0, entry1] => {
+                assert_eq!(entry0.operation_key, entry1.operation_key);
+                assert!(!entry0.operation_key.is_null());
+            }
+            x => panic!(format!("two entries expected, got {:?}", x)),
+        }
+    }
+    Ok(())
 }
 
 #[fbinit::test]
