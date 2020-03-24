@@ -16,6 +16,7 @@ use minibytes::Bytes;
 use std::collections::BTreeMap;
 use std::fs::{self, File};
 use std::io::Cursor;
+use std::iter;
 use std::path::{Path, PathBuf};
 use vlqencoding::VLQEncode;
 
@@ -63,7 +64,7 @@ pub trait IdDagStore {
         level: Level,
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>>;
 
-    /// Iterate through segments that have the given parent.
+    /// Iterate through flat segments that have the given parent.
     fn iter_segments_with_parent<'a>(
         &'a self,
         parent: Id,
@@ -425,9 +426,11 @@ impl IdDagStore for InProcessStore {
                 StoreId::NonMaster(self.non_master_segments.len() - 1)
             }
         };
-        for parent in parents {
-            let children = self.parent_index.entry(parent).or_insert(vec![]);
-            children.push(store_id);
+        if level == 0 {
+            for parent in parents {
+                let children = self.parent_index.entry(parent).or_insert(vec![]);
+                children.push(store_id);
+            }
         }
         self.get_head_index_mut(level).insert(high, store_id);
         Ok(())
@@ -463,17 +466,34 @@ impl IdDagStore for InProcessStore {
 
     fn iter_segments_descending<'a>(
         &'a self,
-        _max_high_id: Id,
-        _level: Level,
+        max_high_id: Id,
+        level: Level,
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
-        unimplemented!();
+        match self.get_head_index(level) {
+            None => Ok(Box::new(iter::empty())),
+            Some(head_index) => {
+                let iter = head_index
+                    .range(Id::MIN..=max_high_id)
+                    .rev()
+                    .map(move |(_, store_id)| Ok(self.get_segment(store_id)));
+                Ok(Box::new(iter))
+            }
+        }
     }
 
     fn iter_segments_with_parent<'a>(
         &'a self,
-        _parent: Id,
+        parent: Id,
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
-        unimplemented!();
+        match self.parent_index.get(&parent) {
+            None => Ok(Box::new(iter::empty())),
+            Some(children) => {
+                let iter = children
+                    .iter()
+                    .map(move |store_id| Ok(self.get_segment(store_id)));
+                Ok(Box::new(iter))
+            }
+        }
     }
 
     fn reload(&mut self) -> Result<()> {
@@ -548,8 +568,15 @@ mod tests {
     static LEVEL1_HEAD13: Lazy<Segment> =
         Lazy::new(|| Segment::new(SegmentFlags::HAS_ROOT, 1 as Level, Id(0), Id(13), &[]));
 
-    fn get_in_process_store() -> InProcessStore {
+    fn init_store(segments: Vec<&Segment>) -> InProcessStore {
         let mut store = InProcessStore::new();
+        for segment in segments {
+            store.insert_segment(segment.clone()).unwrap();
+        }
+        store
+    }
+
+    fn get_in_process_store() -> InProcessStore {
         let segments: Vec<&Segment> = vec![
             &LEVEL0_HEAD2,
             &LEVEL0_HEAD5,
@@ -557,10 +584,11 @@ mod tests {
             &LEVEL0_HEAD13,
             &LEVEL1_HEAD13,
         ];
-        for segment in segments {
-            store.insert_segment(segment.clone()).unwrap();
-        }
-        store
+        init_store(segments)
+    }
+
+    fn segments_to_owned(segments: &[&Segment]) -> Vec<Segment> {
+        segments.into_iter().cloned().cloned().collect()
     }
 
     #[test]
@@ -625,27 +653,20 @@ mod tests {
     #[test]
     fn test_in_process_store_next_segments() {
         let store = get_in_process_store();
-        let ref_to_owned = |items: &[&Segment]| -> Vec<Segment> {
-            items
-                .into_iter()
-                .map(|&item: &&Segment| item.clone())
-                .collect()
-        };
+
         let segments = store.next_segments(Id(4), 0 as Level).unwrap();
-        let expected = ref_to_owned(&[&LEVEL0_HEAD5, &LEVEL0_HEAD9, &LEVEL0_HEAD13]);
+        let expected = segments_to_owned(&[&LEVEL0_HEAD5, &LEVEL0_HEAD9, &LEVEL0_HEAD13]);
         assert_eq!(segments, expected);
 
         let segments = store.next_segments(Id(14), 0 as Level).unwrap();
-        let expected = ref_to_owned(&[]);
-        assert_eq!(segments, expected);
+        assert!(segments.is_empty());
 
         let segments = store.next_segments(Id(0), 1 as Level).unwrap();
-        let expected = ref_to_owned(&[&LEVEL1_HEAD13]);
+        let expected = segments_to_owned(&[&LEVEL1_HEAD13]);
         assert_eq!(segments, expected);
 
         let segments = store.next_segments(Id(0), 2 as Level).unwrap();
-        let expected = ref_to_owned(&[]);
-        assert_eq!(segments, expected);
+        assert!(segments.is_empty());
     }
 
     #[test]
@@ -655,5 +676,59 @@ mod tests {
 
         let store = InProcessStore::new();
         assert_eq!(store.max_level().unwrap(), 0);
+    }
+
+    #[test]
+    fn test_in_process_store_iter_segments_descending() {
+        let store = get_in_process_store();
+
+        let answer = store
+            .iter_segments_descending(Id(12), 0)
+            .unwrap()
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+        let expected = segments_to_owned(&[&LEVEL0_HEAD9, &LEVEL0_HEAD5, &LEVEL0_HEAD2]);
+        assert_eq!(answer, expected);
+
+        let mut answer = store.iter_segments_descending(Id(1), 0).unwrap();
+        assert!(answer.next().is_none());
+
+        let answer = store
+            .iter_segments_descending(Id(13), 1)
+            .unwrap()
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+        let expected = segments_to_owned(&[&LEVEL1_HEAD13]);
+        assert_eq!(answer, expected);
+
+        let mut answer = store.iter_segments_descending(Id(5), 2).unwrap();
+        assert!(answer.next().is_none());
+    }
+
+    #[test]
+    fn test_in_process_store_iter_segments_with_parent() {
+        let level1_head2 = Segment::new(SegmentFlags::HAS_ROOT, 1 as Level, Id(0), Id(2), &[]);
+        let level1_head13 =
+            Segment::new(SegmentFlags::empty(), 1 as Level, Id(3), Id(13), &[Id(2)]);
+        let segments: Vec<&Segment> = vec![
+            &LEVEL0_HEAD2,
+            &LEVEL0_HEAD5,
+            &LEVEL0_HEAD9,
+            &LEVEL0_HEAD13,
+            &level1_head2,
+            &level1_head13,
+        ];
+        let store = init_store(segments);
+
+        let answer = store
+            .iter_segments_with_parent(Id(2))
+            .unwrap()
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+        let expected = segments_to_owned(&[&LEVEL0_HEAD5, &LEVEL0_HEAD9]);
+        assert_eq!(answer, expected);
+
+        let mut iter = store.iter_segments_with_parent(Id(4)).unwrap();
+        assert!(iter.next().is_none());
     }
 }

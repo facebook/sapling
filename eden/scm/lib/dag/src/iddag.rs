@@ -159,7 +159,7 @@ impl<Store: IdDagStore> IdDag<Store> {
         self.store.iter_segments_descending(max_high_id, level)
     }
 
-    /// Iterate through segments that have the given parent.
+    /// Iterate through flat segments that have the given parent.
     pub(crate) fn iter_segments_with_parent<'a>(
         &'a self,
         parent: Id,
