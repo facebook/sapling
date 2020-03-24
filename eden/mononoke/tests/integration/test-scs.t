@@ -269,7 +269,7 @@ blame
       "path": "b"
     }
   ]
-  
+
 lookup, commit with git
   $ scsc lookup --repo repo  -B BOOKMARK_D -S bonsai,hg,globalrev,git
   bonsai=227d4402516061c45a7ba66cf4561bdadaf3ac96eb12c6e75aa9c72dbabd42b6
