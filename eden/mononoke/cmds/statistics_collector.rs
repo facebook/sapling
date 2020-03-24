@@ -17,10 +17,11 @@ use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
+use futures::future::{Future, FutureExt, TryFutureExt};
 use futures::stream::{self, StreamExt, TryStreamExt};
-use futures_ext::{BoxStream, FutureExt, StreamExt as OldStreamExt};
+use futures_ext::{BoxStream, FutureExt as OldFutureExt, StreamExt as OldStreamExt};
 use futures_old::future;
-use futures_old::future::Future;
+use futures_old::future::Future as OldFuture;
 use futures_old::stream::Stream;
 use futures_util::try_join;
 use manifest::{Diff, Entry, ManifestOps};
@@ -125,9 +126,7 @@ impl Sub for RepoStatistics {
     }
 }
 
-pub fn number_of_lines(
-    bytes_stream: BoxStream<FileBytes, Error>,
-) -> impl Future<Item = i64, Error = Error> {
+pub async fn number_of_lines(bytes_stream: BoxStream<FileBytes, Error>) -> Result<i64, Error> {
     bytes_stream
         .map(|bytes| {
             bytes.into_iter().fold(0, |num_lines, byte| {
@@ -141,137 +140,146 @@ pub fn number_of_lines(
         .fold(0, |result, num_lines| {
             future::ok::<_, Error>(result + num_lines)
         })
+        .compat()
+        .await
 }
 
-pub fn get_manifest_from_changeset(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    changeset: HgChangesetId,
-) -> impl Future<Item = HgManifestId, Error = Error> {
-    changeset
-        .load(ctx, repo.blobstore())
-        .from_err()
-        .map(move |changeset| changeset.manifestid())
+pub async fn get_manifest_from_changeset(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    hg_cs_id: &HgChangesetId,
+) -> Result<HgManifestId, Error> {
+    let changeset = hg_cs_id
+        .load(ctx.clone(), repo.blobstore())
+        .compat()
+        .await?;
+    Ok(changeset.manifestid())
 }
 
-pub fn get_changeset_timestamp_from_changeset(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    hg_cs_id: HgChangesetId,
-) -> impl Future<Item = i64, Error = Error> {
-    hg_cs_id
-        .load(ctx, repo.blobstore())
-        .from_err()
-        .map(move |changeset| changeset.time().timestamp_secs())
+pub async fn get_changeset_timestamp_from_changeset(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    hg_cs_id: &HgChangesetId,
+) -> Result<i64, Error> {
+    let changeset = hg_cs_id
+        .load(ctx.clone(), repo.blobstore())
+        .compat()
+        .await?;
+    Ok(changeset.time().timestamp_secs())
 }
 
 // Calculates number of lines only for regular-type file
-pub fn get_statistics_from_entry(
-    ctx: CoreContext,
-    repo: BlobRepo,
+pub async fn get_statistics_from_entry(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     entry: Entry<HgManifestId, (FileType, HgFileNodeId)>,
-) -> impl Future<Item = RepoStatistics, Error = Error> {
+) -> Result<RepoStatistics, Error> {
     match entry {
-        Entry::Leaf((file_type, filenode_id)) => filenode_id
-            .load(ctx.clone(), repo.blobstore())
-            .from_err()
-            .and_then(move |envelope| {
-                let size = envelope.content_size();
-                let content_id = envelope.content_id();
-                if FileType::Regular == file_type && size < BIG_FILE_THRESHOLD {
-                    let content =
-                        filestore::fetch_stream(repo.blobstore(), ctx.clone(), content_id)
-                            .map(FileBytes)
-                            .boxify();
-                    number_of_lines(content)
-                        .join(future::ok(size))
-                        .left_future()
-                } else {
-                    future::ok((0, size)).right_future()
-                }
-            })
-            .map(move |(lines, size)| RepoStatistics::new(1, size as i64, lines))
-            .left_future(),
-        Entry::Tree(_) => future::ok(RepoStatistics::default()).right_future(),
+        Entry::Leaf((file_type, filenode_id)) => {
+            let envelope = filenode_id
+                .load(ctx.clone(), repo.blobstore())
+                .compat()
+                .await?;
+            let size = envelope.content_size();
+            let content_id = envelope.content_id();
+            let lines = if FileType::Regular == file_type && size < BIG_FILE_THRESHOLD {
+                let content = filestore::fetch_stream(repo.blobstore(), ctx.clone(), content_id)
+                    .map(FileBytes)
+                    .boxify();
+                number_of_lines(content).await?
+            } else {
+                0
+            };
+            Ok(RepoStatistics::new(1, size as i64, lines))
+        }
+        Entry::Tree(_) => Ok(RepoStatistics::default()),
     }
 }
 
-pub fn get_statistics_from_changeset(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    blobstore: impl Blobstore + Clone,
-    hg_cs_id: HgChangesetId,
-) -> impl Future<Item = RepoStatistics, Error = Error> {
+pub async fn get_statistics_from_changeset(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    blobstore: &(impl Blobstore + Clone),
+    hg_cs_id: &HgChangesetId,
+) -> Result<RepoStatistics, Error> {
     info!(
         ctx.logger(),
         "Started calculating statistics for changeset {}", hg_cs_id
     );
-    get_manifest_from_changeset(ctx.clone(), repo.clone(), hg_cs_id.clone()).and_then({
-        cloned!(ctx, repo);
-        move |manifest_id| {
-            manifest_id
-                .list_leaf_entries(ctx.clone(), blobstore.clone())
-                .map({
-                    cloned!(ctx);
-                    move |(_, leaf)| {
-                        get_statistics_from_entry(ctx.clone(), repo.clone(), Entry::Leaf(leaf))
-                    }
-                })
-                .buffered(100)
-                .fold(RepoStatistics::default(), |statistics, new_stat| {
-                    future::ok::<_, Error>(statistics + new_stat)
-                })
-                .map(move |statistics| {
-                    info!(
-                        ctx.logger(),
-                        "Finished calculating statistics for changeset {}", hg_cs_id
-                    );
-                    statistics
-                })
-        }
-    })
+    let manifest_id = get_manifest_from_changeset(ctx, repo, hg_cs_id).await?;
+    manifest_id
+        .list_leaf_entries(ctx.clone(), blobstore.clone())
+        .map({
+            move |(_, leaf)| {
+                get_statistics_from_entry(ctx, repo, Entry::Leaf(leaf))
+                    .boxed()
+                    .compat()
+            }
+        })
+        .buffered(100)
+        .fold(RepoStatistics::default(), |statistics, new_stat| {
+            future::ok::<_, Error>(statistics + new_stat)
+        })
+        .map(move |statistics| {
+            info!(
+                ctx.logger(),
+                "Finished calculating statistics for changeset {}", hg_cs_id
+            );
+            statistics
+        })
+        .compat()
+        .await
 }
 
 pub fn update_statistics(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     statistics: RepoStatistics,
     diff: BoxStream<Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>, Error>,
-) -> impl Future<Item = RepoStatistics, Error = Error> {
-    diff.map({
-        move |diff| match diff {
-            Diff::Added(_, entry) => {
-                get_statistics_from_entry(ctx.clone(), repo.clone(), entry.clone())
-                    .map(|stat| (stat, Operation::Add))
-                    .boxify()
+) -> impl Future<Output = Result<RepoStatistics, Error>> {
+    let ctx = ctx.clone();
+    let repo = repo.clone();
+    async move {
+        diff.map({
+            move |diff| {
+                cloned!(repo, ctx);
+                async move {
+                    match diff {
+                        Diff::Added(_, entry) => {
+                            let stat = get_statistics_from_entry(&ctx, &repo, entry).await?;
+                            Ok((stat, Operation::Add))
+                        }
+                        Diff::Removed(_, entry) => {
+                            let stat = get_statistics_from_entry(&ctx, &repo, entry).await?;
+                            Ok((stat, Operation::Sub))
+                        }
+                        Diff::Changed(_, old_entry, new_entry) => {
+                            let (old_stats, new_stats) = try_join!(
+                                get_statistics_from_entry(&ctx, &repo, old_entry),
+                                get_statistics_from_entry(&ctx, &repo, new_entry),
+                            )?;
+                            let stat = new_stats - old_stats;
+                            Ok((stat, Operation::Add))
+                        }
+                    }
+                }
+                .boxed()
+                .compat()
             }
-            Diff::Removed(_, entry) => {
-                get_statistics_from_entry(ctx.clone(), repo.clone(), entry.clone())
-                    .map(|stat| (stat, Operation::Sub))
-                    .boxify()
-            }
-            Diff::Changed(_, old_entry, new_entry) => {
-                get_statistics_from_entry(ctx.clone(), repo.clone(), old_entry.clone())
-                    .join(get_statistics_from_entry(
-                        ctx.clone(),
-                        repo.clone(),
-                        new_entry.clone(),
-                    ))
-                    .map(|(old_stats, new_stats)| new_stats - old_stats)
-                    .join(future::ok(Operation::Add))
-                    .boxify()
-            }
-        }
-    })
-    .buffered(100)
-    .fold(
-        statistics,
-        |statistics, (file_stats, operation)| match operation {
-            Operation::Add => future::ok::<_, Error>(statistics + file_stats),
-            Operation::Sub => future::ok::<_, Error>(statistics - file_stats),
-        },
-    )
-    .map(move |statistics| statistics)
+        })
+        .buffered(100)
+        .fold(
+            statistics,
+            |statistics, (file_stats, operation)| match operation {
+                Operation::Add => future::ok::<_, Error>(statistics + file_stats),
+                Operation::Sub => future::ok::<_, Error>(statistics - file_stats),
+            },
+        )
+        .map(move |statistics| statistics)
+        .boxify()
+        .compat()
+        .await
+    }
 }
 
 pub fn log_statistics(
@@ -329,9 +337,7 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
                     .compat()
                     .await?;
                 let cs_timestamp =
-                    get_changeset_timestamp_from_changeset(ctx.clone(), repo.clone(), hg_cs_id)
-                        .compat()
-                        .await?;
+                    get_changeset_timestamp_from_changeset(ctx, repo, &hg_cs_id).await?;
                 // the error type annotation in principle should be inferred,
                 // but the compiler currently needs it. See https://fburl.com/n1s2ujjb
                 Ok::<(HgChangesetId, i64, RepositoryId), Error>((hg_cs_id, cs_timestamp, repo_id))
@@ -364,19 +370,15 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
                     hg_cs_id, cs_timestamp, REQUIRED_COMMITS_DISTANCE
                 );
                 let (old_manifest, manifest) = try_join!(
-                    get_manifest_from_changeset(ctx.clone(), repo.clone(), old_hg_cs_id.clone(),)
-                        .compat(),
-                    get_manifest_from_changeset(ctx.clone(), repo.clone(), hg_cs_id.clone())
-                        .compat(),
+                    get_manifest_from_changeset(ctx, repo, &old_hg_cs_id,),
+                    get_manifest_from_changeset(ctx, repo, &hg_cs_id),
                 )?;
-
                 let statistics = update_statistics(
-                    ctx.clone(),
-                    repo.clone(),
-                    old_stats.clone(),
+                    ctx,
+                    repo,
+                    old_stats,
                     old_manifest.diff(ctx.clone(), blobstore.clone(), manifest.clone()),
                 )
-                .compat()
                 .await?;
 
                 info!(
@@ -400,14 +402,8 @@ pub async fn generate_statistics_from_file<P: AsRef<Path>>(
                     "Found first changeset for repo_id {}",
                     repo_id.id()
                 );
-                let statistics = get_statistics_from_changeset(
-                    ctx.clone(),
-                    repo.clone(),
-                    blobstore.clone(),
-                    hg_cs_id,
-                )
-                .compat()
-                .await?;
+                let statistics =
+                    get_statistics_from_changeset(ctx, repo, &blobstore, &hg_cs_id).await?;
 
                 info!(
                     ctx.logger(),
@@ -464,19 +460,9 @@ async fn run_statistics<'a>(
 
     // initialize the loop
 
-    let mut statistics = get_statistics_from_changeset(
-        ctx.clone(),
-        repo.clone(),
-        blobstore.clone(),
-        changeset.clone(),
-    )
-    .compat()
-    .await?;
+    let mut statistics = get_statistics_from_changeset(&ctx, &repo, &blobstore, &changeset).await?;
 
-    let cs_timestamp =
-        get_changeset_timestamp_from_changeset(ctx.clone(), repo.clone(), changeset.clone())
-            .compat()
-            .await?;
+    let cs_timestamp = get_changeset_timestamp_from_changeset(&ctx, &repo, &changeset).await?;
 
     log_statistics(
         &ctx,
@@ -512,34 +498,23 @@ async fn run_statistics<'a>(
                 "Found new changeset: {}, updating statistics", changeset
             );
 
-            let (prev_manifest_id, cur_manifest_id) =
-                get_manifest_from_changeset(ctx.clone(), repo.clone(), prev_changeset.clone())
-                    .join(get_manifest_from_changeset(
-                        ctx.clone(),
-                        repo.clone(),
-                        changeset.clone(),
-                    ))
-                    .compat()
-                    .await?;
+            let (prev_manifest_id, cur_manifest_id) = try_join!(
+                get_manifest_from_changeset(&ctx, &repo, &prev_changeset),
+                get_manifest_from_changeset(&ctx, &repo, &changeset),
+            )?;
 
             statistics = update_statistics(
-                ctx.clone(),
-                repo.clone(),
-                statistics.clone(),
+                &ctx,
+                &repo,
+                statistics,
                 prev_manifest_id.diff(ctx.clone(), blobstore.clone(), cur_manifest_id.clone()),
             )
-            .compat()
             .await?;
 
             info!(ctx.logger(), "Statistics for new changeset updated.");
 
-            let cs_timestamp = get_changeset_timestamp_from_changeset(
-                ctx.clone(),
-                repo.clone(),
-                changeset.clone(),
-            )
-            .compat()
-            .await?;
+            let cs_timestamp =
+                get_changeset_timestamp_from_changeset(&ctx, &repo, &changeset).await?;
 
             log_statistics(
                 &ctx,
@@ -613,7 +588,7 @@ mod tests {
 
         let stream: BoxStream<FileBytes, Error> =
             Box::new(old_stream::once(Ok(FileBytes(Bytes::from(&b""[..])))));
-        let result = rt.block_on(number_of_lines(stream))?;
+        let result = rt.block_on(number_of_lines(stream).boxed().compat())?;
         assert_eq!(result, 0);
         Ok(())
     }
@@ -625,7 +600,7 @@ mod tests {
         let stream: BoxStream<FileBytes, Error> = Box::new(old_stream::once(Ok(FileBytes(
             Bytes::from(&b"First line\n"[..]),
         ))));
-        let result = rt.block_on(number_of_lines(stream))?;
+        let result = rt.block_on(number_of_lines(stream).boxed().compat())?;
         assert_eq!(result, 1);
         Ok(())
     }
@@ -637,7 +612,7 @@ mod tests {
         let stream: BoxStream<FileBytes, Error> = Box::new(old_stream::once(Ok(FileBytes(
             Bytes::from(&b"First line\nSecond line\nThird line\n"[..]),
         ))));
-        let result = rt.block_on(number_of_lines(stream))?;
+        let result = rt.block_on(number_of_lines(stream).boxed().compat())?;
         assert_eq!(result, 3);
         Ok(())
     }
@@ -652,7 +627,7 @@ mod tests {
             FileBytes(Bytes::from(&b"First line\nSecond line\nThird line\n"[..])),
         ];
         let stream: BoxStream<FileBytes, Error> = Box::new(old_stream::iter_ok(vec));
-        let result = rt.block_on(number_of_lines(stream))?;
+        let result = rt.block_on(number_of_lines(stream).boxed().compat())?;
         assert_eq!(result, 4);
         Ok(())
     }
@@ -701,15 +676,9 @@ mod tests {
                 .await
                 .unwrap();
 
-            let stats = get_statistics_from_changeset(
-                ctx.clone(),
-                repo.clone(),
-                blobstore.clone(),
-                hg_cs_id.clone(),
-            )
-            .compat()
-            .await
-            .unwrap();
+            let stats = get_statistics_from_changeset(&ctx, &repo, &blobstore, &hg_cs_id)
+                .await
+                .unwrap();
 
             // (num_files, total_file_size, num_lines)
             assert_eq!(stats, RepoStatistics::new(4, 38, 5));
@@ -760,29 +729,24 @@ mod tests {
                 .await
                 .unwrap();
 
-            let mut tree_entries =
-                get_manifest_from_changeset(ctx.clone(), repo.clone(), hg_cs_id.clone())
-                    .and_then({
-                        cloned!(ctx);
-                        move |manifest| {
-                            manifest
-                                .list_all_entries(ctx.clone(), blobstore.clone())
-                                .filter_map(|(_, entry)| match entry {
-                                    Entry::Tree(_) => Some(entry),
-                                    _ => None,
-                                })
-                                .collect()
-                        }
-                    })
-                    .compat()
-                    .await
-                    .unwrap();
+            let manifest = get_manifest_from_changeset(&ctx, &repo, &hg_cs_id)
+                .await
+                .unwrap();
 
-            let stats =
-                get_statistics_from_entry(ctx.clone(), repo.clone(), tree_entries.pop().unwrap())
-                    .compat()
-                    .await
-                    .unwrap();
+            let mut tree_entries = manifest
+                .list_all_entries(ctx.clone(), blobstore.clone())
+                .filter_map(|(_, entry)| match entry {
+                    Entry::Tree(_) => Some(entry),
+                    _ => None,
+                })
+                .collect()
+                .compat()
+                .await
+                .unwrap();
+
+            let stats = get_statistics_from_entry(&ctx, &repo, tree_entries.pop().unwrap())
+                .await
+                .unwrap();
 
             // For Entry::Tree we expect repository with all statistics equal 0
             // (num_files, total_file_size, num_lines)
@@ -814,34 +778,22 @@ mod tests {
             let cur_hg_cs_id =
                 HgChangesetId::from_str("3e0e761030db6e479a7fb58b12881883f9f8c63f").unwrap();
 
-            let stats = get_statistics_from_changeset(
-                ctx.clone(),
-                repo.clone(),
-                blobstore.clone(),
-                prev_hg_cs_id.clone(),
+            let stats = get_statistics_from_changeset(&ctx, &repo, &blobstore, &prev_hg_cs_id)
+                .await
+                .unwrap();
+
+            let (prev_manifest, cur_manifest) = try_join!(
+                get_manifest_from_changeset(&ctx, &repo, &prev_hg_cs_id),
+                get_manifest_from_changeset(&ctx, &repo, &cur_hg_cs_id),
             )
-            .compat()
-            .await
             .unwrap();
 
-            let (prev_manifest, cur_manifest) =
-                get_manifest_from_changeset(ctx.clone(), repo.clone(), prev_hg_cs_id.clone())
-                    .join(get_manifest_from_changeset(
-                        ctx.clone(),
-                        repo.clone(),
-                        cur_hg_cs_id.clone(),
-                    ))
-                    .compat()
-                    .await
-                    .unwrap();
-
             let new_stats = update_statistics(
-                ctx.clone(),
-                repo.clone(),
-                stats.clone(),
+                &ctx,
+                &repo,
+                stats,
                 prev_manifest.diff(ctx.clone(), blobstore.clone(), cur_manifest.clone()),
             )
-            .compat()
             .await
             .unwrap();
 
