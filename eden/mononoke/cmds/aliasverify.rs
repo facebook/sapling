@@ -15,12 +15,13 @@ use std::sync::{
 
 use anyhow::{format_err, Error, Result};
 use bytes::Bytes;
-use clap::{App, Arg};
+use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{stream, Future, IntoFuture, Stream};
+use futures_util::try_join;
 use slog::{debug, info, Logger};
 use tokio::prelude::stream::iter_ok;
 
@@ -332,6 +333,32 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         )
 }
 
+async fn run_aliasverify<'a>(
+    fb: FacebookInit,
+    ctx: CoreContext,
+    logger: &Logger,
+    step: u64,
+    min_cs_db_id: u64,
+    repoid: RepositoryId,
+    matches: &'a ArgMatches<'a>,
+    mode: Mode,
+) -> Result<(), Error> {
+    let (sqlchangesets, blobrepo) = try_join!(
+        args::open_sql::<SqlChangesets>(fb, matches).compat(),
+        args::open_repo(fb, &logger, matches).compat(),
+    )?;
+    AliasVerification::new(
+        logger.clone(),
+        blobrepo,
+        repoid,
+        Arc::new(sqlchangesets),
+        mode,
+    )
+    .verify_all(ctx, step, min_cs_db_id)
+    .compat()
+    .await
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches();
@@ -340,7 +367,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     args::init_cachelib(fb, &matches, None);
-    let sqlchangesets = args::open_sql::<SqlChangesets>(fb, &matches);
 
     let mode = match matches.value_of("mode").expect("no default on mode") {
         "verify" => Mode::Verify,
@@ -360,17 +386,8 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let repoid = args::get_repo_id(fb, &matches).expect("Need repo id");
 
-    let blobrepo = args::open_repo(fb, &logger, &matches);
-    let aliasimport = blobrepo.join(sqlchangesets).and_then({
-        let logger = logger.clone();
-        move |(blobrepo, sqlchangesets)| {
-            AliasVerification::new(logger, blobrepo, repoid, Arc::new(sqlchangesets), mode)
-                .verify_all(ctx, step, min_cs_db_id)
-        }
-    });
-
     block_execute(
-        aliasimport.compat(),
+        run_aliasverify(fb, ctx, &logger, step, min_cs_db_id, repoid, &matches, mode),
         fb,
         "aliasverify",
         &logger,
