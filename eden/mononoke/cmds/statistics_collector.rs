@@ -12,16 +12,13 @@ use bookmarks::BookmarkName;
 use bytes::Bytes;
 use changesets::{deserialize_cs_entries, ChangesetEntry};
 use clap::{App, Arg, ArgMatches, SubCommand};
-use cloned::cloned;
 use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
-use futures::future::{Future, FutureExt, TryFutureExt};
+use futures::compat::{Future01CompatExt, Stream01CompatExt};
+use futures::future::{FutureExt, TryFutureExt};
 use futures::stream::{self, StreamExt, TryStreamExt};
-use futures_ext::{BoxStream, FutureExt as OldFutureExt, StreamExt as OldStreamExt};
-use futures_old::future;
-use futures_old::future::Future as OldFuture;
+use futures_ext::{BoxStream, StreamExt as OldStreamExt};
 use futures_old::stream::Stream;
 use futures_util::try_join;
 use manifest::{Diff, Entry, ManifestOps};
@@ -128,7 +125,8 @@ impl Sub for RepoStatistics {
 
 pub async fn number_of_lines(bytes_stream: BoxStream<FileBytes, Error>) -> Result<i64, Error> {
     bytes_stream
-        .map(|bytes| {
+        .compat()
+        .map_ok(|bytes| {
             bytes.into_iter().fold(0, |num_lines, byte| {
                 if byte == '\n' as u8 {
                     num_lines + 1
@@ -137,10 +135,9 @@ pub async fn number_of_lines(bytes_stream: BoxStream<FileBytes, Error>) -> Resul
                 }
             })
         })
-        .fold(0, |result, num_lines| {
-            future::ok::<_, Error>(result + num_lines)
+        .try_fold(0, |result, num_lines| async move {
+            Ok::<_, Error>(result + num_lines)
         })
-        .compat()
         .await
 }
 
@@ -206,80 +203,69 @@ pub async fn get_statistics_from_changeset(
         ctx.logger(),
         "Started calculating statistics for changeset {}", hg_cs_id
     );
+
     let manifest_id = get_manifest_from_changeset(ctx, repo, hg_cs_id).await?;
-    manifest_id
+    let statistics = manifest_id
         .list_leaf_entries(ctx.clone(), blobstore.clone())
-        .map({
-            move |(_, leaf)| {
-                get_statistics_from_entry(ctx, repo, Entry::Leaf(leaf))
-                    .boxed()
-                    .compat()
-            }
-        })
-        .buffered(100)
-        .fold(RepoStatistics::default(), |statistics, new_stat| {
-            future::ok::<_, Error>(statistics + new_stat)
-        })
-        .map(move |statistics| {
-            info!(
-                ctx.logger(),
-                "Finished calculating statistics for changeset {}", hg_cs_id
-            );
-            statistics
-        })
         .compat()
-        .await
+        .map(move |result| match result {
+            Ok((_, leaf)) => get_statistics_from_entry(ctx, repo, Entry::Leaf(leaf)).boxed(),
+            Err(e) => async move { Err(e) }.boxed(),
+        })
+        .buffered(100usize)
+        .try_fold(
+            RepoStatistics::default(),
+            |statistics, new_stat| async move { Ok::<_, Error>(statistics + new_stat) },
+        )
+        .await?;
+
+    info!(
+        ctx.logger(),
+        "Finished calculating statistics for changeset {}", hg_cs_id
+    );
+
+    Ok(statistics)
 }
 
-pub fn update_statistics(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
+pub async fn update_statistics<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
     statistics: RepoStatistics,
     diff: BoxStream<Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>, Error>,
-) -> impl Future<Output = Result<RepoStatistics, Error>> {
-    let ctx = ctx.clone();
-    let repo = repo.clone();
-    async move {
-        diff.map({
-            move |diff| {
-                cloned!(repo, ctx);
-                async move {
-                    match diff {
-                        Diff::Added(_, entry) => {
-                            let stat = get_statistics_from_entry(&ctx, &repo, entry).await?;
-                            Ok((stat, Operation::Add))
-                        }
-                        Diff::Removed(_, entry) => {
-                            let stat = get_statistics_from_entry(&ctx, &repo, entry).await?;
-                            Ok((stat, Operation::Sub))
-                        }
-                        Diff::Changed(_, old_entry, new_entry) => {
-                            let (old_stats, new_stats) = try_join!(
-                                get_statistics_from_entry(&ctx, &repo, old_entry),
-                                get_statistics_from_entry(&ctx, &repo, new_entry),
-                            )?;
-                            let stat = new_stats - old_stats;
-                            Ok((stat, Operation::Add))
-                        }
-                    }
+) -> Result<RepoStatistics, Error> {
+    diff.compat()
+        .map(move |result| async move {
+            let diff = result?;
+            match diff {
+                Diff::Added(_, entry) => {
+                    let stat = get_statistics_from_entry(ctx, repo, entry).await?;
+                    Ok((stat, Operation::Add))
                 }
-                .boxed()
-                .compat()
+                Diff::Removed(_, entry) => {
+                    let stat = get_statistics_from_entry(ctx, repo, entry).await?;
+                    Ok((stat, Operation::Sub))
+                }
+                Diff::Changed(_, old_entry, new_entry) => {
+                    let (old_stats, new_stats) = try_join!(
+                        get_statistics_from_entry(ctx, repo, old_entry),
+                        get_statistics_from_entry(ctx, repo, new_entry),
+                    )?;
+                    let stat = new_stats - old_stats;
+                    Ok((stat, Operation::Add))
+                }
             }
         })
-        .buffered(100)
-        .fold(
+        .buffered(100usize)
+        .try_fold(
             statistics,
-            |statistics, (file_stats, operation)| match operation {
-                Operation::Add => future::ok::<_, Error>(statistics + file_stats),
-                Operation::Sub => future::ok::<_, Error>(statistics - file_stats),
+            |statistics, (file_stats, operation)| async move {
+                match operation {
+                    Operation::Add => Ok::<_, Error>(statistics + file_stats),
+                    Operation::Sub => Ok::<_, Error>(statistics - file_stats),
+                }
             },
         )
-        .map(move |statistics| statistics)
-        .boxify()
-        .compat()
         .await
-    }
 }
 
 pub fn log_statistics(
