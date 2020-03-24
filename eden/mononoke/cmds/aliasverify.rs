@@ -19,8 +19,8 @@ use clap::{App, Arg, ArgMatches};
 use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{stream, Future, IntoFuture, Stream};
+use futures::future::{Future, FutureExt, TryFutureExt};
+use futures_old::{stream, Future as OldFuture, IntoFuture, Stream};
 use futures_util::try_join;
 use slog::{debug, info, Logger};
 use tokio::prelude::stream::iter_ok;
@@ -84,39 +84,37 @@ impl AliasVerification {
         }
     }
 
-    fn get_file_changes_vector(
+    async fn get_file_changes_vector(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         bcs_id: ChangesetId,
-    ) -> BoxFuture<Vec<Option<FileChange>>, Error> {
+    ) -> Result<Vec<Option<FileChange>>, Error> {
         let cs_cnt = self.cs_processed.fetch_add(1, Ordering::Relaxed);
 
         if cs_cnt % 1000 == 0 {
             info!(self.logger, "Commit processed {:?}", cs_cnt);
         }
 
-        bcs_id
-            .load(ctx, self.blobrepo.blobstore())
-            .from_err()
-            .map(|bcs| {
-                let file_changes: Vec<_> = bcs
-                    .file_changes()
-                    .map(|(_, file_change)| file_change.cloned())
-                    .collect();
-                file_changes
-            })
-            .boxify()
+        let bcs = bcs_id
+            .load(ctx.clone(), self.blobrepo.blobstore())
+            .compat()
+            .await?;
+        let file_changes: Vec<_> = bcs
+            .file_changes()
+            .map(|(_, file_change)| file_change.cloned())
+            .collect();
+        Ok(file_changes)
     }
 
-    fn check_alias_blob(
+    async fn check_alias_blob(
         &self,
-        alias: Sha256,
+        alias: &Sha256,
         expected_content_id: ContentId,
         content_id: ContentId,
-    ) -> impl Future<Item = (), Error = Error> {
+    ) -> Result<(), Error> {
         if content_id == expected_content_id {
             // Everything is good
-            Ok(()).into_future()
+            Ok(())
         } else {
             panic!(
                 "Collision: Wrong content_id by alias for {:?},
@@ -127,124 +125,136 @@ impl AliasVerification {
         }
     }
 
-    fn process_missing_alias_blob(
+    async fn process_missing_alias_blob(
         &self,
-        ctx: CoreContext,
-        alias: Sha256,
+        ctx: &CoreContext,
+        alias: &Sha256,
         content_id: ContentId,
-    ) -> impl Future<Item = (), Error = Error> {
-        cloned!(self.blobrepo, self.logger, self.err_cnt, self.mode);
-
-        err_cnt.fetch_add(1, Ordering::Relaxed);
+    ) -> Result<(), Error> {
+        self.err_cnt.fetch_add(1, Ordering::Relaxed);
         debug!(
-            logger,
+            self.logger,
             "Missing alias blob: alias {:?}, content_id {:?}", alias, content_id
         );
 
-        match mode {
-            Mode::Verify => Ok(()).into_future().boxify(),
+        match self.mode {
+            Mode::Verify => Ok(()),
             Mode::Generate => {
-                let blobstore = blobrepo.get_blobstore();
+                let blobstore = self.blobrepo.get_blobstore();
 
-                filestore::get_metadata(&blobstore, ctx.clone(), &FetchKey::Canonical(content_id))
-                    .and_then(move |meta| {
-                        meta.ok_or(format_err!("Missing content {:?}", content_id))
-                    })
-                    .and_then({
-                        cloned!(blobstore);
-                        move |meta| {
-                            if meta.sha256 == alias {
-                                AliasBlob(
-                                    Alias::Sha256(meta.sha256),
-                                    ContentAlias::from_content_id(content_id),
-                                )
-                                .store(ctx.clone(), &blobstore)
-                                .left_future()
-                            } else {
-                                Err(format_err!(
-                                    "Inconsistent hashes for {:?}, got {:?}, meta is {:?}",
-                                    content_id,
-                                    alias,
-                                    meta.sha256
-                                ))
-                                .into_future()
-                                .right_future()
-                            }
-                        }
-                    })
-                    .boxify()
+                let maybe_meta = filestore::get_metadata(
+                    &blobstore,
+                    ctx.clone(),
+                    &FetchKey::Canonical(content_id),
+                )
+                .compat()
+                .await?;
+
+                let meta = maybe_meta.ok_or(format_err!("Missing content {:?}", content_id))?;
+
+                if meta.sha256 == *alias {
+                    AliasBlob(
+                        Alias::Sha256(meta.sha256),
+                        ContentAlias::from_content_id(content_id),
+                    )
+                    .store(ctx.clone(), &blobstore)
+                    .compat()
+                    .await
+                } else {
+                    Err(format_err!(
+                        "Inconsistent hashes for {:?}, got {:?}, meta is {:?}",
+                        content_id,
+                        alias,
+                        meta.sha256
+                    ))
+                }
             }
         }
     }
 
-    fn process_alias(
+    async fn process_alias(
         &self,
-        ctx: CoreContext,
-        alias: Sha256,
+        ctx: &CoreContext,
+        alias: &Sha256,
         content_id: ContentId,
-    ) -> impl Future<Item = (), Error = Error> {
-        let av = self.clone();
-        FetchKey::from(alias)
+    ) -> Result<(), Error> {
+        let result = FetchKey::from(alias.clone())
             .load(ctx.clone(), self.blobrepo.blobstore())
-            .then(move |result| match result {
-                Ok(content_id_from_blobstore) => av
-                    .check_alias_blob(alias, content_id, content_id_from_blobstore)
-                    .left_future(),
-                Err(_) => {
-                    // the blob with alias is not found
-                    av.process_missing_alias_blob(ctx, alias, content_id)
-                        .right_future()
-                }
-            })
+            .compat()
+            .await;
+
+        match result {
+            Ok(content_id_from_blobstore) => {
+                self.check_alias_blob(alias, content_id, content_id_from_blobstore)
+                    .await
+            }
+            Err(_) => {
+                // the blob with alias is not found
+                self.process_missing_alias_blob(ctx, alias, content_id).await
+            }
+        }
     }
 
-    pub fn process_file_content(
+    pub async fn process_file_content(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         content_id: ContentId,
-    ) -> impl Future<Item = (), Error = Error> {
+    ) -> Result<(), Error> {
         let repo = self.blobrepo.clone();
-        let av = self.clone();
 
-        filestore::fetch_concat(repo.blobstore(), ctx.clone(), content_id)
+        let alias = filestore::fetch_concat(repo.blobstore(), ctx.clone(), content_id)
             .map(FileBytes)
             .map(|content| get_sha256(&content.into_bytes()))
-            .and_then(move |alias| av.process_alias(ctx, alias, content_id))
+            .compat()
+            .await?;
+
+        self.process_alias(ctx, &alias, content_id).await
     }
 
     fn print_report(&self, partial: bool) {
-        let av = self.clone();
         let resolution = if partial { "continues" } else { "finished" };
 
         info!(
-            av.logger,
+            self.logger,
             "Alias Verification {}: {:?} errors found",
             resolution,
-            av.err_cnt.load(Ordering::Relaxed)
+            self.err_cnt.load(Ordering::Relaxed)
         );
     }
 
     fn get_bounded(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         min_id: u64,
         max_id: u64,
-    ) -> impl Future<Item = (), Error = Error> {
-        let av = self.clone();
-        let av_for_process = self.clone();
-        let av_for_report = self.clone();
+    ) -> impl Future<Output = Result<(), Error>> + '_ {
+        let ctx_gfcv = ctx.clone();
+        let ctx_pfc = ctx.clone();
+        let self_gfcv = self.clone();
+        let self_pfc = self.clone();
+        let self_print = self.clone();
 
         info!(
             self.logger,
             "Process Changesets with ids: [{:?}, {:?})", min_id, max_id
         );
-        self.sqlchangesets
+
+        async move {
+            self.sqlchangesets
             // stream of cs_id
             .get_list_bs_cs_id_in_range(self.repoid, min_id, max_id)
             // future of vectors of file changes
             .map({
-                cloned!(ctx);
-                move |bcs_id| av.get_file_changes_vector(ctx.clone(), bcs_id)
+                move |bcs_id| {
+                    cloned!(ctx_gfcv, self_gfcv);
+                    async move {
+                        self_gfcv
+                            .get_file_changes_vector(&ctx_gfcv, bcs_id)
+                            .await
+                    }
+                    .boxed()
+                    .compat()
+                }
             })
             .buffer_unordered(1000)
             // Stream of file_changes
@@ -257,50 +267,72 @@ impl AliasVerification {
                 }
             )
             .flatten()
-            .map(move |file_change| {
-                if let Some(file_change) = file_change {
-                    let content_id = file_change.content_id().clone();
-                    av_for_process
-                        .process_file_content(ctx.clone(), content_id)
-                        .left_future()
-                } else {
-                    Ok(()).into_future().right_future()
+            .map({
+                move |file_change| {
+                    cloned!(ctx_pfc, self_pfc);
+                    async move {
+                    if let Some(file_change) = file_change {
+                        let content_id = file_change.content_id().clone();
+                        self_pfc
+                            .process_file_content(&ctx_pfc, content_id)
+                            .await
+                    } else {
+                        Ok(())
+                    }
+                }
+                .boxed()
+                .compat()
                 }
             })
             .buffer_unordered(1000)
             .for_each(|()| Ok(()))
-            .map(move |()| av_for_report.print_report(true))
-            .boxify()
+            .map(move |()| self_print.print_report(true))
+            .compat()
+            .await
+        }
     }
 
-    pub fn verify_all(
+    pub async fn verify_all(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         step: u64,
         min_cs_db_id: u64,
-    ) -> impl Future<Item = (), Error = Error> {
-        let av = self.clone();
-        let av_for_report = self.clone();
+    ) -> Result<(), Error> {
+        let ctx = ctx.clone();
+        let self_gb = self.clone();
+        let self_print = self.clone();
 
-        self.sqlchangesets
+        let (min_id, max_id) = self
+            .sqlchangesets
             .get_changesets_ids_bounds(self.repoid)
-            .map(move |(min_id, max_id)| {
-                let mut bounds = vec![];
+            .compat()
+            .await?;
 
-                let mut cur_id = cmp::max(min_id.unwrap(), min_cs_db_id);
-                let max_id = max_id.unwrap() + 1;
+        let mut bounds = vec![];
+        let mut cur_id = cmp::max(min_id.unwrap(), min_cs_db_id);
+        let max_id = max_id.unwrap() + 1;
+        while cur_id < max_id {
+            let max = cmp::min(max_id, cur_id + step);
+            bounds.push((cur_id, max));
+            cur_id += step;
+        }
 
-                while cur_id < max_id {
-                    let max = cmp::min(max_id, cur_id + step);
-                    bounds.push((cur_id, max));
-                    cur_id += step;
-                }
-                stream::iter_ok(bounds.into_iter())
-            })
+        async move { Ok(stream::iter_ok(bounds.into_iter())) }
+            .boxed()
+            .compat()
             .flatten_stream()
-            .and_then(move |(min_val, max_val)| av.get_bounded(ctx.clone(), min_val, max_val))
+            .and_then({
+                move |(min_val, max_val)| {
+                    cloned!(ctx, self_gb);
+                    async move { self_gb.get_bounded(&ctx, min_val, max_val).await }
+                        .boxed()
+                        .compat()
+                }
+            })
             .for_each(|()| Ok(()))
-            .map(move |()| av_for_report.print_report(false))
+            .map(move |()| self_print.print_report(false))
+            .compat()
+            .await
     }
 }
 
@@ -354,8 +386,7 @@ async fn run_aliasverify<'a>(
         Arc::new(sqlchangesets),
         mode,
     )
-    .verify_all(ctx, step, min_cs_db_id)
-    .compat()
+    .verify_all(&ctx, step, min_cs_db_id)
     .await
 }
 
