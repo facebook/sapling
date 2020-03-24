@@ -6,7 +6,7 @@ set(
 )
 set_property(CACHE USE_CARGO_VENDOR PROPERTY STRINGS AUTO ON OFF)
 
-set(RUST_VENDORED_CRATES_DIR "${CMAKE_SOURCE_DIR}/../third-party/rust/vendor")
+set(RUST_VENDORED_CRATES_DIR "${CMAKE_SOURCE_DIR}/../rust-vendor")
 if("${USE_CARGO_VENDOR}" STREQUAL "AUTO")
   if(EXISTS "${RUST_VENDORED_CRATES_DIR}")
     set(USE_CARGO_VENDOR ON)
@@ -23,6 +23,13 @@ if(USE_CARGO_VENDOR)
     )
   endif()
 
+  set(RUST_CARGO_HOME "${CMAKE_BINARY_DIR}/_cargo_home")
+  file(MAKE_DIRECTORY "${RUST_CARGO_HOME}")
+
+  file(
+    TO_NATIVE_PATH "${RUST_VENDORED_CRATES_DIR}"
+    ESCAPED_RUST_VENDORED_CRATES_DIR
+  )
   string(
     REPLACE "\\" "\\\\"
     ESCAPED_RUST_VENDORED_CRATES_DIR
@@ -79,12 +86,18 @@ function(rust_static_library TARGET)
 
   set(cargo_target "${TARGET}.cargo")
   set(target_dir $<IF:$<CONFIG:Debug>,debug,release>)
-  set(cargo_cmd cargo build $<IF:$<CONFIG:Debug>,,--release> -p ${crate_name})
   set(staticlib_name "${CMAKE_STATIC_LIBRARY_PREFIX}${crate_name}${CMAKE_STATIC_LIBRARY_SUFFIX}")
   set(rust_staticlib "${CMAKE_CURRENT_BINARY_DIR}/${target_dir}/${staticlib_name}")
 
+  set(cargo_cmd cargo)
+  if(WIN32)
+    set(cargo_cmd cargo.bat)
+  endif()
+
+  set(cargo_flags build $<IF:$<CONFIG:Debug>,,--release> -p ${crate_name})
   if(USE_CARGO_VENDOR)
     set(extra_cargo_env "CARGO_HOME=${RUST_CARGO_HOME}")
+    set(cargo_flags ${cargo_flags} --offline)
   endif()
 
   add_custom_target(
@@ -94,6 +107,7 @@ function(rust_static_library TARGET)
       "CARGO_TARGET_DIR=${CMAKE_CURRENT_BINARY_DIR}"
       ${extra_cargo_env}
       ${cargo_cmd}
+      ${cargo_flags}
     COMMENT "Building Rust crate '${crate_name}'..."
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     BYPRODUCTS
@@ -127,11 +141,17 @@ function(rust_executable TARGET)
   set(crate_name "${TARGET}")
   set(cargo_target "${TARGET}.cargo")
   set(target_dir $<IF:$<CONFIG:Debug>,debug,release>)
-  set(cargo_cmd cargo build $<IF:$<CONFIG:Debug>,,--release> -p ${crate_name})
   set(executable_name "${crate_name}${CMAKE_EXECUTABLE_SUFFIX}")
 
+  set(cargo_cmd cargo)
+  if(WIN32)
+    set(cargo_cmd cargo.bat)
+  endif()
+
+  set(cargo_flags build $<IF:$<CONFIG:Debug>,,--release> -p ${crate_name})
   if(USE_CARGO_VENDOR)
     set(extra_cargo_env "CARGO_HOME=${RUST_CARGO_HOME}")
+    set(cargo_flags ${cargo_flags} --offline)
   endif()
 
   add_custom_target(
@@ -142,6 +162,7 @@ function(rust_executable TARGET)
       "CARGO_TARGET_DIR=${CMAKE_CURRENT_BINARY_DIR}"
       ${extra_cargo_env}
       ${cargo_cmd}
+      ${cargo_flags}
     COMMENT "Building Rust executable '${crate_name}'..."
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}
     BYPRODUCTS
