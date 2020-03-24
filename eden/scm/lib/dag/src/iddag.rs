@@ -160,11 +160,11 @@ impl<Store: IdDagStore> IdDag<Store> {
     }
 
     /// Iterate through flat segments that have the given parent.
-    pub(crate) fn iter_segments_with_parent<'a>(
+    pub(crate) fn iter_master_flat_segments_with_parent<'a>(
         &'a self,
         parent: Id,
     ) -> Result<impl Iterator<Item = Result<Segment>> + 'a> {
-        self.store.iter_segments_with_parent(parent)
+        self.store.iter_master_flat_segments_with_parent(parent)
     }
 }
 
@@ -634,7 +634,7 @@ impl<Store: IdDagStore> IdDag<Store> {
             }
             // Can we use `head` in `seg` as `x`?
             let mut next_id = None;
-            for child_seg in self.iter_segments_with_parent(head)? {
+            for child_seg in self.iter_master_flat_segments_with_parent(head)? {
                 let child_seg = child_seg?;
                 if child_seg.parents()?.len() > 1 {
                     // `child_seg.span().low` is a merge, so `head` is a parent of a merge.

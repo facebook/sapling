@@ -64,8 +64,8 @@ pub trait IdDagStore {
         level: Level,
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>>;
 
-    /// Iterate through flat segments that have the given parent.
-    fn iter_segments_with_parent<'a>(
+    /// Iterate through master flat segments that have the given parent.
+    fn iter_master_flat_segments_with_parent<'a>(
         &'a self,
         parent: Id,
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>>;
@@ -209,7 +209,7 @@ impl IdDagStore for IndexedLogStore {
         Ok(Box::new(iter))
     }
 
-    fn iter_segments_with_parent<'a>(
+    fn iter_master_flat_segments_with_parent<'a>(
         &'a self,
         parent: Id,
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
@@ -327,7 +327,9 @@ impl IndexedLogStore {
                 // parent -> child for flat segments
                 let seg = Segment(Bytes::copy_from_slice(data));
                 let mut result = Vec::new();
-                if seg.level().ok() == Some(0) {
+                if seg.level().ok() == Some(0)
+                    && seg.high().map(|id| id.group()).ok() == Some(Group::MASTER)
+                {
                     // This should never pass since MAGIC_CLEAR_NON_MASTER[0] != 0.
                     assert_ne!(
                         data,
@@ -426,7 +428,7 @@ impl IdDagStore for InProcessStore {
                 StoreId::NonMaster(self.non_master_segments.len() - 1)
             }
         };
-        if level == 0 {
+        if level == 0 && high.group() == Group::MASTER {
             for parent in parents {
                 let children = self.parent_index.entry(parent).or_insert(BTreeSet::new());
                 children.insert(store_id);
@@ -437,19 +439,10 @@ impl IdDagStore for InProcessStore {
     }
 
     fn remove_non_master(&mut self) -> Result<()> {
-        for (i, segment) in self.non_master_segments.iter().enumerate() {
+        // Note. The parent index should not contain any non master entries.
+        for segment in self.non_master_segments.iter() {
             let level = segment.level()?;
             let head = segment.head()?;
-            let store_id = StoreId::NonMaster(i);
-
-            if level == 0 {
-                let parents = segment.parents()?;
-                for parent in parents {
-                    self.parent_index
-                        .get_mut(&parent)
-                        .map(|set| set.remove(&store_id));
-                }
-            }
             self.level_head_index
                 .get_mut(level as usize)
                 .map(|head_index| head_index.remove(&head));
@@ -503,7 +496,7 @@ impl IdDagStore for InProcessStore {
         }
     }
 
-    fn iter_segments_with_parent<'a>(
+    fn iter_master_flat_segments_with_parent<'a>(
         &'a self,
         parent: Id,
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>> {
@@ -767,35 +760,25 @@ mod tests {
     }
 
     #[test]
-    fn test_in_process_store_iter_segments_with_parent() {
+    fn test_in_process_store_iter_master_flat_segments_with_parent() {
         let store = get_in_process_store();
 
         let answer = store
-            .iter_segments_with_parent(Id(2))
+            .iter_master_flat_segments_with_parent(Id(2))
             .unwrap()
             .collect::<Result<Vec<_>>>()
             .unwrap();
         let expected = segments_to_owned(&[&LEVEL0_HEAD5, &LEVEL0_HEAD9]);
         assert_eq!(answer, expected);
 
-        let answer = store
-            .iter_segments_with_parent(Id(13))
-            .unwrap()
-            .collect::<Result<Vec<_>>>()
-            .unwrap();
-        let expected = segments_to_owned(&[&LEVEL0_HEADN2]);
-        assert_eq!(answer, expected);
-
-        let mut answer = store.iter_segments_with_parent(Id(4)).unwrap();
+        let mut answer = store.iter_master_flat_segments_with_parent(Id(13)).unwrap();
         assert!(answer.next().is_none());
 
-        let answer = store
-            .iter_segments_with_parent(nid(2))
-            .unwrap()
-            .collect::<Result<Vec<_>>>()
-            .unwrap();
-        let expected = segments_to_owned(&[&LEVEL0_HEADN6]);
-        assert_eq!(answer, expected);
+        let mut answer = store.iter_master_flat_segments_with_parent(Id(4)).unwrap();
+        assert!(answer.next().is_none());
+
+        let mut answer = store.iter_master_flat_segments_with_parent(nid(2)).unwrap();
+        assert!(answer.next().is_none());
     }
 
     #[test]
@@ -817,7 +800,7 @@ mod tests {
             nid(0)
         );
         assert!(store
-            .iter_segments_with_parent(nid(2))
+            .iter_master_flat_segments_with_parent(nid(2))
             .unwrap()
             .next()
             .is_none());
