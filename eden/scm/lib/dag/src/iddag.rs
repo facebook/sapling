@@ -405,7 +405,7 @@ impl<Store: IdDagStore> IdDag<Store> {
 
 // Reload.
 impl<Store: IdDagStore> IdDag<Store> {
-    /// Reload from the filesystem. Discard pending changes.
+    /// Reload from the source of truth. Discard pending changes.
     pub fn reload(&mut self) -> Result<()> {
         self.store.reload()?;
         self.max_level = self.store.max_level()?;
@@ -1168,7 +1168,7 @@ impl<Store: IdDagStore> SyncableIdDag<Store> {
         Ok(parents)
     }
 
-    /// Mark non-master segments as "removed".
+    /// Remove all non master Group identifiers from the DAG.
     pub fn remove_non_master(&mut self) -> Result<()> {
         self.dag.store.remove_non_master()
     }

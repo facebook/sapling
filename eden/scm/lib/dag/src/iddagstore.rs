@@ -19,12 +19,20 @@ use std::path::{Path, PathBuf};
 use vlqencoding::VLQEncode;
 
 pub trait IdDagStore {
+    /// Maximum level segment in the store
     fn max_level(&self) -> Result<Level>;
 
+    /// Find segment by level and head.
     fn find_segment_by_head_and_level(&self, head: Id, level: u8) -> Result<Option<Segment>>;
 
+    /// Find flat segment containing the given id.
     fn find_flat_segment_including_id(&self, id: Id) -> Result<Option<Segment>>;
 
+    /// Add a new segment.
+    ///
+    /// For simplicity, it does not check if the new segment overlaps with
+    /// an existing segment (which is a logic error). Those checks can be
+    /// offline.
     fn insert(
         &mut self,
         flags: SegmentFlags,
@@ -34,25 +42,34 @@ pub trait IdDagStore {
         parents: &[Id],
     ) -> Result<()>;
 
+    /// Return the next unused id for segments of the specified level.
+    ///
+    /// Useful for building segments incrementally.
     fn next_free_id(&self, level: Level, group: Group) -> Result<Id>;
 
+    /// Find segments that covers `id..` range at the given level, within a same group.
     fn next_segments(&self, id: Id, level: Level) -> Result<Vec<Segment>>;
 
+    /// Iterate through segments at the given level in descending order.
     fn iter_segments_descending<'a>(
         &'a self,
         max_high_id: Id,
         level: Level,
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>>;
 
+    /// Iterate through segments that have the given parent.
     fn iter_segments_with_parent<'a>(
         &'a self,
         parent: Id,
     ) -> Result<Box<dyn Iterator<Item = Result<Segment>> + 'a>>;
 
-    fn reload(&mut self) -> Result<()>;
-
+    /// Remove all non master Group identifiers from the DAG.
     fn remove_non_master(&mut self) -> Result<()>;
 
+    /// Reload from the source of truth. Discard pending changes.
+    fn reload(&mut self) -> Result<()>;
+
+    /// Reload from the source of truth (without discarding pending changes).
     fn sync(&mut self) -> Result<()>;
 }
 
@@ -208,12 +225,6 @@ impl IdDagStore for IndexedLogStore {
         Ok(Box::new(iter))
     }
 
-    fn reload(&mut self) -> Result<()> {
-        self.log.clear_dirty()?;
-        self.log.sync()?;
-        Ok(())
-    }
-
     /// Mark non-master ids as "removed".
     fn remove_non_master(&mut self) -> Result<()> {
         self.log.append(Self::MAGIC_CLEAR_NON_MASTER)?;
@@ -225,6 +236,12 @@ impl IdDagStore for IndexedLogStore {
                 "bug: remove_non_master did not take effect"
             );
         }
+        Ok(())
+    }
+
+    fn reload(&mut self) -> Result<()> {
+        self.log.clear_dirty()?;
+        self.log.sync()?;
         Ok(())
     }
 
