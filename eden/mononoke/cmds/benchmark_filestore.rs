@@ -11,15 +11,14 @@ use anyhow::{format_err, Error};
 use blobstore::Blobstore;
 use bytes::Bytes;
 use cacheblob::{new_cachelib_blobstore_no_lease, new_memcache_blobstore_no_lease};
-use clap::{App, Arg, SubCommand};
-use cloned::cloned;
+use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
 use futures::{compat::Future01CompatExt, future::lazy};
-use futures_ext::{FutureExt, StreamExt};
-use futures_old::{stream::iter_ok, Future, IntoFuture, Stream};
+use futures_ext::StreamExt;
+use futures_old::{stream::iter_ok, Future, Stream};
 use futures_stats::{FutureStats, Timed};
 use manifoldblob::ThriftManifoldBlob;
 use mononoke_types::{ContentMetadata, MononokeId};
@@ -99,6 +98,178 @@ fn read<B: Blobstore + Clone>(
         .for_each(|_| Ok(()))
         .timed(move |stats, res| log_perf(stats, res, total_size))
         .map(move |_| content_metadata)
+}
+
+async fn run_benchmark_filestore<'a>(
+    ctx: &CoreContext,
+    matches: &'a ArgMatches<'a>,
+    blob: Arc<dyn Blobstore>,
+) -> Result<(), Error> {
+    let input = matches.value_of("input").unwrap().to_string();
+
+    let input_capacity: usize = matches.value_of(ARG_INPUT_CAPACITY).unwrap().parse()?;
+
+    let chunk_size: u64 = matches.value_of(ARG_CHUNK_SIZE).unwrap().parse()?;
+
+    let concurrency: usize = matches.value_of(ARG_CONCURRENCY).unwrap().parse()?;
+
+    let delay: Option<Duration> = matches
+        .value_of(ARG_DELAY)
+        .map(|seconds| -> Result<Duration, Error> {
+            let seconds = seconds.parse().map_err(Error::from)?;
+            Ok(Duration::new(seconds, 0))
+        })
+        .transpose()?;
+
+    let randomize = matches.is_present(ARG_RANDOMIZE);
+
+    let config = FilestoreConfig {
+        chunk_size: Some(chunk_size),
+        concurrency,
+    };
+
+    eprintln!("Test with {:?}, writing into {:?}", config, blob);
+
+    let (file, metadata) = File::open(input)
+        .and_then(|file| file.metadata())
+        .from_err::<Error>()
+        .compat()
+        .await?;
+
+    let stdout = BufReader::with_capacity(input_capacity, file);
+    let len = metadata.len();
+
+    let data = codec::FramedRead::new(stdout, codec::BytesCodec::new())
+        .map(|bytes_mut| bytes_mut.freeze())
+        .map(bytes_ext::copy_from_old)
+        .from_err();
+
+    let (len, data) = if randomize {
+        let bytes = rand::thread_rng().gen::<[u8; 32]>();
+        let bytes = Bytes::copy_from_slice(&bytes[..]);
+        (
+            len + (bytes.len() as u64),
+            iter_ok(vec![bytes]).chain(data).left_stream(),
+        )
+    } else {
+        (len, data.right_stream())
+    };
+
+    eprintln!("Write start: {:?} B", len);
+
+    let req = StoreRequest::new(len);
+
+    let metadata = filestore::store(blob.clone(), config, ctx.clone(), &req, data)
+        .timed(move |stats, res| log_perf(stats, res, len))
+        .compat()
+        .await?;
+
+    match delay {
+        Some(delay) => {
+            tokio_timer::sleep(delay).compat().await?;
+        }
+        None => (),
+    }
+
+    eprintln!("Write committed: {:?}", metadata.content_id.blobstore_key());
+
+    let _metadata = read(blob.clone(), ctx.clone(), metadata.clone())
+        .compat()
+        .await?;
+    let _metadata = read(blob, ctx.clone(), metadata.clone()).compat().await?;
+
+    Ok(())
+}
+
+async fn get_blob<'a>(
+    fb: FacebookInit,
+    matches: &'a ArgMatches<'a>,
+) -> Result<Arc<dyn Blobstore>, Error> {
+    let blob: Arc<dyn Blobstore> = match matches.subcommand() {
+        (CMD_MANIFOLD, Some(sub)) => {
+            let bucket = sub.value_of(ARG_MANIFOLD_BUCKET).unwrap();
+            let manifold =
+                ThriftManifoldBlob::new(fb, bucket, None).map_err(|e| -> Error { e.into() })?;
+            let blobstore = PrefixBlobstore::new(manifold, format!("flat/{}.", NAME));
+            Arc::new(blobstore)
+        }
+        (CMD_MEMORY, Some(_)) => Arc::new(memblob::LazyMemblob::new()),
+        (CMD_XDB, Some(sub)) => {
+            let shardmap = sub.value_of(ARG_SHARDMAP).unwrap().to_string();
+            let shard_count = sub.value_of(ARG_SHARD_COUNT).unwrap().parse()?;
+            let blobstore = match sub.value_of(ARG_MYROUTER_PORT) {
+                Some(port) => {
+                    let port = port.parse()?;
+                    Sqlblob::with_myrouter(
+                        fb,
+                        shardmap,
+                        port,
+                        MysqlOptions::default().myrouter_read_service_type(),
+                        shard_count,
+                        false,
+                    )
+                    .compat()
+                    .await?
+                }
+                None => {
+                    Sqlblob::with_raw_xdb_shardmap(
+                        fb,
+                        shardmap,
+                        MysqlOptions::default().db_locator_read_instance_requirement(),
+                        shard_count,
+                        false,
+                    )
+                    .compat()
+                    .await?
+                }
+            };
+            Arc::new(blobstore)
+        }
+        _ => unreachable!(),
+    };
+
+    let blob: Arc<dyn Blobstore> = if matches.is_present(ARG_MEMCACHE) {
+        Arc::new(new_memcache_blobstore_no_lease(fb, blob, NAME, "")?)
+    } else {
+        blob
+    };
+
+    let blob: Arc<dyn Blobstore> = match matches.value_of(ARG_CACHELIB_SIZE) {
+        Some(size) => {
+            let cache_size_bytes = size.parse()?;
+            cachelib::init_cache_once(fb, cachelib::LruCacheConfig::new(cache_size_bytes))?;
+
+            let presence_pool =
+                cachelib::get_or_create_pool("presence", cachelib::get_available_space()? / 20)?;
+            let blob_pool =
+                cachelib::get_or_create_pool("blobs", cachelib::get_available_space()?)?;
+
+            Arc::new(new_cachelib_blobstore_no_lease(
+                blob,
+                Arc::new(blob_pool),
+                Arc::new(presence_pool),
+            ))
+        }
+        None => blob,
+    };
+
+    let read_qps: Option<NonZeroU32> = matches
+        .value_of(ARG_READ_QPS)
+        .map(|v| v.parse())
+        .transpose()?;
+
+    let write_qps: Option<NonZeroU32> = matches
+        .value_of(ARG_WRITE_QPS)
+        .map(|v| v.parse())
+        .transpose()?;
+
+    let blob: Arc<dyn Blobstore> = lazy(move |_| {
+        let blob = ThrottledBlob::new(blob, ThrottleOptions::new(read_qps, write_qps));
+        Arc::new(blob)
+    })
+    .await;
+
+    Ok(blob)
 }
 
 #[fbinit::main]
@@ -195,170 +366,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let app = args::add_logger_args(app);
     let matches = app.get_matches();
-    let input = matches.value_of("input").unwrap().to_string();
-
-    let input_capacity: usize = matches.value_of(ARG_INPUT_CAPACITY).unwrap().parse()?;
-
-    let chunk_size: u64 = matches.value_of(ARG_CHUNK_SIZE).unwrap().parse()?;
-
-    let concurrency: usize = matches.value_of(ARG_CONCURRENCY).unwrap().parse()?;
-
-    let delay: Option<Duration> = matches
-        .value_of(ARG_DELAY)
-        .map(|seconds| -> Result<Duration, Error> {
-            let seconds = seconds.parse().map_err(Error::from)?;
-            Ok(Duration::new(seconds, 0))
-        })
-        .transpose()?;
-
-    let randomize = matches.is_present(ARG_RANDOMIZE);
-
-    let config = FilestoreConfig {
-        chunk_size: Some(chunk_size),
-        concurrency,
-    };
-
-    let mut runtime = tokio_compat::runtime::Runtime::new().map_err(Error::from)?;
-
-    let blob: Arc<dyn Blobstore> = match matches.subcommand() {
-        (CMD_MANIFOLD, Some(sub)) => {
-            let bucket = sub.value_of(ARG_MANIFOLD_BUCKET).unwrap();
-            let manifold =
-                ThriftManifoldBlob::new(fb, bucket, None).map_err(|e| -> Error { e.into() })?;
-            let blobstore = PrefixBlobstore::new(manifold, format!("flat/{}.", NAME));
-            Arc::new(blobstore)
-        }
-        (CMD_MEMORY, Some(_)) => Arc::new(memblob::LazyMemblob::new()),
-        (CMD_XDB, Some(sub)) => {
-            let shardmap = sub.value_of(ARG_SHARDMAP).unwrap().to_string();
-            let shard_count = sub.value_of(ARG_SHARD_COUNT).unwrap().parse()?;
-            let fut = match sub.value_of(ARG_MYROUTER_PORT) {
-                Some(port) => {
-                    let port = port.parse()?;
-                    Sqlblob::with_myrouter(
-                        fb,
-                        shardmap,
-                        port,
-                        MysqlOptions::default().myrouter_read_service_type(),
-                        shard_count,
-                        false,
-                    )
-                }
-                None => Sqlblob::with_raw_xdb_shardmap(
-                    fb,
-                    shardmap,
-                    MysqlOptions::default().db_locator_read_instance_requirement(),
-                    shard_count,
-                    false,
-                ),
-            };
-            let blobstore = runtime.block_on_std(fut.compat())?;
-            Arc::new(blobstore)
-        }
-        _ => unreachable!(),
-    };
-
-    let blob: Arc<dyn Blobstore> = if matches.is_present(ARG_MEMCACHE) {
-        Arc::new(new_memcache_blobstore_no_lease(fb, blob, NAME, "")?)
-    } else {
-        blob
-    };
-
-    let blob: Arc<dyn Blobstore> = match matches.value_of(ARG_CACHELIB_SIZE) {
-        Some(size) => {
-            let cache_size_bytes = size.parse()?;
-            cachelib::init_cache_once(fb, cachelib::LruCacheConfig::new(cache_size_bytes))?;
-
-            let presence_pool =
-                cachelib::get_or_create_pool("presence", cachelib::get_available_space()? / 20)?;
-            let blob_pool =
-                cachelib::get_or_create_pool("blobs", cachelib::get_available_space()?)?;
-
-            Arc::new(new_cachelib_blobstore_no_lease(
-                blob,
-                Arc::new(blob_pool),
-                Arc::new(presence_pool),
-            ))
-        }
-        None => blob,
-    };
-
-    let read_qps: Option<NonZeroU32> = matches
-        .value_of(ARG_READ_QPS)
-        .map(|v| v.parse())
-        .transpose()?;
-
-    let write_qps: Option<NonZeroU32> = matches
-        .value_of(ARG_WRITE_QPS)
-        .map(|v| v.parse())
-        .transpose()?;
-
-    let blob: Arc<dyn Blobstore> = runtime.block_on_std(lazy(move |_| {
-        let blob = ThrottledBlob::new(blob, ThrottleOptions::new(read_qps, write_qps));
-        Arc::new(blob)
-    }));
-
-    eprintln!("Test with {:?}, writing into {:?}", config, blob);
 
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let fut = File::open(input)
-        .and_then(|file| file.metadata())
-        .from_err()
-        .and_then({
-            cloned!(blob, config, ctx);
-            move |(file, metadata)| {
-                let stdout = BufReader::with_capacity(input_capacity, file);
-                let len = metadata.len();
+    let mut runtime = tokio_compat::runtime::Runtime::new().map_err(Error::from)?;
 
-                let data = codec::FramedRead::new(stdout, codec::BytesCodec::new())
-                    .map(|bytes_mut| bytes_mut.freeze())
-                    .map(bytes_ext::copy_from_old)
-                    .from_err();
+    let blob = runtime.block_on_std(get_blob(fb, &matches))?;
 
-                let (len, data) = if randomize {
-                    let bytes = rand::thread_rng().gen::<[u8; 32]>();
-                    let bytes = Bytes::copy_from_slice(&bytes[..]);
-                    (
-                        len + (bytes.len() as u64),
-                        iter_ok(vec![bytes]).chain(data).left_stream(),
-                    )
-                } else {
-                    (len, data.right_stream())
-                };
-
-                eprintln!("Write start: {:?} B", len);
-
-                let req = StoreRequest::new(len);
-
-                filestore::store(blob, config, ctx, &req, data)
-                    .timed(move |stats, res| log_perf(stats, res, len))
-            }
-        })
-        .and_then(move |res| match delay {
-            Some(delay) => tokio_timer::sleep(delay)
-                .from_err()
-                .map(move |_| res)
-                .left_future(),
-            None => {
-                let res: Result<_, Error> = Ok(res);
-                res.into_future().right_future()
-            }
-        })
-        .inspect(|meta| {
-            eprintln!("Write committed: {:?}", meta.content_id.blobstore_key());
-        })
-        .and_then({
-            cloned!(blob, ctx);
-            move |res| read(blob, ctx, res)
-        })
-        .and_then({
-            cloned!(blob, ctx);
-            move |res| read(blob, ctx, res)
-        });
-
-    runtime.block_on_std(fut.compat())?;
+    runtime.block_on_std(run_benchmark_filestore(&ctx, &matches, blob))?;
 
     Ok(())
 }
