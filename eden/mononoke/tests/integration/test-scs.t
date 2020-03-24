@@ -90,6 +90,12 @@ lookup using bookmark
   $ scsc lookup --repo repo -B BOOKMARK_C -S bonsai
   006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b
 
+diff paths only
+  $ scsc diff --repo repo --paths-only -B BOOKMARK_B --bonsai-id "006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b"
+  M b
+  A binary
+  A c
+
 check the scuba methods and perf counters logs 
   $ summarize_scuba_json "Request.*" < "$TESTTMP/scuba.json" \
   >     .normal.log_tag .normal.msg .normal.method \
@@ -317,21 +323,19 @@ lookup using globalrev needed resolving to identify commit
   hg=ee87eb8cfeb218e7352a94689b241ea973b80402
 
 lookup using hg needed resolving to identify commit
-  $ scsc lookup --repo repo -i ee87eb8cfeb218e7352a94689b241ea973b80402 -S bonsai,hg,globalrev
-  bonsai=006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b
-  globalrev=9999999999
-  hg=ee87eb8cfeb218e7352a94689b241ea973b80402
+  $ scsc lookup --repo repo -i 82d5da62960d05281995c370fd083299ff66ba16 -S bonsai,hg,globalrev
+  bonsai=29c11c4d7a26279ad9a90edac504ac6599c0b62cb55455fbed0b7abe125086bb
+  hg=82d5da62960d05281995c370fd083299ff66ba16
 
 lookup using hg prefix needed resolving to identify commit
-  $ scsc lookup --repo repo -i ee87eb8 -S bonsai,hg,globalrev
-  bonsai=006c988c4a9f60080a6bc2a2fff47565fafea2ca5b16c4d994aecdef0c89973b
-  globalrev=9999999999
-  hg=ee87eb8cfeb218e7352a94689b241ea973b80402
+  $ scsc lookup --repo repo -i 82d5da6 -S bonsai,hg,globalrev
+  bonsai=29c11c4d7a26279ad9a90edac504ac6599c0b62cb55455fbed0b7abe125086bb
+  hg=82d5da62960d05281995c370fd083299ff66ba16
 
 lookup using hg prefix needed resolving to identify commit (ambiguous case)
-  $ scsc lookup --repo repo -i e -S bonsai,hg,globalrev
-  note: several hg commits with the prefix 'e' exist
-  error: commit not found: e
+  $ scsc lookup --repo repo -i 8 -S bonsai,hg,globalrev
+  note: several hg commits with the prefix '8' exist
+  error: commit not found: 8
   [1]
 
 cat a file
