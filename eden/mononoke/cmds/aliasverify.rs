@@ -16,14 +16,12 @@ use std::sync::{
 use anyhow::{format_err, Error, Result};
 use bytes::Bytes;
 use clap::{App, Arg, ArgMatches};
-use cloned::cloned;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
-use futures::future::{Future, FutureExt, TryFutureExt};
-use futures_old::{stream, Future as OldFuture, IntoFuture, Stream};
+use futures::compat::{Future01CompatExt, Stream01CompatExt};
+use futures::stream::{self, StreamExt, TryStreamExt};
+use futures_old::Future as OldFuture;
 use futures_util::try_join;
 use slog::{debug, info, Logger};
-use tokio::prelude::stream::iter_ok;
 
 use blobrepo::BlobRepo;
 use blobstore::{Loadable, Storable};
@@ -36,6 +34,8 @@ use mononoke_types::{
     hash::{self, Sha256},
     ChangesetId, ContentAlias, ContentId, FileChange, RepositoryId,
 };
+
+const LIMIT: usize = 1000;
 
 pub fn get_sha256(contents: &Bytes) -> hash::Sha256 {
     use sha2::Digest;
@@ -190,7 +190,8 @@ impl AliasVerification {
             }
             Err(_) => {
                 // the blob with alias is not found
-                self.process_missing_alias_blob(ctx, alias, content_id).await
+                self.process_missing_alias_blob(ctx, alias, content_id)
+                    .await
             }
         }
     }
@@ -222,74 +223,35 @@ impl AliasVerification {
         );
     }
 
-    fn get_bounded(
-        &self,
-        ctx: &CoreContext,
-        min_id: u64,
-        max_id: u64,
-    ) -> impl Future<Output = Result<(), Error>> + '_ {
-        let ctx_gfcv = ctx.clone();
-        let ctx_pfc = ctx.clone();
-        let self_gfcv = self.clone();
-        let self_pfc = self.clone();
-        let self_print = self.clone();
-
+    async fn get_bounded(&self, ctx: &CoreContext, min_id: u64, max_id: u64) -> Result<(), Error> {
         info!(
             self.logger,
             "Process Changesets with ids: [{:?}, {:?})", min_id, max_id
         );
 
-        async move {
-            self.sqlchangesets
-            // stream of cs_id
+        let bcs_ids = self
+            .sqlchangesets
             .get_list_bs_cs_id_in_range(self.repoid, min_id, max_id)
-            // future of vectors of file changes
-            .map({
-                move |bcs_id| {
-                    cloned!(ctx_gfcv, self_gfcv);
-                    async move {
-                        self_gfcv
-                            .get_file_changes_vector(&ctx_gfcv, bcs_id)
-                            .await
-                    }
-                    .boxed()
-                    .compat()
+            .compat();
+
+        bcs_ids
+            .and_then(move |bcs_id| async move {
+                let file_changes_vec = self.get_file_changes_vector(ctx, bcs_id).await?;
+                Ok(stream::iter(file_changes_vec).map(Ok))
+            })
+            .try_flatten()
+            .try_for_each_concurrent(LIMIT, move |file_change| async move {
+                if let Some(file_change) = file_change {
+                    let content_id = file_change.content_id().clone();
+                    self.process_file_content(ctx, content_id).await
+                } else {
+                    Ok(())
                 }
             })
-            .buffer_unordered(1000)
-            // Stream of file_changes
-            .map( move |file_changes_vec| {
-                Ok(file_changes_vec)
-                    .into_future()
-                    .map(|file_changes| file_changes.into_iter())
-                    .map(iter_ok)
-                    .flatten_stream()
-                }
-            )
-            .flatten()
-            .map({
-                move |file_change| {
-                    cloned!(ctx_pfc, self_pfc);
-                    async move {
-                    if let Some(file_change) = file_change {
-                        let content_id = file_change.content_id().clone();
-                        self_pfc
-                            .process_file_content(&ctx_pfc, content_id)
-                            .await
-                    } else {
-                        Ok(())
-                    }
-                }
-                .boxed()
-                .compat()
-                }
-            })
-            .buffer_unordered(1000)
-            .for_each(|()| Ok(()))
-            .map(move |()| self_print.print_report(true))
-            .compat()
-            .await
-        }
+            .await?;
+
+        self.print_report(true);
+        Ok(())
     }
 
     pub async fn verify_all(
@@ -298,10 +260,6 @@ impl AliasVerification {
         step: u64,
         min_cs_db_id: u64,
     ) -> Result<(), Error> {
-        let ctx = ctx.clone();
-        let self_gb = self.clone();
-        let self_print = self.clone();
-
         let (min_id, max_id) = self
             .sqlchangesets
             .get_changesets_ids_bounds(self.repoid)
@@ -317,22 +275,13 @@ impl AliasVerification {
             cur_id += step;
         }
 
-        async move { Ok(stream::iter_ok(bounds.into_iter())) }
-            .boxed()
-            .compat()
-            .flatten_stream()
-            .and_then({
-                move |(min_val, max_val)| {
-                    cloned!(ctx, self_gb);
-                    async move { self_gb.get_bounded(&ctx, min_val, max_val).await }
-                        .boxed()
-                        .compat()
-                }
-            })
-            .for_each(|()| Ok(()))
-            .map(move |()| self_print.print_report(false))
-            .compat()
-            .await
+        stream::iter(bounds)
+            .map(Ok)
+            .try_for_each(move |(min_val, max_val)| self.get_bounded(ctx, min_val, max_val))
+            .await?;
+
+        self.print_report(false);
+        Ok(())
     }
 }
 
