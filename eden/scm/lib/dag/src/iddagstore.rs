@@ -13,7 +13,7 @@ use byteorder::{BigEndian, WriteBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
 use minibytes::Bytes;
-use std::collections::BTreeMap;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs::{self, File};
 use std::io::Cursor;
 use std::iter;
@@ -386,7 +386,7 @@ pub struct InProcessStore {
     // level -> head -> serialized Segment
     level_head_index: Vec<BTreeMap<Id, StoreId>>,
     // parent -> serialized Segment
-    parent_index: BTreeMap<Id, Vec<StoreId>>,
+    parent_index: BTreeMap<Id, BTreeSet<StoreId>>,
 }
 
 impl IdDagStore for InProcessStore {
@@ -428,11 +428,33 @@ impl IdDagStore for InProcessStore {
         };
         if level == 0 {
             for parent in parents {
-                let children = self.parent_index.entry(parent).or_insert(vec![]);
-                children.push(store_id);
+                let children = self.parent_index.entry(parent).or_insert(BTreeSet::new());
+                children.insert(store_id);
             }
         }
         self.get_head_index_mut(level).insert(high, store_id);
+        Ok(())
+    }
+
+    fn remove_non_master(&mut self) -> Result<()> {
+        for (i, segment) in self.non_master_segments.iter().enumerate() {
+            let level = segment.level()?;
+            let head = segment.head()?;
+            let store_id = StoreId::NonMaster(i);
+
+            if level == 0 {
+                let parents = segment.parents()?;
+                for parent in parents {
+                    self.parent_index
+                        .get_mut(&parent)
+                        .map(|set| set.remove(&store_id));
+                }
+            }
+            self.level_head_index
+                .get_mut(level as usize)
+                .map(|head_index| head_index.remove(&head));
+        }
+        self.non_master_segments = Vec::new();
         Ok(())
     }
 
@@ -500,10 +522,6 @@ impl IdDagStore for InProcessStore {
         Ok(())
     }
 
-    fn remove_non_master(&mut self) -> Result<()> {
-        unimplemented!();
-    }
-
     fn sync(&mut self) -> Result<()> {
         Ok(())
     }
@@ -547,8 +565,11 @@ mod tests {
     use once_cell::sync::Lazy;
     use std::ops::Deref;
 
-    //  0---2--3--4--5--10--11--13
-    //   \-1 \-6--8--9-/      \-12
+    fn nid(id: u64) -> Id {
+        Group::NON_MASTER.min_id() + id
+    }
+    //  0---2--3--4--5--10--11--13--N0--N1--N2--N5--N6
+    //   \-1 \-6--8--9-/      \-12   \-N3--N4--/
     //          \-7
     static LEVEL0_HEAD2: Lazy<Segment> =
         Lazy::new(|| Segment::new(SegmentFlags::HAS_ROOT, 0 as Level, Id(0), Id(2), &[]));
@@ -565,8 +586,32 @@ mod tests {
             &[Id(5), Id(9)],
         )
     });
+
+    static LEVEL0_HEADN2: Lazy<Segment> =
+        Lazy::new(|| Segment::new(SegmentFlags::empty(), 0 as Level, nid(0), nid(2), &[Id(13)]));
+    static LEVEL0_HEADN4: Lazy<Segment> =
+        Lazy::new(|| Segment::new(SegmentFlags::empty(), 0 as Level, nid(3), nid(4), &[nid(0)]));
+    static LEVEL0_HEADN6: Lazy<Segment> = Lazy::new(|| {
+        Segment::new(
+            SegmentFlags::empty(),
+            0 as Level,
+            nid(5),
+            nid(6),
+            &[nid(2), nid(4)],
+        )
+    });
+
     static LEVEL1_HEAD13: Lazy<Segment> =
         Lazy::new(|| Segment::new(SegmentFlags::HAS_ROOT, 1 as Level, Id(0), Id(13), &[]));
+    static LEVEL1_HEADN6: Lazy<Segment> = Lazy::new(|| {
+        Segment::new(
+            SegmentFlags::HAS_ROOT,
+            1 as Level,
+            nid(0),
+            nid(6),
+            &[Id(13)],
+        )
+    });
 
     fn init_store(segments: Vec<&Segment>) -> InProcessStore {
         let mut store = InProcessStore::new();
@@ -583,6 +628,10 @@ mod tests {
             &LEVEL0_HEAD9,
             &LEVEL0_HEAD13,
             &LEVEL1_HEAD13,
+            &LEVEL0_HEADN2,
+            &LEVEL0_HEADN4,
+            &LEVEL0_HEADN6,
+            &LEVEL1_HEADN6,
         ];
         init_store(segments)
     }
@@ -611,6 +660,12 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(&segment, LEVEL0_HEAD5.deref());
+
+        let segment = store
+            .find_segment_by_head_and_level(nid(2), 0 as Level)
+            .unwrap()
+            .unwrap();
+        assert_eq!(&segment, LEVEL0_HEADN2.deref());
     }
 
     #[test]
@@ -627,6 +682,12 @@ mod tests {
             .unwrap()
             .unwrap();
         assert_eq!(&segment, LEVEL0_HEAD2.deref());
+
+        let segment = store
+            .find_flat_segment_including_id(nid(1))
+            .unwrap()
+            .unwrap();
+        assert_eq!(&segment, LEVEL0_HEADN2.deref());
     }
 
     #[test]
@@ -638,7 +699,7 @@ mod tests {
         );
         assert_eq!(
             store.next_free_id(0 as Level, Group::NON_MASTER).unwrap(),
-            Group::NON_MASTER.min_id()
+            nid(7)
         );
         assert_eq!(
             store.next_free_id(1 as Level, Group::MASTER).unwrap(),
@@ -707,18 +768,7 @@ mod tests {
 
     #[test]
     fn test_in_process_store_iter_segments_with_parent() {
-        let level1_head2 = Segment::new(SegmentFlags::HAS_ROOT, 1 as Level, Id(0), Id(2), &[]);
-        let level1_head13 =
-            Segment::new(SegmentFlags::empty(), 1 as Level, Id(3), Id(13), &[Id(2)]);
-        let segments: Vec<&Segment> = vec![
-            &LEVEL0_HEAD2,
-            &LEVEL0_HEAD5,
-            &LEVEL0_HEAD9,
-            &LEVEL0_HEAD13,
-            &level1_head2,
-            &level1_head13,
-        ];
-        let store = init_store(segments);
+        let store = get_in_process_store();
 
         let answer = store
             .iter_segments_with_parent(Id(2))
@@ -728,7 +778,48 @@ mod tests {
         let expected = segments_to_owned(&[&LEVEL0_HEAD5, &LEVEL0_HEAD9]);
         assert_eq!(answer, expected);
 
-        let mut iter = store.iter_segments_with_parent(Id(4)).unwrap();
-        assert!(iter.next().is_none());
+        let answer = store
+            .iter_segments_with_parent(Id(13))
+            .unwrap()
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+        let expected = segments_to_owned(&[&LEVEL0_HEADN2]);
+        assert_eq!(answer, expected);
+
+        let mut answer = store.iter_segments_with_parent(Id(4)).unwrap();
+        assert!(answer.next().is_none());
+
+        let answer = store
+            .iter_segments_with_parent(nid(2))
+            .unwrap()
+            .collect::<Result<Vec<_>>>()
+            .unwrap();
+        let expected = segments_to_owned(&[&LEVEL0_HEADN6]);
+        assert_eq!(answer, expected);
+    }
+
+    #[test]
+    fn test_in_process_store_remove_non_master() {
+        let mut store = get_in_process_store();
+
+        store.remove_non_master().unwrap();
+
+        assert!(store
+            .find_segment_by_head_and_level(nid(2), 0 as Level)
+            .unwrap()
+            .is_none());
+        assert!(store
+            .find_flat_segment_including_id(nid(1))
+            .unwrap()
+            .is_none());
+        assert_eq!(
+            store.next_free_id(0 as Level, Group::NON_MASTER).unwrap(),
+            nid(0)
+        );
+        assert!(store
+            .iter_segments_with_parent(nid(2))
+            .unwrap()
+            .next()
+            .is_none());
     }
 }
