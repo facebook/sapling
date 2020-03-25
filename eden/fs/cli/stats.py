@@ -19,7 +19,7 @@ from .subcmd import Subcmd
 
 stats_cmd = subcmd_mod.Decorator()
 
-log = logging.getLogger("eden.cli.stats")
+log = logging.getLogger("eden.fs.cli.stats")
 
 
 DiagInfoCounters = Dict[str, int]

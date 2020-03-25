@@ -9,12 +9,12 @@ import typing
 from typing import List, Optional
 from unittest.mock import patch
 
-import eden.cli.doctor as doctor
-from eden.cli.config import EdenInstance
-from eden.cli.doctor.problem import ProblemBase, ProblemTracker
-from eden.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
-from eden.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
-from eden.cli.doctor.test.lib.testcase import DoctorTestBase
+import eden.fs.cli.doctor as doctor
+from eden.fs.cli.config import EdenInstance
+from eden.fs.cli.doctor.problem import ProblemBase, ProblemTracker
+from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
+from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
+from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 
 
 class DiskUsageTest(DoctorTestBase):
@@ -29,7 +29,7 @@ class DiskUsageTest(DoctorTestBase):
         self.fs_util.f_frsize = frsize
 
         mock_getmountpt_and_deviceid_patcher = patch(
-            "eden.cli.doctor.check_filesystems.get_mountpt"
+            "eden.fs.cli.doctor.check_filesystems.get_mountpt"
         )
         mock_getmountpt_and_deviceid = mock_getmountpt_and_deviceid_patcher.start()
         self.addCleanup(lambda: mock_getmountpt_and_deviceid.stop())

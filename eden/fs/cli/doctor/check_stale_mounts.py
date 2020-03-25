@@ -9,8 +9,8 @@ import logging
 import os
 from typing import List, Set
 
-from eden.cli import mtab
-from eden.cli.doctor.problem import FixableProblem, ProblemTracker, RemediationError
+from eden.fs.cli import mtab
+from eden.fs.cli.doctor.problem import FixableProblem, ProblemTracker, RemediationError
 
 
 def check_for_stale_mounts(
@@ -73,7 +73,7 @@ class StaleMountsFound(FixableProblem):
 
 
 def get_all_stale_eden_mount_points(mount_table: mtab.MountTable) -> List[bytes]:
-    log = logging.getLogger("eden.cli.doctor.stale_mounts")
+    log = logging.getLogger("eden.fs.cli.doctor.stale_mounts")
     stale_eden_mount_points: Set[bytes] = set()
     for mount_point in get_all_eden_mount_points(mount_table):
         # All eden mounts should have a .eden directory.

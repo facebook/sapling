@@ -8,9 +8,9 @@ import platform
 import re
 from typing import Tuple
 
-from eden.cli import ui
-from eden.cli.config import EdenInstance
-from eden.cli.doctor.problem import Problem, ProblemTracker
+from eden.fs.cli import ui
+from eden.fs.cli.config import EdenInstance
+from eden.fs.cli.doctor.problem import Problem, ProblemTracker
 
 
 class OSProblem(Problem):

@@ -7,7 +7,7 @@
 import re
 from typing import Dict, Optional
 
-from eden.cli.util import poll_until
+from eden.fs.cli.util import poll_until
 
 from .lib import testcase
 

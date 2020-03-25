@@ -14,7 +14,7 @@ import unittest
 from pathlib import Path
 from typing import List, Optional, Sequence, Tuple
 
-from eden.cli import fsck as fsck_mod
+from eden.fs.cli import fsck as fsck_mod
 from eden.integration.snapshot import snapshot as snapshot_mod, verify as verify_mod
 from eden.integration.snapshot.types.basic import BasicSnapshot
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin

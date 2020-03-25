@@ -8,7 +8,7 @@ import abc
 from enum import IntEnum
 from typing import Optional, Set
 
-from eden.cli import ui
+from eden.fs.cli import ui
 
 
 class RemediationError(Exception):

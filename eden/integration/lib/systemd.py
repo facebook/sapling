@@ -17,8 +17,8 @@ import tempfile
 import types
 import typing
 
-from eden.cli.daemon import wait_for_process_exit
-from eden.cli.util import poll_until
+from eden.fs.cli.daemon import wait_for_process_exit
+from eden.fs.cli.util import poll_until
 
 from .find_executables import FindExe
 from .linux import LinuxCgroup, ProcessID

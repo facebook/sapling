@@ -7,7 +7,7 @@
 import os
 from typing import Any, cast
 
-from eden.cli.filesystem import FsUtil
+from eden.fs.cli.filesystem import FsUtil
 
 
 class FakeFsUtil(FsUtil):

@@ -17,7 +17,7 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Type
 
 import eden.thrift
 import thrift.transport
-from eden.cli.util import EdenStartError, check_health_using_lockfile
+from eden.fs.cli.util import check_health_using_lockfile
 from eden.thrift import EdenNotRunningError
 from facebook.eden import EdenService
 from facebook.eden.ttypes import GlobParams, MountInfo as ThriftMountInfo, MountState

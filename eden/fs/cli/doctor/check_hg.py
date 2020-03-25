@@ -13,9 +13,13 @@ from typing import Dict, List, Optional, Tuple, Type
 
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
-from eden.cli import hg_util
-from eden.cli.config import EdenCheckout
-from eden.cli.doctor.problem import FixableProblem, ProblemTracker, UnexpectedCheckError
+from eden.fs.cli import hg_util
+from eden.fs.cli.config import EdenCheckout
+from eden.fs.cli.doctor.problem import (
+    FixableProblem,
+    ProblemTracker,
+    UnexpectedCheckError,
+)
 
 
 class HgChecker:

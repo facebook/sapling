@@ -13,8 +13,8 @@ import time
 import typing
 
 import pexpect
-from eden.cli.daemon import did_process_exit
-from eden.cli.util import poll_until
+from eden.fs.cli.daemon import did_process_exit
+from eden.fs.cli.util import poll_until
 
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process

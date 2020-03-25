@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Dict, Iterable, List, NamedTuple, Optional
 
 
-log: logging.Logger = logging.getLogger("eden.cli.process_finder")
+log: logging.Logger = logging.getLogger("eden.fs.cli.process_finder")
 ProcessID = int
 
 

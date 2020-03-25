@@ -11,8 +11,8 @@ import typing
 import eden.thrift
 import eden.thrift.client
 import pexpect
-from eden.cli.config import EdenInstance
-from eden.cli.util import HealthStatus
+from eden.fs.cli.config import EdenInstance
+from eden.fs.cli.util import HealthStatus
 
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin

@@ -12,8 +12,7 @@ import time
 import typing
 import unittest
 
-from eden.cli.daemon import wait_for_shutdown
-from eden.cli.util import poll_until
+from eden.fs.cli.daemon import wait_for_shutdown
 
 
 class WaitForShutdownTest(unittest.TestCase):

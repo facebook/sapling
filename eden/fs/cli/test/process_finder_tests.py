@@ -15,8 +15,8 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Optional
 
-from eden.cli.process_finder import BuildInfo, EdenFSProcess
-from eden.cli.test.lib.fake_process_finder import FakeProcessFinder
+from eden.fs.cli.process_finder import BuildInfo, EdenFSProcess
+from eden.fs.cli.test.lib.fake_process_finder import FakeProcessFinder
 
 
 class ProcessFinderTests(unittest.TestCase):

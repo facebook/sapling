@@ -6,10 +6,10 @@
 
 import typing
 
-from eden.cli.config import EdenInstance
-from eden.cli.doctor import check_os
-from eden.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
-from eden.cli.doctor.test.lib.testcase import DoctorTestBase
+from eden.fs.cli.config import EdenInstance
+from eden.fs.cli.doctor import check_os
+from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
+from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 
 
 class OperatingSystemsCheckTest(DoctorTestBase):

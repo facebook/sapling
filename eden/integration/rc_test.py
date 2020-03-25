@@ -9,7 +9,7 @@ import stat
 import tempfile
 import textwrap
 
-from eden.cli import util
+from eden.fs.cli import util
 
 from .lib import testcase
 

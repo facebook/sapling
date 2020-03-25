@@ -13,7 +13,7 @@ import time
 import typing
 import unittest
 
-from eden.cli.daemon import did_process_exit
+from eden.fs.cli.daemon import did_process_exit
 from eden.test_support.environment_variable import EnvironmentVariableMixin
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 

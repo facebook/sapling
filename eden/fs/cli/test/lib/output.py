@@ -6,14 +6,14 @@
 
 import io
 
-import eden.cli.ui
+import eden.fs.cli.ui
 
 
-class TestOutput(eden.cli.ui.TerminalOutput):
+class TestOutput(eden.fs.cli.ui.TerminalOutput):
     def __init__(self) -> None:
-        Color = eden.cli.ui.Color
-        Attribute = eden.cli.ui.Attribute
-        term_settings = eden.cli.ui.TerminalSettings(
+        Color = eden.fs.cli.ui.Color
+        Attribute = eden.fs.cli.ui.Attribute
+        term_settings = eden.fs.cli.ui.TerminalSettings(
             foreground={
                 Color.RED: b"<red>",
                 Color.GREEN: b"<green>",

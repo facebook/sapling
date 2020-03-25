@@ -12,9 +12,9 @@ import tempfile
 from pathlib import Path
 from typing import List, Set
 
-from eden.cli.config import EdenInstance
-from eden.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
-from eden.cli.filesystem import FsUtil
+from eden.fs.cli.config import EdenInstance
+from eden.fs.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
+from eden.fs.cli.filesystem import FsUtil
 
 
 def check_using_nfs_path(tracker: ProblemTracker, mount_path: Path) -> None:

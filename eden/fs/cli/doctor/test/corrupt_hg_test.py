@@ -8,13 +8,12 @@ import os
 import shutil
 import typing
 
-import eden.cli.doctor as doctor
-from eden.cli import filesystem
-from eden.cli.config import EdenInstance
-from eden.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
-from eden.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
-from eden.cli.doctor.test.lib.testcase import DoctorTestBase
-from eden.cli.test.lib.output import TestOutput
+import eden.fs.cli.doctor as doctor
+from eden.fs.cli.config import EdenInstance
+from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
+from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
+from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
+from eden.fs.cli.test.lib.output import TestOutput
 
 
 class CorruptHgTest(DoctorTestBase):

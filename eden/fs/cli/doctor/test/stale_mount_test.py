@@ -8,10 +8,10 @@ import errno
 import os
 from typing import List, Tuple
 
-import eden.cli.doctor as doctor
-from eden.cli.doctor import check_stale_mounts
-from eden.cli.doctor.test.lib.fake_mount_table import FakeMountTable
-from eden.cli.doctor.test.lib.testcase import DoctorTestBase
+import eden.fs.cli.doctor as doctor
+from eden.fs.cli.doctor import check_stale_mounts
+from eden.fs.cli.doctor.test.lib.fake_mount_table import FakeMountTable
+from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
 
 
 class StaleMountsCheckTest(DoctorTestBase):

@@ -45,7 +45,7 @@ if os.name != "nt":
 
 
 if typing.TYPE_CHECKING:
-    from eden.cli.redirect import RedirectionType  # noqa: F401
+    from eden.fs.cli.redirect import RedirectionType  # noqa: F401
 
 # Use --etcEdenDir to change the value used for a given invocation
 # of the eden cli.
@@ -250,7 +250,7 @@ class EdenInstance:
             return telemetry.NullTelemetryLogger()
 
         try:
-            from eden.cli.facebook import scuba_telemetry
+            from eden.fs.cli.facebook import scuba_telemetry
 
             return scuba_telemetry.ScubaTelemetryLogger()
         except ImportError:
@@ -1130,7 +1130,6 @@ class EdenCheckout:
         # This is a little gross, but only needs to live long enough
         # to swing through migrating folks away from the legacy
         # configuration.
-        from eden.cli.redirect import RedirectionType  # noqa: F811
 
         redirections = {k: str(v) for k, v in checkout_config.redirections.items()}
         config_data = {
@@ -1196,7 +1195,7 @@ class EdenCheckout:
         redirections_dict = config.get("redirections")
 
         if redirections_dict is not None:
-            from eden.cli.redirect import RedirectionType  # noqa: F811
+            from eden.fs.cli.redirect import RedirectionType  # noqa: F811
 
             if not isinstance(redirections_dict, dict):
                 raise Exception(f"{config_path} has an invalid [redirections] section")

@@ -15,8 +15,8 @@ from typing import Dict, Iterable, List, NamedTuple, Optional, Tuple, Union
 
 import eden.dirstate
 import facebook.eden.ttypes as eden_ttypes
-from eden.cli import mtab, version as version_mod
-from eden.cli.config import CheckoutConfig, EdenCheckout, EdenInstance, HealthStatus
+from eden.fs.cli import mtab, version as version_mod
+from eden.fs.cli.config import CheckoutConfig, EdenCheckout, EdenInstance, HealthStatus
 from fb303_core.ttypes import fb303_status
 
 from .fake_client import FakeClient

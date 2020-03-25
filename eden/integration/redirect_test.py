@@ -8,7 +8,7 @@ import json
 import os
 import subprocess
 
-from eden.cli.util import mkscratch_bin
+from eden.fs.cli.util import mkscratch_bin
 
 from .lib import testcase
 

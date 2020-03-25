@@ -7,8 +7,8 @@
 import unittest
 from pathlib import Path
 
-from eden.cli import main as main_mod
-from eden.cli.config import EdenCheckout, EdenInstance
+from eden.fs.cli import main as main_mod
+from eden.fs.cli.config import EdenCheckout, EdenInstance
 from facebook.eden.ttypes import MountInfo, MountState
 
 from .lib.output import TestOutput

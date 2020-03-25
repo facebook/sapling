@@ -11,7 +11,7 @@ import threading
 from pathlib import Path
 from typing import Dict
 
-from eden.cli.util import get_pid_using_lockfile
+from eden.fs.cli.util import get_pid_using_lockfile
 from facebook.eden.ttypes import FaultDefinition
 
 from .lib import testcase

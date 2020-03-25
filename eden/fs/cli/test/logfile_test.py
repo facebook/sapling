@@ -11,7 +11,7 @@ import subprocess
 import typing
 import unittest
 
-from eden.cli.logfile import follow_log_file, forward_log_file
+from eden.fs.cli.logfile import follow_log_file, forward_log_file
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 

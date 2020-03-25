@@ -18,7 +18,7 @@ from types import TracebackType
 from typing import Any, Dict, List, Optional, Union, cast
 
 import eden.thrift
-from eden.cli import util
+from eden.fs.cli import util
 from facebook.eden.ttypes import MountState
 
 from .find_executables import FindExe

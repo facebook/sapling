@@ -10,7 +10,7 @@ import subprocess
 import typing
 from typing import Dict, List, Optional, Set, Union
 
-from eden.cli import mtab
+from eden.fs.cli import mtab
 
 
 class FakeMountTable(mtab.MountTable):

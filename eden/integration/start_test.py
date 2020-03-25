@@ -13,8 +13,8 @@ import unittest
 from typing import List, Optional
 
 import pexpect
-from eden.cli.config import EdenInstance
-from eden.cli.util import HealthStatus
+from eden.fs.cli.config import EdenInstance
+from eden.fs.cli.util import HealthStatus
 from eden.test_support.environment_variable import EnvironmentVariableMixin
 from fb303_core.ttypes import fb303_status
 

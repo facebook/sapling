@@ -8,11 +8,11 @@ import binascii
 import unittest
 from typing import Tuple
 
-import eden.cli.doctor as doctor
 import eden.dirstate
-from eden.cli.config import EdenCheckout
-from eden.cli.test.lib.fake_process_finder import FakeProcessFinder
-from eden.cli.test.lib.output import TestOutput
+import eden.fs.cli.doctor as doctor
+from eden.fs.cli.config import EdenCheckout
+from eden.fs.cli.test.lib.fake_process_finder import FakeProcessFinder
+from eden.fs.cli.test.lib.output import TestOutput
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
 

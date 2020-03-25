@@ -10,8 +10,15 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Dict, Optional
 
-from eden.cli import config as config_mod, filesystem, mtab, process_finder, ui, version
-from eden.cli.config import EdenCheckout, EdenInstance
+from eden.fs.cli import (
+    config as config_mod,
+    filesystem,
+    mtab,
+    process_finder,
+    ui,
+    version,
+)
+from eden.fs.cli.config import EdenCheckout, EdenInstance
 from facebook.eden.ttypes import MountState
 from fb303_core.ttypes import fb303_status
 

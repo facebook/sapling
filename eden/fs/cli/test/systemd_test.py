@@ -9,7 +9,7 @@ import pathlib
 import typing
 import unittest
 
-from eden.cli.systemd import (
+from eden.fs.cli.systemd import (
     SystemdEnvironmentFile,
     escape_dbus_address,
     systemd_escape_path,

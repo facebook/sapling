@@ -12,11 +12,11 @@ import shlex
 from pathlib import Path
 from typing import Dict, List, Optional
 
-from eden.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
-from eden.cli.process_finder import EdenFSProcess, ProcessFinder, ProcessID
+from eden.fs.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
+from eden.fs.cli.process_finder import EdenFSProcess, ProcessFinder, ProcessID
 
 
-log: logging.Logger = logging.getLogger("eden.cli.doctor.check_rogue_edenfs")
+log: logging.Logger = logging.getLogger("eden.fs.cli.doctor.check_rogue_edenfs")
 
 
 def find_rogue_processes(

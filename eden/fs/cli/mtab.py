@@ -15,7 +15,7 @@ import sys
 from typing import List, NamedTuple, Union
 
 
-log = logging.getLogger("eden.cli.mtab")
+log = logging.getLogger("eden.fs.cli.mtab")
 
 
 MountInfo = NamedTuple(

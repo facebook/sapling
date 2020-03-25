@@ -33,7 +33,7 @@ MODULES = [
     # Eden python libraries
     ("eden/fs/py/eden", "eden"),
     # The cli
-    ("eden/cli", "eden/cli"),
+    ("eden/fs/cli", "eden/fs/cli"),
 ]
 
 
@@ -161,5 +161,5 @@ with tempfile.TemporaryDirectory() as instdir:
         instdir,
         target=args.output,
         interpreter=args.python,
-        main="eden.cli.main:zipapp_main",
+        main="eden.fs.cli.main:zipapp_main",
     )

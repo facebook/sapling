@@ -14,7 +14,7 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-from eden.cli import process_finder
+from eden.fs.cli import process_finder
 
 
 class FakeEdenFSProcess(process_finder.EdenFSProcess):

@@ -9,11 +9,11 @@
 import itertools
 from typing import Optional, Tuple
 
-import eden.cli.doctor as doctor
-from eden.cli import process_finder
-from eden.cli.doctor import check_rogue_edenfs
-from eden.cli.doctor.test.lib.testcase import DoctorTestBase
-from eden.cli.test.lib.fake_process_finder import FakeProcessFinder
+import eden.fs.cli.doctor as doctor
+from eden.fs.cli import process_finder
+from eden.fs.cli.doctor import check_rogue_edenfs
+from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
+from eden.fs.cli.test.lib.fake_process_finder import FakeProcessFinder
 
 
 TEST_UID = 99
@@ -254,7 +254,7 @@ kill -9 123991
             logs = "\n".join(logs_assertion.output)
             self.assertRegex(
                 logs,
-                r"WARNING:eden\.cli\..*:Lock file cannot be read for",
+                r"WARNING:.*:Lock file cannot be read for",
                 "when lock file can't be opened",
             )
 

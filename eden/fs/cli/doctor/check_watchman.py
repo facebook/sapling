@@ -12,7 +12,7 @@ import subprocess
 import typing
 from typing import Any, Dict, List, Optional, Set
 
-from eden.cli.doctor.problem import (
+from eden.fs.cli.doctor.problem import (
     FixableProblem,
     Problem,
     ProblemTracker,
@@ -20,7 +20,7 @@ from eden.cli.doctor.problem import (
 )
 
 
-log = logging.getLogger("eden.cli.doctor.checks.watchman")
+log = logging.getLogger("eden.fs.cli.doctor.checks.watchman")
 
 
 WatchmanCheckInfo = collections.namedtuple(

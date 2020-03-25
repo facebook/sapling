@@ -10,17 +10,16 @@ from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional, Tuple
 from unittest.mock import call, patch
 
-import eden.cli.doctor as doctor
-from eden.cli import filesystem
-from eden.cli.config import EdenCheckout, EdenInstance
-from eden.cli.doctor import check_hg, check_watchman
-from eden.cli.doctor.test.lib.fake_client import FakeClient, ResetParentsCommitsArgs
-from eden.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
-from eden.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
-from eden.cli.doctor.test.lib.fake_hg_repo import FakeHgRepo
-from eden.cli.doctor.test.lib.fake_mount_table import FakeMountTable
-from eden.cli.doctor.test.lib.testcase import DoctorTestBase
-from eden.cli.test.lib.output import TestOutput
+import eden.fs.cli.doctor as doctor
+from eden.fs.cli.config import EdenCheckout, EdenInstance
+from eden.fs.cli.doctor import check_hg, check_watchman
+from eden.fs.cli.doctor.test.lib.fake_client import ResetParentsCommitsArgs
+from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
+from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
+from eden.fs.cli.doctor.test.lib.fake_hg_repo import FakeHgRepo
+from eden.fs.cli.doctor.test.lib.fake_mount_table import FakeMountTable
+from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
+from eden.fs.cli.test.lib.output import TestOutput
 from fb303_core.ttypes import fb303_status
 
 
@@ -28,8 +27,8 @@ class DoctorTest(DoctorTestBase):
     # The diffs for what is written to stdout can be large.
     maxDiff = None
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
-    @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide")
     def test_end_to_end_test_with_various_scenarios(
         self, mock_get_roots_for_nuclide, mock_watchman
     ):
@@ -156,8 +155,10 @@ https://fb.facebook.com/groups/eden.users/
         mock_watchman.assert_has_calls(calls)
         self.assertEqual(1, exit_code)
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
-    @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide", return_value=set())
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
+    @patch(
+        "eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide", return_value=set()
+    )
     def test_not_all_mounts_have_watchman_watcher(
         self, mock_get_roots_for_nuclide, mock_watchman
     ):
@@ -195,8 +196,8 @@ https://fb.facebook.com/groups/eden.users/
         mock_watchman.assert_has_calls(calls)
         self.assertEqual(0, exit_code)
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
-    @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide")
     def test_eden_not_in_use(self, mock_get_roots_for_nuclide, mock_watchman):
         instance = FakeEdenInstance(
             self.make_temporary_directory(), status=fb303_status.DEAD
@@ -216,8 +217,8 @@ https://fb.facebook.com/groups/eden.users/
         self.assertEqual("Eden is not in use.\n", out.getvalue())
         self.assertEqual(0, exit_code)
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
-    @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide")
     def test_edenfs_not_running(self, mock_get_roots_for_nuclide, mock_watchman):
         instance = FakeEdenInstance(
             self.make_temporary_directory(), status=fb303_status.DEAD
@@ -251,8 +252,8 @@ https://fb.facebook.com/groups/eden.users/
         )
         self.assertEqual(1, exit_code)
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
-    @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide")
     def test_edenfs_starting(self, mock_get_roots_for_nuclide, mock_watchman):
         instance = FakeEdenInstance(
             self.make_temporary_directory(), status=fb303_status.STARTING
@@ -286,8 +287,8 @@ https://fb.facebook.com/groups/eden.users/
         )
         self.assertEqual(1, exit_code)
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
-    @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide")
     def test_edenfs_stopping(self, mock_get_roots_for_nuclide, mock_watchman):
         instance = FakeEdenInstance(
             self.make_temporary_directory(), status=fb303_status.STOPPING
@@ -321,7 +322,7 @@ https://fb.facebook.com/groups/eden.users/
         )
         self.assertEqual(1, exit_code)
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     def test_no_issue_when_watchman_using_eden_watcher(self, mock_watchman):
         fixer, out = self._test_watchman_watcher_check(
             mock_watchman, initial_watcher="eden"
@@ -329,7 +330,7 @@ https://fb.facebook.com/groups/eden.users/
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     def test_fix_when_watchman_using_inotify_watcher(self, mock_watchman):
         fixer, out = self._test_watchman_watcher_check(
             mock_watchman, initial_watcher="inotify", new_watcher="eden", dry_run=False
@@ -346,7 +347,7 @@ https://fb.facebook.com/groups/eden.users/
         )
         self.assert_results(fixer, num_problems=1, num_fixed_problems=1)
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     def test_dry_run_identifies_inotify_watcher_issue(self, mock_watchman):
         fixer, out = self._test_watchman_watcher_check(
             mock_watchman, initial_watcher="inotify", dry_run=True
@@ -363,7 +364,7 @@ https://fb.facebook.com/groups/eden.users/
         )
         self.assert_results(fixer, num_problems=1)
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     def test_doctor_reports_failure_if_cannot_replace_inotify_watcher(
         self, mock_watchman
     ):
@@ -422,7 +423,7 @@ https://fb.facebook.com/groups/eden.users/
         mock_watchman.assert_has_calls(calls)
         return fixer, out.getvalue()
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     def test_no_issue_when_expected_nuclide_subscriptions_present(self, mock_watchman):
         fixer, out = self._test_nuclide_check(
             mock_watchman=mock_watchman, include_filewatcher_subscriptions=True
@@ -430,7 +431,7 @@ https://fb.facebook.com/groups/eden.users/
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     def test_no_issue_when_path_not_in_nuclide_roots(self, mock_watchman):
         fixer, out = self._test_nuclide_check(
             mock_watchman=mock_watchman, include_path_in_nuclide_roots=False
@@ -438,7 +439,7 @@ https://fb.facebook.com/groups/eden.users/
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     def test_watchman_subscriptions_are_missing(self, mock_watchman):
         fixer, out = self._test_nuclide_check(
             mock_watchman=mock_watchman, include_hg_subscriptions=False, dry_run=False
@@ -472,7 +473,7 @@ command palette in Atom.
         )
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     def test_filewatcher_watchman_subscription_has_duplicate(self, mock_watchman):
         fixer, out = self._test_nuclide_check(
             mock_watchman=mock_watchman,
@@ -512,7 +513,7 @@ command palette in Atom.
         )
         self.assert_results(fixer, num_problems=1, num_manual_fixes=1)
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     def test_filewatcher_subscription_is_missing_dry_run(self, mock_watchman):
         fixer, out = self._test_nuclide_check(mock_watchman=mock_watchman)
         self.assertEqual(
@@ -645,7 +646,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         )
 
     @patch(
-        "eden.cli.doctor.check_hg.get_tip_commit_hash",
+        "eden.fs.cli.doctor.check_hg.get_tip_commit_hash",
         return_value=b"\x87\x65\x43\x21" * 5,
     )
     def test_snapshot_and_dirstate_file_differ_and_all_commit_hash_invalid(
@@ -690,7 +691,7 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         self.assert_dirstate_p0(checkout, valid_commit_hash)
 
     @patch(
-        "eden.cli.doctor.check_hg.get_tip_commit_hash",
+        "eden.fs.cli.doctor.check_hg.get_tip_commit_hash",
         return_value=b"\x87\x65\x43\x21" * 5,
     )
     def test_snapshot_and_dirstate_file_differ_and_all_parents_invalid(
@@ -791,13 +792,13 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         check_hg.check_hg(fixer, checkout)
         return checkout, fixer, out.getvalue()
 
-    @patch("eden.cli.version.get_installed_eden_rpm_version")
+    @patch("eden.fs.cli.version.get_installed_eden_rpm_version")
     def test_edenfs_when_installed_and_running_match(self, mock_gierv):
         fixer, out = self._test_edenfs_version(mock_gierv, "20171213-165642")
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    @patch("eden.cli.version.get_installed_eden_rpm_version")
+    @patch("eden.fs.cli.version.get_installed_eden_rpm_version")
     def test_edenfs_when_installed_and_running_differ(self, mock_gierv):
         fixer, out = self._test_edenfs_version(mock_gierv, "20171120-246561")
         self.assertEqual(
@@ -837,7 +838,9 @@ may have important bug fixes or performance improvements.
         mock_rpm_q.assert_has_calls(calls)
         return fixer, out.getvalue()
 
-    @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide", return_value=set())
+    @patch(
+        "eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide", return_value=set()
+    )
     def test_unconfigured_mounts_dont_crash(self, mock_get_roots_for_nuclide):
         # If Eden advertises that a mount is active, but it is not in the
         # configuration, then at least don't throw an exception.
@@ -928,8 +931,10 @@ Would remount {mounts[1]}
         )
         self.assertEqual(exit_code, 1)
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
-    @patch("eden.cli.doctor.check_watchman._get_roots_for_nuclide", return_value=set())
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
+    @patch(
+        "eden.fs.cli.doctor.check_watchman._get_roots_for_nuclide", return_value=set()
+    )
     def _test_remount_checkouts(
         self,
         mock_get_roots_for_nuclide,
@@ -962,7 +967,7 @@ Would remount {mounts[1]}
         )
         return exit_code, out.getvalue(), mounts
 
-    @patch("eden.cli.doctor.check_watchman._call_watchman")
+    @patch("eden.fs.cli.doctor.check_watchman._call_watchman")
     def test_watchman_fails(self, mock_watchman):
         tmp_dir = self.make_temporary_directory()
         instance = FakeEdenInstance(tmp_dir)

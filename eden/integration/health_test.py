@@ -11,7 +11,7 @@ import sys
 import typing
 
 import pexpect
-from eden.cli.daemon import wait_for_shutdown
+from eden.fs.cli.daemon import wait_for_shutdown
 
 from .lib import edenclient, testcase
 from .lib.find_executables import FindExe

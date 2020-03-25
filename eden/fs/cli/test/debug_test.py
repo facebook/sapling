@@ -6,7 +6,7 @@
 
 import unittest
 
-from eden.cli.debug import FileStatsCMD
+from eden.fs.cli.debug import FileStatsCMD
 
 
 class DebugTest(unittest.TestCase):

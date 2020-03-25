@@ -8,18 +8,17 @@ from types import SimpleNamespace
 from typing import Optional
 from unittest.mock import patch
 
-import eden.cli.doctor as doctor
-from eden.cli import filesystem
-from eden.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
-from eden.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
-from eden.cli.doctor.test.lib.testcase import DoctorTestBase
-from eden.cli.test.lib.output import TestOutput
+import eden.fs.cli.doctor as doctor
+from eden.fs.cli.doctor.test.lib.fake_eden_instance import FakeEdenInstance
+from eden.fs.cli.doctor.test.lib.fake_fs_util import FakeFsUtil
+from eden.fs.cli.doctor.test.lib.testcase import DoctorTestBase
+from eden.fs.cli.test.lib.output import TestOutput
 
 
 class NfsTest(DoctorTestBase):
     maxDiff: Optional[int] = None
 
-    @patch("eden.cli.doctor.check_filesystems.is_nfs_mounted")
+    @patch("eden.fs.cli.doctor.check_filesystems.is_nfs_mounted")
     def test_nfs_mounted(self, mock_is_nfs_mounted):
         mock_is_nfs_mounted.return_value = True
         instance = FakeEdenInstance(self.make_temporary_directory())
@@ -53,7 +52,7 @@ Accessing files and directories in this repository will be slow.
         self.assertEqual(1, exit_code)
 
     @patch("pathlib.Path.read_text")
-    @patch("eden.cli.doctor.check_filesystems.is_nfs_mounted")
+    @patch("eden.fs.cli.doctor.check_filesystems.is_nfs_mounted")
     def test_no_nfs(self, mock_is_nfs_mounted, mock_path_read_text):
         mock_is_nfs_mounted.side_effect = [False, False]
         v = self.run_varying_nfs(mock_path_read_text)
@@ -66,7 +65,7 @@ Checking {v.client_path}
         self.assertEqual(0, v.exit_code)
 
     @patch("pathlib.Path.read_text")
-    @patch("eden.cli.doctor.check_filesystems.is_nfs_mounted")
+    @patch("eden.fs.cli.doctor.check_filesystems.is_nfs_mounted")
     def test_nfs_on_client_path(self, mock_is_nfs_mounted, mock_path_read_text):
         mock_is_nfs_mounted.side_effect = [True, False]
         v = self.run_varying_nfs(mock_path_read_text)
@@ -85,7 +84,7 @@ Checking {v.client_path}
         self.assertEqual(1, v.exit_code)
 
     @patch("pathlib.Path.read_text")
-    @patch("eden.cli.doctor.check_filesystems.is_nfs_mounted")
+    @patch("eden.fs.cli.doctor.check_filesystems.is_nfs_mounted")
     def test_nfs_on_shared_path(self, mock_is_nfs_mounted, mock_path_read_text):
         mock_is_nfs_mounted.side_effect = [False, True]
         v = self.run_varying_nfs(mock_path_read_text)
@@ -102,7 +101,7 @@ Accessing files and directories in this repository will be slow.
         self.assertEqual(1, v.exit_code)
 
     @patch("pathlib.Path.read_text")
-    @patch("eden.cli.doctor.check_filesystems.is_nfs_mounted")
+    @patch("eden.fs.cli.doctor.check_filesystems.is_nfs_mounted")
     def test_nfs_on_client_path_and_shared_path(
         self, mock_is_nfs_mounted, mock_path_read_text
     ):

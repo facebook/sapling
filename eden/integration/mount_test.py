@@ -11,7 +11,7 @@ import subprocess
 from pathlib import Path
 from typing import Optional, Set
 
-from eden.cli.util import poll_until
+from eden.fs.cli.util import poll_until
 from eden.thrift import EdenClient, EdenNotRunningError
 from facebook.eden.ttypes import (
     EdenError,

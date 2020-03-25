@@ -6,7 +6,7 @@
 
 import unittest
 
-from eden.cli.mtab import MountInfo, parse_macos_mount_output, parse_mtab
+from eden.fs.cli.mtab import MountInfo, parse_macos_mount_output, parse_mtab
 
 
 class MTabTest(unittest.TestCase):

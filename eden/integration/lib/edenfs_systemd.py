@@ -9,7 +9,7 @@ import pathlib
 import typing
 import unittest
 
-from eden.cli.systemd import edenfs_systemd_service_name
+from eden.fs.cli.systemd import edenfs_systemd_service_name
 
 from .find_executables import FindExe
 from .systemd import SystemdService, SystemdUserServiceManager

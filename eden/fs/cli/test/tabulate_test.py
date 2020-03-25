@@ -6,7 +6,7 @@
 
 import unittest
 
-from eden.cli.tabulate import tabulate
+from eden.fs.cli.tabulate import tabulate
 
 
 eol = ""
