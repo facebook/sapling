@@ -133,6 +133,16 @@ impl<T: ContentDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> ContentDa
 }
 
 impl Metadata {
+    pub const LFS_FLAG: u64 = 0x2000;
+
+    /// Returns true if the blob retrieved from `DataStore::get` is an LFS pointer.
+    pub fn is_lfs(&self) -> bool {
+        match self.flags {
+            None => false,
+            Some(flag) => (flag & Metadata::LFS_FLAG) == Metadata::LFS_FLAG,
+        }
+    }
+
     pub fn write<T: Write>(&self, writer: &mut T) -> Result<()> {
         let mut buf = vec![];
         if let Some(flags) = self.flags {

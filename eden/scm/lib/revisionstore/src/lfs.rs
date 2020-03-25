@@ -563,13 +563,11 @@ impl HgIdMutableDeltaStore for LfsMultiplexer {
     /// Depending on whether the blob represents an LFS pointer, or if it is large enough, it will
     /// be added either to the lfs store, or to the non-lfs store.
     fn add(&self, delta: &Delta, metadata: &Metadata) -> Result<()> {
-        if let Some(flag) = metadata.flags {
-            if (flag & 0x2000) == 0x2000 {
-                // This is an lfs pointer blob. Let's parse it and extract what matters.
-                let pointer = LfsPointersEntry::from_bytes(&delta.data, delta.key.hgid.clone())?;
+        if metadata.is_lfs() {
+            // This is an lfs pointer blob. Let's parse it and extract what matters.
+            let pointer = LfsPointersEntry::from_bytes(&delta.data, delta.key.hgid.clone())?;
 
-                return self.lfs.inner.write().pointers.add(pointer);
-            }
+            return self.lfs.inner.write().pointers.add(pointer);
         }
 
         if delta.data.len() > self.threshold {
@@ -1071,7 +1069,7 @@ mod tests {
             &delta,
             &Metadata {
                 size: None,
-                flags: Some(0x2000),
+                flags: Some(Metadata::LFS_FLAG),
             },
         )?;
         assert_eq!(
@@ -1133,7 +1131,7 @@ mod tests {
             &delta,
             &Metadata {
                 size: None,
-                flags: Some(0x2000),
+                flags: Some(Metadata::LFS_FLAG),
             },
         )?;
         assert_eq!(
@@ -1195,7 +1193,7 @@ mod tests {
             &delta,
             &Metadata {
                 size: Some(size.try_into()?),
-                flags: Some(0x2000),
+                flags: Some(Metadata::LFS_FLAG),
             },
         )?;
 

@@ -77,10 +77,8 @@ impl BackingStore {
         // Return None for LFS blobs
         // TODO: LFS support
         if let Ok(Some(metadata)) = self.blobstore.get_meta(&key) {
-            if let Some(flag) = metadata.flags {
-                if flag == 0x2000 {
-                    return Ok(None);
-                }
+            if metadata.is_lfs() {
+                return Ok(None);
             }
         }
 
