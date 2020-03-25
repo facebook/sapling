@@ -50,23 +50,6 @@ Commit git SHA:
   $ hg add
   adding d
   $ hg commit -Am "commit with git sha" --extra convert_revision=37b0a167e07f2b84149c918cec818ffeb183dddd --extra hg-git-rename-source=git
-  $ hg bookmark -i BOOKMARK_D
-
-A commit with file move and copy
-
-  $ hg update -q $COMMIT_B
-  $ hg move a moved_a
-  $ echo x >> moved_a
-  $ hg cp b copied_b
-  $ commit D
-
-A commit that adds things in two different subdirectories
-  $ mkdir dir_a dir_b
-  $ hg move moved_a dir_a/a
-  $ echo x >> dir_a/a
-  $ echo y > dir_b/y
-  $ hg add dir_b/y
-  $ commit E
 
 import testing repo to mononoke
   $ cd ..
@@ -190,85 +173,6 @@ check the scuba methods and perf counters logs
 
 commands after this point may run requests in parallel, which can change the ordering
 of the scuba samples.
-
-blame
-  $ scsc blame --repo repo -i "$COMMIT_C" --path b
-  323afe77a1b1e632e54e8d5a683ba2cc8511f299: b
-  c29e0e474e30ae40ed639fa6292797a7502bc590: c
-  323afe77a1b1e632e54e8d5a683ba2cc8511f299: d
-  323afe77a1b1e632e54e8d5a683ba2cc8511f299: e
-  323afe77a1b1e632e54e8d5a683ba2cc8511f299: f
-
-  $ scsc blame --repo repo -i "$COMMIT_C" --parent --path b
-  323afe77a1b1e632e54e8d5a683ba2cc8511f299: a
-  323afe77a1b1e632e54e8d5a683ba2cc8511f299: b
-  323afe77a1b1e632e54e8d5a683ba2cc8511f299: d
-  323afe77a1b1e632e54e8d5a683ba2cc8511f299: e
-  323afe77a1b1e632e54e8d5a683ba2cc8511f299: f
-
-  $ scsc --json blame --repo repo -i "$COMMIT_C" --path b | jq -S .
-  [
-    {
-      "author": "test",
-      "commit": {
-        "bonsai": "c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb",
-        "hg": "323afe77a1b1e632e54e8d5a683ba2cc8511f299"
-      },
-      "contents": "b",
-      "datetime": "1970-01-01T00:00:00+00:00",
-      "line": 1,
-      "origin_line": 2,
-      "path": "b"
-    },
-    {
-      "author": "test",
-      "commit": {
-        "bonsai": "d5ded5e738f4fc36b03c3e09db9cdd9259d167352a03fb6130f5ee138b52972f",
-        "hg": "c29e0e474e30ae40ed639fa6292797a7502bc590"
-      },
-      "contents": "c",
-      "datetime": "1970-01-01T00:00:00+00:00",
-      "line": 2,
-      "origin_line": 2,
-      "path": "b"
-    },
-    {
-      "author": "test",
-      "commit": {
-        "bonsai": "c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb",
-        "hg": "323afe77a1b1e632e54e8d5a683ba2cc8511f299"
-      },
-      "contents": "d",
-      "datetime": "1970-01-01T00:00:00+00:00",
-      "line": 3,
-      "origin_line": 3,
-      "path": "b"
-    },
-    {
-      "author": "test",
-      "commit": {
-        "bonsai": "c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb",
-        "hg": "323afe77a1b1e632e54e8d5a683ba2cc8511f299"
-      },
-      "contents": "e",
-      "datetime": "1970-01-01T00:00:00+00:00",
-      "line": 4,
-      "origin_line": 4,
-      "path": "b"
-    },
-    {
-      "author": "test",
-      "commit": {
-        "bonsai": "c63b71178d240f05632379cf7345e139fe5d4eb1deca50b3e23c26115493bbbb",
-        "hg": "323afe77a1b1e632e54e8d5a683ba2cc8511f299"
-      },
-      "contents": "f",
-      "datetime": "1970-01-01T00:00:00+00:00",
-      "line": 5,
-      "origin_line": 5,
-      "path": "b"
-    }
-  ]
 
 cat a file
   $ scsc cat --repo repo -B BOOKMARK_B -p a
