@@ -30,6 +30,7 @@ use cpython::*;
 use crossbeam::channel::{bounded, Receiver, Sender};
 
 use cpython_ext::{PyNone, PyPath, ResultPyErrExt};
+use fsinfo::{fstype, FsType};
 use pyrevisionstore::contentstore;
 use revisionstore::ContentStore;
 use types::{HgId, Key, RepoPath, RepoPathBuf};
@@ -382,9 +383,14 @@ impl VFS {
     }
 }
 
-fn supports_symlinks(_path: &Path) -> Result<bool> {
-    // XXX: placeholder
-    Ok(!cfg!(windows))
+/// Since Windows doesn't support symlinks (without Windows' Developer Mode), and NTFS on unices is
+/// only used for repos that are intended to be used on Windows, pretend that NTFS doesn't support
+/// symlinks. This is of course a lie since unices have no issues supporting symlinks on NTFS.
+///
+/// Once the need to use NTFS on unices is gone (because this module solves the slowness), this
+/// hack will be removed.
+fn supports_symlinks(path: &Path) -> Result<bool> {
+    Ok(fstype(path)? != FsType::NTFS)
 }
 
 /// Fetch the content of the passed in `hgid` and write it to `path`.

@@ -13,6 +13,7 @@ anyhow = "1.0.20"
 bytes = "0.5"
 pyrevisionstore = { path = "../pyrevisionstore" }
 crossbeam = "0.7"
+fsinfo = { path = "../../../../lib/fsinfo" }
 revisionstore = { path = "../../../../lib/revisionstore" }
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.4", default-features = false }
