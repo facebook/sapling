@@ -327,6 +327,9 @@ folly::File PrivHelperServer::fuseMount(const char* mountPath, bool readOnly) {
   args.altflags |= FUSE_MOPT_NO_APPLEXATTR;
 
   int mountFlags = MNT_NOSUID;
+  if (readOnly) {
+    mountFlags |= MNT_RDONLY;
+  }
   checkUnixError(
       mount(OSXFUSE_NAME, args.mntpath, mountFlags, &args), "failed to mount");
   return std::move(fuseDev);
