@@ -23,11 +23,24 @@ use source_control as thrift;
 use source_control::server::SourceControlService;
 use source_control::services::source_control_service as service;
 use srserver::RequestContext;
+use stats::prelude::*;
 
 use crate::errors;
 use crate::from_request::FromRequest;
 use crate::params::AddScubaParams;
 use crate::specifiers::SpecifierExt;
+
+define_stats! {
+    prefix = "mononoke.scs_server";
+    total_request_start: timeseries(Rate, Sum),
+    total_request_success: timeseries(Rate, Sum),
+    total_request_internal_failure: timeseries(Rate, Sum),
+    total_request_invalid: timeseries(Rate, Sum),
+
+    // permille is used in canaries, because canaries do not allow for tracking formulas
+    total_request_internal_failure_permille: timeseries(Average),
+    total_request_invalid_permille: timeseries(Average),
+}
 
 #[derive(Clone)]
 pub(crate) struct SourceControlServiceImpl {
@@ -235,11 +248,31 @@ impl SourceControlServiceImpl {
 }
 
 fn log_result<T>(ctx: CoreContext, stats: &FutureStats, result: &Result<T, errors::ServiceError>) {
+    let mut success = 0;
+    let mut internal_failure = 0;
+    let mut invalid_request = 0;
+
     let (status, error) = match result {
-        Ok(_) => ("SUCCESS", None),
-        Err(errors::ServiceError::Request(e)) => ("REQUEST_ERROR", Some(format!("{:?}", e))),
-        Err(errors::ServiceError::Internal(e)) => ("INTERNAL_ERROR", Some(format!("{:?}", e))),
+        Ok(_) => {
+            success = 1;
+            ("SUCCESS", None)
+        }
+        Err(errors::ServiceError::Request(e)) => {
+            invalid_request = 1;
+            ("REQUEST_ERROR", Some(format!("{:?}", e)))
+        }
+        Err(errors::ServiceError::Internal(e)) => {
+            internal_failure = 1;
+            ("INTERNAL_ERROR", Some(format!("{:?}", e)))
+        }
     };
+
+    STATS::total_request_success.add_value(success);
+    STATS::total_request_internal_failure.add_value(internal_failure);
+    STATS::total_request_invalid.add_value(invalid_request);
+    STATS::total_request_internal_failure_permille.add_value(internal_failure * 1000);
+    STATS::total_request_invalid_permille.add_value(invalid_request * 1000);
+
     let mut scuba = ctx.scuba().clone();
 
     ctx.perf_counters().insert_perf_counters(&mut scuba);
@@ -288,6 +321,7 @@ macro_rules! impl_thrift_methods {
                 let handler = async move {
                     let ctx = create_ctx!(self.0, $method_name, req_ctxt, $( $param_name ),*)?;
                     ctx.scuba().clone().log_with_msg("Request start", None);
+                    STATS::total_request_start.add_value(1);
                     let (stats, res) = (self.0)
                         .$method_name(ctx.clone(), $( $param_name ),* )
                         .timed()
