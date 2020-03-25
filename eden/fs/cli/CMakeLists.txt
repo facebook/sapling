@@ -6,6 +6,7 @@
 file(GLOB EDENFSCTL_SRCS "*.py" "doctor/*.py")
 add_fb_python_executable(
   edenfsctl
+  NAMESPACE eden.cli
   MAIN_MODULE eden.cli.main:zipapp_main
   SOURCES ${EDENFSCTL_SRCS}
   DEPENDS

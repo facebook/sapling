@@ -43,6 +43,7 @@ add_subdirectory(telemetry)
 add_subdirectory(utils)
 add_subdirectory(testharness)
 add_subdirectory(py)
+add_subdirectory(cli)
 
 
 # Platform specific code

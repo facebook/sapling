@@ -67,7 +67,6 @@ set_property(
   COMPILE_DEFINITIONS
   "FOLLY_XLOG_STRIP_PREFIXES=\"${CMAKE_SOURCE_DIR}:${CMAKE_BINARY_DIR}\""
 )
-add_subdirectory(eden/cli)
 add_subdirectory(eden/fs)
 add_subdirectory(eden/integration)
 add_subdirectory(eden/scm/edenscm/hgext/extlib)

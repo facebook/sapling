@@ -81,8 +81,8 @@ class FindExeClass(object):
         return self._find_exe(
             "eden CLI",
             env="EDENFS_CLI_PATH",
-            buck_path="eden/cli/edenfsctl.par",
-            cmake_path="eden/cli/edenfsctl",
+            buck_path="eden/fs/cli/edenfsctl.par",
+            cmake_path="eden/fs/cli/edenfsctl",
         )
 
     @cached_property
