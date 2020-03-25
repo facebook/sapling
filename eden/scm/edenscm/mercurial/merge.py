@@ -1506,6 +1506,14 @@ def calculateupdates(
     return actions, diverge, renamedelete
 
 
+def removeone(repo, wctx, f):
+    wctx[f].audit()
+    try:
+        wctx[f].remove(ignoremissing=True)
+    except OSError as inst:
+        repo.ui.warn(_("update failed to remove %s: %s!\n") % (f, inst.strerror))
+
+
 def batchremove(repo, wctx, actions):
     """apply removes to the working directory
 
@@ -1518,11 +1526,7 @@ def batchremove(repo, wctx, actions):
         repo.ui.debug(" %s: %s -> r\n" % (f, msg))
         if verbose:
             repo.ui.note(_("removing %s\n") % f)
-        wctx[f].audit()
-        try:
-            wctx[f].remove(ignoremissing=True)
-        except OSError as inst:
-            repo.ui.warn(_("update failed to remove %s: %s!\n") % (f, inst.strerror))
+        removeone(repo, wctx, f)
         if i == 100:
             yield i, 0, f
             i = 0
@@ -1540,6 +1544,27 @@ def batchremove(repo, wctx, actions):
             )
             % repo.root
         )
+
+
+def updateone(repo, fctx, wctx, f, flags, backup=False, backgroundclose=False):
+    if backup:
+        # If a file or directory exists with the same name, back that
+        # up.  Otherwise, look to see if there is a file that conflicts
+        # with a directory this file is in, and if so, back that up.
+        absf = repo.wjoin(f)
+        if not repo.wvfs.lexists(f):
+            for p in util.finddirs(f):
+                if repo.wvfs.isfileorlink(p):
+                    absf = repo.wjoin(p)
+                    break
+        orig = scmutil.origpath(repo.ui, repo, absf)
+        if repo.wvfs.lexists(absf):
+            util.rename(absf, orig)
+    wctx[f].clearunknown()
+    data = fctx(f).data()
+    wctx[f].write(data, flags, backgroundclose=backgroundclose)
+
+    return len(data)
 
 
 def batchget(repo, mctx, wctx, actions):
@@ -1560,23 +1585,7 @@ def batchget(repo, mctx, wctx, actions):
             if verbose:
                 repo.ui.note(_("getting %s\n") % f)
 
-            if backup:
-                # If a file or directory exists with the same name, back that
-                # up.  Otherwise, look to see if there is a file that conflicts
-                # with a directory this file is in, and if so, back that up.
-                absf = repo.wjoin(f)
-                if not repo.wvfs.lexists(f):
-                    for p in util.finddirs(f):
-                        if repo.wvfs.isfileorlink(p):
-                            absf = repo.wjoin(p)
-                            break
-                orig = scmutil.origpath(ui, repo, absf)
-                if repo.wvfs.lexists(absf):
-                    util.rename(absf, orig)
-            wctx[f].clearunknown()
-            data = fctx(f).data()
-            size += len(data)
-            wctx[f].write(data, flags, backgroundclose=True)
+            size += updateone(repo, fctx, wctx, f, flags, backup, backgroundclose=True)
             if i == 100:
                 yield i, size, f
                 i = 0
@@ -1695,7 +1704,10 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 remover.remove(f)
                 z += 1
                 prog.value = (z, f)
-            remover.wait()
+            retry = remover.wait()
+            for f in retry:
+                repo.ui.debug("retrying %s\n" % f)
+                removeone(repo, wctx, f)
         else:
             workerprog = worker.worker(
                 repo.ui, cost, batchremove, (repo, wctx), actions["r"]
@@ -1735,7 +1747,10 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 z += 1
                 prog.value = (z, f)
 
-            writesize = writer.wait()
+            writesize, retry = writer.wait()
+            for f, flag in retry:
+                repo.ui.debug("retrying %s\n" % f)
+                writesize += updateone(repo, fctx, wctx, f, flag)
         else:
             workerprog = worker.worker(
                 repo.ui, cost, batchget, (repo, mctx, wctx), actions["g"]

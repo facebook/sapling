@@ -29,7 +29,7 @@ use bytes::Bytes;
 use cpython::*;
 use crossbeam::channel::{bounded, Receiver, Sender};
 
-use cpython_ext::{PyNone, PyPath, ResultPyErrExt};
+use cpython_ext::{PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str};
 use fsinfo::{fstype, FsType};
 use pyrevisionstore::contentstore;
 use revisionstore::{ContentStore, HgIdDataStore};
@@ -49,7 +49,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 const WORKER_BATCH_SIZE: usize = 100;
 
 struct Worker<Ret, Work> {
-    threads: Vec<JoinHandle<Result<Ret>>>,
+    threads: Vec<JoinHandle<Ret>>,
     sender: Sender<Vec<Work>>,
     pending: Vec<Work>,
 }
@@ -68,7 +68,7 @@ impl<Ret: Send + 'static, Work: Sync + Send + 'static> Worker<Ret, Work> {
     fn new<State: Send + Clone + 'static>(
         num_workers: usize,
         state: State,
-        work: impl Fn(State, Receiver<Vec<Work>>) -> Result<Ret> + Send + 'static + Copy,
+        work: impl Fn(State, Receiver<Vec<Work>>) -> Ret + Send + 'static + Copy,
     ) -> Self {
         let (sender, receiver) = bounded(num_workers * 2);
 
@@ -127,7 +127,7 @@ impl<Ret: Send + 'static, Work: Sync + Send + 'static> Worker<Ret, Work> {
 
     /// Wait until all the previously pushed work have completed. Return an
     /// iterator over all the threads results.
-    fn wait(mut self) -> Result<impl Iterator<Item = Result<Ret>>> {
+    fn wait(mut self) -> Result<impl Iterator<Item = Ret>> {
         let pending = mem::take(&mut self.pending);
         self.sender.send(pending)?;
         drop(self.sender);
@@ -436,16 +436,26 @@ fn update(
 fn threaded_writer(
     state: WriterState,
     chan: Receiver<Vec<(RepoPathBuf, HgId, Option<UpdateFlag>)>>,
-) -> Result<usize> {
+) -> (usize, Vec<(RepoPathBuf, Option<UpdateFlag>)>) {
+    let mut failures = Vec::new();
+
     let mut written = 0;
     while let Ok(vec) = chan.recv() {
         for (path, hgid, flag) in vec.into_iter() {
-            written += update(&state, path.as_repo_path(), hgid, flag)
-                .with_context(|| format!("Can't update {} at {}", path, hgid))?;
+            let res = update(&state, path.as_repo_path(), hgid, flag)
+                .with_context(|| format!("Can't update {} at {}", path, hgid));
+
+            match res {
+                Ok(count) => written += count,
+                Err(e) => {
+                    tracing::warn!("{:?}", e);
+                    failures.push((path, flag));
+                }
+            };
         }
     }
 
-    Ok(written)
+    (written, failures)
 }
 
 #[derive(Clone)]
@@ -465,7 +475,7 @@ impl WriterState {
 }
 
 py_class!(class writerworker |py| {
-    data inner: RefCell<Option<Worker<usize, (RepoPathBuf, HgId, Option<UpdateFlag>)>>>;
+    data inner: RefCell<Option<Worker<(usize, Vec<(RepoPathBuf, Option<UpdateFlag>)>), (RepoPathBuf, HgId, Option<UpdateFlag>)>>>;
 
     def __new__(_cls, contentstore: contentstore, root: &PyPath, numthreads: usize) -> PyResult<writerworker> {
         let store = contentstore.to_inner(py);
@@ -500,25 +510,48 @@ py_class!(class writerworker |py| {
     }
 
     /// Wait for all the pending `write` calls to complete.
-    def wait(&self) -> PyResult<usize> {
+    def wait(&self) -> PyResult<(usize, Vec<(PyPathBuf, Str)>)> {
         let inner = self.inner(py).borrow_mut().take().unwrap();
 
-        let written = py.allow_threads(move || -> Result<usize> {
-            Ok(inner.wait()?.collect::<Result<Vec<usize>>>()?.into_iter().sum())
-        }).map_pyerr(py)?;
+        py.allow_threads(move || -> Result<(usize, Vec<(PyPathBuf, Str)>)> {
+            let mut written = 0;
+            let mut failures = Vec::new();
 
-        Ok(written)
+            for (count, fail) in inner.wait()? {
+                written += count;
+                failures.extend(fail.into_iter().map(|(path, flags)| {
+                    let path = PyPathBuf::from(path);
+
+                    let flags = match flags {
+                        None => Str::from("".to_string()),
+                        Some(flag) => match flag {
+                            UpdateFlag::Symlink => Str::from("l".to_string()),
+                            UpdateFlag::Executable => Str::from("x".to_string())
+                        }
+                    };
+
+                    (path, flags)
+                }));
+            }
+
+            Ok((written, failures))
+        }).map_pyerr(py)
     }
 });
 
-fn threaded_remover(state: RemoverState, chan: Receiver<Vec<RepoPathBuf>>) -> Result<()> {
+fn threaded_remover(state: RemoverState, chan: Receiver<Vec<RepoPathBuf>>) -> Vec<RepoPathBuf> {
+    let mut failures = Vec::new();
+
     while let Ok(vec) = chan.recv() {
         for path in vec.into_iter() {
-            state.working_copy.remove(&path)?;
+            if let Err(e) = state.working_copy.remove(&path) {
+                tracing::warn!("{:?}", e);
+                failures.push(path);
+            }
         }
     }
 
-    Ok(())
+    failures
 }
 
 #[derive(Clone)]
@@ -534,7 +567,7 @@ impl RemoverState {
 }
 
 py_class!(class removerworker |py| {
-    data inner: RefCell<Option<Worker<(), RepoPathBuf>>>;
+    data inner: RefCell<Option<Worker<Vec<RepoPathBuf>, RepoPathBuf>>>;
 
     def __new__(_cls, root: &PyPath, numthreads: usize) -> PyResult<removerworker> {
         let root = root.to_path_buf();
@@ -554,14 +587,14 @@ py_class!(class removerworker |py| {
     }
 
     /// Wait for all the pending `remove` calls to complete
-    def wait(&self) -> PyResult<PyNone> {
+    def wait(&self) -> PyResult<Vec<PyPathBuf>> {
         let inner = self.inner(py).borrow_mut().take().unwrap();
 
-        py.allow_threads(move || -> Result<()> {
-            inner.wait()?.collect::<Result<()>>()
+        let failures = py.allow_threads(move || -> Result<Vec<_>> {
+            Ok(inner.wait()?.flatten().map(|path| PyPathBuf::from(path)).collect::<Vec<PyPathBuf>>())
         }).map_pyerr(py)?;
 
-        Ok(PyNone)
+        Ok(failures)
     }
 });
 

@@ -18,6 +18,7 @@ revisionstore = { path = "../../../../lib/revisionstore" }
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.4", default-features = false }
 types = { path = "../../../../lib/types" }
+tracing = "0.1"
 util = { path = "../../../../lib/util" }
 
 [dev-dependencies]
