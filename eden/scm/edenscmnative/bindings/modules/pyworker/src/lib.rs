@@ -32,7 +32,7 @@ use crossbeam::channel::{bounded, Receiver, Sender};
 use cpython_ext::{PyNone, PyPath, ResultPyErrExt};
 use fsinfo::{fstype, FsType};
 use pyrevisionstore::contentstore;
-use revisionstore::ContentStore;
+use revisionstore::{ContentStore, HgIdDataStore};
 use types::{HgId, Key, RepoPath, RepoPathBuf};
 use util::path::remove_file;
 
@@ -405,6 +405,15 @@ fn update(
         .store
         .get_file_content(&key)?
         .ok_or_else(|| format_err!("Can't find key: {}", key))?;
+
+    let meta = state
+        .store
+        .get_meta(&key)?
+        .ok_or_else(|| format_err!("Can't find metadata for key: {}", key))?;
+
+    if meta.is_lfs() {
+        bail!("LFS pointers cannot be deserialized properly yet");
+    }
 
     // Fast path: let's try to open the file directly, we'll handle the failure only if this fails.
     match state.working_copy.write(path, &content, flag) {
