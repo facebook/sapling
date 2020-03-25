@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#![type_length_limit = "15000000"]
 #![deny(warnings)]
 
 use anyhow::{format_err, Error};
@@ -29,17 +30,17 @@ use fastlog::{fetch_parent_root_unodes, RootFastlog};
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::{
-    compat::Future01CompatExt, future::try_join, future::try_join3, stream::FuturesUnordered,
+    compat::Future01CompatExt,
+    future::{try_join, try_join3},
+    stream::{self, FuturesUnordered, StreamExt},
 };
-use futures_ext::{spawn_future, try_boxfuture, BoxFuture, FutureExt};
+use futures_ext::{spawn_future, FutureExt};
 use futures_old::{
     future, stream as old_stream, Future as OldFuture, IntoFuture, Stream as OldStream,
 };
 use futures_stats::Timed;
-use futures_util::{
-    future::{ready, FutureExt as _, TryFutureExt},
-    stream::TryStreamExt,
-};
+use futures_stats::TimedFutureExt;
+use futures_util::{future::ready, stream::TryStreamExt};
 use lock_ext::LockExt;
 use manifest::find_intersection_of_diffs;
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, RepositoryId};
@@ -237,14 +238,13 @@ async fn run_subcmd<'a>(
                 .await?;
 
             subcommand_backfill(
-                ctx,
-                repo,
-                derived_data_type,
+                &ctx,
+                &repo,
+                &derived_data_type,
                 skip,
                 regenerate,
                 prefetched_commits_path,
             )
-            .compat()
             .await
         }
         (SUBCOMMAND_TAIL, Some(sub_m)) => {
@@ -383,100 +383,97 @@ fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntr
     deserialize_cs_entries(&Bytes::from(data))
 }
 
-fn subcommand_backfill<P: AsRef<Path>>(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    derived_data_type: String,
+async fn subcommand_backfill<P: AsRef<Path>>(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    derived_data_type: &String,
     skip: usize,
     regenerate: bool,
     prefetched_commits_path: P,
-) -> BoxFuture<(), Error> {
-    let derived_utils = try_boxfuture!(derived_data_utils_unsafe(
-        repo.clone(),
-        derived_data_type.clone(),
-    ));
+) -> Result<(), Error> {
+    let derived_utils = &derived_data_utils_unsafe(repo.clone(), derived_data_type.clone())?;
 
     info!(
         ctx.logger(),
         "reading all changesets for: {:?}",
         repo.get_repoid()
     );
-    parse_serialized_commits(prefetched_commits_path)
-        .into_future()
-        .and_then(move |mut changesets| {
-            changesets.sort_by_key(|cs_entry| cs_entry.gen);
-            let changesets: Vec<_> = changesets
-                .into_iter()
-                .skip(skip)
-                .map(|entry| entry.cs_id)
-                .collect();
-            info!(
-                ctx.logger(),
-                "starting deriving data for {} changesets",
-                changesets.len()
-            );
 
-            let total_count = changesets.len();
-            let generated_count = Arc::new(AtomicUsize::new(0));
-            let total_duration = Arc::new(Mutex::new(Duration::from_secs(0)));
+    let mut changesets = parse_serialized_commits(prefetched_commits_path)?;
+    changesets.sort_by_key(|cs_entry| cs_entry.gen);
+    let changesets: Vec<_> = changesets
+        .into_iter()
+        .skip(skip)
+        .map(|entry| entry.cs_id)
+        .collect();
+    info!(
+        ctx.logger(),
+        "starting deriving data for {} changesets",
+        changesets.len()
+    );
 
-            if regenerate {
-                derived_utils.regenerate(&changesets);
+    let total_count = changesets.len();
+    let generated_count = &Arc::new(AtomicUsize::new(0));
+    let total_duration = &Arc::new(Mutex::new(Duration::from_secs(0)));
+
+    if regenerate {
+        derived_utils.regenerate(&changesets);
+    }
+
+    stream::iter(changesets)
+        .chunks(CHUNK_SIZE)
+        .then({
+            move |chunk| {
+                derived_utils
+                    .pending(ctx.clone(), repo.clone(), chunk.clone())
+                    .compat()
             }
-
-            old_stream::iter_ok(changesets)
-                .chunks(CHUNK_SIZE)
-                .and_then({
-                    cloned!(ctx, repo, derived_utils);
-                    move |chunk| derived_utils.pending(ctx.clone(), repo.clone(), chunk.clone())
-                })
-                .and_then({
-                    cloned!(ctx, derived_data_type, repo);
-                    move |chunk| {
-                        warmup(
-                            ctx.clone(),
-                            repo.clone(),
-                            derived_data_type.clone(),
-                            chunk.clone(),
-                        )
-                        .boxed()
-                        .compat()
-                        .map(move |()| chunk)
-                    }
-                })
-                .for_each(move |chunk| {
-                    let chunk_size = chunk.len();
-                    derived_utils
-                        .derive_batch(ctx.clone(), repo.clone(), chunk)
-                        .timed({
-                            cloned!(ctx, generated_count, total_duration);
-                            move |stats, _| {
-                                generated_count.fetch_add(chunk_size, Ordering::SeqCst);
-                                let elapsed = total_duration.with(|total_duration| {
-                                    *total_duration += stats.completion_time;
-                                    *total_duration
-                                });
-
-                                let generated = generated_count.load(Ordering::SeqCst);
-                                if generated != 0 {
-                                    let generated = generated as f32;
-                                    let total = total_count as f32;
-                                    info!(
-                                        ctx.logger(),
-                                        "{}/{} estimate:{:.2?} speed:{:.2}/s mean_speed:{:.2}/s",
-                                        generated,
-                                        total_count,
-                                        elapsed.mul_f32((total - generated) / generated),
-                                        chunk_size as f32 / stats.completion_time.as_secs() as f32,
-                                        generated / elapsed.as_secs() as f32,
-                                    );
-                                }
-                                Ok(())
-                            }
-                        })
-                })
         })
-        .boxify()
+        .and_then({
+            move |chunk| async move {
+                warmup(
+                    ctx.clone(),
+                    repo.clone(),
+                    derived_data_type.clone(),
+                    chunk.clone(),
+                )
+                .await?;
+                Ok(chunk)
+            }
+        })
+        .try_for_each({
+            move |chunk| async move {
+                let chunk_size = chunk.len();
+                let (stats, out) = derived_utils
+                    .derive_batch(ctx.clone(), repo.clone(), chunk)
+                    .compat()
+                    .timed()
+                    .await;
+                generated_count.fetch_add(chunk_size, Ordering::SeqCst);
+                let elapsed = total_duration.with(|total_duration| {
+                    *total_duration += stats.completion_time;
+                    *total_duration
+                });
+
+                let generated = generated_count.load(Ordering::SeqCst);
+                if generated != 0 {
+                    let generated = generated as f32;
+                    let total = total_count as f32;
+                    info!(
+                        ctx.logger(),
+                        "{}/{} estimate:{:.2?} speed:{:.2}/s mean_speed:{:.2}/s",
+                        generated,
+                        total_count,
+                        elapsed.mul_f32((total - generated) / generated),
+                        chunk_size as f32 / stats.completion_time.as_secs() as f32,
+                        generated / elapsed.as_secs() as f32,
+                    );
+                }
+
+                out
+            }
+        })
+        .await
 }
 
 async fn warmup(
@@ -794,6 +791,7 @@ mod tests {
     use super::*;
     use blobstore::BlobstoreBytes;
     use fixtures::linear;
+    use futures_ext::BoxFuture;
     use mercurial_types::HgChangesetId;
     use std::str::FromStr;
     use tokio_compat::runtime::Runtime;
