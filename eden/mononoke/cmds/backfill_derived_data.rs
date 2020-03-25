@@ -19,10 +19,7 @@ use changesets::{
 };
 use clap::{Arg, ArgMatches, SubCommand};
 use cloned::cloned;
-use cmdlib::{
-    args, helpers,
-    monitoring::{start_fb303_and_stats_agg, AliveService},
-};
+use cmdlib::{args, helpers};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use deleted_files_manifest::RootDeletedManifestId;
@@ -31,14 +28,17 @@ use derived_data_utils::{derived_data_utils, derived_data_utils_unsafe, POSSIBLE
 use fastlog::{fetch_parent_root_unodes, RootFastlog};
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
-use futures::{compat::Future01CompatExt, future::try_join3, stream::FuturesUnordered};
+use futures::{
+    compat::Future01CompatExt, future::try_join, future::try_join3, stream::FuturesUnordered,
+};
 use futures_ext::{spawn_future, try_boxfuture, BoxFuture, FutureExt};
-use futures_old::{future, stream, Future, IntoFuture, Stream};
+use futures_old::{
+    future, stream as old_stream, Future as OldFuture, IntoFuture, Stream as OldStream,
+};
 use futures_stats::Timed;
 use futures_util::{
     future::{ready, FutureExt as _, TryFutureExt},
     stream::TryStreamExt,
-    try_join,
 };
 use lock_ext::LockExt;
 use manifest::find_intersection_of_diffs;
@@ -103,7 +103,7 @@ fn open_repo_maybe_unredacted<'a>(
     logger: &Logger,
     matches: &ArgMatches<'a>,
     data_type: &str,
-) -> impl Future<Item = BlobRepo, Error = Error> {
+) -> impl OldFuture<Item = BlobRepo, Error = Error> {
     if UNREDACTED_TYPES.contains(&data_type) {
         args::open_repo_unredacted(fb, logger, matches).left_future()
     } else {
@@ -193,9 +193,24 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let mut runtime = args::init_runtime(&matches)?;
 
-    let run = match matches.subcommand() {
+    helpers::block_execute(
+        run_subcmd(fb, ctx, &logger, &matches),
+        fb,
+        &std::env::var("TW_JOB_NAME").unwrap_or("backfill_derived_data".to_string()),
+        &logger,
+        &matches,
+        cmdlib::monitoring::AliveService,
+    )
+}
+
+async fn run_subcmd<'a>(
+    fb: FacebookInit,
+    ctx: CoreContext,
+    logger: &Logger,
+    matches: &'a ArgMatches<'a>,
+) -> Result<(), Error> {
+    match matches.subcommand() {
         (SUBCOMMAND_BACKFILL, Some(sub_m)) => {
             let derived_data_type = sub_m
                 .value_of(ARG_DERIVED_DATA_TYPE)
@@ -209,31 +224,28 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 })?
                 .to_string();
 
+            let regenerate = sub_m.is_present(ARG_REGENERATE);
+
             let skip = sub_m
                 .value_of(ARG_SKIP)
                 .map(|skip| skip.parse::<usize>())
                 .transpose()
-                .map(|skip| skip.unwrap_or(0))
-                .into_future()
-                .from_err();
-            let regenerate = sub_m.is_present(ARG_REGENERATE);
+                .map(|skip| skip.unwrap_or(0))?;
 
-            (
-                open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type),
+            let repo = open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type)
+                .compat()
+                .await?;
+
+            subcommand_backfill(
+                ctx,
+                repo,
+                derived_data_type,
                 skip,
+                regenerate,
+                prefetched_commits_path,
             )
-                .into_future()
-                .and_then(move |(repo, skip)| {
-                    subcommand_backfill(
-                        ctx,
-                        repo,
-                        derived_data_type,
-                        skip,
-                        regenerate,
-                        prefetched_commits_path,
-                    )
-                })
-                .boxify()
+            .compat()
+            .await
         }
         (SUBCOMMAND_TAIL, Some(sub_m)) => {
             let derived_data_types: Vec<_> = sub_m
@@ -241,8 +253,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .ok_or_else(|| {
                     format_err!("missing required argument: {}", ARG_DERIVED_DATA_TYPE)
                 })?;
-            let service_name =
-                std::env::var("TW_JOB_NAME").unwrap_or("backfill_derived_data".to_string());
 
             let stats = {
                 let repo_name = format!(
@@ -252,31 +262,23 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 );
                 move |data_type| DerivedDataStats::new(repo_name.clone(), data_type)
             };
-            start_fb303_and_stats_agg(
-                fb,
-                &mut runtime,
-                &service_name,
-                &logger,
-                &matches,
-                AliveService,
-            )?;
-            (
-                args::open_repo(fb, &logger, &matches),
-                args::open_repo_unredacted(fb, &logger, &matches),
-                args::open_sql::<SqlBookmarks>(fb, &matches),
+
+            let (repo, unredacted_repo, bookmarks) = try_join3(
+                args::open_repo(fb, &logger, &matches).compat(),
+                args::open_repo_unredacted(fb, &logger, &matches).compat(),
+                args::open_sql::<SqlBookmarks>(fb, &matches).compat(),
             )
-                .into_future()
-                .and_then(move |(repo, unredacted_repo, bookmarks)| {
-                    subcommand_tail(
-                        ctx,
-                        stats,
-                        repo,
-                        unredacted_repo,
-                        bookmarks,
-                        derived_data_types,
-                    )
-                })
-                .boxify()
+            .await?;
+            subcommand_tail(
+                ctx,
+                stats,
+                repo,
+                unredacted_repo,
+                bookmarks,
+                derived_data_types,
+            )
+            .compat()
+            .await
         }
         (SUBCOMMAND_PREFETCH_COMMITS, Some(sub_m)) => {
             let out_filename = sub_m
@@ -284,27 +286,25 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .ok_or_else(|| format_err!("missing required argument: {}", ARG_OUT_FILENAME))?
                 .to_string();
 
-            (
-                args::open_repo(fb, &logger, &matches),
-                args::open_sql::<SqlChangesets>(fb, &matches),
+            let (repo, changesets) = try_join(
+                args::open_repo(fb, &logger, &matches).compat(),
+                args::open_sql::<SqlChangesets>(fb, &matches).compat(),
             )
-                .into_future()
-                .and_then(move |(repo, changesets)| {
-                    let phases = repo.get_phases();
-                    let sql_phases = phases.get_sql_phases();
-                    fetch_all_public_changesets(
-                        ctx.clone(),
-                        repo.get_repoid(),
-                        changesets,
-                        sql_phases.clone(),
-                    )
-                    .collect()
-                })
-                .and_then(move |css| {
-                    let serialized = serialize_cs_entries(css);
-                    fs::write(out_filename, serialized).map_err(Error::from)
-                })
-                .boxify()
+            .await?;
+            let phases = repo.get_phases();
+            let sql_phases = phases.get_sql_phases();
+            let css = fetch_all_public_changesets(
+                ctx.clone(),
+                repo.get_repoid(),
+                changesets,
+                sql_phases.clone(),
+            )
+            .collect()
+            .compat()
+            .await?;
+
+            let serialized = serialize_cs_entries(css);
+            fs::write(out_filename, serialized).map_err(Error::from)
         }
         (SUBCOMMAND_SINGLE, Some(sub_m)) => {
             let hash_or_bookmark = sub_m
@@ -315,18 +315,18 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .value_of(ARG_DERIVED_DATA_TYPE)
                 .ok_or_else(|| format_err!("missing required argument: {}", ARG_DERIVED_DATA_TYPE))?
                 .to_string();
-            open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type)
-                .and_then(move |repo| {
-                    helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
-                        .and_then(move |csid| subcommand_single(ctx, repo, csid, derived_data_type))
-                })
-                .boxify()
+            let repo = open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type)
+                .compat()
+                .await?;
+            let csid = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
+                .compat()
+                .await?;
+            subcommand_single(ctx, repo, csid, derived_data_type)
+                .compat()
+                .await
         }
-        (name, _) => {
-            return Err(format_err!("unhandled subcommand: {}", name));
-        }
-    };
-    runtime.block_on_std(run.compat())
+        (name, _) => Err(format_err!("unhandled subcommand: {}", name)),
+    }
 }
 
 fn windows(start: u64, stop: u64, step: u64) -> impl Iterator<Item = (u64, u64)> {
@@ -343,14 +343,14 @@ fn fetch_all_public_changesets(
     repo_id: RepositoryId,
     changesets: SqlChangesets,
     phases: SqlPhases,
-) -> impl Stream<Item = ChangesetEntry, Error = Error> {
+) -> impl OldStream<Item = ChangesetEntry, Error = Error> {
     changesets
         .get_changesets_ids_bounds(repo_id.clone())
         .and_then(move |(start, stop)| {
             let start = start.ok_or_else(|| Error::msg("changesets table is empty"))?;
             let stop = stop.ok_or_else(|| Error::msg("changesets table is empty"))?;
             let step = 65536;
-            Ok(stream::iter_ok(windows(start, stop, step)))
+            Ok(old_stream::iter_ok(windows(start, stop, step)))
         })
         .flatten_stream()
         .and_then(move |(lower_bound, upper_bound)| {
@@ -369,7 +369,7 @@ fn fetch_all_public_changesets(
                                     )
                                     .map(move |public| {
                                         entries.retain(|entry| public.contains(&entry.cs_id));
-                                        stream::iter_ok(entries)
+                                        old_stream::iter_ok(entries)
                                     })
                             })
                     }
@@ -424,7 +424,7 @@ fn subcommand_backfill<P: AsRef<Path>>(
                 derived_utils.regenerate(&changesets);
             }
 
-            stream::iter_ok(changesets)
+            old_stream::iter_ok(changesets)
                 .chunks(CHUNK_SIZE)
                 .and_then({
                     cloned!(ctx, repo, derived_utils);
@@ -491,7 +491,7 @@ async fn warmup(
     let bcs_warmup = {
         cloned!(ctx, chunk, repo);
         async move {
-            stream::iter_ok(chunk.clone())
+            old_stream::iter_ok(chunk.clone())
                 .map({
                     cloned!(ctx, repo);
                     move |cs_id| cs_id.load(ctx.clone(), repo.blobstore())
@@ -527,7 +527,7 @@ async fn content_warmup(
     repo: BlobRepo,
     chunk: Vec<ChangesetId>,
 ) -> Result<(), Error> {
-    stream::iter_ok(chunk)
+    old_stream::iter_ok(chunk)
         .map({
             cloned!(ctx, repo);
             move |csid| prefetch_content(ctx.clone(), repo.clone(), csid)
@@ -555,7 +555,7 @@ async fn unode_warmup(
 
             let parent_unodes = fetch_parent_root_unodes(ctx.clone(), repo.clone(), bcs);
             let (root_mf_id, parent_unodes) =
-                try_join!(root_mf_id.compat(), parent_unodes.compat())?;
+                try_join(root_mf_id.compat(), parent_unodes.compat()).await?;
             let unode_mf_id = root_mf_id.manifest_unode_id().clone();
             find_intersection_of_diffs(
                 ctx.clone(),
@@ -580,7 +580,7 @@ fn subcommand_tail(
     unredacted_repo: BlobRepo,
     bookmarks: SqlBookmarks,
     derived_data_types: Vec<String>,
-) -> impl Future<Item = (), Error = Error> {
+) -> impl OldFuture<Item = (), Error = Error> {
     let derive_utils: Result<Vec<_>, Error> = derived_data_types
         .into_iter()
         .map(|name| {
@@ -596,7 +596,7 @@ fn subcommand_tail(
         .collect();
     derive_utils.into_future().and_then(move |derive_utils| {
         let derive_utils = Arc::new(derive_utils);
-        stream::repeat::<_, Error>(())
+        old_stream::repeat::<_, Error>(())
             .and_then(move |_| {
                 bookmarks
                     .list_publishing_by_prefix(
@@ -657,7 +657,7 @@ fn subcommand_tail(
                                 } else {
                                     let count = pending.len();
                                     info!(ctx.logger(), "found {} outdated heads", count);
-                                    stream::iter_ok(pending)
+                                    old_stream::iter_ok(pending)
                                         .buffered(1024)
                                         .for_each(|_| Ok(()))
                                         .timed({
@@ -687,7 +687,7 @@ fn subcommand_single(
     repo: BlobRepo,
     csid: ChangesetId,
     derived_data_type: String,
-) -> impl Future<Item = (), Error = Error> {
+) -> impl OldFuture<Item = (), Error = Error> {
     let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
     let derived_utils = match derived_data_utils(repo.clone(), derived_data_type) {
         Ok(derived_utils) => derived_utils,
@@ -712,14 +712,14 @@ fn prefetch_content(
     ctx: CoreContext,
     repo: BlobRepo,
     csid: ChangesetId,
-) -> impl Future<Item = (), Error = Error> {
+) -> impl OldFuture<Item = (), Error = Error> {
     fn prefetch_content_unode(
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
         renames: &HashMap<MPath, FileUnodeId>,
         path: MPath,
         file_unode_id: FileUnodeId,
-    ) -> impl Future<Item = (), Error = Error> {
+    ) -> impl OldFuture<Item = (), Error = Error> {
         let rename = renames.get(&path).copied();
         file_unode_id
             .load(ctx.clone(), &blobstore)
