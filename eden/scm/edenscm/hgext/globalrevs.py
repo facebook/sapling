@@ -166,7 +166,7 @@ def _sqllocalrepowrapper(orig, repo):
         def commitctx(self, ctx, error=False):
             # Assign global revs automatically
             extra = dict(ctx.extra())
-            extra[EXTRASGLOBALREVKEY] = self.nextrevisionnumber()
+            extra[EXTRASGLOBALREVKEY] = str(self.nextrevisionnumber())
             ctx.extra = lambda: extra
             return super(globalrevsrepo, self).commitctx(ctx, error)
 

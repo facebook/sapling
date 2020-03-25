@@ -17,7 +17,7 @@ from typing import IO, Any, Optional, Union
 from . import encoding, error, mdiff, revlog, util, visibility
 from .i18n import _
 from .node import bbin, bin, hex, nullid
-from .pycompat import decodeutf8, encodeutf8, range
+from .pycompat import decodeutf8, encodeutf8, iteritems, range
 from .thirdparty import attr
 
 
@@ -68,6 +68,10 @@ def decodeextra(text):
 
 
 def encodeextra(d):
+    for k, v in iteritems(d):
+        if not isinstance(v, str):
+            raise ValueError("extra '%s' should be type str not %s" % (k, v.__class__))
+
     # keys must be sorted to produce a deterministic changelog entry
     items = [_string_escape("%s:%s" % (k, d[k])) for k in sorted(d)]
     return "\0".join(items)
