@@ -189,144 +189,202 @@ impl PathAuditor {
     }
 }
 
+#[derive(Clone)]
+struct VFS {
+    root: PathBuf,
+    auditor: PathAuditor,
+
+    can_symlink: bool,
+}
+
+#[derive(Clone, Copy)]
 enum UpdateFlag {
     Symlink,
     Executable,
 }
 
-#[cfg(not(windows))]
-fn supports_symlinks() -> bool {
-    // XXX: placeholder
-    true
-}
+impl VFS {
+    pub fn new(root: PathBuf) -> Result<Self> {
+        let auditor = PathAuditor::new(&root);
+        let can_symlink = supports_symlinks(&root)
+            .with_context(|| format!("Can't construct a VFS for {:?}", root))?;
 
-/// On some OS/filesystems, symlinks aren't supported, we simply create a file where it's content
-/// is the symlink destination for these.
-fn plain_symlink_file(link_name: &Path, link_dest: &Path) -> Result<()> {
-    let link_dest = match link_dest.to_str() {
-        None => bail!("Not a valid UTF-8 path: {:?}", link_dest),
-        Some(s) => s,
-    };
-
-    Ok(File::create(link_name)?.write_all(link_dest.as_bytes())?)
-}
-
-/// Add a symlink `link_name` pointing to `link_dest`. On platforms that do not support symlinks,
-/// `link_name` will be a file containing the path to `link_dest`.
-fn symlink(link_name: impl AsRef<Path>, link_dest: impl AsRef<Path>) -> Result<()> {
-    let link_name = link_name.as_ref();
-    let link_dest = link_dest.as_ref();
-
-    #[cfg(windows)]
-    let result = plain_symlink_file(link_name, link_dest);
-
-    #[cfg(not(windows))]
-    let result = if supports_symlinks() {
-        Ok(std::os::unix::fs::symlink(link_dest, link_name)?)
-    } else {
-        plain_symlink_file(link_name, link_dest)
-    };
-
-    result.with_context(|| format!("Can't create symlink '{:?} -> {:?}'", link_name, link_dest))
-}
-
-/// The file `path` can't be written to, attempt to fixup the directories and files so the file can
-/// be created.
-///
-/// This is a slow operation, and should not be called before attempting to create `path`.
-fn clear_conflicts(filepath: &Path, root: &Path) -> Result<()> {
-    let mut path = filepath;
-    if let Ok(metadata) = symlink_metadata(path) {
-        let file_type = metadata.file_type();
-        if file_type.is_dir() {
-            remove_dir_all(path).with_context(|| format!("Can't remove directory {:?}", path))?;
-        }
+        Ok(Self {
+            root,
+            auditor,
+            can_symlink,
+        })
     }
 
-    loop {
-        if path == root {
-            break;
-        }
-
+    /// The file `path` can't be written to, attempt to fixup the directories and files so the file can
+    /// be created.
+    ///
+    /// This is a slow operation, and should not be called before attempting to create `path`.
+    pub fn clear_conflicts(&self, path: &RepoPath) -> Result<()> {
+        let filepath = self.auditor.audit(path)?;
+        let mut path = filepath.as_path();
         if let Ok(metadata) = symlink_metadata(path) {
             let file_type = metadata.file_type();
-            if file_type.is_file() || file_type.is_symlink() {
-                remove_file(path).with_context(|| format!("Can't remove file {:?}", path))?;
+            if file_type.is_dir() {
+                remove_dir_all(path)
+                    .with_context(|| format!("Can't remove directory {:?}", path))?;
             }
         }
 
-        // By virtue of the fact that we haven't reached the root, we are guaranteed to
-        // have a parent directory.
-        path = path.parent().unwrap();
-    }
+        loop {
+            if path == self.root {
+                break;
+            }
 
-    let dir = filepath.parent().unwrap();
-    create_dir_all(dir).with_context(|| format!("Can't create directory {:?}", dir))?;
+            if let Ok(metadata) = symlink_metadata(path) {
+                let file_type = metadata.file_type();
+                if file_type.is_file() || file_type.is_symlink() {
+                    remove_file(path).with_context(|| format!("Can't remove file {:?}", path))?;
+                }
+            }
 
-    Ok(())
-}
-
-/// Write a plain file with `content` at `filepath`.
-fn write_regular(filepath: &Path, content: Bytes, root: &Path) -> Result<usize> {
-    // Fast path: let's try to open the file directly, we'll handle the failure only if this fails.
-    let mut f = match File::create(&filepath) {
-        Ok(f) => f,
-        Err(e) => {
-            // Slow path: let's go over the path and try to figure out what is conflicting to
-            // fix it.
-            clear_conflicts(filepath, root)?;
-            File::create(&filepath).with_context(|| {
-                format!(
-                    "Can't create file {:?}, after handling error \"{}\"",
-                    filepath, e
-                )
-            })?
+            // By virtue of the fact that we haven't reached the root, we are guaranteed to
+            // have a parent directory.
+            path = path.parent().unwrap();
         }
-    };
-    f.write_all(&content)?;
-    Ok(content.len())
-}
 
-/// Write an executable file with `content` as `filepath`.
-fn write_executable(filepath: &Path, content: Bytes, root: &Path) -> Result<usize> {
-    let size = write_regular(filepath, content, root)?;
+        let dir = filepath.parent().unwrap();
+        create_dir_all(dir).with_context(|| format!("Can't create directory {:?}", dir))?;
 
-    #[cfg(windows)]
-    return Ok(size);
+        Ok(())
+    }
 
-    #[cfg(not(windows))]
-    {
-        let perms = Permissions::from_mode(0o755);
-        set_permissions(filepath, perms)?;
-        Ok(size)
+    /// Write a plain file with `content` at `filepath`.
+    fn write_regular(&self, filepath: &Path, content: &Bytes) -> Result<usize> {
+        let mut f = File::create(&filepath)?;
+        f.write_all(&content)
+            .with_context(|| format!("Can't write to {:?}", filepath))?;
+        Ok(content.len())
+    }
+
+    /// Write an executable file with `content` as `filepath`.
+    fn write_executable(&self, filepath: &Path, content: &Bytes) -> Result<usize> {
+        let size = self.write_regular(filepath, content)?;
+
+        #[cfg(windows)]
+        return Ok(size);
+
+        #[cfg(not(windows))]
+        {
+            let perms = Permissions::from_mode(0o755);
+            set_permissions(filepath, perms)
+                .with_context(|| format!("Can't set {:?} as executable", filepath))?;
+            Ok(size)
+        }
+    }
+
+    /// On some OS/filesystems, symlinks aren't supported, we simply create a file where it's content
+    /// is the symlink destination for these.
+    fn plain_symlink_file(link_name: &Path, link_dest: &Path) -> Result<()> {
+        let link_dest = match link_dest.to_str() {
+            None => bail!("Not a valid UTF-8 path: {:?}", link_dest),
+            Some(s) => s,
+        };
+
+        Ok(File::create(link_name)?.write_all(link_dest.as_bytes())?)
+    }
+
+    /// Add a symlink `link_name` pointing to `link_dest`. On platforms that do not support symlinks,
+    /// `link_name` will be a file containing the path to `link_dest`.
+    fn symlink(&self, link_name: &Path, link_dest: &Path) -> Result<()> {
+        #[cfg(windows)]
+        let result = Self::plain_symlink_file(link_name, link_dest);
+
+        #[cfg(not(windows))]
+        let result = if self.can_symlink {
+            std::os::unix::fs::symlink(link_dest, link_name).map_err(Into::into)
+        } else {
+            Self::plain_symlink_file(link_name, link_dest)
+        };
+
+        result.with_context(|| format!("Can't create symlink '{:?} -> {:?}'", link_name, link_dest))
+    }
+
+    /// Write a symlink file at `filepath`. The destination is represented by `content`.
+    fn write_symlink(&self, filepath: &Path, content: &Bytes) -> Result<usize> {
+        let link_dest = Path::new(str::from_utf8(content.as_ref())?);
+
+        self.symlink(filepath, link_dest)?;
+        Ok(filepath.as_os_str().len())
+    }
+
+    /// Overwrite the content of the file at `path` with `data`. The number of bytes written on
+    /// disk will be returned.
+    pub fn write(&self, path: &RepoPath, data: &Bytes, flags: Option<UpdateFlag>) -> Result<usize> {
+        let filepath = self
+            .auditor
+            .audit(path)
+            .with_context(|| format!("Can't write into {}", path))?;
+
+        match flags {
+            None => self.write_regular(&filepath, data),
+            Some(UpdateFlag::Executable) => self.write_executable(&filepath, data),
+            Some(UpdateFlag::Symlink) => self.write_symlink(&filepath, data),
+        }
+    }
+
+    /// Remove the file at `path`.
+    ///
+    /// The parent directories of this file will be removed recursively if they are empty.
+    pub fn remove(&self, path: &RepoPath) -> Result<()> {
+        let mut filepath = self.auditor.audit(path)?;
+
+        if let Ok(metadata) = symlink_metadata(&filepath) {
+            let file_type = metadata.file_type();
+            if file_type.is_file() || file_type.is_symlink() {
+                let result = remove_file(&filepath)
+                    .with_context(|| format!("Can't remove file {:?}", filepath));
+                if cfg!(windows) {
+                    // Windows is... an interesting beast. Some applications may
+                    // open files in the working copy and completely disallowing
+                    // sharing of the file[0] with others. On example of such
+                    // application is the Windows Defender[1], so if for some reason
+                    // it is scanning the working copy, Mercurial will be unable to
+                    // remove that file, and there is nothing that we could do about it.
+                    //
+                    // We could think of various strategies to mitigate this. One
+                    // being that we simply retry a bit later, but there is still no
+                    // guarantee that it would work. For now, let's just ignore all failures
+                    // on Windows.
+                    //
+                    // [0]: https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea?redirectedfrom=MSDN
+                    // [1]: https://en.wikipedia.org/wiki/Windows_Defender
+                    let _ = result;
+                } else {
+                    if let Err(e) = result {
+                        if let Some(io_error) = e.downcast_ref::<io::Error>() {
+                            ensure!(io_error.kind() == ErrorKind::NotFound, e);
+                        } else {
+                            return Err(e);
+                        };
+                    }
+                }
+            }
+        }
+
+        // Mercurial doesn't track empty directories, remove them
+        // recursively.
+        loop {
+            if !filepath.pop() || filepath == self.root {
+                break;
+            }
+
+            if remove_dir(&filepath).is_err() {
+                break;
+            }
+        }
+        Ok(())
     }
 }
 
-/// Write a symlink file at `filepath`. The destination is represented by `content`.
-fn write_symlink(filepath: &Path, content: Bytes, root: &Path) -> Result<usize> {
-    let link_dest = Path::new(str::from_utf8(content.as_ref())?);
-
-    // Fast path: let's try to symlink the file directly
-    if let Err(e) = symlink(filepath, link_dest) {
-        // Slow path: that didn't work out, let's try to fix it up.
-        clear_conflicts(filepath, root)?;
-        symlink(filepath, link_dest)
-            .with_context(|| format!("Can't create symlink after handling error \"{}\"", e))?;
-    };
-    Ok(filepath.as_os_str().len())
-}
-
-fn write_file(
-    filepath: &Path,
-    content: Bytes,
-    root: &Path,
-    flag: Option<UpdateFlag>,
-) -> Result<usize> {
-    match flag {
-        None => write_regular(filepath, content, root),
-        Some(UpdateFlag::Executable) => write_executable(filepath, content, root),
-        Some(UpdateFlag::Symlink) => write_symlink(filepath, content, root),
-    }
+fn supports_symlinks(_path: &Path) -> Result<bool> {
+    // XXX: placeholder
+    Ok(!cfg!(windows))
 }
 
 /// Fetch the content of the passed in `hgid` and write it to `path`.
@@ -337,15 +395,27 @@ fn update(
     flag: Option<UpdateFlag>,
 ) -> Result<usize> {
     let key = Key::new(path.to_owned(), hgid);
-
-    let filepath = state.auditor.audit(path)?;
-
     let content = state
         .store
         .get_file_content(&key)?
         .ok_or_else(|| format_err!("Can't find key: {}", key))?;
 
-    write_file(&filepath, content, state.root.as_path(), flag)
+    // Fast path: let's try to open the file directly, we'll handle the failure only if this fails.
+    match state.working_copy.write(path, &content, flag) {
+        Ok(size) => Ok(size),
+        Err(e) => {
+            // Ideally, we shouldn't need to retry for some failures, but this is the slow path, any
+            // failures not due to a conflicting file would show up here again, so let's not worry
+            // about it.
+            state.working_copy.clear_conflicts(path).with_context(|| {
+                format!("Can't clear conflicts after handling error \"{:?}\"", e)
+            })?;
+            state
+                .working_copy
+                .write(path, &content, flag)
+                .with_context(|| format!("Can't write after handling error \"{:?}\"", e))
+        }
+    }
 }
 
 fn threaded_writer(
@@ -365,19 +435,17 @@ fn threaded_writer(
 
 #[derive(Clone)]
 struct WriterState {
-    root: PathBuf,
     store: Arc<ContentStore>,
-    auditor: PathAuditor,
+    working_copy: VFS,
 }
 
 impl WriterState {
-    pub fn new(root: PathBuf, store: Arc<ContentStore>) -> Self {
-        let auditor = PathAuditor::new(&root);
-        Self {
-            root,
+    pub fn new(root: PathBuf, store: Arc<ContentStore>) -> Result<Self> {
+        let working_copy = VFS::new(root)?;
+        Ok(Self {
             store,
-            auditor,
-        }
+            working_copy,
+        })
     }
 }
 
@@ -387,7 +455,7 @@ py_class!(class writerworker |py| {
     def __new__(_cls, contentstore: contentstore, root: &PyPath, numthreads: usize) -> PyResult<writerworker> {
         let store = contentstore.to_inner(py);
         let root = root.to_path_buf();
-        let writer_state = WriterState::new(root, store);
+        let writer_state = WriterState::new(root, store).map_pyerr(py)?;
 
         let inner = Worker::new(numthreads, writer_state, threaded_writer);
 
@@ -428,61 +496,10 @@ py_class!(class writerworker |py| {
     }
 });
 
-fn remove(state: &RemoverState, path: &RepoPath) -> Result<()> {
-    let mut filepath = state.auditor.audit(&path)?;
-
-    if let Ok(metadata) = symlink_metadata(&filepath) {
-        let file_type = metadata.file_type();
-        if file_type.is_file() || file_type.is_symlink() {
-            let result =
-                remove_file(&filepath).with_context(|| format!("Can't remove file {:?}", filepath));
-            if cfg!(windows) {
-                // Windows is... an interesting beast. Some applications may
-                // open files in the working copy and completely disallowing
-                // sharing of the file[0] with others. On example of such
-                // application is the Windows Defender[1], so if for some reason
-                // it is scanning the working copy, Mercurial will be unable to
-                // remove that file, and there is nothing that we could do about it.
-                //
-                // We could think of various strategies to mitigate this. One
-                // being that we simply retry a bit later, but there is still no
-                // guarantee that it would work. For now, let's just ignore all failures
-                // on Windows.
-                //
-                // [0]: https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea?redirectedfrom=MSDN
-                // [1]: https://en.wikipedia.org/wiki/Windows_Defender
-                let _ = result;
-            } else {
-                if let Err(e) = result {
-                    if let Some(io_error) = e.downcast_ref::<io::Error>() {
-                        ensure!(io_error.kind() == ErrorKind::NotFound, e);
-                    } else {
-                        return Err(e);
-                    };
-                }
-            }
-        }
-    }
-
-    // Mercurial doesn't track empty directories, remove them
-    // recursively.
-    let root = state.root.as_path();
-    loop {
-        if !filepath.pop() || filepath == root {
-            break;
-        }
-
-        if remove_dir(&filepath).is_err() {
-            break;
-        }
-    }
-    Ok(())
-}
-
 fn threaded_remover(state: RemoverState, chan: Receiver<Vec<RepoPathBuf>>) -> Result<()> {
     while let Ok(vec) = chan.recv() {
         for path in vec.into_iter() {
-            remove(&state, &path)?;
+            state.working_copy.remove(&path)?;
         }
     }
 
@@ -491,14 +508,13 @@ fn threaded_remover(state: RemoverState, chan: Receiver<Vec<RepoPathBuf>>) -> Re
 
 #[derive(Clone)]
 struct RemoverState {
-    root: PathBuf,
-    auditor: PathAuditor,
+    working_copy: VFS,
 }
 
 impl RemoverState {
-    pub fn new(root: PathBuf) -> Self {
-        let auditor = PathAuditor::new(&root);
-        Self { root, auditor }
+    pub fn new(root: PathBuf) -> Result<Self> {
+        let working_copy = VFS::new(root)?;
+        Ok(Self { working_copy })
     }
 }
 
@@ -507,7 +523,7 @@ py_class!(class removerworker |py| {
 
     def __new__(_cls, root: &PyPath, numthreads: usize) -> PyResult<removerworker> {
         let root = root.to_path_buf();
-        let remover_state = RemoverState::new(root);
+        let remover_state = RemoverState::new(root).map_pyerr(py)?;
 
         let inner = Worker::new(numthreads, remover_state, threaded_remover);
 
@@ -570,7 +586,7 @@ mod tests {
         store.add(&delta, &Default::default())?;
 
         let root = workingdir.as_ref().to_path_buf();
-        let state = WriterState::new(root, store);
+        let state = WriterState::new(root, store)?;
         let written = update(&state, &k.path, k.hgid.clone(), None)?;
 
         assert_eq!(written, 7);
@@ -595,7 +611,7 @@ mod tests {
         store.add(&delta, &Default::default())?;
 
         let root = workingdir.as_ref().to_path_buf();
-        let state = WriterState::new(root, store);
+        let state = WriterState::new(root, store)?;
         update(
             &state,
             &k.path,
@@ -633,7 +649,7 @@ mod tests {
         store.add(&delta, &Default::default())?;
 
         let root = workingdir.as_ref().to_path_buf();
-        let state = WriterState::new(root, store);
+        let state = WriterState::new(root, store)?;
         update(&state, &k.path, k.hgid.clone(), Some(UpdateFlag::Symlink))?;
 
         let mut file = workingdir.as_ref().to_path_buf();
@@ -667,7 +683,7 @@ mod tests {
         store.add(&delta, &Default::default())?;
 
         let root = workingdir.as_ref().to_path_buf();
-        let state = WriterState::new(root, store);
+        let state = WriterState::new(root, store)?;
         let written = update(&state, &k.path, k.hgid.clone(), None)?;
         assert_eq!(written, 7);
 
@@ -697,7 +713,7 @@ mod tests {
         File::create(&path)?;
 
         let root = workingdir.as_ref().to_path_buf();
-        let state = WriterState::new(root, store);
+        let state = WriterState::new(root, store)?;
         let written = update(&state, &k.path, k.hgid.clone(), None)?;
         assert_eq!(written, 7);
 
@@ -733,7 +749,7 @@ mod tests {
         std::os::unix::fs::symlink("foo", &path)?;
 
         let root = workingdir.as_ref().to_path_buf();
-        let state = WriterState::new(root, store);
+        let state = WriterState::new(root, store)?;
         assert!(update(&state, &k.path, k.hgid.clone(), None).is_err());
 
         Ok(())
@@ -760,7 +776,7 @@ mod tests {
         create_dir_all(&path)?;
 
         let root = workingdir.as_ref().to_path_buf();
-        let state = WriterState::new(root, store);
+        let state = WriterState::new(root, store)?;
         let written = update(&state, &k.path, k.hgid.clone(), None)?;
         assert_eq!(written, 7);
 
@@ -781,8 +797,8 @@ mod tests {
 
         File::create(&path)?;
 
-        let state = RemoverState::new(root);
-        remove(&state, RepoPath::from_str("TEST")?)?;
+        let state = RemoverState::new(root)?;
+        state.working_copy.remove(RepoPath::from_str("TEST")?)?;
 
         assert_eq!(read_dir(&workingdir)?.count(), 0);
 
@@ -801,8 +817,10 @@ mod tests {
         path.push("FILE");
         File::create(&path)?;
 
-        let state = RemoverState::new(root);
-        remove(&state, RepoPath::from_str("THESE/ARE/DIRECTORIES/FILE")?)?;
+        let state = RemoverState::new(root)?;
+        state
+            .working_copy
+            .remove(RepoPath::from_str("THESE/ARE/DIRECTORIES/FILE")?)?;
         assert_eq!(read_dir(&workingdir)?.count(), 0);
 
         Ok(())
@@ -827,8 +845,10 @@ mod tests {
         path.push("FILE");
         File::create(&path)?;
 
-        let state = RemoverState::new(root);
-        remove(&state, RepoPath::from_str("THESE/ARE/DIRECTORIES/FILE")?)?;
+        let state = RemoverState::new(root)?;
+        state
+            .working_copy
+            .remove(RepoPath::from_str("THESE/ARE/DIRECTORIES/FILE")?)?;
         assert_eq!(read_dir(&workingdir)?.count(), 1);
 
         Ok(())
@@ -843,8 +863,8 @@ mod tests {
 
         let f = File::create(&path)?;
 
-        let state = RemoverState::new(root);
-        remove(&state, RepoPath::from_str("TEST")?)?;
+        let state = RemoverState::new(root)?;
+        state.working_copy.remove(RepoPath::from_str("TEST")?)?;
 
         drop(f);
 
@@ -864,8 +884,8 @@ mod tests {
         let f = File::open(&path)?;
         let map = unsafe { MmapOptions::new().map(&f)? };
 
-        let state = RemoverState::new(root);
-        remove(&state, RepoPath::from_str("TEST")?)?;
+        let state = RemoverState::new(root)?;
+        state.working_copy.remove(RepoPath::from_str("TEST")?)?;
 
         drop(map);
 
@@ -873,7 +893,7 @@ mod tests {
             assert_eq!(read_dir(&workingdir)?.count(), 1);
 
             // The file must have been removed
-            remove(&state, RepoPath::from_str("TEST")?)?;
+            state.working_copy.remove(RepoPath::from_str("TEST")?)?;
             assert_eq!(read_dir(&workingdir)?.count(), 1);
         } else {
             assert_eq!(read_dir(&workingdir)?.count(), 0);
@@ -895,9 +915,9 @@ mod tests {
         // No sharing for this file. remove should still succeed.
         let f = OpenOptions::new().read(true).share_mode(0).open(&path)?;
 
-        let state = RemoverState::new(root);
+        let state = RemoverState::new(root)?;
         // This will fail silently.
-        remove(&state, RepoPath::from_str("TEST")?)?;
+        state.working_copy.remove(RepoPath::from_str("TEST")?)?;
         drop(f);
 
         assert_eq!(read_dir(&workingdir)?.count(), 1);
@@ -907,7 +927,7 @@ mod tests {
         drop(f);
 
         // Now there is no longer a file handle to it, remove it.
-        remove(&state, RepoPath::from_str("TEST")?)?;
+        state.working_copy.remove(RepoPath::from_str("TEST")?)?;
 
         assert_eq!(read_dir(&workingdir)?.count(), 0);
 
@@ -1037,7 +1057,7 @@ mod tests {
             }
 
             let root = workingdir.as_ref().to_path_buf();
-            let state = WriterState::new(root, store);
+            let state = WriterState::new(root, store)?;
 
             let mut written_size = 0;
             for key in keys.iter() {
@@ -1072,9 +1092,9 @@ mod tests {
             }
 
             let root = workingdir.as_ref().to_path_buf();
-            let state = RemoverState::new(root);
+            let state = RemoverState::new(root)?;
             for path in paths.iter() {
-                remove(&state, &path)?;
+                state.working_copy.remove(&path)?;
             }
 
             Ok(TestResult::from_bool(read_dir(&workingdir)?.count() == 0))
@@ -1102,16 +1122,16 @@ mod tests {
             }
 
             let root = workingdir.as_ref().to_path_buf();
-            let state = WriterState::new(root, store);
+            let state = WriterState::new(root, store)?;
 
             for key in keys.iter() {
                 update(&state, &key.path, key.hgid.clone(), None)?;
             }
 
             let root = workingdir.as_ref().to_path_buf();
-            let state = RemoverState::new(root);
+            let state = RemoverState::new(root)?;
             for key in keys.iter() {
-                remove(&state, &key.path)?;
+                state.working_copy.remove(&key.path)?;
             }
 
             Ok(TestResult::from_bool(read_dir(&workingdir)?.count() == 0))
