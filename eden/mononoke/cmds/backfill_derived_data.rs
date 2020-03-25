@@ -323,9 +323,7 @@ async fn run_subcmd<'a>(
             let csid = helpers::csid_resolve(ctx.clone(), repo.clone(), hash_or_bookmark)
                 .compat()
                 .await?;
-            subcommand_single(ctx, repo, csid, derived_data_type)
-                .compat()
-                .await
+            subcommand_single(&ctx, &repo, csid, &derived_data_type).await
         }
         (name, _) => Err(format_err!("unhandled subcommand: {}", name)),
     }
@@ -679,29 +677,30 @@ async fn subcommand_tail(
         .await
 }
 
-fn subcommand_single(
-    ctx: CoreContext,
-    repo: BlobRepo,
+async fn subcommand_single(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     csid: ChangesetId,
-    derived_data_type: String,
-) -> impl OldFuture<Item = (), Error = Error> {
+    derived_data_type: &str,
+) -> Result<(), Error> {
     let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
-    let derived_utils = match derived_data_utils(repo.clone(), derived_data_type) {
-        Ok(derived_utils) => derived_utils,
-        Err(error) => return old_future::err(error).left_future(),
-    };
+    let derived_utils = derived_data_utils(repo.clone(), derived_data_type)?;
     derived_utils.regenerate(&vec![csid]);
     derived_utils
         .derive(ctx.clone(), repo, csid)
-        .timed(move |stats, result| {
-            info!(
-                ctx.logger(),
-                "derived in {:?}: {:?}", stats.completion_time, result
-            );
-            Ok(())
+        .timed({
+            cloned!(ctx);
+            move |stats, result| {
+                info!(
+                    ctx.logger(),
+                    "derived in {:?}: {:?}", stats.completion_time, result
+                );
+                Ok(())
+            }
         })
         .map(|_| ())
-        .right_future()
+        .compat()
+        .await
 }
 
 // Prefetch content of changed files between parents
