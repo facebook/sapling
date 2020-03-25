@@ -56,27 +56,30 @@ define_perf_counters! {
         BytesSent,
         CachelibHits,
         CachelibMisses,
+        GetbundleFilenodesTotalWeight,
         GetbundleNumCommits,
         GetbundleNumDrafts,
-        GetbundleNumManifests,
         GetbundleNumFilenodes,
-        GetbundleFilenodesTotalWeight,
+        GetbundleNumManifests,
+        GetcommitdataNumCommits,
+        GetcommitdataResponseSize,
         GetfilesMaxFileSize,
         GetfilesMaxLatency,
         GetfilesNumFiles,
         GetfilesResponseSize,
         GetpackMaxFileSize,
         GetpackNumFiles,
-        GetpackResponseSize,
-        GetpackPossibleLFSFilesSumSize,
         GetpackNumPossibleLFSFiles,
+        GetpackPossibleLFSFilesSumSize,
+        GetpackResponseSize,
+        GettreepackDesignatedNodes,
         GettreepackNumTreepacks,
         GettreepackResponseSize,
-        GettreepackDesignatedNodes,
-        GetcommitdataNumCommits,
-        GetcommitdataResponseSize,
         MemcacheHits,
         MemcacheMisses,
+        NullLinknode,
+        NumKnown,
+        NumUnknown,
         SkiplistAncestorGen,
         SkiplistDescendantGen,
         SkiplistNoskipIterations,
@@ -86,9 +89,6 @@ define_perf_counters! {
         SqlReadsReplica,
         SqlWrites,
         SumManifoldPollTime,
-        NullLinknode,
-        NumKnown,
-        NumUnknown,
     }
 }
 
@@ -106,8 +106,8 @@ impl PerfCounterType {
             | BlobPutsMaxLatency
             | CachelibHits
             | CachelibMisses
-            | GetpackPossibleLFSFilesSumSize
             | GetpackNumPossibleLFSFiles
+            | GetpackPossibleLFSFilesSumSize
             | GettreepackDesignatedNodes
             | MemcacheHits
             | MemcacheMisses
