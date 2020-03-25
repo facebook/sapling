@@ -25,18 +25,21 @@ use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
-use derived_data_utils::{derived_data_utils, derived_data_utils_unsafe, POSSIBLE_DERIVED_TYPES};
+use derived_data_utils::{
+    derived_data_utils, derived_data_utils_unsafe, DerivedUtils, POSSIBLE_DERIVED_TYPES,
+};
 use fastlog::{fetch_parent_root_unodes, RootFastlog};
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::{
-    compat::Future01CompatExt,
+    compat::{Future01CompatExt, Stream01CompatExt},
     future::{try_join, try_join3},
     stream::{self, FuturesUnordered, StreamExt},
 };
 use futures_ext::{spawn_future, FutureExt};
 use futures_old::{
-    future, stream as old_stream, Future as OldFuture, IntoFuture, Stream as OldStream,
+    future as old_future, stream as old_stream, Future as OldFuture, IntoFuture,
+    Stream as OldStream,
 };
 use futures_stats::Timed;
 use futures_stats::TimedFutureExt;
@@ -270,14 +273,13 @@ async fn run_subcmd<'a>(
             )
             .await?;
             subcommand_tail(
-                ctx,
-                stats,
-                repo,
-                unredacted_repo,
-                bookmarks,
-                derived_data_types,
+                &ctx,
+                &stats,
+                &repo,
+                &unredacted_repo,
+                &bookmarks,
+                &derived_data_types,
             )
-            .compat()
             .await
         }
         (SUBCOMMAND_PREFETCH_COMMITS, Some(sub_m)) => {
@@ -570,113 +572,111 @@ async fn unode_warmup(
     futs.try_for_each(|_| ready(Ok(()))).await
 }
 
-fn subcommand_tail(
-    ctx: CoreContext,
-    stats_constructor: impl Fn(&'static str) -> DerivedDataStats,
-    repo: BlobRepo,
-    unredacted_repo: BlobRepo,
-    bookmarks: SqlBookmarks,
-    derived_data_types: Vec<String>,
-) -> impl OldFuture<Item = (), Error = Error> {
-    let derive_utils: Result<Vec<_>, Error> = derived_data_types
-        .into_iter()
-        .map(|name| {
-            let maybe_unredacted_repo = if UNREDACTED_TYPES.contains(&name.as_ref()) {
-                unredacted_repo.clone()
-            } else {
-                repo.clone()
-            };
-            let derive = derived_data_utils(repo.clone(), name)?;
-            let stats = stats_constructor(derive.name());
-            Ok((derive, maybe_unredacted_repo, Arc::new(stats)))
-        })
-        .collect();
-    derive_utils.into_future().and_then(move |derive_utils| {
-        let derive_utils = Arc::new(derive_utils);
-        old_stream::repeat::<_, Error>(())
-            .and_then(move |_| {
-                bookmarks
-                    .list_publishing_by_prefix(
-                        ctx.clone(),
-                        &BookmarkPrefix::empty(),
-                        repo.get_repoid(),
-                        Freshness::MostRecent,
-                    )
-                    .map(|(_name, csid)| csid)
-                    .collect()
-                    .and_then({
-                        cloned!(ctx, derive_utils);
-                        move |heads| {
-                            let pending: Vec<_> = derive_utils
-                                .iter()
-                                .map({
-                                    cloned!(ctx);
-                                    move |(derive, maybe_unredacted_repo, stats)| {
-                                        // create new context so each derivation would have its own trace
-                                        let ctx = CoreContext::new_with_logger(
-                                            ctx.fb,
-                                            ctx.logger().clone(),
-                                        );
-                                        derive
-                                            .pending(
-                                                ctx.clone(),
-                                                maybe_unredacted_repo.clone(),
-                                                heads.clone(),
-                                            )
-                                            .map({
-                                                cloned!(ctx, maybe_unredacted_repo, derive, stats);
-                                                move |pending| {
-                                                    stats
-                                                        .pending_heads
-                                                        .add_value(pending.len() as i64);
-                                                    pending
-                                                        .into_iter()
-                                                        .map(|csid| {
-                                                            derive.derive(
-                                                                ctx.clone(),
-                                                                maybe_unredacted_repo.clone(),
-                                                                csid,
-                                                            )
-                                                        })
-                                                        .collect::<Vec<_>>()
-                                                }
-                                            })
-                                    }
-                                })
-                                .collect();
+async fn subcommand_tail(
+    ctx: &CoreContext,
+    stats_constructor: &impl Fn(&'static str) -> DerivedDataStats,
+    repo: &BlobRepo,
+    unredacted_repo: &BlobRepo,
+    bookmarks: &SqlBookmarks,
+    derived_data_types: &Vec<String>,
+) -> Result<(), Error> {
+    let derive_utils: Vec<(Arc<dyn DerivedUtils>, BlobRepo, Arc<DerivedDataStats>)> =
+        derived_data_types
+            .into_iter()
+            .map(|name| {
+                let maybe_unredacted_repo = if UNREDACTED_TYPES.contains(&name.as_ref()) {
+                    unredacted_repo.clone()
+                } else {
+                    repo.clone()
+                };
+                let derive = derived_data_utils(repo.clone(), name)?;
+                let stats = stats_constructor(derive.name());
+                Ok((derive, maybe_unredacted_repo, Arc::new(stats)))
+            })
+            .collect::<Result<_, Error>>()?;
 
-                            future::join_all(pending).and_then(move |pending| {
-                                let pending: Vec<_> = pending.into_iter().flatten().collect();
-                                if pending.is_empty() {
-                                    tokio_timer::sleep(Duration::from_millis(250))
-                                        .from_err()
-                                        .left_future()
-                                } else {
-                                    let count = pending.len();
-                                    info!(ctx.logger(), "found {} outdated heads", count);
-                                    old_stream::iter_ok(pending)
-                                        .buffered(1024)
-                                        .for_each(|_| Ok(()))
-                                        .timed({
-                                            cloned!(ctx);
-                                            move |stats, _| {
-                                                info!(
-                                                    ctx.logger(),
-                                                    "derived data for {} heads in {:?}",
-                                                    count,
-                                                    stats.completion_time
-                                                );
-                                                Ok(())
+    let derive_utils = Arc::new(derive_utils);
+    old_stream::repeat::<_, Error>(())
+        .and_then(move |_| {
+            bookmarks
+                .list_publishing_by_prefix(
+                    ctx.clone(),
+                    &BookmarkPrefix::empty(),
+                    repo.get_repoid(),
+                    Freshness::MostRecent,
+                )
+                .map(|(_name, csid)| csid)
+                .collect()
+                .and_then({
+                    cloned!(ctx, derive_utils);
+                    move |heads| {
+                        let pending: Vec<_> = derive_utils
+                            .iter()
+                            .map({
+                                cloned!(ctx);
+                                move |(derive, maybe_unredacted_repo, stats)| {
+                                    // create new context so each derivation would have its own trace
+                                    let ctx =
+                                        CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
+                                    derive
+                                        .pending(
+                                            ctx.clone(),
+                                            maybe_unredacted_repo.clone(),
+                                            heads.clone(),
+                                        )
+                                        .map({
+                                            cloned!(ctx, maybe_unredacted_repo, derive, stats);
+                                            move |pending| {
+                                                stats.pending_heads.add_value(pending.len() as i64);
+                                                pending
+                                                    .into_iter()
+                                                    .map(|csid| {
+                                                        derive.derive(
+                                                            ctx.clone(),
+                                                            maybe_unredacted_repo.clone(),
+                                                            csid,
+                                                        )
+                                                    })
+                                                    .collect::<Vec<_>>()
                                             }
                                         })
-                                        .right_future()
                                 }
                             })
-                        }
-                    })
-            })
-            .for_each(|_| Ok(()))
-    })
+                            .collect();
+
+                        old_future::join_all(pending).and_then(move |pending| {
+                            let pending: Vec<_> = pending.into_iter().flatten().collect();
+                            if pending.is_empty() {
+                                tokio_timer::sleep(Duration::from_millis(250))
+                                    .from_err()
+                                    .left_future()
+                            } else {
+                                let count = pending.len();
+                                info!(ctx.logger(), "found {} outdated heads", count);
+                                old_stream::iter_ok(pending)
+                                    .buffered(1024)
+                                    .for_each(|_| Ok(()))
+                                    .timed({
+                                        cloned!(ctx);
+                                        move |stats, _| {
+                                            info!(
+                                                ctx.logger(),
+                                                "derived data for {} heads in {:?}",
+                                                count,
+                                                stats.completion_time
+                                            );
+                                            Ok(())
+                                        }
+                                    })
+                                    .right_future()
+                            }
+                        })
+                    }
+                })
+        })
+        .compat()
+        .try_for_each(|_| async { Ok(()) })
+        .await
 }
 
 fn subcommand_single(
@@ -688,7 +688,7 @@ fn subcommand_single(
     let repo = repo.dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>);
     let derived_utils = match derived_data_utils(repo.clone(), derived_data_type) {
         Ok(derived_utils) => derived_utils,
-        Err(error) => return future::err(error).left_future(),
+        Err(error) => return old_future::err(error).left_future(),
     };
     derived_utils.regenerate(&vec![csid]);
     derived_utils
@@ -737,7 +737,7 @@ fn prefetch_content(
 
                 (
                     fetch_file_full_content(ctx.clone(), blobstore.clone(), file_unode_id),
-                    future::join_all(parents_content),
+                    old_future::join_all(parents_content),
                 )
                     .into_future()
                     .map(|_| ())
@@ -763,7 +763,7 @@ fn prefetch_content(
 
             (
                 root_manifest,
-                future::join_all(parents_manifest),
+                old_future::join_all(parents_manifest),
                 find_unode_renames(ctx.clone(), repo.clone(), &bonsai),
             )
                 .into_future()
@@ -907,7 +907,7 @@ mod tests {
             if key.find(&self.bad_key_substring).is_some() {
                 tokio_timer::sleep(Duration::new(1, 0))
                     .from_err()
-                    .and_then(|_| future::err(format_err!("failed")))
+                    .and_then(|_| old_future::err(format_err!("failed")))
                     .boxify()
             } else {
                 self.inner.put(ctx, key, value).boxify()
