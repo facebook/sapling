@@ -12,8 +12,7 @@ use ascii::AsciiString;
 use blobimport_lib;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use bytes::Bytes;
-use clap::{App, Arg};
-use cloned::cloned;
+use clap::{App, Arg, ArgMatches};
 use cmdlib::{
     args,
     helpers::{block_execute, upload_and_show_trace},
@@ -26,7 +25,7 @@ use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::{FutureExt as _, TryFutureExt},
+    future::{try_join3, FutureExt as _, TryFutureExt},
 };
 use futures_ext::FutureExt;
 use futures_old::{future, Future, IntoFuture};
@@ -41,7 +40,6 @@ use std::path::Path;
 use std::str::FromStr;
 use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
-use tracing::{trace_args, Traced};
 
 const ARG_DERIVED_DATA_TYPE: &'static str = "derived-data-type";
 
@@ -183,14 +181,12 @@ fn update_manifold_key(
         })
 }
 
-#[fbinit::main]
-fn main(fb: FacebookInit) -> Result<()> {
-    let matches = setup_app().get_matches();
-
-    args::init_cachelib(fb, &matches, None);
-    let logger = args::init_logging(fb, &matches);
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
-
+async fn run_blobimport<'a>(
+    fb: FacebookInit,
+    ctx: CoreContext,
+    logger: &Logger,
+    matches: &'a ArgMatches<'a>,
+) -> Result<(), Error> {
     let revlogrepo_path = matches
         .value_of("INPUT")
         .expect("input is not specified")
@@ -253,15 +249,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let concurrent_blobs = args::get_usize(&matches, "concurrent-blobs", 100);
     let concurrent_lfs_imports = args::get_usize(&matches, "concurrent-lfs-imports", 10);
 
-    let globalrevs_store = args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, &matches);
-    let synced_commit_mapping = args::open_sql::<SqlSyncedCommitMapping>(fb, &matches);
-
-    let blobrepo = if matches.is_present("no-create") {
-        args::open_repo_unredacted(fb, &ctx.logger(), &matches).left_future()
-    } else {
-        args::create_repo_unredacted(fb, &ctx.logger(), &matches).right_future()
-    };
-
     let fixed_parent_order = if let Some(path) = matches.value_of("fix-parent-order") {
         parse_fixed_parent_order(&logger, path)
             .context("while parsing file with fixed parent order")?
@@ -282,75 +269,102 @@ fn main(fb: FacebookInit) -> Result<()> {
     }
 
     let has_globalrev = matches.is_present("has-globalrev");
+
     let (_repo_name, repo_config) = args::get_config(ctx.fb, &matches)?;
     let populate_git_mapping = repo_config.pushrebase.populate_git_mapping.clone();
+
     let small_repo_id = args::get_source_repo_id_opt(fb, &matches)?;
 
-    let blobimport = blobrepo
-        .join3(globalrevs_store, synced_commit_mapping)
-        .and_then(move |(blobrepo, globalrevs_store, synced_commit_mapping)| {
-            let globalrevs_store = Arc::new(globalrevs_store);
-            let synced_commit_mapping = Arc::new(synced_commit_mapping);
+    let (blobrepo, globalrevs_store, synced_commit_mapping) = try_join3(
+        if matches.is_present("no-create") {
+            args::open_repo_unredacted(fb, &ctx.logger(), &matches)
+                .compat()
+                .boxed()
+        } else {
+            args::create_repo_unredacted(fb, &ctx.logger(), &matches)
+                .compat()
+                .boxed()
+        },
+        args::open_sql::<SqlBonsaiGlobalrevMapping>(fb, &matches).compat(),
+        args::open_sql::<SqlSyncedCommitMapping>(fb, &matches).compat(),
+    )
+    .await?;
 
-            blobimport_lib::Blobimport {
-                ctx: ctx.clone(),
-                logger: ctx.logger().clone(),
-                blobrepo,
-                revlogrepo_path,
-                changeset,
-                skip,
-                commits_limit,
-                bookmark_import_policy,
-                globalrevs_store,
-                synced_commit_mapping,
-                lfs_helper,
-                concurrent_changesets,
-                concurrent_blobs,
-                concurrent_lfs_imports,
-                fixed_parent_order,
-                has_globalrev,
-                populate_git_mapping,
-                small_repo_id,
-                derived_data_types,
+    let globalrevs_store = Arc::new(globalrevs_store);
+    let synced_commit_mapping = Arc::new(synced_commit_mapping);
+
+    let ctx_ = ctx.clone(); // TODO clean this up in the next diff
+    async move {
+        let maybe_latest_imported_rev = blobimport_lib::Blobimport {
+            ctx: ctx_.clone(),
+            logger: ctx_.logger().clone(),
+            blobrepo,
+            revlogrepo_path,
+            changeset,
+            skip,
+            commits_limit,
+            bookmark_import_policy,
+            globalrevs_store,
+            synced_commit_mapping,
+            lfs_helper,
+            concurrent_changesets,
+            concurrent_blobs,
+            concurrent_lfs_imports,
+            fixed_parent_order,
+            has_globalrev,
+            populate_git_mapping,
+            small_repo_id,
+            derived_data_types,
+        }
+        .import()
+        .compat()
+        .await?;
+
+        match maybe_latest_imported_rev {
+            Some(latest_imported_rev) => {
+                info!(
+                    ctx_.logger(),
+                    "latest imported revision {}",
+                    latest_imported_rev.as_u32()
+                );
+                if let Some((manifold_key, bucket)) = manifold_key_bucket {
+                    update_manifold_key(fb, latest_imported_rev, manifold_key, bucket).left_future()
+                } else {
+                    future::ok(()).right_future()
+                }
             }
-            .import()
-            .and_then({
-                cloned!(ctx);
-                move |maybe_latest_imported_rev| match maybe_latest_imported_rev {
-                    Some(latest_imported_rev) => {
-                        info!(
-                            ctx.logger(),
-                            "latest imported revision {}",
-                            latest_imported_rev.as_u32()
-                        );
-                        if let Some((manifold_key, bucket)) = manifold_key_bucket {
-                            update_manifold_key(fb, latest_imported_rev, manifold_key, bucket)
-                                .left_future()
-                        } else {
-                            future::ok(()).right_future()
-                        }
-                    }
-                    None => {
-                        info!(ctx.logger(), "didn't import any commits");
-                        future::ok(()).right_future()
-                    }
-                }
-            })
-            .traced(ctx.trace(), "blobimport", trace_args!())
-            .map_err({
-                cloned!(ctx);
-                move |err| {
-                    // NOTE: We log the error immediatley, then provide another one for main's
-                    // Result (which will set our exit code).
-                    error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
-                    Error::msg("blobimport exited with a failure")
-                }
-            })
-            .then(move |result| upload_and_show_trace(ctx).then(move |_| result))
-        });
+            None => {
+                info!(ctx_.logger(), "didn't import any commits");
+                future::ok(()).right_future()
+            }
+        }
+        .compat()
+        .await?;
+
+        upload_and_show_trace(ctx_).compat().map(|_| ()).await;
+        Ok(())
+    }
+    .map_err({
+        move |err| {
+            // NOTE: We log the error immediatley, then provide another one for main's
+            // Result (which will set our exit code).
+            error!(ctx.logger(), "error while blobimporting"; SlogKVError(err));
+            Error::msg("blobimport exited with a failure")
+        }
+    })
+    .await
+}
+
+#[fbinit::main]
+fn main(fb: FacebookInit) -> Result<()> {
+    let matches = setup_app().get_matches();
+
+    args::init_cachelib(fb, &matches, None);
+    let logger = args::init_logging(fb, &matches);
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     block_execute(
-        blobimport.compat(),
+        run_blobimport(fb, ctx.clone(), &logger, &matches),
         fb,
         "blobimport",
         &logger,
