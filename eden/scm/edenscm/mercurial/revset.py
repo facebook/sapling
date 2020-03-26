@@ -2353,6 +2353,59 @@ def wdir(repo, subset, x):
     return baseset()
 
 
+@predicate("remotenames()")
+def remotenamesrevset(repo, subset, x):
+    """All remote bookmarks and branches."""
+    getargs(x, 0, 0, "remotenames takes no arguments")
+    remoterevs = set()
+    for rname in repo._remotenames.keys():
+        remoterevs.update(_getremoterevs(repo, "remote" + rname))
+    return subset & smartset.baseset(sorted(remoterevs))
+
+
+@predicate("remotebookmark([name])")
+def remotebookmarkrevset(repo, subset, x):
+    """The named remote bookmark, or all remote bookmarks.
+
+    Pattern matching is supported for `name`. See :hg:`help revisions.patterns`.
+    """
+    args = getargs(x, 0, 1, _("remotebookmark takes one or no arguments"))
+    if args:
+        bookmarkname = getstring(
+            args[0], _("the argument to remotebookmark must be a string")
+        )
+    else:
+        bookmarkname = None
+    remoterevs = _getremoterevs(repo, "remotebookmarks", bookmarkname)
+    if not remoterevs and bookmarkname is not None:
+        raise error.RepoLookupError(
+            _("no remote bookmarks exist that match '%s'") % bookmarkname
+        )
+    return subset & smartset.baseset(sorted(remoterevs))
+
+
+def _getremoterevs(repo, namespacename, matchpattern=None):
+    try:
+        ns = repo.names[namespacename]
+    except KeyError:
+        return set()
+
+    if matchpattern is None:
+        nodes = set()
+        for name in ns.listnames(repo):
+            nodes.update(ns.namemap(repo, name))
+    else:
+        kind, pattern, matcher = util.stringmatcher(matchpattern)
+        if kind == "literal":
+            nodes = ns.namemap(repo, pattern)
+        else:
+            nodes = set()
+            for name in ns.listnames(repo):
+                if matcher(name):
+                    nodes.update(ns.namemap(repo, name))
+    return {repo[node].rev() for node in nodes if node in repo}
+
+
 def _orderedlist(repo, subset, x):
     s = getstring(x, "internal error")
     if not s:

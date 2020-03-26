@@ -1013,6 +1013,20 @@ def showverbosity(ui, **args):
     return ""
 
 
+@templatekeyword("remotenames")
+def remotenameskw(**args):
+    """:remotenames: List of strings. List of remote names associated with the
+    changeset.
+    """
+    repo, ctx = args["repo"], args["ctx"]
+
+    remotenames = []
+    if "remotebookmarks" in repo.names:
+        remotenames = repo.names["remotebookmarks"].names(repo, ctx.node())
+
+    return showlist("remotename", remotenames, args, plural="remotenames")
+
+
 def loadkeyword(ui, extname, registrarobj):
     """Load template keyword from specified registrarobj
     """

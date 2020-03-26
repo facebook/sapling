@@ -81,7 +81,7 @@ Make some non-conflicting commits in in the client repos.
   $ cd ../client2
   $ hg pull -q
   $ log
-  o  second commit [public:0a57cb610829] master
+  o  second commit [public:0a57cb610829] master default/master
   |
   o  first commit [public:679b2ce82944]
   |
@@ -93,7 +93,7 @@ Make some non-conflicting commits in in the client repos.
   $ log
   @  third commit [draft:8ee8e01cbc17]
   |
-  | o  second commit [public:0a57cb610829] master
+  | o  second commit [public:0a57cb610829] master default/master
   | |
   | o  first commit [public:679b2ce82944]
   |/
@@ -119,7 +119,7 @@ Make some non-conflicting commits in in the client repos.
   |
   | @  third commit [draft:8ee8e01cbc17]
   | |
-  o |  second commit [public:0a57cb610829] master
+  o |  second commit [public:0a57cb610829] master default/master
   | |
   o |  first commit [public:679b2ce82944]
   |/
@@ -189,7 +189,7 @@ Meanwhile, push from client2 -> server2.
   | |
   o |  third commit [draft:8ee8e01cbc17]
   | |
-  | o  second commit [public:0a57cb610829] master
+  | o  second commit [public:0a57cb610829] master default/master
   | |
   | o  first commit [public:679b2ce82944]
   |/

@@ -51,7 +51,6 @@ from edenscm.mercurial import (
     scmutil,
     setdiscovery,
     smartset,
-    templatekw,
     ui as uimod,
     url,
     util,
@@ -114,7 +113,6 @@ configitem("remotenames", "upstream", default=[])
 # always update remote bookmarks! The config option exists for testing purpose.
 configitem("remotenames", "racy-pull-on-push", default=True)
 
-templatekeyword = registrar.templatekeyword()
 revsetpredicate = registrar.revsetpredicate()
 
 
@@ -1720,82 +1718,3 @@ def pushed(repo, subset, x):
     """Select changesets in any remote repository according to remotenames."""
     revset.getargs(x, 0, 0, "pushed takes no arguments")
     return upstream_revs(lambda x: True, repo, subset, x)
-
-
-def getremoterevs(repo, namespacename, matchpattern=None):
-    try:
-        ns = repo.names[namespacename]
-    except KeyError:
-        return set()
-
-    if matchpattern is None:
-        nodes = set()
-        for name in ns.listnames(repo):
-            nodes.update(ns.namemap(repo, name))
-    else:
-        kind, pattern, matcher = util.stringmatcher(matchpattern)
-        if kind == "literal":
-            nodes = ns.namemap(repo, pattern)
-        else:
-            nodes = set()
-            for name in ns.listnames(repo):
-                if matcher(name):
-                    nodes.update(ns.namemap(repo, name))
-    return {repo[node].rev() for node in nodes if node in repo}
-
-
-@revsetpredicate("remotenames()")
-def remotenamesrevset(repo, subset, x):
-    """All remote bookmarks and branches."""
-    if not util.safehasattr(repo, "_remotenames"):
-        # If this repository does not have remotenames enabled just evaluate to the
-        # empty set.
-        return smartset.baseset([])
-
-    revset.getargs(x, 0, 0, "remotenames takes no arguments")
-    remoterevs = set()
-    for rname in repo._remotenames.keys():
-        remoterevs.update(getremoterevs(repo, "remote" + rname))
-    return subset & smartset.baseset(sorted(remoterevs))
-
-
-@revsetpredicate("remotebookmark([name])")
-def remotebookmarkrevset(repo, subset, x):
-    """The named remote bookmark, or all remote bookmarks.
-
-    Pattern matching is supported for `name`. See :hg:`help revisions.patterns`.
-    """
-    args = revset.getargs(x, 0, 1, _("remotebookmark takes one or no arguments"))
-    if args:
-        bookmarkname = revset.getstring(
-            args[0], _("the argument to remotebookmark must be a string")
-        )
-    else:
-        bookmarkname = None
-    remoterevs = getremoterevs(repo, "remotebookmarks", bookmarkname)
-    if not remoterevs and bookmarkname is not None:
-        raise error.RepoLookupError(
-            _("no remote bookmarks exist that match '%s'") % bookmarkname
-        )
-    return subset & smartset.baseset(sorted(remoterevs))
-
-
-###########
-# templates
-###########
-
-
-@templatekeyword("remotenames")
-def remotenameskw(**args):
-    """:remotenames: List of strings. List of remote names associated with the
-    changeset. If remotenames.suppressbranches is True then branch names will
-    be hidden if there is a bookmark at the same changeset.
-
-    """
-    repo, ctx = args["repo"], args["ctx"]
-
-    remotenames = []
-    if "remotebookmarks" in repo.names:
-        remotenames = repo.names["remotebookmarks"].names(repo, ctx.node())
-
-    return templatekw.showlist("remotename", remotenames, args, plural="remotenames")

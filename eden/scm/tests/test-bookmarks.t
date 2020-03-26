@@ -158,6 +158,7 @@ bookmarks revset
 
   $ hg help revsets | grep 'bookmark('
       "bookmark([name])"
+      "remotebookmark([name])"
 
 bookmarks X and X2 moved to rev 1, Y at rev -1
 
