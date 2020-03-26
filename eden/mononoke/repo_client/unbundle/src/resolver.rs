@@ -342,8 +342,14 @@ fn resolve_push(
             cloned!(ctx, resolver);
             move |(cg_push, bookmark_push, bundle2)| {
                 if let Some(cg_push) = cg_push {
-                    resolver
-                        .resolve_b2xtreegroup2(ctx, bundle2)
+                    async move {
+                        resolver
+                            .resolve_b2xtreegroup2(ctx, bundle2)
+                            .await
+                            .context("While resolving B2xTreegroup2")
+                    }
+                        .boxed()
+                        .compat()
                         .map(|(manifests, bundle2)| {
                             (Some((cg_push, manifests)), bookmark_push, bundle2)
                         })
@@ -474,8 +480,17 @@ fn resolve_pushrebase(
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
 ) -> OldBoxFuture<PostResolveAction, BundleResolverError> {
-    resolver
-        .resolve_b2xtreegroup2(ctx.clone(), bundle2)
+    {
+        cloned!(ctx, resolver);
+        async move {
+            resolver
+                .resolve_b2xtreegroup2(ctx, bundle2)
+                .await
+                .context("While resolving B2xTreegroup2")
+        }
+    }
+        .boxed()
+        .compat()
         .and_then({
             cloned!(ctx, resolver);
             move |(manifests, bundle2)| {
@@ -1059,31 +1074,34 @@ impl Bundle2Resolver {
     /// Parse b2xtreegroup2.
     /// The Manifests should be scheduled for uploading to BlobRepo and the Future resolving in
     /// their upload as well as their parsed content should be used for uploading changesets.
-    fn resolve_b2xtreegroup2(
+    async fn resolve_b2xtreegroup2(
         &self,
         ctx: CoreContext,
         bundle2: OldBoxStream<Bundle2Item, Error>,
-    ) -> OldBoxFuture<(Manifests, OldBoxStream<Bundle2Item, Error>), Error> {
+    ) -> Result<(Manifests, OldBoxStream<Bundle2Item, Error>), Error> {
         let repo = self.repo.clone();
+        let (b2xtreegroup2, bundle2) = next_item(bundle2).compat().await?;
 
-        next_item(bundle2)
-            .and_then(move |(b2xtreegroup2, bundle2)| match b2xtreegroup2 {
-                Some(Bundle2Item::B2xTreegroup2(_, parts))
-                | Some(Bundle2Item::B2xRebasePack(_, parts)) => upload_hg_blobs(
+        let res: Result<_, Error> = match b2xtreegroup2 {
+            Some(Bundle2Item::B2xTreegroup2(_, parts))
+            | Some(Bundle2Item::B2xRebasePack(_, parts)) => {
+                let manifests = upload_hg_blobs(
                     ctx,
                     repo,
                     TreemanifestBundle2Parser::new(parts),
                     UploadBlobsType::IgnoreDuplicates,
                 )
                 .context("While uploading Manifest Blobs")
-                .from_err()
-                .map(move |manifests| (manifests, bundle2))
-                .boxify(),
-                _ => err(format_err!("Expected Bundle2 B2xTreegroup2")).boxify(),
-            })
-            .context("While resolving B2xTreegroup2")
-            .from_err()
-            .boxify()
+                .boxify()
+                .compat()
+                .await
+                .map_err(Error::from)?;
+
+                Result::<_, Error>::Ok((manifests, bundle2))
+            }
+            _ => Err(format_err!("Expected Bundle2 B2xTreegroup2")),
+        };
+        res
     }
 
     /// Parse b2xinfinitepushscratchbookmarks.
