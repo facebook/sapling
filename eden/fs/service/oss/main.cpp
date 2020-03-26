@@ -7,7 +7,8 @@
 
 #include "eden/fs/service/EdenMain.h"
 
+using namespace facebook::eden;
+
 int main(int argc, char** argv) {
-  facebook::eden::EdenMain server;
-  return server.main(argc, argv);
+  return runEdenMain(DefaultEdenMain{}, argc, argv);
 }

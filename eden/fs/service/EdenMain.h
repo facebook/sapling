@@ -12,20 +12,34 @@
 namespace facebook {
 namespace eden {
 
+class EdenConfig;
 class EdenServer;
 
+/**
+ * Hooks to customize the flavor of the edenfs daemon build.
+ */
 class EdenMain {
  public:
-  virtual ~EdenMain() {}
-  int main(int argc, char** argv);
+  virtual ~EdenMain() = default;
 
- protected:
-  // Subclasses can override these methods to tweak Eden's start-up behavior
-  virtual std::string getEdenfsBuildName();
-  virtual std::string getEdenfsVersion();
-  virtual std::string getLocalHostname();
-  virtual void runServer(const EdenServer& server);
+  virtual std::string getEdenfsBuildName() = 0;
+  virtual std::string getEdenfsVersion() = 0;
+  virtual std::string getLocalHostname() = 0;
+  virtual void runServer(const EdenServer& server) = 0;
 };
+
+/**
+ * A default, open-source implementation of EdenMain.
+ */
+class DefaultEdenMain : public EdenMain {
+ public:
+  virtual std::string getEdenfsBuildName() override;
+  virtual std::string getEdenfsVersion() override;
+  virtual std::string getLocalHostname() override;
+  virtual void runServer(const EdenServer& server) override;
+};
+
+int runEdenMain(EdenMain&& main, int argc, char** argv);
 
 } // namespace eden
 } // namespace facebook

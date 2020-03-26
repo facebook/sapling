@@ -78,23 +78,23 @@ SessionInfo makeSessionInfo(
 namespace facebook {
 namespace eden {
 
-std::string EdenMain::getEdenfsBuildName() {
+std::string DefaultEdenMain::getEdenfsBuildName() {
   // Subclasses can override this if desired to include a version number
   // or other build information.
   return "edenfs";
 }
 
-std::string EdenMain::getEdenfsVersion() {
+std::string DefaultEdenMain::getEdenfsVersion() {
   // Subclasses can override this if desired to return specific version
   // information
   return std::string{};
 }
 
-std::string EdenMain::getLocalHostname() {
+std::string DefaultEdenMain::getLocalHostname() {
   return getHostname();
 }
 
-void EdenMain::runServer(const EdenServer& server) {
+void DefaultEdenMain::runServer(const EdenServer& server) {
   // ThriftServer::serve() will drive the current thread's EventBase.
   // Verify that we are being called from the expected thread, and will end up
   // driving the EventBase returned by EdenServer::getMainEventBase().
@@ -108,7 +108,7 @@ void EdenMain::runServer(const EdenServer& server) {
   });
 }
 
-int EdenMain::main(int argc, char** argv) {
+int runEdenMain(EdenMain&& main, int argc, char** argv) {
   ////////////////////////////////////////////////////////////////////
   // Running as root: do not add any new code here.
   // EdenFS normally starts with root privileges so it can perform mount
@@ -237,17 +237,18 @@ int EdenMain::main(int argc, char** argv) {
     gflags::SetCommandLineOptionWithMode(
         "minloglevel", "1", gflags::SET_FLAGS_DEFAULT);
 
-    startupLogger->log("Starting ", getEdenfsBuildName(), ", pid ", getpid());
+    startupLogger->log(
+        "Starting ", main.getEdenfsBuildName(), ", pid ", getpid());
 
-    auto sessionInfo =
-        makeSessionInfo(identity, getLocalHostname(), getEdenfsVersion());
+    auto sessionInfo = makeSessionInfo(
+        identity, main.getLocalHostname(), main.getEdenfsVersion());
     server.emplace(
         std::move(originalCommandLine),
         std::move(identity),
         std::move(sessionInfo),
         std::move(privHelper),
         std::move(edenConfig),
-        getEdenfsVersion());
+        main.getEdenfsVersion());
 
     prepareFuture = server->prepare(startupLogger, !FLAGS_noWaitForMounts);
   } catch (const std::exception& ex) {
@@ -288,7 +289,7 @@ int EdenMain::main(int argc, char** argv) {
                 DaemonStart{startTimeInSeconds, takeover, true /*success*/});
           });
 
-  runServer(server.value());
+  main.runServer(server.value());
   server->performCleanup();
 
   XLOG(INFO) << "edenfs exiting successfully";
