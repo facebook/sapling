@@ -49,6 +49,7 @@ Looks like `ui.warn()` after getfiles might not make it's way to client hg. Let'
   $ hg pull -r ololo 2>&1 | grep wireproto_requests
   remote: wireproto_requests:  (args=[], command=hello, duration=*, reponame=unknown, responselen=*) (glob)
   remote: wireproto_requests:  (args=['0000000000000000000000000000000000000000-0000000000000000000000000000000000000000'], command=between, duration=*, reponame=unknown, responselen=*) (glob)
+  remote: wireproto_requests:  (args=['bookmarks'], command=listkeys, duration=*, reponame=unknown, responselen=0) (glob)
   remote: wireproto_requests:  (args=['ololo'], command=lookup, duration=*, reponame=unknown, responselen=*) (glob)
 
 Enable clienttelemetry and change reponame

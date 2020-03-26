@@ -133,6 +133,9 @@ check unhydrated infinitepush pulls
   remote: capabilities: * (glob)
   remote: * (glob)
   sending clienttelemetry command
+  preparing listkeys for "bookmarks"
+  sending listkeys command
+  received listkey for "bookmarks": 57 bytes
   sending lookup command
   query 1; heads
   sending batch command
@@ -149,9 +152,7 @@ check unhydrated infinitepush pulls
   bundle2-input-part: total payload size * (glob)
   bundle2-input-part: "phase-heads" supported
   bundle2-input-part: total payload size * (glob)
-  bundle2-input-part: "listkeys" (params: 1 mandatory) supported
-  bundle2-input-part: total payload size * (glob)
-  bundle2-input-bundle: 2 parts total
+  bundle2-input-bundle: 1 parts total
   checking for updated bookmarks
 
 -- update to the recently pullued draft commit
@@ -213,6 +214,9 @@ check hydrated infinitepush pulls
   remote: capabilities: * (glob)
   remote: * (glob)
   sending clienttelemetry command
+  preparing listkeys for "bookmarks"
+  sending listkeys command
+  received listkey for "bookmarks": 57 bytes
   sending lookup command
   query 1; heads
   sending batch command
@@ -232,9 +236,7 @@ check hydrated infinitepush pulls
   bundle2-input-part: total payload size * (glob)
   bundle2-input-part: "phase-heads" supported
   bundle2-input-part: total payload size * (glob)
-  bundle2-input-part: "listkeys" (params: 1 mandatory) supported
-  bundle2-input-part: total payload size * (glob)
-  bundle2-input-bundle: 3 parts total
+  bundle2-input-bundle: 2 parts total
   checking for updated bookmarks
 
 -- update to the recently pullued draft commit

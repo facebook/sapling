@@ -76,6 +76,6 @@ Pull exactly up to d into the client
   adding file changes
   added 2 changesets with 0 changes to 0 files
   { metrics : { ssh : { connections : 1,
-                        read : { bytes : 1155},
-                        write : { bytes : 693}}}}
+                        read : { bytes : 1114},
+                        write : { bytes : 690}}}}
 

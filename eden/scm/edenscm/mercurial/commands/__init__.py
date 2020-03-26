@@ -4719,14 +4719,28 @@ def pull(ui, repo, source="default", **opts):
             other = conn.peer
             revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get("rev"))
 
+            implicitbookmarks = set()
+            # If any revision is given, ex. pull -r HASH, include selectivepull
+            # bookmarks automatically. This check exists so the no-argument
+            # pull is unaffected (pulls everything instead of just
+            # selectivepull bookmarks)
+            if revs:
+                remotename = ui.paths.getname(other.url())  # ex. 'default' or 'remote'
+                # Include selective pull bookmarks automatically.
+                implicitbookmarks.update(
+                    bookmarks.selectivepullbookmarknames(repo, remotename)
+                )
+
             pullopargs = {}
-            if opts.get("bookmark"):
+            if opts.get("bookmark") or implicitbookmarks:
                 if not revs:
                     revs = []
                 # The list of bookmark used here is not the one used to actually
                 # update the bookmark name. This can result in the revision pulled
                 # not ending up with the name of the bookmark because of a race
                 # condition on the server. (See issue 4689 for details)
+                # TODO: Consider migrate to repo.pull to avoid the race
+                # condition.
                 remotebookmarks = other.listkeys("bookmarks")
                 remotebookmarks = bookmarks.unhexlifybookmarks(remotebookmarks)
                 pullopargs["remotebookmarks"] = remotebookmarks
@@ -4735,6 +4749,10 @@ def pull(ui, repo, source="default", **opts):
                     if b not in remotebookmarks:
                         raise error.Abort(_("remote bookmark %s not found!") % b)
                     revs.append(hex(remotebookmarks[b]))
+                    implicitbookmarks.discard(b)
+                for b in implicitbookmarks:
+                    if b in remotebookmarks:
+                        revs.append(hex(remotebookmarks[b]))
 
             if revs:
                 try:
