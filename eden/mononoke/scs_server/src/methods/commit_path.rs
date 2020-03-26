@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use cloned::cloned;
 use context::CoreContext;
 use dedupmap::DedupMap;
 use futures_util::{
@@ -211,7 +210,30 @@ impl SourceControlServiceImpl {
         let number: usize = check_range_and_convert("limit", params.limit, 0..)?;
         let skip: usize = check_range_and_convert("skip", params.skip, 0..)?;
 
-        cloned!(params.after_timestamp, params.before_timestamp);
+        // Time filter equal to zero might be mistaken by users for an unset, like None.
+        // We will consider negative timestamps as invalid and zeros as unset.
+        let validate_ts = |ts_param, name| match ts_param {
+            Some(0) => Ok(None),
+            Some(ts) if ts < 0 => {
+                let err: errors::ServiceError =
+                    errors::invalid_request(format!("{} parameter cannot be negative", name))
+                        .into();
+                Err(err)
+            }
+            Some(ts) => Ok(Some(ts)),
+            None => Ok(None),
+        };
+        let after_timestamp = validate_ts(params.after_timestamp.clone(), "after_timestamp")?;
+        let before_timestamp = validate_ts(params.before_timestamp.clone(), "before_timestamp")?;
+        if let (Some(ats), Some(bts)) = (after_timestamp, before_timestamp) {
+            if bts < ats {
+                return Err(errors::invalid_request(format!(
+                    "after_timestamp cannot be greater than before_timestamp",
+                ))
+                .into());
+            }
+        }
+
         let time_filters = after_timestamp.is_some() || before_timestamp.is_some();
         if skip > 0 && time_filters {
             return Err(errors::invalid_request(

@@ -175,6 +175,14 @@ log check the timezone parsing
   
   E
   
+log for the "zero" timestamp
+  $ scsc log --repo repo -i "$COMMIT_F" --path b --before 0 --limit 1
+  error: The given date or timestamp must be after 1970-01-01 00:00:00 UTC: "0"
+  [1]
+  $ scsc log --repo repo -i "$COMMIT_F" --path b --after "1969-01-01 00:00:00" --limit 1
+  error: The given date or timestamp must be after 1970-01-01 00:00:00 UTC: "1969-01-01 00:00:00"
+  [1]
+
 log skip and time filters conflict
   $ scsc log --repo repo -i "$COMMIT_F" --path b --after "2017-01-01 05:00:00 +08:00" --skip 5
   error: The argument '--skip <SKIP>' cannot be used with '--after <AFTER>'
