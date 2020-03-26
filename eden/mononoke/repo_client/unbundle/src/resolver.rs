@@ -23,6 +23,7 @@ use cloned::cloned;
 use context::CoreContext;
 use core::fmt::Debug;
 use failure_ext::{Compat, FutureFailureErrorExt};
+use futures::future::try_join_all;
 use futures_ext::{
     try_boxfuture as try_old_boxfuture, BoxFuture as OldBoxFuture, BoxStream as OldBoxStream,
     FutureExt as OldFutureExt, StreamExt as OldStreamExt,
@@ -30,6 +31,7 @@ use futures_ext::{
 use futures_old::future::{self as old_future, err, ok, Shared};
 use futures_old::stream as old_stream;
 use futures_old::{Future as OldFuture, IntoFuture, Stream as OldStream};
+use futures_util::{compat::Future01CompatExt, try_join, FutureExt, TryFutureExt};
 use hooks::{HookExecution, HookOutcome};
 use lazy_static::lazy_static;
 use limits::types::RateLimit;
@@ -394,7 +396,7 @@ fn resolve_push(
         .and_then({
             cloned!(ctx, resolver);
             move |(changegroup_id, bookmark_push, maybe_raw_bundle2_id, uploaded_bonsais)| {
-                hg_all_bookmark_pushes_to_bonsai(ctx, &resolver.repo, bookmark_push).map(
+                async move { hg_all_bookmark_pushes_to_bonsai(ctx, &resolver.repo, bookmark_push).await }.boxed().compat().map(
                     move |bookmark_push| {
                         (
                             changegroup_id,
@@ -588,7 +590,7 @@ fn resolve_pushrebase(
         .and_then({
             cloned!(ctx, resolver);
             move |(changesets, bookmark_push_part_id, bookmark_spec, maybe_raw_bundle2_id, uploaded_bonsais, uploaded_hg_changeset_ids)| {
-                hg_pushrebase_bookmark_spec_to_bonsai(ctx, &resolver.repo, bookmark_spec)
+                async move { hg_pushrebase_bookmark_spec_to_bonsai(ctx, &resolver.repo, bookmark_spec).await }.boxed().compat()
                     .map(move |bookmark_spec| (changesets, bookmark_push_part_id, bookmark_spec, maybe_raw_bundle2_id, uploaded_bonsais, uploaded_hg_changeset_ids))
             }
         })
@@ -667,8 +669,14 @@ fn resolve_bookmark_only_pushrebase(
         .and_then({
             cloned!(resolver);
             move |(bookmark_push, maybe_raw_bundle2_id)| {
-                plain_hg_bookmark_push_to_bonsai(ctx, &resolver.repo, bookmark_push)
-                    .map(move |bookmark_push| (bookmark_push, maybe_raw_bundle2_id))
+                {
+                    async move {
+                        plain_hg_bookmark_push_to_bonsai(ctx, &resolver.repo, bookmark_push).await
+                    }
+                }
+                .boxed()
+                .compat()
+                .map(move |bookmark_push| (bookmark_push, maybe_raw_bundle2_id))
             }
         })
         .map({
@@ -940,14 +948,19 @@ impl Bundle2Resolver {
                     .and_then({
                         cloned!(ctx, repo);
                         move |(changesets, filelogs, content_blobs)| {
-                            build_changegroup_push(
-                                ctx,
-                                &repo,
-                                header,
-                                changesets,
-                                filelogs,
-                                content_blobs,
-                            )
+                            async move {
+                                build_changegroup_push(
+                                    ctx,
+                                    &repo,
+                                    header,
+                                    changesets,
+                                    filelogs,
+                                    content_blobs,
+                                )
+                                .await
+                            }
+                            .boxed()
+                            .compat()
                             .map(move |cg_push| (Some(cg_push), bundle2))
                         }
                     })
@@ -1280,14 +1293,14 @@ fn get_optional_changeset_param(
     }
 }
 
-fn build_changegroup_push(
+async fn build_changegroup_push(
     ctx: CoreContext,
     repo: &BlobRepo,
     part_header: PartHeader,
     changesets: Changesets,
     filelogs: Filelogs,
     content_blobs: ContentBlobs,
-) -> impl OldFuture<Item = ChangegroupPush, Error = Error> {
+) -> Result<ChangegroupPush, Error> {
     let PartHeaderInner {
         part_id,
         part_type,
@@ -1302,42 +1315,38 @@ fn build_changegroup_push(
                 .transpose()
                 .map(|maybe_name| maybe_name.map(BookmarkName::new_ascii));
 
-            match maybe_name_res {
-                Err(e) => err(e).left_future(),
+            let bookmark_push = match maybe_name_res {
+                Err(e) => return Err(e),
                 Ok(maybe_name) => match maybe_name {
-                    None => ok(None).left_future(),
-                    Some(name) => repo
-                        .get_bookmark(ctx, &name)
-                        .and_then(move |old| {
-                            // NOTE: We do not validate that the bookmarknode selected (i.e. the
-                            // changeset we should update our bookmark to) is part of the
-                            // changegroup being pushed. We do however validate at a later point
-                            // that this changeset exists.
-                            let new = get_ascii_param(&aparams, "bookmarknode")?;
-                            let new = HgChangesetId::from_ascii_str(&new)?;
-                            let create = aparams.get("create").is_some();
-                            let force = aparams.get("force").is_some();
+                    None => None,
+                    Some(name) => {
+                        let old = repo.get_bookmark(ctx, &name).compat().await?;
+                        // NOTE: We do not validate that the bookmarknode selected (i.e. the
+                        // changeset we should update our bookmark to) is part of the
+                        // changegroup being pushed. We do however validate at a later point
+                        // that this changeset exists.
+                        let new = get_ascii_param(&aparams, "bookmarknode")?;
+                        let new = HgChangesetId::from_ascii_str(&new)?;
+                        let create = aparams.get("create").is_some();
+                        let force = aparams.get("force").is_some();
 
-                            Ok(InfiniteBookmarkPush {
-                                name,
-                                create,
-                                force,
-                                old,
-                                new,
-                            })
+                        Some(InfiniteBookmarkPush {
+                            name,
+                            create,
+                            force,
+                            old,
+                            new,
                         })
-                        .map(Some)
-                        .right_future(),
-                }
-                .right_future(),
-            }
-            .map(|bookmark_push| Some(InfinitepushPayload { bookmark_push }))
-            .left_future()
+                    }
+                },
+            };
+
+            Some(InfinitepushPayload { bookmark_push })
         }
-        _ => ok(None).right_future(),
+        _ => None,
     };
 
-    infinitepush_payload.map(move |infinitepush_payload| ChangegroupPush {
+    Ok(ChangegroupPush {
         part_id,
         changesets,
         filelogs,
@@ -1424,57 +1433,54 @@ fn toposort_changesets(
         .collect())
 }
 
-fn bonsai_from_hg_opt(
+async fn bonsai_from_hg_opt(
     ctx: CoreContext,
     repo: &BlobRepo,
     cs_id: Option<HgChangesetId>,
-) -> impl OldFuture<Item = Option<ChangesetId>, Error = Error> {
+) -> Result<Option<ChangesetId>, Error> {
     match cs_id {
-        None => ok(None).left_future(),
-        Some(cs_id) => repo
-            .get_bonsai_from_hg(ctx, cs_id.clone())
-            .and_then(move |maybe_bcs_id| {
-                if maybe_bcs_id.is_none() {
-                    err(format_err!("No bonsai mapping found for {}", cs_id))
-                } else {
-                    ok(maybe_bcs_id)
-                }
-            })
-            .right_future(),
+        None => Ok(None),
+        Some(cs_id) => {
+            let maybe_bcs_id = repo.get_bonsai_from_hg(ctx, cs_id.clone()).compat().await?;
+            if maybe_bcs_id.is_none() {
+                Err(format_err!("No bonsai mapping found for {}", cs_id))
+            } else {
+                Ok(maybe_bcs_id)
+            }
+        }
     }
 }
 
-/// TODO: this function belongs in some `common` module,
-/// once `bundle2_resolver` is merged into` unbundle`
-fn plain_hg_bookmark_push_to_bonsai(
+async fn plain_hg_bookmark_push_to_bonsai(
     ctx: CoreContext,
     repo: &BlobRepo,
     bookmark_push: PlainBookmarkPush<HgChangesetId>,
-) -> impl OldFuture<Item = PlainBookmarkPush<ChangesetId>, Error = Error> + Send {
+) -> Result<PlainBookmarkPush<ChangesetId>, Error> {
     let PlainBookmarkPush {
         part_id,
         name,
         old,
         new,
     } = bookmark_push;
-    (
-        bonsai_from_hg_opt(ctx.clone(), repo, old),
-        bonsai_from_hg_opt(ctx.clone(), repo, new),
-    )
-        .into_future()
-        .map(move |(old, new)| PlainBookmarkPush {
-            part_id,
-            name,
-            old,
-            new,
-        })
+
+    let (old, new) = try_join!(
+        bonsai_from_hg_opt(ctx.clone(), &repo, old),
+        bonsai_from_hg_opt(ctx.clone(), &repo, new),
+    )?;
+
+    Ok(PlainBookmarkPush {
+        part_id,
+        name,
+        old,
+        new,
+    })
 }
 
-fn infinite_hg_bookmark_push_to_bonsai(
+async fn infinite_hg_bookmark_push_to_bonsai(
     ctx: CoreContext,
     repo: &BlobRepo,
     bookmark_push: InfiniteBookmarkPush<HgChangesetId>,
-) -> impl OldFuture<Item = InfiniteBookmarkPush<ChangesetId>, Error = Error> + Send {
+) -> Result<InfiniteBookmarkPush<ChangesetId>, Error> {
     let InfiniteBookmarkPush {
         name,
         force,
@@ -1483,59 +1489,59 @@ fn infinite_hg_bookmark_push_to_bonsai(
         new,
     } = bookmark_push;
 
-    (
-        bonsai_from_hg_opt(ctx.clone(), repo, old),
-        repo.get_bonsai_from_hg(ctx.clone(), new),
-    )
-        .into_future()
-        .and_then(|(old, new)| match new {
-            Some(new) => Ok((old, new)),
-            None => bail!("Bonsai Changeset not found"),
-        })
-        .map(move |(old, new)| InfiniteBookmarkPush {
-            name,
-            force,
-            create,
-            old,
-            new,
-        })
+    let (old, new) = try_join!(
+        bonsai_from_hg_opt(ctx.clone(), &repo, old),
+        repo.get_bonsai_from_hg(ctx.clone(), new).compat()
+    )?;
+    let new = match new {
+        Some(new) => new,
+        None => bail!("Bonsai Changeset not found"),
+    };
+
+    Ok(InfiniteBookmarkPush {
+        name,
+        force,
+        create,
+        old,
+        new,
+    })
 }
 
-fn hg_pushrebase_bookmark_spec_to_bonsai(
+async fn hg_pushrebase_bookmark_spec_to_bonsai(
     ctx: CoreContext,
     repo: &BlobRepo,
     bookmark_spec: PushrebaseBookmarkSpec<HgChangesetId>,
-) -> impl OldFuture<Item = PushrebaseBookmarkSpec<ChangesetId>, Error = Error> + Send {
-    match bookmark_spec {
+) -> Result<PushrebaseBookmarkSpec<ChangesetId>, Error> {
+    let pbs = match bookmark_spec {
         PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => {
-            ok(PushrebaseBookmarkSpec::NormalPushrebase(onto_params)).left_future()
+            PushrebaseBookmarkSpec::NormalPushrebase(onto_params)
         }
         PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => {
-            plain_hg_bookmark_push_to_bonsai(ctx, repo, plain_push)
-                .map(PushrebaseBookmarkSpec::ForcePushrebase)
-                .right_future()
+            PushrebaseBookmarkSpec::ForcePushrebase(
+                plain_hg_bookmark_push_to_bonsai(ctx, &repo, plain_push).await?,
+            )
         }
-    }
+    };
+    Ok(pbs)
 }
 
-fn hg_all_bookmark_pushes_to_bonsai(
+async fn hg_all_bookmark_pushes_to_bonsai(
     ctx: CoreContext,
     repo: &BlobRepo,
     all_bookmark_pushes: AllBookmarkPushes<HgChangesetId>,
-) -> impl OldFuture<Item = AllBookmarkPushes<ChangesetId>, Error = Error> {
-    match all_bookmark_pushes {
+) -> Result<AllBookmarkPushes<ChangesetId>, Error> {
+    let abp = match all_bookmark_pushes {
         AllBookmarkPushes::PlainPushes(plain_pushes) => {
-            old_future::join_all(plain_pushes.into_iter().map({
-                cloned!(ctx, repo);
-                move |plain_push| plain_hg_bookmark_push_to_bonsai(ctx.clone(), &repo, plain_push)
+            let r = try_join_all(plain_pushes.into_iter().map({
+                |plain_push| plain_hg_bookmark_push_to_bonsai(ctx.clone(), &repo, plain_push)
             }))
-            .map(AllBookmarkPushes::PlainPushes)
-            .left_future()
+            .await?;
+            AllBookmarkPushes::PlainPushes(r)
         }
         AllBookmarkPushes::Inifinitepush(infinite_bookmark_push) => {
-            infinite_hg_bookmark_push_to_bonsai(ctx, repo, infinite_bookmark_push)
-                .map(AllBookmarkPushes::Inifinitepush)
-                .right_future()
+            let r = infinite_hg_bookmark_push_to_bonsai(ctx, &repo, infinite_bookmark_push).await?;
+            AllBookmarkPushes::Inifinitepush(r)
         }
-    }
+    };
+    Ok(abp)
 }
