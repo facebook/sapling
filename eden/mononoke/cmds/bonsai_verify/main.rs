@@ -9,7 +9,7 @@
 
 mod config;
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{format_err, Error, Result};
 use blobrepo_utils::{BonsaiMFVerify, BonsaiMFVerifyResult};
 use blobstore::Loadable;
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -18,11 +18,15 @@ use cmdlib::args;
 use context::CoreContext;
 use failure_ext::DisplayChain;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
-use futures_ext::{try_boxfuture, FutureExt};
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{self, TryFutureExt},
+    stream::{StreamExt, TryStreamExt},
+};
+use futures_ext::FutureExt as OldFutureExt;
 use futures_old::{
-    future::{self, join_all, Either},
-    Future, IntoFuture, Stream,
+    future::{self as old_future, Either},
+    Future, Stream,
 };
 use lock_ext::LockExt;
 use mercurial_types::HgChangesetId;
@@ -99,7 +103,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     match matches.subcommand() {
         ("round-trip", Some(sub_m)) => subcommand_round_trip(ctx, logger, &matches, sub_m),
         ("hg-manifest", Some(sub_m)) => {
-            subcommmand_hg_manifest_verify(ctx, logger, &matches, sub_m)
+            subcommmand_hg_manifest_verify(&ctx, &logger, &matches, sub_m)
         }
         (subcommand, _) => Err(format_err!("unhandled subcommand {}", subcommand)),
     }
@@ -180,7 +184,7 @@ fn subcommand_round_trip(
                         BonsaiMFVerifyResult::Valid { .. } => {
                             debug!(logger, "VALID");
                             valid.fetch_add(1, Ordering::Relaxed);
-                            Either::A(future::ok(()))
+                            Either::A(old_future::ok(()))
                         }
                         BonsaiMFVerifyResult::ValidDifferentId(difference) => {
                             debug!(
@@ -191,7 +195,7 @@ fn subcommand_round_trip(
                                 difference.roundtrip_mf_id,
                             );
                             valid.fetch_add(1, Ordering::Relaxed);
-                            Either::A(future::ok(()))
+                            Either::A(old_future::ok(()))
                         }
                         BonsaiMFVerifyResult::Invalid(difference) => {
                             warn!(logger, "INVALID");
@@ -216,12 +220,12 @@ fn subcommand_round_trip(
                                     .map(|_| ());
                                 Either::B(diff_fut)
                             } else {
-                                Either::A(future::ok(()))
+                                Either::A(old_future::ok(()))
                             }
                         }
                         BonsaiMFVerifyResult::Ignored(..) => {
                             ignored.fetch_add(1, Ordering::Relaxed);
-                            Either::A(future::ok(()))
+                            Either::A(old_future::ok(()))
                         }
                     };
 
@@ -301,132 +305,131 @@ fn summarize(
 }
 
 fn subcommmand_hg_manifest_verify(
-    ctx: CoreContext,
-    logger: Logger,
+    ctx: &CoreContext,
+    logger: &Logger,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> Result<()> {
-    let hg_csid = sub_m
-        .value_of("hg-changeset-id")
-        .ok_or(Error::msg(
-            "required parameter `hg-changeset-id` is not set",
-        ))
-        .and_then(HgChangesetId::from_str);
-
-    let count: Result<u64> = sub_m
-        .value_of("count")
-        .ok_or(Error::msg("required parameter `count` is not set"))
-        .and_then(|count_str| Ok(count_str.parse()?));
-
     args::init_cachelib(ctx.fb, &matches, None);
 
-    let total = Arc::new(AtomicUsize::new(0));
-    let total_millis = Arc::new(AtomicU64::new(0));
-    let bad = Arc::new(Mutex::new(HashSet::new()));
-    let run = (args::open_repo(ctx.fb, &logger, &matches), hg_csid, count)
-        .into_future()
-        .and_then({
-            cloned!(ctx);
-            move |(repo, hg_csid, count)| {
-                repo.get_bonsai_from_hg(ctx, hg_csid)
-                    .and_then(move |csid| match csid {
-                        None => bail!("failed to fetch bonsai changeset"),
-                        Some(csid) => Ok((repo, csid, count)),
-                    })
-            }
-        })
-        .and_then(move |(repo, csid, count)| {
-            AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), csid)
-                .take(count)
-                .map({
-                    cloned!(ctx, repo, bad, total, total_millis);
-                    move |csid| {
-                        (
-                            csid.load(ctx.clone(), repo.blobstore()).from_err(),
-                            repo.get_hg_from_bonsai_changeset(ctx.clone(), csid)
-                                .and_then({
-                                    cloned!(ctx, repo);
-                                    move |cs_id| cs_id.load(ctx, repo.blobstore()).from_err()
-                                })
-                                .and_then({
-                                    cloned!(ctx, repo);
-                                    move |blob_cs| {
-                                        let hg_csid = blob_cs.get_changeset_id();
+    let total = &AtomicUsize::new(0);
+    let total_millis = &AtomicU64::new(0);
+    let bad = &Mutex::new(HashSet::new());
 
-                                        let mut parents = vec![];
-                                        parents.extend(blob_cs.p1());
-                                        parents.extend(blob_cs.p2());
-                                        parents.extend(try_boxfuture!(blob_cs.step_parents()));
+    let run = async move {
+        let count: usize = sub_m
+            .value_of("count")
+            .ok_or(Error::msg("required parameter `count` is not set"))
+            .and_then(|count_str| Ok(count_str.parse()?))?;
+        let hg_csid = sub_m
+            .value_of("hg-changeset-id")
+            .ok_or(Error::msg(
+                "required parameter `hg-changeset-id` is not set",
+            ))
+            .and_then(HgChangesetId::from_str)?;
+        let repo = &args::open_repo(ctx.fb, &logger, &matches).compat().await?;
+        let csid = repo
+            .get_bonsai_from_hg(ctx.clone(), hg_csid)
+            .compat()
+            .await?
+            .ok_or(format_err!("failed to fetch bonsai changeset"))?;
 
-                                        let parents = parents
-                                            .into_iter()
-                                            .map(|p| {
-                                                HgChangesetId::new(p)
-                                                    .load(ctx.clone(), repo.blobstore())
-                                                    .from_err()
-                                                    .map(|cs| cs.manifestid())
-                                            })
-                                            .collect::<Vec<_>>();
+        AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), csid)
+            .compat()
+            .take(count)
+            .map(|res| async move {
+                match res {
+                    Ok(csid) => {
+                        let cs_id = repo
+                            .get_hg_from_bonsai_changeset(ctx.clone(), csid)
+                            .compat()
+                            .await?;
 
-                                        let expected = blob_cs.manifestid();
+                        let bonsai_fut = csid
+                            .load(ctx.clone(), repo.blobstore())
+                            .from_err::<Error>()
+                            .compat();
 
-                                        join_all(parents)
-                                            .map(move |parents| (hg_csid, expected, parents))
-                                            .boxify()
-                                    }
-                                }),
-                        )
-                            .into_future()
-                            .and_then({
-                                cloned!(ctx, repo, bad, total, total_millis);
-                                move |(bonsai, (hg_csid, expected, parents))| {
-                                    let start = Instant::now();
-                                    repo.get_manifest_from_bonsai(
-                                        ctx.clone(),
-                                        bonsai.clone(),
-                                        parents,
-                                    )
-                                    .map(move |result| {
-                                        if result != expected {
-                                            println!(
-                                                "\x1b[KBAD hg_cisd:{} result:{} expected:{}\x1b[m",
-                                                hg_csid, result, expected,
-                                            );
-                                            bad.with(|bad| {
-                                                bad.insert((csid, hg_csid, result, expected))
-                                            });
-                                        }
+                        let parents_fut = async move {
+                            let blob_cs = cs_id
+                                .load(ctx.clone(), repo.blobstore())
+                                .from_err::<Error>()
+                                .compat()
+                                .await?;
+                            let expected = blob_cs.manifestid();
 
-                                        let all = total.fetch_add(1, Ordering::SeqCst) + 1;
-                                        total_millis.fetch_add(
-                                            start.elapsed().as_millis() as u64,
-                                            Ordering::SeqCst,
-                                        );
-                                        print!(
-                                            "\x1b[K {} total:{} bad:{} mean_time:{:.2} ms \r",
-                                            hg_csid,
-                                            all,
-                                            bad.with(|bad| bad.len()),
-                                            total_millis.load(Ordering::SeqCst) as f32 / all as f32,
-                                        );
-                                        std::io::stdout().flush().expect("flush on stdout failed");
+                            let hg_csid = blob_cs.get_changeset_id();
+
+                            let mut parent_hashes = vec![];
+                            parent_hashes.extend(blob_cs.p1());
+                            parent_hashes.extend(blob_cs.p2());
+                            parent_hashes.extend(blob_cs.step_parents()?);
+
+                            let parents = future::try_join_all(
+                                parent_hashes
+                                    .into_iter()
+                                    .map(|p| {
+                                        HgChangesetId::new(p)
+                                            .load(ctx.clone(), repo.blobstore())
+                                            .from_err::<Error>()
+                                            .map(|cs| cs.manifestid())
+                                            .compat()
                                     })
+                                    .collect::<Vec<_>>(),
+                            )
+                            .await?;
+
+                            Ok((parents, hg_csid, expected))
+                        };
+
+                        let (bonsai, (parents, hg_csid, expected)) =
+                            future::try_join(bonsai_fut, parents_fut).await?;
+
+                        let start = Instant::now();
+
+                        repo.get_manifest_from_bonsai(ctx.clone(), bonsai.clone(), parents)
+                            .map(move |result| {
+                                if result != expected {
+                                    println!(
+                                        "\x1b[KBAD hg_cisd:{} result:{} expected:{}\x1b[m",
+                                        hg_csid, result, expected,
+                                    );
+                                    bad.with(|bad| bad.insert((csid, hg_csid, result, expected)));
                                 }
+
+                                let all = total.fetch_add(1, Ordering::SeqCst) + 1;
+                                total_millis.fetch_add(
+                                    start.elapsed().as_millis() as u64,
+                                    Ordering::SeqCst,
+                                );
+                                print!(
+                                    "\x1b[K {} total:{} bad:{} mean_time:{:.2} ms \r",
+                                    hg_csid,
+                                    all,
+                                    bad.with(|bad| bad.len()),
+                                    total_millis.load(Ordering::SeqCst) as f32 / all as f32,
+                                );
+                                std::io::stdout().flush().expect("flush on stdout failed");
                             })
+                            .compat()
+                            .await
                     }
-                })
-                .buffer_unordered(100)
-                .for_each(|_| Ok(()))
-                .map(move |_| {
-                    let bad = bad.with(|bad| std::mem::replace(bad, HashSet::new()));
-                    if bad.is_empty() {
-                        println!("")
-                    } else {
-                        println!("\n BAD: {:#?}", bad)
-                    }
-                })
-        });
+                    Err(e) => Err(e),
+                }
+            })
+            .buffer_unordered(100)
+            .try_for_each(|_| async { Ok(()) })
+            .map_ok(move |_| {
+                let bad = bad.with(|bad| std::mem::replace(bad, HashSet::new()));
+                if bad.is_empty() {
+                    println!("")
+                } else {
+                    println!("\n BAD: {:#?}", bad)
+                }
+            })
+            .await
+    };
 
     let mut runtime = args::init_runtime(&matches)?;
-    runtime.block_on_std(run.compat())
+    runtime.block_on_std(run)
 }
