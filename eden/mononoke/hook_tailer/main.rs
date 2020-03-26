@@ -14,20 +14,16 @@ use anyhow::{format_err, Error, Result};
 use blobrepo_factory::BlobrepoBuilder;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches};
-use cloned::cloned;
 use cmdlib::helpers::block_execute;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::{FutureExt, TryFutureExt},
+    future::FutureExt,
+    stream::{self, StreamExt, TryStreamExt},
 };
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
-use futures_old::{
-    future::{err, ok},
-    stream::repeat,
-    Future, Stream,
-};
+use futures_ext::BoxFuture;
+use futures_old::Future as OldFuture;
 use hooks::HookOutcome;
 use manifold::{ManifoldHttpClient, RequestContext};
 use mercurial_types::{HgChangesetId, HgNodeHash};
@@ -51,6 +47,27 @@ fn main(fb: FacebookInit) -> Result<()> {
     let (repo_name, config) = cmdlib::args::get_config(fb, &matches)?;
     let logger = setup_logger(&matches, repo_name.to_string());
     info!(logger, "Hook tailer is starting");
+
+    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+
+    block_execute(
+        run_hook_tailer(fb, &ctx, &config, &repo_name, &matches, &logger),
+        fb,
+        "hook_tailer",
+        &logger,
+        &matches,
+        cmdlib::monitoring::AliveService,
+    )
+}
+
+async fn run_hook_tailer<'a>(
+    fb: FacebookInit,
+    ctx: &CoreContext,
+    config: &metaconfig_types::RepoConfig,
+    repo_name: &str,
+    matches: &'a ArgMatches<'a>,
+    logger: &Logger,
+) -> Result<(), Error> {
     let bookmark_name = matches.value_of("bookmark").unwrap();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
     let common_config = cmdlib::args::read_common_config(fb, &matches)?;
@@ -89,7 +106,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let readonly_storage = cmdlib::args::parse_readonly_storage(&matches);
     let builder = BlobrepoBuilder::new(
         fb,
-        repo_name,
+        repo_name.into(),
         &config,
         cmdlib::args::parse_mysql_options(&matches),
         caching,
@@ -98,8 +115,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         cmdlib::args::parse_blobstore_options(&matches),
         &logger,
     );
-
-    let blobrepo = builder.build().boxed().compat();
 
     let rc = RequestContext {
         bucket_name: "mononoke_prod".into(),
@@ -110,116 +125,98 @@ fn main(fb: FacebookInit) -> Result<()> {
     let id = "ManifoldBlob";
 
     let manifold_client = ManifoldHttpClient::new(fb, id, rc)?;
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
-    let fut = blobrepo.and_then({
-        cloned!(logger, config);
-        move |blobrepo| {
-            blobrepo
-                .get_hg_bonsai_mapping(ctx.clone(), excludes)
-                .and_then({
-                    cloned!(manifold_client);
-                    move |excl| {
-                        Tailer::new(
-                            ctx,
-                            blobrepo,
-                            config.clone(),
-                            bookmark,
-                            manifold_client.clone(),
-                            excl.into_iter().map(|(_, cs)| cs).collect(),
-                            &disabled_hooks,
-                        )
-                    }
-                })
-                .and_then({
-                    cloned!(manifold_client);
-                    move |tail| {
-                        let f = match init_revision {
-                            Some(init_rev) => {
-                                info!(
-                                    logger.clone(),
-                                    "Initial revision specified as argument {}", init_rev
-                                );
-                                let hash = try_boxfuture!(HgNodeHash::from_str(&init_rev));
-                                let bytes = hash.as_bytes().into();
-                                manifold_client
-                                    .write(tail.get_last_rev_key(), bytes)
-                                    .map(|_| ())
-                                    .boxify()
-                            }
-                            None => futures_old::future::ok(()).boxify(),
-                        };
 
-                        match (continuous, changeset) {
-                            (true, _) => {
-                                // Tail new commits and run hooks on them
-                                let logger = logger.clone();
-                                f.then(|_| {
-                                    repeat(()).for_each(move |()| {
-                                        let fut = tail.run();
-                                        process_hook_results(fut, logger.clone()).and_then(|_| {
-                                            sleep(Duration::new(10, 0)).map_err(|err| {
-                                                format_err!("Tokio timer error {:?}", err)
-                                            })
-                                        })
-                                    })
-                                })
-                                .boxify()
-                            }
-                            (_, Some(changeset)) => {
-                                let fut = tail.run_single_changeset(changeset);
-                                process_hook_results(fut, logger)
-                            }
-                            _ => {
-                                let logger = logger.clone();
-                                f.then(move |_| {
-                                    let fut = tail.run_with_limit(limit);
-                                    process_hook_results(fut, logger)
-                                })
-                                .boxify()
-                            }
+    let blobrepo = builder.build().await?;
+
+    let excl = blobrepo
+        .get_hg_bonsai_mapping(ctx.clone(), excludes)
+        .compat()
+        .await?;
+
+    let tail = &Tailer::new(
+        ctx.clone(),
+        blobrepo.clone(),
+        config.clone(),
+        bookmark,
+        manifold_client.clone(),
+        excl.into_iter().map(|(_, cs)| cs).collect(),
+        &disabled_hooks,
+    )?;
+
+    let f = match init_revision {
+        Some(init_rev) => {
+            info!(
+                *logger,
+                "Initial revision specified as argument {}", init_rev
+            );
+            let hash = HgNodeHash::from_str(&init_rev)?;
+            let bytes = hash.as_bytes().into();
+            manifold_client
+                .write(tail.get_last_rev_key(), bytes)
+                .map(|_| ())
+                .compat()
+                .boxed()
+        }
+        None => async { Ok(()) }.boxed(),
+    };
+
+    match (continuous, changeset) {
+        (true, _) => {
+            // Tail new commits and run hooks on them
+            async move {
+                f.await?;
+                stream::repeat(())
+                    .map(Ok)
+                    .try_for_each({
+                        move |()| async move {
+                            process_hook_results(tail.run(), logger).await?;
+                            sleep(Duration::new(10, 0))
+                                .map_err(|err| format_err!("Tokio timer error {:?}", err))
+                                .compat()
+                                .await
                         }
-                    }
-                })
+                    })
+                    .await
+            }
+            .boxed()
+        }
+        (_, Some(changeset)) => {
+            process_hook_results(tail.run_single_changeset(changeset), logger).boxed()
+        }
+        _ => {
+            f.await?;
+            process_hook_results(tail.run_with_limit(limit), logger).boxed()
+        }
+    }
+    .await
+}
+
+async fn process_hook_results(
+    fut: BoxFuture<Vec<HookOutcome>, Error>,
+    logger: &Logger,
+) -> Result<(), Error> {
+    let res = fut.compat().await?;
+
+    let mut hooks_stat = HookExecutionStat::new();
+
+    debug!(logger, "==== Hooks results ====");
+    res.into_iter().for_each(|outcome| {
+        hooks_stat.record_hook_execution(&outcome);
+
+        if outcome.is_rejection() {
+            info!(logger, "{}", outcome);
+        } else {
+            debug!(logger, "{}", outcome);
         }
     });
 
-    block_execute(
-        fut.compat(),
-        fb,
-        "hook_tailer",
-        &logger,
-        &matches,
-        cmdlib::monitoring::AliveService,
-    )
-}
+    info!(logger, "==== Hooks stat: {} ====", hooks_stat);
 
-fn process_hook_results(
-    fut: BoxFuture<Vec<HookOutcome>, Error>,
-    logger: Logger,
-) -> BoxFuture<(), Error> {
-    fut.and_then(move |res| {
-        let mut hooks_stat = HookExecutionStat::new();
-
-        debug!(logger, "==== Hooks results ====");
-        res.into_iter().for_each(|outcome| {
-            hooks_stat.record_hook_execution(&outcome);
-
-            if outcome.is_rejection() {
-                info!(logger, "{}", outcome);
-            } else {
-                debug!(logger, "{}", outcome);
-            }
-        });
-
-        info!(logger, "==== Hooks stat: {} ====", hooks_stat);
-
-        if hooks_stat.rejected > 0 {
-            err(format_err!("Hook rejections: {}", hooks_stat.rejected,))
-        } else {
-            ok(())
-        }
-    })
-    .boxify()
+    if hooks_stat.rejected > 0 {
+        Err(format_err!("Hook rejections: {}", hooks_stat.rejected,))
+    } else {
+        Ok(())
+    }
 }
 
 struct HookExecutionStat {
