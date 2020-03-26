@@ -90,23 +90,25 @@ wideToMultibyteStringImpl(WideStringType const& wideCharPiece) {
     return MultiByteStringType{};
   }
 
+  int inputSize = folly::to_narrow(folly::to_signed(wideCharPiece.size()));
+
   // To avoid extra copy or using max size buffers we should get the size first
   // and allocate the right size buffer.
   int size = WideCharToMultiByte(
-      CP_UTF8, 0, wideCharPiece.data(), wideCharPiece.size(), nullptr, 0, 0, 0);
+      CP_UTF8, 0, wideCharPiece.data(), inputSize, nullptr, 0, 0, 0);
 
   if (size > 0) {
     MultiByteStringType multiByteString(size, 0);
-    size = WideCharToMultiByte(
+    int resultSize = WideCharToMultiByte(
         CP_UTF8,
         0,
         wideCharPiece.data(),
-        wideCharPiece.size(),
+        inputSize,
         multiByteString.data(),
-        multiByteString.size(),
+        size,
         0,
         0);
-    if (size == multiByteString.size()) {
+    if (size == resultSize) {
       return multiByteString;
     }
   }
@@ -141,21 +143,18 @@ multibyteToWideString(T const& multiBytePiece) {
     return L"";
   }
 
+  int inputSize = folly::to_narrow(folly::to_signed(multiBytePiece.size()));
+
   // To avoid extra copy or using max size buffers we should get the size
   // first and allocate the right size buffer.
   int size = MultiByteToWideChar(
-      CP_UTF8, 0, multiBytePiece.data(), multiBytePiece.size(), nullptr, 0);
+      CP_UTF8, 0, multiBytePiece.data(), inputSize, nullptr, 0);
 
   if (size > 0) {
     std::wstring wideString(size, 0);
-    size = MultiByteToWideChar(
-        CP_UTF8,
-        0,
-        multiBytePiece.data(),
-        multiBytePiece.size(),
-        wideString.data(),
-        wideString.size());
-    if (size == wideString.size()) {
+    int resultSize = MultiByteToWideChar(
+        CP_UTF8, 0, multiBytePiece.data(), inputSize, wideString.data(), size);
+    if (size == resultSize) {
       return wideString;
     }
   }

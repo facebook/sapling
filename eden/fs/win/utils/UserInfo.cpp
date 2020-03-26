@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+#include <folly/Utility.h>
 #include "folly/portability/Windows.h"
 
 #include <Lmcons.h>
@@ -24,7 +25,7 @@ namespace facebook {
 namespace eden {
 
 UserInfo::UserInfo() : username_(UNLEN, 0) {
-  DWORD size = username_.size() + 1;
+  DWORD size = folly::to_narrow(username_.size() + 1);
   TokenHandle tokenHandle;
 
   if (!GetUserNameA(username_.data(), &size)) {

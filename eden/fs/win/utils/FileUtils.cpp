@@ -7,6 +7,7 @@
 
 #include "folly/portability/Windows.h"
 
+#include <folly/Utility.h>
 #include <folly/portability/IOVec.h>
 #include <filesystem>
 #include <iostream>
@@ -66,7 +67,8 @@ DWORD writeFileIov(HANDLE handle, const iovec* iov, int count) {
   DWORD written = 0;
 
   for (int i = 0; i < count; i++) {
-    written = writeFile(handle, iov[i].iov_base, iov[i].iov_len);
+    written =
+        writeFile(handle, iov[i].iov_base, folly::to_narrow(iov[i].iov_len));
     bytesWritten += written;
   }
 
@@ -95,7 +97,8 @@ void writeFile(const wchar_t* filePath, const folly::ByteRange data) {
   }
 
   if (!data.empty()) {
-    DWORD bytesWritten = writeFile(fileHandle.get(), data.data(), data.size());
+    DWORD bytesWritten =
+        writeFile(fileHandle.get(), data.data(), folly::to_narrow(data.size()));
     if (bytesWritten != data.size()) {
       throw std::logic_error(folly::sformat(
           "Partial data written, size {}, written {}",
@@ -110,7 +113,7 @@ void writeFileAtomic(const wchar_t* filePath, const folly::ByteRange data) {
   auto parent = fullPath.parent_path();
   std::wstring tmpFile(MAX_PATH, 0);
 
-  DWORD retVal = GetTempFileName(parent.c_str(), L"TMP_", 0, tmpFile.data());
+  auto retVal = GetTempFileName(parent.c_str(), L"TMP_", 0, tmpFile.data());
 
   if (retVal == 0) {
     throw makeWin32ErrorExplicit(

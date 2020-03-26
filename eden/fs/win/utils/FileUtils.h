@@ -109,7 +109,7 @@ void readFile(
     bytesToRead = fileSize.QuadPart;
   }
   data.resize(bytesToRead, 0);
-  DWORD readBytes = readFile(fileHandle.get(), data.data(), bytesToRead);
+  auto readBytes = readFile(fileHandle.get(), data.data(), bytesToRead);
 
   data.resize(readBytes);
 }

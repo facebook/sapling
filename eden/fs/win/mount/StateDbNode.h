@@ -6,6 +6,7 @@
  */
 
 #pragma once
+#include <folly/Utility.h>
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/win/mount/StateDirectoryEntry.h"
 #include "eden/fs/win/store/WinStore.h"
@@ -91,7 +92,10 @@ class StateDbNode {
       if (hasHash) {
         Hash::Storage hashBuffer;
         tree_.getBinary(
-            kHashValue, hashBuffer.data(), hashBuffer.size(), entry.c_str());
+            kHashValue,
+            hashBuffer.data(),
+            folly::to_narrow(hashBuffer.size()),
+            entry.c_str());
         dirEntries.emplace_back(path_, entry, info, Hash{hashBuffer});
       } else {
         dirEntries.emplace_back(path_, entry, info);
@@ -102,7 +106,11 @@ class StateDbNode {
 
   [[nodiscard]] Hash getHash() const {
     Hash::Storage hashBuffer;
-    tree_.getBinary(kHashValue, hashBuffer.data(), hashBuffer.size(), nullptr);
+    tree_.getBinary(
+        kHashValue,
+        hashBuffer.data(),
+        folly::to_narrow(hashBuffer.size()),
+        nullptr);
     return Hash{hashBuffer};
   }
 

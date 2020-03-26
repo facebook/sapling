@@ -230,7 +230,7 @@ class HgImporter : public Importer {
    */
   [[noreturn]] void readErrorAndThrow(const ChunkHeader& header);
 
-  void readFromHelper(void* buf, size_t size, folly::StringPiece context);
+  void readFromHelper(void* buf, uint32_t size, folly::StringPiece context);
   void
   writeToHelper(struct iovec* iov, size_t numIov, folly::StringPiece context);
   template <size_t N>

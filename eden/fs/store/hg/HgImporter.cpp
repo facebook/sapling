@@ -11,6 +11,7 @@
 #include <boost/filesystem/path.hpp>
 #include <folly/Conv.h>
 #include <folly/FileUtil.h>
+#include <folly/Utility.h>
 #include <folly/container/Array.h>
 #include <folly/dynamic.h>
 #include <folly/experimental/EnvUtil.h>
@@ -205,9 +206,9 @@ HgImporter::HgImporter(
   }
 
   cmd.push_back("--out-fd");
-  cmd.push_back(folly::to<string>((int)childOutPipe->writeHandle));
+  cmd.push_back(folly::to<string>((intptr_t)childOutPipe->writeHandle));
   cmd.push_back("--in-fd");
-  cmd.push_back(folly::to<string>((int)childInPipe->readHandle));
+  cmd.push_back(folly::to<string>((intptr_t)childInPipe->readHandle));
 
   helper_.createSubprocess(
       cmd,
@@ -426,7 +427,7 @@ Hash HgImporter::resolveManifestNode(folly::StringPiece revName) {
   Hash::Storage buffer;
   readFromHelper(
       buffer.data(),
-      buffer.size(),
+      folly::to_narrow(buffer.size()),
       "CMD_MANIFEST_NODE_FOR_COMMIT response body");
   return Hash(buffer);
 }
@@ -435,7 +436,7 @@ HgImporter::ChunkHeader HgImporter::readChunkHeader(
     TransactionID txnID,
     StringPiece cmdName) {
   ChunkHeader header;
-  readFromHelper(&header, sizeof(header), "response header");
+  readFromHelper(&header, folly::to_narrow(sizeof(header)), "response header");
 
   header.requestID = Endian::big(header.requestID);
   header.command = Endian::big(header.command);
@@ -491,7 +492,7 @@ HgImporter::TransactionID HgImporter::sendManifestRequest(
   header.command = Endian::big<uint32_t>(CMD_MANIFEST);
   header.requestID = Endian::big<uint32_t>(txnID);
   header.flags = 0;
-  header.dataLength = Endian::big<uint32_t>(revName.size());
+  header.dataLength = Endian::big<uint32_t>(folly::to_narrow(revName.size()));
 
   std::array<struct iovec, 2> iov;
   iov[0].iov_base = &header;
@@ -513,7 +514,7 @@ HgImporter::TransactionID HgImporter::sendManifestNodeRequest(
   header.command = Endian::big<uint32_t>(CMD_MANIFEST_NODE_FOR_COMMIT);
   header.requestID = Endian::big<uint32_t>(txnID);
   header.flags = 0;
-  header.dataLength = Endian::big<uint32_t>(revName.size());
+  header.dataLength = Endian::big<uint32_t>(folly::to_narrow(revName.size()));
 
   std::array<struct iovec, 2> iov;
   iov[0].iov_base = &header;
@@ -536,7 +537,8 @@ HgImporter::TransactionID HgImporter::sendFileRequest(
   header.requestID = Endian::big<uint32_t>(txnID);
   header.flags = 0;
   StringPiece pathStr = path.stringPiece();
-  header.dataLength = Endian::big<uint32_t>(Hash::RAW_SIZE + pathStr.size());
+  header.dataLength =
+      Endian::big<uint32_t>(folly::to_narrow(Hash::RAW_SIZE + pathStr.size()));
 
   std::array<struct iovec, 3> iov;
   iov[0].iov_base = &header;
@@ -570,7 +572,7 @@ HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
     throw std::runtime_error(
         folly::to<string>("prefetch files request is too large: ", dataLength));
   }
-  header.dataLength = Endian::big<uint32_t>(dataLength);
+  header.dataLength = Endian::big<uint32_t>(folly::to_narrow(dataLength));
 
   // Serialize the body.
   // We serialize all of the filename lengths first, then all of the strings and
@@ -581,10 +583,10 @@ HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
   // them.
   IOBuf buf(IOBuf::CREATE, dataLength);
   Appender appender(&buf, 0);
-  appender.writeBE<uint32_t>(files.size());
+  appender.writeBE<uint32_t>(folly::to_narrow(files.size()));
   for (const auto& pair : files) {
     auto fileName = pair.first.stringPiece();
-    appender.writeBE<uint32_t>(fileName.size());
+    appender.writeBE<uint32_t>(folly::to_narrow(fileName.size()));
   }
   for (const auto& pair : files) {
     auto fileName = pair.first.stringPiece();
@@ -617,7 +619,8 @@ HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
   header.requestID = Endian::big<uint32_t>(txnID);
   header.flags = 0;
   StringPiece pathStr = path.stringPiece();
-  header.dataLength = Endian::big<uint32_t>(Hash::RAW_SIZE + pathStr.size());
+  header.dataLength =
+      Endian::big<uint32_t>(folly::to_narrow(Hash::RAW_SIZE + pathStr.size()));
 
   std::array<struct iovec, 3> iov;
   iov[0].iov_base = &header;
@@ -631,7 +634,7 @@ HgImporter::TransactionID HgImporter::sendFetchTreeRequest(
   return txnID;
 }
 
-void HgImporter::readFromHelper(void* buf, size_t size, StringPiece context) {
+void HgImporter::readFromHelper(void* buf, uint32_t size, StringPiece context) {
   size_t bytesRead;
 
 #ifdef _WIN32
@@ -680,7 +683,8 @@ void HgImporter::writeToHelper(
     StringPiece context) {
 #ifdef _WIN32
   try {
-    auto result = Pipe::writeiov(helperIn_, iov, numIov);
+    auto result = Pipe::writeiov(
+        helperIn_, iov, folly::to_narrow(folly::to_signed(numIov)));
   } catch (const std::exception& ex) {
     // The Pipe::read() code can throw std::system_error.  Translate this to
     // HgImporterError so that the higher-level code will retry on this error.
