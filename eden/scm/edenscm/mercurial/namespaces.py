@@ -11,7 +11,9 @@
 from __future__ import absolute_import
 
 from . import error, pycompat, registrar, templatekw, util
+from .bookmarks import _trackaccessedbookmarks, splitremotename, updateaccessedbookmarks
 from .i18n import _
+from .node import hex
 
 
 namespacetable = util.sortdict()
@@ -60,6 +62,60 @@ def branches(repo):
         nodemap=bnodemap,
         builtin=True,
     )
+
+
+@builtinnamespace("remotebookmarks", priority=55)
+def remotebookmarks(repo):
+    namemap = lambda repo, name: repo._remotenames.mark2nodes().get(name, [])
+
+    def accessed(repo, name):
+        if _trackaccessedbookmarks(repo.ui):
+            nodes = namemap(repo, name)
+            if nodes:
+                rnode = hex(nodes[0])
+                remote, rname = splitremotename(name)
+                updateaccessedbookmarks(repo, remote, {rname: rnode})
+
+    return namespace(
+        templatename="remotebookmarks",
+        logname="bookmark",
+        colorname="remotebookmark",
+        listnames=lambda repo: repo._remotenames.mark2nodes().keys(),
+        namemap=namemap,
+        nodemap=lambda repo, node: repo._remotenames.node2marks().get(node, []),
+        builtin=True,
+        accessed=accessed,
+    )
+
+
+@builtinnamespace("hoistednames", priority=60)
+def hoistednames(repo):
+    hoist = repo.ui.config("remotenames", "hoist")
+    # hoisting only works if there are remote bookmarks
+    if hoist:
+        namemap = lambda repo, name: repo._remotenames.hoist2nodes(hoist).get(name, [])
+
+        def accessed(repo, name):
+            if _trackaccessedbookmarks(repo.ui):
+                nodes = namemap(repo, name)
+                if nodes:
+                    rnode = hex(nodes[0])
+                    updateaccessedbookmarks(repo, hoist, {name: rnode})
+
+        return namespace(
+            templatename="hoistednames",
+            logname="hoistedname",
+            colorname="hoistedname",
+            listnames=lambda repo: repo._remotenames.hoist2nodes(hoist).keys(),
+            namemap=namemap,
+            nodemap=lambda repo, node: repo._remotenames.node2hoists(hoist).get(
+                node, []
+            ),
+            builtin=True,
+            accessed=accessed,
+        )
+    else:
+        return None
 
 
 class namespaces(object):

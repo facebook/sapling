@@ -6,6 +6,7 @@
 
 from edenscm.mercurial import (
     ancestor,
+    bookmarks,
     changelog,
     context,
     manifest,
@@ -537,3 +538,9 @@ class overlayrepo(object):
             elif ref.startswith("refs/tags/"):
                 tagname = ref[10:]
                 self.tagmap.setdefault(bin(refs[ref]), []).append(tagname)
+
+    @util.propertycache
+    def _remotenames(self):
+        remotenames = bookmarks.remotenames(self)
+        remotenames["bookmarks"] = {}
+        return remotenames

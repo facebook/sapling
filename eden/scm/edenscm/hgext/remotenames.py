@@ -42,7 +42,6 @@ from edenscm.mercurial import (
     localrepo,
     lock as lockmod,
     mutation,
-    namespaces,
     obsutil,
     pycompat,
     registrar,
@@ -60,12 +59,18 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.bookmarks import (
     _readremotenamesfrom,
+    _selectivepullaccessedbookmarks,
+    _selectivepullaccessedbookmarkslock,
+    _selectivepullenabledfile,
+    _selectivepullenabledfilelock,
+    _trackaccessedbookmarks,
     _writesingleremotename,
     joinremotename,
     journalremotebookmarktype,
     readremotenames,
     saveremotenames,
     splitremotename,
+    updateaccessedbookmarks,
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, short
@@ -109,17 +114,8 @@ configitem("remotenames", "upstream", default=[])
 # always update remote bookmarks! The config option exists for testing purpose.
 configitem("remotenames", "racy-pull-on-push", default=True)
 
-namespacepredicate = registrar.namespacepredicate()
 templatekeyword = registrar.templatekeyword()
 revsetpredicate = registrar.revsetpredicate()
-
-# name of the file that is used to mark that transition to selectivepull has
-# happened
-_selectivepullenabledfile = "selectivepullenabled"
-_selectivepullenabledfilelock = "selectivepullenabled.lock"
-_selectivepullaccessedbookmarks = "selectivepullaccessedbookmarks"
-# separate lock to update accessed bookmarks
-_selectivepullaccessedbookmarkslock = "selectivepullaccessedbookmarks.lock"
 
 
 def exbookcalcupdate(orig, ui, repo, checkout):
@@ -177,10 +173,6 @@ def expushop(
 
 def _isselectivepull(ui):
     return ui.configbool("remotenames", "selectivepull")
-
-
-def _trackaccessedbookmarks(ui):
-    return ui.configbool("remotenames", "selectivepullaccessedbookmarks")
 
 
 def _readisselectivepullenabledfile(repo):
@@ -283,59 +275,6 @@ def _trypullremotebookmark(mayberemotebookmark, repo, ui):
 
 def _reportaccessedbookmarks(ui, accessedremotenames):
     ui.log("accessedremotenames", accessedremotenames_totalnum=len(accessedremotenames))
-
-
-def updateaccessedbookmarks(repo, remotepath, bookmarks):
-    if not _trackaccessedbookmarks(repo.ui):
-        return
-
-    # Are bookmarks already marked as accessed?
-    existing = set(
-        name
-        for _node, _nametype, oldremote, name in repo._accessedbookmarks
-        if oldremote == remotepath
-    )
-    newdata = set(bookmarks)
-    if existing.issuperset(newdata):
-        # If so, then skip updating the accessed file.
-        # Note: we ignore the "node" portion of the data since it's not
-        # actually used.
-        return
-
-    vfs = repo.sharedvfs
-
-    totalaccessednames = 0
-    with lockmod.lock(vfs, _selectivepullaccessedbookmarkslock):
-        knownbooks = _readremotenamesfrom(vfs, _selectivepullaccessedbookmarks)
-
-        with vfs(_selectivepullaccessedbookmarks, "w", atomictemp=True) as f:
-            newbookmarks = {}
-            for node, nametype, oldremote, rname in knownbooks:
-                if nametype != "bookmarks":
-                    continue
-
-                if oldremote != remotepath:
-                    totalaccessednames += 1
-                    _writesingleremotename(f, oldremote, nametype, rname, node)
-                else:
-                    newbookmarks[rname] = node
-
-            nodemap = repo.unfiltered().changelog.nodemap
-            for rname, node in pycompat.iteritems(bookmarks):
-                # if the node is known locally, update the old value or add new
-                if bin(node) in nodemap:
-                    newbookmarks[rname] = node
-
-            for rname, node in pycompat.iteritems(newbookmarks):
-                totalaccessednames += 1
-                _writesingleremotename(f, remotepath, "bookmarks", rname, node)
-
-        repo._accessedbookmarks = list(
-            _readremotenamesfrom(repo.sharedvfs, _selectivepullaccessedbookmarks)
-        )
-
-    # log the number of accessed bookmarks currently tracked
-    repo.ui.log("accessedremotenames", accessedremotenames_totalnum=totalaccessednames)
 
 
 def expull(orig, repo, remote, heads=None, force=False, **kwargs):
@@ -617,61 +556,6 @@ def updatecmd(orig, ui, repo, node=None, rev=None, **kwargs):
     if "bookmark" in kwargs:
         del kwargs["bookmark"]
     return orig(ui, repo, node=node, rev=rev, **kwargs)
-
-
-@namespacepredicate("remotebookmarks", priority=55)
-def remotebookmarks(repo):
-    if repo.ui.configbool("remotenames", "bookmarks"):
-        namemap = lambda repo, name: repo._remotenames.mark2nodes().get(name, [])
-
-        def accessed(repo, name):
-            if _trackaccessedbookmarks(repo.ui):
-                nodes = namemap(repo, name)
-                if nodes:
-                    rnode = hex(nodes[0])
-                    remote, rname = splitremotename(name)
-                    updateaccessedbookmarks(repo, remote, {rname: rnode})
-
-        return namespaces.namespace(
-            templatename="remotebookmarks",
-            logname="bookmark",
-            colorname="remotebookmark",
-            listnames=lambda repo: repo._remotenames.mark2nodes().keys(),
-            namemap=namemap,
-            nodemap=lambda repo, node: repo._remotenames.node2marks().get(node, []),
-            accessed=accessed,
-        )
-    else:
-        return None
-
-
-@namespacepredicate("hoistednames", priority=60)
-def hoistednames(repo):
-    hoist = repo.ui.config("remotenames", "hoist")
-    # hoisting only works if there are remote bookmarks
-    if repo.ui.configbool("remotenames", "bookmarks") and hoist:
-        namemap = lambda repo, name: repo._remotenames.hoist2nodes(hoist).get(name, [])
-
-        def accessed(repo, name):
-            if _trackaccessedbookmarks(repo.ui):
-                nodes = namemap(repo, name)
-                if nodes:
-                    rnode = hex(nodes[0])
-                    updateaccessedbookmarks(repo, hoist, {name: rnode})
-
-        return namespaces.namespace(
-            templatename="hoistednames",
-            logname="hoistedname",
-            colorname="hoistedname",
-            listnames=lambda repo: repo._remotenames.hoist2nodes(hoist).keys(),
-            namemap=namemap,
-            nodemap=lambda repo, node: repo._remotenames.node2hoists(hoist).get(
-                node, []
-            ),
-            accessed=accessed,
-        )
-    else:
-        return None
 
 
 def reposetup(ui, repo):

@@ -41,6 +41,14 @@ activebookmarklabel = "bookmarks.active bookmarks.current"
 # namespace to use when recording an hg journal entry
 journalremotebookmarktype = "remotebookmark"
 
+# name of the file that is used to mark that transition to selectivepull has
+# happened
+_selectivepullenabledfile = "selectivepullenabled"
+_selectivepullenabledfilelock = "selectivepullenabled.lock"
+_selectivepullaccessedbookmarks = "selectivepullaccessedbookmarks"
+# separate lock to update accessed bookmarks
+_selectivepullaccessedbookmarkslock = "selectivepullaccessedbookmarks.lock"
+
 
 def _getbkfile(repo):
     """Hook so that extensions that mess with the store can hook bm storage.
@@ -1301,3 +1309,60 @@ def splitremotename(remote):
     if "/" in remote:
         remote, name = remote.split("/", 1)
     return remote, name
+
+
+def _trackaccessedbookmarks(ui):
+    return ui.configbool("remotenames", "selectivepullaccessedbookmarks")
+
+
+def updateaccessedbookmarks(repo, remotepath, bookmarks):
+    if not _trackaccessedbookmarks(repo.ui):
+        return
+
+    # Are bookmarks already marked as accessed?
+    existing = set(
+        name
+        for _node, _nametype, oldremote, name in repo._accessedbookmarks
+        if oldremote == remotepath
+    )
+    newdata = set(bookmarks)
+    if existing.issuperset(newdata):
+        # If so, then skip updating the accessed file.
+        # Note: we ignore the "node" portion of the data since it's not
+        # actually used.
+        return
+
+    vfs = repo.sharedvfs
+
+    totalaccessednames = 0
+    with lockmod.lock(vfs, _selectivepullaccessedbookmarkslock):
+        knownbooks = _readremotenamesfrom(vfs, _selectivepullaccessedbookmarks)
+
+        with vfs(_selectivepullaccessedbookmarks, "w", atomictemp=True) as f:
+            newbookmarks = {}
+            for node, nametype, oldremote, rname in knownbooks:
+                if nametype != "bookmarks":
+                    continue
+
+                if oldremote != remotepath:
+                    totalaccessednames += 1
+                    _writesingleremotename(f, oldremote, nametype, rname, node)
+                else:
+                    newbookmarks[rname] = node
+
+            nodemap = repo.unfiltered().changelog.nodemap
+            for rname, node in pycompat.iteritems(bookmarks):
+                # if the node is known locally, update the old value or add new
+                if bin(node) in nodemap:
+                    newbookmarks[rname] = node
+
+            for rname, node in pycompat.iteritems(newbookmarks):
+                totalaccessednames += 1
+                _writesingleremotename(f, remotepath, "bookmarks", rname, node)
+
+        repo._accessedbookmarks = list(
+            _readremotenamesfrom(repo.sharedvfs, _selectivepullaccessedbookmarks)
+        )
+
+    # log the number of accessed bookmarks currently tracked
+    repo.ui.log("accessedremotenames", accessedremotenames_totalnum=totalaccessednames)

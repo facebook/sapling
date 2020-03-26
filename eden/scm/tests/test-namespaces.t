@@ -18,7 +18,7 @@ Test namespace registration using registrar
   > EOF
 
   $ hg debugshell -c "ui.write('%s\n' % str(list(repo.names)))"
-  ['bookmarks', 'branches', 'c', 'a']
+  ['bookmarks', 'branches', 'c', 'remotebookmarks', 'a']
 
   $ newext << EOF
   > from edenscm.mercurial import registrar, namespaces
@@ -31,7 +31,7 @@ Test namespace registration using registrar
   >     return namespaces.namespace()
   > EOF
   $ hg debugshell -c "ui.write('%s\n' % str(list(repo.names)))"
-  ['bookmarks', 'd', 'branches', 'c', 'a', 'z']
+  ['bookmarks', 'd', 'branches', 'c', 'remotebookmarks', 'a', 'z']
 
 Test that not specifying the priority will result in failure to load the
 extension.

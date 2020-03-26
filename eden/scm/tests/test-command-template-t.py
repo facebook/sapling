@@ -3556,6 +3556,8 @@ sh % 'hg --config "extensions.revnamesext=$TESTDIR/revnamesext.py" log -T \'{rev
       bar,foo,text.{rev}
      branches color=branch builtin=True
       default
+     remotebookmarks color=remotebookmark builtin=True
+      
      revnames color=revname builtin=False
       r2
 
@@ -3564,6 +3566,8 @@ sh % 'hg --config "extensions.revnamesext=$TESTDIR/revnamesext.py" log -T \'{rev
       baz
      branches color=branch builtin=True
       default
+     remotebookmarks color=remotebookmark builtin=True
+      
      revnames color=revname builtin=False
       r1
 
@@ -3572,6 +3576,8 @@ sh % 'hg --config "extensions.revnamesext=$TESTDIR/revnamesext.py" log -T \'{rev
       
      branches color=branch builtin=True
       default
+     remotebookmarks color=remotebookmark builtin=True
+      
      revnames color=revname builtin=False
       r0"""
 
@@ -3582,14 +3588,16 @@ del namespaces.namespacetable["revnames"]
 
 sh % "hg log -r2 -T '{namespaces % \"{namespace}: {names}\\n\"}'" == r"""
     bookmarks: bar foo text.{rev}
-    branches: default"""
+    branches: default
+    remotebookmarks:"""
 sh % 'hg log -r2 -T \'{namespaces % "{namespace}:\\n{names % " {name}\\n"}"}\'' == r"""
     bookmarks:
      bar
      foo
      text.{rev}
     branches:
-     default"""
+     default
+    remotebookmarks:"""
 sh % 'hg log -r2 -T \'{get(namespaces, "bookmarks") % "{name}\\n"}\'' == r"""
     bar
     foo
