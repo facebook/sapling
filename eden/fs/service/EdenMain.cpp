@@ -8,6 +8,7 @@
 #include "eden/fs/service/EdenMain.h"
 
 #include <fb303/FollyLoggingHandler.h>
+#include <fb303/TFunctionStatHandler.h>
 #include <folly/Conv.h>
 #include <folly/ScopeGuard.h>
 #include <folly/experimental/FunctionScheduler.h>
@@ -29,6 +30,7 @@
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/EdenServer.h"
+#include "eden/fs/service/EdenServiceHandler.h" // for kServiceName
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/Systemd.h"
 #include "eden/fs/telemetry/SessionInfo.h"
@@ -93,15 +95,17 @@ std::string EdenMain::getLocalHostname() {
 }
 
 void EdenMain::runServer(const EdenServer& server) {
-  fb303::registerFollyLoggingOptionHandlers();
-
   // ThriftServer::serve() will drive the current thread's EventBase.
   // Verify that we are being called from the expected thread, and will end up
   // driving the EventBase returned by EdenServer::getMainEventBase().
   CHECK_EQ(
       server.getMainEventBase(),
       folly::EventBaseManager::get()->getEventBase());
-  server.getServer()->serve();
+
+  fb303::registerFollyLoggingOptionHandlers();
+  fb303::withThriftFunctionStats(kServiceName, server.getHandler().get(), [&] {
+    server.getServer()->serve();
+  });
 }
 
 int EdenMain::main(int argc, char** argv) {
