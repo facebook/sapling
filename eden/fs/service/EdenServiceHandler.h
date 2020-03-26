@@ -25,6 +25,8 @@ class EdenMount;
 class EdenServer;
 class TreeInode;
 
+extern const char* const kServiceName;
+
 /*
  * Handler for the EdenService thrift interface
  */

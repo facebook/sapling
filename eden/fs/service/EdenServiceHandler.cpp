@@ -254,10 +254,12 @@ facebook::eden::InodePtr inodeFromUserPath(
 namespace facebook {
 namespace eden {
 
+const char* const kServiceName = "EdenFS";
+
 EdenServiceHandler::EdenServiceHandler(
     std::vector<std::string> originalCommandLine,
     EdenServer* server)
-    : BaseService{"Eden"},
+    : BaseService{kServiceName},
       originalCommandLine_{std::move(originalCommandLine)},
       server_{server} {
 #ifndef _WIN32
