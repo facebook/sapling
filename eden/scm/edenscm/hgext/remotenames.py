@@ -68,6 +68,7 @@ from edenscm.mercurial.bookmarks import (
     journalremotebookmarktype,
     readremotenames,
     saveremotenames,
+    selectivepullbookmarknames,
     splitremotename,
     updateaccessedbookmarks,
 )
@@ -101,7 +102,6 @@ configitem("remotenames", "pushanonheads", default=False)
 configitem("remotenames", "pushrev", default=None)
 configitem("remotenames", "resolvenodes", default=True)
 configitem("remotenames", "selectivepull", default=False)
-configitem("remotenames", "selectivepulldefault", default=[])
 configitem("remotenames", "selectivepullaccessedbookmarks", default=False)
 configitem("remotenames", "syncbookmarks", default=False)
 configitem("remotenames", "tracking", default=True)
@@ -137,7 +137,7 @@ def expush(orig, repo, remote, *args, **kwargs):
         res = orig(repo, remote, *args, **kwargs)
 
         if _isselectivepull(repo.ui):
-            remotebookmarkskeys = _getselectivepullinitbookmarks(repo, remote)
+            remotebookmarkskeys = selectivepullbookmarknames(repo, remote)
             remotebookmarks = _listremotebookmarks(remote, remotebookmarkskeys)
         else:
             remotebookmarks = remote.listkeys("bookmarks")
@@ -208,36 +208,6 @@ def _disableselectivepull(repo):
             vfs.unlink(_selectivepullenabledfile)
 
 
-def _getselectivepulldefaultbookmarks(ui):
-    return ui.configlist("remotenames", "selectivepulldefault")
-
-
-def _getselectivepullinitbookmarks(repo, remote):
-    initbooks = set(_getselectivepulldefaultbookmarks(repo.ui))
-
-    vfs = repo.sharedvfs
-    try:
-        accessedbooks = _readremotenamesfrom(vfs, _selectivepullaccessedbookmarks)
-    except error.CorruptedState:
-        # if the file is corrupted, let's remove it
-        repo.ui.warn(
-            _(
-                "'selectivepullaccessedbookmarks' file was corrupted, removing it and proceeding further\n"
-            )
-        )
-        with lockmod.lock(vfs, _selectivepullaccessedbookmarkslock):
-            vfs.unlink(_selectivepullaccessedbookmarks)
-
-    for node, nametype, remotepath, name in accessedbooks:
-        if nametype == "bookmarks" and remotepath == remote:
-            initbooks.add(name)
-
-    if not initbooks:
-        raise error.Abort(_("no bookmarks to subscribe specified for selectivepull"))
-
-    return initbooks
-
-
 def _listremotebookmarks(remote, bookmarks):
     remotebookmarks = remote.listkeys("bookmarks")
     result = {}
@@ -295,7 +265,7 @@ def _expull(orig, repo, remote, heads=None, force=False, **kwargs):
         # "hg update REMOTE_BOOK_NAME" or "hg pull -B REMOTE_BOOK_NAME".
         # Selectivepull is helpful when server has too many remote bookmarks
         # because it may slow down clients.
-        remotebookmarkslist = list(_getselectivepullinitbookmarks(repo, path))
+        remotebookmarkslist = list(selectivepullbookmarknames(repo, path))
 
         if kwargs.get("bookmarks"):
             remotebookmarkslist.extend(kwargs["bookmarks"])
@@ -455,7 +425,7 @@ def exclone(orig, ui, *args, **opts):
     repo = dstpeer.local()
     with repo.wlock(), repo.lock(), repo.transaction("exclone") as tr:
         if _isselectivepull(ui):
-            remotebookmarkskeys = _getselectivepullinitbookmarks(repo, srcpeer)
+            remotebookmarkskeys = selectivepullbookmarknames(repo, srcpeer)
             remotebookmarks = _listremotebookmarks(srcpeer, remotebookmarkskeys)
         else:
             remotebookmarks = srcpeer.listkeys("bookmarks")

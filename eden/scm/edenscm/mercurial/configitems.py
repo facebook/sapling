@@ -589,3 +589,5 @@ coreconfigitem("rebase", "experimental.inmemory", default=False)
 
 # Remote names.
 coreconfigitem("remotenames", "important-names", default=["master"])
+coreconfigitem("remotenames", "selectivepulldefault", default=["master"])
+coreconfigitem("remotenames", "autopullprefix", default=["remote/", "default/"])
