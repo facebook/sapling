@@ -84,14 +84,13 @@ Test transition bookmark deletion
 
 Test message
   $ hg dbsh -c 'with repo.lock(), repo.transaction("tr"): repo.svfs.writeutf8("remotenames","")'
+  $ hg book -ir tip master
   $ readglobalconfig <<EOF
   > [remotenames]
   > transitionmessage = Test transition message
   >                     with newline
   > EOF
   $ hg pull -q
-  Test transition message
-  with newline
   Test transition message
   with newline
 

@@ -906,6 +906,10 @@ class localrepository(object):
     def _bookmarks(self):
         return bookmarks.bmstore(self)
 
+    @repofilecache(sharedpaths=["store/remotenames"])
+    def _remotenames(self):
+        return bookmarks.remotenames(self)
+
     @property
     def _activebookmark(self):
         return self._bookmarks.active

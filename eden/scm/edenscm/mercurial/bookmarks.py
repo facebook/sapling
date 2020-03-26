@@ -28,7 +28,7 @@ from . import (
     util,
 )
 from .i18n import _
-from .node import bin, hex, short, wdirid
+from .node import bin, hex, nullid, short, wdirid
 from .pycompat import decodeutf8, encodeutf8
 
 
@@ -37,6 +37,9 @@ from .pycompat import decodeutf8, encodeutf8
 # bookmarks.active, so we must use both to avoid breaking old
 # custom styles
 activebookmarklabel = "bookmarks.active bookmarks.current"
+
+# namespace to use when recording an hg journal entry
+journalremotebookmarktype = "remotebookmark"
 
 
 def _getbkfile(repo):
@@ -964,3 +967,337 @@ def reachablerevs(repo, bookmarks):
     ]
 
     return repo.revs("(%ln) %% (head() - (%ln) + (%ln))", nodes, nodes, othernodes)
+
+
+class remotenames(dict):
+    """This class encapsulates all the remotenames state. It also contains
+    methods to access that state in convenient ways. Remotenames are lazy
+    loaded. Whenever client code needs to ensure the freshest copy of
+    remotenames, use the `clearnames` method to force an eventual load.
+    """
+
+    def __init__(self, repo, *args):
+        dict.__init__(self, *args)
+        self._repo = repo
+        self.clearnames()
+
+    def clearnames(self):
+        """Clear all remote names state"""
+        self["bookmarks"] = lazyremotenamedict("bookmarks", self._repo)
+        self._invalidatecache()
+        self._loadednames = False
+
+    def _invalidatecache(self):
+        self._node2marks = None
+        self._hoist2nodes = None
+        self._node2hoists = None
+        self._node2branch = None
+
+    def applychanges(self, changes):
+        # Only supported for bookmarks
+        bmchanges = changes.get("bookmarks", {})
+        remotepathbooks = {}
+        for remotename, node in pycompat.iteritems(bmchanges):
+            path, name = splitremotename(remotename)
+            remotepathbooks.setdefault(path, {})[name] = node
+
+        saveremotenames(self._repo, remotepathbooks)
+
+    def mark2nodes(self):
+        return self["bookmarks"]
+
+    def node2marks(self):
+        if not self._node2marks:
+            mark2nodes = self.mark2nodes()
+            self._node2marks = {}
+            for name, node in pycompat.iteritems(mark2nodes):
+                self._node2marks.setdefault(node[0], []).append(name)
+        return self._node2marks
+
+    def hoist2nodes(self, hoist):
+        if not self._hoist2nodes:
+            mark2nodes = self.mark2nodes()
+            self._hoist2nodes = {}
+            hoist += "/"
+            for name, node in pycompat.iteritems(mark2nodes):
+                if name.startswith(hoist):
+                    name = name[len(hoist) :]
+                    self._hoist2nodes[name] = node
+        return self._hoist2nodes
+
+    def node2hoists(self, hoist):
+        if not self._node2hoists:
+            mark2nodes = self.mark2nodes()
+            self._node2hoists = {}
+            hoist += "/"
+            for name, node in pycompat.iteritems(mark2nodes):
+                if name.startswith(hoist):
+                    name = name[len(hoist) :]
+                    self._node2hoists.setdefault(node[0], []).append(name)
+        return self._node2hoists
+
+
+def saveremotenames(repo, remotebookmarks, override=True):
+    """
+    remotebookmarks has the format {name: {name: hexnode | None}}.
+    For example: {"remote": {"master": "0" * 40}}
+
+    If override is False, update existing entries.
+    If override is True, bookmarks with the same "remote" name (ex. "remote")
+    will be replaced.
+    """
+    if not remotebookmarks:
+        return
+
+    from . import extensions
+
+    svfs = repo.svfs
+    with repo.wlock(), repo.lock():
+        if extensions.isenabled(repo.ui, "remotenames"):
+            transition(repo, repo.ui)
+
+        tr = repo.currenttransaction()
+        if tr is not None:
+            tr.addbackup("remotenames")
+
+        # read in all data first before opening file to write
+        olddata = set(readremotenames(repo))
+        oldbooks = {}
+
+        remotepaths = remotebookmarks.keys()
+        f = svfs("remotenames", "w", atomictemp=True)
+        for node, nametype, remote, rname in olddata:
+            if remote not in remotepaths:
+                _writesingleremotename(f, remote, nametype, rname, node)
+            elif nametype == "bookmarks":
+                oldbooks[(remote, rname)] = node
+                if not override and rname not in remotebookmarks[remote]:
+                    _writesingleremotename(f, remote, nametype, rname, node)
+
+        journal = []
+        nm = repo.unfiltered().changelog.nodemap
+        missingnode = False
+        for remote, rmbookmarks in pycompat.iteritems(remotebookmarks):
+            rmbookmarks = {} if rmbookmarks is None else rmbookmarks
+            for name, node in pycompat.iteritems(rmbookmarks):
+                oldnode = oldbooks.get((remote, name), hex(nullid))
+                newnode = node
+                if not bin(newnode) in nm:
+                    # node is unknown locally, don't change the bookmark
+                    missingnode = True
+                    newnode = oldnode
+                if newnode != hex(nullid):
+                    _writesingleremotename(f, remote, "bookmarks", name, newnode)
+                    if newnode != oldnode:
+                        journal.append(
+                            (joinremotename(remote, name), bin(oldnode), bin(newnode))
+                        )
+        repo.ui.log("remotenamesmissingnode", remotenamesmissingnode=str(missingnode))
+
+        _recordbookmarksupdate(repo, journal)
+        f.close()
+
+        # Old paths have been deleted, refresh remotenames
+        if util.safehasattr(repo, "_remotenames"):
+            repo._remotenames.clearnames()
+
+        # If narrowheads is enabled, updating remotenames can affect phases
+        # (and other revsets). Therefore invalidate them.
+        if "narrowheads" in repo.storerequirements:
+            repo.invalidatevolatilesets()
+
+
+class lazyremotenamedict(pycompat.Mapping):
+    """Read-only dict-like Class to lazily resolve remotename entries
+
+    We are doing that because remotenames startup was slow.
+    We lazily read the remotenames file once to figure out the potential entries
+    and store them in self.potentialentries. Then when asked to resolve an
+    entry, if it is not in self.potentialentries, then it isn't there, if it
+    is in self.potentialentries we resolve it and store the result in
+    self.cache. We cannot be lazy is when asked all the entries (keys).
+    """
+
+    def __init__(self, kind, repo):
+        self.cache = {}
+        self.potentialentries = {}
+        assert kind == "bookmarks"  # only support bookmarks
+        self._kind = kind
+        self._repo = repo
+        self.loaded = False
+
+    def _load(self):
+        """Read the remotenames file, store entries matching selected kind"""
+        self.loaded = True
+        repo = self._repo
+        alias_default = repo.ui.configbool("remotenames", "alias.default")
+        for node, nametype, remote, rname in readremotenames(repo):
+            if nametype != self._kind:
+                continue
+            # handle alias_default here
+            if remote != "default" and rname == "default" and alias_default:
+                name = remote
+            else:
+                name = joinremotename(remote, rname)
+            self.potentialentries[name] = (node, nametype, remote, rname)
+
+    def _resolvedata(self, potentialentry):
+        """Check that the node for potentialentry exists and return it"""
+        if not potentialentry in self.potentialentries:
+            return None
+        node, nametype, remote, rname = self.potentialentries[potentialentry]
+        repo = self._repo
+        binnode = bin(node)
+        # if the node doesn't exist, skip it
+        try:
+            repo.changelog.rev(binnode)
+        except LookupError:
+            return None
+        # Skip closed branches
+        if nametype == "branches" and repo[binnode].closesbranch():
+            return None
+        return [binnode]
+
+    def __getitem__(self, key):
+        if not self.loaded:
+            self._load()
+        val = self._fetchandcache(key)
+        if val is not None:
+            return val
+        else:
+            raise KeyError()
+
+    def _fetchandcache(self, key):
+        if key in self.cache:
+            return self.cache[key]
+        val = self._resolvedata(key)
+        if val is not None:
+            self.cache[key] = val
+            return val
+        else:
+            return None
+
+    def keys(self):
+        # type: () -> typing.AbstractSet[str]
+        """Get a list of bookmark names"""
+        if not self.loaded:
+            self._load()
+        return self.potentialentries.keys()
+
+    def iteritems(self):
+        """Iterate over (name, node) tuples"""
+        if not self.loaded:
+            self._load()
+        for k, vtup in pycompat.iteritems(self.potentialentries):
+            yield (k, [bin(vtup[0])])
+
+    def __iter__(self):
+        for k, v in self.iteritems():
+            yield k
+
+    def __len__(self):
+        return len(list(self.keys()))
+
+
+def transition(repo, ui):
+    """
+    Help with transitioning to using a remotenames workflow.
+
+    Allows deleting matching local bookmarks defined in a config file:
+
+    [remotenames]
+    transitionbookmarks = master
+        stable
+
+    TODO: Remove this once remotenames is default on everywhere.
+    """
+    transmarks = ui.configlist("remotenames", "transitionbookmarks")
+    localmarks = repo._bookmarks
+    changes = []
+    for mark in transmarks:
+        if mark in localmarks:
+            changes.append((mark, None))  # delete this bookmark
+    if changes:
+        with repo.lock(), repo.transaction("remotenames") as tr:
+            localmarks.applychanges(repo, tr, changes)
+
+        message = ui.config("remotenames", "transitionmessage")
+        if message:
+            ui.warn(message + "\n")
+
+
+def _writesingleremotename(fd, remote, nametype, name, node):
+    remotename = joinremotename(remote, name)
+    fd.write(pycompat.encodeutf8("%s %s %s\n" % (node, nametype, remotename)))
+
+
+def readremotenames(repo=None, svfs=None):
+    if repo is not None:
+        svfs = repo.svfs
+    else:
+        assert svfs is not None, "either repo or svfs should be set"
+    return _readremotenamesfrom(svfs, "remotenames")
+
+
+def _readremotenamesfrom(vfs, filename):
+    try:
+        fileobj = vfs(filename)
+    except EnvironmentError as er:
+        if er.errno != errno.ENOENT:
+            raise
+        return
+
+    with fileobj as f:
+        for line in f:
+            nametype = None
+            line = line.strip()
+            if not line:
+                continue
+            line = pycompat.decodeutf8(line)
+            nametype = None
+            remote, rname = None, None
+
+            try:
+                node, name = line.split(" ", 1)
+            except ValueError:
+                raise error.CorruptedState(
+                    _("corrupt entry in file %s: %s") % (filename, line)
+                )
+
+            # check for nametype being written into the file format
+            if " " in name:
+                try:
+                    nametype, name = name.split(" ", 1)
+                except ValueError:
+                    raise error.CorruptedState(
+                        _("corrupt entry in file %s: %s") % (filename, line)
+                    )
+
+            remote, rname = splitremotename(name)
+
+            # skip old data that didn't write the name (only wrote the alias)
+            if not rname:
+                continue
+
+            yield node, nametype, remote, rname
+
+
+def _recordbookmarksupdate(repo, changes):
+    """writes remotebookmarks changes to the journal
+
+    'changes' - is a list of tuples '(remotebookmark, oldnode, newnode)''"""
+    if util.safehasattr(repo, "journal"):
+        repo.journal.recordmany(journalremotebookmarktype, changes)
+
+
+def joinremotename(remote, ref):
+    if ref:
+        remote += "/" + ref
+    return remote
+
+
+def splitremotename(remote):
+    name = ""
+    if "/" in remote:
+        remote, name = remote.split("/", 1)
+    return remote, name

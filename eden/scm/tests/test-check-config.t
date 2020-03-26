@@ -117,7 +117,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotenames.hoist (str)
   undocumented: remotenames.pushanonheads (bool)
   undocumented: remotenames.pushrev (str)
-  undocumented: remotenames.resolvenodes (bool)
   undocumented: remotenames.selectivepull (bool)
   undocumented: remotenames.selectivepullaccessedbookmarks (bool)
   undocumented: remotenames.selectivepulldefault (list)
