@@ -1702,10 +1702,11 @@ def _pullbookmarks(pullop):
     repo = pullop.repo
     ui = repo.ui
 
-    # Update important remotenames (ex. remote/master) unconditionally.
+    # Update important remotenames (ex. remote/master) listed by selectivepull
+    # unconditionally.
     remotename = ui.paths.getname(pullop.remote.url())  # ex. 'default' or 'remote'
     if remotename is not None:
-        importantnames = ui.configlist("remotenames", "important-names")
+        importantnames = bookmod.selectivepullbookmarknames(repo, remotename)
         remotebookmarks = pullop.remotebookmarks
         newnames = {}  # ex. {"master": hexnode}
         for name in importantnames:
@@ -1714,9 +1715,7 @@ def _pullbookmarks(pullop):
                 # The remotenames.saveremotenames API wants hexnames.
                 newnames[name] = hex(node)
 
-        from ..hgext.remotenames import saveremotenames
-
-        saveremotenames(repo, {remotename: newnames}, override=False)
+        bookmod.saveremotenames(repo, {remotename: newnames}, override=False)
 
     # XXX: Ideally we update remotenames right here to avoid race
     # conditions. See racy-pull-on-push in remotenames.py.
