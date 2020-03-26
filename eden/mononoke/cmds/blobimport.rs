@@ -25,10 +25,8 @@ use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::{try_join3, FutureExt as _, TryFutureExt},
+    future::{try_join3, FutureExt, TryFutureExt},
 };
-use futures_ext::FutureExt;
-use futures_old::{future, Future, IntoFuture};
 use manifold::{ObjectMeta, PayloadDesc, StoredObject};
 use manifold_thrift::thrift::{self, manifold_thrift_new, RequestContext};
 use mercurial_revlog::revlog::RevIdx;
@@ -150,12 +148,12 @@ fn parse_fixed_parent_order<P: AsRef<Path>>(
     Ok(res)
 }
 
-fn update_manifold_key(
+async fn update_manifold_key(
     fb: FacebookInit,
     latest_imported_rev: RevIdx,
     manifold_key: String,
     manifold_bucket: String,
-) -> impl Future<Item = (), Error = Error> {
+) -> Result<(), Error> {
     let next_revision_to_import = latest_imported_rev.as_u32() + 1;
     let context = RequestContext {
         bucketName: manifold_bucket,
@@ -172,18 +170,13 @@ fn update_manifold_key(
         payload: PayloadDesc::from(bytes),
     });
 
-    manifold_thrift_new(fb)
-        .into_future()
-        .and_then(move |client| {
-            async move { thrift::write_chunked(&client, &context, &manifold_key, &object).await }
-                .boxed()
-                .compat()
-        })
+    let client = manifold_thrift_new(fb)?;
+    thrift::write_chunked(&client, &context, &manifold_key, &object).await
 }
 
 async fn run_blobimport<'a>(
     fb: FacebookInit,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     logger: &Logger,
     matches: &'a ArgMatches<'a>,
 ) -> Result<(), Error> {
@@ -293,11 +286,10 @@ async fn run_blobimport<'a>(
     let globalrevs_store = Arc::new(globalrevs_store);
     let synced_commit_mapping = Arc::new(synced_commit_mapping);
 
-    let ctx_ = ctx.clone(); // TODO clean this up in the next diff
     async move {
         let maybe_latest_imported_rev = blobimport_lib::Blobimport {
-            ctx: ctx_.clone(),
-            logger: ctx_.logger().clone(),
+            ctx: ctx.clone(),
+            logger: ctx.logger().clone(),
             blobrepo,
             revlogrepo_path,
             changeset,
@@ -320,28 +312,32 @@ async fn run_blobimport<'a>(
         .compat()
         .await?;
 
-        match maybe_latest_imported_rev {
-            Some(latest_imported_rev) => {
-                info!(
-                    ctx_.logger(),
-                    "latest imported revision {}",
-                    latest_imported_rev.as_u32()
-                );
-                if let Some((manifold_key, bucket)) = manifold_key_bucket {
-                    update_manifold_key(fb, latest_imported_rev, manifold_key, bucket).left_future()
-                } else {
-                    future::ok(()).right_future()
+        async move {
+            match maybe_latest_imported_rev {
+                Some(latest_imported_rev) => {
+                    info!(
+                        ctx.logger(),
+                        "latest imported revision {}",
+                        latest_imported_rev.as_u32()
+                    );
+                    if let Some((manifold_key, bucket)) = manifold_key_bucket {
+                        update_manifold_key(fb, latest_imported_rev, manifold_key, bucket).await
+                    } else {
+                        Ok(())
+                    }
+                }
+                None => {
+                    info!(ctx.logger(), "didn't import any commits");
+                    Ok(())
                 }
             }
-            None => {
-                info!(ctx_.logger(), "didn't import any commits");
-                future::ok(()).right_future()
-            }
         }
-        .compat()
         .await?;
+        upload_and_show_trace(ctx.clone())
+            .compat()
+            .map(|_| ())
+            .await;
 
-        upload_and_show_trace(ctx_).compat().map(|_| ()).await;
         Ok(())
     }
     .map_err({
@@ -361,10 +357,10 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     args::init_cachelib(fb, &matches, None);
     let logger = args::init_logging(fb, &matches);
-    let ctx = CoreContext::new_with_logger(fb, logger.clone());
+    let ctx = &CoreContext::new_with_logger(fb, logger.clone());
 
     block_execute(
-        run_blobimport(fb, ctx.clone(), &logger, &matches),
+        run_blobimport(fb, ctx, &logger, &matches),
         fb,
         "blobimport",
         &logger,
