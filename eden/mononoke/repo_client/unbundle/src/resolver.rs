@@ -378,11 +378,14 @@ fn resolve_push(
         .and_then({
             cloned!(resolver);
             move |(changegroup_id, bookmark_push, bundle2, uploaded_bonsais)| {
-                resolver
-                    .maybe_resolve_infinitepush_bookmarks(bundle2)
-                    .map(move |((), bundle2)| {
-                        (changegroup_id, bookmark_push, bundle2, uploaded_bonsais)
-                    })
+                async move {
+                    resolver.maybe_resolve_infinitepush_bookmarks(bundle2).await
+                }
+                .boxed()
+                .compat()
+                .map(move |((), bundle2)| {
+                    (changegroup_id, bookmark_push, bundle2, uploaded_bonsais)
+                })
             }
         })
         .and_then({
@@ -1085,26 +1088,29 @@ impl Bundle2Resolver {
 
     /// Parse b2xinfinitepushscratchbookmarks.
     /// This part is ignored, so just parse it and forget it
-    fn maybe_resolve_infinitepush_bookmarks(
+    async fn maybe_resolve_infinitepush_bookmarks(
         &self,
         bundle2: OldBoxStream<Bundle2Item, Error>,
-    ) -> OldBoxFuture<((), OldBoxStream<Bundle2Item, Error>), Error> {
-        next_item(bundle2)
-            .and_then(
-                move |(infinitepushbookmarks, bundle2)| match infinitepushbookmarks {
-                    Some(Bundle2Item::B2xInfinitepushBookmarks(_, bookmarks)) => {
-                        bookmarks.collect().map(|_| ((), bundle2)).boxify()
-                    }
-                    None => Ok(((), bundle2)).into_future().boxify(),
-                    _ => err(format_err!(
-                        "Expected B2xInfinitepushBookmarks or end of the stream"
-                    ))
-                    .boxify(),
-                },
-            )
-            .context("While resolving B2xInfinitepushBookmarks")
-            .from_err()
-            .boxify()
+    ) -> Result<((), OldBoxStream<Bundle2Item, Error>), Error> {
+        let (infinitepushbookmarks, bundle2): (
+            Option<Bundle2Item>,
+            OldBoxStream<Bundle2Item, Error>,
+        ) = next_item(bundle2).compat().await?;
+
+        let res: Result<_, Error> = match infinitepushbookmarks {
+            Some(Bundle2Item::B2xInfinitepushBookmarks(_, bookmarks)) => {
+                let _ = bookmarks.collect().boxify().compat().await?;
+                Ok(((), bundle2))
+            }
+            None => Ok(((), bundle2)),
+            _ => Err(format_err!(
+                "Expected B2xInfinitepushBookmarks or end of the stream"
+            )),
+        }
+        .context("While resolving B2xInfinitepushBookmarks")
+        .map_err(Error::from);
+
+        res
     }
 
     /// Takes parsed Changesets and scheduled for upload Filelogs and Manifests. The content of
