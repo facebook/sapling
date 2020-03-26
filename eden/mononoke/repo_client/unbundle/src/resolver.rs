@@ -12,7 +12,7 @@ use crate::errors::*;
 use crate::stats::*;
 use crate::upload_blobs::{upload_hg_blobs, UploadBlobsType, UploadableHgBlob};
 use crate::upload_changesets::upload_changeset;
-use anyhow::{bail, ensure, format_err, Error, Result};
+use anyhow::{bail, ensure, format_err, Context, Error, Result};
 use ascii::AsciiString;
 use blobrepo::{BlobRepo, ChangesetHandle};
 use blobstore::Storable;
@@ -24,6 +24,7 @@ use context::CoreContext;
 use core::fmt::Debug;
 use failure_ext::{Compat, FutureFailureErrorExt};
 use futures::future::try_join_all;
+use futures::stream;
 use futures_ext::{
     try_boxfuture as try_old_boxfuture, BoxFuture as OldBoxFuture, BoxStream as OldBoxStream,
     FutureExt as OldFutureExt, StreamExt as OldStreamExt,
@@ -31,7 +32,9 @@ use futures_ext::{
 use futures_old::future::{self as old_future, err, ok, Shared};
 use futures_old::stream as old_stream;
 use futures_old::{Future as OldFuture, IntoFuture, Stream as OldStream};
-use futures_util::{compat::Future01CompatExt, try_join, FutureExt, TryFutureExt};
+use futures_util::{
+    compat::Future01CompatExt, try_join, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
+};
 use hooks::{HookExecution, HookOutcome};
 use lazy_static::lazy_static;
 use limits::types::RateLimit;
@@ -355,14 +358,18 @@ fn resolve_push(
             move |(cg_and_manifests, bookmark_push, bundle2)| {
                 if let Some((cg_push, manifests)) = cg_and_manifests {
                     let changegroup_id = Some(cg_push.part_id);
-                    resolver
-                        .upload_changesets(ctx, cg_push, manifests)
-                        .map(move |(uploaded_bonsais, _uploaded_hg_changesets)| {
-                            // Note: we do not care about `_uploaded_hg_changesets`, as we currently
-                            // do not run hooks on pure pushes. This probably has to be changed later.
-                            (changegroup_id, bookmark_push, bundle2, uploaded_bonsais)
-                        })
-                        .boxify()
+                    async move {
+                        resolver
+                            .upload_changesets(ctx, cg_push, manifests).await
+                    }
+                    .boxed()
+                    .compat()
+                    .map(move |(uploaded_bonsais, _uploaded_hg_changesets)| {
+                        // Note: we do not care about `_uploaded_hg_changesets`, as we currently
+                        // do not run hooks on pure pushes. This probably has to be changed later.
+                        (changegroup_id, bookmark_push, bundle2, uploaded_bonsais)
+                    })
+                    .boxify()
                 } else {
                     ok((None, bookmark_push, bundle2, UploadedBonsais::new())).boxify()
                 }
@@ -510,12 +517,16 @@ fn resolve_pushrebase(
                         }
                     }
                 }
-                resolver
-                    .upload_changesets(
-                        ctx,
-                        cg_push,
-                        manifests,
-                    )
+                async move {
+                    resolver
+                        .upload_changesets(
+                            ctx,
+                            cg_push,
+                            manifests,
+                        ).await
+                    }
+                    .boxed()
+                    .compat()
                     .map(move |(upload_map, uploaded_hg_changeset_ids)| (changesets, onto_params, bundle2, upload_map, uploaded_hg_changeset_ids)).right_future()
             }
         })
@@ -1101,13 +1112,13 @@ impl Bundle2Resolver {
     /// Manifests and Filelogs it adds.
     /// The Changesets are scheduled for uploading and a Future is returned, whose completion means
     /// that the changesets were uploaded
-    fn upload_changesets(
+    async fn upload_changesets(
         &self,
         ctx: CoreContext,
         cg_push: ChangegroupPush,
         manifests: Manifests,
-    ) -> OldBoxFuture<(UploadedBonsais, UploadedHgChangesetIds), Error> {
-        let changesets = try_old_boxfuture!(toposort_changesets(cg_push.changesets));
+    ) -> Result<(UploadedBonsais, UploadedHgChangesetIds), Error> {
+        let changesets = toposort_changesets(cg_push.changesets)?;
         let filelogs = cg_push.filelogs;
         let content_blobs = cg_push.content_blobs;
 
@@ -1164,49 +1175,56 @@ impl Bundle2Resolver {
         // of their parents and so on. However that might cause stackoverflow on very large pushes
         // To avoid it we commit changesets in relatively small chunks.
         let chunk_size = 100;
-        let res: OldBoxFuture<(UploadedBonsais, UploadedHgChangesetIds), Error> =
-            old_stream::iter_ok::<_, Error>(changesets)
+
+        let res: Result<(UploadedBonsais, UploadedHgChangesetIds), Error> =
+            stream::iter(changesets)
                 .chunks(chunk_size)
-                .fold(
-                    (UploadedBonsais::new(), UploadedHgChangesetIds::new()),
-                    move |(mut bonsais, mut hg_css), chunk| {
-                        old_stream::iter_ok(chunk)
-                            .fold(HashMap::new(), {
-                                cloned!(upload_changeset_fun);
-                                move |uploaded_changesets, (node, revlog_cs)| {
-                                    (*upload_changeset_fun)(uploaded_changesets, node, revlog_cs)
-                                }
-                            })
-                            .and_then({
-                                move |uploaded_changesets| {
-                                    old_stream::iter_ok(uploaded_changesets.into_iter().map(
-                                        move |(hg_cs_id, handle): (HgChangesetId, _)| {
-                                            handle
-                                                .get_completed_changeset()
-                                                .map(move |shared_item| {
-                                                    let bcs = shared_item.0.clone();
-                                                    bcs
-                                                })
-                                                .map(move |bcs| (bcs, hg_cs_id))
-                                        },
-                                    ))
-                                    .buffered(chunk_size)
-                                    .map_err(Error::from)
-                                    .collect()
-                                }
-                            })
-                            .map(move |uploaded| {
-                                let (more_bonsais, more_hg_css): (Vec<_>, Vec<_>) =
-                                    uploaded.into_iter().unzip();
-                                bonsais.extend(more_bonsais.into_iter());
-                                hg_css.extend(more_hg_css.into_iter());
-                                (bonsais, hg_css)
-                            })
-                            .boxify()
-                    },
-                )
-                .context(ErrorKind::WhileUploadingData(changesets_hashes))
-                .boxify();
+                .map(Ok)
+                .try_fold((UploadedBonsais::new(), UploadedHgChangesetIds::new()), {
+                    let upload_changeset_fun = &upload_changeset_fun;
+                    move |(mut bonsais, mut hg_css), chunk| async move {
+                        let uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle> =
+                            stream::iter(chunk)
+                                .map(Ok)
+                                .try_fold(HashMap::new(), {
+                                    move |uploaded_changesets, (node, revlog_cs)| {
+                                        (*upload_changeset_fun)(
+                                            uploaded_changesets,
+                                            node,
+                                            revlog_cs,
+                                        )
+                                        .compat()
+                                    }
+                                })
+                                .await?;
+
+                        let uploaded: Vec<(BonsaiChangeset, HgChangesetId)> =
+                            stream::iter(uploaded_changesets)
+                                .map(move |(hg_cs_id, handle): (HgChangesetId, _)| async move {
+                                    let shared_item_bcs_and_something = handle
+                                        .get_completed_changeset()
+                                        .map_err(Error::from)
+                                        .compat()
+                                        .await?;
+
+                                    let bcs = shared_item_bcs_and_something.0.clone();
+                                    Result::<_, Error>::Ok((bcs, hg_cs_id))
+                                })
+                                .buffered(chunk_size)
+                                .try_collect()
+                                .await?;
+
+                        let (more_bonsais, more_hg_css): (Vec<_>, Vec<_>) =
+                            uploaded.into_iter().unzip();
+                        bonsais.extend(more_bonsais.into_iter());
+                        hg_css.extend(more_hg_css.into_iter());
+                        Result::<(HashSet<BonsaiChangeset>, HashSet<HgChangesetId>), Error>::Ok((
+                            bonsais, hg_css,
+                        ))
+                    }
+                })
+                .await
+                .context(ErrorKind::WhileUploadingData(changesets_hashes));
         res
     }
 
