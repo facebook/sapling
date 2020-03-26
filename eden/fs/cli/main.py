@@ -182,7 +182,7 @@ from the backing repo directory!
             if os.path.exists(lfs_dir):
                 self.usage_for_dir("    LFS cache", lfs_dir)
                 print(
-                    """
+                    f"""
 Reclaim space from the LFS cache directory by running:
 
     hg -R {backing_repo} gc
