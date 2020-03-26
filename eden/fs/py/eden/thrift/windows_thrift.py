@@ -7,6 +7,7 @@ from __future__ import absolute_import, division, print_function, unicode_litera
 
 import ctypes
 import os
+import socket
 
 from thrift.transport.TSocket import TSocket
 from thrift.transport.TTransport import TTransportException
@@ -21,7 +22,13 @@ if os.name == "nt":
 # missing windll on the linux system.
 
 # WSA Error codes
+WSAETIMEDOUT = 10060
 WSAECONNREFUSED = 10061
+
+# Socket options
+SO_SNDTIMEO = 0x1005
+SO_RCVTIMEO = 0x1006
+SOL_SOCKET = 0xFFFF
 
 # int WSAStartup(
 #     WORD      wVersionRequired,
@@ -101,6 +108,19 @@ WSAGetLastError = ctypes.windll.ws2_32.WSAGetLastError
 WSAGetLastError.argtypes = []
 WSAGetLastError.restype = ctypes.c_int
 
+# setsockopt but "falsely" declared to accept DWORD* as
+# its parameter.  It's really char*, but we only use DWORD
+# values.
+WinSetIntSockOpt = ctypes.windll.ws2_32.setsockopt
+WinSetIntSockOpt.argtypes = [
+    ctypes.wintypes.HANDLE,
+    ctypes.c_int,
+    ctypes.c_int,
+    ctypes.wintypes.LPDWORD,
+    ctypes.c_int,
+]
+WinSetIntSockOpt.restype = ctypes.c_int
+
 
 class SOCKADDR_UN(ctypes.Structure):
     _fields_ = [("sun_family", ctypes.c_ushort), ("sun_path", ctypes.c_char * 108)]
@@ -130,6 +150,8 @@ class WindowsSocketHandle(object):
                 raise TTransportException(
                     type=TTransportException.NOT_OPEN, message="eden not running"
                 )
+            elif errcode == WSAETIMEDOUT:
+                raise socket.timeout()
             else:
                 raise WindowsSocketException(errcode)
 
@@ -151,7 +173,23 @@ class WindowsSocketHandle(object):
 
     def settimeout(self, timeout):
         # type: (int) -> None
-        # TODO: implement this method via `setsockopt`
+        timeout = ctypes.wintypes.DWORD(0 if timeout is None else int(timeout * 1000))
+        retcode = WinSetIntSockOpt(
+            self.fd,
+            SOL_SOCKET,
+            SO_RCVTIMEO,
+            ctypes.byref(timeout),
+            ctypes.sizeof(timeout),
+        )
+        self._checkReturnCode(retcode)
+        retcode = WinSetIntSockOpt(
+            self.fd,
+            SOL_SOCKET,
+            SO_SNDTIMEO,
+            ctypes.byref(timeout),
+            ctypes.sizeof(timeout),
+        )
+        self._checkReturnCode(retcode)
         return None
 
     def connect(self, address):
@@ -168,11 +206,22 @@ class WindowsSocketHandle(object):
         self._checkReturnCode(retcode)
         return retcode
 
+    def sendall(self, buff):
+        # type: (bytes) -> None
+        while len(buff) > 0:
+            x = self.send(buff)
+            if x > 0:
+                buff = buff[x:]
+            else:
+                break
+        return None
+
     def recv(self, size):
         # type: (int) -> bytes
         buff = ctypes.create_string_buffer(size)
-        self._checkReturnCode(recv(self.fd, buff, size, 0))
-        return buff.raw
+        retsize = recv(self.fd, buff, size, 0)
+        self._checkReturnCode(retsize)
+        return buff.raw[0:retsize]
 
     def getpeername(self):
         # type: () -> str
