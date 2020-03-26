@@ -23,10 +23,13 @@ use cloned::cloned;
 use context::CoreContext;
 use core::fmt::Debug;
 use failure_ext::{Compat, FutureFailureErrorExt};
-use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
-use futures_old::future::{self, err, ok, Shared};
-use futures_old::stream;
-use futures_old::{Future, IntoFuture, Stream};
+use futures_ext::{
+    try_boxfuture as try_old_boxfuture, BoxFuture as OldBoxFuture, BoxStream as OldBoxStream,
+    FutureExt as OldFutureExt, StreamExt as OldStreamExt,
+};
+use futures_old::future::{self as old_future, err, ok, Shared};
+use futures_old::stream as old_stream;
+use futures_old::{Future as OldFuture, IntoFuture, Stream as OldStream};
 use hooks::{HookExecution, HookOutcome};
 use lazy_static::lazy_static;
 use limits::types::RateLimit;
@@ -47,7 +50,7 @@ use topo_sort::sort_topological;
 use wirepack::{TreemanifestBundle2Parser, TreemanifestEntry};
 
 pub type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
-type Filelogs = HashMap<HgNodeKey, Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
+type Filelogs = HashMap<HgNodeKey, Shared<OldBoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
 type ContentBlobs = HashMap<HgNodeKey, ContentBlobInfo>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 pub type UploadedBonsais = HashSet<BonsaiChangeset>;
@@ -195,12 +198,12 @@ pub fn resolve(
     ctx: CoreContext,
     repo: BlobRepo,
     infinitepush_writes_allowed: bool,
-    bundle2: BoxStream<Bundle2Item, Error>,
+    bundle2: OldBoxStream<Bundle2Item, Error>,
     readonly: RepoReadOnly,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     pure_push_allowed: bool,
     pushrebase_flags: PushrebaseFlags,
-) -> BoxFuture<PostResolveAction, BundleResolverError> {
+) -> OldBoxFuture<PostResolveAction, BundleResolverError> {
     let resolver = Bundle2Resolver::new(
         ctx.clone(),
         repo,
@@ -227,9 +230,10 @@ pub fn resolve(
                         // force the readonly check
                         match (readonly, bypass_readonly) {
                             (RepoReadOnly::ReadOnly(reason), false) => {
-                                future::err(ErrorKind::RepoReadOnly(reason).into()).left_future()
+                                old_future::err(ErrorKind::RepoReadOnly(reason).into())
+                                    .left_future()
                             }
-                            _ => future::ok((maybe_pushvars, maybe_commonheads, bundle2))
+                            _ => old_future::ok((maybe_pushvars, maybe_commonheads, bundle2))
                                 .right_future(),
                         }
                     },
@@ -306,11 +310,11 @@ pub fn resolve(
 fn resolve_push(
     ctx: CoreContext,
     resolver: Bundle2Resolver,
-    bundle2: BoxStream<Bundle2Item, Error>,
+    bundle2: OldBoxStream<Bundle2Item, Error>,
     non_fast_forward_policy: NonFastForwardPolicy,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
-) -> BoxFuture<PostResolveAction, Error> {
+) -> OldBoxFuture<PostResolveAction, Error> {
     resolver
         .maybe_resolve_changegroup(ctx.clone(), bundle2, changegroup_acceptable)
         .and_then({
@@ -453,11 +457,11 @@ fn resolve_pushrebase(
     ctx: CoreContext,
     commonheads: CommonHeads,
     resolver: Bundle2Resolver,
-    bundle2: BoxStream<Bundle2Item, Error>,
+    bundle2: OldBoxStream<Bundle2Item, Error>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
-) -> BoxFuture<PostResolveAction, BundleResolverError> {
+) -> OldBoxFuture<PostResolveAction, BundleResolverError> {
     resolver
         .resolve_b2xtreegroup2(ctx.clone(), bundle2)
         .and_then({
@@ -497,7 +501,7 @@ fn resolve_pushrebase(
                     for (_, hg_cs) in &changesets {
                         for key in pushrebase::MUTATION_KEYS {
                             if hg_cs.extra.as_ref().contains_key(key.as_bytes()) {
-                                return future::err(Error::msg("Forced push blocked because it contains mutation metadata.\n\
+                                return old_future::err(Error::msg("Forced push blocked because it contains mutation metadata.\n\
                                                         You can remove the metadata from a commit with `hg amend --config mutation.record=false`.\n\
                                                         For more help, please contact the Source Control team at https://fburl.com/27qnuyl2")).left_future();
                             }
@@ -524,7 +528,7 @@ fn resolve_pushrebase(
                             let bookmark_pushes = collect_pushkey_bookmark_pushes(pushkeys);
 
                             if bookmark_pushes.len() > 1 {
-                                return future::err(format_err!(
+                                return old_future::err(format_err!(
                                     "Too many pushkey parts: {:?}",
                                     bookmark_pushes
                                 ))
@@ -538,7 +542,7 @@ fn resolve_pushrebase(
                                     if bk_push.name != onto_params.bookmark
                                         && onto_params.bookmark != *DONOTREBASEBOOKMARK =>
                                 {
-                                    return future::err(format_err!(
+                                    return old_future::err(format_err!(
                                         "allowed only pushes of {} bookmark: {:?}",
                                         onto_params.bookmark,
                                         bookmark_pushes
@@ -623,10 +627,10 @@ fn resolve_pushrebase(
 fn resolve_bookmark_only_pushrebase(
     ctx: CoreContext,
     resolver: Bundle2Resolver,
-    bundle2: BoxStream<Bundle2Item, Error>,
+    bundle2: OldBoxStream<Bundle2Item, Error>,
     non_fast_forward_policy: NonFastForwardPolicy,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
-) -> BoxFuture<PostResolveAction, Error> {
+) -> OldBoxFuture<PostResolveAction, Error> {
     // TODO: we probably run hooks even if no changesets are pushed?
     //       however, current run_hooks implementation will no-op such thing
     resolver
@@ -647,7 +651,7 @@ fn resolve_bookmark_only_pushrebase(
                 }
 
                 if bookmark_pushes.len() != 1 {
-                    return future::err(format_err!(
+                    return old_future::err(format_err!(
                         "Too many pushkey parts: {:?}",
                         bookmark_pushes
                     ))
@@ -680,8 +684,8 @@ fn resolve_bookmark_only_pushrebase(
 }
 
 fn next_item(
-    bundle2: BoxStream<Bundle2Item, Error>,
-) -> BoxFuture<(Option<Bundle2Item>, BoxStream<Bundle2Item, Error>), Error> {
+    bundle2: OldBoxStream<Bundle2Item, Error>,
+) -> OldBoxFuture<(Option<Bundle2Item>, OldBoxStream<Bundle2Item, Error>), Error> {
     bundle2.into_future().map_err(|(err, _)| err).boxify()
 }
 
@@ -769,15 +773,15 @@ impl Bundle2Resolver {
     /// Return unchanged `bundle2`
     fn is_next_part_pushkey(
         &self,
-        bundle2: BoxStream<Bundle2Item, Error>,
-    ) -> BoxFuture<(bool, BoxStream<Bundle2Item, Error>), Error> {
+        bundle2: OldBoxStream<Bundle2Item, Error>,
+    ) -> OldBoxFuture<(bool, OldBoxStream<Bundle2Item, Error>), Error> {
         next_item(bundle2)
             .and_then(|(start, bundle2)| match start {
                 Some(part) => {
                     if let Bundle2Item::Pushkey(header, box_future) = part {
                         ok((
                             true,
-                            stream::once(Ok(Bundle2Item::Pushkey(header, box_future)))
+                            old_stream::once(Ok(Bundle2Item::Pushkey(header, box_future)))
                                 .chain(bundle2)
                                 .boxify(),
                         ))
@@ -795,7 +799,7 @@ impl Bundle2Resolver {
     fn maybe_save_full_content_bundle2(
         &self,
         maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
-    ) -> BoxFuture<Option<RawBundle2Id>, Error> {
+    ) -> OldBoxFuture<Option<RawBundle2Id>, Error> {
         match maybe_full_content {
             Some(full_content) => {
                 let blob =
@@ -819,8 +823,8 @@ impl Bundle2Resolver {
     /// Parse Start and Replycaps and ignore their content
     fn resolve_start_and_replycaps(
         &self,
-        bundle2: BoxStream<Bundle2Item, Error>,
-    ) -> BoxStream<Bundle2Item, Error> {
+        bundle2: OldBoxStream<Bundle2Item, Error>,
+    ) -> OldBoxStream<Bundle2Item, Error> {
         next_item(bundle2)
             .and_then(|(start, bundle2)| match start {
                 Some(Bundle2Item::Start(_)) => next_item(bundle2),
@@ -839,8 +843,8 @@ impl Bundle2Resolver {
     // client. This part is used as a marker that this push is pushrebase.
     fn maybe_resolve_commonheads(
         &self,
-        bundle2: BoxStream<Bundle2Item, Error>,
-    ) -> BoxFuture<(Option<CommonHeads>, BoxStream<Bundle2Item, Error>), Error> {
+        bundle2: OldBoxStream<Bundle2Item, Error>,
+    ) -> OldBoxFuture<(Option<CommonHeads>, OldBoxStream<Bundle2Item, Error>), Error> {
         next_item(bundle2)
             .and_then(|(commonheads, bundle2)| match commonheads {
                 Some(Bundle2Item::B2xCommonHeads(_header, heads)) => heads
@@ -860,11 +864,11 @@ impl Bundle2Resolver {
     /// It is used to store hook arguments.
     fn maybe_resolve_pushvars(
         &self,
-        bundle2: BoxStream<Bundle2Item, Error>,
-    ) -> BoxFuture<
+        bundle2: OldBoxStream<Bundle2Item, Error>,
+    ) -> OldBoxFuture<
         (
             Option<HashMap<String, Bytes>>,
-            BoxStream<Bundle2Item, Error>,
+            OldBoxStream<Bundle2Item, Error>,
         ),
         Error,
     > {
@@ -893,9 +897,9 @@ impl Bundle2Resolver {
     fn maybe_resolve_changegroup(
         &self,
         ctx: CoreContext,
-        bundle2: BoxStream<Bundle2Item, Error>,
+        bundle2: OldBoxStream<Bundle2Item, Error>,
         changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
-    ) -> BoxFuture<(Option<ChangegroupPush>, BoxStream<Bundle2Item, Error>), Error> {
+    ) -> OldBoxFuture<(Option<ChangegroupPush>, OldBoxStream<Bundle2Item, Error>), Error> {
         let repo = self.repo.clone();
 
         let fut = next_item(bundle2).and_then(move |(changegroup, bundle2)| match changegroup {
@@ -977,12 +981,12 @@ impl Bundle2Resolver {
     /// Returns an error if the pushkey namespace is unknown
     fn maybe_resolve_pushkey(
         &self,
-        bundle2: BoxStream<Bundle2Item, Error>,
-    ) -> BoxFuture<(Option<Pushkey>, BoxStream<Bundle2Item, Error>), Error> {
+        bundle2: OldBoxStream<Bundle2Item, Error>,
+    ) -> OldBoxFuture<(Option<Pushkey>, OldBoxStream<Bundle2Item, Error>), Error> {
         next_item(bundle2)
             .and_then(move |(newpart, bundle2)| match newpart {
                 Some(Bundle2Item::Pushkey(header, emptypart)) => {
-                    let namespace = try_boxfuture!(header
+                    let namespace = try_old_boxfuture!(header
                         .mparams()
                         .get("namespace")
                         .ok_or(format_err!("pushkey: `namespace` parameter is not set")));
@@ -992,10 +996,12 @@ impl Bundle2Resolver {
                         b"bookmarks" => {
                             let part_id = header.part_id();
                             let mparams = header.mparams();
-                            let name = try_boxfuture!(get_ascii_param(mparams, "key"));
+                            let name = try_old_boxfuture!(get_ascii_param(mparams, "key"));
                             let name = BookmarkName::new_ascii(name);
-                            let old = try_boxfuture!(get_optional_changeset_param(mparams, "old"));
-                            let new = try_boxfuture!(get_optional_changeset_param(mparams, "new"));
+                            let old =
+                                try_old_boxfuture!(get_optional_changeset_param(mparams, "old"));
+                            let new =
+                                try_old_boxfuture!(get_optional_changeset_param(mparams, "new"));
 
                             Pushkey::HgBookmarkPush(PlainBookmarkPush {
                                 part_id,
@@ -1029,8 +1035,8 @@ impl Bundle2Resolver {
     fn resolve_b2xtreegroup2(
         &self,
         ctx: CoreContext,
-        bundle2: BoxStream<Bundle2Item, Error>,
-    ) -> BoxFuture<(Manifests, BoxStream<Bundle2Item, Error>), Error> {
+        bundle2: OldBoxStream<Bundle2Item, Error>,
+    ) -> OldBoxFuture<(Manifests, OldBoxStream<Bundle2Item, Error>), Error> {
         let repo = self.repo.clone();
 
         next_item(bundle2)
@@ -1057,8 +1063,8 @@ impl Bundle2Resolver {
     /// This part is ignored, so just parse it and forget it
     fn maybe_resolve_infinitepush_bookmarks(
         &self,
-        bundle2: BoxStream<Bundle2Item, Error>,
-    ) -> BoxFuture<((), BoxStream<Bundle2Item, Error>), Error> {
+        bundle2: OldBoxStream<Bundle2Item, Error>,
+    ) -> OldBoxFuture<((), OldBoxStream<Bundle2Item, Error>), Error> {
         next_item(bundle2)
             .and_then(
                 move |(infinitepushbookmarks, bundle2)| match infinitepushbookmarks {
@@ -1087,8 +1093,8 @@ impl Bundle2Resolver {
         ctx: CoreContext,
         cg_push: ChangegroupPush,
         manifests: Manifests,
-    ) -> BoxFuture<(UploadedBonsais, UploadedHgChangesetIds), Error> {
-        let changesets = try_boxfuture!(toposort_changesets(cg_push.changesets));
+    ) -> OldBoxFuture<(UploadedBonsais, UploadedHgChangesetIds), Error> {
+        let changesets = try_old_boxfuture!(toposort_changesets(cg_push.changesets));
         let filelogs = cg_push.filelogs;
         let content_blobs = cg_push.content_blobs;
 
@@ -1125,7 +1131,7 @@ impl Bundle2Resolver {
             move |uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle>,
                   node: HgChangesetId,
                   revlog_cs: RevlogChangeset|
-                  -> BoxFuture<HashMap<HgChangesetId, ChangesetHandle>, Error> {
+                  -> OldBoxFuture<HashMap<HgChangesetId, ChangesetHandle>, Error> {
                 upload_changeset(
                     ctx.clone(),
                     repo.clone(),
@@ -1145,13 +1151,13 @@ impl Bundle2Resolver {
         // of their parents and so on. However that might cause stackoverflow on very large pushes
         // To avoid it we commit changesets in relatively small chunks.
         let chunk_size = 100;
-        let res: BoxFuture<(UploadedBonsais, UploadedHgChangesetIds), Error> =
-            stream::iter_ok::<_, Error>(changesets)
+        let res: OldBoxFuture<(UploadedBonsais, UploadedHgChangesetIds), Error> =
+            old_stream::iter_ok::<_, Error>(changesets)
                 .chunks(chunk_size)
                 .fold(
                     (UploadedBonsais::new(), UploadedHgChangesetIds::new()),
                     move |(mut bonsais, mut hg_css), chunk| {
-                        stream::iter_ok(chunk)
+                        old_stream::iter_ok(chunk)
                             .fold(HashMap::new(), {
                                 cloned!(upload_changeset_fun);
                                 move |uploaded_changesets, (node, revlog_cs)| {
@@ -1160,7 +1166,7 @@ impl Bundle2Resolver {
                             })
                             .and_then({
                                 move |uploaded_changesets| {
-                                    stream::iter_ok(uploaded_changesets.into_iter().map(
+                                    old_stream::iter_ok(uploaded_changesets.into_iter().map(
                                         move |(hg_cs_id, handle): (HgChangesetId, _)| {
                                             handle
                                                 .get_completed_changeset()
@@ -1194,9 +1200,9 @@ impl Bundle2Resolver {
     /// Ensures that the next item in stream is None
     fn ensure_stream_finished(
         &self,
-        bundle2: BoxStream<Bundle2Item, Error>,
+        bundle2: OldBoxStream<Bundle2Item, Error>,
         maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
-    ) -> BoxFuture<Option<RawBundle2Id>, Error> {
+    ) -> OldBoxFuture<Option<RawBundle2Id>, Error> {
         next_item(bundle2)
             .and_then(|(none, _)| {
                 ensure!(none.is_none(), "Expected end of Bundle2");
@@ -1220,25 +1226,25 @@ impl Bundle2Resolver {
     /// one pushkey part per bookmark.
     fn resolve_multiple_parts<T, Func>(
         &self,
-        bundle2: BoxStream<Bundle2Item, Error>,
+        bundle2: OldBoxStream<Bundle2Item, Error>,
         mut maybe_resolve: Func,
-    ) -> BoxFuture<(Vec<T>, BoxStream<Bundle2Item, Error>), Error>
+    ) -> OldBoxFuture<(Vec<T>, OldBoxStream<Bundle2Item, Error>), Error>
     where
         Func: FnMut(
                 &Self,
-                BoxStream<Bundle2Item, Error>,
-            ) -> BoxFuture<(Option<T>, BoxStream<Bundle2Item, Error>), Error>
+                OldBoxStream<Bundle2Item, Error>,
+            ) -> OldBoxFuture<(Option<T>, OldBoxStream<Bundle2Item, Error>), Error>
             + Send
             + 'static,
         T: Send + 'static,
     {
         let this = self.clone();
-        future::loop_fn((Vec::new(), bundle2), move |(mut result, bundle2)| {
+        old_future::loop_fn((Vec::new(), bundle2), move |(mut result, bundle2)| {
             maybe_resolve(&this, bundle2).map(move |(maybe_element, bundle2)| match maybe_element {
-                None => future::Loop::Break((result, bundle2)),
+                None => old_future::Loop::Break((result, bundle2)),
                 Some(element) => {
                     result.push(element);
-                    future::Loop::Continue((result, bundle2))
+                    old_future::Loop::Continue((result, bundle2))
                 }
             })
         })
@@ -1281,7 +1287,7 @@ fn build_changegroup_push(
     changesets: Changesets,
     filelogs: Filelogs,
     content_blobs: ContentBlobs,
-) -> impl Future<Item = ChangegroupPush, Error = Error> {
+) -> impl OldFuture<Item = ChangegroupPush, Error = Error> {
     let PartHeaderInner {
         part_id,
         part_type,
@@ -1381,11 +1387,13 @@ fn try_collect_all_bookmark_pushes(
 fn return_with_rest_of_bundle<T: Send + 'static>(
     value: T,
     unused_part: Bundle2Item,
-    rest_of_bundle: BoxStream<Bundle2Item, Error>,
-) -> BoxFuture<(T, BoxStream<Bundle2Item, Error>), Error> {
+    rest_of_bundle: OldBoxStream<Bundle2Item, Error>,
+) -> OldBoxFuture<(T, OldBoxStream<Bundle2Item, Error>), Error> {
     ok((
         value,
-        stream::once(Ok(unused_part)).chain(rest_of_bundle).boxify(),
+        old_stream::once(Ok(unused_part))
+            .chain(rest_of_bundle)
+            .boxify(),
     ))
     .boxify()
 }
@@ -1420,7 +1428,7 @@ fn bonsai_from_hg_opt(
     ctx: CoreContext,
     repo: &BlobRepo,
     cs_id: Option<HgChangesetId>,
-) -> impl Future<Item = Option<ChangesetId>, Error = Error> {
+) -> impl OldFuture<Item = Option<ChangesetId>, Error = Error> {
     match cs_id {
         None => ok(None).left_future(),
         Some(cs_id) => repo
@@ -1442,7 +1450,7 @@ fn plain_hg_bookmark_push_to_bonsai(
     ctx: CoreContext,
     repo: &BlobRepo,
     bookmark_push: PlainBookmarkPush<HgChangesetId>,
-) -> impl Future<Item = PlainBookmarkPush<ChangesetId>, Error = Error> + Send {
+) -> impl OldFuture<Item = PlainBookmarkPush<ChangesetId>, Error = Error> + Send {
     let PlainBookmarkPush {
         part_id,
         name,
@@ -1466,7 +1474,7 @@ fn infinite_hg_bookmark_push_to_bonsai(
     ctx: CoreContext,
     repo: &BlobRepo,
     bookmark_push: InfiniteBookmarkPush<HgChangesetId>,
-) -> impl Future<Item = InfiniteBookmarkPush<ChangesetId>, Error = Error> + Send {
+) -> impl OldFuture<Item = InfiniteBookmarkPush<ChangesetId>, Error = Error> + Send {
     let InfiniteBookmarkPush {
         name,
         force,
@@ -1497,7 +1505,7 @@ fn hg_pushrebase_bookmark_spec_to_bonsai(
     ctx: CoreContext,
     repo: &BlobRepo,
     bookmark_spec: PushrebaseBookmarkSpec<HgChangesetId>,
-) -> impl Future<Item = PushrebaseBookmarkSpec<ChangesetId>, Error = Error> + Send {
+) -> impl OldFuture<Item = PushrebaseBookmarkSpec<ChangesetId>, Error = Error> + Send {
     match bookmark_spec {
         PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => {
             ok(PushrebaseBookmarkSpec::NormalPushrebase(onto_params)).left_future()
@@ -1514,10 +1522,10 @@ fn hg_all_bookmark_pushes_to_bonsai(
     ctx: CoreContext,
     repo: &BlobRepo,
     all_bookmark_pushes: AllBookmarkPushes<HgChangesetId>,
-) -> impl Future<Item = AllBookmarkPushes<ChangesetId>, Error = Error> {
+) -> impl OldFuture<Item = AllBookmarkPushes<ChangesetId>, Error = Error> {
     match all_bookmark_pushes {
         AllBookmarkPushes::PlainPushes(plain_pushes) => {
-            future::join_all(plain_pushes.into_iter().map({
+            old_future::join_all(plain_pushes.into_iter().map({
                 cloned!(ctx, repo);
                 move |plain_push| plain_hg_bookmark_push_to_bonsai(ctx.clone(), &repo, plain_push)
             }))
