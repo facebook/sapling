@@ -6,6 +6,7 @@
 
 import collections
 import pathlib
+import sys
 import typing
 import unittest
 
@@ -16,6 +17,7 @@ from eden.fs.cli.systemd import (
 )
 
 
+@unittest.skipIf(sys.platform != "linux", "systemd requires Linux")
 class SystemdEscapeTest(unittest.TestCase):
     def test_escape_benign_absolute_path(self) -> None:
         self.assertEqual(

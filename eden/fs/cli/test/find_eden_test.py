@@ -66,7 +66,7 @@ class CheckoutInfo:
 
 class FindEdenTest(unittest.TestCase, TemporaryDirectoryMixin):
     def setUp(self) -> None:
-        self._tmp_path = Path(self.make_temporary_directory())
+        self._tmp_path = Path(self.make_temporary_directory()).resolve()
         self._home_dir = self._tmp_path.joinpath("home")
         self._home_dir.mkdir()
         self._etc_eden_dir = self._tmp_path.joinpath("etc_eden")
