@@ -9,6 +9,7 @@
 
 #include <folly/File.h>
 #include <folly/Range.h>
+#include <folly/portability/SysStat.h>
 
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -67,6 +68,12 @@ class EdenStateDir {
   bool isLocked() const;
 
   /**
+   * Returns true if the on-disk lock file is still valid.  Returns false if the
+   * lock file file has been renamed or deleted.
+   */
+  bool isLockValid() const;
+
+  /**
    * Get the path to the state directory.
    */
   AbsolutePathPiece getPath() const {
@@ -97,7 +104,9 @@ class EdenStateDir {
   static void writePidToLockFile(folly::File& lockFile);
 
   AbsolutePath path_;
+  AbsolutePath lockPath_;
   folly::File lockFile_;
+  struct stat lockFileStat_ = {};
 };
 } // namespace eden
 } // namespace facebook

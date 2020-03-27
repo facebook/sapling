@@ -433,6 +433,10 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           config.configReloadInterval.getValue()));
 
+  checkValidityTask_.updateInterval(
+      std::chrono::duration_cast<std::chrono::milliseconds>(
+          config.checkValidityInterval.getValue()));
+
   localStoreTask_.updateInterval(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           config.localStoreManagementInterval.getValue()));
@@ -1490,6 +1494,25 @@ void EdenServer::reloadConfig() {
       [this, config = std::move(config)] {
         updatePeriodicTaskIntervals(*config);
       });
+}
+
+void EdenServer::checkLockValidity() {
+  if (edenDir_.isLockValid()) {
+    return;
+  }
+
+  // Exit if our lock file no longer looks valid.
+  // This ensures EdenFS process quits if someone deletes the `.eden` state
+  // directory or moves it to another location.  Otherwise an EdenFS process
+  // could continue running indefinitely in the background even though its state
+  // directory no longer exists.
+  XLOG(ERR) << "Stopping EdenFS: on-disk lock file is no longer valid";
+
+  // Attempt an orderly shutdown for now.  Since our state directory may have
+  // been deleted we might not really be able to shut down normally, but for now
+  // we'll try.  We potentially could try more aggressive measures (exit() or
+  // _exit()) if we find that trying to stop normally here ever causes problems.
+  stop();
 }
 
 } // namespace eden

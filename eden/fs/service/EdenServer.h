@@ -328,6 +328,11 @@ class EdenServer : private TakeoverHandler {
   void reloadConfig();
 
   /**
+   * Check to make sure that our lock file is still valid.
+   */
+  void checkLockValidity();
+
+  /**
    * Get the main thread's EventBase.
    *
    * Callers can use this for scheduling work to be run in the main thread.
@@ -553,6 +558,9 @@ class EdenServer : private TakeoverHandler {
 
   PeriodicFnTask<&EdenServer::reloadConfig> reloadConfigTask_{this,
                                                               "reload_config"};
+  PeriodicFnTask<&EdenServer::checkLockValidity> checkValidityTask_{
+      this,
+      "check_lock_validity"};
   PeriodicFnTask<&EdenServer::flushStatsNow> flushStatsTask_{this,
                                                              "flush_stats"};
 #ifndef _WIN32

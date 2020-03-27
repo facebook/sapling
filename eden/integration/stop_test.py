@@ -6,11 +6,11 @@
 
 import contextlib
 import os
-import pathlib
 import signal
 import sys
 import time
-import typing
+from pathlib import Path
+from typing import Callable, List, Optional
 
 import pexpect
 from eden.fs.cli.daemon import did_process_exit
@@ -23,6 +23,7 @@ from .lib.service_test_case import (
     SystemdServiceTestCaseMarker,
     service_test,
 )
+from .lib.testcase import EdenTestCase
 
 
 SHUTDOWN_EXIT_CODE_NORMAL = 0
@@ -32,14 +33,14 @@ SHUTDOWN_EXIT_CODE_TERMINATED_VIA_SIGKILL = 3
 
 
 class StopTestBase(ServiceTestCaseBase):
-    eden_dir: pathlib.Path
+    eden_dir: Path
 
     def setUp(self) -> None:
         super().setUp()
         self.eden_dir = self.tmp_dir / "eden"
         self.eden_dir.mkdir()
 
-    def spawn_stop(self, extra_args: typing.List[str]) -> "pexpect.spawn[str]":
+    def spawn_stop(self, extra_args: List[str]) -> "pexpect.spawn[str]":
         return pexpect.spawn(
             # pyre-fixme[6]: Expected `str` for 1st param but got `() -> str`.
             FindExe.EDEN_CLI,
@@ -108,7 +109,7 @@ class StopTest(StopTestBase, PexpectAssertionMixin):
                 stop_process, SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN
             )
 
-            def daemon_exited() -> typing.Optional[bool]:
+            def daemon_exited() -> Optional[bool]:
                 if did_process_exit(daemon_pid):
                     return True
                 else:
@@ -178,3 +179,71 @@ class StopWithSystemdTest(
             stop_process.expect_exact("edenfs exited cleanly.")
             self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
             self.assert_systemd_service_is_stopped(eden_dir=self.eden_dir)
+
+
+class AutoStopTest(EdenTestCase):
+    def update_validity_interval(self, interval: str) -> None:
+        config_text = f"""
+[config]
+[core]
+check-validity-interval = "{interval}"
+"""
+        self.eden.user_rc_path.write_text(config_text)
+        with self.get_thrift_client() as client:
+            client.reloadConfig()
+
+    def _run_test(self, invalidate_fn: Callable[[], None], timeout: float = 15) -> None:
+        self.update_validity_interval("20ms")
+
+        # Run the function which will invalidate the state directory
+        invalidate_fn()
+
+        # EdenFS should exit on its own
+        optional_edenfs = self.eden._process
+        assert optional_edenfs is not None
+        edenfs = optional_edenfs
+
+        def edenfs_exited() -> Optional[bool]:
+            returncode = edenfs.poll()
+            if returncode is None:
+                return None
+            return True
+
+        poll_until(edenfs_exited, timeout=timeout)
+
+    def test_delete_lock_file(self) -> None:
+        def delete_lock_file() -> None:
+            (self.eden.eden_dir / "lock").unlink()
+
+        self._run_test(delete_lock_file)
+
+    def test_replace_lock_file(self) -> None:
+        def replace_lock_file() -> None:
+            lock_path = self.eden.eden_dir / "lock"
+            new_lock_path = self.eden.eden_dir / "lock2"
+            new_lock_path.touch()
+            new_lock_path.rename(lock_path)
+
+        self._run_test(replace_lock_file)
+
+    def test_move_state_dir(self) -> None:
+        def move_state_dir() -> None:
+            new_path = Path(self.tmp_dir) / "new-eden-dir"
+            self.eden.eden_dir.rename(new_path)
+
+        self._run_test(move_state_dir)
+
+    def test_runs_normally(self) -> None:
+        """Make sure that EdenFS continues running normally if the lock file
+        isn't replaced.
+        """
+
+        def noop() -> None:
+            pass
+
+        # Call _run_test().  Since we don't replace the lock file it should time
+        # out waiting for edenfs to exit.
+        with self.assertRaises(TimeoutError):
+            self._run_test(noop, timeout=5)
+
+        self.assertTrue(self.eden.is_healthy())

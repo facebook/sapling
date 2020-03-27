@@ -202,6 +202,15 @@ class EdenConfig : private ConfigSettingManager {
                                              kUnspecifiedDefault,
                                              this};
 
+  /**
+   * How often to check the on-disk lock file to ensure it is still valid.
+   * EdenFS will exit if the lock file is no longer valid.
+   */
+  ConfigSetting<std::chrono::nanoseconds> checkValidityInterval{
+      "core:check-validity-interval",
+      std::chrono::minutes(5),
+      this};
+
   ConfigSetting<bool> allowUnixGroupRequests{"thrift:allow-unix-group-requests",
                                              false,
                                              this};
