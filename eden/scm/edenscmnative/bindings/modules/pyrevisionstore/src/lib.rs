@@ -72,28 +72,22 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add(
         py,
         "repackdatapacks",
-        py_fn!(py, repackdata(packpath: PyPathBuf, outdir: PyPathBuf)),
+        py_fn!(py, repackdata(packpath: &PyPath)),
     )?;
     m.add(
         py,
         "repackincrementaldatapacks",
-        py_fn!(
-            py,
-            incremental_repackdata(packpath: PyPathBuf, outdir: PyPathBuf)
-        ),
+        py_fn!(py, incremental_repackdata(packpath: &PyPath)),
     )?;
     m.add(
         py,
         "repackhistpacks",
-        py_fn!(py, repackhist(packpath: PyPathBuf, outdir: PyPathBuf)),
+        py_fn!(py, repackhist(packpath: &PyPath)),
     )?;
     m.add(
         py,
         "repackincrementalhistpacks",
-        py_fn!(
-            py,
-            incremental_repackhist(packpath: PyPathBuf, outdir: PyPathBuf)
-        ),
+        py_fn!(py, incremental_repackhist(packpath: &PyPath)),
     )?;
     Ok(m)
 }
@@ -101,54 +95,45 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 /// Helper function to de-serialize and re-serialize from and to Python objects.
 fn repack_pywrapper(
     py: Python,
-    path: PyPathBuf,
-    outdir: PyPathBuf,
-    repacker: impl FnOnce(PathBuf, PathBuf) -> Result<PathBuf>,
+    path: &PyPath,
+    repacker: impl FnOnce(PathBuf) -> Result<PathBuf>,
 ) -> PyResult<PyPathBuf> {
-    repacker(path.to_path_buf(), outdir.to_path_buf())
+    repacker(path.to_path_buf())
         .and_then(|p| p.try_into())
         .map_pyerr(py)
 }
 
 /// Merge all the datapacks into one big datapack. Returns the fullpath of the resulting datapack.
-fn repackdata(py: Python, packpath: PyPathBuf, outdir_py: PyPathBuf) -> PyResult<PyPathBuf> {
-    repack_pywrapper(py, packpath, outdir_py, |dir, outdir| {
-        repack_datapacks(list_packs(&dir, "datapack")?.iter(), &outdir)
+fn repackdata(py: Python, packpath: &PyPath) -> PyResult<PyPathBuf> {
+    repack_pywrapper(py, packpath, |dir| {
+        repack_datapacks(list_packs(&dir, "datapack")?.iter(), &dir)
     })
 }
 
 /// Merge all the history packs into one big historypack. Returns the fullpath of the resulting
 /// histpack.
-fn repackhist(py: Python, packpath: PyPathBuf, outdir_py: PyPathBuf) -> PyResult<PyPathBuf> {
-    repack_pywrapper(py, packpath, outdir_py, |dir, outdir| {
-        repack_historypacks(list_packs(&dir, "histpack")?.iter(), &outdir)
+fn repackhist(py: Python, packpath: &PyPath) -> PyResult<PyPathBuf> {
+    repack_pywrapper(py, packpath, |dir| {
+        repack_historypacks(list_packs(&dir, "histpack")?.iter(), &dir)
     })
 }
 
 /// Perform an incremental repack of data packs.
-fn incremental_repackdata(
-    py: Python,
-    packpath: PyPathBuf,
-    outdir_py: PyPathBuf,
-) -> PyResult<PyPathBuf> {
-    repack_pywrapper(py, packpath, outdir_py, |dir, outdir| {
+fn incremental_repackdata(py: Python, packpath: &PyPath) -> PyResult<PyPathBuf> {
+    repack_pywrapper(py, packpath, |dir| {
         repack_datapacks(
             filter_incrementalpacks(list_packs(&dir, "datapack")?, "datapack")?.iter(),
-            &outdir,
+            &dir,
         )
     })
 }
 
 /// Perform an incremental repack of history packs.
-fn incremental_repackhist(
-    py: Python,
-    packpath: PyPathBuf,
-    outdir_py: PyPathBuf,
-) -> PyResult<PyPathBuf> {
-    repack_pywrapper(py, packpath, outdir_py, |dir, outdir| {
+fn incremental_repackhist(py: Python, packpath: &PyPath) -> PyResult<PyPathBuf> {
+    repack_pywrapper(py, packpath, |dir| {
         repack_historypacks(
             filter_incrementalpacks(list_packs(&dir, "histpack")?, "histpack")?.iter(),
-            &outdir,
+            &dir,
         )
     })
 }

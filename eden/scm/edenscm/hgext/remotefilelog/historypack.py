@@ -67,7 +67,7 @@ class historypackstore(basepack.basepackstore):
         )
 
     def repackstore(self):
-        revisionstore.repackincrementalhistpacks(self.path, self.path)
+        revisionstore.repackincrementalhistpacks(self.path)
 
 
 def makehistorypackstore(ui, path, deletecorruptpacks=False):

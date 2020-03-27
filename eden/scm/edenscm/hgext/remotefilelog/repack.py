@@ -58,7 +58,7 @@ def _runrustrepack(repo, packpath, incremental):
 
     for dorepack in repacks:
         try:
-            dorepack(packpath, packpath)
+            dorepack(packpath)
         except Exception as e:
             repo.ui.log("repack_failure", msg=str(e), traceback=traceback.format_exc())
             if "Repack successful but with errors" not in str(e):
