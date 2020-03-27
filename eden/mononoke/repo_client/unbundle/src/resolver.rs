@@ -222,27 +222,32 @@ pub fn resolve(
         .and_then({
             cloned!(resolver);
             move |(maybe_commonheads, bundle2)| {
-                resolver.maybe_resolve_pushvars(bundle2).and_then(
-                    move |(maybe_pushvars, bundle2)| {
-                        let mut bypass_readonly = false;
-                        // check the bypass condition
-                        if let Some(ref pushvars) = maybe_pushvars {
-                            bypass_readonly = pushvars
-                                .get("BYPASS_READONLY")
-                                .map(|s| s.to_ascii_lowercase())
-                                == Some("true".into());
+                async move {
+                    resolver
+                        .maybe_resolve_pushvars(bundle2)
+                        .await
+                        .context("While resolving Pushvars")
+                }
+                .boxed()
+                .compat()
+                .and_then(move |(maybe_pushvars, bundle2)| {
+                    let mut bypass_readonly = false;
+                    // check the bypass condition
+                    if let Some(ref pushvars) = maybe_pushvars {
+                        bypass_readonly = pushvars
+                            .get("BYPASS_READONLY")
+                            .map(|s| s.to_ascii_lowercase())
+                            == Some("true".into());
+                    }
+                    // force the readonly check
+                    match (readonly, bypass_readonly) {
+                        (RepoReadOnly::ReadOnly(reason), false) => {
+                            old_future::err(ErrorKind::RepoReadOnly(reason).into()).left_future()
                         }
-                        // force the readonly check
-                        match (readonly, bypass_readonly) {
-                            (RepoReadOnly::ReadOnly(reason), false) => {
-                                old_future::err(ErrorKind::RepoReadOnly(reason).into())
-                                    .left_future()
-                            }
-                            _ => old_future::ok((maybe_pushvars, maybe_commonheads, bundle2))
-                                .right_future(),
-                        }
-                    },
-                )
+                        _ => old_future::ok((maybe_pushvars, maybe_commonheads, bundle2))
+                            .right_future(),
+                    }
+                })
             }
         })
         .and_then({
@@ -952,29 +957,34 @@ impl Bundle2Resolver {
 
     /// Parse pushvars
     /// It is used to store hook arguments.
-    fn maybe_resolve_pushvars(
+    async fn maybe_resolve_pushvars(
         &self,
         bundle2: OldBoxStream<Bundle2Item, Error>,
-    ) -> OldBoxFuture<
+    ) -> Result<
         (
             Option<HashMap<String, Bytes>>,
             OldBoxStream<Bundle2Item, Error>,
         ),
         Error,
     > {
-        next_item(bundle2)
-            .and_then(move |(newpart, bundle2)| match newpart {
-                Some(Bundle2Item::Pushvars(header, emptypart)) => {
-                    let pushvars = header.aparams().clone();
-                    // ignored for now, will be used for hooks
-                    emptypart.map(move |_| (Some(pushvars), bundle2)).boxify()
-                }
-                Some(part) => return_with_rest_of_bundle(None, part, bundle2),
-                None => ok((None, bundle2)).boxify(),
-            })
-            .context("While resolving Pushvars")
-            .from_err()
-            .boxify()
+        let (newpart, bundle2) = next_item(bundle2).compat().await?;
+
+        let maybe_pushvars = match newpart {
+            Some(Bundle2Item::Pushvars(header, emptypart)) => {
+                let pushvars = header.aparams().clone();
+                // ignored for now, will be used for hooks
+                emptypart.compat().await?;
+                Some(pushvars)
+            }
+            Some(part) => {
+                return return_with_rest_of_bundle(None, part, bundle2)
+                    .compat()
+                    .await
+            }
+            None => None,
+        };
+
+        Result::<_, Error>::Ok((maybe_pushvars, bundle2))
     }
 
     /// Parse changegroup.
