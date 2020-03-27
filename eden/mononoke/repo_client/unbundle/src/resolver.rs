@@ -29,7 +29,7 @@ use futures_ext::{
     BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, FutureExt as OldFutureExt,
     StreamExt as OldStreamExt,
 };
-use futures_old::future::{self as old_future, err, Shared};
+use futures_old::future::{err, Shared};
 use futures_old::stream as old_stream;
 use futures_old::{Future as OldFuture, Stream as OldStream};
 use futures_util::{
@@ -196,10 +196,7 @@ pub enum PostResolveAction {
     BookmarkOnlyPushRebase(PostResolveBookmarkOnlyPushRebase),
 }
 
-/// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
-/// Manifests and uploades all of them to the provided BlobRepo in the correct order.
-/// It returns a Future that contains the response that should be send back to the requester.
-pub fn resolve(
+pub fn resolve_compat(
     ctx: CoreContext,
     repo: BlobRepo,
     infinitepush_writes_allowed: bool,
@@ -209,6 +206,37 @@ pub fn resolve(
     pure_push_allowed: bool,
     pushrebase_flags: PushrebaseFlags,
 ) -> OldBoxFuture<PostResolveAction, BundleResolverError> {
+    async move {
+        resolve(
+            ctx,
+            repo,
+            infinitepush_writes_allowed,
+            bundle2,
+            readonly,
+            maybe_full_content,
+            pure_push_allowed,
+            pushrebase_flags,
+        )
+        .await
+    }
+    .boxed()
+    .compat()
+    .boxify()
+}
+
+/// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
+/// Manifests and uploades all of them to the provided BlobRepo in the correct order.
+/// It returns a Future that contains the response that should be send back to the requester.
+async fn resolve(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    infinitepush_writes_allowed: bool,
+    bundle2: OldBoxStream<Bundle2Item, Error>,
+    readonly: RepoReadOnly,
+    maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
+    pure_push_allowed: bool,
+    pushrebase_flags: PushrebaseFlags,
+) -> Result<PostResolveAction, BundleResolverError> {
     let resolver = Bundle2Resolver::new(
         ctx.clone(),
         repo,
@@ -217,128 +245,81 @@ pub fn resolve(
     );
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
 
-    {
-        cloned!(resolver);
-        async move { resolver.maybe_resolve_commonheads(bundle2).await }
-    }
-    .boxed()
-    .compat()
-    .and_then({
-        cloned!(resolver);
-        move |(maybe_commonheads, bundle2)| {
-            async move {
-                resolver
-                    .maybe_resolve_pushvars(bundle2)
-                    .await
-                    .context("While resolving Pushvars")
-            }
-            .boxed()
-            .compat()
-            .and_then(move |(maybe_pushvars, bundle2)| {
-                let mut bypass_readonly = false;
-                // check the bypass condition
-                if let Some(ref pushvars) = maybe_pushvars {
-                    bypass_readonly = pushvars
-                        .get("BYPASS_READONLY")
-                        .map(|s| s.to_ascii_lowercase())
-                        == Some("true".into());
-                }
-                // force the readonly check
-                match (readonly, bypass_readonly) {
-                    (RepoReadOnly::ReadOnly(reason), false) => {
-                        old_future::err(ErrorKind::RepoReadOnly(reason).into()).left_future()
-                    }
-                    _ => {
-                        old_future::ok((maybe_pushvars, maybe_commonheads, bundle2)).right_future()
-                    }
-                }
-            })
-        }
-    })
-    .and_then({
-        cloned!(resolver);
-        move |(maybe_pushvars, maybe_commonheads, bundle2)| {
-            async move { resolver.is_next_part_pushkey(bundle2).await }
-                .boxed()
-                .compat()
-                .map(move |(pushkey_next, bundle2)| {
-                    (maybe_pushvars, maybe_commonheads, pushkey_next, bundle2)
-                })
-        }
-    })
-    .from_err()
-    .and_then(
-        move |(maybe_pushvars, maybe_commonheads, pushkey_next, bundle2)| {
-            let non_fast_forward_policy = {
-                let mut allow_non_fast_forward = false;
-                // check the bypass condition
-                if let Some(ref pushvars) = maybe_pushvars {
-                    allow_non_fast_forward = pushvars
-                        .get("NON_FAST_FORWARD")
-                        .map(|s| s.to_ascii_lowercase())
-                        == Some("true".into());
-                }
-                NonFastForwardPolicy::from(allow_non_fast_forward)
-            };
+    let (maybe_commonheads, bundle2) = resolver.maybe_resolve_commonheads(bundle2).await?;
+    let (maybe_pushvars, bundle2) = resolver
+        .maybe_resolve_pushvars(bundle2)
+        .await
+        .context("While resolving Pushvars")?;
 
-            if let Some(commonheads) = maybe_commonheads {
-                if pushkey_next {
-                    async move {
-                        resolve_bookmark_only_pushrebase(
-                            ctx,
-                            resolver,
-                            bundle2,
-                            non_fast_forward_policy,
-                            maybe_full_content,
-                        )
-                        .await
-                    }
-                    .boxed()
-                    .compat()
-                    .from_err()
-                    .boxify()
-                } else {
-                    fn changegroup_always_unacceptable() -> bool {
-                        false
-                    };
-                    async move {
-                        resolve_pushrebase(
-                            ctx,
-                            commonheads,
-                            resolver,
-                            bundle2,
-                            maybe_pushvars,
-                            maybe_full_content,
-                            changegroup_always_unacceptable,
-                        )
-                        .await
-                    }
-                    .boxed()
-                    .compat()
-                    .from_err()
-                    .boxify()
-                }
-            } else {
-                async move {
-                    resolve_push(
-                        ctx,
-                        resolver,
-                        bundle2,
-                        non_fast_forward_policy,
-                        maybe_full_content,
-                        move || pure_push_allowed,
-                    )
-                    .await
-                    .context("bundle2_resolver error")
-                }
-                .boxed()
-                .compat()
-                .from_err()
-                .boxify()
-            }
-        },
-    )
-    .boxify()
+    let mut bypass_readonly = false;
+    // check the bypass condition
+    if let Some(ref pushvars) = maybe_pushvars {
+        bypass_readonly = pushvars
+            .get("BYPASS_READONLY")
+            .map(|s| s.to_ascii_lowercase())
+            == Some("true".into());
+    }
+
+    if let RepoReadOnly::ReadOnly(reason) = readonly {
+        if bypass_readonly == false {
+            let e = Error::from(ErrorKind::RepoReadOnly(reason));
+            return Err(e.into());
+        }
+    }
+
+    let (pushkey_next, bundle2) = resolver.is_next_part_pushkey(bundle2).await?;
+
+    let non_fast_forward_policy = {
+        let mut allow_non_fast_forward = false;
+        // check the bypass condition
+        if let Some(ref pushvars) = maybe_pushvars {
+            allow_non_fast_forward = pushvars
+                .get("NON_FAST_FORWARD")
+                .map(|s| s.to_ascii_lowercase())
+                == Some("true".into());
+        }
+        NonFastForwardPolicy::from(allow_non_fast_forward)
+    };
+
+    if let Some(commonheads) = maybe_commonheads {
+        if pushkey_next {
+            resolve_bookmark_only_pushrebase(
+                ctx,
+                resolver,
+                bundle2,
+                non_fast_forward_policy,
+                maybe_full_content,
+            )
+            .await
+            .map_err(BundleResolverError::from)
+        } else {
+            fn changegroup_always_unacceptable() -> bool {
+                false
+            };
+            resolve_pushrebase(
+                ctx,
+                commonheads,
+                resolver,
+                bundle2,
+                maybe_pushvars,
+                maybe_full_content,
+                changegroup_always_unacceptable,
+            )
+            .await
+        }
+    } else {
+        resolve_push(
+            ctx,
+            resolver,
+            bundle2,
+            non_fast_forward_policy,
+            maybe_full_content,
+            move || pure_push_allowed,
+        )
+        .await
+        .context("bundle2_resolver error")
+        .map_err(BundleResolverError::from)
+    }
 }
 
 async fn resolve_push(

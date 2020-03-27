@@ -24,7 +24,7 @@ pub use hook_running::run_hooks;
 pub use processing::run_post_resolve_action;
 pub use push_redirector::{PushRedirector, CONFIGERATOR_PUSHREDIRECT_ENABLE};
 pub use resolver::{
-    resolve, BundleResolverError, Changesets, CommonHeads, InfiniteBookmarkPush,
+    resolve_compat, BundleResolverError, Changesets, CommonHeads, InfiniteBookmarkPush,
     NonFastForwardPolicy, PlainBookmarkPush, PostResolveAction, PostResolveBookmarkOnlyPushRebase,
     PostResolveInfinitePush, PostResolvePush, PostResolvePushRebase, PushrebaseBookmarkSpec,
     UploadedBonsais, UploadedHgChangesetIds,

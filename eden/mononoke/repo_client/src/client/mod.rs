@@ -1385,7 +1385,7 @@ impl HgCommands for RepoClient {
                 let infinitepush_writes_allowed = infinitepush_params.allow_writes;
                 let pushrebase_params = client.repo.pushrebase_params().clone();
 
-                let res = unbundle::resolve(
+                let res = unbundle::resolve_compat(
                     ctx.clone(),
                     client.repo.blobrepo().clone(),
                     infinitepush_writes_allowed,
