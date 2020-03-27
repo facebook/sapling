@@ -14,10 +14,10 @@ use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::{
     facebook::{
         create_myrouter_connections, create_raw_xdb_connections, MysqlOptions, PoolSizeConfig,
+        ReadConnectionType,
     },
     SqlConnections, SqlConstructors,
 };
-use sql_facebook::{myrouter, raw};
 use std::sync::Arc;
 
 use crate::local_cache::{CachelibCache, LocalCache};
@@ -100,14 +100,14 @@ impl NewFilenodesBuilder {
             Some(myrouter_port) => Self::with_sharded_myrouter(
                 tier,
                 myrouter_port,
-                options.myrouter_read_service_type(),
+                options.read_connection_type(),
                 shard_count,
                 readonly,
             ),
             None => Self::with_sharded_raw_xdb(
                 fb,
                 tier,
-                options.db_locator_read_instance_requirement(),
+                options.read_connection_type(),
                 shard_count,
                 readonly,
             ),
@@ -143,7 +143,7 @@ impl NewFilenodesBuilder {
     fn with_sharded_myrouter(
         tier: String,
         port: u16,
-        read_service_type: myrouter::ServiceType,
+        read_con_type: ReadConnectionType,
         shard_count: usize,
         readonly: bool,
     ) -> BoxFuture<Self, Error> {
@@ -154,7 +154,7 @@ impl NewFilenodesBuilder {
                     tier.clone(),
                     Some(shard_id),
                     port,
-                    read_service_type,
+                    read_con_type,
                     PoolSizeConfig::for_sharded_connection(),
                     "shardedfilenodes".into(),
                     readonly,
@@ -169,7 +169,7 @@ impl NewFilenodesBuilder {
     pub fn with_sharded_raw_xdb(
         fb: FacebookInit,
         tier: String,
-        read_instance_requirement: raw::InstanceRequirement,
+        read_con_type: ReadConnectionType,
         shard_count: usize,
         readonly: bool,
     ) -> BoxFuture<Self, Error> {
@@ -179,7 +179,7 @@ impl NewFilenodesBuilder {
                 create_raw_xdb_connections(
                     fb,
                     format!("{}.{}", tier, shard_id),
-                    read_instance_requirement,
+                    read_con_type,
                     readonly,
                 )
                 .boxify()

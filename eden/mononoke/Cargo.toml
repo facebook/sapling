@@ -2,14 +2,18 @@
 
 members = [
     "blobstore",
+    "blobstore/cacheblob",
     "blobstore/chaosblob",
     "blobstore/delayblob",
     "blobstore/fileblob",
+    "blobstore/if",
     "blobstore/memblob",
     "blobstore/prefixblob",
     "blobstore/readonlyblob",
     "blobstore/redactedblobstore",
     "blobstore/samplingblob",
+    "blobstore/sqlblob",
+    "blobstore/sqlblob/if",
     "blobstore/throttledblob",
     "common/async_limiter",
     "common/async_limiter/examples/tokio_v1",

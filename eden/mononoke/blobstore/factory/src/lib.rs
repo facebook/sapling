@@ -178,7 +178,7 @@ impl SqlFactoryBase for XdbFactory {
                 self.db_address.clone(),
                 None,
                 mysql_options,
-                self.mysql_options.myrouter_read_service_type(),
+                self.mysql_options.read_connection_type(),
                 PoolSizeConfig::for_regular_connection(),
                 label,
                 self.readonly,
@@ -187,7 +187,7 @@ impl SqlFactoryBase for XdbFactory {
             None => create_raw_xdb_connections(
                 self.fb,
                 self.db_address.clone(),
-                self.mysql_options.db_locator_read_instance_requirement(),
+                self.mysql_options.read_connection_type(),
                 self.readonly,
             )
             .boxify(),
@@ -354,7 +354,7 @@ pub fn make_blobstore(
                 fb,
                 shard_map.clone(),
                 myrouter_port,
-                mysql_options.myrouter_read_service_type(),
+                mysql_options.read_connection_type(),
                 shard_num,
                 readonly_storage.0,
             )
@@ -362,7 +362,7 @@ pub fn make_blobstore(
             Sqlblob::with_raw_xdb_shardmap(
                 fb,
                 shard_map.clone(),
-                mysql_options.db_locator_read_instance_requirement(),
+                mysql_options.read_connection_type(),
                 shard_num,
                 readonly_storage.0,
             )

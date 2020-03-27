@@ -1,0 +1,36 @@
+[package]
+name = "sqlblob"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["schema/**/*.sql", "src/**/*.rs"]
+
+[dependencies]
+blobstore = { path = ".." }
+cacheblob = { path = "../cacheblob" }
+context = { path = "../../server/context" }
+mononoke_types = { path = "../../mononoke_types" }
+sql_ext = { path = "../../common/rust/sql_ext" }
+sqlblob-thrift = { path = "if" }
+bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+bytes = { version = "0.5", features = ["serde"] }
+futures = "0.1"
+rand = { version = "0.7", features = ["small_rng"] }
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_derive = "1.0"
+serde_json = "1.0"
+tokio = "0.1"
+tokio-compat = "0.1"
+twox-hash = "1.5"
+
+[dev-dependencies]
+quickcheck = "0.9"

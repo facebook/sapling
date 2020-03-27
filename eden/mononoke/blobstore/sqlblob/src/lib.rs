@@ -25,10 +25,11 @@ use memcache::MEMCACHE_VALUE_MAX_SIZE;
 use mononoke_types::BlobstoreBytes;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_ext::{
-    facebook::{create_myrouter_connections, create_raw_xdb_connections, PoolSizeConfig},
+    facebook::{
+        create_myrouter_connections, create_raw_xdb_connections, PoolSizeConfig, ReadConnectionType,
+    },
     open_sqlite_in_memory, open_sqlite_path, SqlConnections,
 };
-use sql_facebook::{myrouter, raw};
 use stats::prelude::*;
 use std::fmt;
 use std::num::NonZeroUsize;
@@ -76,7 +77,7 @@ impl Sqlblob<MemcacheOps> {
         fb: FacebookInit,
         shardmap: String,
         port: u16,
-        read_service_type: myrouter::ServiceType,
+        read_con_type: ReadConnectionType,
         shard_num: NonZeroUsize,
         readonly: bool,
     ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
@@ -85,7 +86,7 @@ impl Sqlblob<MemcacheOps> {
                 shardmap.clone(),
                 Some(shard_id),
                 port,
-                read_service_type,
+                read_con_type,
                 PoolSizeConfig::for_sharded_connection(),
                 "blobstore".into(),
                 readonly,
@@ -98,7 +99,7 @@ impl Sqlblob<MemcacheOps> {
     pub fn with_raw_xdb_shardmap(
         fb: FacebookInit,
         shardmap: String,
-        read_instance_requirement: raw::InstanceRequirement,
+        read_con_type: ReadConnectionType,
         shard_num: NonZeroUsize,
         readonly: bool,
     ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
@@ -106,7 +107,7 @@ impl Sqlblob<MemcacheOps> {
             create_raw_xdb_connections(
                 fb,
                 format!("{}.{}", shardmap, shard_id),
-                read_instance_requirement,
+                read_con_type,
                 readonly,
             )
             .boxify()

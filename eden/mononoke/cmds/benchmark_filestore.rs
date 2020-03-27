@@ -24,7 +24,7 @@ use manifoldblob::ThriftManifoldBlob;
 use mononoke_types::{ContentMetadata, MononokeId};
 use prefixblob::PrefixBlobstore;
 use rand::Rng;
-use sql_ext::facebook::MysqlOptions;
+use sql_ext::facebook::ReadConnectionType;
 use sqlblob::Sqlblob;
 use std::fmt::Debug;
 use std::io::BufReader;
@@ -204,7 +204,7 @@ async fn get_blob<'a>(
                         fb,
                         shardmap,
                         port,
-                        MysqlOptions::default().myrouter_read_service_type(),
+                        ReadConnectionType::Replica,
                         shard_count,
                         false,
                     )
@@ -215,7 +215,7 @@ async fn get_blob<'a>(
                     Sqlblob::with_raw_xdb_shardmap(
                         fb,
                         shardmap,
-                        MysqlOptions::default().db_locator_read_instance_requirement(),
+                        ReadConnectionType::Replica,
                         shard_count,
                         false,
                     )

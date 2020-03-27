@@ -29,7 +29,7 @@ use context::CoreContext;
 use manifoldblob::{ManifoldEntry, ManifoldRange, ThriftManifoldBlob};
 use metaconfig_types::{BlobConfig, BlobstoreId, MetadataDBConfig, MultiplexId, StorageConfig};
 use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
-use sql_ext::facebook::{FbSqlConstructors, MysqlOptions};
+use sql_ext::facebook::{FbSqlConstructors, ReadConnectionType};
 
 /// Save manifold continuation token each once per `PRESERVE_STATE_RATIO` entries
 const PRESERVE_STATE_RATIO: usize = 10_000;
@@ -400,7 +400,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let queue: Arc<dyn BlobstoreSyncQueue> = Arc::new(SqlBlobstoreSyncQueue::with_myrouter(
         config.db_address.clone(),
         config.myrouter_port,
-        MysqlOptions::default().myrouter_read_service_type(),
+        ReadConnectionType::Replica,
         config.readonly_storage,
     ));
     let mut runtime = runtime::Runtime::new()?;
