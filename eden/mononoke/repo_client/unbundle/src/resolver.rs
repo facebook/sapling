@@ -320,8 +320,17 @@ fn resolve_push(
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
 ) -> OldBoxFuture<PostResolveAction, Error> {
-    resolver
-        .maybe_resolve_changegroup(ctx.clone(), bundle2, changegroup_acceptable)
+    {
+        cloned!(resolver, ctx);
+        async move {
+            resolver
+                .maybe_resolve_changegroup(ctx, bundle2, changegroup_acceptable)
+                .await
+                .context("While resolving Changegroup")
+        }
+    }
+    .boxed()
+    .compat()
         .and_then({
             cloned!(resolver);
             move |(cg_push, bundle2)| {
@@ -505,9 +514,15 @@ fn resolve_pushrebase(
         .and_then({
             cloned!(ctx, resolver);
             move |(manifests, bundle2)| {
-                resolver
-                    .maybe_resolve_changegroup(ctx, bundle2, changegroup_acceptable)
-                    .map(move |(cg_push, bundle2)| (cg_push, manifests, bundle2))
+                async move {
+                    resolver
+                        .maybe_resolve_changegroup(ctx, bundle2, changegroup_acceptable)
+                        .await
+                        .context("While resolving Changegroup")
+                }
+                .boxed()
+                .compat()
+                .map(move |(cg_push, bundle2)| (cg_push, manifests, bundle2))
             }
         })
         .and_then(|(cg_push, manifests, bundle2)| {
@@ -969,15 +984,18 @@ impl Bundle2Resolver {
     /// their upload should be used for uploading changesets
     /// `pure_push_allowed` argument is responsible for allowing
     /// pure (non-pushrebase and non-infinitepush) pushes
-    fn maybe_resolve_changegroup(
+    async fn maybe_resolve_changegroup(
         &self,
         ctx: CoreContext,
         bundle2: OldBoxStream<Bundle2Item, Error>,
         changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
-    ) -> OldBoxFuture<(Option<ChangegroupPush>, OldBoxStream<Bundle2Item, Error>), Error> {
+    ) -> Result<(Option<ChangegroupPush>, OldBoxStream<Bundle2Item, Error>), Error> {
         let repo = self.repo.clone();
+        let infinitepush_writes_allowed = self.infinitepush_writes_allowed;
 
-        let fut = next_item(bundle2).and_then(move |(changegroup, bundle2)| match changegroup {
+        let (changegroup, bundle2) = next_item(bundle2).compat().await?;
+
+        let maybe_cg_push: Option<ChangegroupPush> = match changegroup {
             // XXX: we may be interested in checking that this is a correct changegroup part
             // type
             Some(Bundle2Item::Changegroup(header, parts))
@@ -985,76 +1003,63 @@ impl Bundle2Resolver {
             | Some(Bundle2Item::B2xRebase(header, parts)) => {
                 if header.part_type() == &PartHeaderType::Changegroup && !changegroup_acceptable() {
                     // Changegroup part type signals that we are in a pure push scenario
-                    return err(format_err!("Pure pushes are disallowed in this repo")).boxify();
+                    return Err(format_err!("Pure pushes are disallowed in this repo"));
                 }
-                let (c, f) = split_changegroup(parts);
-                convert_to_revlog_changesets(c)
+
+                let (changesets, filelogs) = split_changegroup(parts);
+                let changesets = convert_to_revlog_changesets(changesets)
                     .collect()
-                    .and_then({
-                        cloned!(repo, ctx);
-                        move |changesets| {
-                            upload_hg_blobs(
-                                ctx.clone(),
-                                repo.clone(),
-                                convert_to_revlog_filelog(ctx.clone(), repo.clone(), f),
-                                UploadBlobsType::EnsureNoDuplicates,
-                            )
-                            .map(move |upload_map| {
-                                let mut filelogs = HashMap::new();
-                                let mut content_blobs = HashMap::new();
-                                for (node_key, (cbinfo, file_upload)) in upload_map {
-                                    filelogs.insert(node_key.clone(), file_upload);
-                                    content_blobs.insert(node_key, cbinfo);
-                                }
-                                (changesets, filelogs, content_blobs)
-                            })
-                            .context("While uploading File Blobs")
-                            .from_err()
-                        }
-                    })
-                    .and_then({
-                        cloned!(ctx, repo);
-                        move |(changesets, filelogs, content_blobs)| {
-                            async move {
-                                build_changegroup_push(
-                                    ctx,
-                                    &repo,
-                                    header,
-                                    changesets,
-                                    filelogs,
-                                    content_blobs,
-                                )
-                                .await
-                            }
-                            .boxed()
-                            .compat()
-                            .map(move |cg_push| (Some(cg_push), bundle2))
-                        }
-                    })
-                    .boxify()
+                    .compat()
+                    .await?;
+                let upload_map = upload_hg_blobs(
+                    ctx.clone(),
+                    repo.clone(),
+                    convert_to_revlog_filelog(ctx.clone(), repo.clone(), filelogs),
+                    UploadBlobsType::EnsureNoDuplicates,
+                )
+                .compat()
+                .await
+                .context("While uploading File Blobs")?;
+
+                let (filelogs, content_blobs) = {
+                    let mut filelogs = HashMap::new();
+                    let mut content_blobs = HashMap::new();
+                    for (node_key, (cbinfo, file_upload)) in upload_map {
+                        filelogs.insert(node_key.clone(), file_upload);
+                        content_blobs.insert(node_key, cbinfo);
+                    }
+                    (filelogs, content_blobs)
+                };
+
+                let cg_push =
+                    build_changegroup_push(ctx, &repo, header, changesets, filelogs, content_blobs)
+                        .await?;
+
+                Some(cg_push)
             }
-            Some(part) => return_with_rest_of_bundle(None, part, bundle2),
-            _ => err(format_err!("Unexpected Bundle2 stream end")).boxify(),
-        });
+            Some(part) => {
+                return return_with_rest_of_bundle(None, part, bundle2)
+                    .compat()
+                    .await
+            }
+            _ => return Err(format_err!("Unexpected Bundle2 stream end")),
+        };
 
         // Check that infinitepush is enabled if we use it.
-        let fut = if self.infinitepush_writes_allowed {
-            fut.left_future()
+        let res: Result<Option<ChangegroupPush>, Error> = if infinitepush_writes_allowed {
+            Ok(maybe_cg_push)
         } else {
-            fut.and_then(|maybe_cg_push| match maybe_cg_push {
-                (Some(ref cg_push), _) if cg_push.infinitepush_payload.is_some() => {
+            match maybe_cg_push {
+                Some(ref cg_push) if cg_push.infinitepush_payload.is_some() => {
                     bail!(
                         "Infinitepush is not enabled on this server. Contact Source Control @ FB."
                     );
                 }
                 r => Ok(r),
-            })
-            .right_future()
+            }
         };
 
-        fut.context("While resolving Changegroup")
-            .from_err()
-            .boxify()
+        res.map(move |maybe_cg_push| (maybe_cg_push, bundle2))
     }
 
     /// Parses pushkey part if it exists
