@@ -1,0 +1,37 @@
+[package]
+name = "filestore"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blobstore = { path = "../blobstore" }
+context = { path = "../server/context" }
+mononoke_types = { path = "../mononoke_types" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+bytes = { version = "0.5", features = ["serde"] }
+digest = "0.8"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+futures-util = "0.3"
+itertools = "0.8"
+sha-1 = "0.8"
+sha2 = "0.8"
+slog = { version="2.5", features=["max_level_debug"] }
+thiserror = "1.0"
+tokio = "0.1"
+tokio-compat = "0.1"
+
+[dev-dependencies]
+memblob = { path = "../blobstore/memblob" }
+mononoke_types-mocks = { path = "../mononoke_types/mocks" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+assert_matches = "1.3"
+lazy_static = "1.0"
+quickcheck = "0.9"
+rand = { version = "0.7", features = ["small_rng"] }

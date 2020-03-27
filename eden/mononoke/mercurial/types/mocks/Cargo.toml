@@ -1,0 +1,27 @@
+[package]
+name = "mercurial_types-mocks"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["**/*.rs"]
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+context = { path = "../../../server/context" }
+mercurial_types = { path = ".." }
+mononoke_types = { path = "../../../mononoke_types" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+byteorder = "1.3"
+bytes = { version = "0.5", features = ["serde"] }
+futures-old = { package = "futures", version = "0.1" }
+thiserror = "1.0"
+
+[dev-dependencies]
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures = { version = "0.3", features = ["async-await", "compat"] }
+maplit = "1.0"

@@ -22,7 +22,7 @@ use crate::{Entry, Manifest, ManifestOps};
 /// becomes occupied by a file in the child. In this case all files in the
 /// replaced directory are implicitly deleted.
 /// For example, consider the following manifest:
-/// ```
+/// ```ignore
 /// p1/
 ///   p2/   <- a dir
 ///     p3  <- a file
@@ -30,7 +30,7 @@ use crate::{Entry, Manifest, ManifestOps};
 /// ```
 /// Now a child adds the following file: `/p1/p2`
 /// New manifest looks like:
-/// ```
+/// ```ignore
 /// p1/
 ///   p2    <- f file
 /// ```

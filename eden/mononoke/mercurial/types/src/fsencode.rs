@@ -243,7 +243,7 @@ fn auxencode<E: AsRef<[u8]>>(elem: E, dotencode: bool) -> Vec<u8> {
 /// Returns file extension with period; leading periods are ignored
 ///
 /// # Examples
-/// ```
+/// ```ignore
 /// assert_eq(get_extension(b".foo"), b"");
 /// assert_eq(get_extension(b"bar.foo"), b".foo");
 /// assert_eq(get_extension(b"foo."), b".");
@@ -265,7 +265,7 @@ fn get_extension(basename: &[u8]) -> &[u8] {
 /// Returns sha-1 hash of the file name
 ///
 /// # Example
-/// ```
+/// ```ignore
 /// let dirs = vec![Vec::from(&b"asdf"[..]), Vec::from("asdf")];
 /// let file = b"file.txt";
 /// assert_eq!(hashed_file(&dirs, Some(file)), Sha1::from(&b"asdf/asdf/file.txt"[..]));
