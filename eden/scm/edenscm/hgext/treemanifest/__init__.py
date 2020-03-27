@@ -765,7 +765,7 @@ def setuptreestores(repo, mfl):
         ondemandstore = ondemandtreedatastore(repo)
 
         # Data store
-        datastore = makedatapackstore(ui, packpath)
+        datastore = makedatapackstore(ui, packpath, False)
         revlogstore = manifestrevlogstore(repo)
         mfl.revlogstore = revlogstore
 
@@ -791,7 +791,7 @@ def setuptreestores(repo, mfl):
         )
 
         # History store
-        historystore = makehistorypackstore(ui, packpath)
+        historystore = makehistorypackstore(ui, packpath, False)
         mfl.historystore = unionmetadatastore(
             historystore, revlogstore, mutablelocalstore, ondemandstore
         )
@@ -828,8 +828,8 @@ def setuptreestores(repo, mfl):
     )
 
     # Data store
-    datastore = makedatapackstore(ui, packpath, deletecorruptpacks=True)
-    localdatastore = makedatapackstore(ui, localpackpath)
+    datastore = makedatapackstore(ui, packpath, True, deletecorruptpacks=True)
+    localdatastore = makedatapackstore(ui, localpackpath, False)
     datastores = [datastore, localdatastore, mutablelocalstore, mutablesharedstore]
     if demanddownload:
         datastores.append(remotestore)
@@ -844,8 +844,10 @@ def setuptreestores(repo, mfl):
     mfl.localdatastores = [localdatastore]
 
     # History store
-    sharedhistorystore = makehistorypackstore(ui, packpath, deletecorruptpacks=True)
-    localhistorystore = makehistorypackstore(ui, localpackpath)
+    sharedhistorystore = makehistorypackstore(
+        ui, packpath, True, deletecorruptpacks=True
+    )
+    localhistorystore = makehistorypackstore(ui, localpackpath, False)
     mfl.sharedhistorystores = [sharedhistorystore]
     mfl.localhistorystores = [localhistorystore]
 

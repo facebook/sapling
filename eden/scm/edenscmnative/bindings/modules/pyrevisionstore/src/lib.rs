@@ -20,16 +20,15 @@ use anyhow::{format_err, Error};
 use cpython::*;
 use parking_lot::RwLock;
 
-use cpython_ext::{PyErr, PyPath, PyPathBuf, ResultPyErrExt, Str};
+use cpython_ext::{PyErr, PyNone, PyPath, PyPathBuf, ResultPyErrExt, Str};
 use pyconfigparser::config;
 use revisionstore::{
-    repack::{filter_incrementalpacks, list_packs, repack_datapacks, repack_historypacks},
-    ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore, DataPackVersion,
-    Delta, HgIdDataStore, HgIdHistoryStore, HgIdMutableDeltaStore, HgIdMutableHistoryStore,
-    HgIdRemoteStore, HistoryPack, HistoryPackStore, HistoryPackVersion, IndexedLogHgIdDataStore,
-    IndexedLogHgIdHistoryStore, IndexedlogRepair, LocalStore, MemcacheStore, Metadata,
-    MetadataStore, MetadataStoreBuilder, MutableDataPack, MutableHistoryPack, RemoteDataStore,
-    RemoteHistoryStore, StoreKey,
+    repack, ContentStore, ContentStoreBuilder, CorruptionPolicy, DataPack, DataPackStore,
+    DataPackVersion, Delta, HgIdDataStore, HgIdHistoryStore, HgIdMutableDeltaStore,
+    HgIdMutableHistoryStore, HgIdRemoteStore, HistoryPack, HistoryPackStore, HistoryPackVersion,
+    IndexedLogHgIdDataStore, IndexedLogHgIdHistoryStore, IndexedlogRepair, LocalStore,
+    MemcacheStore, Metadata, MetadataStore, MetadataStoreBuilder, MutableDataPack,
+    MutableHistoryPack, RemoteDataStore, RemoteHistoryStore, RepackKind, RepackLocation, StoreKey,
 };
 use types::{Key, NodeInfo};
 
@@ -71,71 +70,44 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     m.add_class::<memcachestore>(py)?;
     m.add(
         py,
-        "repackdatapacks",
-        py_fn!(py, repackdata(packpath: &PyPath)),
-    )?;
-    m.add(
-        py,
-        "repackincrementaldatapacks",
-        py_fn!(py, incremental_repackdata(packpath: &PyPath)),
-    )?;
-    m.add(
-        py,
-        "repackhistpacks",
-        py_fn!(py, repackhist(packpath: &PyPath)),
-    )?;
-    m.add(
-        py,
-        "repackincrementalhistpacks",
-        py_fn!(py, incremental_repackhist(packpath: &PyPath)),
+        "repack",
+        py_fn!(
+            py,
+            repack_py(
+                packpath: &PyPath,
+                stores: Option<(contentstore, metadatastore)>,
+                full: bool,
+                shared: bool
+            )
+        ),
     )?;
     Ok(m)
 }
 
-/// Helper function to de-serialize and re-serialize from and to Python objects.
-fn repack_pywrapper(
+fn repack_py(
     py: Python,
-    path: &PyPath,
-    repacker: impl FnOnce(PathBuf) -> Result<PathBuf>,
-) -> PyResult<PyPathBuf> {
-    repacker(path.to_path_buf())
-        .and_then(|p| p.try_into())
-        .map_pyerr(py)
-}
+    packpath: &PyPath,
+    stores: Option<(contentstore, metadatastore)>,
+    full: bool,
+    shared: bool,
+) -> PyResult<PyNone> {
+    let stores = stores.map(|(content, metadata)| (content.to_inner(py), metadata.to_inner(py)));
 
-/// Merge all the datapacks into one big datapack. Returns the fullpath of the resulting datapack.
-fn repackdata(py: Python, packpath: &PyPath) -> PyResult<PyPathBuf> {
-    repack_pywrapper(py, packpath, |dir| {
-        repack_datapacks(list_packs(&dir, "datapack")?.iter(), &dir)
-    })
-}
+    let kind = if full {
+        RepackKind::Full
+    } else {
+        RepackKind::Incremental
+    };
 
-/// Merge all the history packs into one big historypack. Returns the fullpath of the resulting
-/// histpack.
-fn repackhist(py: Python, packpath: &PyPath) -> PyResult<PyPathBuf> {
-    repack_pywrapper(py, packpath, |dir| {
-        repack_historypacks(list_packs(&dir, "histpack")?.iter(), &dir)
-    })
-}
+    let location = if shared {
+        RepackLocation::Shared
+    } else {
+        RepackLocation::Local
+    };
 
-/// Perform an incremental repack of data packs.
-fn incremental_repackdata(py: Python, packpath: &PyPath) -> PyResult<PyPathBuf> {
-    repack_pywrapper(py, packpath, |dir| {
-        repack_datapacks(
-            filter_incrementalpacks(list_packs(&dir, "datapack")?, "datapack")?.iter(),
-            &dir,
-        )
-    })
-}
+    repack(packpath.to_path_buf(), stores, kind, location).map_pyerr(py)?;
 
-/// Perform an incremental repack of history packs.
-fn incremental_repackhist(py: Python, packpath: &PyPath) -> PyResult<PyPathBuf> {
-    repack_pywrapper(py, packpath, |dir| {
-        repack_historypacks(
-            filter_incrementalpacks(list_packs(&dir, "histpack")?, "histpack")?.iter(),
-            &dir,
-        )
-    })
+    Ok(PyNone)
 }
 
 py_class!(class datapack |py| {
@@ -886,7 +858,7 @@ impl contentstore {
 }
 
 py_class!(class metadatastore |py| {
-    data store: MetadataStore;
+    data store: Arc<MetadataStore>;
 
     def __new__(_cls, path: Option<PyPathBuf>, config: config, remote: pyremotestore, memcache: Option<memcachestore>) -> PyResult<metadatastore> {
         let remotestore = remote.into_inner(py);
@@ -906,7 +878,7 @@ py_class!(class metadatastore |py| {
             builder
         };
 
-        let metadatastore = builder.build().map_pyerr(py)?;
+        let metadatastore = Arc::new(builder.build().map_pyerr(py)?);
         metadatastore::create_instance(py, metadatastore)
     }
 
@@ -933,6 +905,12 @@ py_class!(class metadatastore |py| {
         store.prefetch_py(py, keys)
     }
 });
+
+impl metadatastore {
+    pub fn to_inner(&self, py: Python) -> Arc<MetadataStore> {
+        self.store(py).clone()
+    }
+}
 
 py_class!(pub class memcachestore |py| {
     data memcache: MemcacheStore;

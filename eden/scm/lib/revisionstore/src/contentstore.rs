@@ -31,6 +31,7 @@ use crate::{
     multiplexstore::MultiplexDeltaStore,
     packstore::{CorruptionPolicy, MutableDataPackStore},
     remotestore::HgIdRemoteStore,
+    repack::RepackLocation,
     types::StoreKey,
     uniondatastore::{UnionContentDataStore, UnionHgIdDataStore},
     util::{
@@ -72,6 +73,37 @@ impl ContentStore {
         } else {
             Ok(None)
         }
+    }
+}
+
+// Repack specific methods, not to be used directly but by the repack code.
+impl ContentStore {
+    pub(crate) fn add_pending(
+        &self,
+        key: &Key,
+        data: Bytes,
+        meta: Metadata,
+        location: RepackLocation,
+    ) -> Result<()> {
+        let delta = Delta {
+            data,
+            base: None,
+            key: key.clone(),
+        };
+
+        match location {
+            RepackLocation::Local => self.add(&delta, &meta),
+            RepackLocation::Shared => self.shared_mutabledatastore.add(&delta, &meta),
+        }
+    }
+
+    pub(crate) fn commit_pending(&self, location: RepackLocation) -> Result<()> {
+        match location {
+            RepackLocation::Local => self.flush()?,
+            RepackLocation::Shared => self.shared_mutabledatastore.flush()?,
+        };
+
+        Ok(())
     }
 }
 

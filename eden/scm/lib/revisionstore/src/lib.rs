@@ -21,6 +21,7 @@ mod lfs;
 mod memcache;
 mod metadatastore;
 mod remotestore;
+mod repack;
 mod sliceext;
 mod types;
 mod unionstore;
@@ -40,7 +41,6 @@ pub mod mutablehistorypack;
 pub mod mutablepack;
 pub mod packstore;
 pub mod packwriter;
-pub mod repack;
 pub mod uniondatastore;
 pub mod unionhistorystore;
 
@@ -66,7 +66,7 @@ pub use crate::packstore::{
     MutableHistoryPackStore,
 };
 pub use crate::remotestore::HgIdRemoteStore;
-pub use crate::repack::ToKeys;
+pub use crate::repack::{repack, RepackKind, RepackLocation, Repackable, ToKeys};
 pub use crate::types::{ContentHash, StoreKey};
 pub use crate::uniondatastore::UnionHgIdDataStore;
 pub use crate::util::Error;

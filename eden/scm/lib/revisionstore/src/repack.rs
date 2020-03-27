@@ -8,24 +8,40 @@
 use std::{
     fs,
     path::{Path, PathBuf},
+    sync::Arc,
 };
 
 use anyhow::{format_err, Error, Result};
+use bytes::Bytes;
 use thiserror::Error;
 
 use types::Key;
 
 use crate::{
+    contentstore::ContentStore,
     datapack::{DataPack, DataPackVersion},
     datastore::{HgIdDataStore, HgIdMutableDeltaStore},
     historypack::{HistoryPack, HistoryPackVersion},
     historystore::{HgIdHistoryStore, HgIdMutableHistoryStore},
     localstore::LocalStore,
+    metadatastore::MetadataStore,
     mutabledatapack::MutableDataPack,
     mutablehistorypack::MutableHistoryPack,
     mutablepack::MutablePack,
     types::StoreKey,
 };
+
+#[derive(Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
+pub enum RepackLocation {
+    Local,
+    Shared,
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Ord, PartialOrd)]
+pub enum RepackKind {
+    Incremental,
+    Full,
+}
 
 pub trait ToKeys {
     fn to_keys(&self) -> Vec<Result<Key>>;
@@ -60,20 +76,20 @@ enum RepackFailure {
     #[error("Repack failure: {0:?}")]
     Total(Vec<(PathBuf, Error)>),
 
-    #[error("Repack successful but with errors: {1:?}")]
-    Partial(PathBuf, Vec<(PathBuf, Error)>),
+    #[error("Repack successful but with errors: {0:?}")]
+    Partial(Vec<(PathBuf, Error)>),
 }
 
 /// Repack all pack files in the paths iterator. Once repacked, the repacked packs will be removed
 /// from the filesystem.
-fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable + ToKeys>(
-    paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
+fn repack_packs<T: MutablePack, U: LocalStore + Repackable + ToKeys>(
+    paths: impl IntoIterator<Item = PathBuf> + Clone,
     mut mut_pack: T,
     repack_pack: impl Fn(&U, &mut T) -> Result<()>,
 ) -> Result<PathBuf> {
     if paths.clone().into_iter().count() <= 1 {
         if let Some(path) = paths.into_iter().next() {
-            return Ok(path.to_path_buf());
+            return Ok(path);
         } else {
             return Ok(PathBuf::new());
         }
@@ -137,14 +153,14 @@ fn repack_packs<'a, T: MutablePack, U: LocalStore + Repackable + ToKeys>(
     if successfully_repacked == 0 {
         Err(RepackFailure::Total(errors).into())
     } else if !errors.is_empty() {
-        Err(RepackFailure::Partial(new_pack_path, errors).into())
+        Err(RepackFailure::Partial(errors).into())
     } else {
         Ok(new_pack_path)
     }
 }
 
-pub fn repack_datapacks<'a>(
-    paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
+fn repack_datapacks(
+    paths: impl IntoIterator<Item = PathBuf> + Clone,
     outdir: &Path,
 ) -> Result<PathBuf> {
     let mut_pack = MutableDataPack::new(outdir, DataPackVersion::One)?;
@@ -163,8 +179,8 @@ fn repack_historypack(history_pack: &HistoryPack, mut_pack: &mut MutableHistoryP
     Ok(())
 }
 
-pub fn repack_historypacks<'a>(
-    paths: impl IntoIterator<Item = &'a PathBuf> + Clone,
+fn repack_historypacks(
+    paths: impl IntoIterator<Item = PathBuf> + Clone,
     outdir: &Path,
 ) -> Result<PathBuf> {
     let mut_pack = MutableHistoryPack::new(outdir, HistoryPackVersion::One)?;
@@ -173,7 +189,7 @@ pub fn repack_historypacks<'a>(
 }
 
 /// List all the pack files in the directory `dir` that ends with `extension`.
-pub fn list_packs(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
+fn list_packs(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
     let mut dirents = fs::read_dir(dir)?
         .filter_map(|e| match e {
             Err(_) => None,
@@ -194,7 +210,7 @@ pub fn list_packs(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
 /// Select all the packs from `packs` that needs to be repacked during an incremental repack.
 ///
 /// The filtering is fairly basic and is intended to reduce the fragmentation of pack files.
-pub fn filter_incrementalpacks(packs: Vec<PathBuf>, extension: &str) -> Result<Vec<PathBuf>> {
+fn filter_incrementalpacks(packs: Vec<PathBuf>, extension: &str) -> Result<Vec<PathBuf>> {
     // XXX: Read these from the configuration.
     let repackmaxpacksize = if extension == "histpack" {
         // Per 100MB of histpack size, the memory consumption is over 1GB, thus repacking 4GB
@@ -243,6 +259,177 @@ pub fn filter_incrementalpacks(packs: Vec<PathBuf>, extension: &str) -> Result<V
         .collect())
 }
 
+/// Fallback for `repack` for when no `ContentStore`/`MetadataStore` were passed in. Will simply
+/// use the legacy code path to write the content of the packfiles to a packfile.
+fn repack_no_store(path: PathBuf, kind: RepackKind) -> Result<()> {
+    let mut datapacks = list_packs(&path, "datapack")?;
+    let mut histpacks = list_packs(&path, "histpack")?;
+
+    if kind == RepackKind::Incremental {
+        datapacks = filter_incrementalpacks(datapacks, "datapack")?;
+        histpacks = filter_incrementalpacks(histpacks, "histpack")?;
+    }
+
+    let datapack_res = repack_datapacks(datapacks, &path).map(|_| ());
+    let histpack_res = repack_historypacks(histpacks, &path).map(|_| ());
+
+    datapack_res.and(histpack_res)
+}
+
+fn repack_datapack_to_contentstore(
+    paths: Vec<PathBuf>,
+    store: &ContentStore,
+    location: RepackLocation,
+) -> Result<()> {
+    let mut repacked = Vec::with_capacity(paths.len());
+    let mut errors = vec![];
+
+    for path in paths {
+        let pack = match DataPack::new(&path) {
+            Ok(pack) => pack,
+            Err(_) => continue,
+        };
+
+        let res = (|| -> Result<()> {
+            for key in pack.to_keys() {
+                let key = key?;
+
+                if let Some(content) = store.get(&key)? {
+                    // If we managed to get a delta, the metadata must be present.
+                    let meta = store.get_meta(&key)?.unwrap();
+
+                    store.add_pending(&key, Bytes::from(content), meta, location)?;
+                }
+            }
+            Ok(())
+        })();
+
+        match res {
+            Ok(_) => repacked.push(path),
+            Err(e) => errors.push((path, e)),
+        }
+    }
+
+    if repacked.is_empty() {
+        return Err(RepackFailure::Total(errors).into());
+    }
+
+    store.commit_pending(location)?;
+
+    for path in repacked {
+        match DataPack::new(&path) {
+            Ok(pack) => pack.delete()?,
+            Err(_) => continue,
+        }
+    }
+
+    if !errors.is_empty() {
+        Err(RepackFailure::Partial(errors).into())
+    } else {
+        Ok(())
+    }
+}
+
+fn repack_histpack_to_metadatastore(
+    paths: Vec<PathBuf>,
+    store: &MetadataStore,
+    location: RepackLocation,
+) -> Result<()> {
+    let mut repacked = Vec::with_capacity(paths.len());
+    let mut errors = vec![];
+
+    for path in paths {
+        let pack = match HistoryPack::new(&path) {
+            Ok(pack) => pack,
+            Err(_) => continue,
+        };
+
+        let res = (|| -> Result<()> {
+            for key in pack.to_keys() {
+                let key = key?;
+
+                if let Some(nodeinfo) = store.get_node_info(&key)? {
+                    store.add_pending(&key, nodeinfo, location)?;
+                }
+            }
+
+            Ok(())
+        })();
+
+        match res {
+            Ok(_) => repacked.push(path),
+            Err(e) => errors.push((path, e)),
+        }
+    }
+
+    if repacked.is_empty() {
+        return Err(RepackFailure::Total(errors).into());
+    }
+
+    store.commit_pending(location)?;
+
+    for path in repacked {
+        match HistoryPack::new(&path) {
+            Ok(pack) => pack.delete()?,
+            Err(_) => continue,
+        }
+    }
+
+    if !errors.is_empty() {
+        Err(RepackFailure::Partial(errors).into())
+    } else {
+        Ok(())
+    }
+}
+
+/// Read blobs and metadata contained in the packfiles from `path` and write them back to the
+/// `stores`.
+///
+/// The primary goal of `repack` is to reduce the performance effect of having many packfiles on
+/// disk. This is done by writing all the data (and metadata) of the several packfiles onto one.
+///
+/// The secondary goal of `repack` is for file format changes, packfile are for instance holding
+/// LFS pointers, and by virtue of writing these pointers to a `ContentStore`, these will be
+/// written to the `LfsStore` instead of to a packfile.
+///
+/// When `RepackKind::Incremental` is passed in, only a subset of the packfiles will be repacked in
+/// order to minimize CPU cost.
+///
+/// When `stores` is None, a much dumber repack operation is performed, where only the primary goal
+/// is fullfilled.
+pub fn repack(
+    path: PathBuf,
+    stores: Option<(Arc<ContentStore>, Arc<MetadataStore>)>,
+    kind: RepackKind,
+    location: RepackLocation,
+) -> Result<()> {
+    let (content, metadata) = match stores {
+        Some((content, metadata)) => (content, metadata),
+        None => return repack_no_store(path, kind),
+    };
+
+    let mut datapacks = list_packs(&path, "datapack")?;
+    let mut histpacks = list_packs(&path, "histpack")?;
+
+    if kind == RepackKind::Incremental {
+        // We may be filtering out packfiles that contain LFS pointers, reducing the effectiveness
+        // of the secondary goal of repack. To fully perform this secondary goal, a full repack
+        // will be necessary, to keep incremental repacks simple.
+        datapacks = filter_incrementalpacks(datapacks, "datapack")?;
+        histpacks = filter_incrementalpacks(histpacks, "histpack")?;
+    }
+
+    if datapacks.len() > 1 {
+        repack_datapack_to_contentstore(datapacks, &content, location)?;
+    }
+
+    if histpacks.len() > 1 {
+        repack_histpack_to_metadatastore(histpacks, &metadata, location)?;
+    }
+
+    Ok(())
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -268,7 +455,7 @@ mod tests {
     fn test_repack_no_datapack() {
         let tempdir = TempDir::new().unwrap();
 
-        let newpath = repack_datapacks(vec![].iter(), tempdir.path());
+        let newpath = repack_datapacks(vec![].into_iter(), tempdir.path());
         assert!(newpath.is_ok());
         let newpath = newpath.unwrap();
         assert_eq!(newpath.to_str(), Some(""));
@@ -288,7 +475,10 @@ mod tests {
         )];
 
         let pack = make_datapack(&tempdir, &revisions);
-        let newpath = repack_datapacks(vec![pack.base_path().to_path_buf()].iter(), tempdir.path());
+        let newpath = repack_datapacks(
+            vec![pack.base_path().to_path_buf()].into_iter(),
+            tempdir.path(),
+        );
         assert!(newpath.is_ok());
         let newpath2 = newpath.unwrap();
         assert_eq!(newpath2.with_extension("datapack"), pack.pack_path());
@@ -340,7 +530,7 @@ mod tests {
             paths.push(path);
         }
 
-        let newpath = repack_datapacks(paths.iter(), tempdir.path());
+        let newpath = repack_datapacks(paths.into_iter(), tempdir.path());
         assert!(newpath.is_ok());
         let newpack = DataPack::new(&newpath.unwrap()).unwrap();
         assert_eq!(
@@ -362,13 +552,18 @@ mod tests {
         let tempdir = TempDir::new().unwrap();
 
         let paths = vec![PathBuf::from("foo.datapack"), PathBuf::from("bar.datapack")];
-        let files = paths.iter().map(|p| p).collect::<Vec<&PathBuf>>();
-        let res = repack_datapacks(files.clone(), tempdir.path())
+        let res = repack_datapacks(paths.clone().into_iter(), tempdir.path())
             .err()
             .unwrap();
 
-        if let Some(RepackFailure::Total(errors)) = res.downcast_ref() {
-            assert!(errors.iter().map(|(path, _)| path).eq(files));
+        if let Ok(RepackFailure::Total(errors)) = res.downcast() {
+            assert_eq!(
+                errors
+                    .into_iter()
+                    .map(|(path, _)| path)
+                    .collect::<Vec<PathBuf>>(),
+                paths
+            );
         } else {
             assert!(false);
         }
@@ -418,11 +613,11 @@ mod tests {
         file.write_all(b"FOOBARBAZ").unwrap();
         drop(file);
 
-        let res = repack_datapacks(paths.iter(), tempdir.path())
+        let res = repack_datapacks(paths.into_iter(), tempdir.path())
             .err()
             .unwrap();
 
-        if let Some(RepackFailure::Partial(_, errors)) = res.downcast_ref() {
+        if let Some(RepackFailure::Partial(errors)) = res.downcast_ref() {
             assert_eq!(errors.iter().count(), 1);
             to_corrupt.set_extension("");
             assert!(errors.iter().find(|(p, _)| p == &to_corrupt).is_some());
@@ -439,8 +634,10 @@ mod tests {
         let nodes = get_nodes(&mut rng);
 
         let pack = make_historypack(&tempdir, &nodes);
-        let newpath =
-            repack_historypacks(vec![pack.base_path().to_path_buf()].iter(), tempdir.path());
+        let newpath = repack_historypacks(
+            vec![pack.base_path().to_path_buf()].into_iter(),
+            tempdir.path(),
+        );
         assert!(newpath.is_ok());
         let newpack = HistoryPack::new(&newpath.unwrap()).unwrap();
 
@@ -466,7 +663,7 @@ mod tests {
             paths.push(path);
         }
 
-        let newpath = repack_historypacks(paths.iter(), tempdir.path());
+        let newpath = repack_historypacks(paths.into_iter(), tempdir.path());
         assert!(newpath.is_ok());
         let newpack = HistoryPack::new(&newpath.unwrap()).unwrap();
 

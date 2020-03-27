@@ -23,6 +23,7 @@ use crate::{
     multiplexstore::MultiplexHgIdHistoryStore,
     packstore::{CorruptionPolicy, MutableHistoryPackStore},
     remotestore::HgIdRemoteStore,
+    repack::RepackLocation,
     types::StoreKey,
     unionhistorystore::UnionHgIdHistoryStore,
     util::{
@@ -47,6 +48,30 @@ impl MetadataStore {
         MetadataStoreBuilder::new(config)
             .local_path(&local_path)
             .build()
+    }
+}
+
+// Repack specific methods, not to be used directly but by the repack code.
+impl MetadataStore {
+    pub(crate) fn add_pending(
+        &self,
+        key: &Key,
+        info: NodeInfo,
+        location: RepackLocation,
+    ) -> Result<()> {
+        match location {
+            RepackLocation::Local => self.add(&key, &info),
+            RepackLocation::Shared => self.shared_mutablehistorystore.add(&key, &info),
+        }
+    }
+
+    pub(crate) fn commit_pending(&self, location: RepackLocation) -> Result<()> {
+        match location {
+            RepackLocation::Local => self.flush()?,
+            RepackLocation::Shared => self.shared_mutablehistorystore.flush()?,
+        };
+
+        Ok(())
     }
 }
 

@@ -1344,8 +1344,8 @@ def resolveonto(repo, ontoarg):
 
 
 def _createpackstore(ui, packpath):
-    datastore = datapack.makedatapackstore(ui, packpath)
-    histstore = historypack.makehistorypackstore(ui, packpath)
+    datastore = datapack.makedatapackstore(ui, packpath, True)
+    histstore = historypack.makehistorypackstore(ui, packpath, True)
     return datastore, histstore
 
 

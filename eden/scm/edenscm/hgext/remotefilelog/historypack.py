@@ -44,9 +44,9 @@ class historypackstore(basepack.basepackstore):
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
 
-    def __init__(self, ui, path, deletecorruptpacks=False):
+    def __init__(self, ui, path, shared, deletecorruptpacks=False):
         super(historypackstore, self).__init__(
-            ui, path, deletecorruptpacks=deletecorruptpacks
+            ui, path, shared, deletecorruptpacks=deletecorruptpacks
         )
 
     def getpack(self, path):
@@ -66,15 +66,12 @@ class historypackstore(basepack.basepackstore):
             "cannot add to historypackstore (%s:%s)" % (filename, hex(node))
         )
 
-    def repackstore(self):
-        revisionstore.repackincrementalhistpacks(self.path)
 
-
-def makehistorypackstore(ui, path, deletecorruptpacks=False):
+def makehistorypackstore(ui, path, shared, deletecorruptpacks=False):
     if ui.configbool("remotefilelog", "userustpackstore", False):
         return revisionstore.historypackstore(path, deletecorruptpacks)
     else:
-        return historypackstore(ui, path, deletecorruptpacks)
+        return historypackstore(ui, path, shared, deletecorruptpacks=deletecorruptpacks)
 
 
 class memhistorypack(object):

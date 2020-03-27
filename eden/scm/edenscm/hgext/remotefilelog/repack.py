@@ -44,25 +44,29 @@ def backgroundrepack(repo, incremental=True):
     runshellcommand(cmd, encoding.environ)
 
 
-def _runrustrepack(repo, packpath, incremental):
+def _runrustrepack(ui, packpath, stores, incremental, shared):
     if not os.path.isdir(packpath):
         return
 
-    if incremental:
-        repacks = [
-            revisionstore.repackincrementaldatapacks,
-            revisionstore.repackincrementalhistpacks,
-        ]
-    else:
-        repacks = [revisionstore.repackdatapacks, revisionstore.repackhistpacks]
+    try:
+        revisionstore.repack(packpath, stores, not incremental, shared)
+    except Exception as e:
+        ui.log("repack_failure", msg=str(e), traceback=traceback.format_exc())
+        if "Repack successful but with errors" not in str(e):
+            raise
 
-    for dorepack in repacks:
-        try:
-            dorepack(packpath)
-        except Exception as e:
-            repo.ui.log("repack_failure", msg=str(e), traceback=traceback.format_exc())
-            if "Repack successful but with errors" not in str(e):
-                raise
+
+def _runrepack(repo, packpath, incremental, shared):
+    if repo.fileslog._ruststore:
+        stores = (repo.fileslog.contentstore, repo.fileslog.metadatastore)
+    else:
+        stores = None
+
+    _runrustrepack(repo.ui, packpath, stores, incremental, shared)
+
+
+def runrepacklegacy(ui, packpath, incremental, shared):
+    _runrustrepack(ui, packpath, None, incremental, shared)
 
 
 def _shareddatastoresrepack(repo, incremental):
@@ -71,7 +75,7 @@ def _shareddatastoresrepack(repo, incremental):
         limit = repo.ui.configbytes("remotefilelog", "cachelimit", "10GB")
         _cleanuppacks(repo.ui, packpath, limit)
 
-        _runrustrepack(repo, packpath, incremental)
+        _runrepack(repo, packpath, incremental, True)
 
 
 def _localdatarepack(repo, incremental):
@@ -83,12 +87,12 @@ def _localdatarepack(repo, incremental):
         )
         _cleanuppacks(repo.ui, packpath, 0)
 
-        _runrustrepack(repo, packpath, incremental)
+        _runrepack(repo, packpath, incremental, False)
 
 
 def _manifestrepack(repo, incremental):
     if repo.ui.configbool("treemanifest", "server"):
-        _runrustrepack(repo, repo.localvfs.join("cache/packs/manifests"), incremental)
+        _runrepack(repo, repo.localvfs.join("cache/packs/manifests"), incremental)
     elif util.safehasattr(repo.manifestlog, "datastore"):
         localdata, shareddata = _getmanifeststores(repo)
         lpackpath, ldstores, lhstores = localdata
@@ -101,7 +105,7 @@ def _manifestrepack(repo, incremental):
                 else 0
             )
             _cleanuppacks(repo.ui, packpath, limit)
-            _runrustrepack(repo, packpath, incremental)
+            runrepacklegacy(repo.ui, packpath, incremental, shared)
 
         # Repack the shared manifest store
         _domanifestrepack(spackpath, sdstores, shstores, True)

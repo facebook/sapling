@@ -30,9 +30,9 @@ class datapackstore(basepack.basepackstore):
     INDEXSUFFIX = INDEXSUFFIX
     PACKSUFFIX = PACKSUFFIX
 
-    def __init__(self, ui, path, deletecorruptpacks=False):
+    def __init__(self, ui, path, shared, deletecorruptpacks=False):
         super(datapackstore, self).__init__(
-            ui, path, deletecorruptpacks=deletecorruptpacks
+            ui, path, shared, deletecorruptpacks=deletecorruptpacks
         )
 
     def getpack(self, path):
@@ -71,15 +71,12 @@ class datapackstore(basepack.basepackstore):
     def add(self, name, node, data):
         raise RuntimeError("cannot add to datapackstore")
 
-    def repackstore(self, incremental=True):
-        revisionstore.repackincrementaldatapacks(self.path)
 
-
-def makedatapackstore(ui, path, deletecorruptpacks=False):
+def makedatapackstore(ui, path, shared, deletecorruptpacks=False):
     if ui.configbool("remotefilelog", "userustpackstore", False):
         return revisionstore.datapackstore(path, deletecorruptpacks)
     else:
-        return datapackstore(ui, path, deletecorruptpacks)
+        return datapackstore(ui, path, shared, deletecorruptpacks=deletecorruptpacks)
 
 
 class memdatapack(object):

@@ -96,10 +96,11 @@ class basepackstore(object):
     # Default cache size limit for the pack files.
     DEFAULTCACHESIZE = 100
 
-    def __init__(self, ui, path, deletecorruptpacks=False):
+    def __init__(self, ui, path, shared, deletecorruptpacks=False):
         self.ui = ui
         self.path = path
         self.deletecorruptpacks = deletecorruptpacks
+        self.shared = shared
 
         # lastrefesh is 0 so we'll immediately check for new packs on the first
         # failure.
@@ -107,6 +108,11 @@ class basepackstore(object):
 
         self.packs = _cachebackedpacks([], self.DEFAULTCACHESIZE)
         self.packspath = set()
+
+    def repackstore(self, incremental=True):
+        from .repack import runrepacklegacy
+
+        runrepacklegacy(self.ui, self.path, incremental, self.shared)
 
     def _getavailablepackfiles(self, currentpacks=None):
         """For each pack file (a index/data file combo), yields:

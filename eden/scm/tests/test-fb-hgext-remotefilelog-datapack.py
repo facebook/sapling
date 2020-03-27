@@ -281,7 +281,7 @@ class datapacktestsbase(object):
             # Ensures that we are not keeping everything in the cache.
             DEFAULTCACHESIZE = numpacks / 2
 
-        store = testdatapackstore(uimod.ui(), packdir)
+        store = testdatapackstore(uimod.ui(), packdir, True)
 
         random.shuffle(deltachains)
         for randomchain in deltachains:
@@ -323,7 +323,7 @@ class datapacktestsbase(object):
             def getpack(self, path):
                 return packreader(path)
 
-        store = testdatapackstore(uimod.ui(), packdir)
+        store = testdatapackstore(uimod.ui(), packdir, True)
 
         # The first refresh should populate all the packfiles.
         store.refresh()
@@ -370,7 +370,7 @@ class datapacktestsbase(object):
             deltachains.append(chain)
 
         ui = uimod.ui()
-        store = datapackstore(ui, packdir, deletecorruptpacks=True)
+        store = datapackstore(ui, packdir, True, deletecorruptpacks=True)
 
         key = (deltachains[0][0][0], deltachains[0][0][1])
         # Count packs
@@ -388,7 +388,7 @@ class datapacktestsbase(object):
         # Re-create the store. Otherwise the behavior is kind of "undefined"
         # because the size of mmap-ed memory isn't truncated automatically,
         # and is filled by 0.
-        store = datapackstore(ui, packdir, deletecorruptpacks=True)
+        store = datapackstore(ui, packdir, True, deletecorruptpacks=True)
 
         # Look for key again
         try:
@@ -414,7 +414,7 @@ class datapacktestsbase(object):
         # Load the packs
         origpackcount = len(os.listdir(packdir))
         ui.pushbuffer(error=True)
-        store = datapackstore(ui, packdir, deletecorruptpacks=True)
+        store = datapackstore(ui, packdir, True, deletecorruptpacks=True)
         # Constructing the store doesn't load the packfiles, these are loaded
         # on demand, and thus the detection of bad packfiles only happen then.
         # Let's force a refresh to make sure the bad pack files are deleted.

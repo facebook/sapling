@@ -673,12 +673,14 @@ class remotefileslog(filelog.fileslog):
         """Packs are more efficient (to read from) cache stores."""
         repo = self.repo
 
-        def makepackstore(datastores, historystores, packpath, deletecorrupt=False):
+        def makepackstore(
+            datastores, historystores, packpath, deletecorrupt=False, shared=True
+        ):
             packcontentstore = makedatapackstore(
-                repo.ui, packpath, deletecorruptpacks=deletecorrupt
+                repo.ui, packpath, deletecorruptpacks=deletecorrupt, shared=shared
             )
             packmetadatastore = makehistorypackstore(
-                repo.ui, packpath, deletecorruptpacks=deletecorrupt
+                repo.ui, packpath, deletecorruptpacks=deletecorrupt, shared=shared
             )
             datastores.append(packcontentstore)
             historystores.append(packmetadatastore)
@@ -692,13 +694,14 @@ class remotefileslog(filelog.fileslog):
             self.sharedhistorystores,
             spackpath,
             deletecorrupt=True,
+            shared=True,
         )
 
         lpackpath = shallowutil.getlocalpackpath(
             repo.svfs.vfs.base, constants.FILEPACK_CATEGORY
         )
         lpackcontent, lpackmetadata = makepackstore(
-            self.localdatastores, self.localhistorystores, lpackpath
+            self.localdatastores, self.localhistorystores, lpackpath, shared=False
         )
 
         return (spackcontent, spackmetadata, lpackcontent, lpackmetadata)
