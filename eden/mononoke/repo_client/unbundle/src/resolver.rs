@@ -283,13 +283,18 @@ pub fn resolve(
 
             if let Some(commonheads) = maybe_commonheads {
                 if pushkey_next {
-                    resolve_bookmark_only_pushrebase(
-                        ctx,
-                        resolver,
-                        bundle2,
-                        non_fast_forward_policy,
-                        maybe_full_content,
-                    )
+                    async move {
+                        resolve_bookmark_only_pushrebase(
+                            ctx,
+                            resolver,
+                            bundle2,
+                            non_fast_forward_policy,
+                            maybe_full_content,
+                        )
+                        .await
+                    }
+                    .boxed()
+                    .compat()
                     .from_err()
                     .boxify()
                 } else {
@@ -705,83 +710,49 @@ fn resolve_pushrebase(
 }
 
 /// Do the right thing when pushrebase-enabled client only wants to manipulate bookmarks
-fn resolve_bookmark_only_pushrebase(
+async fn resolve_bookmark_only_pushrebase(
     ctx: CoreContext,
     resolver: Bundle2Resolver,
     bundle2: OldBoxStream<Bundle2Item, Error>,
     non_fast_forward_policy: NonFastForwardPolicy,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
-) -> OldBoxFuture<PostResolveAction, Error> {
+) -> Result<PostResolveAction, Error> {
     // TODO: we probably run hooks even if no changesets are pushed?
     //       however, current run_hooks implementation will no-op such thing
-    {
-        cloned!(resolver);
-        async move {
-            resolver
-                .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
-                .await
-                .context("While resolving Pushkey")
-        }
-        .boxed()
-        .compat()
+
+    let (pushkeys, bundle2) = resolver
+        .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
+        .await
+        .context("While resolving Pushkey")?;
+    let pushkeys_len = pushkeys.len();
+    let bookmark_pushes = collect_pushkey_bookmark_pushes(pushkeys);
+
+    // this means we filtered some Phase pushkeys out
+    // which is not expected
+    if bookmark_pushes.len() != pushkeys_len {
+        return Err(Error::msg(
+            "Expected bookmark-only push, phases pushkey found",
+        ));
     }
-    .and_then({
-        cloned!(resolver);
-        move |(pushkeys, bundle2)| {
-            let pushkeys_len = pushkeys.len();
-            let bookmark_pushes = collect_pushkey_bookmark_pushes(pushkeys);
 
-            // this means we filtered some Phase pushkeys out
-            // which is not expected
-            if bookmark_pushes.len() != pushkeys_len {
-                return err(Error::msg(
-                    "Expected bookmark-only push, phases pushkey found",
-                ))
-                .boxify();
-            }
+    if bookmark_pushes.len() != 1 {
+        return Err(format_err!("Too many pushkey parts: {:?}", bookmark_pushes));
+    }
 
-            if bookmark_pushes.len() != 1 {
-                return old_future::err(format_err!(
-                    "Too many pushkey parts: {:?}",
-                    bookmark_pushes
-                ))
-                .boxify();
-            }
-            let bookmark_push = bookmark_pushes.into_iter().nth(0).unwrap();
-            async move {
-                resolver
-                    .ensure_stream_finished(bundle2, maybe_full_content)
-                    .await
-            }
-            .boxed()
-            .compat()
-            .map(move |maybe_raw_bundle2_id| (bookmark_push, maybe_raw_bundle2_id))
-            .boxify()
-        }
-    })
-    .and_then({
-        cloned!(resolver);
-        move |(bookmark_push, maybe_raw_bundle2_id)| {
-            {
-                    async move {
-                        plain_hg_bookmark_push_to_bonsai(ctx, &resolver.repo, bookmark_push).await
-                    }
-                }
-                .boxed()
-                .compat()
-                .map(move |bookmark_push| (bookmark_push, maybe_raw_bundle2_id))
-        }
-    })
-    .map({
-        move |(bookmark_push, maybe_raw_bundle2_id)| {
-            PostResolveAction::BookmarkOnlyPushRebase(PostResolveBookmarkOnlyPushRebase {
-                bookmark_push,
-                maybe_raw_bundle2_id,
-                non_fast_forward_policy,
-            })
-        }
-    })
-    .boxify()
+    let bookmark_push = bookmark_pushes.into_iter().nth(0).unwrap();
+    let maybe_raw_bundle2_id = resolver
+        .ensure_stream_finished(bundle2, maybe_full_content)
+        .await?;
+    let bookmark_push =
+        plain_hg_bookmark_push_to_bonsai(ctx, &resolver.repo, bookmark_push).await?;
+
+    Ok(PostResolveAction::BookmarkOnlyPushRebase(
+        PostResolveBookmarkOnlyPushRebase {
+            bookmark_push,
+            maybe_raw_bundle2_id,
+            non_fast_forward_policy,
+        },
+    ))
 }
 
 async fn next_item(
