@@ -71,16 +71,25 @@ class ProcessFinderTests(unittest.TestCase):
         }
         expected_minus_cmdline = {
             1234: EdenFSProcess(
-                pid=1234, uid=99, eden_dir=Path("/home/nobody/eden_dir_1"), cmdline=[]
+                pid=1234,
+                uid=99,
+                eden_dir=Path("/home/nobody/eden_dir_1"),
+                cmdline=[],
+                holding_lock=True,
             ),
             4567: EdenFSProcess(
-                pid=4567, uid=99, eden_dir=Path("/home/nobody/local/.eden"), cmdline=[]
+                pid=4567,
+                uid=99,
+                eden_dir=Path("/home/nobody/local/.eden"),
+                cmdline=[],
+                holding_lock=True,
             ),
             9999: EdenFSProcess(
                 pid=9999,
                 uid=65534,
                 eden_dir=Path("/data/users/nfsnobody/.eden"),
                 cmdline=[],
+                holding_lock=True,
             ),
         }
         self.assertEqual(found_minus_cmdline, expected_minus_cmdline)

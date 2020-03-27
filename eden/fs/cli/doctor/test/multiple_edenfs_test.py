@@ -125,13 +125,14 @@ kill -9 575204 675205
         process_finder.add_process(
             775206, ["/foobar/edenfs", "--edenDir", "/home/user/.eden", "--edenfs"]
         )
+        process_finder.add_edenfs(775310, "/home/user/.eden", set_lockfile=False)
 
         fixer, out = self.run_check(process_finder, dry_run=False)
         self.assertEqual(
             f"""\
 <yellow>- Found problem:<reset>
 Many edenfs processes are running. Please keep only one for each config directory.
-kill -9 775206
+kill -9 775310
 
 """,
             out,

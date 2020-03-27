@@ -195,10 +195,21 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         return contents
 
     def make_edenfs_process(
-        self, pid: int, cmdline: List[bytes], eden_dir: Optional[Path], uid: int
+        self,
+        pid: int,
+        uid: int,
+        cmdline: List[bytes],
+        eden_dir: Optional[Path],
+        holding_lock: Optional[bool],
     ) -> FakeEdenFSProcess:
         build_info = self._build_info.get(pid, process_finder.BuildInfo())
-        p = FakeEdenFSProcess(pid=pid, cmdline=cmdline, eden_dir=eden_dir, uid=uid)
+        p = FakeEdenFSProcess(
+            pid=pid,
+            cmdline=cmdline,
+            eden_dir=eden_dir,
+            uid=uid,
+            holding_lock=holding_lock,
+        )
         p.build_info = build_info
         return p
 

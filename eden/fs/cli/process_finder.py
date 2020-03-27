@@ -14,7 +14,7 @@ import sys
 import time
 import typing
 from pathlib import Path
-from typing import Dict, Iterable, List, NamedTuple, Optional
+from typing import Iterable, List, NamedTuple, Optional, Tuple
 
 
 log: logging.Logger = logging.getLogger("eden.fs.cli.process_finder")
@@ -35,6 +35,16 @@ class EdenFSProcess(NamedTuple):
     uid: int
     cmdline: List[bytes]
     eden_dir: Optional[Path]
+
+    # holding_lock indicates if this EdenFS process is currently holding the lock
+    # on the state directory.  This is set to True or False if we could tell if the
+    # process was holding the lock, or None if we could not tell.
+    #
+    # Normally this should only ever be False if the lock file (or the entire Eden state
+    # directory) is deleted out from under a running EdenFS process.  Current releases
+    # of EdenFS will detect this and exit if their lock file is deleted, but older
+    # versions of EdenFS would continue to run in this state.
+    holding_lock: Optional[bool] = None
 
     def get_build_info(self) -> BuildInfo:
         """
@@ -155,9 +165,13 @@ class LinuxProcessFinder(ProcessFinder):
                 continue
 
             cmdline = cmdline_bytes.split(b"\x00")
-            eden_dir = self.get_eden_dir(pid, cmdline)
+            eden_dir, holding_lock = self.get_eden_dir(pid)
             yield self.make_edenfs_process(
-                pid=pid, cmdline=cmdline, eden_dir=eden_dir, uid=st.st_uid
+                pid=pid,
+                uid=st.st_uid,
+                cmdline=cmdline,
+                eden_dir=eden_dir,
+                holding_lock=holding_lock,
             )
 
     def stat_process_dir(self, path: Path) -> os.stat_result:
@@ -167,20 +181,7 @@ class LinuxProcessFinder(ProcessFinder):
         """
         return path.lstat()
 
-    def get_eden_dir(self, pid: ProcessID, cmdline: List[bytes]) -> Optional[Path]:
-        # In most situations we currently invoke edenfs with the state directory
-        # explicitly specified in its command line arguments.  Check to see if the
-        # directory is present in the arguments.
-        eden_dir: Optional[Path] = None
-        for idx in range(1, len(cmdline) - 1):
-            if cmdline[idx] == b"--edenDir":
-                eden_dir = Path(os.fsdecode(cmdline[idx + 1]))
-                # We can only return the path from the command line arguments
-                # if it was an absolute path
-                if eden_dir.is_absolute():
-                    return eden_dir
-                break
-
+    def get_eden_dir(self, pid: ProcessID) -> Tuple[Optional[Path], Optional[bool]]:
         # In case the state directory was not specified on the command line we can
         # look at the open FDs to find the state directory
         fd_dir = self.proc_path / str(pid) / "fd"
@@ -190,19 +191,32 @@ class LinuxProcessFinder(ProcessFinder):
                     dest = os.readlink(entry)
                 except OSError:
                     continue
-                if dest.endswith("/lock") or dest.endswith("/lock (deleted)"):
-                    return Path(dest).parent
+                if dest.endswith("/lock"):
+                    return Path(dest).parent, True
+                if dest.endswith("/lock (deleted)"):
+                    return Path(dest).parent, False
         except OSError:
             # We may not have permission to read the fd directory
             pass
 
-        log.debug(f"could not determine edenDir for edenfs process {pid} ({cmdline})")
-        return None
+        log.debug(f"could not determine edenDir for edenfs process {pid}")
+        return None, None
 
     def make_edenfs_process(
-        self, pid: int, cmdline: List[bytes], eden_dir: Optional[Path], uid: int
+        self,
+        pid: int,
+        uid: int,
+        cmdline: List[bytes],
+        eden_dir: Optional[Path],
+        holding_lock: Optional[bool],
     ) -> EdenFSProcess:
-        return EdenFSProcess(pid=pid, cmdline=cmdline, eden_dir=eden_dir, uid=uid)
+        return EdenFSProcess(
+            pid=pid,
+            cmdline=cmdline,
+            eden_dir=eden_dir,
+            uid=uid,
+            holding_lock=holding_lock,
+        )
 
     def get_process_start_time(self, pid: int) -> float:
         stat_path = self.proc_path / str(pid) / "stat"
