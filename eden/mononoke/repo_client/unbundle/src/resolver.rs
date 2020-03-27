@@ -784,10 +784,10 @@ fn resolve_bookmark_only_pushrebase(
     .boxify()
 }
 
-fn next_item(
+async fn next_item(
     bundle2: OldBoxStream<Bundle2Item, Error>,
-) -> OldBoxFuture<(Option<Bundle2Item>, OldBoxStream<Bundle2Item, Error>), Error> {
-    bundle2.into_future().map_err(|(err, _)| err).boxify()
+) -> Result<(Option<Bundle2Item>, OldBoxStream<Bundle2Item, Error>), Error> {
+    bundle2.into_future().map_err(|(err, _)| err).compat().await
 }
 
 /// Represents all the bookmark pushes that are created
@@ -876,7 +876,7 @@ impl Bundle2Resolver {
         &self,
         bundle2: OldBoxStream<Bundle2Item, Error>,
     ) -> Result<(bool, OldBoxStream<Bundle2Item, Error>), Error> {
-        let (start, bundle2) = next_item(bundle2).compat().await?;
+        let (start, bundle2) = next_item(bundle2).await?;
         match start {
             Some(part) => {
                 if let Bundle2Item::Pushkey(header, box_future) = part {
@@ -927,13 +927,15 @@ impl Bundle2Resolver {
         bundle2: OldBoxStream<Bundle2Item, Error>,
     ) -> OldBoxStream<Bundle2Item, Error> {
         next_item(bundle2)
+            .boxed()
+            .compat()
             .and_then(|(start, bundle2)| match start {
-                Some(Bundle2Item::Start(_)) => next_item(bundle2),
-                _ => err(format_err!("Expected Bundle2 Start")).boxify(),
+                Some(Bundle2Item::Start(_)) => next_item(bundle2).boxed().compat().left_future(),
+                _ => err(format_err!("Expected Bundle2 Start")).right_future(),
             })
             .and_then(|(replycaps, bundle2)| match replycaps {
-                Some(Bundle2Item::Replycaps(_, part)) => part.map(|_| bundle2).boxify(),
-                _ => err(format_err!("Expected Bundle2 Replycaps")).boxify(),
+                Some(Bundle2Item::Replycaps(_, part)) => part.map(|_| bundle2).left_future(),
+                _ => err(format_err!("Expected Bundle2 Replycaps")).right_future(),
             })
             .flatten_stream()
             .boxify()
@@ -946,7 +948,7 @@ impl Bundle2Resolver {
         &self,
         bundle2: OldBoxStream<Bundle2Item, Error>,
     ) -> Result<(Option<CommonHeads>, OldBoxStream<Bundle2Item, Error>), Error> {
-        let (maybe_commonheads, bundle2) = next_item(bundle2).compat().await?;
+        let (maybe_commonheads, bundle2) = next_item(bundle2).await?;
 
         match maybe_commonheads {
             Some(Bundle2Item::B2xCommonHeads(_header, heads)) => {
@@ -976,7 +978,7 @@ impl Bundle2Resolver {
         ),
         Error,
     > {
-        let (newpart, bundle2) = next_item(bundle2).compat().await?;
+        let (newpart, bundle2) = next_item(bundle2).await?;
 
         let maybe_pushvars = match newpart {
             Some(Bundle2Item::Pushvars(header, emptypart)) => {
@@ -1012,7 +1014,7 @@ impl Bundle2Resolver {
         let repo = self.repo.clone();
         let infinitepush_writes_allowed = self.infinitepush_writes_allowed;
 
-        let (changegroup, bundle2) = next_item(bundle2).compat().await?;
+        let (changegroup, bundle2) = next_item(bundle2).await?;
 
         let maybe_cg_push: Option<ChangegroupPush> = match changegroup {
             // XXX: we may be interested in checking that this is a correct changegroup part
@@ -1087,7 +1089,7 @@ impl Bundle2Resolver {
         &self,
         bundle2: OldBoxStream<Bundle2Item, Error>,
     ) -> Result<(Option<Pushkey>, OldBoxStream<Bundle2Item, Error>), Error> {
-        let (newpart, bundle2) = next_item(bundle2).compat().await?;
+        let (newpart, bundle2) = next_item(bundle2).await?;
 
         match newpart {
             Some(Bundle2Item::Pushkey(header, emptypart)) => {
@@ -1142,7 +1144,7 @@ impl Bundle2Resolver {
         bundle2: OldBoxStream<Bundle2Item, Error>,
     ) -> Result<(Manifests, OldBoxStream<Bundle2Item, Error>), Error> {
         let repo = self.repo.clone();
-        let (b2xtreegroup2, bundle2) = next_item(bundle2).compat().await?;
+        let (b2xtreegroup2, bundle2) = next_item(bundle2).await?;
 
         let res: Result<_, Error> = match b2xtreegroup2 {
             Some(Bundle2Item::B2xTreegroup2(_, parts))
@@ -1175,7 +1177,7 @@ impl Bundle2Resolver {
         let (infinitepushbookmarks, bundle2): (
             Option<Bundle2Item>,
             OldBoxStream<Bundle2Item, Error>,
-        ) = next_item(bundle2).compat().await?;
+        ) = next_item(bundle2).await?;
 
         let res: Result<_, Error> = match infinitepushbookmarks {
             Some(Bundle2Item::B2xInfinitepushBookmarks(_, bookmarks)) => {
@@ -1320,7 +1322,7 @@ impl Bundle2Resolver {
         bundle2: OldBoxStream<Bundle2Item, Error>,
         maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     ) -> Result<Option<RawBundle2Id>, Error> {
-        let (none, _bundle2) = next_item(bundle2).compat().await?;
+        let (none, _bundle2) = next_item(bundle2).await?;
         ensure!(none.is_none(), "Expected end of Bundle2");
         self.maybe_save_full_content_bundle2(maybe_full_content)
             .await
