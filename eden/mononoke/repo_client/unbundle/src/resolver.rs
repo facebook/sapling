@@ -887,9 +887,7 @@ impl Bundle2Resolver {
                             .boxify(),
                     ))
                 } else {
-                    return_with_rest_of_bundle(false, part, bundle2)
-                        .compat()
-                        .await
+                    return_with_rest_of_bundle(false, part, bundle2).await
                 }
             }
             _ => Ok((false, bundle2)),
@@ -957,11 +955,7 @@ impl Bundle2Resolver {
                 Ok((Some(heads), bundle2))
             }
 
-            Some(part) => {
-                return_with_rest_of_bundle(None, part, bundle2)
-                    .compat()
-                    .await
-            }
+            Some(part) => return_with_rest_of_bundle(None, part, bundle2).await,
             _ => Err(format_err!("Unexpected Bundle2 stream end")),
         }
     }
@@ -987,11 +981,7 @@ impl Bundle2Resolver {
                 emptypart.compat().await?;
                 Some(pushvars)
             }
-            Some(part) => {
-                return return_with_rest_of_bundle(None, part, bundle2)
-                    .compat()
-                    .await
-            }
+            Some(part) => return return_with_rest_of_bundle(None, part, bundle2).await,
             None => None,
         };
 
@@ -1058,11 +1048,7 @@ impl Bundle2Resolver {
 
                 Some(cg_push)
             }
-            Some(part) => {
-                return return_with_rest_of_bundle(None, part, bundle2)
-                    .compat()
-                    .await
-            }
+            Some(part) => return return_with_rest_of_bundle(None, part, bundle2).await,
             _ => return Err(format_err!("Unexpected Bundle2 stream end")),
         };
 
@@ -1126,11 +1112,7 @@ impl Bundle2Resolver {
                 emptypart.compat().await?;
                 Ok((Some(pushkey), bundle2))
             }
-            Some(part) => {
-                return_with_rest_of_bundle(None, part, bundle2)
-                    .compat()
-                    .await
-            }
+            Some(part) => return_with_rest_of_bundle(None, part, bundle2).await,
             None => Ok((None, bundle2)),
         }
     }
@@ -1485,18 +1467,17 @@ fn try_collect_all_bookmark_pushes(
 
 /// Helper fn to return some (usually "empty") value and
 /// chain together an unused part with the rest of the bundle
-fn return_with_rest_of_bundle<T: Send + 'static>(
+async fn return_with_rest_of_bundle<T: Send + 'static>(
     value: T,
     unused_part: Bundle2Item,
     rest_of_bundle: OldBoxStream<Bundle2Item, Error>,
-) -> OldBoxFuture<(T, OldBoxStream<Bundle2Item, Error>), Error> {
-    ok((
+) -> Result<(T, OldBoxStream<Bundle2Item, Error>), Error> {
+    Ok((
         value,
         old_stream::once(Ok(unused_part))
             .chain(rest_of_bundle)
             .boxify(),
     ))
-    .boxify()
 }
 
 fn toposort_changesets(
