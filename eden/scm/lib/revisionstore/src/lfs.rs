@@ -6,6 +6,7 @@
  */
 
 use std::{
+    collections::HashMap,
     convert::TryInto,
     fs::File,
     io::{ErrorKind, Read, Write},
@@ -100,6 +101,21 @@ pub struct LfsMultiplexer {
     union: UnionHgIdDataStore<Arc<dyn HgIdMutableDeltaStore>>,
 }
 
+#[derive(
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Copy,
+    Clone,
+    Hash,
+    Serialize,
+    Deserialize
+)]
+enum ContentHashType {
+    Sha256,
+}
+
 /// On-disk format of an LFS pointer. This is directly serialized with the mincode encoding, and
 /// thus changes to this structure must be done in a backward and forward compatible fashion.
 #[derive(Serialize, Deserialize)]
@@ -108,7 +124,8 @@ struct LfsPointersEntry {
     size: u64,
     is_binary: bool,
     copy_from: Option<Key>,
-    content_hash: ContentHash,
+    /// The content_hashes will always contain at least a `ContentHashType::Sha256` entry.
+    content_hashes: HashMap<ContentHashType, ContentHash>,
 }
 
 impl LfsPointersStore {
@@ -125,9 +142,11 @@ impl LfsPointersStore {
             .index("sha256", |buf| {
                 let pointer = LfsPointersStore::get_from_slice(buf).unwrap();
 
-                match pointer.content_hash {
-                    ContentHash::Sha256(hash) => vec![IndexOutput::Owned(Box::from(hash.as_ref()))],
-                }
+                // We're guaranteed to have at least a sha256 entry.
+                let content_hash = pointer.content_hashes[&ContentHashType::Sha256].clone();
+                vec![IndexOutput::Owned(Box::from(
+                    content_hash.unwrap_sha256().as_ref(),
+                ))]
             })
     }
 
@@ -271,8 +290,12 @@ impl LfsStore {
 
         match pointer {
             None => Ok(None),
-            Some(entry) => match entry.content_hash {
-                ContentHash::Sha256(hash) => Ok(self.blobs.get(&hash)?.map(|blob| (entry, blob))),
+            Some(entry) => match entry.content_hashes.get(&ContentHashType::Sha256) {
+                None => Ok(None),
+                Some(content_hash) => Ok(self
+                    .blobs
+                    .get(&content_hash.clone().unwrap_sha256())?
+                    .map(|blob| (entry, blob))),
             },
         }
     }
@@ -287,12 +310,15 @@ impl LocalStore for LfsStore {
                     let entry = self.pointers.read().get(key);
                     match entry {
                         Ok(None) | Err(_) => Some(k.clone()),
-                        Ok(Some(entry)) => match entry.content_hash {
-                            ContentHash::Sha256(hash) => {
-                                if self.blobs.contains(&hash) {
+                        Ok(Some(entry)) => match entry.content_hashes.get(&ContentHashType::Sha256)
+                        {
+                            None => None,
+                            Some(content_hash) => {
+                                let sha256 = content_hash.clone().unwrap_sha256();
+                                if self.blobs.contains(&sha256) {
                                     None
                                 } else {
-                                    Some(StoreKey::Content(entry.content_hash))
+                                    Some(StoreKey::from(content_hash))
                                 }
                             }
                         },
@@ -387,12 +413,15 @@ impl HgIdMutableDeltaStore for LfsStore {
             ContentHash::Sha256(sha256) => self.blobs.add(&sha256, data.clone())?,
         };
 
+        let mut content_hashes = HashMap::new();
+        content_hashes.insert(ContentHashType::Sha256, content_hash);
+
         let entry = LfsPointersEntry {
             hgid: delta.key.hgid.clone(),
             size: data.len().try_into()?,
             is_binary: data.as_ref().contains(&b'\0'),
             copy_from,
-            content_hash,
+            content_hashes,
         };
         self.pointers.write().add(entry)
     }
@@ -405,9 +434,11 @@ impl HgIdMutableDeltaStore for LfsStore {
 
 impl From<LfsPointersEntry> for ContentMetadata {
     fn from(pointer: LfsPointersEntry) -> Self {
+        let hash = pointer.content_hashes[&ContentHashType::Sha256].clone();
+
         ContentMetadata {
             size: pointer.size as usize,
-            hash: pointer.content_hash,
+            hash,
             is_binary: pointer.is_binary,
         }
     }
@@ -539,12 +570,15 @@ impl LfsPointersEntry {
             (Some(path), Some(copy_hgid)) => Some(Key::new(path, copy_hgid)),
         };
 
+        let mut content_hashes = HashMap::new();
+        content_hashes.insert(ContentHashType::Sha256, ContentHash::Sha256(hash));
+
         Ok(LfsPointersEntry {
             hgid,
             size: size.try_into()?,
             is_binary,
             copy_from,
-            content_hash: ContentHash::Sha256(hash),
+            content_hashes,
         })
     }
 }
@@ -765,11 +799,13 @@ impl RemoteDataStore for LfsRemoteStore {
             .iter()
             .map(|k| {
                 if let Some(pointer) = self.remote.local.pointers.read().entry(k)? {
-                    let oid = match pointer.content_hash {
-                        ContentHash::Sha256(hash) => hash,
-                    };
-
-                    Ok(Some((oid, pointer.size.try_into()?)))
+                    match pointer.content_hashes.get(&ContentHashType::Sha256) {
+                        None => Ok(None),
+                        Some(content_hash) => Ok(Some((
+                            content_hash.clone().unwrap_sha256(),
+                            pointer.size.try_into()?,
+                        ))),
+                    }
                 } else {
                     Ok(None)
                 }
@@ -931,12 +967,16 @@ mod tests {
     quickcheck! {
         fn metadata_strip_rebuild(data: Vec<u8>, copy_from: Option<Key>) -> Result<bool> {
             let data = Bytes::from(data);
+
+            let mut content_hashes = HashMap::new();
+            content_hashes.insert(ContentHashType::Sha256, ContentHash::sha256(&data)?);
+
             let pointer = LfsPointersEntry {
                 hgid: hgid("1234"),
                 size: data.len().try_into()?,
                 is_binary: true,
                 copy_from: copy_from.clone(),
-                content_hash: ContentHash::sha256(&data)?,
+                content_hashes,
             };
 
             let with_metadata = rebuild_metadata(data.clone(), &pointer);
@@ -1076,7 +1116,10 @@ mod tests {
         assert_eq!(entry.size, size);
         assert_eq!(entry.is_binary, false);
         assert_eq!(entry.copy_from, None);
-        assert_eq!(entry.content_hash, ContentHash::Sha256(sha256));
+        assert_eq!(
+            entry.content_hashes[&ContentHashType::Sha256],
+            ContentHash::Sha256(sha256)
+        );
 
         Ok(())
     }
@@ -1138,7 +1181,10 @@ mod tests {
         assert_eq!(entry.size, size);
         assert_eq!(entry.is_binary, true);
         assert_eq!(entry.copy_from, Some(copy_from));
-        assert_eq!(entry.content_hash, ContentHash::Sha256(sha256));
+        assert_eq!(
+            entry.content_hashes[&ContentHashType::Sha256],
+            ContentHash::Sha256(sha256)
+        );
 
         Ok(())
     }
@@ -1290,14 +1336,20 @@ mod tests {
 
         let key = key("a/b", "1234");
 
+        let mut content_hashes = HashMap::new();
+        content_hashes.insert(
+            ContentHashType::Sha256,
+            ContentHash::Sha256(Sha256::from_str(
+                "ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24",
+            )?),
+        );
+
         let pointer = LfsPointersEntry {
             hgid: key.hgid.clone(),
             size: 6,
             is_binary: false,
             copy_from: None,
-            content_hash: ContentHash::Sha256(Sha256::from_str(
-                "ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24",
-            )?),
+            content_hashes,
         };
 
         // Populate the pointer store. Usually, this would be done via a previous remotestore call.

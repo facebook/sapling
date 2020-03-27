@@ -46,6 +46,12 @@ impl ContentHash {
         let bytes: [u8; Sha256::len()] = hash.result().into();
         Ok(ContentHash::Sha256(Sha256::from_slice(&bytes)?))
     }
+
+    pub fn unwrap_sha256(self) -> Sha256 {
+        match self {
+            ContentHash::Sha256(hash) => hash,
+        }
+    }
 }
 
 impl StoreKey {
