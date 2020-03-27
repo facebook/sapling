@@ -54,11 +54,6 @@ struct LfsPointersStore(Store);
 #[derive(Clone)]
 struct LfsBlobsStore(PathBuf, bool);
 
-struct LfsStoreInner {
-    pointers: LfsPointersStore,
-    blobs: LfsBlobsStore,
-}
-
 #[derive(Clone)]
 struct HttpLfsRemote {
     url: Url,
@@ -89,7 +84,8 @@ pub struct LfsRemote {
 ///    "objects". Under that directory, the string representation of its content hash is used to
 ///    find the file storing the data: <2-digits hex>/<62-digits hex>
 pub struct LfsStore {
-    inner: RwLock<LfsStoreInner>,
+    pointers: RwLock<LfsPointersStore>,
+    blobs: LfsBlobsStore,
 }
 
 /// When a blob is added to the `LfsMultiplexer`, is will either be written to an `LfsStore`, or to
@@ -229,7 +225,7 @@ impl LfsBlobsStore {
     }
 
     /// Add the blob to the store.
-    fn add(&mut self, hash: &Sha256, blob: Bytes) -> Result<()> {
+    fn add(&self, hash: &Sha256, blob: Bytes) -> Result<()> {
         let path = self.path(hash);
         create_dir(path.parent().unwrap())?;
 
@@ -247,7 +243,8 @@ impl LfsBlobsStore {
 impl LfsStore {
     fn new(pointers: LfsPointersStore, blobs: LfsBlobsStore) -> Result<Self> {
         Ok(Self {
-            inner: RwLock::new(LfsStoreInner { pointers, blobs }),
+            pointers: RwLock::new(pointers),
+            blobs,
         })
     }
 
@@ -270,14 +267,12 @@ impl LfsStore {
     }
 
     fn blob_impl(&self, key: &StoreKey) -> Result<Option<(LfsPointersEntry, Bytes)>> {
-        let inner = self.inner.read();
-
-        let pointer = inner.pointers.entry(key)?;
+        let pointer = self.pointers.read().entry(key)?;
 
         match pointer {
             None => Ok(None),
             Some(entry) => match entry.content_hash {
-                ContentHash::Sha256(hash) => Ok(inner.blobs.get(&hash)?.map(|blob| (entry, blob))),
+                ContentHash::Sha256(hash) => Ok(self.blobs.get(&hash)?.map(|blob| (entry, blob))),
             },
         }
     }
@@ -285,25 +280,27 @@ impl LfsStore {
 
 impl LocalStore for LfsStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        let inner = self.inner.read();
         Ok(keys
             .iter()
             .filter_map(|k| match k {
-                StoreKey::HgId(key) => match inner.pointers.get(key) {
-                    Ok(None) | Err(_) => Some(k.clone()),
-                    Ok(Some(entry)) => match entry.content_hash {
-                        ContentHash::Sha256(hash) => {
-                            if inner.blobs.contains(&hash) {
-                                None
-                            } else {
-                                Some(StoreKey::Content(entry.content_hash))
+                StoreKey::HgId(key) => {
+                    let entry = self.pointers.read().get(key);
+                    match entry {
+                        Ok(None) | Err(_) => Some(k.clone()),
+                        Ok(Some(entry)) => match entry.content_hash {
+                            ContentHash::Sha256(hash) => {
+                                if self.blobs.contains(&hash) {
+                                    None
+                                } else {
+                                    Some(StoreKey::Content(entry.content_hash))
+                                }
                             }
-                        }
-                    },
-                },
+                        },
+                    }
+                }
                 StoreKey::Content(content_hash) => match content_hash {
                     ContentHash::Sha256(hash) => {
-                        if inner.blobs.contains(&hash) {
+                        if self.blobs.contains(&hash) {
                             None
                         } else {
                             Some(k.clone())
@@ -367,9 +364,7 @@ impl HgIdDataStore for LfsStore {
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        let inner = self.inner.read();
-
-        let entry = inner.pointers.get(key)?;
+        let entry = self.pointers.read().get(key)?;
         if let Some(entry) = entry {
             Ok(Some(Metadata {
                 size: Some(entry.size.try_into()?),
@@ -388,10 +383,8 @@ impl HgIdMutableDeltaStore for LfsStore {
         let (data, copy_from) = strip_metadata(&delta.data)?;
         let content_hash = ContentHash::sha256(&data)?;
 
-        let mut inner = self.inner.write();
-
         match content_hash {
-            ContentHash::Sha256(sha256) => inner.blobs.add(&sha256, data.clone())?,
+            ContentHash::Sha256(sha256) => self.blobs.add(&sha256, data.clone())?,
         };
 
         let entry = LfsPointersEntry {
@@ -401,11 +394,11 @@ impl HgIdMutableDeltaStore for LfsStore {
             copy_from,
             content_hash,
         };
-        inner.pointers.add(entry)
+        self.pointers.write().add(entry)
     }
 
     fn flush(&self) -> Result<Option<PathBuf>> {
-        self.inner.write().pointers.0.flush()?;
+        self.pointers.write().0.flush()?;
         Ok(None)
     }
 }
@@ -426,8 +419,7 @@ impl ContentDataStore for LfsStore {
     }
 
     fn metadata(&self, key: &StoreKey) -> Result<Option<ContentMetadata>> {
-        let inner = self.inner.read();
-        let pointer = inner.pointers.entry(key)?;
+        let pointer = self.pointers.read().entry(key)?;
 
         Ok(pointer.map(Into::into))
     }
@@ -566,8 +558,7 @@ impl HgIdMutableDeltaStore for LfsMultiplexer {
         if metadata.is_lfs() {
             // This is an lfs pointer blob. Let's parse it and extract what matters.
             let pointer = LfsPointersEntry::from_bytes(&delta.data, delta.key.hgid.clone())?;
-
-            return self.lfs.inner.write().pointers.add(pointer);
+            return self.lfs.pointers.write().add(pointer);
         }
 
         if delta.data.len() > self.threshold {
@@ -773,9 +764,7 @@ impl RemoteDataStore for LfsRemoteStore {
         let objs = keys
             .iter()
             .map(|k| {
-                let guard = self.remote.local.inner.read();
-
-                if let Some(pointer) = guard.pointers.entry(k)? {
+                if let Some(pointer) = self.remote.local.pointers.read().entry(k)? {
                     let oid = match pointer.content_hash {
                         ContentHash::Sha256(hash) => hash,
                     };
@@ -790,12 +779,7 @@ impl RemoteDataStore for LfsRemoteStore {
 
         for response in self.remote.batch(&objs)? {
             let (sha256, content) = response?;
-            self.remote
-                .local
-                .inner
-                .write()
-                .blobs
-                .add(&sha256, content)?;
+            self.remote.local.blobs.add(&sha256, content)?;
         }
 
         Ok(())
@@ -1082,7 +1066,7 @@ mod tests {
         multiplexer.flush()?;
 
         let lfs = LfsStore::shared(&lfsdir)?;
-        let entry = lfs.inner.read().pointers.get(&k1)?;
+        let entry = lfs.pointers.read().get(&k1)?;
 
         assert!(entry.is_some());
 
@@ -1144,7 +1128,7 @@ mod tests {
         multiplexer.flush()?;
 
         let lfs = LfsStore::shared(&lfsdir)?;
-        let entry = lfs.inner.read().pointers.get(&k1)?;
+        let entry = lfs.pointers.read().get(&k1)?;
 
         assert!(entry.is_some());
 
@@ -1172,7 +1156,7 @@ mod tests {
             ContentHash::Sha256(sha256) => sha256,
         };
         let size = blob.len();
-        lfs.inner.write().blobs.add(&sha256, blob)?;
+        lfs.blobs.add(&sha256, blob)?;
 
         let multiplexer = LfsMultiplexer::new(lfs, indexedlog, 4);
 
@@ -1264,7 +1248,7 @@ mod tests {
         let lfs = Arc::new(LfsStore::shared(&lfsdir)?);
 
         let remote = TempDir::new()?;
-        let mut remote_lfs_file_store = LfsBlobsStore::shared(remote.path())?;
+        let remote_lfs_file_store = LfsBlobsStore::shared(remote.path())?;
 
         let blob1 = (
             Sha256::from_str("fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9")?,
@@ -1317,7 +1301,7 @@ mod tests {
         };
 
         // Populate the pointer store. Usually, this would be done via a previous remotestore call.
-        lfs.inner.write().pointers.add(pointer)?;
+        lfs.pointers.write().add(pointer)?;
 
         let remotedatastore = remote.datastore(lfs.clone());
 
