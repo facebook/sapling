@@ -11,9 +11,6 @@
 ///! segmented_changelog
 ///!
 ///! Data structures and algorithms for a commit graph used by source control.
-pub mod idmap;
+pub mod dag;
+mod idmap;
 mod parents;
-
-// TODO(sfilip):
-// generate_graph
-// struct Dag(idmap, segments)

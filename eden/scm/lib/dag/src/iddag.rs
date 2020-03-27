@@ -95,6 +95,8 @@ impl IdDag<IndexedLogStore> {
 }
 
 impl IdDag<InProcessStore> {
+    /// Instantiate an [`IdDag`] that stores all it's data in process. Useful for scenarios that
+    /// do not require data persistance.
     pub fn new_in_process() -> Self {
         let store = InProcessStore::new();
         Self {
@@ -156,7 +158,7 @@ impl<Store: IdDagStore> IdDag<Store> {
     /// Return the next unused id for segments of the specified level.
     ///
     /// Useful for building segments incrementally.
-    pub(crate) fn next_free_id(&self, level: Level, group: Group) -> Result<Id> {
+    pub fn next_free_id(&self, level: Level, group: Group) -> Result<Id> {
         self.store.next_free_id(level, group)
     }
 
