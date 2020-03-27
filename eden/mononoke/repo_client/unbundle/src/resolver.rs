@@ -258,8 +258,9 @@ pub fn resolve(
     .and_then({
         cloned!(resolver);
         move |(maybe_pushvars, maybe_commonheads, bundle2)| {
-            resolver
-                .is_next_part_pushkey(bundle2)
+            async move { resolver.is_next_part_pushkey(bundle2).await }
+                .boxed()
+                .compat()
                 .map(move |(pushkey_next, bundle2)| {
                     (maybe_pushvars, maybe_commonheads, pushkey_next, bundle2)
                 })
@@ -871,52 +872,52 @@ impl Bundle2Resolver {
 
     /// Peek at the next `bundle2` item and check if it is a `Pushkey` part
     /// Return unchanged `bundle2`
-    fn is_next_part_pushkey(
+    async fn is_next_part_pushkey(
         &self,
         bundle2: OldBoxStream<Bundle2Item, Error>,
-    ) -> OldBoxFuture<(bool, OldBoxStream<Bundle2Item, Error>), Error> {
-        next_item(bundle2)
-            .and_then(|(start, bundle2)| match start {
-                Some(part) => {
-                    if let Bundle2Item::Pushkey(header, box_future) = part {
-                        ok((
-                            true,
-                            old_stream::once(Ok(Bundle2Item::Pushkey(header, box_future)))
-                                .chain(bundle2)
-                                .boxify(),
-                        ))
-                        .boxify()
-                    } else {
-                        return_with_rest_of_bundle(false, part, bundle2)
-                    }
+    ) -> Result<(bool, OldBoxStream<Bundle2Item, Error>), Error> {
+        let (start, bundle2) = next_item(bundle2).compat().await?;
+        match start {
+            Some(part) => {
+                if let Bundle2Item::Pushkey(header, box_future) = part {
+                    Ok((
+                        true,
+                        old_stream::once(Ok(Bundle2Item::Pushkey(header, box_future)))
+                            .chain(bundle2)
+                            .boxify(),
+                    ))
+                } else {
+                    return_with_rest_of_bundle(false, part, bundle2)
+                        .compat()
+                        .await
                 }
-                _ => ok((false, bundle2)).boxify(),
-            })
-            .boxify()
+            }
+            _ => Ok((false, bundle2)),
+        }
     }
 
     /// Preserve the full raw content of the bundle2 for later replay
-    fn maybe_save_full_content_bundle2(
+    async fn maybe_save_full_content_bundle2(
         &self,
         maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
-    ) -> OldBoxFuture<Option<RawBundle2Id>, Error> {
+    ) -> Result<Option<RawBundle2Id>, Error> {
         match maybe_full_content {
             Some(full_content) => {
                 let blob =
                     RawBundle2::new_bytes(Bytes::copy_from_slice(&full_content.lock().unwrap()))
                         .into_blob();
-                let ctx = self.ctx.clone();
-                blob.store(ctx.clone(), self.repo.blobstore())
-                    .map(move |id| {
-                        debug!(ctx.logger(), "Saved a raw bundle2 content: {:?}", id);
-                        ctx.scuba()
-                            .clone()
-                            .log_with_msg("Saved a raw bundle2 content", Some(format!("{}", id)));
-                        Some(id)
-                    })
-                    .boxify()
+                let id = blob
+                    .store(self.ctx.clone(), self.repo.blobstore())
+                    .compat()
+                    .await?;
+                debug!(self.ctx.logger(), "Saved a raw bundle2 content: {:?}", id);
+                self.ctx
+                    .scuba()
+                    .clone()
+                    .log_with_msg("Saved a raw bundle2 content", Some(format!("{}", id)));
+                Ok(Some(id))
             }
-            None => ok(None).boxify(),
+            None => Ok(None),
         }
     }
 
@@ -1322,7 +1323,6 @@ impl Bundle2Resolver {
         let (none, _bundle2) = next_item(bundle2).compat().await?;
         ensure!(none.is_none(), "Expected end of Bundle2");
         self.maybe_save_full_content_bundle2(maybe_full_content)
-            .compat()
             .await
     }
 
