@@ -32,9 +32,7 @@
 # Test that repack cleans up the old files and creates new packs
 
   $ cd shallow
-  $ find $CACHEDIR | sort
-  $TESTTMP/hgcache
-  $TESTTMP/hgcache/master
+  $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histidx
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histpack
@@ -43,9 +41,7 @@
 
   $ hg repack
 
-  $ find $CACHEDIR | sort
-  $TESTTMP/hgcache
-  $TESTTMP/hgcache/master
+  $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histidx
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histpack
@@ -77,7 +73,7 @@
   $ hg up -q tip
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
 
-  $ find $CACHEDIR -type f | sort
+  $ find $CACHEDIR/master/packs -type f | sort
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histidx
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histidx
@@ -90,7 +86,7 @@
 
   $ hg repack --traceback
 
-  $ find $CACHEDIR -type f | sort
+  $ find $CACHEDIR/master/packs -type f | sort
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histidx
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
   $TESTTMP/hgcache/master/packs/fe74acc023664cd7eda12330d321b4a2423cc4f8.dataidx
@@ -109,7 +105,7 @@
 # Test that repacking again without new data does not delete the pack files
 # and did not change the pack names
   $ hg repack
-  $ find $CACHEDIR -type f | sort
+  $ find $CACHEDIR/master/packs -type f | sort
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histidx
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
   $TESTTMP/hgcache/master/packs/fe74acc023664cd7eda12330d321b4a2423cc4f8.dataidx
@@ -131,7 +127,7 @@
   $ hg pull -q
   $ hg up -q tip
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  $ find $CACHEDIR -type f | sort
+  $ find $CACHEDIR/master/packs -type f | sort
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histidx
   $TESTTMP/hgcache/master/packs/077e7ce5dfe862dc40cc8f3c9742d96a056865f2.histpack
   $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histidx
@@ -146,7 +142,7 @@
   (running background repack)
   $ sleep 0.5
   $ hg debugwaitonrepack >/dev/null 2>&1
-  $ find $CACHEDIR -type f | sort
+  $ find $CACHEDIR/master/packs -type f | sort
   $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histidx
   $TESTTMP/hgcache/master/packs/094b530486dad4427a0faf6bcbc031571b99ca24.histpack
   $TESTTMP/hgcache/master/packs/d16759ce28060a639a43d64b9a243e4f86b26a46.dataidx
@@ -362,9 +358,7 @@ Pull should run background repack
 Test environment variable resolution
   $ CACHEPATH=$TESTTMP/envcache hg prefetch --config 'remotefilelog.cachepath=$CACHEPATH'
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  $ find $TESTTMP/envcache | sort
-  $TESTTMP/envcache
-  $TESTTMP/envcache/master
+  $ find $TESTTMP/envcache/master/packs | sort
   $TESTTMP/envcache/master/packs
   $TESTTMP/envcache/master/packs/2021b67b6df3cec03f6ca46b83a3e69a67b204ec.dataidx
   $TESTTMP/envcache/master/packs/2021b67b6df3cec03f6ca46b83a3e69a67b204ec.datapack

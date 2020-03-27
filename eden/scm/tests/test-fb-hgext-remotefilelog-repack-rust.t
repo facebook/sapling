@@ -50,9 +50,7 @@
   $ hg prefetch -r 2
   1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  $ find $CACHEDIR | sort
-  $TESTTMP/hgcache
-  $TESTTMP/hgcache/master
+  $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/1e6f0f575de6319f747ef83966a08775803fcecc.dataidx
   $TESTTMP/hgcache/master/packs/1e6f0f575de6319f747ef83966a08775803fcecc.datapack
@@ -97,9 +95,7 @@
   $ hg repack
 
 # Repacking one datapack/historypack should result in the same datapack/historypack
-  $ find $CACHEDIR | sort
-  $TESTTMP/hgcache
-  $TESTTMP/hgcache/master
+  $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/073bc5bae3cee0940d7f1983cab3fe6754ed1407.dataidx
   $TESTTMP/hgcache/master/packs/073bc5bae3cee0940d7f1983cab3fe6754ed1407.datapack
@@ -128,9 +124,7 @@
   1 trees fetched over * (glob)
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg repack
-  $ find $CACHEDIR | sort
-  $TESTTMP/hgcache
-  $TESTTMP/hgcache/master
+  $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.dataidx
   $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.datapack
@@ -146,9 +140,7 @@
   $ chmod +w $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.datapack
   $ python $TESTDIR/truncate.py --size 200 $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.datapack
   $ hg repack
-  $ find $CACHEDIR | sort
-  $TESTTMP/hgcache
-  $TESTTMP/hgcache/master
+  $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.dataidx
   $TESTTMP/hgcache/master/packs/aa3c302eff0b511bab7f0180d344971f917472c1.datapack

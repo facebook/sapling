@@ -94,9 +94,7 @@
 
   $ hg repack
 
-  $ find $CACHEDIR | sort
-  $TESTTMP/hgcache
-  $TESTTMP/hgcache/master
+  $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/8f2de7e341fbe688326386a45a3a7082d9f56871.histidx
   $TESTTMP/hgcache/master/packs/8f2de7e341fbe688326386a45a3a7082d9f56871.histpack
@@ -233,9 +231,7 @@
   $ cd ../shallow
 
   $ hg repack
-  $ find $CACHEDIR | sort
-  $TESTTMP/hgcache
-  $TESTTMP/hgcache/master
+  $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/4dd95950593c0c4df6d6df2fa8d6fb03b51ecf4b.dataidx
   $TESTTMP/hgcache/master/packs/4dd95950593c0c4df6d6df2fa8d6fb03b51ecf4b.datapack

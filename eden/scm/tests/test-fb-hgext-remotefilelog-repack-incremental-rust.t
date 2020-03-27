@@ -34,9 +34,7 @@
 # Test that repack cleans up the old files and creates new packs
 
   $ cd shallow
-  $ find $CACHEDIR | sort
-  $TESTTMP/hgcache
-  $TESTTMP/hgcache/master
+  $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histidx
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histpack
@@ -58,9 +56,7 @@
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
   $ hg prefetch -r 2
   1 files fetched over 1 fetches - (1 misses, 0.00% hit ratio) over * (glob) (?)
-  $ find $CACHEDIR | sort
-  $TESTTMP/hgcache
-  $TESTTMP/hgcache/master
+  $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/1e6f0f575de6319f747ef83966a08775803fcecc.dataidx
   $TESTTMP/hgcache/master/packs/1e6f0f575de6319f747ef83966a08775803fcecc.datapack

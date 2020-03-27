@@ -229,7 +229,7 @@
   $ clearcache
   $ hg prefetch -r .
   3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over * (glob) (?)
-  $ find $TESTTMP/hgcache -type f | sort
+  $ find $TESTTMP/hgcache/master/packs -type f | sort
   $TESTTMP/hgcache/master/packs/0a61bfbc8e0c4a08583b3f1abc7ad7f9cc9acc21.dataidx
   $TESTTMP/hgcache/master/packs/0a61bfbc8e0c4a08583b3f1abc7ad7f9cc9acc21.datapack
   $TESTTMP/hgcache/master/packs/47d8f1b90a73af4ff8af19fcd10bdc027b6a881a.histidx

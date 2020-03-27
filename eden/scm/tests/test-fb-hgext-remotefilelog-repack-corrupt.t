@@ -33,7 +33,7 @@ no matter what their creation date is.
   $ cd ..
 
   $ cd shallow
-  $ findfilessorted $CACHEDIR/master
+  $ findfilessorted $CACHEDIR/master/packs
   $TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440.histidx
   $TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440.histpack
   $TESTTMP/hgcache/master/packs/9ae82bbfd147f28ff04367cf066c5ed3ef429be4.dataidx
@@ -41,7 +41,7 @@ no matter what their creation date is.
 
   $ hg repack
 
-  $ findfilessorted $CACHEDIR/master
+  $ findfilessorted $CACHEDIR/master/packs
   $TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440.histidx
   $TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440.histpack
   $TESTTMP/hgcache/master/packs/9ae82bbfd147f28ff04367cf066c5ed3ef429be4.dataidx
@@ -61,7 +61,7 @@ Create some new data to pack into it
   $ hg pull -q
   $ hg up -q tip
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over * (glob) (?)
-  $ findfilessorted $CACHEDIR/master
+  $ findfilessorted $CACHEDIR/master/packs
   $TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440.histidx
   $TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440.histpack
   $TESTTMP/hgcache/master/packs/767371d087d35f549346611a68c10805fa2e5083.dataidx
@@ -78,7 +78,7 @@ Truncate the historypack file in the middle of the filename length for "y"
 
 Repack
   $ hg repack
-  $ findfilessorted $CACHEDIR/master
+  $ findfilessorted $CACHEDIR/master/packs
   $TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440.histidx
   $TESTTMP/hgcache/master/packs/37db2caec222ca26824a52d6bdc778344e0d1440.histpack
   $TESTTMP/hgcache/master/packs/60374dd52300114836388912c35fe94f80e74889.dataidx

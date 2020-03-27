@@ -28,9 +28,7 @@
   $ cd ..
 
   $ cd shallow
-  $ find $CACHEDIR | sort
-  $TESTTMP/hgcache
-  $TESTTMP/hgcache/master
+  $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histidx
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histpack
@@ -42,9 +40,7 @@
 # Cleanup the old over the limit packfiles
   $ hg repack --config remotefilelog.cleanoldpacks=True --config remotefilelog.cachelimit="10B"
 
-  $ find $CACHEDIR | sort
-  $TESTTMP/hgcache
-  $TESTTMP/hgcache/master
+  $ find $CACHEDIR/master/packs | sort
   $TESTTMP/hgcache/master/packs
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histidx
   $TESTTMP/hgcache/master/packs/276d308429d0303762befa376788300f0310f90e.histpack

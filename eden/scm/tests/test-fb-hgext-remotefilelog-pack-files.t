@@ -90,7 +90,7 @@
 
 # Check that files are not fetched from the server for the full history
 # after clearing cache the file will be fetched because it needs a content of it
-  $ findfilessorted $CACHEDIR
+  $ findfilessorted $CACHEDIR/master/packs
   $TESTTMP/hgcache/master/packs/221b1b8a6642854febb789d0597f5719e9380354.dataidx
   $TESTTMP/hgcache/master/packs/221b1b8a6642854febb789d0597f5719e9380354.datapack
   $TESTTMP/hgcache/master/packs/8439c9deb49aa426fddba0f12b66e39ed3b229f7.histidx
@@ -115,7 +115,8 @@
   committing manifest
   committing changelog
   committed changeset 5:ef28949d25cb
-  $ findfilessorted $CACHEDIR
+  $ test -d $CACHEDIR/master/packs
+  [1]
 
 
 # Test that it doesn't break non-remotefilelog repos
