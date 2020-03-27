@@ -217,104 +217,109 @@ pub fn resolve(
     );
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
 
-    resolver
-        .maybe_resolve_commonheads(bundle2)
-        .and_then({
-            cloned!(resolver);
-            move |(maybe_commonheads, bundle2)| {
-                async move {
-                    resolver
-                        .maybe_resolve_pushvars(bundle2)
-                        .await
-                        .context("While resolving Pushvars")
-                }
-                .boxed()
-                .compat()
-                .and_then(move |(maybe_pushvars, bundle2)| {
-                    let mut bypass_readonly = false;
-                    // check the bypass condition
-                    if let Some(ref pushvars) = maybe_pushvars {
-                        bypass_readonly = pushvars
-                            .get("BYPASS_READONLY")
-                            .map(|s| s.to_ascii_lowercase())
-                            == Some("true".into());
-                    }
-                    // force the readonly check
-                    match (readonly, bypass_readonly) {
-                        (RepoReadOnly::ReadOnly(reason), false) => {
-                            old_future::err(ErrorKind::RepoReadOnly(reason).into()).left_future()
-                        }
-                        _ => old_future::ok((maybe_pushvars, maybe_commonheads, bundle2))
-                            .right_future(),
-                    }
-                })
-            }
-        })
-        .and_then({
-            cloned!(resolver);
-            move |(maybe_pushvars, maybe_commonheads, bundle2)| {
+    {
+        cloned!(resolver);
+        async move { resolver.maybe_resolve_commonheads(bundle2).await }
+    }
+    .boxed()
+    .compat()
+    .and_then({
+        cloned!(resolver);
+        move |(maybe_commonheads, bundle2)| {
+            async move {
                 resolver
-                    .is_next_part_pushkey(bundle2)
-                    .map(move |(pushkey_next, bundle2)| {
-                        (maybe_pushvars, maybe_commonheads, pushkey_next, bundle2)
-                    })
+                    .maybe_resolve_pushvars(bundle2)
+                    .await
+                    .context("While resolving Pushvars")
             }
-        })
-        .from_err()
-        .and_then(
-            move |(maybe_pushvars, maybe_commonheads, pushkey_next, bundle2)| {
-                let non_fast_forward_policy = {
-                    let mut allow_non_fast_forward = false;
-                    // check the bypass condition
-                    if let Some(ref pushvars) = maybe_pushvars {
-                        allow_non_fast_forward = pushvars
-                            .get("NON_FAST_FORWARD")
-                            .map(|s| s.to_ascii_lowercase())
-                            == Some("true".into());
+            .boxed()
+            .compat()
+            .and_then(move |(maybe_pushvars, bundle2)| {
+                let mut bypass_readonly = false;
+                // check the bypass condition
+                if let Some(ref pushvars) = maybe_pushvars {
+                    bypass_readonly = pushvars
+                        .get("BYPASS_READONLY")
+                        .map(|s| s.to_ascii_lowercase())
+                        == Some("true".into());
+                }
+                // force the readonly check
+                match (readonly, bypass_readonly) {
+                    (RepoReadOnly::ReadOnly(reason), false) => {
+                        old_future::err(ErrorKind::RepoReadOnly(reason).into()).left_future()
                     }
-                    NonFastForwardPolicy::from(allow_non_fast_forward)
-                };
+                    _ => {
+                        old_future::ok((maybe_pushvars, maybe_commonheads, bundle2)).right_future()
+                    }
+                }
+            })
+        }
+    })
+    .and_then({
+        cloned!(resolver);
+        move |(maybe_pushvars, maybe_commonheads, bundle2)| {
+            resolver
+                .is_next_part_pushkey(bundle2)
+                .map(move |(pushkey_next, bundle2)| {
+                    (maybe_pushvars, maybe_commonheads, pushkey_next, bundle2)
+                })
+        }
+    })
+    .from_err()
+    .and_then(
+        move |(maybe_pushvars, maybe_commonheads, pushkey_next, bundle2)| {
+            let non_fast_forward_policy = {
+                let mut allow_non_fast_forward = false;
+                // check the bypass condition
+                if let Some(ref pushvars) = maybe_pushvars {
+                    allow_non_fast_forward = pushvars
+                        .get("NON_FAST_FORWARD")
+                        .map(|s| s.to_ascii_lowercase())
+                        == Some("true".into());
+                }
+                NonFastForwardPolicy::from(allow_non_fast_forward)
+            };
 
-                if let Some(commonheads) = maybe_commonheads {
-                    if pushkey_next {
-                        resolve_bookmark_only_pushrebase(
-                            ctx,
-                            resolver,
-                            bundle2,
-                            non_fast_forward_policy,
-                            maybe_full_content,
-                        )
-                        .from_err()
-                        .boxify()
-                    } else {
-                        fn changegroup_always_unacceptable() -> bool {
-                            false
-                        };
-                        resolve_pushrebase(
-                            ctx,
-                            commonheads,
-                            resolver,
-                            bundle2,
-                            maybe_pushvars,
-                            maybe_full_content,
-                            changegroup_always_unacceptable,
-                        )
-                    }
-                } else {
-                    resolve_push(
+            if let Some(commonheads) = maybe_commonheads {
+                if pushkey_next {
+                    resolve_bookmark_only_pushrebase(
                         ctx,
                         resolver,
                         bundle2,
                         non_fast_forward_policy,
                         maybe_full_content,
-                        move || pure_push_allowed,
                     )
                     .from_err()
                     .boxify()
+                } else {
+                    fn changegroup_always_unacceptable() -> bool {
+                        false
+                    };
+                    resolve_pushrebase(
+                        ctx,
+                        commonheads,
+                        resolver,
+                        bundle2,
+                        maybe_pushvars,
+                        maybe_full_content,
+                        changegroup_always_unacceptable,
+                    )
                 }
-            },
-        )
-        .boxify()
+            } else {
+                resolve_push(
+                    ctx,
+                    resolver,
+                    bundle2,
+                    non_fast_forward_policy,
+                    maybe_full_content,
+                    move || pure_push_allowed,
+                )
+                .from_err()
+                .boxify()
+            }
+        },
+    )
+    .boxify()
 }
 
 fn resolve_push(
@@ -936,23 +941,26 @@ impl Bundle2Resolver {
     // Parse b2x:commonheads
     // This part sent by pushrebase so that server can find out what commits to send back to the
     // client. This part is used as a marker that this push is pushrebase.
-    fn maybe_resolve_commonheads(
+    async fn maybe_resolve_commonheads(
         &self,
         bundle2: OldBoxStream<Bundle2Item, Error>,
-    ) -> OldBoxFuture<(Option<CommonHeads>, OldBoxStream<Bundle2Item, Error>), Error> {
-        next_item(bundle2)
-            .and_then(|(commonheads, bundle2)| match commonheads {
-                Some(Bundle2Item::B2xCommonHeads(_header, heads)) => heads
-                    .collect()
-                    .map(|heads| {
-                        let heads = CommonHeads { heads };
-                        (Some(heads), bundle2)
-                    })
-                    .boxify(),
-                Some(part) => return_with_rest_of_bundle(None, part, bundle2),
-                _ => err(format_err!("Unexpected Bundle2 stream end")).boxify(),
-            })
-            .boxify()
+    ) -> Result<(Option<CommonHeads>, OldBoxStream<Bundle2Item, Error>), Error> {
+        let (maybe_commonheads, bundle2) = next_item(bundle2).compat().await?;
+
+        match maybe_commonheads {
+            Some(Bundle2Item::B2xCommonHeads(_header, heads)) => {
+                let heads = heads.collect().compat().await?;
+                let heads = CommonHeads { heads };
+                Ok((Some(heads), bundle2))
+            }
+
+            Some(part) => {
+                return_with_rest_of_bundle(None, part, bundle2)
+                    .compat()
+                    .await
+            }
+            _ => Err(format_err!("Unexpected Bundle2 stream end")),
+        }
     }
 
     /// Parse pushvars
