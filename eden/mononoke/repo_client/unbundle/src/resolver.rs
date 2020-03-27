@@ -23,11 +23,11 @@ use cloned::cloned;
 use context::CoreContext;
 use core::fmt::Debug;
 use failure_ext::{Compat, FutureFailureErrorExt};
-use futures::future::try_join_all;
+use futures::future::{try_join_all, Future};
 use futures::stream;
 use futures_ext::{
-    try_boxfuture as try_old_boxfuture, BoxFuture as OldBoxFuture, BoxStream as OldBoxStream,
-    FutureExt as OldFutureExt, StreamExt as OldStreamExt,
+    BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, FutureExt as OldFutureExt,
+    StreamExt as OldStreamExt,
 };
 use futures_old::future::{self as old_future, err, ok, Shared};
 use futures_old::stream as old_stream;
@@ -325,8 +325,14 @@ fn resolve_push(
         .and_then({
             cloned!(resolver);
             move |(cg_push, bundle2)| {
-                resolver
-                    .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
+                async move {
+                    resolver
+                        .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
+                            .await
+                            .context("While resolving Pushkey")
+                    }
+                    .boxed()
+                    .compat()
                     .and_then(move |(pushkeys, bundle2)| {
                         let infinitepush_bp = cg_push
                             .as_ref()
@@ -551,8 +557,16 @@ fn resolve_pushrebase(
         .and_then({
             cloned!(resolver);
             move |(changesets, onto_params, bundle2, upload_map, uploaded_hg_changeset_ids)| {
-                resolver
-                    .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
+                {
+                    cloned!(resolver);
+                    async move {
+                        resolver.resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
+                            .await
+                            .context("While resolving Pushkey")
+                    }
+                }
+                .boxed()
+                .compat()
                     .and_then({
                         cloned!(resolver);
                         move |(pushkeys, bundle2)| {
@@ -664,41 +678,50 @@ fn resolve_bookmark_only_pushrebase(
 ) -> OldBoxFuture<PostResolveAction, Error> {
     // TODO: we probably run hooks even if no changesets are pushed?
     //       however, current run_hooks implementation will no-op such thing
-    resolver
-        .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
-        .and_then({
-            cloned!(resolver);
-            move |(pushkeys, bundle2)| {
-                let pushkeys_len = pushkeys.len();
-                let bookmark_pushes = collect_pushkey_bookmark_pushes(pushkeys);
+    {
+        cloned!(resolver);
+        async move {
+            resolver
+                .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
+                .await
+                .context("While resolving Pushkey")
+        }
+        .boxed()
+        .compat()
+    }
+    .and_then({
+        cloned!(resolver);
+        move |(pushkeys, bundle2)| {
+            let pushkeys_len = pushkeys.len();
+            let bookmark_pushes = collect_pushkey_bookmark_pushes(pushkeys);
 
-                // this means we filtered some Phase pushkeys out
-                // which is not expected
-                if bookmark_pushes.len() != pushkeys_len {
-                    return err(Error::msg(
-                        "Expected bookmark-only push, phases pushkey found",
-                    ))
-                    .boxify();
-                }
-
-                if bookmark_pushes.len() != 1 {
-                    return old_future::err(format_err!(
-                        "Too many pushkey parts: {:?}",
-                        bookmark_pushes
-                    ))
-                    .boxify();
-                }
-                let bookmark_push = bookmark_pushes.into_iter().nth(0).unwrap();
-                resolver
-                    .ensure_stream_finished(bundle2, maybe_full_content)
-                    .map(move |maybe_raw_bundle2_id| (bookmark_push, maybe_raw_bundle2_id))
-                    .boxify()
+            // this means we filtered some Phase pushkeys out
+            // which is not expected
+            if bookmark_pushes.len() != pushkeys_len {
+                return err(Error::msg(
+                    "Expected bookmark-only push, phases pushkey found",
+                ))
+                .boxify();
             }
-        })
-        .and_then({
-            cloned!(resolver);
-            move |(bookmark_push, maybe_raw_bundle2_id)| {
-                {
+
+            if bookmark_pushes.len() != 1 {
+                return old_future::err(format_err!(
+                    "Too many pushkey parts: {:?}",
+                    bookmark_pushes
+                ))
+                .boxify();
+            }
+            let bookmark_push = bookmark_pushes.into_iter().nth(0).unwrap();
+            resolver
+                .ensure_stream_finished(bundle2, maybe_full_content)
+                .map(move |maybe_raw_bundle2_id| (bookmark_push, maybe_raw_bundle2_id))
+                .boxify()
+        }
+    })
+    .and_then({
+        cloned!(resolver);
+        move |(bookmark_push, maybe_raw_bundle2_id)| {
+            {
                     async move {
                         plain_hg_bookmark_push_to_bonsai(ctx, &resolver.repo, bookmark_push).await
                     }
@@ -706,18 +729,18 @@ fn resolve_bookmark_only_pushrebase(
                 .boxed()
                 .compat()
                 .map(move |bookmark_push| (bookmark_push, maybe_raw_bundle2_id))
-            }
-        })
-        .map({
-            move |(bookmark_push, maybe_raw_bundle2_id)| {
-                PostResolveAction::BookmarkOnlyPushRebase(PostResolveBookmarkOnlyPushRebase {
-                    bookmark_push,
-                    maybe_raw_bundle2_id,
-                    non_fast_forward_policy,
-                })
-            }
-        })
-        .boxify()
+        }
+    })
+    .map({
+        move |(bookmark_push, maybe_raw_bundle2_id)| {
+            PostResolveAction::BookmarkOnlyPushRebase(PostResolveBookmarkOnlyPushRebase {
+                bookmark_push,
+                maybe_raw_bundle2_id,
+                non_fast_forward_policy,
+            })
+        }
+    })
+    .boxify()
 }
 
 fn next_item(
@@ -1021,54 +1044,54 @@ impl Bundle2Resolver {
 
     /// Parses pushkey part if it exists
     /// Returns an error if the pushkey namespace is unknown
-    fn maybe_resolve_pushkey(
+    async fn maybe_resolve_pushkey(
         &self,
         bundle2: OldBoxStream<Bundle2Item, Error>,
-    ) -> OldBoxFuture<(Option<Pushkey>, OldBoxStream<Bundle2Item, Error>), Error> {
-        next_item(bundle2)
-            .and_then(move |(newpart, bundle2)| match newpart {
-                Some(Bundle2Item::Pushkey(header, emptypart)) => {
-                    let namespace = try_old_boxfuture!(header
-                        .mparams()
-                        .get("namespace")
-                        .ok_or(format_err!("pushkey: `namespace` parameter is not set")));
+    ) -> Result<(Option<Pushkey>, OldBoxStream<Bundle2Item, Error>), Error> {
+        let (newpart, bundle2) = next_item(bundle2).compat().await?;
 
-                    let pushkey = match &namespace[..] {
-                        b"phases" => Pushkey::Phases,
-                        b"bookmarks" => {
-                            let part_id = header.part_id();
-                            let mparams = header.mparams();
-                            let name = try_old_boxfuture!(get_ascii_param(mparams, "key"));
-                            let name = BookmarkName::new_ascii(name);
-                            let old =
-                                try_old_boxfuture!(get_optional_changeset_param(mparams, "old"));
-                            let new =
-                                try_old_boxfuture!(get_optional_changeset_param(mparams, "new"));
+        match newpart {
+            Some(Bundle2Item::Pushkey(header, emptypart)) => {
+                let namespace = header
+                    .mparams()
+                    .get("namespace")
+                    .ok_or(format_err!("pushkey: `namespace` parameter is not set"))?;
 
-                            Pushkey::HgBookmarkPush(PlainBookmarkPush {
-                                part_id,
-                                name,
-                                old,
-                                new,
-                            })
-                        }
-                        _ => {
-                            return err(format_err!(
-                                "pushkey: unexpected namespace: {:?}",
-                                namespace
-                            ))
-                            .boxify();
-                        }
-                    };
+                let pushkey = match &namespace[..] {
+                    b"phases" => Pushkey::Phases,
+                    b"bookmarks" => {
+                        let part_id = header.part_id();
+                        let mparams = header.mparams();
+                        let name = get_ascii_param(mparams, "key")?;
+                        let name = BookmarkName::new_ascii(name);
+                        let old = get_optional_changeset_param(mparams, "old")?;
+                        let new = get_optional_changeset_param(mparams, "new")?;
 
-                    emptypart.map(move |_| (Some(pushkey), bundle2)).boxify()
-                }
-                Some(part) => return_with_rest_of_bundle(None, part, bundle2),
-                None => ok((None, bundle2)).boxify(),
-            })
-            .context("While resolving Pushkey")
-            .from_err()
-            .boxify()
+                        Pushkey::HgBookmarkPush(PlainBookmarkPush {
+                            part_id,
+                            name,
+                            old,
+                            new,
+                        })
+                    }
+                    _ => {
+                        return Err(format_err!(
+                            "pushkey: unexpected namespace: {:?}",
+                            namespace
+                        ));
+                    }
+                };
+
+                emptypart.compat().await?;
+                Ok((Some(pushkey), bundle2))
+            }
+            Some(part) => {
+                return_with_rest_of_bundle(None, part, bundle2)
+                    .compat()
+                    .await
+            }
+            None => Ok((None, bundle2)),
+        }
     }
 
     /// Parse b2xtreegroup2.
@@ -1279,31 +1302,28 @@ impl Bundle2Resolver {
     /// a Vec of (potentailly multiple) Part rather than an Option of Part.
     /// The original use case is to parse multiple pushkey Parts since bundle2 gets
     /// one pushkey part per bookmark.
-    fn resolve_multiple_parts<T, Func>(
-        &self,
+    async fn resolve_multiple_parts<'a, T, Func, Fut>(
+        &'a self,
         bundle2: OldBoxStream<Bundle2Item, Error>,
         mut maybe_resolve: Func,
-    ) -> OldBoxFuture<(Vec<T>, OldBoxStream<Bundle2Item, Error>), Error>
+    ) -> Result<(Vec<T>, OldBoxStream<Bundle2Item, Error>), Error>
     where
-        Func: FnMut(
-                &Self,
-                OldBoxStream<Bundle2Item, Error>,
-            ) -> OldBoxFuture<(Option<T>, OldBoxStream<Bundle2Item, Error>), Error>
-            + Send
-            + 'static,
+        Fut: Future<Output = Result<(Option<T>, OldBoxStream<Bundle2Item, Error>), Error>> + Sized,
+        Func: FnMut(&'a Self, OldBoxStream<Bundle2Item, Error>) -> Fut + Send + 'static,
         T: Send + 'static,
     {
-        let this = self.clone();
-        old_future::loop_fn((Vec::new(), bundle2), move |(mut result, bundle2)| {
-            maybe_resolve(&this, bundle2).map(move |(maybe_element, bundle2)| match maybe_element {
-                None => old_future::Loop::Break((result, bundle2)),
-                Some(element) => {
-                    result.push(element);
-                    old_future::Loop::Continue((result, bundle2))
-                }
-            })
-        })
-        .boxify()
+        let mut result = Vec::new();
+        let mut bundle2 = bundle2;
+        loop {
+            let (maybe_element, rest_of_bundle2) = maybe_resolve(&self, bundle2).await?;
+            bundle2 = rest_of_bundle2;
+            if let Some(element) = maybe_element {
+                result.push(element);
+            } else {
+                break;
+            }
+        }
+        Ok((result, bundle2))
     }
 }
 
