@@ -6,7 +6,7 @@
  */
 
 use crate::id::{Group, Id};
-use crate::iddagstore::{GetLock, IdDagStore, IndexedLogStore};
+use crate::iddagstore::{GetLock, IdDagStore, InProcessStore, IndexedLogStore};
 use crate::segment::{Segment, SegmentFlags};
 use crate::spanset::Span;
 use crate::spanset::SpanSet;
@@ -48,22 +48,13 @@ pub struct SyncableIdDag<Store> {
     lock_file: File,
 }
 
+static DEFAULT_SEG_SIZE: usize = 16;
+
 impl IdDag<IndexedLogStore> {
     /// Open [`IdDag`] at the given directory. Create it on demand.
     pub fn open(path: impl AsRef<Path>) -> Result<Self> {
         let store = IndexedLogStore::open(path)?;
         Self::open_from_store(store)
-    }
-
-    pub(crate) fn open_from_store(store: IndexedLogStore) -> Result<Self> {
-        let max_level = store.max_level()?;
-        let mut dag = Self {
-            store,
-            max_level,
-            new_seg_size: 16, // see D16660078 for this default setting
-        };
-        dag.build_all_high_level_segments(false)?;
-        Ok(dag)
     }
 
     /// Return a [`SyncableIdDag`] instance that provides race-free
@@ -100,6 +91,30 @@ impl IdDag<IndexedLogStore> {
     /// The default value is Usually good enough.
     pub fn set_new_segment_size(&mut self, size: usize) {
         self.new_seg_size = size.max(2);
+    }
+}
+
+impl IdDag<InProcessStore> {
+    pub fn new_in_process() -> Self {
+        let store = InProcessStore::new();
+        Self {
+            store,
+            max_level: 0,
+            new_seg_size: DEFAULT_SEG_SIZE,
+        }
+    }
+}
+
+impl<Store: IdDagStore> IdDag<Store> {
+    pub(crate) fn open_from_store(store: Store) -> Result<Self> {
+        let max_level = store.max_level()?;
+        let mut dag = Self {
+            store,
+            max_level,
+            new_seg_size: DEFAULT_SEG_SIZE, // see D16660078 for this default setting
+        };
+        dag.build_all_high_level_segments(false)?;
+        Ok(dag)
     }
 }
 

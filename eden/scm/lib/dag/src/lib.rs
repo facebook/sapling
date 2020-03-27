@@ -29,6 +29,7 @@ pub use nameset::NameSet;
 pub use spanset::SpanSet;
 
 pub type Level = u8;
+pub type InProcessIdDag = IdDag<iddagstore::InProcessStore>;
 
 #[cfg(test)]
 mod tests;
