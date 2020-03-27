@@ -2751,7 +2751,12 @@ def newrepostorerequirements(repo):
     if ui.configbool("visibility", "enabled"):
         requirements.add("visibleheads")
 
-    if ui.configbool("experimental", "narrow-heads"):
+    # See also self._narrowheadsmigration()
+    if (
+        ui.configbool("experimental", "narrow-heads")
+        and ui.configbool("visibility", "enabled")
+        and extensions.isenabled(ui, "remotenames")
+    ):
         requirements.add("narrowheads")
 
     if ui.configbool("format", "use-zstore-commit-data"):
