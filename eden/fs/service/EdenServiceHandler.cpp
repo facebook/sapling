@@ -20,6 +20,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/stop_watch.h>
 #include <folly/system/Shell.h>
+#include <thrift/lib/cpp/util/EnumUtils.h>
 #include <optional>
 
 #ifdef _WIN32
@@ -388,8 +389,7 @@ void EdenServiceHandler::checkOutRevision(
       DBG1,
       *mountPoint,
       logHash(*hash),
-      folly::get_default(
-          _CheckoutMode_VALUES_TO_NAMES, checkoutMode, "(unknown)"));
+      apache::thrift::util::enumName(checkoutMode, "(unknown)"));
   auto hashObj = hashFromThrift(*hash);
 
   auto edenMount = server_->getMount(*mountPoint);

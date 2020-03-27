@@ -15,28 +15,25 @@ template <typename ThriftEnum>
 std::ostream& outputThriftEnum(
     std::ostream& os,
     ThriftEnum value,
-    const std::map<ThriftEnum, const char*>& valuesToNames,
     folly::StringPiece typeName) {
-  auto iter = valuesToNames.find(value);
-  if (iter == valuesToNames.end()) {
-    os << typeName << "::" << int(value);
+  const char* name = apache::thrift::TEnumTraits<ThriftEnum>::findName(value);
+  if (name) {
+    return os << name;
   } else {
-    os << iter->second;
+    return os << typeName << "::" << int(value);
   }
-  return os;
 }
 
 template <typename ThriftEnum>
 void appendThriftEnum(
     ThriftEnum value,
     std::string* result,
-    const std::map<ThriftEnum, const char*>& valuesToNames,
     folly::StringPiece typeName) {
-  auto iter = valuesToNames.find(value);
-  if (iter == valuesToNames.end()) {
-    result->append(folly::to<std::string>(typeName, "::", int(value)));
+  const char* name = apache::thrift::TEnumTraits<ThriftEnum>::findName(value);
+  if (name) {
+    result->append(name);
   } else {
-    result->append(iter->second);
+    result->append(folly::to<std::string>(typeName, "::", int(value)));
   }
 }
 } // unnamed namespace
@@ -45,8 +42,7 @@ namespace facebook {
 namespace eden {
 
 std::ostream& operator<<(std::ostream& os, ConflictType conflictType) {
-  return outputThriftEnum(
-      os, conflictType, _ConflictType_VALUES_TO_NAMES, "ConflictType");
+  return outputThriftEnum(os, conflictType, "ConflictType");
 }
 
 std::ostream& operator<<(std::ostream& os, const CheckoutConflict& conflict) {
@@ -56,18 +52,15 @@ std::ostream& operator<<(std::ostream& os, const CheckoutConflict& conflict) {
 }
 
 std::ostream& operator<<(std::ostream& os, ScmFileStatus scmFileStatus) {
-  return outputThriftEnum(
-      os, scmFileStatus, _ScmFileStatus_VALUES_TO_NAMES, "ScmFileStatus");
+  return outputThriftEnum(os, scmFileStatus, "ScmFileStatus");
 }
 
 std::ostream& operator<<(std::ostream& os, MountState mountState) {
-  return outputThriftEnum(
-      os, mountState, _MountState_VALUES_TO_NAMES, "MountState");
+  return outputThriftEnum(os, mountState, "MountState");
 }
 
 void toAppend(MountState mountState, std::string* result) {
-  appendThriftEnum(
-      mountState, result, _MountState_VALUES_TO_NAMES, "MountState");
+  appendThriftEnum(mountState, result, "MountState");
 }
 
 } // namespace eden
