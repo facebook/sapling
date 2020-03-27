@@ -29,7 +29,7 @@ use futures_ext::{
     BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, FutureExt as OldFutureExt,
     StreamExt as OldStreamExt,
 };
-use futures_old::future::{self as old_future, err, ok, Shared};
+use futures_old::future::{self as old_future, err, Shared};
 use futures_old::stream as old_stream;
 use futures_old::{Future as OldFuture, IntoFuture, Stream as OldStream};
 use futures_util::{
@@ -312,14 +312,20 @@ pub fn resolve(
                     )
                 }
             } else {
-                resolve_push(
-                    ctx,
-                    resolver,
-                    bundle2,
-                    non_fast_forward_policy,
-                    maybe_full_content,
-                    move || pure_push_allowed,
-                )
+                async move {
+                    resolve_push(
+                        ctx,
+                        resolver,
+                        bundle2,
+                        non_fast_forward_policy,
+                        maybe_full_content,
+                        move || pure_push_allowed,
+                    )
+                    .await
+                    .context("bundle2_resolver error")
+                }
+                .boxed()
+                .compat()
                 .from_err()
                 .boxify()
             }
@@ -328,164 +334,77 @@ pub fn resolve(
     .boxify()
 }
 
-fn resolve_push(
+async fn resolve_push(
     ctx: CoreContext,
     resolver: Bundle2Resolver,
     bundle2: OldBoxStream<Bundle2Item, Error>,
     non_fast_forward_policy: NonFastForwardPolicy,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
-) -> OldBoxFuture<PostResolveAction, Error> {
-    {
-        cloned!(resolver, ctx);
-        async move {
-            resolver
-                .maybe_resolve_changegroup(ctx, bundle2, changegroup_acceptable)
-                .await
-                .context("While resolving Changegroup")
+) -> Result<PostResolveAction, Error> {
+    let (cg_push, bundle2) = resolver
+        .maybe_resolve_changegroup(ctx.clone(), bundle2, changegroup_acceptable)
+        .await
+        .context("While resolving Changegroup")?;
+    let (pushkeys, bundle2) = resolver
+        .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
+        .await
+        .context("While resolving Pushkey")?;
+    let infinitepush_bp = cg_push
+        .as_ref()
+        .and_then(|cg_push| cg_push.infinitepush_payload.clone())
+        .and_then(|ip_payload| ip_payload.bookmark_push);
+    let bookmark_push = try_collect_all_bookmark_pushes(pushkeys, infinitepush_bp)?;
+
+    let (cg_and_manifests, bundle2) = if let Some(cg_push) = cg_push {
+        let (manifests, bundle2) = resolver
+            .resolve_b2xtreegroup2(ctx.clone(), bundle2)
+            .await
+            .context("While resolving B2xTreegroup2")?;
+        (Some((cg_push, manifests)), bundle2)
+    } else {
+        (None, bundle2)
+    };
+
+    let (changegroup_id, uploaded_bonsais) = if let Some((cg_push, manifests)) = cg_and_manifests {
+        let changegroup_id = Some(cg_push.part_id);
+        let (uploaded_bonsais, _uploaded_hg_changesets) = resolver
+            .upload_changesets(ctx.clone(), cg_push, manifests)
+            .await?;
+
+        (changegroup_id, uploaded_bonsais)
+    } else {
+        (None, UploadedBonsais::new())
+    };
+
+    let (_, bundle2) = resolver
+        .maybe_resolve_infinitepush_bookmarks(bundle2)
+        .await?;
+    let maybe_raw_bundle2_id = resolver
+        .ensure_stream_finished(bundle2, maybe_full_content)
+        .await?;
+    let bookmark_push =
+        hg_all_bookmark_pushes_to_bonsai(ctx, &resolver.repo, bookmark_push).await?;
+
+    Result::<_, Error>::Ok(match bookmark_push {
+        AllBookmarkPushes::PlainPushes(bookmark_pushes) => {
+            PostResolveAction::Push(PostResolvePush {
+                changegroup_id,
+                bookmark_pushes,
+                maybe_raw_bundle2_id,
+                non_fast_forward_policy,
+                uploaded_bonsais,
+            })
         }
-    }
-    .boxed()
-    .compat()
-        .and_then({
-            cloned!(resolver);
-            move |(cg_push, bundle2)| {
-                async move {
-                    resolver
-                        .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
-                            .await
-                            .context("While resolving Pushkey")
-                    }
-                    .boxed()
-                    .compat()
-                    .and_then(move |(pushkeys, bundle2)| {
-                        let infinitepush_bp = cg_push
-                            .as_ref()
-                            .and_then(|cg_push| cg_push.infinitepush_payload.clone())
-                            .and_then(|ip_payload| ip_payload.bookmark_push);
-                        let bookmark_push =
-                            try_collect_all_bookmark_pushes(pushkeys, infinitepush_bp)?;
-                        Ok((cg_push, bookmark_push, bundle2))
-                    })
-            }
-        })
-        .and_then({
-            cloned!(ctx, resolver);
-            move |(cg_push, bookmark_push, bundle2)| {
-                if let Some(cg_push) = cg_push {
-                    async move {
-                        resolver
-                            .resolve_b2xtreegroup2(ctx, bundle2)
-                            .await
-                            .context("While resolving B2xTreegroup2")
-                    }
-                        .boxed()
-                        .compat()
-                        .map(|(manifests, bundle2)| {
-                            (Some((cg_push, manifests)), bookmark_push, bundle2)
-                        })
-                        .boxify()
-                } else {
-                    ok((None, bookmark_push, bundle2)).boxify()
-                }
-            }
-        })
-        .and_then({
-            cloned!(ctx, resolver);
-            move |(cg_and_manifests, bookmark_push, bundle2)| {
-                if let Some((cg_push, manifests)) = cg_and_manifests {
-                    let changegroup_id = Some(cg_push.part_id);
-                    async move {
-                        resolver
-                            .upload_changesets(ctx, cg_push, manifests).await
-                    }
-                    .boxed()
-                    .compat()
-                    .map(move |(uploaded_bonsais, _uploaded_hg_changesets)| {
-                        // Note: we do not care about `_uploaded_hg_changesets`, as we currently
-                        // do not run hooks on pure pushes. This probably has to be changed later.
-                        (changegroup_id, bookmark_push, bundle2, uploaded_bonsais)
-                    })
-                    .boxify()
-                } else {
-                    ok((None, bookmark_push, bundle2, UploadedBonsais::new())).boxify()
-                }
-            }
-        })
-        .and_then({
-            cloned!(resolver);
-            move |(changegroup_id, bookmark_push, bundle2, uploaded_bonsais)| {
-                async move {
-                    resolver.maybe_resolve_infinitepush_bookmarks(bundle2).await
-                }
-                .boxed()
-                .compat()
-                .map(move |((), bundle2)| {
-                    (changegroup_id, bookmark_push, bundle2, uploaded_bonsais)
-                })
-            }
-        })
-        .and_then({
-            cloned!(resolver);
-            move |(changegroup_id, bookmark_push, bundle2, uploaded_bonsais)| {
-                async move {
-                    resolver
-                        .ensure_stream_finished(bundle2, maybe_full_content)
-                        .await
-                }
-                .boxed()
-                .compat()
-                .map(move |maybe_raw_bundle2_id| {
-                    (
-                        changegroup_id,
-                        bookmark_push,
-                        maybe_raw_bundle2_id,
-                        uploaded_bonsais,
-                    )
-                })
-            }
-        })
-        .and_then({
-            cloned!(ctx, resolver);
-            move |(changegroup_id, bookmark_push, maybe_raw_bundle2_id, uploaded_bonsais)| {
-                async move { hg_all_bookmark_pushes_to_bonsai(ctx, &resolver.repo, bookmark_push).await }.boxed().compat().map(
-                    move |bookmark_push| {
-                        (
-                            changegroup_id,
-                            bookmark_push,
-                            maybe_raw_bundle2_id,
-                            uploaded_bonsais,
-                        )
-                    },
-                )
-            }
-        })
-        .map({
-            move |(changegroup_id, bookmark_push, maybe_raw_bundle2_id, uploaded_bonsais)| {
-                match bookmark_push {
-                    AllBookmarkPushes::PlainPushes(bookmark_pushes) => {
-                        PostResolveAction::Push(PostResolvePush {
-                            changegroup_id,
-                            bookmark_pushes,
-                            maybe_raw_bundle2_id,
-                            non_fast_forward_policy,
-                            uploaded_bonsais,
-                        })
-                    }
-                    AllBookmarkPushes::Inifinitepush(bookmark_push) => {
-                        PostResolveAction::InfinitePush(PostResolveInfinitePush {
-                            changegroup_id,
-                            bookmark_push,
-                            maybe_raw_bundle2_id,
-                            uploaded_bonsais,
-                        })
-                    }
-                }
-            }
-        })
-        .context("bundle2_resolver error")
-        .from_err()
-        .boxify()
+        AllBookmarkPushes::Inifinitepush(bookmark_push) => {
+            PostResolveAction::InfinitePush(PostResolveInfinitePush {
+                changegroup_id,
+                bookmark_push,
+                maybe_raw_bundle2_id,
+                uploaded_bonsais,
+            })
+        }
+    })
 }
 
 // Enum used to pass data for normal or forceful pushrebases
