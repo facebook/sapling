@@ -279,7 +279,7 @@ impl<'a> ContentStoreBuilder<'a> {
             None
         };
 
-        let shared_lfs_store = Arc::new(LfsStore::shared(&cache_path)?);
+        let shared_lfs_store = Arc::new(LfsStore::shared(&cache_path, self.config)?);
         blob_stores.add(shared_lfs_store.clone());
 
         let shared_store: Arc<dyn HgIdMutableDeltaStore> =
@@ -306,7 +306,7 @@ impl<'a> ContentStoreBuilder<'a> {
                     CorruptionPolicy::IGNORE,
                 )?);
 
-                let local_lfs_store = Arc::new(LfsStore::local(&local_path.unwrap())?);
+                let local_lfs_store = Arc::new(LfsStore::local(&local_path.unwrap(), self.config)?);
                 blob_stores.add(local_lfs_store.clone());
 
                 let local_store: Arc<dyn HgIdMutableDeltaStore> =
@@ -648,7 +648,7 @@ mod tests {
         let localdir = TempDir::new()?;
         let config = make_config(&cachedir);
 
-        let lfs_store = LfsStore::local(&localdir)?;
+        let lfs_store = LfsStore::local(&localdir, &config)?;
         let k1 = key("a", "2");
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -672,7 +672,7 @@ mod tests {
         let mut lfs_cache_dir = cachedir.path().to_path_buf();
         lfs_cache_dir.push("test");
         create_dir(&lfs_cache_dir)?;
-        let lfs_store = LfsStore::shared(&lfs_cache_dir)?;
+        let lfs_store = LfsStore::shared(&lfs_cache_dir, &config)?;
         let k1 = key("a", "2");
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
@@ -757,7 +757,7 @@ mod tests {
         store.add(&delta, &Default::default())?;
         store.flush()?;
 
-        let lfs_store = LfsStore::local(&localdir)?;
+        let lfs_store = LfsStore::local(&localdir, &config)?;
         assert_eq!(lfs_store.get_delta(&k1)?, Some(delta));
 
         Ok(())

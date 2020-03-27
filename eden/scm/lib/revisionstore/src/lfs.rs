@@ -24,7 +24,10 @@ use reqwest::{Client, IntoUrl, Method, RequestBuilder, Url};
 use serde_derive::{Deserialize, Serialize};
 use tokio::runtime::Runtime;
 
-use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
+use configparser::{
+    config::ConfigSet,
+    hg::{ByteCount, ConfigSetHgExt},
+};
 use indexedlog::log::IndexOutput;
 use lfs_protocol::{
     ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch, Sha256 as LfsSha256,
@@ -132,10 +135,11 @@ impl LfsPointersStore {
     const INDEX_NODE: usize = 0;
     const INDEX_SHA256: usize = 1;
 
-    fn open_options() -> StoreOpenOptions {
-        StoreOpenOptions::new()
+    fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
+        let log_size = config.get_or("lfs", "pointersstoresize", || ByteCount::from(40_000_000))?;
+        Ok(StoreOpenOptions::new()
             .max_log_count(4)
-            .max_bytes_per_log(10_000_000)
+            .max_bytes_per_log(log_size.value() / 4)
             .index("node", |_| {
                 vec![IndexOutput::Reference(0..HgId::len() as u64)]
             })
@@ -147,19 +151,19 @@ impl LfsPointersStore {
                 vec![IndexOutput::Owned(Box::from(
                     content_hash.unwrap_sha256().as_ref(),
                 ))]
-            })
+            }))
     }
 
     /// Create a local `LfsPointersStore`.
-    fn local(path: &Path) -> Result<Self> {
+    fn local(path: &Path, config: &ConfigSet) -> Result<Self> {
         let path = get_lfs_pointers_path(path)?;
-        Ok(Self(LfsPointersStore::open_options().local(path)?))
+        Ok(Self(LfsPointersStore::open_options(config)?.local(path)?))
     }
 
     /// Create a shared `LfsPointersStore`.
-    fn shared(path: &Path) -> Result<Self> {
+    fn shared(path: &Path, config: &ConfigSet) -> Result<Self> {
         let path = get_lfs_pointers_path(path)?;
-        Ok(Self(LfsPointersStore::open_options().shared(path)?))
+        Ok(Self(LfsPointersStore::open_options(config)?.shared(path)?))
     }
 
     /// Read an entry from the slice and deserialize it.
@@ -270,17 +274,17 @@ impl LfsStore {
     /// Create a new local `LfsStore`.
     ///
     /// Local stores will `fsync(2)` data to disk, and will never rotate data out of the store.
-    pub fn local(path: impl AsRef<Path>) -> Result<Self> {
+    pub fn local(path: impl AsRef<Path>, config: &ConfigSet) -> Result<Self> {
         let path = path.as_ref();
-        let pointers = LfsPointersStore::local(path)?;
+        let pointers = LfsPointersStore::local(path, config)?;
         let blobs = LfsBlobsStore::local(path)?;
         LfsStore::new(pointers, blobs)
     }
 
     /// Create a new shared `LfsStore`.
-    pub fn shared(path: impl AsRef<Path>) -> Result<Self> {
+    pub fn shared(path: impl AsRef<Path>, config: &ConfigSet) -> Result<Self> {
         let path = path.as_ref();
-        let pointers = LfsPointersStore::shared(path)?;
+        let pointers = LfsPointersStore::shared(path, config)?;
         let blobs = LfsBlobsStore::shared(path)?;
         LfsStore::new(pointers, blobs)
     }
@@ -868,7 +872,8 @@ mod tests {
     #[test]
     fn test_new_shared() -> Result<()> {
         let dir = TempDir::new()?;
-        let _ = LfsStore::shared(&dir)?;
+        let config = make_lfs_config(&dir);
+        let _ = LfsStore::shared(&dir, &config)?;
 
         let mut lfs_dir = dir.as_ref().to_owned();
         lfs_dir.push("lfs");
@@ -881,7 +886,8 @@ mod tests {
     #[test]
     fn test_new_local() -> Result<()> {
         let dir = TempDir::new()?;
-        let _ = LfsStore::local(&dir)?;
+        let config = make_lfs_config(&dir);
+        let _ = LfsStore::local(&dir, &config)?;
 
         let mut lfs_dir = dir.as_ref().to_owned();
         lfs_dir.push("lfs");
@@ -894,7 +900,8 @@ mod tests {
     #[test]
     fn test_add() -> Result<()> {
         let dir = TempDir::new()?;
-        let store = LfsStore::shared(&dir)?;
+        let config = make_lfs_config(&dir);
+        let store = LfsStore::shared(&dir, &config)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -926,7 +933,8 @@ mod tests {
     #[test]
     fn test_add_get_missing() -> Result<()> {
         let dir = TempDir::new()?;
-        let store = LfsStore::shared(&dir)?;
+        let config = make_lfs_config(&dir);
+        let store = LfsStore::shared(&dir, &config)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -948,7 +956,8 @@ mod tests {
     #[test]
     fn test_add_get() -> Result<()> {
         let dir = TempDir::new()?;
-        let store = LfsStore::shared(&dir)?;
+        let config = make_lfs_config(&dir);
+        let store = LfsStore::shared(&dir, &config)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -989,7 +998,8 @@ mod tests {
     #[test]
     fn test_add_get_copyfrom() -> Result<()> {
         let dir = TempDir::new()?;
-        let store = LfsStore::shared(&dir)?;
+        let config = make_lfs_config(&dir);
+        let store = LfsStore::shared(&dir, &config)?;
 
         let k1 = key("a", "2");
         let delta = Delta {
@@ -1014,7 +1024,8 @@ mod tests {
     #[test]
     fn test_multiplexer_smaller_than_threshold() -> Result<()> {
         let dir = TempDir::new()?;
-        let lfs = Arc::new(LfsStore::shared(&dir)?);
+        let config = make_lfs_config(&dir);
+        let lfs = Arc::new(LfsStore::shared(&dir, &config)?);
 
         let dir = TempDir::new()?;
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
@@ -1038,7 +1049,8 @@ mod tests {
     #[test]
     fn test_multiplexer_larger_than_threshold() -> Result<()> {
         let dir = TempDir::new()?;
-        let lfs = Arc::new(LfsStore::shared(&dir)?);
+        let config = make_lfs_config(&dir);
+        let lfs = Arc::new(LfsStore::shared(&dir, &config)?);
 
         let dir = TempDir::new()?;
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
@@ -1065,7 +1077,8 @@ mod tests {
     #[test]
     fn test_multiplexer_add_pointer() -> Result<()> {
         let lfsdir = TempDir::new()?;
-        let lfs = Arc::new(LfsStore::shared(&lfsdir)?);
+        let config = make_lfs_config(&lfsdir);
+        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
@@ -1105,7 +1118,7 @@ mod tests {
 
         multiplexer.flush()?;
 
-        let lfs = LfsStore::shared(&lfsdir)?;
+        let lfs = LfsStore::shared(&lfsdir, &config)?;
         let entry = lfs.pointers.read().get(&k1)?;
 
         assert!(entry.is_some());
@@ -1127,7 +1140,8 @@ mod tests {
     #[test]
     fn test_multiplexer_add_copy_from_pointer() -> Result<()> {
         let lfsdir = TempDir::new()?;
-        let lfs = Arc::new(LfsStore::shared(&lfsdir)?);
+        let config = make_lfs_config(&lfsdir);
+        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
@@ -1170,7 +1184,7 @@ mod tests {
 
         multiplexer.flush()?;
 
-        let lfs = LfsStore::shared(&lfsdir)?;
+        let lfs = LfsStore::shared(&lfsdir, &config)?;
         let entry = lfs.pointers.read().get(&k1)?;
 
         assert!(entry.is_some());
@@ -1192,7 +1206,8 @@ mod tests {
     #[test]
     fn test_multiplexer_blob_with_header() -> Result<()> {
         let lfsdir = TempDir::new()?;
-        let lfs = Arc::new(LfsStore::shared(&lfsdir)?);
+        let config = make_lfs_config(&lfsdir);
+        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let dir = TempDir::new()?;
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
@@ -1240,9 +1255,9 @@ mod tests {
     fn test_lfs_non_present() -> Result<()> {
         let cachedir = TempDir::new()?;
         let lfsdir = TempDir::new()?;
-        let lfs = Arc::new(LfsStore::shared(&lfsdir)?);
-
         let config = make_lfs_config(&cachedir);
+
+        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
         let remote = LfsRemote::new(lfs, &config)?;
 
         let blob = (
@@ -1262,9 +1277,9 @@ mod tests {
     fn test_lfs_remote() -> Result<()> {
         let cachedir = TempDir::new()?;
         let lfsdir = TempDir::new()?;
-        let lfs = Arc::new(LfsStore::shared(&lfsdir)?);
-
         let config = make_lfs_config(&cachedir);
+
+        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
         let remote = LfsRemote::new(lfs, &config)?;
 
         let blob1 = (
@@ -1290,8 +1305,10 @@ mod tests {
     #[test]
     fn test_lfs_remote_file() -> Result<()> {
         let cachedir = TempDir::new()?;
+        let mut config = make_lfs_config(&cachedir);
+
         let lfsdir = TempDir::new()?;
-        let lfs = Arc::new(LfsStore::shared(&lfsdir)?);
+        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let remote = TempDir::new()?;
         let remote_lfs_file_store = LfsBlobsStore::shared(remote.path())?;
@@ -1310,7 +1327,6 @@ mod tests {
         remote_lfs_file_store.add(&blob1.0, blob1.2.clone())?;
         remote_lfs_file_store.add(&blob2.0, blob2.2.clone())?;
 
-        let mut config = make_lfs_config(&cachedir);
         let url = Url::from_file_path(&remote).unwrap();
         config.set("lfs", "url", Some(url.as_str()), &Default::default());
 
@@ -1329,9 +1345,9 @@ mod tests {
     fn test_lfs_remote_datastore() -> Result<()> {
         let cachedir = TempDir::new()?;
         let lfsdir = TempDir::new()?;
-        let lfs = Arc::new(LfsStore::shared(&lfsdir)?);
-
         let config = make_lfs_config(&cachedir);
+
+        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
         let remote = LfsRemote::new(lfs.clone(), &config)?;
 
         let key = key("a/b", "1234");
@@ -1371,7 +1387,8 @@ mod tests {
     #[test]
     fn test_blob() -> Result<()> {
         let dir = TempDir::new()?;
-        let store = LfsStore::shared(&dir)?;
+        let config = make_lfs_config(&dir);
+        let store = LfsStore::shared(&dir, &config)?;
 
         let data = Bytes::from(&[1, 2, 3, 4][..]);
         let k1 = key("a", "2");
@@ -1392,7 +1409,8 @@ mod tests {
     #[test]
     fn test_metadata() -> Result<()> {
         let dir = TempDir::new()?;
-        let store = LfsStore::shared(&dir)?;
+        let config = make_lfs_config(&dir);
+        let store = LfsStore::shared(&dir, &config)?;
 
         let k1 = key("a", "2");
         let data = Bytes::from(&[1, 2, 3, 4][..]);
