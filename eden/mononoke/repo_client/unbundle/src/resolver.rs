@@ -403,16 +403,21 @@ fn resolve_push(
         .and_then({
             cloned!(resolver);
             move |(changegroup_id, bookmark_push, bundle2, uploaded_bonsais)| {
-                resolver
-                    .ensure_stream_finished(bundle2, maybe_full_content)
-                    .map(move |maybe_raw_bundle2_id| {
-                        (
-                            changegroup_id,
-                            bookmark_push,
-                            maybe_raw_bundle2_id,
-                            uploaded_bonsais,
-                        )
-                    })
+                async move {
+                    resolver
+                        .ensure_stream_finished(bundle2, maybe_full_content)
+                        .await
+                }
+                .boxed()
+                .compat()
+                .map(move |maybe_raw_bundle2_id| {
+                    (
+                        changegroup_id,
+                        bookmark_push,
+                        maybe_raw_bundle2_id,
+                        uploaded_bonsais,
+                    )
+                })
             }
         })
         .and_then({
@@ -613,19 +618,24 @@ fn resolve_pushrebase(
                                 }
                             };
 
-                            resolver
-                                .ensure_stream_finished(bundle2, maybe_full_content)
-                                .map(move |maybe_raw_bundle2_id| {
-                                    (
-                                        changesets,
-                                        bookmark_push_part_id,
-                                        bookmark_spec,
-                                        maybe_raw_bundle2_id,
-                                        upload_map,
-                                        uploaded_hg_changeset_ids,
-                                    )
-                                })
-                                .boxify()
+                            async move {
+                                resolver
+                                    .ensure_stream_finished(bundle2, maybe_full_content)
+                                    .await
+                            }
+                            .boxed()
+                            .compat()
+                            .map(move |maybe_raw_bundle2_id| {
+                                (
+                                    changesets,
+                                    bookmark_push_part_id,
+                                    bookmark_spec,
+                                    maybe_raw_bundle2_id,
+                                    upload_map,
+                                    uploaded_hg_changeset_ids,
+                                )
+                            })
+                            .boxify()
                         }
                     })
             }
@@ -712,10 +722,15 @@ fn resolve_bookmark_only_pushrebase(
                 .boxify();
             }
             let bookmark_push = bookmark_pushes.into_iter().nth(0).unwrap();
-            resolver
-                .ensure_stream_finished(bundle2, maybe_full_content)
-                .map(move |maybe_raw_bundle2_id| (bookmark_push, maybe_raw_bundle2_id))
-                .boxify()
+            async move {
+                resolver
+                    .ensure_stream_finished(bundle2, maybe_full_content)
+                    .await
+            }
+            .boxed()
+            .compat()
+            .map(move |maybe_raw_bundle2_id| (bookmark_push, maybe_raw_bundle2_id))
+            .boxify()
         }
     })
     .and_then({
@@ -1276,26 +1291,16 @@ impl Bundle2Resolver {
     }
 
     /// Ensures that the next item in stream is None
-    fn ensure_stream_finished(
+    async fn ensure_stream_finished(
         &self,
         bundle2: OldBoxStream<Bundle2Item, Error>,
         maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
-    ) -> OldBoxFuture<Option<RawBundle2Id>, Error> {
-        next_item(bundle2)
-            .and_then(|(none, _)| {
-                ensure!(none.is_none(), "Expected end of Bundle2");
-                Ok(())
-            })
-            .and_then({
-                let resolver = self.clone();
-                move |_| {
-                    resolver
-                        .maybe_save_full_content_bundle2(maybe_full_content)
-                        .and_then(move |maybe_raw_bundle2_id| ok(maybe_raw_bundle2_id).boxify())
-                        .boxify()
-                }
-            })
-            .boxify()
+    ) -> Result<Option<RawBundle2Id>, Error> {
+        let (none, _bundle2) = next_item(bundle2).compat().await?;
+        ensure!(none.is_none(), "Expected end of Bundle2");
+        self.maybe_save_full_content_bundle2(maybe_full_content)
+            .compat()
+            .await
     }
 
     /// A method that can use any of the above maybe_resolve_* methods to return
