@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobrepoBuilder, BlobstoreOptions, Caching, ReadOnlyStorage};
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, future};
+use futures::{compat::Future01CompatExt, future, FutureExt};
 use hooks::HookManager;
 use metaconfig_types::RepoConfig;
 use mutable_counters::SqlMutableCounters;
@@ -133,7 +133,8 @@ impl MononokeRepoBuilder {
             skiplist_index_blobstore_key,
             repo.get_blobstore().boxed(),
         )
-        .compat();
+        .compat()
+        .map(|res| res.with_context(|| format!("while fetching skiplist for {}", repo.name())));
 
         let (streaming_clone, sql_read_write_status, mutable_counters, skiplist) =
             future::try_join4(
