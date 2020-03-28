@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![deny(warnings)]
+
 use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
@@ -16,7 +18,7 @@ use cmdlib::{args, helpers::block_execute};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
-use futures::future::{FutureExt, TryFutureExt};
+use futures::future::FutureExt;
 use futures::stream::{self, StreamExt, TryStreamExt};
 use futures_ext::{BoxStream, StreamExt as OldStreamExt};
 use futures_old::stream::Stream;
@@ -562,6 +564,7 @@ mod tests {
     use super::*;
     use bytes::Bytes;
     use fixtures::linear;
+    use futures::future::TryFutureExt;
     use futures_old::stream as old_stream;
     use maplit::btreemap;
     use std::str::FromStr;
