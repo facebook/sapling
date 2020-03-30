@@ -265,7 +265,7 @@ async fn maybe_unbundle(
         async move {
             unbundle::resolve(
                 &ctx,
-                repo,
+                &repo,
                 false, // infinitepush_writes_allowed
                 Box::new(bundle_stream),
                 RepoReadOnly::ReadWrite,

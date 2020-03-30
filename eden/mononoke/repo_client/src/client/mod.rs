@@ -1392,7 +1392,7 @@ impl HgCommands for RepoClient {
                     async move {
                         unbundle::resolve(
                             &ctx,
-                            blobrepo,
+                            &blobrepo,
                             infinitepush_writes_allowed,
                             stream,
                             read_write,

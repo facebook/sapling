@@ -198,9 +198,9 @@ pub enum PostResolveAction {
 /// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
 /// Manifests and uploades all of them to the provided BlobRepo in the correct order.
 /// It returns a Future that contains the response that should be send back to the requester.
-pub async fn resolve(
-    ctx: &CoreContext,
-    repo: BlobRepo,
+pub async fn resolve<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
     infinitepush_writes_allowed: bool,
     bundle2: OldBoxStream<Bundle2Item, Error>,
     readonly: RepoReadOnly,
@@ -208,12 +208,7 @@ pub async fn resolve(
     pure_push_allowed: bool,
     pushrebase_flags: PushrebaseFlags,
 ) -> Result<PostResolveAction, BundleResolverError> {
-    let resolver = Bundle2Resolver::new(
-        ctx.clone(),
-        repo,
-        infinitepush_writes_allowed,
-        pushrebase_flags,
-    );
+    let resolver = Bundle2Resolver::new(ctx, repo, infinitepush_writes_allowed, pushrebase_flags);
     let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
 
     let (maybe_commonheads, bundle2) = resolver.maybe_resolve_commonheads(bundle2).await?;
@@ -293,9 +288,9 @@ pub async fn resolve(
     }
 }
 
-async fn resolve_push(
-    ctx: &CoreContext,
-    resolver: Bundle2Resolver,
+async fn resolve_push<'r>(
+    ctx: &'r CoreContext,
+    resolver: Bundle2Resolver<'r>,
     bundle2: OldBoxStream<Bundle2Item, Error>,
     non_fast_forward_policy: NonFastForwardPolicy,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
@@ -387,10 +382,10 @@ impl<T: Copy> PushrebaseBookmarkSpec<T> {
     }
 }
 
-async fn resolve_pushrebase(
-    ctx: &CoreContext,
+async fn resolve_pushrebase<'r>(
+    ctx: &'r CoreContext,
     commonheads: CommonHeads,
-    resolver: Bundle2Resolver,
+    resolver: Bundle2Resolver<'r>,
     bundle2: OldBoxStream<Bundle2Item, Error>,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
@@ -501,9 +496,9 @@ async fn resolve_pushrebase(
 }
 
 /// Do the right thing when pushrebase-enabled client only wants to manipulate bookmarks
-async fn resolve_bookmark_only_pushrebase(
-    ctx: &CoreContext,
-    resolver: Bundle2Resolver,
+async fn resolve_bookmark_only_pushrebase<'r>(
+    ctx: &'r CoreContext,
+    resolver: Bundle2Resolver<'r>,
     bundle2: OldBoxStream<Bundle2Item, Error>,
     non_fast_forward_policy: NonFastForwardPolicy,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
@@ -610,17 +605,17 @@ enum Pushkey {
 
 /// Holds repo and logger for convienience access from it's methods
 #[derive(Clone)]
-pub struct Bundle2Resolver {
-    ctx: CoreContext,
-    repo: BlobRepo,
+pub struct Bundle2Resolver<'r> {
+    ctx: &'r CoreContext,
+    repo: &'r BlobRepo,
     infinitepush_writes_allowed: bool,
     pushrebase_flags: PushrebaseFlags,
 }
 
-impl Bundle2Resolver {
+impl<'r> Bundle2Resolver<'r> {
     fn new(
-        ctx: CoreContext,
-        repo: BlobRepo,
+        ctx: &'r CoreContext,
+        repo: &'r BlobRepo,
         infinitepush_writes_allowed: bool,
         pushrebase_flags: PushrebaseFlags,
     ) -> Self {
