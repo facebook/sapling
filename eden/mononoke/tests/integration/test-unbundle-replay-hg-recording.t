@@ -5,7 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ ENABLE_PRESERVE_BUNDLE2=1 BLOB_TYPE="blob_files" quiet default_setup
+  $ ASSIGN_GLOBALREVS=1 ENABLE_PRESERVE_BUNDLE2=1 BLOB_TYPE="blob_files" quiet default_setup
 
 Set up script to output the raw bundle. This doesn't look at its arguments at all
 
@@ -33,14 +33,14 @@ Pushrebase commit
   426bada5c67598ca65036d57d9e4b64b0c1ce7a0
   112478962961147124edd43549aedd1a335e44bf
   26805aba1e600a82e93661149f2313866a221a7b
-  7d506888e440e3cd874b8973d641c29ac6a0c8ea
-  c111c12cf96da82524957a6fbf4ab2d92ef48dad
+  cbab85d064b0fbdd3e9caa125f8eeac0fb5acf6a
+  7a8f33ce453248a6f5cc4747002e931c77234fbd
 
 Check bookmark history
 
   $ mononoke_admin bookmarks log -c hg master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  (master_bookmark) c111c12cf96da82524957a6fbf4ab2d92ef48dad pushrebase * (glob)
+  (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
   (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
 
 Export the bundle so we can replay it as it if were coming from hg, through the $BUNDLE_HELPER
@@ -51,12 +51,12 @@ Blow everything away: we're going to re-do the push from scratch, in a new repo.
 
   $ kill -9 "$MONONOKE_PID"
   $ rm -rf "$TESTTMP/mononoke-config" "$TESTTMP/monsql" "$TESTTMP/blobstore"
-  $ BLOB_TYPE="blob_files" quiet default_setup
+  $ ASSIGN_GLOBALREVS=1 BLOB_TYPE="blob_files" quiet default_setup
 
 Replay the push. This will fail because the entry does not exist (we need run this once to create the schema).
 
   $ unbundle_replay hg-recording "$BUNDLE_HELPER" 1
-  * using repo "repo" repoid RepositoryId(0) (glob)
+  * Loading repository: repo (id = 0) (glob)
   * Execution error: Entry with id 1 does not exist (glob)
   Error: Execution failed
   [1]
@@ -70,7 +70,7 @@ Insert the entry. Note that in tests, the commit timestamp will always be zero.
   >   '26805aba1e600a82e93661149f2313866a221a7b',
   >   'handle123',
   >   '{"4afe8a7fa62cf8320c8c11191d4dfdaaed9fb28b": [0.0, 0], "461b7a0d0ccf85d1168e2ae1be2a85af1ad62826": [0.0, 0]}',
-  >   '["7d506888e440e3cd874b8973d641c29ac6a0c8ea", "c111c12cf96da82524957a6fbf4ab2d92ef48dad"]'
+  >   '["cbab85d064b0fbdd3e9caa125f8eeac0fb5acf6a", "7a8f33ce453248a6f5cc4747002e931c77234fbd"]'
   > );
   > EOS
 
@@ -82,5 +82,5 @@ Check history again. We're back to where we were:
 
   $ mononoke_admin bookmarks log -c hg master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
-  (master_bookmark) c111c12cf96da82524957a6fbf4ab2d92ef48dad pushrebase * (glob)
+  (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
   (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)

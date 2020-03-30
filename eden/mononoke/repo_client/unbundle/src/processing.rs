@@ -25,7 +25,7 @@ use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
-use pushrebase;
+use pushrebase::{self, PushrebaseHook};
 use reachabilityindex::LeastCommonAncestorsHint;
 use scribe_commit_queue::{self, ScribeCommitQueue};
 use scuba_ext::ScubaSampleBuilderExt;
@@ -378,19 +378,7 @@ fn normal_pushrebase(
         .boxify();
     }
 
-    let mut hooks = vec![];
-    if pushrebase_params.assign_globalrevs {
-        let hook = GlobalrevPushrebaseHook::new(
-            repo.bonsai_globalrev_mapping().clone(),
-            repo.get_repoid(),
-        );
-        hooks.push(hook);
-    }
-
-    if pushrebase_params.populate_git_mapping {
-        let hook = GitMappingPushrebaseHook::new(repo.get_repoid());
-        hooks.push(hook);
-    }
+    let hooks = get_pushrebase_hooks(&repo, &pushrebase_params);
 
     let mut flags = pushrebase_params.flags.clone();
     if let Some(rewritedates) = bookmark_attrs.should_rewrite_dates(bookmark) {
@@ -733,4 +721,28 @@ fn log_commits_to_scribe(
             })
     });
     future::join_all(futs).map(|_| ()).boxify()
+}
+
+/// Get a Vec of the relevant pushrebase hooks for PushrebaseParams, using this BlobRepo when
+/// required by those hooks.
+pub fn get_pushrebase_hooks(
+    repo: &BlobRepo,
+    params: &PushrebaseParams,
+) -> Vec<Box<dyn PushrebaseHook>> {
+    let mut hooks = vec![];
+
+    if params.assign_globalrevs {
+        let hook = GlobalrevPushrebaseHook::new(
+            repo.bonsai_globalrev_mapping().clone(),
+            repo.get_repoid(),
+        );
+        hooks.push(hook);
+    }
+
+    if params.populate_git_mapping {
+        let hook = GitMappingPushrebaseHook::new(repo.get_repoid());
+        hooks.push(hook);
+    }
+
+    hooks
 }

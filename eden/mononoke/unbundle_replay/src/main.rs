@@ -12,6 +12,7 @@ mod hooks;
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
+use blobrepo_factory::BlobrepoBuilder;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, Freshness};
 use clap::{Arg, ArgMatches, SubCommand};
@@ -26,14 +27,16 @@ use futures::{
 use futures_old::stream::Stream;
 use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
 use mercurial_types::HgChangesetId;
-use metaconfig_types::{PushrebaseFlags, RepoReadOnly};
+use metaconfig_types::RepoReadOnly;
 use mononoke_types::{hash::Blake2, ChangesetId, RawBundle2Id, Timestamp};
 use slog::{info, Logger};
 use std::collections::HashMap;
 use std::io::Cursor;
 use std::str::FromStr;
 use std::sync::Arc;
-use unbundle::{self, PostResolveAction, PostResolvePushRebase, PushrebaseBookmarkSpec};
+use unbundle::{
+    self, get_pushrebase_hooks, PostResolveAction, PostResolvePushRebase, PushrebaseBookmarkSpec,
+};
 
 use crate::hg_recording::{HgRecordingClient, HgRecordingEntry};
 use crate::hooks::{Target, UnbundleReplayHook};
@@ -161,10 +164,35 @@ async fn do_main(
     logger: &Logger,
     service: &ReadyFlagService,
 ) -> Result<(), Error> {
+    let mysql_options = args::parse_mysql_options(&matches);
+    let blobstore_options = args::parse_blobstore_options(&matches);
+    let readonly_storage = args::parse_readonly_storage(&matches);
+    let caching = args::init_cachelib(fb, &matches, None);
+
+    let repo_id = args::get_repo_id(fb, matches)?;
+    let (repo_name, repo_config) = args::get_config_by_repoid(fb, &matches, repo_id)?;
+
+    info!(
+        logger,
+        "Loading repository: {} (id = {})", repo_name, repo_id
+    );
+
+    let repo = BlobrepoBuilder::new(
+        fb,
+        repo_name,
+        &repo_config,
+        mysql_options,
+        caching,
+        None, // We don't need to log redacted access from here
+        readonly_storage,
+        blobstore_options,
+        &logger,
+    )
+    .build()
+    .await?;
+
     let mut scuba = args::get_scuba_sample_builder(fb, &matches)?;
     scuba.add_common_server_data();
-
-    let repo = args::open_repo(fb, &logger, &matches).compat().await?;
 
     // TODO: Would want Scuba and such here.
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
@@ -194,7 +222,7 @@ async fn do_main(
         RepoReadOnly::ReadWrite,
         None,  // maybe_full_content
         false, // pure_push_allowed
-        PushrebaseFlags::default(),
+        repo_config.pushrebase.flags,
     )
     .await?;
 
@@ -265,16 +293,18 @@ async fn do_main(
     .into_iter()
     .collect();
 
-    let pushrebase_hooks = vec![UnbundleReplayHook::new(
+    let mut pushrebase_hooks = get_pushrebase_hooks(&repo, &repo_config.pushrebase);
+
+    pushrebase_hooks.push(UnbundleReplayHook::new(
         repo.clone(),
         Arc::new(timestamps),
         target,
-    )];
+    ));
 
     pushrebase::do_pushrebase_bonsai(
         &ctx,
         &repo,
-        &PushrebaseFlags::default(), // TODO
+        &repo_config.pushrebase.flags,
         &onto_params,
         &changesets,
         &None,

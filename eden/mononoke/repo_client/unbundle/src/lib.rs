@@ -21,7 +21,7 @@ mod upload_blobs;
 mod upload_changesets;
 
 pub use hook_running::run_hooks;
-pub use processing::run_post_resolve_action;
+pub use processing::{get_pushrebase_hooks, run_post_resolve_action};
 pub use push_redirector::{PushRedirector, CONFIGERATOR_PUSHREDIRECT_ENABLE};
 pub use resolver::{
     resolve, resolve_compat, BundleResolverError, Changesets, CommonHeads, InfiniteBookmarkPush,

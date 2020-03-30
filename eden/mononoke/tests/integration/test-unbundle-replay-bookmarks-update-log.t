@@ -24,7 +24,7 @@ Check bookmark history
 Replay the push. It will fail since the bookmark is in the wrong position
 
   $ unbundle_replay log-entry 2
-  * using repo "repo" repoid RepositoryId(0) (glob)
+  * Loading repository: repo (id = 0) (glob)
   * Fetching bundle from log entry: 2 (glob)
   * Fetching raw bundle: * (glob)
   * Execution error: Expected cs_id for BookmarkName { bookmark: "master_bookmark" } at Some(ChangesetId(Blake2(*))), found Some(ChangesetId(Blake2(*))) (glob)
