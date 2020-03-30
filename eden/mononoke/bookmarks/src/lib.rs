@@ -259,6 +259,17 @@ impl BookmarkUpdateReason {
         }
     }
 
+    pub fn into_bundle_replay_data(self) -> Option<BundleReplayData> {
+        use BookmarkUpdateReason::*;
+        match self {
+            Pushrebase { bundle_replay_data }
+            | Push { bundle_replay_data }
+            | TestMove { bundle_replay_data }
+            | Backsyncer { bundle_replay_data } => bundle_replay_data,
+            Blobimport | ManualMove | XRepoSync => None,
+        }
+    }
+
     pub fn get_bundle_replay_data(&self) -> Option<&BundleReplayData> {
         use BookmarkUpdateReason::*;
         match self {
