@@ -441,6 +441,11 @@ async fn do_main(
         .into_iter()
         .collect();
 
+        info!(
+            ctx.logger(),
+            "Pushrebase starting: {}: {:?} -> {:?}", onto, onto_rev, target
+        );
+
         let mut pushrebase_hooks = get_pushrebase_hooks(&repo, &repo_config.pushrebase);
 
         pushrebase_hooks.push(UnbundleReplayHook::new(
