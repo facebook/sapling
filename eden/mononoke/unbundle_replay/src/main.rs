@@ -89,7 +89,14 @@ async fn get_replay_spec(
             let onto_rev = repo
                 .get_bonsai_from_hg(ctx.clone(), onto_rev)
                 .compat()
-                .await?;
+                .await?
+                .ok_or_else(|| format_err!("Bonsai changeset is missing for {:?}", onto_rev))?;
+
+            // Wrap this back into an Option, since that's what we want in ReplaySpec. It might be
+            // a little weird to unwrap the option then wrap it back, but those are different
+            // options: None above means we are missing the Bonsai, None here would mean we want to
+            // create the bookmark (which this doesn't support right now).
+            let onto_rev = Some(onto_rev);
 
             let target = Target::hg(*revs.last().ok_or_else(|| format_err!("Missing dest rev"))?);
 
