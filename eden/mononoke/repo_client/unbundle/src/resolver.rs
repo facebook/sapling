@@ -227,7 +227,7 @@ pub fn resolve_compat(
 /// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
 /// Manifests and uploades all of them to the provided BlobRepo in the correct order.
 /// It returns a Future that contains the response that should be send back to the requester.
-async fn resolve(
+pub async fn resolve(
     ctx: CoreContext,
     repo: BlobRepo,
     infinitepush_writes_allowed: bool,
