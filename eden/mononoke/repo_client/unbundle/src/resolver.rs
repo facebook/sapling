@@ -1035,56 +1035,42 @@ impl Bundle2Resolver {
         // To avoid it we commit changesets in relatively small chunks.
         let chunk_size = 100;
 
-        let res: Result<(UploadedBonsais, UploadedHgChangesetIds), Error> =
-            stream::iter(changesets)
-                .chunks(chunk_size)
-                .map(Ok)
-                .try_fold((UploadedBonsais::new(), UploadedHgChangesetIds::new()), {
-                    let upload_changeset_fun = &upload_changeset_fun;
-                    move |(mut bonsais, mut hg_css), chunk| async move {
-                        let uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle> =
-                            stream::iter(chunk)
-                                .map(Ok)
-                                .try_fold(HashMap::new(), {
-                                    move |uploaded_changesets, (node, revlog_cs)| {
-                                        (*upload_changeset_fun)(
-                                            uploaded_changesets,
-                                            node,
-                                            revlog_cs,
-                                        )
-                                        .compat()
-                                    }
-                                })
-                                .await?;
+        let mut bonsais = UploadedBonsais::new();
+        let mut hg_css = UploadedHgChangesetIds::new();
+        for chunk in changesets.chunks(chunk_size) {
+            let mut uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle> = HashMap::new();
+            for (node, revlog_cs) in chunk {
+                uploaded_changesets =
+                    (*upload_changeset_fun)(uploaded_changesets, *node, revlog_cs.clone())
+                        .compat()
+                        .await
+                        .with_context(|| {
+                            ErrorKind::WhileUploadingData(changesets_hashes.clone())
+                        })?;
+            }
 
-                        let uploaded: Vec<(BonsaiChangeset, HgChangesetId)> =
-                            stream::iter(uploaded_changesets)
-                                .map(move |(hg_cs_id, handle): (HgChangesetId, _)| async move {
-                                    let shared_item_bcs_and_something = handle
-                                        .get_completed_changeset()
-                                        .map_err(Error::from)
-                                        .compat()
-                                        .await?;
+            let uploaded: Vec<(BonsaiChangeset, HgChangesetId)> = stream::iter(uploaded_changesets)
+                .map(move |(hg_cs_id, handle): (HgChangesetId, _)| async move {
+                    let shared_item_bcs_and_something = handle
+                        .get_completed_changeset()
+                        .map_err(Error::from)
+                        .compat()
+                        .await?;
 
-                                    let bcs = shared_item_bcs_and_something.0.clone();
-                                    Result::<_, Error>::Ok((bcs, hg_cs_id))
-                                })
-                                .buffered(chunk_size)
-                                .try_collect()
-                                .await?;
-
-                        let (more_bonsais, more_hg_css): (Vec<_>, Vec<_>) =
-                            uploaded.into_iter().unzip();
-                        bonsais.extend(more_bonsais.into_iter());
-                        hg_css.extend(more_hg_css.into_iter());
-                        Result::<(HashSet<BonsaiChangeset>, HashSet<HgChangesetId>), Error>::Ok((
-                            bonsais, hg_css,
-                        ))
-                    }
+                    let bcs = shared_item_bcs_and_something.0.clone();
+                    Result::<_, Error>::Ok((bcs, hg_cs_id))
                 })
+                .buffered(chunk_size)
+                .try_collect()
                 .await
-                .context(ErrorKind::WhileUploadingData(changesets_hashes));
-        res
+                .with_context(|| ErrorKind::WhileUploadingData(changesets_hashes.clone()))?;
+
+            let (more_bonsais, more_hg_css): (Vec<_>, Vec<_>) = uploaded.into_iter().unzip();
+            bonsais.extend(more_bonsais.into_iter());
+            hg_css.extend(more_hg_css.into_iter());
+        }
+
+        Result::<(HashSet<BonsaiChangeset>, HashSet<HgChangesetId>), Error>::Ok((bonsais, hg_css))
     }
 
     /// Ensures that the next item in stream is None
