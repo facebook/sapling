@@ -13,6 +13,7 @@ use context::CoreContext;
 use futures::compat::Future01CompatExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{BonsaiChangesetMut, ChangesetId, DateTime, Timestamp};
+use slog::info;
 
 use pushrebase::{
     PushrebaseCommitHook, PushrebaseHook, PushrebaseTransactionHook, RebasedChangesets,
@@ -94,6 +95,12 @@ impl PushrebaseCommitHook for UnbundleReplayHook {
             .values()
             .map(|(cs_id, _ts)| *cs_id)
             .collect::<Vec<_>>();
+
+        info!(
+            ctx.logger(),
+            "Deriving {} hg changesets...",
+            changesets.len()
+        );
 
         let mapping = self
             .repo
