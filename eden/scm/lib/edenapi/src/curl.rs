@@ -448,7 +448,7 @@ where
         "curl::multi_request",
         url = &AsRef::<str>::as_ref(&url.to_string()),
         downloaded = "",
-        uplaoded = "",
+        uploaded = "",
         requests = num_requests,
         latency = "",
     );
