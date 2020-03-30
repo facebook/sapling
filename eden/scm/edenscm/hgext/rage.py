@@ -27,6 +27,7 @@ from functools import partial
 from edenscm.mercurial import (
     bookmarks,
     cmdutil,
+    color,
     commands,
     encoding,
     error,
@@ -502,7 +503,13 @@ def rage(ui, repo, *pats, **opts):
 
     """
     with progress.spinner(ui, "collecting information"):
-        msg = _makerage(ui, repo, **opts)
+        with ui.configoverride({("ui", "color"): "False"}):
+            # Disable colors when generating a rage.
+            color.setup(ui)
+            msg = _makerage(ui, repo, **opts)
+
+    # Restore color output.
+    color.setup(ui)
 
     if opts.get("preview"):
         ui.pager("rage")
