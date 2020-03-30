@@ -41,6 +41,7 @@ use std::io::Cursor;
 use std::sync::Arc;
 use std::time::Duration;
 use time_ext::DurationExt;
+use tokio::{task, time};
 use unbundle::{
     self, get_pushrebase_hooks, PostResolveAction, PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
@@ -152,7 +153,7 @@ async fn get_replay_stream<'a>(
                                     onto,
                                     onto_rev
                                 );
-                                tokio::time::delay_for(poll_interval).await;
+                                time::delay_for(poll_interval).await;
                                 continue;
                             }
                         }
@@ -252,7 +253,7 @@ async fn maybe_unbundle(
             StreamEvent::Done(..) => None,
         });
 
-    let (unbundle_stats, resolution) = unbundle::resolve(
+    let (unbundle_stats, resolution) = task::spawn(unbundle::resolve(
         ctx.clone(),
         repo.clone(),
         false, // infinitepush_writes_allowed
@@ -261,13 +262,14 @@ async fn maybe_unbundle(
         None,  // maybe_full_content
         false, // pure_push_allowed
         repo_config.pushrebase.flags,
-    )
+    ))
     .timed()
     .await;
 
     let resolution = match resolution {
-        Ok(resolution) => resolution,
-        Err(e) => return Ok(UnbundleOutcome::Deferred(bundle, pushrebase_spec, e.into())),
+        Ok(Ok(resolution)) => resolution,
+        Ok(Err(e)) => return Ok(UnbundleOutcome::Deferred(bundle, pushrebase_spec, e.into())),
+        Err(e) => return Err(e.into()),
     };
 
     let PushrebaseSpec {
@@ -538,9 +540,8 @@ async fn do_main(
             Ok(head)
         })
         .try_for_each_concurrent(filenodes_concurrency, |head| async move {
-            FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), head)
-                .compat()
-                .await?;
+            task::spawn(FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), head).compat())
+                .await??;
 
             info!(ctx.logger(), "Filenodes derived for {:?}", head);
 
