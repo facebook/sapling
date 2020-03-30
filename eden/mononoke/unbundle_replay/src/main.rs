@@ -18,6 +18,8 @@ use bookmarks::{BookmarkName, Freshness};
 use clap::{Arg, ArgMatches, SubCommand};
 use cmdlib::{args, monitoring::ReadyFlagService};
 use context::CoreContext;
+use derived_data::BonsaiDerived;
+use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
@@ -324,6 +326,12 @@ async fn do_main(
         ctx.logger(),
         "Pushrebase completed. New bookmark: {:?}", head
     );
+
+    FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), head)
+        .compat()
+        .await?;
+
+    info!(ctx.logger(), "Filenodes derived");
 
     Ok(())
 }
