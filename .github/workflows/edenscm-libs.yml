@@ -82,7 +82,7 @@ jobs:
     - name: Run renderdag tests
       run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/renderdag/Cargo.toml
     - name: Run revisionstore tests
-      run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/revisionstore/Cargo.toml
+      run: cargo test --verbose --target-dir target --no-default-features --manifest-path eden/scm/lib/revisionstore/Cargo.toml
     - name: Run stackdesc tests
       run: cargo test --verbose --target-dir target --manifest-path eden/scm/lib/stackdesc/Cargo.toml
     # fbthrift is not published

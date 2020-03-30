@@ -401,12 +401,12 @@ impl<'a> ContentStoreBuilder<'a> {
 mod tests {
     use super::*;
 
-    use std::{collections::HashMap, str::FromStr};
+    use std::collections::HashMap;
 
     use bytes::Bytes;
     use tempfile::TempDir;
 
-    use types::{testutil::*, Sha256};
+    use types::testutil::*;
     use util::path::create_dir;
 
     use crate::{
@@ -763,40 +763,50 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_lfs_remote() -> Result<()> {
-        let cachedir = TempDir::new()?;
-        let localdir = TempDir::new()?;
-        let config = make_lfs_config(&cachedir);
+    #[cfg(feature = "fb")]
+    mod fb_tests {
+        use super::*;
 
-        let k = key("a", "1");
-        let sha256 =
-            Sha256::from_str("fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9")?;
-        let size = 6;
+        use std::str::FromStr;
 
-        let pointer = format!(
-            "version https://git-lfs.github.com/spec/v1\noid sha256:{}\nsize {}\nx-is-binary 0\n",
-            sha256.to_hex(),
-            size
-        );
+        use types::Sha256;
 
-        let data = Bytes::from(pointer);
+        #[test]
+        fn test_lfs_remote() -> Result<()> {
+            let cachedir = TempDir::new()?;
+            let localdir = TempDir::new()?;
+            let config = make_lfs_config(&cachedir);
 
-        let mut map = HashMap::new();
-        map.insert(k.clone(), (data, Some(0x2000)));
-        let mut remotestore = FakeHgIdRemoteStore::new();
-        remotestore.data(map);
+            let k = key("a", "1");
+            let sha256 = Sha256::from_str(
+                "fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9",
+            )?;
+            let size = 6;
 
-        let store = ContentStoreBuilder::new(&config)
-            .local_path(&localdir)
-            .remotestore(Box::new(remotestore))
-            .build()?;
+            let pointer = format!(
+                "version https://git-lfs.github.com/spec/v1\noid sha256:{}\nsize {}\nx-is-binary 0\n",
+                sha256.to_hex(),
+                size
+            );
 
-        let data = store.get(&k)?.map(|vec| Bytes::from(vec));
+            let data = Bytes::from(pointer);
 
-        assert_eq!(data, Some(Bytes::from(&b"master"[..])));
+            let mut map = HashMap::new();
+            map.insert(k.clone(), (data, Some(0x2000)));
+            let mut remotestore = FakeHgIdRemoteStore::new();
+            remotestore.data(map);
 
-        Ok(())
+            let store = ContentStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .remotestore(Box::new(remotestore))
+                .build()?;
+
+            let data = store.get(&k)?.map(|vec| Bytes::from(vec));
+
+            assert_eq!(data, Some(Bytes::from(&b"master"[..])));
+
+            Ok(())
+        }
     }
 
     #[cfg(fbcode_build)]

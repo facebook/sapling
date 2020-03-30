@@ -1251,55 +1251,109 @@ mod tests {
         Ok(())
     }
 
-    #[test]
-    fn test_lfs_non_present() -> Result<()> {
-        let cachedir = TempDir::new()?;
-        let lfsdir = TempDir::new()?;
-        let config = make_lfs_config(&cachedir);
+    #[cfg(feature = "fb")]
+    mod fb_test {
+        use super::*;
 
-        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-        let remote = LfsRemote::new(lfs, &config)?;
+        #[test]
+        fn test_lfs_non_present() -> Result<()> {
+            let cachedir = TempDir::new()?;
+            let lfsdir = TempDir::new()?;
+            let config = make_lfs_config(&cachedir);
 
-        let blob = (
-            Sha256::from_str("0000000000000000000000000000000000000000000000000000000000000000")?,
-            1,
-            Bytes::from(&b"nothing"[..]),
-        );
+            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let remote = LfsRemote::new(lfs, &config)?;
 
-        let resp = remote.batch(&[(blob.0, blob.1)]);
-        let err = resp.err().unwrap();
-        assert_eq!(err.to_string(), "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }");
+            let blob = (
+                Sha256::from_str(
+                    "0000000000000000000000000000000000000000000000000000000000000000",
+                )?,
+                1,
+                Bytes::from(&b"nothing"[..]),
+            );
 
-        Ok(())
-    }
+            let resp = remote.batch(&[(blob.0, blob.1)]);
+            let err = resp.err().unwrap();
+            assert_eq!(err.to_string(), "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }");
 
-    #[test]
-    fn test_lfs_remote() -> Result<()> {
-        let cachedir = TempDir::new()?;
-        let lfsdir = TempDir::new()?;
-        let config = make_lfs_config(&cachedir);
+            Ok(())
+        }
 
-        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-        let remote = LfsRemote::new(lfs, &config)?;
+        #[test]
+        fn test_lfs_remote() -> Result<()> {
+            let cachedir = TempDir::new()?;
+            let lfsdir = TempDir::new()?;
+            let config = make_lfs_config(&cachedir);
 
-        let blob1 = (
-            Sha256::from_str("fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9")?,
-            6,
-            Bytes::from(&b"master"[..]),
-        );
-        let blob2 = (
-            Sha256::from_str("ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24")?,
-            6,
-            Bytes::from(&b"1.44.0"[..]),
-        );
+            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let remote = LfsRemote::new(lfs, &config)?;
 
-        let resp = remote
-            .batch(&[(blob1.0, blob1.1), (blob2.0, blob2.1)])?
-            .collect::<Result<Vec<_>>>()?
-            .sort();
-        assert_eq!(resp, vec![(blob1.0, blob1.2), (blob2.0, blob2.2)].sort());
+            let blob1 = (
+                Sha256::from_str(
+                    "fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9",
+                )?,
+                6,
+                Bytes::from(&b"master"[..]),
+            );
+            let blob2 = (
+                Sha256::from_str(
+                    "ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24",
+                )?,
+                6,
+                Bytes::from(&b"1.44.0"[..]),
+            );
 
-        Ok(())
+            let resp = remote
+                .batch(&[(blob1.0, blob1.1), (blob2.0, blob2.1)])?
+                .collect::<Result<Vec<_>>>()?
+                .sort();
+            assert_eq!(resp, vec![(blob1.0, blob1.2), (blob2.0, blob2.2)].sort());
+
+            Ok(())
+        }
+
+        #[test]
+        fn test_lfs_remote_datastore() -> Result<()> {
+            let cachedir = TempDir::new()?;
+            let lfsdir = TempDir::new()?;
+            let config = make_lfs_config(&cachedir);
+
+            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let remote = LfsRemote::new(lfs.clone(), &config)?;
+
+            let key = key("a/b", "1234");
+
+            let mut content_hashes = HashMap::new();
+            content_hashes.insert(
+                ContentHashType::Sha256,
+                ContentHash::Sha256(Sha256::from_str(
+                    "ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24",
+                )?),
+            );
+
+            let pointer = LfsPointersEntry {
+                hgid: key.hgid.clone(),
+                size: 6,
+                is_binary: false,
+                copy_from: None,
+                content_hashes,
+            };
+
+            // Populate the pointer store. Usually, this would be done via a previous remotestore call.
+            lfs.pointers.write().add(pointer)?;
+
+            let remotedatastore = remote.datastore(lfs.clone());
+
+            let expected_delta = Delta {
+                data: Bytes::from(&b"1.44.0"[..]),
+                base: None,
+                key: key.clone(),
+            };
+
+            assert_eq!(remotedatastore.get_delta(&key)?, Some(expected_delta));
+
+            Ok(())
+        }
     }
 
     #[test]
@@ -1337,49 +1391,6 @@ mod tests {
             .collect::<Result<Vec<_>>>()?
             .sort();
         assert_eq!(resp, vec![(blob1.0, blob1.2), (blob2.0, blob2.2)].sort());
-
-        Ok(())
-    }
-
-    #[test]
-    fn test_lfs_remote_datastore() -> Result<()> {
-        let cachedir = TempDir::new()?;
-        let lfsdir = TempDir::new()?;
-        let config = make_lfs_config(&cachedir);
-
-        let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-        let remote = LfsRemote::new(lfs.clone(), &config)?;
-
-        let key = key("a/b", "1234");
-
-        let mut content_hashes = HashMap::new();
-        content_hashes.insert(
-            ContentHashType::Sha256,
-            ContentHash::Sha256(Sha256::from_str(
-                "ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24",
-            )?),
-        );
-
-        let pointer = LfsPointersEntry {
-            hgid: key.hgid.clone(),
-            size: 6,
-            is_binary: false,
-            copy_from: None,
-            content_hashes,
-        };
-
-        // Populate the pointer store. Usually, this would be done via a previous remotestore call.
-        lfs.pointers.write().add(pointer)?;
-
-        let remotedatastore = remote.datastore(lfs.clone());
-
-        let expected_delta = Delta {
-            data: Bytes::from(&b"1.44.0"[..]),
-            base: None,
-            key: key.clone(),
-        };
-
-        assert_eq!(remotedatastore.get_delta(&key)?, Some(expected_delta));
 
         Ok(())
     }
