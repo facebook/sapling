@@ -11,6 +11,7 @@ CREATE TABLE `pushrebaserecording` (
   `ontorev` VARBINARY(40) NOT NULL,
   `onto` VARBINARY(512) NOT NULL,
   `pushrebase_errmsg` TEXT,
+  `conflicts` TEXT,
   `bundlehandle` TEXT,
   `timestamps` TEXT NOT NULL,
   `replacements_revs` TEXT,

@@ -64,7 +64,7 @@ queries! {
         "
         SELECT id, onto, ontorev, bundlehandle, timestamps, ordered_added_revs
         FROM pushrebaserecording
-        WHERE repo_id = {repo_id} AND id > {min_id} AND pushrebase_errmsg IS NULL
+        WHERE repo_id = {repo_id} AND id > {min_id} AND pushrebase_errmsg IS NULL AND conflicts IS NULL
         ORDER BY id ASC
         LIMIT 1
         "
@@ -74,7 +74,7 @@ queries! {
         "
         SELECT id, onto, ontorev, bundlehandle, timestamps, ordered_added_revs
         FROM pushrebaserecording
-        WHERE repo_id = {repo_id} AND onto LIKE {onto} AND ontorev LIKE LOWER(HEX({ontorev})) AND pushrebase_errmsg IS NULL
+        WHERE repo_id = {repo_id} AND onto LIKE {onto} AND ontorev LIKE LOWER(HEX({ontorev})) AND pushrebase_errmsg IS NULL AND conflicts IS NULL
         ORDER BY id ASC
         LIMIT 1
         "
@@ -216,14 +216,23 @@ mod test {
             bundlehandle: String,
             timestamps: String,
             ordered_added_revs: String,
-            pushrebase_errmsg: Option<String>
         ) {
             none,
             "
             INSERT INTO
-            pushrebaserecording(id, repo_id, onto, ontorev, bundlehandle, timestamps, ordered_added_revs, pushrebase_errmsg)
-            VALUES ({id}, {repo_id}, {onto}, {ontorev}, {bundlehandle}, {timestamps}, {ordered_added_revs}, {pushrebase_errmsg})
+            pushrebaserecording(id, repo_id, onto, ontorev, bundlehandle, timestamps, ordered_added_revs)
+            VALUES ({id}, {repo_id}, {onto}, {ontorev}, {bundlehandle}, {timestamps}, {ordered_added_revs})
             "
+        }
+
+        write SetPushrebaseErrMsgOnAllEntries() {
+            none,
+            "UPDATE pushrebaserecording SET pushrebase_errmsg = 'oops'"
+        }
+
+        write SetConflictsOnAllEntries() {
+            none,
+            "UPDATE pushrebaserecording SET conflicts = 'oops'"
         }
     }
 
@@ -247,7 +256,6 @@ mod test {
             &"handle123".to_string(),
             &json!({ ONES_CSID.to_string(): [123.0, 0] }).to_string(),
             &json!([TWOS_CSID.to_string()]).to_string(),
-            &None,
         )
         .compat()
         .await?;
@@ -311,19 +319,24 @@ mod test {
         let client = HgRecordingClient::test_instance()?;
         let ctx = CoreContext::test_mock(fb);
 
-        InsertHgRecordingEntry::query(
-            &client.sql.0,
-            &1,
-            &REPO_ZERO.id(),
-            &"book123".to_string(),
-            &ONES_CSID.to_string(),
-            &"handle123".to_string(),
-            &"{}".to_string(),
-            &"[]".to_string(),
-            &Some("some error".to_string()),
-        )
-        .compat()
-        .await?;
+        insert_test_entry(&client).await?;
+        SetPushrebaseErrMsgOnAllEntries::query(&client.sql.0)
+            .compat()
+            .await?;
+
+        assert_eq!(client.next_entry_by_id(&ctx, 0).await?, None);
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_conflict_entry_by_id(fb: FacebookInit) -> Result<(), Error> {
+        let client = HgRecordingClient::test_instance()?;
+        let ctx = CoreContext::test_mock(fb);
+
+        insert_test_entry(&client).await?;
+        SetConflictsOnAllEntries::query(&client.sql.0)
+            .compat()
+            .await?;
 
         assert_eq!(client.next_entry_by_id(&ctx, 0).await?, None);
         Ok(())
@@ -353,19 +366,30 @@ mod test {
         let client = HgRecordingClient::test_instance()?;
         let ctx = CoreContext::test_mock(fb);
 
-        InsertHgRecordingEntry::query(
-            &client.sql.0,
-            &1,
-            &REPO_ZERO.id(),
-            &"book123".to_string(),
-            &ONES_CSID.to_string(),
-            &"handle123".to_string(),
-            &"{}".to_string(),
-            &"[]".to_string(),
-            &Some("some error".to_string()),
-        )
-        .compat()
-        .await?;
+        insert_test_entry(&client).await?;
+        SetPushrebaseErrMsgOnAllEntries::query(&client.sql.0)
+            .compat()
+            .await?;
+
+        let book = BookmarkName::try_from("book123")?;
+
+        assert_eq!(
+            client.next_entry_by_onto(&ctx, &book, &ONES_CSID).await?,
+            None
+        );
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_conflict_entry_onto(fb: FacebookInit) -> Result<(), Error> {
+        let client = HgRecordingClient::test_instance()?;
+        let ctx = CoreContext::test_mock(fb);
+
+        insert_test_entry(&client).await?;
+        SetConflictsOnAllEntries::query(&client.sql.0)
+            .compat()
+            .await?;
 
         let book = BookmarkName::try_from("book123")?;
 
