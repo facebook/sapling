@@ -18,8 +18,9 @@ use sql::{queries, Connection};
 use sql_ext::SqlConstructors;
 use std::borrow::Cow;
 use std::collections::HashMap;
-use std::convert::TryFrom;
+use std::convert::{TryFrom, TryInto};
 use std::str::FromStr;
+use std::time::Duration;
 
 pub struct HgRecordingEntry {
     pub id: i64,
@@ -28,6 +29,7 @@ pub struct HgRecordingEntry {
     pub bundle: String,
     pub timestamps: HashMap<HgChangesetId, Timestamp>,
     pub revs: Vec<HgChangesetId>,
+    pub duration: Option<Duration>,
 }
 
 pub struct HgRecordingClient {
@@ -53,12 +55,20 @@ impl SqlConstructors for HgRecordingConnection {
     }
 }
 
-type EntryRow = (i64, String, String, Option<String>, String, String);
+type EntryRow = (
+    i64,
+    String,
+    String,
+    Option<String>,
+    String,
+    String,
+    Option<i64>,
+);
 
 queries! {
-    read SelectNextSuccessfulHgRecordingEntryById(repo_id: RepositoryId, min_id: i64) -> (i64, String, String, Option<String>, String, String) {
+    read SelectNextSuccessfulHgRecordingEntryById(repo_id: RepositoryId, min_id: i64) -> (i64, String, String, Option<String>, String, String, Option<i64>) {
         "
-        SELECT id, onto, ontorev, bundlehandle, timestamps, ordered_added_revs
+        SELECT id, onto, ontorev, bundlehandle, timestamps, ordered_added_revs, duration_ms
         FROM pushrebaserecording
         WHERE repo_id = {repo_id} AND id > {min_id} AND pushrebase_errmsg IS NULL AND conflicts IS NULL
         ORDER BY id ASC
@@ -66,9 +76,9 @@ queries! {
         "
     }
 
-    read SelectNextSuccessfulHgRecordingEntryByOnto(repo_id: RepositoryId, onto: BookmarkName, ontorev: HgChangesetId) -> (i64, String, String, Option<String>, String, String) {
+    read SelectNextSuccessfulHgRecordingEntryByOnto(repo_id: RepositoryId, onto: BookmarkName, ontorev: HgChangesetId) -> (i64, String, String, Option<String>, String, String, Option<i64>) {
         "
-        SELECT id, onto, ontorev, bundlehandle, timestamps, ordered_added_revs
+        SELECT id, onto, ontorev, bundlehandle, timestamps, ordered_added_revs, duration_ms
         FROM pushrebaserecording
         WHERE repo_id = {repo_id} AND onto LIKE {onto} AND ontorev LIKE LOWER(HEX({ontorev})) AND pushrebase_errmsg IS NULL AND conflicts IS NULL
         ORDER BY id ASC
@@ -135,9 +145,12 @@ impl HgRecordingClient {
             }
         };
 
-        let (id, onto, onto_rev, bundle, timestamps, revs) = entry;
+        let (id, onto, onto_rev, bundle, timestamps, revs, duration_ms) = entry;
         let onto = BookmarkName::try_from(onto.as_str())?;
         let onto_rev = HgChangesetId::from_str(&onto_rev)?;
+        let duration: Option<Duration> = duration_ms
+            .map(|d| Result::<_, Error>::Ok(Duration::from_millis(d.try_into()?)))
+            .transpose()?;
 
         let timestamps = serde_json::from_str::<HashMap<Cow<'_, str>, (f64, u64)>>(&timestamps)?;
         let timestamps = timestamps
@@ -164,6 +177,7 @@ impl HgRecordingClient {
             bundle,
             timestamps,
             revs,
+            duration,
         }))
     }
 }

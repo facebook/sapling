@@ -68,13 +68,14 @@ Replay the push. This will fail because the entry does not exist (we need run th
 Insert the entry. Note that in tests, the commit timestamp will always be zero.
 
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" << EOS
-  > INSERT INTO pushrebaserecording(repo_id, onto, ontorev, bundlehandle, timestamps, ordered_added_revs) VALUES (
+  > INSERT INTO pushrebaserecording(repo_id, onto, ontorev, bundlehandle, timestamps, ordered_added_revs, duration_ms) VALUES (
   >   0,
   >   'master_bookmark',
   >   '26805aba1e600a82e93661149f2313866a221a7b',
   >   'handle123',
   >   '{"4afe8a7fa62cf8320c8c11191d4dfdaaed9fb28b": [0.0, 0], "461b7a0d0ccf85d1168e2ae1be2a85af1ad62826": [0.0, 0]}',
-  >   '["cbab85d064b0fbdd3e9caa125f8eeac0fb5acf6a", "7a8f33ce453248a6f5cc4747002e931c77234fbd"]'
+  >   '["cbab85d064b0fbdd3e9caa125f8eeac0fb5acf6a", "7a8f33ce453248a6f5cc4747002e931c77234fbd"]',
+  >   123
   > );
   > EOS
 
@@ -94,6 +95,7 @@ Check history again. We're back to where we were:
     "int": {
       "age_s": *, (glob)
       "pushrebase_completion_time_us": *, (glob)
+      "pushrebase_recorded_time_us": 123000,
       "time": *, (glob)
       "unbundle_completion_time_us": * (glob)
     },

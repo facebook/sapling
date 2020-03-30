@@ -17,6 +17,7 @@ use mononoke_types::{hash::Blake2, ChangesetId, RawBundle2Id, Timestamp};
 use slog::info;
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::time::Duration;
 use tokio::process::Command;
 
 use crate::hg_recording::HgRecordingEntry;
@@ -88,6 +89,7 @@ pub struct PushrebaseSpec {
     pub onto_rev: Option<OntoRev>,
     pub target: Target,
     pub timestamps: HashMap<HgChangesetId, Timestamp>,
+    pub recorded_duration: Option<Duration>,
 }
 
 pub struct ReplaySpec<'a> {
@@ -117,6 +119,7 @@ impl ReplaySpec<'static> {
                 onto: entry.bookmark_name,
                 onto_rev: entry.from_changeset_id.map(OntoRev::Bonsai),
                 target: Target::bonsai(target),
+                recorded_duration: None,
             },
         })
     }
@@ -134,6 +137,7 @@ impl<'a> ReplaySpec<'a> {
             bundle,
             timestamps,
             revs,
+            duration,
         } = entry;
 
         let target = Target::hg(
@@ -154,6 +158,7 @@ impl<'a> ReplaySpec<'a> {
                 onto_rev: Some(OntoRev::Hg(onto_rev)),
                 target,
                 timestamps,
+                recorded_duration: duration,
             },
         })
     }

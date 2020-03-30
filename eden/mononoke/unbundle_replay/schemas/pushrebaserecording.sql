@@ -15,5 +15,6 @@ CREATE TABLE `pushrebaserecording` (
   `bundlehandle` TEXT,
   `timestamps` TEXT NOT NULL,
   `replacements_revs` TEXT,
-  `ordered_added_revs` TEXT
+  `ordered_added_revs` TEXT,
+  `duration_ms` INTEGER
 );

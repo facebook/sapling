@@ -220,6 +220,7 @@ struct UnbundleComplete {
     timestamps: HashMap<ChangesetId, Timestamp>,
     changesets: HashSet<BonsaiChangeset>,
     unbundle_stats: FutureStats,
+    recorded_duration: Option<Duration>,
 }
 
 enum UnbundleOutcome {
@@ -274,6 +275,7 @@ async fn maybe_unbundle(
         onto_rev,
         target,
         timestamps,
+        recorded_duration,
     } = pushrebase_spec;
 
     // TODO: Run hooks here (this is where repo_client would run them).
@@ -337,6 +339,7 @@ async fn maybe_unbundle(
         timestamps,
         changesets,
         unbundle_stats,
+        recorded_duration,
     }))
 }
 
@@ -447,6 +450,7 @@ async fn do_main(
                 timestamps,
                 changesets,
                 unbundle_stats,
+                recorded_duration,
             } = unbundle_complete;
 
             let onto_rev = match onto_rev {
@@ -513,6 +517,12 @@ async fn do_main(
             scuba.add("to_cs_id", head.to_string());
             if let Some(current_cs_id) = current_cs_id {
                 scuba.add("from_cs_id", current_cs_id.to_string());
+            }
+            if let Some(recorded_duration) = recorded_duration {
+                scuba.add(
+                    "pushrebase_recorded_time_us",
+                    recorded_duration.as_micros_unchecked(),
+                );
             }
             scuba.log();
 
