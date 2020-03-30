@@ -24,9 +24,9 @@ use fbinit::FacebookInit;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future,
-    stream::StreamExt,
+    stream::{self, Stream, StreamExt},
 };
-use futures_old::stream::Stream;
+use futures_old::stream::Stream as OldStream;
 use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
 use mercurial_types::HgChangesetId;
 use metaconfig_types::RepoReadOnly;
@@ -58,11 +58,11 @@ struct ReplaySpec {
     target: Target,
 }
 
-async fn get_replay_spec(
+async fn get_replay_stream(
     ctx: &CoreContext,
     repo: &BlobRepo,
     matches: &ArgMatches<'_>,
-) -> Result<ReplaySpec, Error> {
+) -> Result<impl Stream<Item = Result<ReplaySpec, Error>>, Error> {
     match matches.subcommand() {
         (SUBCOMMAND_HG_RECORDING, Some(sub)) => {
             let bundle_helper = sub.value_of(ARG_HG_RECORDING_BUNDLE_HELPER).unwrap();
@@ -102,13 +102,15 @@ async fn get_replay_spec(
 
             let target = Target::hg(*revs.last().ok_or_else(|| format_err!("Missing dest rev"))?);
 
-            Ok(ReplaySpec {
+            let spec = ReplaySpec {
                 bundle,
                 timestamps,
                 onto,
                 onto_rev,
                 target,
-            })
+            };
+
+            Ok(stream::once(async { Ok(spec) }).boxed())
         }
         (SUBCOMMAND_LOG_ENTRY, Some(sub)) => {
             let id: u64 = sub.value_of(ARG_LOG_ENTRY_ID).unwrap().parse()?;
@@ -151,17 +153,18 @@ async fn get_replay_spec(
                 .into_bytes()
                 .to_vec();
 
-            Ok(ReplaySpec {
-                bundle,
-                timestamps: replay_data.commit_timestamps,
-                onto: entry.bookmark_name,
-                onto_rev: entry.from_changeset_id,
-                target: Target::bonsai(
-                    entry.to_changeset_id.ok_or_else(|| {
+            let spec =
+                ReplaySpec {
+                    bundle,
+                    timestamps: replay_data.commit_timestamps,
+                    onto: entry.bookmark_name,
+                    onto_rev: entry.from_changeset_id,
+                    target: Target::bonsai(entry.to_changeset_id.ok_or_else(|| {
                         format_err!("Replaying bookmark deletions is not supported")
-                    })?,
-                ),
-            })
+                    })?),
+                };
+
+            Ok(stream::once(async { Ok(spec) }).boxed())
         }
         (name, _) => Err(format_err!("Invalid subcommand: {:?}", name)),
     }
@@ -200,138 +203,149 @@ async fn do_main(
     .build()
     .await?;
 
+    service.set_ready();
+
     let mut scuba = args::get_scuba_sample_builder(fb, &matches)?;
     scuba.add_common_server_data();
 
     // TODO: Would want Scuba and such here.
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    service.set_ready();
+    let mut stream = get_replay_stream(&ctx, &repo, matches).await?;
 
-    let ReplaySpec {
-        bundle,
-        timestamps,
-        onto,
-        onto_rev,
-        target,
-    } = get_replay_spec(&ctx, &repo, matches).await?;
+    loop {
+        let entry = match stream.next().await {
+            Some(entry) => entry?,
+            None => {
+                break;
+            }
+        };
 
-    let bundle = Cursor::new(bundle);
-
-    let bundle_stream = Bundle2Stream::new(logger.clone(), bundle).filter_map(|e| match e {
-        StreamEvent::Next(item) => Some(item),
-        StreamEvent::Done(..) => None,
-    });
-
-    let resolution = unbundle::resolve(
-        ctx.clone(),
-        repo.clone(),
-        false, // infinitepush_writes_allowed
-        Box::new(bundle_stream),
-        RepoReadOnly::ReadWrite,
-        None,  // maybe_full_content
-        false, // pure_push_allowed
-        repo_config.pushrebase.flags,
-    )
-    .await?;
-
-    // TODO: Run hooks here (this is where repo_client would run them).
-
-    let action = match resolution {
-        PostResolveAction::PushRebase(action) => action,
-        _ => return Err(format_err!("Unsupported post-resolve action!")),
-    };
-
-    let PostResolvePushRebase {
-        any_merges: _,
-        bookmark_push_part_id: _,
-        bookmark_spec,
-        maybe_hg_replay_data: _,
-        maybe_pushvars: _,
-        commonheads: _,
-        uploaded_bonsais: changesets,
-        uploaded_hg_changeset_ids: _,
-    } = action;
-
-    let onto_params = match bookmark_spec {
-        PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => onto_params,
-        _ => return Err(format_err!("Unsupported bookmark spec")),
-    };
-
-    if onto_params.bookmark != onto {
-        return Err(format_err!(
-            "Expected pushrebase for bookmark {:?}, found {:?}",
+        let ReplaySpec {
+            bundle,
+            timestamps,
             onto,
-            onto_params.bookmark
-        ));
-    }
-
-    let current_cs_id = repo
-        .get_bonsai_bookmark(ctx.clone(), &onto_params.bookmark)
-        .compat()
-        .await?;
-
-    if current_cs_id != onto_rev {
-        return Err(format_err!(
-            "Expected cs_id for {:?} at {:?}, found {:?}",
-            onto_params.bookmark,
             onto_rev,
-            current_cs_id
-        ));
-    }
+            target,
+        } = entry;
 
-    // At this point, the commits have have been imported so we can map the timestamps we have to
-    // the ones we want.
+        let bundle = Cursor::new(bundle);
 
-    let timestamps = future::try_join_all(timestamps.into_iter().map(|(hg_cs_id, ts)| {
-        let repo = &repo;
-        let ctx = &ctx;
-        async move {
-            let bonsai_cs_id = repo
-                .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
-                .compat()
-                .await?
-                .ok_or(format_err!(
-                    "Hg Changeset is missing after unbundle: {:?}",
-                    hg_cs_id
-                ))?;
-            Result::<_, Error>::Ok((bonsai_cs_id, ts))
-        }
-    }))
-    .await?
-    .into_iter()
-    .collect();
+        let bundle_stream = Bundle2Stream::new(logger.clone(), bundle).filter_map(|e| match e {
+            StreamEvent::Next(item) => Some(item),
+            StreamEvent::Done(..) => None,
+        });
 
-    let mut pushrebase_hooks = get_pushrebase_hooks(&repo, &repo_config.pushrebase);
-
-    pushrebase_hooks.push(UnbundleReplayHook::new(
-        repo.clone(),
-        Arc::new(timestamps),
-        target,
-    ));
-
-    let head = pushrebase::do_pushrebase_bonsai(
-        &ctx,
-        &repo,
-        &repo_config.pushrebase.flags,
-        &onto_params,
-        &changesets,
-        &None,
-        pushrebase_hooks.as_ref(),
-    )
-    .await?
-    .head;
-
-    info!(
-        ctx.logger(),
-        "Pushrebase completed. New bookmark: {:?}", head
-    );
-
-    FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), head)
-        .compat()
+        let resolution = unbundle::resolve(
+            ctx.clone(),
+            repo.clone(),
+            false, // infinitepush_writes_allowed
+            Box::new(bundle_stream),
+            RepoReadOnly::ReadWrite,
+            None,  // maybe_full_content
+            false, // pure_push_allowed
+            repo_config.pushrebase.flags,
+        )
         .await?;
 
-    info!(ctx.logger(), "Filenodes derived");
+        // TODO: Run hooks here (this is where repo_client would run them).
+
+        let action = match resolution {
+            PostResolveAction::PushRebase(action) => action,
+            _ => return Err(format_err!("Unsupported post-resolve action!")),
+        };
+
+        let PostResolvePushRebase {
+            any_merges: _,
+            bookmark_push_part_id: _,
+            bookmark_spec,
+            maybe_hg_replay_data: _,
+            maybe_pushvars: _,
+            commonheads: _,
+            uploaded_bonsais: changesets,
+            uploaded_hg_changeset_ids: _,
+        } = action;
+
+        let onto_params = match bookmark_spec {
+            PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => onto_params,
+            _ => return Err(format_err!("Unsupported bookmark spec")),
+        };
+
+        if onto_params.bookmark != onto {
+            return Err(format_err!(
+                "Expected pushrebase for bookmark {:?}, found {:?}",
+                onto,
+                onto_params.bookmark
+            ));
+        }
+
+        let current_cs_id = repo
+            .get_bonsai_bookmark(ctx.clone(), &onto_params.bookmark)
+            .compat()
+            .await?;
+
+        if current_cs_id != onto_rev {
+            return Err(format_err!(
+                "Expected cs_id for {:?} at {:?}, found {:?}",
+                onto_params.bookmark,
+                onto_rev,
+                current_cs_id
+            ));
+        }
+
+        // At this point, the commits have have been imported so we can map the timestamps we have to
+        // the ones we want.
+
+        let timestamps = future::try_join_all(timestamps.into_iter().map(|(hg_cs_id, ts)| {
+            let repo = &repo;
+            let ctx = &ctx;
+            async move {
+                let bonsai_cs_id = repo
+                    .get_bonsai_from_hg(ctx.clone(), hg_cs_id)
+                    .compat()
+                    .await?
+                    .ok_or(format_err!(
+                        "Hg Changeset is missing after unbundle: {:?}",
+                        hg_cs_id
+                    ))?;
+                Result::<_, Error>::Ok((bonsai_cs_id, ts))
+            }
+        }))
+        .await?
+        .into_iter()
+        .collect();
+
+        let mut pushrebase_hooks = get_pushrebase_hooks(&repo, &repo_config.pushrebase);
+
+        pushrebase_hooks.push(UnbundleReplayHook::new(
+            repo.clone(),
+            Arc::new(timestamps),
+            target,
+        ));
+
+        let head = pushrebase::do_pushrebase_bonsai(
+            &ctx,
+            &repo,
+            &repo_config.pushrebase.flags,
+            &onto_params,
+            &changesets,
+            &None,
+            pushrebase_hooks.as_ref(),
+        )
+        .await?
+        .head;
+
+        info!(
+            ctx.logger(),
+            "Pushrebase completed. New bookmark: {:?}", head
+        );
+
+        FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), head)
+            .compat()
+            .await?;
+
+        info!(ctx.logger(), "Filenodes derived");
+    }
 
     Ok(())
 }
