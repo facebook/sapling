@@ -25,6 +25,7 @@ minibytes = { path = "../minibytes" }
 mpatch = { path = "../mpatch" }
 lfs_protocol = { path = "../../../mononoke/lfs_protocol" }
 parking_lot = "0.9"
+rand = "0.7"
 reqwest = "0.10"
 serde = "1.0.84"
 serde_derive = "1.0.84"
@@ -39,7 +40,6 @@ types = { path = "../types" }
 util = { path = "../util" }
 
 [dev-dependencies]
-rand = "0.7"
 rand_chacha = "0.2"
 quickcheck = "0.9"
 types = { path = "../types", default-features = false, features = ["for-tests"] }

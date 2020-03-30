@@ -16,15 +16,18 @@ use std::{
     path::{Path, PathBuf},
     str::{self, FromStr},
     sync::Arc,
+    thread::sleep,
+    time::Duration,
 };
 
 use anyhow::{bail, ensure, Result};
 use bytes::{Bytes, BytesMut};
 use futures::stream::{iter, StreamExt};
 use parking_lot::{Mutex, RwLock};
-use reqwest::{Client, IntoUrl, Method, RequestBuilder, Url};
+use rand::{thread_rng, Rng};
+use reqwest::{Client, Method, RequestBuilder, Url};
 use serde_derive::{Deserialize, Serialize};
-use tokio::runtime::Runtime;
+use tokio::{runtime::Runtime, task::spawn_blocking};
 
 use configparser::{
     config::ConfigSet,
@@ -77,6 +80,7 @@ struct HttpLfsRemote {
     url: Url,
     user_agent: String,
     concurrent_fetches: usize,
+    backoff_times: Vec<f32>,
     client: Client,
     rt: Arc<Mutex<Runtime>>,
 }
@@ -825,6 +829,50 @@ impl LfsRemoteInner {
         }
     }
 
+    async fn send_with_retry(
+        client: Client,
+        method: Method,
+        url: Url,
+        user_agent: String,
+        backoff_times: Vec<f32>,
+        add_extra: impl Fn(RequestBuilder) -> RequestBuilder,
+    ) -> Result<Bytes> {
+        let mut backoff = backoff_times.into_iter();
+
+        loop {
+            let req = client
+                .request(method.clone(), url.clone())
+                .header("Accept", "application/vnd.git-lfs+json")
+                .header("Content-Type", "application/vnd.git-lfs+json")
+                .header("User-Agent", &user_agent);
+            let req = add_extra(req);
+
+            let reply = req.send().await?.error_for_status();
+
+            let (err, status) = match reply {
+                Ok(response) => return Ok(response.bytes().await?),
+                Err(e) => match e.status() {
+                    None => return Err(e.into()),
+                    Some(status) => (e, status),
+                },
+            };
+
+            if status.is_server_error() {
+                if let Some(backoff_time) = backoff.next() {
+                    spawn_blocking(move || {
+                        let mut rng = thread_rng();
+                        let sleep_time = Duration::from_secs_f32(rng.gen_range(0.0, backoff_time));
+                        sleep(sleep_time)
+                    })
+                    .await?;
+                    continue;
+                }
+            }
+
+            return Err(err.into());
+        }
+    }
+
     /// Fetch blobs from the LFS server.
     ///
     /// The protocol is described at: https://github.com/git-lfs/git-lfs/blob/master/docs/api/batch.md
@@ -849,30 +897,26 @@ impl LfsRemoteInner {
 
         let batch_json = serde_json::to_string(&batch)?;
 
-        fn make_request(http: &HttpLfsRemote, method: Method, url: impl IntoUrl) -> RequestBuilder {
-            http.client
-                .request(method, url)
-                .header("Accept", "application/vnd.git-lfs+json")
-                .header("Content-Type", "application/vnd.git-lfs+json")
-                .header("User-Agent", &http.user_agent)
-        }
+        let response_fut = async move {
+            LfsRemoteInner::send_with_retry(
+                http.client.clone(),
+                Method::POST,
+                http.url.join("objects/batch")?,
+                http.user_agent.clone(),
+                http.backoff_times.clone(),
+                move |builder| builder.body(batch_json.clone()),
+            )
+            .await
+        };
 
-        let req = make_request(http, Method::POST, http.url.join("objects/batch")?)
-            .body(batch_json)
-            .send();
-
-        let response = http
-            .rt
-            .lock()
-            .block_on(async { req.await?.error_for_status()?.bytes().await })?;
-
+        let response = http.rt.lock().block_on(response_fut)?;
         let response: ResponseBatch = serde_json::from_slice(response.as_ref())?;
 
         let mut futures = Vec::new();
 
         for object in response.objects {
             let oid = object.object.oid;
-            let actions = match object.status {
+            let mut actions = match object.status {
                 ObjectStatus::Ok {
                     authenticated: _,
                     actions,
@@ -880,16 +924,33 @@ impl LfsRemoteInner {
                 ObjectStatus::Err { error: e } => bail!("Couldn't fetch oid {}: {:?}", oid, e),
             };
 
-            if let Some(action) = actions.get(&Operation::Download) {
-                let mut req = make_request(http, Method::GET, &action.href.to_string());
-                if let Some(header) = action.header.as_ref() {
-                    for (key, val) in header {
-                        req = req.header(key, val)
-                    }
-                }
+            if let Some(action) = actions.remove(&Operation::Download) {
+                let client = http.client.clone();
+                let user_agent = http.user_agent.clone();
+                let backoff_times = http.backoff_times.clone();
+                let fut = async move {
+                    let url = Url::from_str(&action.href.to_string())?;
+                    Ok((
+                        oid,
+                        LfsRemoteInner::send_with_retry(
+                            client,
+                            Method::GET,
+                            url,
+                            user_agent,
+                            backoff_times,
+                            move |mut builder| {
+                                if let Some(header) = action.header.as_ref() {
+                                    for (key, val) in header {
+                                        builder = builder.header(key, val)
+                                    }
+                                }
+                                builder
+                            },
+                        )
+                        .await?,
+                    ))
+                };
 
-                let fut =
-                    async move { Ok((oid, req.send().await?.error_for_status()?.bytes().await?)) };
                 futures.push(fut);
             }
         }
@@ -898,12 +959,12 @@ impl LfsRemoteInner {
         let mut stream = iter(futures).buffer_unordered(http.concurrent_fetches);
 
         let rt = http.rt.clone();
-        Ok(iter::from_fn(move || {
+        Ok(Box::new(iter::from_fn(move || {
             let next = stream.next();
             rt.lock()
                 .block_on(async { next.await })
                 .map(|res| res.map(|(sha, bytes)| ((&sha.0).into(), bytes)))
-        }))
+        })))
     }
 
     /// Fetch files from the filesystem.
@@ -954,6 +1015,8 @@ impl LfsRemote {
 
             let concurrent_fetches = config.get_or("lfs", "concurrentfetches", || 1)?;
 
+            let backoff_times = config.get_or("lfs", "backofftimes", || vec![1f32, 4f32, 8f32])?;
+
             let rt = Arc::new(Mutex::new(Runtime::new()?));
             let client = Client::new();
             Ok(Self {
@@ -962,6 +1025,7 @@ impl LfsRemote {
                     url,
                     user_agent,
                     concurrent_fetches,
+                    backoff_times,
                     client,
                     rt,
                 })),
