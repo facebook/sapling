@@ -314,12 +314,14 @@ fn repack_datapack_to_contentstore(
         return Err(RepackFailure::Total(errors).into());
     }
 
-    store.commit_pending(location)?;
+    let new_pack = store.commit_pending(location)?;
 
     for path in repacked {
-        match DataPack::new(&path) {
-            Ok(pack) => pack.delete()?,
-            Err(_) => continue,
+        if Some(&path) != new_pack.as_ref() {
+            match DataPack::new(&path) {
+                Ok(pack) => pack.delete()?,
+                Err(_) => continue,
+            }
         }
     }
 
@@ -366,12 +368,14 @@ fn repack_histpack_to_metadatastore(
         return Err(RepackFailure::Total(errors).into());
     }
 
-    store.commit_pending(location)?;
+    let new_pack = store.commit_pending(location)?;
 
     for path in repacked {
-        match HistoryPack::new(&path) {
-            Ok(pack) => pack.delete()?,
-            Err(_) => continue,
+        if Some(&path) != new_pack.as_ref() {
+            match HistoryPack::new(&path) {
+                Ok(pack) => pack.delete()?,
+                Err(_) => continue,
+            }
         }
     }
 
@@ -419,11 +423,11 @@ pub fn repack(
         histpacks = filter_incrementalpacks(histpacks, "histpack")?;
     }
 
-    if datapacks.len() > 1 {
+    if !datapacks.is_empty() {
         repack_datapack_to_contentstore(datapacks, &content, location)?;
     }
 
-    if histpacks.len() > 1 {
+    if !histpacks.is_empty() {
         repack_histpack_to_metadatastore(histpacks, &metadata, location)?;
     }
 

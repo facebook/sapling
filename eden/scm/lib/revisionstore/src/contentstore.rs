@@ -97,13 +97,11 @@ impl ContentStore {
         }
     }
 
-    pub(crate) fn commit_pending(&self, location: RepackLocation) -> Result<()> {
+    pub(crate) fn commit_pending(&self, location: RepackLocation) -> Result<Option<PathBuf>> {
         match location {
-            RepackLocation::Local => self.flush()?,
-            RepackLocation::Shared => self.shared_mutabledatastore.flush()?,
-        };
-
-        Ok(())
+            RepackLocation::Local => self.flush(),
+            RepackLocation::Shared => self.shared_mutabledatastore.flush(),
+        }
     }
 }
 
