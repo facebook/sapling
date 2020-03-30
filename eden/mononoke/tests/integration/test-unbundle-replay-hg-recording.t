@@ -81,7 +81,7 @@ Insert the entry. Note that in tests, the commit timestamp will always be zero.
 
 Replay the push. It will succeed now
 
-  $ quiet unbundle_replay --scuba-log-file "$TESTTMP/scuba.json" hg-recording "$BUNDLE_HELPER" 1
+  $ quiet unbundle_replay --run-hooks --scuba-log-file "$TESTTMP/scuba.json" hg-recording "$BUNDLE_HELPER" 1
 
 Check history again. We're back to where we were:
 
@@ -94,6 +94,7 @@ Check history again. We're back to where we were:
   {
     "int": {
       "age_s": *, (glob)
+      "hooks_execution_time_us": *, (glob)
       "pushrebase_completion_time_us": *, (glob)
       "pushrebase_recorded_time_us": 123000,
       "time": *, (glob)
