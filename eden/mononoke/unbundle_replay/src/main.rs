@@ -20,11 +20,10 @@ use bytes::Bytes;
 use clap::{Arg, ArgMatches, SubCommand};
 use cmdlib::{args, monitoring::ReadyFlagService};
 use context::CoreContext;
-use derived_data::BonsaiDerived;
-use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
+    future,
     stream::{self, Stream, StreamExt, TryStreamExt},
 };
 use futures_old::stream::Stream as OldStream;
@@ -51,7 +50,6 @@ use crate::hooks::{Target, UnbundleReplayHook};
 use crate::replay_spec::{OntoRev, PushrebaseSpec, ReplaySpec};
 
 const ARG_UNBUNDLE_CONCURRENCY: &str = "unbundle-concurrency";
-const ARG_FILENODES_CONCURRENCY: &str = "filenodes-conurrency";
 
 const SUBCOMMAND_HG_RECORDING: &str = "hg-recording";
 const ARG_HG_RECORDING_ID: &str = "hg-recording-id";
@@ -357,12 +355,6 @@ async fn do_main(
         .transpose()?
         .unwrap_or(1_usize);
 
-    let filenodes_concurrency = matches
-        .value_of(ARG_FILENODES_CONCURRENCY)
-        .map(|s| s.parse())
-        .transpose()?
-        .unwrap_or(1_usize);
-
     let mysql_options = args::parse_mysql_options(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
@@ -537,16 +529,9 @@ async fn do_main(
                 age,
             );
 
-            Ok(head)
-        })
-        .try_for_each_concurrent(filenodes_concurrency, |head| async move {
-            task::spawn(FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), head).compat())
-                .await??;
-
-            info!(ctx.logger(), "Filenodes derived for {:?}", head);
-
             Ok(())
         })
+        .try_for_each(|()| future::ready(Ok(())))
         .await?;
 
     Ok(())
@@ -563,13 +548,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             Arg::with_name(ARG_UNBUNDLE_CONCURRENCY)
                 .help("How many unbundles to attempt to process in parallel")
                 .long(ARG_UNBUNDLE_CONCURRENCY)
-                .takes_value(true)
-                .required(false),
-        )
-        .arg(
-            Arg::with_name(ARG_FILENODES_CONCURRENCY)
-                .help("How many commits to filenodes concurrency for")
-                .long(ARG_FILENODES_CONCURRENCY)
                 .takes_value(true)
                 .required(false),
         )
