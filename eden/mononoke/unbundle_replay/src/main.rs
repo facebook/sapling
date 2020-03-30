@@ -33,6 +33,7 @@ use metaconfig_types::RepoReadOnly;
 use mononoke_types::{hash::Blake2, ChangesetId, RawBundle2Id, Timestamp};
 use slog::{info, Logger};
 use std::collections::HashMap;
+use std::convert::TryInto;
 use std::io::Cursor;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -44,8 +45,12 @@ use crate::hg_recording::{HgRecordingClient, HgRecordingEntry};
 use crate::hooks::{Target, UnbundleReplayHook};
 
 const SUBCOMMAND_HG_RECORDING: &str = "hg-recording";
-const ARG_HG_RECORDING_BUNDLE_HELPER: &str = "hg-recording-helper";
 const ARG_HG_RECORDING_ID: &str = "hg-recording-id";
+
+const SUBCOMMAND_HG_BOOKMARK: &str = "hg-bookmark";
+const ARG_HG_BOOKMARK_NAME: &str = "hg-bookmark-name";
+
+const ARG_HG_BUNDLE_HELPER: &str = "hg-recording-helper";
 
 const SUBCOMMAND_LOG_ENTRY: &str = "log-entry";
 const ARG_LOG_ENTRY_ID: &str = "log-entry-id";
@@ -58,59 +63,140 @@ struct ReplaySpec {
     target: Target,
 }
 
-async fn get_replay_stream(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    matches: &ArgMatches<'_>,
-) -> Result<impl Stream<Item = Result<ReplaySpec, Error>>, Error> {
+impl ReplaySpec {
+    pub async fn from_hg_recording_entry(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        entry: HgRecordingEntry,
+    ) -> Result<Self, Error> {
+        let HgRecordingEntry {
+            id,
+            onto,
+            onto_rev,
+            bundle,
+            timestamps,
+            revs,
+        } = entry;
+
+        let onto_rev = repo
+            .get_bonsai_from_hg(ctx.clone(), onto_rev)
+            .compat()
+            .await?
+            .ok_or_else(|| {
+                format_err!(
+                    "Bonsai changeset missing for {:?} in HgRecordingEntry {}",
+                    onto_rev,
+                    id
+                )
+            })?;
+
+        // Wrap this back into an Option, since that's what we want in ReplaySpec. It might be
+        // a little weird to unwrap the option then wrap it back, but those are different
+        // options: None above means we are missing the Bonsai, None here would mean we want to
+        // create the bookmark (which this doesn't support right now).
+        let onto_rev = Some(onto_rev);
+
+        let target = Target::hg(
+            *revs
+                .last()
+                .ok_or_else(|| format_err!("Missing target in HgRecordingEntry {}", id))?,
+        );
+
+        Ok(ReplaySpec {
+            bundle,
+            timestamps,
+            onto,
+            onto_rev,
+            target,
+        })
+    }
+}
+
+async fn get_replay_stream<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
+    matches: &'a ArgMatches<'a>,
+) -> Result<impl Stream<Item = Result<ReplaySpec, Error>> + 'a, Error> {
     match matches.subcommand() {
         (SUBCOMMAND_HG_RECORDING, Some(sub)) => {
-            let bundle_helper = sub.value_of(ARG_HG_RECORDING_BUNDLE_HELPER).unwrap();
+            let bundle_helper = sub.value_of(ARG_HG_BUNDLE_HELPER).unwrap();
             let bundle_id: i64 = sub.value_of(ARG_HG_RECORDING_ID).unwrap().parse()?;
 
             let client = HgRecordingClient::new(ctx.fb, bundle_helper, matches).await?;
 
             let entry = client
-                .next_entry(ctx, bundle_id - 1)
+                .next_entry_by_id(ctx, bundle_id - 1)
                 .await?
                 .ok_or_else(|| format_err!("Entry with id {} does not exist", bundle_id))?;
 
-            let HgRecordingEntry {
-                id,
-                onto,
-                onto_rev,
-                bundle,
-                timestamps,
-                revs,
-            } = entry;
-
-            if id != bundle_id {
+            if entry.id != bundle_id {
                 return Err(format_err!("Entry with id {} does not exist", bundle_id));
             }
 
-            let onto_rev = repo
-                .get_bonsai_from_hg(ctx.clone(), onto_rev)
-                .compat()
-                .await?
-                .ok_or_else(|| format_err!("Bonsai changeset is missing for {:?}", onto_rev))?;
-
-            // Wrap this back into an Option, since that's what we want in ReplaySpec. It might be
-            // a little weird to unwrap the option then wrap it back, but those are different
-            // options: None above means we are missing the Bonsai, None here would mean we want to
-            // create the bookmark (which this doesn't support right now).
-            let onto_rev = Some(onto_rev);
-
-            let target = Target::hg(*revs.last().ok_or_else(|| format_err!("Missing dest rev"))?);
-
-            let spec = ReplaySpec {
-                bundle,
-                timestamps,
-                onto,
-                onto_rev,
-                target,
-            };
+            let spec = ReplaySpec::from_hg_recording_entry(ctx, repo, entry).await?;
 
             Ok(stream::once(async { Ok(spec) }).boxed())
+        }
+        (SUBCOMMAND_HG_BOOKMARK, Some(sub)) => {
+            let bundle_helper = sub.value_of(ARG_HG_BUNDLE_HELPER).unwrap();
+            let onto: BookmarkName = sub.value_of(ARG_HG_BOOKMARK_NAME).unwrap().try_into()?;
+            let client = HgRecordingClient::new(ctx.fb, bundle_helper, matches).await?;
+
+            let onto_rev = repo
+                .get_bookmark(ctx.clone(), &onto)
+                .compat()
+                .await?
+                .ok_or_else(|| format_err!("Bookmark does not exist: {}", onto))?;
+
+            info!(
+                ctx.logger(),
+                "Loading hg bookmark updates for bookmark {}, starting at {}", onto, onto_rev
+            );
+
+            let state = Arc::new((client, onto));
+
+            Ok(stream::try_unfold(onto_rev, move |onto_rev| {
+                // NOTE: We need to wrap the state in an Arc here, because while our stream itself
+                // can have a lifetime bound by 'a, the futures we return from this closure cannot
+                // have their lifetime constrained by that of said closure, which effectively means
+                // we have nowhere to put client and onto (we'd normally want to put them in the
+                // closure, but we can't do that because then they wouldn't live enough for the
+                // futures we put in -- this is why we can have &ctx and &repo as pointers but need
+                // an Arc for those). If this wasn't a stream, we'd just use `async move { ... }`,
+                // but there isn't an equivalent for streams. Besides, considering that the future
+                // returned by `next()` on a stream doesn't have a lifetime bound by the lifetime
+                // of the stream, it seems like this might be simply not possible.
+                let state = state.clone();
+
+                async move {
+                    let (client, onto) = state.as_ref();
+
+                    let entry = client.next_entry_by_onto(&ctx, &onto, &onto_rev).await?;
+
+                    match entry {
+                        Some(entry) => {
+                            let next_onto_rev = *entry.revs.last().ok_or_else(|| {
+                                format_err!("Missing target in HgRecordingEntry {}", entry.id)
+                            })?;
+
+                            let spec =
+                                ReplaySpec::from_hg_recording_entry(ctx, repo, entry).await?;
+
+                            Ok(Some((spec, next_onto_rev)))
+                        }
+                        None => {
+                            info!(
+                                ctx.logger(),
+                                "No further hg bookmark updates for bookmark {} at {}",
+                                onto,
+                                onto_rev
+                            );
+                            Ok(None)
+                        }
+                    }
+                }
+            })
+            .boxed())
         }
         (SUBCOMMAND_LOG_ENTRY, Some(sub)) => {
             let id: u64 = sub.value_of(ARG_LOG_ENTRY_ID).unwrap().parse()?;
@@ -228,6 +314,11 @@ async fn do_main(
             onto_rev,
             target,
         } = entry;
+
+        info!(
+            ctx.logger(),
+            "Replaying {}: {:?} -> {:?}", onto, onto_rev, target
+        );
 
         let bundle = Cursor::new(bundle);
 
@@ -361,12 +452,32 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             SubCommand::with_name(SUBCOMMAND_HG_RECORDING)
                 .about("Replay a single bundle, from hg")
                 .arg(
-                    Arg::with_name(ARG_HG_RECORDING_BUNDLE_HELPER)
+                    Arg::with_name(ARG_HG_BUNDLE_HELPER)
                         .takes_value(true)
                         .required(true),
                 )
                 .arg(
                     Arg::with_name(ARG_HG_RECORDING_ID)
+                        .takes_value(true)
+                        .required(true),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(SUBCOMMAND_HG_BOOKMARK)
+                .about(
+                    "Replay a single bookmark, from hg. This is not \
+                    guaranteed to work if there are multiple bookmarks \
+                    (if commit A is introduced in another bookmark, \
+                    then depended on by commit B that is in this bookmark, \
+                    it will fail).",
+                )
+                .arg(
+                    Arg::with_name(ARG_HG_BUNDLE_HELPER)
+                        .takes_value(true)
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name(ARG_HG_BOOKMARK_NAME)
                         .takes_value(true)
                         .required(true),
                 ),

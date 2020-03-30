@@ -27,6 +27,7 @@ Replay the push. It will fail since the bookmark is in the wrong position
   * Loading repository: repo (id = 0) (glob)
   * Fetching bundle from log entry: 2 (glob)
   * Fetching raw bundle: * (glob)
+  * Replaying master_bookmark: Some(ChangesetId(Blake2(c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd))) -> Bonsai(ChangesetId(Blake2(2a82f3ca034e35c9d8a658c3d2d350d1d34399a9ef7854cda859b491e8723096))) (glob)
   * Execution error: Expected cs_id for BookmarkName { bookmark: "master_bookmark" } at Some(ChangesetId(Blake2(*))), found Some(ChangesetId(Blake2(*))) (glob)
   Error: Execution failed
   [1]

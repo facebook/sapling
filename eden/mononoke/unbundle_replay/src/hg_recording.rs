@@ -57,8 +57,10 @@ impl SqlConstructors for HgRecordingConnection {
     }
 }
 
+type EntryRow = (i64, String, String, Option<String>, String, String);
+
 queries! {
-    read SelectNextSuccessfulHgRecordingEntry(repo_id: RepositoryId, min_id: i64) -> (i64, String, String, Option<String>, String, String) {
+    read SelectNextSuccessfulHgRecordingEntryById(repo_id: RepositoryId, min_id: i64) -> (i64, String, String, Option<String>, String, String) {
         "
         SELECT id, onto, ontorev, bundlehandle, timestamps, ordered_added_revs
         FROM pushrebaserecording
@@ -67,13 +69,23 @@ queries! {
         LIMIT 1
         "
     }
+
+    read SelectNextSuccessfulHgRecordingEntryByOnto(repo_id: RepositoryId, onto: BookmarkName, ontorev: HgChangesetId) -> (i64, String, String, Option<String>, String, String) {
+        "
+        SELECT id, onto, ontorev, bundlehandle, timestamps, ordered_added_revs
+        FROM pushrebaserecording
+        WHERE repo_id = {repo_id} AND onto LIKE {onto} AND ontorev LIKE LOWER(HEX({ontorev})) AND pushrebase_errmsg IS NULL
+        ORDER BY id ASC
+        LIMIT 1
+        "
+    }
 }
 
 impl<'a> HgRecordingClient<'a> {
-    pub async fn new(
+    pub async fn new<'b>(
         fb: FacebookInit,
         bundle_helper: &'a str,
-        matches: &ArgMatches<'_>,
+        matches: &'b ArgMatches<'b>,
     ) -> Result<HgRecordingClient<'a>, Error> {
         let sql = args::open_sql::<HgRecordingConnection>(fb, matches)
             .compat()
@@ -86,18 +98,46 @@ impl<'a> HgRecordingClient<'a> {
         })
     }
 
-    pub async fn next_entry(
+    pub async fn next_entry_by_id(
         &self,
         ctx: &CoreContext,
         min_id: i64,
     ) -> Result<Option<HgRecordingEntry>, Error> {
         let entry =
-            SelectNextSuccessfulHgRecordingEntry::query(&self.sql.0, &self.repo_id, &min_id)
+            SelectNextSuccessfulHgRecordingEntryById::query(&self.sql.0, &self.repo_id, &min_id)
                 .compat()
                 .await?
                 .into_iter()
                 .next();
 
+        self.hydrate_entry(ctx, entry).await
+    }
+
+    pub async fn next_entry_by_onto(
+        &self,
+        ctx: &CoreContext,
+        onto: &BookmarkName,
+        onto_rev: &HgChangesetId,
+    ) -> Result<Option<HgRecordingEntry>, Error> {
+        let entry = SelectNextSuccessfulHgRecordingEntryByOnto::query(
+            &self.sql.0,
+            &self.repo_id,
+            onto,
+            onto_rev,
+        )
+        .compat()
+        .await?
+        .into_iter()
+        .next();
+
+        self.hydrate_entry(ctx, entry).await
+    }
+
+    async fn hydrate_entry(
+        &self,
+        ctx: &CoreContext,
+        entry: Option<EntryRow>,
+    ) -> Result<Option<HgRecordingEntry>, Error> {
         let entry = match entry {
             Some(entry) => entry,
             None => {
@@ -142,7 +182,7 @@ impl<'a> HgRecordingClient<'a> {
 
     async fn fetch_bundle(&self, handle: &str) -> Result<Vec<u8>, Error> {
         // NOTE: We buffer all the output here because we're going to buffer it anyway.
-        let output = Command::new(self.bundle_helper)
+        let output = Command::new(&self.bundle_helper)
             .arg(handle)
             .output()
             .await?;
@@ -197,11 +237,7 @@ mod test {
         }
     }
 
-    #[fbinit::compat_test]
-    async fn test_next_entry(fb: FacebookInit) -> Result<(), Error> {
-        let client = HgRecordingClient::test_instance()?;
-        let ctx = CoreContext::test_mock(fb);
-
+    async fn insert_test_entry(client: &HgRecordingClient<'_>) -> Result<(), Error> {
         InsertHgRecordingEntry::query(
             &client.sql.0,
             &1,
@@ -216,11 +252,10 @@ mod test {
         .compat()
         .await?;
 
-        let entry = client
-            .next_entry(&ctx, 0)
-            .await?
-            .ok_or(Error::msg("Entry not found"))?;
+        Ok(())
+    }
 
+    fn assert_is_test_entry(entry: &HgRecordingEntry) -> Result<(), Error> {
         assert_eq!(entry.id, 1);
         assert_eq!(entry.onto, BookmarkName::try_from("book123")?);
         assert_eq!(entry.onto_rev, ONES_CSID);
@@ -235,16 +270,72 @@ mod test {
     }
 
     #[fbinit::compat_test]
-    async fn test_no_entry(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_next_entry_by_id(fb: FacebookInit) -> Result<(), Error> {
         let client = HgRecordingClient::test_instance()?;
         let ctx = CoreContext::test_mock(fb);
 
-        assert_eq!(client.next_entry(&ctx, 0).await?, None);
+        insert_test_entry(&client).await?;
+
+        let entry = client
+            .next_entry_by_id(&ctx, 0)
+            .await?
+            .ok_or(Error::msg("Entry not found"))?;
+
+        assert_is_test_entry(&entry)?;
+
         Ok(())
     }
 
     #[fbinit::compat_test]
-    async fn test_excluded_entry(fb: FacebookInit) -> Result<(), Error> {
+    async fn test_no_entry_by_id(fb: FacebookInit) -> Result<(), Error> {
+        let client = HgRecordingClient::test_instance()?;
+        let ctx = CoreContext::test_mock(fb);
+
+        assert_eq!(client.next_entry_by_id(&ctx, 0).await?, None);
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_excluded_entry_by_id(fb: FacebookInit) -> Result<(), Error> {
+        let client = HgRecordingClient::test_instance()?;
+        let ctx = CoreContext::test_mock(fb);
+
+        insert_test_entry(&client).await?;
+
+        assert_eq!(client.next_entry_by_id(&ctx, 1).await?, None);
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_error_entry_by_id(fb: FacebookInit) -> Result<(), Error> {
+        let client = HgRecordingClient::test_instance()?;
+        let ctx = CoreContext::test_mock(fb);
+
+        assert_eq!(client.next_entry_by_id(&ctx, 0).await?, None);
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_select_onto(fb: FacebookInit) -> Result<(), Error> {
+        let client = HgRecordingClient::test_instance()?;
+        let ctx = CoreContext::test_mock(fb);
+
+        insert_test_entry(&client).await?;
+
+        let book = BookmarkName::try_from("book123")?;
+
+        let entry = client
+            .next_entry_by_onto(&ctx, &book, &ONES_CSID)
+            .await?
+            .ok_or(Error::msg("Entry not found"))?;
+
+        assert_is_test_entry(&entry)?;
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_error_entry_onto(fb: FacebookInit) -> Result<(), Error> {
         let client = HgRecordingClient::test_instance()?;
         let ctx = CoreContext::test_mock(fb);
 
@@ -257,21 +348,18 @@ mod test {
             &"handle123".to_string(),
             &"{}".to_string(),
             &"[]".to_string(),
-            &None,
+            &Some("some error".to_string()),
         )
         .compat()
         .await?;
 
-        assert_eq!(client.next_entry(&ctx, 1).await?, None);
-        Ok(())
-    }
+        let book = BookmarkName::try_from("book123")?;
 
-    #[fbinit::compat_test]
-    async fn test_error_entry(fb: FacebookInit) -> Result<(), Error> {
-        let client = HgRecordingClient::test_instance()?;
-        let ctx = CoreContext::test_mock(fb);
+        assert_eq!(
+            client.next_entry_by_onto(&ctx, &book, &ONES_CSID).await?,
+            None
+        );
 
-        assert_eq!(client.next_entry(&ctx, 0).await?, None);
         Ok(())
     }
 }
