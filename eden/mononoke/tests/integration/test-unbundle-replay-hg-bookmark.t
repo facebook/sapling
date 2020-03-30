@@ -5,7 +5,7 @@
 # directory of this source tree.
 
   $ . "${TEST_FIXTURES}/library.sh"
-  $ ASSIGN_GLOBALREVS=1 ENABLE_PRESERVE_BUNDLE2=1 BLOB_TYPE="blob_files" quiet default_setup
+  $ ASSIGN_GLOBALREVS=1 ENABLE_PRESERVE_BUNDLE2=1 EMIT_OBSMARKERS=1 BLOB_TYPE="blob_files" quiet default_setup
 
 Set up script to output the raw bundle. This doesn't look at its arguments at all
 
@@ -17,22 +17,27 @@ Set up script to output the raw bundle. This doesn't look at its arguments at al
   > EOF
   $ chmod +x "$BUNDLE_HELPER"
 
-Pushrebase commit
+Pushrebase commits. foo and bar are independent. qux requires bar to be present
+(so it'll result in a deferred unbundle)
 
   $ hg up -q 0
   $ echo "foo" > foo
   $ hg commit -Aqm "add foo"
-  $ hg log -r 0::. -T '{node}\n'
-  426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  $ hg log -r . -T '{node}\n'
   4afe8a7fa62cf8320c8c11191d4dfdaaed9fb28b
   $ quiet hgmn push -r . --to master_bookmark
 
   $ hg up -q 0
   $ echo "bar" > bar
   $ hg commit -Aqm "add bar"
-  $ hg log -r 0::. -T '{node}\n'
-  426bada5c67598ca65036d57d9e4b64b0c1ce7a0
+  $ hg log -r . -T '{node}\n'
   87e97d0197df950005fa12535b98eaed237c2d2f
+  $ quiet hgmn push -r . --to master_bookmark
+
+  $ echo "qux" > qux
+  $ hg commit -Aqm "add qux"
+  $ hg log -r . -T '{node}\n'
+  0c82f6008902b04535c85f27004a65e9b823a3a6
   $ quiet hgmn push -r . --to master_bookmark
 
   $ hg log -r ::master_bookmark -T '{node}\n'
@@ -41,11 +46,13 @@ Pushrebase commit
   26805aba1e600a82e93661149f2313866a221a7b
   cbab85d064b0fbdd3e9caa125f8eeac0fb5acf6a
   7a8f33ce453248a6f5cc4747002e931c77234fbd
+  ef90aeee2a47e488fc381fba57b2e20096e23dde
 
 Check bookmark history
 
   $ mononoke_admin bookmarks log -c hg master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
+  (master_bookmark) ef90aeee2a47e488fc381fba57b2e20096e23dde pushrebase * (glob)
   (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
   (master_bookmark) cbab85d064b0fbdd3e9caa125f8eeac0fb5acf6a pushrebase * (glob)
   (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
@@ -55,6 +62,7 @@ Export the bundles so we can replay it as it if were coming from hg, through the
   $ mkdir "$BUNDLE_ROOT"
   $ quiet mononoke_admin hg-sync-bundle fetch-bundle --id 2 --output-file "$BUNDLE_ROOT/bundle1"
   $ quiet mononoke_admin hg-sync-bundle fetch-bundle --id 3 --output-file "$BUNDLE_ROOT/bundle2"
+  $ quiet mononoke_admin hg-sync-bundle fetch-bundle --id 4 --output-file "$BUNDLE_ROOT/bundle3"
 
 Blow everything away: we're going to re-do the push from scratch, in a new repo.
 
@@ -88,17 +96,26 @@ Insert the entry. Note that in tests, the commit timestamp will always be zero.
   >   'bundle2',
   >   '{"87e97d0197df950005fa12535b98eaed237c2d2f": [0.0, 0]}',
   >   '["7a8f33ce453248a6f5cc4747002e931c77234fbd"]'
+  > ),
+  > (
+  >   0,
+  >   'master_bookmark',
+  >   '7a8f33ce453248a6f5cc4747002e931c77234fbd',
+  >   'bundle3',
+  >   '{"0c82f6008902b04535c85f27004a65e9b823a3a6": [0.0, 0]}',
+  >   '["ef90aeee2a47e488fc381fba57b2e20096e23dde"]'
   > );
   > EOS
 
 Replay the push. It will succeed now
 
-  $ quiet unbundle_replay hg-bookmark "$BUNDLE_HELPER" master_bookmark
+  $ quiet unbundle_replay --unbundle-concurrency 10 hg-bookmark "$BUNDLE_HELPER" master_bookmark
 
 Check history again. We're back to where we were:
 
   $ mononoke_admin bookmarks log -c hg master_bookmark
   * using repo "repo" repoid RepositoryId(0) (glob)
+  (master_bookmark) ef90aeee2a47e488fc381fba57b2e20096e23dde pushrebase * (glob)
   (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
   (master_bookmark) cbab85d064b0fbdd3e9caa125f8eeac0fb5acf6a pushrebase * (glob)
   (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
