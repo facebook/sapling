@@ -18,6 +18,7 @@ use std::fmt;
 use std::fs;
 use std::io;
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicUsize, Ordering::SeqCst};
 use tracing::{debug_span, trace};
 
 /// A collection of [`Log`]s that get rotated or deleted automatically when they
@@ -28,6 +29,9 @@ pub struct RotateLog {
     dir: Option<PathBuf>,
     open_options: OpenOptions,
     logs: Vec<OnceCell<Log>>,
+    // Logical length of `logs`. It can be smaller than `logs.len()` if some Log
+    // fails to load.
+    logs_len: AtomicUsize,
     latest: u8,
 }
 
@@ -206,10 +210,12 @@ impl OpenOptions {
                 }
             };
 
+            let logs_len = AtomicUsize::new(logs.len());
             Ok(RotateLog {
                 dir: Some(dir.into()),
                 open_options: self.clone(),
                 logs,
+                logs_len,
                 latest,
             })
         })();
@@ -223,10 +229,12 @@ impl OpenOptions {
             let cell = create_log_cell(self.log_open_options.open(())?);
             let mut logs = Vec::with_capacity(1);
             logs.push(cell);
+            let logs_len = AtomicUsize::new(logs.len());
             Ok(RotateLog {
                 dir: None,
                 open_options: self.clone(),
                 logs,
+                logs_len,
                 latest: 0,
             })
         })();
@@ -398,8 +406,11 @@ impl RotateLog {
                     if latest != self.latest {
                         // Latest changed. Re-load and write to the real latest Log.
                         // PERF(minor): This can be smarter by avoiding reloading some logs.
-                        self.logs =
-                            read_logs(self.dir.as_ref().unwrap(), &self.open_options, latest)?;
+                        self.set_logs(read_logs(
+                            self.dir.as_ref().unwrap(),
+                            &self.open_options,
+                            latest,
+                        )?);
                         self.latest = latest;
                     }
                     self.writable_log().sync()?;
@@ -445,7 +456,7 @@ impl RotateLog {
                             log.append(bytes)?;
                         }
                     }
-                    self.logs = new_logs;
+                    self.set_logs(new_logs);
                     self.latest = latest;
                 }
 
@@ -491,6 +502,7 @@ impl RotateLog {
             self.logs.pop();
         }
         self.logs.insert(0, create_log_cell(log));
+        self.logs_len = AtomicUsize::new(self.logs.len());
         self.latest = next;
         self.try_remove_old_logs(lock);
         Ok(())
@@ -499,6 +511,11 @@ impl RotateLog {
     /// Renamed. Use [`RotateLog::sync`] instead.
     pub fn flush(&mut self) -> crate::Result<u8> {
         self.sync()
+    }
+
+    fn set_logs(&mut self, logs: Vec<OnceCell<Log>>) {
+        self.logs_len = AtomicUsize::new(logs.len());
+        self.logs = logs;
     }
 
     #[allow(clippy::nonminimal_bool)]
@@ -539,11 +556,14 @@ impl RotateLog {
 
     /// Lazily load a log. The 'latest' (or 'writable') log has index 0.
     fn load_log(&self, index: usize) -> crate::Result<Option<&Log>> {
+        if index >= self.logs_len.load(SeqCst) {
+            return Ok(None);
+        }
         match self.logs.get(index) {
             Some(cell) => {
                 let id = self.latest.wrapping_sub(index as u8);
                 if let Some(dir) = &self.dir {
-                    Ok(Some(cell.get_or_try_init(|| {
+                    let log = cell.get_or_try_init(|| {
                         let mut open_options = self.open_options.log_open_options.clone();
                         if index > 0 {
                             open_options = open_options.with_zero_index_lag();
@@ -555,15 +575,20 @@ impl RotateLog {
                             success = log.is_ok()
                         );
                         log
-                    })?))
+                    });
+                    match log {
+                        Ok(log) => Ok(Some(log)),
+                        Err(err) => {
+                            // Logically truncate self.logs. This avoids loading broken Logs again.
+                            self.logs_len.store(index, SeqCst);
+                            Err(err)
+                        }
+                    }
                 } else {
                     Ok(cell.get())
                 }
             }
-            None => {
-                trace!(name = "RotateLog::load_log", index = index, end = true);
-                Ok(None)
-            }
+            None => unreachable!(),
         }
     }
 
@@ -634,7 +659,11 @@ impl RotateLowLevelExt for RotateLog {
         let lock = ScopedDirLock::new(&dir)?;
         self.latest = read_latest(self.dir.as_ref().unwrap())?;
         self.rotate_internal(&lock)?;
-        self.logs = read_logs(self.dir.as_ref().unwrap(), &self.open_options, self.latest)?;
+        self.set_logs(read_logs(
+            self.dir.as_ref().unwrap(),
+            &self.open_options,
+            self.latest,
+        )?);
         Ok(())
     }
 }
@@ -1432,6 +1461,36 @@ Reset latest to 2
 "#
         );
         opts.open(&dir).unwrap();
+    }
+
+    #[test]
+    fn test_load_broken_logs_once() {
+        let dir = tempdir().unwrap();
+        let open_opts = OpenOptions::new()
+            .create(true)
+            .max_log_count(10)
+            .max_bytes_per_log(100);
+        let mut log = open_opts.open(dir.path()).unwrap();
+
+        // Create 0, 1, 2, 3 logs
+        for i in 0..4 {
+            log.append(&[i; 200][..]).unwrap();
+            log.sync().unwrap();
+        }
+
+        // Break 1/
+        utils::atomic_write(dir.path().join("1").join("meta"), "foo", false).unwrap();
+        let log = open_opts.open(dir.path()).unwrap();
+
+        // The broken log should only be loaded once.
+        assert!(log.load_log(3).is_err()); // Reports error loading the broken Log.
+        assert!(log.load_log(3).is_ok()); // The error is "cached" - not loading the Log again.
+
+        // Logs iteration will only have 2, no 0 or 1.
+        assert_eq!(
+            log.iter().map(|i| i.unwrap()[0]).collect::<Vec<_>>(),
+            [2, 3]
+        );
     }
 
     #[test]
