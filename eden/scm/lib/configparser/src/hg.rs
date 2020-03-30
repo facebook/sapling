@@ -402,6 +402,20 @@ impl FromConfigValue for usize {
     }
 }
 
+impl FromConfigValue for f32 {
+    fn try_from_str(s: &str) -> Result<Self> {
+        let value = s.parse()?;
+        Ok(value)
+    }
+}
+
+impl FromConfigValue for f64 {
+    fn try_from_str(s: &str) -> Result<Self> {
+        let value = s.parse()?;
+        Ok(value)
+    }
+}
+
 impl FromConfigValue for String {
     fn try_from_str(s: &str) -> Result<Self> {
         Ok(s.to_string())
@@ -982,6 +996,7 @@ mod tests {
              byte1 = 1.5 KB\n\
              byte2 = 500\n\
              byte3 = 0.125M\n\
+             float = 1.42\n\
              ",
             &"test".into(),
         );
@@ -1033,5 +1048,6 @@ mod tests {
                 .value(),
             3
         );
+        assert_eq!(cfg.get_or("foo", "float", || 42f32).unwrap(), 1.42f32);
     }
 }
