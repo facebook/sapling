@@ -990,14 +990,13 @@ impl Bundle2Resolver {
                     self.repo.clone(),
                     self.ctx.scuba().clone(),
                     *node,
-                    revlog_cs.clone(),
+                    revlog_cs,
                     uploaded_changesets,
                     &filelogs,
                     &manifests,
                     &content_blobs,
                     self.pushrebase_flags.casefolding_check,
                 )
-                .compat()
                 .await
                 .with_context(err_context)?;
             }
