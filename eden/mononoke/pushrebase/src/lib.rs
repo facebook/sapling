@@ -391,10 +391,12 @@ async fn do_rebase(
     )
     .await?;
 
-    let hooks = hooks
-        .into_iter()
-        .map(|h| h.into_transaction_hook(&rebased_changesets))
-        .collect::<Result<Vec<_>, Error>>()?;
+    let hooks = try_join_all(
+        hooks
+            .into_iter()
+            .map(|h| h.into_transaction_hook(ctx, &rebased_changesets)),
+    )
+    .await?;
 
     try_move_bookmark(
         ctx.clone(),
@@ -1421,6 +1423,7 @@ mod tests {
             }
         }
 
+        #[async_trait]
         impl PushrebaseCommitHook for Hook {
             fn post_rebase_changeset(
                 &mut self,
@@ -1430,8 +1433,9 @@ mod tests {
                 Ok(())
             }
 
-            fn into_transaction_hook(
+            async fn into_transaction_hook(
                 self: Box<Self>,
+                _ctx: &CoreContext,
                 changesets: &RebasedChangesets,
             ) -> Result<Box<dyn PushrebaseTransactionHook>, Error> {
                 let (_, (cs_id, _)) = changesets
@@ -2365,6 +2369,7 @@ mod tests {
         }
     }
 
+    #[async_trait]
     impl PushrebaseCommitHook for SleepHook {
         fn post_rebase_changeset(
             &mut self,
@@ -2374,8 +2379,9 @@ mod tests {
             Ok(())
         }
 
-        fn into_transaction_hook(
+        async fn into_transaction_hook(
             self: Box<Self>,
+            _ctx: &CoreContext,
             _changesets: &RebasedChangesets,
         ) -> Result<Box<dyn PushrebaseTransactionHook>, Error> {
             Ok(Box::new(*self) as Box<dyn PushrebaseTransactionHook>)

@@ -159,6 +159,7 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
         }
     }
 
+    #[async_trait]
     impl PushrebaseCommitHook for SleepHook {
         fn post_rebase_changeset(
             &mut self,
@@ -168,8 +169,9 @@ async fn pushrebase_race_assigns_monotonic_globalrevs(fb: FacebookInit) -> Resul
             Ok(())
         }
 
-        fn into_transaction_hook(
+        async fn into_transaction_hook(
             self: Box<Self>,
+            _ctx: &CoreContext,
             _changesets: &RebasedChangesets,
         ) -> Result<Box<dyn PushrebaseTransactionHook>, Error> {
             Ok(Box::new(*self) as Box<dyn PushrebaseTransactionHook>)

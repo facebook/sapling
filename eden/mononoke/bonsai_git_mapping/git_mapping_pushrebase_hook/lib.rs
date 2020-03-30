@@ -50,6 +50,7 @@ struct GitMappingCommitHook {
     assignments: HashMap<ChangesetId, GitSha1>,
 }
 
+#[async_trait]
 impl PushrebaseCommitHook for GitMappingCommitHook {
     fn post_rebase_changeset(
         &mut self,
@@ -68,8 +69,9 @@ impl PushrebaseCommitHook for GitMappingCommitHook {
         Ok(())
     }
 
-    fn into_transaction_hook(
+    async fn into_transaction_hook(
         self: Box<Self>,
+        _ctx: &CoreContext,
         rebased: &RebasedChangesets,
     ) -> Result<Box<dyn PushrebaseTransactionHook>, Error> {
         // Let's tie assigned git hashes to rebased Bonsai changesets:

@@ -70,6 +70,7 @@ struct GlobalrevCommitHook {
     next_rev: u64,
 }
 
+#[async_trait]
 impl PushrebaseCommitHook for GlobalrevCommitHook {
     fn post_rebase_changeset(
         &mut self,
@@ -89,8 +90,9 @@ impl PushrebaseCommitHook for GlobalrevCommitHook {
         Ok(())
     }
 
-    fn into_transaction_hook(
+    async fn into_transaction_hook(
         self: Box<Self>,
+        _ctx: &CoreContext,
         rebased: &RebasedChangesets,
     ) -> Result<Box<dyn PushrebaseTransactionHook>, Error> {
         // Let's tie assigned globalrevs to rebased Bonsai changesets:

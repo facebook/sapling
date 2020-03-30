@@ -39,9 +39,11 @@ impl PushrebaseHook for CrossRepoSyncPushrebaseHook {
     }
 }
 
+#[async_trait]
 impl PushrebaseCommitHook for CrossRepoSyncPushrebaseHook {
-    fn into_transaction_hook(
+    async fn into_transaction_hook(
         self: Box<Self>,
+        _ctx: &CoreContext,
         rebased: &RebasedChangesets,
     ) -> Result<Box<dyn PushrebaseTransactionHook>, Error> {
         if rebased.len() > 1 {

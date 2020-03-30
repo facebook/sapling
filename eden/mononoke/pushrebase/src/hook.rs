@@ -22,6 +22,7 @@ pub trait PushrebaseHook: Send + Sync + 'static {
     async fn prepushrebase(&self) -> Result<Box<dyn PushrebaseCommitHook>, Error>;
 }
 
+#[async_trait]
 pub trait PushrebaseCommitHook: Send + Sync + 'static {
     /// post_rebase_changeset is called once per pushrebased changeset, with the ID of the
     /// changeset that was rebased, and a mutable reference to the resulting changeset. This can be
@@ -37,8 +38,9 @@ pub trait PushrebaseCommitHook: Send + Sync + 'static {
     /// into_transaction_hook is called after all commits have been pushrebased and we're going to
     /// attempt to move the bookmark to pushrebase onto. This should capture any data necessary and
     /// return a PushrebaseTransactionHook.
-    fn into_transaction_hook(
+    async fn into_transaction_hook(
         self: Box<Self>,
+        _ctx: &CoreContext,
         changesets: &RebasedChangesets,
     ) -> Result<Box<dyn PushrebaseTransactionHook>, Error>;
 }
