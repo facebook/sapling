@@ -9,10 +9,12 @@ use anyhow::{format_err, Error};
 use bookmarks::BookmarkName;
 use clap::ArgMatches;
 use cmdlib::args;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{RepositoryId, Timestamp};
+use slog::info;
 use sql::{queries, Connection};
 use sql_ext::SqlConstructors;
 use std::borrow::Cow;
@@ -84,7 +86,11 @@ impl<'a> HgRecordingClient<'a> {
         })
     }
 
-    pub async fn next_entry(&self, min_id: i64) -> Result<Option<HgRecordingEntry>, Error> {
+    pub async fn next_entry(
+        &self,
+        ctx: &CoreContext,
+        min_id: i64,
+    ) -> Result<Option<HgRecordingEntry>, Error> {
         let entry =
             SelectNextSuccessfulHgRecordingEntry::query(&self.sql.0, &self.repo_id, &min_id)
                 .compat()
@@ -120,6 +126,8 @@ impl<'a> HgRecordingClient<'a> {
             .collect::<Result<_, Error>>()?;
 
         let bundle_handle = bundle_handle.ok_or(Error::msg("Bundle handle is missing"))?;
+
+        info!(ctx.logger(), "Fetching bundle: {}", bundle_handle);
         let bundle = self.fetch_bundle(&bundle_handle).await?;
 
         Ok(Some(HgRecordingEntry {
@@ -190,11 +198,12 @@ mod test {
     }
 
     #[fbinit::compat_test]
-    async fn test_next_entry(_fb: FacebookInit) -> Result<(), Error> {
-        let c = HgRecordingClient::test_instance()?;
+    async fn test_next_entry(fb: FacebookInit) -> Result<(), Error> {
+        let client = HgRecordingClient::test_instance()?;
+        let ctx = CoreContext::test_mock(fb);
 
         InsertHgRecordingEntry::query(
-            &c.sql.0,
+            &client.sql.0,
             &1,
             &REPO_ZERO.id(),
             &"book123".to_string(),
@@ -207,8 +216,8 @@ mod test {
         .compat()
         .await?;
 
-        let entry = c
-            .next_entry(0)
+        let entry = client
+            .next_entry(&ctx, 0)
             .await?
             .ok_or(Error::msg("Entry not found"))?;
 
@@ -226,18 +235,21 @@ mod test {
     }
 
     #[fbinit::compat_test]
-    async fn test_no_entry(_fb: FacebookInit) -> Result<(), Error> {
-        let c = HgRecordingClient::test_instance()?;
-        assert_eq!(c.next_entry(0).await?, None);
+    async fn test_no_entry(fb: FacebookInit) -> Result<(), Error> {
+        let client = HgRecordingClient::test_instance()?;
+        let ctx = CoreContext::test_mock(fb);
+
+        assert_eq!(client.next_entry(&ctx, 0).await?, None);
         Ok(())
     }
 
     #[fbinit::compat_test]
-    async fn test_excluded_entry(_fb: FacebookInit) -> Result<(), Error> {
-        let c = HgRecordingClient::test_instance()?;
+    async fn test_excluded_entry(fb: FacebookInit) -> Result<(), Error> {
+        let client = HgRecordingClient::test_instance()?;
+        let ctx = CoreContext::test_mock(fb);
 
         InsertHgRecordingEntry::query(
-            &c.sql.0,
+            &client.sql.0,
             &1,
             &REPO_ZERO.id(),
             &"book123".to_string(),
@@ -250,14 +262,16 @@ mod test {
         .compat()
         .await?;
 
-        assert_eq!(c.next_entry(1).await?, None);
+        assert_eq!(client.next_entry(&ctx, 1).await?, None);
         Ok(())
     }
 
     #[fbinit::compat_test]
-    async fn test_error_entry(_fb: FacebookInit) -> Result<(), Error> {
-        let c = HgRecordingClient::test_instance()?;
-        assert_eq!(c.next_entry(0).await?, None);
+    async fn test_error_entry(fb: FacebookInit) -> Result<(), Error> {
+        let client = HgRecordingClient::test_instance()?;
+        let ctx = CoreContext::test_mock(fb);
+
+        assert_eq!(client.next_entry(&ctx, 0).await?, None);
         Ok(())
     }
 }

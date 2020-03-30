@@ -69,7 +69,7 @@ async fn get_replay_spec(
             let client = HgRecordingClient::new(ctx.fb, bundle_helper, matches).await?;
 
             let entry = client
-                .next_entry(bundle_id - 1)
+                .next_entry(ctx, bundle_id - 1)
                 .await?
                 .ok_or_else(|| format_err!("Entry with id {} does not exist", bundle_id))?;
 
@@ -301,7 +301,7 @@ async fn do_main(
         target,
     ));
 
-    pushrebase::do_pushrebase_bonsai(
+    let head = pushrebase::do_pushrebase_bonsai(
         &ctx,
         &repo,
         &repo_config.pushrebase.flags,
@@ -310,7 +310,13 @@ async fn do_main(
         &None,
         pushrebase_hooks.as_ref(),
     )
-    .await?;
+    .await?
+    .head;
+
+    info!(
+        ctx.logger(),
+        "Pushrebase completed. New bookmark: {:?}", head
+    );
 
     Ok(())
 }
