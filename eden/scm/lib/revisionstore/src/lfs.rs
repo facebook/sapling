@@ -90,10 +90,9 @@ enum LfsRemoteInner {
     File(LfsBlobsStore),
 }
 
-#[derive(Clone)]
 pub struct LfsRemote {
     local: Arc<LfsStore>,
-    remote: Arc<LfsRemoteInner>,
+    remote: LfsRemoteInner,
 }
 
 /// Main LFS store to be used within the `ContentStore`.
@@ -1050,7 +1049,7 @@ impl LfsRemote {
             let file = LfsBlobsStore::shared(&path, &config)?;
             Ok(Self {
                 local: store,
-                remote: Arc::new(LfsRemoteInner::File(file)),
+                remote: LfsRemoteInner::File(file),
             })
         } else {
             if !["http", "https"].contains(&url.scheme()) {
@@ -1069,14 +1068,14 @@ impl LfsRemote {
             let client = Client::new();
             Ok(Self {
                 local: store,
-                remote: Arc::new(LfsRemoteInner::Http(HttpLfsRemote {
+                remote: LfsRemoteInner::Http(HttpLfsRemote {
                     url,
                     user_agent,
                     concurrent_fetches,
                     backoff_times,
                     client,
                     rt,
-                })),
+                }),
             })
         }
     }
@@ -1090,7 +1089,10 @@ impl LfsRemote {
 }
 
 impl HgIdRemoteStore for LfsRemote {
-    fn datastore(&self, store: Arc<dyn HgIdMutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+    fn datastore(
+        self: Arc<Self>,
+        store: Arc<dyn HgIdMutableDeltaStore>,
+    ) -> Arc<dyn RemoteDataStore> {
         Arc::new(LfsRemoteStore {
             store,
             remote: self.clone(),
@@ -1098,7 +1100,7 @@ impl HgIdRemoteStore for LfsRemote {
     }
 
     fn historystore(
-        &self,
+        self: Arc<Self>,
         _store: Arc<dyn HgIdMutableHistoryStore>,
     ) -> Arc<dyn RemoteHistoryStore> {
         unreachable!()
@@ -1107,7 +1109,7 @@ impl HgIdRemoteStore for LfsRemote {
 
 struct LfsRemoteStore {
     store: Arc<dyn HgIdMutableDeltaStore>,
-    remote: LfsRemote,
+    remote: Arc<LfsRemote>,
 }
 
 impl RemoteDataStore for LfsRemoteStore {
@@ -1778,7 +1780,7 @@ mod tests {
             let config = make_lfs_config(&cachedir);
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs.clone(), &config)?;
+            let remote = Arc::new(LfsRemote::new(lfs.clone(), &config)?);
 
             let key = key("a/b", "1234");
 

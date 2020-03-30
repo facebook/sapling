@@ -53,7 +53,10 @@ impl FakeHgIdRemoteStore {
 }
 
 impl HgIdRemoteStore for FakeHgIdRemoteStore {
-    fn datastore(&self, store: Arc<dyn HgIdMutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+    fn datastore(
+        self: Arc<Self>,
+        store: Arc<dyn HgIdMutableDeltaStore>,
+    ) -> Arc<dyn RemoteDataStore> {
         assert!(self.data.is_some());
 
         Arc::new(FakeRemoteDataStore {
@@ -62,7 +65,10 @@ impl HgIdRemoteStore for FakeHgIdRemoteStore {
         })
     }
 
-    fn historystore(&self, store: Arc<dyn HgIdMutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
+    fn historystore(
+        self: Arc<Self>,
+        store: Arc<dyn HgIdMutableHistoryStore>,
+    ) -> Arc<dyn RemoteHistoryStore> {
         assert!(self.hist.is_some());
 
         Arc::new(FakeRemoteHistoryStore {

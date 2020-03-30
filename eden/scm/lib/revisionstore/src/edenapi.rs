@@ -28,7 +28,6 @@ enum EdenApiHgIdRemoteStoreKind {
 
 /// Small shim around `EdenApi` that implements the `RemoteDataStore` and `HgIdDataStore` trait. All
 /// the `HgIdDataStore` methods will always fetch data from the network.
-#[derive(Clone)]
 pub struct EdenApiHgIdRemoteStore {
     edenapi: Arc<dyn EdenApi>,
     kind: EdenApiHgIdRemoteStoreKind,
@@ -51,35 +50,32 @@ impl EdenApiHgIdRemoteStore {
 }
 
 impl HgIdRemoteStore for EdenApiHgIdRemoteStore {
-    fn datastore(&self, store: Arc<dyn HgIdMutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+    fn datastore(
+        self: Arc<Self>,
+        store: Arc<dyn HgIdMutableDeltaStore>,
+    ) -> Arc<dyn RemoteDataStore> {
         Arc::new(EdenApiRemoteDataStore {
-            inner: EdenApiRemoteDataStoreInner {
-                edenapi: self.clone(),
-                store,
-            },
+            edenapi: self,
+            store,
         })
     }
 
     fn historystore(
-        &self,
+        self: Arc<Self>,
         _store: Arc<dyn HgIdMutableHistoryStore>,
     ) -> Arc<dyn RemoteHistoryStore> {
         unimplemented!()
     }
 }
 
-struct EdenApiRemoteDataStoreInner {
-    edenapi: EdenApiHgIdRemoteStore,
-    store: Arc<dyn HgIdMutableDeltaStore>,
-}
-
 struct EdenApiRemoteDataStore {
-    inner: EdenApiRemoteDataStoreInner,
+    edenapi: Arc<EdenApiHgIdRemoteStore>,
+    store: Arc<dyn HgIdMutableDeltaStore>,
 }
 
 impl RemoteDataStore for EdenApiRemoteDataStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
-        let edenapi = &self.inner.edenapi;
+        let edenapi = &self.edenapi;
 
         let keys = keys
             .iter()
@@ -104,7 +100,7 @@ impl RemoteDataStore for EdenApiRemoteDataStore {
                 base: None,
                 key,
             };
-            self.inner.store.add(&delta, &metadata)?;
+            self.store.add(&delta, &metadata)?;
         }
         Ok(())
     }
@@ -117,21 +113,21 @@ impl HgIdDataStore for EdenApiRemoteDataStore {
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
         match self.prefetch(&[StoreKey::hgid(key.clone())]) {
-            Ok(()) => self.inner.store.get_delta(key),
+            Ok(()) => self.store.get_delta(key),
             Err(_) => Ok(None),
         }
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         match self.prefetch(&[StoreKey::hgid(key.clone())]) {
-            Ok(()) => self.inner.store.get_delta_chain(key),
+            Ok(()) => self.store.get_delta_chain(key),
             Err(_) => Ok(None),
         }
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         match self.prefetch(&[StoreKey::hgid(key.clone())]) {
-            Ok(()) => self.inner.store.get_meta(key),
+            Ok(()) => self.store.get_meta(key),
             Err(_) => Ok(None),
         }
     }
@@ -139,7 +135,7 @@ impl HgIdDataStore for EdenApiRemoteDataStore {
 
 impl LocalStore for EdenApiRemoteDataStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.inner.store.get_missing(keys)
+        self.store.get_missing(keys)
     }
 }
 
@@ -166,7 +162,7 @@ mod tests {
         let mut map = HashMap::new();
         map.insert(k.clone(), d.data.clone());
 
-        let edenapi = EdenApiHgIdRemoteStore::filestore(fake_edenapi(map));
+        let edenapi = Arc::new(EdenApiHgIdRemoteStore::filestore(fake_edenapi(map)));
 
         let remotestore = edenapi.datastore(store.clone());
         assert_eq!(remotestore.get_delta(&k)?.unwrap(), d);
@@ -181,7 +177,7 @@ mod tests {
         let store = Arc::new(IndexedLogHgIdDataStore::new(&tmp)?);
 
         let map = HashMap::new();
-        let edenapi = EdenApiHgIdRemoteStore::filestore(fake_edenapi(map));
+        let edenapi = Arc::new(EdenApiHgIdRemoteStore::filestore(fake_edenapi(map)));
 
         let remotestore = edenapi.datastore(store);
 

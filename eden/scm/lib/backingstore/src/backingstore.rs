@@ -43,7 +43,7 @@ impl BackingStore {
         match MemcacheStore::new(&config) {
             Ok(memcache) => {
                 // XXX: Add the memcachestore for the treestore.
-                blobstore = blobstore.memcachestore(memcache);
+                blobstore = blobstore.memcachestore(Arc::new(memcache));
             }
             Err(e) => warn!("couldn't initialize Memcache: {}", e),
         }
@@ -52,8 +52,8 @@ impl BackingStore {
             let edenapi_config = edenapi::Config::from_hg_config(&config)?;
             let edenapi = EdenApiCurlClient::new(edenapi_config)?;
             let edenapi: Arc<dyn EdenApi> = Arc::new(edenapi);
-            let fileremotestore = Box::new(EdenApiHgIdRemoteStore::filestore(edenapi.clone()));
-            let treeremotestore = Box::new(EdenApiHgIdRemoteStore::treestore(edenapi));
+            let fileremotestore = Arc::new(EdenApiHgIdRemoteStore::filestore(edenapi.clone()));
+            let treeremotestore = Arc::new(EdenApiHgIdRemoteStore::treestore(edenapi));
 
             (
                 blobstore.remotestore(fileremotestore).build()?,

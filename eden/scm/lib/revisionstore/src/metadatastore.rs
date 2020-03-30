@@ -131,9 +131,9 @@ pub struct MetadataStoreBuilder<'a> {
     local_path: Option<PathBuf>,
     no_local_store: bool,
     config: &'a ConfigSet,
-    remotestore: Option<Box<dyn HgIdRemoteStore>>,
+    remotestore: Option<Arc<dyn HgIdRemoteStore>>,
     suffix: Option<PathBuf>,
-    memcachestore: Option<MemcacheStore>,
+    memcachestore: Option<Arc<MemcacheStore>>,
 }
 
 impl<'a> MetadataStoreBuilder<'a> {
@@ -163,12 +163,12 @@ impl<'a> MetadataStoreBuilder<'a> {
         self
     }
 
-    pub fn remotestore(mut self, remotestore: Box<dyn HgIdRemoteStore>) -> Self {
+    pub fn remotestore(mut self, remotestore: Arc<dyn HgIdRemoteStore>) -> Self {
         self.remotestore = Some(remotestore);
         self
     }
 
-    pub fn memcachestore(mut self, memcachestore: MemcacheStore) -> Self {
+    pub fn memcachestore(mut self, memcachestore: Arc<MemcacheStore>) -> Self {
         self.memcachestore = Some(memcachestore);
         self
     }
@@ -226,52 +226,53 @@ impl<'a> MetadataStoreBuilder<'a> {
                 None
             };
 
-        let remote_store: Option<Arc<dyn RemoteHistoryStore>> = if let Some(remotestore) =
-            self.remotestore
-        {
-            let (cache, shared_store) = if let Some(memcachestore) = self.memcachestore {
-                // Combine the memcache store with the other stores. The intent is that all remote
-                // requests will first go to the memcache store, and only reach the slower remote
-                // store after that.
-                //
-                // If data isn't found in the memcache store, once fetched from the remote store it
-                // will be written to the local cache, and will populate the memcache store, so
-                // other clients and future requests won't need to go to a network store.
-                let memcachehistorystore = memcachestore.historystore(shared_pack_store.clone());
+        let remote_store: Option<Arc<dyn RemoteHistoryStore>> =
+            if let Some(remotestore) = self.remotestore {
+                let (cache, shared_store) = if let Some(memcachestore) = self.memcachestore {
+                    // Combine the memcache store with the other stores. The intent is that all remote
+                    // requests will first go to the memcache store, and only reach the slower remote
+                    // store after that.
+                    //
+                    // If data isn't found in the memcache store, once fetched from the remote store it
+                    // will be written to the local cache, and will populate the memcache store, so
+                    // other clients and future requests won't need to go to a network store.
+                    let memcachehistorystore = memcachestore
+                        .clone()
+                        .historystore(shared_pack_store.clone());
 
-                let mut multiplexstore: MultiplexHgIdHistoryStore<
-                    Arc<dyn HgIdMutableHistoryStore>,
-                > = MultiplexHgIdHistoryStore::new();
-                multiplexstore.add_store(Arc::new(memcachestore));
-                multiplexstore.add_store(shared_pack_store.clone());
+                    let mut multiplexstore: MultiplexHgIdHistoryStore<
+                        Arc<dyn HgIdMutableHistoryStore>,
+                    > = MultiplexHgIdHistoryStore::new();
+                    multiplexstore.add_store(memcachestore);
+                    multiplexstore.add_store(shared_pack_store.clone());
 
-                (
-                    Some(memcachehistorystore),
-                    Arc::new(multiplexstore) as Arc<dyn HgIdMutableHistoryStore>,
-                )
+                    (
+                        Some(memcachehistorystore),
+                        Arc::new(multiplexstore) as Arc<dyn HgIdMutableHistoryStore>,
+                    )
+                } else {
+                    (
+                        None,
+                        shared_pack_store.clone() as Arc<dyn HgIdMutableHistoryStore>,
+                    )
+                };
+
+                let store = remotestore.historystore(shared_store);
+
+                let remotestores = if let Some(cache) = cache {
+                    let mut remotestores = UnionHgIdHistoryStore::new();
+                    remotestores.add(cache.clone());
+                    remotestores.add(store.clone());
+                    Arc::new(remotestores)
+                } else {
+                    store
+                };
+
+                historystore.add(Arc::new(remotestores.clone()));
+                Some(remotestores)
             } else {
-                (
-                    None,
-                    shared_pack_store.clone() as Arc<dyn HgIdMutableHistoryStore>,
-                )
+                None
             };
-
-            let store = remotestore.historystore(shared_store);
-
-            let remotestores = if let Some(cache) = cache {
-                let mut remotestores = UnionHgIdHistoryStore::new();
-                remotestores.add(cache.clone());
-                remotestores.add(store.clone());
-                Arc::new(remotestores)
-            } else {
-                store
-            };
-
-            historystore.add(Arc::new(remotestores.clone()));
-            Some(remotestores)
-        } else {
-            None
-        };
 
         let shared_mutablehistorystore: Arc<dyn HgIdMutableHistoryStore> = shared_pack_store;
 
@@ -409,7 +410,7 @@ mod tests {
 
         let store = MetadataStoreBuilder::new(&config)
             .local_path(&localdir)
-            .remotestore(Box::new(remotestore))
+            .remotestore(Arc::new(remotestore))
             .build()?;
         assert_eq!(store.get_node_info(&k)?, Some(nodeinfo));
         Ok(())
@@ -434,7 +435,7 @@ mod tests {
 
         let store = MetadataStoreBuilder::new(&config)
             .local_path(&localdir)
-            .remotestore(Box::new(remotestore))
+            .remotestore(Arc::new(remotestore))
             .build()?;
         store.get_node_info(&k)?;
         drop(store);
@@ -456,7 +457,7 @@ mod tests {
 
         let store = MetadataStoreBuilder::new(&config)
             .local_path(&localdir)
-            .remotestore(Box::new(remotestore))
+            .remotestore(Arc::new(remotestore))
             .build()?;
 
         let k = key("a", "1");
@@ -483,7 +484,7 @@ mod tests {
 
         let store = MetadataStoreBuilder::new(&config)
             .local_path(&localdir)
-            .remotestore(Box::new(remotestore))
+            .remotestore(Arc::new(remotestore))
             .build()?;
         store.get_node_info(&k)?;
         assert_eq!(
@@ -560,10 +561,10 @@ mod tests {
             let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.hist(map);
 
-            let memcache = MemcacheStore::new(&config)?;
+            let memcache = Arc::new(MemcacheStore::new(&config)?);
             let store = MetadataStoreBuilder::new(&config)
                 .local_path(&localdir)
-                .remotestore(Box::new(remotestore))
+                .remotestore(Arc::new(remotestore))
                 .memcachestore(memcache.clone())
                 .build()?;
             let nodeinfo_get = store.get_node_info(&k)?;

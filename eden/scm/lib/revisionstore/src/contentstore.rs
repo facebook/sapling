@@ -194,9 +194,9 @@ pub struct ContentStoreBuilder<'a> {
     local_path: Option<PathBuf>,
     no_local_store: bool,
     config: &'a ConfigSet,
-    remotestore: Option<Box<dyn HgIdRemoteStore>>,
+    remotestore: Option<Arc<dyn HgIdRemoteStore>>,
     suffix: Option<PathBuf>,
-    memcachestore: Option<MemcacheStore>,
+    memcachestore: Option<Arc<MemcacheStore>>,
 }
 
 impl<'a> ContentStoreBuilder<'a> {
@@ -226,12 +226,12 @@ impl<'a> ContentStoreBuilder<'a> {
         self
     }
 
-    pub fn remotestore(mut self, remotestore: Box<dyn HgIdRemoteStore>) -> Self {
+    pub fn remotestore(mut self, remotestore: Arc<dyn HgIdRemoteStore>) -> Self {
         self.remotestore = Some(remotestore);
         self
     }
 
-    pub fn memcachestore(mut self, memcachestore: MemcacheStore) -> Self {
+    pub fn memcachestore(mut self, memcachestore: Arc<MemcacheStore>) -> Self {
         self.memcachestore = Some(memcachestore);
         self
     }
@@ -345,11 +345,11 @@ impl<'a> ContentStoreBuilder<'a> {
                     // store it will be written to the local cache, and will populate the memcache
                     // store, so other clients and future requests won't need to go to a network
                     // store.
-                    let memcachedatastore = memcachestore.datastore(shared_store.clone());
+                    let memcachedatastore = memcachestore.clone().datastore(shared_store.clone());
 
                     let mut multiplexstore: MultiplexDeltaStore<Arc<dyn HgIdMutableDeltaStore>> =
                         MultiplexDeltaStore::new();
-                    multiplexstore.add_store(Arc::new(memcachestore));
+                    multiplexstore.add_store(memcachestore);
                     multiplexstore.add_store(shared_store.clone());
 
                     (
@@ -375,7 +375,8 @@ impl<'a> ContentStoreBuilder<'a> {
                 // Third, the LFS remote store. The previously fetched LFS pointers will be used to
                 // fetch the actual blobs in this store.
                 if enable_lfs {
-                    let lfs_remote_store = LfsRemote::new(shared_lfs_store.clone(), self.config)?;
+                    let lfs_remote_store =
+                        Arc::new(LfsRemote::new(shared_lfs_store.clone(), self.config)?);
                     remotestores.add(lfs_remote_store.datastore(shared_store.clone()));
 
                     // Fallback store if the LFS one is dead. In `ContentStore::get_missing`, when
@@ -531,7 +532,7 @@ mod tests {
 
         let store = ContentStoreBuilder::new(&config)
             .local_path(&localdir)
-            .remotestore(Box::new(remotestore))
+            .remotestore(Arc::new(remotestore))
             .build()?;
         let data_get = store.get(&k)?;
 
@@ -556,7 +557,7 @@ mod tests {
 
         let store = ContentStoreBuilder::new(&config)
             .local_path(&localdir)
-            .remotestore(Box::new(remotestore))
+            .remotestore(Arc::new(remotestore))
             .build()?;
         store.get(&k)?;
         drop(store);
@@ -581,7 +582,7 @@ mod tests {
 
         let store = ContentStoreBuilder::new(&config)
             .local_path(&localdir)
-            .remotestore(Box::new(remotestore))
+            .remotestore(Arc::new(remotestore))
             .build()?;
 
         let k = key("a", "1");
@@ -606,7 +607,7 @@ mod tests {
 
         let store = ContentStoreBuilder::new(&config)
             .local_path(&localdir)
-            .remotestore(Box::new(remotestore))
+            .remotestore(Arc::new(remotestore))
             .build()?;
         store.get(&k)?;
         store.shared_mutabledatastore.get(&k)?;
@@ -805,7 +806,7 @@ mod tests {
 
             let store = ContentStoreBuilder::new(&config)
                 .local_path(&localdir)
-                .remotestore(Box::new(remotestore))
+                .remotestore(Arc::new(remotestore))
                 .build()?;
 
             let data = store.get(&k)?.map(|vec| Bytes::from(vec));
@@ -843,7 +844,7 @@ mod tests {
 
             let store = ContentStoreBuilder::new(&config)
                 .local_path(&localdir)
-                .remotestore(Box::new(remotestore))
+                .remotestore(Arc::new(remotestore))
                 .build()?;
 
             let delta = Delta {
@@ -899,10 +900,10 @@ mod tests {
             let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.data(map);
 
-            let memcache = MemcacheStore::new(&config)?;
+            let memcache = Arc::new(MemcacheStore::new(&config)?);
             let store = ContentStoreBuilder::new(&config)
                 .local_path(&localdir)
-                .remotestore(Box::new(remotestore))
+                .remotestore(Arc::new(remotestore))
                 .memcachestore(memcache.clone())
                 .build()?;
             let data_get = store.get(&k)?;
@@ -938,10 +939,10 @@ mod tests {
             let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.data(map);
 
-            let memcache = MemcacheStore::new(&config)?;
+            let memcache = Arc::new(MemcacheStore::new(&config)?);
             let store = ContentStoreBuilder::new(&config)
                 .local_path(&localdir)
-                .remotestore(Box::new(remotestore))
+                .remotestore(Arc::new(remotestore))
                 .memcachestore(memcache.clone())
                 .build()?;
             let data_get = store.get(&k)?;
@@ -974,11 +975,11 @@ mod tests {
             let mut remotestore = FakeHgIdRemoteStore::new();
             remotestore.data(map);
 
-            let memcache = MemcacheStore::new(&config)?;
+            let memcache = Arc::new(MemcacheStore::new(&config)?);
             let store = ContentStoreBuilder::new(&config)
                 .local_path(&localdir)
-                .remotestore(Box::new(remotestore))
-                .memcachestore(memcache.clone())
+                .remotestore(Arc::new(remotestore))
+                .memcachestore(memcache)
                 .build()?;
             let data_get = store.get(&k)?;
             assert_eq!(data_get.unwrap(), data);

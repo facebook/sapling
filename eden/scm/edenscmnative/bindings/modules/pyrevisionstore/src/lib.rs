@@ -611,9 +611,8 @@ struct PyHgIdRemoteStoreInner {
     historystore: Option<mutablehistorystore>,
 }
 
-#[derive(Clone)]
 pub struct PyHgIdRemoteStore {
-    inner: Arc<RwLock<PyHgIdRemoteStoreInner>>,
+    inner: RwLock<PyHgIdRemoteStoreInner>,
 }
 
 impl PyHgIdRemoteStore {
@@ -647,26 +646,31 @@ impl PyHgIdRemoteStore {
     }
 }
 
-struct PyRemoteDataStore(PyHgIdRemoteStore);
-struct PyRemoteHistoryStore(PyHgIdRemoteStore);
+struct PyRemoteDataStore(Arc<PyHgIdRemoteStore>);
+struct PyRemoteHistoryStore(Arc<PyHgIdRemoteStore>);
 
 impl HgIdRemoteStore for PyHgIdRemoteStore {
-    fn datastore(&self, store: Arc<dyn HgIdMutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
+    fn datastore(
+        self: Arc<Self>,
+        store: Arc<dyn HgIdMutableDeltaStore>,
+    ) -> Arc<dyn RemoteDataStore> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let mut inner = self.inner.write();
-        inner.datastore = Some(mutabledeltastore::create_instance(py, store).unwrap());
+        self.inner.write().datastore = Some(mutabledeltastore::create_instance(py, store).unwrap());
 
-        Arc::new(PyRemoteDataStore(self.clone()))
+        Arc::new(PyRemoteDataStore(self))
     }
 
-    fn historystore(&self, store: Arc<dyn HgIdMutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
+    fn historystore(
+        self: Arc<Self>,
+        store: Arc<dyn HgIdMutableHistoryStore>,
+    ) -> Arc<dyn RemoteHistoryStore> {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let mut inner = self.inner.write();
-        inner.historystore = Some(mutablehistorystore::create_instance(py, store).unwrap());
+        self.inner.write().historystore =
+            Some(mutablehistorystore::create_instance(py, store).unwrap());
 
         Arc::new(PyRemoteHistoryStore(self.clone()))
     }
@@ -761,16 +765,16 @@ impl LocalStore for PyRemoteHistoryStore {
 }
 
 py_class!(pub class pyremotestore |py| {
-    data remote: PyHgIdRemoteStore;
+    data remote: Arc<PyHgIdRemoteStore>;
 
     def __new__(_cls, py_store: PyObject) -> PyResult<pyremotestore> {
-        let store = PyHgIdRemoteStore { inner: Arc::new(RwLock::new(PyHgIdRemoteStoreInner { py_store, datastore: None, historystore: None })) };
+        let store = Arc::new(PyHgIdRemoteStore { inner: RwLock::new(PyHgIdRemoteStoreInner { py_store, datastore: None, historystore: None }) });
         pyremotestore::create_instance(py, store)
     }
 });
 
 impl pyremotestore {
-    fn into_inner(&self, py: Python) -> PyHgIdRemoteStore {
+    fn into_inner(&self, py: Python) -> Arc<PyHgIdRemoteStore> {
         self.remote(py).clone()
     }
 }
@@ -782,7 +786,7 @@ py_class!(pub class contentstore |py| {
         let remotestore = remote.into_inner(py);
         let config = config.get_cfg(py);
 
-        let mut builder = ContentStoreBuilder::new(&config).remotestore(Box::new(remotestore));
+        let mut builder = ContentStoreBuilder::new(&config).remotestore(remotestore);
 
         builder = if let Some(path) = path {
             builder.local_path(path.as_path())
@@ -864,7 +868,7 @@ py_class!(class metadatastore |py| {
         let remotestore = remote.into_inner(py);
         let config = config.get_cfg(py);
 
-        let mut builder = MetadataStoreBuilder::new(&config).remotestore(Box::new(remotestore));
+        let mut builder = MetadataStoreBuilder::new(&config).remotestore(remotestore);
 
         builder = if let Some(path) = path {
             builder.local_path(path.as_path())
@@ -913,17 +917,17 @@ impl metadatastore {
 }
 
 py_class!(pub class memcachestore |py| {
-    data memcache: MemcacheStore;
+    data memcache: Arc<MemcacheStore>;
 
     def __new__(_cls, config: config) -> PyResult<memcachestore> {
         let config = config.get_cfg(py);
-        let memcache = MemcacheStore::new(&config).map_pyerr(py)?;
+        let memcache = Arc::new(MemcacheStore::new(&config).map_pyerr(py)?);
         memcachestore::create_instance(py, memcache)
     }
 });
 
 impl memcachestore {
-    fn into_inner(&self, py: Python) -> MemcacheStore {
+    fn into_inner(&self, py: Python) -> Arc<MemcacheStore> {
         self.memcache(py).clone()
     }
 }

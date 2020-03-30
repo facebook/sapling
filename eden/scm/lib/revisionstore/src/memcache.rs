@@ -54,7 +54,6 @@ mod dummy {
     use configparser::config::ConfigSet;
 
     /// Dummy memcache client for when Mercurial is compiled outside of fbcode.
-    #[derive(Clone)]
     pub struct MemcacheStore;
 
     impl MemcacheStore {
@@ -152,22 +151,28 @@ impl LocalStore for MemcacheStore {
 }
 
 impl HgIdRemoteStore for MemcacheStore {
-    fn datastore(&self, store: Arc<dyn HgIdMutableDeltaStore>) -> Arc<dyn RemoteDataStore> {
-        Arc::new(MemcacheHgIdDataStore::new(self.clone(), store))
+    fn datastore(
+        self: Arc<Self>,
+        store: Arc<dyn HgIdMutableDeltaStore>,
+    ) -> Arc<dyn RemoteDataStore> {
+        Arc::new(MemcacheHgIdDataStore::new(self, store))
     }
 
-    fn historystore(&self, store: Arc<dyn HgIdMutableHistoryStore>) -> Arc<dyn RemoteHistoryStore> {
-        Arc::new(MemcacheHgIdHistoryStore::new(self.clone(), store))
+    fn historystore(
+        self: Arc<Self>,
+        store: Arc<dyn HgIdMutableHistoryStore>,
+    ) -> Arc<dyn RemoteHistoryStore> {
+        Arc::new(MemcacheHgIdHistoryStore::new(self, store))
     }
 }
 
 struct MemcacheHgIdDataStore {
     store: Arc<dyn HgIdMutableDeltaStore>,
-    memcache: MemcacheStore,
+    memcache: Arc<MemcacheStore>,
 }
 
 impl MemcacheHgIdDataStore {
-    pub fn new(memcache: MemcacheStore, store: Arc<dyn HgIdMutableDeltaStore>) -> Self {
+    pub fn new(memcache: Arc<MemcacheStore>, store: Arc<dyn HgIdMutableDeltaStore>) -> Self {
         Self { memcache, store }
     }
 }
@@ -242,11 +247,11 @@ impl RemoteDataStore for MemcacheHgIdDataStore {
 
 struct MemcacheHgIdHistoryStore {
     store: Arc<dyn HgIdMutableHistoryStore>,
-    memcache: MemcacheStore,
+    memcache: Arc<MemcacheStore>,
 }
 
 impl MemcacheHgIdHistoryStore {
-    pub fn new(memcache: MemcacheStore, store: Arc<dyn HgIdMutableHistoryStore>) -> Self {
+    pub fn new(memcache: Arc<MemcacheStore>, store: Arc<dyn HgIdMutableHistoryStore>) -> Self {
         Self { memcache, store }
     }
 }
