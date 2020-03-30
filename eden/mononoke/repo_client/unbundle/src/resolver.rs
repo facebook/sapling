@@ -367,7 +367,8 @@ async fn resolve_push(
 
     let (_, bundle2) = resolver
         .maybe_resolve_infinitepush_bookmarks(bundle2)
-        .await?;
+        .await
+        .context("While resolving B2xInfinitepushBookmarks")?;
     let maybe_raw_bundle2_id = resolver
         .ensure_stream_finished(bundle2, maybe_full_content)
         .await?;
@@ -842,8 +843,8 @@ impl Bundle2Resolver {
         };
 
         // Check that infinitepush is enabled if we use it.
-        let res: Result<Option<ChangegroupPush>, Error> = if infinitepush_writes_allowed {
-            Ok(maybe_cg_push)
+        if infinitepush_writes_allowed {
+            Ok((maybe_cg_push, bundle2))
         } else {
             match maybe_cg_push {
                 Some(ref cg_push) if cg_push.infinitepush_payload.is_some() => {
@@ -851,11 +852,9 @@ impl Bundle2Resolver {
                         "Infinitepush is not enabled on this server. Contact Source Control @ FB."
                     );
                 }
-                r => Ok(r),
+                other => Ok((other, bundle2)),
             }
-        };
-
-        res.map(move |maybe_cg_push| (maybe_cg_push, bundle2))
+        }
     }
 
     /// Parses pushkey part if it exists
@@ -917,7 +916,7 @@ impl Bundle2Resolver {
         let repo = self.repo.clone();
         let (b2xtreegroup2, bundle2) = next_item(bundle2).await?;
 
-        let res: Result<_, Error> = match b2xtreegroup2 {
+        match b2xtreegroup2 {
             Some(Bundle2Item::B2xTreegroup2(_, parts))
             | Some(Bundle2Item::B2xRebasePack(_, parts)) => {
                 let manifests = upload_hg_blobs(
@@ -935,8 +934,7 @@ impl Bundle2Resolver {
                 Result::<_, Error>::Ok((manifests, bundle2))
             }
             _ => Err(format_err!("Expected Bundle2 B2xTreegroup2")),
-        };
-        res
+        }
     }
 
     /// Parse b2xinfinitepushscratchbookmarks.
@@ -950,7 +948,7 @@ impl Bundle2Resolver {
             OldBoxStream<Bundle2Item, Error>,
         ) = next_item(bundle2).await?;
 
-        let res: Result<_, Error> = match infinitepushbookmarks {
+        match infinitepushbookmarks {
             Some(Bundle2Item::B2xInfinitepushBookmarks(_, bookmarks)) => {
                 let _ = bookmarks.collect().boxify().compat().await?;
                 Ok(((), bundle2))
@@ -960,10 +958,6 @@ impl Bundle2Resolver {
                 "Expected B2xInfinitepushBookmarks or end of the stream"
             )),
         }
-        .context("While resolving B2xInfinitepushBookmarks")
-        .map_err(Error::from);
-
-        res
     }
 
     /// Takes parsed Changesets and scheduled for upload Filelogs and Manifests. The content of
