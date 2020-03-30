@@ -9,16 +9,19 @@
 
 use anyhow::{format_err, Error};
 use blobstore::Blobstore;
-use bytes::Bytes;
+use bytes::{Bytes, BytesMut};
 use cacheblob::{new_cachelib_blobstore_no_lease, new_memcache_blobstore_no_lease};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
 use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
-use futures::{compat::Future01CompatExt, future::lazy};
-use futures_ext::StreamExt;
-use futures_old::{stream::iter_ok, Future, Stream};
+use futures::{
+    compat::Future01CompatExt,
+    future::lazy,
+    stream::{self, StreamExt, TryStreamExt},
+};
+use futures_old::Stream;
 use futures_stats::{FutureStats, TimedFutureExt};
 use manifoldblob::ThriftManifoldBlob;
 use mononoke_types::{ContentMetadata, MononokeId};
@@ -27,12 +30,12 @@ use rand::Rng;
 use sql_ext::facebook::ReadConnectionType;
 use sqlblob::Sqlblob;
 use std::fmt::Debug;
-use std::io::BufReader;
 use std::num::NonZeroU32;
 use std::sync::Arc;
 use std::time::Duration;
 use throttledblob::{ThrottleOptions, ThrottledBlob};
-use tokio::{codec, fs::File};
+use tokio::{fs::File, io::BufReader};
+use tokio_util::codec::{BytesCodec, FramedRead};
 
 const NAME: &str = "benchmark_filestore";
 
@@ -51,7 +54,6 @@ const ARG_MEMCACHE: &str = "memcache";
 const ARG_CACHELIB_SIZE: &str = "cachelib-size";
 const ARG_INPUT: &str = "input";
 const ARG_DELAY: &str = "delay";
-const ARG_DEBUG: &str = "debug";
 const ARG_RANDOMIZE: &str = "randomize";
 const ARG_READ_QPS: &str = "read-qps";
 const ARG_WRITE_QPS: &str = "write-qps";
@@ -129,26 +131,19 @@ async fn run_benchmark_filestore<'a>(
 
     eprintln!("Test with {:?}, writing into {:?}", config, blob);
 
-    let (file, metadata) = File::open(input)
-        .and_then(|file| file.metadata())
-        .from_err::<Error>()
-        .compat()
-        .await?;
+    let file = File::open(input).await?;
+    let metadata = file.metadata().await?;
 
-    let stdout = BufReader::with_capacity(input_capacity, file);
+    let data = BufReader::with_capacity(input_capacity, file);
+    let data = FramedRead::new(data, BytesCodec::new()).map_ok(BytesMut::freeze);
     let len = metadata.len();
-
-    let data = codec::FramedRead::new(stdout, codec::BytesCodec::new())
-        .map(|bytes_mut| bytes_mut.freeze())
-        .map(bytes_ext::copy_from_old)
-        .from_err();
 
     let (len, data) = if randomize {
         let bytes = rand::thread_rng().gen::<[u8; 32]>();
         let bytes = Bytes::copy_from_slice(&bytes[..]);
         (
             len + (bytes.len() as u64),
-            iter_ok(vec![bytes]).chain(data).left_stream(),
+            stream::iter(vec![Ok(bytes)]).chain(data).left_stream(),
         )
     } else {
         (len, data.right_stream())
@@ -158,10 +153,16 @@ async fn run_benchmark_filestore<'a>(
 
     let req = StoreRequest::new(len);
 
-    let (stats, res) = filestore::store(blob.clone(), config, ctx.clone(), &req, data)
-        .compat()
-        .timed()
-        .await;
+    let (stats, res) = filestore::store(
+        blob.clone(),
+        config,
+        ctx.clone(),
+        &req,
+        data.map_err(Error::from).compat(),
+    )
+    .compat()
+    .timed()
+    .await;
     log_perf(stats, &res, len);
 
     let metadata = res?;
@@ -337,10 +338,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .long("delay-after-write")
                 .takes_value(true)
                 .required(false),
-        )
-        .arg(
-            // This is read by args::init_logging
-            Arg::with_name(ARG_DEBUG).long("debug").required(false),
         )
         .arg(
             Arg::with_name(ARG_RANDOMIZE)
