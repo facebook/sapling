@@ -85,7 +85,7 @@ impl RemoteDataStore for EdenApiRemoteDataStore {
             .iter()
             .filter_map(|k| match k {
                 StoreKey::HgId(k) => Some(k.clone()),
-                StoreKey::Content(_) => None,
+                StoreKey::Content(_, _) => None,
             })
             .collect::<Vec<_>>();
         let (entries, _) = match edenapi.kind {

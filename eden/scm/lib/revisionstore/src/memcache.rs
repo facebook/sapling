@@ -213,7 +213,7 @@ impl RemoteDataStore for MemcacheHgIdDataStore {
             .iter()
             .filter_map(|k| match k {
                 StoreKey::HgId(k) => Some(k.clone()),
-                StoreKey::Content(_) => None,
+                StoreKey::Content(_, _) => None,
             })
             .collect::<Vec<_>>();
 
@@ -277,7 +277,7 @@ impl RemoteHistoryStore for MemcacheHgIdHistoryStore {
             .iter()
             .filter_map(|k| match k {
                 StoreKey::HgId(k) => Some(k.clone()),
-                StoreKey::Content(_) => None,
+                StoreKey::Content(_, _) => None,
             })
             .collect::<Vec<_>>();
 

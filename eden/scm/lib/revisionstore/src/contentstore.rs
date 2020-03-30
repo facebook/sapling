@@ -369,13 +369,22 @@ impl<'a> ContentStoreBuilder<'a> {
 
                 // Second, the slower remotestore. For LFS blobs, the LFS pointers will be fetched
                 // at this step and be written to the LFS store.
-                remotestores.add(remotestore.datastore(shared_store.clone()));
+                let filenode_remotestore = remotestore.datastore(shared_store.clone());
+                remotestores.add(filenode_remotestore.clone());
 
                 // Third, the LFS remote store. The previously fetched LFS pointers will be used to
                 // fetch the actual blobs in this store.
                 if enable_lfs {
                     let lfs_remote_store = LfsRemote::new(shared_lfs_store.clone(), self.config)?;
                     remotestores.add(lfs_remote_store.datastore(shared_store.clone()));
+
+                    // Fallback store if the LFS one is dead. In `ContentStore::get_missing`, when
+                    // the LFS pointers are available locally, a `StoreKey::Content` will be
+                    // returned, preventing the first `filenode_remotestore` from trying to fetch
+                    // the blob. However, in this situation, when the LFS server is down, the
+                    // `LfsStore::get_missing` will return a `StoreKey::HgId`, that can then be
+                    // fetched by the following store.
+                    remotestores.add(filenode_remotestore);
                 }
 
                 let remotestores = Arc::new(remotestores);
@@ -802,6 +811,63 @@ mod tests {
             let data = store.get(&k)?.map(|vec| Bytes::from(vec));
 
             assert_eq!(data, Some(Bytes::from(&b"master"[..])));
+
+            Ok(())
+        }
+
+        #[test]
+        fn test_lfs_fallback_on_missing_blob() -> Result<()> {
+            let cachedir = TempDir::new()?;
+            let localdir = TempDir::new()?;
+            let config = make_lfs_config(&cachedir);
+
+            let k = key("a", "1");
+            // This should be a missing blob.
+            let sha256 = Sha256::from_str(
+                "0000000000000000000000000000000000000000000000000000000000000042",
+            )?;
+            let size = 4;
+
+            let pointer = format!(
+                "version https://git-lfs.github.com/spec/v1\noid sha256:{}\nsize {}\nx-is-binary 0\n",
+                sha256.to_hex(),
+                size
+            );
+
+            let data = Bytes::from("AAAA");
+
+            let mut map = HashMap::new();
+            map.insert(k.clone(), (data.clone(), None));
+            let mut remotestore = FakeHgIdRemoteStore::new();
+            remotestore.data(map);
+
+            let store = ContentStoreBuilder::new(&config)
+                .local_path(&localdir)
+                .remotestore(Box::new(remotestore))
+                .build()?;
+
+            let delta = Delta {
+                data: Bytes::from(pointer),
+                base: None,
+                key: k.clone(),
+            };
+
+            // Add the pointer the the shared store, but not the blob
+            store.shared_mutabledatastore.add(
+                &delta,
+                &Metadata {
+                    size: None,
+                    flags: Some(0x2000),
+                },
+            )?;
+
+            assert_eq!(
+                store.get_missing(&[StoreKey::from(k.clone())])?,
+                vec![StoreKey::from(k.clone())]
+            );
+            store.prefetch(&[StoreKey::from(k.clone())])?;
+            // Even though the blob was missing, we got it!
+            assert_eq!(store.get_missing(&[StoreKey::from(k.clone())])?, vec![]);
 
             Ok(())
         }

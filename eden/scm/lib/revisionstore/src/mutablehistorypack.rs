@@ -318,7 +318,7 @@ impl LocalStore for MutableHistoryPack {
                     Some(e) => e.get(k).is_none(),
                     None => true,
                 },
-                StoreKey::Content(_) => true,
+                StoreKey::Content(_, _) => true,
             })
             .cloned()
             .collect())

@@ -355,7 +355,7 @@ impl LocalStore for HistoryPack {
                     Ok(None) | Err(_) => true,
                     Ok(Some(_)) => false,
                 },
-                StoreKey::Content(_) => true,
+                StoreKey::Content(_, _) => true,
             })
             .cloned()
             .collect())

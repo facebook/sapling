@@ -158,7 +158,7 @@ impl RemoteDataStore for PythonHgIdDataStore {
                     let py_node = PyBytes::new(py, key.hgid.as_ref());
                     Some((py_name, py_node))
                 }
-                StoreKey::Content(_) => None,
+                StoreKey::Content(_, _) => None,
             })
             .collect::<Vec<_>>();
 
@@ -182,7 +182,7 @@ impl LocalStore for PythonHgIdDataStore {
                     let py_key = from_key_to_tuple(py, &key);
                     py_missing.insert(py, py_missing.len(py), py_key.into_object());
                 }
-                StoreKey::Content(_) => continue,
+                StoreKey::Content(_, _) => continue,
             }
         }
 

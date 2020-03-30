@@ -192,7 +192,7 @@ impl LfsPointersStore {
     fn entry(&self, key: &StoreKey) -> Result<Option<LfsPointersEntry>> {
         let mut iter = match key {
             StoreKey::HgId(key) => self.0.lookup(Self::INDEX_NODE, key.hgid)?,
-            StoreKey::Content(hash) => match hash {
+            StoreKey::Content(hash, _) => match hash {
                 ContentHash::Sha256(hash) => self.0.lookup(Self::INDEX_SHA256, hash)?,
             },
         };
@@ -529,16 +529,43 @@ impl LocalStore for LfsStore {
                                 let sha256 = content_hash.clone().unwrap_sha256();
                                 match self.blobs.contains(&sha256) {
                                     Ok(true) => None,
-                                    Ok(false) | Err(_) => Some(StoreKey::from(content_hash)),
+                                    Ok(false) | Err(_) => Some(StoreKey::Content(
+                                        content_hash.clone(),
+                                        Some(key.clone()),
+                                    )),
                                 }
                             }
                         },
                     }
                 }
-                StoreKey::Content(content_hash) => match content_hash {
+                StoreKey::Content(content_hash, key) => match content_hash {
                     ContentHash::Sha256(hash) => match self.blobs.contains(&hash) {
                         Ok(true) => None,
-                        Ok(false) | Err(_) => Some(k.clone()),
+                        Ok(false) | Err(_) => {
+                            // WARNING: Hack!
+                            //
+                            // For now, the only Content addressed store is the LfsStore, as such,
+                            // returning a StoreKey::Content when we get here isn't going to help
+                            // in finding the missing blob.
+                            //
+                            // If for any reason, the LFS server is turned off, we will end up in
+                            // here for blobs where we have the pointer locally, but not the blob.
+                            // In this case, we want the code to fallback to fetching the blob with
+                            // the regular non-LFS protocol, hence we need to pretend that what is
+                            // missing isn't the content hash, but the filenode hash.
+                            //
+                            // Obviously, the above doesn't apply for local blobs, as having these
+                            // missing should be fatal.
+                            let pointers = self.pointers.read();
+                            if pointers.0.is_local() {
+                                Some(k.clone())
+                            } else {
+                                match key {
+                                    None => Some(StoreKey::from(content_hash)),
+                                    Some(key) => Some(StoreKey::from(key)),
+                                }
+                            }
+                        }
                     },
                 },
             })
@@ -824,7 +851,7 @@ impl LfsRemoteInner {
         objs: &[(Sha256, usize)],
     ) -> Result<Box<dyn Iterator<Item = Result<(Sha256, Bytes)>>>> {
         match self {
-            LfsRemoteInner::Http(http) => Ok(Box::new(Self::batch_http(http, objs)?)),
+            LfsRemoteInner::Http(http) => Ok(Self::batch_http(http, objs)?),
             LfsRemoteInner::File(file) => Ok(Box::new(Self::batch_file(file, objs)?)),
         }
     }
@@ -836,7 +863,7 @@ impl LfsRemoteInner {
         user_agent: String,
         backoff_times: Vec<f32>,
         add_extra: impl Fn(RequestBuilder) -> RequestBuilder,
-    ) -> Result<Bytes> {
+    ) -> Result<Option<Bytes>> {
         let mut backoff = backoff_times.into_iter();
 
         loop {
@@ -850,7 +877,7 @@ impl LfsRemoteInner {
             let reply = req.send().await?.error_for_status();
 
             let (err, status) = match reply {
-                Ok(response) => return Ok(response.bytes().await?),
+                Ok(response) => return Ok(Some(response.bytes().await?)),
                 Err(e) => match e.status() {
                     None => return Err(e.into()),
                     Some(status) => (e, status),
@@ -858,6 +885,11 @@ impl LfsRemoteInner {
             };
 
             if status.is_server_error() {
+                if status.as_u16() == reqwest::StatusCode::SERVICE_UNAVAILABLE {
+                    // No need to retry, the server is down.
+                    return Ok(None);
+                }
+
                 if let Some(backoff_time) = backoff.next() {
                     spawn_blocking(move || {
                         let mut rng = thread_rng();
@@ -879,7 +911,7 @@ impl LfsRemoteInner {
     fn batch_http(
         http: &HttpLfsRemote,
         objs: &[(Sha256, usize)],
-    ) -> Result<impl Iterator<Item = Result<(Sha256, Bytes)>>> {
+    ) -> Result<Box<dyn Iterator<Item = Result<(Sha256, Bytes)>>>> {
         let objects = objs
             .iter()
             .map(|(oid, size)| RequestObject {
@@ -910,6 +942,11 @@ impl LfsRemoteInner {
         };
 
         let response = http.rt.lock().block_on(response_fut)?;
+        let response = match response {
+            None => return Ok(Box::new(std::iter::empty())),
+            Some(response) => response,
+        };
+
         let response: ResponseBatch = serde_json::from_slice(response.as_ref())?;
 
         let mut futures = Vec::new();
@@ -959,11 +996,22 @@ impl LfsRemoteInner {
         let mut stream = iter(futures).buffer_unordered(http.concurrent_fetches);
 
         let rt = http.rt.clone();
-        Ok(Box::new(iter::from_fn(move || {
+        Ok(Box::new(iter::from_fn(move || loop {
             let next = stream.next();
-            rt.lock()
-                .block_on(async { next.await })
-                .map(|res| res.map(|(sha, bytes)| ((&sha.0).into(), bytes)))
+
+            let res = match rt.lock().block_on(async { next.await }) {
+                None => return None,
+                Some(res) => res,
+            };
+
+            let (oid, bytes) = match res {
+                Ok(tuple) => tuple,
+                Err(e) => return Some(Err(e)),
+            };
+
+            if let Some(bytes) = bytes {
+                return Some(Ok(((&oid.0).into(), bytes)));
+            }
         })))
     }
 

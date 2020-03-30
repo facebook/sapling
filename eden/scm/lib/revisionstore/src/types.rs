@@ -35,7 +35,9 @@ pub enum ContentHash {
 #[derive(Clone, PartialEq, Eq, Debug, Hash, Ord, PartialOrd)]
 pub enum StoreKey {
     HgId(Key),
-    Content(ContentHash),
+    /// The Key is a temporary workaround to being able to fallback from the LFS protocol to the
+    /// non-LFS protocol. Do not depend on it as it will be removed.
+    Content(ContentHash, Option<Key>),
 }
 
 impl ContentHash {
@@ -60,7 +62,7 @@ impl StoreKey {
     }
 
     pub fn content(hash: ContentHash) -> Self {
-        StoreKey::Content(hash)
+        StoreKey::Content(hash, None)
     }
 }
 
@@ -78,13 +80,13 @@ impl<'a> From<&'a Key> for StoreKey {
 
 impl From<ContentHash> for StoreKey {
     fn from(hash: ContentHash) -> Self {
-        StoreKey::Content(hash)
+        StoreKey::Content(hash, None)
     }
 }
 
 impl<'a> From<&'a ContentHash> for StoreKey {
     fn from(hash: &'a ContentHash) -> Self {
-        StoreKey::Content(hash.clone())
+        StoreKey::Content(hash.clone(), None)
     }
 }
 
@@ -101,7 +103,7 @@ impl quickcheck::Arbitrary for StoreKey {
         if g.gen() {
             StoreKey::HgId(Key::arbitrary(g))
         } else {
-            StoreKey::Content(ContentHash::arbitrary(g))
+            StoreKey::Content(ContentHash::arbitrary(g), Option::arbitrary(g))
         }
     }
 }

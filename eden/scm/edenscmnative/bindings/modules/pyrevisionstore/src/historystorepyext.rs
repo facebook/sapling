@@ -68,7 +68,7 @@ impl<T: HgIdHistoryStore + ?Sized> HgIdHistoryStorePyExt for T {
                     let key_tuple = from_key_to_tuple(py, &key);
                     results.append(py, key_tuple.into_object());
                 }
-                StoreKey::Content(_) => {
+                StoreKey::Content(_, _) => {
                     return Err(format_err!("Unsupported key: {:?}", key)).map_pyerr(py)
                 }
             }

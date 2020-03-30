@@ -96,7 +96,7 @@ impl RemoteDataStore for FakeRemoteDataStore {
                         },
                     )?;
                 }
-                StoreKey::Content(_) => continue,
+                StoreKey::Content(_, _) => continue,
             }
         }
 
@@ -149,7 +149,7 @@ impl RemoteHistoryStore for FakeRemoteHistoryStore {
                 StoreKey::HgId(k) => self
                     .store
                     .add(&k, self.map.get(&k).ok_or_else(|| Error::msg("Not found"))?)?,
-                StoreKey::Content(_) => continue,
+                StoreKey::Content(_, _) => continue,
             }
         }
 

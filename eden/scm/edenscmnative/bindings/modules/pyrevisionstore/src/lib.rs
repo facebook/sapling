@@ -625,7 +625,7 @@ impl PyHgIdRemoteStore {
             .into_iter()
             .filter_map(|key| match key {
                 StoreKey::HgId(key) => Some(from_key(py, &key)),
-                StoreKey::Content(_) => None,
+                StoreKey::Content(_, _) => None,
             })
             .collect::<Vec<_>>();
 
