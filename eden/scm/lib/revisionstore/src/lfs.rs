@@ -1053,7 +1053,7 @@ impl HgIdDataStore for LfsRemoteStore {
 
 impl LocalStore for LfsRemoteStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        Ok(keys.to_vec())
+        self.store.get_missing(keys)
     }
 }
 

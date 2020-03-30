@@ -139,7 +139,7 @@ impl HgIdDataStore for EdenApiRemoteDataStore {
 
 impl LocalStore for EdenApiRemoteDataStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        Ok(keys.to_vec())
+        self.inner.store.get_missing(keys)
     }
 }
 

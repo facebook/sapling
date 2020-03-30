@@ -133,7 +133,7 @@ impl HgIdDataStore for FakeRemoteDataStore {
 
 impl LocalStore for FakeRemoteDataStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        Ok(keys.to_vec())
+        self.store.get_missing(keys)
     }
 }
 
@@ -168,7 +168,7 @@ impl HgIdHistoryStore for FakeRemoteHistoryStore {
 
 impl LocalStore for FakeRemoteHistoryStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        Ok(keys.to_vec())
+        self.store.get_missing(keys)
     }
 }
 
