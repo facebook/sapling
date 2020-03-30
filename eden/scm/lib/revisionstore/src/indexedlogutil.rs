@@ -75,6 +75,7 @@ impl<'a> Iterator for LookupIter<'a> {
 }
 
 pub struct StoreOpenOptions {
+    auto_sync_threshold: Option<u64>,
     max_log_count: Option<u8>,
     max_bytes_per_log: Option<u64>,
     indexes: Vec<IndexDef>,
@@ -83,6 +84,7 @@ pub struct StoreOpenOptions {
 impl StoreOpenOptions {
     pub fn new() -> Self {
         Self {
+            auto_sync_threshold: None,
             max_log_count: None,
             max_bytes_per_log: None,
             indexes: Vec::new(),
@@ -108,6 +110,12 @@ impl StoreOpenOptions {
         self
     }
 
+    /// When the in-memory buffer exceeds `threshold`, it's automatically flushed to disk.
+    pub fn auto_sync_threshold(mut self, threshold: u64) -> Self {
+        self.auto_sync_threshold = Some(threshold);
+        self
+    }
+
     /// Create a local `Store`.
     ///
     /// Data added to a local store will never be rotated out, and `fsync(2)` is used to guarantee
@@ -118,6 +126,7 @@ impl StoreOpenOptions {
                 .create(true)
                 .fsync(true)
                 .index_defs(self.indexes)
+                .auto_sync_threshold(self.auto_sync_threshold)
                 .open(path.as_ref())?,
         ))
     }
@@ -129,6 +138,7 @@ impl StoreOpenOptions {
     pub fn shared(self, path: impl AsRef<Path>) -> Result<Store> {
         let mut opts = rotate::OpenOptions::new()
             .create(true)
+            .auto_sync_threshold(self.auto_sync_threshold)
             .index_defs(self.indexes);
 
         if let Some(max_log_count) = self.max_log_count {

@@ -228,9 +228,13 @@ impl LfsIndexedLogBlobsStore {
     fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
         let log_size =
             config.get_or("lfs", "blobsstoresize", || ByteCount::from(20_000_000_000))?;
+        let auto_sync = config.get_or("lfs", "autosyncthreshold", || {
+            ByteCount::from(1_000_000_000)
+        })?;
         Ok(StoreOpenOptions::new()
             .max_log_count(4)
             .max_bytes_per_log(log_size.value() / 4)
+            .auto_sync_threshold(auto_sync.value())
             .index("sha256", |_| {
                 vec![IndexOutput::Reference(0..Sha256::len() as u64)]
             }))
