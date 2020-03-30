@@ -11,10 +11,13 @@ use anyhow::{bail, Error, Result};
 use blobrepo::{BlobRepo, ChangesetHandle, CreateChangeset};
 use context::CoreContext;
 use failure_ext::{Compat, FutureFailureErrorExt, StreamFailureErrorExt};
-use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
-use futures_old::future::{self, ok, Shared};
-use futures_old::Future;
-use futures_old::{stream, Stream};
+use futures_ext::{
+    try_boxfuture as try_oldboxfuture, BoxFuture as OldBoxFuture, BoxStream as OldBoxStream,
+    FutureExt as OldFutureExt, StreamExt as OldStreamExt,
+};
+use futures_old::future::{self as old_future, ok, Shared};
+use futures_old::Future as OldFuture;
+use futures_old::{stream as old_stream, Stream as OldStream};
 use mercurial_revlog::{
     changeset::RevlogChangeset,
     manifest::{Details, ManifestContent},
@@ -28,20 +31,20 @@ use std::collections::HashMap;
 use std::ops::AddAssign;
 use wirepack::TreemanifestEntry;
 
-type Filelogs = HashMap<HgNodeKey, Shared<BoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
+type Filelogs = HashMap<HgNodeKey, Shared<OldBoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
 type ContentBlobs = HashMap<HgNodeKey, ContentBlobInfo>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 type UploadedChangesets = HashMap<HgChangesetId, ChangesetHandle>;
 
-type HgBlobFuture = BoxFuture<(HgBlobEntry, RepoPath), Error>;
-type HgBlobStream = BoxStream<(HgBlobEntry, RepoPath), Error>;
+type HgBlobFuture = OldBoxFuture<(HgBlobEntry, RepoPath), Error>;
+type HgBlobStream = OldBoxStream<(HgBlobEntry, RepoPath), Error>;
 
 /// In order to generate the DAG of dependencies between Root Manifest and other Manifests and
 /// Filelogs we need to walk that DAG.
 /// This represents the manifests and file nodes introduced by a particular changeset.
 pub struct NewBlobs {
     // root_manifest can be None f.e. when commit removes all the content of the repo
-    root_manifest: BoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
+    root_manifest: OldBoxFuture<Option<(HgBlobEntry, RepoPath)>, Error>,
     // sub_entries has both submanifest and filenode entries.
     sub_entries: HgBlobStream,
     // This is returned as a Vec rather than a Stream so that the path and metadata are
@@ -78,7 +81,7 @@ impl NewBlobs {
             // If manifest root id is NULL_HASH then there is no content in this changest
             return Ok(Self {
                 root_manifest: ok(None).boxify(),
-                sub_entries: stream::empty().boxify(),
+                sub_entries: old_stream::empty().boxify(),
                 content_blobs: Vec::new(),
             });
         }
@@ -116,13 +119,13 @@ impl NewBlobs {
                     HgBlobEntry::new_root(repo.blobstore().boxed(), manifest_root_id),
                     RepoPath::RootPath,
                 );
-                (vec![], vec![], future::ok(Some(entry)).boxify())
+                (vec![], vec![], old_future::ok(Some(entry)).boxify())
             }
         };
 
         Ok(Self {
             root_manifest,
-            sub_entries: stream::futures_unordered(entries)
+            sub_entries: old_stream::futures_unordered(entries)
                 .with_context(move || {
                     format!(
                         "While walking dependencies of Root Manifest with id {:?}",
@@ -258,7 +261,7 @@ fn get_parent(
     repo: &BlobRepo,
     map: &UploadedChangesets,
     p: Option<HgNodeHash>,
-) -> impl Future<Item = Option<ChangesetHandle>, Error = Error> {
+) -> impl OldFuture<Item = Option<ChangesetHandle>, Error = Error> {
     let res = match p {
         None => None,
         Some(p) => match map.get(&HgChangesetId::new(p)) {
@@ -284,7 +287,7 @@ pub fn upload_changeset(
     manifests: &Manifests,
     content_blobs: &ContentBlobs,
     must_check_case_conflicts: bool,
-) -> BoxFuture<UploadedChangesets, Error> {
+) -> OldBoxFuture<UploadedChangesets, Error> {
     let (p1, p2) = {
         (
             get_parent(ctx.clone(), &repo, &uploaded_changesets, revlog_cs.p1),
@@ -296,7 +299,7 @@ pub fn upload_changeset(
         sub_entries,
         // XXX use these content blobs in the future
         content_blobs: _content_blobs,
-    } = try_boxfuture!(NewBlobs::new(
+    } = try_oldboxfuture!(NewBlobs::new(
         revlog_cs.manifestid(),
         &manifests,
         &filelogs,
