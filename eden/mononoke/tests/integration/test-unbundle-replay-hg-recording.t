@@ -4,6 +4,10 @@
 # GNU General Public License found in the LICENSE file in the root
 # directory of this source tree.
 
+Clean up state out of Scuba logs
+
+  $ unset SMC_TIERS TW_TASK_ID TW_CANARY_ID TW_JOB_CLUSTER TW_JOB_USER TW_JOB_NAME
+
   $ . "${TEST_FIXTURES}/library.sh"
   $ ASSIGN_GLOBALREVS=1 ENABLE_PRESERVE_BUNDLE2=1 BLOB_TYPE="blob_files" quiet default_setup
 
@@ -76,7 +80,7 @@ Insert the entry. Note that in tests, the commit timestamp will always be zero.
 
 Replay the push. It will succeed now
 
-  $ quiet unbundle_replay hg-recording "$BUNDLE_HELPER" 1
+  $ quiet unbundle_replay --scuba-log-file "$TESTTMP/scuba.json" hg-recording "$BUNDLE_HELPER" 1
 
 Check history again. We're back to where we were:
 
@@ -84,3 +88,21 @@ Check history again. We're back to where we were:
   * using repo "repo" repoid RepositoryId(0) (glob)
   (master_bookmark) 7a8f33ce453248a6f5cc4747002e931c77234fbd pushrebase * (glob)
   (master_bookmark) 26805aba1e600a82e93661149f2313866a221a7b blobimport * (glob)
+
+  $ jq -S . < $TESTTMP/scuba.json
+  {
+    "int": {
+      "age_s": *, (glob)
+      "pushrebase_completion_time_us": *, (glob)
+      "time": *, (glob)
+      "unbundle_completion_time_us": * (glob)
+    },
+    "normal": {
+      "bookmark": "master_bookmark",
+      "build_revision": *, (glob)
+      "build_rule": "fbcode:eden/mononoke/unbundle_replay:unbundle_replay",
+      "from_cs_id": "c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd",
+      "server_hostname": *, (glob)
+      "to_cs_id": "604bc07f395768cd320516a640bef6a1af75d13b4214d44ae3faa2a36f1203bb"
+    }
+  }

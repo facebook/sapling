@@ -28,6 +28,7 @@ use futures::{
     stream::{self, Stream, StreamExt, TryStreamExt},
 };
 use futures_old::stream::Stream as OldStream;
+use futures_stats::{FutureStats, TimedFutureExt};
 use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
 use metaconfig_types::{RepoConfig, RepoReadOnly};
 use mononoke_types::{BonsaiChangeset, ChangesetId, Timestamp};
@@ -39,6 +40,7 @@ use std::convert::TryInto;
 use std::io::Cursor;
 use std::sync::Arc;
 use std::time::Duration;
+use time_ext::DurationExt;
 use unbundle::{
     self, get_pushrebase_hooks, PostResolveAction, PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
@@ -211,15 +213,18 @@ async fn get_replay_stream<'a>(
     }
 }
 
+struct UnbundleComplete {
+    onto_params: OntoBookmarkParams,
+    onto_rev: Option<OntoRev>,
+    target: Target,
+    timestamps: HashMap<ChangesetId, Timestamp>,
+    changesets: HashSet<BonsaiChangeset>,
+    unbundle_stats: FutureStats,
+}
+
 enum UnbundleOutcome {
     /// This unbundle has completed, and can be pushrebased.
-    Complete(
-        OntoBookmarkParams,
-        Option<OntoRev>,
-        Target,
-        HashMap<ChangesetId, Timestamp>,
-        HashSet<BonsaiChangeset>,
-    ),
+    Complete(UnbundleComplete),
     /// This unbundle failed, likely because it depended on commits that haven't been pushrebased
     /// yet. Re-run it before starting pushrebasee.
     Deferred(Bytes, PushrebaseSpec, Error),
@@ -246,7 +251,7 @@ async fn maybe_unbundle(
             StreamEvent::Done(..) => None,
         });
 
-    let resolution = unbundle::resolve(
+    let (unbundle_stats, resolution) = unbundle::resolve(
         ctx.clone(),
         repo.clone(),
         false, // infinitepush_writes_allowed
@@ -256,6 +261,7 @@ async fn maybe_unbundle(
         false, // pure_push_allowed
         repo_config.pushrebase.flags,
     )
+    .timed()
     .await;
 
     let resolution = match resolution {
@@ -324,13 +330,14 @@ async fn maybe_unbundle(
     .try_collect()
     .await?;
 
-    Ok(UnbundleOutcome::Complete(
+    Ok(UnbundleOutcome::Complete(UnbundleComplete {
         onto_params,
         onto_rev,
         target,
         timestamps,
         changesets,
-    ))
+        unbundle_stats,
+    }))
 }
 
 async fn do_main(
@@ -387,6 +394,7 @@ async fn do_main(
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let ctx = &ctx;
+    let scuba = &scuba;
     let repo = &repo;
     let repo_config = &repo_config;
 
@@ -412,8 +420,8 @@ async fn do_main(
             // Our unbundle will hopefully have succeeded, but if it depended on any data being
             // produced by a previous pushrebase, it could have failed. In that case, retry the
             // deferred unbundle now, in the unbuffered pushrebase section of the stream.
-            let (onto_params, onto_rev, target, timestamps, changesets) = match outcome {
-                UnbundleOutcome::Complete(a, b, c, d, e) => (a, b, c, d, e),
+            let unbundle_complete = match outcome {
+                UnbundleOutcome::Complete(c) => (c),
                 UnbundleOutcome::Deferred(bundle, pushrebase_spec, _) => {
                     warn!(
                         ctx.logger(),
@@ -424,13 +432,22 @@ async fn do_main(
                     );
 
                     match maybe_unbundle(ctx, repo, repo_config, bundle, pushrebase_spec).await? {
-                        UnbundleOutcome::Complete(a, b, c, d, e) => (a, b, c, d, e),
-                        UnbundleOutcome::Deferred(_, _, e) => {
-                            return Err(e);
+                        UnbundleOutcome::Complete(c) => c,
+                        UnbundleOutcome::Deferred(_, _, err) => {
+                            return Err(err);
                         }
                     }
                 }
             };
+
+            let UnbundleComplete {
+                onto_params,
+                onto_rev,
+                target,
+                timestamps,
+                changesets,
+                unbundle_stats,
+            } = unbundle_complete;
 
             let onto_rev = match onto_rev {
                 Some(onto_rev) => Some(onto_rev.into_cs_id(ctx, repo).await?),
@@ -464,7 +481,7 @@ async fn do_main(
                 target,
             ));
 
-            let head = pushrebase::do_pushrebase_bonsai(
+            let (pushrebase_stats, res) = pushrebase::do_pushrebase_bonsai(
                 &ctx,
                 &repo,
                 &repo_config.pushrebase.flags,
@@ -473,10 +490,31 @@ async fn do_main(
                 &None,
                 pushrebase_hooks.as_ref(),
             )
-            .await?
-            .head;
+            .timed()
+            .await;
+
+            let head = res?.head;
 
             let cs = head.load(ctx.clone(), repo.blobstore()).compat().await?;
+
+            let age = Timestamp::from(*cs.author_date()).since_seconds();
+
+            let mut scuba = scuba.clone();
+            scuba.add(
+                "unbundle_completion_time_us",
+                unbundle_stats.completion_time.as_micros_unchecked(),
+            );
+            scuba.add(
+                "pushrebase_completion_time_us",
+                pushrebase_stats.completion_time.as_micros_unchecked(),
+            );
+            scuba.add("age_s", age);
+            scuba.add("bookmark", onto_params.bookmark.to_string());
+            scuba.add("to_cs_id", head.to_string());
+            if let Some(current_cs_id) = current_cs_id {
+                scuba.add("from_cs_id", current_cs_id.to_string());
+            }
+            scuba.log();
 
             info!(
                 ctx.logger(),
@@ -484,7 +522,7 @@ async fn do_main(
                 onto_params.bookmark,
                 current_cs_id,
                 head,
-                Timestamp::from(*cs.author_date()).since_seconds()
+                age,
             );
 
             Ok(head)
