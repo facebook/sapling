@@ -120,9 +120,17 @@ pub fn get_lfs_pointers_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
     Ok(path)
 }
 
-pub fn get_lfs_blobs_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
+pub fn get_lfs_objects_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
     let mut path = get_lfs_path(store_path)?;
     path.push("objects");
+    create_dir(&path)?;
+
+    Ok(path)
+}
+
+pub fn get_lfs_blobs_path(store_path: impl AsRef<Path>) -> Result<PathBuf> {
+    let mut path = get_lfs_path(store_path)?;
+    path.push("blobs");
     create_dir(&path)?;
 
     Ok(path)

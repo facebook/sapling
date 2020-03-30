@@ -6,11 +6,13 @@
  */
 
 use std::{
+    cmp::min,
     collections::HashMap,
     convert::TryInto,
     fs::File,
     io::{ErrorKind, Read, Write},
     iter,
+    ops::Range,
     path::{Path, PathBuf},
     str::{self, FromStr},
     sync::Arc,
@@ -47,18 +49,30 @@ use crate::{
     remotestore::HgIdRemoteStore,
     types::{ContentHash, StoreKey},
     uniondatastore::UnionHgIdDataStore,
-    util::{get_lfs_blobs_path, get_lfs_pointers_path, get_str_config},
+    util::{get_lfs_blobs_path, get_lfs_objects_path, get_lfs_pointers_path, get_str_config},
 };
 
 /// The `LfsPointersStore` holds the mapping between a `HgId` and the content hash (sha256) of the LFS blob.
 struct LfsPointersStore(Store);
 
+struct LfsIndexedLogBlobsStore {
+    inner: RwLock<Store>,
+    chunk_size: usize,
+}
+
 /// The `LfsBlobsStore` holds the actual blobs. Lookup is done via the content hash (sha256) of the
 /// blob.
-#[derive(Clone)]
-struct LfsBlobsStore(PathBuf, bool);
+enum LfsBlobsStore {
+    /// Blobs are stored on-disk and will stay on it until garbage collected.
+    Loose(PathBuf, bool),
 
-#[derive(Clone)]
+    /// Blobs are chunked and stored in an IndexedLog.
+    IndexedLog(LfsIndexedLogBlobsStore),
+
+    /// Allow blobs to be searched in both stores. Writes will only be done to the first one.
+    Union(Box<LfsBlobsStore>, Box<LfsBlobsStore>),
+}
+
 struct HttpLfsRemote {
     url: Url,
     user_agent: String,
@@ -67,7 +81,6 @@ struct HttpLfsRemote {
     rt: Arc<Mutex<Runtime>>,
 }
 
-#[derive(Clone)]
 enum LfsRemoteInner {
     Http(HttpLfsRemote),
     File(LfsBlobsStore),
@@ -76,7 +89,7 @@ enum LfsRemoteInner {
 #[derive(Clone)]
 pub struct LfsRemote {
     local: Arc<LfsStore>,
-    remote: LfsRemoteInner,
+    remote: Arc<LfsRemoteInner>,
 }
 
 /// Main LFS store to be used within the `ContentStore`.
@@ -198,17 +211,164 @@ impl LfsPointersStore {
     }
 }
 
+#[derive(Serialize, Deserialize)]
+struct LfsIndexedLogBlobsEntry {
+    sha256: Sha256,
+    range: Range<usize>,
+    data: Bytes,
+}
+
+impl LfsIndexedLogBlobsStore {
+    fn chunk_size(config: &ConfigSet) -> Result<usize> {
+        Ok(config
+            .get_or("lfs", "blobschunksize", || ByteCount::from(20_000_000))?
+            .value() as usize)
+    }
+
+    fn open_options(config: &ConfigSet) -> Result<StoreOpenOptions> {
+        let log_size =
+            config.get_or("lfs", "blobsstoresize", || ByteCount::from(20_000_000_000))?;
+        Ok(StoreOpenOptions::new()
+            .max_log_count(4)
+            .max_bytes_per_log(log_size.value() / 4)
+            .index("sha256", |_| {
+                vec![IndexOutput::Reference(0..Sha256::len() as u64)]
+            }))
+    }
+
+    pub fn shared(path: &Path, config: &ConfigSet) -> Result<Self> {
+        let path = get_lfs_blobs_path(path)?;
+        Ok(Self {
+            inner: RwLock::new(LfsIndexedLogBlobsStore::open_options(config)?.shared(path)?),
+            chunk_size: LfsIndexedLogBlobsStore::chunk_size(config)?,
+        })
+    }
+
+    pub fn get(&self, hash: &Sha256) -> Result<Option<Bytes>> {
+        let store = self.inner.read();
+        let chunks_iter = store
+            .lookup(0, hash)?
+            .map(|data| Ok(deserialize::<LfsIndexedLogBlobsEntry>(data?)?));
+
+        // Filter errors. It's possible that one entry is corrupted, or for whatever reason can't
+        // be deserialized, whenever this blob/entry is refetched, the corrupted entry will still be
+        // present alonside a valid one. We shouldn't fail because of it, so filter the errors.
+        let mut chunks = chunks_iter
+            .filter(|res| res.is_ok())
+            .collect::<Result<Vec<LfsIndexedLogBlobsEntry>>>()?;
+        drop(store);
+
+        if chunks.is_empty() {
+            return Ok(None);
+        }
+
+        // Make sure that the ranges are sorted in increasing order.
+        chunks.sort_unstable_by(|a, b| a.range.start.cmp(&b.range.start));
+
+        // unwrap safety: chunks isn't empty.
+        let size = chunks.last().unwrap().range.end;
+
+        let mut res = BytesMut::with_capacity(size);
+
+        let mut next_start = 0;
+        for entry in chunks.into_iter() {
+            // A chunk is missing.
+            if entry.range.start > next_start {
+                return Ok(None);
+            }
+
+            // This chunk is fully contained in the previous ones.
+            if entry.range.end <= next_start {
+                continue;
+            }
+
+            let mut range_in_data = Range {
+                start: 0,
+                end: entry.data.len(),
+            };
+
+            // This chunk starts before the end of the previous one.
+            if entry.range.start < next_start {
+                range_in_data.start = next_start - entry.range.start;
+            }
+
+            next_start = entry.range.end;
+
+            res.extend_from_slice(entry.data.slice(range_in_data).as_ref());
+        }
+
+        let data = res.freeze();
+        if &ContentHash::sha256(&data)?.unwrap_sha256() != hash {
+            Ok(None)
+        } else {
+            Ok(Some(data))
+        }
+    }
+
+    /// Test whether a blob is in the store. It returns true if at least one chunk is present, and
+    /// thus it is possible that one of the chunk is missing.
+    pub fn contains(&self, hash: &Sha256) -> Result<bool> {
+        Ok(self.inner.read().lookup(0, hash)?.next().is_some())
+    }
+
+    fn chunk(mut data: Bytes, chunk_size: usize) -> impl Iterator<Item = (Range<usize>, Bytes)> {
+        let mut start = 0;
+        iter::from_fn(move || {
+            if data.len() == 0 {
+                None
+            } else {
+                let size = min(chunk_size, data.len());
+                let next = Some((start..start + size, data.split_to(size)));
+                start += size;
+                next
+            }
+        })
+    }
+
+    pub fn add(&self, hash: &Sha256, data: Bytes) -> Result<()> {
+        let chunks = LfsIndexedLogBlobsStore::chunk(data, self.chunk_size);
+        let chunks = chunks.map(|(range, data)| LfsIndexedLogBlobsEntry {
+            sha256: hash.clone(),
+            range,
+            data,
+        });
+
+        for entry in chunks {
+            let serialized = serialize(&entry)?;
+            self.inner.write().append(serialized)?;
+        }
+
+        Ok(())
+    }
+
+    pub fn flush(&self) -> Result<()> {
+        self.inner.write().flush()
+    }
+}
+
 impl LfsBlobsStore {
-    fn local(path: &Path) -> Result<Self> {
-        Ok(Self(get_lfs_blobs_path(path)?, true))
+    /// Store the local blobs in their loose format, ie: one file on disk per LFS blob.
+    pub fn local(path: &Path) -> Result<Self> {
+        Ok(LfsBlobsStore::Loose(get_lfs_objects_path(path)?, true))
     }
 
-    fn shared(path: &Path) -> Result<Self> {
-        Ok(Self(get_lfs_blobs_path(path)?, false))
+    /// Store the shared blobs in an `IndexedLog`, but still allow reading blobs in their loose
+    /// format.
+    pub fn shared(path: &Path, config: &ConfigSet) -> Result<Self> {
+        let indexedlog = Box::new(LfsBlobsStore::IndexedLog(LfsIndexedLogBlobsStore::shared(
+            &path, config,
+        )?));
+        let loose = Box::new(LfsBlobsStore::Loose(get_lfs_objects_path(path)?, false));
+
+        Ok(LfsBlobsStore::union(indexedlog, loose))
     }
 
-    fn path(&self, hash: &Sha256) -> PathBuf {
-        let mut path = self.0.to_path_buf();
+    fn union(first: Box<LfsBlobsStore>, second: Box<LfsBlobsStore>) -> Self {
+        LfsBlobsStore::Union(first, second)
+    }
+
+    fn path(path: &Path, hash: &Sha256) -> PathBuf {
+        let mut path = path.to_path_buf();
         let mut hex = hash.to_hex();
 
         let second = hex.split_off(2);
@@ -220,46 +380,86 @@ impl LfsBlobsStore {
 
     /// Read the blob matching the content hash.
     ///
-    /// XXX: The blob hash is not validated.
-    fn get(&self, hash: &Sha256) -> Result<Option<Bytes>> {
-        let path = self.path(hash);
+    /// Blob hash should be validated by the underlying store.
+    pub fn get(&self, hash: &Sha256) -> Result<Option<Bytes>> {
+        let blob = match self {
+            LfsBlobsStore::Loose(path, _) => {
+                let path = LfsBlobsStore::path(&path, hash);
+                let mut file = match File::open(path) {
+                    Ok(file) => file,
+                    Err(e) => {
+                        if e.kind() == ErrorKind::NotFound {
+                            return Ok(None);
+                        } else {
+                            return Err(e.into());
+                        }
+                    }
+                };
 
-        let mut file = match File::open(path) {
-            Ok(file) => file,
-            Err(e) => {
-                if e.kind() == ErrorKind::NotFound {
-                    return Ok(None);
+                let mut buf = Vec::new();
+                file.read_to_end(&mut buf)?;
+                let blob = Bytes::from(buf);
+                if &ContentHash::sha256(&blob)?.unwrap_sha256() != hash {
+                    None
                 } else {
-                    return Err(e.into());
+                    Some(blob)
+                }
+            }
+
+            LfsBlobsStore::IndexedLog(log) => log.get(hash)?,
+
+            LfsBlobsStore::Union(first, second) => {
+                if let Some(blob) = first.get(hash)? {
+                    Some(blob)
+                } else {
+                    second.get(hash)?
                 }
             }
         };
 
-        let mut buf = Vec::new();
-        file.read_to_end(&mut buf)?;
-        Ok(Some(Bytes::from(buf)))
+        Ok(blob)
     }
 
-    /// Test whether the blob store contains the hash. A file of the correct name is for now
-    /// indicating that it exists.
-    fn contains(&self, hash: &Sha256) -> bool {
-        let path = self.path(hash);
-        path.is_file()
+    /// Test whether the blob store contains the hash.
+    pub fn contains(&self, hash: &Sha256) -> Result<bool> {
+        match self {
+            LfsBlobsStore::Loose(path, _) => Ok(LfsBlobsStore::path(&path, hash).is_file()),
+            LfsBlobsStore::IndexedLog(log) => log.contains(hash),
+            LfsBlobsStore::Union(first, second) => {
+                Ok(first.contains(hash)? || second.contains(hash)?)
+            }
+        }
     }
 
     /// Add the blob to the store.
-    fn add(&self, hash: &Sha256, blob: Bytes) -> Result<()> {
-        let path = self.path(hash);
-        create_dir(path.parent().unwrap())?;
+    pub fn add(&self, hash: &Sha256, blob: Bytes) -> Result<()> {
+        match self {
+            LfsBlobsStore::Loose(path, is_local) => {
+                let path = LfsBlobsStore::path(&path, hash);
+                create_dir(path.parent().unwrap())?;
 
-        let mut file = File::create(path)?;
-        file.write_all(&blob)?;
+                let mut file = File::create(path)?;
+                file.write_all(&blob)?;
 
-        if self.1 {
-            file.sync_all()?;
+                if *is_local {
+                    file.sync_all()?;
+                }
+            }
+
+            LfsBlobsStore::IndexedLog(log) => log.add(hash, blob)?,
+
+            LfsBlobsStore::Union(first, _) => first.add(hash, blob)?,
         }
 
         Ok(())
+    }
+
+    pub fn flush(&self) -> Result<()> {
+        match self {
+            LfsBlobsStore::IndexedLog(log) => log.flush(),
+            LfsBlobsStore::Union(first, _) => first.flush(),
+            _ => Ok(()),
+        }
     }
 }
 
@@ -285,7 +485,7 @@ impl LfsStore {
     pub fn shared(path: impl AsRef<Path>, config: &ConfigSet) -> Result<Self> {
         let path = path.as_ref();
         let pointers = LfsPointersStore::shared(path, config)?;
-        let blobs = LfsBlobsStore::shared(path)?;
+        let blobs = LfsBlobsStore::shared(path, config)?;
         LfsStore::new(pointers, blobs)
     }
 
@@ -319,23 +519,19 @@ impl LocalStore for LfsStore {
                             None => None,
                             Some(content_hash) => {
                                 let sha256 = content_hash.clone().unwrap_sha256();
-                                if self.blobs.contains(&sha256) {
-                                    None
-                                } else {
-                                    Some(StoreKey::from(content_hash))
+                                match self.blobs.contains(&sha256) {
+                                    Ok(true) => None,
+                                    Ok(false) | Err(_) => Some(StoreKey::from(content_hash)),
                                 }
                             }
                         },
                     }
                 }
                 StoreKey::Content(content_hash) => match content_hash {
-                    ContentHash::Sha256(hash) => {
-                        if self.blobs.contains(&hash) {
-                            None
-                        } else {
-                            Some(k.clone())
-                        }
-                    }
+                    ContentHash::Sha256(hash) => match self.blobs.contains(&hash) {
+                        Ok(true) => None,
+                        Ok(false) | Err(_) => Some(k.clone()),
+                    },
                 },
             })
             .collect())
@@ -431,6 +627,7 @@ impl HgIdMutableDeltaStore for LfsStore {
     }
 
     fn flush(&self) -> Result<Option<PathBuf>> {
+        self.blobs.flush()?;
         self.pointers.write().0.flush()?;
         Ok(None)
     }
@@ -737,10 +934,10 @@ impl LfsRemote {
         if url.scheme() == "file" {
             let path = url.to_file_path().unwrap();
             create_dir(&path)?;
-            let file = LfsBlobsStore::shared(&path)?;
+            let file = LfsBlobsStore::shared(&path, &config)?;
             Ok(Self {
                 local: store,
-                remote: LfsRemoteInner::File(file),
+                remote: Arc::new(LfsRemoteInner::File(file)),
             })
         } else {
             if !["http", "https"].contains(&url.scheme()) {
@@ -757,13 +954,13 @@ impl LfsRemote {
             let client = Client::new();
             Ok(Self {
                 local: store,
-                remote: LfsRemoteInner::Http(HttpLfsRemote {
+                remote: Arc::new(LfsRemoteInner::Http(HttpLfsRemote {
                     url,
                     user_agent,
                     concurrent_fetches,
                     client,
                     rt,
-                }),
+                })),
             })
         }
     }
@@ -911,21 +1108,31 @@ mod tests {
         };
 
         store.add(&delta, &Default::default())?;
+        store.flush()?;
 
-        let mut lfs_dir = dir.as_ref().to_owned();
-        lfs_dir.push("lfs");
-        lfs_dir.push("objects");
+        let indexedlog_blobs = LfsIndexedLogBlobsStore::shared(&dir.path(), &config)?;
+        let hash = ContentHash::sha256(&delta.data)?.unwrap_sha256();
 
-        lfs_dir.push("9f");
-        assert!(lfs_dir.is_dir());
+        assert!(indexedlog_blobs.contains(&hash)?);
 
-        lfs_dir.push("64a747e1b97f131fabb6b447296c9b6f0201e79fb3c5356e6c77e89b6a806a");
-        assert!(lfs_dir.is_file());
+        assert_eq!(Some(delta.data), indexedlog_blobs.get(&hash)?);
 
-        let mut content = Vec::new();
-        File::open(&lfs_dir)?.read_to_end(&mut content)?;
+        Ok(())
+    }
 
-        assert_eq!(Bytes::from(content), delta.data);
+    #[test]
+    fn test_loose() -> Result<()> {
+        let dir = TempDir::new()?;
+        let config = make_lfs_config(&dir);
+        let blob_store = LfsBlobsStore::shared(dir.path(), &config)?;
+        let loose_store = LfsBlobsStore::Loose(get_lfs_objects_path(dir.path())?, false);
+
+        let data = Bytes::from(&[1, 2, 3, 4][..]);
+        let sha256 = ContentHash::sha256(&data)?.unwrap_sha256();
+        loose_store.add(&sha256, data.clone())?;
+
+        assert!(blob_store.contains(&sha256)?);
+        assert_eq!(blob_store.get(&sha256)?, Some(data));
 
         Ok(())
     }
@@ -969,6 +1176,142 @@ mod tests {
         store.add(&delta, &Default::default())?;
         let get_delta = store.get_delta(&k1)?;
         assert_eq!(Some(delta), get_delta);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_add_get_split() -> Result<()> {
+        let dir = TempDir::new()?;
+        let mut config = make_lfs_config(&dir);
+        config.set("lfs", "blobschunksize", Some("2"), &Default::default());
+
+        let store = LfsStore::shared(&dir, &config)?;
+
+        let k1 = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4][..]),
+            base: None,
+            key: k1.clone(),
+        };
+
+        store.add(&delta, &Default::default())?;
+        let get_delta = store.get_delta(&k1)?;
+        assert_eq!(Some(delta.clone()), get_delta);
+
+        store.flush()?;
+
+        let get_delta = store.get_delta(&k1)?;
+        assert_eq!(Some(delta), get_delta);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_partial_blob() -> Result<()> {
+        let dir = TempDir::new()?;
+        let config = make_lfs_config(&dir);
+
+        let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
+
+        let data = Bytes::from(&[1, 2, 3, 4][..]);
+        let partial = data.slice(2..);
+        let sha256 = ContentHash::sha256(&data)?.unwrap_sha256();
+
+        let entry = LfsIndexedLogBlobsEntry {
+            sha256: sha256.clone(),
+            range: Range { start: 2, end: 4 },
+            data: partial,
+        };
+
+        store.inner.write().append(serialize(&entry)?)?;
+        store.flush()?;
+
+        assert_eq!(store.get(&sha256)?, None);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_full_chunked() -> Result<()> {
+        let dir = TempDir::new()?;
+        let config = make_lfs_config(&dir);
+
+        let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
+
+        let data = Bytes::from(&[1, 2, 3, 4, 5, 6, 7][..]);
+        let sha256 = ContentHash::sha256(&data)?.unwrap_sha256();
+
+        let first = data.slice(0..1);
+        let second = data.slice(1..4);
+        let last = data.slice(4..7);
+
+        let first_entry = LfsIndexedLogBlobsEntry {
+            sha256: sha256.clone(),
+            range: Range { start: 0, end: 1 },
+            data: first,
+        };
+        store.inner.write().append(serialize(&first_entry)?)?;
+
+        let second_entry = LfsIndexedLogBlobsEntry {
+            sha256: sha256.clone(),
+            range: Range { start: 1, end: 4 },
+            data: second,
+        };
+        store.inner.write().append(serialize(&second_entry)?)?;
+
+        let last_entry = LfsIndexedLogBlobsEntry {
+            sha256: sha256.clone(),
+            range: Range { start: 4, end: 7 },
+            data: last,
+        };
+        store.inner.write().append(serialize(&last_entry)?)?;
+
+        store.flush()?;
+
+        assert_eq!(store.get(&sha256)?, Some(data));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_overlapped_chunked() -> Result<()> {
+        let dir = TempDir::new()?;
+        let config = make_lfs_config(&dir);
+
+        let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
+
+        let data = Bytes::from(&[1, 2, 3, 4, 5, 6, 7][..]);
+        let sha256 = ContentHash::sha256(&data)?.unwrap_sha256();
+
+        let first = data.slice(0..4);
+        let second = data.slice(2..3);
+        let last = data.slice(2..7);
+
+        let first_entry = LfsIndexedLogBlobsEntry {
+            sha256: sha256.clone(),
+            range: Range { start: 0, end: 4 },
+            data: first,
+        };
+        store.inner.write().append(serialize(&first_entry)?)?;
+
+        let second_entry = LfsIndexedLogBlobsEntry {
+            sha256: sha256.clone(),
+            range: Range { start: 2, end: 3 },
+            data: second,
+        };
+        store.inner.write().append(serialize(&second_entry)?)?;
+
+        let last_entry = LfsIndexedLogBlobsEntry {
+            sha256: sha256.clone(),
+            range: Range { start: 2, end: 7 },
+            data: last,
+        };
+        store.inner.write().append(serialize(&last_entry)?)?;
+
+        store.flush()?;
+
+        assert_eq!(store.get(&sha256)?, Some(data));
 
         Ok(())
     }
@@ -1365,7 +1708,7 @@ mod tests {
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let remote = TempDir::new()?;
-        let remote_lfs_file_store = LfsBlobsStore::shared(remote.path())?;
+        let remote_lfs_file_store = LfsBlobsStore::shared(remote.path(), &config)?;
 
         let blob1 = (
             Sha256::from_str("fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9")?,
