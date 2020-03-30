@@ -717,9 +717,9 @@ class HgServer(object):
                 raise ResetRepoError(e)
 
             if self.repo.fileslog._ruststore:
-                # Committing the contentstore will force it to be rebuilt,
-                # effectively refreshing the store.
-                self.repo.fileslog.contentstore.commitpending()
+                # Committing the fileslog will force the contentstore to be
+                # rebuilt, effectively refreshing the store.
+                self.repo.fileslog.commitpending()
             else:
                 self.repo.fileslog.contentstore.markforrefresh()
 
