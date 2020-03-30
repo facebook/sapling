@@ -37,6 +37,7 @@ use std::convert::TryInto;
 use std::io::Cursor;
 use std::str::FromStr;
 use std::sync::Arc;
+use std::time::Duration;
 use unbundle::{
     self, get_pushrebase_hooks, PostResolveAction, PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
@@ -49,6 +50,7 @@ const ARG_HG_RECORDING_ID: &str = "hg-recording-id";
 
 const SUBCOMMAND_HG_BOOKMARK: &str = "hg-bookmark";
 const ARG_HG_BOOKMARK_NAME: &str = "hg-bookmark-name";
+const ARG_HG_BOOKMARK_POLL_INTERVAL: &str = "poll-interval";
 
 const ARG_HG_BUNDLE_HELPER: &str = "hg-recording-helper";
 
@@ -139,7 +141,13 @@ async fn get_replay_stream<'a>(
         }
         (SUBCOMMAND_HG_BOOKMARK, Some(sub)) => {
             let bundle_helper = sub.value_of(ARG_HG_BUNDLE_HELPER).unwrap();
-            let onto: BookmarkName = sub.value_of(ARG_HG_BOOKMARK_NAME).unwrap().try_into()?;
+            let onto = sub.value_of(ARG_HG_BOOKMARK_NAME).unwrap().try_into()?;
+            let poll_interval = sub
+                .value_of(ARG_HG_BOOKMARK_POLL_INTERVAL)
+                .map(|i| i.parse())
+                .transpose()?
+                .map(Duration::from_secs);
+
             let client = HgRecordingClient::new(ctx.fb, bundle_helper, matches).await?;
 
             let onto_rev = repo
@@ -171,7 +179,34 @@ async fn get_replay_stream<'a>(
                 async move {
                     let (client, onto) = state.as_ref();
 
-                    let entry = client.next_entry_by_onto(&ctx, &onto, &onto_rev).await?;
+                    let entry = loop {
+                        let entry = client.next_entry_by_onto(&ctx, &onto, &onto_rev).await?;
+
+                        match (poll_interval, entry) {
+                            (None, entry) => {
+                                // If we have no poll interval, then return the entry, regardless
+                                // of whether we have one.
+                                break entry;
+                            }
+                            (_, Some(entry)) => {
+                                // If we do have an entry, then it doesn't matter what the poll
+                                // interval is, we can go with that.
+                                break Some(entry);
+                            }
+                            (Some(poll_interval), None) => {
+                                // If we have a poll interval, but no entry, then let's wait.
+                                info!(
+                                    ctx.logger(),
+                                    "Waiting {:?} for hg bookmark update for bookmark {} at {}",
+                                    poll_interval,
+                                    onto,
+                                    onto_rev
+                                );
+                                tokio::time::delay_for(poll_interval).await;
+                                continue;
+                            }
+                        }
+                    };
 
                     match entry {
                         Some(entry) => {
@@ -470,6 +505,16 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                     (if commit A is introduced in another bookmark, \
                     then depended on by commit B that is in this bookmark, \
                     it will fail).",
+                )
+                .arg(
+                    Arg::with_name(ARG_HG_BOOKMARK_POLL_INTERVAL)
+                        .help(
+                            "How frequently to poll for updates if none are found, in seconds. \
+                             If unset, the sync will exit once no more entries are found.",
+                        )
+                        .long(ARG_HG_BOOKMARK_POLL_INTERVAL)
+                        .takes_value(true)
+                        .required(false),
                 )
                 .arg(
                     Arg::with_name(ARG_HG_BUNDLE_HELPER)
