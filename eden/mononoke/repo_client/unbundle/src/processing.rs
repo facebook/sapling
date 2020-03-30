@@ -219,7 +219,8 @@ fn run_pushrebase(
         uploaded_hg_changeset_ids: _,
     } = action;
 
-    let bookmark = bookmark_spec.get_bookmark_name();
+    // FIXME: stop cloning when this fn is async
+    let bookmark = bookmark_spec.get_bookmark_name().clone();
 
     match bookmark_spec {
         // There's no `.context()` after `normal_pushrebase`, as it has

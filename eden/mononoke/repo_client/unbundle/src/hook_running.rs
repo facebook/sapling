@@ -36,7 +36,8 @@ fn run_pushrebase_hooks(
 ) -> BoxFuture<(), BundleResolverError> {
     let changesets = action.uploaded_hg_changeset_ids.clone();
     let maybe_pushvars = action.maybe_pushvars.clone();
-    let bookmark = action.bookmark_spec.get_bookmark_name();
+    // FIXME: stop cloning when this fn is async
+    let bookmark = action.bookmark_spec.get_bookmark_name().clone();
 
     async move {
         let hook_failures: Vec<_> = hook_manager

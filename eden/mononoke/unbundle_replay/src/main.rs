@@ -258,16 +258,24 @@ async fn maybe_unbundle(
             StreamEvent::Done(..) => None,
         });
 
-    let (unbundle_stats, resolution) = task::spawn(unbundle::resolve(
-        ctx.clone(),
-        repo.clone(),
-        false, // infinitepush_writes_allowed
-        Box::new(bundle_stream),
-        RepoReadOnly::ReadWrite,
-        None,  // maybe_full_content
-        false, // pure_push_allowed
-        repo_config.pushrebase.flags,
-    ))
+    let (unbundle_stats, resolution) = task::spawn({
+        let ctx = ctx.clone();
+        let repo = repo.clone();
+        let pushrebase_flags = repo_config.pushrebase.flags;
+        async move {
+            unbundle::resolve(
+                &ctx,
+                repo,
+                false, // infinitepush_writes_allowed
+                Box::new(bundle_stream),
+                RepoReadOnly::ReadWrite,
+                None,  // maybe_full_content
+                false, // pure_push_allowed
+                pushrebase_flags,
+            )
+            .await
+        }
+    })
     .timed()
     .await;
 

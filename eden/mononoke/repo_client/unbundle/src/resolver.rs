@@ -19,7 +19,6 @@ use blobstore::Storable;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use bytes_old::Bytes as BytesOld;
-use cloned::cloned;
 use context::CoreContext;
 use core::fmt::Debug;
 use failure_ext::{Compat, FutureFailureErrorExt};
@@ -196,39 +195,11 @@ pub enum PostResolveAction {
     BookmarkOnlyPushRebase(PostResolveBookmarkOnlyPushRebase),
 }
 
-pub fn resolve_compat(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    infinitepush_writes_allowed: bool,
-    bundle2: OldBoxStream<Bundle2Item, Error>,
-    readonly: RepoReadOnly,
-    maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
-    pure_push_allowed: bool,
-    pushrebase_flags: PushrebaseFlags,
-) -> OldBoxFuture<PostResolveAction, BundleResolverError> {
-    async move {
-        resolve(
-            ctx,
-            repo,
-            infinitepush_writes_allowed,
-            bundle2,
-            readonly,
-            maybe_full_content,
-            pure_push_allowed,
-            pushrebase_flags,
-        )
-        .await
-    }
-    .boxed()
-    .compat()
-    .boxify()
-}
-
 /// The resolve function takes a bundle2, interprets it's content as Changesets, Filelogs and
 /// Manifests and uploades all of them to the provided BlobRepo in the correct order.
 /// It returns a Future that contains the response that should be send back to the requester.
 pub async fn resolve(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: BlobRepo,
     infinitepush_writes_allowed: bool,
     bundle2: OldBoxStream<Bundle2Item, Error>,
@@ -323,7 +294,7 @@ pub async fn resolve(
 }
 
 async fn resolve_push(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     resolver: Bundle2Resolver,
     bundle2: OldBoxStream<Bundle2Item, Error>,
     non_fast_forward_policy: NonFastForwardPolicy,
@@ -331,7 +302,7 @@ async fn resolve_push(
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
 ) -> Result<PostResolveAction, Error> {
     let (cg_push, bundle2) = resolver
-        .maybe_resolve_changegroup(ctx.clone(), bundle2, changegroup_acceptable)
+        .maybe_resolve_changegroup(bundle2, changegroup_acceptable)
         .await
         .context("While resolving Changegroup")?;
     let (pushkeys, bundle2) = resolver
@@ -340,13 +311,13 @@ async fn resolve_push(
         .context("While resolving Pushkey")?;
     let infinitepush_bp = cg_push
         .as_ref()
-        .and_then(|cg_push| cg_push.infinitepush_payload.clone())
-        .and_then(|ip_payload| ip_payload.bookmark_push);
-    let bookmark_push = try_collect_all_bookmark_pushes(pushkeys, infinitepush_bp)?;
+        .and_then(|cg_push| cg_push.infinitepush_payload.as_ref())
+        .and_then(|ip_payload| ip_payload.bookmark_push.as_ref());
+    let bookmark_push = try_collect_all_bookmark_pushes(pushkeys, infinitepush_bp.cloned())?;
 
     let (cg_and_manifests, bundle2) = if let Some(cg_push) = cg_push {
         let (manifests, bundle2) = resolver
-            .resolve_b2xtreegroup2(ctx.clone(), bundle2)
+            .resolve_b2xtreegroup2(bundle2)
             .await
             .context("While resolving B2xTreegroup2")?;
         (Some((cg_push, manifests)), bundle2)
@@ -356,16 +327,17 @@ async fn resolve_push(
 
     let (changegroup_id, uploaded_bonsais) = if let Some((cg_push, manifests)) = cg_and_manifests {
         let changegroup_id = Some(cg_push.part_id);
-        let (uploaded_bonsais, _uploaded_hg_changesets) = resolver
-            .upload_changesets(ctx.clone(), cg_push, manifests)
-            .await?;
+        let (uploaded_bonsais, _uploaded_hg_changesets) =
+            resolver.upload_changesets(cg_push, manifests).await?;
 
+        // Note: we do not care about `_uploaded_hg_changesets`, as we currently
+        // do not run hooks on pure pushes. This probably has to be changed later.
         (changegroup_id, uploaded_bonsais)
     } else {
         (None, UploadedBonsais::new())
     };
 
-    let (_, bundle2) = resolver
+    let ((), bundle2) = resolver
         .maybe_resolve_infinitepush_bookmarks(bundle2)
         .await
         .context("While resolving B2xInfinitepushBookmarks")?;
@@ -375,7 +347,7 @@ async fn resolve_push(
     let bookmark_push =
         hg_all_bookmark_pushes_to_bonsai(ctx, &resolver.repo, bookmark_push).await?;
 
-    Result::<_, Error>::Ok(match bookmark_push {
+    Ok(match bookmark_push {
         AllBookmarkPushes::PlainPushes(bookmark_pushes) => {
             PostResolveAction::Push(PostResolvePush {
                 changegroup_id,
@@ -407,16 +379,16 @@ pub enum PushrebaseBookmarkSpec<T: Copy> {
 }
 
 impl<T: Copy> PushrebaseBookmarkSpec<T> {
-    pub fn get_bookmark_name(&self) -> BookmarkName {
+    pub fn get_bookmark_name(&self) -> &BookmarkName {
         match self {
-            PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => onto_params.bookmark.clone(),
-            PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => plain_push.name.clone(),
+            PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => &onto_params.bookmark,
+            PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => &plain_push.name,
         }
     }
 }
 
 async fn resolve_pushrebase(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     commonheads: CommonHeads,
     resolver: Bundle2Resolver,
     bundle2: OldBoxStream<Bundle2Item, Error>,
@@ -425,15 +397,15 @@ async fn resolve_pushrebase(
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
 ) -> Result<PostResolveAction, BundleResolverError> {
     let (manifests, bundle2) = resolver
-        .resolve_b2xtreegroup2(ctx.clone(), bundle2)
+        .resolve_b2xtreegroup2(bundle2)
         .await
         .context("While resolving B2xTreegroup2")?;
     let (maybe_cg_push, bundle2) = resolver
-        .maybe_resolve_changegroup(ctx.clone(), bundle2, changegroup_acceptable)
+        .maybe_resolve_changegroup(bundle2, changegroup_acceptable)
         .await
         .context("While resolving Changegroup")?;
     let cg_push = maybe_cg_push.ok_or(Error::msg("Empty pushrebase"))?;
-    let onto_params = match cg_push.mparams.get("onto").cloned() {
+    let onto_params = match cg_push.mparams.get("onto") {
         Some(onto_bookmark) => {
             let v = Vec::from(onto_bookmark.as_ref());
             let onto_bookmark = String::from_utf8(v).map_err(Error::from)?;
@@ -444,12 +416,16 @@ async fn resolve_pushrebase(
         None => return Err(format_err!("onto is not specified").into()),
     };
 
-    let changesets = cg_push.changesets.clone();
+    let changesets = &cg_push.changesets.clone();
+    let any_merges = changesets
+        .iter()
+        .any(|(_, revlog_cs)| revlog_cs.p1.is_some() && revlog_cs.p2.is_some());
+
     let will_rebase = onto_params.bookmark != *DONOTREBASEBOOKMARK;
     // Mutation information must not be present in public commits
     // See T54101162, S186586
     if !will_rebase {
-        for (_, hg_cs) in &changesets {
+        for (_, hg_cs) in changesets {
             for key in pushrebase::MUTATION_KEYS {
                 if hg_cs.extra.as_ref().contains_key(key.as_bytes()) {
                     return Err(Error::msg("Forced push blocked because it contains mutation metadata.\n\
@@ -460,9 +436,8 @@ async fn resolve_pushrebase(
         }
     }
 
-    let (uploaded_bonsais, uploaded_hg_changeset_ids) = resolver
-        .upload_changesets(ctx.clone(), cg_push, manifests)
-        .await?;
+    let (uploaded_bonsais, uploaded_hg_changeset_ids) =
+        resolver.upload_changesets(cg_push, manifests).await?;
 
     let (pushkeys, bundle2) = resolver
         .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
@@ -474,7 +449,7 @@ async fn resolve_pushrebase(
         return Err(format_err!("Too many pushkey parts: {:?}", bookmark_pushes).into());
     }
 
-    let (bookmark_push_part_id, bookmark_spec) = match bookmark_pushes.get(0) {
+    let (bookmark_push_part_id, bookmark_spec) = match bookmark_pushes.into_iter().next() {
         Some(bk_push)
             if bk_push.name != onto_params.bookmark
                 && onto_params.bookmark != *DONOTREBASEBOOKMARK =>
@@ -482,7 +457,7 @@ async fn resolve_pushrebase(
             return Err(format_err!(
                 "allowed only pushes of {} bookmark: {:?}",
                 onto_params.bookmark,
-                bookmark_pushes
+                bk_push
             )
             .into());
         }
@@ -493,7 +468,7 @@ async fn resolve_pushrebase(
                 // response.
                 // See comment next to DONOTREBASEBOOKMARK definition
                 Some(bk_push.part_id),
-                PushrebaseBookmarkSpec::ForcePushrebase(bk_push.clone()),
+                PushrebaseBookmarkSpec::ForcePushrebase(bk_push),
             )
         }
         Some(bk_push) => (
@@ -507,10 +482,7 @@ async fn resolve_pushrebase(
         .ensure_stream_finished(bundle2, maybe_full_content)
         .await?;
     let bookmark_spec =
-        hg_pushrebase_bookmark_spec_to_bonsai(ctx.clone(), &resolver.repo, bookmark_spec).await?;
-    let any_merges = changesets
-        .iter()
-        .any(|(_, revlog_cs)| revlog_cs.p1.is_some() && revlog_cs.p2.is_some());
+        hg_pushrebase_bookmark_spec_to_bonsai(ctx, &resolver.repo, bookmark_spec).await?;
     let repo = resolver.repo.clone();
     let maybe_hg_replay_data = maybe_raw_bundle2_id.map(|raw_bundle2_id| {
         HgReplayData::new_with_simple_convertor(ctx.clone(), raw_bundle2_id, repo)
@@ -530,7 +502,7 @@ async fn resolve_pushrebase(
 
 /// Do the right thing when pushrebase-enabled client only wants to manipulate bookmarks
 async fn resolve_bookmark_only_pushrebase(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     resolver: Bundle2Resolver,
     bundle2: OldBoxStream<Bundle2Item, Error>,
     non_fast_forward_policy: NonFastForwardPolicy,
@@ -558,7 +530,7 @@ async fn resolve_bookmark_only_pushrebase(
         return Err(format_err!("Too many pushkey parts: {:?}", bookmark_pushes));
     }
 
-    let bookmark_push = bookmark_pushes.into_iter().nth(0).unwrap();
+    let bookmark_push = bookmark_pushes.into_iter().next().unwrap();
     let maybe_raw_bundle2_id = resolver
         .ensure_stream_finished(bundle2, maybe_full_content)
         .await?;
@@ -766,7 +738,7 @@ impl Bundle2Resolver {
 
         let maybe_pushvars = match newpart {
             Some(Bundle2Item::Pushvars(header, emptypart)) => {
-                let pushvars = header.aparams().clone();
+                let pushvars = header.into_inner().aparams;
                 // ignored for now, will be used for hooks
                 emptypart.compat().await?;
                 Some(pushvars)
@@ -775,7 +747,7 @@ impl Bundle2Resolver {
             None => None,
         };
 
-        Result::<_, Error>::Ok((maybe_pushvars, bundle2))
+        Ok((maybe_pushvars, bundle2))
     }
 
     /// Parse changegroup.
@@ -787,11 +759,9 @@ impl Bundle2Resolver {
     /// pure (non-pushrebase and non-infinitepush) pushes
     async fn maybe_resolve_changegroup(
         &self,
-        ctx: CoreContext,
         bundle2: OldBoxStream<Bundle2Item, Error>,
         changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
     ) -> Result<(Option<ChangegroupPush>, OldBoxStream<Bundle2Item, Error>), Error> {
-        let repo = self.repo.clone();
         let infinitepush_writes_allowed = self.infinitepush_writes_allowed;
 
         let (changegroup, bundle2) = next_item(bundle2).await?;
@@ -813,9 +783,9 @@ impl Bundle2Resolver {
                     .compat()
                     .await?;
                 let upload_map = upload_hg_blobs(
-                    ctx.clone(),
-                    repo.clone(),
-                    convert_to_revlog_filelog(ctx.clone(), repo.clone(), filelogs),
+                    self.ctx.clone(),
+                    self.repo.clone(),
+                    convert_to_revlog_filelog(self.ctx.clone(), self.repo.clone(), filelogs),
                     UploadBlobsType::EnsureNoDuplicates,
                 )
                 .compat()
@@ -832,9 +802,15 @@ impl Bundle2Resolver {
                     (filelogs, content_blobs)
                 };
 
-                let cg_push =
-                    build_changegroup_push(ctx, &repo, header, changesets, filelogs, content_blobs)
-                        .await?;
+                let cg_push = build_changegroup_push(
+                    &self.ctx,
+                    &self.repo,
+                    header,
+                    changesets,
+                    filelogs,
+                    content_blobs,
+                )
+                .await?;
 
                 Some(cg_push)
             }
@@ -910,18 +886,16 @@ impl Bundle2Resolver {
     /// their upload as well as their parsed content should be used for uploading changesets.
     async fn resolve_b2xtreegroup2(
         &self,
-        ctx: CoreContext,
         bundle2: OldBoxStream<Bundle2Item, Error>,
     ) -> Result<(Manifests, OldBoxStream<Bundle2Item, Error>), Error> {
-        let repo = self.repo.clone();
         let (b2xtreegroup2, bundle2) = next_item(bundle2).await?;
 
         match b2xtreegroup2 {
             Some(Bundle2Item::B2xTreegroup2(_, parts))
             | Some(Bundle2Item::B2xRebasePack(_, parts)) => {
                 let manifests = upload_hg_blobs(
-                    ctx,
-                    repo,
+                    self.ctx.clone(),
+                    self.repo.clone(),
                     TreemanifestBundle2Parser::new(parts),
                     UploadBlobsType::IgnoreDuplicates,
                 )
@@ -931,7 +905,7 @@ impl Bundle2Resolver {
                 .await
                 .map_err(Error::from)?;
 
-                Result::<_, Error>::Ok((manifests, bundle2))
+                Ok((manifests, bundle2))
             }
             _ => Err(format_err!("Expected Bundle2 B2xTreegroup2")),
         }
@@ -967,7 +941,6 @@ impl Bundle2Resolver {
     /// that the changesets were uploaded
     async fn upload_changesets(
         &self,
-        ctx: CoreContext,
         cg_push: ChangegroupPush,
         manifests: Manifests,
     ) -> Result<(UploadedBonsais, UploadedHgChangesetIds), Error> {
@@ -988,9 +961,10 @@ impl Bundle2Resolver {
         STATS::filelogs_count.add_value(filelogs.len() as i64);
         STATS::content_blobs_count.add_value(content_blobs.len() as i64);
 
-        let repo = self.repo.clone();
-
-        let changesets_hashes: Vec<_> = changesets.iter().map(|(hash, _)| *hash).collect();
+        let err_context = || {
+            let changesets_hashes: Vec<_> = changesets.iter().map(|(hash, _)| *hash).collect();
+            ErrorKind::WhileUploadingData(changesets_hashes)
+        };
 
         trace!(self.ctx.logger(), "changesets: {:?}", changesets);
         trace!(self.ctx.logger(), "filelogs: {:?}", filelogs.keys());
@@ -1000,29 +974,6 @@ impl Bundle2Resolver {
             "content blobs: {:?}",
             content_blobs.keys()
         );
-
-        let scuba_logger = self.ctx.scuba().clone();
-        let casefolding_check = self.pushrebase_flags.casefolding_check;
-        let upload_changeset_fun = Arc::new({
-            cloned!(ctx);
-            move |uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle>,
-                  node: HgChangesetId,
-                  revlog_cs: RevlogChangeset|
-                  -> OldBoxFuture<HashMap<HgChangesetId, ChangesetHandle>, Error> {
-                upload_changeset(
-                    ctx.clone(),
-                    repo.clone(),
-                    scuba_logger.clone(),
-                    node.clone(),
-                    revlog_cs,
-                    uploaded_changesets,
-                    &filelogs,
-                    &manifests,
-                    &content_blobs,
-                    casefolding_check,
-                )
-            }
-        });
 
         // Each commit gets a future. This future polls futures of parent commits, which poll futures
         // of their parents and so on. However that might cause stackoverflow on very large pushes
@@ -1034,13 +985,21 @@ impl Bundle2Resolver {
         for chunk in changesets.chunks(chunk_size) {
             let mut uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle> = HashMap::new();
             for (node, revlog_cs) in chunk {
-                uploaded_changesets =
-                    (*upload_changeset_fun)(uploaded_changesets, *node, revlog_cs.clone())
-                        .compat()
-                        .await
-                        .with_context(|| {
-                            ErrorKind::WhileUploadingData(changesets_hashes.clone())
-                        })?;
+                uploaded_changesets = upload_changeset(
+                    self.ctx.clone(),
+                    self.repo.clone(),
+                    self.ctx.scuba().clone(),
+                    *node,
+                    revlog_cs.clone(),
+                    uploaded_changesets,
+                    &filelogs,
+                    &manifests,
+                    &content_blobs,
+                    self.pushrebase_flags.casefolding_check,
+                )
+                .compat()
+                .await
+                .with_context(err_context)?;
             }
 
             let uploaded: Vec<(BonsaiChangeset, HgChangesetId)> = stream::iter(uploaded_changesets)
@@ -1057,14 +1016,14 @@ impl Bundle2Resolver {
                 .buffered(chunk_size)
                 .try_collect()
                 .await
-                .with_context(|| ErrorKind::WhileUploadingData(changesets_hashes.clone()))?;
+                .with_context(err_context)?;
 
             let (more_bonsais, more_hg_css): (Vec<_>, Vec<_>) = uploaded.into_iter().unzip();
             bonsais.extend(more_bonsais.into_iter());
             hg_css.extend(more_hg_css.into_iter());
         }
 
-        Result::<(HashSet<BonsaiChangeset>, HashSet<HgChangesetId>), Error>::Ok((bonsais, hg_css))
+        Ok((bonsais, hg_css))
     }
 
     /// Ensures that the next item in stream is None
@@ -1137,7 +1096,7 @@ fn get_optional_changeset_param(
 }
 
 async fn build_changegroup_push(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     part_header: PartHeader,
     changesets: Changesets,
@@ -1163,7 +1122,7 @@ async fn build_changegroup_push(
                 Ok(maybe_name) => match maybe_name {
                     None => None,
                     Some(name) => {
-                        let old = repo.get_bookmark(ctx, &name).compat().await?;
+                        let old = repo.get_bookmark(ctx.clone(), &name).compat().await?;
                         // NOTE: We do not validate that the bookmarknode selected (i.e. the
                         // changeset we should update our bookmark to) is part of the
                         // changegroup being pushed. We do however validate at a later point
@@ -1276,14 +1235,14 @@ fn toposort_changesets(
 }
 
 async fn bonsai_from_hg_opt(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: Option<HgChangesetId>,
 ) -> Result<Option<ChangesetId>, Error> {
     match cs_id {
         None => Ok(None),
         Some(cs_id) => {
-            let maybe_bcs_id = repo.get_bonsai_from_hg(ctx, cs_id.clone()).compat().await?;
+            let maybe_bcs_id = repo.get_bonsai_from_hg(ctx.clone(), cs_id).compat().await?;
             if maybe_bcs_id.is_none() {
                 Err(format_err!("No bonsai mapping found for {}", cs_id))
             } else {
@@ -1294,7 +1253,7 @@ async fn bonsai_from_hg_opt(
 }
 
 async fn plain_hg_bookmark_push_to_bonsai(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark_push: PlainBookmarkPush<HgChangesetId>,
 ) -> Result<PlainBookmarkPush<ChangesetId>, Error> {
@@ -1306,8 +1265,8 @@ async fn plain_hg_bookmark_push_to_bonsai(
     } = bookmark_push;
 
     let (old, new) = try_join!(
-        bonsai_from_hg_opt(ctx.clone(), &repo, old),
-        bonsai_from_hg_opt(ctx.clone(), &repo, new),
+        bonsai_from_hg_opt(ctx, &repo, old),
+        bonsai_from_hg_opt(ctx, &repo, new),
     )?;
 
     Ok(PlainBookmarkPush {
@@ -1319,7 +1278,7 @@ async fn plain_hg_bookmark_push_to_bonsai(
 }
 
 async fn infinite_hg_bookmark_push_to_bonsai(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark_push: InfiniteBookmarkPush<HgChangesetId>,
 ) -> Result<InfiniteBookmarkPush<ChangesetId>, Error> {
@@ -1332,7 +1291,7 @@ async fn infinite_hg_bookmark_push_to_bonsai(
     } = bookmark_push;
 
     let (old, new) = try_join!(
-        bonsai_from_hg_opt(ctx.clone(), &repo, old),
+        bonsai_from_hg_opt(ctx, &repo, old),
         repo.get_bonsai_from_hg(ctx.clone(), new).compat()
     )?;
     let new = match new {
@@ -1350,7 +1309,7 @@ async fn infinite_hg_bookmark_push_to_bonsai(
 }
 
 async fn hg_pushrebase_bookmark_spec_to_bonsai(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     bookmark_spec: PushrebaseBookmarkSpec<HgChangesetId>,
 ) -> Result<PushrebaseBookmarkSpec<ChangesetId>, Error> {
@@ -1368,16 +1327,17 @@ async fn hg_pushrebase_bookmark_spec_to_bonsai(
 }
 
 async fn hg_all_bookmark_pushes_to_bonsai(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     repo: &BlobRepo,
     all_bookmark_pushes: AllBookmarkPushes<HgChangesetId>,
 ) -> Result<AllBookmarkPushes<ChangesetId>, Error> {
     let abp = match all_bookmark_pushes {
         AllBookmarkPushes::PlainPushes(plain_pushes) => {
-            let r = try_join_all(plain_pushes.into_iter().map({
-                |plain_push| plain_hg_bookmark_push_to_bonsai(ctx.clone(), &repo, plain_push)
-            }))
-            .await?;
+            let r =
+                try_join_all(plain_pushes.into_iter().map({
+                    |plain_push| plain_hg_bookmark_push_to_bonsai(ctx, &repo, plain_push)
+                }))
+                .await?;
             AllBookmarkPushes::PlainPushes(r)
         }
         AllBookmarkPushes::Inifinitepush(infinite_bookmark_push) => {

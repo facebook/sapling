@@ -1385,16 +1385,27 @@ impl HgCommands for RepoClient {
                 let infinitepush_writes_allowed = infinitepush_params.allow_writes;
                 let pushrebase_params = client.repo.pushrebase_params().clone();
 
-                let res = unbundle::resolve_compat(
-                    ctx.clone(),
-                    client.repo.blobrepo().clone(),
-                    infinitepush_writes_allowed,
-                    stream,
-                    read_write,
-                    maybe_full_content,
-                    pure_push_allowed,
-                    pushrebase_params.flags.clone(),
-                ).and_then({
+                let res = {
+                    cloned!(ctx);
+                    let blobrepo = client.repo.blobrepo().clone();
+                    let pushrebase_flags = pushrebase_params.flags.clone();
+                    async move {
+                        unbundle::resolve(
+                            &ctx,
+                            blobrepo,
+                            infinitepush_writes_allowed,
+                            stream,
+                            read_write,
+                            maybe_full_content,
+                            pure_push_allowed,
+                            pushrebase_flags,
+                        )
+                        .await
+                    }
+                }
+                .boxed()
+                .compat()
+                .and_then({
                     cloned!(ctx);
                     move |action| {
                         run_hooks(ctx, hook_manager, &action)
