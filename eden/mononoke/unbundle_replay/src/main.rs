@@ -461,9 +461,13 @@ async fn do_main(
         .await?
         .head;
 
+        let cs = head.load(ctx.clone(), repo.blobstore()).compat().await?;
+
         info!(
             ctx.logger(),
-            "Pushrebase completed. New bookmark: {:?}", head
+            "Pushrebase completed. New bookmark: {:?}. Age: {}s",
+            head,
+            Timestamp::from(*cs.author_date()).since_seconds()
         );
 
         FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), head)
