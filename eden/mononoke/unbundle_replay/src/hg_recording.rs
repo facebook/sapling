@@ -311,6 +311,20 @@ mod test {
         let client = HgRecordingClient::test_instance()?;
         let ctx = CoreContext::test_mock(fb);
 
+        InsertHgRecordingEntry::query(
+            &client.sql.0,
+            &1,
+            &REPO_ZERO.id(),
+            &"book123".to_string(),
+            &ONES_CSID.to_string(),
+            &"handle123".to_string(),
+            &"{}".to_string(),
+            &"[]".to_string(),
+            &Some("some error".to_string()),
+        )
+        .compat()
+        .await?;
+
         assert_eq!(client.next_entry_by_id(&ctx, 0).await?, None);
         Ok(())
     }
