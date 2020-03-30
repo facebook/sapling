@@ -116,7 +116,7 @@ WinSetIntSockOpt.argtypes = [
     ctypes.wintypes.HANDLE,
     ctypes.c_int,
     ctypes.c_int,
-    ctypes.wintypes.LPDWORD,
+    ctypes.POINTER(ctypes.wintypes.DWORD),
     ctypes.c_int,
 ]
 WinSetIntSockOpt.restype = ctypes.c_int
