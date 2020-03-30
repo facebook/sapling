@@ -24,6 +24,13 @@ pub enum Store {
 }
 
 impl Store {
+    pub fn is_local(&self) -> bool {
+        match self {
+            Store::Local(_) => true,
+            _ => false,
+        }
+    }
+
     /// Find the key in the store. Returns an `Iterator` over all the values that this store
     /// contains for the key.
     pub fn lookup(&self, index_id: usize, key: impl AsRef<[u8]>) -> Result<LookupIter> {
