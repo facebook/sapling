@@ -11,8 +11,8 @@
 #include <folly/SocketAddress.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/AsyncSignalHandler.h>
+#include <folly/io/async/AsyncSocket.h>
 #include <folly/logging/xlog.h>
-#include <thrift/lib/cpp/async/TAsyncSocket.h>
 #include <thrift/lib/cpp2/async/HeaderClientChannel.h>
 
 #include "eden/fs/eden-config.h"
@@ -25,7 +25,7 @@
 #endif
 
 using apache::thrift::HeaderClientChannel;
-using apache::thrift::async::TAsyncSocket;
+using folly::AsyncSocket;
 using folly::Future;
 using folly::SocketAddress;
 using folly::Try;
@@ -155,7 +155,7 @@ Future<Unit> EdenMonitor::getEdenInstance() {
 std::shared_ptr<EdenServiceAsyncClient> EdenMonitor::createEdenThriftClient() {
   auto socketPath = edenDir_ + PathComponentPiece("socket");
   uint32_t connectTimeoutMS = 500;
-  auto socket = TAsyncSocket::newSocket(
+  auto socket = AsyncSocket::newSocket(
       &eventBase_,
       SocketAddress::makeFromPath(socketPath.value()),
       connectTimeoutMS);
