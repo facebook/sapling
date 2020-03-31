@@ -397,7 +397,7 @@ impl ChangesetContext {
             .compat()
             .try_filter_map(|diff_entry| {
                 future::ok(match diff_entry {
-                    ManifestDiff::Added(Some(path), ManifestEntry::Leaf(_)) => {
+                    ManifestDiff::Added(Some(path), entry @ ManifestEntry::Leaf(_)) => {
                         if !within_restrictions(Some(path.clone()), &path_restrictions) {
                             None
                         } else if let Some(from_path) = inv_copy_path_map.get(&&path) {
@@ -405,24 +405,35 @@ impl ChangesetContext {
                             if copied_paths.contains(from_path) {
                                 // If the source still exists in the current commit it was a copy.
                                 Some(ChangesetPathDiffContext::Copied(
-                                    ChangesetPathContext::new(self.clone(), path.clone()),
+                                    ChangesetPathContext::new_with_fsnode_entry(
+                                        self.clone(),
+                                        path.clone(),
+                                        entry,
+                                    ),
                                     ChangesetPathContext::new(other.clone(), (*from_path).clone()),
                                 ))
                             } else {
                                 // If it doesn't it was a move
                                 Some(ChangesetPathDiffContext::Moved(
-                                    ChangesetPathContext::new(self.clone(), path.clone()),
+                                    ChangesetPathContext::new_with_fsnode_entry(
+                                        self.clone(),
+                                        path.clone(),
+                                        entry,
+                                    ),
                                     ChangesetPathContext::new(other.clone(), (*from_path).clone()),
                                 ))
                             }
                         } else {
-                            Some(ChangesetPathDiffContext::Added(ChangesetPathContext::new(
-                                self.clone(),
-                                path,
-                            )))
+                            Some(ChangesetPathDiffContext::Added(
+                                ChangesetPathContext::new_with_fsnode_entry(
+                                    self.clone(),
+                                    path,
+                                    entry,
+                                ),
+                            ))
                         }
                     }
-                    ManifestDiff::Removed(Some(path), ManifestEntry::Leaf(_)) => {
+                    ManifestDiff::Removed(Some(path), entry @ ManifestEntry::Leaf(_)) => {
                         if let Some(_) = copy_path_map.get(&path) {
                             // The file is was moved (not removed), it will be covered by a "Moved" entry.
                             None
@@ -430,21 +441,33 @@ impl ChangesetContext {
                             None
                         } else {
                             Some(ChangesetPathDiffContext::Removed(
-                                ChangesetPathContext::new(other.clone(), path),
+                                ChangesetPathContext::new_with_fsnode_entry(
+                                    other.clone(),
+                                    path,
+                                    entry,
+                                ),
                             ))
                         }
                     }
                     ManifestDiff::Changed(
                         Some(path),
-                        ManifestEntry::Leaf(_a),
-                        ManifestEntry::Leaf(_b),
+                        from_entry @ ManifestEntry::Leaf(_),
+                        to_entry @ ManifestEntry::Leaf(_),
                     ) => {
                         if !within_restrictions(Some(path.clone()), &path_restrictions) {
                             None
                         } else {
                             Some(ChangesetPathDiffContext::Changed(
-                                ChangesetPathContext::new(self.clone(), path.clone()),
-                                ChangesetPathContext::new(other.clone(), path),
+                                ChangesetPathContext::new_with_fsnode_entry(
+                                    self.clone(),
+                                    path.clone(),
+                                    to_entry,
+                                ),
+                                ChangesetPathContext::new_with_fsnode_entry(
+                                    other.clone(),
+                                    path,
+                                    from_entry,
+                                ),
                             ))
                         }
                     }
