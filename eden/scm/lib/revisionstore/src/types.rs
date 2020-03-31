@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
 use bytes::Bytes;
 use serde_derive::{Deserialize, Serialize};
 use sha2::Digest;
@@ -41,12 +40,12 @@ pub enum StoreKey {
 }
 
 impl ContentHash {
-    pub fn sha256(data: &Bytes) -> Result<Self> {
+    pub fn sha256(data: &Bytes) -> Self {
         let mut hash = sha2::Sha256::new();
         hash.input(data);
 
         let bytes: [u8; Sha256::len()] = hash.result().into();
-        Ok(ContentHash::Sha256(Sha256::from_slice(&bytes)?))
+        ContentHash::Sha256(Sha256::from(bytes))
     }
 
     pub fn unwrap_sha256(self) -> Sha256 {

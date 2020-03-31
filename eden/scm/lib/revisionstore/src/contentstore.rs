@@ -725,7 +725,7 @@ mod tests {
 
         let k1 = key("a", "2");
         let data = Bytes::from(&[1, 2, 3, 4, 5][..]);
-        let hash = ContentHash::sha256(&data)?;
+        let hash = ContentHash::sha256(&data);
         let delta = Delta {
             data,
             base: None,

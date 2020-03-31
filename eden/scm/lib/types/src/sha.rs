@@ -74,6 +74,12 @@ impl<'a> From<&'a [u8; Sha256::len()]> for Sha256 {
     }
 }
 
+impl From<[u8; Sha256::len()]> for Sha256 {
+    fn from(bytes: [u8; Sha256::len()]) -> Sha256 {
+        Sha256(bytes)
+    }
+}
+
 impl AsRef<[u8]> for Sha256 {
     fn as_ref(&self) -> &[u8] {
         &self.0

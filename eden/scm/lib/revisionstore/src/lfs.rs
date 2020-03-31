@@ -305,7 +305,7 @@ impl LfsIndexedLogBlobsStore {
         }
 
         let data = res.freeze();
-        if &ContentHash::sha256(&data)?.unwrap_sha256() != hash {
+        if &ContentHash::sha256(&data).unwrap_sha256() != hash {
             Ok(None)
         } else {
             Ok(Some(data))
@@ -406,7 +406,7 @@ impl LfsBlobsStore {
                 let mut buf = Vec::new();
                 file.read_to_end(&mut buf)?;
                 let blob = Bytes::from(buf);
-                if &ContentHash::sha256(&blob)?.unwrap_sha256() != hash {
+                if &ContentHash::sha256(&blob).unwrap_sha256() != hash {
                     None
                 } else {
                     Some(blob)
@@ -641,7 +641,7 @@ impl HgIdMutableDeltaStore for LfsStore {
         ensure!(delta.base.is_none(), "Deltas aren't supported.");
 
         let (data, copy_from) = strip_metadata(&delta.data)?;
-        let content_hash = ContentHash::sha256(&data)?;
+        let content_hash = ContentHash::sha256(&data);
 
         match content_hash {
             ContentHash::Sha256(sha256) => self.blobs.add(&sha256, data.clone())?,
@@ -1229,7 +1229,7 @@ mod tests {
         store.flush()?;
 
         let indexedlog_blobs = LfsIndexedLogBlobsStore::shared(&dir.path(), &config)?;
-        let hash = ContentHash::sha256(&delta.data)?.unwrap_sha256();
+        let hash = ContentHash::sha256(&delta.data).unwrap_sha256();
 
         assert!(indexedlog_blobs.contains(&hash)?);
 
@@ -1246,7 +1246,7 @@ mod tests {
         let loose_store = LfsBlobsStore::Loose(get_lfs_objects_path(dir.path())?, false);
 
         let data = Bytes::from(&[1, 2, 3, 4][..]);
-        let sha256 = ContentHash::sha256(&data)?.unwrap_sha256();
+        let sha256 = ContentHash::sha256(&data).unwrap_sha256();
         loose_store.add(&sha256, data.clone())?;
 
         assert!(blob_store.contains(&sha256)?);
@@ -1334,7 +1334,7 @@ mod tests {
 
         let data = Bytes::from(&[1, 2, 3, 4][..]);
         let partial = data.slice(2..);
-        let sha256 = ContentHash::sha256(&data)?.unwrap_sha256();
+        let sha256 = ContentHash::sha256(&data).unwrap_sha256();
 
         let entry = LfsIndexedLogBlobsEntry {
             sha256: sha256.clone(),
@@ -1358,7 +1358,7 @@ mod tests {
         let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
 
         let data = Bytes::from(&[1, 2, 3, 4, 5, 6, 7][..]);
-        let sha256 = ContentHash::sha256(&data)?.unwrap_sha256();
+        let sha256 = ContentHash::sha256(&data).unwrap_sha256();
 
         let first = data.slice(0..1);
         let second = data.slice(1..4);
@@ -1400,7 +1400,7 @@ mod tests {
         let store = LfsIndexedLogBlobsStore::shared(dir.path(), &config)?;
 
         let data = Bytes::from(&[1, 2, 3, 4, 5, 6, 7][..]);
-        let sha256 = ContentHash::sha256(&data)?.unwrap_sha256();
+        let sha256 = ContentHash::sha256(&data).unwrap_sha256();
 
         let first = data.slice(0..4);
         let second = data.slice(2..3);
@@ -1439,7 +1439,7 @@ mod tests {
             let data = Bytes::from(data);
 
             let mut content_hashes = HashMap::new();
-            content_hashes.insert(ContentHashType::Sha256, ContentHash::sha256(&data)?);
+            content_hashes.insert(ContentHashType::Sha256, ContentHash::sha256(&data));
 
             let pointer = LfsPointersEntry {
                 hgid: hgid("1234"),
@@ -1674,7 +1674,7 @@ mod tests {
         let indexedlog = Arc::new(IndexedLogHgIdDataStore::new(&dir)?);
 
         let blob = Bytes::from(&b"\x01\nTHIS IS A BLOB WITH A HEADER"[..]);
-        let sha256 = match ContentHash::sha256(&blob)? {
+        let sha256 = match ContentHash::sha256(&blob) {
             ContentHash::Sha256(sha256) => sha256,
         };
         let size = blob.len();
@@ -1886,7 +1886,7 @@ mod tests {
 
         let k1 = key("a", "2");
         let data = Bytes::from(&[1, 2, 3, 4][..]);
-        let hash = ContentHash::sha256(&data)?;
+        let hash = ContentHash::sha256(&data);
         let delta = Delta {
             data,
             base: None,
