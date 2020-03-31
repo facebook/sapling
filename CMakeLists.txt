@@ -93,6 +93,14 @@ if(WIN32)
     get_target_property(python_dll Python3::Python LOCATION)
     install(FILES "${python_dll}" DESTINATION bin)
   endif()
+
+  # Also a emit a file listing additional directories containing runtime
+  # library dependencies.  On Windows this is needed to help figure out runtime
+  # dependencies needed to run the generated build artifacts.  This file can be
+  # processed by getdeps.py
+  get_filename_component(python_dll_dir "${python_dll}" DIRECTORY)
+  file(TO_NATIVE_PATH "${python_dll_dir}" python_dll_dir)
+  file(WRITE "${CMAKE_BINARY_DIR}/LIBRARY_DEP_DIRS.txt" "${python_dll_dir}\n")
 endif()
 
 configure_file(
