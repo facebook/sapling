@@ -10,5 +10,5 @@
 mod changeset_info;
 mod derive;
 
-pub use changeset_info::{ChangesetInfo, ChangesetMessage};
-pub use derive::ChangesetInfoMapping;
+pub use crate::changeset_info::{ChangesetInfo, ChangesetMessage};
+pub use crate::derive::ChangesetInfoMapping;

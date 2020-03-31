@@ -1,0 +1,26 @@
+[package]
+name = "context_concurrency_blobstore"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/*.rs"]
+
+[dependencies]
+blobstore = { path = ".." }
+context = { path = "../../server/context" }
+metaconfig_types = { path = "../../metaconfig/types" }
+mononoke_types = { path = "../../mononoke_types" }
+sql_ext = { path = "../../common/rust/sql_ext" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+scopeguard = "1.0.0"
+tokio = { version = "0.2", features = ["full"] }
+
+[dev-dependencies]
+scuba_ext = { path = "../../common/scuba_ext" }
+slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+slog = { version="2.5", features=["max_level_debug"] }

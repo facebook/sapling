@@ -9,8 +9,8 @@ use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{future, Future, Stream};
 pub use sql_ext::SqlConstructors;
 
 use bookmarks::{BookmarkName, BookmarkUpdateReason};

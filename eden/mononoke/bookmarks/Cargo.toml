@@ -1,0 +1,29 @@
+[package]
+name = "bookmarks"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+bookmarks_types = { path = "bookmarks_types" }
+context = { path = "../server/context" }
+mercurial_types = { path = "../mercurial/types" }
+mononoke_types = { path = "../mononoke_types" }
+sql_ext = { path = "../common/rust/sql_ext" }
+ascii_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+futures = "0.1"
+quickcheck = "0.9"
+
+[dev-dependencies]
+mononoke_types-mocks = { path = "../mononoke_types/mocks" }
+maplit = "1.0"
+tokio = "0.1"
+tokio-compat = "0.1"

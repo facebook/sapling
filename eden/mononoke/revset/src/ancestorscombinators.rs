@@ -52,7 +52,7 @@ use crate::UniqueHeap;
 /// In mercurial revset's terms it's (::A) - (::B), where A and B are sets of nodes.
 /// In Mononoke revset's terms it's equivalent to
 ///
-/// ```
+/// ```ignore
 ///   let include: Vec<HgNodeHash> = vec![ ... ];
 ///   let exclude: Vec<HgNodeHash> = vec![ ... ];
 ///   ...

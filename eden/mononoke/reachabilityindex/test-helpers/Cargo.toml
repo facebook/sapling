@@ -1,0 +1,21 @@
+[package]
+name = "test-helpers"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blobrepo = { path = "../../blobrepo" }
+common = { path = "../common" }
+context = { path = "../../server/context" }
+fixtures = { path = "../../tests/fixtures" }
+mercurial_types = { path = "../../mercurial/types" }
+mononoke_types = { path = "../../mononoke_types" }
+reachabilityindex = { path = ".." }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }

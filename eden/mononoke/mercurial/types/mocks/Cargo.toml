@@ -4,10 +4,14 @@ edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["**/*.rs"]
+include = ["**/*.rs", "../tests/**/*.rs"]
 
 [lib]
 path = "lib.rs"
+
+[[test]]
+name = "mercurial_types_test"
+path = "../tests/src/lib.rs"
 
 [dependencies]
 context = { path = "../../../server/context" }
@@ -22,6 +26,15 @@ futures-old = { package = "futures", version = "0.1" }
 thiserror = "1.0"
 
 [dev-dependencies]
+blobrepo = { path = "../../../blobrepo" }
+fixtures = { path = "../../../tests/fixtures" }
+mononoke_types-mocks = { path = "../../../mononoke_types/mocks" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3", features = ["async-await", "compat"] }
+lazy_static = "1.0"
 maplit = "1.0"
+quickcheck = "0.9"
+rand = { version = "0.7", features = ["small_rng"] }
+tempdir = "0.3"
+tokio = "0.1"
+tokio-compat = "0.1"

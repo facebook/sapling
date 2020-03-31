@@ -1,0 +1,49 @@
+[package]
+name = "phases"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+autotests = false
+include = ["schemas/**/*.sql", "src/**/*.rs", "tests/src/**/*.rs"]
+
+[lib]
+path = "src/lib.rs"
+
+[[test]]
+name = "tests"
+path = "tests/src/main.rs"
+
+[dependencies]
+caching_ext = { path = "../common/rust/caching_ext" }
+changeset_fetcher = { path = "../blobrepo/changeset_fetcher" }
+context = { path = "../server/context" }
+mercurial_types = { path = "../mercurial/types" }
+mononoke_types = { path = "../mononoke_types" }
+sql_ext = { path = "../common/rust/sql_ext" }
+cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+abomonation = "0.7"
+abomonation_derive = "0.5"
+anyhow = "1.0"
+ascii = "1.0"
+bytes = { version = "0.5", features = ["serde"] }
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+thiserror = "1.0"
+tokio = "0.1"
+tokio-compat = "0.1"
+
+[dev-dependencies]
+blobrepo = { path = "../blobrepo" }
+blobrepo_factory = { path = "../blobrepo/factory" }
+bookmarks = { path = "../bookmarks" }
+fixtures = { path = "../tests/fixtures" }
+mercurial_types-mocks = { path = "../mercurial/types/mocks" }
+mononoke_types-mocks = { path = "../mononoke_types/mocks" }
+maplit = "1.0"

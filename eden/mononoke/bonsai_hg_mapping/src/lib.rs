@@ -17,8 +17,8 @@ use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use futures::{future, Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{future, Future, IntoFuture};
 use heapsize_derive::HeapSizeOf;
 use mercurial_types::{
     HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgNodeHash,

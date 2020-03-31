@@ -1,0 +1,69 @@
+[package]
+name = "blobrepo_factory"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blame = { path = "../../derived_data/blame" }
+blobrepo = { path = ".." }
+blobrepo_errors = { path = "../errors" }
+blobstore = { path = "../../blobstore" }
+blobstore_factory = { path = "../../blobstore/factory" }
+bonsai_git_mapping = { path = "../../bonsai_git_mapping" }
+bonsai_globalrev_mapping = { path = "../../bonsai_globalrev_mapping" }
+bonsai_hg_mapping = { path = "../../bonsai_hg_mapping" }
+bookmarks = { path = "../../bookmarks" }
+cacheblob = { path = "../../blobstore/cacheblob" }
+changeset_info = { path = "../../derived_data/changeset_info" }
+changesets = { path = "../../changesets" }
+context = { path = "../../server/context" }
+dbbookmarks = { path = "../../bookmarks/dbbookmarks" }
+deleted_files_manifest = { path = "../../derived_data/deleted_files_manifest" }
+derived_data = { path = "../../derived_data" }
+derived_data_filenodes = { path = "../../derived_data/filenodes" }
+fastlog = { path = "../../derived_data/fastlog" }
+filenodes = { path = "../../filenodes" }
+filestore = { path = "../../filestore" }
+fsnodes = { path = "../../derived_data/fsnodes" }
+git_types = { path = "../../git/git_types" }
+memblob = { path = "../../blobstore/memblob" }
+mercurial_types = { path = "../../mercurial/types" }
+metaconfig_types = { path = "../../metaconfig/types" }
+mononoke_types = { path = "../../mononoke_types" }
+newfilenodes = { path = "../../newfilenodes" }
+phases = { path = "../../phases" }
+readonlyblob = { path = "../../blobstore/readonlyblob" }
+redactedblobstore = { path = "../../blobstore/redactedblobstore" }
+repo_blobstore = { path = "../repo_blobstore" }
+scuba_ext = { path = "../../common/scuba_ext" }
+sql_ext = { path = "../../common/rust/sql_ext" }
+unodes = { path = "../../derived_data/unodes" }
+cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+ascii = "1.0"
+bincode = "1.2"
+bytes = { version = "0.5", features = ["serde"] }
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+heapsize = "0.4"
+maplit = "1.0"
+rust-crypto = "0.2"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_derive = "1.0"
+serde_json = "1.0"
+slog = { version="2.5", features=["max_level_debug"] }
+tokio = "0.1"
+tokio-compat = "0.1"

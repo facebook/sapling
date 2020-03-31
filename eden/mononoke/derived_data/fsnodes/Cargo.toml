@@ -1,0 +1,47 @@
+[package]
+name = "fsnodes"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["*.rs"]
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+blobrepo = { path = "../../blobrepo" }
+blobstore = { path = "../../blobstore" }
+bookmarks = { path = "../../bookmarks" }
+context = { path = "../../server/context" }
+derived_data = { path = ".." }
+filestore = { path = "../../filestore" }
+manifest = { path = "../../manifest" }
+mercurial_types = { path = "../../mercurial/types" }
+mononoke_types = { path = "../../mononoke_types" }
+repo_blobstore = { path = "../../blobrepo/repo_blobstore" }
+revset = { path = "../../revset" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+ascii = "1.0"
+bytes = { version = "0.5", features = ["serde"] }
+digest = "0.8"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+maplit = "1.0"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_derive = "1.0"
+sha-1 = "0.8"
+sha2 = "0.8"
+thiserror = "1.0"
+tokio = "0.1"
+tokio-compat = "0.1"
+
+[dev-dependencies]
+blobrepo_factory = { path = "../../blobrepo/factory" }
+fixtures = { path = "../../tests/fixtures" }
+test_utils = { path = "../../manifest/test_utils" }

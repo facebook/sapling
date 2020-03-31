@@ -1,0 +1,48 @@
+[package]
+name = "bonsai_hg_mapping"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["schemas/**/*.sql", "src/**/*.rs", "test/**/*.rs"]
+
+[lib]
+path = "src/lib.rs"
+
+[[test]]
+name = "bonsai_hg_mapping_test"
+path = "test/main.rs"
+
+[dependencies]
+bonsai_hg_mapping_entry_thrift = { path = "if" }
+caching_ext = { path = "../common/rust/caching_ext" }
+context = { path = "../server/context" }
+mercurial_types = { path = "../mercurial/types" }
+mononoke_types = { path = "../mononoke_types" }
+sql_ext = { path = "../common/rust/sql_ext" }
+bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+abomonation = "0.7"
+abomonation_derive = "0.5"
+anyhow = "1.0"
+bytes = { version = "0.5", features = ["serde"] }
+futures-old = { package = "futures", version = "0.1" }
+heapsize = "0.4"
+heapsize_derive = "0.1"
+thiserror = "1.0"
+tokio = "0.1"
+tokio-compat = "0.1"
+
+[dev-dependencies]
+mercurial_types-mocks = { path = "../mercurial/types/mocks" }
+mononoke_types-mocks = { path = "../mononoke_types/mocks" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+assert_matches = "1.3"
+futures = { version = "0.3", features = ["async-await", "compat"] }

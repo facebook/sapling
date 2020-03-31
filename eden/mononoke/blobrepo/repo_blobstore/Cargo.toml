@@ -1,0 +1,15 @@
+[package]
+name = "repo_blobstore"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blobstore = { path = "../../blobstore" }
+context_concurrency_blobstore = { path = "../../blobstore/context_concurrency_blobstore" }
+mononoke_types = { path = "../../mononoke_types" }
+prefixblob = { path = "../../blobstore/prefixblob" }
+redactedblobstore = { path = "../../blobstore/redactedblobstore" }
+scuba_ext = { path = "../../common/scuba_ext" }
