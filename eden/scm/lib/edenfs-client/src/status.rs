@@ -131,7 +131,7 @@ fn maybe_status_fastpath_internal(
 
     let relativizer = PathRelativizer::new(cwd, repo_root);
     let relativizer = HgStatusPathRelativizer::new(print_config.root_relative, relativizer);
-    print_config.print_status(
+    let return_code = print_config.print_status(
         &repo_root,
         &status.status,
         &dirstate_data,
@@ -184,7 +184,7 @@ Your running Eden server is more than 45 days old.  You should run
         }
     }
 
-    Ok(0)
+    Ok(return_code)
 }
 
 const NULL_COMMIT: [u8; 20] = [0; 20];
@@ -426,7 +426,7 @@ impl PrintConfig {
         relativizer: &HgStatusPathRelativizer,
         use_color: bool,
         io: &mut IO,
-    ) -> Result<()> {
+    ) -> Result<u8> {
         let groups = group_entries(&repo_root, &status, &dirstate_data)?;
         let endl = self.endl;
 
@@ -503,7 +503,21 @@ impl PrintConfig {
             &groups.ignored,
         )?;
         print_group(PrintGroup::Clean, self.status_types.clean, &groups.clean)?;
-        return Ok(());
+
+        if status.errors.is_empty() {
+            Ok(0)
+        } else {
+            io.write_err("Encountered errors computing status for some paths:\n")?;
+            for (path_str, error) in &status.errors {
+                let path = Path::new(str::from_utf8(path_str)?);
+                io.write_err(format!(
+                    "  {}: {}\n",
+                    &relativizer.relativize(&path.to_path_buf()).display(),
+                    error,
+                ))?;
+            }
+            Ok(1)
+        }
     }
 }
 
@@ -802,11 +816,13 @@ mod test {
         p1: [u8; 20],
         p2: [u8; 20],
         entries: BTreeMap<Vec<u8>, ScmFileStatus>,
+        errors: BTreeMap<Vec<u8>, String>,
         dirstate_data_tuples: HashMap<PathBuf, DirstateDataTuple>,
         files: Vec<(&'a str, Fixture<'a>)>,
         use_color: bool,
         stdout: String,
         stderr: String,
+        return_code: u8,
     }
 
     /// This function is used to drive most of the tests. It runs PrintConfig.print_status(), so it
@@ -831,7 +847,7 @@ mod test {
         };
         let status = ScmStatus {
             entries: test_case.entries,
-            ..Default::default()
+            errors: test_case.errors,
         };
 
         let relativizer = HgStatusPathRelativizer::new(
@@ -842,16 +858,16 @@ mod test {
         let tout = Vec::new();
         let terr = Vec::new();
         let mut io = IO::new(tin, tout, Some(terr));
-        assert!(print_config
+        let return_code = print_config
             .print_status(
                 repo_root.path(),
                 &status,
                 &dirstate_data,
                 &relativizer,
                 test_case.use_color,
-                &mut io
+                &mut io,
             )
-            .is_ok());
+            .unwrap();
         let actual_output = io.output.as_any().downcast_ref::<Vec<u8>>().unwrap();
         assert_eq!(str::from_utf8(actual_output).unwrap(), test_case.stdout);
         let actual_error = io
@@ -862,6 +878,7 @@ mod test {
             .downcast_ref::<Vec<u8>>()
             .unwrap();
         assert_eq!(str::from_utf8(actual_error).unwrap(), test_case.stderr);
+        assert_eq!(return_code, test_case.return_code);
     }
 
     fn one_modified_file() -> BTreeMap<Vec<u8>, ScmFileStatus> {
@@ -1086,5 +1103,39 @@ I ignored.txt
             &repo_root.path().join(".hg"),
             &p2
         ));
+    }
+
+    #[test]
+    fn status_with_errors() {
+        let mut entries = BTreeMap::new();
+        entries.insert("unknown.txt".into(), ScmFileStatus::ADDED);
+        entries.insert("modified.txt".into(), ScmFileStatus::MODIFIED);
+
+        let mut errors = BTreeMap::new();
+        errors.insert(
+            "src/lib".into(),
+            "unable to fetch directory data: connection reset".into(),
+        );
+
+        let color_stdout = concat!(
+            "\u{001B}[34m\u{001B}[1mM modified.txt\u{001B}[0m\n",
+            "\u{001B}[35m\u{001B}[1m\u{001b}[4m? unknown.txt\u{001B}[0m\n",
+        );
+        let src_lib_path = Path::new("src").join("lib");
+        let stderr = format!(
+            "{}\n  {}: {}\n",
+            "Encountered errors computing status for some paths:",
+            src_lib_path.display(),
+            "unable to fetch directory data: connection reset",
+        );
+        test_status(StatusTestCase {
+            entries,
+            errors,
+            use_color: true,
+            stdout: color_stdout.to_string(),
+            stderr: stderr.to_string(),
+            return_code: 1,
+            ..Default::default()
+        });
     }
 }
