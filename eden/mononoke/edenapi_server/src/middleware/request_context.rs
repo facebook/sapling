@@ -5,14 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use gotham::state::{request_id, State};
+use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
 use hyper::{Body, Response};
 use slog::{o, Logger};
 
 use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
-use gotham_ext::middleware::Middleware;
+use gotham_ext::middleware::{ClientIdentity, Middleware};
+use identity::{Identity, IdentitySet};
 use scuba::ScubaSampleBuilder;
 
 #[derive(StateData)]
@@ -45,14 +46,24 @@ impl RequestContextMiddleware {
 #[async_trait::async_trait]
 impl Middleware for RequestContextMiddleware {
     async fn inbound(&self, state: &mut State) -> Option<Response<Body>> {
-        let request_id = request_id(&state);
+        let identities = extract_identities(state);
+        let session = SessionContainer::builder(self.fb)
+            .identities(identities)
+            .build();
 
+        let request_id = request_id(&state);
         let logger = self.logger.new(o!("request_id" => request_id.to_string()));
-        let session = SessionContainer::new_with_defaults(self.fb);
         let ctx = session.new_context(logger, ScubaSampleBuilder::with_discard());
 
         state.put(RequestContext::new(ctx));
 
         None
     }
+}
+
+fn extract_identities(state: &State) -> Option<IdentitySet> {
+    ClientIdentity::borrow_from(state)
+        .identities()
+        .clone()
+        .map(|ids: Vec<Identity>| ids.into_iter().collect())
 }

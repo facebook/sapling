@@ -8,6 +8,7 @@
 #![deny(warnings)]
 
 use std::net::SocketAddr;
+use std::str::FromStr;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
     Arc,
@@ -26,13 +27,17 @@ use openssl::ssl::SslAcceptor;
 use slog::{error, info, warn, Logger};
 use tokio::net::TcpListener;
 
+use aclchecker::Identity;
 use cmdlib::{
     args,
     helpers::serve_forever,
     monitoring::{start_fb303_server, AliveService},
 };
 use fbinit::FacebookInit;
-use gotham_ext::{handler::MononokeHttpHandler, middleware::ServerIdentityMiddleware};
+use gotham_ext::{
+    handler::MononokeHttpHandler,
+    middleware::{ClientIdentityMiddleware, ServerIdentityMiddleware},
+};
 use mononoke_api::Mononoke;
 use secure_utils::SslConfig;
 
@@ -50,6 +55,7 @@ const ARG_TLS_CERTIFICATE: &str = "tls-certificate";
 const ARG_TLS_PRIVATE_KEY: &str = "tls-private-key";
 const ARG_TLS_CA: &str = "tls-ca";
 const ARG_TLS_TICKET_SEEDS: &str = "tls-ticket-seeds";
+const ARG_TRUSTED_PROXY_IDENTITY: &str = "trusted-proxy-identity";
 
 const SERVICE_NAME: &str = "mononoke_edenapi_server";
 
@@ -116,6 +122,14 @@ fn build_tls_acceptor(
     Ok(builder.build())
 }
 
+/// Parse AclChecker identities passed in as arguments.
+fn parse_identities(matches: &ArgMatches) -> Result<Vec<Identity>> {
+    match matches.values_of(ARG_TRUSTED_PROXY_IDENTITY) {
+        Some(values) => values.map(FromStr::from_str).collect(),
+        None => Ok(Vec::new()),
+    }
+}
+
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
     let app = args::MononokeApp::new("EdenAPI Server")
@@ -157,6 +171,15 @@ fn main(fb: FacebookInit) -> Result<()> {
             Arg::with_name(ARG_TLS_TICKET_SEEDS)
                 .long("--tls-ticket-seeds")
                 .takes_value(true),
+        )
+        .arg(
+            Arg::with_name(ARG_TRUSTED_PROXY_IDENTITY)
+                .long(ARG_TRUSTED_PROXY_IDENTITY)
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1)
+                .required(false)
+                .help("Proxy identity to trust"),
         );
 
     let matches = app.get_matches();
@@ -165,6 +188,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
+    let trusted_proxy_idents = parse_identities(&matches)?;
 
     let caching = args::init_cachelib(fb, &matches, None);
     let logger = args::init_logging(fb, &matches);
@@ -198,6 +222,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     // middleware is set up during router setup in build_router.
     let router = build_router(ctx);
     let handler = MononokeHttpHandler::builder()
+        .add(ClientIdentityMiddleware::new(trusted_proxy_idents))
         .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
             "edenapi_server",
         )))
