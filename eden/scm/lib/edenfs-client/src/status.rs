@@ -813,6 +813,7 @@ mod test {
     /// focuses on exercising the display logic under various scenarios.
     fn test_status(test_case: StatusTestCase<'_>) {
         let repo_root = generate_fixture(test_case.files);
+        let repo_root_path = repo_root.path().canonicalize().unwrap();
         let mut all_args: Vec<String> = vec![
             "--cwd".to_owned(),
             repo_root.path().to_str().unwrap().to_string(),
@@ -835,7 +836,7 @@ mod test {
 
         let relativizer = HgStatusPathRelativizer::new(
             print_config.root_relative,
-            PathRelativizer::new(hg_args.cwd, repo_root.path()),
+            PathRelativizer::new(hg_args.cwd, repo_root_path),
         );
         let tin = "".as_bytes();
         let tout = Vec::new();

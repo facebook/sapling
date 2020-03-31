@@ -86,6 +86,12 @@ pub struct PathRelativizer {
 
 /// Utility for computing a relativized path for a file in an Hg repository given the user's cwd
 /// and specified value for --repository/-R, if any.
+///
+/// Note: the caller is responsible for normalizing the repo_root and cwd parameters ahead of time.
+/// If these are specified in different formats (e.g., on Windows one is a UNC path and the other
+/// is not), then this function will not produce expected results.  Unfortunately the Rust library
+/// does not provide a mechanism for normalizing paths.  The best thing for callers to do for now
+/// is probably to call Path::canonicalize() if they expect that the paths do exist on disk.
 impl PathRelativizer {
     /// `cwd` corresponds to getcwd(2) while `repo_root` is the absolute path specified via
     /// --repository/-R, or failing that, the Hg repo that contains `cwd`.
@@ -95,7 +101,7 @@ impl PathRelativizer {
 
     fn new_impl(cwd: &Path, repo_root: &Path) -> PathRelativizer {
         use self::PathRelativizerConfig::*;
-        let config = if cwd.starts_with(repo_root) {
+        let config = if cwd.starts_with(&repo_root) {
             CwdUnderRepo {
                 relative_cwd: relativize(repo_root, cwd),
             }
@@ -142,6 +148,14 @@ mod test {
         check("/foo/bar/baz", "/foo", "../..");
         check("/foo/bar/baz", "/foo/BAR", "../../BAR");
         check("/foo/bar/baz", "/foo/BAR/BAZ", "../../BAR/BAZ");
+    }
+
+    #[test]
+    fn relativize_platform_absolute_paths() {
+        // This test with Windows-style absolute paths on Windows, and Unix-style path on Unix
+        let cwd = Path::new(".").canonicalize().unwrap();
+        let result = relativize(&cwd, &cwd.join("a").join("b"));
+        assert_eq!(result, Path::new("a").join("b"));
     }
 
     #[test]
