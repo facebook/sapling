@@ -33,6 +33,7 @@ from edenscm.mercurial import (
     error,
     extensions,
     hg,
+    hintutil,
     progress,
     pycompat,
     registrar,
@@ -510,6 +511,9 @@ def rage(ui, repo, *pats, **opts):
 
     # Restore color output.
     color.setup(ui)
+
+    # Remove all triggered hints.
+    hintutil.clear()
 
     if opts.get("preview"):
         ui.pager("rage")

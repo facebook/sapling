@@ -34,6 +34,7 @@ from . import (
     error,
     formatter,
     graphmod,
+    hintutil,
     match as matchmod,
     mdiff,
     mergeutil,
@@ -3182,6 +3183,7 @@ def rustdisplaygraph(
     props=None,
     reserved=None,
 ):
+    hintutil.trigger("graph-renderer")
     props = props or {}
     formatnode = _graphnodeformatter(ui, displayer)
     if ui.plain("graph"):

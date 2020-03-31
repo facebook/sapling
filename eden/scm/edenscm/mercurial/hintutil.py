@@ -37,6 +37,9 @@ hinttable = {
         "This should only be used for debugging."
     )
     % root,
+    "graph-renderer": lambda: _(
+        "The new graph renderer is in use.  See fburl.com/wiki/8zhodl1g for customization and troubleshooting."
+    ),
 }
 messages = []
 triggered = set()
@@ -102,3 +105,9 @@ def silence(ui, names):
             acked.append(name)
     value = " ".join(util.shellquote(w) for w in acked)
     rcutil.editconfig(path, "hint", "ack", value)
+
+
+def clear():
+    """Clear all triggered hints"""
+    triggered.clear()
+    del messages[:]

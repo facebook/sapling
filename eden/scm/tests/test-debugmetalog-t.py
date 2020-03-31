@@ -17,6 +17,7 @@ sh.setconfig(
     "experimental.narrow-heads=1",
     "remotenames.selectivepull=1",
     "mutation.date=0 0",
+    "hint.ack-graph-renderer=true",
 )
 sh.newrepo()
 sh.enable("remotenames", "amend")
