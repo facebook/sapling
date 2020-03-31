@@ -172,7 +172,6 @@ impl ChangesetPathContext {
         self.fsnode_id.clone().await
     }
 
-    #[allow(dead_code)]
     async fn unode_id(&self) -> Result<Option<Entry<ManifestUnodeId, FileUnodeId>>, MononokeError> {
         self.unode_id.clone().await
     }
