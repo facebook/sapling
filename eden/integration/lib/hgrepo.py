@@ -167,6 +167,12 @@ class HgRepository(repobase.Repository):
     def write_hgrc(self, hgrc: configparser.ConfigParser) -> None:
         hgrc_path = os.path.join(self.path, ".hg", "hgrc")
         with open(hgrc_path, "a") as f:
+            # Explicitly %include the overridden system hgrc. This ensures
+            # hg commands accessing the repo will load the overridden config,
+            # even if HGRCPATH is not set properly.
+            system_hgrc_path = self.hg_environment.get("HGRCPATH")
+            if system_hgrc_path:
+                f.write("%%include %s\n" % system_hgrc_path)
             hgrc.write(f)
 
     def get_type(self) -> str:
