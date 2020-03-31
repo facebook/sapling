@@ -121,7 +121,7 @@ struct StatusTest {
   FakeTreeBuilder builder_;
 };
 
-TEST(StatusTest, emptyClone) {
+TEST(StatusTest, DISABLED_emptyClone) {
   FakeTreeBuilder builder;
   builder.setFile("a/b/c/d/e/file1.txt", "file1 contents");
   builder.setFile("a/b/file2.txt", "file 2 contents");
@@ -135,7 +135,7 @@ TEST(StatusTest, emptyClone) {
   EXPECT_EQ(statusTest.getStatus()->entries.size(), 0);
 }
 
-TEST(StatusTest, basicStatusTests) {
+TEST(StatusTest, DISABLED_basicStatusTests) {
   FakeTreeBuilder builder;
   builder.setFile("a/b/c/d/e/file1.txt", "file1 contents");
   builder.setFile("a/b/file2.txt", "file 2 contents");
@@ -222,7 +222,7 @@ TEST(StatusTest, basicStatusTests) {
   EXPECT_EQ(statusTest.getStatus()->entries, expectedStatus);
 }
 
-TEST(StatusTest, removeSubTree) {
+TEST(StatusTest, DISABLED_removeSubTree) {
   FakeTreeBuilder builder;
   builder.setFile("aa/bb/cc/dd/ee/file1.txt", "file1 contents");
   builder.setFile("aa/bb/cc/dd/ee/file2.txt", "file2 contents");
@@ -291,7 +291,7 @@ TEST(StatusTest, removeSubTree) {
   EXPECT_EQ(statusTest.getStatus()->entries, expectedStatus);
 }
 
-TEST(StatusTest, fileModified) {
+TEST(StatusTest, DISABLED_fileModified) {
   StatusTest test;
   TestMount& mount = test.testMount();
   mount.createEntry(L"src", /*isDirectory=*/true, "1");
@@ -305,7 +305,7 @@ TEST(StatusTest, fileModified) {
           std::make_pair("src/1.txt", ScmFileStatus::MODIFIED)));
 }
 
-TEST(StatusTest, fileRemoved) {
+TEST(StatusTest, DISABLED_fileRemoved) {
   StatusTest test;
   TestMount& mount = test.testMount();
 
@@ -320,7 +320,7 @@ TEST(StatusTest, fileRemoved) {
           std::make_pair("src/1.txt", ScmFileStatus::REMOVED)));
 }
 
-TEST(StatusTest, fileAdded) {
+TEST(StatusTest, DISABLED_fileAdded) {
   StatusTest test;
   TestMount& mount = test.testMount();
   mount.createEntry(L"src", /*isDirectory=*/true, "1");
@@ -332,7 +332,7 @@ TEST(StatusTest, fileAdded) {
           std::make_pair("src/new.txt", ScmFileStatus::ADDED)));
 }
 
-TEST(StatusTest, directoryRemoved) {
+TEST(StatusTest, DISABLED_directoryRemoved) {
   StatusTest test;
   TestMount& mount = test.testMount();
   mount.createEntry(L"src", /*isDirectory=*/true, "1");
@@ -358,7 +358,7 @@ TEST(StatusTest, directoryRemoved) {
           std::make_pair("src/a/b/3.txt", ScmFileStatus::REMOVED)));
 }
 
-TEST(StatusTest, directoryAdded) {
+TEST(StatusTest, DISABLED_directoryAdded) {
   StatusTest test;
   TestMount& mount = test.testMount();
   mount.createEntry(L"src", /*isDirectory=*/true, "1");
@@ -376,7 +376,7 @@ TEST(StatusTest, directoryAdded) {
           std::make_pair("src/new/subdir/bar.txt", ScmFileStatus::ADDED)));
 }
 
-TEST(StatusTest, dirReplacedWithFile) {
+TEST(StatusTest, DISABLED_dirReplacedWithFile) {
   StatusTest test;
   TestMount& mount = test.testMount();
   mount.createEntry(L"src", /*isDirectory=*/true, "1");
@@ -404,7 +404,7 @@ TEST(StatusTest, dirReplacedWithFile) {
           std::make_pair("src/a/b/c/4.txt", ScmFileStatus::REMOVED)));
 }
 
-TEST(StatusTest, fileReplacedWithDir) {
+TEST(StatusTest, DISABLED_fileReplacedWithDir) {
   StatusTest test;
   TestMount& mount = test.testMount();
   mount.createEntry(L"src", /*isDirectory=*/true, "1");
@@ -431,7 +431,7 @@ TEST(StatusTest, fileReplacedWithDir) {
 // Test file adds/removes/modifications with various orderings of names between
 // the fs entries and Tree entries.  This exercises the code that walks
 // through the two entry lists comparing entry names.
-TEST(StatusTest, pathOrdering) {
+TEST(StatusTest, DISABLED_pathOrdering) {
   StatusTest test({
       {"one/bbb.txt", "test\n"},
       {"one/xxx.txt", "test\n"},
@@ -522,6 +522,6 @@ TEST(StatusTest, pathOrdering) {
 //          std::make_pair("src/1.txt", ScmFileStatus::MODIFIED)));
 //}
 //
-// TEST(StatusTest, resetFileModified) {
+// TEST(StatusTest, DISABLED_resetFileModified) {
 //  testResetFileModified();
 //}
