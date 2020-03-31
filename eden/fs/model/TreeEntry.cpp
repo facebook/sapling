@@ -7,6 +7,10 @@
 
 #include "eden/fs/model/TreeEntry.h"
 
+#ifdef _WIN32
+#include "eden/fs/utils/DirType.h"
+#endif
+
 #include <folly/Conv.h>
 #include <folly/Range.h>
 #include <folly/logging/xlog.h>
@@ -37,20 +41,24 @@ mode_t modeFromTreeEntryType(TreeEntryType ft) {
   XLOG(FATAL) << "illegal file type " << static_cast<int>(ft);
 }
 
-#ifndef _WIN32
 std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode) {
   if (S_ISREG(mode)) {
+#ifdef _WIN32
+    // On Windows, S_ISREG only means regular file and doesn't support
+    // TreeEntryType::EXECUTABLE_FILE and TreeEntryType::SYMLINK
+    return TreeEntryType::REGULAR_FILE;
+#else
     return mode & S_IXUSR ? TreeEntryType::EXECUTABLE_FILE
                           : TreeEntryType::REGULAR_FILE;
   } else if (S_ISLNK(mode)) {
     return TreeEntryType::SYMLINK;
+#endif
   } else if (S_ISDIR(mode)) {
     return TreeEntryType::TREE;
   } else {
     return std::nullopt;
   }
 }
-#endif
 
 std::string TreeEntry::toLogString() const {
   char fileTypeChar = '?';
