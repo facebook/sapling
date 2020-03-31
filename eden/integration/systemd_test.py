@@ -47,8 +47,7 @@ class SystemdTest(
         def test(start_args: typing.List[str]) -> None:
             with self.subTest(start_args=start_args):
                 start_process: "pexpect.spawn[str]" = pexpect.spawn(
-                    # pyre-fixme[6]: Expected `str` for 1st param but got `() -> str`.
-                    FindExe.EDEN_CLI,
+                    FindExe.EDEN_CLI,  # pyre-ignore[6]: T38947910
                     self.get_required_eden_cli_args()
                     + ["start", "--foreground"]
                     + start_args,
@@ -61,12 +60,8 @@ class SystemdTest(
                 start_process.wait()
 
         test(start_args=["--", "--allowRoot"])
-        test(
-            start_args=[
-                "--daemon-binary",
-                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
-            ]
-        )
+        # pyre-ignore[6]: T38947910
+        test(start_args=["--daemon-binary", FindExe.FAKE_EDENFS])
 
     # TODO(T33122320): Delete this test when systemd is properly integrated.
     def test_eden_start_with_systemd_disabled_does_not_say_systemd_mode_is_enabled(
@@ -77,8 +72,7 @@ class SystemdTest(
         def test(start_args: typing.List[str]) -> None:
             with self.subTest(start_args=start_args):
                 start_process: "pexpect.spawn[str]" = pexpect.spawn(
-                    # pyre-fixme[6]: Expected `str` for 1st param but got `() -> str`.
-                    FindExe.EDEN_CLI,
+                    FindExe.EDEN_CLI,  # pyre-ignore[6]: T38947910
                     self.get_required_eden_cli_args()
                     + ["start", "--foreground"]
                     + start_args,
@@ -93,23 +87,15 @@ class SystemdTest(
                 start_process.wait()
 
         test(start_args=["--", "--allowRoot"])
-        test(
-            start_args=[
-                "--daemon-binary",
-                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
-            ]
-        )
+        # pyre-ignore[6]: T38947910
+        test(start_args=["--daemon-binary", FindExe.FAKE_EDENFS])
 
     def test_eden_start_starts_systemd_service(self) -> None:
         self.set_up_edenfs_systemd_service()
         subprocess.check_call(
-            [typing.cast(str, FindExe.EDEN_CLI)]  # T38947910
-            + self.get_required_eden_cli_args()
-            + [
-                "start",
-                "--daemon-binary",
-                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
-            ]
+            self.get_edenfsctl_cmd()
+            # pyre-ignore[6]: T38947910
+            + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
         )
         self.assert_systemd_service_is_active(eden_dir=pathlib.Path(self.eden_dir))
 
@@ -117,12 +103,11 @@ class SystemdTest(
         self.set_up_edenfs_systemd_service()
         self.assert_systemd_service_is_stopped(eden_dir=pathlib.Path(self.eden_dir))
         subprocess.call(
-            [typing.cast(str, FindExe.EDEN_CLI)]  # T38947910
-            + self.get_required_eden_cli_args()
-            + [
+            self.get_edenfsctl_cmd()
+            + [  # pyre-ignore[6]: T38947910
                 "start",
                 "--daemon-binary",
-                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
+                FindExe.FAKE_EDENFS,
                 "--",
                 "--failDuringStartup",
             ]
@@ -209,18 +194,18 @@ class SystemdTest(
         self, extra_args: typing.Sequence[str] = ()
     ) -> "pexpect.spawn[str]":
         return pexpect.spawn(
-            # pyre-fixme[6]: Expected `str` for 1st param but got `() -> str`.
+            # pyre-ignore[6]: T38947910
             FindExe.EDEN_CLI,
             self.get_required_eden_cli_args()
-            + [
-                "start",
-                "--daemon-binary",
-                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
-            ]
-            + list(extra_args),
+            # pyre-ignore[6]: T38947910
+            + ["start", "--daemon-binary", FindExe.FAKE_EDENFS] + list(extra_args),
             encoding="utf-8",
             logfile=sys.stderr,
         )
+
+    def get_edenfsctl_cmd(self) -> typing.List[str]:
+        # pyre-ignore[6,7]: T38947910
+        return [FindExe.EDEN_CLI] + self.get_required_eden_cli_args()
 
     def get_required_eden_cli_args(self) -> typing.List[str]:
         return [
@@ -236,7 +221,7 @@ class SystemdTest(
         config_d = pathlib.Path(self.etc_eden_dir) / "config.d"
         config_d.mkdir()
         with open(config_d / "systemd.toml", "w") as config_file:
-            # pyre-fixme[6]: Expected `_Writable` for 2nd param but got `IO[Any]`.
+            # pyre-ignore[6]: T39129461
             toml.dump(config, config_file)
 
     def spoof_user_name(self, user_name: str) -> None:

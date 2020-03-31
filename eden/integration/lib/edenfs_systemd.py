@@ -24,9 +24,7 @@ class EdenFSSystemdMixin(metaclass=abc.ABCMeta):
         # pyre-fixme[16]: Optional type has no attribute
         #  `enable_runtime_unit_from_file`.
         self.systemd.enable_runtime_unit_from_file(
-            unit_file=pathlib.Path(
-                typing.cast(str, FindExe.SYSTEMD_FB_EDENFS_SERVICE)  # T38947910
-            )
+            unit_file=pathlib.Path(FindExe.SYSTEMD_FB_EDENFS_SERVICE)
         )
         # pyre-fixme[16]: Optional type has no attribute `extra_env`.
         self.set_environment_variables(self.systemd.extra_env)

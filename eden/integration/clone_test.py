@@ -8,7 +8,6 @@ import json
 import os
 import subprocess
 import sys
-import typing
 from pathlib import Path
 from textwrap import dedent
 from typing import Optional, Sequence, Set
@@ -284,7 +283,7 @@ class CloneTest(testcase.EdenRepoTest):
         clone_output = self.eden.run_cmd(
             "clone",
             "--daemon-binary",
-            typing.cast(str, FindExe.EDEN_DAEMON),  # T38947910
+            FindExe.EDEN_DAEMON,  # pyre-ignore[6]: T38947910
             self.repo.path,
             str(tmp),
             "--daemon-args",
@@ -343,10 +342,10 @@ class CloneFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
         args = (
             ["--config-dir", str(self.eden_dir)]
             + self.get_required_eden_cli_args()
-            + [
+            + [  # pyre-ignore[6]: T38947910
                 "clone",
                 "--daemon-binary",
-                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
+                FindExe.FAKE_EDENFS,
                 str(repo_path),
                 str(mount_path),
             ]
@@ -354,7 +353,7 @@ class CloneFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
         if extra_args:
             args.extend(extra_args)
         return pexpect.spawn(
-            # pyre-fixme[6]: Expected `str` for 1st param but got `() -> str`.
+            # pyre-ignore[6]: T38947910
             FindExe.EDEN_CLI,
             args,
             encoding="utf-8",

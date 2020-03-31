@@ -42,7 +42,7 @@ class StopTestBase(ServiceTestCaseBase):
 
     def spawn_stop(self, extra_args: List[str]) -> "pexpect.spawn[str]":
         return pexpect.spawn(
-            # pyre-fixme[6]: Expected `str` for 1st param but got `() -> str`.
+            # pyre-ignore[6]: T38947910
             FindExe.EDEN_CLI,
             ["--config-dir", str(self.eden_dir)]
             + self.get_required_eden_cli_args()

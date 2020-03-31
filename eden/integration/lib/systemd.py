@@ -492,9 +492,8 @@ class _TransientUnmanagedSystemdUserServiceManager:
         # HACK(strager): Work around 'systemd --user' refusing to start if the
         # system is not managed by systemd.
         env["LD_PRELOAD"] = str(
-            pathlib.Path(
-                typing.cast(str, FindExe.FORCE_SD_BOOTED)  # T38947910
-            ).resolve(strict=True)
+            # pyre-ignore[6]: T38947910
+            pathlib.Path(FindExe.FORCE_SD_BOOTED).resolve(strict=True)
         )
         process = subprocess.Popen(
             [

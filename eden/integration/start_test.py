@@ -8,9 +8,8 @@ import os
 import pathlib
 import subprocess
 import sys
-import typing
 import unittest
-from typing import List, Optional
+from typing import List, Optional, Sequence
 
 import pexpect
 from eden.fs.cli.config import EdenInstance
@@ -157,7 +156,7 @@ class DirectInvokeTest(unittest.TestCase):
         self._check_error(["restart"])
 
     def _check_error(self, args: List[str], err: Optional[str] = None) -> None:
-        cmd = [typing.cast(str, FindExe.EDEN_DAEMON)]  # T38947910
+        cmd: List[str] = [FindExe.EDEN_DAEMON]  # pyre-ignore[9]: T38947910
         cmd.extend(args)
         out = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertEqual(os.EX_USAGE, out.returncode)
@@ -179,24 +178,24 @@ class StartFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
 
     def spawn_start(
         self,
-        eden_dir: typing.Optional[pathlib.Path] = None,
-        extra_args: typing.Optional[typing.Sequence[str]] = None,
+        eden_dir: Optional[pathlib.Path] = None,
+        extra_args: Optional[Sequence[str]] = None,
     ) -> "pexpect.spawn[str]":
         if eden_dir is None:
             eden_dir = self.eden_dir
         args = (
             ["--config-dir", str(eden_dir)]
             + self.get_required_eden_cli_args()
-            + [
+            + [  # pyre-ignore[6]: T38947910
                 "start",
                 "--daemon-binary",
-                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
+                FindExe.FAKE_EDENFS,
             ]
         )
         if extra_args:
             args.extend(extra_args)
         return pexpect.spawn(
-            # pyre-fixme[6]: Expected `str` for 1st param but got `() -> str`.
+            # pyre-ignore[6]: T38947910
             FindExe.EDEN_CLI,
             args,
             encoding="utf-8",
@@ -322,14 +321,14 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase, PexpectAssertionMixin):
         args = (
             self.get_required_eden_cli_args()
             + config_dir_args
-            + [
+            + [  # pyre-ignore[6]: T38947910
                 "start",
                 "--daemon-binary",
-                typing.cast(str, FindExe.FAKE_EDENFS),  # T38947910
+                FindExe.FAKE_EDENFS,
             ]
         )
         start_process: pexpect.spawn[str] = pexpect.spawn(
-            # pyre-fixme[6]: Expected `str` for 1st param but got `() -> str`.
+            # pyre-ignore[6]: T38947910
             FindExe.EDEN_CLI,
             args,
             encoding="utf-8",
@@ -399,8 +398,8 @@ def run_eden_start_with_real_daemon(
         env["EDEN_EXPERIMENTAL_SYSTEMD"] = "1"
     else:
         env.pop("EDEN_EXPERIMENTAL_SYSTEMD", None)
-    command = [
-        typing.cast(str, FindExe.EDEN_CLI),  # T38947910
+    command: List[str] = [  # pyre-ignore[9]: T38947910
+        FindExe.EDEN_CLI,
         "--config-dir",
         str(eden_dir),
         "--etc-eden-dir",
@@ -409,7 +408,7 @@ def run_eden_start_with_real_daemon(
         str(home_dir),
         "start",
         "--daemon-binary",
-        typing.cast(str, FindExe.EDEN_DAEMON),  # T38947910
+        FindExe.EDEN_DAEMON,
     ]
     if eden_start_needs_allow_root_option(systemd=systemd):
         command.extend(["--", "--allowRoot"])

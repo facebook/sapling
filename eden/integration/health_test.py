@@ -70,7 +70,7 @@ class HealthOfFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
 
     def spawn_status(self, extra_args: typing.List[str]) -> "pexpect.spawn[str]":
         return pexpect.spawn(
-            # pyre-fixme[6]: Expected `str` for 1st param but got `() -> str`.
+            # pyre-ignore[6]: T38947910
             FindExe.EDEN_CLI,
             ["--config-dir", str(self.temp_dir)]
             + self.get_required_eden_cli_args()

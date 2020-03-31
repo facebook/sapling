@@ -6,7 +6,7 @@
 
 import subprocess
 import sys
-import typing
+from typing import Optional
 
 import eden.thrift
 import eden.thrift.client
@@ -30,11 +30,7 @@ class RestartTestBase(ServiceTestCaseBase):
 
         def ensure_stopped() -> None:
             stop_cmd = (
-                [
-                    typing.cast(str, FindExe.EDEN_CLI),  # T38947910
-                    "--config-dir",
-                    str(self.eden_dir),
-                ]
+                [FindExe.EDEN_CLI, "--config-dir", str(self.eden_dir)]
                 + self.get_required_eden_cli_args()
                 + ["stop"]
             )
@@ -46,8 +42,7 @@ class RestartTestBase(ServiceTestCaseBase):
         restart_cmd = (
             [FindExe.EDEN_CLI, "--config-dir", str(self.eden_dir)]
             + self.get_required_eden_cli_args()
-            # pyre-fixme[6]: Expected `List[str]` for 1st param but got
-            #  `List[Union[() -> str, str]]`.
+            # pyre-ignore[6]: T38947910
             + ["restart", "--daemon-binary", FindExe.FAKE_EDENFS]
         )
         restart_cmd.extend(args)
@@ -113,9 +108,7 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         p = self._spawn_restart("--force")
         p.expect(r"Started edenfs \(pid (?P<pid>\d+)\)")
         new_pid_from_restart: int = int(p.match.group("pid"))
-        new_pid_from_health_check: typing.Optional[
-            int
-        ] = self._check_edenfs_health().pid
+        new_pid_from_health_check: Optional[int] = self._check_edenfs_health().pid
 
         self.assertIsNotNone(new_pid_from_health_check, "EdenFS should be alive")
         self.assertNotEqual(

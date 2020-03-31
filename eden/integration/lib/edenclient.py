@@ -12,7 +12,6 @@ import shlex
 import shutil
 import subprocess
 import tempfile
-import typing
 from pathlib import Path
 from types import TracebackType
 from typing import Any, Dict, List, Optional, Union, cast
@@ -154,8 +153,7 @@ class EdenFS(object):
             # Re-raise our own exception type so we can include the error
             # output.
             raise EdenCommandError(ex)
-        # pyre-fixme[22]: The cast is redundant.
-        return cast(str, completed_process.stdout.decode("utf-8"))
+        return completed_process.stdout.decode("utf-8")
 
     def run_unchecked(
         self, command: str, *args: str, **kwargs: Any
@@ -181,7 +179,7 @@ class EdenFS(object):
             subprocess.Popen() or subprocess.check_call().
         """
         cmd = [
-            typing.cast(str, FindExe.EDEN_CLI),  # T38947910
+            FindExe.EDEN_CLI,
             "--config-dir",
             str(self._eden_dir),
             "--etc-eden-dir",
@@ -225,7 +223,7 @@ class EdenFS(object):
         )
 
     def get_extra_daemon_args(self) -> List[str]:
-        extra_daemon_args = [
+        extra_daemon_args: List[str] = [  # pyre-ignore[9]: T38947910
             # Defaulting to 8 import processes is excessive when the test
             # framework runs tests on each CPU core.
             "--num_hg_import_threads",
@@ -233,7 +231,7 @@ class EdenFS(object):
             "--local_storage_engine_unsafe",
             self._storage_engine,
             "--hgPath",
-            typing.cast(str, FindExe.HG_REAL),  # T38947910
+            FindExe.HG_REAL,
         ]
 
         if "SANDCASTLE" in os.environ:
@@ -270,7 +268,7 @@ class EdenFS(object):
         args = self.get_eden_cli_args(
             "daemon",
             "--daemon-binary",
-            typing.cast(str, FindExe.EDEN_DAEMON),  # T38947910
+            FindExe.EDEN_DAEMON,  # pyre-ignore[6]: T38947910
             "--foreground",
         )
 
@@ -379,11 +377,8 @@ class EdenFS(object):
         """
         assert self._process is not None
 
-        cmd = [
-            typing.cast(str, FindExe.TAKEOVER_TOOL),  # T38947910
-            "--edenDir",
-            str(self._eden_dir),
-        ]
+        # pyre-ignore[9]: T38947910
+        cmd: List[str] = [FindExe.TAKEOVER_TOOL, "--edenDir", str(self._eden_dir)]
         subprocess.check_call(cmd)
 
         old_process = self._process
@@ -416,7 +411,7 @@ class EdenFS(object):
         a dictionary.
         """
         data = self.run_cmd("list", "--json")
-        return json.loads(data)
+        return cast(Dict[str, Dict[str, Any]], json.loads(data))
 
     def list_cmd_simple(self) -> Dict[str, str]:
         """
