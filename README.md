@@ -1,4 +1,61 @@
-# EdenFS is a FUSE virtual filesystem for source control repositories.
+# EdenSCM
+
+EdenSCM is a cross-platform, highly scalable source control management system.
+
+It aims to provide both user-friendly and powerful interfaces for users, as
+well as extreme scalability to deal with repositories containing many millions
+of files and many millions of commits.
+
+EdenSCM is comprised of three main components:
+
+* The `eden` CLI: The client-side command line interface for users to interact
+  with EdenSCM.
+* Mononoke: The server-side part of EdenSCM.
+* EdenFS: A virtual filesystem for efficiently checking out large repositories.
+
+EdenSCM's scalability goals are to ensure that all source control operations
+scale with the number of files in use by a developer, and not with the size of
+the repository itself.  This enables fast, performant developer experiences
+even in massive repositories with many long files and very long commit
+histories.
+
+
+# The `eden` CLI
+
+The `eden` CLI was originally based on
+[Mercurial](https://www.mercurial-scm.org/), and shares many aspects of the UI
+and features of Mercurial.
+
+The CLI code can be found in the `eden/scm` subdirectory.
+
+## Building the `eden` CLI
+
+The `eden` CLI currently builds and runs on Linux, Mac, and Windows.  The
+`setup.py` script is the main interface for building the CLI.
+
+
+# Mononoke
+
+Mononoke is the server-side component of EdenSCM.
+
+Despite having originally evolved from Mercurial, EdenSCM is not a distributed
+source control system.  In order to support massive repositories, not all
+repository data is downloaded to the client system when checking out a
+repository.  Clients ideally only download the minimal amount of data
+necessary, and then fetch additional data from the server as it is needed.
+
+## Building Mononoke
+
+The Mononoke code lives under `eden/mononoke`
+
+Mononoke currently builds and runs only on Linux, and is not yet buildable
+outside of Facebook's internal environment.  Work is still in progress to
+support building Mononoke with Rust's `cargo` build system.
+
+
+# EdenFS
+
+EdenFS is a virtual file system for managing EdenSCM checkouts.
 
 EdenFS speeds up operations in large repositories by only populating working
 directory files on demand, as they are accessed.  This makes operations like
@@ -17,48 +74,28 @@ The filesystem monitoring tool [Watchman](https://facebook.github.io/watchman/)
 also integrates with EdenFS, allowing it to more efficiently track updates to
 the filesystem.
 
-# Building EdenFS
+## Building EdenFS
 
-EdenFS currently only builds on Linux.
-We have primarily tested building it on Ubuntu 18.04.
+EdenFS currently builds on Linux, Mac, and Windows.
 
-## TL;DR
+The recommended way to build EdenFS is using the `build.sh` script in the
+top-level of the repository.  This script will download and build all of the
+necessary dependencies for EdenFS, before building EdenFS itself.  On Windows
+use the `build.bat` script instead of `build.sh`.
 
-```
-[eden]$ ./getdeps.py --system-deps
-[eden]$ mkdir _build && cd _build
-[eden/_build]$ cmake ..
-[eden/_build]$ make
-```
+This build script will create an output directory outside of the repository
+where it will perform the build.  You can control this output directory
+location by passing a  `--scratch-path` argument to the build script.
 
-## Dependencies
+# Support
 
-EdenFS depends on several other third-party projects.  Some of these are
-commonly available as part of most Linux distributions, while others need to be
-downloaded and built from GitHub.
+EdenSCM is the primary source control system used at Facebook, and is used for
+Facebook's main [monorepo](https://en.wikipedia.org/wiki/Monorepo) code base.
 
-The `getdeps.py` script can be used to help download and build EdenFS's
-dependencies.
-
-### Operating System Dependencies
-
-Running `getdeps.py`  with `--system-deps` will make it install third-party
-dependencies available from your operating system's package management system.
-Without this argument it assumes you already have correct OS dependencies
-installed, and it only updates and builds dependencies that must be compiled
-from source.
-
-### GitHub Dependencies
-
-By default `getdeps.py` will check out third-party dependencies into the
-`eden/external/` directory, then build and install them into
-`eden/external/install/`
-
-If repositories for some of the dependencies are already present in
-`eden/external/` `getdeps.py` does not automatically fetch the latest upstream
-changes from GitHub.  You can explicitly run `./getdeps.py --update` if you
-want it to fetch the latest updates for each dependency and rebuild them from
-scratch.
+Support for using EdenSCM outside of Facebook is still highly experimental.
+While we would be interested to hear feedback if you run into issues,
+supporting external users is not currently a high priority for the development
+team, so we unfortunately cannot guarantee prompt support at this time.
 
 # License
 
