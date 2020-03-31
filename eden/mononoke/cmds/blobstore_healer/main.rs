@@ -16,6 +16,7 @@ use anyhow::{bail, format_err, Error, Result};
 use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, make_sql_factory, BlobstoreOptions, ReadOnlyStorage};
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
+use cached_config::ConfigStore;
 use chrono::Duration as ChronoDuration;
 use clap::{value_t, App, Arg};
 use cloned::cloned;
@@ -23,7 +24,6 @@ use cmdlib::{
     args::{self, get_scuba_sample_builder},
     helpers::block_execute,
 };
-use configerator::ConfigeratorAPI;
 use context::{CoreContext, SessionContainer};
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
 use fbinit::FacebookInit;
@@ -61,9 +61,9 @@ fn open_mysql_raw_replicas(
     fb: FacebookInit,
     ctx: CoreContext,
     db_address: String,
-    regions: Vec<String>,
+    regions: Arc<Vec<String>>,
 ) -> BoxFuture<Vec<(String, Connection)>, Error> {
-    let raw_conns = regions.into_iter().map({
+    let raw_conns = (*regions).clone().into_iter().map({
         cloned!(ctx);
         move |region| {
             let tier: &str = &db_address;
@@ -204,13 +204,11 @@ fn maybe_schedule_healer_for_storage(
                 .boxify()
         }
         MetadataDBConfig::Mysql { db_address, .. } => {
-            let cfgr = ConfigeratorAPI::new(fb)?;
-            let regions = cfgr
-                .get_entity(CONFIGERATOR_REGIONS_CONFIG, Duration::from_secs(5))?
-                .contents;
-            let regions: Vec<String> = serde_json::from_str(&regions)?;
+            let regions = ConfigStore::configerator(fb, None, None, Duration::from_secs(5))?
+                .get_config_handle::<Vec<String>>(CONFIGERATOR_REGIONS_CONFIG.to_owned())?
+                .get();
             if let Some(myrouter_port) = mysql_options.myrouter_port {
-                info!(ctx.logger(), "Monitoring regions: {:?}", regions);
+                info!(ctx.logger(), "Monitoring regions: {:?}", *regions);
                 let mut conn_builder = myrouter::Builder::new();
                 conn_builder
                     .service_type(myrouter::ServiceType::SLAVE)
@@ -218,10 +216,10 @@ fn maybe_schedule_healer_for_storage(
                     .tier(db_address.clone(), None)
                     .port(myrouter_port);
                 let mut myrouter_conns = vec![];
-                for region in regions {
+                for region in &*regions {
                     conn_builder.explicit_region(region.clone());
                     let conn: Connection = conn_builder.build_read_only().into();
-                    let conn_fut = future::ok((region, conn));
+                    let conn_fut = future::ok((region.clone(), conn));
                     myrouter_conns.push(conn_fut);
                 }
                 join_all(myrouter_conns).boxify()

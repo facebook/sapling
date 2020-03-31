@@ -22,7 +22,7 @@ use crate::errors::ErrorKind;
 use anyhow::{anyhow, format_err, Error, Result};
 use ascii::AsciiString;
 use bookmarks_types::BookmarkName;
-use configerator::ConfigeratorAPI;
+use cached_config::ConfigStore;
 use fbinit::FacebookInit;
 use itertools::Itertools;
 use maplit::hashmap;
@@ -821,22 +821,22 @@ impl RepoConfigs {
 
     fn read_raw_configs(fb: FacebookInit, config_path: &Path) -> Result<RawRepoConfigs> {
         if config_path.starts_with(CONFIGERATOR_PREFIX) {
-            // this intentionally doesn't use ConfigSource, since we'll be expanding
-            // ConfigeratorAPI to support signed configs, hence we will need to use
-            // the lower API directly
             let cfg_path = config_path
                 .strip_prefix(CONFIGERATOR_PREFIX)?
-                .to_string_lossy();
-            let cfgr = ConfigeratorAPI::with_signed_config_validation(
+                .to_string_lossy()
+                .into_owned();
+            let arc_conf = ConfigStore::signed_configerator(
                 fb,
+                None,
                 hashmap! {
-                    cfg_path.to_string() => CONFIGERATOR_CRYPTO_PROJECT.to_owned(),
+                    cfg_path.clone() => CONFIGERATOR_CRYPTO_PROJECT.to_owned(),
                 },
-            )?;
-            let repo_configs = cfgr
-                .get_entity(&cfg_path, Duration::from_secs(30))?
-                .contents;
-            Ok(serde_json::from_str(&repo_configs)?)
+                None,
+                Duration::from_secs(30),
+            )?
+            .get_config_handle::<RawRepoConfigs>(cfg_path)?
+            .get();
+            Ok((*arc_conf).clone())
         } else if config_path.is_dir() {
             Self::read_raw_configs_toml(config_path)
         } else if config_path.is_file() {

@@ -65,6 +65,7 @@ members = [
     "mercurial/types",
     "mercurial/types/if",
     "mercurial/types/mocks",
+    "metaconfig/parser",
     "metaconfig/types",
     "mononoke_types",
     "mononoke_types/if",
