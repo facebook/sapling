@@ -15,7 +15,7 @@ use std::sync::{
 use aclchecker::Identity;
 use anyhow::Error;
 use bytes::Bytes;
-use configerator_cached::ConfigHandle;
+use cached_config::ConfigHandle;
 use futures::{
     channel::oneshot,
     future::{self, Future, FutureExt},

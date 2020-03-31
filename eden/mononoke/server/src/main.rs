@@ -9,9 +9,9 @@
 #![feature(never_type)]
 
 use anyhow::Result;
+use cached_config::ConfigStore;
 use clap::{App, ArgMatches};
 use cmdlib::{args, monitoring::ReadyFlagService};
-use configerator_cached::ConfigStore;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,

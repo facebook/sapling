@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use configerator_cached::ConfigHandle;
+use cached_config::ConfigHandle;
 use context::{CoreContext, PerfCounters, SessionContainer};
 use dns_lookup::lookup_addr;
 use fbinit::FacebookInit;

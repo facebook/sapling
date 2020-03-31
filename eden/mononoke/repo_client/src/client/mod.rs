@@ -15,8 +15,8 @@ use blobstore::Loadable;
 use bookmarks::{Bookmark, BookmarkName, BookmarkPrefix};
 use bytes::Bytes;
 use bytes_old::{BufMut as BufMutOld, Bytes as BytesOld, BytesMut as BytesMutOld};
+use cached_config::ConfigHandle;
 use cloned::cloned;
-use configerator_cached::ConfigHandle;
 use context::{CoreContext, LoggingContainer, PerfCounterType, SessionContainer};
 use futures_ext::{
     spawn_future, try_boxfuture, try_boxstream, BoxFuture, BoxStream, BufferedParams,

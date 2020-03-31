@@ -10,7 +10,7 @@ use std::sync::{Arc, Mutex};
 use std::time::Instant;
 
 use anyhow::Error;
-use configerator_cached::ConfigHandle;
+use cached_config::ConfigHandle;
 use context::{generate_session_id, SessionId};
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;

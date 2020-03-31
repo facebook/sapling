@@ -7,7 +7,7 @@
 
 use super::*;
 use blobstore::Loadable;
-use configerator_cached::ConfigHandle;
+use cached_config::ConfigHandle;
 use fbinit::FacebookInit;
 use fixtures::many_files_dirs;
 use futures::compat::Future01CompatExt;

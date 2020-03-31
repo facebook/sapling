@@ -15,9 +15,9 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{bail, format_err, Error, Result};
+use cached_config::{ConfigHandle, ConfigStore};
 use clap::{App, Arg, ArgGroup, ArgMatches};
 use cloned::cloned;
-use configerator_cached::{ConfigHandle, ConfigStore};
 use fbinit::FacebookInit;
 use futures::{FutureExt, TryFutureExt};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};

@@ -6,7 +6,7 @@
  */
 
 use aclchecker::Identity;
-use configerator_cached::ConfigHandle;
+use cached_config::ConfigHandle;
 use fbinit::FacebookInit;
 use futures::future::{self, FutureExt};
 use gotham::{handler::HandlerFuture, middleware::Middleware, state::State};

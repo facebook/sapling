@@ -21,7 +21,7 @@ pub use crate::connection_acceptor::wait_for_connections_closed;
 
 use anyhow::Error;
 use blobrepo_factory::{BlobstoreOptions, Caching, ReadOnlyStorage};
-use configerator_cached::ConfigStore;
+use cached_config::ConfigStore;
 use fbinit::FacebookInit;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::Future;

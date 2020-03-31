@@ -13,10 +13,10 @@ mod protocol;
 
 use anyhow::{Context, Error};
 use blobstore_factory::make_blobstore;
+use cached_config::ConfigHandle;
 use clap::{Arg, ArgMatches};
 use cloned::cloned;
 use cmdlib::{args, monitoring::ReadyFlagService};
-use configerator_cached::ConfigHandle;
 use context::SessionContainer;
 use fbinit::FacebookInit;
 use futures::{
