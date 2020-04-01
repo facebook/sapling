@@ -101,10 +101,14 @@ class HgBackingStore : public BackingStore {
 
   using WatchList = std::list<folly::stop_watch<>>;
   using LockedWatchList = folly::Synchronized<WatchList>;
+  using DefaultDuration = std::chrono::steady_clock::steady_clock::duration;
 
   size_t getPendingBlobImports() const;
   size_t getPendingTreeImports() const;
   size_t getPendingPrefetchImports() const;
+  DefaultDuration getPendingBlobImportMaxDuration() const;
+  DefaultDuration getPendingTreeImportMaxDuration() const;
+  DefaultDuration getPendingPrefetchImportMaxDuration() const;
 
  private:
   // Forbidden copy constructor and assignment operator
@@ -204,6 +208,12 @@ class HgBackingStore : public BackingStore {
       const Hash& edenTreeID,
       RelativePathPiece path,
       LocalStore::WriteBatch* writeBatch);
+
+  /**
+   * finds the watch in `watches` for which the time that has elapsed
+   * is the greatest and returns the duration of time that has elapsed
+   */
+  DefaultDuration getMaxDuration(LockedWatchList& watches) const;
 
   LocalStore* localStore_{nullptr};
   std::shared_ptr<EdenStats> stats_;

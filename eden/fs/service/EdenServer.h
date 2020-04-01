@@ -500,6 +500,14 @@ class EdenServer : private TakeoverHandler {
   size_t sumHgQueuedBackingStoreCounters(
       size_t getCounterFromStore(const HgQueuedBackingStore&));
 
+  /**
+   * take the max of the values of the counter for each
+   * HgQueuedBackingStore accessed by calling the getCounterFromStore
+   * function on the each store
+   */
+  size_t maxHgQueuedBackingStoreCounters(
+      size_t getCounterFromStore(const HgQueuedBackingStore&));
+
   /*
    * Member variables.
    *

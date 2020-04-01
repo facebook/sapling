@@ -122,23 +122,19 @@ class HgBackingStoreStatsTest(testcase.EdenRepoTest):
     def test_pending_import_counters_available(self) -> None:
         counters = self.get_counters()
 
-        self.assertIn(
-            "store.hg.pending_import_count.blob",
-            counters,
-            "store.hg.pending_import_count.blob should be available",
-        )
+        counter_names_to_check = [
+            "store.hg.pending_import.blob.count",
+            "store.hg.pending_import.tree.count",
+            "store.hg.pending_import.prefetch.count",
+            "store.hg.pending_import.count",
+            "store.hg.pending_import.blob.max_duration_us",
+            "store.hg.pending_import.tree.max_duration_us",
+            "store.hg.pending_import.prefetch.max_duration_us",
+            "store.hg.pending_import.max_duration_us",
+        ]
 
-        self.assertIn(
-            "store.hg.pending_import_count.tree",
-            counters,
-            "store.hg.pending_import_count.tree should be available",
-        )
-
-        self.assertIn(
-            "store.hg.pending_import_count.prefetch",
-            counters,
-            "store.hg.pending_import_count.prefetch should available",
-        )
+        for counter_name in counter_names_to_check:
+            self.assertIn(counter_name, counters, f"{counter_name} should be available")
 
     def create_repo(self, name: str) -> HgRepository:
         return self.create_hg_repo(name)

@@ -881,6 +881,32 @@ size_t HgBackingStore::getPendingTreeImports() const {
 size_t HgBackingStore::getPendingPrefetchImports() const {
   return pendingImportPrefetchWatches_.rlock()->size();
 }
+HgBackingStore::DefaultDuration
+HgBackingStore::getPendingBlobImportMaxDuration() const {
+  return getMaxDuration(pendingImportBlobWatches_);
+}
+
+HgBackingStore::DefaultDuration
+HgBackingStore::getPendingTreeImportMaxDuration() const {
+  return getMaxDuration(pendingImportTreeWatches_);
+}
+
+HgBackingStore::DefaultDuration
+HgBackingStore::getPendingPrefetchImportMaxDuration() const {
+  return getMaxDuration(pendingImportPrefetchWatches_);
+}
+
+HgBackingStore::DefaultDuration HgBackingStore::getMaxDuration(
+    LockedWatchList& watches) const {
+  DefaultDuration maxDurationImport{0};
+  {
+    auto lockedWatches = watches.rlock();
+    for (const auto& watch : *lockedWatches) {
+      maxDurationImport = std::max(maxDurationImport, watch.elapsed());
+    }
+  }
+  return maxDurationImport;
+}
 
 void HgBackingStore::periodicManagementTask() {
 #ifdef EDEN_HAVE_RUST_DATAPACK

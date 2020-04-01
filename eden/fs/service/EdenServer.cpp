@@ -223,11 +223,21 @@ class EdenServer::ThriftServerEventHandler
 
 static constexpr folly::StringPiece kBlobCacheMemory{"blob_cache.memory"};
 static constexpr folly::StringPiece kPendingBlobImportCount{
-    "store.hg.pending_import_count.blob"};
+    "store.hg.pending_import.blob.count"};
 static constexpr folly::StringPiece kPendingTreeImportCount{
-    "store.hg.pending_import_count.tree"};
+    "store.hg.pending_import.tree.count"};
 static constexpr folly::StringPiece kPendingPrefetchImportCount{
-    "store.hg.pending_import_count.prefetch"};
+    "store.hg.pending_import.prefetch.count"};
+static constexpr folly::StringPiece kPendingImportCountSummary{
+    "store.hg.pending_import.count"};
+static constexpr folly::StringPiece kPendingBlobImportMaxDuration{
+    "store.hg.pending_import.blob.max_duration_us"};
+static constexpr folly::StringPiece kPendingTreeImportMaxDuration{
+    "store.hg.pending_import.tree.max_duration_us"};
+static constexpr folly::StringPiece kPendingPrefetchImportMaxDuration{
+    "store.hg.pending_import.prefetch.max_duration_us"};
+static constexpr folly::StringPiece kPendingImportMaxDurationSummary{
+    "store.hg.pending_import.max_duration_us"};
 
 EdenServer::EdenServer(
     std::vector<std::string> originalCommandLine,
@@ -273,6 +283,53 @@ EdenServer::EdenServer(
           return store.getHgBackingStore()->getPendingPrefetchImports();
         });
   });
+  counters->registerCallback(kPendingImportCountSummary, [this] {
+    return this->sumHgQueuedBackingStoreCounters(
+        [](const HgQueuedBackingStore& store) {
+          return store.getHgBackingStore()->getPendingBlobImports() +
+              store.getHgBackingStore()->getPendingTreeImports() +
+              store.getHgBackingStore()->getPendingPrefetchImports();
+        });
+  });
+  counters->registerCallback(kPendingBlobImportMaxDuration, [this] {
+    return this->maxHgQueuedBackingStoreCounters(
+        [](const HgQueuedBackingStore& store) {
+          return static_cast<size_t>(
+              std::chrono::duration_cast<std::chrono::microseconds>(
+                  store.getHgBackingStore()->getPendingBlobImportMaxDuration())
+                  .count());
+        });
+  });
+  counters->registerCallback(kPendingTreeImportMaxDuration, [this] {
+    return this->maxHgQueuedBackingStoreCounters(
+        [](const HgQueuedBackingStore& store) {
+          return static_cast<size_t>(
+              std::chrono::duration_cast<std::chrono::microseconds>(
+                  store.getHgBackingStore()->getPendingTreeImportMaxDuration())
+                  .count());
+        });
+  });
+  counters->registerCallback(kPendingPrefetchImportMaxDuration, [this] {
+    return this->maxHgQueuedBackingStoreCounters([](const HgQueuedBackingStore&
+                                                        store) {
+      return static_cast<size_t>(
+          std::chrono::duration_cast<std::chrono::microseconds>(
+              store.getHgBackingStore()->getPendingPrefetchImportMaxDuration())
+              .count());
+    });
+  });
+  counters->registerCallback(kPendingImportMaxDurationSummary, [this] {
+    return this->maxHgQueuedBackingStoreCounters([](const HgQueuedBackingStore&
+                                                        store) {
+      auto max_duration = std::max(
+          {store.getHgBackingStore()->getPendingBlobImportMaxDuration(),
+           store.getHgBackingStore()->getPendingTreeImportMaxDuration(),
+           store.getHgBackingStore()->getPendingPrefetchImportMaxDuration()});
+      return static_cast<size_t>(
+          std::chrono::duration_cast<std::chrono::microseconds>(max_duration)
+              .count());
+    });
+  });
 }
 
 EdenServer::~EdenServer() {
@@ -281,6 +338,11 @@ EdenServer::~EdenServer() {
   counters->unregisterCallback(kPendingBlobImportCount);
   counters->unregisterCallback(kPendingTreeImportCount);
   counters->unregisterCallback(kPendingPrefetchImportCount);
+  counters->unregisterCallback(kPendingImportCountSummary);
+  counters->unregisterCallback(kPendingBlobImportMaxDuration);
+  counters->unregisterCallback(kPendingTreeImportMaxDuration);
+  counters->unregisterCallback(kPendingPrefetchImportMaxDuration);
+  counters->unregisterCallback(kPendingImportMaxDurationSummary);
 }
 
 Future<Unit> EdenServer::unmountAll() {
@@ -1291,6 +1353,16 @@ size_t EdenServer::sumHgQueuedBackingStoreCounters(
   size_t aggregatedCounter{0};
   for (const auto& store : this->getHgQueuedBackingStores()) {
     aggregatedCounter += getCounterFromStore(*store);
+  }
+  return aggregatedCounter;
+}
+
+size_t EdenServer::maxHgQueuedBackingStoreCounters(
+    size_t getCounterFromStore(const HgQueuedBackingStore&)) {
+  size_t aggregatedCounter{0};
+  for (const auto& store : this->getHgQueuedBackingStores()) {
+    aggregatedCounter =
+        std::max(aggregatedCounter, getCounterFromStore(*store));
   }
   return aggregatedCounter;
 }
