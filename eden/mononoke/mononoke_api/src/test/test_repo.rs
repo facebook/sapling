@@ -10,7 +10,8 @@ use std::convert::TryFrom;
 use std::str::FromStr;
 use std::sync::Arc;
 
-use anyhow::Error;
+use anyhow::{anyhow, Error};
+use blobrepo_factory::new_memblob_empty;
 use blobstore::Loadable;
 use bytes::Bytes;
 use chrono::{FixedOffset, TimeZone};
@@ -21,9 +22,10 @@ use futures_old::Future;
 use futures_util::stream::TryStreamExt;
 
 use crate::{
-    ChangesetId, ChangesetIdPrefix, ChangesetPrefixSpecifier, ChangesetSpecifier,
-    ChangesetSpecifierPrefixResolution, CoreContext, FileId, FileMetadata, FileType, HgChangesetId,
-    HgChangesetIdPrefix, Mononoke, MononokePath, TreeEntry, TreeId,
+    changeset_path_diff::ChangesetPathDiffContext, ChangesetId, ChangesetIdPrefix,
+    ChangesetPrefixSpecifier, ChangesetSpecifier, ChangesetSpecifierPrefixResolution, CoreContext,
+    FileId, FileMetadata, FileType, HgChangesetId, HgChangesetIdPrefix, Mononoke, MononokePath,
+    TreeEntry, TreeId,
 };
 use cross_repo_sync_test_utils::init_small_large_repo;
 use mononoke_types::{
@@ -801,5 +803,48 @@ async fn resolve_changeset_id_prefix(fb: FacebookInit) -> Result<(), Error> {
     // invalid hex string
     assert!(HgChangesetIdPrefix::from_str("607314euuuuu").is_err());
 
+    Ok(())
+}
+
+#[fbinit::compat_test]
+async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
+    let ctx = CoreContext::test_mock(fb);
+    let blobrepo = new_memblob_empty(None)?;
+    let root = CreateCommitContext::new_root(&ctx, &blobrepo)
+        .add_file("file_to_move", "context1")
+        .commit()
+        .await?;
+
+    let commit_with_move = CreateCommitContext::new(&ctx, &blobrepo, vec![root])
+        .add_file_with_copy_info("file_moved", "context", (root, "file_to_move"))?
+        .delete_file("file_to_move")
+        .commit()
+        .await?;
+
+    let mononoke =
+        Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
+
+    let repo = mononoke.repo(ctx.clone(), "test")?.expect("repo exists");
+    let commit_with_move_ctx = repo
+        .changeset(ChangesetSpecifier::Bonsai(commit_with_move))
+        .await?
+        .ok_or(anyhow!("commit not found"))?;
+    let diff = commit_with_move_ctx
+        .diff(
+            root, true, /* include_copies_renames */
+            None, /* path_restrictions */
+        )
+        .await?;
+
+    assert_eq!(diff.len(), 1);
+    match diff.get(0) {
+        Some(ChangesetPathDiffContext::Moved(to, from)) => {
+            assert_eq!(to.path(), &MononokePath::try_from("file_moved")?);
+            assert_eq!(from.path(), &MononokePath::try_from("file_to_move")?);
+        }
+        _ => {
+            panic!("unexpected diff");
+        }
+    }
     Ok(())
 }

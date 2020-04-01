@@ -11,6 +11,7 @@ use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
+use anyhow::anyhow;
 use blobstore::Loadable;
 use changeset_info::ChangesetInfo;
 use chrono::{DateTime, FixedOffset};
@@ -20,7 +21,7 @@ use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
 use futures::stream::Stream;
-use futures_util::future::{self, try_join, try_join_all, FutureExt, Shared};
+use futures_util::future::{self, try_join, FutureExt, Shared};
 use futures_util::stream::{StreamExt, TryStreamExt};
 use manifest::{Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, PathOrPrefix};
 use mercurial_types::Globalrev;
@@ -358,21 +359,59 @@ impl ChangesetContext {
                 {
                     if *csid == other.id {
                         copy_path_map.insert(from_path, to_path);
-                        inv_copy_path_map.insert(to_path, from_path);
                     }
                 }
             }
+
+            // Prefetch fsnode entries for all "from paths" so that we don't need
+            // to refetch them later
+            let from_path_to_mf_entry = other
+                .root_fsnode_id()
+                .await?
+                .fsnode_id()
+                .find_entries(
+                    self.ctx().clone(),
+                    self.repo().blob_repo().get_blobstore(),
+                    copy_path_map.keys().cloned().cloned(),
+                )
+                .compat()
+                .try_filter_map(|(maybe_from_path, entry)| async move {
+                    Ok(maybe_from_path.map(|from_path| (from_path, entry)))
+                })
+                .try_collect::<HashMap<_, _>>()
+                .await?;
+            inv_copy_path_map = copy_path_map
+                .iter()
+                .map(move |(from_path, to_path)| {
+                    let mf_entry = from_path_to_mf_entry.get(from_path).cloned().ok_or(
+                        MononokeError::from(anyhow!(
+                            "internal error cannot find {:?} in parent commit",
+                            from_path
+                        )),
+                    )?;
+                    let res: Result<_, MononokeError> = Ok((to_path, (from_path, mf_entry)));
+                    res
+                })
+                .collect::<Result<HashMap<_, _>, _>>()?;
         }
+
         // set of paths from other that were copied in (not moved)
-        let copied_paths: HashSet<_> =
-            try_join_all(copy_path_map.iter().map(move |(from_path, _)| async move {
-                self.path((*from_path).clone())?.file_type().await
-            }))
+        // We check if `self` contains paths that were source for copy or move in `other`
+        // If self does contain a path, then we consider it to be a copy, otherwise
+        // it's a move.
+        let copied_paths = self
+            .root_fsnode_id()
             .await?
-            .into_iter()
-            .zip(copy_path_map.keys())
-            .filter_map(|(file_type, path)| file_type.map(|_| path))
-            .collect();
+            .fsnode_id()
+            .find_entries(
+                self.ctx().clone(),
+                self.repo().blob_repo().get_blobstore(),
+                copy_path_map.keys().cloned().cloned(),
+            )
+            .compat()
+            .try_filter_map(|(maybe_from_path, _)| async move { Ok(maybe_from_path) })
+            .try_collect::<HashSet<_>>()
+            .await?;
 
         let (self_manifest_root, other_manifest_root) =
             try_join(self.root_fsnode_id(), other.root_fsnode_id()).await?;
@@ -400,7 +439,8 @@ impl ChangesetContext {
                     ManifestDiff::Added(Some(path), entry @ ManifestEntry::Leaf(_)) => {
                         if !within_restrictions(Some(path.clone()), &path_restrictions) {
                             None
-                        } else if let Some(from_path) = inv_copy_path_map.get(&&path) {
+                        } else if let Some((from_path, from_entry)) = inv_copy_path_map.get(&&path)
+                        {
                             // There's copy information that we can use.
                             if copied_paths.contains(from_path) {
                                 // If the source still exists in the current commit it was a copy.
@@ -410,7 +450,11 @@ impl ChangesetContext {
                                         path.clone(),
                                         entry,
                                     ),
-                                    ChangesetPathContext::new(other.clone(), (*from_path).clone()),
+                                    ChangesetPathContext::new_with_fsnode_entry(
+                                        other.clone(),
+                                        (**from_path).clone(),
+                                        *from_entry,
+                                    ),
                                 ))
                             } else {
                                 // If it doesn't it was a move
@@ -420,7 +464,11 @@ impl ChangesetContext {
                                         path.clone(),
                                         entry,
                                     ),
-                                    ChangesetPathContext::new(other.clone(), (*from_path).clone()),
+                                    ChangesetPathContext::new_with_fsnode_entry(
+                                        other.clone(),
+                                        (**from_path).clone(),
+                                        *from_entry,
+                                    ),
                                 ))
                             }
                         } else {
