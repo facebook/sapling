@@ -472,6 +472,8 @@ async fn run_and_check_if_lfs(
     let pushrebase_params = PushrebaseParams::default();
 
     let mononoke_repo = MononokeRepo::new(
+        ctx.fb,
+        ctx.logger().clone(),
         repo.clone(),
         &pushrebase_params,
         vec![],
@@ -495,7 +497,8 @@ async fn run_and_check_if_lfs(
         0,
         Arc::new(SkiplistIndex::new()),
         Arc::new(SqlMutableCounters::with_sqlite_in_memory()?),
-    );
+    )
+    .await?;
 
     let logging = LoggingContainer::new(ctx.logger().clone(), ScubaSampleBuilder::with_discard());
 

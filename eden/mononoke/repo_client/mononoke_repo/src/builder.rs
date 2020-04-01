@@ -151,6 +151,8 @@ impl MononokeRepoBuilder {
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = skiplist;
 
         let repo = MononokeRepo::new(
+            ctx.fb,
+            ctx.logger().clone(),
             repo,
             &pushrebase,
             bookmarks,
@@ -164,7 +166,7 @@ impl MononokeRepoBuilder {
             Arc::new(mutable_counters),
         );
 
-        Ok(repo)
+        repo.await
     }
 
     pub fn blobrepo(&self) -> &BlobRepo {

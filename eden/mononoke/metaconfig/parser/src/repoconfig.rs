@@ -641,6 +641,7 @@ impl RepoConfigs {
                 generate_lfs_blob_in_hg_sync_job: lfs_params
                     .generate_lfs_blob_in_hg_sync_job
                     .unwrap_or(false),
+                rollout_smc_tier: lfs_params.rollout_smc_tier,
             },
             None => LfsParams::default(),
         };
@@ -1411,6 +1412,7 @@ mod test {
             threshold = 1000
             rollout_percentage = 56
             generate_lfs_blob_in_hg_sync_job = true
+            rollout_smc_tier = "smc_tier"
 
             [bundle2_replay_params]
             preserve_raw_bundle2 = true
@@ -1578,6 +1580,7 @@ mod test {
                     threshold: Some(1000),
                     rollout_percentage: 56,
                     generate_lfs_blob_in_hg_sync_job: true,
+                    rollout_smc_tier: Some("smc_tier".to_string()),
                 },
                 wireproto_logging: WireprotoLoggingConfig {
                     scribe_category: Some("category".to_string()),

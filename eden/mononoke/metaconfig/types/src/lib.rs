@@ -520,6 +520,8 @@ pub struct LfsParams {
     pub rollout_percentage: u32,
     /// Whether hg sync job should generate lfs blobs
     pub generate_lfs_blob_in_hg_sync_job: bool,
+    /// Hosts in this smc tier will receive lfs pointers regardless of rollout_percentage
+    pub rollout_smc_tier: Option<String>,
 }
 
 /// Id used to discriminate diffirent underlying blobstore instances
