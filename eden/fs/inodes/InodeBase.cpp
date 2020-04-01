@@ -12,10 +12,13 @@
 
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeMap.h"
-#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/ParentInodeInfo.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/utils/Clock.h"
+
+#ifndef _WIN32
+#include "eden/fs/inodes/InodeTable.h"
+#endif
 
 namespace facebook {
 namespace eden {
@@ -32,8 +35,10 @@ InodeBase::InodeBase(EdenMount* mount)
   // The root inode always starts with an implicit reference from FUSE.
   incFuseRefcount();
 
+#ifndef _WIN32
   mount->getInodeMetadataTable()->populateIfNotSet(
       ino_, [&] { return mount->getInitialInodeMetadata(S_IFDIR | 0755); });
+#endif
 }
 
 InodeBase::InodeBase(
@@ -52,6 +57,7 @@ InodeBase::InodeBase(
   XLOG(DBG5) << "inode " << this << " (" << ino_
              << ") created: " << getLogPath();
 
+#ifndef _WIN32
   mount_->getInodeMetadataTable()->populateIfNotSet(ino_, [&] {
     auto metadata = mount_->getInitialInodeMetadata(initialMode);
     if (initialTimestamps) {
@@ -59,6 +65,7 @@ InodeBase::InodeBase(
     }
     return metadata;
   });
+#endif
 }
 
 InodeBase::~InodeBase() {
@@ -66,6 +73,7 @@ InodeBase::~InodeBase() {
              << ") destroyed: " << getLogPath();
 }
 
+#ifndef _WIN32
 // See Dispatcher::getattr
 folly::Future<Dispatcher::Attr> InodeBase::getattr() {
   FUSELL_NOT_IMPL();
@@ -92,6 +100,7 @@ folly::Future<folly::Unit> InodeBase::access(int /*mask*/) {
   // not need to call back into the FUSE daemon.
   FUSELL_NOT_IMPL();
 }
+#endif
 
 bool InodeBase::isUnlinked() const {
   auto loc = location_.rlock();
@@ -341,6 +350,7 @@ ParentInodeInfo InodeBase::getParentInfo() const {
   }
 }
 
+#ifndef _WIN32
 InodeMetadata InodeBase::getMetadataLocked() const {
   return getMount()->getInodeMetadataTable()->getOrThrow(getNodeId());
 }
@@ -363,6 +373,7 @@ InodeTimestamps InodeBase::updateMtimeAndCtime(timespec now) {
           })
       .timestamps;
 }
+#endif
 
 timespec InodeBase::getNow() const {
   return getClock().getRealtime();

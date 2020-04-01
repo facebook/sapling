@@ -52,6 +52,7 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(Hash newSnapshot) {
   // This allows any filesystem unlink() or rename() operations to proceed.
   renameLock_.unlock();
 
+#ifndef _WIN32
   // If we have a FUSE channel, flush all invalidations we sent to the kernel
   // as part of the checkout operation.  This will ensure that other processes
   // will see up-to-date data once we return.
@@ -68,6 +69,7 @@ Future<vector<CheckoutConflict>> CheckoutContext::finish(Hash newSnapshot) {
       return std::move(*conflicts_.wlock());
     });
   }
+#endif
 
   // Release the parentsLock_.
   // Once this is released other checkout operations may proceed.

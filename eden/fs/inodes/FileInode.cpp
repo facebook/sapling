@@ -14,19 +14,24 @@
 #include <folly/logging/xlog.h>
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeError.h"
-#include "eden/fs/inodes/InodeTable.h"
-#include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/store/BlobMetadata.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
+
+#ifdef _WIN32
+#include "eden/fs/win/utils/FileUtils.h" // @manual
+#else
+#include "eden/fs/inodes/InodeTable.h"
+#include "eden/fs/inodes/Overlay.h"
+#include "eden/fs/store/BlobAccess.h"
 #include "eden/fs/utils/XAttr.h"
+#endif
 
 using folly::Future;
 using folly::makeFuture;
@@ -137,7 +142,9 @@ std::shared_ptr<const Blob> FileInode::LockedState::getCachedBlob(
   // doesn't accurately reflect how much data is in the kernel's
   // caches.
   ptr_->interestHandle.reset();
+#ifndef _WIN32
   ptr_->readByteRanges.clear();
+#endif // !_WIN32
 
   return nullptr;
 }
@@ -147,7 +154,10 @@ void FileInode::LockedState::setMaterialized() {
   ptr_->tag = State::MATERIALIZED_IN_OVERLAY;
 
   ptr_->interestHandle.reset();
+
+#ifndef _WIN32
   ptr_->readByteRanges.clear();
+#endif
 }
 
 /*********************************************************************
@@ -214,6 +224,7 @@ ReturnType FileInode::runWhileDataLoaded(
       });
 }
 
+#ifndef _WIN32
 template <typename Fn>
 typename folly::futures::detail::callableResult<FileInode::LockedState, Fn>::
     Return
@@ -347,6 +358,7 @@ FileInode::truncateAndRun(LockedState state, Fn&& fn) {
 
   XLOG(FATAL) << "unexpected FileInode state " << state->tag;
 }
+#endif // !_WIN32
 
 /*********************************************************************
  * FileInode::State methods
@@ -377,13 +389,17 @@ void FileInodeState::checkInvariants() {
     case BLOB_LOADING:
       CHECK(hash);
       CHECK(blobLoadingPromise);
+#ifndef _WIN32
       CHECK(readByteRanges.empty());
+#endif
       return;
     case MATERIALIZED_IN_OVERLAY:
       // 'materialized'
       CHECK(!hash);
       CHECK(!blobLoadingPromise);
+#ifndef _WIN32
       CHECK(readByteRanges.empty());
+#endif
       return;
   }
 
@@ -415,6 +431,7 @@ FileInode::FileInode(
     : Base(ino, initialMode, initialTimestamps, std::move(parentInode), name),
       state_(folly::in_place) {}
 
+#ifndef _WIN32
 folly::Future<Dispatcher::Attr> FileInode::getattr() {
   // Future optimization opportunity: right now, if we have not already
   // materialized the data from the entry, we have to materialize it
@@ -492,14 +509,24 @@ folly::Future<std::string> FileInode::readlink(
   // The symlink contents are simply the file contents!
   return readAll(fetchContext, cacheHint);
 }
+#endif // !_WIN32
 
 std::optional<bool> FileInode::isSameAsFast(
     const Hash& blobID,
     TreeEntryType entryType) {
   auto state = state_.rlock();
+#ifndef _WIN32
   if (entryType != treeEntryTypeFromMode(getMetadataLocked(*state).mode)) {
     return false;
   }
+#else
+  // Note: the Windows-specific version of getMode() is safe to call here even
+  // though we are holding the state_ lock.  On non-Windows getMetadataLocked()
+  // must be used instead when holding the lock.
+  if (entryType != treeEntryTypeFromMode(getMode())) {
+    return false;
+  }
+#endif // !_WIN32
 
   if (state->hash.has_value()) {
     // This file is not materialized, so we can compare blob hashes.
@@ -548,6 +575,7 @@ folly::Future<bool> FileInode::isSameAs(
       });
 }
 
+#ifndef _WIN32
 mode_t FileInode::getMode() const {
   return getMetadata().mode;
 }
@@ -561,6 +589,14 @@ InodeMetadata FileInode::getMetadata() const {
   return getMetadataLocked(*lock);
 }
 
+#else
+mode_t FileInode::getMode() const {
+  // On Windows we only store the dir type info and no permissions bits here.
+  // For file it will always be a regular file.
+  return _S_IFREG;
+}
+#endif // !_WIN32
+
 std::optional<Hash> FileInode::getBlobHash() const {
   return state_.rlock()->hash;
 }
@@ -573,6 +609,7 @@ void FileInode::materializeInParent() {
   }
 }
 
+#ifndef _WIN32
 Future<vector<string>> FileInode::listxattr() {
   vector<string> attributes;
   // We used to return kXattrSha1 here for regular files, but
@@ -593,6 +630,17 @@ Future<string> FileInode::getxattr(StringPiece name) {
     return hash.toString();
   });
 }
+#else
+
+AbsolutePath FileInode::getMaterializedFilePath() {
+  auto filePath = getPath();
+  if (!filePath.has_value()) {
+    throw InodeError(
+        EINVAL, inodePtrFromThis(), "File is unlinked", getLogPath());
+  }
+  return getMount()->getPath() + filePath.value();
+}
+#endif
 
 Future<Hash> FileInode::getSha1(ObjectFetchContext& fetchContext) {
   auto state = LockedState{this};
@@ -603,12 +651,20 @@ Future<Hash> FileInode::getSha1(ObjectFetchContext& fetchContext) {
       // If a file is not materialized, it should have a hash value.
       return getObjectStore()->getBlobSha1(state->hash.value(), fetchContext);
     case State::MATERIALIZED_IN_OVERLAY:
+#ifdef _WIN32
+      // TODO(puneetk): We should convert the following code to Future based by
+      // offloading the function call.
+      AbsolutePath pathToFile = getMaterializedFilePath();
+      return makeFuture(getFileSha1(pathToFile.c_str()));
+#else
       return getOverlayFileAccess(state)->getSha1(*this);
+#endif // _WIN32
   }
 
   XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
 }
 
+#ifndef _WIN32
 folly::Future<struct stat> FileInode::stat() {
   auto st = getMount()->initStatData();
   st.st_nlink = 1; // Eden does not support hard links yet.
@@ -660,6 +716,7 @@ void FileInode::fsync(bool datasync) {
     getOverlayFileAccess(state)->fsync(*this, datasync);
   }
 }
+#endif
 
 Future<string> FileInode::readAll(
     ObjectFetchContext& fetchContext,
@@ -689,8 +746,13 @@ Future<string> FileInode::readAll(
         std::string result;
         switch (state->tag) {
           case State::MATERIALIZED_IN_OVERLAY: {
+#ifdef _WIN32
+            AbsolutePath pathToFile = self->getMaterializedFilePath();
+            readFile(pathToFile.c_str(), result);
+#else
             DCHECK(!blob);
             result = self->getOverlayFileAccess(state)->readAllContents(*self);
+#endif
             break;
           }
           case State::BLOB_NOT_LOADING: {
@@ -705,11 +767,29 @@ Future<string> FileInode::readAll(
                           "runWhileDataLoaded() call";
         }
 
+#ifndef _WIN32
         // We want to update atime after the read operation.
         self->updateAtimeLocked(*state);
+#endif // !_WIN32
+
         return result;
       });
 }
+
+#ifdef _WIN32
+void FileInode::materialize() {
+  {
+    auto state = LockedState{this};
+    state.setMaterialized();
+  }
+
+  materializeInParent();
+  auto path = getPath();
+  if (path.has_value()) {
+    getMount()->getJournal().recordChanged(std::move(path.value()));
+  }
+}
+#else
 
 Future<BufVec> FileInode::read(size_t size, off_t off) {
   DCHECK_GE(off, 0);
@@ -816,6 +896,7 @@ folly::Future<size_t> FileInode::write(folly::StringPiece data, off_t off) {
         return self->writeImpl(stateLock, &iov, 1, off);
       });
 }
+#endif
 
 Future<std::shared_ptr<const Blob>> FileInode::startLoadingData(
     LockedState state,
@@ -894,6 +975,7 @@ Future<std::shared_ptr<const Blob>> FileInode::startLoadingData(
   return resultFuture;
 }
 
+#ifndef _WIN32
 void FileInode::materializeNow(
     LockedState& state,
     std::shared_ptr<const Blob> blob) {
@@ -929,12 +1011,13 @@ void FileInode::truncateInOverlay(LockedState& state) {
   getOverlayFileAccess(state)->truncate(*this);
 }
 
-ObjectStore* FileInode::getObjectStore() const {
-  return getMount()->getObjectStore();
-}
-
 OverlayFileAccess* FileInode::getOverlayFileAccess(LockedState&) const {
   return getMount()->getOverlayFileAccess();
+}
+#endif // !_WIN32
+
+ObjectStore* FileInode::getObjectStore() const {
+  return getMount()->getObjectStore();
 }
 
 } // namespace eden

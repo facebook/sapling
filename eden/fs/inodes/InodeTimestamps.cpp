@@ -9,8 +9,11 @@
 
 #include <folly/Conv.h>
 #include <sys/stat.h>
-#include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/utils/Clock.h"
+
+#ifndef _WIN32
+#include "eden/fs/fuse/FuseTypes.h"
+#endif
 
 namespace facebook {
 namespace eden {
@@ -115,6 +118,7 @@ timespec EdenTimestamp::toTimespec() const noexcept {
   return repToTimespec(nsec_);
 }
 
+#ifndef _WIN32
 void InodeTimestamps::setattrTimes(
     const Clock& clock,
     const fuse_setattr_in& attr) {
@@ -162,6 +166,7 @@ void InodeTimestamps::applyToStat(struct stat& st) const {
   st.st_ctime = ctime.toTimespec().tv_sec;
 #endif
 }
+#endif
 
 } // namespace eden
 } // namespace facebook

@@ -14,11 +14,19 @@
 #include <optional>
 #include <unordered_map>
 
-#include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/model/Hash.h"
-#include "eden/fs/takeover/gen-cpp2/takeover_types.h"
 #include "eden/fs/utils/PathFuncs.h"
+
+#ifndef _WIN32
+#include "eden/fs/fuse/FuseChannel.h"
+#include "eden/fs/takeover/gen-cpp2/takeover_types.h"
+#else
+#include "eden/fs/fuse/InodeNumber.h"
+#include "eden/fs/inodes/InodeBase.h"
+#include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/win/utils/Stub.h" // @manual
+#endif
 
 namespace folly {
 class exception_wrapper;
@@ -122,6 +130,7 @@ class InodeMap {
    */
   void initialize(TreeInodePtr root);
 
+#ifndef _WIN32
   /**
    * Initialize the InodeMap from data handed over from a process being taken
    * over.
@@ -131,6 +140,7 @@ class InodeMap {
   void initializeFromTakeover(
       TreeInodePtr root,
       const SerializedInodeMap& takeover);
+#endif
 
   /**
    * Get the root inode.

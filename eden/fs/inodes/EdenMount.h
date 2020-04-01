@@ -6,6 +6,9 @@
  */
 
 #pragma once
+#ifdef _WIN32
+#include "eden/fs/inodes/win/EdenMount.h" // @manual
+#else
 
 #include <folly/Portability.h>
 #include <folly/SharedMutex.h>
@@ -979,3 +982,4 @@ class EdenMountCancelled : public std::runtime_error {
 
 } // namespace eden
 } // namespace facebook
+#endif

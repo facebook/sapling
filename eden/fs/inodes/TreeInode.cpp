@@ -8,25 +8,19 @@
 #include "eden/fs/inodes/TreeInode.h"
 
 #include <boost/polymorphic_cast.hpp>
-#include <folly/FileUtil.h>
 #include <folly/chrono/Conv.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/xlog.h>
 #include <vector>
 
-#include "eden/fs/fuse/DirList.h"
-#include "eden/fs/fuse/FuseChannel.h"
-#include "eden/fs/fuse/RequestData.h"
 #include "eden/fs/inodes/CheckoutAction.h"
 #include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/DeferredDiffEntry.h"
-#include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
-#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/ServerState.h"
@@ -48,7 +42,19 @@
 #include "eden/fs/utils/Synchronized.h"
 #include "eden/fs/utils/TimeUtil.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
+
+#ifdef _WIN32
+#include "eden/fs/win/store/WinStore.h" // @manual
+#include "eden/fs/win/utils/StringConv.h" // @manual
+#else
+#include <folly/FileUtil.h>
+#include "eden/fs/fuse/DirList.h"
+#include "eden/fs/fuse/FuseChannel.h"
+#include "eden/fs/fuse/RequestData.h"
+#include "eden/fs/inodes/EdenDispatcher.h"
+#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/utils/XAttr.h"
+#endif // _WIN32
 
 using folly::ByteRange;
 using folly::Future;
@@ -169,6 +175,7 @@ TreeInode::TreeInode(
 
 TreeInode::~TreeInode() {}
 
+#ifndef _WIN32
 folly::Future<Dispatcher::Attr> TreeInode::getattr() {
   return getAttrLocked(contents_.rlock()->entries);
 }
@@ -184,10 +191,12 @@ Dispatcher::Attr TreeInode::getAttrLocked(const DirContents& contents) {
   attr.st.st_nlink = contents.size() + 2;
   return attr;
 }
+#endif // !_WIN32
 
 Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
   TraceBlock block("getOrLoadChild");
 
+#ifndef _WIN32
   if (name == kDotEdenName && getNodeId() != kRootNodeId) {
     // If they ask for `.eden` in any subdir, return the magical
     // this-dir symlink inode that resolves to the path to the
@@ -197,6 +206,7 @@ Future<InodePtr> TreeInode::getOrLoadChild(PathComponentPiece name) {
     // separately.
     return getMount()->getInode(".eden/this-dir"_relpath);
   }
+#endif // !_WIN32
 
   return tryRlockCheckBeforeUpdate<Future<InodePtr>>(
              contents_,
@@ -845,12 +855,13 @@ FileInodePtr TreeInode::createImpl(
     PathComponentPiece name,
     mode_t mode,
     ByteRange fileContents) {
+#ifndef _WIN32
   // This relies on the fact that the dotEdenInodeNumber field of EdenMount is
   // not defined until after EdenMount finishes configuring the .eden directory.
   if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
     throw InodeError(EPERM, inodePtrFromThis(), name);
   }
-
+#endif
   FileInodePtr inode;
   RelativePath targetName;
 
@@ -894,8 +905,10 @@ FileInodePtr TreeInode::createImpl(
     // Generate an inode number for this new entry.
     auto childNumber = getOverlay()->allocateInodeNumber();
 
+#ifndef _WIN32
     // Create the overlay file before we insert the file into our entries map.
     auto file = getOverlay()->createOverlayFile(childNumber, fileContents);
+#endif
 
     auto now = getNow();
     auto inodeTimestamps = InodeTimestamps{now};
@@ -912,19 +925,27 @@ FileInodePtr TreeInode::createImpl(
     entry.setInode(inode.get());
     getInodeMap()->inodeCreated(inode);
 
+#ifndef _WIN32
     updateMtimeAndCtimeLocked(contents->entries, now);
     getMount()->getServerState()->getFaultInjector().check(
         "createInodeSaveOverlay", name.stringPiece());
+#endif
+
     saveOverlayDir(contents->entries);
   }
 
+#ifndef _WIN32
   invalidateFuseEntryCacheIfRequired(name);
   invalidateFuseInodeCacheIfRequired();
+#endif // !_WIN32
 
   getMount()->getJournal().recordCreated(targetName);
 
   return inode;
 }
+
+#ifndef _WIN32
+// Eden doesn't support symlinks support on Windows
 
 FileInodePtr TreeInode::symlink(
     PathComponentPiece name,
@@ -940,6 +961,7 @@ FileInodePtr TreeInode::symlink(
         std::move(contents), name, mode, ByteRange{symlinkTarget});
   }
 }
+#endif
 
 FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
   validatePathComponentLength(name);
@@ -972,9 +994,11 @@ FileInodePtr TreeInode::mknod(PathComponentPiece name, mode_t mode, dev_t dev) {
 }
 
 TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
+#ifndef _WIN32
   if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
     throw InodeError(EPERM, inodePtrFromThis(), name);
   }
+#endif
   validatePathComponentLength(name);
 
   RelativePath targetName;
@@ -1032,12 +1056,16 @@ TreeInodePtr TreeInode::mkdir(PathComponentPiece name, mode_t mode) {
     getInodeMap()->inodeCreated(newChild);
 
     // Save our updated overlay data
+#ifndef _WIN32
     updateMtimeAndCtimeLocked(contents->entries, now);
+#endif
     saveOverlayDir(contents->entries);
   }
 
+#ifndef _WIN32
   invalidateFuseEntryCacheIfRequired(name);
   invalidateFuseInodeCacheIfRequired();
+#endif
   getMount()->getJournal().recordCreated(targetName);
 
   return newChild;
@@ -1102,7 +1130,11 @@ folly::Future<folly::Unit> TreeInode::removeImpl(
   // Set the flushKernelCache parameter to true unless this was triggered by a
   // FUSE request, in which case the kernel will automatically update its
   // cache correctly.
+#ifndef _WIN32
   bool flushKernelCache = !RequestData::isFuseRequest();
+#else
+  bool flushKernelCache = false;
+#endif
   int errnoValue =
       tryRemoveChild(renameLock, name, nullChildPtr, flushKernelCache);
   if (errnoValue == 0) {
@@ -1157,10 +1189,12 @@ int TreeInode::tryRemoveChild(
     bool flushKernelCache) {
   materialize(&renameLock);
 
+#ifndef _WIN32
   // prevent unlinking files in the .eden directory
   if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
     return EPERM;
   }
+#endif // !_WIN32
 
   // Lock our contents in write mode.
   // We will hold it for the duration of the unlink.
@@ -1207,17 +1241,21 @@ int TreeInode::tryRemoveChild(
 
     // We want to update mtime and ctime of parent directory after removing the
     // child.
+#ifndef _WIN32
     updateMtimeAndCtimeLocked(contents->entries, getNow());
+#endif
     saveOverlayDir(contents->entries);
   }
   deletedInode.reset();
 
+#ifndef _WIN32
   // We have successfully removed the entry.
   // Flush the kernel cache for this entry if requested.
   if (flushKernelCache) {
     invalidateFuseInodeCache();
     invalidateFuseEntryCache(name);
   }
+#endif
 
   return 0;
 }
@@ -1344,12 +1382,14 @@ Future<Unit> TreeInode::rename(
     PathComponentPiece name,
     TreeInodePtr destParent,
     PathComponentPiece destName) {
+#ifndef _WIN32
   if (getNodeId() == getMount()->getDotEdenInodeNumber()) {
     return makeFuture<Unit>(InodeError(EPERM, inodePtrFromThis(), name));
   }
   if (destParent->getNodeId() == getMount()->getDotEdenInodeNumber()) {
     return makeFuture<Unit>(InodeError(EPERM, destParent, destName));
   }
+#endif
   validatePathComponentLength(destName);
 
   bool needSrc = false;
@@ -1539,10 +1579,12 @@ Future<Unit> TreeInode::doRename(
   locks.srcContents()->erase(srcIter);
 
   auto now = getNow();
+#ifndef _WIN32
   updateMtimeAndCtimeLocked(*locks.srcContents(), now);
   if (destParent.get() != this) {
     destParent->updateMtimeAndCtimeLocked(*locks.destContents(), now);
   }
+#endif
 
   // Save the overlay data
   saveOverlayDir(*locks.srcContents());
@@ -1574,6 +1616,7 @@ Future<Unit> TreeInode::doRename(
   locks.reset();
   deletedInode.reset();
 
+#ifndef _WIN32
   // If the rename occurred outside of a FUSE request (unlikely), make sure to
   // invalidate the kernel caches.
   invalidateFuseInodeCacheIfRequired();
@@ -1582,6 +1625,7 @@ Future<Unit> TreeInode::doRename(
   }
   invalidateFuseEntryCacheIfRequired(srcName);
   destParent->invalidateFuseEntryCacheIfRequired(destName);
+#endif
 
   return folly::unit;
 }
@@ -1663,6 +1707,7 @@ void TreeInode::TreeRenameLocks::lockDestChild(PathComponentPiece destName) {
   }
 }
 
+#ifndef _WIN32
 DirList TreeInode::readdir(DirList&& list, off_t off) {
   /*
    * Implementing readdir correctly in the presence of concurrent modifications
@@ -1772,6 +1817,7 @@ DirList TreeInode::readdir(DirList&& list, off_t off) {
 
   return std::move(list);
 }
+#endif // _WIN32
 
 InodeMap* TreeInode::getInodeMap() const {
   return getMount()->getInodeMap();
@@ -2354,9 +2400,11 @@ Future<Unit> TreeInode::checkout(
                   self.get(), actions[n]->getEntryName(), result.exception());
             }
 
+#ifndef _WIN32
             if (wasDirectoryListModified) {
               self->invalidateFuseInodeCache();
             }
+#endif // !_WIN32
 
             // Update our state in the overlay
             self->saveOverlayPostCheckout(ctx, toTree.get());
@@ -2581,7 +2629,9 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
       // after this inode processes all of its checkout actions. But we
       // do want to invalidate the kernel's dcache and inode caches.
       wasDirectoryListModified = true;
+#ifndef _WIN32
       invalidateFuseEntryCache(name);
+#endif // !_WIN32
     }
 
     // Nothing else to do when there is no local inode.
@@ -2683,6 +2733,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     getOverlay()->recursivelyRemoveOverlayData(oldEntryInodeNumber);
   }
 
+#ifndef _WIN32
   // TODO: contents have changed: we probably should propagate
   // this information up to our caller so it can mark us
   // materialized if necessary.
@@ -2692,6 +2743,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   if (fuseChannel) {
     fuseChannel->invalidateEntry(getNodeId(), name);
   }
+#endif // !_WIN32
 
   return nullptr;
 }
@@ -2744,8 +2796,9 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
     }
 
     // Tell FUSE to invalidate its cache for this entry.
+#ifndef _WIN32
     invalidateFuseEntryCache(name);
-
+#endif
     // We don't save our own overlay data right now:
     // we'll wait to do that until the checkout operation finishes touching all
     // of our children in checkout().
@@ -2809,10 +2862,11 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
                   newScmEntry->getHash());
               inserted = ret.second;
             }
-
+#ifndef _WIN32
             // This code is running asynchronously during checkout, so
             // flush the readdir cache right here.
             parentInode->invalidateFuseInodeCache();
+#endif
 
             if (!inserted) {
               // Hmm.  Someone else already created a new entry in this location
@@ -2837,6 +2891,7 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
           });
 }
 
+#ifndef _WIN32
 void TreeInode::invalidateFuseInodeCache() {
   if (auto* fuseChannel = getMount()->getFuseChannel()) {
     // FUSE_NOTIFY_INVAL_ENTRY is the appropriate invalidation function
@@ -2867,6 +2922,7 @@ void TreeInode::invalidateFuseEntryCacheIfRequired(PathComponentPiece name) {
   }
   invalidateFuseEntryCache(name);
 }
+#endif
 
 void TreeInode::saveOverlayPostCheckout(
     CheckoutContext* ctx,
@@ -3130,6 +3186,7 @@ size_t TreeInode::unloadChildrenNow() {
       [](InodeBase*) { return true; });
 }
 
+#ifndef _WIN32
 size_t TreeInode::unloadChildrenUnreferencedByFuse() {
   auto treeChildren = getTreeChildren(this);
   return unloadChildrenIf(
@@ -3440,6 +3497,7 @@ folly::Future<std::vector<std::string>> TreeInode::listxattr() {
 folly::Future<std::string> TreeInode::getxattr(folly::StringPiece /*name*/) {
   return makeFuture<std::string>(InodeError(kENOATTR, inodePtrFromThis()));
 }
+#endif
 
 } // namespace eden
 } // namespace facebook

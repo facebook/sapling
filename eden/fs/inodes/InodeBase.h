@@ -12,12 +12,16 @@
 #include <memory>
 #include <optional>
 #include <vector>
-#include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/fuse/InodeNumber.h"
-#include "eden/fs/inodes/InodeMetadata.h"
 #include "eden/fs/inodes/InodePtr.h"
+#include "eden/fs/inodes/InodeTimestamps.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
+
+#ifndef _WIN32
+#include "eden/fs/fuse/Dispatcher.h"
+#include "eden/fs/inodes/InodeMetadata.h"
+#endif
 
 namespace facebook {
 namespace eden {
@@ -98,6 +102,7 @@ class InodeBase {
     return mount_;
   }
 
+#ifndef _WIN32
   // See Dispatcher::getattr
   virtual folly::Future<Dispatcher::Attr> getattr();
 
@@ -114,6 +119,7 @@ class InodeBase {
   virtual folly::Future<std::string> getxattr(folly::StringPiece name) = 0;
 
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> access(int mask);
+#endif // !_WIN32
 
   /**
    * Check if this Inode has been unlinked from its parent TreeInode.
@@ -333,11 +339,12 @@ class InodeBase {
     auto loc = location_.rlock();
     return *loc;
   }
-
+#ifndef _WIN32
   /**
    * Acquire this inode's contents lock and return its metadata.
    */
   virtual InodeMetadata getMetadata() const = 0;
+#endif
 
  protected:
   /**
@@ -356,11 +363,13 @@ class InodeBase {
   void updateJournal();
 
  private:
+#ifndef _WIN32
   // The caller (which is always InodeBaseMetadata) must be holding the inode
   // state lock for this type of inode when calling getMetadataLocked().
   InodeMetadata getMetadataLocked() const;
   void updateAtime();
   InodeTimestamps updateMtimeAndCtime(timespec now);
+#endif
 
   template <typename InodeType>
   friend class InodePtrImpl;
@@ -548,6 +557,7 @@ class InodeBaseMetadata : public InodeBase {
   using InodeBase::InodeBase;
 
  protected:
+#ifndef _WIN32
   /**
    * Get this inode's metadata. The inode's state lock must be held.
    */
@@ -573,6 +583,7 @@ class InodeBaseMetadata : public InodeBase {
   InodeTimestamps updateMtimeAndCtimeLocked(InodeState&, timespec now) {
     return InodeBase::updateMtimeAndCtime(now);
   }
+#endif
 };
 } // namespace eden
 } // namespace facebook

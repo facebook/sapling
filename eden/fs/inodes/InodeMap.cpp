@@ -118,6 +118,7 @@ void InodeMap::initialize(TreeInodePtr root) {
   DCHECK_EQ(0, data->numFileInodes_);
 }
 
+#ifndef _WIN32
 void InodeMap::initializeFromTakeover(
     TreeInodePtr root,
     const SerializedInodeMap& takeover) {
@@ -168,6 +169,7 @@ void InodeMap::initializeFromTakeover(
              << " from takeover, " << data->unloadedInodes_.size()
              << " inodes registered";
 }
+#endif
 
 Future<InodePtr> InodeMap::lookupInode(InodeNumber number) {
   // Lock the data.
@@ -585,11 +587,17 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
   root_.manualDecRef();
 
   return std::move(future).thenValue([this, doTakeover](auto&&) {
+#ifdef _WIN32
+    // On Windows we don't have the takeover implemented yet, so we will return
+    // from here.
+    return SerializedInodeMap{};
+#else
     // TODO: This check could occur after the loadedInodes_ assertion below to
     // maximize coverage of any invariants that are broken during shutdown.
     if (!doTakeover) {
       return SerializedInodeMap{};
     }
+
     auto data = data_.wlock();
     XLOG(DBG3)
         << "InodeMap::shutdown after releasing inodesToClear: loadedCount="
@@ -623,6 +631,7 @@ Future<SerializedInodeMap> InodeMap::shutdown(bool doTakeover) {
     }
 
     return result;
+#endif
   });
 }
 

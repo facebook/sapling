@@ -106,6 +106,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
   ~TreeInode() override;
 
+#ifndef _WIN32
   folly::Future<Dispatcher::Attr> getattr() override;
   folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr) override;
 
@@ -113,6 +114,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
 
   Dispatcher::Attr getAttrLocked(const DirContents& contents);
+#endif // !_WIN32
 
   /**
    * Get the inode object for a child of this directory.
@@ -137,7 +139,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       TreeInodePtr newParent,
       PathComponentPiece newName);
 
+#ifndef _WIN32
   DirList readdir(DirList&& list, off_t off);
+#endif
 
   const folly::Synchronized<TreeInodeState>& getContents() const {
     return contents_;
@@ -360,13 +364,17 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
   /**
    * Returns a copy of this inode's metadata.
    */
+#ifndef _WIN32
   InodeMetadata getMetadata() const override;
+#endif
 
  private:
   class TreeRenameLocks;
   class IncompleteInodeLoad;
 
+#ifndef _WIN32
   InodeMetadata getMetadataLocked(const DirContents&) const;
+#endif
 
   /**
    * The InodeMap is guaranteed to remain valid for at least the lifetime of
@@ -442,7 +450,9 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * used to track the directory in the inode */
   static DirContents buildDirFromTree(const Tree* tree, Overlay* overlay);
 
+#ifndef _WIN32
   void updateAtime();
+#endif // !_WIN32
 
   void prefetch();
 
@@ -615,6 +625,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
       bool& wasDirectoryListModified);
   void saveOverlayPostCheckout(CheckoutContext* ctx, const Tree* tree);
 
+#ifndef _WIN32
   /**
    * Send a request to the kernel to invalidate the pagecache for this inode,
    * which flushes the readdir cache. This is required when the child entry list
@@ -651,6 +662,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * need to tell the kernel about the change--it will automatically know.
    */
   void invalidateFuseEntryCacheIfRequired(PathComponentPiece name);
+#endif
 
   /**
    * Attempt to remove an empty directory during a checkout operation.

@@ -14,11 +14,12 @@
 #include <optional>
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodeBase.h"
-#include "eden/fs/inodes/OverlayFileAccess.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/ImportPriority.h"
+#ifndef _WIN32
 #include "eden/fs/utils/CoverageSet.h"
+#endif
 
 namespace folly {
 class File;
@@ -109,10 +110,12 @@ struct FileInodeState {
    */
   BlobInterestHandle interestHandle;
 
+#ifndef _WIN32
   /**
    * Records the ranges that have been read() when not materialized.
    */
   CoverageSet readByteRanges;
+#endif
 };
 
 class FileInode final : public InodeBaseMetadata<FileInodeState> {
@@ -144,6 +147,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       mode_t initialMode,
       const InodeTimestamps& initialTimestamps);
 
+#ifndef _WIN32
   folly::Future<Dispatcher::Attr> getattr() override;
   folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr) override;
 
@@ -154,6 +158,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   folly::Future<std::string> getxattr(folly::StringPiece name) override;
   folly::Future<std::vector<std::string>> listxattr() override;
+#endif
 
   folly::Future<Hash> getSha1(ObjectFetchContext& fetchContext);
 
@@ -178,6 +183,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    */
   mode_t getMode() const;
 
+#ifndef _WIN32
   /**
    * Get the file dev_t value.
    */
@@ -194,6 +200,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * Returns a copy of this inode's metadata.
    */
   InodeMetadata getMetadata() const override;
+#endif // !_WIN32
 
   /**
    * If this file is backed by a source control Blob, return the hash of the
@@ -216,6 +223,12 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       ObjectFetchContext& fetchContext,
       CacheHint cacheHint = CacheHint::LikelyNeededAgain);
 
+#ifdef _WIN32
+  // This function will update the FileInode's state as materialized. This is a
+  // Windows only function. On POSIX systems the write() functions mark a file
+  // as Materialized.
+  void materialize();
+#else
   /**
    * Read up to size bytes from the file at the specified offset.
    *
@@ -235,6 +248,8 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
   void fsync(bool datasync);
 
   folly::Future<struct stat> stat();
+
+#endif // !_WIN32
 
  private:
   using State = FileInodeState;
@@ -261,6 +276,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       std::shared_ptr<const Blob> blob,
       Fn&& fn);
 
+#ifndef _WIN32
   /**
    * Run a function with the FileInode materialized.
    *
@@ -290,6 +306,8 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       LockedState state,
       Fn&& fn);
 
+#endif // !_WIN32
+
   /**
    * Start loading the file data.
    *
@@ -305,6 +323,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       ObjectFetchContext& fetchContext,
       ImportPriority priority);
 
+#ifndef _WIN32
   /**
    * Materialize the file as an empty file in the overlay.
    *
@@ -328,6 +347,8 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * should use truncateAndRun() instead of calling this function directly.
    */
   void truncateInOverlay(LockedState& state);
+
+#endif // !_WIN32
 
   /**
    * Transition from NOT_LOADING to MATERIALIZED_IN_OVERLAY by copying the
@@ -370,6 +391,7 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    */
   ObjectStore* getObjectStore() const;
 
+#ifndef _WIN32
   /**
    * Returns the OverlayFileAccess used to mediate access to an overlay file.
    *
@@ -388,6 +410,14 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
    * Update the st_blocks field in a stat structure based on the st_size value.
    */
   static void updateBlockCount(struct stat& st);
+#else
+
+  /**
+   * The getMaterializedFilePath() will return the Absolute path to the file in
+   * the ProjectedFS cache.
+   */
+  AbsolutePath getMaterializedFilePath();
+#endif // !_WIN32
 
   folly::Synchronized<State> state_;
 

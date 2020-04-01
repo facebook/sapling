@@ -146,6 +146,7 @@ struct InodeTimestamps {
     ctime = ts;
   }
 
+#ifndef _WIN32
   /**
    * Helper that assigns all three timestamps from the flags and parameters in
    * a fuse_setattr_in struct.
@@ -158,6 +159,7 @@ struct InodeTimestamps {
    * Updates st_atime, st_mtime, and st_ctime of the given stat struct.
    */
   void applyToStat(struct stat& st) const;
+#endif
 };
 
 static_assert(noexcept(EdenTimestamp{}), "");
