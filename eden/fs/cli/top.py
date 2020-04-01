@@ -69,7 +69,10 @@ COLUMN_REVERSE_SORT = Row(
     command=False,
 )
 
+DEFAULT_COLOR_PAIR = 0  # white text, black background
 COLOR_SELECTED = 1
+
+IMPORT_TYPES = ["blob", "tree", "prefetch"]
 
 
 class Top:
@@ -81,6 +84,9 @@ class Top:
         self.running = False
         self.ephemeral = False
         self.refresh_rate = 1
+        self.current_line = 0  # current line printed
+        self.current_x_offset = 0  # horizontal position up to which
+        # has been printed on the current line
 
         # Processes are stored by PID
         self.processes: Dict[int, Process] = {}
@@ -89,6 +95,8 @@ class Top:
 
         self.height = 0
         self.width = 0
+
+        self.pending_imports = {import_type: {} for import_type in IMPORT_TYPES}
 
     def start(self, args: argparse.Namespace) -> int:
         self.running = True
@@ -123,6 +131,7 @@ class Top:
         if self.ephemeral:
             self.processes.clear()
 
+        self._update_summary_stats(client)
         counts = client.getAccessCounts(self.refresh_rate)
 
         for mount, accesses in counts.accessesByMount.items():
@@ -137,10 +146,22 @@ class Top:
         for pid in self.processes.keys():
             self.processes[pid].is_running = os.path.exists(f"/proc/{pid}/")
 
+    def _update_summary_stats(self, client):
+        client.flushStatsNow()
+        counters = client.getCounters()
+        for import_type in IMPORT_TYPES:
+            number_requests = counters.get(
+                f"store.hg.pending_import.{import_type}.count", -1
+            )
+            self.pending_imports[import_type]["number_requests"] = number_requests
+
     def render(self, stdscr):
         stdscr.erase()
+        self.reset()
 
         self.render_top_bar(stdscr)
+        self.write_new_line()
+        self.render_summary_section(stdscr)
         # TODO: daemon memory/inode stats on line 2
         self.render_column_titles(stdscr)
         self.render_rows(stdscr)
@@ -154,24 +175,44 @@ class Top:
         extra_space = self.width - len(TITLE + hostname + date)
 
         # left: title
-        self._write(stdscr, 0, 0, TITLE, self.width)
+        self.write_part_of_line(stdscr, TITLE + " " * (extra_space // 2), self.width)
         if extra_space >= 0:
             # center: date
-            self._write(stdscr, 0, len(TITLE) + extra_space // 2, date, self.width)
+            self.write_part_of_line(stdscr, date, self.width)
             # right: hostname
-            self._write(stdscr, 0, self.width - len(hostname), hostname, self.width)
+            self.write_line_right_justified(stdscr, hostname, self.width)
+
+    def render_summary_section(self, stdscr):
+        imports_header = "outstanding object imports:"
+        self.write_line(stdscr, imports_header, len(imports_header))
+
+        mid_section_size = (self.width - len(imports_header)) // len(IMPORT_TYPES)
+
+        separator = ""
+        for import_type in IMPORT_TYPES:
+            label = f"{separator}{import_type}: "
+            self.write_part_of_line(stdscr, label, len(label))
+
+            import_metric_size = mid_section_size - len(label)
+
+            # number of imports
+            imports_for_type = self.pending_imports[import_type]["number_requests"]
+            if imports_for_type == -1:
+                imports_for_type = "N/A"
+            imports_for_type_display = f"{imports_for_type:>{import_metric_size}}"
+
+            self.write_part_of_line(
+                stdscr, imports_for_type_display, import_metric_size
+            )
+
+            separator = "| "
+
+        self.write_new_line()
 
     def render_column_titles(self, stdscr):
-        LINE = 2
-        self._write(
-            stdscr, LINE, 0, " " * self.width, self.width, self.curses.A_REVERSE
-        )
-        self.render_row(stdscr, LINE, COLUMN_TITLES, self.curses.A_REVERSE)
+        self.render_row(stdscr, COLUMN_TITLES, self.curses.A_REVERSE)
 
     def render_rows(self, stdscr):
-        START_LINE = 3
-        line_numbers = range(START_LINE, self.height)
-
         aggregated_processes = {}
         for process in self.processes.values():
             key = process.get_key()
@@ -186,19 +227,18 @@ class Top:
             reverse=COLUMN_REVERSE_SORT[self.selected_column],
         )
 
-        for line, process in zip(line_numbers, sorted_processes):
+        for process in sorted_processes[: self.height]:
             row = process.get_row()
             row = (fmt(data) for fmt, data in zip(COLUMN_FORMATTING, row))
 
             style = self.curses.A_BOLD if process.is_running else self.curses.A_NORMAL
-            self.render_row(stdscr, line, row, style)
+            self.render_row(stdscr, row, style)
 
-    def render_row(self, stdscr, y, row, style):
-        x = 0
+    def render_row(self, stdscr, row, style):
 
         row_data = zip(row, COLUMN_ALIGNMENT, COLUMN_SPACING)
-        for i, (str, align, space) in enumerate(row_data):
-            remaining_space = self.width - x
+        for i, (raw_text, align, space) in enumerate(row_data):
+            remaining_space = self.width - self.current_x_offset
             if remaining_space <= 0:
                 break
 
@@ -206,14 +246,52 @@ class Top:
             if i == len(COLUMN_SPACING) - 1:
                 space = max(space, remaining_space)
 
-            text = f"{str:{align}{space}}"
+            text = f"{raw_text:{align}{space}} "
 
-            color = 0
+            color = DEFAULT_COLOR_PAIR
             if i == self.selected_column:
                 color = self.curses.color_pair(COLOR_SELECTED)
+            self.write_part_of_line(stdscr, text, space + 1, color | style)
+        self.write_new_line()
 
-            self._write(stdscr, y, x, text, space, color | style)
-            x += space + 1
+    def reset(self) -> None:
+        self.current_line = 0
+        self.current_x_offset = 0
+
+    def write_new_line(self) -> None:
+        self.current_line += 1
+        self.current_x_offset = 0
+
+    # note: this will start writing at what ever the `current_x_offset` is, it
+    # will not start writing on a new line, adds a new line to the end of the
+    # line printed
+    def write_line(
+        self, window, line: str, max_width: int, attr: Optional[int] = None
+    ) -> None:
+        self._write(
+            window, self.current_line, self.current_x_offset, line, max_width, attr
+        )
+        self.write_new_line()
+
+    # prints starting from the `current_x_offset`, does NOT add a newline
+    def write_part_of_line(
+        self, window, part, max_width: int, attr: Optional[int] = None
+    ) -> None:
+        self._write(
+            window, self.current_line, self.current_x_offset, part, max_width, attr
+        )
+        self.current_x_offset += len(part)
+
+    # prints a line with the line right justified, adds a new line after printing
+    # the line
+    def write_line_right_justified(
+        self, window, line, max_width: int, attr: Optional[int] = None
+    ) -> None:
+        max_width = min(max_width, self.width - self.current_x_offset)
+        width = min(max_width, len(line))
+        x = self.width - width
+        self._write(window, self.current_line, x, line, max_width, attr)
+        self.write_new_line()
 
     def _write(
         self,
@@ -222,9 +300,11 @@ class Top:
         x: int,
         text: str,
         max_width: int,
-        attr: Optional[int] = 0,
+        attr: Optional[int] = None,
     ) -> None:
         try:
+            if attr is None:
+                attr = DEFAULT_COLOR_PAIR
             window.addnstr(y, x, text, max_width, attr)
         except Exception as ex:
             # When attempting to write to the very last terminal cell curses will
