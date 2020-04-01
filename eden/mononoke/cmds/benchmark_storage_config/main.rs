@@ -22,6 +22,8 @@ mod single_puts;
 pub const KB: usize = 1024;
 pub const MB: usize = KB * 1024;
 const ARG_STORAGE_CONFIG_NAME: &'static str = "storage-config-name";
+const ARG_SAVE_BASELINE: &'static str = "save-baseline";
+const ARG_USE_BASELINE: &'static str = "use-baseline";
 
 #[fbinit::main]
 fn main(fb: fbinit::FacebookInit) {
@@ -35,8 +37,36 @@ fn main(fb: fbinit::FacebookInit) {
                 .takes_value(true)
                 .required(true)
                 .help("the name of the storage config to benchmark"),
+        )
+        .arg(
+            Arg::with_name(ARG_SAVE_BASELINE)
+                .long(ARG_SAVE_BASELINE)
+                .takes_value(true)
+                .required(false)
+                .help("save results as a baseline under given name, for comparison"),
+        )
+        .arg(
+            Arg::with_name(ARG_USE_BASELINE)
+                .long(ARG_USE_BASELINE)
+                .takes_value(true)
+                .required(false)
+                .conflicts_with(ARG_SAVE_BASELINE)
+                .help("compare to named baseline instead of last run"),
         );
     let matches = app.get_matches();
+
+    let mut criterion = Criterion::default()
+        .measurement_time(Duration::from_secs(60))
+        .sample_size(10)
+        .warm_up_time(Duration::from_secs(60));
+
+    if let Some(baseline) = matches.value_of(ARG_SAVE_BASELINE) {
+        criterion = criterion.save_baseline(baseline.to_string());
+    }
+    if let Some(baseline) = matches.value_of(ARG_USE_BASELINE) {
+        criterion = criterion.retain_baseline(baseline.to_string());
+    }
+
     let logger = args::init_logging(fb, &matches);
     args::init_cachelib(fb, &matches, None);
 
@@ -63,11 +93,6 @@ fn main(fb: fbinit::FacebookInit) {
             logger,
         ))
         .expect("Could not make blobstore");
-
-    let mut criterion = Criterion::default()
-        .measurement_time(Duration::from_secs(60))
-        .sample_size(10)
-        .warm_up_time(Duration::from_secs(60));
 
     // Tests are run from here
     single_puts::benchmark(&mut criterion, ctx.clone(), blobstore.clone(), &mut runtime);
