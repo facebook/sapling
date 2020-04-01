@@ -327,6 +327,22 @@ class wirepeer(repository.legacypeer):
         yield pushkeymod.decodekeys(d)
 
     @batchable
+    def listkeyspatterns(self, namespace, patterns):
+        if not self.capable("pushkey"):
+            yield {}, None
+        f = peer.future()
+        self.ui.debug(
+            'preparing listkeys for "%s" with pattern "%s"\n' % (namespace, patterns)
+        )
+        yield {
+            "namespace": encoding.fromlocal(namespace),
+            "patterns": encodelist([pycompat.encodeutf8(p) for p in patterns]),
+        }, f
+        d = f.value
+        self.ui.debug('received listkey for "%s": %i bytes\n' % (namespace, len(d)))
+        yield pushkeymod.decodekeys(d)
+
+    @batchable
     def pushkey(self, namespace, key, old, new):
         if not self.capable("pushkey"):
             yield False, None
@@ -1071,6 +1087,13 @@ def hello(repo, proto):
 @wireprotocommand("listkeys", "namespace")
 def listkeys(repo, proto, namespace):
     d = repo.listkeys(encoding.tolocal(namespace)).items()
+    return pushkeymod.encodekeys(d)
+
+
+@wireprotocommand("listkeyspatterns", "namespace patterns")
+def listkeyspatterns(repo, proto, namespace, patterns):
+    patterns = [pycompat.decodeutf8(p) for p in decodelist(patterns)]
+    d = pycompat.iteritems(repo.listkeys(encoding.tolocal(namespace), patterns))
     return pushkeymod.encodekeys(d)
 
 

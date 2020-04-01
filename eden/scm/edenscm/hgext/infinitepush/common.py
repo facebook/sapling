@@ -32,21 +32,11 @@ def reposetup(ui, repo):
 
 
 def extsetup(ui):
-    wireproto.commands["listkeyspatterns"] = (
-        wireprotolistkeyspatterns,
-        "namespace patterns",
-    )
     wireproto.commands["knownnodes"] = (wireprotoknownnodes, "nodes *")
     extensions.wrapfunction(debugcommands, "_debugbundle2part", debugbundle2part)
     extensions.wrapfunction(
         bundlerepo.bundlerepository, "_handlebundle2part", bundlerepohandlebundle2part
     )
-
-
-def wireprotolistkeyspatterns(repo, proto, namespace, patterns):
-    patterns = [pycompat.decodeutf8(p) for p in wireproto.decodelist(patterns)]
-    d = pycompat.iteritems(repo.listkeys(encoding.tolocal(namespace), patterns))
-    return pushkey.encodekeys(d)
 
 
 def wireprotoknownnodes(repo, proto, nodes, others):

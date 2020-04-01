@@ -14,7 +14,7 @@ from __future__ import absolute_import
 
 import abc
 
-from . import error, pycompat
+from . import error, pycompat, util
 from .i18n import _
 
 
@@ -132,6 +132,26 @@ class _basewirecommands(pycompat.ABC):
 
         Returns an iterable of key names.
         """
+
+    def listkeyspatterns(self, namespace, patterns):
+        """Obtain all keys in a pushkey namespace.
+
+        Filter by patterns.
+
+        Returns an iterable of key names.
+        """
+        values = self.listkeys(namespace)
+        if namespace == "bookmarks":
+            bmarks = values
+            values = util.sortdict()
+            for pattern in patterns:
+                if pattern.endswith("*"):
+                    pattern = "re:^" + pattern[:-1] + ".*"
+                kind, pat, matcher = util.stringmatcher(pattern)
+                for bookmark, node in pycompat.iteritems(bmarks):
+                    if matcher(bookmark):
+                        values[bookmark] = node
+        return values
 
     @abc.abstractmethod
     def lookup(self, key):

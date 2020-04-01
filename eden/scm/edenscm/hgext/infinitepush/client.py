@@ -88,7 +88,6 @@ def extsetup(ui):
 
     extensions.wrapfunction(bundle2, "_addpartsfromopts", _addpartsfromopts)
 
-    wireproto.wirepeer.listkeyspatterns = listkeyspatterns
     wireproto.wirepeer.knownnodes = knownnodes
 
     # Move infinitepush part before pushrebase part
@@ -595,23 +594,6 @@ def _addpartsfromopts(orig, ui, repo, bundler, *args, **kwargs):
     if ui.configbool("infinitepush", "bundle-stream", False):
         bundler.addparam("infinitepush", True)
     return orig(ui, repo, bundler, *args, **kwargs)
-
-
-@peer.batchable
-def listkeyspatterns(self, namespace, patterns):
-    if not self.capable("pushkey"):
-        yield {}, None
-    f = peer.future()
-    self.ui.debug(
-        'preparing listkeys for "%s" with pattern "%s"\n' % (namespace, patterns)
-    )
-    yield {
-        "namespace": encoding.fromlocal(namespace),
-        "patterns": wireproto.encodelist([pycompat.encodeutf8(p) for p in patterns]),
-    }, f
-    d = f.value
-    self.ui.debug('received listkey for "%s": %i bytes\n' % (namespace, len(d)))
-    yield pushkey.decodekeys(d)
 
 
 @peer.batchable

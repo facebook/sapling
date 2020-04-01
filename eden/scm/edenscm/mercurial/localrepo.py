@@ -251,8 +251,11 @@ class localpeer(repository.peer):
     def known(self, nodes):
         return self._repo.known(nodes)
 
-    def listkeys(self, namespace):
-        return self._repo.listkeys(namespace)
+    def listkeys(self, namespace, patterns=None):
+        return self._repo.listkeys(namespace, patterns)
+
+    def listkeyspatterns(self, namespace, patterns=None):
+        return self._repo.listkeys(namespace, patterns)
 
     def lookup(self, key):
         return self._repo.lookup(key)
@@ -2614,11 +2617,21 @@ class localrepository(object):
         self._afterlock(runhook)
         return ret
 
-    def listkeys(self, namespace):
+    def listkeys(self, namespace, patterns=None):
         self.hook("prelistkeys", throw=True, namespace=namespace)
         self.ui.debug('listing keys for "%s"\n' % namespace)
         values = pushkey.list(self, namespace)
         self.hook("listkeys", namespace=namespace, values=values)
+        if patterns is not None and namespace == "bookmarks":
+            bmarks = values
+            values = util.sortdict()
+            for pattern in patterns:
+                if pattern.endswith("*"):
+                    pattern = "re:^" + pattern[:-1] + ".*"
+                kind, pat, matcher = util.stringmatcher(pattern)
+                for bookmark, node in pycompat.iteritems(bmarks):
+                    if matcher(bookmark):
+                        values[bookmark] = node
         return values
 
     def debugwireargs(self, one, two, three=None, four=None, five=None):
