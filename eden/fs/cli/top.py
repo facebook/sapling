@@ -71,8 +71,12 @@ COLUMN_REVERSE_SORT = Row(
 
 DEFAULT_COLOR_PAIR = 0  # white text, black background
 COLOR_SELECTED = 1
+LOWER_WARN_THRESHOLD_COLOR = 2
+UPPER_WARN_THRESHOLD_COLOR = 3
 
 IMPORT_TYPES = ["blob", "tree", "prefetch"]
+IMPORT_TIME_LOWER_WARN_THRESHOLD = 10  # seconds
+IMPORT_TIME_UPPER_WARN_THRESHOLD = 30  # seconds
 
 
 class Top:
@@ -119,6 +123,10 @@ class Top:
 
             self.curses.use_default_colors()
             self.curses.init_pair(COLOR_SELECTED, self.curses.COLOR_GREEN, -1)
+            self.curses.init_pair(
+                LOWER_WARN_THRESHOLD_COLOR, self.curses.COLOR_YELLOW, -1
+            )
+            self.curses.init_pair(UPPER_WARN_THRESHOLD_COLOR, self.curses.COLOR_RED, -1)
 
             while self.running:
                 self.update(client)
@@ -153,7 +161,18 @@ class Top:
             number_requests = counters.get(
                 f"store.hg.pending_import.{import_type}.count", -1
             )
+            longest_outstanding_request = counters.get(
+                f"store.hg.pending_import.{import_type}.max_duration_us", -1
+            )  # us
+            longest_outstanding_request = (
+                -1
+                if longest_outstanding_request == -1
+                else (longest_outstanding_request / 1000000)
+            )  # s
             self.pending_imports[import_type]["number_requests"] = number_requests
+            self.pending_imports[import_type][
+                "max_request_duration"
+            ] = longest_outstanding_request
 
     def render(self, stdscr):
         stdscr.erase()
@@ -186,28 +205,58 @@ class Top:
         imports_header = "outstanding object imports:"
         self.write_line(stdscr, imports_header, len(imports_header))
 
-        mid_section_size = (self.width - len(imports_header)) // len(IMPORT_TYPES)
+        mid_section_size = self.width // 3
 
         separator = ""
         for import_type in IMPORT_TYPES:
             label = f"{separator}{import_type}: "
             self.write_part_of_line(stdscr, label, len(label))
 
+            # split the section between the number of imports and
+            # the duration of the longest import
             import_metric_size = mid_section_size - len(label)
+            import_count_size = import_metric_size // 2
+            import_time_size = import_metric_size - import_count_size
 
             # number of imports
             imports_for_type = self.pending_imports[import_type]["number_requests"]
             if imports_for_type == -1:
                 imports_for_type = "N/A"
-            imports_for_type_display = f"{imports_for_type:>{import_metric_size}}"
+            imports_for_type_display = f"{imports_for_type:>{import_count_size-1}} "
 
-            self.write_part_of_line(
-                stdscr, imports_for_type_display, import_metric_size
-            )
+            # duration of the longest import
+            longest_request = self.pending_imports[import_type][
+                "max_request_duration"
+            ]  # us
+            color = self._get_color_for_pending_import_display(longest_request)
+            if longest_request == -1:
+                longest_request_display = "N/A"
+            else:
+                # 3 places after the decimal
+                longest_request_display = f"{longest_request:.3f}"
+                # set the maximum number of digits, will remove decimals if
+                # not enough space & adds unit
+                longest_request_display = (
+                    f"{longest_request_display:.{import_time_size-3}s}s"
+                )
+            # wrap time in parens
+            longest_request_display = f"({longest_request_display})"
+            # right align
+            longest_request_display = f"{longest_request_display:>{import_time_size}}"
 
-            separator = "| "
+            import_display = f"{imports_for_type_display}{longest_request_display}"
+            self.write_part_of_line(stdscr, import_display, import_metric_size, color)
 
+            separator = " | "
         self.write_new_line()
+
+    def _get_color_for_pending_import_display(self, longest_request) -> Optional[int]:
+        if longest_request == 0 or longest_request < IMPORT_TIME_LOWER_WARN_THRESHOLD:
+            return None
+        elif longest_request < IMPORT_TIME_UPPER_WARN_THRESHOLD:
+            return self.curses.color_pair(LOWER_WARN_THRESHOLD_COLOR)
+        else:
+            return self.curses.color_pair(UPPER_WARN_THRESHOLD_COLOR)
 
     def render_column_titles(self, stdscr):
         self.render_row(stdscr, COLUMN_TITLES, self.curses.A_REVERSE)
@@ -280,7 +329,7 @@ class Top:
         self._write(
             window, self.current_line, self.current_x_offset, part, max_width, attr
         )
-        self.current_x_offset += len(part)
+        self.current_x_offset += min(max_width, len(part))
 
     # prints a line with the line right justified, adds a new line after printing
     # the line
