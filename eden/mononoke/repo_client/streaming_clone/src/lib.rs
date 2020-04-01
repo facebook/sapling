@@ -19,12 +19,14 @@ use thiserror::Error;
 
 use blobstore::Blobstore;
 use context::CoreContext;
-use mononoke_types::{BlobstoreBytes, RepositoryId};
+use mononoke_types::RepositoryId;
 
 #[derive(Debug, Error)]
 pub enum ErrorKind {
-    #[error("internal error: streaming blob {0} missing")]
+    #[error("missing blob {0}")]
     MissingStreamingBlob(String),
+    #[error("incorrect size {1} (expected {2}) of corrupt blob {0}")]
+    CorruptStreamingBlob(String, usize, usize),
 }
 
 pub struct RevlogStreamingChunks {
@@ -75,6 +77,25 @@ impl SqlConstructors for SqlStreamingChunksFetcher {
     }
 }
 
+fn fetch_blob<B: Blobstore>(
+    ctx: CoreContext,
+    blobstore: &B,
+    key: &[u8],
+    expected_size: usize,
+) -> BoxFuture<Bytes, Error> {
+    let key = String::from_utf8_lossy(key).into_owned();
+    blobstore
+        .get(ctx.clone(), key.clone())
+        .and_then(move |data| match data {
+            None => Err(ErrorKind::MissingStreamingBlob(key).into()),
+            Some(data) if data.len() == expected_size => Ok(data.into_bytes()),
+            Some(data) => {
+                Err(ErrorKind::CorruptStreamingBlob(key, data.len(), expected_size).into())
+            }
+        })
+        .boxify()
+}
+
 impl SqlStreamingChunksFetcher {
     pub fn fetch_changelog(
         &self,
@@ -87,30 +108,22 @@ impl SqlStreamingChunksFetcher {
                 rows.into_iter().fold(
                     RevlogStreamingChunks::new(),
                     move |mut res, (idx_blob_name, idx_size, data_blob_name, data_size)| {
-                        res.data_size += data_size as usize;
-                        res.index_size += idx_size as usize;
-                        let data_blob_key = String::from_utf8_lossy(&data_blob_name).into_owned();
-                        res.data_blobs.push(
-                            blobstore
-                                .get(ctx.clone(), data_blob_key.clone())
-                                .and_then(|data| {
-                                    data.ok_or(
-                                        ErrorKind::MissingStreamingBlob(data_blob_key).into(),
-                                    )
-                                })
-                                .map(BlobstoreBytes::into_bytes)
-                                .boxify(),
-                        );
-                        let idx_blob_key = String::from_utf8_lossy(&idx_blob_name).into_owned();
-                        res.index_blobs.push(
-                            blobstore
-                                .get(ctx.clone(), idx_blob_key.clone())
-                                .and_then(|data| {
-                                    data.ok_or(ErrorKind::MissingStreamingBlob(idx_blob_key).into())
-                                })
-                                .map(BlobstoreBytes::into_bytes)
-                                .boxify(),
-                        );
+                        let data_size = data_size as usize;
+                        let idx_size = idx_size as usize;
+                        res.data_size += data_size;
+                        res.index_size += idx_size;
+                        res.data_blobs.push(fetch_blob(
+                            ctx.clone(),
+                            &blobstore,
+                            &data_blob_name,
+                            data_size,
+                        ));
+                        res.index_blobs.push(fetch_blob(
+                            ctx.clone(),
+                            &blobstore,
+                            &idx_blob_name,
+                            idx_size,
+                        ));
                         res
                     },
                 )
