@@ -80,20 +80,13 @@ Sync in client2 (remote bookmarks sync disabled). The master bookmark doesn't mo
 Sync in client2 with sync enabled
   $ hg cloud sync -q --config commitcloud.remotebookmarkssync=true
   $ showgraph
-  @  0 base: public  default/master
-  
-
-Sync in client1 again. BUG: master is rewound
-  $ cd $TESTTMP/client1
-  $ hg cloud sync -q
-  $ showgraph
-  o  1 public1: public
+  o  1 public1: public  default/master
   |
-  @  0 base: public  default/master
+  @  0 base: public
   
 
-Remediate by pulling.
-  $ hg pull -q
+Sync in client1 again.
+  $ cd $TESTTMP/client1
   $ hg cloud sync -q
   $ showgraph
   o  1 public1: public  default/master
@@ -104,12 +97,6 @@ Remediate by pulling.
 Sync in client2 again (remote bookmarks sync disabled)
   $ cd $TESTTMP/client2
   $ hg cloud sync -q
-  $ showgraph
-  @  0 base: public  default/master
-  
-
-Pull latest master
-  $ hg pull -q
   $ showgraph
   o  1 public1: public  default/master
   |
@@ -133,11 +120,13 @@ Pull in client1 and sync
   @  0 base: public
   
 
-Sync in client 2 with remotebookmarks sync enabled.  BUG: master is not updated
+Sync in client 2 with remotebookmarks sync enabled.
   $ cd $TESTTMP/client2
   $ hg cloud sync -q --config commitcloud.remotebookmarkssync=true
   $ showgraph
-  o  1 public1: public  default/master
+  o  2 public2: public  default/master
+  |
+  o  1 public1: public
   |
   @  0 base: public
   
