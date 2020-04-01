@@ -7,18 +7,21 @@
 
 #pragma once
 
+#include <list>
+#include <memory>
+#include <optional>
+
+#include <folly/Executor.h>
+#include <folly/Range.h>
+#include <folly/Synchronized.h>
+#include <folly/stop_watch.h>
+
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/PathFuncs.h"
-
-#include <folly/Executor.h>
-#include <folly/Range.h>
-#include <folly/Synchronized.h>
-#include <memory>
-#include <optional>
 
 #ifdef EDEN_HAVE_RUST_DATAPACK
 #include "eden/fs/store/hg/HgDatapackStore.h" // @manual
@@ -95,6 +98,9 @@ class HgBackingStore : public BackingStore {
    * treemanifest data.
    */
   folly::Future<std::unique_ptr<Tree>> importTreeManifest(const Hash& commitId);
+
+  using WatchList = std::list<folly::stop_watch<>>;
+  using LockedWatchList = folly::Synchronized<WatchList>;
 
   size_t getPendingBlobImports() const;
   size_t getPendingTreeImports() const;
@@ -223,9 +229,10 @@ class HgBackingStore : public BackingStore {
   std::optional<HgDatapackStore> datapackStore_;
 #endif
 
-  mutable std::atomic<size_t> pendingImportBlobCount_{0};
-  mutable std::atomic<size_t> pendingImportTreeCount_{0};
-  mutable std::atomic<size_t> pendingImportPrefetchCount_{0};
+  // Track metrics for queued imports
+  mutable LockedWatchList pendingImportBlobWatches_;
+  mutable LockedWatchList pendingImportTreeWatches_;
+  mutable LockedWatchList pendingImportPrefetchWatches_;
 };
 } // namespace eden
 } // namespace facebook

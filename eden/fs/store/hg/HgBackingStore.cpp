@@ -7,6 +7,8 @@
 
 #include "HgBackingStore.h"
 
+#include <list>
+
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
 #include <folly/Try.h>
@@ -18,6 +20,7 @@
 #include <folly/logging/xlog.h>
 #include <folly/small_vector.h>
 #include <folly/stop_watch.h>
+
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/model/Blob.h"
@@ -188,21 +191,30 @@ std::unique_ptr<Blob> getBlobFromUnionStore(
 /**
  * managers the pointer to the number of outstanding imports
  */
-class PendingImportsCounterScope {
+class PendingImportsMetricsScope {
  public:
-  explicit PendingImportsCounterScope(std::atomic<size_t>* pendingRequestsCount)
-      : pendingRequestsCount_(pendingRequestsCount) {
-    pendingRequestsCount_->fetch_add(1, std::memory_order_relaxed);
+  explicit PendingImportsMetricsScope(
+      HgBackingStore::LockedWatchList* pendingRequestWatches)
+      : pendingRequestWatches_(pendingRequestWatches) {
+    folly::stop_watch<> watch;
+    {
+      auto startTimes = pendingRequestWatches_->wlock();
+      requestWatch_ = startTimes->insert(startTimes->end(), watch);
+    }
   }
 
-  ~PendingImportsCounterScope() {
-    pendingRequestsCount_->fetch_sub(1, std::memory_order_relaxed);
+  ~PendingImportsMetricsScope() {
+    {
+      auto startTimes = pendingRequestWatches_->wlock();
+      startTimes->erase(requestWatch_);
+    }
   }
-  PendingImportsCounterScope(PendingImportsCounterScope&&) = delete;
-  PendingImportsCounterScope& operator=(PendingImportsCounterScope&&) = delete;
+  PendingImportsMetricsScope(PendingImportsMetricsScope&&) = delete;
+  PendingImportsMetricsScope& operator=(PendingImportsMetricsScope&&) = delete;
 
  private:
-  std::atomic<size_t>* pendingRequestsCount_;
+  HgBackingStore::LockedWatchList* pendingRequestWatches_;
+  HgBackingStore::WatchList::iterator requestWatch_;
 };
 } // namespace
 
@@ -552,7 +564,7 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
     RelativePath path,
     std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
   auto queueTracker =
-      std::make_unique<PendingImportsCounterScope>(&pendingImportTreeCount_);
+      std::make_unique<PendingImportsMetricsScope>(&pendingImportTreeWatches_);
   auto fut =
       folly::via(
           importThreadPool_.get(),
@@ -758,7 +770,7 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(
     const RelativePathPiece& path,
     const Hash& id) {
   auto queueTracker =
-      std::make_unique<PendingImportsCounterScope>(&pendingImportBlobCount_);
+      std::make_unique<PendingImportsMetricsScope>(&pendingImportBlobWatches_);
   return folly::via(
              importThreadPool_.get(),
              [path = path.copy(), stats = stats_, id] {
@@ -774,8 +786,8 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(
 
 folly::Future<folly::Unit> HgBackingStore::prefetchBlobs(
     const std::vector<Hash>& ids) const {
-  auto queueTracker = std::make_unique<PendingImportsCounterScope>(
-      &pendingImportPrefetchCount_);
+  auto queueTracker = std::make_unique<PendingImportsMetricsScope>(
+      &pendingImportPrefetchWatches_);
   return HgProxyHash::getBatch(localStore_, ids)
       .via(importThreadPool_.get())
       .thenValue([](std::vector<std::pair<RelativePath, Hash>>&& hgPathHashes) {
@@ -859,15 +871,15 @@ folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::importTreeForCommit(
 }
 
 size_t HgBackingStore::getPendingBlobImports() const {
-  return pendingImportBlobCount_.load(std::memory_order_relaxed);
+  return pendingImportBlobWatches_.rlock()->size();
 }
 
 size_t HgBackingStore::getPendingTreeImports() const {
-  return pendingImportTreeCount_.load(std::memory_order_relaxed);
+  return pendingImportTreeWatches_.rlock()->size();
 }
 
 size_t HgBackingStore::getPendingPrefetchImports() const {
-  return pendingImportPrefetchCount_.load(std::memory_order_relaxed);
+  return pendingImportPrefetchWatches_.rlock()->size();
 }
 
 void HgBackingStore::periodicManagementTask() {
