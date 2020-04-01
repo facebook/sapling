@@ -328,7 +328,7 @@ def git_branch_names():
     out, _ = run_cmd(["branch"])
     reg = r"\*\s*(\w*)"
     GitRevision.current_branch = re.search(reg, out).groups()[0]
-    return list(set(out.split()) - set(["*"]))
+    return list(set(out.split()) - set(["*", "+"]))
 
 def git_common_ancestor(branch1, branch2):
     out, _ = run_cmd(["merge-base", branch1, branch2], swallow_error=True)
