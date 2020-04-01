@@ -490,7 +490,15 @@ class EdenServer : private TakeoverHandler {
    *
    */
   std::unordered_set<std::shared_ptr<HgQueuedBackingStore>>
-  getHgBackingStores();
+  getHgQueuedBackingStores();
+
+  /**
+   * sum the values of the counter for each HgQueuedBackingStore
+   * accessed by calling the getCounterFromStore function on the
+   * each store
+   */
+  size_t sumHgQueuedBackingStoreCounters(
+      size_t getCounterFromStore(const HgQueuedBackingStore&));
 
   /*
    * Member variables.

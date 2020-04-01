@@ -256,31 +256,22 @@ EdenServer::EdenServer(
     return this->getBlobCache()->getStats().totalSizeInBytes;
   });
   counters->registerCallback(kPendingBlobImportCount, [this] {
-    size_t pendingBlobImportCount{0};
-    auto hgBackingStores = this->getHgBackingStores();
-    for (const auto& store : hgBackingStores) {
-      pendingBlobImportCount +=
-          store->getHgBackingStore()->getPendingBlobImports();
-    }
-    return pendingBlobImportCount;
+    return this->sumHgQueuedBackingStoreCounters(
+        [](const HgQueuedBackingStore& store) {
+          return store.getHgBackingStore()->getPendingBlobImports();
+        });
   });
   counters->registerCallback(kPendingTreeImportCount, [this] {
-    size_t pendingTreeImportCount{0};
-    auto hgBackingStores = this->getHgBackingStores();
-    for (const auto& store : hgBackingStores) {
-      pendingTreeImportCount +=
-          store->getHgBackingStore()->getPendingTreeImports();
-    }
-    return pendingTreeImportCount;
+    return this->sumHgQueuedBackingStoreCounters(
+        [](const HgQueuedBackingStore& store) {
+          return store.getHgBackingStore()->getPendingTreeImports();
+        });
   });
   counters->registerCallback(kPendingPrefetchImportCount, [this] {
-    size_t pendingPrefetchImportCount{0};
-    auto hgBackingStores = this->getHgBackingStores();
-    for (const auto& store : hgBackingStores) {
-      pendingPrefetchImportCount +=
-          store->getHgBackingStore()->getPendingPrefetchImports();
-    }
-    return pendingPrefetchImportCount;
+    return this->sumHgQueuedBackingStoreCounters(
+        [](const HgQueuedBackingStore& store) {
+          return store.getHgBackingStore()->getPendingPrefetchImports();
+        });
   });
 }
 
@@ -1281,7 +1272,7 @@ shared_ptr<BackingStore> EdenServer::getBackingStore(
 }
 
 std::unordered_set<shared_ptr<HgQueuedBackingStore>>
-EdenServer::getHgBackingStores() {
+EdenServer::getHgQueuedBackingStores() {
   std::unordered_set<std::shared_ptr<HgQueuedBackingStore>> hgBackingStores{};
   {
     auto lockedStores = this->backingStores_.rlock();
@@ -1293,6 +1284,15 @@ EdenServer::getHgBackingStores() {
     }
   }
   return hgBackingStores;
+}
+
+size_t EdenServer::sumHgQueuedBackingStoreCounters(
+    size_t getCounterFromStore(const HgQueuedBackingStore&)) {
+  size_t aggregatedCounter{0};
+  for (const auto& store : this->getHgQueuedBackingStores()) {
+    aggregatedCounter += getCounterFromStore(*store);
+  }
+  return aggregatedCounter;
 }
 
 shared_ptr<BackingStore> EdenServer::createBackingStore(
