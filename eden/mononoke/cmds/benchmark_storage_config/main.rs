@@ -24,6 +24,7 @@ pub const MB: usize = KB * 1024;
 const ARG_STORAGE_CONFIG_NAME: &'static str = "storage-config-name";
 const ARG_SAVE_BASELINE: &'static str = "save-baseline";
 const ARG_USE_BASELINE: &'static str = "use-baseline";
+const ARG_FILTER_BENCHMARKS: &'static str = "filter";
 
 #[fbinit::main]
 fn main(fb: fbinit::FacebookInit) {
@@ -52,6 +53,14 @@ fn main(fb: fbinit::FacebookInit) {
                 .required(false)
                 .conflicts_with(ARG_SAVE_BASELINE)
                 .help("compare to named baseline instead of last run"),
+        )
+        .arg(
+            Arg::with_name(ARG_FILTER_BENCHMARKS)
+                .long(ARG_FILTER_BENCHMARKS)
+                .takes_value(true)
+                .required(false)
+                .multiple(true)
+                .help("limit to benchmarks whose name contains this string. Repetition tightens the filter"),
         );
     let matches = app.get_matches();
 
@@ -65,6 +74,12 @@ fn main(fb: fbinit::FacebookInit) {
     }
     if let Some(baseline) = matches.value_of(ARG_USE_BASELINE) {
         criterion = criterion.retain_baseline(baseline.to_string());
+    }
+
+    if let Some(filters) = matches.values_of(ARG_FILTER_BENCHMARKS) {
+        for filter in filters {
+            criterion = criterion.with_filter(filter.to_string())
+        }
     }
 
     let logger = args::init_logging(fb, &matches);
