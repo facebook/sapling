@@ -10,6 +10,7 @@ from __future__ import absolute_import
 import ctypes
 import getpass
 import os
+import sys
 
 from edenscm.mercurial import blackbox, encoding, progress, pycompat, util
 from edenscm.mercurial.node import hex
@@ -187,7 +188,8 @@ class client(object):
             return self._command(*args)
 
     @util.timefunction("watchmanquery", 0, "_ui")
-    def command(self, *args):
+    def command(self, *args, **kwargs):
+        ignoreerrors = kwargs.get("ignoreerrors", False)
         with progress.spinner(self._ui, "querying watchman"):
             try:
                 try:
@@ -212,7 +214,8 @@ class client(object):
             except Unavailable:
                 # this is in an outer scope to catch Unavailable form any of the
                 # above _command calls
-                self._watchmanclient = None
+                if not ignoreerrors:
+                    self._watchmanclient = None
                 raise
 
 
@@ -313,10 +316,24 @@ class state_update(object):
                 "partial": self.partial,
             }
             metadata.update(self.metadata)
-            client.command(cmd, {"name": self.name, "metadata": metadata})
+            client.command(
+                # ignoreerrors=True prevents the client from invalidating it's
+                # watchman client in the event of an error. It will still throw
+                # an exception though.
+                cmd, {"name": self.name, "metadata": metadata}, ignoreerrors=True
+            )
             return True
-        except Exception:
+        except Exception as ex:
             # Swallow any errors; fire and forget
+            exctype = sys.exc_info()[0]
+            exctypename = "None" if exctype is None else exctype.__name__
+            self.repo.ui.log(
+                "hgerrors",
+                "watchman '%s' event has failed: %s",
+                cmd,
+                str(ex),
+                type=exctypename,
+            )
             return False
 
 
