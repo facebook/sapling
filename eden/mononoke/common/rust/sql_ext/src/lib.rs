@@ -5,13 +5,18 @@
  * GNU General Public License version 2.
  */
 
-mod constructors;
 mod sqlite;
 
 use sql::{Connection, Transaction};
 
-pub use constructors::{SqlConnections, SqlConstructors};
-pub use sqlite::{create_sqlite_connections, open_sqlite_in_memory, open_sqlite_path};
+pub use sqlite::{open_sqlite_in_memory, open_sqlite_path};
+
+#[derive(Clone)]
+pub struct SqlConnections {
+    pub write_connection: Connection,
+    pub read_connection: Connection,
+    pub read_master_connection: Connection,
+}
 
 impl SqlConnections {
     /// Create SqlConnections from a single connection.
