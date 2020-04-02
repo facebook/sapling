@@ -41,6 +41,7 @@ members = [
     "common/rust/caching_ext",
     "common/rust/sql_ext",
     "common/scuba_ext",
+    "common/sql_construct",
     "common/topo_sort",
     "common/uniqueheap",
     "derived_data",

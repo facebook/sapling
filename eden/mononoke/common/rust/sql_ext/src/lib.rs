@@ -8,10 +8,21 @@
 mod constructors;
 mod sqlite;
 
-use sql::Transaction;
+use sql::{Connection, Transaction};
 
 pub use constructors::{SqlConnections, SqlConstructors};
 pub use sqlite::{create_sqlite_connections, open_sqlite_in_memory, open_sqlite_path};
+
+impl SqlConnections {
+    /// Create SqlConnections from a single connection.
+    pub fn new_single(connection: Connection) -> Self {
+        Self {
+            write_connection: connection.clone(),
+            read_connection: connection.clone(),
+            read_master_connection: connection,
+        }
+    }
+}
 
 #[must_use]
 pub enum TransactionResult {
