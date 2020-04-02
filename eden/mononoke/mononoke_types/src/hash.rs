@@ -121,6 +121,13 @@ impl Blake2 {
         // should be possible to do that without copying.
         thrift::Blake2(self.0.to_vec())
     }
+
+    // Stable hash prefix for selection when sampling with modulus
+    pub fn sampling_fingerprint(&self) -> u64 {
+        let mut bytes: [u8; 8] = [0; 8];
+        bytes.copy_from_slice(&self.0[0..8]);
+        u64::from_le_bytes(bytes)
+    }
 }
 
 /// Context for incrementally computing a `Blake2` hash.

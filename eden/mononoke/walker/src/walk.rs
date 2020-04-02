@@ -86,6 +86,7 @@ pub trait WalkVisitor<VOut, Route> {
     // This can mutate the internal state.  Takes ownership and returns data, plus next step
     fn visit(
         &self,
+        ctx: &CoreContext,
         source: ResolvedNode,
         route: Option<Route>,
         outgoing: Vec<OutgoingEdge>,
@@ -559,6 +560,7 @@ where
 {
     // record the roots so the stats add up
     visitor.visit(
+        &ctx,
         ResolvedNode::new(Node::Root, NodeData::Root, None),
         None,
         walk_roots.clone(),
@@ -665,35 +667,39 @@ where
             )
             .await
         }
-        Node::BonsaiChangeset(bcs_id) => bonsai_changeset_step(ctx, &repo, bcs_id).await,
+        Node::BonsaiChangeset(bcs_id) => bonsai_changeset_step(ctx.clone(), &repo, bcs_id).await,
         Node::BonsaiHgMapping(bcs_id) => {
-            bonsai_to_hg_mapping_step(ctx, &repo, bcs_id, enable_derive).await
+            bonsai_to_hg_mapping_step(ctx.clone(), &repo, bcs_id, enable_derive).await
         }
         Node::BonsaiPhaseMapping(bcs_id) => {
             let phases_store = repo
                 .get_phases_factory()
                 .get_phases(repo.get_changeset_fetcher(), heads_fetcher.clone());
-            bonsai_phase_step(ctx, phases_store, bcs_id).await
+            bonsai_phase_step(ctx.clone(), phases_store, bcs_id).await
         }
         Node::PublishedBookmarks => published_bookmarks_step(published_bookmarks.clone()).await,
         // Hg
-        Node::HgBonsaiMapping(hg_csid) => hg_to_bonsai_mapping_step(ctx, &repo, hg_csid).await,
-        Node::HgChangeset(hg_csid) => hg_changeset_step(ctx, &repo, hg_csid).await,
+        Node::HgBonsaiMapping(hg_csid) => {
+            hg_to_bonsai_mapping_step(ctx.clone(), &repo, hg_csid).await
+        }
+        Node::HgChangeset(hg_csid) => hg_changeset_step(ctx.clone(), &repo, hg_csid).await,
         Node::HgFileEnvelope(hg_file_node_id) => {
-            hg_file_envelope_step(ctx, &repo, hg_file_node_id).await
+            hg_file_envelope_step(ctx.clone(), &repo, hg_file_node_id).await
         }
         Node::HgFileNode((path, hg_file_node_id)) => {
-            hg_file_node_step(ctx, &repo, path, hg_file_node_id).await
+            hg_file_node_step(ctx.clone(), &repo, path, hg_file_node_id).await
         }
         Node::HgManifest((path, hg_manifest_id)) => {
-            hg_manifest_step(ctx, &repo, path, hg_manifest_id).await
+            hg_manifest_step(ctx.clone(), &repo, path, hg_manifest_id).await
         }
         // Content
-        Node::FileContent(content_id) => file_content_step(ctx, &repo, content_id),
+        Node::FileContent(content_id) => file_content_step(ctx.clone(), &repo, content_id),
         Node::FileContentMetadata(content_id) => {
-            file_content_metadata_step(ctx, &repo, content_id, enable_derive).await
+            file_content_metadata_step(ctx.clone(), &repo, content_id, enable_derive).await
         }
-        Node::AliasContentMapping(alias) => alias_content_mapping_step(ctx, &repo, alias).await,
+        Node::AliasContentMapping(alias) => {
+            alias_content_mapping_step(ctx.clone(), &repo, alias).await
+        }
     };
 
     let edge_label = walk_item.label;
@@ -762,6 +768,7 @@ where
 
             // Allow WalkVisitor to record state and decline outgoing nodes if already visited
             Ok(visitor.visit(
+                &ctx,
                 ResolvedNode::new(node, node_data, Some(edge_label)),
                 via,
                 children,

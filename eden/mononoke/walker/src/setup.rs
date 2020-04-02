@@ -28,9 +28,10 @@ use futures::{
 use futures_ext::FutureExt as _;
 use lazy_static::lazy_static;
 use metaconfig_types::{Redaction, ScrubAction};
+use samplingblob::SamplingHandler;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, warn, Logger};
-use std::{collections::HashSet, iter::FromIterator, str::FromStr, time::Duration};
+use std::{collections::HashSet, iter::FromIterator, str::FromStr, sync::Arc, time::Duration};
 
 pub struct RepoWalkDatasources {
     pub blobrepo: BoxFuture<'static, Result<BlobRepo, Error>>,
@@ -55,46 +56,48 @@ pub const PROGRESS_SAMPLE_RATE: u64 = 1000;
 pub const PROGRESS_SAMPLE_DURATION_S: u64 = 5;
 
 // Sub commands
-pub const SCRUB: &'static str = "scrub";
-pub const COMPRESSION_BENEFIT: &'static str = "compression-benefit";
-pub const VALIDATE: &'static str = "validate";
+pub const SCRUB: &str = "scrub";
+pub const COMPRESSION_BENEFIT: &str = "compression-benefit";
+pub const VALIDATE: &str = "validate";
 
 // Subcommand args
-const QUIET_ARG: &'static str = "quiet";
-const ENABLE_REDACTION_ARG: &'static str = "enable-redaction";
-const SCHEDULED_MAX_ARG: &'static str = "scheduled-max";
-const TAIL_INTERVAL_ARG: &'static str = "tail-interval";
-const ERROR_AS_DATA_NODE_TYPE_ARG: &'static str = "error-as-data-node-type";
-const ERROR_AS_DATA_EDGE_TYPE_ARG: &'static str = "error-as-data-edge-type";
-const EXCLUDE_NODE_TYPE_ARG: &'static str = "exclude-node-type";
-const INCLUDE_NODE_TYPE_ARG: &'static str = "include-node-type";
-const EXCLUDE_EDGE_TYPE_ARG: &'static str = "exclude-edge-type";
-const INCLUDE_EDGE_TYPE_ARG: &'static str = "include-edge-type";
-const BOOKMARK_ARG: &'static str = "bookmark";
-const WALK_ROOT_ARG: &'static str = "walk-root";
-const INNER_BLOBSTORE_ID_ARG: &'static str = "inner-blobstore-id";
-const SCRUB_BLOBSTORE_ACTION_ARG: &'static str = "scrub-blobstore-action";
-const ENABLE_DERIVE_ARG: &'static str = "enable-derive";
-const PROGRESS_SAMPLE_RATE_ARG: &'static str = "progress-sample-rate";
-const PROGRESS_INTERVAL_ARG: &'static str = "progress-interval";
-pub const LIMIT_DATA_FETCH_ARG: &'static str = "limit-data-fetch";
-pub const COMPRESSION_LEVEL_ARG: &'static str = "compression-level";
-pub const SAMPLE_RATE_ARG: &'static str = "sample-rate";
-pub const EXCLUDE_CHECK_TYPE_ARG: &'static str = "exclude-check-type";
-pub const INCLUDE_CHECK_TYPE_ARG: &'static str = "include-check-type";
-const SCUBA_TABLE_ARG: &'static str = "scuba-table";
-const SCUBA_LOG_FILE_ARG: &'static str = "scuba-log-file";
+const QUIET_ARG: &str = "quiet";
+const ENABLE_REDACTION_ARG: &str = "enable-redaction";
+const SCHEDULED_MAX_ARG: &str = "scheduled-max";
+const TAIL_INTERVAL_ARG: &str = "tail-interval";
+const ERROR_AS_DATA_NODE_TYPE_ARG: &str = "error-as-data-node-type";
+const ERROR_AS_DATA_EDGE_TYPE_ARG: &str = "error-as-data-edge-type";
+const EXCLUDE_NODE_TYPE_ARG: &str = "exclude-node-type";
+const INCLUDE_NODE_TYPE_ARG: &str = "include-node-type";
+const EXCLUDE_EDGE_TYPE_ARG: &str = "exclude-edge-type";
+const INCLUDE_EDGE_TYPE_ARG: &str = "include-edge-type";
+const BOOKMARK_ARG: &str = "bookmark";
+const WALK_ROOT_ARG: &str = "walk-root";
+const INNER_BLOBSTORE_ID_ARG: &str = "inner-blobstore-id";
+const SCRUB_BLOBSTORE_ACTION_ARG: &str = "scrub-blobstore-action";
+const ENABLE_DERIVE_ARG: &str = "enable-derive";
+const PROGRESS_SAMPLE_RATE_ARG: &str = "progress-sample-rate";
+const PROGRESS_INTERVAL_ARG: &str = "progress-interval";
+pub const LIMIT_DATA_FETCH_ARG: &str = "limit-data-fetch";
+pub const COMPRESSION_LEVEL_ARG: &str = "compression-level";
+pub const SAMPLE_RATE_ARG: &str = "sample-rate";
+pub const EXCLUDE_CHECK_TYPE_ARG: &str = "exclude-check-type";
+pub const INCLUDE_CHECK_TYPE_ARG: &str = "include-check-type";
+pub const EXCLUDE_SAMPLE_NODE_TYPE_ARG: &str = "exclude-sample-node-type";
+pub const INCLUDE_SAMPLE_NODE_TYPE_ARG: &str = "include-sample-node-type";
+const SCUBA_TABLE_ARG: &str = "scuba-table";
+const SCUBA_LOG_FILE_ARG: &str = "scuba-log-file";
 
-const SHALLOW_VALUE_ARG: &'static str = "shallow";
-const DEEP_VALUE_ARG: &'static str = "deep";
-const MARKER_VALUE_ARG: &'static str = "marker";
-const HG_VALUE_ARG: &'static str = "hg";
-const BONSAI_VALUE_ARG: &'static str = "bonsai";
-const CONTENT_META_VALUE_ARG: &'static str = "contentmeta";
+const SHALLOW_VALUE_ARG: &str = "shallow";
+const DEEP_VALUE_ARG: &str = "deep";
+const MARKER_VALUE_ARG: &str = "marker";
+const HG_VALUE_ARG: &str = "hg";
+const BONSAI_VALUE_ARG: &str = "bonsai";
+const CONTENT_META_VALUE_ARG: &str = "contentmeta";
 
 // Toplevel args - healer and populate healer have this one at top level
 // so keeping it there for consistency
-const STORAGE_ID_ARG: &'static str = "storage-id";
+const STORAGE_ID_ARG: &str = "storage-id";
 
 const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
     NodeType::Bookmark,
@@ -261,6 +264,26 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
             .takes_value(true)
             .required(false)
             .help("How many files to sample. Pass 1 to try all, 120 to do 1 in 120, etc."),
+    )
+    .arg(
+        Arg::with_name(EXCLUDE_SAMPLE_NODE_TYPE_ARG)
+            .long(EXCLUDE_SAMPLE_NODE_TYPE_ARG)
+            .short("S")
+            .takes_value(true)
+            .multiple(true)
+            .number_of_values(1)
+            .required(false)
+            .help("Node types to exclude from sampling for size"),
+    )
+    .arg(
+        Arg::with_name(INCLUDE_SAMPLE_NODE_TYPE_ARG)
+            .long(INCLUDE_SAMPLE_NODE_TYPE_ARG)
+            .short("s")
+            .takes_value(true)
+            .multiple(true)
+            .number_of_values(1)
+            .required(false)
+            .help("Node types to sample for size"),
     );
 
     let validate = setup_subcommand_args(
@@ -468,7 +491,7 @@ fn setup_subcommand_args<'a, 'b>(subcmd: App<'a, 'b>) -> App<'a, 'b> {
         );
 }
 
-fn parse_node_types(
+pub fn parse_node_types(
     sub_m: &ArgMatches<'_>,
     include_arg_name: &str,
     exclude_arg_name: &str,
@@ -568,6 +591,7 @@ pub fn setup_common(
     walk_stats_key: &'static str,
     fb: FacebookInit,
     logger: &Logger,
+    blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> Result<(RepoWalkDatasources, RepoWalkParams), Error> {
@@ -730,6 +754,7 @@ pub fn setup_common(
         None,
         readonly_storage,
         scrub_action,
+        blobstore_sampler,
         scuba_builder.clone(),
         walk_stats_key,
         repo_name.clone(),

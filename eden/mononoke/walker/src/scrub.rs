@@ -57,7 +57,7 @@ pub fn scrub_objects(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<'static, Result<(), Error>> {
-    match setup_common(SCRUB, fb, &logger, matches, sub_m) {
+    match setup_common(SCRUB, fb, &logger, None, matches, sub_m) {
         Err(e) => future::err::<_, Error>(e).boxed(),
         Ok((datasources, walk_params)) => {
             let limit_data_fetch = sub_m.is_present(LIMIT_DATA_FETCH_ARG);

@@ -197,6 +197,7 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), Node> for Validat
 
     fn visit(
         &self,
+        ctx: &CoreContext,
         current: ResolvedNode,
         route: Option<Node>,
         outgoing: Vec<OutgoingEdge>,
@@ -244,7 +245,7 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), Node> for Validat
         // Call inner after checks. otherwise it will prune outgoing edges we wanted to check.
         let ((node, _opt_data, opt_stats), _, outgoing) =
             self.inner
-                .visit(current, route.as_ref().map(|_| ()), outgoing);
+                .visit(&ctx, current, route.as_ref().map(|_| ()), outgoing);
 
         let vout = (
             node.clone(),
@@ -494,7 +495,7 @@ pub fn validate(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<'static, Result<(), Error>> {
-    match setup_common(VALIDATE, fb, &logger, matches, sub_m).and_then(
+    match setup_common(VALIDATE, fb, &logger, None, matches, sub_m).and_then(
         |(datasources, walk_params)| {
             args::get_repo_name(fb, &matches).and_then(|repo_stats_key| {
                 parse_check_types(sub_m).and_then(|mut include_check_types| {

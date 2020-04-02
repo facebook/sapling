@@ -19,6 +19,7 @@ mod blobstore;
 mod graph;
 mod parse_node;
 mod progress;
+mod sampling;
 mod scrub;
 mod setup;
 mod sizing;

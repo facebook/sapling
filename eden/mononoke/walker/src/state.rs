@@ -159,6 +159,7 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), ()> for WalkStateC
 
     fn visit(
         &self,
+        _ctx: &CoreContext,
         source: ResolvedNode,
         _route: Option<()>,
         mut outgoing: Vec<OutgoingEdge>,
@@ -237,10 +238,11 @@ where
 
     fn visit(
         &self,
+        ctx: &CoreContext,
         current: ResolvedNode,
         route: Option<Route>,
         outgoing_edge: Vec<OutgoingEdge>,
     ) -> (VOut, Route, Vec<OutgoingEdge>) {
-        self.inner.visit(current, route, outgoing_edge)
+        self.inner.visit(ctx, current, route, outgoing_edge)
     }
 }

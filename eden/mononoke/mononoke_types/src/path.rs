@@ -634,6 +634,10 @@ impl MPathHash {
     pub fn to_hex(&self) -> AsciiString {
         self.0.to_hex()
     }
+
+    pub fn sampling_fingerprint(&self) -> u64 {
+        self.0.sampling_fingerprint()
+    }
 }
 
 /// Context for incrementally computing a hash.

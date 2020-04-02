@@ -19,6 +19,7 @@ use inlinable_string::InlinableString;
 use metaconfig_types::{BlobConfig, BlobstoreId, ScrubAction};
 use multiplexedblob::{LoggingScrubHandler, ScrubHandler};
 use prefixblob::PrefixBlobstore;
+use samplingblob::{SamplingBlobstore, SamplingHandler};
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
@@ -143,6 +144,7 @@ pub async fn open_blobstore(
     prefix: Option<String>,
     readonly_storage: ReadOnlyStorage,
     scrub_action: Option<ScrubAction>,
+    blobstore_sampler: Option<Arc<dyn SamplingHandler>>,
     scuba_builder: ScubaSampleBuilder,
     walk_stats_key: &'static str,
     repo_stats_key: String,
@@ -238,6 +240,12 @@ pub async fn open_blobstore(
         (Some(_), _) => {
             return Err(format_err!("Scrub action passed for non-scrubbable store"));
         }
+    };
+
+    let blobstore = match blobstore_sampler {
+        Some(blobstore_sampler) => Arc::new(SamplingBlobstore::new(blobstore, blobstore_sampler))
+            as Arc<dyn blobstore::Blobstore>,
+        None => blobstore,
     };
 
     if let Some(prefix) = prefix {
