@@ -437,11 +437,11 @@ Connect to commit cloud
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
+  added 3 changesets with 3 changes to 3 files
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files
+  added 1 changesets with 1 changes to 1 files
   pulling 2b8dce7bd745
   pulling from ssh://user@dummy/server
   searching for changes
@@ -460,13 +460,13 @@ Connect to commit cloud
   |
   o  5: 1f9ebd6d1390 oldstack-feb1 oldbook
   |
-  | o  4: 46f8775ee5d4 newstack-feb28
-  | |
-  | o  3: 7f958333fe84 newstack-feb15
-  | |
-  | o  2: 56a352317b67 newstack-feb13 newbook
+  | o  4: ff52de2f760c client2-feb28
   |/
-  | o  1: ff52de2f760c client2-feb28
+  | o  3: 46f8775ee5d4 newstack-feb28
+  | |
+  | o  2: 7f958333fe84 newstack-feb15
+  | |
+  | o  1: 56a352317b67 newstack-feb13 newbook
   |/
   @  0: df4f53cec30a base
   
@@ -502,13 +502,13 @@ Do a sync in the new client - the bookmark is left where it was
   |
   o  5: 1f9ebd6d1390 draft 'oldstack-feb1'
   |
-  | o  4: 46f8775ee5d4 draft 'newstack-feb28'
-  | |
-  | o  3: 7f958333fe84 draft 'newstack-feb15'
-  | |
-  | o  2: 56a352317b67 draft 'newstack-feb13' newbook
+  | o  4: ff52de2f760c draft 'client2-feb28'
   |/
-  | o  1: ff52de2f760c draft 'client2-feb28'
+  | o  3: 46f8775ee5d4 draft 'newstack-feb28'
+  | |
+  | o  2: 7f958333fe84 draft 'newstack-feb15'
+  | |
+  | o  1: 56a352317b67 draft 'newstack-feb13' newbook
   |/
   @  0: df4f53cec30a public 'base'
   
@@ -522,13 +522,13 @@ Move the bookmark locally - this still gets synced ok.
   |
   o  5: 1f9ebd6d1390 draft 'oldstack-feb1'
   |
-  | o  4: 46f8775ee5d4 draft 'newstack-feb28'
-  | |
-  | o  3: 7f958333fe84 draft 'newstack-feb15' oldbook
-  | |
-  | o  2: 56a352317b67 draft 'newstack-feb13' newbook
+  | o  4: ff52de2f760c draft 'client2-feb28'
   |/
-  | o  1: ff52de2f760c draft 'client2-feb28'
+  | o  3: 46f8775ee5d4 draft 'newstack-feb28' oldbook
+  | |
+  | o  2: 7f958333fe84 draft 'newstack-feb15'
+  | |
+  | o  1: 56a352317b67 draft 'newstack-feb13' newbook
   |/
   @  0: df4f53cec30a public 'base'
   
@@ -545,11 +545,11 @@ Move the bookmark locally - this still gets synced ok.
   $ tglogp
   @  9: 2b8dce7bd745 draft 'oldstack-mar4'
   |
-  | o  8: 46f8775ee5d4 draft 'newstack-feb28'
+  | o  8: 46f8775ee5d4 draft 'newstack-feb28' oldbook
   | |
   | | o  7: ff52de2f760c draft 'client2-feb28'
   | | |
-  | o |  6: 7f958333fe84 draft 'newstack-feb15' oldbook
+  | o |  6: 7f958333fe84 draft 'newstack-feb15'
   | | |
   | o |  5: 56a352317b67 draft 'newstack-feb13' newbook
   | |/
@@ -589,13 +589,13 @@ A full sync pulls the old commits in
   | |
   | o  5: 1f9ebd6d1390 draft 'oldstack-feb1'
   |/
-  | o  4: 46f8775ee5d4 draft 'newstack-feb28'
-  | |
-  | o  3: 7f958333fe84 draft 'newstack-feb15' oldbook
-  | |
-  | o  2: 56a352317b67 draft 'newstack-feb13' newbook
+  | o  4: ff52de2f760c draft 'client2-feb28'
   |/
-  | o  1: ff52de2f760c draft 'client2-feb28'
+  | o  3: 46f8775ee5d4 draft 'newstack-feb28' oldbook
+  | |
+  | o  2: 7f958333fe84 draft 'newstack-feb15'
+  | |
+  | o  1: 56a352317b67 draft 'newstack-feb13' newbook
   |/
   @  0: df4f53cec30a public 'base'
   
@@ -698,13 +698,13 @@ other bookmark is treated like a move.
   | |
   | o  5: 1f9ebd6d1390 draft 'oldstack-feb1'
   |/
-  | o  4: 46f8775ee5d4 draft 'newstack-feb28'
-  | |
-  | o  3: 7f958333fe84 draft 'newstack-feb15'
-  | |
-  | o  2: 56a352317b67 draft 'newstack-feb13'
+  | o  4: ff52de2f760c draft 'client2-feb28'
   |/
-  | o  1: ff52de2f760c draft 'client2-feb28'
+  | o  3: 46f8775ee5d4 draft 'newstack-feb28'
+  | |
+  | o  2: 7f958333fe84 draft 'newstack-feb15'
+  | |
+  | o  1: 56a352317b67 draft 'newstack-feb13'
   |/
   @  0: df4f53cec30a public 'base'
   

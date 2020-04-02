@@ -202,23 +202,23 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 3 files
+  added 1 changesets with 0 changes to 2 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 2 files
+  added 1 changesets with 1 changes to 3 files
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
-  o  8: 6caded0e9807 'D'
+  o  8: ba83c5428cb2 'F'
   |
-  | o  7: ba83c5428cb2 'F'
+  | o  7: 6caded0e9807 'D'
   | |
-  +---@  6: dd114d9b2f9e 'X'
-  | |
-  | | o  5: d8fc5ae9b7ef 'D'
+  | | @  6: dd114d9b2f9e 'X'
   | |/
-  | o  4: c70a9bd6bfd1 'E'
+  +---o  5: d8fc5ae9b7ef 'D'
+  | |
+  o |  4: c70a9bd6bfd1 'E'
   |/
   o  1: dae3b312bb78 'Z'
   |
@@ -227,15 +227,15 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
 It should also have mutations made on both sides visible.
 
   $ tglogm -r 'predecessors(all())'
-  o  8: 6caded0e9807 'D'
+  o  8: ba83c5428cb2 'F'
   |
-  | o  7: ba83c5428cb2 'F'
+  | o  7: 6caded0e9807 'D'
   | |
-  +---@  6: dd114d9b2f9e 'X'
-  | |
-  | | o  5: d8fc5ae9b7ef 'D'
+  | | @  6: dd114d9b2f9e 'X'
   | |/
-  | o  4: c70a9bd6bfd1 'E'
+  +---o  5: d8fc5ae9b7ef 'D'
+  | |
+  o |  4: c70a9bd6bfd1 'E'
   |/
   | x  3: 6ba5de8abe43 'D'  (Rewritten using rebase into 6caded0e9807) (Rewritten using rebase into d8fc5ae9b7ef)
   | |
@@ -268,31 +268,31 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   adding changesets
   adding manifests
   adding file changes
-  added 3 changesets with 3 changes to 3 files
+  added 2 changesets with 2 changes to 2 files
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 2 changes to 3 files
+  adding changesets
+  adding manifests
+  adding file changes
+  added 1 changesets with 0 changes to 3 files
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 2 files
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 3 files
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 2 files
   commitcloud: commits synchronized
   finished in * sec (glob)
   $ tglogm
-  o  6: 6caded0e9807 'D'
+  o  6: dd114d9b2f9e 'X'
   |
-  | o  5: ba83c5428cb2 'F'
+  | o  5: d8fc5ae9b7ef 'D'
   | |
-  +---o  4: dd114d9b2f9e 'X'
-  | |
-  | | o  3: d8fc5ae9b7ef 'D'
+  | | o  4: ba83c5428cb2 'F'
   | |/
-  | o  2: c70a9bd6bfd1 'E'
+  | o  3: c70a9bd6bfd1 'E'
+  |/
+  | o  2: 6caded0e9807 'D'
   |/
   o  1: dae3b312bb78 'Z'
   |
@@ -357,15 +357,15 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   $ tglogm
   o  7: 1ef69cfd595b 'F-amended'
   |
-  | o  6: 6caded0e9807 'D'
+  | o  6: dd114d9b2f9e 'X'
   | |
-  +---o  5: ba83c5428cb2 'F'
+  +---o  5: d8fc5ae9b7ef 'D'
   | |
-  | | o  4: dd114d9b2f9e 'X'
-  | |/
-  +---o  3: d8fc5ae9b7ef 'D'
+  +---o  4: ba83c5428cb2 'F'
   | |
-  o |  2: c70a9bd6bfd1 'E'
+  o |  3: c70a9bd6bfd1 'E'
+  |/
+  | o  2: 6caded0e9807 'D'
   |/
   o  1: dae3b312bb78 'Z'
   |

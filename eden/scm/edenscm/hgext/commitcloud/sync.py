@@ -563,7 +563,7 @@ def _pullheadgroups(repo, remotepath, headgroups):
             headgroupstr = " ".join([head[:12] for head in headgroup])
             repo.ui.status(_("pulling %s\n") % headgroupstr)
             prog.value = (index, headgroupstr)
-            pullopts["rev"] = headgroup
+            pullopts["rev"] = sorted(headgroup)
             pullcmd(repo.ui, repo, remotepath, **pullopts)
             repo.connectionpool.close()
 

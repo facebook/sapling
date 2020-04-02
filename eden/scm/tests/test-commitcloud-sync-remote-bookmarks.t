@@ -258,21 +258,21 @@ sync and create a new commit on top of the draft-3
   $ showgraph
   @  9 draft-4: draft
   |
-  o  8 draft-3: draft
+  o  8 draft-2: draft
   |
-  | o  7 draft-2: draft
+  | o  7 draft-1: draft
   | |
-  | | o  6 draft-1: draft
+  | | o  6 draft-3: draft
   | | |
-  | | o  5 a3: public
+  | o |  5 a3: public
   | | |
-  | | o  4 a2: public  default/master
+  | o |  4 a2: public  default/master
   | | |
-  | | o  3 a1: public
+  | o |  3 a1: public
   | | |
-  | o |  2 b1: public
-  | |/
-  o /  1 c1: public
+  o | |  2 b1: public
+  |/ /
+  | o  1 c1: public
   |/
   o  0 root: public
   
@@ -283,9 +283,9 @@ sync and create a new commit on top of the draft-3
   $ showgraph
   o  9 draft-4: draft
   |
-  o  8 draft-3: draft
-  |
-  | o  7 draft-2: draft
+  | o  8 draft-3: draft
+  | |
+  o |  7 draft-2: draft
   | |
   | | @  6 draft-1: draft
   | | |
@@ -295,8 +295,8 @@ sync and create a new commit on top of the draft-3
   | | |
   | | o  3 a1: public
   | | |
-  | o |  2 b1: public  default/stable
-  | |/
+  o---+  2 b1: public  default/stable
+   / /
   o /  1 c1: public  default/warm
   |/
   o  0 root: public

@@ -937,17 +937,17 @@ And the commits should now be availble in the other client.
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 3 files
+  added 1 changesets with 1 changes to 3 files
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 3 files
+  added 1 changesets with 0 changes to 3 files
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
-  o  22: 9bd68ef10d6b 'toobig' testbookmark toobig
+  o  22: a6b97eebbf74 'shared commit updated'
   |
-  | o  21: a6b97eebbf74 'shared commit updated'
+  | o  21: 9bd68ef10d6b 'toobig' testbookmark toobig
   |/
   o  19: 715c1454ae33 'stack commit 2'
   |
@@ -1014,21 +1014,21 @@ Commit still becomes available in the other repo
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 3 changes to 3 files
+  added 2 changesets with 2 changes to 2 files
   adding changesets
   adding manifests
   adding file changes
-  added 2 changesets with 2 changes to 2 files
+  added 2 changesets with 3 changes to 3 files
   commitcloud: commits synchronized
   finished in * (glob)
   $ tglog
-  o  21: 799d22972c4e 'stack 2 second'
+  o  21: 9a3e7907fd5c 'stack 1 second'
   |
-  o  20: 3597ff85ead0 'stack 2 first'
+  o  20: e58a6603d256 'stack 1 first'
   |
-  | o  19: 9a3e7907fd5c 'stack 1 second'
+  | o  19: 799d22972c4e 'stack 2 second'
   | |
-  | o  18: e58a6603d256 'stack 1 first'
+  | o  18: 3597ff85ead0 'stack 2 first'
   |/
   @  0: d20a80d4def3 'base'
   
