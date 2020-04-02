@@ -16,6 +16,7 @@ import re
 import time
 
 from . import (
+    bookmarks,
     dagop,
     encoding,
     error,
@@ -189,8 +190,32 @@ def _warnrevnum(ui, x):
         raise error.Abort(_("local revision number is disabled in this repo"))
 
 
-def stringset(repo, subset, x, order):
-    i = scmutil.intrev(repo[x])
+def stringset(repo, subset, x, order, autopull=True):
+    try:
+        i = scmutil.intrev(repo[x])
+    except error.RepoLookupError:
+        # If we autopull commits, subset might be invalidated and need a
+        # refresh.  For now we only know how to refresh a fullreposet.
+        # So refuse to autopull if subset is not a fullreposet.
+        if not isinstance(subset, fullreposet):
+            autopull = False
+        # Pull remote names like "remote/foo" automatically.
+        if (
+            autopull
+            and "/" in x
+            and any(
+                x.startswith(p)
+                for p in repo.ui.configlist("remotenames", "autopullprefix")
+            )
+        ):
+            remotename, name = bookmarks.splitremotename(x)
+            if not repo.ui.quiet:
+                repo.ui.write_err(_("attempt to pull %s\n") % x)
+            repo.pull(remotename, [name])
+            subset = fullreposet(repo)
+            return stringset(repo, subset, x, order, autopull=False)
+        raise
+
     if x.startswith("-") or x == str(i):
         # 'x' was used as a revision number. Maybe warn and log it.
         _warnrevnum(repo.ui, x)

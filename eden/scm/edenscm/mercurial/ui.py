@@ -1585,6 +1585,13 @@ class paths(util.sortdict):
         if not name:
             return None
 
+        # Normalize the name according to remotenames.rename.*
+        # NOTE: Consider just rename "default" to "remote" in tests and get
+        # rid of the remotenames.rename.* configs.
+        for k, v in self._uiconfig.configitems("remotenames"):
+            if v == name and k.startswith("rename."):
+                name = k[len("rename.") :]
+
         try:
             return self[name]
         except KeyError:

@@ -218,10 +218,21 @@ Make sure only master bookmark is present
      default/master            2:0238718db2b1
 
 Check that log shows the hint about selective pull
-  $ hg log -r default/thirdbook
-  abort: unknown revision 'default/thirdbook'!
-  (if default/thirdbook is a remote bookmark or commit, try to 'hg pull' it first)
+  $ hg log -r thirdbook
+  abort: unknown revision 'thirdbook'!
+  (if thirdbook is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
+
+By using "default/" the commit gets automatically pulled
+  $ hg log -r default/thirdbook
+  attempt to pull default/thirdbook
+  changeset:   0:1449e7934ec1
+  bookmark:    default/thirdbook
+  hoistedname: thirdbook
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     First
+  
 
 Set two bookmarks in selectivepulldefault, make sure both of them were pulled
   $ setconfig "remotenames.selectivepulldefault=master,thirdbook"
@@ -335,3 +346,14 @@ Check the repo.pull API
   |
   o  1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 First default/thirdbook
   
+- Auto pull in revset resolution
+
+  $ newrepo
+  $ setconfig paths.default=ssh://user@dummy/remoterepo
+  $ hg log -r default/thirdbook::default/master -T '{node} {desc} {remotenames}\n'
+  attempt to pull default/thirdbook
+  attempt to pull default/master
+  1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 First default/thirdbook
+  0238718db2b174d2622ae9c4c75d61745eb12b25 Move master bookmark 
+  a81520e7283a6967ec1d82620b75ab92f5478638 push commit default/master
+

@@ -107,6 +107,7 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: remotefilelog.shallowtrees (bool)
   undocumented: remotenames.alias.default (bool)
   undocumented: remotenames.allownonfastforward (bool)
+  undocumented: remotenames.autopullprefix (list)
   undocumented: remotenames.calculatedistance (bool)
   undocumented: remotenames.disallowedbookmarks (list)
   undocumented: remotenames.disallowedhint (str)
