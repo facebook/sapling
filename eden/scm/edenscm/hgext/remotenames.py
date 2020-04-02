@@ -318,8 +318,6 @@ def exfindcommonheads(orig, ui, local, remote, **kwargs):
     if not ui.configbool("remotenames", "fastheaddiscovery"):
         return orig(ui, local, remote, **kwargs)
 
-    cl = local.changelog
-
     remotepath = activepath(local.ui, remote)
     remotenodes = []
     for node, nametype, remotename, rname in readremotenames(local):
@@ -358,6 +356,10 @@ def exfindcommonheads(orig, ui, local, remote, **kwargs):
             )
         )
         return orig(ui, local, remote, **kwargs)
+
+    # We only want to use this for existence checks. We don't want hidden
+    # commits to result in throwing an exception here.
+    cl = local.unfiltered().changelog
 
     if cl.tip() == nullid:
         if srvheadhashes != [nullid]:
