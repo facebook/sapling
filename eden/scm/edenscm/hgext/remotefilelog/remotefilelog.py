@@ -518,12 +518,16 @@ class remotefileslog(filelog.fileslog):
         )
         memcachestore = self.memcachestore(repo)
 
-        sharedonlycontentstore = revisionstore.contentstore(
-            None, repo.ui._rcfg._rcfg, sharedonlyremotestore, memcachestore
-        )
-        sharedonlymetadatastore = revisionstore.metadatastore(
-            None, repo.ui._rcfg._rcfg, sharedonlyremotestore, memcachestore
-        )
+        mask = os.umask(0o002)
+        try:
+            sharedonlycontentstore = revisionstore.contentstore(
+                None, repo.ui._rcfg._rcfg, sharedonlyremotestore, memcachestore
+            )
+            sharedonlymetadatastore = revisionstore.metadatastore(
+                None, repo.ui._rcfg._rcfg, sharedonlyremotestore, memcachestore
+            )
+        finally:
+            os.umask(mask)
 
         return sharedonlycontentstore, sharedonlymetadatastore
 
@@ -532,12 +536,16 @@ class remotefileslog(filelog.fileslog):
 
         memcachestore = self.memcachestore(repo)
 
-        self.contentstore = revisionstore.contentstore(
-            repo.svfs.vfs.base, repo.ui._rcfg._rcfg, remotestore, memcachestore
-        )
-        self.metadatastore = revisionstore.metadatastore(
-            repo.svfs.vfs.base, repo.ui._rcfg._rcfg, remotestore, memcachestore
-        )
+        mask = os.umask(0o002)
+        try:
+            self.contentstore = revisionstore.contentstore(
+                repo.svfs.vfs.base, repo.ui._rcfg._rcfg, remotestore, memcachestore
+            )
+            self.metadatastore = revisionstore.metadatastore(
+                repo.svfs.vfs.base, repo.ui._rcfg._rcfg, remotestore, memcachestore
+            )
+        finally:
+            os.umask(mask)
 
     def getmutablelocalpacks(self):
         if self._ruststore:
