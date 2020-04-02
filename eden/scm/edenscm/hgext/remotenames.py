@@ -390,6 +390,21 @@ def pullremotenames(repo, remote, bookmarks):
         repo = repo.unfiltered()
         saveremotenames(repo, {path: bookmarks})
 
+        # repo.ui.paths.get(path) might be empty during clone.
+        if repo.ui.paths.get(path):
+            # Collect selected bookmarks that point to unknown commits. This
+            # indicates a race condition.
+            selected = set(selectivepullbookmarknames(repo, path))
+            hasnode = repo.changelog.hasnode
+            movedbookmarks = [
+                name
+                for name, hexnode in bookmarks.items()
+                if name in selected and hexnode and not hasnode(bin(hexnode))
+            ]
+            # Those bookmarks have moved since pull. Pull them again.
+            if movedbookmarks:
+                repo.pull(path, bookmarknames=movedbookmarks)
+
     precachedistance(repo)
 
 
