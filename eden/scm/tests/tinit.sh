@@ -53,7 +53,7 @@ clone() {
     --config "extensions.treemanifest=" \
     --config "remotefilelog.reponame=$servername" \
     --config "treemanifest.treeonly=True" \
-    --config "ui.ssh=$TESTDIR/dummyssh" \
+    --config ui.ssh="\"$PYTHON\" $TESTDIR/dummyssh" \
     --config "ui.remotecmd=$remotecmd"
 
   cat >> $clientname/.hg/hgrc <<EOF
@@ -77,7 +77,7 @@ sendtrees=True
 treeonly=True
 
 [ui]
-ssh=$TESTDIR/dummyssh
+ssh=$PYTHON "$TESTDIR/dummyssh"
 
 [tweakdefaults]
 rebasekeepdate=True
