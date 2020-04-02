@@ -87,6 +87,16 @@ fn should_call_chg(args: &Vec<String>) -> bool {
         }
     }
 
+    // Bash might translate `<(...)` to `/dev/fd/x` instead of using a real fifo. That
+    // path resolves to different fd by the chg server. Therefore chg cannot be used.
+    if cfg!(unix)
+        && args
+            .iter()
+            .any(|a| a.starts_with("/dev/fd/") || a.starts_with("/proc/self/"))
+    {
+        return false;
+    }
+
     // CHGDISABLE=1 means that we want to disable it
     // regardless of the other conditions, but CHGDISABLE=0
     // does not guarantee that we want to enable it
