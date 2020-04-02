@@ -14,8 +14,6 @@ import re
 import subprocess
 import time
 
-from edenscm.mercurial.pycompat import iteritems
-
 seconds_in_a_day = 60.0 * 60.0 * 24.0
 
 class ColorOutput(object):
@@ -96,7 +94,7 @@ class GitRevision(object):
     def remove_old_revs(cls):
         new_revisionmap = {}
         ignored = []
-        for hash, rev in iteritems(cls.revisionmap):
+        for hash, rev in cls.revisionmap.iteritems():
             if rev.use_me:
                 new_revisionmap[hash] = rev
             else:
