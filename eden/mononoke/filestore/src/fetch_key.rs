@@ -70,6 +70,15 @@ impl Alias {
             Alias::Sha256(sha256) => format!("alias.sha256.{}", sha256.to_hex()),
         }
     }
+
+    #[inline]
+    pub fn sampling_fingerprint(&self) -> u64 {
+        match self {
+            Alias::GitSha1(git_sha1) => git_sha1.sampling_fingerprint(),
+            Alias::Sha1(sha1) => sha1.sampling_fingerprint(),
+            Alias::Sha256(sha256) => sha256.sampling_fingerprint(),
+        }
+    }
 }
 
 impl Loadable for Alias {

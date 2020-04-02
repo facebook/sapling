@@ -381,4 +381,27 @@ impl Node {
             Node::AliasContentMapping(_) => None,
         }
     }
+
+    /// None means not hash based
+    pub fn sampling_fingerprint(&self) -> Option<u64> {
+        match self {
+            Node::Root => None,
+            // Bonsai
+            Node::Bookmark(_k) => None,
+            Node::BonsaiChangeset(k) => Some(k.sampling_fingerprint()),
+            Node::BonsaiHgMapping(k) => Some(k.sampling_fingerprint()),
+            Node::BonsaiPhaseMapping(k) => Some(k.sampling_fingerprint()),
+            Node::PublishedBookmarks => None,
+            // Hg
+            Node::HgBonsaiMapping(k) => Some(k.sampling_fingerprint()),
+            Node::HgChangeset(k) => Some(k.sampling_fingerprint()),
+            Node::HgManifest((_, k)) => Some(k.sampling_fingerprint()),
+            Node::HgFileEnvelope(k) => Some(k.sampling_fingerprint()),
+            Node::HgFileNode((_, k)) => Some(k.sampling_fingerprint()),
+            // Content
+            Node::FileContent(k) => Some(k.sampling_fingerprint()),
+            Node::FileContentMetadata(k) => Some(k.sampling_fingerprint()),
+            Node::AliasContentMapping(k) => Some(k.sampling_fingerprint()),
+        }
+    }
 }

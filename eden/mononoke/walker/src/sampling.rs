@@ -118,8 +118,7 @@ where
                         .map(|p| p.get_path_hash().sampling_fingerprint()),
                     None => match route {
                         Some(route) => route.sampling_fingerprint(),
-                        // TODO, sample non-path node types
-                        None => None,
+                        None => step.target.sampling_fingerprint(),
                     },
                 };
 

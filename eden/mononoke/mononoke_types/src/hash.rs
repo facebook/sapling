@@ -368,6 +368,14 @@ macro_rules! impl_hash {
             pub fn into_inner(self) -> [u8; $size] {
                 self.0
             }
+
+            /// Return a stable hash fingerprint that can be used for sampling
+            #[inline]
+            pub fn sampling_fingerprint(&self) -> u64 {
+                let mut bytes: [u8; 8] = [0; 8];
+                bytes.copy_from_slice(&&self.0[0..8]);
+                u64::from_le_bytes(bytes)
+            }
         }
 
         impl From<[u8; $size]> for $type {

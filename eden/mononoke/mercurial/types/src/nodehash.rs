@@ -100,6 +100,15 @@ impl HgNodeHash {
     pub fn display_opt<'a>(opt_hash: Option<&'a HgNodeHash>) -> OptDisplay<'a, Self> {
         OptDisplay { inner: opt_hash }
     }
+
+    /// Return a stable hash fingerprint that can be used for sampling
+    #[inline]
+    pub fn sampling_fingerprint(&self) -> u64 {
+        let byte_slice = &self.0.as_ref();
+        let mut bytes: [u8; 8] = [0; 8];
+        bytes.copy_from_slice(&byte_slice[0..8]);
+        u64::from_le_bytes(bytes)
+    }
 }
 
 pub struct OptDisplay<'a, T> {
@@ -266,6 +275,11 @@ impl HgChangesetId {
             inner: opt_changeset_id,
         }
     }
+
+    #[inline]
+    pub fn sampling_fingerprint(&self) -> u64 {
+        self.0.sampling_fingerprint()
+    }
 }
 
 impl AsRef<[u8]> for HgChangesetId {
@@ -395,6 +409,11 @@ impl HgManifestId {
     pub fn blobstore_key(&self) -> String {
         format!("hgmanifest.sha1.{}", self.0)
     }
+
+    #[inline]
+    pub fn sampling_fingerprint(&self) -> u64 {
+        self.0.sampling_fingerprint()
+    }
 }
 
 impl FromStr for HgManifestId {
@@ -447,6 +466,11 @@ impl HgFileNodeId {
     #[inline]
     pub fn blobstore_key(&self) -> String {
         format!("hgfilenode.sha1.{}", self.0)
+    }
+
+    #[inline]
+    pub fn sampling_fingerprint(&self) -> u64 {
+        self.0.sampling_fingerprint()
     }
 }
 
