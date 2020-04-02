@@ -884,7 +884,9 @@ class localrepository(object):
     def peer(self):
         return localpeer(self)  # not cached to avoid reference cycle
 
-    def pull(self, source="default", bookmarknames=(), headnodes=(), headnames=()):
+    def pull(
+        self, source="default", bookmarknames=(), headnodes=(), headnames=(), quiet=True
+    ):
         """Pull specified revisions and remote bookmarks.
 
         headnodes is a list of binary nodes to pull.
@@ -905,9 +907,12 @@ class localrepository(object):
         as it issues a second wireproto command to fetch remote bookmarks,
         which can be racy.
         """
+        configoverride = {}
+        if quiet:
+            configoverride[("ui", "quiet")] = True
         with self.conn(source) as conn, self.wlock(), self.lock(), self.transaction(
             "pull"
-        ), self.ui.configoverride({("ui", "quiet"): True}):
+        ), self.ui.configoverride(configoverride):
             remote = conn.peer
             remotenamechanges = {}  # changes to remotenames, {name: hexnode}
             heads = set()

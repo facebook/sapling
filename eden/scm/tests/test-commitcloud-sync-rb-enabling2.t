@@ -82,18 +82,13 @@ Advance master again.
   $ hg commit -Aqm public2
 
 Sync in client2 (remote bookmarks sync disabled). The master bookmark does not
-move but the real public master got pulled by selective pull.
-Without narrow-heads those public commits cannot be hidden by just visibleheads.
+move and no extra commits are pulled.
 
   $ cd $TESTTMP/client2
   $ hg cloud sync -q
   $ showgraph
-  o  3 X: draft
+  o  1 X: draft
   |
-  | o  2 public2: public
-  | |
-  | o  1 public1: public
-  |/
   @  0 base: public  default/master
   
 
@@ -106,17 +101,15 @@ Make changes in client2 and sync the changes to cloud.
   > EOS
   $ hg cloud sync -q
 
-Sync back to client1. This caused lagged default/master.
+Sync back to client1. This does not cause lagged default/master.
 
   $ cd $TESTTMP/client1
   $ hg cloud sync -q
   $ showgraph
-  o  4 Y: draft
+  o  3 Y: draft
   |
-  | o  3 public2: public
-  | |
-  o |  2 X: draft
-  | |
+  o  2 X: draft
+  |
   | o  1 public1: public  default/master
   |/
   @  0 base: public

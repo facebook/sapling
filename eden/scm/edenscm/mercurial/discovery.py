@@ -67,6 +67,11 @@ def findcommonincoming(
         needlargestcommonset=needlargestcommonset,
     )
     common, anyinc, srvheads = res
+    unfi = repo.unfiltered()
+    # anyinc = True prints "no changes found". However that is not always
+    # true if heads is provided. Do a double check.
+    if anyinc is False and heads and any(head not in unfi for head in heads):
+        anyinc = True
     return (list(common), anyinc, heads or list(srvheads))
 
 

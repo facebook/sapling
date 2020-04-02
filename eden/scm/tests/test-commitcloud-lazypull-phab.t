@@ -139,8 +139,7 @@ Test for `hg diff --since-last-submit`
 
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 95847be64d6a
-  pulling from ssh://user@dummy/server
+  pulling 95847be64d6a from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -177,8 +176,7 @@ Test for `hg diff --since-last-submit`
 
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 95847be64d6a
-  pulling from ssh://user@dummy/server
+  pulling 95847be64d6a from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests

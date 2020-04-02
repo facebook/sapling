@@ -158,15 +158,13 @@ Connect to commit cloud
   commitcloud: synchronizing 'server' with 'user/test/default'
   omitting heads that are older than 14 days:
     d16408588b2d from Sun Feb 04 12:00:00 1990 +0000
-  pulling d133b886da68
-  pulling from ssh://user@dummy/server
+  pulling d133b886da68 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 2 changesets with 2 changes to 2 files
-  pulling 7f958333fe84
-  pulling from ssh://user@dummy/server
+  pulling 7f958333fe84 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -207,8 +205,7 @@ Sync these commits to the first client - it has everything
   $ cd ../client1
   $ hgfakedate 1990-02-28T01:02Z cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling ff52de2f760c
-  pulling from ssh://user@dummy/server
+  pulling ff52de2f760c from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -301,8 +298,7 @@ Second client syncs that in, but still leaves the old commits missing
   commitcloud: synchronizing 'server' with 'user/test/default'
   omitting heads that are older than 14 days:
     d16408588b2d from Sun Feb 04 12:00:00 1990 +0000
-  pulling 46f8775ee5d4
-  pulling from ssh://user@dummy/server
+  pulling 46f8775ee5d4 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -377,8 +373,7 @@ Second client syncs the old stack in, and now has the bookmark
   $ cd ../client2
   $ hgfakedate 1990-03-04T03:03Z cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 2b8dce7bd745
-  pulling from ssh://user@dummy/server
+  pulling 2b8dce7bd745 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -431,8 +426,7 @@ Connect to commit cloud
   commitcloud: synchronizing 'server' with 'user/test/default'
   omitting heads that are older than 14 days:
     d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
-  pulling ff52de2f760c 46f8775ee5d4
-  pulling from ssh://user@dummy/server
+  pulling ff52de2f760c 46f8775ee5d4 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -442,8 +436,7 @@ Connect to commit cloud
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
-  pulling 2b8dce7bd745
-  pulling from ssh://user@dummy/server
+  pulling 2b8dce7bd745 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -568,8 +561,7 @@ A full sync pulls the old commits in
   $ cd ../client3
   $ hgfakedate 1990-03-05T12:01Z cloud sync --full
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling d133b886da68
-  pulling from ssh://user@dummy/server
+  pulling d133b886da68 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -650,8 +642,7 @@ Pull in some of the commits by setting max age manually
     d133b886da68 from Fri Feb 09 12:00:00 1990 +0000
     ff52de2f760c from Wed Feb 28 01:00:00 1990 +0000
     46f8775ee5d4 from Wed Feb 28 02:00:00 1990 +0000
-  pulling 2b8dce7bd745
-  pulling from ssh://user@dummy/server
+  pulling 2b8dce7bd745 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -833,8 +824,7 @@ from the cloud workspace, but the sync should still work.
   $ cd ../client4
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 2ace67ee4791
-  pulling from ssh://user@dummy/server
+  pulling 2ace67ee4791 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests

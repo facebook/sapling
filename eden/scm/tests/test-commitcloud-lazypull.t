@@ -86,8 +86,7 @@ Sync from the second client and `hg unamend` there
   $ cd client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling b68dd726c6c6
-  pulling from ssh://user@dummy/server
+  pulling b68dd726c6c6 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -175,8 +174,7 @@ Now cloud sync in the other client.  The cycle means we can't reliably pick a de
   $ cd ../client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling cb45bbd0ae75 74b668b6b779
-  pulling from ssh://user@dummy/server
+  pulling cb45bbd0ae75 74b668b6b779 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests

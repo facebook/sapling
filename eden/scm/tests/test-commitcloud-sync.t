@@ -196,8 +196,7 @@ Sync from the second client - the commit should appear
   $ cd client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling fa5d62c46fd7
-  pulling from ssh://user@dummy/server
+  pulling fa5d62c46fd7 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -229,8 +228,7 @@ On the first client, make a bookmark, then sync - the bookmark and new commit sh
   $ hg bookmark -r 0 bookmark1
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 02f6fc2b7154
-  pulling from ssh://user@dummy/server
+  pulling 02f6fc2b7154 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -316,8 +314,7 @@ Sync the amended commit to the other client
   $ cd client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 48610b1a7ec0
-  pulling from ssh://user@dummy/server
+  pulling 48610b1a7ec0 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -385,8 +382,7 @@ Expected result: the message telling that revision has been moved to another rev
   $ cd client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 41f3b9359864
-  pulling from ssh://user@dummy/server
+  pulling 41f3b9359864 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -447,8 +443,7 @@ Expected result: client2 should be moved to the amended version
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 8134e74ecdc8
-  pulling from ssh://user@dummy/server
+  pulling 8134e74ecdc8 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -504,8 +499,7 @@ Expected result: move should not happen, expect a message that move is ambiguous
   $ hg up 41f3b9359864 -q
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling abd5311ab3c6 cebbb614447e
-  pulling from ssh://user@dummy/server
+  pulling abd5311ab3c6 cebbb614447e from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -567,8 +561,7 @@ Expected result: client2 should be moved to fada67350ab0
   $ hg up abd5311ab3c6 -q
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling fada67350ab0
-  pulling from ssh://user@dummy/server
+  pulling fada67350ab0 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -931,8 +924,7 @@ And the commits should now be availble in the other client.
   $ cd ../client1
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling a6b97eebbf74 9bd68ef10d6b
-  pulling from ssh://user@dummy/server
+  pulling a6b97eebbf74 9bd68ef10d6b from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -1008,8 +1000,7 @@ Commit still becomes available in the other repo
   $ cd ../client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 9a3e7907fd5c 799d22972c4e
-  pulling from ssh://user@dummy/server
+  pulling 9a3e7907fd5c 799d22972c4e from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -1077,8 +1068,7 @@ Sync this onto the second client, the remote bookmarks don't change.
   $ cd ../client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 2da6c73964b8
-  pulling from ssh://user@dummy/server
+  pulling 2da6c73964b8 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -1135,8 +1125,7 @@ Rebase the commits again, and resync to the first client.
   $ cd ../client1
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling af621240884f
-  pulling from ssh://user@dummy/server
+  pulling af621240884f from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -1242,8 +1231,7 @@ Reconnect to the default repository.  This should work and pull in the commits.
   commitcloud: attempting to connect to the 'user/test/default' workspace for the 'server' repo
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 799d22972c4e af621240884f
-  pulling from ssh://user@dummy/server
+  pulling 799d22972c4e af621240884f from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests

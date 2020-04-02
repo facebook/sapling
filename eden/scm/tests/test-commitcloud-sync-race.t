@@ -107,8 +107,7 @@ Let the background sync we started earlier continue, and start a concurrent clou
   visibility: read 1 heads: 1292cc1f1c17
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   backing up stack rooted at 1292cc1f1c17
-  pulling 79089e97b9e7
-  pulling from ssh://user@dummy/server
+  pulling 79089e97b9e7 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests

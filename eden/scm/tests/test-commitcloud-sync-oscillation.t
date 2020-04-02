@@ -140,8 +140,7 @@ Connect to commit cloud
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 878302dcadc7
-  pulling from ssh://user@dummy/server
+  pulling 878302dcadc7 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests

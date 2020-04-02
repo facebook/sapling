@@ -109,8 +109,7 @@ Sync from the second client - the commits should appear
   $ cd ../client2
   $ hgmn cloud sync
   commitcloud: synchronizing 'client2' with 'user/test/default'
-  pulling 44641a2b1a42
-  pulling from ssh://user@dummy/repo
+  pulling 44641a2b1a42 from ssh://user@dummy/repo
   searching for changes
   adding changesets
   adding manifests
@@ -145,8 +144,7 @@ On the first client, make a bookmark, then sync - the bookmark and the new commi
   $ hg bookmark -r 0 bookmark1
   $ hgmn cloud sync
   commitcloud: synchronizing 'client1' with 'user/test/default'
-  pulling 58508421158d
-  pulling from ssh://user@dummy/repo
+  pulling 58508421158d from ssh://user@dummy/repo
   searching for changes
   adding changesets
   adding manifests
@@ -187,8 +185,7 @@ On the second client sync it
   $ cd ../client2
   $ hgmn cloud sync
   commitcloud: synchronizing 'client2' with 'user/test/default'
-  pulling 8e3f03f8d9db
-  pulling from ssh://user@dummy/repo
+  pulling 8e3f03f8d9db from ssh://user@dummy/repo
   searching for changes
   adding changesets
   adding manifests
@@ -304,8 +301,7 @@ Commit still becomes available in the other repo
   $ cd ../client2
   $ hgmn cloud sync
   commitcloud: synchronizing 'client2' with 'user/test/default'
-  pulling ec61bf312a03 88d416aed919
-  pulling from ssh://user@dummy/repo
+  pulling ec61bf312a03 88d416aed919 from ssh://user@dummy/repo
   searching for changes
   adding changesets
   adding manifests

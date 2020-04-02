@@ -530,41 +530,19 @@ def _pullheadgroups(repo, remotepath, headgroups):
     backuplock.progresspulling(
         repo, [nodemod.bin(node) for newheads in headgroups for node in newheads]
     )
-    pullcmd, pullopts = ccutil.getcommandandoptions("pull|pul")
-
-    def disabled(*args, **kwargs):
-        pass
-
-    # Disable pulling of obsmarkers
-    wrapobs = extensions.wrappedfunction(exchange, "_pullobsolete", disabled)
-
-    # Disable pulling of bookmarks
-    wrapbook = extensions.wrappedfunction(exchange, "_pullbookmarks", disabled)
-
-    # Disable pulling of remote bookmarks
-
-    try:
-        remotenames = extensions.find("remotenames")
-        wrapremotenames = extensions.wrappedfunction(
-            remotenames, "pullremotenames", disabled
-        )
-    except KeyError:
-        wrapremotenames = util.nullcontextmanager()
-
-    # Disable automigration and prefetching of trees
-    configoverride = repo.ui.configoverride(
-        {("pull", "automigrate"): False, ("treemanifest", "pullprefetchrevs"): ""},
-        "cloudsyncpull",
-    )
-
-    prog = progress.bar(repo.ui, _("pulling from commit cloud"), total=len(headgroups))
-    with wrapobs, wrapbook, wrapremotenames, configoverride, prog:
+    with progress.bar(
+        repo.ui, _("pulling from commit cloud"), total=len(headgroups)
+    ) as prog:
         for index, headgroup in enumerate(headgroups):
             headgroupstr = " ".join([head[:12] for head in headgroup])
-            repo.ui.status(_("pulling %s\n") % headgroupstr)
+            url = repo.ui.paths.getpath(remotepath).url
+            repo.ui.status(_("pulling %s from %s\n") % (headgroupstr, url))
             prog.value = (index, headgroupstr)
-            pullopts["rev"] = sorted(headgroup)
-            pullcmd(repo.ui, repo, remotepath, **pullopts)
+            repo.pull(
+                remotepath,
+                headnodes=[nodemod.bin(hexnode) for hexnode in headgroup],
+                quiet=False,
+            )
             repo.connectionpool.close()
 
 

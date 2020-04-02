@@ -77,8 +77,7 @@ Create another client and use it to modify the commits and create some new ones.
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 6ba5de8abe43 c70a9bd6bfd1
-  pulling from ssh://user@dummy/server
+  pulling 6ba5de8abe43 c70a9bd6bfd1 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -157,8 +156,7 @@ Now cloud sync.  The sets of commits should be merged.
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at dae3b312bb78
-  pulling d8fc5ae9b7ef dd114d9b2f9e
-  pulling from ssh://user@dummy/server
+  pulling d8fc5ae9b7ef dd114d9b2f9e from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -196,8 +194,7 @@ Cloud sync back to the other client, it should get the same smartlog (apart from
   $ cd $TESTTMP/client2
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling ba83c5428cb2 6caded0e9807
-  pulling from ssh://user@dummy/server
+  pulling ba83c5428cb2 6caded0e9807 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -262,8 +259,7 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   $ hg cloud join
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'server' repo
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling d8fc5ae9b7ef dd114d9b2f9e ba83c5428cb2 6caded0e9807
-  pulling from ssh://user@dummy/server
+  pulling d8fc5ae9b7ef dd114d9b2f9e ba83c5428cb2 6caded0e9807 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -331,8 +327,7 @@ Introduce a third client that is still using obsmarker-based mutation and visibi
   $ cd ../client3
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 1ef69cfd595b
-  pulling from ssh://user@dummy/server
+  pulling 1ef69cfd595b from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests

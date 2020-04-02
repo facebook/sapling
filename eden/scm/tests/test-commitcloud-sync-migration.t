@@ -99,12 +99,13 @@ because it can't access the second commit.
   $ hg cloud sync --config paths.infinitepush=ssh://user@dummy/server1
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at fa5d62c46fd7
-  pulling 02f6fc2b7154
-  pulling from ssh://user@dummy/server1
+  pulling 02f6fc2b7154 from ssh://user@dummy/server1
+  searching for changes
+  remote: abort: 02f6fc2b715444d7df09bd859e1d4877f9ef9946 head is not known
   remote: pushing 2 commits:
   remote:     fa5d62c46fd7  commit1
   remote:     26d5a99991bd  commit3
-  abort: unknown revision '02f6fc2b715444d7df09bd859e1d4877f9ef9946'!
+  abort: pull failed on remote
   [255]
 
   $ cd ..
@@ -140,8 +141,7 @@ The first client can now successfully sync using the new server.
   $ cd client1
   $ hg cloud sync --config paths.infinitepush=ssh://user@dummy/server1
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling c701070be855
-  pulling from ssh://user@dummy/server1
+  pulling c701070be855 from ssh://user@dummy/server1
   searching for changes
   adding changesets
   adding manifests

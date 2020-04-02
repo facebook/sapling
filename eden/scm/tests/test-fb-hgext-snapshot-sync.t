@@ -160,8 +160,7 @@
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
   backing up stack rooted at 5e55990d9843
-  pulling 7917335ca006
-  pulling from ssh://user@dummy/server
+  pulling 7917335ca006 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -228,8 +227,7 @@
   no snapshots created
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling 5e55990d9843
-  pulling from ssh://user@dummy/server
+  pulling 5e55990d9843 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
