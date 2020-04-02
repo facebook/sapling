@@ -71,7 +71,9 @@ impl CachingBonsaiHgMapping {
         Self {
             mapping,
             cache_pool: cache_pool.into(),
-            memcache: MemcacheClient::new(fb).into(),
+            memcache: MemcacheClient::new(fb)
+                .expect("Memcache initialization failed")
+                .into(),
             keygen: CachingBonsaiHgMapping::create_key_gen(),
         }
     }

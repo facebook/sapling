@@ -45,7 +45,7 @@ impl SqlPhasesFactory {
     ) -> Self {
         let key_prefix = "scm.mononoke.phases";
         let caches = Caches {
-            memcache: MemcacheClient::new(fb),
+            memcache: MemcacheClient::new(fb).expect("Memcache initialization failed"),
             keygen: KeyGen::new(key_prefix, MC_CODEVER, MC_SITEVER),
             cache_pool: cache_pool.into(),
         };

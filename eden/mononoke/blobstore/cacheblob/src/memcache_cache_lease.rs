@@ -138,7 +138,7 @@ impl MemcacheOps {
 
         Ok(Self {
             lease_type,
-            memcache: MemcacheClient::new(fb),
+            memcache: MemcacheClient::new(fb)?,
             keygen: KeyGen::new(blob_key, MC_CODEVER, MC_SITEVER),
             presence_keygen: KeyGen::new(presence_key, MC_CODEVER, MC_SITEVER),
             hostname,

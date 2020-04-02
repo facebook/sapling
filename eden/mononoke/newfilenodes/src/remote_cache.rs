@@ -141,7 +141,9 @@ impl MemcacheCache {
         };
 
         Self {
-            memcache: MemcacheHandler::from(MemcacheClient::new(fb)),
+            memcache: MemcacheHandler::from(
+                MemcacheClient::new(fb).expect("Memcache initialization failed"),
+            ),
             keygen: KeyGen::new(key_prefix, MC_CODEVER as u32, mc_sitever),
         }
     }

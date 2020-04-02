@@ -38,7 +38,7 @@ impl CacheManager {
         }?;
 
         Ok(CacheManager {
-            memcache: MemcacheClient::new(fb).into(),
+            memcache: MemcacheClient::new(fb)?.into(),
             cachelib: cachelib.into(),
             keygen: KeyGen::new(Self::KEY_PREFIX, Self::MC_CODEVER, Self::MC_SITEVER),
         })

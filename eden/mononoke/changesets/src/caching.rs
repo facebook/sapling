@@ -68,7 +68,9 @@ impl CachingChangesets {
         Self {
             changesets,
             cachelib: cache_pool.into(),
-            memcache: MemcacheClient::new(fb).into(),
+            memcache: MemcacheClient::new(fb)
+                .expect("Memcache initialization failed")
+                .into(),
             keygen: get_keygen(),
         }
     }
