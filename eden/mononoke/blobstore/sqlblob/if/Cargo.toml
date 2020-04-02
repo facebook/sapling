@@ -17,7 +17,7 @@ thrift_compiler = { git = "https://github.com/facebookexperimental/rust-shed.git
 codegen_includer_proc_macro = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbthrift = { git = "https://github.com/facebook/fbthrift.git", branch = "master" }
 anyhow = "1.0"
-async-trait = { version = "0.1", features = ["support_old_nightly"] }
+async-trait = "0.1.29"
 futures = { version = "0.3", features = ["async-await", "compat"] }
 lazy_static = "1.0"
 serde = { version = "1.0", features = ["derive", "rc"] }

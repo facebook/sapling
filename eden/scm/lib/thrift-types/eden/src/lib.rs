@@ -12531,6 +12531,7 @@ pub mod server {
         SS: ThriftService<P::Frame>,
         SS::Handler: fb303_core::server::BaseService,
         P::Frame: Send + 'static,
+        R: Sync,
     {
         pub fn new(service: H, supa: SS) -> Self {
             Self {

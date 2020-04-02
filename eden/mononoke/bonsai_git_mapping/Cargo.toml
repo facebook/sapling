@@ -23,7 +23,7 @@ sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = 
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 ascii = "1.0"
-async-trait = { version = "0.1", features = ["support_old_nightly"] }
+async-trait = "0.1.29"
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-util = "0.3"
 slog = { version="2.5", features=["max_level_debug"] }
