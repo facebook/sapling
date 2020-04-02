@@ -71,7 +71,7 @@ from . import (
     visibility,
 )
 from .i18n import _
-from .node import hex, nullid, short
+from .node import bin, hex, nullhex, nullid, short
 from .pycompat import range
 
 
@@ -883,6 +883,87 @@ class localrepository(object):
 
     def peer(self):
         return localpeer(self)  # not cached to avoid reference cycle
+
+    def pull(self, source="default", bookmarknames=(), headnodes=(), headnames=()):
+        """Pull specified revisions and remote bookmarks.
+
+        headnodes is a list of binary nodes to pull.
+        headnames is a list of text names (ex. hex prefix of a commit hash).
+        bookmarknames is a list of bookmark names to pull.
+
+        If a remote bookmark no longer exists on the server-side, it will be
+        removed.
+
+        This differs from the traditional pull command in a few ways:
+        - Pull nothing if both bookmarknames and headnodes are empty.
+        - Do not write local bookmarks.
+        - Only update remote bookmarks that are explicitly specified. Do not
+          save every name the server has.
+
+        This is also done in proper ways so the remote bookmarks updated will
+        match the commits pulled. The remotenames extension might fail to do so
+        as it issues a second wireproto command to fetch remote bookmarks,
+        which can be racy.
+        """
+        with self.conn(source) as conn, self.wlock(), self.lock(), self.transaction(
+            "pull"
+        ), self.ui.configoverride({("ui", "quiet"): True}):
+            remote = conn.peer
+            remotenamechanges = {}  # changes to remotenames, {name: hexnode}
+            heads = set()
+
+            # Resolve the bookmark names to heads.
+            if bookmarknames:
+                remotebookmarks = remote.listkeyspatterns(
+                    "bookmarks", patterns=list(bookmarknames)
+                )  # {name: hexnode}
+                for name in bookmarknames:
+                    if name in remotebookmarks:
+                        hexnode = remotebookmarks[name]
+                        heads.add(bin(hexnode))
+                        remotenamechanges[name] = hexnode  # update it
+                    else:
+                        remotenamechanges[name] = nullhex  # delete it
+
+            # Resolve headnames to heads.
+            if headnames:
+                batch = remote.iterbatch()
+                for name in headnames:
+                    batch.lookup(name)
+                batch.submit()
+                heads.update(batch.results())
+
+            # Merge headnodes into heads.
+            for node in headnodes:
+                heads.add(node)
+
+            # Only perform a pull if heads are not empty.
+            if heads:
+                # Bypass the bookmarks logic as remotenames are updated here.
+                # Note: remotenamechanges contains bookmark deletion
+                # information while the exchange.pull does not know about what
+                # to delete.  Consider also bypass phases if narrow-heads is
+                # enabled everywhere.
+                extras = {"bookmarks": False, "obsolete": False}
+                opargs = {"extras": extras}
+                heads = sorted(heads)
+                exchange.pull(self, remote, heads, opargs=opargs)
+
+            # Update remotenames.
+            if remotenamechanges:
+                remotename = self.ui.paths.getname(
+                    remote.url()
+                )  # ex. 'default' or 'remote'
+                bookmarks.saveremotenames(
+                    self, {remotename: remotenamechanges}, override=False
+                )
+
+    def conn(self, source="default", **opts):
+        """Create a connection from the connection pool"""
+        from . import hg  # avoid cycle
+
+        source, _branches = hg.parseurl(self.ui.expandpath(source))
+        return self.connectionpool.get(source, opts=opts)
 
     def unfiltered(self):
         """Return unfiltered version of the repository

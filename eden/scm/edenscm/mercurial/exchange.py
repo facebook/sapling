@@ -310,7 +310,14 @@ class pushoperation(object):
     """
 
     def __init__(
-        self, repo, remote, force=False, revs=None, bookmarks=(), pushvars=None
+        self,
+        repo,
+        remote,
+        force=False,
+        revs=None,
+        bookmarks=(),
+        pushvars=None,
+        extras=None,
     ):
         # repo we push from
         self.repo = repo
@@ -371,6 +378,8 @@ class pushoperation(object):
         self.pkfailcb = {}
         # an iterable of pushvars or None
         self.pushvars = pushvars
+        # extra information
+        self.extras = extras or {}
 
     @util.propertycache
     def futureheads(self):
@@ -1221,6 +1230,7 @@ class pulloperation(object):
         remotebookmarks=None,
         streamclonerequested=None,
         exactbyteclone=False,
+        extras=None,
     ):
         # repo we pull into
         self.repo = repo
@@ -1255,6 +1265,8 @@ class pulloperation(object):
         # Whether clones should do an exact byte clone. This is used for hgsql
         # to avoid the extra semantic pull after a streaming clone.
         self.exactbyteclone = exactbyteclone
+        # extra information
+        self.extras = extras or {}
 
     @util.propertycache
     def pulledsubset(self):
@@ -1397,9 +1409,12 @@ def pull(
             if pullop.canusebundle2:
                 _pullbundle2(pullop)
             _pullchangeset(pullop)
-            _pullphase(pullop)
-            _pullbookmarks(pullop)
-            _pullobsolete(pullop)
+            if pullop.extras.get("phases", True):
+                _pullphase(pullop)
+            if pullop.extras.get("bookmarks", True):
+                _pullbookmarks(pullop)
+            if pullop.extras.get("obsolete", True):
+                _pullobsolete(pullop)
         pullop.trmanager.close()
     finally:
         lockmod.release(pullop.trmanager, lock, wlock)
@@ -1602,7 +1617,7 @@ def _pullbundle2(pullop):
                 pullop.remotebookmarks = bookmod.unhexlifybookmarks(value)
 
     # bookmark data were either already there or pulled in the bundle
-    if pullop.remotebookmarks is not None:
+    if pullop.remotebookmarks is not None and pullop.extras.get("bookmarks", True):
         _pullbookmarks(pullop)
 
 

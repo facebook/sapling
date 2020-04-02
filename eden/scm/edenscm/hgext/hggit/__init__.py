@@ -243,17 +243,16 @@ def extsetup(ui):
         lambda *args: open(os.path.join(helpdir, "git.rst")).read(),
     )
     insort(help.helptable, entry)
+    # Mercurial >= 3.2
+    extensions.wrapfunction(exchange, "pull", exchangepull)
+    # Mercurial >= 3.4
+    extensions.wrapfunction(manifest.manifestdict, "diff", overlay.wrapmanifestdictdiff)
 
 
 def reposetup(ui, repo):
     if not isinstance(repo, gitrepo.gitrepo):
         klass = hgrepo.generate_repo_subclass(repo.__class__)
         repo.__class__ = klass
-
-
-if hgutil.safehasattr(manifest, "_lazymanifest"):
-    # Mercurial >= 3.4
-    extensions.wrapfunction(manifest.manifestdict, "diff", overlay.wrapmanifestdictdiff)
 
 
 @command("gimport")
@@ -463,11 +462,6 @@ def exchangepull(orig, repo, remote, heads=None, force=False, bookmarks=(), **kw
             wlock.release()
     else:
         return orig(repo, remote, heads, force, bookmarks=bookmarks, **kwargs)
-
-
-if not hgutil.safehasattr(localrepo.localrepository, "pull"):
-    # Mercurial >= 3.2
-    extensions.wrapfunction(exchange, "pull", exchangepull)
 
 
 @util.transform_notgit

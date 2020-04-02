@@ -246,6 +246,11 @@ def _reportaccessedbookmarks(ui, accessedremotenames):
 
 
 def expull(orig, repo, remote, heads=None, force=False, **kwargs):
+    if not kwargs.get("opargs", {}).get("extras", {}).get("bookmarks", True):
+        # The callsite disables the bookmarks pulling.
+        # Use the vanilla pull path.
+        return orig(repo, remote, heads, force, **kwargs)
+
     with repo.wlock(), repo.lock(), repo.transaction("expull"):
         return _expull(orig, repo, remote, heads, force, **kwargs)
 

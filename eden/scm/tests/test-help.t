@@ -1033,6 +1033,7 @@ Test list of internal help commands
                  show process tree related to hg
    debugprogress
                  (no help text available)
+   debugpull     test repo.pull interface
    debugpushkey  access the pushkey key/value protocol
    debugpvec     (no help text available)
    debugpython   run python interpreter

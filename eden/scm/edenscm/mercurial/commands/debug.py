@@ -2390,6 +2390,25 @@ def debugprocesstree(ui, *pids, **opts):
     printtree("0")
 
 
+@command(
+    "debugpull",
+    [
+        ("B", "bookmark", [], _("a bookmark to pull"), _("BOOKMARK")),
+        ("r", "rev", [], _("names to pull (not revset)"), _("REV")),
+    ],
+)
+def debugpull(ui, repo, **opts):
+    """test repo.pull interface"""
+    headnames = []
+    headnodes = []
+    for rev in opts.get("rev", []):
+        if len(rev) == 40:
+            headnodes.append(bin(rev))
+        else:
+            headnames.append(rev)
+    repo.pull(bookmarknames=opts["bookmark"], headnodes=headnodes, headnames=headnames)
+
+
 @command("debugpushkey", [], _("REPO NAMESPACE [KEY OLD NEW]"), norepo=True)
 def debugpushkey(ui, repopath, namespace, *keyinfo, **opts):
     """access the pushkey key/value protocol

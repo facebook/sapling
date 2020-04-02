@@ -142,6 +142,7 @@ Show debug commands if there are no other candidates
   debugpreviewbindag
   debugprocesstree
   debugprogress
+  debugpull
   debugpushkey
   debugpvec
   debugpython
@@ -343,6 +344,7 @@ Show all commands + options
   debugpreviewbindag: 
   debugprocesstree: 
   debugprogress: spinner, nototal, bytes, sleep, nested, with-output
+  debugpull: bookmark, rev
   debugpushkey: 
   debugpvec: 
   debugpython: trace

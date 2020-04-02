@@ -300,3 +300,38 @@ Check remote bookmarks after push
   $ hg push -r . --to master -q
   $ hg book --list-subscriptions
      default/master            4:a81520e7283a
+
+Check the repo.pull API
+
+  $ newrepo
+  $ setconfig paths.default=ssh://user@dummy/remoterepo
+
+- Pull nothing != Pull everything
+  $ hg debugpull
+  $ hg log -Gr 'all()' -T '{node} {desc} {remotenames}'
+
+- Pull a name, and an unknown name. The unknown name is not an error (it will delete the name).
+  $ hg debugpull -B thirdbook -B not-found
+  $ hg log -Gr 'all()' -T '{node} {desc} {remotenames}'
+  o  1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 First default/thirdbook
+  
+- Only pull 'master' without 'thirdbook'. This will not work if remotenames expull is not bypassed.
+  $ newrepo
+  $ setconfig paths.default=ssh://user@dummy/remoterepo
+  $ hg debugpull -B master
+  $ hg log -Gr 'all()' -T '{node} {desc} {remotenames}'
+  o  a81520e7283a6967ec1d82620b75ab92f5478638 push commit default/master
+  |
+  o  0238718db2b174d2622ae9c4c75d61745eb12b25 Move master bookmark
+  |
+  o  1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 First
+  
+- Pull by hash + name + prefix
+  $ newrepo
+  $ setconfig paths.default=ssh://user@dummy/remoterepo
+  $ hg debugpull -B thirdbook -r 0238718db2b174d2622ae9c4c75d61745eb12b25 -r 1449e7934ec1c
+  $ hg log -Gr 'all()' -T '{node} {desc} {remotenames}'
+  o  0238718db2b174d2622ae9c4c75d61745eb12b25 Move master bookmark
+  |
+  o  1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 First default/thirdbook
+  
