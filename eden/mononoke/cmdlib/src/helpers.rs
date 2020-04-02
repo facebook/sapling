@@ -38,12 +38,12 @@ use blobrepo::BlobRepo;
 use blobrepo_factory::ReadOnlyStorage;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
-use changesets::SqlConstructors;
 use context::CoreContext;
 use mercurial_types::{HgChangesetId, HgManifestId};
-use metaconfig_types::MetadataDBConfig;
+use metaconfig_types::MetadataDatabaseConfig;
 use mononoke_types::ChangesetId;
-use sql_ext::facebook::{FbSqlConstructors, MysqlOptions};
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::facebook::MysqlOptions;
 use stats::schedule_stats_aggregation_preview;
 
 pub const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
@@ -316,29 +316,19 @@ pub fn get_root_manifest_id(
 
 pub fn open_sql_with_config_and_mysql_options<T>(
     fb: FacebookInit,
-    dbconfig: MetadataDBConfig,
+    dbconfig: MetadataDatabaseConfig,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
 ) -> BoxFuture<T, Error>
 where
-    T: SqlConstructors,
+    T: SqlConstructFromMetadataDatabaseConfig,
 {
-    let name = T::LABEL;
-    match dbconfig {
-        MetadataDBConfig::LocalDB { path } => {
-            T::with_sqlite_path(path.join("sqlite_dbs"), readonly_storage.0)
-                .into_future()
-                .boxify()
-        }
-        MetadataDBConfig::Mysql { db_address, .. } if name != "filenodes" => {
-            T::with_xdb(fb, db_address, mysql_options, readonly_storage.0)
-        }
-        MetadataDBConfig::Mysql { .. } => Err(Error::msg(
-            "Use SqlFilenodes::with_sharded_myrouter for filenodes",
-        ))
-        .into_future()
-        .boxify(),
-    }
+    Box::pin(async move {
+        // FIXME: remove pinning when this crate is migrated to new futures
+        T::with_metadata_database_config(fb, &dbconfig, mysql_options, readonly_storage.0).await
+    })
+    .compat()
+    .boxify()
 }
 
 /// Get a tokio `Runtime` with potentially explicitly set number of core threads

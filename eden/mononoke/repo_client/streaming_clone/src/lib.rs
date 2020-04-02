@@ -14,7 +14,8 @@ use bytes::Bytes;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use sql::{queries, Connection};
-use sql_ext::SqlConstructors;
+use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_ext::SqlConnections;
 use thiserror::Error;
 
 use blobstore::Blobstore;
@@ -61,21 +62,19 @@ queries! {
     }
 }
 
-impl SqlConstructors for SqlStreamingChunksFetcher {
+impl SqlConstruct for SqlStreamingChunksFetcher {
     const LABEL: &'static str = "streaming-chunks";
 
-    fn from_connections(
-        _write_connection: Connection,
-        read_connection: Connection,
-        _read_master_connection: Connection,
-    ) -> Self {
-        Self { read_connection }
-    }
+    const CREATION_QUERY: &'static str = "";
 
-    fn get_up_query() -> &'static str {
-        ""
+    fn from_sql_connections(connections: SqlConnections) -> Self {
+        Self {
+            read_connection: connections.read_connection,
+        }
     }
 }
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlStreamingChunksFetcher {}
 
 fn fetch_blob<B: Blobstore>(
     ctx: CoreContext,

@@ -11,9 +11,9 @@ use futures::future::Future;
 use futures_ext::{BoxFuture, FutureExt};
 use mononoke_types::Timestamp;
 use sql::{queries, Connection};
+use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_ext::SqlConnections;
 use std::collections::HashMap;
-
-pub use sql_ext::SqlConstructors;
 use std::iter::FromIterator;
 
 #[derive(Clone)]
@@ -43,24 +43,20 @@ queries! {
     }
 }
 
-impl SqlConstructors for SqlRedactedContentStore {
+impl SqlConstruct for SqlRedactedContentStore {
     const LABEL: &'static str = "censored_contents";
 
-    fn from_connections(
-        write_connection: Connection,
-        read_connection: Connection,
-        _read_master_connection: Connection,
-    ) -> Self {
+    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-redacted.sql");
+
+    fn from_sql_connections(connections: SqlConnections) -> Self {
         Self {
-            write_connection,
-            read_connection,
+            write_connection: connections.write_connection,
+            read_connection: connections.read_connection,
         }
     }
-
-    fn get_up_query() -> &'static str {
-        include_str!("../schemas/sqlite-redacted.sql")
-    }
 }
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlRedactedContentStore {}
 
 impl SqlRedactedContentStore {
     pub fn get_all_redacted_blobs(&self) -> BoxFuture<HashMap<String, String>, Error> {

@@ -38,7 +38,7 @@ use rand::Rng;
 use rand_distr::Distribution;
 use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::ScubaSampleBuilder;
-use sql_ext::SqlConstructors;
+use sql_construct::SqlConstruct;
 use std::{sync::Arc, time::Duration};
 
 pub type Normal = rand_distr::Normal<f64>;

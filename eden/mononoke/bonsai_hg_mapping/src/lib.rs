@@ -11,7 +11,8 @@ use std::collections::HashSet;
 use std::sync::Arc;
 
 use sql::Connection;
-pub use sql_ext::SqlConstructors;
+use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_ext::SqlConnections;
 
 use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
@@ -226,25 +227,21 @@ queries! {
     }
 }
 
-impl SqlConstructors for SqlBonsaiHgMapping {
+impl SqlConstruct for SqlBonsaiHgMapping {
     const LABEL: &'static str = "bonsai_hg_mapping";
 
-    fn from_connections(
-        write_connection: Connection,
-        read_connection: Connection,
-        read_master_connection: Connection,
-    ) -> Self {
+    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-bonsai-hg-mapping.sql");
+
+    fn from_sql_connections(connections: SqlConnections) -> Self {
         Self {
-            write_connection,
-            read_connection,
-            read_master_connection,
+            write_connection: connections.write_connection,
+            read_connection: connections.read_connection,
+            read_master_connection: connections.read_master_connection,
         }
     }
-
-    fn get_up_query() -> &'static str {
-        include_str!("../schemas/sqlite-bonsai-hg-mapping.sql")
-    }
 }
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiHgMapping {}
 
 impl SqlBonsaiHgMapping {
     fn verify_consistency(

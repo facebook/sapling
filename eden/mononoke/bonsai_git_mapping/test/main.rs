@@ -18,7 +18,8 @@ use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::hash::*;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use sql::Connection;
-use sql_ext::{open_sqlite_in_memory, SqlConstructors};
+use sql_construct::SqlConstruct;
+use sql_ext::{open_sqlite_in_memory, SqlConnections};
 
 #[fbinit::test]
 async fn test_add_and_get() -> Result<(), Error> {
@@ -137,12 +138,13 @@ async fn test_missing() -> Result<(), Error> {
 #[fbinit::test]
 async fn test_add_with_transaction() -> Result<(), Error> {
     let conn = open_sqlite_in_memory()?;
-    conn.execute_batch(SqlBonsaiGitMappingConnection::get_up_query())?;
+    conn.execute_batch(SqlBonsaiGitMappingConnection::CREATION_QUERY)?;
     let conn = Connection::with_sqlite(conn);
 
-    let mapping =
-        SqlBonsaiGitMappingConnection::from_connections(conn.clone(), conn.clone(), conn.clone())
-            .with_repo_id(REPO_ZERO);
+    let mapping = SqlBonsaiGitMappingConnection::from_sql_connections(SqlConnections::new_single(
+        conn.clone(),
+    ))
+    .with_repo_id(REPO_ZERO);
 
     let entry1 = BonsaiGitMappingEntry {
         bcs_id: bonsai::ONES_CSID,

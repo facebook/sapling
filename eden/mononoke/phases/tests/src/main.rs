@@ -11,7 +11,6 @@ use cloned::cloned;
 use context::CoreContext;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future, Future, Stream};
-pub use sql_ext::SqlConstructors;
 
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 use fbinit::FacebookInit;
@@ -21,6 +20,7 @@ use mercurial_types::nodehash::HgChangesetId;
 use mononoke_types::{ChangesetId, RepositoryId};
 use mononoke_types_mocks::changesetid::*;
 use phases::{Phase, Phases, SqlPhasesStore};
+use sql_construct::SqlConstruct;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio_compat::runtime::Runtime;

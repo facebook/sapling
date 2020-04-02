@@ -16,7 +16,7 @@ use crate::walk::OutgoingEdge;
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::open_blobrepo_given_datasources;
-use blobstore_factory::make_sql_factory;
+use blobstore_factory::make_metadata_sql_factory;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches, SubCommand, Values};
 use cmdlib::args;
@@ -740,9 +740,9 @@ pub fn setup_common(
     .compat()
     .boxify();
 
-    let sql_factory = make_sql_factory(
+    let sql_factory = make_metadata_sql_factory(
         fb,
-        storage_config.dbconfig,
+        storage_config.metadata,
         mysql_options,
         readonly_storage,
         logger.clone(),

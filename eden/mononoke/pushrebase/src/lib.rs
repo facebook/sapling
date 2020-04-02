@@ -1211,7 +1211,8 @@ mod tests {
     use mutable_counters::{MutableCounters, SqlMutableCounters};
     use rand::Rng;
     use sql::{rusqlite::Connection as SqliteConnection, Connection, Transaction};
-    use sql_ext::{SqlConstructors, TransactionResult};
+    use sql_construct::SqlConstruct;
+    use sql_ext::{SqlConnections, TransactionResult};
     use std::time::Duration;
     use std::{collections::BTreeMap, str::FromStr};
     use tests_utils::{bookmark, resolve_cs_id, CreateCommitContext};
@@ -1393,19 +1394,15 @@ mod tests {
     async fn init_bookmarks_mutable_counters(
     ) -> Result<(Arc<dyn Bookmarks>, Arc<SqlMutableCounters>), Error> {
         let con = SqliteConnection::open_in_memory()?;
-        con.execute_batch(SqlMutableCounters::get_up_query())?;
-        con.execute_batch(SqlBookmarks::get_up_query())?;
+        con.execute_batch(SqlMutableCounters::CREATION_QUERY)?;
+        con.execute_batch(SqlBookmarks::CREATION_QUERY)?;
 
         let con = Connection::with_sqlite(con);
-        let bookmarks = Arc::new(SqlBookmarks::from_connections(
-            con.clone(),
-            con.clone(),
-            con.clone(),
+        let bookmarks = Arc::new(SqlBookmarks::from_sql_connections(
+            SqlConnections::new_single(con.clone()),
         )) as Arc<dyn Bookmarks>;
-        let mutable_counters = Arc::new(SqlMutableCounters::from_connections(
-            con.clone(),
-            con.clone(),
-            con.clone(),
+        let mutable_counters = Arc::new(SqlMutableCounters::from_sql_connections(
+            SqlConnections::new_single(con),
         ));
 
         Ok((bookmarks, mutable_counters))

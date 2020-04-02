@@ -20,7 +20,8 @@ use sql::mysql_async::{
     FromValueError, Value,
 };
 use sql::{queries, Connection};
-pub use sql_ext::SqlConstructors;
+pub use sql_construct::SqlConstruct;
+pub use sql_ext::SqlConnections;
 use stats::prelude::*;
 use std::iter::IntoIterator;
 use std::sync::Arc;
@@ -252,15 +253,13 @@ queries! {
     }
 }
 
-impl SqlConstructors for SqlBlobstoreSyncQueue {
+impl SqlConstruct for SqlBlobstoreSyncQueue {
     const LABEL: &'static str = "blobstore_sync_queue";
 
-    fn from_connections(
-        write_connection: Connection,
-        read_connection: Connection,
-        read_master_connection: Connection,
-    ) -> Self {
-        let write_connection = Arc::new(write_connection);
+    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-blobstore-sync-queue.sql");
+
+    fn from_sql_connections(connections: SqlConnections) -> Self {
+        let write_connection = Arc::new(connections.write_connection);
         type ChannelType = (oneshot::Sender<Result<(), Error>>, BlobstoreSyncQueueEntry);
         let (sender, receiver): (mpsc::UnboundedSender<ChannelType>, _) = mpsc::unbounded();
 
@@ -307,15 +306,11 @@ impl SqlConstructors for SqlBlobstoreSyncQueue {
 
         Self {
             write_connection,
-            read_connection,
-            read_master_connection,
+            read_connection: connections.read_connection,
+            read_master_connection: connections.read_master_connection,
             write_sender: Arc::new(sender),
             ensure_worker_scheduled,
         }
-    }
-
-    fn get_up_query() -> &'static str {
-        include_str!("../schemas/sqlite-blobstore-sync-queue.sql")
     }
 }
 

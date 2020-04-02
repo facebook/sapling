@@ -18,7 +18,8 @@ use mercurial_types_mocks::globalrev::*;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
 use sql::Connection;
-use sql_ext::{open_sqlite_in_memory, SqlConstructors};
+use sql_construct::SqlConstruct;
+use sql_ext::{open_sqlite_in_memory, SqlConnections};
 
 #[fbinit::test]
 async fn test_add_and_get() -> Result<(), Error> {
@@ -133,11 +134,11 @@ async fn test_get_max() -> Result<(), Error> {
 #[fbinit::test]
 async fn test_add_globalrevs() -> Result<(), Error> {
     let conn = open_sqlite_in_memory()?;
-    conn.execute_batch(SqlBonsaiGlobalrevMapping::get_up_query())?;
+    conn.execute_batch(SqlBonsaiGlobalrevMapping::CREATION_QUERY)?;
     let conn = Connection::with_sqlite(conn);
 
     let mapping =
-        SqlBonsaiGlobalrevMapping::from_connections(conn.clone(), conn.clone(), conn.clone());
+        SqlBonsaiGlobalrevMapping::from_sql_connections(SqlConnections::new_single(conn.clone()));
 
     let e0 = BonsaiGlobalrevMappingEntry {
         repo_id: REPO_ZERO,

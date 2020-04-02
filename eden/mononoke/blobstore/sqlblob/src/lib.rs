@@ -129,47 +129,33 @@ impl Sqlblob<MemcacheOps> {
 
         join_all(futs)
             .map(move |shard_connections| {
-                struct Cons {
-                    write_connection: Vec<Connection>,
-                    read_connection: Vec<Connection>,
-                    read_master_connection: Vec<Connection>,
+                let mut write_connections = Vec::with_capacity(shard_count);
+                let mut read_connections = Vec::with_capacity(shard_count);
+                let mut read_master_connections = Vec::with_capacity(shard_count);
+
+                for connections in shard_connections {
+                    write_connections.push(connections.write_connection);
+                    read_connections.push(connections.read_connection);
+                    read_master_connections.push(connections.read_master_connection);
                 }
 
-                let mut cons = Cons {
-                    write_connection: Vec::with_capacity(shard_count),
-                    read_connection: Vec::with_capacity(shard_count),
-                    read_master_connection: Vec::with_capacity(shard_count),
-                };
-
-                for conn in shard_connections {
-                    let SqlConnections {
-                        write_connection,
-                        read_connection,
-                        read_master_connection,
-                    } = conn;
-
-                    cons.write_connection.push(write_connection);
-                    cons.read_connection.push(read_connection);
-                    cons.read_master_connection.push(read_master_connection);
-                }
-
-                let write_connection = Arc::new(cons.write_connection);
-                let read_connection = Arc::new(cons.read_connection);
-                let read_master_connection = Arc::new(cons.read_master_connection);
+                let write_connections = Arc::new(write_connections);
+                let read_connections = Arc::new(read_connections);
+                let read_master_connections = Arc::new(read_master_connections);
 
                 Self::counted(
                     Self {
                         data_store: DataSqlStore::new(
                             shard_num,
-                            write_connection.clone(),
-                            read_connection.clone(),
-                            read_master_connection.clone(),
+                            write_connections.clone(),
+                            read_connections.clone(),
+                            read_master_connections.clone(),
                         ),
                         chunk_store: ChunkSqlStore::new(
                             shard_num,
-                            write_connection,
-                            read_connection,
-                            read_master_connection,
+                            write_connections,
+                            read_connections,
+                            read_master_connections,
                         ),
                         data_cache: SqlblobCacheOps::new(
                             Arc::new(
@@ -197,7 +183,7 @@ impl Sqlblob<DummyCache> {
     pub fn with_sqlite_in_memory() -> Result<CountedSqlblob<DummyCache>> {
         Self::with_sqlite(|_| {
             let con = open_sqlite_in_memory()?;
-            con.execute_batch(Self::get_up_query())?;
+            con.execute_batch(Self::CREATION_QUERY)?;
             Ok(con)
         })
     }
@@ -214,7 +200,7 @@ impl Sqlblob<DummyCache> {
             )?;
             // When opening an sqlite database we might already have the proper tables in it, so ignore
             // errors from table creation
-            let _ = con.execute_batch(Self::get_up_query());
+            let _ = con.execute_batch(Self::CREATION_QUERY);
             Ok(con)
         })
     }
@@ -253,9 +239,7 @@ impl Sqlblob<DummyCache> {
         ))
     }
 
-    fn get_up_query() -> &'static str {
-        include_str!("../schema/sqlite-sqlblob.sql")
-    }
+    const CREATION_QUERY: &'static str = include_str!("../schema/sqlite-sqlblob.sql");
 }
 
 impl<C: CacheOps> Sqlblob<C> {

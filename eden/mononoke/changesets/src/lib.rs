@@ -20,7 +20,8 @@ use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
 };
 use sql::{queries, Connection, Transaction};
-pub use sql_ext::SqlConstructors;
+use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_ext::SqlConnections;
 use stats::prelude::*;
 use std::collections::{HashMap, HashSet};
 use std::result;
@@ -244,25 +245,21 @@ queries! {
 
 }
 
-impl SqlConstructors for SqlChangesets {
+impl SqlConstruct for SqlChangesets {
     const LABEL: &'static str = "changesets";
 
-    fn from_connections(
-        write_connection: Connection,
-        read_connection: Connection,
-        read_master_connection: Connection,
-    ) -> Self {
+    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-changesets.sql");
+
+    fn from_sql_connections(connections: SqlConnections) -> Self {
         Self {
-            write_connection,
-            read_connection,
-            read_master_connection,
+            write_connection: connections.write_connection,
+            read_connection: connections.read_connection,
+            read_master_connection: connections.read_master_connection,
         }
     }
-
-    fn get_up_query() -> &'static str {
-        include_str!("../schemas/sqlite-changesets.sql")
-    }
 }
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlChangesets {}
 
 impl Changesets for SqlChangesets {
     fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error> {

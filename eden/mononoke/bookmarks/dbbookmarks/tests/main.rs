@@ -15,7 +15,7 @@ use bookmarks::{
     BookmarkUpdateReason, Bookmarks, BundleReplayData, Freshness,
 };
 use context::CoreContext;
-use dbbookmarks::{SqlBookmarks, SqlConstructors};
+use dbbookmarks::SqlBookmarks;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use futures_old::{Future, Stream};
@@ -27,6 +27,7 @@ use mononoke_types_mocks::changesetid::{
 };
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_TWO, REPO_ZERO};
 use sql::mysql_async::{prelude::ConvIr, Value};
+use sql_construct::SqlConstruct;
 use std::collections::HashMap;
 
 fn create_bookmark_name(book: &str) -> BookmarkName {

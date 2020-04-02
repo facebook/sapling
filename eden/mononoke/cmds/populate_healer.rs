@@ -27,9 +27,13 @@ use blobstore_sync_queue::{
 use cmdlib::args;
 use context::CoreContext;
 use manifoldblob::{ManifoldEntry, ManifoldRange, ThriftManifoldBlob};
-use metaconfig_types::{BlobConfig, BlobstoreId, MetadataDBConfig, MultiplexId, StorageConfig};
+use metaconfig_types::{
+    BlobConfig, BlobstoreId, MetadataDatabaseConfig, MultiplexId, RemoteDatabaseConfig,
+    RemoteMetadataDatabaseConfig, StorageConfig,
+};
 use mononoke_types::{BlobstoreBytes, DateTime, RepositoryId};
-use sql_ext::facebook::{FbSqlConstructors, ReadConnectionType};
+use sql_construct::facebook::FbSqlConstruct;
+use sql_ext::facebook::ReadConnectionType;
 
 /// Save manifold continuation token each once per `PRESERVE_STATE_RATIO` entries
 const PRESERVE_STATE_RATIO: usize = 10_000;
@@ -208,7 +212,11 @@ fn parse_args(fb: FacebookInit) -> Result<Config, Error> {
 
     let (blobstores, multiplex_id, db_address) = match storage_config {
         StorageConfig {
-            dbconfig: MetadataDBConfig::Mysql { db_address, .. },
+            metadata:
+                MetadataDatabaseConfig::Remote(RemoteMetadataDatabaseConfig {
+                    primary: RemoteDatabaseConfig { db_address },
+                    ..
+                }),
             blobstore:
                 BlobConfig::Multiplexed {
                     blobstores,

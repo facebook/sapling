@@ -15,8 +15,9 @@ use futures::compat::Future01CompatExt;
 use context::CoreContext;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::{REPO_ONE, REPO_ZERO};
+use sql_construct::SqlConstruct;
 use synced_commit_mapping::{
-    EquivalentWorkingCopyEntry, SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping,
+    EquivalentWorkingCopyEntry, SqlSyncedCommitMapping, SyncedCommitMapping,
     SyncedCommitMappingEntry, WorkingCopyEquivalence,
 };
 

@@ -13,23 +13,25 @@ use cloned::cloned;
 use failure_ext::chain::ChainExt;
 use fbinit::FacebookInit;
 use fileblob::Fileblob;
-use futures::{
+use futures::{FutureExt, TryFutureExt};
+use futures_ext::{BoxFuture, FutureExt as _};
+use futures_old::{
     future::{self, IntoFuture},
     Future,
 };
-use futures_ext::{BoxFuture, FutureExt};
-use metaconfig_types::{BlobConfig, BlobstoreId, MetadataDBConfig, MultiplexId, ScrubAction};
+use metaconfig_types::{BlobConfig, BlobstoreId, DatabaseConfig, MultiplexId, ScrubAction};
 use multiplexedblob::{LoggingScrubHandler, MultiplexedBlobstore, ScrubBlobstore, ScrubHandler};
 use readonlyblob::ReadOnlyBlobstore;
 use scuba::ScubaSampleBuilder;
 use slog::Logger;
+use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 use sqlblob::Sqlblob;
 use std::num::NonZeroU64;
 use std::sync::Arc;
 use throttledblob::{ThrottleOptions, ThrottledBlob};
 
-use crate::{make_sql_factory, ReadOnlyStorage};
+use crate::ReadOnlyStorage;
 
 #[derive(Clone, Debug)]
 pub struct BlobstoreOptions {
@@ -256,7 +258,7 @@ pub fn make_blobstore(
 pub fn make_blobstore_multiplexed(
     fb: FacebookInit,
     multiplex_id: MultiplexId,
-    queue_db: MetadataDBConfig,
+    queue_db: DatabaseConfig,
     scuba_table: Option<String>,
     scuba_sample_rate: NonZeroU64,
     inner_config: Vec<(BlobstoreId, BlobConfig)>,
@@ -303,8 +305,21 @@ pub fn make_blobstore_multiplexed(
         })
         .collect();
 
-    let queue = make_sql_factory(fb, queue_db, mysql_options, readonly_storage, logger)
-        .and_then(|sql_factory| sql_factory.open::<SqlBlobstoreSyncQueue>());
+    let queue = {
+        // FIXME: remove cloning and boxing when this crate is migrated to new futures
+        cloned!(queue_db);
+        async move {
+            SqlBlobstoreSyncQueue::with_database_config(
+                fb,
+                &queue_db,
+                mysql_options,
+                readonly_storage.0,
+            )
+            .await
+        }
+    }
+    .boxed()
+    .compat();
 
     queue
         .and_then({
@@ -314,7 +329,7 @@ pub fn make_blobstore_multiplexed(
                         Some((scrub_handler, scrub_action)) => Arc::new(ScrubBlobstore::new(
                             multiplex_id,
                             components,
-                            queue,
+                            Arc::new(queue),
                             scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
                                 ScubaSampleBuilder::new(fb, table)
                             }),
@@ -326,7 +341,7 @@ pub fn make_blobstore_multiplexed(
                         None => Arc::new(MultiplexedBlobstore::new(
                             multiplex_id,
                             components,
-                            queue,
+                            Arc::new(queue),
                             scuba_table.map_or(ScubaSampleBuilder::with_discard(), |table| {
                                 ScubaSampleBuilder::new(fb, table)
                             }),

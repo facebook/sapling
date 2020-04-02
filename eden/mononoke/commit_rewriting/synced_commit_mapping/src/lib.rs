@@ -10,7 +10,8 @@
 use std::sync::Arc;
 
 use sql::{Connection, Transaction};
-pub use sql_ext::SqlConstructors;
+use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_ext::SqlConnections;
 
 use anyhow::Error;
 use cloned::cloned;
@@ -225,25 +226,22 @@ queries! {
     }
 }
 
-impl SqlConstructors for SqlSyncedCommitMapping {
+impl SqlConstruct for SqlSyncedCommitMapping {
     const LABEL: &'static str = "synced_commit_mapping";
 
-    fn from_connections(
-        write_connection: Connection,
-        read_connection: Connection,
-        read_master_connection: Connection,
-    ) -> Self {
+    const CREATION_QUERY: &'static str =
+        include_str!("../schemas/sqlite-synced-commit-mapping.sql");
+
+    fn from_sql_connections(connections: SqlConnections) -> Self {
         Self {
-            write_connection,
-            read_connection,
-            read_master_connection,
+            write_connection: connections.write_connection,
+            read_connection: connections.read_connection,
+            read_master_connection: connections.read_master_connection,
         }
     }
-
-    fn get_up_query() -> &'static str {
-        include_str!("../schemas/sqlite-synced-commit-mapping.sql")
-    }
 }
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlSyncedCommitMapping {}
 
 impl SqlSyncedCommitMapping {
     fn add_many(

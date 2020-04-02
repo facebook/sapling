@@ -1,8 +1,9 @@
 repoid = 123
 storage_config = "multiplex"
 
-[storage.multiplex.db.remote]
-db_address="xdb.mononoke_production"
+[storage.multiplex.metadata.remote]
+primary = { db_address="xdb.mononoke_production" }
+filenodes = { unsharded = { db_address="xdb.mononoke_production" } }
 
 [storage.multiplex.blobstore.multiplexed]
 multiplex_id = 1

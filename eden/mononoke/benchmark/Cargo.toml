@@ -34,6 +34,7 @@ newfilenodes = { path = "../newfilenodes" }
 phases = { path = "../phases" }
 repo_blobstore = { path = "../blobrepo/repo_blobstore" }
 scuba_ext = { path = "../common/scuba_ext" }
+sql_construct = { path = "../common/sql_construct" }
 sql_ext = { path = "../common/rust/sql_ext" }
 cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

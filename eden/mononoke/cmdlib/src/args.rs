@@ -33,13 +33,13 @@ use slog_glog_fmt::{kv_categorizer::FacebookCategorizer, kv_defaults::FacebookKV
 use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobrepoBuilder, Caching, ReadOnlyStorage};
 use blobstore_factory::{BlobstoreOptions, ChaosOptions, Scrubbing, ThrottleOptions};
-use changesets::SqlConstructors;
 use metaconfig_parser::RepoConfigs;
 use metaconfig_types::{
     BlobConfig, CommonConfig, Redaction, RepoConfig, ScrubAction, StorageConfig,
 };
 use mononoke_types::RepositoryId;
 use slog_logview::LogViewDrain;
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 
 use crate::helpers::{
@@ -526,14 +526,14 @@ pub fn get_target_repo_id<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Res
 
 pub fn open_sql<T>(fb: FacebookInit, matches: &ArgMatches<'_>) -> BoxFuture<T, Error>
 where
-    T: SqlConstructors,
+    T: SqlConstructFromMetadataDatabaseConfig,
 {
     let (_, config) = try_boxfuture!(get_config(fb, matches));
     let mysql_options = parse_mysql_options(matches);
     let readonly_storage = parse_readonly_storage(matches);
     open_sql_with_config_and_mysql_options(
         fb,
-        config.storage_config.dbconfig,
+        config.storage_config.metadata,
         mysql_options,
         readonly_storage,
     )
@@ -541,7 +541,7 @@ where
 
 pub fn open_source_sql<T>(fb: FacebookInit, matches: &ArgMatches<'_>) -> BoxFuture<T, Error>
 where
-    T: SqlConstructors,
+    T: SqlConstructFromMetadataDatabaseConfig,
 {
     let source_repo_id = try_boxfuture!(get_source_repo_id(fb, matches));
     let (_, config) = try_boxfuture!(get_config_by_repoid(fb, matches, source_repo_id));
@@ -549,7 +549,7 @@ where
     let readonly_storage = parse_readonly_storage(matches);
     open_sql_with_config_and_mysql_options(
         fb,
-        config.storage_config.dbconfig,
+        config.storage_config.metadata,
         mysql_options,
         readonly_storage,
     )

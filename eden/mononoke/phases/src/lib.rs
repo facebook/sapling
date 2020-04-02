@@ -31,7 +31,8 @@ use sql::mysql_async::{
     FromValueError, Value,
 };
 use sql::{queries, Connection};
-pub use sql_ext::SqlConstructors;
+use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_ext::SqlConnections;
 use stats::prelude::*;
 use std::{
     collections::{HashMap, HashSet},
@@ -247,25 +248,21 @@ impl SqlPhasesStore {
     }
 }
 
-impl SqlConstructors for SqlPhasesStore {
+impl SqlConstruct for SqlPhasesStore {
     const LABEL: &'static str = "phases";
 
-    fn from_connections(
-        write_connection: Connection,
-        read_connection: Connection,
-        read_master_connection: Connection,
-    ) -> Self {
+    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-phases.sql");
+
+    fn from_sql_connections(connections: SqlConnections) -> Self {
         Self {
-            write_connection,
-            read_connection,
-            read_master_connection,
+            write_connection: connections.write_connection,
+            read_connection: connections.read_connection,
+            read_master_connection: connections.read_master_connection,
         }
     }
-
-    fn get_up_query() -> &'static str {
-        include_str!("../schemas/sqlite-phases.sql")
-    }
 }
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlPhasesStore {}
 
 #[derive(Clone)]
 pub struct SqlPhases {

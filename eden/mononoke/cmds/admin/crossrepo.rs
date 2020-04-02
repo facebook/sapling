@@ -436,7 +436,7 @@ mod test {
     };
     use mononoke_types::{MPath, RepositoryId};
     use revset::AncestorsNodeStream;
-    use sql_ext::SqlConstructors;
+    use sql_construct::SqlConstruct;
     use std::{collections::HashSet, sync::Arc};
     // To support async tests
     use synced_commit_mapping::SyncedCommitMappingEntry;

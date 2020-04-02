@@ -15,7 +15,8 @@ use futures::compat::Future01CompatExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{RepositoryId, Timestamp};
 use sql::{queries, Connection};
-use sql_ext::SqlConstructors;
+use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_ext::SqlConnections;
 use std::borrow::Cow;
 use std::collections::HashMap;
 use std::convert::{TryFrom, TryInto};
@@ -39,21 +40,17 @@ pub struct HgRecordingClient {
 
 struct HgRecordingConnection(Connection);
 
-impl SqlConstructors for HgRecordingConnection {
+impl SqlConstruct for HgRecordingConnection {
     const LABEL: &'static str = "hg_recording";
 
-    fn from_connections(
-        _write_connection: Connection,
-        read_connection: Connection,
-        _read_master_connection: Connection,
-    ) -> Self {
-        Self(read_connection)
-    }
+    const CREATION_QUERY: &'static str = include_str!("../schemas/pushrebaserecording.sql");
 
-    fn get_up_query() -> &'static str {
-        include_str!("../schemas/pushrebaserecording.sql")
+    fn from_sql_connections(connections: SqlConnections) -> Self {
+        Self(connections.read_connection)
     }
 }
+
+impl SqlConstructFromMetadataDatabaseConfig for HgRecordingConnection {}
 
 type EntryRow = (
     i64,

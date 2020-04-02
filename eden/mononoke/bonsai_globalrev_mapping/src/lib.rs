@@ -8,7 +8,8 @@
 #![deny(warnings)]
 
 use sql::{Connection, Transaction};
-use sql_ext::SqlConstructors;
+use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_ext::SqlConnections;
 use std::collections::HashSet;
 use thiserror::Error;
 
@@ -189,25 +190,22 @@ pub struct SqlBonsaiGlobalrevMapping {
     read_master_connection: Connection,
 }
 
-impl SqlConstructors for SqlBonsaiGlobalrevMapping {
+impl SqlConstruct for SqlBonsaiGlobalrevMapping {
     const LABEL: &'static str = "bonsai_globalrev_mapping";
 
-    fn from_connections(
-        write_connection: Connection,
-        read_connection: Connection,
-        read_master_connection: Connection,
-    ) -> Self {
+    const CREATION_QUERY: &'static str =
+        include_str!("../schemas/sqlite-bonsai-globalrev-mapping.sql");
+
+    fn from_sql_connections(connections: SqlConnections) -> Self {
         Self {
-            write_connection,
-            read_connection,
-            read_master_connection,
+            write_connection: connections.write_connection,
+            read_connection: connections.read_connection,
+            read_master_connection: connections.read_master_connection,
         }
     }
-
-    fn get_up_query() -> &'static str {
-        include_str!("../schemas/sqlite-bonsai-globalrev-mapping.sql")
-    }
 }
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiGlobalrevMapping {}
 
 impl BonsaiGlobalrevMapping for SqlBonsaiGlobalrevMapping {
     fn bulk_import(&self, entries: &[BonsaiGlobalrevMappingEntry]) -> BoxFuture<(), Error> {

@@ -10,6 +10,7 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use cloned::cloned;
 use fbinit::FacebookInit;
+use futures::TryFutureExt;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::Future;
 use getbundle_response::SessionLfsParams;
@@ -25,7 +26,8 @@ use repo_blobstore::RepoBlobstore;
 use repo_read_write_status::RepoReadWriteFetcher;
 use slog::{error, Logger};
 use smc::get_available_services;
-use sql_ext::facebook::{FbSqlConstructors, MysqlOptions};
+use sql_construct::facebook::FbSqlConstruct;
+use sql_ext::facebook::MysqlOptions;
 use std::fmt::{self, Debug};
 use std::sync::{Arc, RwLock};
 use std::time::Duration;
@@ -245,6 +247,7 @@ pub fn streaming_clone(
     readonly_storage: bool,
 ) -> BoxFuture<SqlStreamingCloneConfig, Error> {
     SqlStreamingChunksFetcher::with_xdb(fb, db_address, mysql_options, readonly_storage)
+        .compat()
         .map(move |fetcher| SqlStreamingCloneConfig {
             fetcher,
             blobstore: blobrepo.get_blobstore(),

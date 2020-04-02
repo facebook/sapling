@@ -10,7 +10,7 @@ use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_errors::*;
 use blobstore::Blobstore;
-use blobstore_factory::{make_blobstore, make_sql_factory, SqlFactory};
+use blobstore_factory::{make_blobstore, make_metadata_sql_factory, MetadataSqlFactory};
 use bonsai_git_mapping::SqlBonsaiGitMappingConnection;
 use bonsai_globalrev_mapping::SqlBonsaiGlobalrevMapping;
 use bonsai_hg_mapping::{CachingBonsaiHgMapping, SqlBonsaiHgMapping};
@@ -49,7 +49,8 @@ use repo_blobstore::RepoBlobstoreArgs;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::Logger;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
-use sql_ext::{facebook::MysqlOptions, SqlConstructors};
+use sql_construct::SqlConstruct;
+use sql_ext::{facebook::MysqlOptions, SqlConnections};
 use std::{collections::HashMap, iter::FromIterator, sync::Arc, time::Duration};
 use unodes::RootUnodeManifestId;
 
@@ -140,12 +141,12 @@ impl<'a> BlobrepoBuilder<'a> {
             derived_data_config,
         } = self;
 
-        let sql_factory = make_sql_factory(
+        let sql_factory = make_metadata_sql_factory(
             fb,
-            storage_config.dbconfig,
+            storage_config.metadata,
             mysql_options,
             readonly_storage,
-            // FIXME: remove clone when mysql_sql_factory is async-await
+            // FIXME: remove clone when make_metadata_sql_factory is async-await
             logger.clone(),
         )
         .boxify();
@@ -184,7 +185,7 @@ impl<'a> BlobrepoBuilder<'a> {
 pub fn open_blobrepo_given_datasources(
     fb: FacebookInit,
     unredacted_blobstore: BoxFuture<Arc<dyn Blobstore>, Error>,
-    sql_factory: BoxFuture<SqlFactory, Error>,
+    sql_factory: BoxFuture<MetadataSqlFactory, Error>,
     repoid: RepositoryId,
     caching: Caching,
     bookmarks_cache_ttl: Option<Duration>,
@@ -352,12 +353,12 @@ pub fn new_memblob_with_sqlite_connection_with_id(
     con: SqliteConnection,
     repo_id: RepositoryId,
 ) -> Result<(BlobRepo, Connection)> {
-    con.execute_batch(SqlBookmarks::get_up_query())?;
-    con.execute_batch(SqlChangesets::get_up_query())?;
-    con.execute_batch(SqlBonsaiGitMappingConnection::get_up_query())?;
-    con.execute_batch(SqlBonsaiGlobalrevMapping::get_up_query())?;
-    con.execute_batch(SqlBonsaiHgMapping::get_up_query())?;
-    con.execute_batch(SqlPhasesStore::get_up_query())?;
+    con.execute_batch(SqlBookmarks::CREATION_QUERY)?;
+    con.execute_batch(SqlChangesets::CREATION_QUERY)?;
+    con.execute_batch(SqlBonsaiGitMappingConnection::CREATION_QUERY)?;
+    con.execute_batch(SqlBonsaiGlobalrevMapping::CREATION_QUERY)?;
+    con.execute_batch(SqlBonsaiHgMapping::CREATION_QUERY)?;
+    con.execute_batch(SqlPhasesStore::CREATION_QUERY)?;
     let con = Connection::with_sqlite(con);
 
     new_memblob_with_connection_with_id(con.clone(), repo_id)
@@ -374,20 +375,16 @@ pub fn new_memblob_with_connection_with_id(
         ScubaSampleBuilder::with_discard(),
     );
 
-    let phases_store = Arc::new(SqlPhasesStore::from_connections(
-        con.clone(),
-        con.clone(),
-        con.clone(),
+    let sql_connections = SqlConnections::new_single(con.clone());
+
+    let phases_store = Arc::new(SqlPhasesStore::from_sql_connections(
+        sql_connections.clone(),
     ));
     let phases_factory = SqlPhasesFactory::new_no_caching(phases_store, repo_id.clone());
 
     Ok((
         BlobRepo::new(
-            Arc::new(SqlBookmarks::from_connections(
-                con.clone(),
-                con.clone(),
-                con.clone(),
-            )),
+            Arc::new(SqlBookmarks::from_sql_connections(sql_connections.clone())),
             repo_blobstore_args,
             // Filenodes are intentionally created on another connection
             Arc::new(
@@ -395,29 +392,15 @@ pub fn new_memblob_with_connection_with_id(
                     .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?
                     .build(),
             ),
-            Arc::new(SqlChangesets::from_connections(
-                con.clone(),
-                con.clone(),
-                con.clone(),
-            )),
+            Arc::new(SqlChangesets::from_sql_connections(sql_connections.clone())),
             Arc::new(
-                SqlBonsaiGitMappingConnection::from_connections(
-                    con.clone(),
-                    con.clone(),
-                    con.clone(),
-                )
-                .with_repo_id(repo_id),
+                SqlBonsaiGitMappingConnection::from_sql_connections(sql_connections.clone())
+                    .with_repo_id(repo_id),
             ),
-            Arc::new(SqlBonsaiGlobalrevMapping::from_connections(
-                con.clone(),
-                con.clone(),
-                con.clone(),
+            Arc::new(SqlBonsaiGlobalrevMapping::from_sql_connections(
+                sql_connections.clone(),
             )),
-            Arc::new(SqlBonsaiHgMapping::from_connections(
-                con.clone(),
-                con.clone(),
-                con.clone(),
-            )),
+            Arc::new(SqlBonsaiHgMapping::from_sql_connections(sql_connections)),
             Arc::new(InProcessLease::new()),
             FilestoreConfig::default(),
             phases_factory,
@@ -430,7 +413,7 @@ pub fn new_memblob_with_connection_with_id(
 
 fn new_development(
     fb: FacebookInit,
-    sql_factory: &SqlFactory,
+    sql_factory: &MetadataSqlFactory,
     unredacted_blobstore: BoxFuture<Arc<dyn Blobstore>, Error>,
     redacted_blobs: BoxFuture<Option<HashMap<String, String>>, Error>,
     scuba_censored_table: Option<String>,
@@ -446,29 +429,29 @@ fn new_development(
         .from_err()
         .map(move |bookmarks| {
             let bookmarks: Arc<dyn Bookmarks> = if let Some(ttl) = bookmarks_cache_ttl {
-                Arc::new(CachedBookmarks::new(bookmarks, ttl))
+                Arc::new(CachedBookmarks::new(Arc::new(bookmarks), ttl))
             } else {
-                bookmarks
+                Arc::new(bookmarks)
             };
 
             bookmarks
         });
 
     let filenodes_builder = sql_factory
-        .open_filenodes()
+        .open_shardable::<NewFilenodesBuilder>()
         .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))
-        .from_err()
-        .map(|(_tier, filenodes)| filenodes);
+        .from_err();
 
     let changesets = sql_factory
         .open::<SqlChangesets>()
         .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))
-        .from_err();
+        .from_err()
+        .map(Arc::new);
 
     let bonsai_git_mapping = {
         cloned!(repoid);
         sql_factory
-            .open_owned::<SqlBonsaiGitMappingConnection>()
+            .open::<SqlBonsaiGitMappingConnection>()
             .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))
             .from_err()
             .map(move |conn| Arc::new(conn.with_repo_id(repoid)))
@@ -477,17 +460,20 @@ fn new_development(
     let bonsai_globalrev_mapping = sql_factory
         .open::<SqlBonsaiGlobalrevMapping>()
         .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGlobalrevMapping))
-        .from_err();
+        .from_err()
+        .map(Arc::new);
 
     let bonsai_hg_mapping = sql_factory
         .open::<SqlBonsaiHgMapping>()
         .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))
-        .from_err();
+        .from_err()
+        .map(Arc::new);
 
     let phases = sql_factory
         .open::<SqlPhasesStore>()
         .chain_err(ErrorKind::StateOpen(StateOpenError::Phases))
-        .from_err();
+        .from_err()
+        .map(Arc::new);
 
     bookmarks
         .join5(
@@ -537,7 +523,7 @@ fn new_development(
 /// In theory this could be with a local blobstore, but that would just be weird.
 fn new_production(
     fb: FacebookInit,
-    sql_factory: &SqlFactory,
+    sql_factory: &MetadataSqlFactory,
     blobstore: BoxFuture<Arc<dyn Blobstore>, Error>,
     redacted_blobs: BoxFuture<Option<HashMap<String, String>>, Error>,
     scuba_censored_table: Option<String>,
@@ -574,18 +560,24 @@ fn new_production(
 
     let derive_data_lease = try_boxfuture!(MemcacheOps::new(fb, "derived-data-lease", ""));
 
-    let filenodes_tier_and_builder = sql_factory.open_filenodes();
-    let bookmarks = sql_factory.open::<SqlBookmarks>();
-    let changesets = sql_factory.open::<SqlChangesets>();
+    let filenodes_tier = sql_factory
+        .tier_name_shardable::<NewFilenodesBuilder>()
+        .into_future();
+    let filenodes_builder = sql_factory.open_shardable::<NewFilenodesBuilder>();
+    let filenodes_tier_and_builder = filenodes_tier.join(filenodes_builder);
+    let bookmarks = sql_factory.open::<SqlBookmarks>().map(Arc::new);
+    let changesets = sql_factory.open::<SqlChangesets>().map(Arc::new);
     let bonsai_git_mapping = {
         cloned!(repoid);
         sql_factory
-            .open_owned::<SqlBonsaiGitMappingConnection>()
+            .open::<SqlBonsaiGitMappingConnection>()
             .map(move |conn| Arc::new(conn.with_repo_id(repoid)))
     };
-    let bonsai_globalrev_mapping = sql_factory.open::<SqlBonsaiGlobalrevMapping>();
-    let bonsai_hg_mapping = sql_factory.open::<SqlBonsaiHgMapping>();
-    let phases = sql_factory.open::<SqlPhasesStore>();
+    let bonsai_globalrev_mapping = sql_factory
+        .open::<SqlBonsaiGlobalrevMapping>()
+        .map(Arc::new);
+    let bonsai_hg_mapping = sql_factory.open::<SqlBonsaiHgMapping>().map(Arc::new);
+    let phases = sql_factory.open::<SqlPhasesStore>().map(Arc::new);
 
     // Wrap again to avoid any writes to memcache
     let blobstore = if readonly_storage.0 {

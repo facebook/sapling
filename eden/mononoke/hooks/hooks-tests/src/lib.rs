@@ -33,8 +33,8 @@ use mercurial_types::{HgChangesetId, MPath};
 use mercurial_types_mocks::nodehash::{ONES_FNID, THREES_FNID, TWOS_FNID};
 use metaconfig_types::{
     BlobConfig, BookmarkParams, Bundle2ReplayParams, DerivedDataConfig, HookConfig, HookParams,
-    HookType, InfinitepushParams, MetadataDBConfig, Redaction, RepoConfig, RepoReadOnly,
-    SourceControlServiceParams, StorageConfig,
+    HookType, InfinitepushParams, LocalDatabaseConfig, MetadataDatabaseConfig, Redaction,
+    RepoConfig, RepoReadOnly, SourceControlServiceParams, StorageConfig,
 };
 use mononoke_types::{FileType, RepositoryId};
 use regex::Regex;
@@ -1290,9 +1290,9 @@ fn default_repo_config() -> RepoConfig {
     RepoConfig {
         storage_config: StorageConfig {
             blobstore: BlobConfig::Disabled,
-            dbconfig: MetadataDBConfig::LocalDB {
+            metadata: MetadataDatabaseConfig::Local(LocalDatabaseConfig {
                 path: "/some/place".into(),
-            },
+            }),
         },
         write_lock_db_address: None,
         enabled: true,

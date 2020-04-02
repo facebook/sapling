@@ -12,13 +12,28 @@
 //! these database managers, backed by various database types.
 //!
 //! Database managers should implement `SqlConstruct` to define how to be constructed from
-//! a set of `SqlConnections`.
+//! a set of `SqlConnections`.  This is sufficient to allow construction based on `DatabaseConfig`,
+//! which is provided through the `SqlConstructFromDatabaseConfig` trait.
 //!
 //! Database managers that support sharding should additionally implement `SqlShardedConstruct` for
 //! the sharded case.
+//!
+//! Database managers that would like to be constructed from repository metadata configuration
+//! should implement the `SqlConstructFromMetadataDatabaseConfig` trait.  If their data is not
+//! stored in the primary metadata database, they should implement the `remote_database_config`
+//! method to define which configuration is used for remote database configuration.
+//!
+//! Database managers that support sharding should instead implement the
+//! `SqlShardableConstructFromMetadataDatabaseConfig` trait, which allows them to return
+//! either sharded or unsharded configuration from `remote_database_config`.
 
+mod config;
 mod construct;
 
+pub use config::{
+    SqlConstructFromDatabaseConfig, SqlConstructFromMetadataDatabaseConfig,
+    SqlShardableConstructFromMetadataDatabaseConfig,
+};
 pub use construct::{SqlConstruct, SqlShardedConstruct};
 
 pub mod facebook {

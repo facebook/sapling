@@ -12,7 +12,8 @@ use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::{err, ok};
 use futures_old::Future;
 use sql::{queries, Connection};
-use sql_ext::SqlConstructors;
+use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_ext::SqlConnections;
 
 use sql::mysql_async::{
     prelude::{ConvIr, FromValue},
@@ -86,24 +87,20 @@ pub struct SqlRepoReadWriteStatus {
     read_connection: Connection,
 }
 
-impl SqlConstructors for SqlRepoReadWriteStatus {
+impl SqlConstruct for SqlRepoReadWriteStatus {
     const LABEL: &'static str = "repo-lock";
 
-    fn from_connections(
-        write_connection: Connection,
-        read_connection: Connection,
-        _read_master_connection: Connection,
-    ) -> Self {
+    const CREATION_QUERY: &'static str = include_str!("../../schemas/sqlite-repo-lock.sql");
+
+    fn from_sql_connections(connections: SqlConnections) -> Self {
         Self {
-            write_connection,
-            read_connection,
+            write_connection: connections.write_connection,
+            read_connection: connections.read_connection,
         }
     }
-
-    fn get_up_query() -> &'static str {
-        include_str!("../../schemas/sqlite-repo-lock.sql")
-    }
 }
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlRepoReadWriteStatus {}
 
 impl SqlRepoReadWriteStatus {
     fn query_read_write_state(

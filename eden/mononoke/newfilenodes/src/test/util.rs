@@ -7,7 +7,7 @@
 
 use anyhow::Error;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
-use sql_ext::SqlConstructors;
+use sql_construct::SqlConstruct;
 
 use crate::builder::{NewFilenodesBuilder, SQLITE_INSERT_CHUNK_SIZE};
 use crate::reader::FilenodesReader;
@@ -15,7 +15,7 @@ use crate::writer::FilenodesWriter;
 
 pub fn build_shard() -> Result<Connection, Error> {
     let con = SqliteConnection::open_in_memory()?;
-    con.execute_batch(NewFilenodesBuilder::get_up_query())?;
+    con.execute_batch(NewFilenodesBuilder::CREATION_QUERY)?;
     Ok(Connection::with_sqlite(con))
 }
 

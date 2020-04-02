@@ -1,7 +1,7 @@
 repoid = 123
 storage_config = "complex"
 
-[storage.simple.db.local]
+[storage.simple.metadata.local]
 local_db_path = "/tmp/foo"
 
 [storage.simple.blobstore.blob_files]

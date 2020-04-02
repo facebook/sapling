@@ -33,8 +33,10 @@ use mononoke_types::{
     MPath, RepositoryId,
 };
 use movers::Mover;
+use sql_construct::SqlConstruct;
+use sql_ext::SqlConnections;
 use synced_commit_mapping::{
-    SqlConstructors, SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
+    SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
 };
 
 use cross_repo_sync::{CommitSyncRepos, CommitSyncer};
@@ -412,7 +414,7 @@ fn test_sync_causes_conflict(fb: FacebookInit) {
 
 fn prepare_repos_and_mapping() -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMapping), Error> {
     let sqlite_con = SqliteConnection::open_in_memory()?;
-    sqlite_con.execute_batch(SqlSyncedCommitMapping::get_up_query())?;
+    sqlite_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
     let (megarepo, con) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
         sqlite_con,
         RepositoryId::new(1),
@@ -420,7 +422,7 @@ fn prepare_repos_and_mapping() -> Result<(BlobRepo, BlobRepo, SqlSyncedCommitMap
 
     let (small_repo, _) =
         blobrepo_factory::new_memblob_with_connection_with_id(con.clone(), RepositoryId::new(0))?;
-    let mapping = SqlSyncedCommitMapping::from_connections(con.clone(), con.clone(), con.clone());
+    let mapping = SqlSyncedCommitMapping::from_sql_connections(SqlConnections::new_single(con));
     Ok((small_repo, megarepo, mapping))
 }
 

@@ -497,7 +497,7 @@ mod tests {
     use fbinit::FacebookInit;
     use futures_ext::BoxFuture;
     use futures_util::compat::Future01CompatExt;
-    use sql_ext::SqlConstructors;
+    use sql_construct::SqlConstruct;
     use std::iter::FromIterator;
     use std::sync::Mutex;
 

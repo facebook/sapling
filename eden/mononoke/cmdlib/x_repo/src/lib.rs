@@ -88,15 +88,15 @@ async fn create_commit_syncer<'a>(
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
 ) -> Result<CommitSyncer<SqlSyncedCommitMapping>, Error> {
-    if source_config.storage_config.dbconfig != target_config.storage_config.dbconfig {
+    if source_config.storage_config.metadata != target_config.storage_config.metadata {
         return Err(Error::msg(
-            "source repo and target repo have different db configs!",
+            "source repo and target repo have different metadata database configs!",
         ));
     }
 
     let mapping = open_sql_with_config_and_mysql_options::<SqlSyncedCommitMapping>(
         fb,
-        source_config.storage_config.dbconfig.clone(),
+        source_config.storage_config.metadata.clone(),
         mysql_options,
         readonly_storage,
     )

@@ -12,6 +12,7 @@ blobstore_sync_queue = { path = "../../blobstore_sync_queue" }
 context = { path = "../../server/context" }
 metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
+sql_construct = { path = "../../common/sql_construct" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

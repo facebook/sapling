@@ -5,19 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
 use cachelib::VolatileLruCachePool;
 use fbinit::FacebookInit;
-use futures_ext::{BoxFuture, FutureExt as _};
-use futures_old::future::{join_all, Future, IntoFuture};
-use sql::{rusqlite::Connection as SqliteConnection, Connection};
-use sql_ext::{
-    facebook::{
-        create_myrouter_connections, create_raw_xdb_connections, MysqlOptions, PoolSizeConfig,
-        ReadConnectionType,
-    },
-    SqlConnections, SqlConstructors,
+use metaconfig_types::{RemoteMetadataDatabaseConfig, ShardableRemoteDatabaseConfig};
+use sql::Connection;
+use sql_construct::{
+    SqlConstruct, SqlShardableConstructFromMetadataDatabaseConfig, SqlShardedConstruct,
 };
+use sql_ext::SqlConnections;
 use std::sync::Arc;
 
 use crate::local_cache::{CachelibCache, LocalCache};
@@ -34,14 +29,17 @@ pub struct NewFilenodesBuilder {
     writer: FilenodesWriter,
 }
 
-impl SqlConstructors for NewFilenodesBuilder {
+impl SqlConstruct for NewFilenodesBuilder {
     const LABEL: &'static str = "filenodes";
 
-    fn from_connections(
-        write_connection: Connection,
-        read_connection: Connection,
-        read_master_connection: Connection,
-    ) -> Self {
+    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-filenodes.sql");
+
+    fn from_sql_connections(connections: SqlConnections) -> Self {
+        let SqlConnections {
+            write_connection,
+            read_connection,
+            read_master_connection,
+        } = connections;
         let chunk_size = match read_connection {
             Connection::Sqlite(_) => SQLITE_INSERT_CHUNK_SIZE,
             Connection::Mysql(_) => MYSQL_INSERT_CHUNK_SIZE,
@@ -55,9 +53,47 @@ impl SqlConstructors for NewFilenodesBuilder {
 
         Self { reader, writer }
     }
+}
 
-    fn get_up_query() -> &'static str {
-        include_str!("../schemas/sqlite-filenodes.sql")
+impl SqlShardedConstruct for NewFilenodesBuilder {
+    const LABEL: &'static str = "shardedfilenodes";
+
+    const CREATION_QUERY: &'static str = <NewFilenodesBuilder as SqlConstruct>::CREATION_QUERY;
+
+    fn from_sql_shard_connections(shard_connections: Vec<SqlConnections>) -> Self {
+        if shard_connections.is_empty() {
+            // It should be impossible for shard_connections to be empty, as the configured
+            // number of shards was required to be non-zero.
+            panic!("sharded database constructed with no shards");
+        }
+        let chunk_size = match shard_connections.iter().next() {
+            Some(SqlConnections {
+                read_connection: Connection::Mysql(_),
+                ..
+            }) => MYSQL_INSERT_CHUNK_SIZE,
+            _ => SQLITE_INSERT_CHUNK_SIZE,
+        };
+        let mut write_connections = Vec::with_capacity(shard_connections.len());
+        let mut read_connections = Vec::with_capacity(shard_connections.len());
+        let mut read_master_connections = Vec::with_capacity(shard_connections.len());
+        for connections in shard_connections.into_iter() {
+            write_connections.push(connections.write_connection);
+            read_connections.push(connections.read_connection);
+            read_master_connections.push(connections.read_master_connection);
+        }
+        let reader = FilenodesReader::new(read_connections.clone(), read_master_connections);
+
+        let writer = FilenodesWriter::new(chunk_size, write_connections, read_connections);
+
+        Self { reader, writer }
+    }
+}
+
+impl SqlShardableConstructFromMetadataDatabaseConfig for NewFilenodesBuilder {
+    fn remote_database_config(
+        remote: &RemoteMetadataDatabaseConfig,
+    ) -> Option<&ShardableRemoteDatabaseConfig> {
+        Some(&remote.filenodes)
     }
 }
 
@@ -87,142 +123,5 @@ impl NewFilenodesBuilder {
             backing_store_name,
             backing_store_params,
         ));
-    }
-
-    pub fn with_sharded_xdb(
-        fb: FacebookInit,
-        tier: String,
-        options: MysqlOptions,
-        shard_count: usize,
-        readonly: bool,
-    ) -> BoxFuture<Self, Error> {
-        match options.myrouter_port {
-            Some(myrouter_port) => Self::with_sharded_myrouter(
-                tier,
-                myrouter_port,
-                options.read_connection_type(),
-                shard_count,
-                readonly,
-            ),
-            None => Self::with_sharded_raw_xdb(
-                fb,
-                tier,
-                options.read_connection_type(),
-                shard_count,
-                readonly,
-            ),
-        }
-    }
-
-    pub fn with_sharded_sqlite(shard_count: usize) -> Result<Self, Error> {
-        let mut read_connections = vec![];
-        let mut read_master_connections = vec![];
-        let mut write_connections = vec![];
-
-        for _ in 0..shard_count {
-            let con = SqliteConnection::open_in_memory()?;
-            con.execute_batch(Self::get_up_query())?;
-            let con = Connection::with_sqlite(con);
-
-            read_connections.push(con.clone());
-            read_master_connections.push(con.clone());
-            write_connections.push(con);
-        }
-
-        let reader = FilenodesReader::new(read_connections.clone(), read_master_connections);
-
-        let writer = FilenodesWriter::new(
-            SQLITE_INSERT_CHUNK_SIZE,
-            write_connections,
-            read_connections,
-        );
-
-        Ok(Self { writer, reader })
-    }
-
-    fn with_sharded_myrouter(
-        tier: String,
-        port: u16,
-        read_con_type: ReadConnectionType,
-        shard_count: usize,
-        readonly: bool,
-    ) -> BoxFuture<Self, Error> {
-        Self::with_sharded_factory(
-            shard_count,
-            move |shard_id| {
-                Ok(create_myrouter_connections(
-                    tier.clone(),
-                    Some(shard_id),
-                    port,
-                    read_con_type,
-                    PoolSizeConfig::for_sharded_connection(),
-                    "shardedfilenodes".into(),
-                    readonly,
-                ))
-                .into_future()
-                .boxify()
-            },
-            MYSQL_INSERT_CHUNK_SIZE,
-        )
-    }
-
-    pub fn with_sharded_raw_xdb(
-        fb: FacebookInit,
-        tier: String,
-        read_con_type: ReadConnectionType,
-        shard_count: usize,
-        readonly: bool,
-    ) -> BoxFuture<Self, Error> {
-        Self::with_sharded_factory(
-            shard_count,
-            move |shard_id| {
-                create_raw_xdb_connections(
-                    fb,
-                    format!("{}.{}", tier, shard_id),
-                    read_con_type,
-                    readonly,
-                )
-                .boxify()
-            },
-            MYSQL_INSERT_CHUNK_SIZE,
-        )
-    }
-
-    fn with_sharded_factory(
-        shard_count: usize,
-        factory: impl Fn(usize) -> BoxFuture<SqlConnections, Error>,
-        chunk_size: usize,
-    ) -> BoxFuture<Self, Error> {
-        let futs: Vec<_> = (1..=shard_count)
-            .into_iter()
-            .map(|shard| factory(shard))
-            .collect();
-
-        join_all(futs)
-            .map(move |shard_connections| {
-                let mut write_connections = vec![];
-                let mut read_connections = vec![];
-                let mut read_master_connections = vec![];
-
-                for conn in shard_connections {
-                    let SqlConnections {
-                        write_connection,
-                        read_connection,
-                        read_master_connection,
-                    } = conn;
-
-                    write_connections.push(write_connection);
-                    read_connections.push(read_connection);
-                    read_master_connections.push(read_master_connection);
-                }
-
-                let reader =
-                    FilenodesReader::new(read_connections.clone(), read_master_connections);
-
-                let writer = FilenodesWriter::new(chunk_size, write_connections, read_connections);
-
-                Self { writer, reader }
-            })
-            .boxify()
     }
 }

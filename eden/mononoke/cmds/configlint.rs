@@ -51,7 +51,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     for (name, config) in &configs.repos {
         let (isbad, locality) = match (
-            config.storage_config.dbconfig.is_local(),
+            config.storage_config.metadata.is_local(),
             config.storage_config.blobstore.is_local(),
         ) {
             (true, true) => (false, "local"),

@@ -485,11 +485,12 @@ CONFIG
 function db_config() {
   local blobstorename="$1"
   if [[ -n "$DB_SHARD_NAME" ]]; then
-    echo "[$blobstorename.db.remote]"
-    echo "db_address=\"$DB_SHARD_NAME\""
+    echo "[$blobstorename.metadata.remote]"
+    echo "primary = { db_address = \"$DB_SHARD_NAME\" }"
+    echo "filenodes = { unsharded = { db_address = \"$DB_SHARD_NAME\" } }"
   else
-    echo "[$blobstorename.db.local]"
-    echo "local_db_path=\"$TESTTMP/monsql\""
+    echo "[$blobstorename.metadata.local]"
+    echo "local_db_path = \"$TESTTMP/monsql\""
   fi
 }
 
@@ -642,7 +643,7 @@ CONFIG
 storage_config="traffic_replay_blobstore"
 remote_arg_size_threshold=0
 
-[storage.traffic_replay_blobstore.db.local]
+[storage.traffic_replay_blobstore.metadata.local]
 local_db_path="$TESTTMP/monsql"
 
 [storage.traffic_replay_blobstore.blobstore.blob_files]

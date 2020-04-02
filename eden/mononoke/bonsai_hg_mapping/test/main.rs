@@ -14,7 +14,7 @@ use anyhow::Error;
 use assert_matches::assert_matches;
 use bonsai_hg_mapping::{
     BonsaiHgMapping, BonsaiHgMappingEntry, BonsaiOrHgChangesetIds, CachingBonsaiHgMapping,
-    ErrorKind, SqlBonsaiHgMapping, SqlConstructors,
+    ErrorKind, SqlBonsaiHgMapping,
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -25,6 +25,7 @@ use mercurial_types_mocks::nodehash as hg;
 use mononoke_types::RepositoryId;
 use mononoke_types_mocks::changesetid as bonsai;
 use mononoke_types_mocks::repo::REPO_ZERO;
+use sql_construct::SqlConstruct;
 
 use std::str::FromStr;
 use std::sync::{

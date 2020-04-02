@@ -16,7 +16,8 @@ use mutable_counters::SqlMutableCounters;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
 use skiplist::fetch_skiplist_index;
-use sql_ext::facebook::{FbSqlConstructors, MysqlOptions};
+use sql_construct::{facebook::FbSqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_ext::facebook::MysqlOptions;
 use std::sync::Arc;
 
 use crate::{streaming_clone, MononokeRepo};
@@ -87,7 +88,7 @@ impl MononokeRepoBuilder {
         } = config;
 
         let streaming_clone = async {
-            if let Some(db_address) = storage_config.dbconfig.get_db_address() {
+            if let Some(db_address) = storage_config.metadata.primary_address() {
                 let r = streaming_clone(
                     ctx.fb,
                     repo.clone(),
@@ -112,7 +113,6 @@ impl MononokeRepoBuilder {
                     mysql_options,
                     readonly_storage.0,
                 )
-                .compat()
                 .await?;
                 Ok(Some(r))
             } else {
@@ -120,13 +120,12 @@ impl MononokeRepoBuilder {
             }
         };
 
-        let mutable_counters = SqlMutableCounters::with_db_config(
+        let mutable_counters = SqlMutableCounters::with_metadata_database_config(
             ctx.fb,
-            &storage_config.dbconfig,
+            &storage_config.metadata,
             mysql_options,
             readonly_storage.0,
-        )
-        .compat();
+        );
 
         let skiplist = fetch_skiplist_index(
             ctx.clone(),

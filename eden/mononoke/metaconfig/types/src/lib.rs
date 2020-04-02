@@ -31,8 +31,9 @@ use mononoke_types::{MPath, RepositoryId};
 use nonzero_ext::nonzero;
 use regex::Regex;
 use repos::{
-    RawBlobstoreConfig, RawDbConfig, RawFilestoreParams, RawShardedFilenodesParams,
-    RawSourceControlServiceMonitoring, RawStorageConfig,
+    RawBlobstoreConfig, RawDbConfig, RawDbLocal, RawDbRemote, RawDbShardableRemote,
+    RawDbShardedRemote, RawFilestoreParams, RawMetadataConfig, RawSourceControlServiceMonitoring,
+    RawStorageConfig,
 };
 use scuba::ScubaValue;
 use serde_derive::Deserialize;
@@ -164,9 +165,9 @@ impl Default for UnodeVersion {
 }
 
 impl RepoConfig {
-    /// Returns a db address that is referenced in this config or None if there is none
-    pub fn get_db_address(&self) -> Option<String> {
-        self.storage_config.dbconfig.get_db_address()
+    /// Returns the address of the primary metadata database, or None if there is none.
+    pub fn primary_metadata_db_address(&self) -> Option<String> {
+        self.storage_config.metadata.primary_address()
     }
 }
 
@@ -618,8 +619,8 @@ pub struct StorageConfig {
     /// Blobstores. If the blobstore has a BlobstoreId then it can be used as a component of
     /// a Multiplexed blobstore.
     pub blobstore: BlobConfig,
-    /// Metadata DB
-    pub dbconfig: MetadataDBConfig,
+    /// Metadata database
+    pub metadata: MetadataDatabaseConfig,
 }
 
 impl TryFrom<RawStorageConfig> for StorageConfig {
@@ -627,7 +628,7 @@ impl TryFrom<RawStorageConfig> for StorageConfig {
 
     fn try_from(raw: RawStorageConfig) -> Result<Self, Error> {
         let config = StorageConfig {
-            dbconfig: TryFrom::try_from(raw.db)?,
+            metadata: TryFrom::try_from(raw.metadata)?,
             blobstore: TryFrom::try_from(raw.blobstore)?,
         };
         Ok(config)
@@ -698,7 +699,7 @@ pub enum BlobConfig {
         /// 1 in scuba_sample_rate samples will be logged.
         scuba_sample_rate: NonZeroU64,
         /// DB config to use for the sync queue
-        queue_db: MetadataDBConfig,
+        queue_db: DatabaseConfig,
     },
     /// Multiplex across multiple blobstores scrubbing for errors
     Scrub {
@@ -713,7 +714,7 @@ pub enum BlobConfig {
         /// 1 in scuba_sample_rate samples will be logged.
         scuba_sample_rate: NonZeroU64,
         /// DB config to use for the sync queue
-        queue_db: MetadataDBConfig,
+        queue_db: DatabaseConfig,
     },
     /// Store in a manifold bucket, but every object will have an expiration
     ManifoldWithTtl {
@@ -847,106 +848,177 @@ impl TryFrom<RawBlobstoreConfig> for BlobConfig {
     }
 }
 
-/// Configuration for the Metadata DB
+/// Configuration for a local SQLite database
 #[derive(Debug, Clone, Eq, PartialEq)]
-pub enum MetadataDBConfig {
-    /// Remove MySQL DB
-    Mysql {
-        /// Identifies the SQL database to connect to.
-        db_address: String,
-        /// If present, sharding configuration for filenodes.
-        sharded_filenodes: Option<ShardedFilenodesParams>,
-    },
-    /// Local SQLite dbs
-    LocalDB {
-        /// Path to directory of sqlite dbs
-        path: PathBuf,
-    },
+pub struct LocalDatabaseConfig {
+    /// Path to the directory containing the SQLite databases
+    pub path: PathBuf,
 }
 
-impl Default for MetadataDBConfig {
+/// Configuration for a remote MySQL database
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct RemoteDatabaseConfig {
+    /// SQL database to connect to
+    pub db_address: String,
+}
+
+/// Configuration for a sharded remote MySQL database
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct ShardedRemoteDatabaseConfig {
+    /// SQL database shard map to connect to
+    pub shard_map: String,
+    /// Number of shards to distribute data across.
+    pub shard_num: NonZeroUsize,
+}
+
+/// Configuration for a potentially sharded remote MySQL database
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum ShardableRemoteDatabaseConfig {
+    /// Database is not sharded.
+    Unsharded(RemoteDatabaseConfig),
+    /// Database is sharded.
+    Sharded(ShardedRemoteDatabaseConfig),
+}
+
+/// Configuration for a single database
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum DatabaseConfig {
+    /// Local SQLite database
+    Local(LocalDatabaseConfig),
+    /// Remote MySQL database
+    Remote(RemoteDatabaseConfig),
+}
+
+/// Configuration for the Metadata database when it is remote.
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub struct RemoteMetadataDatabaseConfig {
+    /// Database for the primary metadata.
+    pub primary: RemoteDatabaseConfig,
+    /// Database for possibly sharded filenodes.
+    pub filenodes: ShardableRemoteDatabaseConfig,
+}
+
+/// Configuration for the Metadata database
+#[derive(Debug, Clone, Eq, PartialEq)]
+pub enum MetadataDatabaseConfig {
+    /// Local SQLite database
+    Local(LocalDatabaseConfig),
+    /// Remote MySQL databases
+    Remote(RemoteMetadataDatabaseConfig),
+}
+
+impl Default for MetadataDatabaseConfig {
     fn default() -> Self {
-        MetadataDBConfig::LocalDB {
+        MetadataDatabaseConfig::Local(LocalDatabaseConfig {
             path: PathBuf::default(),
-        }
+        })
     }
 }
 
-impl MetadataDBConfig {
-    /// Return true if this is a local on-disk DB.
+impl MetadataDatabaseConfig {
+    /// Whether this is a local on-disk database.
     pub fn is_local(&self) -> bool {
         match self {
-            MetadataDBConfig::LocalDB { .. } => true,
-            MetadataDBConfig::Mysql { .. } => false,
+            MetadataDatabaseConfig::Local(_) => true,
+            MetadataDatabaseConfig::Remote(_) => false,
         }
     }
 
-    /// Return address we should connect to for a remote DB
-    /// (Assumed to be Mysql)
-    pub fn get_db_address(&self) -> Option<String> {
+    /// The address of the primary metadata database, if this is a remote metadata database.
+    pub fn primary_address(&self) -> Option<String> {
         match self {
-            MetadataDBConfig::Mysql { db_address, .. } => Some(db_address.clone()),
-            MetadataDBConfig::LocalDB { .. } => None,
-        }
-    }
-
-    /// Return local path that stores local DB
-    /// (Assumed to be Sqlite)
-    pub fn get_local_address(&self) -> Option<&PathBuf> {
-        match self {
-            MetadataDBConfig::LocalDB { path } => Some(path),
-            MetadataDBConfig::Mysql { .. } => None,
+            MetadataDatabaseConfig::Remote(remote) => Some(remote.primary.db_address.clone()),
+            MetadataDatabaseConfig::Local(_) => None,
         }
     }
 }
 
-impl TryFrom<RawDbConfig> for MetadataDBConfig {
+impl From<RawDbLocal> for LocalDatabaseConfig {
+    fn from(raw: RawDbLocal) -> Self {
+        LocalDatabaseConfig {
+            path: PathBuf::from(raw.local_db_path),
+        }
+    }
+}
+
+impl From<RawDbRemote> for RemoteDatabaseConfig {
+    fn from(raw: RawDbRemote) -> Self {
+        RemoteDatabaseConfig {
+            db_address: raw.db_address,
+        }
+    }
+}
+
+impl TryFrom<RawDbShardedRemote> for ShardedRemoteDatabaseConfig {
+    type Error = Error;
+
+    fn try_from(raw: RawDbShardedRemote) -> Result<Self, Self::Error> {
+        let shard_num = NonZeroUsize::new(raw.shard_num.try_into()?)
+            .ok_or_else(|| anyhow!("sharded remote shard_num must be > 0"))?;
+        Ok(ShardedRemoteDatabaseConfig {
+            shard_map: raw.shard_map,
+            shard_num,
+        })
+    }
+}
+
+impl TryFrom<RawDbShardableRemote> for ShardableRemoteDatabaseConfig {
+    type Error = Error;
+
+    fn try_from(raw: RawDbShardableRemote) -> Result<Self, Self::Error> {
+        match raw {
+            RawDbShardableRemote::unsharded(def) => {
+                Ok(ShardableRemoteDatabaseConfig::Unsharded(def.try_into()?))
+            }
+            RawDbShardableRemote::sharded(def) => {
+                Ok(ShardableRemoteDatabaseConfig::Sharded(def.try_into()?))
+            }
+            RawDbShardableRemote::UnknownField(f) => {
+                Err(anyhow!("unsupported database configuration ({})", f))
+            }
+        }
+    }
+}
+
+impl TryFrom<RawDbConfig> for DatabaseConfig {
     type Error = Error;
 
     fn try_from(raw: RawDbConfig) -> Result<Self, Self::Error> {
         match raw {
-            RawDbConfig::local(def) => Ok(MetadataDBConfig::LocalDB {
-                path: PathBuf::from(def.local_db_path),
-            }),
-            RawDbConfig::remote(def) => match def.sharded_filenodes {
-                None => Ok(MetadataDBConfig::Mysql {
-                    db_address: def.db_address,
-                    sharded_filenodes: None,
-                }),
-                Some(RawShardedFilenodesParams {
-                    shard_map,
-                    shard_num,
-                }) => {
-                    let shard_num: Result<_> = NonZeroUsize::new(shard_num.try_into()?)
-                        .ok_or_else(|| anyhow!("filenodes shard_num must be > 0"));
-                    Ok(MetadataDBConfig::Mysql {
-                        db_address: def.db_address,
-                        sharded_filenodes: Some(ShardedFilenodesParams {
-                            shard_map,
-                            shard_num: shard_num?,
-                        }),
-                    })
-                }
-            },
-            RawDbConfig::UnknownField(_) => Err(anyhow!("unsupported DB configuration")),
+            RawDbConfig::local(def) => Ok(DatabaseConfig::Local(def.into())),
+            RawDbConfig::remote(def) => Ok(DatabaseConfig::Remote(def.into())),
+            RawDbConfig::UnknownField(f) => {
+                Err(anyhow!("unsupported database configuration ({})", f))
+            }
         }
     }
 }
 
-/// Params fro the bunle2 replay
+impl TryFrom<RawMetadataConfig> for MetadataDatabaseConfig {
+    type Error = Error;
+
+    fn try_from(raw: RawMetadataConfig) -> Result<Self, Self::Error> {
+        match raw {
+            RawMetadataConfig::local(def) => Ok(MetadataDatabaseConfig::Local(def.into())),
+            RawMetadataConfig::remote(def) => Ok(MetadataDatabaseConfig::Remote(
+                RemoteMetadataDatabaseConfig {
+                    primary: def.primary.into(),
+                    filenodes: def.filenodes.try_into()?,
+                },
+            )),
+            RawMetadataConfig::UnknownField(f) => Err(anyhow!(
+                "unsupported metadata database configuration ({})",
+                f
+            )),
+        }
+    }
+}
+
+/// Params for the bundle2 replay
 #[derive(Debug, Clone, Copy, Eq, PartialEq, Default)]
 pub struct Bundle2ReplayParams {
     /// A flag specifying whether to preserve raw bundle2 contents in the blobstore
     pub preserve_raw_bundle2: bool,
-}
-
-/// Storage setup for sharded filenodes
-#[derive(Debug, Clone, Eq, PartialEq)]
-pub struct ShardedFilenodesParams {
-    /// Identifies the SQL database to connect to.
-    pub shard_map: String,
-    /// Number of shards to distribute filenodes across.
-    pub shard_num: NonZeroUsize,
 }
 
 /// Regex for valid branches that Infinite Pushes can be directed to.

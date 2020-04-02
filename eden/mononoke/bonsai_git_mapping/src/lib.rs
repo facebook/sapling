@@ -16,7 +16,8 @@ use mononoke_types::{hash::GitSha1, BonsaiChangeset, ChangesetId, RepositoryId};
 use slog::warn;
 use sql::queries;
 use sql::{Connection, Transaction};
-use sql_ext::SqlConstructors;
+use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_ext::SqlConnections;
 use stats::prelude::*;
 use std::collections::{BTreeMap, HashSet};
 use std::convert::AsRef;
@@ -271,25 +272,21 @@ impl SqlBonsaiGitMappingConnection {
     }
 }
 
-impl SqlConstructors for SqlBonsaiGitMappingConnection {
+impl SqlConstruct for SqlBonsaiGitMappingConnection {
     const LABEL: &'static str = "bonsai_git_mapping";
 
-    fn from_connections(
-        write_connection: Connection,
-        read_connection: Connection,
-        read_master_connection: Connection,
-    ) -> Self {
+    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-bonsai-git-mapping.sql");
+
+    fn from_sql_connections(connections: SqlConnections) -> Self {
         Self {
-            write_connection,
-            read_connection,
-            read_master_connection,
+            write_connection: connections.write_connection,
+            read_connection: connections.read_connection,
+            read_master_connection: connections.read_master_connection,
         }
     }
-
-    fn get_up_query() -> &'static str {
-        include_str!("../schemas/sqlite-bonsai-git-mapping.sql")
-    }
 }
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlBonsaiGitMappingConnection {}
 
 /// An in-transaction version of bulk_add. Instead of using multiple connections
 /// it reuses existing `Transaction`. Useful for updating the mapping atomically

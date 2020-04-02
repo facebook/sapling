@@ -14,9 +14,7 @@ use crate::queue::MultiplexedBlobstore;
 use crate::scrub::{LoggingScrubHandler, ScrubBlobstore, ScrubHandler};
 use anyhow::{bail, Error};
 use blobstore::Blobstore;
-use blobstore_sync_queue::{
-    BlobstoreSyncQueue, OperationKey, SqlBlobstoreSyncQueue, SqlConstructors,
-};
+use blobstore_sync_queue::{BlobstoreSyncQueue, OperationKey, SqlBlobstoreSyncQueue};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -36,6 +34,7 @@ use mononoke_types::BlobstoreBytes;
 use nonzero_ext::nonzero;
 use readonlyblob::ReadOnlyBlobstore;
 use scuba::ScubaSampleBuilder;
+use sql_construct::SqlConstruct;
 
 pub struct Tickable<T> {
     pub storage: Arc<Mutex<HashMap<String, T>>>,

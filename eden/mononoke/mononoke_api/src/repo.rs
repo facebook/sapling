@@ -16,7 +16,7 @@ use anyhow::{bail, format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobrepoBuilder, BlobstoreOptions, Caching, ReadOnlyStorage};
 use blobstore::Loadable;
-use blobstore_factory::make_sql_factory;
+use blobstore_factory::make_metadata_sql_factory;
 use bookmarks::{BookmarkName, BookmarkPrefix};
 use changeset_info::ChangesetInfo;
 use context::CoreContext;
@@ -43,9 +43,9 @@ use mononoke_types::{
 use revset::AncestorsNodeStream;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, Logger};
-use sql_ext::facebook::MysqlOptions;
 #[cfg(test)]
-use sql_ext::SqlConstructors;
+use sql_construct::SqlConstruct;
+use sql_ext::facebook::MysqlOptions;
 use stats_facebook::service_data::{get_service_data_singleton, ServiceData};
 use std::collections::HashSet;
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
@@ -101,9 +101,9 @@ pub async fn open_synced_commit_mapping(
     readonly_storage: ReadOnlyStorage,
     logger: &Logger,
 ) -> Result<Arc<SqlSyncedCommitMapping>, Error> {
-    let sql_factory = make_sql_factory(
+    let sql_factory = make_metadata_sql_factory(
         fb,
-        config.storage_config.dbconfig,
+        config.storage_config.metadata,
         mysql_options,
         readonly_storage,
         logger.clone(),
@@ -111,7 +111,12 @@ pub async fn open_synced_commit_mapping(
     .compat()
     .await?;
 
-    sql_factory.open::<SqlSyncedCommitMapping>().compat().await
+    Ok(Arc::new(
+        sql_factory
+            .open::<SqlSyncedCommitMapping>()
+            .compat()
+            .await?,
+    ))
 }
 
 impl Repo {

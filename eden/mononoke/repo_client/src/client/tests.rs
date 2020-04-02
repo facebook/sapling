@@ -22,7 +22,7 @@ use mutable_counters::SqlMutableCounters;
 use repo_read_write_status::RepoReadWriteFetcher;
 use scuba_ext::ScubaSampleBuilder;
 use skiplist::SkiplistIndex;
-use sql_ext::SqlConstructors;
+use sql_construct::SqlConstruct;
 use tests_utils::CreateCommitContext;
 
 use mononoke_types_mocks::changesetid::ONES_CSID;

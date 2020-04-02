@@ -1,8 +1,9 @@
 repoid = 456
 storage_config = "simple"
 
-[storage.simple.db.remote]
-db_address = "somedb"
+[storage.simple.metadata.remote]
+primary = { db_address = "somedb" }
+filenodes = { unsharded = { db_address = "somedb" } }
 
 [storage.simple.blobstore.blob_files]
 path = "/tmp/blobstore"

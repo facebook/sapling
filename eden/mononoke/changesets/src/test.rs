@@ -8,7 +8,6 @@
 //! Tests for the Changesets store.
 use super::{
     CachingChangesets, ChangesetEntry, ChangesetInsert, Changesets, ErrorKind, SqlChangesets,
-    SqlConstructors,
 };
 use assert_matches::assert_matches;
 use caching_ext::MockStoreStats;
@@ -18,6 +17,7 @@ use maplit::hashset;
 use mononoke_types::{ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix};
 use mononoke_types_mocks::changesetid::*;
 use mononoke_types_mocks::repo::*;
+use sql_construct::SqlConstruct;
 use std::collections::HashSet;
 use std::iter::FromIterator;
 use std::str::FromStr;

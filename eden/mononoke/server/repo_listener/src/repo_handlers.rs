@@ -28,12 +28,16 @@ use cross_repo_sync::create_commit_syncers;
 use fbinit::FacebookInit;
 use hooks::{hook_loader::load_hooks, HookManager};
 use hooks_content_stores::{blobrepo_text_only_store, BlobRepoChangesetStore};
-use metaconfig_types::{CommitSyncConfig, MetadataDBConfig, RepoConfig, WireprotoLoggingConfig};
+use metaconfig_types::{
+    CommitSyncConfig, MetadataDatabaseConfig, RepoConfig, WireprotoLoggingConfig,
+};
 use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use repo_client::{MononokeRepo, MononokeRepoBuilder, PushRedirector, WireprotoLogging};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
-use sql_ext::facebook::{FbSqlConstructors, MysqlOptions};
+use sql_construct::SqlConstructFromMetadataDatabaseConfig;
+use sql_ext::facebook::MysqlOptions;
+
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 
 use crate::errors::ErrorKind;
@@ -91,7 +95,7 @@ impl IncompleteRepoHandler {
 struct PushRedirectorArgs {
     commit_sync_config: CommitSyncConfig,
     synced_commit_mapping: SqlSyncedCommitMapping,
-    db_config: MetadataDBConfig,
+    db_config: MetadataDatabaseConfig,
     mysql_options: MysqlOptions,
 }
 
@@ -225,7 +229,7 @@ pub fn repo_handlers(
             let hooks_scuba_table = config.scuba_table_hooks.clone();
             let hooks_scuba_local_path = config.scuba_local_path_hooks.clone();
             let hook_max_file_size = config.hook_max_file_size.clone();
-            let db_config = config.storage_config.dbconfig.clone();
+            let db_config = config.storage_config.metadata.clone();
             let hash_validation_percentage = config.hash_validation_percentage.clone();
             let preserve_raw_bundle2 = config.bundle2_replay_params.preserve_raw_bundle2.clone();
             let pure_push_allowed = config.push.pure_push_allowed.clone();
@@ -294,13 +298,12 @@ pub fn repo_handlers(
                 let repo = builder.finalize(Arc::new(hook_manager));
 
                 let support_bundle2_listkeys = async {
-                    let counters = SqlMutableCounters::with_db_config(
+                    let counters = SqlMutableCounters::with_metadata_database_config(
                         fb,
                         &db_config,
                         mysql_options,
                         readonly_storage.0,
                     )
-                    .compat()
                     .await?;
 
                     let counter = counters
@@ -315,13 +318,12 @@ pub fn repo_handlers(
                     Ok(counter != 0)
                 };
 
-                let sql_commit_sync_mapping = SqlSyncedCommitMapping::with_db_config(
+                let sql_commit_sync_mapping = SqlSyncedCommitMapping::with_metadata_database_config(
                     fb,
                     &db_config,
                     mysql_options,
                     readonly_storage.0,
-                )
-                .compat();
+                );
 
                 let wireproto_logging = create_wireproto_logging(
                     fb,

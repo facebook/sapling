@@ -12,12 +12,12 @@
 use anyhow::Error;
 use blobstore_sync_queue::{
     BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey, SqlBlobstoreSyncQueue,
-    SqlConstructors,
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
 use metaconfig_types::{BlobstoreId, MultiplexId};
 use mononoke_types::DateTime;
+use sql_construct::SqlConstruct;
 use uuid::Uuid;
 
 #[fbinit::test]

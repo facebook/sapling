@@ -1,7 +1,7 @@
 repoid = 123
 storage_config = "simple"
 
-[storage.simple.db.local]
+[storage.simple.metadata.local]
 local_db_path = "/tmp/foo"
 
 [storage.simple.blobstore.manifold]

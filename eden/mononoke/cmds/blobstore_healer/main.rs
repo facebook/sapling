@@ -14,7 +14,7 @@ mod replication_lag;
 
 use anyhow::{bail, format_err, Error, Result};
 use blobstore::Blobstore;
-use blobstore_factory::{make_blobstore, make_sql_factory, BlobstoreOptions, ReadOnlyStorage};
+use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
 use cached_config::ConfigStore;
 use chrono::Duration as ChronoDuration;
@@ -36,11 +36,12 @@ use futures_old::{
 };
 use healer::Healer;
 use lazy_static::lazy_static;
-use metaconfig_types::{BlobConfig, MetadataDBConfig, StorageConfig};
+use metaconfig_types::{BlobConfig, LocalDatabaseConfig, MetadataDatabaseConfig, StorageConfig};
 use mononoke_types::DateTime;
 use replication_lag::wait_for_replication;
 use slog::{error, info, o, warn};
 use sql::Connection;
+use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::{facebook::MysqlOptions, open_sqlite_path};
 use sql_facebook::{myrouter, raw};
 use std::collections::HashMap;
@@ -132,15 +133,22 @@ fn maybe_schedule_healer_for_storage(
         s => bail!("Storage doesn't use Multiplexed blobstore, got {:?}", s),
     };
 
-    let sync_queue = make_sql_factory(
-        fb,
-        queue_db,
-        mysql_options,
-        readonly_storage,
-        ctx.logger().clone(),
-    )
-    .and_then(|sql_factory| sql_factory.open::<SqlBlobstoreSyncQueue>())
-    .map(|q| q as Arc<dyn BlobstoreSyncQueue>);
+    let sync_queue = {
+        // FIXME: remove boxing and cloning when this crate is converted to new futures
+        cloned!(queue_db);
+        async move {
+            SqlBlobstoreSyncQueue::with_database_config(
+                fb,
+                &queue_db,
+                mysql_options,
+                readonly_storage.0,
+            )
+            .await
+            .map(|queue| Arc::new(queue) as Arc<dyn BlobstoreSyncQueue>)
+        }
+    }
+    .boxed()
+    .compat();
 
     let blobstores: HashMap<_, BoxFuture<Arc<dyn Blobstore + 'static>, _>> = {
         let mut blobstores = HashMap::new();
@@ -196,14 +204,15 @@ fn maybe_schedule_healer_for_storage(
             .boxify()
     };
 
-    let regional_conns = match storage_config.dbconfig {
-        MetadataDBConfig::LocalDB { path } => {
+    let regional_conns = match storage_config.metadata {
+        MetadataDatabaseConfig::Local(LocalDatabaseConfig { path }) => {
             open_sqlite_path(path.join("sqlite_dbs"), readonly_storage.0)
                 .into_future()
                 .map(|c| vec![("sqlite_region".to_string(), Connection::with_sqlite(c))])
                 .boxify()
         }
-        MetadataDBConfig::Mysql { db_address, .. } => {
+        MetadataDatabaseConfig::Remote(remote) => {
+            let db_address = remote.primary.db_address;
             let regions = ConfigStore::configerator(fb, None, None, Duration::from_secs(5))?
                 .get_config_handle::<Vec<String>>(CONFIGERATOR_REGIONS_CONFIG.to_owned())?
                 .get();
@@ -213,7 +222,7 @@ fn maybe_schedule_healer_for_storage(
                 conn_builder
                     .service_type(myrouter::ServiceType::SLAVE)
                     .locality(myrouter::DbLocality::EXPLICIT)
-                    .tier(db_address.clone(), None)
+                    .tier(db_address, None)
                     .port(myrouter_port);
                 let mut myrouter_conns = vec![];
                 for region in &*regions {

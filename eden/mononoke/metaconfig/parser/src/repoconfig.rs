@@ -956,8 +956,9 @@ mod test {
     use super::*;
     use maplit::{btreemap, btreeset, hashmap};
     use metaconfig_types::{
-        BlobConfig, BlobstoreId, FilestoreParams, MetadataDBConfig, MultiplexId,
-        ShardedFilenodesParams, SourceControlServiceMonitoring,
+        BlobConfig, BlobstoreId, DatabaseConfig, FilestoreParams, LocalDatabaseConfig,
+        MetadataDatabaseConfig, MultiplexId, RemoteDatabaseConfig, RemoteMetadataDatabaseConfig,
+        ShardableRemoteDatabaseConfig, ShardedRemoteDatabaseConfig, SourceControlServiceMonitoring,
     };
     use nonzero_ext::nonzero;
     use pretty_assertions::assert_eq;
@@ -1298,7 +1299,7 @@ mod test {
             scuba_table_hooks="scm_hooks"
             storage_config="files"
 
-            [storage.files.db.local]
+            [storage.files.metadata.local]
             local_db_path = "/tmp/www"
 
             [storage.files.blobstore.blob_files]
@@ -1361,9 +1362,9 @@ mod test {
             [derived_data_config.raw_unode_version]
             unode_version_v2 = {}
 
-            [storage.main.db.remote]
-            db_address="db_address"
-            sharded_filenodes = { shard_map = "db_address_shards", shard_num = 123 }
+            [storage.main.metadata.remote]
+            primary = { db_address = "db_address" }
+            filenodes = { sharded = { shard_map = "db_address_shards", shard_num = 123 } }
 
             [storage.main.blobstore.multiplexed]
             multiplex_id = 1
@@ -1434,7 +1435,7 @@ mod test {
             scuba_table_hooks="scm_hooks"
             storage_config="files"
 
-            [storage.files.db.local]
+            [storage.files.metadata.local]
             local_db_path = "/tmp/www"
 
             [storage.files.blobstore.blob_files]
@@ -1483,20 +1484,21 @@ mod test {
                     },
                 ),
             ],
-            queue_db: MetadataDBConfig::Mysql {
+            queue_db: DatabaseConfig::Remote(RemoteDatabaseConfig {
                 db_address: "queue_db_address".into(),
-                sharded_filenodes: None,
-            },
+            }),
         };
         let main_storage_config = StorageConfig {
             blobstore: multiplex,
-            dbconfig: MetadataDBConfig::Mysql {
-                db_address: "db_address".into(),
-                sharded_filenodes: Some(ShardedFilenodesParams {
+            metadata: MetadataDatabaseConfig::Remote(RemoteMetadataDatabaseConfig {
+                primary: RemoteDatabaseConfig {
+                    db_address: "db_address".into(),
+                },
+                filenodes: ShardableRemoteDatabaseConfig::Sharded(ShardedRemoteDatabaseConfig {
                     shard_map: "db_address_shards".into(),
                     shard_num: NonZeroUsize::new(123).unwrap(),
                 }),
-            },
+            }),
         };
 
         let mut repos = HashMap::new();
@@ -1632,9 +1634,9 @@ mod test {
             RepoConfig {
                 enabled: true,
                 storage_config: StorageConfig {
-                    dbconfig: MetadataDBConfig::LocalDB {
+                    metadata: MetadataDatabaseConfig::Local(LocalDatabaseConfig {
                         path: "/tmp/www".into(),
-                    },
+                    }),
                     blobstore: BlobConfig::Files {
                         path: "/tmp/www".into(),
                     },
@@ -1719,7 +1721,7 @@ mod test {
             repoid=0
             storage_config = "sqlite"
 
-            [storage.sqlite.db.local]
+            [storage.sqlite.metadata.local]
             local_db_path = "/tmp/fbsource"
 
             [storage.sqlite.blobstore.blob_files]
@@ -1757,7 +1759,7 @@ mod test {
             repoid=0
             storage_config = "sqlite"
 
-            [storage.sqlite.db.local]
+            [storage.sqlite.metadata.local]
             local_db_path = "/tmp/fbsource"
 
             [storage.sqlite.blobstore.blob_files]
@@ -1796,7 +1798,7 @@ mod test {
                 repoid = 0
                 storage_config = "storage"
 
-                [storage.storage.db.local]
+                [storage.storage.metadata.local]
                 local_db_path = "/tmp/fbsource"
 
                 [storage.storage.blobstore.blob_sqlite]
@@ -1856,9 +1858,9 @@ mod test {
     #[fbinit::test]
     fn test_common_storage(fb: FacebookInit) {
         const STORAGE: &str = r#"
-        [multiplex_store.db.remote]
-        db_address = "some_db"
-        sharded_filenodes = { shard_map="some-shards", shard_num=123 }
+        [multiplex_store.metadata.remote]
+        primary = { db_address = "some_db" }
+        filenodes = { sharded = { shard_map = "some-shards", shard_num = 123 } }
 
         [multiplex_store.blobstore.multiplexed]
         multiplex_id = 1
@@ -1874,8 +1876,9 @@ mod test {
         storage_config = "multiplex_store"
 
         # Not overriding common store
-        [storage.some_other_store.db.remote]
-        db_address = "other_db"
+        [storage.some_other_store.metadata.remote]
+        primary = { db_address = "other_db" }
+        filenodes = { sharded = { shard_map = "other-shards", shard_num = 20 } }
 
         [storage.some_other_store.blobstore]
         disabled = {}
@@ -1904,15 +1907,20 @@ mod test {
                                 path: "/tmp/foo".into()
                             })
                         ],
-                        queue_db: MetadataDBConfig::Mysql {
-                            db_address: "queue_db_address".into(),
-                            sharded_filenodes: None,
+                        queue_db: DatabaseConfig::Remote(
+                            RemoteDatabaseConfig {
+                                db_address: "queue_db_address".into(),
+                            }
+                        ),
+                    },
+                    metadata: MetadataDatabaseConfig::Remote(RemoteMetadataDatabaseConfig {
+                        primary: RemoteDatabaseConfig {
+                            db_address: "some_db".into(),
                         },
-                    },
-                    dbconfig: MetadataDBConfig::Mysql {
-                        db_address: "some_db".into(),
-                        sharded_filenodes: Some(ShardedFilenodesParams { shard_map: "some-shards".into(), shard_num: NonZeroUsize::new(123).unwrap()}),
-                    },
+                        filenodes: ShardableRemoteDatabaseConfig::Sharded(ShardedRemoteDatabaseConfig {
+                            shard_map: "some-shards".into(), shard_num: NonZeroUsize::new(123).unwrap()
+                        }),
+                    }),
                 },
                 repoid: RepositoryId::new(123),
                 generation_cache_size: 10 * 1024 * 1024,
@@ -1932,16 +1940,18 @@ mod test {
     #[fbinit::test]
     fn test_common_blobstores_local_override(fb: FacebookInit) {
         const STORAGE: &str = r#"
-        [multiplex_store.db.remote]
-        db_address = "some_db"
+        [multiplex_store.metadata.remote]
+        primary = { db_address = "some_db" }
+        filenodes = { sharded = { shard_map = "some-shards", shard_num = 123 } }
 
         [multiplex_store.blobstore.multiplexed]
         components = [
             { blobstore_id = 1, blobstore = { blob_files = { path = "/tmp/foo" } } },
         ]
 
-        [manifold_store.db.remote]
-        db_address = "other_db"
+        [manifold_store.metadata.remote]
+        primary = { db_address = "other_db" }
+        filenodes = { sharded = { shard_map = "other-shards", shard_num = 456 } }
 
         [manifold_store.blobstore.manifold]
         manifold_bucket = "bucketybucket"
@@ -1952,8 +1962,9 @@ mod test {
         storage_config = "multiplex_store"
 
         # Override common store
-        [storage.multiplex_store.db.remote]
-        db_address = "other_other_db"
+        [storage.multiplex_store.metadata.remote]
+        primary = { db_address = "other_other_db" }
+        filenodes = { sharded = { shard_map = "other-other-shards", shard_num = 789 } }
 
         [storage.multiplex_store.blobstore]
         disabled = {}
@@ -1974,10 +1985,11 @@ mod test {
                 enabled: true,
                 storage_config: StorageConfig {
                     blobstore: BlobConfig::Disabled,
-                    dbconfig: MetadataDBConfig::Mysql {
-                        db_address: "other_other_db".into(),
-                        sharded_filenodes: None,
-                    },
+                    metadata: MetadataDatabaseConfig::Remote( RemoteMetadataDatabaseConfig {
+                        primary: RemoteDatabaseConfig { db_address: "other_other_db".into(), },
+                        filenodes: ShardableRemoteDatabaseConfig::Sharded(ShardedRemoteDatabaseConfig { shard_map: "other-other-shards".into(), shard_num: NonZeroUsize::new(789).unwrap() }),
+                    }),
+
                 },
                 repoid: RepositoryId::new(123),
                 generation_cache_size: 10 * 1024 * 1024,
@@ -2000,8 +2012,8 @@ mod test {
         repoid = 123
         storage_config = "randomstore"
 
-        [storage.randomstore.db.remote]
-        db_address = "other_other_db"
+        [storage.randomstore.metadata.remote]
+        primary = { db_address = "other_other_db" }
 
         [storage.randomstore.blobstore.blob_files]
         path = "/tmp/foo"

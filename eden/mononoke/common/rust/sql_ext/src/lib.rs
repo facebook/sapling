@@ -71,7 +71,6 @@ pub mod facebook {
         use anyhow::Error;
         use fbinit::FacebookInit;
         use futures_ext::BoxFuture;
-        use metaconfig_types::MetadataDBConfig;
         use slog::Logger;
 
         macro_rules! fb_unimplemented {
@@ -117,42 +116,6 @@ pub mod facebook {
             _: bool,
         ) -> BoxFuture<SqlConnections, Error> {
             fb_unimplemented!()
-        }
-
-        impl<T: SqlConstructors> FbSqlConstructors for T {}
-
-        /// Set of useful constructors for Mononoke's sql based data access objects
-        pub trait FbSqlConstructors: SqlConstructors + Sized + Send + Sync + 'static {
-            fn with_myrouter(_: String, _: u16, _: ReadConnectionType, _: bool) -> Self {
-                fb_unimplemented!()
-            }
-
-            fn with_raw_xdb_tier(
-                _: FacebookInit,
-                _: String,
-                _: ReadConnectionType,
-                _: bool,
-            ) -> BoxFuture<Self, Error> {
-                fb_unimplemented!()
-            }
-
-            fn with_xdb(
-                _: FacebookInit,
-                _: String,
-                _: MysqlOptions,
-                _: bool,
-            ) -> BoxFuture<Self, Error> {
-                fb_unimplemented!()
-            }
-
-            fn with_db_config(
-                _: FacebookInit,
-                _: &MetadataDBConfig,
-                _: MysqlOptions,
-                _: bool,
-            ) -> BoxFuture<Self, Error> {
-                fb_unimplemented!()
-            }
         }
     }
 }

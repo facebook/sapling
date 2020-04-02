@@ -27,7 +27,8 @@ use metaconfig_types::{
 use mononoke_types::RepositoryId;
 use mononoke_types::{ChangesetId, DateTime, MPath};
 use sql::rusqlite::Connection as SqliteConnection;
-use sql_ext::SqlConstructors;
+use sql_construct::SqlConstruct;
+use sql_ext::SqlConnections;
 use std::{collections::HashMap, sync::Arc};
 use synced_commit_mapping::{
     SqlSyncedCommitMapping, SyncedCommitMapping, SyncedCommitMappingEntry,
@@ -134,13 +135,14 @@ pub async fn init_small_large_repo(
     ctx: &CoreContext,
 ) -> Result<(Syncers<SqlSyncedCommitMapping>, CommitSyncConfig), Error> {
     let sqlite_con = SqliteConnection::open_in_memory()?;
-    sqlite_con.execute_batch(SqlSyncedCommitMapping::get_up_query())?;
+    sqlite_con.execute_batch(SqlSyncedCommitMapping::CREATION_QUERY)?;
     let (megarepo, con) = blobrepo_factory::new_memblob_with_sqlite_connection_with_id(
         sqlite_con,
         RepositoryId::new(1),
     )?;
 
-    let mapping = SqlSyncedCommitMapping::from_connections(con.clone(), con.clone(), con.clone());
+    let mapping =
+        SqlSyncedCommitMapping::from_sql_connections(SqlConnections::new_single(con.clone()));
     let (smallrepo, _) =
         blobrepo_factory::new_memblob_with_connection_with_id(con.clone(), RepositoryId::new(0))?;
 

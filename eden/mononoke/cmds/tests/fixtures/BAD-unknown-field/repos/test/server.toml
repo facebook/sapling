@@ -2,7 +2,7 @@ repoid = 123
 storage_config = "files"
 random_unknown_field = "hello"
 
-[storage.files.db.local]
+[storage.files.metadata.local]
 local_db_path = "/tmp/foo"
 
 [storage.files.blobstore.blob_files]
