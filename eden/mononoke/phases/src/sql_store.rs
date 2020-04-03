@@ -40,8 +40,9 @@ impl SqlPhasesStore {
         cs_id: ChangesetId,
     ) -> impl Future<Item = Option<Phase>, Error = Error> {
         STATS::get_single.add_value(1);
-        SelectPhase::query(&self.read_connection, &repo_id, &cs_id)
-            .map(move |rows| rows.into_iter().next().map(|row| row.0))
+        let csids = vec![cs_id];
+        SelectPhases::query(&self.read_connection, &repo_id, &csids)
+            .map(move |rows| rows.into_iter().map(|row| row.1).next())
     }
 
     pub fn get_public_raw(
@@ -100,10 +101,6 @@ queries! {
         // there is not usage for changing the phase at the moment
         // TODO (liubovd): improve sqlite query to make it semantically the same
         sqlite("INSERT OR IGNORE INTO phases (repo_id, cs_id, phase) VALUES {values}")
-    }
-
-    read SelectPhase(repo_id: RepositoryId, cs_id: ChangesetId) -> (Phase) {
-        "SELECT phase FROM phases WHERE repo_id = {repo_id} AND cs_id = {cs_id}"
     }
 
     read SelectPhases(
