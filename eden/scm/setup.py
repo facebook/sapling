@@ -1005,17 +1005,19 @@ class buildembedded(Command):
     def _process_hg_exts(self, dirforexts):
         """Prepare Mercurail native Python extensions
 
-        This just copies edenscmnative/ to the destination."""
+        This copies edenscmnative/ and edenscm/ to the destination."""
         parentdir = scriptdir
         if not self.local_bins:
             # copy .pyd's from ./build/lib.win-amd64/, not from ./
             parentdir = pjoin(scriptdir, "build", distutils_dir_name("lib"))
         copy_to(pjoin(parentdir, "edenscmnative"), pjoin(dirforexts, "edenscmnative"))
+        copy_to(pjoin(parentdir, "edenscm"), pjoin(dirforexts, "edenscm"))
 
-    def _zip_pyc_files(self, zipname):
+    def _zip_pyc_files(self, embdir, zipname):
         """Modify a zip archive to include edenscm .pyc files"""
-        sourcedir = pjoin(scriptdir, "edenscm")
+        sourcedir = pjoin(embdir, "edenscm")
         with zipfile.PyZipFile(zipname, "a") as z:
+            z.debug = 1
             # Write .py files for better traceback.
             for root, _dirs, files in os.walk(sourcedir):
                 for basename in files:
@@ -1024,8 +1026,14 @@ class buildembedded(Command):
                         # relative to scriptdir
                         inzippath = sourcepath[len(scriptdir) + 1 :]
                         z.write(sourcepath, inzippath)
+
+                        # Remove the pyc to force recompiling them
+                        tryunlink(sourcepath + "c")
             # Compile and write .pyc files.
             z.writepy(sourcedir)
+        # Finally, remove the edenscm directory so that the package loads the
+        # pyc from the zip.
+        rmtree(sourcedir)
 
     def _copy_py_lib(self, dirtocopy):
         """Copy main Python shared library"""
@@ -1087,7 +1095,7 @@ class buildembedded(Command):
         # Build everything into python27.zip, which is in the default sys.path.
         zippath = pjoin(embdir, "python27.zip")
         buildpyzip(self.distribution).run(appendzippath=zippath)
-        self._zip_pyc_files(zippath)
+        self._zip_pyc_files(embdir, zippath)
         self._copy_hg_exe(embdir)
         self._copy_other(embdir)
 
