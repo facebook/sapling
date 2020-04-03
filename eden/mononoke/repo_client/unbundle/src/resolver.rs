@@ -53,6 +53,22 @@ use std::sync::{Arc, Mutex};
 use topo_sort::sort_topological;
 use wirepack::{TreemanifestBundle2Parser, TreemanifestEntry};
 
+#[allow(non_snake_case)]
+mod UNBUNDLE_STATS {
+    use stats::define_stats;
+
+    define_stats! {
+        prefix = "mononoke.unbundle.resolver";
+        push: dynamic_timeseries("{}.push", (reponame: String); Rate, Sum),
+        pushrebase: dynamic_timeseries("{}.pushrebase", (reponame: String); Rate, Sum),
+        bookmark_only_pushrebase: dynamic_timeseries("{}.bookmark_only_pushrebase", (reponame: String); Rate, Sum),
+        infinitepush: dynamic_timeseries("{}.infinitepush", (reponame: String); Rate, Sum),
+        resolver_error: dynamic_timeseries("{}.resolver_error", (reponame: String); Rate, Sum),
+    }
+
+    pub use self::STATS::*;
+}
+
 pub type Changesets = Vec<(HgChangesetId, RevlogChangeset)>;
 type Filelogs = HashMap<HgNodeKey, Shared<OldBoxFuture<(HgBlobEntry, RepoPath), Compat<Error>>>>;
 type ContentBlobs = HashMap<HgNodeKey, ContentBlobInfo>;
@@ -247,7 +263,7 @@ pub async fn resolve<'a>(
         NonFastForwardPolicy::from(allow_non_fast_forward)
     };
 
-    if let Some(commonheads) = maybe_commonheads {
+    let post_resolve_action = if let Some(commonheads) = maybe_commonheads {
         if pushkey_next {
             resolve_bookmark_only_pushrebase(
                 ctx,
@@ -285,6 +301,29 @@ pub async fn resolve<'a>(
         .await
         .context("bundle2_resolver error")
         .map_err(BundleResolverError::from)
+    };
+
+    report_unbundle_type(repo, &post_resolve_action);
+    post_resolve_action
+}
+
+fn report_unbundle_type(
+    repo: &BlobRepo,
+    post_resolve_action: &Result<PostResolveAction, BundleResolverError>,
+) {
+    let repo_name = repo.name().clone();
+    match post_resolve_action {
+        Ok(PostResolveAction::Push(_)) => UNBUNDLE_STATS::push.add_value(1, (repo_name,)),
+        Ok(PostResolveAction::PushRebase(_)) => {
+            UNBUNDLE_STATS::pushrebase.add_value(1, (repo_name,))
+        }
+        Ok(PostResolveAction::InfinitePush(_)) => {
+            UNBUNDLE_STATS::infinitepush.add_value(1, (repo_name,))
+        }
+        Ok(PostResolveAction::BookmarkOnlyPushRebase(_)) => {
+            UNBUNDLE_STATS::bookmark_only_pushrebase.add_value(1, (repo_name,))
+        }
+        Err(_) => UNBUNDLE_STATS::resolver_error.add_value(1, (repo_name,)),
     }
 }
 
