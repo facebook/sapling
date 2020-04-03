@@ -99,34 +99,39 @@ mod tests {
     use crate::Phase;
     use anyhow::Error;
     use context::CoreContext;
+    use futures::compat::Future01CompatExt;
     use maplit::hashset;
     use mononoke_types_mocks::changesetid::*;
-    use tokio_compat::runtime::Runtime;
 
-    #[fbinit::test]
-    fn add_get_phase_sql_test(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new()?;
+    #[fbinit::compat_test]
+    async fn add_get_phase_sql_test(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
         let repo_id = RepositoryId::new(0);
         let phases_factory = SqlPhasesFactory::with_sqlite_in_memory()?;
         let phases = phases_factory.get_phases_store();
 
-        rt.block_on(phases.add_public_raw(ctx, repo_id, vec![ONES_CSID]))?;
+        phases
+            .add_public_raw(ctx, repo_id, vec![ONES_CSID])
+            .compat()
+            .await?;
 
         assert_eq!(
-            rt.block_on(phases.get_single_raw(repo_id, ONES_CSID))?,
+            phases.get_single_raw(repo_id, ONES_CSID).compat().await?,
             Some(Phase::Public),
             "sql: get phase for the existing changeset"
         );
 
         assert_eq!(
-            rt.block_on(phases.get_single_raw(repo_id, TWOS_CSID))?,
+            phases.get_single_raw(repo_id, TWOS_CSID).compat().await?,
             None,
             "sql: get phase for non existing changeset"
         );
 
         assert_eq!(
-            rt.block_on(phases.get_public_raw(repo_id, &[ONES_CSID, TWOS_CSID]))?,
+            phases
+                .get_public_raw(repo_id, &[ONES_CSID, TWOS_CSID])
+                .compat()
+                .await?,
             hashset! {ONES_CSID},
             "sql: get phase for non existing changeset and existing changeset"
         );
