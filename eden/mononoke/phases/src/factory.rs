@@ -99,7 +99,6 @@ mod tests {
     use crate::Phase;
     use anyhow::Error;
     use context::CoreContext;
-    use futures::compat::Future01CompatExt;
     use maplit::hashset;
     use mononoke_types_mocks::changesetid::*;
 
@@ -110,19 +109,16 @@ mod tests {
         let phases_factory = SqlPhasesFactory::with_sqlite_in_memory()?;
         let phases = phases_factory.get_phases_store();
 
-        phases
-            .add_public_raw(ctx, repo_id, vec![ONES_CSID])
-            .compat()
-            .await?;
+        phases.add_public_raw(ctx, repo_id, vec![ONES_CSID]).await?;
 
         assert_eq!(
-            phases.get_single_raw(repo_id, ONES_CSID).compat().await?,
+            phases.get_single_raw(repo_id, ONES_CSID).await?,
             Some(Phase::Public),
             "sql: get phase for the existing changeset"
         );
 
         assert_eq!(
-            phases.get_single_raw(repo_id, TWOS_CSID).compat().await?,
+            phases.get_single_raw(repo_id, TWOS_CSID).await?,
             None,
             "sql: get phase for non existing changeset"
         );
@@ -130,7 +126,6 @@ mod tests {
         assert_eq!(
             phases
                 .get_public_raw(repo_id, &[ONES_CSID, TWOS_CSID])
-                .compat()
                 .await?,
             hashset! {ONES_CSID},
             "sql: get phase for non existing changeset and existing changeset"

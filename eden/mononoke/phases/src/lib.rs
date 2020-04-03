@@ -153,14 +153,20 @@ impl SqlPhases {
         &self,
         cs_id: ChangesetId,
     ) -> impl Future<Item = Option<Phase>, Error = Error> {
-        self.phases_store.get_single_raw(self.repo_id, cs_id)
+        self.phases_store
+            .get_single_raw(self.repo_id, cs_id)
+            .boxed()
+            .compat()
     }
 
     pub fn get_public_raw(
         &self,
         csids: &[ChangesetId],
     ) -> impl Future<Item = HashSet<ChangesetId>, Error = Error> {
-        self.phases_store.get_public_raw(self.repo_id, csids)
+        self.phases_store
+            .get_public_raw(self.repo_id, csids)
+            .boxed()
+            .compat()
     }
 
     pub fn add_public_raw(
@@ -168,14 +174,20 @@ impl SqlPhases {
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
     ) -> impl Future<Item = (), Error = Error> {
-        self.phases_store.add_public_raw(ctx, self.repo_id, csids)
+        self.phases_store
+            .add_public_raw(ctx, self.repo_id, csids)
+            .boxed()
+            .compat()
     }
 
     pub fn list_all_public(
         &self,
         ctx: CoreContext,
     ) -> impl Future<Item = Vec<ChangesetId>, Error = Error> {
-        self.phases_store.list_all_public(ctx, self.repo_id)
+        self.phases_store
+            .list_all_public(ctx, self.repo_id)
+            .boxed()
+            .compat()
     }
 
     pub fn get_public_derive(
