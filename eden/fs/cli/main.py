@@ -48,7 +48,7 @@ from .util import ShutdownError, print_stderr
 
 
 if os.name == "nt":
-    from . import winproc
+    from . import daemon_util, winproc
 else:
     from . import daemon, fsck as fsck_mod, rage as rage_mod
 
@@ -1296,7 +1296,8 @@ class StartCmd(Subcmd):
 
     def start(self, args: argparse.Namespace, instance: EdenInstance) -> int:
         if os.name == "nt":
-            winproc.start_process(instance, args.daemon_binary, args.edenfs_args)
+            daemon_binary = daemon_util.find_daemon_binary(args.daemon_binary)
+            winproc.start_edenfs(instance, daemon_binary, args.edenfs_args)
         else:
             daemon.exec_daemon(
                 instance,

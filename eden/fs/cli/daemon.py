@@ -14,6 +14,7 @@ import subprocess
 import sys
 from typing import Dict, List, NoReturn, Optional, Tuple
 
+from . import daemon_util
 from .config import EdenInstance
 from .logfile import forward_log_file
 from .systemd import (
@@ -141,38 +142,6 @@ def did_process_exit(pid: int) -> bool:
     return False
 
 
-def _find_default_daemon_binary() -> Optional[str]:
-    # By default, we look for the daemon executable in the corresponding libexec
-    # directory.
-    script_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
-    candidate = os.path.normpath(os.path.join(script_dir, "../libexec/eden/edenfs"))
-    permissions = os.R_OK | os.X_OK
-    if os.access(candidate, permissions):
-        return candidate
-
-    # This is where the binary will be found relative to this file when it is
-    # run out of buck-out in debug mode.
-    candidate = os.path.normpath(os.path.join(script_dir, "../service/edenfs"))
-    if os.access(candidate, permissions):
-        return candidate
-    else:
-        return None
-
-
-class DaemonBinaryNotFound(Exception):
-    def __init__(self) -> None:
-        super().__init__("unable to find edenfs executable")
-
-
-def _find_daemon_binary(explicit_daemon_binary: Optional[str]) -> str:
-    if explicit_daemon_binary is not None:
-        return explicit_daemon_binary
-    daemon_binary = _find_default_daemon_binary()
-    if daemon_binary is None:
-        raise DaemonBinaryNotFound()
-    return daemon_binary
-
-
 def exec_daemon(
     instance: EdenInstance,
     daemon_binary: Optional[str] = None,
@@ -199,7 +168,7 @@ def exec_daemon(
             strace_file=strace_file,
             foreground=foreground,
         )
-    except DaemonBinaryNotFound as e:
+    except daemon_util.DaemonBinaryNotFound as e:
         print_stderr(f"error: {e}")
         os._exit(1)
 
@@ -223,7 +192,7 @@ def start_daemon(
             edenfs_args=edenfs_args,
             takeover=takeover,
         )
-    except DaemonBinaryNotFound as e:
+    except daemon_util.DaemonBinaryNotFound as e:
         print_stderr(f"error: {e}")
         return 1
 
@@ -236,8 +205,8 @@ def start_systemd_service(
     edenfs_args: Optional[List[str]] = None,
 ) -> int:
     try:
-        daemon_binary = _find_daemon_binary(daemon_binary)
-    except DaemonBinaryNotFound as e:
+        daemon_binary = daemon_util.find_daemon_binary(daemon_binary)
+    except daemon_util.DaemonBinaryNotFound as e:
         print_stderr(f"error: {e}")
         return 1
 
@@ -316,7 +285,7 @@ def _get_daemon_args(
     foreground: bool = False,
 ) -> Tuple[List[str], Dict[str, str]]:
     """Get the command and environment to use to start edenfs."""
-    daemon_binary = _find_daemon_binary(daemon_binary)
+    daemon_binary = daemon_util.find_daemon_binary(daemon_binary)
     return instance.get_edenfs_start_cmd(
         daemon_binary,
         edenfs_args,

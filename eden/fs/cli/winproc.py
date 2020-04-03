@@ -17,9 +17,6 @@ from typing import List, Optional
 from .config import EdenInstance
 
 
-EDENFS_DEFAULT = os.path.join("C:\\", "tools", "eden", "edenfs", "edenfs.exe")
-
-
 class _STARTUPINFO(ctypes.Structure):
     _fields_ = [
         ("cb", _DWORD),
@@ -83,20 +80,11 @@ def _create_process_shim(cmd_str):
     ctypes.windll.kernel32.CloseHandle(pi.hThread)
 
 
-def start_process(
-    instance: EdenInstance,
-    daemon_binary: Optional[str] = None,
-    edenfs_args: Optional[List[str]] = None,
-):
-    edenfs_bin = EDENFS_DEFAULT
-    if daemon_binary:
-        edenfs_bin = daemon_binary
-
-    if not os.path.isfile(edenfs_bin):
-        raise Exception("edenfs is not found: {}".format(edenfs_bin))
-
+def start_edenfs(
+    instance: EdenInstance, daemon_binary: str, edenfs_args: Optional[List[str]] = None
+) -> None:
     cmd = [
-        edenfs_bin,
+        daemon_binary,
         "--edenDir",
         str(instance._config_dir),
         "--etcEdenDir",
