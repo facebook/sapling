@@ -147,20 +147,29 @@ pub struct SqlPhases {
 }
 
 impl SqlPhases {
-    pub async fn get_single_raw(&self, cs_id: ChangesetId) -> Result<Option<Phase>, Error> {
-        self.phases_store.get_single_raw(self.repo_id, cs_id).await
+    pub async fn get_single_raw(
+        &self,
+        ctx: &CoreContext,
+        cs_id: ChangesetId,
+    ) -> Result<Option<Phase>, Error> {
+        self.phases_store
+            .get_single_raw(ctx, self.repo_id, cs_id)
+            .await
     }
 
     pub async fn get_public_raw(
         &self,
+        ctx: &CoreContext,
         csids: &[ChangesetId],
     ) -> Result<HashSet<ChangesetId>, Error> {
-        self.phases_store.get_public_raw(self.repo_id, csids).await
+        self.phases_store
+            .get_public_raw(ctx, self.repo_id, csids)
+            .await
     }
 
     pub async fn add_public_raw(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         csids: Vec<ChangesetId>,
     ) -> Result<(), Error> {
         self.phases_store
@@ -174,14 +183,14 @@ impl SqlPhases {
 
     pub async fn get_public_derive(
         &self,
-        ctx: CoreContext,
+        ctx: &CoreContext,
         csids: Vec<ChangesetId>,
         ephemeral_derive: bool,
     ) -> Result<HashSet<ChangesetId>, Error> {
         if csids.is_empty() {
             return Ok(Default::default());
         }
-        let public_cold = self.get_public_raw(&csids).await?;
+        let public_cold = self.get_public_raw(&ctx, &csids).await?;
 
         let mut unknown: Vec<_> = csids
             .into_iter()
@@ -197,7 +206,7 @@ impl SqlPhases {
 
         // Still do the get_public_raw incase someone else marked the changes as public
         // and thus mark_reachable_as_public did not return them as freshly_marked
-        let public_hot = self.get_public_raw(&unknown).await?;
+        let public_hot = self.get_public_raw(ctx, &unknown).await?;
 
         let public_combined = public_cold.into_iter().chain(public_hot);
         let public_combined = if ephemeral_derive {
@@ -235,7 +244,7 @@ impl Phases for SqlPhases {
         ephemeral_derive: bool,
     ) -> BoxFuture<HashSet<ChangesetId>, Error> {
         let this = self.clone();
-        async move { this.get_public_derive(ctx, csids, ephemeral_derive).await }
+        async move { this.get_public_derive(&ctx, csids, ephemeral_derive).await }
             .boxed()
             .compat()
             .boxify()
@@ -247,7 +256,7 @@ impl Phases for SqlPhases {
         heads: Vec<ChangesetId>,
     ) -> BoxFuture<Vec<ChangesetId>, Error> {
         let this = self.clone();
-        async move { mark_reachable_as_public(ctx, &this, &heads, false).await }
+        async move { mark_reachable_as_public(&ctx, &this, &heads, false).await }
             .boxed()
             .compat()
             .boxify()
@@ -260,13 +269,13 @@ impl Phases for SqlPhases {
 
 /// Mark all commits reachable from `public_heads` as public
 pub async fn mark_reachable_as_public(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     phases: &SqlPhases,
     all_heads: &[ChangesetId],
     ephemeral_derive: bool,
 ) -> Result<Vec<ChangesetId>, Error> {
     let changeset_fetcher = &phases.changeset_fetcher;
-    let public = phases.get_public_raw(&all_heads).await?;
+    let public = phases.get_public_raw(&ctx, &all_heads).await?;
 
     let mut input = all_heads
         .iter()
@@ -283,7 +292,7 @@ pub async fn mark_reachable_as_public(
             Some(cs) => cs,
         };
 
-        let phase = phases.get_single_raw(cs).await?;
+        let phase = phases.get_single_raw(&ctx, cs).await?;
         if let Some(Phase::Public) = phase {
             continue;
         }
@@ -311,7 +320,7 @@ pub async fn mark_reachable_as_public(
     for chunk in unmarked.chunks(100) {
         let chunk = chunk.iter().map(|(cs, _)| *cs).collect::<Vec<_>>();
         if !ephemeral_derive {
-            phases.add_public_raw(ctx.clone(), chunk.clone()).await?;
+            phases.add_public_raw(&ctx, chunk.clone()).await?;
         }
         result.extend(chunk)
     }

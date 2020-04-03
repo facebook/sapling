@@ -123,7 +123,7 @@ fn add_public_phases(
                             phases
                                 .get_sql_phases()
                                 .add_public_raw(
-                                    ctx,
+                                    &ctx,
                                     changesets.into_iter().map(|(_, cs)| cs).collect(),
                                 )
                                 .await

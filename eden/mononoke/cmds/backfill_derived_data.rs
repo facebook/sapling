@@ -360,19 +360,19 @@ fn fetch_all_public_changesets(
                 .and_then({
                     cloned!(ctx, changesets, phases);
                     move |ids| {
-                        changesets
-                            .get_many(ctx, repo_id, ids)
-                            .and_then(move |mut entries| {
+                        changesets.get_many(ctx.clone(), repo_id, ids).and_then(
+                            move |mut entries| {
                                 let cs_ids =
                                     entries.iter().map(|entry| entry.cs_id).collect::<Vec<_>>();
-                                async move { phases.get_public_raw(&cs_ids).await }
+                                async move { phases.get_public_raw(&ctx, &cs_ids).await }
                                     .boxed()
                                     .compat()
                                     .map(move |public| {
                                         entries.retain(|entry| public.contains(&entry.cs_id));
                                         old_stream::iter_ok(entries)
                                     })
-                            })
+                            },
+                        )
                     }
                 })
         })

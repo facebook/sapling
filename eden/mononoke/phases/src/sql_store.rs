@@ -9,7 +9,8 @@ use crate::caching::{get_cache_key, phase_caching_determinator, Caches};
 use anyhow::Error;
 use bytes::Bytes;
 use caching_ext::{GetOrFillMultipleFromCacheLayers, McErrorKind, McResult};
-use context::CoreContext;
+use cloned::cloned;
+use context::{CoreContext, PerfCounterType};
 use futures::compat::Future01CompatExt;
 use futures_ext::FutureExt as OldFutureExt;
 use futures_old::Future as OldFuture;
@@ -27,6 +28,7 @@ define_stats! {
     get_single: timeseries(Rate, Sum),
     get_many: timeseries(Rate, Sum),
     add_many: timeseries(Rate, Sum),
+    list_all: timeseries(Rate, Sum),
     memcache_hit: timeseries("memcache.hit"; Rate, Sum),
     memcache_miss: timeseries("memcache.miss"; Rate, Sum),
     memcache_internal_err: timeseries("memcache.internal_err"; Rate, Sum),
@@ -45,6 +47,7 @@ pub struct SqlPhasesStore {
 impl SqlPhasesStore {
     fn get_cacher(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
     ) -> GetOrFillMultipleFromCacheLayers<ChangesetId, Phase> {
         let report_mc_result = |res: McResult<()>| {
@@ -56,10 +59,12 @@ impl SqlPhasesStore {
             };
         };
 
-        let read_connection = self.read_connection.clone();
+        cloned!(ctx, self.read_connection);
         let get_from_db = {
             move |cs_ids: HashSet<ChangesetId>| {
                 let cs_ids: Vec<_> = cs_ids.into_iter().collect();
+                ctx.perf_counters()
+                    .increment_counter(PerfCounterType::SqlReadsReplica);
                 SelectPhases::query(&read_connection, &repo_id, &cs_ids)
                     .map(move |public| public.into_iter().collect())
                     .boxify()
@@ -84,13 +89,14 @@ impl SqlPhasesStore {
 
     pub async fn get_single_raw(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         cs_id: ChangesetId,
     ) -> Result<Option<Phase>, Error> {
         STATS::get_single.add_value(1);
         let csids = vec![cs_id];
 
-        let cacher = self.get_cacher(repo_id);
+        let cacher = self.get_cacher(ctx, repo_id);
         let cs_to_phase = cacher.run(csids.into_iter().collect()).compat().await?;
 
         Ok(cs_to_phase.into_iter().next().map(|(_, phase)| phase))
@@ -98,6 +104,7 @@ impl SqlPhasesStore {
 
     pub async fn get_public_raw(
         &self,
+        ctx: &CoreContext,
         repo_id: RepositoryId,
         csids: &[ChangesetId],
     ) -> Result<HashSet<ChangesetId>, Error> {
@@ -106,7 +113,7 @@ impl SqlPhasesStore {
         }
 
         STATS::get_many.add_value(1);
-        let cacher = self.get_cacher(repo_id);
+        let cacher = self.get_cacher(ctx, repo_id);
         let csids = csids.iter().cloned().collect();
         let cs_to_phase = cacher.run(csids).compat().await?;
 
@@ -124,7 +131,7 @@ impl SqlPhasesStore {
 
     pub async fn add_public_raw(
         &self,
-        _ctx: CoreContext,
+        ctx: &CoreContext,
         repoid: RepositoryId,
         csids: Vec<ChangesetId>,
     ) -> Result<(), Error> {
@@ -132,11 +139,14 @@ impl SqlPhasesStore {
             return Ok(());
         }
         STATS::add_many.add_value(1);
-        let cacher = self.get_cacher(repoid);
+        let cacher = self.get_cacher(ctx, repoid);
         let phases: Vec<_> = csids
             .iter()
             .map(|csid| (&repoid, csid, &Phase::Public))
             .collect();
+
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlWrites);
         InsertPhase::query(&self.write_connection, &phases)
             .compat()
             .await?;
@@ -147,9 +157,12 @@ impl SqlPhasesStore {
 
     pub async fn list_all_public(
         &self,
-        _ctx: CoreContext,
+        ctx: CoreContext,
         repo_id: RepositoryId,
     ) -> Result<Vec<ChangesetId>, Error> {
+        STATS::list_all.add_value(1);
+        ctx.perf_counters()
+            .increment_counter(PerfCounterType::SqlReadsReplica);
         let ans = SelectAllPublic::query(&self.read_connection, &repo_id)
             .compat()
             .await?;
