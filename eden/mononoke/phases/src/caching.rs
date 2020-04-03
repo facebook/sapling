@@ -10,12 +10,13 @@ use anyhow::Error;
 use bytes::Bytes;
 use caching_ext::{
     CacheDisposition, CachelibHandler, GetOrFillMultipleFromCacheLayers, McErrorKind, McResult,
+    MemcacheHandler,
 };
 use cloned::cloned;
 use context::CoreContext;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::Future;
-use memcache::{KeyGen, MemcacheClient};
+use memcache::KeyGen;
 use mononoke_types::{ChangesetId, RepositoryId};
 use stats::prelude::*;
 use std::{collections::HashSet, convert::TryInto, sync::Arc, time::Duration};
@@ -36,7 +37,7 @@ pub fn get_cache_key(repo_id: RepositoryId, cs_id: &ChangesetId) -> String {
 }
 
 pub struct Caches {
-    pub memcache: MemcacheClient, // Memcache Client for temporary caching
+    pub memcache: MemcacheHandler, // Memcache Client for temporary caching
     pub cache_pool: CachelibHandler<Phase>,
     pub keygen: KeyGen,
 }
@@ -91,7 +92,7 @@ impl CachingPhases {
             get_cache_key: Arc::new(get_cache_key),
             cachelib: self.caches.cache_pool.clone().into(),
             keygen: self.caches.keygen.clone(),
-            memcache: self.caches.memcache.clone().into(),
+            memcache: self.caches.memcache.clone(),
             deserialize: Arc::new(|buf| buf.as_ref().try_into().map_err(|_| ())),
             serialize: Arc::new(|phase| Bytes::from(phase.to_string())),
             report_mc_result: Arc::new(report_mc_result),
