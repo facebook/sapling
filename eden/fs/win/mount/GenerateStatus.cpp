@@ -78,7 +78,7 @@ GenerateStatus::markAllFsSubEntriesAdded(
     childPath = currentPath / entry.getName();
     futures.push_back(addedEntry(childPath, callback, entry));
   }
-  return folly::collectAll(futures).thenValue([](auto&&) {});
+  return folly::collectAllUnsafe(futures).thenValue([](auto&&) {});
 }
 
 FOLLY_NODISCARD folly::Future<folly::Unit>
@@ -100,7 +100,7 @@ GenerateStatus::markAllScmSubEntriesRemoved(
                               entry.getName().stringPiece());
               futures.push_back(removedEntry(childPath, callback, entry));
             }
-            folly::collectAll(futures).thenValue([](auto&&) {});
+            folly::collectAllUnsafe(futures).thenValue([](auto&&) {});
           });
 }
 
@@ -223,7 +223,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> GenerateStatus::compute(
   }
 
   // Convert vector of futures to one future<Unit>
-  return folly::collectAll(std::move(futures)).thenValue([](auto&&) {});
+  return folly::collectAllUnsafe(std::move(futures)).thenValue([](auto&&) {});
 }
 
 FOLLY_NODISCARD folly::Future<folly::Unit> GenerateStatus::computeCompareBoth(
@@ -305,7 +305,7 @@ FOLLY_NODISCARD folly::Future<folly::Unit> GenerateStatus::computeCompareBoth(
     }
   }
 
-  return folly::collectAll(std::move(futures)).thenValue([](auto&&) {});
+  return folly::collectAllUnsafe(std::move(futures)).thenValue([](auto&&) {});
 }
 
 FOLLY_NODISCARD folly::Future<folly::Unit> GenerateStatus::compute(
