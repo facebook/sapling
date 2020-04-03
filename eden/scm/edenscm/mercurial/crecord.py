@@ -1691,17 +1691,17 @@ are you sure you want to review/edit and confirm the selected changes [yn]?
 
         Return true to exit the main loop.
         """
-        if keypressed in ["k", "KEY_UP"]:
+        if keypressed in ["k", "KEY_UP", "KEY_A2"]:
             self.uparrowevent()
-        if keypressed in ["K", "KEY_PPAGE"]:
+        if keypressed in ["K", "KEY_PPAGE", "KEY_A3"]:
             self.uparrowshiftevent()
-        elif keypressed in ["j", "KEY_DOWN"]:
+        elif keypressed in ["j", "KEY_DOWN", "KEY_C2"]:
             self.downarrowevent()
-        elif keypressed in ["J", "KEY_NPAGE"]:
+        elif keypressed in ["J", "KEY_NPAGE", "KEY_C3"]:
             self.downarrowshiftevent()
-        elif keypressed in ["l", "KEY_RIGHT"]:
+        elif keypressed in ["l", "KEY_RIGHT", "KEY_B3"]:
             self.rightarrowevent()
-        elif keypressed in ["h", "KEY_LEFT"]:
+        elif keypressed in ["h", "KEY_LEFT", "KEY_B1"]:
             self.leftarrowevent()
         elif keypressed in ["H", "KEY_SLEFT"]:
             self.leftarrowshiftevent()
