@@ -453,6 +453,9 @@ class overlayrepo(object):
         self.getcwd = handler.repo.getcwd
         # self.status = handler.repo.status
         self.ui = handler.repo.ui
+        self.sharedvfs = self.handler.repo.sharedvfs
+        self.localvfs = self.handler.repo.localvfs
+        self.svfs = self.handler.repo.svfs
 
         self.revmap = None
         self.nodemap = None

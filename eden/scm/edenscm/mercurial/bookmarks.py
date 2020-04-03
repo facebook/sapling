@@ -988,6 +988,9 @@ class remotenames(dict):
         dict.__init__(self, *args)
         self._repo = repo
         self.clearnames()
+        self._accessedbookmarks = list(
+            _readremotenamesfrom(repo.sharedvfs, _selectivepullaccessedbookmarks)
+        )
 
     def clearnames(self):
         """Clear all remote names state"""
@@ -1349,7 +1352,7 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
     # Are bookmarks already marked as accessed?
     existing = set(
         name
-        for _node, _nametype, oldremote, name in repo._accessedbookmarks
+        for _node, _nametype, oldremote, name in repo._remotenames._accessedbookmarks
         if oldremote == remotepath
     )
     newdata = set(bookmarks)
@@ -1387,7 +1390,7 @@ def updateaccessedbookmarks(repo, remotepath, bookmarks):
                 totalaccessednames += 1
                 _writesingleremotename(f, remotepath, "bookmarks", rname, node)
 
-        repo._accessedbookmarks = list(
+        repo._remotenames._accessedbookmarks = list(
             _readremotenamesfrom(repo.sharedvfs, _selectivepullaccessedbookmarks)
         )
 

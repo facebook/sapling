@@ -548,15 +548,6 @@ def updatecmd(orig, ui, repo, node=None, rev=None, **kwargs):
     return orig(ui, repo, node=node, rev=rev, **kwargs)
 
 
-def reposetup(ui, repo):
-    if not repo.local():
-        return
-
-    repo._accessedbookmarks = list(
-        _readremotenamesfrom(repo.sharedvfs, _selectivepullaccessedbookmarks)
-    )
-
-
 def _tracking(ui):
     # omg default true
     return ui.configbool("remotenames", "tracking")
