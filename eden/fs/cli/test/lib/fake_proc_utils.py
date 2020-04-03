@@ -14,24 +14,24 @@ import time
 from pathlib import Path
 from typing import Dict, List, Optional, Union
 
-from eden.fs.cli import process_finder
+from eden.fs.cli.proc_utils import BuildInfo, EdenFSProcess, LinuxProcUtils
 
 
-class FakeEdenFSProcess(process_finder.EdenFSProcess):
-    build_info: process_finder.BuildInfo = process_finder.BuildInfo()
+class FakeEdenFSProcess(EdenFSProcess):
+    build_info: BuildInfo = BuildInfo()
 
-    def get_build_info(self) -> process_finder.BuildInfo:
+    def get_build_info(self) -> BuildInfo:
         return self.build_info
 
 
 _default_start_age = datetime.timedelta(hours=1)
 
 
-class FakeProcessFinder(process_finder.LinuxProcessFinder):
+class FakeProcUtils(LinuxProcUtils):
     _file_contents: Dict[Path, Union[bytes, Exception]] = {}
     _process_stat: Dict[int, os.stat_result] = {}
     _default_uid: int
-    _build_info: Dict[int, process_finder.BuildInfo] = {}
+    _build_info: Dict[int, BuildInfo] = {}
 
     def __init__(self, tmp_dir: str, default_uid: Optional[int] = None) -> None:
         self.proc_path = Path(tmp_dir)
@@ -44,7 +44,7 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         uid: Optional[int] = None,
         comm: Optional[str] = None,
         fds: Optional[Dict[int, str]] = None,
-        build_info: Optional[process_finder.BuildInfo] = None,
+        build_info: Optional[BuildInfo] = None,
         ppid: int = 1,
         start_age: datetime.timedelta = _default_start_age,
     ) -> None:
@@ -86,7 +86,7 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         cmdline: Optional[List[str]] = None,
         build_time: int = 0,
         start_age: datetime.timedelta = _default_start_age,
-    ) -> process_finder.BuildInfo:
+    ) -> BuildInfo:
         """Add a fake EdenFS instance.
         Note that this will add 2 processes: the main EdenFS process with the
         specified PID, and its corresponding privhelper process using PID+1
@@ -202,7 +202,7 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         eden_dir: Optional[Path],
         holding_lock: Optional[bool],
     ) -> FakeEdenFSProcess:
-        build_info = self._build_info.get(pid, process_finder.BuildInfo())
+        build_info = self._build_info.get(pid, BuildInfo())
         p = FakeEdenFSProcess(
             pid=pid,
             cmdline=cmdline,
@@ -283,15 +283,15 @@ class FakeProcessFinder(process_finder.LinuxProcessFinder):
         return f"{pid} ({command}) S {stat_fields_str}\n"
 
 
-def make_edenfs_build_info(build_time: int) -> process_finder.BuildInfo:
+def make_edenfs_build_info(build_time: int) -> BuildInfo:
     if build_time == 0:
         # Return an empty BuildInfo if the build time is 0
-        return process_finder.BuildInfo()
+        return BuildInfo()
 
     utc = datetime.timezone.utc
     build_datetime = datetime.datetime.fromtimestamp(build_time, tz=utc)
     revision = "1" * 40
-    return process_finder.BuildInfo(
+    return BuildInfo(
         package_name="fb-eden",
         package_version=build_datetime.strftime("%Y%m%d"),
         package_release=build_datetime.strftime("%H%M%S"),

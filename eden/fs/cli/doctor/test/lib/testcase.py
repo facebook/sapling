@@ -11,7 +11,7 @@ from typing import Tuple
 import eden.dirstate
 import eden.fs.cli.doctor as doctor
 from eden.fs.cli.config import EdenCheckout
-from eden.fs.cli.test.lib.fake_process_finder import FakeProcessFinder
+from eden.fs.cli.test.lib.fake_proc_utils import FakeProcUtils
 from eden.fs.cli.test.lib.output import TestOutput
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
@@ -44,5 +44,5 @@ class DoctorTestBase(unittest.TestCase, TemporaryDirectoryMixin):
             parents, _tuples_dict, _copymap = eden.dirstate.read(f, str(dirstate_path))
         self.assertEqual(binascii.hexlify(parents[0]).decode("utf-8"), commit)
 
-    def make_process_finder(self) -> FakeProcessFinder:
-        return FakeProcessFinder(self.make_temporary_directory())
+    def make_proc_utils(self) -> FakeProcUtils:
+        return FakeProcUtils(self.make_temporary_directory())

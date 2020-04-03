@@ -13,21 +13,21 @@ from pathlib import Path
 from typing import Dict, List, Optional
 
 from eden.fs.cli.doctor.problem import Problem, ProblemSeverity, ProblemTracker
-from eden.fs.cli.process_finder import EdenFSProcess, ProcessFinder, ProcessID
+from eden.fs.cli.proc_utils import EdenFSProcess, ProcessID, ProcUtils
 
 
 log: logging.Logger = logging.getLogger("eden.fs.cli.doctor.check_rogue_edenfs")
 
 
 def find_rogue_processes(
-    process_finder: ProcessFinder, uid: Optional[int] = None
+    proc_utils: ProcUtils, uid: Optional[int] = None
 ) -> List[EdenFSProcess]:
     # Build a dictionary of eden directory to list of running PIDs,
     # so that below we can we only check each eden directory once even if there are
     # multiple processes that appear to be running for it.
     info_by_eden_dir: Dict[Path, List[EdenFSProcess]] = {}
     user_id = os.getuid() if uid is None else uid
-    for info in process_finder.get_edenfs_processes():
+    for info in proc_utils.get_edenfs_processes():
         # Ignore processes not owned by the current user
         if info.uid != user_id:
             continue
@@ -59,7 +59,7 @@ def find_rogue_processes(
 
         lockfile = eden_dir / "lock"
         try:
-            lock_pid = ProcessID(process_finder.read_lock_file(lockfile).strip())
+            lock_pid = ProcessID(proc_utils.read_lock_file(lockfile).strip())
         except OSError:
             log.warning(f"Lock file cannot be read for {eden_dir}", exc_info=True)
             continue
@@ -79,9 +79,9 @@ def find_rogue_processes(
 
 
 def check_many_edenfs_are_running(
-    tracker: ProblemTracker, process_finder: ProcessFinder, uid: Optional[int] = None
+    tracker: ProblemTracker, proc_utils: ProcUtils, uid: Optional[int] = None
 ) -> None:
-    rogue_processes = find_rogue_processes(process_finder, uid=uid)
+    rogue_processes = find_rogue_processes(proc_utils, uid=uid)
     if len(rogue_processes) > 0:
         rogue_pids = [p.pid for p in rogue_processes]
         rogue_pids_problem = ManyEdenFsRunning(rogue_pids)

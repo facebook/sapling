@@ -166,7 +166,7 @@ Repairing hg directory contents for {self.checkout.path}...<green>fixed<reset>
             dry_run,
             self.instance.mount_table,
             fs_util=FakeFsUtil(),
-            process_finder=self.make_process_finder(),
+            proc_utils=self.make_proc_utils(),
             out=out,
         )
         return out

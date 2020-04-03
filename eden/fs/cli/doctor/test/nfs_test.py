@@ -31,7 +31,7 @@ class NfsTest(DoctorTestBase):
             dry_run,
             instance.mount_table,
             fs_util=FakeFsUtil(),
-            process_finder=self.make_process_finder(),
+            proc_utils=self.make_proc_utils(),
             out=out,
         )
         expected = f"""\
@@ -140,7 +140,7 @@ The Mercurial data directory for {v.client_path}/.hg/sharedpath is at\
             dry_run,
             instance.mount_table,
             fs_util=FakeFsUtil(),
-            process_finder=self.make_process_finder(),
+            proc_utils=self.make_proc_utils(),
             out=out,
         )
         v.stdout = out.getvalue()

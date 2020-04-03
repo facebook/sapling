@@ -30,7 +30,7 @@ from . import (
     doctor as doctor_mod,
     filesystem,
     mtab,
-    process_finder,
+    proc_utils,
     redirect as redirect_mod,
     stats as stats_mod,
     subcmd as subcmd_mod,
@@ -743,7 +743,7 @@ class DoctorCmd(Subcmd):
             args.dry_run,
             mount_table=mtab.new(),
             fs_util=filesystem.LinuxFsUtil(),
-            process_finder=process_finder.new(),
+            proc_utils=proc_utils.new(),
         )
 
 

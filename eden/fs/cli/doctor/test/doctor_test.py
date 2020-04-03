@@ -106,7 +106,7 @@ class DoctorTest(DoctorTestBase):
             dry_run,
             instance.mount_table,
             fs_util=FakeFsUtil(),
-            process_finder=self.make_process_finder(),
+            proc_utils=self.make_proc_utils(),
             out=out,
         )
 
@@ -183,7 +183,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
-            process_finder=self.make_process_finder(),
+            proc_utils=self.make_proc_utils(),
             out=out,
         )
 
@@ -210,7 +210,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             FakeMountTable(),
             fs_util=FakeFsUtil(),
-            process_finder=self.make_process_finder(),
+            proc_utils=self.make_proc_utils(),
             out=out,
         )
 
@@ -232,7 +232,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             FakeMountTable(),
             fs_util=FakeFsUtil(),
-            process_finder=self.make_process_finder(),
+            proc_utils=self.make_proc_utils(),
             out=out,
         )
 
@@ -267,7 +267,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             FakeMountTable(),
             fs_util=FakeFsUtil(),
-            process_finder=self.make_process_finder(),
+            proc_utils=self.make_proc_utils(),
             out=out,
         )
 
@@ -302,7 +302,7 @@ https://fb.facebook.com/groups/eden.users/
             dry_run,
             FakeMountTable(),
             fs_util=FakeFsUtil(),
-            process_finder=self.make_process_finder(),
+            proc_utils=self.make_proc_utils(),
             out=out,
         )
 
@@ -857,7 +857,7 @@ may have important bug fixes or performance improvements.
             dry_run,
             instance.mount_table,
             fs_util=FakeFsUtil(),
-            process_finder=self.make_process_finder(),
+            proc_utils=self.make_proc_utils(),
             out=out,
         )
 
@@ -962,7 +962,7 @@ Would remount {mounts[1]}
             dry_run,
             instance.mount_table,
             fs_util=FakeFsUtil(),
-            process_finder=self.make_process_finder(),
+            proc_utils=self.make_proc_utils(),
             out=out,
         )
         return exit_code, out.getvalue(), mounts
@@ -984,7 +984,7 @@ Would remount {mounts[1]}
             dry_run=False,
             mount_table=instance.mount_table,
             fs_util=FakeFsUtil(),
-            process_finder=self.make_process_finder(),
+            proc_utils=self.make_proc_utils(),
             out=out,
         )
 
@@ -1059,7 +1059,7 @@ Checking {mount}
                 dry_run=False,
                 mount_table=instance.mount_table,
                 fs_util=FakeFsUtil(),
-                process_finder=self.make_process_finder(),
+                proc_utils=self.make_proc_utils(),
                 out=out,
             )
             return exit_code, out.getvalue()

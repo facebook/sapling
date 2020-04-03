@@ -15,27 +15,27 @@ from datetime import timedelta
 from pathlib import Path
 from typing import Optional
 
-from eden.fs.cli.process_finder import BuildInfo, EdenFSProcess
-from eden.fs.cli.test.lib.fake_process_finder import FakeProcessFinder
+from eden.fs.cli.proc_utils import BuildInfo, EdenFSProcess
+from eden.fs.cli.test.lib.fake_proc_utils import FakeProcUtils
 
 
-class ProcessFinderTests(unittest.TestCase):
+class ProcUtilsTests(unittest.TestCase):
     def setUp(self) -> None:
         self.maxDiff: Optional[int] = None
         self.tmpdir = Path(tempfile.mkdtemp(prefix="eden_test."))
         self.addCleanup(shutil.rmtree, self.tmpdir)
-        self.process_finder = FakeProcessFinder(str(self.tmpdir))
+        self.proc_utils = FakeProcUtils(str(self.tmpdir))
 
     def test_find_edenfs(self) -> None:
         # Add some non-EdenFS processes
-        self.process_finder.add_process(pid=1111, uid=99, cmdline=["sleep", "60"])
-        self.process_finder.add_process(pid=7868, uid=99, cmdline=["bash"])
+        self.proc_utils.add_process(pid=1111, uid=99, cmdline=["sleep", "60"])
+        self.proc_utils.add_process(pid=7868, uid=99, cmdline=["bash"])
 
         # Add a couple EdenFS processes owned by user 99
         # Set counters to indicate that process 1234 has done a checkout recently.
         build_time_1234 = 0
         start_age_1234 = timedelta(days=1)
-        self.process_finder.add_edenfs(
+        self.proc_utils.add_edenfs(
             pid=1234,
             uid=99,
             eden_dir="/home/nobody/eden_dir_1",
@@ -44,7 +44,7 @@ class ProcessFinderTests(unittest.TestCase):
         )
         build_time_4567 = 1577836800  # 2020-01-01 00:00:00, UTC
         start_age_4567 = timedelta(hours=4)
-        self.process_finder.add_edenfs(
+        self.proc_utils.add_edenfs(
             pid=4567,
             uid=99,
             eden_dir="/home/nobody/local/.eden",
@@ -56,7 +56,7 @@ class ProcessFinderTests(unittest.TestCase):
         # Add an EdenFS processes owned by user 65534
         build_time_9999 = 1576240496  # 2019-12-13 12:34:56 UTC
         start_age_9999 = timedelta(hours=27)
-        self.process_finder.add_edenfs(
+        self.proc_utils.add_edenfs(
             pid=9999,
             uid=65534,
             eden_dir="/data/users/nfsnobody/.eden",
@@ -65,7 +65,7 @@ class ProcessFinderTests(unittest.TestCase):
         )
 
         # Call get_edenfs_processes() and check the results
-        found_processes = {p.pid: p for p in self.process_finder.get_edenfs_processes()}
+        found_processes = {p.pid: p for p in self.proc_utils.get_edenfs_processes()}
         found_minus_cmdline = {
             p.pid: p._replace(cmdline=[]) for p in found_processes.values()
         }
@@ -127,13 +127,13 @@ class ProcessFinderTests(unittest.TestCase):
 
         # Check the process start times
         self.assert_age_near(
-            start_age_1234, self.process_finder.get_process_start_time(1234)
+            start_age_1234, self.proc_utils.get_process_start_time(1234)
         )
         self.assert_age_near(
-            start_age_4567, self.process_finder.get_process_start_time(4567)
+            start_age_4567, self.proc_utils.get_process_start_time(4567)
         )
         self.assert_age_near(
-            start_age_9999, self.process_finder.get_process_start_time(9999)
+            start_age_9999, self.proc_utils.get_process_start_time(9999)
         )
 
     def assert_age_near(self, age: timedelta, timestamp: float) -> None:

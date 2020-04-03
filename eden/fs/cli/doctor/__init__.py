@@ -10,14 +10,7 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Dict, Optional
 
-from eden.fs.cli import (
-    config as config_mod,
-    filesystem,
-    mtab,
-    process_finder,
-    ui,
-    version,
-)
+from eden.fs.cli import config as config_mod, filesystem, mtab, proc_utils, ui, version
 from eden.fs.cli.config import EdenCheckout, EdenInstance
 from facebook.eden.ttypes import MountState
 from fb303_core.ttypes import fb303_status
@@ -50,7 +43,7 @@ def cure_what_ails_you(
     dry_run: bool,
     mount_table: mtab.MountTable,
     fs_util: filesystem.FsUtil,
-    process_finder: process_finder.ProcessFinder,
+    proc_utils: proc_utils.ProcUtils,
     out: Optional[ui.Output] = None,
 ) -> int:
     if out is None:
@@ -67,7 +60,7 @@ def cure_what_ails_you(
     check_os.run_operating_system_checks(fixer, instance, out)
 
     # check multiple edenfs running with some rogue stale PIDs
-    check_rogue_edenfs.check_many_edenfs_are_running(fixer, process_finder)
+    check_rogue_edenfs.check_many_edenfs_are_running(fixer, proc_utils)
 
     status = instance.check_health()
     if status.status == fb303_status.ALIVE:

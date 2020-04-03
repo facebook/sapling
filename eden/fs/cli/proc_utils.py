@@ -17,7 +17,7 @@ from pathlib import Path
 from typing import Iterable, List, NamedTuple, Optional, Tuple
 
 
-log: logging.Logger = logging.getLogger("eden.fs.cli.process_finder")
+log: logging.Logger = logging.getLogger("eden.fs.cli.proc_utils")
 ProcessID = int
 
 
@@ -92,7 +92,14 @@ except ImportError:
         return None
 
 
-class ProcessFinder(abc.ABC):
+class ProcUtils(abc.ABC):
+    """ProcUtils provides APIs for querying running processes on the system.
+
+    This API helps abstract out platform-specific logic that varies across Linux, Mac,
+    and Windows.  These APIs are grouped together in class (instead of just standalone
+    functions) primarily to make it easier to stub out this logic during unit tests.
+    """
+
     @abc.abstractmethod
     def get_edenfs_processes(self) -> Iterable[EdenFSProcess]:
         """Returns a list of running EdenFS processes on the system."""
@@ -110,17 +117,17 @@ class ProcessFinder(abc.ABC):
         return path.read_bytes()
 
 
-class NopProcessFinder(ProcessFinder):
+class NopProcUtils(ProcUtils):
     def get_edenfs_processes(self) -> Iterable[EdenFSProcess]:
         return []
 
     def get_process_start_time(self, pid: int) -> float:
         raise NotImplementedError(
-            "NopProcessFinder does not currently implement get_process_start_time()"
+            "NopProcUtils does not currently implement get_process_start_time()"
         )
 
 
-class LinuxProcessFinder(ProcessFinder):
+class LinuxProcUtils(ProcUtils):
     proc_path = Path("/proc")
     _system_boot_time: Optional[float] = None
     _jiffies_per_sec: Optional[int] = None
@@ -253,7 +260,7 @@ class LinuxProcessFinder(ProcessFinder):
         return jps
 
 
-def new() -> ProcessFinder:
+def new() -> ProcUtils:
     if platform.system() == "Linux":
-        return LinuxProcessFinder()
-    return NopProcessFinder()
+        return LinuxProcUtils()
+    return NopProcUtils()
