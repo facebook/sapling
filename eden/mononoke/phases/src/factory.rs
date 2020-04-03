@@ -6,7 +6,7 @@
  */
 
 use crate::caching::{Caches, CachingPhases};
-use crate::{HeadsFetcher, Phases, SqlPhases, SqlPhasesStore};
+use crate::{sql_store::SqlPhasesStore, HeadsFetcher, Phases, SqlPhases};
 use cachelib::VolatileLruCachePool;
 use changeset_fetcher::ChangesetFetcher;
 use fbinit::FacebookInit;
