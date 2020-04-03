@@ -177,7 +177,6 @@ class ui(object):
         self.insecureconnections = False
         # color mode: see mercurial/color.py for possible value
         self._colormode = None
-        self._terminfoparams = {}
         self._styles = {}
 
         if src:
@@ -195,7 +194,6 @@ class ui(object):
             self.callhooks = src.callhooks
             self.insecureconnections = src.insecureconnections
             self._colormode = src._colormode
-            self._terminfoparams = src._terminfoparams.copy()
             self._styles = src._styles.copy()
 
             self.httppasswordmgrdb = src.httppasswordmgrdb
@@ -643,11 +641,7 @@ class ui(object):
                 # if these encodings differ (e.g. Python 2.7 on Windows).
                 args = [encoding.localtooutput(arg) for arg in args]
             msgs = self._addprefixesandlabels(args, opts, bool(self._colormode))
-            if self._colormode == "win32":
-                # windows color printing is its own can of crab
-                color.win32print(self, self._write, *msgs)
-            else:
-                self._write(*msgs)
+            self._write(*msgs)
 
     def _write(self, *msgs):
         # type: (str) -> None
@@ -680,11 +674,7 @@ class ui(object):
             msgs = self._addprefixesandlabels(
                 args, opts, self._colormode, usebytes=True
             )
-            if self._colormode == "win32":
-                # windows color printing is its own can of crab
-                color.win32print(self, self._write, *msgs, **opts)
-            else:
-                self._writebytes(*msgs, **opts)
+            self._writebytes(*msgs, **opts)
 
     def _writebytes(self, *msgs, **opts):
         with progress.suspend():
@@ -707,11 +697,7 @@ class ui(object):
                 self.write(*args, **opts)
             else:
                 msgs = self._addprefixesandlabels(args, opts, self._colormode)
-                if self._colormode == "win32":
-                    # windows color printing is its own can of crab
-                    color.win32print(self, self._write_err, *msgs, **opts)
-                else:
-                    self._write_err(*msgs, **opts)
+                self._write_err(*msgs, **opts)
 
     def _write_err(self, *msgs, **opts):
         starttime = util.timer()
@@ -826,9 +812,7 @@ class ui(object):
 
             # If pagermode differs from color.mode, reconfigure color now that
             # pageractive is set.
-            cm = self._colormode
-            if cm != self.config("color", "pagermode", cm):
-                color.setup(self)
+            color.setup(self)
         else:
             # If the pager can't be spawned in dispatch when --pager=on is
             # given, don't try again when the command runs, to avoid a duplicate

@@ -23,34 +23,12 @@ from .pycompat import encodeutf8
 try:
     import curses
 
-    # Mapping from effect name to terminfo attribute name (or raw code) or
-    # color number.  This will also force-load the curses module.
-    _baseterminfoparams = {
-        "none": (True, "sgr0", ""),
-        "standout": (True, "smso", ""),
-        "underline": (True, "smul", ""),
-        "reverse": (True, "rev", ""),
-        "inverse": (True, "rev", ""),
-        "blink": (True, "blink", ""),
-        "dim": (True, "dim", ""),
-        "bold": (True, "bold", ""),
-        "invisible": (True, "invis", ""),
-        "italic": (True, "sitm", ""),
-        "black": (False, curses.COLOR_BLACK, ""),
-        "red": (False, curses.COLOR_RED, ""),
-        "green": (False, curses.COLOR_GREEN, ""),
-        "yellow": (False, curses.COLOR_YELLOW, ""),
-        "blue": (False, curses.COLOR_BLUE, ""),
-        "magenta": (False, curses.COLOR_MAGENTA, ""),
-        "cyan": (False, curses.COLOR_CYAN, ""),
-        "white": (False, curses.COLOR_WHITE, ""),
-    }
+    curses.COLOR_BLACK
 except ImportError:
     curses = None
-    _baseterminfoparams = {}
 
 # start and stop parameters for effects
-_effects = {
+_defaulteffects = {
     "none": 0,
     "black": 30,
     "red": 31,
@@ -74,6 +52,7 @@ _effects = {
     "cyan_background": 46,
     "white_background": 47,
 }
+_effects = {}
 
 _defaultstyles = {
     "grep.match": "red bold",
@@ -201,64 +180,15 @@ def _modesetup(ui):
 
     formatted = always or (encoding.environ.get("TERM") != "dumb" and ui.formatted())
 
-    mode = ui.config("color", "mode")
-
-    # If pager is active, color.pagermode overrides color.mode.
-    if getattr(ui, "pageractive", False):
-        mode = ui.config("color", "pagermode", mode)
-
-    realmode = mode
     if pycompat.iswindows:
         from . import win32
 
-        term = encoding.environ.get("TERM")
-        # TERM won't be defined in a vanilla cmd.exe environment.
-
-        # UNIX-like environments on Windows such as Cygwin and MSYS will
-        # set TERM. They appear to make a best effort attempt at setting it
-        # to something appropriate. However, not all environments with TERM
-        # defined support ANSI.
-        ansienviron = term and "xterm" in term
-
-        if mode == "auto":
-            # Since "ansi" could result in terminal gibberish, we error on the
-            # side of selecting "win32". However, if w32effects is not defined,
-            # we almost certainly don't support "win32", so don't even try.
-            # w32ffects is not populated when stdout is redirected, so checking
-            # it first avoids win32 calls in a state known to error out.
-            if ansienviron or not w32effects or win32.enablevtmode():
-                realmode = "ansi"
-            else:
-                realmode = "win32"
-        # An empty w32effects is a clue that stdout is redirected, and thus
-        # cannot enable VT mode.
-        elif mode == "ansi" and w32effects and not ansienviron:
-            win32.enablevtmode()
-    elif mode == "auto":
-        realmode = "ansi"
-
-    def modewarn():
-        # only warn if color.mode was explicitly set and we're in
-        # a formatted terminal
-        if mode == realmode and formatted:
-            ui.warn(_("warning: failed to set color mode to %s\n") % mode)
-
-    if realmode == "terminfo":
-        ui.warn(_("warning: color.mode = terminfo is no longer supported\n"))
-        realmode = "ansi"
-
-    if realmode == "win32":
-        ui._terminfoparams.clear()
-        if not w32effects:
-            modewarn()
+        if not win32.enablevtmode():
+            ui.warn(_("couldn't enable VT mode for your terminal, disabling colors\n"))
             return None
-    elif realmode == "ansi":
-        ui._terminfoparams.clear()
-    else:
-        return None
 
     if always or (auto and formatted):
-        return realmode
+        return "ansi"
     return None
 
 
@@ -300,6 +230,7 @@ class truecoloreffects(dict):
 def _extendcolors(colors):
     # see https://en.wikipedia.org/wiki/ANSI_escape_code
     global _effects
+    _effects = _defaulteffects.copy()
     if colors >= 16:
         _effects.update(
             {
@@ -322,11 +253,11 @@ def _extendcolors(colors):
 
 
 def configstyles(ui):
-    if ui._colormode in ("ansi", "terminfo"):
-        _extendcolors(supportedcolors())
+    if ui._colormode == "ansi":
+        _extendcolors(supportedcolors(ui))
     ui._styles.update(_defaultstyles)
     for status, cfgeffects in ui.configitems("color"):
-        if "." not in status or status.startswith(("color.", "terminfo.")):
+        if "." not in status or status.startswith("color."):
             continue
         cfgeffects = ui.configlist("color", status)
         if cfgeffects:
@@ -348,9 +279,7 @@ def configstyles(ui):
 
 def _activeeffects(ui):
     """Return the effects map for the color mode set on the ui."""
-    if ui._colormode == "win32":
-        return w32effects
-    elif ui._colormode is not None:
+    if ui._colormode is not None:
         return _effects
     return {}
 
@@ -358,35 +287,8 @@ def _activeeffects(ui):
 def valideffect(ui, effect):
     "Determine if the effect is valid or not."
     return (
-        (
-            isinstance(_activeeffects(ui), truecoloreffects)
-            and _truecolorre.match(effect)
-        )
-        or (not ui._terminfoparams and effect in _activeeffects(ui))
-        or (effect in ui._terminfoparams or effect[:-11] in ui._terminfoparams)
-    )
-
-
-def _effect_str(ui, effect):
-    """Helper function for render_effects()."""
-
-    bg = False
-    if effect.endswith("_background"):
-        bg = True
-        effect = effect[:-11]
-    try:
-        attr, val, termcode = ui._terminfoparams[effect]
-    except KeyError:
-        return ""
-    if attr:
-        if termcode:
-            return termcode
-        else:
-            return curses.tigetstr(val)
-    elif bg:
-        return curses.tparm(curses.tigetstr("setab"), val)
-    else:
-        return curses.tparm(curses.tigetstr("setaf"), val)
+        isinstance(_activeeffects(ui), truecoloreffects) and _truecolorre.match(effect)
+    ) or (effect in _activeeffects(ui))
 
 
 def _mergeeffects(text, start, stop, usebytes=False):
@@ -421,16 +323,10 @@ def _render_effects(ui, text, effects, usebytes=False):
     "Wrap text in commands to turn on each effect."
     if not text:
         return text
-    if ui._terminfoparams:
-        start = "".join(
-            _effect_str(ui, effect) for effect in ["none"] + effects.split()
-        )
-        stop = _effect_str(ui, "none")
-    else:
-        activeeffects = _activeeffects(ui)
-        start = [pycompat.bytestr(activeeffects[e]) for e in ["none"] + effects.split()]
-        start = "\033[" + ";".join(start) + "m"
-        stop = "\033[" + pycompat.bytestr(activeeffects["none"]) + "m"
+    activeeffects = _activeeffects(ui)
+    start = [pycompat.bytestr(activeeffects[e]) for e in ["none"] + effects.split()]
+    start = "\033[" + ";".join(start) + "m"
+    stop = "\033[" + pycompat.bytestr(activeeffects["none"]) + "m"
     return _mergeeffects(text, start, stop, usebytes=usebytes)
 
 
@@ -483,156 +379,7 @@ def colorlabel(ui, msg, label, usebytes=False):
     return msg
 
 
-w32effects = None
-if pycompat.iswindows:
-    import ctypes
-
-    # pyre-fixme[16]: Module `ctypes` has no attribute `windll`.
-    _kernel32 = ctypes.windll.kernel32
-
-    _WORD = ctypes.c_ushort
-
-    _INVALID_HANDLE_VALUE = -1
-
-    class _COORD(ctypes.Structure):
-        _fields_ = [("X", ctypes.c_short), ("Y", ctypes.c_short)]
-
-    class _SMALL_RECT(ctypes.Structure):
-        _fields_ = [
-            ("Left", ctypes.c_short),
-            ("Top", ctypes.c_short),
-            ("Right", ctypes.c_short),
-            ("Bottom", ctypes.c_short),
-        ]
-
-    class _CONSOLE_SCREEN_BUFFER_INFO(ctypes.Structure):
-        _fields_ = [
-            ("dwSize", _COORD),
-            ("dwCursorPosition", _COORD),
-            ("wAttributes", _WORD),
-            ("srWindow", _SMALL_RECT),
-            ("dwMaximumWindowSize", _COORD),
-        ]
-
-    _STD_OUTPUT_HANDLE = 0xFFFFFFF5  # (DWORD)-11
-    _STD_ERROR_HANDLE = 0xFFFFFFF4  # (DWORD)-12
-
-    _FOREGROUND_BLUE = 0x0001
-    _FOREGROUND_GREEN = 0x0002
-    _FOREGROUND_RED = 0x0004
-    _FOREGROUND_INTENSITY = 0x0008
-
-    _BACKGROUND_BLUE = 0x0010
-    _BACKGROUND_GREEN = 0x0020
-    _BACKGROUND_RED = 0x0040
-    _BACKGROUND_INTENSITY = 0x0080
-
-    _COMMON_LVB_REVERSE_VIDEO = 0x4000
-    _COMMON_LVB_UNDERSCORE = 0x8000
-
-    # http://msdn.microsoft.com/en-us/library/ms682088%28VS.85%29.aspx
-    w32effects = {
-        "none": -1,
-        "black": 0,
-        "red": _FOREGROUND_RED,
-        "green": _FOREGROUND_GREEN,
-        "yellow": _FOREGROUND_RED | _FOREGROUND_GREEN,
-        "blue": _FOREGROUND_BLUE,
-        "magenta": _FOREGROUND_BLUE | _FOREGROUND_RED,
-        "cyan": _FOREGROUND_BLUE | _FOREGROUND_GREEN,
-        "white": _FOREGROUND_RED | _FOREGROUND_GREEN | _FOREGROUND_BLUE,
-        "bold": _FOREGROUND_INTENSITY,
-        "brightblack": 0,
-        "brightred": _FOREGROUND_RED | _FOREGROUND_INTENSITY,
-        "brightgreen": _FOREGROUND_GREEN | _FOREGROUND_INTENSITY,
-        "brightyellow": (_FOREGROUND_RED | _FOREGROUND_GREEN | _FOREGROUND_INTENSITY),
-        "brightblue": _FOREGROUND_BLUE | _FOREGROUND_INTENSITY,
-        "brightmagenta": (_FOREGROUND_BLUE | _FOREGROUND_RED | _FOREGROUND_INTENSITY),
-        "brightcyan": (_FOREGROUND_BLUE | _FOREGROUND_GREEN | _FOREGROUND_INTENSITY),
-        "brightwhite": (
-            _FOREGROUND_RED
-            | _FOREGROUND_GREEN
-            | _FOREGROUND_BLUE
-            | _FOREGROUND_INTENSITY
-        ),
-        "black_background": 0x100,  # unused value > 0x0f
-        "red_background": _BACKGROUND_RED,
-        "green_background": _BACKGROUND_GREEN,
-        "yellow_background": _BACKGROUND_RED | _BACKGROUND_GREEN,
-        "blue_background": _BACKGROUND_BLUE,
-        "purple_background": _BACKGROUND_BLUE | _BACKGROUND_RED,
-        "cyan_background": _BACKGROUND_BLUE | _BACKGROUND_GREEN,
-        "white_background": (_BACKGROUND_RED | _BACKGROUND_GREEN | _BACKGROUND_BLUE),
-        "bold_background": _BACKGROUND_INTENSITY,
-        "underline": _COMMON_LVB_UNDERSCORE,  # double-byte charsets only
-        "inverse": _COMMON_LVB_REVERSE_VIDEO,  # double-byte charsets only
-    }
-
-    passthrough = {
-        _FOREGROUND_INTENSITY,
-        _BACKGROUND_INTENSITY,
-        _COMMON_LVB_UNDERSCORE,
-        _COMMON_LVB_REVERSE_VIDEO,
-    }
-
-    stdout = _kernel32.GetStdHandle(
-        _STD_OUTPUT_HANDLE
-    )  # don't close the handle returned
-    if stdout is None or stdout == _INVALID_HANDLE_VALUE:
-        w32effects = None
-    else:
-        csbi = _CONSOLE_SCREEN_BUFFER_INFO()
-        if not _kernel32.GetConsoleScreenBufferInfo(stdout, ctypes.byref(csbi)):
-            # stdout may not support GetConsoleScreenBufferInfo()
-            # when called from subprocess or redirected
-            w32effects = None
-        else:
-            origattr = csbi.wAttributes
-            ansire = re.compile(
-                "\033\\[([^m]*)m([^\033]*)(.*)", re.MULTILINE | re.DOTALL
-            )
-
-    def win32print(ui, writefunc, *msgs):
-        # type: (Any, str, Callable[str, None], str) -> None
-        for text in msgs:
-            _win32print(ui, text, writefunc)
-
-    def _win32print(ui, text, writefunc):
-        # type: (Any, str, Callable[str, None]) -> None
-        attr = origattr
-
-        def mapcolor(val, attr):
-            # type: (int, int) -> int
-            if val == -1:
-                return origattr
-            elif val in passthrough:
-                return attr | val
-            elif val > 0x0F:
-                return (val & 0x70) | (attr & 0x8F)
-            else:
-                return (val & 0x07) | (attr & 0xF8)
-
-        # Look for ANSI-like codes embedded in text
-        m = re.match(ansire, text)
-        if m:
-            try:
-                while m:
-                    for sattr in m.group(1).split(";"):
-                        if sattr:
-                            attr = mapcolor(int(sattr), attr)
-                    ui.flush()
-                    _kernel32.SetConsoleTextAttribute(stdout, attr)
-                    writefunc(m.group(2))
-                    m = re.match(ansire, m.group(3))
-            finally:
-                # Explicitly reset original attributes
-                ui.flush()
-                _kernel32.SetConsoleTextAttribute(stdout, origattr)
-        else:
-            writefunc(text)
-
-
-def supportedcolors():
+def supportedcolors(ui):
     """Return the number of colors likely supported by the terminal
 
     Usually it's one of 8, 16, 256.
@@ -657,11 +404,8 @@ def supportedcolors():
             pass
 
     # Guess the real number of colors supported.
-    # Windows supports 16 colors.
-    if pycompat.iswindows:
-        realcolors = 16
     # Emacs has issues with 16 or 256 colors.
-    elif env.get("INSIDE_EMACS"):
+    if env.get("INSIDE_EMACS"):
         realcolors = 8
     # Detecting Terminal features is hard. "infocmp" seems to be a "standard"
     # way to do it. But it can often miss real terminal capabilities.
@@ -679,6 +423,10 @@ def supportedcolors():
     # If COLORTERM is set to indicate a truecolor terminal, believe it.
     elif env.get("COLORTERM") in ("truecolor", "24bit"):
         realcolors = 16777216
+    # XXX: The gitbash pager doesn't support more than 8 colors, remove once
+    # we switched over to our embedded less pager.
+    elif pycompat.iswindows and ui.pageractive:
+        realcolors = 8
     # Otherwise, pretend to support 256 colors.
     else:
         realcolors = 256
