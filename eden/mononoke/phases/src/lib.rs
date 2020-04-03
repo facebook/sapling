@@ -17,7 +17,6 @@ use abomonation_derive::Abomonation;
 use anyhow::{Error, Result};
 use ascii::AsciiString;
 use changeset_fetcher::ChangesetFetcher;
-use cloned::cloned;
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
@@ -25,7 +24,7 @@ use futures::{
     TryFutureExt,
 };
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
-use futures_old::{future, Future};
+use futures_old::Future;
 use mercurial_types::HgPhase;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::mysql_async::{
@@ -196,47 +195,43 @@ impl SqlPhases {
         csids: Vec<ChangesetId>,
         ephemeral_derive: bool,
     ) -> BoxFuture<HashSet<ChangesetId>, Error> {
-        if csids.is_empty() {
-            return future::ok(Default::default()).boxify();
-        }
         let this = self.clone();
-        self.get_public_raw(&csids)
-            .and_then(move |public_cold| {
-                let mut unknown: Vec<_> = csids
-                    .into_iter()
-                    .filter(|csid| !public_cold.contains(csid))
-                    .collect();
-                if unknown.is_empty() {
-                    return future::ok(public_cold).left_future();
-                }
-                (this.heads_fetcher)(&ctx)
-                    .compat()
-                    .and_then({
-                        cloned!(this);
-                        move |heads| {
-                            async move {
-                                mark_reachable_as_public(ctx, this, &heads, ephemeral_derive).await
-                            }
-                            .boxed()
-                            .compat()
-                        }
-                    })
-                    .and_then(move |freshly_marked| {
-                        // Still do the get_public_raw incase someone else marked the changes as public
-                        // and thus mark_reachable_as_public did not return them as freshly_marked
-                        this.get_public_raw(&unknown).map(move |public_hot| {
-                            let public_combined = public_cold.into_iter().chain(public_hot);
-                            if ephemeral_derive {
-                                unknown.retain(|e| freshly_marked.contains(e));
-                                public_combined.chain(unknown).collect()
-                            } else {
-                                public_combined.collect()
-                            }
-                        })
-                    })
-                    .right_future()
-            })
-            .boxify()
+        async move {
+            if csids.is_empty() {
+                return Ok(Default::default());
+            }
+            let public_cold = this.get_public_raw(&csids).compat().await?;
+
+            let mut unknown: Vec<_> = csids
+                .into_iter()
+                .filter(|csid| !public_cold.contains(csid))
+                .collect();
+
+            if unknown.is_empty() {
+                return Ok(public_cold);
+            }
+
+            let heads = (this.heads_fetcher)(&ctx).await?;
+            let freshly_marked =
+                mark_reachable_as_public(ctx, &this, &heads, ephemeral_derive).await?;
+
+            // Still do the get_public_raw incase someone else marked the changes as public
+            // and thus mark_reachable_as_public did not return them as freshly_marked
+            let public_hot = this.get_public_raw(&unknown).compat().await?;
+
+            let public_combined = public_cold.into_iter().chain(public_hot);
+            let public_combined = if ephemeral_derive {
+                unknown.retain(|e| freshly_marked.contains(e));
+                public_combined.chain(unknown).collect()
+            } else {
+                public_combined.collect()
+            };
+
+            Ok(public_combined)
+        }
+        .boxed()
+        .compat()
+        .boxify()
     }
 }
 
@@ -272,7 +267,7 @@ impl Phases for SqlPhases {
         heads: Vec<ChangesetId>,
     ) -> BoxFuture<Vec<ChangesetId>, Error> {
         let this = self.clone();
-        async move { mark_reachable_as_public(ctx, this, &heads, false).await }
+        async move { mark_reachable_as_public(ctx, &this, &heads, false).await }
             .boxed()
             .compat()
             .boxify()
@@ -286,7 +281,7 @@ impl Phases for SqlPhases {
 /// Mark all commits reachable from `public_heads` as public
 pub async fn mark_reachable_as_public(
     ctx: CoreContext,
-    phases: SqlPhases,
+    phases: &SqlPhases,
     all_heads: &[ChangesetId],
     ephemeral_derive: bool,
 ) -> Result<Vec<ChangesetId>, Error> {
