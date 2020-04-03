@@ -35,8 +35,9 @@ use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, ready, try_join, try_join3},
     stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
+    FutureExt, TryFutureExt,
 };
-use futures_ext::{spawn_future, FutureExt};
+use futures_ext::{spawn_future, FutureExt as OldFutureExt};
 use futures_old::{
     future as old_future, stream as old_stream, Future as OldFuture, IntoFuture,
     Stream as OldStream,
@@ -364,10 +365,13 @@ fn fetch_all_public_changesets(
                             .and_then(move |mut entries| {
                                 let cs_ids =
                                     entries.iter().map(|entry| entry.cs_id).collect::<Vec<_>>();
-                                phases.get_public_raw(&cs_ids).map(move |public| {
-                                    entries.retain(|entry| public.contains(&entry.cs_id));
-                                    old_stream::iter_ok(entries)
-                                })
+                                async move { phases.get_public_raw(&cs_ids).await }
+                                    .boxed()
+                                    .compat()
+                                    .map(move |public| {
+                                        entries.retain(|entry| public.contains(&entry.cs_id));
+                                        old_stream::iter_ok(entries)
+                                    })
                             })
                     }
                 })

@@ -24,7 +24,6 @@ use futures::{
     TryFutureExt,
 };
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
-use futures_old::Future;
 use mercurial_types::HgPhase;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::mysql_async::{
@@ -148,90 +147,67 @@ pub struct SqlPhases {
 }
 
 impl SqlPhases {
-    pub fn get_single_raw(
-        &self,
-        cs_id: ChangesetId,
-    ) -> impl Future<Item = Option<Phase>, Error = Error> {
-        self.phases_store
-            .get_single_raw(self.repo_id, cs_id)
-            .boxed()
-            .compat()
+    pub async fn get_single_raw(&self, cs_id: ChangesetId) -> Result<Option<Phase>, Error> {
+        self.phases_store.get_single_raw(self.repo_id, cs_id).await
     }
 
-    pub fn get_public_raw(
+    pub async fn get_public_raw(
         &self,
         csids: &[ChangesetId],
-    ) -> impl Future<Item = HashSet<ChangesetId>, Error = Error> {
-        self.phases_store
-            .get_public_raw(self.repo_id, csids)
-            .boxed()
-            .compat()
+    ) -> Result<HashSet<ChangesetId>, Error> {
+        self.phases_store.get_public_raw(self.repo_id, csids).await
     }
 
-    pub fn add_public_raw(
+    pub async fn add_public_raw(
         &self,
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
-    ) -> impl Future<Item = (), Error = Error> {
+    ) -> Result<(), Error> {
         self.phases_store
             .add_public_raw(ctx, self.repo_id, csids)
-            .boxed()
-            .compat()
+            .await
     }
 
-    pub fn list_all_public(
-        &self,
-        ctx: CoreContext,
-    ) -> impl Future<Item = Vec<ChangesetId>, Error = Error> {
-        self.phases_store
-            .list_all_public(ctx, self.repo_id)
-            .boxed()
-            .compat()
+    pub async fn list_all_public(&self, ctx: CoreContext) -> Result<Vec<ChangesetId>, Error> {
+        self.phases_store.list_all_public(ctx, self.repo_id).await
     }
 
-    pub fn get_public_derive(
+    pub async fn get_public_derive(
         &self,
         ctx: CoreContext,
         csids: Vec<ChangesetId>,
         ephemeral_derive: bool,
-    ) -> BoxFuture<HashSet<ChangesetId>, Error> {
-        let this = self.clone();
-        async move {
-            if csids.is_empty() {
-                return Ok(Default::default());
-            }
-            let public_cold = this.get_public_raw(&csids).compat().await?;
-
-            let mut unknown: Vec<_> = csids
-                .into_iter()
-                .filter(|csid| !public_cold.contains(csid))
-                .collect();
-
-            if unknown.is_empty() {
-                return Ok(public_cold);
-            }
-
-            let heads = (this.heads_fetcher)(&ctx).await?;
-            let freshly_marked =
-                mark_reachable_as_public(ctx, &this, &heads, ephemeral_derive).await?;
-
-            // Still do the get_public_raw incase someone else marked the changes as public
-            // and thus mark_reachable_as_public did not return them as freshly_marked
-            let public_hot = this.get_public_raw(&unknown).compat().await?;
-
-            let public_combined = public_cold.into_iter().chain(public_hot);
-            let public_combined = if ephemeral_derive {
-                unknown.retain(|e| freshly_marked.contains(e));
-                public_combined.chain(unknown).collect()
-            } else {
-                public_combined.collect()
-            };
-
-            Ok(public_combined)
+    ) -> Result<HashSet<ChangesetId>, Error> {
+        if csids.is_empty() {
+            return Ok(Default::default());
         }
-        .boxed()
-        .compat()
-        .boxify()
+        let public_cold = self.get_public_raw(&csids).await?;
+
+        let mut unknown: Vec<_> = csids
+            .into_iter()
+            .filter(|csid| !public_cold.contains(csid))
+            .collect();
+
+        if unknown.is_empty() {
+            return Ok(public_cold);
+        }
+
+        let heads = (self.heads_fetcher)(&ctx).await?;
+        let freshly_marked = mark_reachable_as_public(ctx, &self, &heads, ephemeral_derive).await?;
+
+        // Still do the get_public_raw incase someone else marked the changes as public
+        // and thus mark_reachable_as_public did not return them as freshly_marked
+        let public_hot = self.get_public_raw(&unknown).await?;
+
+        let public_combined = public_cold.into_iter().chain(public_hot);
+        let public_combined = if ephemeral_derive {
+            unknown.retain(|e| freshly_marked.contains(e));
+            public_combined.chain(unknown).collect()
+        } else {
+            public_combined.collect()
+        };
+
+        Ok(public_combined)
     }
 }
 
@@ -258,7 +234,11 @@ impl Phases for SqlPhases {
         csids: Vec<ChangesetId>,
         ephemeral_derive: bool,
     ) -> BoxFuture<HashSet<ChangesetId>, Error> {
-        self.get_public_derive(ctx, csids, ephemeral_derive)
+        let this = self.clone();
+        async move { this.get_public_derive(ctx, csids, ephemeral_derive).await }
+            .boxed()
+            .compat()
+            .boxify()
     }
 
     fn add_reachable_as_public(
@@ -286,7 +266,7 @@ pub async fn mark_reachable_as_public(
     ephemeral_derive: bool,
 ) -> Result<Vec<ChangesetId>, Error> {
     let changeset_fetcher = &phases.changeset_fetcher;
-    let public = phases.get_public_raw(&all_heads).compat().await?;
+    let public = phases.get_public_raw(&all_heads).await?;
 
     let mut input = all_heads
         .iter()
@@ -303,7 +283,7 @@ pub async fn mark_reachable_as_public(
             Some(cs) => cs,
         };
 
-        let phase = phases.get_single_raw(cs).compat().await?;
+        let phase = phases.get_single_raw(cs).await?;
         if let Some(Phase::Public) = phase {
             continue;
         }
@@ -331,10 +311,7 @@ pub async fn mark_reachable_as_public(
     for chunk in unmarked.chunks(100) {
         let chunk = chunk.iter().map(|(cs, _)| *cs).collect::<Vec<_>>();
         if !ephemeral_derive {
-            phases
-                .add_public_raw(ctx.clone(), chunk.clone())
-                .compat()
-                .await?;
+            phases.add_public_raw(ctx.clone(), chunk.clone()).await?;
         }
         result.extend(chunk)
     }

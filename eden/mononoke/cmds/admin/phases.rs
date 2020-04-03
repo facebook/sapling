@@ -119,9 +119,17 @@ fn add_public_phases(
                 .and_then({
                     cloned!(ctx, phases);
                     move |changesets| {
-                        phases
-                            .get_sql_phases()
-                            .add_public_raw(ctx, changesets.into_iter().map(|(_, cs)| cs).collect())
+                        async move {
+                            phases
+                                .get_sql_phases()
+                                .add_public_raw(
+                                    ctx,
+                                    changesets.into_iter().map(|(_, cs)| cs).collect(),
+                                )
+                                .await
+                        }
+                        .boxed()
+                        .compat()
                     }
                 })
                 .and_then({
@@ -149,7 +157,7 @@ async fn subcommand_list_public_impl(
     let phases = repo.get_phases();
     let sql_phases = phases.get_sql_phases();
 
-    let public = sql_phases.list_all_public(ctx.clone()).compat().await?;
+    let public = sql_phases.list_all_public(ctx.clone()).await?;
     if ty == "bonsai" {
         for p in public {
             println!("{}", p);

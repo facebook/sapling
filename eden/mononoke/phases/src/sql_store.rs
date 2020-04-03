@@ -10,7 +10,7 @@ use anyhow::Error;
 use bytes::Bytes;
 use caching_ext::{GetOrFillMultipleFromCacheLayers, McErrorKind, McResult};
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, future::ready, Future, FutureExt};
+use futures::compat::Future01CompatExt;
 use futures_ext::FutureExt as OldFutureExt;
 use futures_old::Future as OldFuture;
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -82,91 +82,78 @@ impl SqlPhasesStore {
         }
     }
 
-    pub fn get_single_raw(
+    pub async fn get_single_raw(
         &self,
         repo_id: RepositoryId,
         cs_id: ChangesetId,
-    ) -> impl Future<Output = Result<Option<Phase>, Error>> {
+    ) -> Result<Option<Phase>, Error> {
         STATS::get_single.add_value(1);
         let csids = vec![cs_id];
 
         let cacher = self.get_cacher(repo_id);
-        async move {
-            let cs_to_phase = cacher.run(csids.into_iter().collect()).compat().await?;
+        let cs_to_phase = cacher.run(csids.into_iter().collect()).compat().await?;
 
-            Ok(cs_to_phase.into_iter().next().map(|(_, phase)| phase))
-        }
+        Ok(cs_to_phase.into_iter().next().map(|(_, phase)| phase))
     }
 
-    pub fn get_public_raw(
+    pub async fn get_public_raw(
         &self,
         repo_id: RepositoryId,
         csids: &[ChangesetId],
-    ) -> impl Future<Output = Result<HashSet<ChangesetId>, Error>> {
+    ) -> Result<HashSet<ChangesetId>, Error> {
         if csids.is_empty() {
-            return ready(Ok(Default::default())).left_future();
+            return Ok(Default::default());
         }
 
         STATS::get_many.add_value(1);
         let cacher = self.get_cacher(repo_id);
         let csids = csids.iter().cloned().collect();
-        async move {
-            let cs_to_phase = cacher.run(csids).compat().await?;
+        let cs_to_phase = cacher.run(csids).compat().await?;
 
-            Ok(cs_to_phase
-                .into_iter()
-                .filter_map(|(key, value)| {
-                    if value == Phase::Public {
-                        Some(key)
-                    } else {
-                        None
-                    }
-                })
-                .collect())
-        }
-        .right_future()
+        Ok(cs_to_phase
+            .into_iter()
+            .filter_map(|(key, value)| {
+                if value == Phase::Public {
+                    Some(key)
+                } else {
+                    None
+                }
+            })
+            .collect())
     }
 
-    pub fn add_public_raw(
+    pub async fn add_public_raw(
         &self,
         _ctx: CoreContext,
         repoid: RepositoryId,
         csids: Vec<ChangesetId>,
-    ) -> impl Future<Output = Result<(), Error>> {
+    ) -> Result<(), Error> {
         if csids.is_empty() {
-            return ready(Ok(())).left_future();
+            return Ok(());
         }
         STATS::add_many.add_value(1);
         let cacher = self.get_cacher(repoid);
-        let write_connection = self.write_connection.clone();
-        async move {
-            let phases: Vec<_> = csids
-                .iter()
-                .map(|csid| (&repoid, csid, &Phase::Public))
-                .collect();
-            InsertPhase::query(&write_connection, &phases)
-                .compat()
-                .await?;
+        let phases: Vec<_> = csids
+            .iter()
+            .map(|csid| (&repoid, csid, &Phase::Public))
+            .collect();
+        InsertPhase::query(&self.write_connection, &phases)
+            .compat()
+            .await?;
 
-            cacher.fill_caches(csids.iter().map(|csid| (*csid, Phase::Public)).collect());
-            Ok(())
-        }
-        .right_future()
+        cacher.fill_caches(csids.iter().map(|csid| (*csid, Phase::Public)).collect());
+        Ok(())
     }
 
-    pub fn list_all_public(
+    pub async fn list_all_public(
         &self,
         _ctx: CoreContext,
         repo_id: RepositoryId,
-    ) -> impl Future<Output = Result<Vec<ChangesetId>, Error>> {
-        let read_connection = self.read_connection.clone();
-
-        async move {
-            let ans = SelectAllPublic::query(&read_connection, &repo_id)
-                .compat()
-                .await?;
-            Ok(ans.into_iter().map(|x| x.0).collect())
-        }
+    ) -> Result<Vec<ChangesetId>, Error> {
+        let ans = SelectAllPublic::query(&self.read_connection, &repo_id)
+            .compat()
+            .await?;
+        Ok(ans.into_iter().map(|x| x.0).collect())
     }
 }
 
