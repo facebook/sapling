@@ -5,16 +5,19 @@
  * GNU General Public License version 2.
  */
 
+use crate::caching::{get_cache_key, phase_caching_determinator, Caches};
 use anyhow::Error;
+use bytes::Bytes;
+use caching_ext::{GetOrFillMultipleFromCacheLayers, McErrorKind, McResult};
 use context::CoreContext;
 use futures_ext::FutureExt;
 use futures_old::{future, Future};
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::{queries, Connection};
-use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
-use sql_ext::SqlConnections;
 use stats::prelude::*;
 use std::collections::HashSet;
+use std::convert::TryInto;
+use std::sync::Arc;
 
 use crate::Phase;
 
@@ -23,17 +26,61 @@ define_stats! {
     get_single: timeseries(Rate, Sum),
     get_many: timeseries(Rate, Sum),
     add_many: timeseries(Rate, Sum),
+    memcache_hit: timeseries("memcache.hit"; Rate, Sum),
+    memcache_miss: timeseries("memcache.miss"; Rate, Sum),
+    memcache_internal_err: timeseries("memcache.internal_err"; Rate, Sum),
+    memcache_deserialize_err: timeseries("memcache.deserialize_err"; Rate, Sum),
 }
 
 /// Object that reads/writes to phases db
 #[derive(Clone)]
 pub struct SqlPhasesStore {
-    write_connection: Connection,
-    read_connection: Connection,
-    read_master_connection: Connection,
+    pub(crate) write_connection: Connection,
+    pub(crate) read_connection: Connection,
+    pub(crate) read_master_connection: Connection,
+    pub(crate) caches: Arc<Caches>,
 }
 
 impl SqlPhasesStore {
+    fn get_cacher(
+        &self,
+        repo_id: RepositoryId,
+    ) -> GetOrFillMultipleFromCacheLayers<ChangesetId, Phase> {
+        let report_mc_result = |res: McResult<()>| {
+            match res {
+                Ok(_) => STATS::memcache_hit.add_value(1),
+                Err(McErrorKind::MemcacheInternal) => STATS::memcache_internal_err.add_value(1),
+                Err(McErrorKind::Missing) => STATS::memcache_miss.add_value(1),
+                Err(McErrorKind::Deserialization) => STATS::memcache_deserialize_err.add_value(1),
+            };
+        };
+
+        let read_connection = self.read_connection.clone();
+        let get_from_db = {
+            move |cs_ids: HashSet<ChangesetId>| {
+                let cs_ids: Vec<_> = cs_ids.into_iter().collect();
+                SelectPhases::query(&read_connection, &repo_id, &cs_ids)
+                    .map(move |public| public.into_iter().collect())
+                    .boxify()
+            }
+        };
+
+        let determinator = phase_caching_determinator;
+
+        GetOrFillMultipleFromCacheLayers {
+            repo_id,
+            get_cache_key: Arc::new(get_cache_key),
+            cachelib: self.caches.cache_pool.clone(),
+            keygen: self.caches.keygen.clone(),
+            memcache: self.caches.memcache.clone(),
+            deserialize: Arc::new(|buf| buf.as_ref().try_into().map_err(|_| ())),
+            serialize: Arc::new(|phase| Bytes::from(phase.to_string())),
+            report_mc_result: Arc::new(report_mc_result),
+            get_from_db: Arc::new(get_from_db),
+            determinator,
+        }
+    }
+
     pub fn get_single_raw(
         &self,
         repo_id: RepositoryId,
@@ -41,8 +88,11 @@ impl SqlPhasesStore {
     ) -> impl Future<Item = Option<Phase>, Error = Error> {
         STATS::get_single.add_value(1);
         let csids = vec![cs_id];
-        SelectPhases::query(&self.read_connection, &repo_id, &csids)
-            .map(move |rows| rows.into_iter().map(|row| row.1).next())
+
+        let cacher = self.get_cacher(repo_id);
+        cacher
+            .run(csids.into_iter().collect())
+            .map(|cs_to_phase| cs_to_phase.into_iter().next().map(|(_, phase)| phase))
     }
 
     pub fn get_public_raw(
@@ -53,12 +103,21 @@ impl SqlPhasesStore {
         if csids.is_empty() {
             return future::ok(Default::default()).left_future();
         }
+
         STATS::get_many.add_value(1);
-        SelectPhases::query(&self.read_connection, &repo_id, &csids)
-            .map(move |rows| {
-                rows.into_iter()
-                    .filter(|row| row.1 == Phase::Public)
-                    .map(|row| row.0)
+        let cacher = self.get_cacher(repo_id);
+        cacher
+            .run(csids.iter().cloned().collect())
+            .map(|cs_to_phase| {
+                cs_to_phase
+                    .into_iter()
+                    .filter_map(|(key, value)| {
+                        if value == Phase::Public {
+                            Some(key)
+                        } else {
+                            None
+                        }
+                    })
                     .collect()
             })
             .right_future()
@@ -78,8 +137,11 @@ impl SqlPhasesStore {
             .map(|csid| (&repoid, csid, &Phase::Public))
             .collect();
         STATS::add_many.add_value(1);
+        let cacher = self.get_cacher(repoid);
         InsertPhase::query(&self.write_connection, &phases)
-            .map(|_| ())
+            .map(move |_| {
+                cacher.fill_caches(csids.iter().map(|csid| (*csid, Phase::Public)).collect());
+            })
             .right_future()
     }
 
@@ -120,19 +182,3 @@ queries! {
            AND phase = 'Public'"
     }
 }
-
-impl SqlConstruct for SqlPhasesStore {
-    const LABEL: &'static str = "phases";
-
-    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-phases.sql");
-
-    fn from_sql_connections(connections: SqlConnections) -> Self {
-        Self {
-            write_connection: connections.write_connection,
-            read_connection: connections.read_connection,
-            read_master_connection: connections.read_master_connection,
-        }
-    }
-}
-
-impl SqlConstructFromMetadataDatabaseConfig for SqlPhasesStore {}

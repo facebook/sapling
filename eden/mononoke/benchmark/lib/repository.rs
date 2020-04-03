@@ -33,7 +33,7 @@ use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepoPath, RepositoryId,
 };
 use newfilenodes::NewFilenodesBuilder;
-use phases::{SqlPhasesFactory, SqlPhasesStore};
+use phases::SqlPhasesFactory;
 use rand::Rng;
 use rand_distr::Distribution;
 use repo_blobstore::RepoBlobstoreArgs;
@@ -135,8 +135,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
     let bonsai_git_mapping =
         Arc::new(SqlBonsaiGitMappingConnection::with_sqlite_in_memory()?.with_repo_id(repoid));
 
-    let phases_store = Arc::new(SqlPhasesStore::with_sqlite_in_memory()?);
-    let phases_factory = SqlPhasesFactory::new_no_caching(phases_store, repoid);
+    let phases_factory = SqlPhasesFactory::with_sqlite_in_memory()?;
 
     let blobstore =
         RepoBlobstoreArgs::new(blobstore, None, repoid, ScubaSampleBuilder::with_discard());

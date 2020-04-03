@@ -6,7 +6,6 @@
  */
 
 mod caching;
-pub use caching::CachingPhases;
 mod errors;
 pub use errors::ErrorKind;
 mod factory;
@@ -143,7 +142,7 @@ pub type HeadsFetcher = Arc<
 
 #[derive(Clone)]
 pub struct SqlPhases {
-    phases_store: Arc<SqlPhasesStore>,
+    phases_store: SqlPhasesStore,
     changeset_fetcher: Arc<dyn ChangesetFetcher>,
     heads_fetcher: HeadsFetcher,
     repo_id: RepositoryId,
@@ -227,15 +226,11 @@ impl SqlPhases {
             })
             .boxify()
     }
-
-    fn get_repoid(&self) -> RepositoryId {
-        self.repo_id
-    }
 }
 
 impl SqlPhases {
     pub fn new(
-        phases_store: Arc<SqlPhasesStore>,
+        phases_store: SqlPhasesStore,
         repo_id: RepositoryId,
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
         heads_fetcher: HeadsFetcher,

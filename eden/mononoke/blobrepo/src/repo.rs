@@ -709,8 +709,11 @@ impl BlobRepo {
     }
 
     pub fn get_phases(&self) -> Arc<dyn Phases> {
-        self.phases_factory
-            .get_phases((self.changeset_fetcher_factory)(), self.get_heads_fetcher())
+        self.phases_factory.get_phases(
+            self.repoid,
+            (self.changeset_fetcher_factory)(),
+            self.get_heads_fetcher(),
+        )
     }
 
     pub fn name(&self) -> &String {

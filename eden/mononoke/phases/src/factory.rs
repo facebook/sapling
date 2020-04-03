@@ -5,13 +5,16 @@
  * GNU General Public License version 2.
  */
 
-use crate::caching::{Caches, CachingPhases};
+use crate::caching::Caches;
 use crate::{sql_store::SqlPhasesStore, HeadsFetcher, Phases, SqlPhases};
 use cachelib::VolatileLruCachePool;
 use changeset_fetcher::ChangesetFetcher;
 use fbinit::FacebookInit;
 use memcache::{KeyGen, MemcacheClient};
 use mononoke_types::RepositoryId;
+use sql::Connection;
+use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
+use sql_ext::SqlConnections;
 use std::sync::Arc;
 
 // Memcache constants, should be changed when we want to invalidate memcache
@@ -19,60 +22,115 @@ use std::sync::Arc;
 const MC_CODEVER: u32 = 0;
 const MC_SITEVER: u32 = 0;
 
-/// Factory that can be used to produce Phases object
+/// Factory that can be used to produce SqlPhasesStore object
 /// Primarily intended to be used by BlobRepo
 #[derive(Clone)]
 pub struct SqlPhasesFactory {
-    phases_store: Arc<SqlPhasesStore>,
-    repo_id: RepositoryId,
-    caches: Option<Arc<Caches>>,
+    write_connection: Connection,
+    read_connection: Connection,
+    read_master_connection: Connection,
+    caches: Arc<Caches>,
 }
 
 impl SqlPhasesFactory {
-    pub fn new_no_caching(phases_store: Arc<SqlPhasesStore>, repo_id: RepositoryId) -> Self {
-        Self {
-            phases_store,
-            repo_id,
-            caches: None,
-        }
-    }
-
-    pub fn new_with_caching(
-        fb: FacebookInit,
-        phases_store: Arc<SqlPhasesStore>,
-        repo_id: RepositoryId,
-        cache_pool: VolatileLruCachePool,
-    ) -> Self {
-        let key_prefix = "scm.mononoke.phases";
+    pub fn enable_caching(&mut self, fb: FacebookInit, cache_pool: VolatileLruCachePool) {
         let caches = Caches {
             memcache: MemcacheClient::new(fb)
                 .expect("Memcache initialization failed")
                 .into(),
-            keygen: KeyGen::new(key_prefix, MC_CODEVER, MC_SITEVER),
+            keygen: Self::get_key_gen(),
             cache_pool: cache_pool.into(),
         };
-
-        Self {
-            phases_store,
-            repo_id,
-            caches: Some(Arc::new(caches)),
-        }
+        self.caches = Arc::new(caches);
     }
 
     pub fn get_phases(
         &self,
+        repo_id: RepositoryId,
         changeset_fetcher: Arc<dyn ChangesetFetcher>,
         heads_fetcher: HeadsFetcher,
     ) -> Arc<dyn Phases> {
+        let phases_store = self.get_phases_store();
         let phases = SqlPhases {
-            phases_store: self.phases_store.clone(),
+            phases_store,
             changeset_fetcher,
             heads_fetcher,
-            repo_id: self.repo_id.clone(),
+            repo_id,
         };
-        match &self.caches {
-            Some(caches) => Arc::new(CachingPhases::new(phases, caches.clone())),
-            None => Arc::new(phases),
+        Arc::new(phases)
+    }
+
+    fn get_key_gen() -> KeyGen {
+        let key_prefix = "scm.mononoke.phases";
+        KeyGen::new(key_prefix, MC_CODEVER, MC_SITEVER)
+    }
+
+    fn get_phases_store(&self) -> SqlPhasesStore {
+        SqlPhasesStore {
+            write_connection: self.write_connection.clone(),
+            read_connection: self.read_connection.clone(),
+            read_master_connection: self.read_master_connection.clone(),
+            caches: self.caches.clone(),
         }
+    }
+}
+
+impl SqlConstruct for SqlPhasesFactory {
+    const LABEL: &'static str = "phases";
+
+    const CREATION_QUERY: &'static str = include_str!("../schemas/sqlite-phases.sql");
+
+    fn from_sql_connections(connections: SqlConnections) -> Self {
+        let caches = Arc::new(Caches::new_mock(Self::get_key_gen()));
+        Self {
+            write_connection: connections.write_connection,
+            read_connection: connections.read_connection,
+            read_master_connection: connections.read_master_connection,
+            caches,
+        }
+    }
+}
+
+impl SqlConstructFromMetadataDatabaseConfig for SqlPhasesFactory {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::Phase;
+    use anyhow::Error;
+    use context::CoreContext;
+    use maplit::hashset;
+    use mononoke_types_mocks::changesetid::*;
+    use tokio_compat::runtime::Runtime;
+
+    #[fbinit::test]
+    fn add_get_phase_sql_test(fb: FacebookInit) -> Result<(), Error> {
+        let mut rt = Runtime::new()?;
+        let ctx = CoreContext::test_mock(fb);
+        let repo_id = RepositoryId::new(0);
+        let phases_factory = SqlPhasesFactory::with_sqlite_in_memory()?;
+        let phases = phases_factory.get_phases_store();
+
+        rt.block_on(phases.add_public_raw(ctx, repo_id, vec![ONES_CSID]))?;
+
+        assert_eq!(
+            rt.block_on(phases.get_single_raw(repo_id, ONES_CSID))?,
+            Some(Phase::Public),
+            "sql: get phase for the existing changeset"
+        );
+
+        assert_eq!(
+            rt.block_on(phases.get_single_raw(repo_id, TWOS_CSID))?,
+            None,
+            "sql: get phase for non existing changeset"
+        );
+
+        assert_eq!(
+            rt.block_on(phases.get_public_raw(repo_id, &[ONES_CSID, TWOS_CSID]))?,
+            hashset! {ONES_CSID},
+            "sql: get phase for non existing changeset and existing changeset"
+        );
+
+        Ok(())
     }
 }

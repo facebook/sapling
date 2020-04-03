@@ -143,12 +143,12 @@ fn published_bookmarks_step(
 }
 
 fn bonsai_phase_step(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     phases_store: Arc<dyn Phases>,
     bcs_id: ChangesetId,
 ) -> impl Future<Output = Result<StepOutput, Error>> {
     phases_store
-        .get_public(ctx, vec![bcs_id], true)
+        .get_public(ctx.clone(), vec![bcs_id], true)
         .map(move |public| public.contains(&bcs_id))
         .map(|is_public| {
             let phase = if is_public { Some(Phase::Public) } else { None };
@@ -672,10 +672,12 @@ where
             bonsai_to_hg_mapping_step(ctx.clone(), &repo, bcs_id, enable_derive).await
         }
         Node::BonsaiPhaseMapping(bcs_id) => {
-            let phases_store = repo
-                .get_phases_factory()
-                .get_phases(repo.get_changeset_fetcher(), heads_fetcher.clone());
-            bonsai_phase_step(ctx.clone(), phases_store, bcs_id).await
+            let phases_store = repo.get_phases_factory().get_phases(
+                repo.get_repoid(),
+                repo.get_changeset_fetcher(),
+                heads_fetcher.clone(),
+            );
+            bonsai_phase_step(&ctx, phases_store, bcs_id).await
         }
         Node::PublishedBookmarks => published_bookmarks_step(published_bookmarks.clone()).await,
         // Hg

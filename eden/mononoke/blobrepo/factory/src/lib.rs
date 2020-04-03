@@ -42,7 +42,7 @@ use metaconfig_types::{
 };
 use mononoke_types::RepositoryId;
 use newfilenodes::NewFilenodesBuilder;
-use phases::{SqlPhasesFactory, SqlPhasesStore};
+use phases::SqlPhasesFactory;
 use readonlyblob::ReadOnlyBlobstore;
 use redactedblobstore::SqlRedactedContentStore;
 use repo_blobstore::RepoBlobstoreArgs;
@@ -295,8 +295,7 @@ pub fn new_memblob_empty_with_id(
         ScubaSampleBuilder::with_discard(),
     );
 
-    let phases_store = Arc::new(SqlPhasesStore::with_sqlite_in_memory()?);
-    let phases_factory = SqlPhasesFactory::new_no_caching(phases_store, repo_id.clone());
+    let phases_factory = SqlPhasesFactory::with_sqlite_in_memory()?;
 
     Ok(BlobRepo::new(
         Arc::new(SqlBookmarks::with_sqlite_in_memory()?),
@@ -358,7 +357,7 @@ pub fn new_memblob_with_sqlite_connection_with_id(
     con.execute_batch(SqlBonsaiGitMappingConnection::CREATION_QUERY)?;
     con.execute_batch(SqlBonsaiGlobalrevMapping::CREATION_QUERY)?;
     con.execute_batch(SqlBonsaiHgMapping::CREATION_QUERY)?;
-    con.execute_batch(SqlPhasesStore::CREATION_QUERY)?;
+    con.execute_batch(SqlPhasesFactory::CREATION_QUERY)?;
     let con = Connection::with_sqlite(con);
 
     new_memblob_with_connection_with_id(con.clone(), repo_id)
@@ -377,10 +376,7 @@ pub fn new_memblob_with_connection_with_id(
 
     let sql_connections = SqlConnections::new_single(con.clone());
 
-    let phases_store = Arc::new(SqlPhasesStore::from_sql_connections(
-        sql_connections.clone(),
-    ));
-    let phases_factory = SqlPhasesFactory::new_no_caching(phases_store, repo_id.clone());
+    let phases_factory = SqlPhasesFactory::from_sql_connections(sql_connections.clone());
 
     Ok((
         BlobRepo::new(
@@ -469,17 +465,16 @@ fn new_development(
         .from_err()
         .map(Arc::new);
 
-    let phases = sql_factory
-        .open::<SqlPhasesStore>()
+    let phases_factory = sql_factory
+        .open::<SqlPhasesFactory>()
         .chain_err(ErrorKind::StateOpen(StateOpenError::Phases))
-        .from_err()
-        .map(Arc::new);
+        .from_err();
 
     bookmarks
         .join5(
             unredacted_blobstore,
             redacted_blobs,
-            phases,
+            phases_factory,
             bonsai_git_mapping,
         )
         .join5(
@@ -490,15 +485,13 @@ fn new_development(
         )
         .map({
             move |(
-                (bookmarks, blobstore, redacted_blobs, phases_store, bonsai_git_mapping),
+                (bookmarks, blobstore, redacted_blobs, phases_factory, bonsai_git_mapping),
                 filenodes_builder,
                 changesets,
                 bonsai_globalrev_mapping,
                 bonsai_hg_mapping,
             )| {
                 let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
-
-                let phases_factory = SqlPhasesFactory::new_no_caching(phases_store, repoid);
 
                 BlobRepo::new(
                     bookmarks,
@@ -577,7 +570,7 @@ fn new_production(
         .open::<SqlBonsaiGlobalrevMapping>()
         .map(Arc::new);
     let bonsai_hg_mapping = sql_factory.open::<SqlBonsaiHgMapping>().map(Arc::new);
-    let phases = sql_factory.open::<SqlPhasesStore>().map(Arc::new);
+    let phases_factory = sql_factory.open::<SqlPhasesFactory>();
 
     // Wrap again to avoid any writes to memcache
     let blobstore = if readonly_storage.0 {
@@ -589,7 +582,12 @@ fn new_production(
     };
 
     filenodes_tier_and_builder
-        .join5(blobstore, redacted_blobs, phases, bonsai_git_mapping)
+        .join5(
+            blobstore,
+            redacted_blobs,
+            phases_factory,
+            bonsai_git_mapping,
+        )
         .join5(
             bookmarks,
             changesets,
@@ -602,7 +600,7 @@ fn new_production(
                     (filenodes_tier, mut filenodes_builder),
                     blobstore,
                     redacted_blobs,
-                    phases,
+                    mut phases_factory,
                     bonsai_git_mapping,
                 ),
                 bookmarks,
@@ -638,12 +636,7 @@ fn new_production(
                     bonsai_hg_mapping_cache_pool,
                 );
 
-                let phases_factory = SqlPhasesFactory::new_with_caching(
-                    fb,
-                    phases,
-                    repoid.clone(),
-                    phases_cache_pool,
-                );
+                phases_factory.enable_caching(fb, phases_cache_pool);
                 let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
 
                 BlobRepo::new(

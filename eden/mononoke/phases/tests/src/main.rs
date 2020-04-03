@@ -17,43 +17,11 @@ use fbinit::FacebookInit;
 use fixtures::linear;
 use maplit::hashset;
 use mercurial_types::nodehash::HgChangesetId;
-use mononoke_types::{ChangesetId, RepositoryId};
-use mononoke_types_mocks::changesetid::*;
-use phases::{Phase, Phases, SqlPhasesStore};
-use sql_construct::SqlConstruct;
+use mononoke_types::ChangesetId;
+use phases::Phases;
 use std::str::FromStr;
 use std::sync::Arc;
 use tokio_compat::runtime::Runtime;
-
-#[fbinit::test]
-fn add_get_phase_sql_test(fb: FacebookInit) -> Result<()> {
-    let mut rt = Runtime::new()?;
-    let ctx = CoreContext::test_mock(fb);
-    let repo_id = RepositoryId::new(0);
-    let phases = SqlPhasesStore::with_sqlite_in_memory()?;
-
-    rt.block_on(phases.add_public_raw(ctx.clone(), repo_id, vec![ONES_CSID]))?;
-
-    assert_eq!(
-        rt.block_on(phases.get_single_raw(repo_id, ONES_CSID))?,
-        Some(Phase::Public),
-        "sql: get phase for the existing changeset"
-    );
-
-    assert_eq!(
-        rt.block_on(phases.get_single_raw(repo_id, TWOS_CSID))?,
-        None,
-        "sql: get phase for non existing changeset"
-    );
-
-    assert_eq!(
-        rt.block_on(phases.get_public_raw(repo_id, &vec![ONES_CSID, TWOS_CSID]))?,
-        hashset! {ONES_CSID},
-        "sql: get phase for non existing changeset and existing changeset"
-    );
-
-    Ok(())
-}
 
 fn delete_all_publishing_bookmarks(rt: &mut Runtime, ctx: CoreContext, repo: BlobRepo) {
     let bookmarks = rt
