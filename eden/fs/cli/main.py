@@ -47,7 +47,7 @@ from .subcmd import Subcmd
 from .util import ShutdownError, print_stderr
 
 
-if os.name == "nt":
+if sys.platform == "win32":
     from . import daemon_util, winproc
 else:
     from . import daemon, fsck as fsck_mod, rage as rage_mod
@@ -1127,7 +1127,7 @@ class PrefetchCmd(Subcmd):
             with open(args.pattern_file) as f:
                 args.PATTERN += [pat.strip() for pat in f.readlines()]
 
-        if os.name == "nt":
+        if sys.platform == "win32":
             if args.no_prefetch:
                 # Not implementing --no-prefetch option right now because no
                 # one is using it. Will come back it.
@@ -1295,7 +1295,7 @@ class StartCmd(Subcmd):
             return self.start(args, instance)
 
     def start(self, args: argparse.Namespace, instance: EdenInstance) -> int:
-        if os.name == "nt":
+        if sys.platform == "win32":
             daemon_binary = daemon_util.find_daemon_binary(args.daemon_binary)
             winproc.start_edenfs(instance, daemon_binary, args.edenfs_args)
         else:

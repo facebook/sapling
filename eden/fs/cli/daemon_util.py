@@ -30,7 +30,7 @@ def _find_default_daemon_binary() -> Optional[str]:
     cli_dir = os.path.dirname(os.path.abspath(sys.argv[0]))
 
     # Check the normal release installation location first
-    if os.name != "nt":
+    if sys.platform != "win32":
         # On non-Windows platforms, the edenfs binary is installed under
         # <prefix>/libexec/eden/, while edenfsctl is in <prefix>/bin/
         suffix = ""

@@ -6,6 +6,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import os
+import sys
 from typing import Any, Optional, cast  # noqa: F401
 
 from facebook.eden import EdenService
@@ -16,10 +17,7 @@ from thrift.transport.THeaderTransport import THeaderTransport
 from thrift.transport.TTransport import TTransportException
 
 
-if os.name == "nt":
-    # pyre-fixme[21]: Could not find a module corresponding to import
-    # eden.thrift.windows_thrift. This is a Windows only file and only included
-    # on Windows.
+if sys.platform == "win32":
     from eden.thrift.windows_thrift import WinTSocket  # @manual
 else:
     from thrift.transport.TSocket import TSocket
@@ -66,8 +64,7 @@ class EdenClient(EdenService.Client):
             self._socket_path = os.path.join(eden_dir, SOCKET_PATH)
         else:
             raise TypeError("one of eden_dir or socket_path is required")
-        if os.name == "nt":
-            # pyre-fixme[16]: Module eden.thrift has no attribute windows_thrift.
+        if sys.platform == "win32":
             self._socket = WinTSocket(unix_socket=self._socket_path)
         else:
             self._socket = TSocket(unix_socket=self._socket_path)

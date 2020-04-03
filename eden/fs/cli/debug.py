@@ -1168,7 +1168,7 @@ class DebugCmd(Subcmd):
         # supported on POSIX platforms (basically, not Windows).  Import this module
         # if we aren't running on Windows.  This will make sure it has registered all of
         # its subcommands in our debug_cmd.commands list.
-        if os.name != "nt":
+        if sys.platform != "win32":
             from . import debug_posix  # noqa: F401
 
         # Save the parser so we can use it to print help in run() if we are

@@ -25,7 +25,7 @@ from fb303_core.ttypes import fb303_status
 from thrift import Thrift
 
 
-if os.name != "nt":
+if sys.platform != "win32":
     import pwd
 
 # These paths are relative to the user's client directory.
@@ -232,7 +232,7 @@ def wait_for_daemon_healthy(
 
 def get_home_dir() -> Path:
     home_dir = None
-    if os.name == "nt":
+    if sys.platform == "win32":
         home_dir = os.getenv("USERPROFILE")
     else:
         home_dir = os.getenv("HOME")
@@ -494,7 +494,7 @@ def get_eden_mount_name(path_arg: str) -> str:
     """
     Get the path to the Eden checkout containing the specified path
     """
-    if os.name == "nt":
+    if sys.platform == "win32":
         path = path_arg
         parent = os.path.dirname(path)
         while path != parent:

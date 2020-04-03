@@ -40,7 +40,7 @@ log = logging.getLogger(__name__)
 
 # On Linux we import fcntl for flock. The Windows LockFileEx is not semantically
 # same as flock. We will need to make some changes for LockFileEx to work.
-if os.name != "nt":
+if sys.platform != "win32":
     import fcntl
 
 
@@ -49,7 +49,7 @@ if typing.TYPE_CHECKING:
 
 # Use --etcEdenDir to change the value used for a given invocation
 # of the eden cli.
-if os.name == "nt":
+if sys.platform == "win32":
     DEFAULT_ETC_EDEN_DIR = "C:/tools/eden/config"
 else:
     DEFAULT_ETC_EDEN_DIR = "/etc/eden"
@@ -164,7 +164,7 @@ class EdenInstance:
         # directory on NFS, which may not be readable as root.
         if config_dir:
             self._config_dir = Path(config_dir)
-        elif os.name == "nt":
+        elif sys.platform == "win32":
             self._config_dir = self._home_dir / ".eden"
         else:
             self._config_dir = self._home_dir / "local" / ".eden"
@@ -202,7 +202,7 @@ class EdenInstance:
 
     @property
     def _config_variables(self) -> Dict[str, str]:
-        if os.name == "nt":
+        if sys.platform == "win32":
             # We don't have user ids on Windows right now.
             # We should update this code if and when we add user id support.
             user_id = 0
@@ -544,7 +544,7 @@ Do you want to run `eden mount %s` instead?"""
         if help_contents is not None:
             with help_path.open("w") as f:
                 f.write(help_contents)
-                if os.name != "nt":
+                if sys.platform != "win32":
                     os.fchmod(f.fileno(), 0o444)
 
     def _create_client_dir_for_path(self, clients_dir: Path, path: str) -> Path:
@@ -973,7 +973,7 @@ class ConfigUpdater(object):
         # We could make a locking scheme with LockFileEx(), but it would
         # have different symentics than flock (For one, we can't unlink a
         # locked file).
-        if os.name == "nt":
+        if sys.platform == "win32":
             return
         while True:
             self._lock_file = typing.cast(typing.TextIO, open(self._lock_path, "w+"))
@@ -996,7 +996,7 @@ class ConfigUpdater(object):
             continue
 
     def _unlock(self) -> None:
-        if os.name == "nt":
+        if sys.platform == "win32":
             return
         assert self._lock_file is not None
         # Remove the file on disk before we unlock it.
@@ -1271,7 +1271,7 @@ def find_eden(
     checkout_root = None
     checkout_state_dir = None
     try:
-        if os.name != "nt":
+        if sys.platform != "win32":
             eden_socket_path = readlink_retry_estale(
                 path.joinpath(path, ".eden", "socket")
             )

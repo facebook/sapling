@@ -6,14 +6,14 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import ctypes
-import os
 import socket
+import sys
 
 from thrift.transport.TSocket import TSocket
 from thrift.transport.TTransport import TTransportException
 
 
-if os.name == "nt":
+if sys.platform == "win32":
     import ctypes.wintypes
 
 
@@ -240,7 +240,7 @@ class WinTSocket(TSocket):
     @property
     def _shouldUseWinsocket(self):
         # type: () -> bool
-        return os.name == "nt" and self._unix_socket
+        return sys.platform == "win32" and self._unix_socket
 
     def open(self):
         # type: () -> None
