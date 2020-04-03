@@ -30,6 +30,7 @@ use reachabilityindex::LeastCommonAncestorsHint;
 use scribe_commit_queue::{self, ScribeCommitQueue};
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{o, warn};
+use stats::prelude::*;
 use std::{collections::HashSet, sync::Arc};
 
 use crate::rate_limits::enforce_commit_rate_limits;
@@ -43,6 +44,14 @@ enum BookmarkPush<T: Copy> {
     Infinitepush(InfiniteBookmarkPush<T>),
 }
 
+define_stats! {
+    prefix = "mononoke.unbundle.processed";
+    push: dynamic_timeseries("{}.push", (reponame: String); Rate, Sum),
+    pushrebase: dynamic_timeseries("{}.pushrebase", (reponame: String); Rate, Sum),
+    bookmark_only_pushrebase: dynamic_timeseries("{}.bookmark_only_pushrebase", (reponame: String); Rate, Sum),
+    infinitepush: dynamic_timeseries("{}.infinitepush", (reponame: String); Rate, Sum),
+}
+
 pub fn run_post_resolve_action(
     ctx: CoreContext,
     repo: BlobRepo,
@@ -53,45 +62,66 @@ pub fn run_post_resolve_action(
     action: PostResolveAction,
 ) -> BoxFuture<UnbundleResponse, BundleResolverError> {
     enforce_commit_rate_limits(ctx.clone(), &action)
-        .and_then(move |()| match action {
-            PostResolveAction::Push(action) => run_push(
-                ctx,
-                repo,
-                bookmark_attrs,
-                lca_hint,
-                infinitepush_params,
-                action,
-            )
-            .map(UnbundleResponse::Push)
-            .boxify(),
-            PostResolveAction::InfinitePush(action) => {
-                run_infinitepush(ctx, repo, lca_hint, infinitepush_params, action)
-                    .map(UnbundleResponse::InfinitePush)
-                    .boxify()
+        .and_then({
+            cloned!(repo);
+            move |()| match action {
+                PostResolveAction::Push(action) => run_push(
+                    ctx,
+                    repo,
+                    bookmark_attrs,
+                    lca_hint,
+                    infinitepush_params,
+                    action,
+                )
+                .map(UnbundleResponse::Push)
+                .boxify(),
+                PostResolveAction::InfinitePush(action) => {
+                    run_infinitepush(ctx, repo, lca_hint, infinitepush_params, action)
+                        .map(UnbundleResponse::InfinitePush)
+                        .boxify()
+                }
+                PostResolveAction::PushRebase(action) => run_pushrebase(
+                    ctx,
+                    repo,
+                    bookmark_attrs,
+                    lca_hint,
+                    infinitepush_params,
+                    pushrebase_params,
+                    action,
+                )
+                .map(UnbundleResponse::PushRebase)
+                .boxify(),
+                PostResolveAction::BookmarkOnlyPushRebase(action) => run_bookmark_only_pushrebase(
+                    ctx,
+                    repo,
+                    bookmark_attrs,
+                    lca_hint,
+                    infinitepush_params,
+                    action,
+                )
+                .map(UnbundleResponse::BookmarkOnlyPushRebase)
+                .boxify(),
             }
-            PostResolveAction::PushRebase(action) => run_pushrebase(
-                ctx,
-                repo,
-                bookmark_attrs,
-                lca_hint,
-                infinitepush_params,
-                pushrebase_params,
-                action,
-            )
-            .map(UnbundleResponse::PushRebase)
-            .boxify(),
-            PostResolveAction::BookmarkOnlyPushRebase(action) => run_bookmark_only_pushrebase(
-                ctx,
-                repo,
-                bookmark_attrs,
-                lca_hint,
-                infinitepush_params,
-                action,
-            )
-            .map(UnbundleResponse::BookmarkOnlyPushRebase)
-            .boxify(),
+        })
+        .inspect({
+            cloned!(repo);
+            move |unbundle_response| {
+                report_unbundle_type(&repo, unbundle_response);
+            }
         })
         .boxify()
+}
+
+fn report_unbundle_type(repo: &BlobRepo, unbundle_response: &UnbundleResponse) {
+    let repo_name = repo.name().clone();
+    match unbundle_response {
+        UnbundleResponse::Push(_) => STATS::push.add_value(1, (repo_name,)),
+        UnbundleResponse::PushRebase(_) => STATS::pushrebase.add_value(1, (repo_name,)),
+        UnbundleResponse::InfinitePush(_) => STATS::infinitepush.add_value(1, (repo_name,)),
+        UnbundleResponse::BookmarkOnlyPushRebase(_) => {
+            STATS::bookmark_only_pushrebase.add_value(1, (repo_name,))
+        }
+    }
 }
 
 fn run_push(
