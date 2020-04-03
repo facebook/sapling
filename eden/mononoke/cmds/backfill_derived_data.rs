@@ -362,14 +362,12 @@ fn fetch_all_public_changesets(
                         changesets
                             .get_many(ctx, repo_id, ids)
                             .and_then(move |mut entries| {
-                                phases
-                                    .get_public_raw(
-                                        &entries.iter().map(|entry| entry.cs_id).collect(),
-                                    )
-                                    .map(move |public| {
-                                        entries.retain(|entry| public.contains(&entry.cs_id));
-                                        old_stream::iter_ok(entries)
-                                    })
+                                let cs_ids =
+                                    entries.iter().map(|entry| entry.cs_id).collect::<Vec<_>>();
+                                phases.get_public_raw(&cs_ids).map(move |public| {
+                                    entries.retain(|entry| public.contains(&entry.cs_id));
+                                    old_stream::iter_ok(entries)
+                                })
                             })
                     }
                 })

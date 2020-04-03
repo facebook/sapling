@@ -20,12 +20,13 @@ use ascii::AsciiString;
 use changeset_fetcher::ChangesetFetcher;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{future::BoxFuture as NewBoxFuture, TryFutureExt};
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{
-    future::{self, IntoFuture, Loop},
-    stream, Future, Stream,
+use futures::{
+    compat::Future01CompatExt,
+    future::{try_join, BoxFuture as NewBoxFuture, FutureExt},
+    TryFutureExt,
 };
+use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
+use futures_old::{future, Future};
 use mercurial_types::HgPhase;
 use mononoke_types::{ChangesetId, RepositoryId};
 use sql::mysql_async::{
@@ -158,7 +159,7 @@ impl SqlPhases {
 
     pub fn get_public_raw(
         &self,
-        csids: &Vec<ChangesetId>,
+        csids: &[ChangesetId],
     ) -> impl Future<Item = HashSet<ChangesetId>, Error = Error> {
         self.phases_store.get_public_raw(self.repo_id, csids)
     }
@@ -201,7 +202,13 @@ impl SqlPhases {
                     .compat()
                     .and_then({
                         cloned!(this);
-                        move |heads| mark_reachable_as_public(ctx, this, &heads, ephemeral_derive)
+                        move |heads| {
+                            async move {
+                                mark_reachable_as_public(ctx, this, &heads, ephemeral_derive).await
+                            }
+                            .boxed()
+                            .compat()
+                        }
                     })
                     .and_then(move |freshly_marked| {
                         // Still do the get_public_raw incase someone else marked the changes as public
@@ -257,7 +264,11 @@ impl Phases for SqlPhases {
         ctx: CoreContext,
         heads: Vec<ChangesetId>,
     ) -> BoxFuture<Vec<ChangesetId>, Error> {
-        mark_reachable_as_public(ctx, self.clone(), &heads, false).boxify()
+        let this = self.clone();
+        async move { mark_reachable_as_public(ctx, this, &heads, false).await }
+            .boxed()
+            .compat()
+            .boxify()
     }
 
     fn get_sql_phases(&self) -> &SqlPhases {
@@ -266,80 +277,64 @@ impl Phases for SqlPhases {
 }
 
 /// Mark all commits reachable from `public_heads` as public
-pub fn mark_reachable_as_public<'a, Heads>(
+pub async fn mark_reachable_as_public(
     ctx: CoreContext,
     phases: SqlPhases,
-    public_heads: &'a Heads,
+    all_heads: &[ChangesetId],
     ephemeral_derive: bool,
-) -> impl Future<Item = Vec<ChangesetId>, Error = Error>
-where
-    &'a Heads: IntoIterator<Item = &'a ChangesetId>,
-{
-    let changeset_fetcher = phases.changeset_fetcher.clone();
-    let all_heads: Vec<_> = public_heads.into_iter().cloned().collect();
-    phases
-        .get_public_raw(&all_heads)
-        .and_then({
-            cloned!(ctx, phases);
-            move |public| {
-                let input = all_heads
-                    .into_iter()
-                    .filter(|csid| !public.contains(csid))
-                    .collect::<Vec<_>>();
-                future::loop_fn((HashMap::new(), input), {
-                    cloned!(ctx, phases);
-                    move |(mut output, mut input)| match input.pop() {
-                        None => future::ok(Loop::Break(output)).left_future(),
-                        Some(cs) => phases
-                            .get_single_raw(cs)
-                            .and_then({
-                                cloned!(changeset_fetcher, ctx);
-                                move |phase| match phase {
-                                    Some(Phase::Public) => {
-                                        future::ok(Loop::Continue((output, input))).left_future()
-                                    }
-                                    _ => (
-                                        changeset_fetcher.get_generation_number(ctx.clone(), cs),
-                                        changeset_fetcher.get_parents(ctx, cs),
-                                    )
-                                        .into_future()
-                                        .map(move |(generation, parents)| {
-                                            output.insert(cs, generation);
-                                            input.extend(
-                                                parents
-                                                    .into_iter()
-                                                    .filter(|p| !output.contains_key(p)),
-                                            );
-                                            Loop::Continue((output, input))
-                                        })
-                                        .right_future(),
-                                }
-                            })
-                            .right_future(),
-                    }
-                })
+) -> Result<Vec<ChangesetId>, Error> {
+    let changeset_fetcher = &phases.changeset_fetcher;
+    let public = phases.get_public_raw(&all_heads).compat().await?;
+
+    let mut input = all_heads
+        .iter()
+        .filter(|csid| !public.contains(csid))
+        .copied()
+        .collect::<Vec<_>>();
+
+    let mut unmarked = HashMap::new();
+    loop {
+        let cs = match input.pop() {
+            None => {
+                break;
             }
-        })
-        .and_then({
-            move |unmarked| {
-                // NOTE: We need to write phases in increasing generation number order, this will
-                //       ensure that our phases in a valid state (i.e do not have any gaps). Once
-                //       first public changeset is found we assume that all ancestors of it have
-                //       already been marked as public.
-                let mut unmarked: Vec<_> = unmarked.into_iter().map(|(k, v)| (v, k)).collect();
-                unmarked.sort_by(|l, r| l.0.cmp(&r.0));
-                let mark: Vec<_> = unmarked.into_iter().map(|(_gen, cs)| cs).collect();
-                stream::iter_ok(mark.clone())
-                    .chunks(100)
-                    .and_then(move |chunk| {
-                        if !ephemeral_derive {
-                            phases.add_public_raw(ctx.clone(), chunk).left_future()
-                        } else {
-                            future::ok(()).right_future()
-                        }
-                    })
-                    .for_each(|()| future::ok(()))
-                    .map(move |_| mark)
-            }
-        })
+            Some(cs) => cs,
+        };
+
+        let phase = phases.get_single_raw(cs).compat().await?;
+        if let Some(Phase::Public) = phase {
+            continue;
+        }
+
+        let (generation, parents) = try_join(
+            changeset_fetcher
+                .get_generation_number(ctx.clone(), cs)
+                .compat(),
+            changeset_fetcher.get_parents(ctx.clone(), cs).compat(),
+        )
+        .await?;
+
+        unmarked.insert(cs, generation);
+        input.extend(parents.into_iter().filter(|p| !unmarked.contains_key(p)));
+    }
+
+    // NOTE: We need to write phases in increasing generation number order, this will
+    //       ensure that our phases in a valid state (i.e do not have any gaps). Once
+    //       first public changeset is found we assume that all ancestors of it have
+    //       already been marked as public.
+    let mut unmarked: Vec<_> = unmarked.into_iter().collect();
+    unmarked.sort_by(|l, r| l.1.cmp(&r.1));
+
+    let mut result = vec![];
+    for chunk in unmarked.chunks(100) {
+        let chunk = chunk.iter().map(|(cs, _)| *cs).collect::<Vec<_>>();
+        if !ephemeral_derive {
+            phases
+                .add_public_raw(ctx.clone(), chunk.clone())
+                .compat()
+                .await?;
+        }
+        result.extend(chunk)
+    }
+    Ok(result)
 }
