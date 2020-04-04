@@ -282,6 +282,17 @@ class FakeProcUtils(LinuxProcUtils):
         stat_fields_str = " ".join(str(n) for n in stat_fields)
         return f"{pid} ({command}) S {stat_fields_str}\n"
 
+    def is_process_alive(self, pid: int) -> bool:
+        comm_path = self.proc_path / str(pid) / "comm"
+        return comm_path.exists()
+
+    def _get_process_command(self, pid: int) -> Optional[str]:
+        comm_path = self.proc_path / str(pid) / "comm"
+        try:
+            return comm_path.read_text().rstrip()
+        except FileNotFoundError:
+            return None
+
 
 def make_edenfs_build_info(build_time: int) -> BuildInfo:
     if build_time == 0:

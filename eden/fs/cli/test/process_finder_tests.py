@@ -153,3 +153,14 @@ class ProcUtilsTests(unittest.TestCase):
             f"  actual timestamp:       {time_str(timestamp)}\n"
         )
         self.fail(msg)
+
+    def test_is_edenfs_process(self) -> None:
+        # Test using FakeProcessFinder
+        self.proc_utils.add_edenfs(pid=1234, eden_dir="/home/nobody/eden_dir_1")
+        self.proc_utils.add_process(pid=1111, cmdline=["sleep", "60"])
+        self.proc_utils.add_process(pid=7868, cmdline=["bash"])
+
+        self.assertTrue(self.proc_utils.is_edenfs_process(1234))
+        self.assertFalse(self.proc_utils.is_edenfs_process(1111))
+        self.assertFalse(self.proc_utils.is_edenfs_process(7868))
+        self.assertFalse(self.proc_utils.is_edenfs_process(9999))

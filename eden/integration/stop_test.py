@@ -13,7 +13,8 @@ from pathlib import Path
 from typing import Callable, List, Optional
 
 import pexpect
-from eden.fs.cli.daemon import did_process_exit
+from eden.fs.cli import proc_utils as proc_utils_mod
+from eden.fs.cli.daemon import wait_for_process_exit
 from eden.fs.cli.util import poll_until
 
 from .lib.find_executables import FindExe
@@ -56,12 +57,14 @@ class StopTestBase(ServiceTestCaseBase):
 @service_test
 class StopTest(StopTestBase, PexpectAssertionMixin):
     def test_stop_stops_running_daemon(self) -> None:
+        proc_utils = proc_utils_mod.new()
         with self.spawn_fake_edenfs(self.eden_dir) as daemon_pid:
             stop_process = self.spawn_stop(["--timeout", "5"])
             stop_process.expect_exact("edenfs exited cleanly.")
             self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
-            self.assertTrue(
-                did_process_exit(daemon_pid), f"Process {daemon_pid} should have died"
+            self.assertFalse(
+                proc_utils.is_process_alive(daemon_pid),
+                f"Process {daemon_pid} should have died",
             )
 
     def test_eden_stop_shuts_down_edenfs_cleanly(self) -> None:
@@ -109,13 +112,7 @@ class StopTest(StopTestBase, PexpectAssertionMixin):
                 stop_process, SHUTDOWN_EXIT_CODE_REQUESTED_SHUTDOWN
             )
 
-            def daemon_exited() -> Optional[bool]:
-                if did_process_exit(daemon_pid):
-                    return True
-                else:
-                    return None
-
-            poll_until(daemon_exited, timeout=10)
+            self.assertTrue(wait_for_process_exit(daemon_pid, timeout=10))
 
     def test_stop_not_running(self) -> None:
         stop_process = self.spawn_stop(["--timeout", "1"])

@@ -120,20 +120,10 @@ def check_health_using_lockfile(config_dir: Path) -> HealthStatus:
         # DEAD.
         return _create_dead_health_status()
 
-    try:
-        stdout = subprocess.check_output(["ps", "-p", str(pid), "-o", "comm="])
-    except subprocess.CalledProcessError:
-        # If there is no process with the specified id, return DEAD.
-        return _create_dead_health_status()
+    from . import proc_utils as proc_utils_mod
 
-    # Use heuristics to determine that the PID in the lockfile is associated
-    # with an edenfs process as it is possible that edenfs is no longer
-    # running and the PID in the lockfile has been assigned to a new process
-    # unrelated to Eden.
-    comm = stdout.rstrip().decode("utf8")
-    # Note that the command may be just "edenfs" rather than a path, but it
-    # works out fine either way.
-    if os.path.basename(comm) in ("edenfs", "fake_edenfs"):
+    proc_utils = proc_utils_mod.new()
+    if proc_utils.is_edenfs_process(pid):
         return HealthStatus(
             fb303_status.STOPPED,
             pid,
@@ -226,7 +216,7 @@ def wait_for_daemon_healthy(
         # Still starting
         return None
 
-    timeout_ex = EdenStartError("timed out waiting for edenfs to become " "healthy")
+    timeout_ex = EdenStartError("timed out waiting for edenfs to become healthy")
     return poll_until(check_daemon_health, timeout=timeout, timeout_ex=timeout_ex)
 
 

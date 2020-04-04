@@ -4,80 +4,13 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import ctypes
-import os
-from ctypes.wintypes import (
-    DWORD as _DWORD,
-    HANDLE as _HANDLE,
-    LPSTR as _LPSTR,
-    WORD as _WORD,
-)
+# pyre-strict
+
+import subprocess
 from typing import List, Optional
 
+from . import proc_utils_win
 from .config import EdenInstance
-
-
-class _STARTUPINFO(ctypes.Structure):
-    _fields_ = [
-        ("cb", _DWORD),
-        ("lpReserved", _LPSTR),
-        ("lpDesktop", _LPSTR),
-        ("lpTitle", _LPSTR),
-        ("dwX", _DWORD),
-        ("dwY", _DWORD),
-        ("dwXSize", _DWORD),
-        ("dwYSize", _DWORD),
-        ("dwXCountChars", _DWORD),
-        ("dwYCountChars", _DWORD),
-        ("dwFillAttribute", _DWORD),
-        ("dwFlags", _DWORD),
-        ("wShowWindow", _WORD),
-        ("cbReserved2", _WORD),
-        ("lpReserved2", ctypes.c_char_p),
-        ("hStdInput", _HANDLE),
-        ("hStdOutput", _HANDLE),
-        ("hStdError", _HANDLE),
-    ]
-
-
-class _PROCESS_INFORMATION(ctypes.Structure):
-    _fields_ = [
-        ("hProcess", _HANDLE),
-        ("hThread", _HANDLE),
-        ("dwProcessId", _DWORD),
-        ("dwThreadId", _DWORD),
-    ]
-
-
-_CREATE_NO_WINDOW = 0x08000000
-_SW_HIDE = 0
-
-
-# This is deliberately untyped because the type checker on
-# linux cannot reason about windll
-def _create_process_shim(cmd_str):
-    si = _STARTUPINFO()
-    si.cb = ctypes.sizeof(_STARTUPINFO)
-    pi = _PROCESS_INFORMATION()
-
-    res = ctypes.windll.kernel32.CreateProcessW(
-        None,
-        cmd_str,
-        None,
-        None,
-        False,
-        _CREATE_NO_WINDOW,
-        None,
-        None,
-        ctypes.byref(si),
-        ctypes.byref(pi),
-    )
-
-    if not res:
-        raise ctypes.WinError()
-
-    ctypes.windll.kernel32.CloseHandle(pi.hProcess)
-    ctypes.windll.kernel32.CloseHandle(pi.hThread)
 
 
 def start_edenfs(
@@ -92,8 +25,8 @@ def start_edenfs(
         "--configPath",
         str(instance._user_config_path),
     ]
-    cmd_str = " ".join(cmd)
+    cmd_str = subprocess.list2cmdline(cmd)
 
-    _create_process_shim(cmd_str)
+    proc_utils_win.create_process_shim(cmd_str)
 
     print("Edenfs started")

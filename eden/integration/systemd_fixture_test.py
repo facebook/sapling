@@ -13,7 +13,7 @@ import time
 import typing
 import unittest
 
-from eden.fs.cli.daemon import did_process_exit
+from eden.fs.cli import proc_utils as proc_utils_mod
 from eden.test_support.environment_variable import EnvironmentVariableMixin
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 
@@ -74,7 +74,8 @@ class TemporarySystemdUserServiceManagerTest(
         process_id = systemd.process_id
         systemd.exit()
         self.assertFalse(systemd.is_alive())
-        self.assertTrue(did_process_exit(process_id))
+        proc_utils = proc_utils_mod.new()
+        self.assertFalse(proc_utils.is_process_alive(process_id))
 
 
 class TemporarySystemdUserServiceManagerIsolationTest(

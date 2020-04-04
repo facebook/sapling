@@ -10,6 +10,7 @@ import abc
 import logging
 import os
 import platform
+import subprocess
 import sys
 import time
 import typing
@@ -110,6 +111,27 @@ class ProcUtils(abc.ABC):
         """Get the start time of the process, in seconds since the Unix epoch."""
         raise NotImplementedError()
 
+    @abc.abstractmethod
+    def is_process_alive(self, pid: int) -> bool:
+        """Return true if a process is currently running with the specified
+        process ID.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
+    def is_edenfs_process(self, pid: int) -> bool:
+        """Heuristically check if the specified process ID looks like a running
+        EdenFS process.  This is primarily used by the health checking code
+        if we find an existing EdenFS pid but cannot communicate with it over thrift.
+
+        This should return False if no process exists with this process ID.
+        If the process ID exists it should ideally attempt to determine if it looks like
+        an EdenFS process or not, and return True only if the process appears to be an
+        EdenFS instance.  However, the output is primarily used just for diagnostic
+        reporting, so false positives are acceptable.
+        """
+        raise NotImplementedError()
+
     def read_lock_file(self, path: Path) -> bytes:
         """Read an EdenFS lock file.
         This method exists primarily to allow it to be overridden in test cases.
@@ -117,7 +139,44 @@ class ProcUtils(abc.ABC):
         return path.read_bytes()
 
 
-class NopProcUtils(ProcUtils):
+class UnixProcUtils(ProcUtils):
+    def is_process_alive(self, pid: int) -> bool:
+        try:
+            os.kill(pid, 0)
+            # Still running
+            return True
+        except OSError as ex:
+            import errno
+
+            if ex.errno == errno.ESRCH:
+                # The process has exited
+                return False
+            elif ex.errno == errno.EPERM:
+                # The process is still running but we don't have permissions
+                # to send signals to it
+                return True
+            # Any other error else is unexpected
+            raise
+
+    def is_edenfs_process(self, pid: int) -> bool:
+        comm = self._get_process_command(pid)
+        if comm is None:
+            return False
+
+        # Note that the command may be just "edenfs" rather than a path, but it
+        # works out fine either way.
+        return os.path.basename(comm) in ("edenfs", "fake_edenfs")
+
+    def _get_process_command(self, pid: int) -> Optional[str]:
+        try:
+            stdout = subprocess.check_output(["ps", "-p", str(pid), "-o", "comm="])
+        except subprocess.CalledProcessError:
+            return None
+
+        return stdout.rstrip().decode("utf8")
+
+
+class MacProcUtils(UnixProcUtils):
     def get_edenfs_processes(self) -> Iterable[EdenFSProcess]:
         return []
 
@@ -127,7 +186,7 @@ class NopProcUtils(ProcUtils):
         )
 
 
-class LinuxProcUtils(ProcUtils):
+class LinuxProcUtils(UnixProcUtils):
     proc_path = Path("/proc")
     _system_boot_time: Optional[float] = None
     _jiffies_per_sec: Optional[int] = None
@@ -261,6 +320,12 @@ class LinuxProcUtils(ProcUtils):
 
 
 def new() -> ProcUtils:
-    if platform.system() == "Linux":
+    if sys.platform.startswith("linux"):
         return LinuxProcUtils()
-    return NopProcUtils()
+    elif sys.platform == "darwin":
+        return MacProcUtils()
+    elif sys.platform == "win32":
+        from . import proc_utils_win
+
+        return proc_utils_win.WinProcUtils()
+    raise Exception("unsupported platform: {sys.platform!r}")

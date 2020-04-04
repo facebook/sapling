@@ -14,7 +14,7 @@ import subprocess
 import sys
 from typing import Dict, List, NoReturn, Optional, Tuple
 
-from . import daemon_util
+from . import daemon_util, proc_utils as proc_utils_mod
 from .config import EdenInstance
 from .logfile import forward_log_file
 from .systemd import (
@@ -48,12 +48,12 @@ def wait_for_process_exit(pid: int, timeout: float) -> bool:
     Returns True if the process exits within the specified timeout, and False if the
     timeout expires while the process is still alive.
     """
+    proc_utils = proc_utils_mod.new()
 
     def process_exited() -> Optional[bool]:
-        if did_process_exit(pid):
+        if not proc_utils.is_process_alive(pid):
             return True
-        else:
-            return None
+        return None
 
     try:
         poll_until(process_exited, timeout=timeout)
@@ -125,21 +125,6 @@ def sigkill_process(pid: int, timeout: float = DEFAULT_SIGKILL_TIMEOUT) -> None:
             "edenfs process {} did not terminate within {} seconds of "
             "sending SIGKILL.".format(pid, timeout)
         )
-
-
-def did_process_exit(pid: int) -> bool:
-    try:
-        os.kill(pid, 0)
-    except OSError as ex:
-        if ex.errno == errno.ESRCH:
-            # The process has exited
-            return True
-        # EPERM is okay (and means the process is still running),
-        # anything else is unexpected
-        elif ex.errno != errno.EPERM:
-            raise
-    # Still running
-    return False
 
 
 def exec_daemon(
