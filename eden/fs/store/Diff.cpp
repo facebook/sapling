@@ -581,7 +581,7 @@ FOLLY_NODISCARD Future<Unit> waitOnResults(
     return makeFuture();
   }
 
-  return folly::collectAllSemiFuture(std::move(childFutures.futures))
+  return folly::collectAll(std::move(childFutures.futures))
       .toUnsafeFuture()
       .thenValue([context, paths = std::move(childFutures.paths)](
                      vector<Try<Unit>>&& results) {

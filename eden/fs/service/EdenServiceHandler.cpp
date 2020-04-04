@@ -428,7 +428,7 @@ void EdenServiceHandler::getSHA1(
     futures.emplace_back(getSHA1ForPathDefensively(*mountPoint, path));
   }
 
-  auto results = folly::collectAllSemiFuture(std::move(futures)).get();
+  auto results = folly::collectAll(std::move(futures)).get();
   for (auto& result : results) {
     out.emplace_back();
     SHA1Result& sha1Result = out.back();
@@ -770,25 +770,25 @@ EdenServiceHandler::semifuture_getFileInformation(
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
 
-  return collectAllSemiFuture(applyToInodes(
-                                  rootInode,
-                                  *paths,
-                                  [](InodePtr inode) {
-                                    return inode->getattr().thenValue(
-                                        [](Dispatcher::Attr attr) {
-                                          FileInformation info;
-                                          info.size = attr.st.st_size;
-                                          auto& ts = stMtime(attr.st);
-                                          info.mtime.seconds = ts.tv_sec;
-                                          info.mtime.nanoSeconds = ts.tv_nsec;
-                                          info.mode = attr.st.st_mode;
+  return collectAll(applyToInodes(
+                        rootInode,
+                        *paths,
+                        [](InodePtr inode) {
+                          return inode->getattr().thenValue(
+                              [](Dispatcher::Attr attr) {
+                                FileInformation info;
+                                info.size = attr.st.st_size;
+                                auto& ts = stMtime(attr.st);
+                                info.mtime.seconds = ts.tv_sec;
+                                info.mtime.nanoSeconds = ts.tv_nsec;
+                                info.mode = attr.st.st_mode;
 
-                                          FileInformationOrError result;
-                                          result.set_info(info);
+                                FileInformationOrError result;
+                                result.set_info(info);
 
-                                          return result;
-                                        });
-                                  }))
+                                return result;
+                              });
+                        }))
       .deferValue([](vector<Try<FileInformationOrError>>&& done) {
         auto out = std::make_unique<vector<FileInformationOrError>>();
         out->reserve(done.size());

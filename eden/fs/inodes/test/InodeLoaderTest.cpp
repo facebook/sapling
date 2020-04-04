@@ -27,7 +27,7 @@ TEST(InodeLoader, load) {
 
   {
     auto results =
-        collectAllSemiFuture(
+        collectAll(
             applyToInodes(
                 rootInode,
                 std::vector<std::string>{
@@ -42,16 +42,16 @@ TEST(InodeLoader, load) {
   }
 
   {
-    auto results = collectAllSemiFuture(
-                       applyToInodes(
-                           rootInode,
-                           std::vector<std::string>{"dir/sub/b.txt",
-                                                    "dir/a.txt",
-                                                    "not/exist/a",
-                                                    "not/exist/b",
-                                                    "dir/sub/b.txt"},
-                           [](InodePtr inode) { return inode->getPath(); }))
-                       .get();
+    auto results =
+        collectAll(applyToInodes(
+                       rootInode,
+                       std::vector<std::string>{"dir/sub/b.txt",
+                                                "dir/a.txt",
+                                                "not/exist/a",
+                                                "not/exist/b",
+                                                "dir/sub/b.txt"},
+                       [](InodePtr inode) { return inode->getPath(); }))
+            .get();
 
     EXPECT_EQ("dir/sub/b.txt"_relpath, results[0].value());
     EXPECT_EQ("dir/a.txt"_relpath, results[1].value());
@@ -63,7 +63,7 @@ TEST(InodeLoader, load) {
 
   {
     auto results =
-        collectAllSemiFuture(
+        collectAll(
             applyToInodes(
                 rootInode,
                 std::vector<std::string>{"dir/a.txt", "/invalid///exist/a"},
@@ -83,7 +83,7 @@ TEST(InodeLoader, notReady) {
   auto rootInode = mount.getTreeInode(RelativePathPiece());
 
   {
-    auto future = collectAllSemiFuture(applyToInodes(
+    auto future = collectAll(applyToInodes(
         rootInode,
         std::vector<std::string>{
             "dir/a.txt", "not/exist/a", "not/exist/b", "dir/sub/b.txt"},

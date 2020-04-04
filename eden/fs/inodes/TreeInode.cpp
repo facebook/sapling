@@ -2318,7 +2318,7 @@ Future<Unit> TreeInode::computeDiff(
   // Note that we explicitly move-capture the deferredFutures vector into this
   // callback, to ensure that the DeferredDiffEntry objects do not get
   // destroyed before they complete.
-  return folly::collectAllSemiFuture(deferredFutures)
+  return folly::collectAll(deferredFutures)
       .toUnsafeFuture()
       .thenValue([self = std::move(self),
                   currentPath = RelativePath{std::move(currentPath)},
@@ -2377,7 +2377,7 @@ Future<Unit> TreeInode::checkout(
     actionFutures.emplace_back(action->run(ctx, getStore()));
   }
   // Wait for all of the actions, and record any errors.
-  return folly::collectAllSemiFuture(actionFutures)
+  return folly::collectAll(actionFutures)
       .toUnsafeFuture()
       .thenValue(
           [ctx,

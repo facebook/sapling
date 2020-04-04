@@ -95,7 +95,7 @@ bool WinStore::getAllEntries(
         fileSize);
   }
 
-  auto results = folly::collectAllSemiFuture(std::move(futures)).get();
+  auto results = folly::collectAll(std::move(futures)).get();
   for (auto& result : results) {
     //
     // If we are here it's for a file, so the second argument will be false.
