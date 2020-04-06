@@ -183,12 +183,13 @@ def _modesetup(ui):
     if pycompat.iswindows:
         from . import win32
 
-        if not win32.enablevtmode():
+        if not (util.istest() or win32.enablevtmode()):
             if formatted:
                 ui.warn(
                     _("couldn't enable VT mode for your terminal, disabling colors\n")
                 )
-            return None
+            if not always:
+                return None
 
     if always or (auto and formatted):
         return "ansi"
