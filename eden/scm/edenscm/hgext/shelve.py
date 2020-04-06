@@ -528,7 +528,7 @@ def _docreatecmd(ui, repo, pats, opts):
 
     _shelvecreatedcommit(ui, repo, node, name)
 
-    if ui.formatted():
+    if ui.formatted:
         desc = util.ellipsis(desc, ui.termwidth())
     ui.status(_("shelved as %s\n") % name)
 
@@ -645,7 +645,7 @@ def listcmd(ui, repo, pats, opts):
                     break
                 if not line.startswith("#"):
                     desc = line.rstrip()
-                    if ui.formatted():
+                    if ui.formatted:
                         desc = util.ellipsis(desc, width - used)
                     ui.write(desc)
                     break

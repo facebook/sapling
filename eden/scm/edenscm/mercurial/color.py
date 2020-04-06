@@ -178,7 +178,7 @@ def _modesetup(ui):
     if not always and not auto:
         return None
 
-    formatted = always or (encoding.environ.get("TERM") != "dumb" and ui.formatted())
+    formatted = always or (encoding.environ.get("TERM") != "dumb" and ui.formatted)
 
     if pycompat.iswindows:
         from . import win32

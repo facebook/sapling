@@ -1321,7 +1321,7 @@ def displayremotebookmarks(ui, repo, opts, fm):
 
     # it seems overkill to hide displaying hidden remote bookmarks
     repo = repo.unfiltered()
-    useformatted = repo.ui.formatted()
+    useformatted = repo.ui.formatted
 
     for name in sorted(ns.listnames(repo)):
         nodes = ns.nodes(repo, name)

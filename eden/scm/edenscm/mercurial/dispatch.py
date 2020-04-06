@@ -719,7 +719,7 @@ def _callcatch(ui, func):
             and ui.interactive()
             and not ui.pageractive
             and not ui.plain()
-            and ui.formatted()
+            and ui.formatted
         ):
             ui.write_err(
                 _(

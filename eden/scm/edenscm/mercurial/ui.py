@@ -636,7 +636,7 @@ class ui(object):
             msgs = self._addprefixesandlabels(args, opts, bool(self._bufferapplylabels))
             self._buffers[-1].extend(msgs)
         else:
-            if self.formatted():
+            if self.formatted:
                 # Convert arguments from local encoding to output encoding
                 # if these encodings differ (e.g. Python 2.7 on Windows).
                 args = [encoding.localtooutput(arg) for arg in args]
@@ -771,7 +771,7 @@ class ui(object):
             or not self.configbool("pager", "attend-" + command, True)
             # TODO: if we want to allow HGPLAINEXCEPT=pager,
             # formatted() will need some adjustment.
-            or not self.formatted()
+            or not self.formatted
             or self.plain()
             or self._buffers
             # TODO: expose debugger-enabled on the UI object
@@ -794,7 +794,7 @@ class ui(object):
         self.debug("starting pager for command %r\n" % command)
         self.flush()
 
-        wasformatted = self.formatted()
+        wasformatted = self.formatted
         if util.safehasattr(signal, "SIGPIPE"):
             signal.signal(signal.SIGPIPE, _catchterm)
         if self._runpager(pagercmd, pagerenv):
@@ -803,6 +803,7 @@ class ui(object):
             # because we mess with stdout, which might confuse
             # auto-detection of things being formatted.
             self.setconfig("ui", "formatted", wasformatted, "pager")
+            util.clearcachedproperty(self, "formatted")
             self.setconfig("ui", "interactive", False, "pager")
 
             # If pager encoding is set, update the output encoding
@@ -998,6 +999,7 @@ class ui(object):
                 pass
         return scmutil.termsize(self)[0]
 
+    @util.propertycache
     def formatted(self):
         """should formatted output be used?
 

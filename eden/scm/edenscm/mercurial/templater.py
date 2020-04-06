@@ -1443,7 +1443,7 @@ def hyperlink(context, mapping, args):
         raise error.ParseError("hyperlink expects two arguments, got %s" % len(args))
 
     ui = mapping["ui"]
-    hyperlink = ui.formatted() and ui.configbool("ui", "hyperlink", False)
+    hyperlink = ui.formatted and ui.configbool("ui", "hyperlink", False)
 
     title = evalstring(context, mapping, args[1])
 
