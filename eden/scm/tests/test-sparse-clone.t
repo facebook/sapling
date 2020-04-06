@@ -70,6 +70,7 @@ Verify sparse clone with a non-existing sparse profile warns
   $ hg clone --enable-profile nonexisting.sparse myrepo clone5
   updating to branch default
   the profile 'nonexisting.sparse' does not exist in the current commit, it will only take effect when you check out a commit containing a profile with that name
+  (if the path is a typo, use 'hg sparse disableprofile' to remove it)
   5 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ cd clone5
   $ ls

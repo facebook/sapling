@@ -266,6 +266,8 @@ warning message can be suppressed by setting missingwarning = false in
   > missingwarning = true
   > EOF
   $ hg sparse enableprofile backend.sparse
+  the profile 'backend.sparse' does not exist in the current commit, it will only take effect when you check out a commit containing a profile with that name
+  (if the path is a typo, use 'hg sparse disableprofile' to remove it)
   warning: sparse profile 'backend.sparse' not found in rev 42b23bc43905 - ignoring it
 
   $ cd ..
@@ -580,6 +582,7 @@ when listing:
 
   $ hg sparse enableprofile nonesuch
   the profile 'nonesuch' does not exist in the current commit, it will only take effect when you check out a commit containing a profile with that name
+  (if the path is a typo, use 'hg sparse disableprofile' to remove it)
   $ hg sparse list
   Available Profiles:
   

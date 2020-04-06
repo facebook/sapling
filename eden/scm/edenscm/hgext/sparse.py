@@ -2296,11 +2296,6 @@ def _config(
 
 
 def _checknonexistingprofiles(ui, repo, profiles):
-    # don't do the check if sparse.missingwarning is set to true
-    # otherwise warnings will be shown twice for the same profile
-    if ui.configbool("sparse", "missingwarning"):
-        return
-
     for p in profiles:
         try:
             repo.filectx(p, changeid=".").data()
@@ -2311,6 +2306,7 @@ def _checknonexistingprofiles(ui, repo, profiles):
                     "current commit, it will only take effect "
                     "when you check out a commit containing a "
                     "profile with that name\n"
+                    "(if the path is a typo, use 'hg sparse disableprofile' to remove it)\n"
                 )
                 % p
             )
