@@ -32,6 +32,7 @@
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/LazyInitialize.h"
 #include "eden/fs/utils/SSLContext.h"
 #include "eden/fs/utils/ServiceAddress.h"
@@ -187,35 +188,6 @@ std::unique_ptr<Blob> getBlobFromUnionStore(
   }
   return nullptr;
 }
-
-/**
- * managers the pointer to the number of outstanding imports
- */
-class PendingImportsMetricsScope {
- public:
-  explicit PendingImportsMetricsScope(
-      HgBackingStore::LockedWatchList* pendingRequestWatches)
-      : pendingRequestWatches_(pendingRequestWatches) {
-    folly::stop_watch<> watch;
-    {
-      auto startTimes = pendingRequestWatches_->wlock();
-      requestWatch_ = startTimes->insert(startTimes->end(), watch);
-    }
-  }
-
-  ~PendingImportsMetricsScope() {
-    {
-      auto startTimes = pendingRequestWatches_->wlock();
-      startTimes->erase(requestWatch_);
-    }
-  }
-  PendingImportsMetricsScope(PendingImportsMetricsScope&&) = delete;
-  PendingImportsMetricsScope& operator=(PendingImportsMetricsScope&&) = delete;
-
- private:
-  HgBackingStore::LockedWatchList* pendingRequestWatches_;
-  HgBackingStore::WatchList::iterator requestWatch_;
-};
 } // namespace
 
 HgBackingStore::HgBackingStore(
@@ -564,19 +536,21 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
     RelativePath path,
     std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
   auto queueTracker =
-      std::make_unique<PendingImportsMetricsScope>(&pendingImportTreeWatches_);
-  auto fut =
-      folly::via(
-          importThreadPool_.get(),
-          [path, manifestNode, stats = stats_] {
-            Importer& importer = getThreadLocalImporter();
-            folly::stop_watch<std::chrono::milliseconds> watch;
-            importer.fetchTree(path, manifestNode);
-            stats->getHgBackingStoreStatsForCurrentThread()
-                .hgBackingStoreImportTree.addValue(watch.elapsed().count());
-          })
-          .via(serverThreadPool_);
-  return std::move(fut)
+      std::make_unique<RequestMetricsScope>(&pendingImportTreeWatches_);
+  return folly::via(
+             importThreadPool_.get(),
+             [path,
+              manifestNode,
+              stats = stats_,
+              &liveImportTreeWatches = liveImportTreeWatches_] {
+               Importer& importer = getThreadLocalImporter();
+               folly::stop_watch<std::chrono::milliseconds> watch;
+               RequestMetricsScope queueTracker{&liveImportTreeWatches};
+               importer.fetchTree(path, manifestNode);
+               stats->getHgBackingStoreStatsForCurrentThread()
+                   .hgBackingStoreImportTree.addValue(watch.elapsed().count());
+             })
+      .via(serverThreadPool_)
       .thenTry([this,
                 ownedPath = std::move(path),
                 node = std::move(manifestNode),
@@ -770,12 +744,16 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(
     const RelativePathPiece& path,
     const Hash& id) {
   auto queueTracker =
-      std::make_unique<PendingImportsMetricsScope>(&pendingImportBlobWatches_);
+      std::make_unique<RequestMetricsScope>(&pendingImportBlobWatches_);
   return folly::via(
              importThreadPool_.get(),
-             [path = path.copy(), stats = stats_, id] {
+             [path = path.copy(),
+              stats = stats_,
+              id,
+              &liveImportBlobWatches = liveImportBlobWatches_] {
                Importer& importer = getThreadLocalImporter();
                folly::stop_watch<std::chrono::milliseconds> watch;
+               RequestMetricsScope queueTracker{&liveImportBlobWatches};
                auto blob = importer.importFileContents(path, id);
                stats->getHgBackingStoreStatsForCurrentThread()
                    .hgBackingStoreImportBlob.addValue(watch.elapsed().count());
@@ -786,13 +764,16 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(
 
 folly::Future<folly::Unit> HgBackingStore::prefetchBlobs(
     const std::vector<Hash>& ids) const {
-  auto queueTracker = std::make_unique<PendingImportsMetricsScope>(
-      &pendingImportPrefetchWatches_);
+  auto queueTracker =
+      std::make_unique<RequestMetricsScope>(&pendingImportPrefetchWatches_);
   return HgProxyHash::getBatch(localStore_, ids)
       .via(importThreadPool_.get())
-      .thenValue([](std::vector<std::pair<RelativePath, Hash>>&& hgPathHashes) {
-        return getThreadLocalImporter().prefetchFiles(hgPathHashes);
-      })
+      .thenValue(
+          [&liveImportPrefetchWatches = liveImportPrefetchWatches_](
+              std::vector<std::pair<RelativePath, Hash>>&& hgPathHashes) {
+            RequestMetricsScope queueTracker{&liveImportPrefetchWatches};
+            return getThreadLocalImporter().prefetchFiles(hgPathHashes);
+          })
       .via(serverThreadPool_)
       .ensure([tracker = std::move(queueTracker)] {});
 }
@@ -881,31 +862,20 @@ size_t HgBackingStore::getPendingTreeImports() const {
 size_t HgBackingStore::getPendingPrefetchImports() const {
   return pendingImportPrefetchWatches_.rlock()->size();
 }
-HgBackingStore::DefaultDuration
+
+RequestMetricsScope::DefaultRequestDuration
 HgBackingStore::getPendingBlobImportMaxDuration() const {
-  return getMaxDuration(pendingImportBlobWatches_);
+  return RequestMetricsScope::getMaxDuration(pendingImportBlobWatches_);
 }
 
-HgBackingStore::DefaultDuration
+RequestMetricsScope::DefaultRequestDuration
 HgBackingStore::getPendingTreeImportMaxDuration() const {
-  return getMaxDuration(pendingImportTreeWatches_);
+  return RequestMetricsScope::getMaxDuration(pendingImportTreeWatches_);
 }
 
-HgBackingStore::DefaultDuration
+RequestMetricsScope::DefaultRequestDuration
 HgBackingStore::getPendingPrefetchImportMaxDuration() const {
-  return getMaxDuration(pendingImportPrefetchWatches_);
-}
-
-HgBackingStore::DefaultDuration HgBackingStore::getMaxDuration(
-    LockedWatchList& watches) const {
-  DefaultDuration maxDurationImport{0};
-  {
-    auto lockedWatches = watches.rlock();
-    for (const auto& watch : *lockedWatches) {
-      maxDurationImport = std::max(maxDurationImport, watch.elapsed());
-    }
-  }
-  return maxDurationImport;
+  return RequestMetricsScope::getMaxDuration(pendingImportPrefetchWatches_);
 }
 
 void HgBackingStore::periodicManagementTask() {

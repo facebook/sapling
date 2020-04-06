@@ -14,13 +14,13 @@
 #include <folly/Executor.h>
 #include <folly/Range.h>
 #include <folly/Synchronized.h>
-#include <folly/stop_watch.h>
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifdef EDEN_HAVE_RUST_DATAPACK
@@ -99,16 +99,15 @@ class HgBackingStore : public BackingStore {
    */
   folly::Future<std::unique_ptr<Tree>> importTreeManifest(const Hash& commitId);
 
-  using WatchList = std::list<folly::stop_watch<>>;
-  using LockedWatchList = folly::Synchronized<WatchList>;
-  using DefaultDuration = std::chrono::steady_clock::steady_clock::duration;
-
   size_t getPendingBlobImports() const;
   size_t getPendingTreeImports() const;
   size_t getPendingPrefetchImports() const;
-  DefaultDuration getPendingBlobImportMaxDuration() const;
-  DefaultDuration getPendingTreeImportMaxDuration() const;
-  DefaultDuration getPendingPrefetchImportMaxDuration() const;
+  RequestMetricsScope::DefaultRequestDuration getPendingBlobImportMaxDuration()
+      const;
+  RequestMetricsScope::DefaultRequestDuration getPendingTreeImportMaxDuration()
+      const;
+  RequestMetricsScope::DefaultRequestDuration
+  getPendingPrefetchImportMaxDuration() const;
 
  private:
   // Forbidden copy constructor and assignment operator
@@ -209,12 +208,6 @@ class HgBackingStore : public BackingStore {
       RelativePathPiece path,
       LocalStore::WriteBatch* writeBatch);
 
-  /**
-   * finds the watch in `watches` for which the time that has elapsed
-   * is the greatest and returns the duration of time that has elapsed
-   */
-  DefaultDuration getMaxDuration(LockedWatchList& watches) const;
-
   LocalStore* localStore_{nullptr};
   std::shared_ptr<EdenStats> stats_;
   // A set of threads owning HgImporter instances
@@ -239,10 +232,16 @@ class HgBackingStore : public BackingStore {
   std::optional<HgDatapackStore> datapackStore_;
 #endif
 
-  // Track metrics for queued imports
-  mutable LockedWatchList pendingImportBlobWatches_;
-  mutable LockedWatchList pendingImportTreeWatches_;
-  mutable LockedWatchList pendingImportPrefetchWatches_;
+  // Track metrics for imports that are queued, live or fetching data from cache
+  mutable RequestMetricsScope::LockedRequestWatchList pendingImportBlobWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList pendingImportTreeWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList
+      pendingImportPrefetchWatches_;
+  // Track metrics for imports currently fetching data from hg
+  mutable RequestMetricsScope::LockedRequestWatchList liveImportBlobWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList liveImportTreeWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList
+      liveImportPrefetchWatches_;
 };
 } // namespace eden
 } // namespace facebook
