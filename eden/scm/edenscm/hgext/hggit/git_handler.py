@@ -277,7 +277,7 @@ class GitHandler(object):
     def import_commits(self, remote_name):
         refs = self.git.refs.as_dict()
         filteredrefs = self.filter_min_date(refs)
-        self.import_git_objects(remote_name, filteredrefs)
+        self.import_git_objects(filteredrefs)
         self.update_hg_bookmarks(refs)
         self.save_map(self.map_file)
 
@@ -292,7 +292,7 @@ class GitHandler(object):
         imported = 0
         if refs:
             filteredrefs = self.filter_min_date(self.filter_refs(refs, heads))
-            imported = self.import_git_objects(remote_name, filteredrefs)
+            imported = self.import_git_objects(filteredrefs)
             self.update_hg_bookmarks(refs)
 
             try:
@@ -860,7 +860,7 @@ class GitHandler(object):
     def get_git_incoming(self, refs):
         return git2hg.find_incoming(self.git.object_store, self._map, refs)
 
-    def import_git_objects(self, remote_name, refs):
+    def import_git_objects(self, refs, limit=None):
         result = self.get_git_incoming(refs)
         commits = result.commits
         commit_cache = result.commit_cache
@@ -871,9 +871,15 @@ class GitHandler(object):
         else:
             self.ui.status(_("no changes found\n"))
 
+        importcount = total
+        if limit is not None:
+            importcount = min(total, limit)
+
         mapsavefreq = compat.config(self.ui, "int", "hggit", "mapsavefrequency")
-        with progress.bar(self.ui, _("importing"), "commits", total=total) as prog:
-            icommits = enumerate(commits)
+        with progress.bar(
+            self.ui, _("importing"), "commits", total=importcount
+        ) as prog:
+            icommits = enumerate(itertools.islice(commits, limit))
             while True:
                 isubcommits = list(itertools.islice(icommits, mapsavefreq or 1))
                 if not isubcommits:
@@ -891,7 +897,7 @@ class GitHandler(object):
                     self.save_map(self.map_file)
 
         # TODO if the tags cache is used, remove any dangling tag references
-        return total
+        return importcount
 
     def import_git_commit(self, commit):
         self.ui.debug("importing: %s\n" % commit.id)
@@ -1282,8 +1288,8 @@ class GitHandler(object):
 
         return new_refs
 
-    def fetch_pack(self, remote_name, heads=None):
-        localclient, path = self.get_transport_and_path(remote_name)
+    def fetch_pack(self, uri, heads=None):
+        localclient, path = self.get_transport_and_path(uri)
 
         # The dulwich default walk only checks refs/heads/. We also want to
         # consider remotes when doing discovery, so we build our own list.  We

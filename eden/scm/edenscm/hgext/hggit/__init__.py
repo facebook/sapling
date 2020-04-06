@@ -255,6 +255,19 @@ def reposetup(ui, repo):
         repo.__class__ = klass
 
 
+@command("external-sync", [], _("REMOTE HEAD LIMIT"))
+def externalsync(ui, repo, remote, head, limit):
+    limit = int(limit)
+    repo.ui.status(
+        _("importing up to %d commits from %s in %s\n") % (limit, remote, head)
+    )
+    with repo.wlock(), repo.lock():
+        refs = repo.githandler.fetch_pack(remote, [head])
+        refs = repo.githandler.filter_refs(refs, [head])
+        imported = repo.githandler.import_git_objects(refs, limit)
+        repo.ui.status(_("imported %s commits\n") % imported)
+
+
 @command("gimport")
 def gimport(ui, repo, remote_name=None):
     """import commits from Git to Mercurial"""
