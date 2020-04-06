@@ -2279,7 +2279,17 @@ def pull(orig, ui, repo, *pats, **opts):
 
     result = orig(ui, repo, *pats, **opts)
     if treeenabled(repo.ui):
-        _postpullprefetch(ui, repo)
+        try:
+            _postpullprefetch(ui, repo)
+        except Exception as ex:
+            # Errors are not fatal.
+            ui.warn(_("failed to prefetch trees after pull: %s\n") % ex)
+            ui.log(
+                "exceptions",
+                exception_type=type(ex).__name__,
+                exception_msg=str(ex),
+                fatal="false",
+            )
     return result
 
 
