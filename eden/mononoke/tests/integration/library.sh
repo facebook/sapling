@@ -118,7 +118,7 @@ function mononoke_blobstore_healer {
   GLOG_minloglevel=5 "$MONONOKE_BLOBSTORE_HEALER" \
     "${COMMON_ARGS[@]}" \
     --mononoke-config-path mononoke-config  \
-    "$@"
+    "$@" 2>&1 | grep -v "Could not connect to a replica"
 }
 
 function mononoke_x_repo_sync() {
@@ -494,13 +494,20 @@ function db_config() {
   fi
 }
 
+function blobstore_db_config() {
+  if [[ -n "$DB_SHARD_NAME" ]]; then
+    echo "queue_db = { remote = { db_address = \"$DB_SHARD_NAME\" } }"
+  else
+    local blobstore_db_path="$TESTTMP/blobstore_sync_queue"
+    mkdir -p "$blobstore_db_path"
+    echo "queue_db = { local = { local_db_path = \"$blobstore_db_path\" } }"
+  fi
+}
+
 function setup_mononoke_storage_config {
   local underlyingstorage="$1"
   local blobstorename="$2"
   local blobstorepath="$TESTTMP/$blobstorename"
-
-  local blobstore_db_path="$TESTTMP/blobstore_sync_queue"
-  mkdir -p "$blobstore_db_path"
 
   if [[ -v MULTIPLEXED ]]; then
     cat >> common/storage.toml <<CONFIG
@@ -508,7 +515,7 @@ $(db_config "$blobstorename")
 
 [$blobstorename.blobstore.multiplexed]
 multiplex_id = 1
-queue_db = { local = { local_db_path = "$blobstore_db_path" } }
+$(blobstore_db_config)
 components = [
 CONFIG
 
@@ -1385,20 +1392,34 @@ EOF
 }
 
 function read_blobstore_sync_queue_size() {
-  local attempts timeout ret
-  timeout="100"
-  attempts="$((timeout * 10))"
+  if [[ -n "$DB_SHARD_NAME" ]]; then
+    echo "SELECT COUNT(*) FROM blobstore_sync_queue;" | db "$DB_SHARD_NAME" 2> /dev/null | grep -v COUNT
+  else
+    local attempts timeout ret
+    timeout="100"
+    attempts="$((timeout * 10))"
+    for _ in $(seq 1 $attempts); do
+      ret="$(sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "select count(*) from blobstore_sync_queue" 2>/dev/null)"
+      if [[ -n "$ret" ]]; then
+        echo "$ret"
+        return 0
+      fi
+      sleep 0.1
+    done
+    return 1
+  fi
 
-  for _ in $(seq 1 $attempts); do
-    ret="$(sqlite3 "$TESTTMP/blobstore_sync_queue/sqlite_dbs" "select count(*) from blobstore_sync_queue" 2>/dev/null)"
-    if [[ -n "$ret" ]]; then
-      echo "$ret"
-      return 0
-    fi
-    sleep 0.1
-  done
+}
 
-  return 1
+function erase_blobstore_sync_queue() {
+  if [[ -n "$DB_SHARD_NAME" ]]; then
+    # See above for why we have to redirect this output to /dev/null
+    db -wu "$DB_SHARD_NAME" 2> /dev/null <<EOF
+      DELETE FROM blobstore_sync_queue;
+EOF
+  else
+    rm -rf "$TESTTMP/blobstore_sync_queue/sqlite_dbs"
+fi
 }
 
 function log() {

@@ -39,6 +39,7 @@ EPHEMERAL_DB_WHITELIST = {
     "test-bookmarks-filler.t",
     "test-pushrebase.t",
     "test-mononoke-hg-sync-job-generate-bundles-loop.t",
+    "test-blobstore-healer.t",
 }
 
 # At this time, all tests support the network blackhole (except when ephemeral
