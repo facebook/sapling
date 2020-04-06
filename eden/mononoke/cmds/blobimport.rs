@@ -288,8 +288,7 @@ async fn run_blobimport<'a>(
 
     async move {
         let maybe_latest_imported_rev = blobimport_lib::Blobimport {
-            ctx: ctx.clone(),
-            logger: ctx.logger().clone(),
+            ctx,
             blobrepo,
             revlogrepo_path,
             changeset,
@@ -309,7 +308,6 @@ async fn run_blobimport<'a>(
             derived_data_types,
         }
         .import()
-        .compat()
         .await?;
 
         async move {

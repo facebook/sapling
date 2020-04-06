@@ -23,13 +23,13 @@ use ascii::AsciiString;
 use cloned::cloned;
 use futures::{
     compat::Future01CompatExt,
-    future::{ready, Future as NewFuture, FutureExt as _, TryFutureExt},
+    future::{ready, Future, FutureExt, TryFutureExt},
     stream::futures_unordered::FuturesUnordered,
     TryStreamExt,
 };
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
-use futures_old::{future, Future, Stream};
-use slog::{debug, error, info, Logger};
+use futures_ext::{FutureExt as OldFutureExt, StreamExt};
+use futures_old::{future, Future as OldFuture, Stream};
+use slog::{debug, error, info};
 
 use blobrepo::BlobRepo;
 use bonsai_git_mapping::BonsaiGitMapping;
@@ -48,7 +48,7 @@ fn derive_data_for_csids(
     repo: BlobRepo,
     csids: Vec<ChangesetId>,
     derived_data_types: &[String],
-) -> Result<impl NewFuture<Output = Result<(), Error>>, Error> {
+) -> Result<impl Future<Output = Result<(), Error>>, Error> {
     let derivations = FuturesUnordered::new();
 
     for data_type in derived_data_types {
@@ -76,9 +76,8 @@ pub enum BookmarkImportPolicy {
     Prefix(AsciiString),
 }
 
-pub struct Blobimport {
-    pub ctx: CoreContext,
-    pub logger: Logger,
+pub struct Blobimport<'a> {
+    pub ctx: &'a CoreContext,
     pub blobrepo: BlobRepo,
     pub revlogrepo_path: PathBuf,
     pub changeset: Option<HgNodeHash>,
@@ -98,11 +97,10 @@ pub struct Blobimport {
     pub derived_data_types: Vec<String>,
 }
 
-impl Blobimport {
-    pub fn import(self) -> BoxFuture<Option<RevIdx>, Error> {
+impl<'a> Blobimport<'a> {
+    pub async fn import(self) -> Result<Option<RevIdx>, Error> {
         let Self {
             ctx,
-            logger,
             blobrepo,
             revlogrepo_path,
             changeset,
@@ -121,6 +119,8 @@ impl Blobimport {
             small_repo_id,
             derived_data_types,
         } = self;
+
+        let logger = ctx.logger().clone();
 
         let repo_id = blobrepo.get_repoid();
 
@@ -186,21 +186,15 @@ impl Blobimport {
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
             .map(|(bookmark, changeset_id)| (bookmark.into_name(), changeset_id));
 
-        stale_bookmarks
+        let run = stale_bookmarks
             .join(mononoke_bookmarks.collect())
             .and_then({
-                cloned!(ctx, blobrepo, logger);
+                cloned!(ctx, blobrepo);
                 move |(stale_bookmarks, mononoke_bookmarks)| {
                     upload_changesets
                         .chunks(chunk_size)
                         .and_then({
-                            cloned!(
-                                ctx,
-                                globalrevs_store,
-                                synced_commit_mapping,
-                                blobrepo,
-                                logger
-                            );
+                            cloned!(ctx, globalrevs_store, synced_commit_mapping, blobrepo,);
                             move |chunk| {
                                 let max_rev = chunk.iter().map(|(rev, _)| rev).max().cloned();
                                 let synced_commit_mapping_work =
@@ -254,7 +248,10 @@ impl Blobimport {
                                 };
 
                                 if !derived_data_types.is_empty() {
-                                    info!(logger, "Deriving data for: {:?}", derived_data_types);
+                                    info!(
+                                        ctx.logger(),
+                                        "Deriving data for: {:?}", derived_data_types
+                                    );
                                 }
 
                                 let derivation_work = derive_data_for_csids(
@@ -284,31 +281,34 @@ impl Blobimport {
                         .map(move |max_rev| (max_rev, stale_bookmarks, mononoke_bookmarks))
                 }
             })
-            .and_then(move |(max_rev, stale_bookmarks, mononoke_bookmarks)| {
-                info!(
-                    logger,
-                    "finished uploading changesets, globalrevs and deriving data"
-                );
-                let f = match bookmark_import_policy {
-                    BookmarkImportPolicy::Ignore => {
-                        info!(
-                            logger,
-                            "since --no-bookmark was provided, bookmarks won't be imported"
-                        );
-                        future::ok(()).boxify()
-                    }
-                    BookmarkImportPolicy::Prefix(prefix) => bookmark::upload_bookmarks(
-                        ctx,
-                        &logger,
-                        revlogrepo,
-                        blobrepo,
-                        stale_bookmarks,
-                        mononoke_bookmarks,
-                        bookmark::get_bookmark_prefixer(prefix),
-                    ),
-                };
-                f.map(move |()| max_rev)
-            })
-            .boxify()
+            .and_then({
+                move |(max_rev, stale_bookmarks, mononoke_bookmarks)| {
+                    info!(
+                        logger,
+                        "finished uploading changesets, globalrevs and deriving data"
+                    );
+                    let f = match bookmark_import_policy {
+                        BookmarkImportPolicy::Ignore => {
+                            info!(
+                                logger,
+                                "since --no-bookmark was provided, bookmarks won't be imported"
+                            );
+                            future::ok(()).boxify()
+                        }
+                        BookmarkImportPolicy::Prefix(prefix) => bookmark::upload_bookmarks(
+                            ctx.clone(),
+                            &logger,
+                            revlogrepo,
+                            blobrepo,
+                            stale_bookmarks,
+                            mononoke_bookmarks,
+                            bookmark::get_bookmark_prefixer(prefix),
+                        ),
+                    };
+                    f.map(move |()| max_rev)
+                }
+            });
+
+        run.compat().await
     }
 }
