@@ -28,12 +28,19 @@ newserver() {
   else
     mkdir "$TESTTMP/$reponame"
     cd "$TESTTMP/$reponame"
-    hg init --config extensions.lz4revlog=
+    hg --config extensions.lz4revlog= \
+      --config extensions.treemanifest= \
+      --config experimental.narrow-heads=false \
+      --config visibility.enabled=false \
+      init
     enable lz4revlog remotefilelog remotenames treemanifest
     setconfig \
        remotefilelog.reponame="$reponame" remotefilelog.server=True \
        treemanifest.flatcompat=False treemanifest.rustmanifest=True \
-       treemanifest.server=True treemanifest.treeonly=True
+       treemanifest.server=True treemanifest.treeonly=True \
+       infinitepush.server=yes infinitepush.reponame="$reponame" \
+       infinitepush.indextype=disk infinitepush.storetype=disk \
+       experimental.narrow-heads=false
   fi
 }
 
@@ -89,6 +96,11 @@ EOF
 remotecmd=$MONONOKE_HGCLI
 EOF
   fi
+
+  if [ -n "$COMMITCLOUD" ]; then
+    hg --cwd $clientname cloud auth -t xxxxxx -q
+    hg --cwd $clientname cloud join -q
+  fi
 }
 
 switchrepo() {
@@ -129,7 +141,30 @@ configure() {
             mutation.enabled=false \
             visibility.enabled=false
         ;;
-        
+      commitcloud)
+        enable commitcloud infinitepush
+        setconfig commitcloud.hostname=testhost
+        setconfig commitcloud.servicetype=local commitcloud.servicelocation=$TESTTMP
+        setconfig commitcloud.user_token_path=$TESTTMP
+        setconfig commitcloud.remotebookmarkssync=True
+        COMMITCLOUD=1
+        ;;
+      narrowheads)
+        configure noevolution mutation-norecord
+        setconfig experimental.narrow-heads=true
+        ;;
+      selectivepull)
+        enable remotenames
+        setconfig remotenames.selectivepull=True
+        setconfig remotenames.selectivepulldefault=master
+        setconfig remotenames.selectivepullaccessedbookmarks=True
+        ;;
+      modern)
+        enable amend
+        setconfig remotenames.rename.default=remote
+        setconfig remotenames.hoist=remote
+        configure dummyssh commitcloud narrowheads selectivepull
+        ;;
     esac
   done
 }
