@@ -184,7 +184,10 @@ def _modesetup(ui):
         from . import win32
 
         if not win32.enablevtmode():
-            ui.warn(_("couldn't enable VT mode for your terminal, disabling colors\n"))
+            if formatted:
+                ui.warn(
+                    _("couldn't enable VT mode for your terminal, disabling colors\n")
+                )
             return None
 
     if always or (auto and formatted):
