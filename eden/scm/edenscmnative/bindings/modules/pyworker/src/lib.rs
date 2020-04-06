@@ -340,30 +340,12 @@ impl VFS {
             if file_type.is_file() || file_type.is_symlink() {
                 let result = remove_file(&filepath)
                     .with_context(|| format!("Can't remove file {:?}", filepath));
-                if cfg!(windows) {
-                    // Windows is... an interesting beast. Some applications may
-                    // open files in the working copy and completely disallowing
-                    // sharing of the file[0] with others. On example of such
-                    // application is the Windows Defender[1], so if for some reason
-                    // it is scanning the working copy, Mercurial will be unable to
-                    // remove that file, and there is nothing that we could do about it.
-                    //
-                    // We could think of various strategies to mitigate this. One
-                    // being that we simply retry a bit later, but there is still no
-                    // guarantee that it would work. For now, let's just ignore all failures
-                    // on Windows.
-                    //
-                    // [0]: https://docs.microsoft.com/en-us/windows/win32/api/fileapi/nf-fileapi-createfilea?redirectedfrom=MSDN
-                    // [1]: https://en.wikipedia.org/wiki/Windows_Defender
-                    let _ = result;
-                } else {
-                    if let Err(e) = result {
-                        if let Some(io_error) = e.downcast_ref::<io::Error>() {
-                            ensure!(io_error.kind() == ErrorKind::NotFound, e);
-                        } else {
-                            return Err(e);
-                        };
-                    }
+                if let Err(e) = result {
+                    if let Some(io_error) = e.downcast_ref::<io::Error>() {
+                        ensure!(io_error.kind() == ErrorKind::NotFound, e);
+                    } else {
+                        return Err(e);
+                    };
                 }
             }
         }
