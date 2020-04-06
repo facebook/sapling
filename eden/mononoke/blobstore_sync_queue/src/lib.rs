@@ -207,15 +207,15 @@ queries! {
         OperationKey,
         u64,
     ) {
-        "SELECT blobstore_sync_queue.blobstore_key, blobstore_id, multiplex_id, add_timestamp, operation_key, id
+        "SELECT blobstore_key, blobstore_id, multiplex_id, add_timestamp, blobstore_sync_queue.operation_key, id
          FROM blobstore_sync_queue
          JOIN (
-               SELECT DISTINCT blobstore_key
+               SELECT DISTINCT operation_key
                FROM blobstore_sync_queue
                WHERE add_timestamp <= {older_than} AND multiplex_id = {multiplex_id}
                LIMIT {limit}
          ) b
-         ON blobstore_sync_queue.blobstore_key = b.blobstore_key AND multiplex_id = {multiplex_id}
+         ON blobstore_sync_queue.operation_key = b.operation_key AND multiplex_id = {multiplex_id}
          "
     }
 
@@ -227,15 +227,15 @@ queries! {
         OperationKey,
         u64,
     ) {
-        "SELECT blobstore_sync_queue.blobstore_key, blobstore_id, multiplex_id, add_timestamp, operation_key, id
+        "SELECT blobstore_key, blobstore_id, multiplex_id, add_timestamp, blobstore_sync_queue.operation_key, id
          FROM blobstore_sync_queue
          JOIN (
-               SELECT DISTINCT blobstore_key
+               SELECT DISTINCT operation_key
                FROM blobstore_sync_queue
                WHERE blobstore_key LIKE {blobstore_key_like} AND add_timestamp <= {older_than} AND multiplex_id = {multiplex_id}
                LIMIT {limit}
          ) b
-         ON blobstore_sync_queue.blobstore_key = b.blobstore_key AND multiplex_id = {multiplex_id}
+         ON blobstore_sync_queue.operation_key = b.operation_key AND multiplex_id = {multiplex_id}
          "
     }
 

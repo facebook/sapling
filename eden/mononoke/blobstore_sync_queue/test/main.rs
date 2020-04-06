@@ -70,19 +70,19 @@ fn test_simple(fb: FacebookInit) -> Result<(), Error> {
     let some_entries = rt
         .block_on(queue.iter(ctx.clone(), None, mp, t1, 1))
         .expect("DateTime range iteration failed");
-    assert_eq!(some_entries.len(), 4);
+    assert_eq!(some_entries.len(), 2);
     let some_entries = rt
         .block_on(queue.iter(ctx.clone(), None, mp, t1, 2))
         .expect("DateTime range iteration failed");
-    assert_eq!(some_entries.len(), 5);
+    assert_eq!(some_entries.len(), 3);
     let some_entries = rt
         .block_on(queue.iter(ctx.clone(), None, mp, t0, 1))
         .expect("DateTime range iteration failed");
-    assert_eq!(some_entries.len(), 4);
+    assert_eq!(some_entries.len(), 2);
     let some_entries = rt
         .block_on(queue.iter(ctx.clone(), None, mp, t0, 100))
         .expect("DateTime range iteration failed");
-    assert_eq!(some_entries.len(), 4);
+    assert_eq!(some_entries.len(), 2);
 
     // delete
     rt.block_on(queue.del(ctx.clone(), vec![entry0]))
