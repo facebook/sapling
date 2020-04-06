@@ -118,8 +118,8 @@ class EdenFS(object):
 
     def kill(self) -> None:
         """Stops and unmounts this instance."""
-        # pyre-fixme[16]: `Optional` has no attribute `returncode`.
-        if self._process is None or self._process.returncode is not None:
+        process = self._process
+        if process is None or process.returncode is not None:
             return
         self.shutdown()
 
@@ -212,10 +212,10 @@ class EdenFS(object):
         takeover = takeover_from is not None
         self.spawn_nowait(gdb=use_gdb, takeover=takeover, extra_args=extra_args)
 
-        assert self._process is not None
+        process = self._process
+        assert process is not None
         util.wait_for_daemon_healthy(
-            # pyre-fixme[6]: Expected `Popen` for 1st param but got `Optional[Popen]`.
-            proc=self._process,
+            proc=process,
             config_dir=self._eden_dir,
             get_client=lambda: self.get_thrift_client(),
             timeout=timeout,
@@ -239,17 +239,16 @@ class EdenFS(object):
 
         # Turn up the VLOG level for the fuse server so that errors are logged
         # with an explanation when they bubble up to RequestData::catchErrors
-        if self._logging_settings:
+        logging_settings = self._logging_settings
+        if logging_settings:
             logging_arg = ",".join(
                 "%s=%s" % (module, level)
-                # pyre-fixme[16]: `Optional` has no attribute `items`.
-                for module, level in sorted(self._logging_settings.items())
+                for module, level in sorted(logging_settings.items())
             )
             extra_daemon_args.extend(["--logging=" + logging_arg])
-        if self._extra_args:
-            # pyre-fixme[6]: Expected `Iterable[str]` for 1st param but got
-            #  `Optional[List[str]]`.
-            extra_daemon_args.extend(self._extra_args)
+        extra_args = self._extra_args
+        if extra_args:
+            extra_daemon_args.extend(extra_args)
 
         return extra_daemon_args
 
@@ -349,20 +348,19 @@ class EdenFS(object):
             return client.getDaemonInfo().pid
 
     def graceful_restart(self, timeout: float = 30) -> None:
-        assert self._process is not None
+        old_process = self._process
+        assert old_process is not None
+
         # Get the process ID of the old edenfs process.
         # Note that this is not necessarily self._process.pid, since the eden
         # CLI may have spawned eden using sudo, and self._process may refer to
         # a sudo parent process.
         old_pid = self.get_pid_via_thrift()
 
-        old_process = self._process
         self._process = None
-
         self.start(timeout=timeout, takeover_from=old_pid)
 
         # Check the return code from the old edenfs process
-        # pyre-fixme[16]: `Optional` has no attribute `wait`.
         return_code = old_process.wait()
         if return_code != 0:
             raise Exception(
@@ -375,16 +373,14 @@ class EdenFS(object):
         daemon.  Attempts to access files or directories inside the mount will fail with
         an ENOTCONN error after this.
         """
-        assert self._process is not None
+        old_process = self._process
+        assert old_process is not None
 
         # pyre-ignore[9]: T38947910
         cmd: List[str] = [FindExe.TAKEOVER_TOOL, "--edenDir", str(self._eden_dir)]
         subprocess.check_call(cmd)
 
-        old_process = self._process
         self._process = None
-
-        # pyre-fixme[16]: `Optional` has no attribute `wait`.
         return_code = old_process.wait()
         if return_code != 0:
             raise Exception(
@@ -529,11 +525,12 @@ def can_run_eden() -> bool:
     integration tests.
     """
     global _can_run_eden
-    if _can_run_eden is None:
-        _can_run_eden = _compute_can_run_eden()
+    can_run = _can_run_eden
+    if can_run is None:
+        can_run = _compute_can_run_eden()
+        _can_run_eden = can_run
 
-    # pyre-fixme[7]: Expected `bool` but got `Optional[bool]`.
-    return _can_run_eden
+    return can_run
 
 
 def _compute_can_run_eden() -> bool:
@@ -553,11 +550,12 @@ def _compute_can_run_eden() -> bool:
 
 def can_run_sudo() -> bool:
     global _can_run_sudo
-    if _can_run_sudo is None:
-        _can_run_sudo = _compute_can_run_sudo()
+    can_run = _can_run_sudo
+    if can_run is None:
+        can_run = _compute_can_run_sudo()
+        _can_run_sudo = can_run
 
-    # pyre-fixme[7]: Expected `bool` but got `Optional[bool]`.
-    return _can_run_sudo
+    return can_run
 
 
 def _compute_can_run_sudo() -> bool:
