@@ -23,12 +23,12 @@ use ascii::AsciiString;
 use cloned::cloned;
 use futures::{
     compat::Future01CompatExt,
-    future::{ready, Future, FutureExt, TryFutureExt},
+    future::{self, ready, Future, FutureExt, TryFutureExt},
     stream::futures_unordered::FuturesUnordered,
     TryStreamExt,
 };
 use futures_ext::{FutureExt as OldFutureExt, StreamExt};
-use futures_old::{future, Future as OldFuture, Stream};
+use futures_old::{future as oldfuture, Future as OldFuture, Stream};
 use slog::{debug, error, info};
 
 use blobrepo::BlobRepo;
@@ -124,10 +124,11 @@ impl<'a> Blobimport<'a> {
 
         let repo_id = blobrepo.get_repoid();
 
-        let stale_bookmarks = {
+        let stale_bookmarks_fut = {
             let revlogrepo = RevlogRepo::open(&revlogrepo_path).expect("cannot open revlogrepo");
             bookmark::read_bookmarks(revlogrepo)
-        };
+        }
+        .compat();
 
         let revlogrepo = RevlogRepo::open(revlogrepo_path).expect("cannot open revlogrepo");
 
@@ -182,133 +183,126 @@ impl<'a> Blobimport<'a> {
 
         // Blobimport does not see scratch bookmarks in Mercurial, so we use
         // PublishingOrPullDefault here, which is the non-scratch set in Mononoke.
-        let mononoke_bookmarks = blobrepo
+        let mononoke_bookmarks_fut = blobrepo
             .get_bonsai_publishing_bookmarks_maybe_stale(ctx.clone())
-            .map(|(bookmark, changeset_id)| (bookmark.into_name(), changeset_id));
+            .map(|(bookmark, changeset_id)| (bookmark.into_name(), changeset_id))
+            .collect()
+            .compat();
 
-        let run = stale_bookmarks
-            .join(mononoke_bookmarks.collect())
+        let (stale_bookmarks, mononoke_bookmarks) =
+            future::try_join(stale_bookmarks_fut, mononoke_bookmarks_fut).await?;
+
+        let max_rev = upload_changesets
+            .chunks(chunk_size)
             .and_then({
-                cloned!(ctx, blobrepo);
-                move |(stale_bookmarks, mononoke_bookmarks)| {
-                    upload_changesets
-                        .chunks(chunk_size)
-                        .and_then({
-                            cloned!(ctx, globalrevs_store, synced_commit_mapping, blobrepo,);
-                            move |chunk| {
-                                let max_rev = chunk.iter().map(|(rev, _)| rev).max().cloned();
-                                let synced_commit_mapping_work =
-                                    if let Some(small_repo_id) = small_repo_id {
-                                        let entries = chunk
-                                            .iter()
-                                            .map(|(_, cs)| SyncedCommitMappingEntry {
-                                                large_repo_id: repo_id,
-                                                large_bcs_id: cs.get_changeset_id(),
-                                                small_repo_id,
-                                                small_bcs_id: cs.get_changeset_id(),
-                                            })
-                                            .collect();
-                                        synced_commit_mapping
-                                            .add_bulk(ctx.clone(), entries)
-                                            .map(|_| ())
-                                            .left_future()
-                                    } else {
-                                        future::ok(()).right_future()
-                                    };
+                cloned!(ctx, globalrevs_store, synced_commit_mapping, blobrepo,);
+                move |chunk| {
+                    let max_rev = chunk.iter().map(|(rev, _)| rev).max().cloned();
+                    let synced_commit_mapping_work = if let Some(small_repo_id) = small_repo_id {
+                        let entries = chunk
+                            .iter()
+                            .map(|(_, cs)| SyncedCommitMappingEntry {
+                                large_repo_id: repo_id,
+                                large_bcs_id: cs.get_changeset_id(),
+                                small_repo_id,
+                                small_bcs_id: cs.get_changeset_id(),
+                            })
+                            .collect();
+                        synced_commit_mapping
+                            .add_bulk(ctx.clone(), entries)
+                            .map(|_| ())
+                            .left_future()
+                    } else {
+                        oldfuture::ok(()).right_future()
+                    };
 
-                                let changesets: Vec<_> =
-                                    chunk.into_iter().map(|(_, cs)| cs).collect();
+                    let changesets: Vec<_> = chunk.into_iter().map(|(_, cs)| cs).collect();
 
-                                let globalrevs_work = if has_globalrev {
-                                    bulk_import_globalrevs(
-                                        ctx.clone(),
-                                        repo_id,
-                                        globalrevs_store.clone(),
-                                        changesets.iter(),
-                                    )
-                                    .left_future()
-                                } else {
-                                    future::ok(()).right_future()
-                                };
+                    let globalrevs_work = if has_globalrev {
+                        bulk_import_globalrevs(
+                            ctx.clone(),
+                            repo_id,
+                            globalrevs_store.clone(),
+                            changesets.iter(),
+                        )
+                        .left_future()
+                    } else {
+                        oldfuture::ok(()).right_future()
+                    };
 
-                                let git_mapping_work = {
-                                    cloned!(changesets, ctx);
-                                    let git_mapping_store = blobrepo.bonsai_git_mapping().clone();
-                                    async move {
-                                        if populate_git_mapping {
-                                            git_mapping_store
-                                                .bulk_import_from_bonsai(ctx, &changesets)
-                                                .await
-                                        } else {
-                                            Ok(())
-                                        }
-                                    }
-                                    .boxed()
-                                    .compat()
-                                };
-
-                                if !derived_data_types.is_empty() {
-                                    info!(
-                                        ctx.logger(),
-                                        "Deriving data for: {:?}", derived_data_types
-                                    );
-                                }
-
-                                let derivation_work = derive_data_for_csids(
-                                    ctx.clone(),
-                                    blobrepo.clone(),
-                                    changesets.iter().map(|cs| cs.get_changeset_id()).collect(),
-                                    &derived_data_types[..],
-                                );
-
-                                let derivation_work =
-                                    async move { derivation_work?.await }.boxed().compat();
-
-                                globalrevs_work
-                                    .join(synced_commit_mapping_work)
-                                    .join(derivation_work)
-                                    .join(git_mapping_work)
-                                    .map(move |_| max_rev)
+                    let git_mapping_work = {
+                        cloned!(changesets, ctx);
+                        let git_mapping_store = blobrepo.bonsai_git_mapping().clone();
+                        async move {
+                            if populate_git_mapping {
+                                git_mapping_store
+                                    .bulk_import_from_bonsai(ctx, &changesets)
+                                    .await
+                            } else {
+                                Ok(())
                             }
-                        })
-                        .fold(None, |mut acc, rev| {
-                            if let Some(rev) = rev {
-                                acc = Some(::std::cmp::max(acc.unwrap_or(RevIdx::zero()), rev));
-                            }
-                            let res: Result<_, Error> = Ok(acc);
-                            res
-                        })
-                        .map(move |max_rev| (max_rev, stale_bookmarks, mononoke_bookmarks))
+                        }
+                        .boxed()
+                        .compat()
+                    };
+
+                    if !derived_data_types.is_empty() {
+                        info!(ctx.logger(), "Deriving data for: {:?}", derived_data_types);
+                    }
+
+                    let derivation_work = derive_data_for_csids(
+                        ctx.clone(),
+                        blobrepo.clone(),
+                        changesets.iter().map(|cs| cs.get_changeset_id()).collect(),
+                        &derived_data_types[..],
+                    );
+
+                    let derivation_work = async move { derivation_work?.await }.boxed().compat();
+
+                    globalrevs_work
+                        .join(synced_commit_mapping_work)
+                        .join(derivation_work)
+                        .join(git_mapping_work)
+                        .map(move |_| max_rev)
                 }
             })
-            .and_then({
-                move |(max_rev, stale_bookmarks, mononoke_bookmarks)| {
-                    info!(
-                        logger,
-                        "finished uploading changesets, globalrevs and deriving data"
-                    );
-                    let f = match bookmark_import_policy {
-                        BookmarkImportPolicy::Ignore => {
-                            info!(
-                                logger,
-                                "since --no-bookmark was provided, bookmarks won't be imported"
-                            );
-                            future::ok(()).boxify()
-                        }
-                        BookmarkImportPolicy::Prefix(prefix) => bookmark::upload_bookmarks(
-                            ctx.clone(),
-                            &logger,
-                            revlogrepo,
-                            blobrepo,
-                            stale_bookmarks,
-                            mononoke_bookmarks,
-                            bookmark::get_bookmark_prefixer(prefix),
-                        ),
-                    };
-                    f.map(move |()| max_rev)
+            .fold(None, |mut acc, rev| {
+                if let Some(rev) = rev {
+                    acc = Some(::std::cmp::max(acc.unwrap_or_else(RevIdx::zero), rev));
                 }
-            });
+                let res: Result<_, Error> = Ok(acc);
+                res
+            })
+            .compat()
+            .await?;
 
-        run.compat().await
+        info!(
+            logger,
+            "finished uploading changesets, globalrevs and deriving data"
+        );
+
+        match bookmark_import_policy {
+            BookmarkImportPolicy::Ignore => {
+                info!(
+                    logger,
+                    "since --no-bookmark was provided, bookmarks won't be imported"
+                );
+            }
+            BookmarkImportPolicy::Prefix(prefix) => {
+                bookmark::upload_bookmarks(
+                    ctx.clone(),
+                    &logger,
+                    revlogrepo,
+                    blobrepo,
+                    stale_bookmarks,
+                    mononoke_bookmarks,
+                    bookmark::get_bookmark_prefixer(prefix),
+                )
+                .compat()
+                .await?
+            }
+        };
+
+        Ok(max_rev)
     }
 }
