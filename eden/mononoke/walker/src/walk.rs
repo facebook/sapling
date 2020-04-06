@@ -708,6 +708,14 @@ where
     let step_output = match step_result {
         Ok(s) => Ok(s),
         Err(e) => {
+            // Log to scuba regardless
+            add_node_to_scuba(None, &walk_item.target, &mut scuba);
+            scuba
+                .add(EDGE_TYPE, edge_label.to_string())
+                .add(CHECK_TYPE, "step")
+                .add(CHECK_FAIL, 1)
+                .log();
+            // Optionally attempt to continue
             if error_as_data_node_types.contains(&walk_item.target.get_type()) {
                 if error_as_data_edge_types.is_empty()
                     || error_as_data_edge_types.contains(&walk_item.label)
@@ -716,12 +724,6 @@ where
                         logger,
                         "Could not step to {:?}, due to: {:?}", &walk_item, e
                     );
-                    add_node_to_scuba(None, &walk_item.target, &mut scuba);
-                    scuba
-                        .add(EDGE_TYPE, edge_label.to_string())
-                        .add(CHECK_TYPE, "step")
-                        .add(CHECK_FAIL, 1)
-                        .log();
                     Ok(StepOutput(
                         NodeData::ErrorAsData(walk_item.target.clone()),
                         vec![],
