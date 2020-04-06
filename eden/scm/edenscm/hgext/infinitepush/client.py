@@ -468,7 +468,8 @@ def _dopull(orig, ui, repo, source="default", **opts):
             torevive.append(rev)
         except error.RepoLookupError:
             pass
-    obsolete.revive([unfi[r] for r in torevive])
+    if obsolete.isenabled(repo, obsolete.createmarkersopt):
+        obsolete.revive([unfi[r] for r in torevive])
     visibility.add(repo, [unfi[r].node() for r in torevive])
 
     if scratchbookmarks or unknownnodes:
