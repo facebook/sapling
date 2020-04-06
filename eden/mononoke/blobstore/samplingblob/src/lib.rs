@@ -16,8 +16,8 @@ use std::sync::Arc;
 
 pub trait SamplingHandler: std::fmt::Debug + Send + Sync {
     fn sample_get(&self, ctx: CoreContext, key: String, value: Option<&BlobstoreBytes>);
-    fn sample_put(&self, ctx: &CoreContext, key: &str, value: &BlobstoreBytes);
-    fn sample_is_present(&self, ctx: CoreContext, key: String, value: bool);
+    fn sample_put(&self, _ctx: &CoreContext, _key: &str, _value: &BlobstoreBytes) {}
+    fn sample_is_present(&self, _ctx: CoreContext, _key: String, _value: bool) {}
 }
 
 /// A layer over an existing blobstore that allows sampling of blobs, e.g. for
