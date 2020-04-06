@@ -29,6 +29,7 @@
   .hg/store/lfs/objects/f3/8ef89300956a8cf001746d6e4b015708c3d0d883d1a69bf00f4958090cbe21
   .hg/store/lfs/pointers/index2-node
   .hg/store/lfs/pointers/index2-sha256
+  .hg/store/lfs/pointers/lock (?)
   .hg/store/lfs/pointers/log
   .hg/store/lfs/pointers/meta
 
