@@ -13,16 +13,11 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use futures::{compat::Future01CompatExt, future::TryFutureExt, FutureExt as NewFutureExt};
 use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxFuture, FutureExt};
-use futures_old::{
-    future,
-    stream::{iter_ok, FuturesUnordered},
-    Future, Stream,
-};
+use futures_old::{future, stream, Future, Stream};
 use manifest::{Entry, ManifestOps};
 use maplit::{hashmap, hashset};
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
-use std::collections::{HashMap, HashSet};
-use std::iter::FromIterator;
+use std::collections::{HashMap, HashSet, VecDeque};
 use std::sync::Arc;
 use unodes::RootUnodeManifestId;
 
@@ -39,8 +34,8 @@ use crate::mapping::{FastlogParent, RootFastlog};
 /// In order to do this it keeps:
 ///   - history_graph: commit graph that is constructed from fastlog data and represents
 ///                    'child(cs_id) -> parents(cs_id)' relationship
-///   - starting node: changeset to start BFS graph traversal
-///   - processed nodes: nodes from the previous BFS layer are used to construct next nodes
+///   - prefetch: changeset id to fetch fastlog batch for
+///   - bfs: BFS queue
 ///   - visited: set that marks nodes already enqueued for BFS
 /// For example, for this commit graph where some file is changed in every commit and E - start:
 ///
@@ -52,12 +47,10 @@ use crate::mapping::{FastlogParent, RootFastlog};
 ///    |
 ///    o A    - stage: 3
 ///
-/// On each step of bounded_traversal_stream it processes all the nodes on the same depth (stage)
-/// and streams them:
-///   1 - prefetch parents for the already processed nodes
-///   2 - construct new BFS layer from already processed nodes
-///   3 - if there was no processed nodes - it's the first iteration - use starting node
-///   4 - return the new nodes and contruct new state
+/// On each step of bounded_traversal_stream:
+///   1 - prefetch fastlog batch for the `prefetch` changeset id and fill the commit graph
+///   2 - perform BFS until the node for which parents haven't been prefetched
+///   3 - stream all the "ready" nodes and set the last node to prefetch
 /// The stream stops when there is nothing to return.
 ///
 /// Why to pop all nodes on the same depth and not just one commit at a time?
@@ -78,41 +71,44 @@ pub fn list_file_history(
                 Entry::Leaf(file_unode) => file_unode.linknode().clone(),
             };
 
-            let history_graph = hashmap! { changeset_id.clone() => None };
-            let visited = hashset! { changeset_id.clone() };
+            stream::once(Ok(changeset_id.clone())).chain({
+                let history_graph = hashmap! { changeset_id.clone() => None };
+                let visited = hashset! { changeset_id.clone() };
+                let bfs = VecDeque::new();
 
-            bounded_traversal_stream(
-                256,
-                // starting point
-                Some(TraversalState {
-                    history_graph,
-                    visited,
-                    starting_node: Some(changeset_id),
-                    processed_nodes: vec![],
-                }),
-                // unfold
-                {
-                    cloned!(ctx, path, repo);
-                    move |TraversalState {
-                              history_graph,
-                              visited,
-                              starting_node,
-                              processed_nodes,
-                          }| {
-                        do_history_unfold(
-                            ctx.clone(),
-                            repo.clone(),
-                            path.clone(),
-                            starting_node,
-                            processed_nodes,
-                            visited,
-                            history_graph,
-                        )
-                    }
-                },
-            )
-            .map(|history| iter_ok(history))
-            .flatten()
+                bounded_traversal_stream(
+                    256,
+                    // starting point
+                    Some(TraversalState {
+                        history_graph,
+                        visited,
+                        bfs,
+                        prefetch: changeset_id,
+                    }),
+                    // unfold
+                    {
+                        cloned!(ctx, path, repo);
+                        move |TraversalState {
+                                  history_graph,
+                                  visited,
+                                  bfs,
+                                  prefetch,
+                              }| {
+                            do_history_unfold(
+                                ctx.clone(),
+                                repo.clone(),
+                                path.clone(),
+                                prefetch,
+                                bfs,
+                                visited,
+                                history_graph,
+                            )
+                        }
+                    },
+                )
+                .map(stream::iter_ok)
+                .flatten()
+            })
         })
         .flatten_stream()
 }
@@ -144,100 +140,97 @@ pub fn prefetch_history(
     .compat()
 }
 
+type CommitGraph = HashMap<ChangesetId, Option<Vec<ChangesetId>>>;
+
 struct TraversalState {
-    history_graph: HashMap<ChangesetId, Option<Vec<ChangesetId>>>,
+    history_graph: CommitGraph,
     visited: HashSet<ChangesetId>,
-    // node to start BFS graph traversal
-    starting_node: Option<ChangesetId>,
-    // nodes that were already used and needed to construct next BFS layer
-    processed_nodes: Vec<ChangesetId>,
+    bfs: VecDeque<ChangesetId>,
+    prefetch: ChangesetId,
 }
 
 fn do_history_unfold(
     ctx: CoreContext,
     repo: BlobRepo,
     path: Option<MPath>,
-    starting_node: Option<ChangesetId>,
-    processed_nodes: Vec<ChangesetId>,
+    prefetch: ChangesetId,
+    mut bfs: VecDeque<ChangesetId>,
     mut visited: HashSet<ChangesetId>,
     // commit graph: changesets -> parents
-    mut history_graph: HashMap<ChangesetId, Option<Vec<ChangesetId>>>,
+    history_graph: CommitGraph,
 ) -> impl Future<Item = (Vec<ChangesetId>, Option<TraversalState>), Error = Error> {
-    let mut prefetch_parents = vec![];
-    for cs_id in &processed_nodes {
-        if let Some(None) = history_graph.get(cs_id) {
-            // parents haven't been fetched yet
-            prefetch_parents.push(cs_id.clone());
-        }
-    }
-
-    // if prefetch_parents is empty the function doesn't do anything and just returns an empty vector
-    prefetch_unodes_for_changesets(ctx.clone(), repo.clone(), path.clone(), prefetch_parents).map(
-        move |unode_batches| {
-            // fill the commit graph
-            for unode_batch in unode_batches {
-                process_unode_batch(unode_batch, &mut history_graph);
-            }
-
-            // generate next BFS stage
-            let mut next_to_yield = vec![];
-            for cs_id in &processed_nodes {
-                if let Some(Some(parents)) = history_graph.get(&cs_id) {
-                    // parents are fetched, ready to process
-                    for p in parents {
-                        if visited.insert(*p) {
-                            next_to_yield.push(*p);
-                        }
+    prefetch_and_process_history(ctx, repo, path, prefetch.clone(), history_graph).map(
+        move |history_graph| {
+            // `prefetch` changeset is not in bfs queue anymore and neither it's parents
+            // in order to traverse its parents we need to explicitly add them to the queue
+            if let Some(Some(parents)) = history_graph.get(&prefetch) {
+                // parents are fetched, ready to process
+                for p in parents {
+                    if visited.insert(*p) {
+                        bfs.push_back(*p);
                     }
                 }
             }
 
-            if next_to_yield.is_empty() {
-                if let Some(node) = starting_node {
-                    next_to_yield = vec![node];
+            // process nodes to yield
+            let mut next_to_fetch = None;
+            let mut history = vec![];
+            while let Some(cs_id) = bfs.pop_front() {
+                history.push(cs_id.clone());
+                match history_graph.get(&cs_id) {
+                    Some(Some(parents)) => {
+                        // parents are fetched, ready to process
+                        for p in parents {
+                            if visited.insert(*p) {
+                                bfs.push_back(*p);
+                            }
+                        }
+                    }
+                    Some(None) => {
+                        // parents haven't been fetched yet
+                        // we want to proceed to next iteration to fetch the parents
+                        next_to_fetch = Some(cs_id);
+                        break;
+                    }
+                    // this should never happen as the [cs -> parents] mapping is fetched
+                    // from the fastlog batch. and if some cs id is mentioned as a parent
+                    // in the batch, the same batch has to have a record for this cs id.
+                    None => {}
                 }
             }
 
-            let new_state = if next_to_yield.is_empty() {
-                None
-            } else {
+            let new_state = if let Some(prefetch) = next_to_fetch {
                 Some(TraversalState {
                     history_graph,
                     visited,
-                    starting_node: None,
-                    // nodes that were just used are needed to generate the next BFS layer
-                    processed_nodes: next_to_yield.clone(),
+                    bfs,
+                    prefetch,
                 })
+            } else {
+                None
             };
-            (next_to_yield, new_state)
+            (history, new_state)
         },
     )
 }
 
-/// prefetches unode batches for each given changeset id
-fn prefetch_unodes_for_changesets(
+/// prefetches and processes fastlog batch for the given changeset id
+fn prefetch_and_process_history(
     ctx: CoreContext,
     repo: BlobRepo,
     path: Option<MPath>,
-    changeset_ids: Vec<ChangesetId>,
-) -> impl Future<Item = Vec<Vec<(ChangesetId, Vec<FastlogParent>)>>, Error = Error> {
-    if changeset_ids.is_empty() {
-        return future::ok(vec![]).left_future();
-    }
-
-    let prefetch_futs = changeset_ids.into_iter().map({
-        cloned!(ctx, repo);
-        move |cs_id| prefetch_history_by_changeset(ctx.clone(), repo.clone(), cs_id, path.clone())
-    });
-
-    FuturesUnordered::from_iter(prefetch_futs)
-        .collect()
-        .right_future()
+    changeset_id: ChangesetId,
+    mut history_graph: CommitGraph,
+) -> impl Future<Item = CommitGraph, Error = Error> {
+    prefetch_fastlog_by_changeset(ctx, repo, changeset_id, path).map(move |fastlog_batch| {
+        process_unode_batch(fastlog_batch, &mut history_graph);
+        history_graph
+    })
 }
 
 fn process_unode_batch(
     unode_batch: Vec<(ChangesetId, Vec<FastlogParent>)>,
-    graph: &mut HashMap<ChangesetId, Option<Vec<ChangesetId>>>,
+    graph: &mut CommitGraph,
 ) {
     for (cs_id, parents) in unode_batch {
         let has_unknown_parent = parents.iter().any(|parent| match parent {
@@ -275,7 +268,7 @@ fn process_unode_batch(
     }
 }
 
-fn prefetch_history_by_changeset(
+fn prefetch_fastlog_by_changeset(
     ctx: CoreContext,
     repo: BlobRepo,
     changeset_id: ChangesetId,
