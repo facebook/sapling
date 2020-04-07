@@ -390,8 +390,9 @@ def _getglobalrev(ui, commitextra):
 
 def _getsvnrev(commitextra):
     convertrev = commitextra.get(EXTRASCONVERTKEY)
-    if convertrev:
-        # ex. svn:uuid/path@1234
+
+    # ex. svn:uuid/path@1234
+    if convertrev and "svn:" in convertrev:
         return convertrev.rsplit("@", 1)[-1]
 
 
