@@ -242,7 +242,7 @@ impl SourceControlServiceImpl {
             .into());
         }
 
-        let history_stream = path.history().await?;
+        let history_stream = path.history(after_timestamp.clone()).await?;
         let history_stream = history_stream
             .map_err(errors::ServiceError::from)
             .skip(skip);

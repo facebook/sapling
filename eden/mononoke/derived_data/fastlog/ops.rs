@@ -24,6 +24,7 @@ use manifest::{Entry, ManifestOps};
 use maplit::{hashmap, hashset};
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
 use std::collections::{HashMap, HashSet, VecDeque};
+use std::future::Future as NewFuture;
 use std::sync::Arc;
 use unodes::RootUnodeManifestId;
 
@@ -31,6 +32,19 @@ use crate::fastlog_impl::{fetch_fastlog_batch_by_unode_id, fetch_flattened};
 use crate::mapping::{FastlogParent, RootFastlog};
 
 /// Returns a full history of the given path starting from the given unode in BFS order.
+///
+/// Can accept a terminator function: a function on changeset id, that returns true if
+/// the history fetching on the current branch has to be terminated.
+/// The terminator will be called on changeset id when a fatslog batch is going to be
+/// fetched for the changeset. If the terminator returns true, fastlog is not fetched,
+/// which means that this history branch is terminated. Already prefetched commits are
+/// still streamed.
+/// It is possible that of history is not linear and have 2 or more branches, terminator
+/// can drop history fetching on one of the branches and still proceed with others.
+/// Usage:
+///       as history stream generally is not ordered by commit creation time (due to
+///       the BFS order), it's still necessary to drop the stream if the history is
+///       already older than the given time frame.
 ///
 /// This is the public API of this crate i.e. what clients should use if they want to
 /// fetch the history.
@@ -62,12 +76,17 @@ use crate::mapping::{FastlogParent, RootFastlog};
 /// Why to pop all nodes on the same depth and not just one commit at a time?
 /// Because if history contains merges and parents for more than one node on the current depth
 /// haven't been fetched yet, we can fetch them at the same time using FuturesUnordered.
-pub async fn list_file_history(
+pub async fn list_file_history<Terminator, TFut>(
     ctx: CoreContext,
     repo: BlobRepo,
     path: Option<MPath>,
     unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
-) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, Error> {
+    terminator: Option<Terminator>,
+) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, Error>
+where
+    Terminator: Fn(ChangesetId) -> TFut + Clone,
+    TFut: NewFuture<Output = Result<bool, Error>>,
+{
     let unode = unode_entry
         .load(ctx.clone(), &repo.get_blobstore())
         .compat()
@@ -94,7 +113,19 @@ pub async fn list_file_history(
                     prefetch: changeset_id,
                 }),
                 // unfold
-                move |state| do_history_unfold(ctx.clone(), repo.clone(), path.clone(), state),
+                move |state| {
+                    cloned!(ctx, repo, path, terminator);
+                    async move {
+                        do_history_unfold(
+                            ctx.clone(),
+                            repo.clone(),
+                            path.clone(),
+                            state,
+                            terminator,
+                        )
+                        .await
+                    }
+                },
             )
             .map_ok(|history| stream::iter(history).map(Ok))
             .try_flatten()
@@ -138,12 +169,17 @@ struct TraversalState {
     prefetch: ChangesetId,
 }
 
-async fn do_history_unfold(
+async fn do_history_unfold<Terminator, TFut>(
     ctx: CoreContext,
     repo: BlobRepo,
     path: Option<MPath>,
     state: TraversalState,
-) -> Result<(Vec<ChangesetId>, Option<TraversalState>), Error> {
+    terminator: Option<Terminator>,
+) -> Result<(Vec<ChangesetId>, Option<TraversalState>), Error>
+where
+    Terminator: Fn(ChangesetId) -> TFut + Clone,
+    TFut: NewFuture<Output = Result<bool, Error>>,
+{
     let TraversalState {
         history_graph,
         mut visited,
@@ -151,8 +187,16 @@ async fn do_history_unfold(
         prefetch,
     } = state;
 
-    let history_graph =
-        prefetch_and_process_history(ctx, repo, path, prefetch.clone(), history_graph).await?;
+    let terminate = match terminator {
+        Some(terminator) => terminator(prefetch.clone()).await?,
+        _ => false,
+    };
+    let history_graph = if !terminate {
+        prefetch_and_process_history(ctx, repo, path, prefetch.clone(), history_graph).await?
+    } else {
+        history_graph
+    };
+
     // `prefetch` changeset is not in bfs queue anymore and neither it's parents
     // in order to traverse its parents we need to explicitly add them to the queue
     if let Some(Some(parents)) = history_graph.get(&prefetch) {
@@ -334,6 +378,7 @@ mod test {
     use context::CoreContext;
     use fbinit::FacebookInit;
     use fixtures::{create_bonsai_changeset_with_files, store_files};
+    use futures::future;
     use manifest::{Entry, ManifestOps};
     use maplit::btreemap;
     use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
@@ -384,8 +429,15 @@ mod test {
         );
         derive_fastlog(ctx.clone(), repo.clone(), &mut rt, latest);
 
+        let terminator = |_cs_id| future::ready(Ok(false));
         let history = rt
-            .block_on_std(list_file_history(ctx, repo, filepath, unode_entry))
+            .block_on_std(list_file_history(
+                ctx,
+                repo,
+                filepath,
+                unode_entry,
+                Some(terminator),
+            ))
             .unwrap();
         let history = rt.block_on_std(history.try_collect::<Vec<_>>()).unwrap();
 
@@ -476,8 +528,15 @@ mod test {
         );
         derive_fastlog(ctx.clone(), repo.clone(), &mut rt, top);
 
+        let terminator = |_cs_id| future::ready(Ok(false));
         let history = rt
-            .block_on_std(list_file_history(ctx, repo, filepath, unode_entry))
+            .block_on_std(list_file_history(
+                ctx,
+                repo,
+                filepath,
+                unode_entry,
+                Some(terminator),
+            ))
             .unwrap();
         let history = rt.block_on_std(history.try_collect::<Vec<_>>()).unwrap();
 
@@ -590,13 +649,137 @@ mod test {
         );
         derive_fastlog(ctx.clone(), repo.clone(), &mut rt, prev_id);
 
+        let terminator = |_cs_id| future::ready(Ok(false));
         let history = rt
-            .block_on_std(list_file_history(ctx, repo, filepath, unode_entry))
+            .block_on_std(list_file_history(
+                ctx,
+                repo,
+                filepath,
+                unode_entry,
+                Some(terminator),
+            ))
             .unwrap();
         let history = rt.block_on_std(history.try_collect::<Vec<_>>()).unwrap();
 
         expected.reverse();
         assert_eq!(history, expected);
+    }
+
+    #[fbinit::test]
+    fn test_list_history_terminator(fb: FacebookInit) {
+        // Test history termination on one of the history branches.
+        // The main branch (top) and branch A have commits that change only single file.
+        // Branch B changes 2 files and this is used as a termination condition.
+        // The history is long enough so it needs to prefetch fastlog batch for both A and B
+        // branches.
+        //
+        //          o - top   _
+        //          |          |
+        //          o          |
+        //          :          |
+        //          o          |- single fastlog batch
+        //         / \         |
+        //    A - o   o - B    |
+        //        |   |        |
+        //        o   o        |
+        //        :   :       _| <- we want terminate here
+        //        o   o          - other two fastlog batches
+        //        |   |
+        //        o   o
+        //
+        let repo = new_memblob_empty(None).unwrap();
+        let mut rt = Runtime::new().unwrap();
+        let ctx = CoreContext::test_mock(fb);
+
+        let filename = "1";
+        let filepath = path(filename);
+
+        let mut bonsais = vec![];
+        let mut graph = HashMap::new();
+        let mut create_branch = |branch, number, mut parents: Vec<_>, save_branch, branch_file| {
+            let mut br = vec![];
+            for i in 0..number {
+                let content = format!("{} - {}", branch, i);
+                let c = format!("{}", i);
+                let mut changes = btreemap! { filename => Some(content.as_str()) };
+                if branch_file {
+                    changes.insert(branch, Some(c.as_str()));
+                }
+
+                let stored_files = rt.block_on_std(store_files(ctx.clone(), changes, repo.clone()));
+
+                let bcs = create_bonsai_changeset_with_files(parents.clone(), stored_files);
+                let bcs_id = bcs.get_changeset_id();
+                bonsais.push(bcs);
+
+                if save_branch {
+                    br.push(bcs_id.clone());
+                }
+                graph.insert(bcs_id.clone(), parents);
+                parents = vec![bcs_id];
+            }
+            (parents.get(0).unwrap().clone(), br)
+        };
+
+        let (a_top, mut a_branch) = create_branch("A", 20, vec![], true, false);
+        let (b_top, _) = create_branch("B", 20, vec![], false, true);
+        let (top, _) = create_branch("top", 100, vec![a_top, b_top], false, false);
+
+        rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
+            .unwrap();
+
+        let unode_entry = derive_and_get_unode_entry(
+            ctx.clone(),
+            repo.clone(),
+            &mut rt,
+            top.clone(),
+            filepath.clone(),
+        );
+        derive_fastlog(ctx.clone(), repo.clone(), &mut rt, top);
+
+        // prune all fastlog batch fetchings
+        let terminator = Some(|_cs_id| future::ready(Ok(true)));
+        let history = rt
+            .block_on_std(list_file_history(
+                ctx.clone(),
+                repo.clone(),
+                filepath.clone(),
+                unode_entry.clone(),
+                terminator,
+            ))
+            .unwrap();
+        let history = rt.block_on_std(history.try_collect::<Vec<_>>()).unwrap();
+        // history now should represent only a single commit - the first one
+        assert_eq!(history, vec![top.clone()]);
+
+        // prune right branch on fastlog batch fetching
+        let terminator = move |ctx: CoreContext, repo: BlobRepo, cs_id: ChangesetId| async move {
+            let cs = cs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
+            let files = cs.file_changes_map();
+            Ok(files.len() > 1)
+        };
+        let terminator = Some({
+            cloned!(ctx, repo);
+            move |cs_id| terminator(ctx.clone(), repo.clone(), cs_id)
+        });
+        let history = rt
+            .block_on_std(list_file_history(
+                ctx,
+                repo,
+                filepath,
+                unode_entry,
+                terminator,
+            ))
+            .unwrap();
+        let history = rt.block_on_std(history.try_collect::<Vec<_>>()).unwrap();
+
+        // the beginning of the history should be same as bfs
+        let expected = bfs(&graph, top);
+        assert_eq!(history[..109], expected[..109]);
+
+        // last 15 commits of the history should be last 15 of the branch A
+        a_branch.reverse();
+        assert_eq!(history[109..], a_branch[5..]);
     }
 
     fn bfs(graph: &HashMap<ChangesetId, Vec<ChangesetId>>, node: ChangesetId) -> Vec<ChangesetId> {

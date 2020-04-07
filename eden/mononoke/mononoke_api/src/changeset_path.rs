@@ -11,8 +11,13 @@ use std::pin::Pin;
 
 use anyhow::Error;
 use blame::{fetch_blame, BlameError};
+use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use bytes::Bytes;
+use changeset_info::ChangesetInfo;
 use cloned::cloned;
+use context::CoreContext;
+use derived_data::BonsaiDerived;
 use fastlog::list_file_history;
 use filestore::FetchKey;
 use futures::compat::Future01CompatExt;
@@ -270,6 +275,7 @@ impl ChangesetPathContext {
     /// a history of the path.
     pub async fn history<'a>(
         &'a self,
+        until_timestamp: Option<i64>,
     ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + 'a, MononokeError>
     {
         let ctx = self.changeset.ctx().clone();
@@ -282,7 +288,32 @@ impl ChangesetPathContext {
         })?;
         let mpath = self.path.as_mpath();
 
-        let history = list_file_history(ctx, repo, mpath.cloned(), unode_entry)
+        let terminator_until =
+            move |ctx: CoreContext, repo: BlobRepo, cs_id, until_ts, cs_info_enabled| async move {
+                let info = if cs_info_enabled {
+                    ChangesetInfo::derive(ctx, repo, cs_id).compat().await
+                } else {
+                    let bonsai = cs_id.load(ctx, repo.blobstore()).compat().await?;
+                    Ok(ChangesetInfo::new(cs_id, bonsai))
+                }?;
+                let date = info.author_date().as_chrono().clone();
+
+                let terminate = date.timestamp() < until_ts;
+                Ok(terminate)
+            };
+        let cs_info_enabled = self.repo().derive_changeset_info_enabled();
+        let terminator = if let Some(until) = until_timestamp {
+            Some({
+                cloned!(ctx, repo);
+                move |cs_id| {
+                    terminator_until(ctx.clone(), repo.clone(), cs_id, until, cs_info_enabled)
+                }
+            })
+        } else {
+            None
+        };
+
+        let history = list_file_history(ctx, repo, mpath.cloned(), unode_entry, terminator)
             .await
             .map_err(MononokeError::from)?;
 
