@@ -367,17 +367,10 @@ class EdenFS(object):
                 "eden exited unsuccessfully with status {}".format(return_code)
             )
 
-    def stop_with_stale_mounts(self) -> None:
-        """Stop edenfs without unmounting any of its mount points.
-        This will leave the mount points mounted but no longer connected to a FUSE
-        daemon.  Attempts to access files or directories inside the mount will fail with
-        an ENOTCONN error after this.
-        """
+    def run_takeover_tool(self, cmd: List[str]) -> None:
         old_process = self._process
         assert old_process is not None
 
-        # pyre-ignore[9]: T38947910
-        cmd: List[str] = [FindExe.TAKEOVER_TOOL, "--edenDir", str(self._eden_dir)]
         subprocess.check_call(cmd)
 
         self._process = None
@@ -387,6 +380,32 @@ class EdenFS(object):
                 f"eden exited unsuccessfully with status {return_code} "
                 "after a fake takeover stop"
             )
+
+    def stop_with_stale_mounts(self) -> None:
+        """Stop edenfs without unmounting any of its mount points.
+        This will leave the mount points mounted but no longer connected to a FUSE
+        daemon.  Attempts to access files or directories inside the mount will fail with
+        an ENOTCONN error after this.
+        """
+        # pyre-ignore[9]: T38947910
+        cmd: List[str] = [FindExe.TAKEOVER_TOOL, "--edenDir", str(self._eden_dir)]
+        self.run_takeover_tool(cmd)
+
+    def fake_takeover_with_version(self, version: int) -> None:
+        """
+        Execute a fake takeover to explicitly test downgrades and make sure
+        output is as expected. Right now, this is used as a sanity check to
+        make sure we don't crash.
+        """
+        # pyre-ignore[9]: T38947910
+        cmd: List[str] = [
+            FindExe.TAKEOVER_TOOL,
+            "--edenDir",
+            str(self._eden_dir),
+            "--takeoverVersion",
+            str(version),
+        ]
+        self.run_takeover_tool(cmd)
 
     def add_repository(self, name: str, repo_path: str) -> None:
         """

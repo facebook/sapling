@@ -51,9 +51,26 @@ TakeoverData takeoverMounts(
             CompactSerializer::serialize<folly::IOBufQueue>(query).move());
       })
       .thenValue([&socket](auto&&) {
-        // Wait for the takeover data response
+        // Wait for a response. this will either be a "ready" ping or the
+        // takeover data depending on the server protocol
         auto timeout = std::chrono::seconds(FLAGS_takeoverReceiveTimeout);
         return socket.receive(timeout);
+      })
+      .thenValue([&socket](UnixSocket::Message&& msg) {
+        if (TakeoverData::isPing(&msg.data)) {
+          // Just send an empty message back here, the server knows it sent a
+          // ping so it does not need to parse the message.
+          UnixSocket::Message ping;
+          return socket.send(std::move(ping)).thenValue([&socket](auto&&) {
+            // Wait for the takeover data response
+            auto timeout = std::chrono::seconds(FLAGS_takeoverReceiveTimeout);
+            return socket.receive(timeout);
+          });
+        } else {
+          // Older versions of EdenFS will not send a "ready" ping and
+          // could simply send the takeover data.
+          return folly::makeFuture<UnixSocket::Message>(std::move(msg));
+        }
       })
       .thenValue([&expectedMessage](UnixSocket::Message&& msg) {
         expectedMessage = std::move(msg);

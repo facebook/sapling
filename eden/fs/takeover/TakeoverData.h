@@ -59,6 +59,17 @@ class TakeoverData {
     // like too much of a headache, so we simply skip over using
     // version 2 to describe this next one.
     kTakeoverProtocolVersionThree = 3,
+
+    // This version introduced an additonal handshake before taking over
+    // that is sent after the TakeoverData is ready but before actually
+    // sending it. This is in order to make sure we only send the data if
+    // the new process is healthy and able to receive, because otherwise
+    // we would want to recover ourselves. While this does not change
+    // the actual data format of the TakeoverData, it does change the
+    // number of sends/receives, and this additional handshake would
+    // break a server with this extra handshake talking to a client
+    // without it
+    kTakeoverProtocolVersionFour = 4,
   };
 
   // Given a set of versions provided by a client, find the largest
@@ -108,9 +119,19 @@ class TakeoverData {
       const folly::exception_wrapper& ew);
 
   /**
+   * Create a ping to send.
+   */
+  static folly::IOBuf serializePing();
+
+  /**
    * Deserialize the TakeoverData from a buffer.
    */
   static TakeoverData deserialize(folly::IOBuf* buf);
+
+  /**
+   * Checks to see if a message is of type PING
+   */
+  static bool isPing(const folly::IOBuf* buf);
 
   /**
    * The main eden lock file that prevents two edenfs processes from running at
@@ -178,6 +199,7 @@ class TakeoverData {
   enum MessageType : uint32_t {
     ERROR = 1,
     MOUNTS = 2,
+    PING = 3,
   };
 
   /**

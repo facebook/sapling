@@ -23,7 +23,8 @@ namespace eden {
 
 const std::set<int32_t> kSupportedTakeoverVersions{
     TakeoverData::kTakeoverProtocolVersionOne,
-    TakeoverData::kTakeoverProtocolVersionThree};
+    TakeoverData::kTakeoverProtocolVersionThree,
+    TakeoverData::kTakeoverProtocolVersionFour};
 
 std::optional<int32_t> TakeoverData::computeCompatibleVersion(
     const std::set<int32_t>& versions,
@@ -49,11 +50,12 @@ IOBuf TakeoverData::serialize(int32_t protocolVersion) {
     case kTakeoverProtocolVersionOne:
       return serializeVersion1();
     case kTakeoverProtocolVersionThree:
+    case kTakeoverProtocolVersionFour:
+      // versions 3 and 4 use the same data serialization
       return serializeVersion3();
     default: {
-      EDEN_BUG()
-          << "only kTakeoverProtocolVersionOne is supported, but somehow "
-          << "we were asked to handle version " << protocolVersion;
+      EDEN_BUG() << "asked to serialize takeover data in unsupported format "
+                 << protocolVersion;
     }
   }
 }
@@ -69,13 +71,30 @@ folly::IOBuf TakeoverData::serializeError(
     case kTakeoverProtocolVersionOne:
       return serializeErrorVersion1(ew);
     case kTakeoverProtocolVersionThree:
+    case kTakeoverProtocolVersionFour:
+      // versions 3 and 4 use the same data serialization
       return serializeErrorVersion3(ew);
     default: {
-      EDEN_BUG()
-          << "only kTakeoverProtocolVersionOne is supported, but somehow "
-          << "we were asked to handle version " << protocolVersion;
+      EDEN_BUG() << "asked to serialize takeover error in unsupported format "
+                 << protocolVersion;
     }
   }
+}
+
+bool TakeoverData::isPing(const IOBuf* buf) {
+  if (buf->length() == sizeof(uint32_t)) {
+    folly::io::Cursor cursor(buf);
+    auto messageType = cursor.readBE<uint32_t>();
+    return messageType == MessageType::PING;
+  }
+  return false;
+}
+
+folly::IOBuf TakeoverData::serializePing() {
+  IOBuf buf(IOBuf::CREATE, kHeaderLength);
+  folly::io::Appender app(&buf, 0);
+  app.writeBE<uint32_t>(MessageType::PING);
+  return buf;
 }
 
 TakeoverData TakeoverData::deserialize(IOBuf* buf) {

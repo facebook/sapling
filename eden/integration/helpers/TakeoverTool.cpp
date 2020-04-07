@@ -15,6 +15,12 @@
 #include "eden/fs/takeover/TakeoverData.h"
 
 DEFINE_string(edenDir, "", "The path to the .eden directory");
+/**
+ * Versions 3 and 4 are the only valid versions to send here. Even if
+ * a different version is specified, we still log version 3/4 message
+ * contents.
+ */
+DEFINE_int32(takeoverVersion, 0, "The takeover version number to send");
 
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2");
 
@@ -39,7 +45,13 @@ int main(int argc, char* argv[]) {
   auto edenDir = facebook::eden::canonicalPath(FLAGS_edenDir);
   auto takeoverSocketPath = edenDir + "takeover"_pc;
 
-  auto data = facebook::eden::takeoverMounts(takeoverSocketPath);
+  facebook::eden::TakeoverData data;
+  if (FLAGS_takeoverVersion == 0) {
+    data = facebook::eden::takeoverMounts(takeoverSocketPath);
+  } else {
+    auto takeoverVersion = std::set<int32_t>{FLAGS_takeoverVersion};
+    data = facebook::eden::takeoverMounts(takeoverSocketPath, takeoverVersion);
+  }
   for (const auto& mount : data.mountPoints) {
     XLOG(INFO) << "mount " << mount.mountPath << ": fd=" << mount.fuseFD.fd();
     for (const auto& bindMount : mount.bindMounts) {

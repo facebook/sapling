@@ -32,6 +32,11 @@ using folly::makeFuture;
 using folly::SocketAddress;
 using folly::Unit;
 
+DEFINE_int32(
+    pingReceiveTimeout,
+    5,
+    "Timeout for receiving ready ping from new process in seconds");
+
 namespace facebook {
 namespace eden {
 
@@ -53,8 +58,14 @@ class TakeoverServer::ConnHandler {
   FOLLY_NODISCARD folly::Future<folly::Unit> start() noexcept;
 
  private:
+  FOLLY_NODISCARD folly::Future<folly::Unit> sendError(
+      const folly::exception_wrapper& error);
+
+  FOLLY_NODISCARD folly::Future<folly::Unit> pingThenSendTakeoverData(
+      TakeoverData&& data);
+
   FOLLY_NODISCARD folly::Future<folly::Unit> sendTakeoverData(
-      folly::Try<TakeoverData>&& data);
+      TakeoverData&& data);
 
   template <typename... Args>
   [[noreturn]] void fail(Args&&... args) {
@@ -63,6 +74,7 @@ class TakeoverServer::ConnHandler {
     throw std::runtime_error(msg);
   }
 
+  bool shouldPing_{false};
   TakeoverServer* const server_{nullptr};
   FutureUnixSocket socket_;
   int32_t protocolVersion_{
@@ -134,11 +146,22 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
           }
           // Initiate the takeover shutdown.
           protocolVersion_ = supported.value();
+          shouldPing_ =
+              (protocolVersion_ == TakeoverData::kTakeoverProtocolVersionFour);
           return server_->getTakeoverHandler()->startTakeoverShutdown();
         })
         .thenTryInline(folly::makeAsyncTask(
             server_->eventBase_, [this](folly::Try<TakeoverData>&& data) {
-              return sendTakeoverData(std::move(data));
+              if (!data.hasValue()) {
+                return sendError(data.exception());
+              }
+              if (shouldPing_) {
+                XLOG(DBG7) << "sending ready ping to takeover client";
+                return pingThenSendTakeoverData(std::move(data.value()));
+              } else {
+                XLOG(DBG7) << "not sending ready ping to takeover client";
+                return sendTakeoverData(std::move(data.value()));
+              }
             }));
   } catch (const std::exception& ex) {
     return makeFuture<Unit>(
@@ -146,24 +169,54 @@ Future<Unit> TakeoverServer::ConnHandler::start() noexcept {
   }
 }
 
-Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
-    folly::Try<TakeoverData>&& dataTry) {
-  if (!dataTry.hasValue()) {
-    XLOG(ERR) << "error while performing takeover shutdown: "
-              << dataTry.exception();
-    if (socket_) {
-      // Send the error to the client.
-      return socket_.send(
-          TakeoverData::serializeError(protocolVersion_, dataTry.exception()));
-    }
-    // Socket was closed (likely by a receive timeout above), so don't
-    // try to send again in here lest we break; instead just pass up
-    // the error.
-    return makeFuture<Unit>(dataTry.exception());
+Future<Unit> TakeoverServer::ConnHandler::sendError(
+    const folly::exception_wrapper& error) {
+  XLOG(ERR) << "error while performing takeover shutdown: " << error;
+  if (socket_) {
+    // Send the error to the client.
+    return socket_.send(TakeoverData::serializeError(protocolVersion_, error));
   }
+  // Socket was closed (likely by a receive timeout above), so don't
+  // try to send again in here lest we break; instead just pass up
+  // the error.
+  return makeFuture<Unit>(error);
+}
 
+Future<Unit> TakeoverServer::ConnHandler::pingThenSendTakeoverData(
+    TakeoverData&& data) {
+  // Send a message to ping the takeover client process.
+  // This ensures that the client is still connected and ready to receive data.
+  // If the client disconnected while we were pausing our checkout mounts and
+  // preparing the takeover, we want to resume our mounts rather than trying to
+  // transfer them to to the now-disconnected process.
   UnixSocket::Message msg;
-  auto& data = dataTry.value();
+  msg.data = TakeoverData::serializePing();
+
+  return socket_.send(std::move(msg))
+      .thenValue([this](auto&&) {
+        // Wait for the ping reply.
+        auto timeout = std::chrono::seconds(FLAGS_pingReceiveTimeout);
+        return socket_.receive(timeout);
+      })
+      .thenTryInline(folly::makeAsyncTask(
+          server_->eventBase_,
+          [this, data = std::move(data)](
+              folly::Try<UnixSocket::Message>&& msg) mutable {
+            if (msg.hasException()) {
+              // If we got an exception on sending or receiving here, we should
+              // bubble up an exception and recover. It is important to mark the
+              // takeover as completed here so the promise fulfills and we
+              // continue the cleanup process inside of EdenServer
+              data.takeoverComplete.setException(msg.exception());
+              return makeFuture<Unit>(msg.exception());
+            }
+            return sendTakeoverData(std::move(data));
+          }));
+}
+
+Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
+    TakeoverData&& data) {
+  UnixSocket::Message msg;
   try {
     msg.data = data.serialize(protocolVersion_);
     msg.files.push_back(std::move(data.lockFile));
