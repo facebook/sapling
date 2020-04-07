@@ -773,30 +773,6 @@ class LoggingCmd(Subcmd):
             print(category_fmt.format(name, level_str, handlers_str))
 
 
-# set_log_level is deprecated.
-# We should delete it in a few weeks (from 2018-07-18).
-# The debugSetLogLevel() API in eden/fs/service/eden.thrift can also be removed at the
-# same time.
-@debug_cmd("set_log_level", help=None)
-class SetLogLevelCmd(Subcmd):
-    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument("category", type=str, help="Period-separated log category.")
-        parser.add_argument(
-            "level",
-            type=str,
-            help="Log level string as understood by stringToLogLevel.",
-        )
-
-    def run(self, args: argparse.Namespace) -> int:
-        print(
-            "The set_log_level command is deprecated.  "
-            "Use `eden debug logging` instead:"
-        )
-        log_arg = shlex.quote(f"{args.category}={args.level}")
-        print(f"  eden debug logging {log_arg}")
-        return 1
-
-
 @debug_cmd("journal_set_memory_limit", "Sets the journal memory limit")
 class DebugJournalSetMemoryLimitCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
