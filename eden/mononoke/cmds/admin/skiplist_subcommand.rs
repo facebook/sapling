@@ -251,7 +251,7 @@ fn fetch_all_changesets(
         .flatten_stream()
         .and_then(move |(lower_bound, upper_bound)| {
             sqlchangesets
-                .get_list_bs_cs_id_in_range(repo_id, lower_bound, upper_bound)
+                .get_list_bs_cs_id_in_range_exclusive(repo_id, lower_bound, upper_bound)
                 .collect()
                 .and_then({
                     cloned!(ctx, sqlchangesets);

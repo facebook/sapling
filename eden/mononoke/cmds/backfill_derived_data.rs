@@ -348,14 +348,15 @@ fn fetch_all_public_changesets(
         .get_changesets_ids_bounds(repo_id.clone())
         .and_then(move |(start, stop)| {
             let start = start.ok_or_else(|| Error::msg("changesets table is empty"))?;
-            let stop = stop.ok_or_else(|| Error::msg("changesets table is empty"))?;
+            // Add "+ 1" because get_list_bs_cs_id_in_range_exclusive returns exclusive ranges
+            let stop = stop.ok_or_else(|| Error::msg("changesets table is empty"))? + 1;
             let step = 65536;
             Ok(old_stream::iter_ok(windows(start, stop, step)))
         })
         .flatten_stream()
         .and_then(move |(lower_bound, upper_bound)| {
             changesets
-                .get_list_bs_cs_id_in_range(repo_id, lower_bound, upper_bound)
+                .get_list_bs_cs_id_in_range_exclusive(repo_id, lower_bound, upper_bound)
                 .collect()
                 .and_then({
                     cloned!(ctx, changesets, phases);

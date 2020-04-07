@@ -231,7 +231,7 @@ impl AliasVerification {
 
         let bcs_ids = self
             .sqlchangesets
-            .get_list_bs_cs_id_in_range(self.repoid, min_id, max_id)
+            .get_list_bs_cs_id_in_range_exclusive(self.repoid, min_id, max_id)
             .compat();
 
         bcs_ids

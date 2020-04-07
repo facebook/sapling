@@ -441,7 +441,7 @@ fn fetch_many_by_prefix(
 }
 
 impl SqlChangesets {
-    pub fn get_list_bs_cs_id_in_range(
+    pub fn get_list_bs_cs_id_in_range_exclusive(
         &self,
         repo_id: RepositoryId,
         min_id: u64,
