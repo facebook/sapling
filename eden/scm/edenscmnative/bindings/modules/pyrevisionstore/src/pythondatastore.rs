@@ -168,6 +168,10 @@ impl RemoteDataStore for PythonHgIdDataStore {
 
         Ok(())
     }
+
+    fn upload(&self, _keys: &[StoreKey]) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl LocalStore for PythonHgIdDataStore {

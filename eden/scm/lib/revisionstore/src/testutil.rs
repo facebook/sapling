@@ -108,6 +108,10 @@ impl RemoteDataStore for FakeRemoteDataStore {
 
         Ok(())
     }
+
+    fn upload(&self, _keys: &[StoreKey]) -> Result<()> {
+        unimplemented!()
+    }
 }
 
 impl HgIdDataStore for FakeRemoteDataStore {

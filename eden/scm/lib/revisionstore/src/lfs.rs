@@ -91,7 +91,8 @@ enum LfsRemoteInner {
 }
 
 pub struct LfsRemote {
-    local: Arc<LfsStore>,
+    local: Option<Arc<LfsStore>>,
+    shared: Arc<LfsStore>,
     remote: LfsRemoteInner,
 }
 
@@ -1041,7 +1042,11 @@ impl LfsRemoteInner {
 }
 
 impl LfsRemote {
-    pub fn new(store: Arc<LfsStore>, config: &ConfigSet) -> Result<Self> {
+    pub fn new(
+        shared: Arc<LfsStore>,
+        local: Option<Arc<LfsStore>>,
+        config: &ConfigSet,
+    ) -> Result<Self> {
         let mut url = get_str_config(config, "lfs", "url")?;
         // A trailing '/' needs to be present so that `Url::join` doesn't remove the reponame
         // present at the end of the config.
@@ -1054,7 +1059,8 @@ impl LfsRemote {
             create_dir(&path)?;
             let file = LfsBlobsStore::loose(path);
             Ok(Self {
-                local: store,
+                shared,
+                local,
                 remote: LfsRemoteInner::File(file),
             })
         } else {
@@ -1073,7 +1079,8 @@ impl LfsRemote {
             let rt = Arc::new(Mutex::new(Runtime::new()?));
             let client = Client::new();
             Ok(Self {
-                local: store,
+                shared,
+                local,
                 remote: LfsRemoteInner::Http(HttpLfsRemote {
                     url,
                     user_agent,
@@ -1123,7 +1130,7 @@ impl RemoteDataStore for LfsRemoteStore {
         let objs = keys
             .iter()
             .map(|k| {
-                if let Some(pointer) = self.remote.local.pointers.read().entry(k)? {
+                if let Some(pointer) = self.remote.shared.pointers.read().entry(k)? {
                     match pointer.content_hashes.get(&ContentHashType::Sha256) {
                         None => Ok(None),
                         Some(content_hash) => Ok(Some((
@@ -1140,10 +1147,14 @@ impl RemoteDataStore for LfsRemoteStore {
 
         for response in self.remote.batch(&objs)? {
             let (sha256, content) = response?;
-            self.remote.local.blobs.add(&sha256, content)?;
+            self.remote.shared.blobs.add(&sha256, content)?;
         }
 
         Ok(())
+    }
+
+    fn upload(&self, keys: &[StoreKey]) -> Result<()> {
+        unimplemented!();
     }
 }
 
@@ -1729,7 +1740,7 @@ mod tests {
             let config = make_lfs_config(&cachedir);
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, &config)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let blob = (
                 Sha256::from_str(
@@ -1753,7 +1764,7 @@ mod tests {
             let config = make_lfs_config(&cachedir);
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = LfsRemote::new(lfs, &config)?;
+            let remote = LfsRemote::new(lfs, None, &config)?;
 
             let blob1 = (
                 Sha256::from_str(
@@ -1786,7 +1797,7 @@ mod tests {
             let config = make_lfs_config(&cachedir);
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
-            let remote = Arc::new(LfsRemote::new(lfs.clone(), &config)?);
+            let remote = Arc::new(LfsRemote::new(lfs.clone(), None, &config)?);
 
             let key = key("a/b", "1234");
 
@@ -1851,7 +1862,7 @@ mod tests {
         let url = Url::from_file_path(&remote).unwrap();
         config.set("lfs", "url", Some(url.as_str()), &Default::default());
 
-        let remote = LfsRemote::new(lfs, &config)?;
+        let remote = LfsRemote::new(lfs, None, &config)?;
 
         let resp = remote
             .batch(&[(blob1.0, blob1.1), (blob2.0, blob2.1)])?

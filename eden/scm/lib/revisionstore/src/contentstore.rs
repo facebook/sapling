@@ -137,6 +137,14 @@ impl RemoteDataStore for ContentStore {
             Ok(())
         }
     }
+
+    fn upload(&self, keys: &[StoreKey]) -> Result<()> {
+        if let Some(remote_store) = self.remote_store.as_ref() {
+            remote_store.upload(keys)
+        } else {
+            Ok(())
+        }
+    }
 }
 
 impl LocalStore for ContentStore {
@@ -297,7 +305,7 @@ impl<'a> ContentStoreBuilder<'a> {
                 shared_pack_store
             };
 
-        let local_mutabledatastore: Option<Arc<dyn HgIdMutableDeltaStore>> =
+        let (local_mutabledatastore, local_lfs_store): (Option<Arc<dyn HgIdMutableDeltaStore>>, _) =
             if let Some(unsuffixed_local_path) = self.local_path {
                 let local_pack_store = Arc::new(MutableDataPackStore::new(
                     get_packs_path(&unsuffixed_local_path, &self.suffix)?,
@@ -310,7 +318,7 @@ impl<'a> ContentStoreBuilder<'a> {
                 let local_store: Arc<dyn HgIdMutableDeltaStore> =
                     if let Some(lfs_threshold) = lfs_threshold {
                         let local_store = Arc::new(LfsMultiplexer::new(
-                            local_lfs_store,
+                            local_lfs_store.clone(),
                             local_pack_store,
                             lfs_threshold.value() as usize,
                         ));
@@ -320,18 +328,18 @@ impl<'a> ContentStoreBuilder<'a> {
                         local_store
                     } else {
                         datastore.add(local_pack_store.clone());
-                        datastore.add(local_lfs_store);
+                        datastore.add(local_lfs_store.clone());
                         local_pack_store
                     };
 
-                Some(local_store)
+                (Some(local_store), Some(local_lfs_store))
             } else {
                 if !self.no_local_store {
                     return Err(format_err!(
                         "a ContentStore cannot be built without a local store"
                     ));
                 }
-                None
+                (None, None)
             };
 
         let remote_store: Option<Arc<dyn RemoteDataStore>> =
@@ -375,8 +383,11 @@ impl<'a> ContentStoreBuilder<'a> {
                 // Third, the LFS remote store. The previously fetched LFS pointers will be used to
                 // fetch the actual blobs in this store.
                 if enable_lfs {
-                    let lfs_remote_store =
-                        Arc::new(LfsRemote::new(shared_lfs_store.clone(), self.config)?);
+                    let lfs_remote_store = Arc::new(LfsRemote::new(
+                        shared_lfs_store,
+                        local_lfs_store,
+                        self.config,
+                    )?);
                     remotestores.add(lfs_remote_store.datastore(shared_store.clone()));
 
                     // Fallback store if the LFS one is dead. In `ContentStore::get_missing`, when

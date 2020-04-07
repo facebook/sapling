@@ -13,7 +13,7 @@ use cpython::{
     ToPyObject,
 };
 
-use cpython_ext::{PyPath, PyPathBuf, ResultPyErrExt};
+use cpython_ext::{PyNone, PyPath, PyPathBuf, ResultPyErrExt};
 use revisionstore::{
     ContentDataStore, ContentHash, HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore, StoreKey,
     ToKeys,
@@ -57,6 +57,7 @@ pub trait HgIdMutableDeltaStorePyExt: HgIdDataStorePyExt {
 
 pub trait RemoteDataStorePyExt: RemoteDataStore {
     fn prefetch_py(&self, py: Python, keys: PyList) -> PyResult<PyObject>;
+    fn upload_py(&self, py: Python, keys: PyList) -> PyResult<PyNone>;
 }
 
 impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
@@ -244,5 +245,14 @@ impl<T: RemoteDataStore + ?Sized> RemoteDataStorePyExt for T {
             .collect::<PyResult<Vec<StoreKey>>>()?;
         self.prefetch(&keys).map_pyerr(py)?;
         Ok(Python::None(py))
+    }
+
+    fn upload_py(&self, py: Python, keys: PyList) -> PyResult<PyNone> {
+        let keys = keys
+            .iter(py)
+            .map(|tuple| Ok(StoreKey::from(from_tuple_to_key(py, &tuple)?)))
+            .collect::<PyResult<Vec<StoreKey>>>()?;
+        self.upload(&keys).map_pyerr(py)?;
+        Ok(PyNone)
     }
 }

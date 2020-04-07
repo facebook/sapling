@@ -680,6 +680,10 @@ impl RemoteDataStore for PyRemoteDataStore {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         self.0.prefetch(keys)
     }
+
+    fn upload(&self, _keys: &[StoreKey]) -> Result<()> {
+        Ok(())
+    }
 }
 
 impl HgIdDataStore for PyRemoteDataStore {
@@ -842,6 +846,11 @@ py_class!(pub class contentstore |py| {
     def prefetch(&self, keys: PyList) -> PyResult<PyObject> {
         let store = self.store(py);
         store.prefetch_py(py, keys)
+    }
+
+    def upload(&self, keys: PyList) -> PyResult<PyNone> {
+        let store = self.store(py);
+        store.upload_py(py, keys)
     }
 
     def blob(&self, name: &PyPath, node: &PyBytes) -> PyResult<PyBytes> {

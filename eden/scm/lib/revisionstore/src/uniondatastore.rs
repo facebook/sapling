@@ -117,6 +117,14 @@ impl<T: RemoteDataStore> RemoteDataStore for UnionHgIdDataStore<T> {
 
         Ok(())
     }
+
+    fn upload(&self, keys: &[StoreKey]) -> Result<()> {
+        for store in self {
+            store.upload(keys)?
+        }
+
+        Ok(())
+    }
 }
 
 pub type UnionContentDataStore<T> = UnionStore<T>;

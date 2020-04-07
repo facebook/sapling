@@ -54,6 +54,9 @@ pub trait RemoteDataStore: HgIdDataStore + Send + Sync {
     /// everything that was asked. On a higher level store, such as the `ContentStore`, this will
     /// avoid fetching data that is already present locally.
     fn prefetch(&self, keys: &[StoreKey]) -> Result<()>;
+
+    /// Send all the blobs referenced by the keys to the remote store.
+    fn upload(&self, keys: &[StoreKey]) -> Result<()>;
 }
 
 pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
@@ -106,6 +109,10 @@ impl<T: HgIdDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdDataStor
 impl<T: RemoteDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> RemoteDataStore for U {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<()> {
         T::prefetch(self, keys)
+    }
+
+    fn upload(&self, keys: &[StoreKey]) -> Result<()> {
+        T::upload(self, keys)
     }
 }
 

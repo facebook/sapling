@@ -243,6 +243,10 @@ impl RemoteDataStore for MemcacheHgIdDataStore {
 
         Ok(())
     }
+
+    fn upload(&self, _keys: &[StoreKey]) -> Result<()> {
+        Ok(())
+    }
 }
 
 struct MemcacheHgIdHistoryStore {
