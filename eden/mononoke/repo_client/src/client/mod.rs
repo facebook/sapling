@@ -1544,12 +1544,27 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
     fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<BytesOld, Error> {
-        let args = json!({
-            "rootdir": debug_format_path(&params.rootdir),
-            "mfnodes": debug_format_manifests(&params.mfnodes),
-            "basemfnodes": debug_format_manifests(&params.basemfnodes),
-            "directories": debug_format_directories(&params.directories),
-        });
+        let mut args = serde_json::Map::new();
+        args.insert(
+            "rootdir".to_string(),
+            debug_format_path(&params.rootdir).into(),
+        );
+        args.insert(
+            "mfnodes".to_string(),
+            debug_format_manifests(&params.mfnodes).into(),
+        );
+        args.insert(
+            "basemfnodes".to_string(),
+            debug_format_manifests(&params.basemfnodes).into(),
+        );
+        args.insert(
+            "directories".to_string(),
+            debug_format_directories(&params.directories).into(),
+        );
+        if let Some(depth) = params.depth {
+            args.insert("depth".to_string(), depth.to_string().into());
+        }
+
         let args = json!(vec![args]);
         let (ctx, mut command_logger) = self.start_command(ops::GETTREEPACK);
 

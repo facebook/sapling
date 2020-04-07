@@ -59,7 +59,7 @@ Check logging structure
       "build_revision": *, (glob)
       "build_rule": *, (glob)
       "command": "gettreepack",
-      "command_args": "[{\"basemfnodes\":\"\",\"directories\":\"\",\"mfnodes\":\"*\",\"rootdir\":\"\"}]", (glob)
+      "command_args": "[{\"basemfnodes\":\"\",\"depth\":\"65536\",\"directories\":\"\",\"mfnodes\":\"7c9b4fd8b49377e2fead2e9610bb8db910a98c53\",\"rootdir\":\"\"}]",
       "log_tag": "Replay Succeeded",
       "recorded_mononoke_session_id": *, (glob)
       "recorded_server": "mononoke",
