@@ -124,19 +124,44 @@ mod ops {
     pub static GETCOMMITDATA: &str = "getcommitdata";
 }
 
-fn format_path(path: &Option<MPath>) -> String {
+fn debug_format_path(path: &Option<MPath>) -> String {
     match path {
         Some(p) => format!("{}", p),
         None => String::new(),
     }
 }
 
-fn format_nodes<'a>(nodes: impl IntoIterator<Item = &'a HgChangesetId>) -> String {
+fn debug_format_nodes<'a>(nodes: impl IntoIterator<Item = &'a HgChangesetId>) -> String {
     nodes.into_iter().map(|node| format!("{}", node)).join(" ")
 }
 
-fn format_manifests<'a>(nodes: impl IntoIterator<Item = &'a HgManifestId>) -> String {
+fn debug_format_manifests<'a>(nodes: impl IntoIterator<Item = &'a HgManifestId>) -> String {
     nodes.into_iter().map(|node| format!("{}", node)).join(" ")
+}
+
+fn debug_format_directories<'a, T: AsRef<[u8]> + 'a>(
+    directories: impl IntoIterator<Item = &'a T>,
+) -> String {
+    let encoded_directories = directories
+        .into_iter()
+        .map(hgproto::batch::escape)
+        .collect::<Vec<_>>();
+
+    let len = encoded_directories
+        .iter()
+        .map(|v| v.len())
+        .fold(0, |sum, len| sum + len + 1);
+
+    let mut out = Vec::with_capacity(len);
+
+    for vec in encoded_directories {
+        out.extend(vec);
+        out.extend(b",");
+    }
+
+    // NOTE: This normally shouldn't happen, but this is just a debug function, so if it does we
+    // just ignore it.
+    String::from_utf8_lossy(out.as_ref()).to_string()
 }
 
 // Generic for HashSet, Vec, etc...
@@ -1214,8 +1239,8 @@ impl HgCommands for RepoClient {
 
         let value = json!({
             "bundlecaps": format_utf8_bytes_list(&args.bundlecaps),
-            "common": format_nodes(&args.common),
-            "heads": format_nodes(&args.heads),
+            "common": debug_format_nodes(&args.common),
+            "heads": debug_format_nodes(&args.heads),
             "listkeys": format_utf8_bytes_list(&args.listkeys),
         });
         let value = json!(vec![value]);
@@ -1520,10 +1545,10 @@ impl HgCommands for RepoClient {
     // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
     fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<BytesOld, Error> {
         let args = json!({
-            "rootdir": format_path(&params.rootdir),
-            "mfnodes": format_manifests(&params.mfnodes),
-            "basemfnodes": format_manifests(&params.basemfnodes),
-            "directories": format_utf8_bytes_list(&params.directories),
+            "rootdir": debug_format_path(&params.rootdir),
+            "mfnodes": debug_format_manifests(&params.mfnodes),
+            "basemfnodes": debug_format_manifests(&params.basemfnodes),
+            "directories": debug_format_directories(&params.directories),
         });
         let args = json!(vec![args]);
         let (ctx, mut command_logger) = self.start_command(ops::GETTREEPACK);
@@ -2223,4 +2248,13 @@ fn serialize_getcommitdata(
 }
 
 #[cfg(test)]
-mod tests;
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_debug_format_directories() {
+        assert_eq!(&debug_format_directories(vec![&"foo"]), "foo,");
+        assert_eq!(&debug_format_directories(vec![&"foo,bar"]), "foo:obar,");
+        assert_eq!(&debug_format_directories(vec![&"foo", &"bar"]), "foo,bar,");
+    }
+}

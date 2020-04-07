@@ -12,7 +12,6 @@
 
 use crate::errors::ErrorKind;
 use anyhow::{bail, Result};
-use bytes_old::Bytes;
 
 /// Unescape a batch-escaped argument key or value.
 pub fn unescape(bs: &[u8]) -> Result<Vec<u8>> {
@@ -41,7 +40,8 @@ pub fn unescape(bs: &[u8]) -> Result<Vec<u8>> {
 }
 
 /// Escape a batch result.
-pub fn escape(res: &Bytes) -> Vec<u8> {
+pub fn escape<T: AsRef<[u8]>>(res: T) -> Vec<u8> {
+    let res = res.as_ref();
     let mut out = Vec::with_capacity(res.len());
     for b in res {
         match b {
@@ -49,7 +49,7 @@ pub fn escape(res: &Bytes) -> Vec<u8> {
             b',' => out.extend_from_slice(b":o"),
             b';' => out.extend_from_slice(b":s"),
             b'=' => out.extend_from_slice(b":e"),
-            ch => out.push(ch),
+            ch => out.push(*ch),
         }
     }
     out
@@ -58,6 +58,7 @@ pub fn escape(res: &Bytes) -> Vec<u8> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use bytes_old::Bytes;
     use quickcheck::{quickcheck, TestResult};
 
     const BAD_BYTES: [u8; 3] = [b',', b';', b'='];

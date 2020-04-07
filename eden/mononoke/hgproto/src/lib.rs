@@ -23,7 +23,7 @@ use std::fmt::{self, Debug};
 use std::sync::Mutex;
 use types::api::TreeRequest;
 
-mod batch;
+pub mod batch;
 mod commands;
 mod dechunker;
 mod errors;
