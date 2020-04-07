@@ -20,21 +20,21 @@ pub struct IO {
     pager_handle: Option<JoinHandle<streampager::Result<()>>>,
 }
 
-pub trait Read: io::Read + Any {
+pub trait Read: io::Read + Any + Send {
     fn as_any(&self) -> &dyn Any;
 }
 
-pub trait Write: io::Write + Any {
+pub trait Write: io::Write + Any + Send {
     fn as_any(&self) -> &dyn Any;
 }
 
-impl<T: io::Read + Any> Read for T {
+impl<T: io::Read + Any + Send> Read for T {
     fn as_any(&self) -> &dyn Any {
         self
     }
 }
 
-impl<T: io::Write + Any> Write for T {
+impl<T: io::Write + Any + Send> Write for T {
     fn as_any(&self) -> &dyn Any {
         self
     }

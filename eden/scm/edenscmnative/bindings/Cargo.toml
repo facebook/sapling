@@ -35,6 +35,7 @@ pymanifest = { path = "modules/pymanifest" }
 pymetalog = { path = "modules/pymetalog" }
 pymutationstore = { path = "modules/pymutationstore" }
 pynodemap = { path = "modules/pynodemap" }
+pypager = { path = "modules/pypager" }
 pypathmatcher = { path = "modules/pypathmatcher" }
 pyrenderdag = { path = "modules/pyrenderdag" }
 pyrevisionstore = { path = "modules/pyrevisionstore" }
