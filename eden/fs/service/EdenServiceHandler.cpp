@@ -1256,25 +1256,6 @@ void EdenServiceHandler::debugGetInodePath(
 #endif // !_WIN32
 }
 
-void EdenServiceHandler::debugSetLogLevel(
-    SetLogLevelResult& result,
-    std::unique_ptr<std::string> category,
-    std::unique_ptr<std::string> level) {
-  auto helper = INSTRUMENT_THRIFT_CALL(DBG1);
-  // TODO: This is a temporary hack until Adam's upcoming log config parser
-  // is ready.
-  bool inherit = true;
-  if (level->length() && '!' == level->back()) {
-    *level = level->substr(0, level->length() - 1);
-    inherit = false;
-  }
-
-  auto& db = folly::LoggerDB::get();
-  result.categoryCreated = !db.getCategoryOrNull(*category);
-  folly::Logger(*category).getCategory()->setLevel(
-      folly::stringToLogLevel(*level), inherit);
-}
-
 void EdenServiceHandler::getAccessCounts(
     GetAccessCountsResult& result,
     int64_t duration) {

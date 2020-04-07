@@ -484,7 +484,7 @@ class EdenFS(object):
 
     def set_log_level(self, category: str, level: str) -> None:
         with self.get_thrift_client() as client:
-            client.debugSetLogLevel(category, level)
+            client.setOption("logging", f"{category}={level}")
 
     def client_dir_for_mount(self, mount_path: pathlib.Path) -> pathlib.Path:
         client_link = mount_path / ".eden" / "client"

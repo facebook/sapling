@@ -46,13 +46,6 @@ namespace {
 
 constexpr StringPiece kEdenVersion = "edenwin";
 
-void debugSetLogLevel(std::string category, std::string level) {
-  auto& db = folly::LoggerDB::get();
-  db.getCategoryOrNull(category);
-  folly::Logger(category).getCategory()->setLevel(
-      folly::stringToLogLevel(level), true);
-}
-
 void redirectLogOutput(const char* logPath) {
   HANDLE newHandle = CreateFileA(
       logPath,
