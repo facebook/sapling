@@ -10,6 +10,7 @@
 #include <folly/io/async/AsyncServerSocket.h>
 #include <memory>
 
+#include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -27,7 +28,8 @@ class TakeoverServer : private folly::AsyncServerSocket::AcceptCallback {
   explicit TakeoverServer(
       folly::EventBase* eventBase,
       AbsolutePathPiece socketPath,
-      TakeoverHandler* handler);
+      TakeoverHandler* handler,
+      FaultInjector* FOLLY_NONNULL faultInjector);
   virtual ~TakeoverServer() override;
 
   void start();
@@ -55,6 +57,7 @@ class TakeoverServer : private folly::AsyncServerSocket::AcceptCallback {
   TakeoverHandler* handler_{nullptr};
   AbsolutePath socketPath_;
   folly::AsyncServerSocket::UniquePtr socket_;
+  FaultInjector& faultInjector_;
 };
 } // namespace eden
 } // namespace facebook

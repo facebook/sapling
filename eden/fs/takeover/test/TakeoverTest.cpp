@@ -121,7 +121,8 @@ folly::Try<TakeoverData> runTakeover(
       AbsolutePathPiece{tmpDir.path().string()} + "takeover"_pc;
   EventBase evb;
 
-  TakeoverServer server(&evb, socketPath, handler);
+  FaultInjector faultInjector{/*enabled=*/false};
+  TakeoverServer server(&evb, socketPath, handler, &faultInjector);
 
   auto future =
       takeoverViaEventBase(&evb, socketPath, supportedVersions).ensure([&] {

@@ -620,8 +620,11 @@ Future<Unit> EdenServer::prepareImpl(
 
 #ifndef _WIN32
   // Start listening for graceful takeover requests
-  takeoverServer_.reset(
-      new TakeoverServer(getMainEventBase(), takeoverPath, this));
+  takeoverServer_.reset(new TakeoverServer(
+      getMainEventBase(),
+      takeoverPath,
+      this,
+      &serverState_->getFaultInjector()));
   takeoverServer_->start();
 #endif // !_WIN32
 

@@ -194,9 +194,13 @@ Future<Unit> TakeoverServer::ConnHandler::pingThenSendTakeoverData(
 
   return socket_.send(std::move(msg))
       .thenValue([this](auto&&) {
-        // Wait for the ping reply.
+        // Wait for the ping reply. Here we just give it a few seconds to
+        // respond.
         auto timeout = std::chrono::seconds(FLAGS_pingReceiveTimeout);
-        return socket_.receive(timeout);
+        return server_->faultInjector_.checkAsync("takeover", "ping_receive")
+            .via(server_->eventBase_)
+            .thenValue(
+                [this, timeout](auto&&) { return socket_.receive(timeout); });
       })
       .thenTryInline(folly::makeAsyncTask(
           server_->eventBase_,
@@ -243,8 +247,12 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
 TakeoverServer::TakeoverServer(
     folly::EventBase* eventBase,
     AbsolutePathPiece socketPath,
-    TakeoverHandler* handler)
-    : eventBase_{eventBase}, handler_{handler}, socketPath_{socketPath} {
+    TakeoverHandler* handler,
+    FaultInjector* faultInjector)
+    : eventBase_{eventBase},
+      handler_{handler},
+      socketPath_{socketPath},
+      faultInjector_(*faultInjector) {
   start();
 }
 
