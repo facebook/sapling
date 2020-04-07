@@ -402,6 +402,18 @@ def version():
         return "unknown"
 
 
+def isoldversion():
+    """Returns approximate date information for the current version if available"""
+    try:
+        v = version()
+        parts = remod.split("_", v)
+        approxbuilddate = datetime.datetime.strptime(parts[1], "%Y%m%d")
+        now = datetime.datetime.now()
+        return (now - approxbuilddate).days > 31
+    except Exception:
+        return None
+
+
 def versiontuple(v=None, n=4):
     """Parses a Mercurial version string into an N-tuple.
 

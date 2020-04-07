@@ -372,6 +372,8 @@ remotefilelog=
 cachepath=$TESTTMP/cachepath
 [extensions]
 commitextras=
+[hint]
+ack=*
 EOF
 }
 

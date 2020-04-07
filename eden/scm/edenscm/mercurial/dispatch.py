@@ -440,6 +440,9 @@ def dispatch(req):
             )
         blackbox.sync()
 
+    if util.isoldversion():
+        hintutil.trigger("old-version")
+
     # by registering this exit handler here, we guarantee that it runs
     # after other exithandlers, like the killpager one
     req.ui.atexit(logatexit)
