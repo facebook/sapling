@@ -370,6 +370,12 @@ impl LfsBlobsStore {
         Ok(LfsBlobsStore::union(indexedlog, loose))
     }
 
+    /// Loose shared blob store. Intended to be used when the remote store destination is FS
+    /// backed instead of HTTP backed.
+    fn loose(path: PathBuf) -> Self {
+        LfsBlobsStore::Loose(path, false)
+    }
+
     fn union(first: Box<LfsBlobsStore>, second: Box<LfsBlobsStore>) -> Self {
         LfsBlobsStore::Union(first, second)
     }
@@ -1046,7 +1052,7 @@ impl LfsRemote {
         if url.scheme() == "file" {
             let path = url.to_file_path().unwrap();
             create_dir(&path)?;
-            let file = LfsBlobsStore::shared(&path, &config)?;
+            let file = LfsBlobsStore::loose(path);
             Ok(Self {
                 local: store,
                 remote: LfsRemoteInner::File(file),
@@ -1243,7 +1249,7 @@ mod tests {
         let dir = TempDir::new()?;
         let config = make_lfs_config(&dir);
         let blob_store = LfsBlobsStore::shared(dir.path(), &config)?;
-        let loose_store = LfsBlobsStore::Loose(get_lfs_objects_path(dir.path())?, false);
+        let loose_store = LfsBlobsStore::loose(get_lfs_objects_path(dir.path())?);
 
         let data = Bytes::from(&[1, 2, 3, 4][..]);
         let sha256 = ContentHash::sha256(&data).unwrap_sha256();

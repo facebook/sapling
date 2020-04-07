@@ -49,10 +49,6 @@
 # Only the first one has uploaded a blob. This will change once push is properly support in remotefilelog LFS implementation
   $ findfilessorted $TESTTMP/lfs-server
   $TESTTMP/lfs-server/e4/1d3fc42af9a3407f07926c75946c0aa433ccbd99c175b98474fa19b2ee5963
-  $TESTTMP/lfs-server/lfs/blobs/0/index2-sha256
-  $TESTTMP/lfs-server/lfs/blobs/0/log
-  $TESTTMP/lfs-server/lfs/blobs/0/meta
-  $TESTTMP/lfs-server/lfs/blobs/latest
 
 # Now let's repack to move the LFS pointer to the remotefilelog LFS pointer store.
   $ hg repack
