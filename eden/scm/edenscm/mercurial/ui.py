@@ -29,6 +29,7 @@ import traceback
 from enum import Enum
 from typing import Any, Dict, List, Optional, Tuple, Union
 
+import bindings
 from bindings import configparser
 
 from . import (
@@ -797,7 +798,9 @@ class ui(object):
         wasformatted = self.formatted
         if util.safehasattr(signal, "SIGPIPE"):
             signal.signal(signal.SIGPIPE, _catchterm)
-        if self._runpager(pagercmd, pagerenv):
+        if pagercmd == "internal:streampager":
+            self._runinternalstreampager()
+        elif self._runpager(pagercmd, pagerenv):
             self.pageractive = True
             # Preserve the formatted-ness of the UI. This is important
             # because we mess with stdout, which might confuse
@@ -819,6 +822,46 @@ class ui(object):
             # given, don't try again when the command runs, to avoid a duplicate
             # warning about a missing pager command.
             self.disablepager()
+
+    def _runinternalstreampager(self):
+        """Start the builtin streampager"""
+        origfout = self.fout
+        origferr = self.ferr
+        origencoding = encoding.outputencoding
+        self.flush()
+
+        # This will start the pager using the system terminal immediately.
+        pager = bindings.pager.pager()
+
+        # The Rust pager wants utf-8 unconditionally.
+        encoding.outputencoding = "utf-8"
+
+        # Replace stream with write functions from the Rust pager.
+        class stream(object):
+            def __init__(self, writefunc):
+                self._write = writefunc
+
+            def write(self, content):
+                return self._write(content)
+
+            def flush(self):
+                pass
+
+            def close(self):
+                pass
+
+        self.fout = stream(pager.write)
+        self.ferr = stream(pager.write_err)
+
+        @self.atexit
+        def waitpager():
+            with self.timeblockedsection("pager"):
+                pager.close()
+            self.fout = origfout
+            self.ferr = origferr
+            encoding.outputencoding = origencoding
+
+        self.pageractive = True
 
     def _runpager(self, command, env=None):
         """Actually start the pager and set up file descriptors.
