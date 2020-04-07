@@ -649,7 +649,7 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
                     newremotebooks[remotename] = cloudnode
                 else:
                     newremotebooks[remotename] = localnode
-            else:
+            elif localnode:
                 # The remote bookmark was deleted in the cloud or locally. Keep
                 # the local remote bookmark for now.  For normal remote
                 # bookmarks, if they are deleted on the server the state will be
@@ -659,7 +659,7 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
         elif cloudnode and cloudnode != oldcloudnode:
             # The cloud node has updated, use the new version
             newremotebooks[remotename] = cloudnode
-        else:
+        elif localnode:
             # Stick with the local node
             newremotebooks[remotename] = localnode
 
