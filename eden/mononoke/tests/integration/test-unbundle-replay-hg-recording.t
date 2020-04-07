@@ -98,7 +98,9 @@ Check history again. We're back to where we were:
       "pushrebase_completion_time_us": *, (glob)
       "pushrebase_recorded_time_us": 123000,
       "time": *, (glob)
+      "unbundle_changeset_count": 2,
       "unbundle_completion_time_us": * (glob)
+      "unbundle_file_count": 2
     },
     "normal": {
       "bookmark": "master_bookmark",

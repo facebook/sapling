@@ -562,7 +562,13 @@ async fn do_main(
 
             let age = Timestamp::from(*cs.author_date()).since_seconds();
 
+            let file_count = changesets
+                .iter()
+                .fold(0, |acc, c| acc + c.file_changes_map().len());
+
             let mut scuba = scuba.clone();
+            scuba.add("unbundle_file_count", file_count);
+            scuba.add("unbundle_changeset_count", changesets.len());
             scuba.add(
                 "unbundle_completion_time_us",
                 unbundle_stats.completion_time.as_micros_unchecked(),
