@@ -12,6 +12,7 @@ path = "lib.rs"
 [dependencies]
 blobrepo = { path = "../../blobrepo" }
 blobstore = { path = "../../blobstore" }
+bounded_traversal = { path = "../../common/bounded_traversal" }
 context = { path = "../../server/context" }
 derived_data = { path = ".." }
 manifest = { path = "../../manifest" }

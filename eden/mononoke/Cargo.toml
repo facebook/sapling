@@ -38,6 +38,7 @@ members = [
     "common/async_limiter",
     "common/async_limiter/examples/tokio_v1",
     "common/async_limiter/examples/tokio_v2",
+    "common/bounded_traversal",
     "common/rust/caching_ext",
     "common/rust/sql_ext",
     "common/scuba_ext",

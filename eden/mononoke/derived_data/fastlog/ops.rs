@@ -8,12 +8,18 @@
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
+use bounded_traversal::bounded_traversal_stream;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use futures::{compat::Future01CompatExt, future::TryFutureExt, FutureExt as NewFutureExt};
-use futures_ext::{bounded_traversal::bounded_traversal_stream, BoxFuture, FutureExt};
-use futures_old::{future, stream, Future, Stream};
+use futures::{
+    compat::Future01CompatExt,
+    future::{self as new_future, FutureExt as NewFutureExt, TryFutureExt},
+    stream::{self, Stream as NewStream},
+};
+use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{future, Future};
+use futures_util::{StreamExt, TryStreamExt};
 use manifest::{Entry, ManifestOps};
 use maplit::{hashmap, hashset};
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
@@ -56,61 +62,44 @@ use crate::mapping::{FastlogParent, RootFastlog};
 /// Why to pop all nodes on the same depth and not just one commit at a time?
 /// Because if history contains merges and parents for more than one node on the current depth
 /// haven't been fetched yet, we can fetch them at the same time using FuturesUnordered.
-pub fn list_file_history(
+pub async fn list_file_history(
     ctx: CoreContext,
     repo: BlobRepo,
     path: Option<MPath>,
     unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
-) -> impl Stream<Item = ChangesetId, Error = Error> {
-    unode_entry
+) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, Error> {
+    let unode = unode_entry
         .load(ctx.clone(), &repo.get_blobstore())
-        .from_err()
-        .map(move |unode| {
-            let changeset_id = match unode {
-                Entry::Tree(mf_unode) => mf_unode.linknode().clone(),
-                Entry::Leaf(file_unode) => file_unode.linknode().clone(),
-            };
+        .compat()
+        .await?;
 
-            stream::once(Ok(changeset_id.clone())).chain({
-                let history_graph = hashmap! { changeset_id.clone() => None };
-                let visited = hashset! { changeset_id.clone() };
-                let bfs = VecDeque::new();
+    let changeset_id = match unode {
+        Entry::Tree(mf_unode) => mf_unode.linknode().clone(),
+        Entry::Leaf(file_unode) => file_unode.linknode().clone(),
+    };
 
-                bounded_traversal_stream(
-                    256,
-                    // starting point
-                    Some(TraversalState {
-                        history_graph,
-                        visited,
-                        bfs,
-                        prefetch: changeset_id,
-                    }),
-                    // unfold
-                    {
-                        cloned!(ctx, path, repo);
-                        move |TraversalState {
-                                  history_graph,
-                                  visited,
-                                  bfs,
-                                  prefetch,
-                              }| {
-                            do_history_unfold(
-                                ctx.clone(),
-                                repo.clone(),
-                                path.clone(),
-                                prefetch,
-                                bfs,
-                                visited,
-                                history_graph,
-                            )
-                        }
-                    },
-                )
-                .map(stream::iter_ok)
-                .flatten()
-            })
-        })
-        .flatten_stream()
+    Ok(
+        stream::once(new_future::ready(Ok(changeset_id.clone()))).chain({
+            let history_graph = hashmap! { changeset_id.clone() => None };
+            let visited = hashset! { changeset_id.clone() };
+            let bfs = VecDeque::new();
+
+            bounded_traversal_stream(
+                256,
+                // starting point
+                Some(TraversalState {
+                    history_graph,
+                    visited,
+                    bfs,
+                    prefetch: changeset_id,
+                }),
+                // unfold
+                move |state| do_history_unfold(ctx.clone(), repo.clone(), path.clone(), state),
+            )
+            .map_ok(|history| stream::iter(history).map(Ok))
+            .try_flatten()
+        }),
+    )
 }
 
 /// Returns history for a given unode if it exists.
@@ -149,21 +138,39 @@ struct TraversalState {
     prefetch: ChangesetId,
 }
 
-fn do_history_unfold(
+async fn do_history_unfold(
     ctx: CoreContext,
     repo: BlobRepo,
     path: Option<MPath>,
-    prefetch: ChangesetId,
-    mut bfs: VecDeque<ChangesetId>,
-    mut visited: HashSet<ChangesetId>,
-    // commit graph: changesets -> parents
-    history_graph: CommitGraph,
-) -> impl Future<Item = (Vec<ChangesetId>, Option<TraversalState>), Error = Error> {
-    prefetch_and_process_history(ctx, repo, path, prefetch.clone(), history_graph).map(
-        move |history_graph| {
-            // `prefetch` changeset is not in bfs queue anymore and neither it's parents
-            // in order to traverse its parents we need to explicitly add them to the queue
-            if let Some(Some(parents)) = history_graph.get(&prefetch) {
+    state: TraversalState,
+) -> Result<(Vec<ChangesetId>, Option<TraversalState>), Error> {
+    let TraversalState {
+        history_graph,
+        mut visited,
+        mut bfs,
+        prefetch,
+    } = state;
+
+    let history_graph =
+        prefetch_and_process_history(ctx, repo, path, prefetch.clone(), history_graph).await?;
+    // `prefetch` changeset is not in bfs queue anymore and neither it's parents
+    // in order to traverse its parents we need to explicitly add them to the queue
+    if let Some(Some(parents)) = history_graph.get(&prefetch) {
+        // parents are fetched, ready to process
+        for p in parents {
+            if visited.insert(*p) {
+                bfs.push_back(*p);
+            }
+        }
+    }
+
+    // process nodes to yield
+    let mut next_to_fetch = None;
+    let mut history = vec![];
+    while let Some(cs_id) = bfs.pop_front() {
+        history.push(cs_id.clone());
+        match history_graph.get(&cs_id) {
+            Some(Some(parents)) => {
                 // parents are fetched, ready to process
                 for p in parents {
                     if visited.insert(*p) {
@@ -171,61 +178,46 @@ fn do_history_unfold(
                     }
                 }
             }
-
-            // process nodes to yield
-            let mut next_to_fetch = None;
-            let mut history = vec![];
-            while let Some(cs_id) = bfs.pop_front() {
-                history.push(cs_id.clone());
-                match history_graph.get(&cs_id) {
-                    Some(Some(parents)) => {
-                        // parents are fetched, ready to process
-                        for p in parents {
-                            if visited.insert(*p) {
-                                bfs.push_back(*p);
-                            }
-                        }
-                    }
-                    Some(None) => {
-                        // parents haven't been fetched yet
-                        // we want to proceed to next iteration to fetch the parents
-                        next_to_fetch = Some(cs_id);
-                        break;
-                    }
-                    // this should never happen as the [cs -> parents] mapping is fetched
-                    // from the fastlog batch. and if some cs id is mentioned as a parent
-                    // in the batch, the same batch has to have a record for this cs id.
-                    None => {}
-                }
+            Some(None) => {
+                // parents haven't been fetched yet
+                // we want to proceed to next iteration to fetch the parents
+                next_to_fetch = Some(cs_id);
+                break;
             }
+            // this should never happen as the [cs -> parents] mapping is fetched
+            // from the fastlog batch. and if some cs id is mentioned as a parent
+            // in the batch, the same batch has to have a record for this cs id.
+            None => {}
+        }
+    }
 
-            let new_state = if let Some(prefetch) = next_to_fetch {
-                Some(TraversalState {
-                    history_graph,
-                    visited,
-                    bfs,
-                    prefetch,
-                })
-            } else {
-                None
-            };
-            (history, new_state)
-        },
-    )
+    let new_state = if let Some(prefetch) = next_to_fetch {
+        Some(TraversalState {
+            history_graph,
+            visited,
+            bfs,
+            prefetch,
+        })
+    } else {
+        None
+    };
+
+    Ok((history, new_state))
 }
 
 /// prefetches and processes fastlog batch for the given changeset id
-fn prefetch_and_process_history(
+async fn prefetch_and_process_history(
     ctx: CoreContext,
     repo: BlobRepo,
     path: Option<MPath>,
     changeset_id: ChangesetId,
     mut history_graph: CommitGraph,
-) -> impl Future<Item = CommitGraph, Error = Error> {
-    prefetch_fastlog_by_changeset(ctx, repo, changeset_id, path).map(move |fastlog_batch| {
-        process_unode_batch(fastlog_batch, &mut history_graph);
-        history_graph
-    })
+) -> Result<CommitGraph, Error> {
+    let fastlog_batch = prefetch_fastlog_by_changeset(ctx, repo, changeset_id, path)
+        .compat()
+        .await?;
+    process_unode_batch(fastlog_batch, &mut history_graph);
+    Ok(history_graph)
 }
 
 fn process_unode_batch(
@@ -393,8 +385,9 @@ mod test {
         derive_fastlog(ctx.clone(), repo.clone(), &mut rt, latest);
 
         let history = rt
-            .block_on(list_file_history(ctx.clone(), repo.clone(), filepath, unode_entry).collect())
+            .block_on_std(list_file_history(ctx, repo, filepath, unode_entry))
             .unwrap();
+        let history = rt.block_on_std(history.try_collect::<Vec<_>>()).unwrap();
 
         expected.reverse();
         assert_eq!(history, expected);
@@ -484,8 +477,9 @@ mod test {
         derive_fastlog(ctx.clone(), repo.clone(), &mut rt, top);
 
         let history = rt
-            .block_on(list_file_history(ctx.clone(), repo.clone(), filepath, unode_entry).collect())
+            .block_on_std(list_file_history(ctx, repo, filepath, unode_entry))
             .unwrap();
+        let history = rt.block_on_std(history.try_collect::<Vec<_>>()).unwrap();
 
         let expected = bfs(&graph, top);
         assert_eq!(history, expected);
@@ -597,8 +591,9 @@ mod test {
         derive_fastlog(ctx.clone(), repo.clone(), &mut rt, prev_id);
 
         let history = rt
-            .block_on(list_file_history(ctx.clone(), repo.clone(), filepath, unode_entry).collect())
+            .block_on_std(list_file_history(ctx, repo, filepath, unode_entry))
             .unwrap();
+        let history = rt.block_on_std(history.try_collect::<Vec<_>>()).unwrap();
 
         expected.reverse();
         assert_eq!(history, expected);

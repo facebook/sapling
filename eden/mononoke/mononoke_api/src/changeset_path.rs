@@ -15,10 +15,10 @@ use bytes::Bytes;
 use cloned::cloned;
 use fastlog::list_file_history;
 use filestore::FetchKey;
-use futures::compat::{Future01CompatExt, Stream01CompatExt};
+use futures::compat::Future01CompatExt;
 use futures::future::{FutureExt, Shared};
 use futures::stream::Stream;
-use futures_old::{stream::Stream as StreamLegacy, Future as FutureLegacy};
+use futures_old::Future as FutureLegacy;
 use futures_util::{try_join, TryStreamExt};
 use manifest::{Entry, ManifestOps};
 use mononoke_types::{
@@ -282,9 +282,12 @@ impl ChangesetPathContext {
         })?;
         let mpath = self.path.as_mpath();
 
-        Ok(list_file_history(ctx, repo, mpath.cloned(), unode_entry)
-            .map_err(|error| MononokeError::from(Error::from(error)))
-            .compat()
+        let history = list_file_history(ctx, repo, mpath.cloned(), unode_entry)
+            .await
+            .map_err(MononokeError::from)?;
+
+        Ok(history
+            .map_err(MononokeError::from)
             .map_ok(move |changeset_id| ChangesetContext::new(self.repo().clone(), changeset_id)))
     }
 }
