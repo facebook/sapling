@@ -42,6 +42,8 @@ class TestHandler : public TakeoverHandler {
     return makeFuture(std::move(data_));
   }
 
+  void closeStorage() override {}
+
  private:
   TakeoverData data_;
 };
@@ -55,6 +57,7 @@ class ErrorHandler : public TakeoverHandler {
     return makeFuture<TakeoverData>(
         std::logic_error("purposely failing for testing"));
   }
+  void closeStorage() override {}
 };
 
 /**
@@ -70,7 +73,9 @@ Future<TakeoverData> takeoverViaEventBase(
   std::thread thread([path = AbsolutePath{socketPath},
                       supportedVersions,
                       promise = std::move(promise)]() mutable {
-    promise.setWith([&] { return takeoverMounts(path, supportedVersions); });
+    promise.setWith([&] {
+      return takeoverMounts(path, /*shouldPing=*/true, supportedVersions);
+    });
   });
 
   return future.via(evb).ensure(

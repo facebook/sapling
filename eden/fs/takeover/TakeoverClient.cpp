@@ -32,6 +32,7 @@ namespace eden {
 
 TakeoverData takeoverMounts(
     AbsolutePathPiece socketPath,
+    bool shouldPing,
     const std::set<int32_t>& supportedVersions) {
   folly::EventBase evb;
   folly::Expected<UnixSocket::Message, folly::exception_wrapper>
@@ -56,16 +57,23 @@ TakeoverData takeoverMounts(
         auto timeout = std::chrono::seconds(FLAGS_takeoverReceiveTimeout);
         return socket.receive(timeout);
       })
-      .thenValue([&socket](UnixSocket::Message&& msg) {
+      .thenValue([&socket, shouldPing](UnixSocket::Message&& msg) {
         if (TakeoverData::isPing(&msg.data)) {
-          // Just send an empty message back here, the server knows it sent a
-          // ping so it does not need to parse the message.
-          UnixSocket::Message ping;
-          return socket.send(std::move(ping)).thenValue([&socket](auto&&) {
-            // Wait for the takeover data response
-            auto timeout = std::chrono::seconds(FLAGS_takeoverReceiveTimeout);
-            return socket.receive(timeout);
-          });
+          if (shouldPing) {
+            // Just send an empty message back here, the server knows it sent a
+            // ping so it does not need to parse the message.
+            UnixSocket::Message ping;
+            return socket.send(std::move(ping)).thenValue([&socket](auto&&) {
+              // Wait for the takeover data response
+              auto timeout = std::chrono::seconds(FLAGS_takeoverReceiveTimeout);
+              return socket.receive(timeout);
+            });
+          } else {
+            // This should only be hit during integration tests.
+            return folly::makeFuture<UnixSocket::Message>(
+                folly::exception_wrapper(std::runtime_error(
+                    "ping received but should not respond")));
+          }
         } else {
           // Older versions of EdenFS will not send a "ready" ping and
           // could simply send the takeover data.

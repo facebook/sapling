@@ -191,6 +191,17 @@ class EdenFS(object):
         cmd.extend(args)
         return cmd
 
+    def wait_for_is_healthy(self, timeout: float = 30) -> bool:
+        process = self._process
+        assert process is not None
+        health = util.wait_for_daemon_healthy(
+            proc=process,
+            config_dir=self._eden_dir,
+            get_client=lambda: self.get_thrift_client(),
+            timeout=timeout,
+        )
+        return health.is_healthy()
+
     def start(
         self,
         timeout: float = 60,
@@ -406,6 +417,27 @@ class EdenFS(object):
             str(version),
         ]
         self.run_takeover_tool(cmd)
+
+    def takeover_without_ping_response(self) -> None:
+        """
+        Execute a fake takeover to explicitly test a failed takeover. The
+        takeover client does not send a ping with the nosendPing flag,
+        so the subprocess call will throw, and we expect the old process
+        to recover
+        """
+        # pyre-ignore[9]: T38947910
+        cmd: List[str] = [
+            FindExe.TAKEOVER_TOOL,
+            "--edenDir",
+            str(self._eden_dir),
+            "--noshouldPing",
+        ]
+
+        try:
+            subprocess.check_call(cmd)
+        except Exception:
+            # We expect the new process to fail starting.
+            pass
 
     def add_repository(self, name: str, repo_path: str) -> None:
         """

@@ -150,6 +150,20 @@ class EdenServer : private TakeoverHandler {
       std::shared_ptr<StartupLogger> logger,
       bool waitForMountCompletion = true);
 
+#ifndef _WIN32
+  /**
+   * Recover the EdenServer after a failed takeover request.
+   *
+   * This function is very similar to prepare() implementation-wise,
+   * but uses a TakeoverData object from a failed takeover request
+   * to recover itself.
+   *
+   * This function resets the TakeoverServer, resets the takeoverPromise,
+   * sets takeoverShutdown to false, and sets the state to RUNNING
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> recover(TakeoverData&& data);
+#endif // _WIN32
+
   /**
    * Shut down the EdenServer after it has stopped running.
    *
@@ -161,7 +175,12 @@ class EdenServer : private TakeoverHandler {
    * Otherwise performCleanup() will unmount and shutdown all currently running
    * mounts.
    */
-  void performCleanup();
+  bool performCleanup();
+
+  /**
+   * Close the backingStore and the localStore.
+   */
+  void closeStorage() override;
 
   /**
    * Stops this server, which includes the underlying Thrift server.
@@ -410,6 +429,13 @@ class EdenServer : private TakeoverHandler {
       std::shared_ptr<StartupLogger> logger);
   static void incrementStartupMountFailures();
 
+#ifndef _WIN32
+  /**
+   * recoverImpl() contains the bulk of the implementation of recover()
+   */
+  FOLLY_NODISCARD folly::Future<folly::Unit> recoverImpl(TakeoverData&& data);
+#endif // !_WIN32
+
   /**
    * Create config file if this the first time running the server, otherwise
    * parse existing config file.
@@ -435,8 +461,11 @@ class EdenServer : private TakeoverHandler {
       std::optional<TakeoverData::MountInfo> takeover);
 
   FOLLY_NODISCARD folly::Future<folly::Unit> performNormalShutdown();
-  FOLLY_NODISCARD folly::Future<folly::Unit> performTakeoverShutdown(
-      folly::File thriftSocket);
+  // If the takeover was successful, this returns std::nullopt. If a
+  // TakeoverData object is returned, that means the takeover attempt failed and
+  // the server should be resumed using the given TakeoverData.
+  FOLLY_NODISCARD folly::Future<std::optional<TakeoverData>>
+  performTakeoverShutdown(folly::File thriftSocket);
   void shutdownPrivhelper();
 
   // Starts up a new fuse mount for edenMount, starting up the thread
@@ -536,8 +565,6 @@ class EdenServer : private TakeoverHandler {
    * a graceful restart, taking over our running mount points.
    */
   std::unique_ptr<TakeoverServer> takeoverServer_;
-  folly::Promise<TakeoverData> takeoverPromise_;
-
 #endif // !_WIN32
 
   /**
@@ -548,6 +575,7 @@ class EdenServer : private TakeoverHandler {
     RunState state{RunState::STARTING};
     bool takeoverShutdown{false};
     folly::File takeoverThriftSocket;
+    folly::Promise<TakeoverData> takeoverPromise;
   };
   folly::Synchronized<RunStateData> runningState_;
 

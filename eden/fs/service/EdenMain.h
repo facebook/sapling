@@ -25,6 +25,7 @@ class EdenMain {
   virtual std::string getEdenfsBuildName() = 0;
   virtual std::string getEdenfsVersion() = 0;
   virtual std::string getLocalHostname() = 0;
+  virtual void prepare(const EdenServer& server) = 0;
   virtual void runServer(const EdenServer& server) = 0;
 };
 
@@ -36,6 +37,7 @@ class DefaultEdenMain : public EdenMain {
   virtual std::string getEdenfsBuildName() override;
   virtual std::string getEdenfsVersion() override;
   virtual std::string getLocalHostname() override;
+  virtual void prepare(const EdenServer& server) override;
   virtual void runServer(const EdenServer& server) override;
 };
 

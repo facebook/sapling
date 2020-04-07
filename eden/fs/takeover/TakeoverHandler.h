@@ -38,6 +38,8 @@ class TakeoverHandler {
    * its mounts.
    */
   virtual folly::Future<TakeoverData> startTakeoverShutdown() = 0;
+
+  virtual void closeStorage() = 0;
 };
 
 } // namespace eden

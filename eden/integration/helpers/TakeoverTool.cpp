@@ -22,6 +22,11 @@ DEFINE_string(edenDir, "", "The path to the .eden directory");
  */
 DEFINE_int32(takeoverVersion, 0, "The takeover version number to send");
 
+DEFINE_bool(
+    shouldPing,
+    true,
+    "This is used by integration tests to avoid sending a ping");
+
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2");
 
 using namespace facebook::eden::path_literals;
@@ -47,10 +52,11 @@ int main(int argc, char* argv[]) {
 
   facebook::eden::TakeoverData data;
   if (FLAGS_takeoverVersion == 0) {
-    data = facebook::eden::takeoverMounts(takeoverSocketPath);
+    data = facebook::eden::takeoverMounts(takeoverSocketPath, FLAGS_shouldPing);
   } else {
     auto takeoverVersion = std::set<int32_t>{FLAGS_takeoverVersion};
-    data = facebook::eden::takeoverMounts(takeoverSocketPath, takeoverVersion);
+    data = facebook::eden::takeoverMounts(
+        takeoverSocketPath, FLAGS_shouldPing, takeoverVersion);
   }
   for (const auto& mount : data.mountPoints) {
     XLOG(INFO) << "mount " << mount.mountPath << ": fd=" << mount.fuseFD.fd();

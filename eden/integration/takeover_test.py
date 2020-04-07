@@ -304,6 +304,12 @@ class TakeoverTest(testcase.EdenRepoTest):
         """
         self.eden.fake_takeover_with_version(3)
 
+    def test_takeover_failure(self) -> None:
+        print("=== beginning restart ===", file=sys.stderr)
+        self.eden.takeover_without_ping_response()
+        print("=== restart complete ===", file=sys.stderr)
+        self.assertTrue(self.eden.wait_for_is_healthy())
+
 
 @testcase.eden_repo_test
 class TakeoverRocksDBStressTest(testcase.EdenRepoTest):

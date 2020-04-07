@@ -94,6 +94,10 @@ std::string DefaultEdenMain::getLocalHostname() {
   return getHostname();
 }
 
+void DefaultEdenMain::prepare(const EdenServer& /*server*/) {
+  fb303::registerFollyLoggingOptionHandlers();
+}
+
 void DefaultEdenMain::runServer(const EdenServer& server) {
   // ThriftServer::serve() will drive the current thread's EventBase.
   // Verify that we are being called from the expected thread, and will end up
@@ -102,7 +106,6 @@ void DefaultEdenMain::runServer(const EdenServer& server) {
       server.getMainEventBase(),
       folly::EventBaseManager::get()->getEventBase());
 
-  fb303::registerFollyLoggingOptionHandlers();
   fb303::withThriftFunctionStats(kServiceName, server.getHandler().get(), [&] {
     server.getServer()->serve();
   });
@@ -289,8 +292,15 @@ int runEdenMain(EdenMain&& main, int argc, char** argv) {
                 DaemonStart{startTimeInSeconds, takeover, true /*success*/});
           });
 
-  main.runServer(server.value());
-  server->performCleanup();
+  main.prepare(server.value());
+  while (true) {
+    main.runServer(server.value());
+    if (server->performCleanup()) {
+      break;
+    }
+    // performCleanup() returns false if a takeover shutdown attempt
+    // failed.  Continue and re-run the server in this case.
+  }
 
   XLOG(INFO) << "edenfs exiting successfully";
   return EX_OK;

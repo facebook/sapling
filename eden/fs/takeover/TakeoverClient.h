@@ -20,8 +20,9 @@ namespace eden {
  */
 TakeoverData takeoverMounts(
     AbsolutePathPiece socketPath,
-    // this parameter is present for testing purposes and should not normally
-    // be used in the production build.
+    // the following parameters are present for testing purposes and should not
+    // normally be used in the production build.
+    bool shouldPing = true,
     const std::set<int32_t>& supportedTakeoverVersions =
         kSupportedTakeoverVersions);
 

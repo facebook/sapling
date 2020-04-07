@@ -153,7 +153,7 @@ class TakeoverData {
    * The takeoverComplete promise will be fulfilled by the TakeoverServer code
    * once the TakeoverData has been sent to the remote process.
    */
-  folly::Promise<folly::Unit> takeoverComplete;
+  folly::Promise<std::optional<TakeoverData>> takeoverComplete;
 
  private:
   /**

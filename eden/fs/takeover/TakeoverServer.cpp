@@ -208,10 +208,15 @@ Future<Unit> TakeoverServer::ConnHandler::pingThenSendTakeoverData(
               folly::Try<UnixSocket::Message>&& msg) mutable {
             if (msg.hasException()) {
               // If we got an exception on sending or receiving here, we should
-              // bubble up an exception and recover. It is important to mark the
-              // takeover as completed here so the promise fulfills and we
-              // continue the cleanup process inside of EdenServer
-              data.takeoverComplete.setException(msg.exception());
+              // bubble up an exception and recover.
+
+              // We must save the original takeoverComplete promise
+              // since we will move the TakeoverData into the takeoverComplete
+              // promise and the EdenServer waits on this to be fulfilled to
+              // determine to recover or not
+              auto takeoverPromise = std::move(data.takeoverComplete);
+              takeoverPromise.setValue(std::move(data));
+
               return makeFuture<Unit>(msg.exception());
             }
             return sendTakeoverData(std::move(data));
@@ -220,6 +225,11 @@ Future<Unit> TakeoverServer::ConnHandler::pingThenSendTakeoverData(
 
 Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
     TakeoverData&& data) {
+  // Before sending the takeover data, we must close the server's
+  // local and backing store. This is important for ensuring the RocksDB
+  // lock is released so the client can take over.
+  server_->getTakeoverHandler()->closeStorage();
+
   UnixSocket::Message msg;
   try {
     msg.data = data.serialize(protocolVersion_);
@@ -240,7 +250,12 @@ Future<Unit> TakeoverServer::ConnHandler::sendTakeoverData(
   return socket_.send(std::move(msg))
       .thenTry([promise = std::move(data.takeoverComplete)](
                    folly::Try<Unit>&& sendResult) mutable {
-        promise.setTry(std::move(sendResult));
+        if (sendResult.hasException()) {
+          promise.setException(sendResult.exception());
+        } else {
+          // Set an uninitalized optional here to avoid an attempted recovery
+          promise.setValue(std::nullopt);
+        }
       });
 }
 
