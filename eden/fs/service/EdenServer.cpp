@@ -1531,6 +1531,12 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
     result = state->takeoverPromise.getFuture();
   }
 
+  // Compact storage for all key spaces in order to speed up the
+  // takeover start of the new process. We could potentially test this more
+  // and change it in the future to simply flush instead of compact if this
+  // proves to be too expensive.
+  localStore_->compactStorage();
+
   shutdownSubscribers();
 
   // Stop the thrift server.  We will fulfill takeoverPromise once it
