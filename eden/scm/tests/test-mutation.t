@@ -37,6 +37,8 @@ Amend
       6d60953c6009fdd3d6bd870ad37c7f48ea6d1311 amend by test at 1970-01-01T00:00:00 from:
       c5d0fa8770bdde6ef311cc640a78a2f686be28b4
   
+  $ hg log -r . -T '{dict(predecessors)|json}\n'
+  {"predecessors": ["cc809964b02448cb4c84c772b9beba99d4159cff"]}
 
 Rebase
 

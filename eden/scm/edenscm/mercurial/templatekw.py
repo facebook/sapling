@@ -754,8 +754,11 @@ def showpeerurls(repo, **args):
 
 @templatekeyword("predecessors")
 def showpredecessors(repo, ctx, **args):
-    """Returns the list if the closest visible successors. (EXPERIMENTAL)"""
-    predecessors = sorted(obsutil.closestpredecessors(repo, ctx.node()))
+    """Returns the list if the closest visible predecessors. (EXPERIMENTAL)"""
+    if mutation.enabled(repo):
+        predecessors = sorted(mutation.predecessorsset(repo, ctx.node(), closest=True))
+    else:
+        predecessors = sorted(obsutil.closestpredecessors(repo, ctx.node()))
     predecessors = list(map(hex, predecessors))
 
     return _hybrid(
