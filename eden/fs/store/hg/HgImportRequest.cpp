@@ -14,24 +14,34 @@
 namespace facebook {
 namespace eden {
 
-std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Blob>>>
-HgImportRequest::makeBlobImportRequest(Hash hash, ImportPriority priority) {
-  auto [promise, future] = folly::makePromiseContract<std::unique_ptr<Blob>>();
-
+namespace {
+template <typename Request, typename Input>
+std::pair<HgImportRequest, folly::SemiFuture<typename Request::Response>>
+makeRequest(Input&& input, ImportPriority priority) {
+  auto [promise, future] =
+      folly::makePromiseContract<typename Request::Response>();
   return std::make_pair(
       HgImportRequest{
-          BlobImport{std::move(hash)}, priority, std::move(promise)},
+          Request{std::forward<Input>(input)}, priority, std::move(promise)},
       std::move(future));
+}
+} // namespace
+
+std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Blob>>>
+HgImportRequest::makeBlobImportRequest(Hash hash, ImportPriority priority) {
+  return makeRequest<BlobImport>(hash, priority);
 }
 
 std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Tree>>>
 HgImportRequest::makeTreeImportRequest(Hash hash, ImportPriority priority) {
-  auto [promise, future] = folly::makePromiseContract<std::unique_ptr<Tree>>();
+  return makeRequest<TreeImport>(hash, priority);
+}
 
-  return std::make_pair(
-      HgImportRequest{
-          TreeImport{std::move(hash)}, priority, std::move(promise)},
-      std::move(future));
+std::pair<HgImportRequest, folly::SemiFuture<folly::Unit>>
+HgImportRequest::makePrefetchRequest(
+    std::vector<Hash> hashes,
+    ImportPriority priority) {
+  return makeRequest<Prefetch>(hashes, priority);
 }
 
 } // namespace eden

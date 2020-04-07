@@ -18,6 +18,10 @@ struct ImportPriority {
   ImportPriorityKind kind;
   uint64_t offset : 48;
 
+  static constexpr ImportPriority kLow() {
+    return ImportPriority{ImportPriorityKind::Low};
+  }
+
   static constexpr ImportPriority kNormal() {
     return ImportPriority{ImportPriorityKind::Normal};
   }

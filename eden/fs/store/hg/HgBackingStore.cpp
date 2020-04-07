@@ -762,8 +762,8 @@ SemiFuture<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(
       .ensure([tracker = std::move(queueTracker)] {});
 }
 
-folly::Future<folly::Unit> HgBackingStore::prefetchBlobs(
-    const std::vector<Hash>& ids) const {
+SemiFuture<folly::Unit> HgBackingStore::prefetchBlobs(
+    const std::vector<Hash>& ids) {
   auto queueTracker =
       std::make_unique<RequestMetricsScope>(&pendingImportPrefetchWatches_);
   return HgProxyHash::getBatch(localStore_, ids)

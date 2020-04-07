@@ -88,8 +88,8 @@ class HgBackingStore : public BackingStore {
   folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(
       const Hash& commitID,
       const Hash& manifestID) override;
-  FOLLY_NODISCARD folly::Future<folly::Unit> prefetchBlobs(
-      const std::vector<Hash>& ids) const override;
+  FOLLY_NODISCARD folly::SemiFuture<folly::Unit> prefetchBlobs(
+      const std::vector<Hash>& ids) override;
 
   void periodicManagementTask() override;
 

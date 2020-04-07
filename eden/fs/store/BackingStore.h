@@ -50,8 +50,8 @@ class BackingStore {
   virtual folly::SemiFuture<std::unique_ptr<Tree>> getTreeForManifest(
       const Hash& commitID,
       const Hash& manifestID) = 0;
-  FOLLY_NODISCARD virtual folly::Future<folly::Unit> prefetchBlobs(
-      const std::vector<Hash>& /*ids*/) const {
+  FOLLY_NODISCARD virtual folly::SemiFuture<folly::Unit> prefetchBlobs(
+      const std::vector<Hash>& /*ids*/) {
     return folly::unit;
   }
 

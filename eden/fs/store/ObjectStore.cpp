@@ -161,7 +161,7 @@ folly::Future<folly::Unit> ObjectStore::prefetchBlobs(
   if (ids.empty()) {
     return folly::unit;
   }
-  return backingStore_->prefetchBlobs(ids);
+  return backingStore_->prefetchBlobs(ids).via(executor_);
 }
 
 Future<shared_ptr<const Blob>> ObjectStore::getBlob(

@@ -39,11 +39,29 @@ class HgImportRequest {
     Hash hash;
   };
 
+  struct Prefetch {
+    using Response = folly::Unit;
+
+    std::vector<Hash> hashes;
+  };
+
   static std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Blob>>>
   makeBlobImportRequest(Hash hash, ImportPriority priority);
 
   static std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Tree>>>
   makeTreeImportRequest(Hash hash, ImportPriority priority);
+
+  static std::pair<HgImportRequest, folly::SemiFuture<folly::Unit>>
+  makePrefetchRequest(std::vector<Hash> hashes, ImportPriority priority);
+
+  template <typename RequestType>
+  HgImportRequest(
+      RequestType request,
+      ImportPriority priority,
+      folly::Promise<typename RequestType::Response>&& promise)
+      : request_(std::move(request)),
+        priority_(priority),
+        promise_(std::move(promise)) {}
 
   template <typename T>
   const T* getRequest() noexcept {
@@ -54,9 +72,9 @@ class HgImportRequest {
    * Set Try with the Future for the inner promise.
    *
    * We need this method instead of letting the caller directly call
-   * `promise.setTry()` because of the use of `std::variant`, `promise.setTry`
-   * won't be able to convert the incoming response to the correct
-   * `std::variant` automatically.
+   * `promise.setTry()` because of the use of `std::variant`,
+   * `promise.setTry` won't be able to convert the incoming response to the
+   * correct `std::variant` automatically.
    */
   template <typename T>
   void setTry(folly::Try<T> result) {
@@ -74,19 +92,11 @@ class HgImportRequest {
   }
 
  private:
-  using Request = std::variant<BlobImport, TreeImport>;
+  using Request = std::variant<BlobImport, TreeImport, Prefetch>;
   using Response = std::variant<
       folly::Promise<std::unique_ptr<Blob>>,
-      folly::Promise<std::unique_ptr<Tree>>>;
-
-  template <typename RequestType>
-  HgImportRequest(
-      RequestType request,
-      ImportPriority priority,
-      folly::Promise<typename RequestType::Response>&& promise)
-      : request_(std::move(request)),
-        priority_(priority),
-        promise_(std::move(promise)) {}
+      folly::Promise<std::unique_ptr<Tree>>,
+      folly::Promise<folly::Unit>>;
 
   Request request_;
   ImportPriority priority_;

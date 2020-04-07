@@ -59,6 +59,15 @@ void HgQueuedBackingStore::processRequest() {
           });
       request->setTry<HgImportRequest::TreeImport::Response>(
           std::move(future).getTry());
+    } else if (
+        auto parameter = request->getRequest<HgImportRequest::Prefetch>()) {
+      auto future =
+          folly::makeSemiFutureWith([store = backingStore_.get(),
+                                     hashes = std::move(parameter->hashes)]() {
+            return store->prefetchBlobs(std::move(hashes));
+          });
+      request->setTry<HgImportRequest::Prefetch::Response>(
+          std::move(future).getTry());
     }
   }
 }
@@ -89,6 +98,15 @@ HgQueuedBackingStore::getTreeForManifest(
     const Hash& commitID,
     const Hash& manifestID) {
   return backingStore_->getTreeForManifest(commitID, manifestID);
+}
+
+folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
+    const std::vector<Hash>& ids) {
+  auto [request, future] =
+      HgImportRequest::makePrefetchRequest(ids, ImportPriority::kNormal());
+  queue_.enqueue(std::move(request));
+
+  return std::move(future);
 }
 } // namespace eden
 } // namespace facebook
