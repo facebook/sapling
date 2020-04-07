@@ -44,20 +44,21 @@ void HgQueuedBackingStore::processRequest() {
       break;
     }
 
-    auto type = request->getType();
-
-    if (type == HgImportRequest::BlobImport) {
+    if (auto parameter = request->getRequest<HgImportRequest::BlobImport>()) {
       auto future = folly::makeSemiFutureWith(
-          [store = backingStore_.get(), hash = request->getHash()]() {
+          [store = backingStore_.get(), hash = std::move(parameter->hash)]() {
             return store->getBlob(hash);
           });
-      request->setSemiFuture(std::move(future));
-    } else if (type == HgImportRequest::TreeImport) {
+      request->setTry<HgImportRequest::BlobImport::Response>(
+          std::move(future).getTry());
+    } else if (
+        auto parameter = request->getRequest<HgImportRequest::TreeImport>()) {
       auto future = folly::makeSemiFutureWith(
-          [store = backingStore_.get(), hash = request->getHash()]() {
+          [store = backingStore_.get(), hash = std::move(parameter->hash)]() {
             return store->getTree(hash);
           });
-      request->setSemiFuture(std::move(future));
+      request->setTry<HgImportRequest::TreeImport::Response>(
+          std::move(future).getTry());
     }
   }
 }

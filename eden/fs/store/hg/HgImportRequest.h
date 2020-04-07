@@ -15,6 +15,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ImportPriority.h"
+#include "eden/fs/utils/Bug.h"
 
 namespace facebook {
 namespace eden {
@@ -26,9 +27,16 @@ namespace eden {
  */
 class HgImportRequest {
  public:
-  enum RequestType : uint8_t {
-    BlobImport,
-    TreeImport,
+  struct BlobImport {
+    using Response = std::unique_ptr<Blob>;
+
+    Hash hash;
+  };
+
+  struct TreeImport {
+    using Response = std::unique_ptr<Tree>;
+
+    Hash hash;
   };
 
   static std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Blob>>>
@@ -37,12 +45,9 @@ class HgImportRequest {
   static std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Tree>>>
   makeTreeImportRequest(Hash hash, ImportPriority priority);
 
-  RequestType getType() const {
-    return type_;
-  }
-
-  const Hash& getHash() const {
-    return hash_;
+  template <typename T>
+  const T* getRequest() noexcept {
+    return std::get_if<T>(&request_);
   }
 
   /**
@@ -54,38 +59,38 @@ class HgImportRequest {
    * `std::variant` automatically.
    */
   template <typename T>
-  void setSemiFuture(folly::SemiFuture<T>&& future) {
-    auto&& result = std::move(future).getTry();
+  void setTry(folly::Try<T> result) {
+    auto promise = std::get_if<folly::Promise<T>>(&promise_); // Promise<T>
+
+    if (!promise) {
+      EDEN_BUG() << "invalid promise type";
+    }
 
     if (result.hasValue()) {
-      promise_.setValue(ResponseType{std::forward<T>(result.value())});
+      promise->setValue(std::move(result.value()));
     } else {
-      promise_.setException(std::move(result.exception()));
+      promise->setException(std::move(result.exception()));
     }
   }
 
-  void setException(std::exception&& except) {
-    promise_.setException(std::move(except));
-  }
-
  private:
-  using ResponseType =
-      std::variant<std::unique_ptr<Blob>, std::unique_ptr<Tree>>;
+  using Request = std::variant<BlobImport, TreeImport>;
+  using Response = std::variant<
+      folly::Promise<std::unique_ptr<Blob>>,
+      folly::Promise<std::unique_ptr<Tree>>>;
 
+  template <typename RequestType>
   HgImportRequest(
-      RequestType type,
-      Hash hash,
+      RequestType request,
       ImportPriority priority,
-      folly::Promise<ResponseType>&& promise)
-      : type_(type),
-        hash_(std::move(hash)),
+      folly::Promise<typename RequestType::Response>&& promise)
+      : request_(std::move(request)),
         priority_(priority),
         promise_(std::move(promise)) {}
 
-  RequestType type_;
-  Hash hash_;
+  Request request_;
   ImportPriority priority_;
-  folly::Promise<ResponseType> promise_;
+  Response promise_;
 
   friend bool operator<(
       const HgImportRequest& lhs,

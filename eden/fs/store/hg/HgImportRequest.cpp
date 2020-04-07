@@ -16,40 +16,22 @@ namespace eden {
 
 std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Blob>>>
 HgImportRequest::makeBlobImportRequest(Hash hash, ImportPriority priority) {
-  auto [promise, future] = folly::makePromiseContract<ResponseType>();
+  auto [promise, future] = folly::makePromiseContract<std::unique_ptr<Blob>>();
 
   return std::make_pair(
-      HgImportRequest{RequestType::BlobImport,
-                      std::move(hash),
-                      priority,
-                      std::move(promise)},
-      std::move(future).deferValue(
-          [](auto result) -> folly::SemiFuture<std::unique_ptr<Blob>> {
-            if (auto* blob = std::get_if<std::unique_ptr<Blob>>(&result)) {
-              return folly::makeSemiFuture<>(std::move(*blob));
-            }
-            return folly::makeSemiFuture<std::unique_ptr<Blob>>(
-                std::runtime_error("invalid response"));
-          }));
+      HgImportRequest{
+          BlobImport{std::move(hash)}, priority, std::move(promise)},
+      std::move(future));
 }
 
 std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Tree>>>
 HgImportRequest::makeTreeImportRequest(Hash hash, ImportPriority priority) {
-  auto [promise, future] = folly::makePromiseContract<ResponseType>();
+  auto [promise, future] = folly::makePromiseContract<std::unique_ptr<Tree>>();
 
   return std::make_pair(
-      HgImportRequest{RequestType::TreeImport,
-                      std::move(hash),
-                      priority,
-                      std::move(promise)},
-      std::move(future).deferValue(
-          [](auto result) -> folly::SemiFuture<std::unique_ptr<Tree>> {
-            if (auto* tree = std::get_if<std::unique_ptr<Tree>>(&result)) {
-              return folly::makeSemiFuture<>(std::move(*tree));
-            }
-            return folly::makeSemiFuture<std::unique_ptr<Tree>>(
-                std::runtime_error("invalid response"));
-          }));
+      HgImportRequest{
+          TreeImport{std::move(hash)}, priority, std::move(promise)},
+      std::move(future));
 }
 
 } // namespace eden

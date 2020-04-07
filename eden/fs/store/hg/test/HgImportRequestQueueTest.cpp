@@ -52,12 +52,14 @@ TEST(HgImportRequestQueueTest, getRequestByPriority) {
     auto expected = enqueued.back();
     enqueued.pop_back();
 
-    auto request = queue.dequeue();
-
-    EXPECT_EQ(expected, request->getHash());
+    EXPECT_EQ(
+        expected,
+        queue.dequeue()->getRequest<HgImportRequest::BlobImport>()->hash);
   }
 
-  EXPECT_EQ(smallHash, queue.dequeue()->getHash());
+  EXPECT_EQ(
+      smallHash,
+      queue.dequeue()->getRequest<HgImportRequest::BlobImport>()->hash);
 }
 
 TEST(HgImportRequestQueueTest, getRequestByPriorityReverse) {
@@ -75,7 +77,9 @@ TEST(HgImportRequestQueueTest, getRequestByPriorityReverse) {
   auto [largeHash, largeRequest] =
       makeImportRequest(ImportPriority(ImportPriority::kHigh()));
   queue.enqueue(std::move(largeRequest));
-  EXPECT_EQ(largeHash, queue.dequeue()->getHash());
+  EXPECT_EQ(
+      largeHash,
+      queue.dequeue()->getRequest<HgImportRequest::BlobImport>()->hash);
 
   while (!enqueued.empty()) {
     auto expected = enqueued.front();
@@ -83,6 +87,7 @@ TEST(HgImportRequestQueueTest, getRequestByPriorityReverse) {
 
     auto request = queue.dequeue();
 
-    EXPECT_EQ(expected, request->getHash());
+    EXPECT_EQ(
+        expected, request->getRequest<HgImportRequest::BlobImport>()->hash);
   }
 }
