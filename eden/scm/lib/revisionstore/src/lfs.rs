@@ -35,7 +35,8 @@ use configparser::{
 };
 use indexedlog::log::IndexOutput;
 use lfs_protocol::{
-    ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch, Sha256 as LfsSha256,
+    ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
+    Sha256 as LfsSha256,
 };
 use mincode::{deserialize, serialize};
 use types::{HgId, Key, RepoPath, Sha256};
@@ -852,13 +853,39 @@ impl HgIdMutableDeltaStore for LfsMultiplexer {
 }
 
 impl LfsRemoteInner {
-    fn batch(
+    fn batch_fetch(
         &self,
         objs: &[(Sha256, usize)],
-    ) -> Result<Box<dyn Iterator<Item = Result<(Sha256, Bytes)>>>> {
+        write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
+    ) -> Result<()> {
+        let read_from_store = |_sha256| unreachable!();
         match self {
-            LfsRemoteInner::Http(http) => Ok(Self::batch_http(http, objs)?),
-            LfsRemoteInner::File(file) => Ok(Box::new(Self::batch_file(file, objs)?)),
+            LfsRemoteInner::Http(http) => Self::batch_http(
+                http,
+                objs,
+                Operation::Download,
+                read_from_store,
+                write_to_store,
+            ),
+            LfsRemoteInner::File(file) => Self::batch_fetch_file(file, objs, write_to_store),
+        }
+    }
+
+    fn batch_upload(
+        &self,
+        objs: &[(Sha256, usize)],
+        read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + Clone + 'static,
+    ) -> Result<()> {
+        let write_to_store = |_, _| unreachable!();
+        match self {
+            LfsRemoteInner::Http(http) => Self::batch_http(
+                http,
+                objs,
+                Operation::Upload,
+                read_from_store,
+                write_to_store,
+            ),
+            LfsRemoteInner::File(file) => Self::batch_upload_file(file, objs, read_from_store),
         }
     }
 
@@ -893,7 +920,11 @@ impl LfsRemoteInner {
             if status.is_server_error() {
                 if status.as_u16() == reqwest::StatusCode::SERVICE_UNAVAILABLE {
                     // No need to retry, the server is down.
-                    return Ok(None);
+                    if method == Method::GET {
+                        return Ok(None);
+                    } else {
+                        return Err(err.into());
+                    }
                 }
 
                 if let Some(backoff_time) = backoff.next() {
@@ -911,13 +942,11 @@ impl LfsRemoteInner {
         }
     }
 
-    /// Fetch blobs from the LFS server.
-    ///
-    /// The protocol is described at: https://github.com/git-lfs/git-lfs/blob/master/docs/api/batch.md
-    fn batch_http(
+    fn send_batch_request(
         http: &HttpLfsRemote,
         objs: &[(Sha256, usize)],
-    ) -> Result<Box<dyn Iterator<Item = Result<(Sha256, Bytes)>>>> {
+        operation: Operation,
+    ) -> Result<Option<ResponseBatch>> {
         let objects = objs
             .iter()
             .map(|(oid, size)| RequestObject {
@@ -927,7 +956,7 @@ impl LfsRemoteInner {
             .collect::<Vec<_>>();
 
         let batch = RequestBatch {
-            operation: Operation::Download,
+            operation,
             transfers: vec![Default::default()],
             r#ref: None,
             objects,
@@ -949,11 +978,84 @@ impl LfsRemoteInner {
 
         let response = http.rt.lock().block_on(response_fut)?;
         let response = match response {
-            None => return Ok(Box::new(std::iter::empty())),
+            None => return Ok(None),
             Some(response) => response,
         };
 
-        let response: ResponseBatch = serde_json::from_slice(response.as_ref())?;
+        Ok(Some(serde_json::from_slice(response.as_ref())?))
+    }
+
+    async fn process_action(
+        client: Client,
+        user_agent: String,
+        backoff_times: Vec<f32>,
+        op: Operation,
+        action: ObjectAction,
+        oid: Sha256,
+        read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + 'static,
+        write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + 'static,
+    ) -> Result<()> {
+        let body = if op == Operation::Upload {
+            spawn_blocking(move || read_from_store(oid)).await??
+        } else {
+            None
+        };
+
+        let method = match op {
+            Operation::Download => Method::GET,
+            Operation::Upload => Method::PUT,
+        };
+
+        let url = Url::from_str(&action.href.to_string())?;
+        let data = LfsRemoteInner::send_with_retry(
+            client,
+            method,
+            url,
+            user_agent,
+            backoff_times,
+            move |mut builder| {
+                if let Some(header) = action.header.as_ref() {
+                    for (key, val) in header {
+                        builder = builder.header(key, val)
+                    }
+                }
+
+                if let Some(body) = body.clone() {
+                    builder.body(body)
+                } else {
+                    builder
+                }
+            },
+        )
+        .await?;
+
+        if op == Operation::Download {
+            if let Some(data) = data {
+                spawn_blocking(move || write_to_store(oid, data)).await??
+            }
+        }
+
+        Ok(())
+    }
+
+    /// Fetch and Upload blobs from the LFS server.
+    ///
+    /// When uploading, the `write_to_store` is guaranteed not to be called, similarly when fetching,
+    /// the `read_from_store` will not be called.
+    ///
+    /// The protocol is described at: https://github.com/git-lfs/git-lfs/blob/master/docs/api/batch.md
+    fn batch_http(
+        http: &HttpLfsRemote,
+        objs: &[(Sha256, usize)],
+        operation: Operation,
+        read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + Clone + 'static,
+        write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
+    ) -> Result<()> {
+        let response = LfsRemoteInner::send_batch_request(http, objs, operation)?;
+        let response = match response {
+            None => return Ok(()),
+            Some(response) => response,
+        };
 
         let mut futures = Vec::new();
 
@@ -967,31 +1069,25 @@ impl LfsRemoteInner {
                 ObjectStatus::Err { error: e } => bail!("Couldn't fetch oid {}: {:?}", oid, e),
             };
 
-            if let Some(action) = actions.remove(&Operation::Download) {
+            for (op, action) in actions.drain() {
                 let client = http.client.clone();
                 let user_agent = http.user_agent.clone();
                 let backoff_times = http.backoff_times.clone();
+
+                let oid = Sha256::from(oid.0);
+                let read_from_store = read_from_store.clone();
+                let write_to_store = write_to_store.clone();
                 let fut = async move {
-                    let url = Url::from_str(&action.href.to_string())?;
-                    Ok((
+                    LfsRemoteInner::process_action(
+                        client,
+                        user_agent,
+                        backoff_times,
+                        op,
+                        action,
                         oid,
-                        LfsRemoteInner::send_with_retry(
-                            client,
-                            Method::GET,
-                            url,
-                            user_agent,
-                            backoff_times,
-                            move |mut builder| {
-                                if let Some(header) = action.header.as_ref() {
-                                    for (key, val) in header {
-                                        builder = builder.header(key, val)
-                                    }
-                                }
-                                builder
-                            },
-                        )
-                        .await?,
-                    ))
+                        read_from_store,
+                        write_to_store,
+                    )
                 };
 
                 futures.push(fut);
@@ -1000,44 +1096,42 @@ impl LfsRemoteInner {
 
         // Request a couple of blobs concurrently.
         let mut stream = iter(futures).buffer_unordered(http.concurrent_fetches);
-
-        let rt = http.rt.clone();
-        Ok(Box::new(iter::from_fn(move || loop {
-            let next = stream.next();
-
-            let res = match rt.lock().block_on(async { next.await }) {
-                None => return None,
-                Some(res) => res,
-            };
-
-            let (oid, bytes) = match res {
-                Ok(tuple) => tuple,
-                Err(e) => return Some(Err(e)),
-            };
-
-            if let Some(bytes) = bytes {
-                return Some(Ok(((&oid.0).into(), bytes)));
+        http.rt.lock().block_on(async {
+            while let Some(next) = stream.next().await {
+                next.await?
             }
-        })))
+
+            Ok(())
+        })
     }
 
     /// Fetch files from the filesystem.
-    ///
-    /// The implementation is inefficient and will read all the blobs from the disk before
-    /// returning. Since file backed LFS servers are only intended for tests purposes this is an
-    /// appropriate solution.
-    fn batch_file(
+    fn batch_fetch_file(
         file: &LfsBlobsStore,
         objs: &[(Sha256, usize)],
-    ) -> Result<impl Iterator<Item = Result<(Sha256, Bytes)>>> {
-        let ret = objs.iter().filter_map(|(hash, _)| {
-            file.get(&hash)
-                .transpose()
-                .map(|data| data.map(|data| (*hash, data)))
-        });
+        write_to_store: impl Fn(Sha256, Bytes) -> Result<()>,
+    ) -> Result<()> {
+        for (hash, _) in objs {
+            if let Some(data) = file.get(hash)? {
+                write_to_store(*hash, data)?;
+            }
+        }
 
-        // Avoid lifetime issues by collecting everything.
-        Ok(ret.collect::<Vec<_>>().into_iter())
+        Ok(())
+    }
+
+    fn batch_upload_file(
+        file: &LfsBlobsStore,
+        objs: &[(Sha256, usize)],
+        read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>>,
+    ) -> Result<()> {
+        for (sha256, _) in objs {
+            if let Some(blob) = read_from_store(*sha256)? {
+                file.add(sha256, blob)?;
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -1093,11 +1187,20 @@ impl LfsRemote {
         }
     }
 
-    fn batch(
+    fn batch_fetch(
         &self,
         objs: &[(Sha256, usize)],
-    ) -> Result<impl Iterator<Item = Result<(Sha256, Bytes)>>> {
-        self.remote.batch(objs)
+        write_to_store: impl Fn(Sha256, Bytes) -> Result<()> + Send + Clone + 'static,
+    ) -> Result<()> {
+        self.remote.batch_fetch(objs, write_to_store)
+    }
+
+    fn batch_upload(
+        &self,
+        objs: &[(Sha256, usize)],
+        read_from_store: impl Fn(Sha256) -> Result<Option<Bytes>> + Send + Clone + 'static,
+    ) -> Result<()> {
+        self.remote.batch_upload(objs, read_from_store)
     }
 }
 
@@ -1145,16 +1248,43 @@ impl RemoteDataStore for LfsRemoteStore {
             .filter_map(|res| res.transpose())
             .collect::<Result<Vec<_>>>()?;
 
-        for response in self.remote.batch(&objs)? {
-            let (sha256, content) = response?;
-            self.remote.shared.blobs.add(&sha256, content)?;
-        }
-
-        Ok(())
+        self.remote.batch_fetch(&objs, {
+            let remote = self.remote.clone();
+            move |sha256, data| remote.shared.blobs.add(&sha256, data)
+        })
     }
 
     fn upload(&self, keys: &[StoreKey]) -> Result<()> {
-        unimplemented!();
+        let local_store = match self.remote.local.as_ref() {
+            None => return Ok(()),
+            Some(local) => local,
+        };
+
+        let objs = keys
+            .iter()
+            .map(|k| {
+                if let Some(pointer) = local_store.pointers.read().entry(k)? {
+                    match pointer.content_hashes.get(&ContentHashType::Sha256) {
+                        None => Ok(None),
+                        Some(content_hash) => Ok(Some((
+                            content_hash.clone().unwrap_sha256(),
+                            pointer.size.try_into()?,
+                        ))),
+                    }
+                } else {
+                    Ok(None)
+                }
+            })
+            .filter_map(|res| res.transpose())
+            .collect::<Result<Vec<_>>>()?;
+
+        self.remote.batch_upload(&objs, {
+            let local_store = local_store.clone();
+            move |sha256| {
+                let key = StoreKey::from(ContentHash::Sha256(sha256));
+                local_store.blob(&key)
+            }
+        })
     }
 }
 
@@ -1750,7 +1880,7 @@ mod tests {
                 Bytes::from(&b"nothing"[..]),
             );
 
-            let resp = remote.batch(&[(blob.0, blob.1)]);
+            let resp = remote.batch_fetch(&[(blob.0, blob.1)], |_, _| unreachable!());
             let err = resp.err().unwrap();
             assert_eq!(err.to_string(), "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }");
 
@@ -1781,11 +1911,20 @@ mod tests {
                 Bytes::from(&b"1.44.0"[..]),
             );
 
-            let resp = remote
-                .batch(&[(blob1.0, blob1.1), (blob2.0, blob2.1)])?
-                .collect::<Result<Vec<_>>>()?
-                .sort();
-            assert_eq!(resp, vec![(blob1.0, blob1.2), (blob2.0, blob2.2)].sort());
+            let out = Arc::new(Mutex::new(Vec::new()));
+            remote.batch_fetch(&[(blob1.0, blob1.1), (blob2.0, blob2.1)], {
+                let out = out.clone();
+                move |sha256, blob| {
+                    out.lock().push((sha256, blob));
+                    Ok(())
+                }
+            })?;
+            out.lock().sort();
+
+            let mut expected_res = vec![(blob1.0, blob1.2), (blob2.0, blob2.2)];
+            expected_res.sort();
+
+            assert_eq!(*out.lock(), expected_res);
 
             Ok(())
         }
@@ -1843,7 +1982,7 @@ mod tests {
         let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
 
         let remote = TempDir::new()?;
-        let remote_lfs_file_store = LfsBlobsStore::shared(remote.path(), &config)?;
+        let remote_lfs_file_store = LfsBlobsStore::Loose(remote.path().to_path_buf(), false);
 
         let blob1 = (
             Sha256::from_str("fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9")?,
@@ -1858,17 +1997,69 @@ mod tests {
 
         remote_lfs_file_store.add(&blob1.0, blob1.2.clone())?;
         remote_lfs_file_store.add(&blob2.0, blob2.2.clone())?;
+        remote_lfs_file_store.flush()?;
 
         let url = Url::from_file_path(&remote).unwrap();
         config.set("lfs", "url", Some(url.as_str()), &Default::default());
 
         let remote = LfsRemote::new(lfs, None, &config)?;
 
-        let resp = remote
-            .batch(&[(blob1.0, blob1.1), (blob2.0, blob2.1)])?
-            .collect::<Result<Vec<_>>>()?
-            .sort();
-        assert_eq!(resp, vec![(blob1.0, blob1.2), (blob2.0, blob2.2)].sort());
+        let out = Arc::new(Mutex::new(Vec::new()));
+        remote.batch_fetch(&[(blob1.0, blob1.1), (blob2.0, blob2.1)], {
+            let out = out.clone();
+            move |sha256, blob| {
+                out.lock().push((sha256, blob));
+                Ok(())
+            }
+        })?;
+        out.lock().sort();
+
+        let mut expected_res = vec![(blob1.0, blob1.2), (blob2.0, blob2.2)];
+        expected_res.sort();
+
+        assert_eq!(*out.lock(), expected_res);
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_lfs_upload_remote_file() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let mut config = make_lfs_config(&cachedir);
+
+        let lfsdir = TempDir::new()?;
+        let shared_lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+        let local_lfs = Arc::new(LfsStore::local(&lfsdir, &config)?);
+
+        let remote_dir = TempDir::new()?;
+        let remote_lfs_file_store = LfsBlobsStore::Loose(remote_dir.path().to_path_buf(), false);
+
+        let blob1 = (
+            Sha256::from_str("fc613b4dfd6736a7bd268c8a0e74ed0d1c04a959f59dd74ef2874983fd443fc9")?,
+            6,
+            Bytes::from(&b"master"[..]),
+        );
+        let blob2 = (
+            Sha256::from_str("ca3e228a1d8d845064112c4e92781f6b8fc2501f0aa0e415d4a1dcc941485b24")?,
+            6,
+            Bytes::from(&b"1.44.0"[..]),
+        );
+
+        local_lfs.blobs.add(&blob1.0, blob1.2.clone())?;
+        local_lfs.blobs.add(&blob2.0, blob2.2.clone())?;
+        local_lfs.blobs.flush()?;
+
+        let url = Url::from_file_path(&remote_dir).unwrap();
+        config.set("lfs", "url", Some(url.as_str()), &Default::default());
+
+        let remote = LfsRemote::new(shared_lfs, Some(local_lfs.clone()), &config)?;
+
+        remote.batch_upload(&[(blob1.0, blob1.1), (blob2.0, blob2.1)], {
+            move |sha256| local_lfs.blobs.get(&sha256)
+        })?;
+
+        assert_eq!(remote_lfs_file_store.get(&blob1.0)?, Some(blob1.2));
+        assert_eq!(remote_lfs_file_store.get(&blob2.0)?, Some(blob2.2));
 
         Ok(())
     }
