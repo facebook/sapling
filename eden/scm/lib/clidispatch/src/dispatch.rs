@@ -252,6 +252,10 @@ pub fn dispatch(command_table: &CommandTable, args: Vec<String>, io: &mut IO) ->
 
     initialize_blackbox(&optional_repo)?;
 
+    if global_opts.pager == "always" {
+        io.start_pager()?;
+    }
+
     let handler = def.func();
     match handler {
         CommandFunc::Repo(f) => {

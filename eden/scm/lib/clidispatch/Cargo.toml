@@ -7,9 +7,11 @@ edition = "2018"
 [dependencies]
 anyhow = "1.0.20"
 blackbox = { path = "../blackbox" }
-configparser = { path = "../configparser" }
 cliparser = { path = "../cliparser" }
+configparser = { path = "../configparser" }
 indexedlog = { path = "../indexedlog" }
+pipe = "0.2"
+streampager = "0.7"
 thiserror = "1.0.5"
 thrift-types = { path = "../thrift-types" }
 tracing = "0.1"

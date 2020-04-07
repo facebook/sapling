@@ -71,5 +71,6 @@ fn main() {
             code = 255;
         }
     }
+    drop(io);
     std::process::exit(code as i32);
 }
