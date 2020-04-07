@@ -486,9 +486,13 @@ void EdenServer::updatePeriodicTaskIntervals(const EdenConfig& config) {
       std::chrono::duration_cast<std::chrono::milliseconds>(
           config.configReloadInterval.getValue()));
 
+  // The checkValidityTask_ isn't really needed on Windows, since the lock file
+  // cannot be removed while we are holding it.
+#ifndef _WIN32
   checkValidityTask_.updateInterval(
       std::chrono::duration_cast<std::chrono::milliseconds>(
           config.checkValidityInterval.getValue()));
+#endif
 
   localStoreTask_.updateInterval(
       std::chrono::duration_cast<std::chrono::milliseconds>(

@@ -66,6 +66,14 @@ bool EdenStateDir::isLockValid() const {
     return false;
   }
 
+  // The st_dev and st_ino fields aren't valid on Windows, so skip the check
+  // to see if the lock file is still valid.  Assume that if we acquired it
+  // initially it is still valid.
+  //
+  // Windows generally makes it harder for users to delete or rename the
+  // directory out from under an existing process while we have file handles
+  // open, so this check isn't really as necessary.
+#ifndef _WIN32
   struct stat st;
   int rc = stat(lockPath_.c_str(), &st);
   if (rc != 0) {
@@ -83,6 +91,7 @@ bool EdenStateDir::isLockValid() const {
                  "file has been replaced";
     return false;
   }
+#endif
 
   return true;
 }
