@@ -55,6 +55,25 @@ DESCRIPTION_REGEX = re.compile(
 
 def graphqlgetdiff(repo, diffid):
     """Resolves a phabricator Diff number to a commit hash of it's latest version """
+    if util.istest():
+        hexnode = repo.ui.config("phrevset", "mock-D%s" % diffid)
+        if hexnode:
+            return {
+                "source_control_system": "hg",
+                "description": "mock",
+                "phabricator_version_properties": {
+                    "edges": [
+                        {
+                            "node": {
+                                "property_name": "local:commits",
+                                "property_value": json.dumps(
+                                    {hexnode: {"commit": hexnode, "rev": hexnode}}
+                                ),
+                            }
+                        }
+                    ]
+                },
+            }
     timeout = repo.ui.configint("ssl", "timeout", 10)
     ca_certs = repo.ui.configpath("web", "cacerts")
     try:
@@ -265,8 +284,9 @@ def revsetdiff(repo, diffid):
                 node = unfiltered[rev]
             except error.RepoLookupError:
                 raise error.Abort(
-                    "Commit %s corresponding to D%s\n not found in the repo"
-                    % (rev, diffid)
+                    _("cannot find the latest version of D%s (%s) locally")
+                    % (diffid, rev),
+                    hint=_("try 'hg pull -r %s'") % rev,
                 )
             successors = list(repo.revs("last(successors(%n))", node.node()))
             if len(successors) != 1:

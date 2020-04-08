@@ -453,7 +453,7 @@ def getreponame(ui):
     return "unknown"
 
 
-class MissingNodesError(error.Abort, KeyError):
+class MissingNodesError(error.Abort, error.Context, KeyError):
     def __init__(self, keys, message=None, hint=None):
         keys = list(keys)
         nodestr = ", ".join(
