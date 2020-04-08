@@ -1331,6 +1331,10 @@ class Test(unittest.TestCase):
                 "\nKeeping testtmp dir: %s\nKeeping threadtmp dir: %s"
                 % (self._testtmp.decode("utf-8"), self._threadtmp.decode("utf-8"))
             )
+            log(
+                "\nSet up config environment by:\n"
+                "  export HGRCPATH=%s" % self._gethgrcpath()
+            )
         else:
             shutil.rmtree(self._testtmp, True)
             shutil.rmtree(self._threadtmp, True)
@@ -1450,6 +1454,11 @@ class Test(unittest.TestCase):
                     continue
                 envf.write("unset %s\n" % (name,))
 
+    def _gethgrcpath(self):
+        rcpath = os.path.join(self._threadtmp, b".hgrc")
+        rcpaths = [p.encode("utf-8") for p in self._extrarcpaths] + [rcpath]
+        return os.pathsep.encode("utf-8").join(rcpaths)
+
     def _getenv(self):
         """Obtain environment variables to use during test execution."""
 
@@ -1475,9 +1484,7 @@ class Test(unittest.TestCase):
         for port in xrange(3):
             # This list should be parallel to _portmap in _getreplacements
             defineport(port)
-        rcpath = os.path.join(self._threadtmp, b".hgrc")
-        rcpaths = [p.encode("utf-8") for p in self._extrarcpaths] + [rcpath]
-        env["HGRCPATH"] = os.pathsep.encode("utf-8").join(rcpaths)
+        env["HGRCPATH"] = self._gethgrcpath()
         env["DAEMON_PIDS"] = os.path.join(self._threadtmp, b"daemon.pids")
         env["HGEDITOR"] = (
             '"' + PYTHON.decode("utf-8") + '"' + ' -c "import sys; sys.exit(0)"'

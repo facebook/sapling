@@ -852,6 +852,9 @@ test --tmpdir support
   
   Keeping testtmp dir: $TESTTMP/keep/child1/test-success.t
   Keeping threadtmp dir: $TESTTMP/keep/child1 
+  
+  Set up config environment by:
+    export HGRCPATH=* (glob)
   .
   # Ran 1 tests, 0 skipped, 0 failed.
 
