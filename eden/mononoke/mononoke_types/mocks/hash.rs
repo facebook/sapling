@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use mononoke_types::hash::{Blake2, GitSha1};
+use mononoke_types::hash::{Blake2, GitSha1, Sha256};
 
 // Definitions for hashes 1111...1111 to ffff...ffff.
 
@@ -54,6 +54,24 @@ pub const FS_ES_GIT_SHA1: GitSha1 = GitSha1::from_byte_array([
     0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xee, 0xee, 0xee, 0xee, 0xee, 0xee,
     0xee, 0xee, 0xee, 0xee,
 ]);
+
+// Definitions for SHA-256 hashes 1111...1111 to ffff...ffff.
+
+pub const ONES_SHA256: Sha256 = Sha256::from_byte_array([0x11; 32]);
+pub const TWOS_SHA256: Sha256 = Sha256::from_byte_array([0x22; 32]);
+pub const THREES_SHA256: Sha256 = Sha256::from_byte_array([0x33; 32]);
+pub const FOURS_SHA256: Sha256 = Sha256::from_byte_array([0x44; 32]);
+pub const FIVES_SHA256: Sha256 = Sha256::from_byte_array([0x55; 32]);
+pub const SIXES_SHA256: Sha256 = Sha256::from_byte_array([0x66; 32]);
+pub const SEVENS_SHA256: Sha256 = Sha256::from_byte_array([0x77; 32]);
+pub const EIGHTS_SHA256: Sha256 = Sha256::from_byte_array([0x88; 32]);
+pub const NINES_SHA256: Sha256 = Sha256::from_byte_array([0x99; 32]);
+pub const AS_SHA256: Sha256 = Sha256::from_byte_array([0xaa; 32]);
+pub const BS_SHA256: Sha256 = Sha256::from_byte_array([0xbb; 32]);
+pub const CS_SHA256: Sha256 = Sha256::from_byte_array([0xcc; 32]);
+pub const DS_SHA256: Sha256 = Sha256::from_byte_array([0xdd; 32]);
+pub const ES_SHA256: Sha256 = Sha256::from_byte_array([0xee; 32]);
+pub const FS_SHA256: Sha256 = Sha256::from_byte_array([0xff; 32]);
 
 #[cfg(test)]
 mod test {
