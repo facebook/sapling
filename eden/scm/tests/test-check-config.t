@@ -91,7 +91,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: phabricator.graphql_app_token (str)
   undocumented: phabricator.graphql_host (str)
   undocumented: phabstatus.logpeekahead (int) [30]
-  undocumented: phrevset.callsign (str)
   undocumented: pushrebase.blocknonpushrebase (bool)
   undocumented: pushrebase.rewritedates (bool)
   undocumented: remotefilelog.backgroundrepack (bool)

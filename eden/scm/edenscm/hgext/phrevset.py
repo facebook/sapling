@@ -15,10 +15,12 @@ changed since submitting to Differential (due to amends or rebasing).
 Requires arcanist to be installed and properly configured.
 Repositories should include a callsign in their hgrc.
 
-Example for www:
+Example for www::
 
-[phrevset]
-callsign = E
+    [phrevset]
+    callsign = E
+    # Only ask GraphQL. Do not scan the local commits (which do not scale).
+    graphqlonly = True
 
 """
 
@@ -35,6 +37,7 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 
 configitem("phrevset", "callsign", default=None)
+configitem("phrevset", "graphqlonly", default=True)
 
 namespacepredicate = registrar.namespacepredicate()
 
@@ -72,6 +75,10 @@ def finddiff(repo, diffid, querythread=None):
     If the optional querythread parameter is provided, it must be a threading.Thread
     instance. It will be polled during the iteration and if it indicates that
     the thread has finished, the function will raise StopIteration"""
+    if repo.ui.configbool("phrevset", "graphqlonly"):
+        raise error.Abort(
+            _("phrevset.graphqlonly is set and Phabricator cannot resolve D%s") % diffid
+        )
 
     repo.ui.debug("[diffrev] Traversing log for %s\n" % diffid)
 
@@ -97,6 +104,8 @@ def forksearch(repo, diffid):
     None, depending on which process terminated first"""
 
     repo.ui.debug("[diffrev] Starting graphql call\n")
+    if repo.ui.configbool("phrevset", "graphqlonly"):
+        return getdiff(repo, diffid)
 
     result = [None, None]
 
