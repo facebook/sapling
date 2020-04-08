@@ -67,6 +67,8 @@ pub enum ErrorKind {
     Throttled(String, i64, i64),
     #[error("Object size ({0}) exceeds max allowed size ({1})")]
     UploadTooLarge(u64, u64),
+    #[error("Object is not internally available, and upstream is not available: {0:?}")]
+    ObjectNotInternallyAvailableAndUpstreamUnavailable(RequestObject),
 }
 
 #[derive(Debug, Error)]

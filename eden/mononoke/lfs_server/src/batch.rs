@@ -290,24 +290,53 @@ async fn batch_upload(
     })
 }
 
+/// This method peforms the routing logic for a given object being requested, given what's
+/// available in upstream and downstream.
+fn route_download_for_object<'a>(
+    upstream: &'a Result<UpstreamObjects, Error>,
+    internal: &'a HashMap<RequestObject, ObjectAction>,
+    obj: &'_ RequestObject,
+) -> Result<Option<(Source, &'a ObjectAction)>, Error> {
+    // If we have the object internally, then get it from there.
+    if let Some(action) = internal.get(obj) {
+        return Ok(Some((Source::Internal, action)));
+    }
+
+    match upstream {
+        // If our upstream succeded, then we try to get the object from there.
+        Ok(ref upstream) => {
+            if let Some(action) = upstream.download_action(obj) {
+                return Ok(Some((Source::Upstream, action)));
+            }
+        }
+        // If our upstream failed, then we don't know whether the object is available anywhere, so
+        // that's an error.
+        Err(ref cause) => {
+            let err =
+                Error::new(ErrorKind::ObjectNotInternallyAvailableAndUpstreamUnavailable(*obj))
+                    .context(cause.to_string());
+            return Err(err);
+        }
+    }
+
+    // If upstream succeeded and we found the result neither locally nor remotely, then that's
+    // just a missing object.
+    Ok(None)
+}
+
 fn batch_download_response_objects(
     objects: &[RequestObject],
-    upstream: &UpstreamObjects,
+    upstream: &Result<UpstreamObjects, Error>,
     internal: &HashMap<RequestObject, ObjectAction>,
     scuba: &mut Option<&mut ScubaMiddlewareState>,
-) -> Vec<ResponseObject> {
+) -> Result<Vec<ResponseObject>, Error> {
     let mut upstream_blobs = vec![];
     let responses = objects
         .iter()
         .map(|object| {
-            // For downloads, see if we can find it from internal or upstream (which means we
-            // prefer internal). If we can't find it in either, then that's an error.
-            let internal_action = internal.get(object).map(|o| (Source::Internal, o));
-            let upstream_action = upstream
-                .download_action(object)
-                .map(|o| (Source::Upstream, o));
+            let source_and_action = route_download_for_object(upstream, internal, object)?;
 
-            let status = match internal_action.or(upstream_action) {
+            let status = match source_and_action {
                 Some((source, action)) => {
                     match source {
                         Source::Internal => STATS::download_redirect_internal.add_value(1),
@@ -333,16 +362,16 @@ fn batch_download_response_objects(
                 }
             };
 
-            ResponseObject {
+            Result::<_, Error>::Ok(ResponseObject {
                 object: *object,
                 status,
-            }
+            })
         })
-        .collect();
+        .collect::<Result<Vec<_>, _>>()?;
 
     add_to_sample(scuba, ScubaKey::BatchInternalMissingBlobs, upstream_blobs);
 
-    responses
+    Ok(responses)
 }
 
 /// Try to prepare a batch response with only internal objects. Returns None if any are missing.
@@ -391,7 +420,6 @@ async fn batch_download(
     let objects = select! {
         upstream_objects = upstream => {
             update_batch_order("upstream");
-            let upstream_objects = upstream_objects?;
             debug!(ctx.logger(), "batch: upstream ready");
             let internal_objects = internal.await?;
             debug!(ctx.logger(), "batch: internal ready");
@@ -411,16 +439,16 @@ async fn batch_download(
                 // We were able to return with just internal, don't wait for upstream.
                 update_batch_order("internal");
                 debug!(ctx.logger(), "batch: skip upstream");
-                objects
+                Ok(objects)
             } else {
                 // We don't have all the objects: wait for upstream.
                 update_batch_order("both");
-                let upstream_objects = upstream.await?;
+                let upstream_objects = upstream.await;
                 debug!(ctx.logger(), "batch: upstream ready");
                 batch_download_response_objects(&batch.objects, &upstream_objects, &internal_objects, scuba)
             }
         }
-    };
+    }?;
 
     Ok(ResponseBatch {
         transfer: Transfer::Basic,
@@ -545,10 +573,10 @@ mod test {
 
         let res = batch_download_response_objects(
             &req,
-            &UpstreamObjects::UpstreamPresence(upstream),
+            &Ok(UpstreamObjects::UpstreamPresence(upstream)),
             &internal,
             &mut None,
-        );
+        )?;
 
         assert_eq!(
             vec![
@@ -588,6 +616,50 @@ mod test {
             ],
             res
         );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_download_upstream_failed_and_its_ok() -> Result<(), Error> {
+        let o1 = obj(ONES_HASH, 111)?;
+
+        let req = vec![o1];
+
+        let upstream = Err(Error::msg("Oops"));
+
+        let internal = hashmap! {
+            o1 => ObjectAction::new("http://foo.com/1".parse()?),
+        };
+
+        let res = batch_download_response_objects(&req, &upstream, &internal, &mut None)?;
+
+        assert_eq!(
+            vec![ResponseObject {
+                object: o1,
+                status: ObjectStatus::Ok {
+                    authenticated: false,
+                    actions: hashmap! { Operation::Download =>  ObjectAction::new("http://foo.com/1".parse()?) }
+                }
+            },],
+            res
+        );
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_download_upstream_failed_and_its_not_ok() -> Result<(), Error> {
+        let o1 = obj(ONES_HASH, 111)?;
+
+        let req = vec![o1];
+
+        let upstream = Err(Error::msg("Oops"));
+
+        let internal = hashmap! {};
+
+        let res = batch_download_response_objects(&req, &upstream, &internal, &mut None);
+        assert!(res.is_err());
 
         Ok(())
     }
