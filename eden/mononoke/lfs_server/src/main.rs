@@ -77,6 +77,7 @@ const ARG_TEST_IDENTITY: &str = "allowed-test-identity";
 const ARG_TEST_FRIENDLY_LOGGING: &str = "test-friendly-logging";
 const ARG_TLS_SESSION_DATA_LOG_FILE: &str = "tls-session-data-log-file";
 const ARG_MAX_UPLOAD_SIZE: &str = "max-upload-size";
+const ARG_DISABLE_ACL_CHECKER: &str = "disable-acl-checker";
 
 const SERVICE_NAME: &str = "mononoke_lfs_server";
 
@@ -204,6 +205,13 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(true)
                 .required(false)
                 .help("A limit (in bytes) to enforce for uploads."),
+        )
+        .arg(
+            Arg::with_name(ARG_DISABLE_ACL_CHECKER)
+                .long(ARG_DISABLE_ACL_CHECKER)
+                .takes_value(false)
+                .required(false)
+                .help("Whether to disable ACL checks (only use this locally!)"),
         );
 
     let matches = app.get_matches();
@@ -231,6 +239,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     scuba_logger.add_common_server_data();
 
     let test_idents = idents_from_values(matches.values_of(ARG_TEST_IDENTITY))?;
+    let disable_acl_checker = matches.is_present(ARG_DISABLE_ACL_CHECKER);
 
     let test_acl_checker = if !test_idents.is_empty() {
         Some(LfsAclChecker::TestAclChecker(test_idents))
@@ -268,6 +277,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 let aclchecker = async {
                     if let Some(test_checker) = test_acl_checker {
                         Ok(test_checker)
+                    } else if disable_acl_checker {
+                        Ok(LfsAclChecker::disabled())
                     } else {
                         LfsAclChecker::new_acl_checker(fb, &name, &logger, hipster_acl).await
                     }

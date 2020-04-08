@@ -51,6 +51,10 @@ impl LfsAclChecker {
         }
     }
 
+    pub fn disabled() -> Self {
+        Self::AclChecker(None)
+    }
+
     pub fn is_allowed(&self, identities: &Vec<Identity>, actions: &[&str]) -> bool {
         match self {
             Self::AclChecker(Some(aclchecker)) => aclchecker.check(identities.as_ref(), actions),
