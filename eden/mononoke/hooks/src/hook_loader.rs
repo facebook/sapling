@@ -23,7 +23,7 @@ use crate::facebook::rust_hooks::{
     tp2_symlinks_only::TP2SymlinksOnly, verify_integrity::VerifyIntegrityHook,
     verify_reviewedby_info::VerifyReviewedbyInfo,
 };
-use crate::{Hook, HookChangeset, HookFile, HookManager};
+use crate::{ChangesetHook, FileHook, Hook, HookChangeset, HookFile, HookManager};
 use anyhow::Error;
 use fbinit::FacebookInit;
 use metaconfig_types::RepoConfig;
@@ -33,6 +33,10 @@ use std::sync::Arc;
 enum LoadedRustHook {
     ChangesetHook(Arc<dyn Hook<HookChangeset>>),
     FileHook(Arc<dyn Hook<HookFile>>),
+    #[allow(dead_code)]
+    BonsaiChangesetHook(Box<dyn ChangesetHook>),
+    #[allow(dead_code)]
+    BonsaiFileHook(Box<dyn FileHook>),
 }
 
 pub fn load_hooks(
@@ -96,6 +100,12 @@ pub fn load_hooks(
             FileHook(rust_hook) => hook_manager.register_file_hook(&name, rust_hook, hook.config),
             ChangesetHook(rust_hook) => {
                 hook_manager.register_changeset_hook(&name, rust_hook, hook.config)
+            }
+            BonsaiFileHook(rust_hook) => {
+                hook_manager.register_file_hook_new(&name, rust_hook, hook.config)
+            }
+            BonsaiChangesetHook(rust_hook) => {
+                hook_manager.register_changeset_hook_new(&name, rust_hook, hook.config)
             }
         }
 
