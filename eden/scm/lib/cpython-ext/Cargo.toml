@@ -13,6 +13,7 @@ anyhow = "1.0.20"
 cpython = { version = "0.4", default-features = false }
 encoding = { path = "../encoding" }
 lazy_static = "1"
+libc = "0.2"
 parking_lot = "0.9"
 python27-sys = { version = "0.4", optional = true }
 python3-sys = { version = "0.4", optional = true }
