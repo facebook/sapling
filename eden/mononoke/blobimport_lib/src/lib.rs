@@ -142,7 +142,7 @@ impl<'a> Blobimport<'a> {
 
         let chunk_size = 100;
 
-        let upload_changesets = UploadChangesets {
+        let mut upload_changesets = UploadChangesets {
             ctx: ctx.clone(),
             blobrepo: blobrepo.clone(),
             revlogrepo: revlogrepo.clone(),
@@ -201,90 +201,86 @@ impl<'a> Blobimport<'a> {
         let (stale_bookmarks, mononoke_bookmarks) =
             future::try_join(stale_bookmarks_fut, mononoke_bookmarks_fut).await?;
 
-        let max_rev = upload_changesets
-            .and_then({
-                move |chunk: Vec<_>| async move {
-                    let max_rev = chunk.iter().map(|(rev, _)| rev).max().cloned();
+        let mut max_rev = None;
+        while let Some(chunk_result) = upload_changesets.next().await {
+            let chunk = chunk_result?;
+            let new_max_rev = chunk.iter().map(|(rev, _)| rev).max().cloned();
 
-                    let changesets: &Vec<_> = &chunk.into_iter().map(|(_, cs)| cs).collect();
+            let changesets: &Vec<_> = &chunk.into_iter().map(|(_, cs)| cs).collect();
 
-                    let synced_commit_mapping_work = async {
-                        if let Some(small_repo_id) = small_repo_id {
-                            let entries = changesets
-                                .iter()
-                                .map(|cs| SyncedCommitMappingEntry {
-                                    large_repo_id: repo_id,
-                                    large_bcs_id: cs.get_changeset_id(),
-                                    small_repo_id,
-                                    small_bcs_id: cs.get_changeset_id(),
-                                })
-                                .collect();
-                            synced_commit_mapping
-                                .add_bulk(ctx.clone(), entries)
-                                .map(|_| ())
-                                .compat()
-                                .await
-                        } else {
-                            Ok(())
-                        }
-                    };
+            let synced_commit_mapping_work = async {
+                if let Some(small_repo_id) = small_repo_id {
+                    let entries = changesets
+                        .iter()
+                        .map(|cs| SyncedCommitMappingEntry {
+                            large_repo_id: repo_id,
+                            large_bcs_id: cs.get_changeset_id(),
+                            small_repo_id,
+                            small_bcs_id: cs.get_changeset_id(),
+                        })
+                        .collect();
+                    synced_commit_mapping
+                        .add_bulk(ctx.clone(), entries)
+                        .map(|_| ())
+                        .compat()
+                        .await
+                } else {
+                    Ok(())
+                }
+            };
 
-                    let globalrevs_work = async {
-                        if has_globalrev {
-                            bulk_import_globalrevs(
-                                ctx.clone(),
-                                repo_id,
-                                globalrevs_store.clone(),
-                                changesets.iter(),
-                            )
-                            .compat()
-                            .await
-                        } else {
-                            Ok(())
-                        }
-                    };
-
-                    let git_mapping_work = async move {
-                        if populate_git_mapping {
-                            let git_mapping_store = blobrepo.bonsai_git_mapping();
-                            git_mapping_store
-                                .bulk_import_from_bonsai(ctx.clone(), changesets)
-                                .await
-                        } else {
-                            Ok(())
-                        }
-                    };
-
-                    if !derived_data_types.is_empty() {
-                        info!(ctx.logger(), "Deriving data for: {:?}", derived_data_types);
-                    }
-
-                    let derivation_work = derive_data_for_csids(
-                        ctx,
-                        blobrepo,
-                        changesets.iter().map(|cs| cs.get_changeset_id()).collect(),
-                        &derived_data_types[..],
-                    )?;
-
-                    future::try_join4(
-                        synced_commit_mapping_work,
-                        globalrevs_work,
-                        git_mapping_work,
-                        derivation_work,
+            let globalrevs_work = async {
+                if has_globalrev {
+                    bulk_import_globalrevs(
+                        ctx.clone(),
+                        repo_id,
+                        globalrevs_store.clone(),
+                        changesets.iter(),
                     )
-                    .await?;
+                    .compat()
+                    .await
+                } else {
+                    Ok(())
+                }
+            };
 
-                    Ok(max_rev)
+            let git_mapping_work = async move {
+                if populate_git_mapping {
+                    let git_mapping_store = blobrepo.bonsai_git_mapping();
+                    git_mapping_store
+                        .bulk_import_from_bonsai(ctx.clone(), changesets)
+                        .await
+                } else {
+                    Ok(())
                 }
-            })
-            .try_fold(None, |mut acc, rev| async move {
-                if let Some(rev) = rev {
-                    acc = Some(::std::cmp::max(acc.unwrap_or_else(RevIdx::zero), rev));
-                }
-                let res: Result<_, Error> = Ok(acc);
-                res
-            })
+            };
+
+            if !derived_data_types.is_empty() {
+                info!(ctx.logger(), "Deriving data for: {:?}", derived_data_types);
+            }
+
+            let derivation_work = derive_data_for_csids(
+                ctx,
+                blobrepo,
+                changesets.iter().map(|cs| cs.get_changeset_id()).collect(),
+                &derived_data_types[..],
+            )?;
+
+            future::try_join4(
+                synced_commit_mapping_work,
+                globalrevs_work,
+                git_mapping_work,
+                derivation_work,
+            )
             .await?;
+
+            if let Some(new_max_rev) = new_max_rev {
+                max_rev = Some(::std::cmp::max(
+                    max_rev.unwrap_or_else(RevIdx::zero),
+                    new_max_rev,
+                ));
+            }
+        }
 
         info!(
             ctx.logger(),
