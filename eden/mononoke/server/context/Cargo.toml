@@ -12,6 +12,7 @@ path = "src/lib.rs"
 [[bin]]
 name = "benchmark"
 path = "benchmark/main.rs"
+doc = false
 
 [dependencies]
 scuba_ext = { path = "../../common/scuba_ext" }

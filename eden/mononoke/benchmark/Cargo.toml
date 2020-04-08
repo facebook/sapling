@@ -4,10 +4,14 @@ edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["lib/**/*.rs"]
+include = ["benchmark.rs", "lib/**/*.rs"]
 
 [lib]
 path = "lib/lib.rs"
+
+[[bin]]
+name = "benchmark"
+path = "benchmark.rs"
 
 [dependencies]
 blobrepo = { path = "../blobrepo" }
@@ -21,11 +25,14 @@ bookmarks = { path = "../bookmarks" }
 cacheblob = { path = "../blobstore/cacheblob" }
 changeset_fetcher = { path = "../blobrepo/changeset_fetcher" }
 changesets = { path = "../changesets" }
+cmdlib = { path = "../cmdlib" }
 context = { path = "../server/context" }
 dbbookmarks = { path = "../bookmarks/dbbookmarks" }
 delayblob = { path = "../blobstore/delayblob" }
+derived_data = { path = "../derived_data" }
 filenodes = { path = "../filenodes" }
 filestore = { path = "../filestore" }
+fsnodes = { path = "../derived_data/fsnodes" }
 memblob = { path = "../blobstore/memblob" }
 mercurial_types = { path = "../mercurial/types" }
 metaconfig_types = { path = "../metaconfig/types" }
@@ -36,15 +43,21 @@ repo_blobstore = { path = "../blobrepo/repo_blobstore" }
 scuba_ext = { path = "../common/scuba_ext" }
 sql_construct = { path = "../common/sql_construct" }
 sql_ext = { path = "../common/rust/sql_ext" }
+unodes = { path = "../derived_data/unodes" }
 cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
+clap = "2.33"
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 rand = { version = "0.7", features = ["small_rng"] }
 rand_distr = "0.2"
+rand_xorshift = "0.2"
 slog = { version="2.5", features=["max_level_debug"] }
+tokio = "0.1"
+tokio-compat = "0.1"
 tokio-timer = "0.2"

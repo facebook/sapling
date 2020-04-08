@@ -34,13 +34,13 @@ use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::{ChangesetId, Timestamp};
 use slog::{debug, info, warn};
 use stats::prelude::*;
-use stats_facebook::service_data::{get_service_data_singleton, ServiceData};
 use unodes::RootUnodeManifestId;
 
 define_stats! {
     prefix = "mononoke.warm_bookmarks_cache";
     bookmarks_fetch_failures: timeseries(Rate, Sum),
     bookmark_update_failures: timeseries(Rate, Sum),
+    max_staleness_secs: dynamic_singleton_counter("{}.max_staleness_secs", (reponame: String)),
 }
 
 pub struct WarmBookmarksCache {
@@ -468,11 +468,7 @@ fn report_delay_and_remove_finished_updaters(
         *live_updaters = new_updaters;
     });
 
-    let counter_name = format!(
-        "mononoke.warm_bookmark_cache.{}.max_staleness_secs",
-        reponame,
-    );
-    get_service_data_singleton(ctx.fb).set_counter(&counter_name, max_staleness as i64);
+    STATS::max_staleness_secs.set_value(ctx.fb, max_staleness as i64, (reponame.to_owned(),));
 }
 
 #[derive(Clone)]

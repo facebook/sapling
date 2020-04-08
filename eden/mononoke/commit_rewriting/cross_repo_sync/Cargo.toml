@@ -1,0 +1,56 @@
+[package]
+name = "cross_repo_sync"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs", "test/**/*.rs"]
+
+[lib]
+path = "src/lib.rs"
+
+[[test]]
+name = "cross_repo_sync_test"
+path = "test/main.rs"
+
+[dependencies]
+blobrepo = { path = "../../blobrepo" }
+blobstore = { path = "../../blobstore" }
+blobsync = { path = "../../blobrepo/blobsync" }
+bookmark_renaming = { path = "../bookmark_renaming" }
+bookmarks = { path = "../../bookmarks" }
+context = { path = "../../server/context" }
+manifest = { path = "../../manifest" }
+mercurial_types = { path = "../../mercurial/types" }
+metaconfig_types = { path = "../../metaconfig/types" }
+mononoke_types = { path = "../../mononoke_types" }
+movers = { path = "../movers" }
+pushrebase = { path = "../../pushrebase" }
+revset = { path = "../../revset" }
+sql_construct = { path = "../../common/sql_construct" }
+sql_ext = { path = "../../common/rust/sql_ext" }
+synced_commit_mapping = { path = "../synced_commit_mapping" }
+topo_sort = { path = "../../common/topo_sort" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+async-trait = "0.1.29"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+futures-util = "0.3"
+maplit = "1.0"
+slog = { version="2.5", features=["max_level_debug"] }
+thiserror = "1.0"
+tokio = { version = "0.2", features = ["full"] }
+tokio-compat = "0.1"
+
+[dev-dependencies]
+blobrepo_factory = { path = "../../blobrepo/factory" }
+cross_repo_sync_test_utils = { path = "test_utils" }
+fixtures = { path = "../../tests/fixtures" }
+mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
+tests_utils = { path = "../../tests/utils" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+bytes = { version = "0.5", features = ["serde"] }

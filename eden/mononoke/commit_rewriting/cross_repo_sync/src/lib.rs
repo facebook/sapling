@@ -714,6 +714,7 @@ where
     /// Rewrite a commit and creates in target repo if parents are already created.
     /// This is marked as unsafe since it might lead to repo corruption if used incorrectly.
     /// At the moment it can be used to import a merge commit from a new repo:
+    /// ```text
     ///     source repo:
     ///
     ///     O  <- master (common bookmark). Points to a merge commit that imports a new repo
@@ -721,6 +722,7 @@ where
     ///     O   \
     ///          O  <- merge commit in the new repo we are trying to merge into master.
     ///         /  \   naive_sync_commit can be used to sync this commit
+    /// ```
     pub async fn unsafe_naive_sync_commit(
         &self,
         ctx: CoreContext,

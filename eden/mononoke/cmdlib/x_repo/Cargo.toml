@@ -1,0 +1,34 @@
+[package]
+name = "cmdlib_x_repo"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blobrepo = { path = "../../blobrepo" }
+blobrepo_factory = { path = "../../blobrepo/factory" }
+cmdlib = { path = ".." }
+context = { path = "../../server/context" }
+cross_repo_sync = { path = "../../commit_rewriting/cross_repo_sync" }
+mercurial_types = { path = "../../mercurial/types" }
+metaconfig_parser = { path = "../../metaconfig/parser" }
+metaconfig_types = { path = "../../metaconfig/types" }
+mononoke_types = { path = "../../mononoke_types" }
+sql_ext = { path = "../../common/rust/sql_ext" }
+synced_commit_mapping = { path = "../../commit_rewriting/synced_commit_mapping" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+clap = "2.33"
+env_logger = "0.7"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+futures-util = "0.3"
+slog = { version="2.5", features=["max_level_debug"] }
+tokio = { version = "0.2", features = ["full"] }
+tokio-compat = "0.1"
+
+[dev-dependencies]
+tokio-timer = "0.2"

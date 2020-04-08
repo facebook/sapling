@@ -1,0 +1,34 @@
+[package]
+name = "git_mapping_pushrebase_hook"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["**/*.rs"]
+
+[lib]
+path = "lib.rs"
+
+[dependencies]
+bonsai_git_mapping = { path = ".." }
+bookmarks = { path = "../../bookmarks" }
+context = { path = "../../server/context" }
+mercurial_types = { path = "../../mercurial/types" }
+mononoke_types = { path = "../../mononoke_types" }
+pushrebase = { path = "../../pushrebase" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+async-trait = "0.1.29"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+maplit = "1.0"
+thiserror = "1.0"
+tokio = { version = "0.2", features = ["full"] }
+
+[dev-dependencies]
+blobrepo_factory = { path = "../../blobrepo/factory" }
+blobstore = { path = "../../blobstore" }
+mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
+tests_utils = { path = "../../tests/utils" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+rand = { version = "0.7", features = ["small_rng"] }
+tokio-compat = "0.1"

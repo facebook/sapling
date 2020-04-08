@@ -11,15 +11,16 @@
 /// Commits that client pushed are rebased on top of `onto_bookmark` on the server
 ///
 ///  Client
-///
+///  ```text
 ///     O <- `onto` on client, potentially outdated
 ///     |
 ///     O  O <- pushed set (in this case just one commit)
 ///     | /
 ///     O <- root
+///  ```
 ///
 ///  Server
-///
+///  ```text
 ///     O  <- update `onto` bookmark, pointing at the pushed commit
 ///     |
 ///     O  <- `onto` bookmark on the server before the push
@@ -29,6 +30,7 @@
 ///     O
 ///     |
 ///     O <- root
+///  ```
 ///
 ///  Terminology:
 ///  *onto bookmark* - bookmark that is the destination of the rebase, for example "master"

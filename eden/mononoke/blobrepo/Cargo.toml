@@ -4,7 +4,14 @@ edition = "2018"
 version = "0.1.0"
 authors = ['Facebook']
 license = "GPLv2+"
-include = ["src/**/*.rs"]
+include = ["src/**/*.rs", "test/**/*.rs"]
+
+[lib]
+path = "src/lib.rs"
+
+[[test]]
+name = "blobrepo_test"
+path = "test/main.rs"
 
 [dependencies]
 blobrepo_errors = { path = "errors" }
@@ -60,7 +67,22 @@ tokio-compat = "0.1"
 uuid = { version = "0.8.1", features=["v4"] }
 
 [dev-dependencies]
+benchmark_lib = { path = "../benchmark" }
+blobrepo_factory = { path = "factory" }
+cmdlib = { path = "../cmdlib" }
+dbbookmarks = { path = "../bookmarks/dbbookmarks" }
+derived_data = { path = "../derived_data" }
+derived_data_filenodes = { path = "../derived_data/filenodes" }
 fixtures = { path = "../tests/fixtures" }
+memblob = { path = "../blobstore/memblob" }
 mercurial_types-mocks = { path = "../mercurial/types/mocks" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
+sql_ext = { path = "../common/rust/sql_ext" }
+tests_utils = { path = "../tests/utils" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+assert_matches = "1.3"
+quickcheck = "0.9"
+rand = { version = "0.7", features = ["small_rng"] }
+rand_distr = "0.2"
+rand_xorshift = "0.2"

@@ -13,7 +13,6 @@ mod utils;
 use ::manifest::{Entry, Manifest, ManifestOps};
 use anyhow::Error;
 use assert_matches::assert_matches;
-use benchmark_lib::{new_benchmark_repo, DelaySettings, GenManifest};
 use blobrepo::{compute_changed_files, errors::ErrorKind, BlobRepo, UploadEntries};
 use blobstore::{Loadable, Storable};
 use bytes::Bytes;
@@ -43,9 +42,6 @@ use mononoke_types::bonsai_changeset::BonsaiChangesetMut;
 use mononoke_types::{
     blob::BlobstoreValue, BonsaiChangeset, ChangesetId, DateTime, FileChange, FileContents,
 };
-use rand::SeedableRng;
-use rand_distr::Normal;
-use rand_xorshift::XorShiftRng;
 use scuba_ext::ScubaSampleBuilder;
 use std::{
     collections::{BTreeMap, HashMap, HashSet},
@@ -1274,8 +1270,14 @@ fn test_hg_commit_generation_uneven_branch(fb: FacebookInit) {
         .unwrap();
 }
 
+#[cfg(fbcode_build)]
 #[fbinit::test]
 fn save_reproducibility_under_load(fb: FacebookInit) -> Result<(), Error> {
+    use benchmark_lib::{new_benchmark_repo, DelaySettings, GenManifest};
+    use rand::SeedableRng;
+    use rand_distr::Normal;
+    use rand_xorshift::XorShiftRng;
+
     let ctx = CoreContext::test_mock(fb);
     let delay_settings = DelaySettings {
         blobstore_put_dist: Normal::new(0.01, 0.005).expect("Normal::new failed"),
