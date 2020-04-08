@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use futures::compat::Future01CompatExt;
+use futures::{compat::Future01CompatExt, future::TryFutureExt};
 use futures_util::{future::try_join_all, pin_mut, select, try_join, FutureExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
@@ -14,6 +14,7 @@ use gotham_ext::body_ext::BodyExt;
 use http::header::HeaderMap;
 use hyper::{Body, StatusCode};
 use maplit::hashmap;
+use redactedblobstore::has_redaction_root_cause;
 use scuba::ScubaValue;
 use serde::Deserialize;
 use slog::debug;
@@ -160,8 +161,24 @@ async fn resolve_internal_object(
     let exists = blobstore
         .get(ctx.ctx.clone(), content_id.blobstore_key())
         .compat()
-        .await?
-        .is_some();
+        .map_ok(|b| b.is_some())
+        .or_else(|e| async move {
+            // If a load error was caused by redaction, then check for existence instead, which
+            // isn't subject to redaction (only the content is). The reason we normally check for
+            // the content itself is because doing a exists() check does not fill our Cachelib
+            // cache on hit, whereas get() does (and those blobs are all very small because they're
+            // just lists of the blobs that make up the actual large file). We therefore only
+            // fallback to this slow path when redaction gets in the way (uncommon).
+            if has_redaction_root_cause(&e) {
+                Ok(blobstore
+                    .is_present(ctx.ctx.clone(), content_id.blobstore_key())
+                    .compat()
+                    .await?)
+            } else {
+                Err(e)
+            }
+        })
+        .await?;
 
     if exists {
         Ok(Some(content_id))
@@ -534,7 +551,15 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
 mod test {
     use super::*;
 
+    use blobrepo::DangerousOverride;
+    use blobrepo_factory::TestRepoBuilder;
+    use bytes::Bytes;
+    use context::CoreContext;
+    use fbinit::FacebookInit;
+    use filestore::{self, StoreRequest};
+    use futures_old::stream as stream_old;
     use hyper::Uri;
+    use mononoke_types_mocks::hash::ONES_SHA256;
     use std::sync::Arc;
 
     use lfs_protocol::Sha256 as LfsSha256;
@@ -744,6 +769,76 @@ mod test {
                 },
             ],
             res
+        );
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_resolve_missing(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = RepositoryRequestContext::test_builder(fb)?.build()?;
+        assert_eq!(resolve_internal_object(&ctx, ONES_SHA256).await?, None);
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_resolve_present(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = RepositoryRequestContext::test_builder(fb)?.build()?;
+
+        let meta = filestore::store(
+            ctx.repo.blobstore().clone(),
+            ctx.repo.filestore_config(),
+            ctx.ctx.clone(),
+            &StoreRequest::new(6),
+            stream_old::once(Ok(Bytes::from("foobar"))),
+        )
+        .compat()
+        .await?;
+
+        assert_eq!(
+            resolve_internal_object(&ctx, meta.sha256).await?,
+            Some(meta.content_id)
+        );
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_resolve_redacted(fb: FacebookInit) -> Result<(), Error> {
+        // First, have the filestore tell us what the hash for this blob would be, so we can create
+        // a new repo and redact it.
+        let stub = TestRepoBuilder::new().build()?;
+
+        let meta = filestore::store(
+            stub.blobstore().clone(),
+            stub.filestore_config(),
+            CoreContext::test_mock(fb),
+            &StoreRequest::new(6),
+            stream_old::once(Ok(Bytes::from("foobar"))),
+        )
+        .compat()
+        .await?;
+
+        // NOTE: It's not ideal that we have to do as_inner 3 times here, but that's how
+        // the structure of RepoBlobstore works right now: it's just a type name. So, we
+        // get to the inner blobstore, and then clone that. It's where our data is!
+        let stub_blobstore = stub.blobstore().as_inner().as_inner().as_inner().clone();
+
+        // Now, create a new blob repo with redaction, then swap the blobstore from the stub repo
+        // into it, which has the data (but now it is redacted)!
+        let repo = TestRepoBuilder::new()
+            .redacted(Some(
+                hashmap! { meta.content_id.blobstore_key() => "test".to_string() },
+            ))
+            .build()?
+            .dangerous_override(|_: Arc<dyn Blobstore>| stub_blobstore);
+
+        let ctx = RepositoryRequestContext::test_builder(fb)?
+            .repo(repo)
+            .build()?;
+
+        assert_eq!(
+            resolve_internal_object(&ctx, meta.sha256).await?,
+            Some(meta.content_id)
         );
 
         Ok(())

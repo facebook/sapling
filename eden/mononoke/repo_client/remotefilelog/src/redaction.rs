@@ -11,7 +11,7 @@ use bytes::Bytes;
 use futures_old::{Async, Future, Poll};
 use mercurial_types::FileBytes;
 
-use redactedblobstore::ErrorKind;
+use redactedblobstore::has_redaction_root_cause;
 
 /// Tombstone string to replace the content of redacted files with
 const REDACTED_CONTENT: &str =
@@ -43,17 +43,11 @@ where
             Ok(Async::NotReady) => return Ok(Async::NotReady),
             Ok(Async::Ready(r)) => Ok(Async::Ready(r)),
             Err(e) => {
-                let root_cause = e.root_cause();
-                let maybe_redacted = root_cause.downcast_ref::<ErrorKind>();
-
-                // If the error was caused by redaction, then return a tombstone instead of the
-                // content.
-                match maybe_redacted {
-                    Some(ErrorKind::Censored(_, _)) => {
-                        let ret = (Bytes::new(), FileBytes(REDACTED_CONTENT.as_bytes().into()));
-                        Ok(Async::Ready(ret))
-                    }
-                    None => Err(e),
+                if has_redaction_root_cause(&e) {
+                    let ret = (Bytes::new(), FileBytes(REDACTED_CONTENT.as_bytes().into()));
+                    Ok(Async::Ready(ret))
+                } else {
+                    Err(e)
                 }
             }
         }

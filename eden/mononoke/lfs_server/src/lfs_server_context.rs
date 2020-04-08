@@ -113,7 +113,7 @@ impl LfsServerContext {
                         repository,
                         server: inner.server.clone(),
                     },
-                    client: inner.client.clone(),
+                    client: HttpClient::Enabled(inner.client.clone()),
                     config,
                     always_wait_for_upstream: inner.always_wait_for_upstream,
                     max_upload_size: inner.max_upload_size,
@@ -160,6 +160,13 @@ fn acl_check(
 }
 
 #[derive(Clone)]
+enum HttpClient {
+    Enabled(Arc<HttpsHyperClient>),
+    #[cfg(test)]
+    Disabled,
+}
+
+#[derive(Clone)]
 pub struct RepositoryRequestContext {
     pub ctx: CoreContext,
     pub repo: BlobRepo,
@@ -167,7 +174,7 @@ pub struct RepositoryRequestContext {
     pub config: Arc<ServerConfig>,
     always_wait_for_upstream: bool,
     max_upload_size: Option<u64>,
-    client: Arc<HttpsHyperClient>,
+    client: HttpClient,
 }
 
 impl RepositoryRequestContext {
@@ -204,6 +211,13 @@ impl RepositoryRequestContext {
     }
 
     pub fn dispatch(&self, request: Request<Body>) -> impl Future<Output = Result<Bytes, Error>> {
+        #[allow(clippy::infallible_destructuring_match)]
+        let client = match self.client {
+            HttpClient::Enabled(ref client) => client,
+            #[cfg(test)]
+            HttpClient::Disabled => panic!("HttpClient is disabled in test"),
+        };
+
         let (sender, receiver) = oneshot::channel();
 
         // NOTE: We spawn the request on an executor because we'd like to read the response even if
@@ -211,7 +225,7 @@ impl RepositoryRequestContext {
         // response, Hyper will not reuse the conneciton for its pool (which makes sense for the
         // general case: if your server is sending you 5GB of data and you drop the future, you
         // don't want to read all that later just to reuse a connection).
-        let fut = self.client.request(request).then(move |r| {
+        let fut = client.request(request).then(move |r| {
             let _ = sender.send(r);
             future::ready(())
         });
@@ -392,6 +406,8 @@ impl BaseUri {
 #[cfg(test)]
 mod test {
     use super::*;
+    use blobrepo_factory::TestRepoBuilder;
+    use fbinit::FacebookInit;
     use lfs_protocol::Sha256 as LfsSha256;
     use mononoke_types::{hash::Sha256, ContentId};
     use std::str::FromStr;
@@ -399,6 +415,57 @@ mod test {
     const ONES_HASH: &str = "1111111111111111111111111111111111111111111111111111111111111111";
     const TWOS_HASH: &str = "2222222222222222222222222222222222222222222222222222222222222222";
     const SIZE: u64 = 123;
+
+    pub fn uri_builder(self_uri: &str, upstream_uri: &str) -> Result<UriBuilder, Error> {
+        let server = ServerUris::new(self_uri, Some(upstream_uri))?;
+        Ok(UriBuilder {
+            repository: "repo123".to_string(),
+            server: Arc::new(server),
+        })
+    }
+
+    pub struct TestContextBuilder {
+        fb: FacebookInit,
+        repo: BlobRepo,
+        uri_builder: UriBuilder,
+    }
+
+    impl TestContextBuilder {
+        pub fn repo(mut self, repo: BlobRepo) -> Self {
+            self.repo = repo;
+            self
+        }
+
+        pub fn build(self) -> Result<RepositoryRequestContext, Error> {
+            let Self {
+                fb,
+                repo,
+                uri_builder,
+            } = self;
+
+            Ok(RepositoryRequestContext {
+                ctx: CoreContext::test_mock(fb),
+                repo,
+                config: Arc::new(ServerConfig::default()),
+                uri_builder,
+                always_wait_for_upstream: false,
+                max_upload_size: None,
+                client: HttpClient::Disabled,
+            })
+        }
+    }
+
+    impl RepositoryRequestContext {
+        pub fn test_builder(fb: FacebookInit) -> Result<TestContextBuilder, Error> {
+            let uri_builder = uri_builder("http://foo.com/", "http://bar.com")?;
+
+            Ok(TestContextBuilder {
+                fb,
+                repo: TestRepoBuilder::new().build()?,
+                uri_builder,
+            })
+        }
+    }
 
     fn obj() -> Result<RequestObject, Error> {
         Ok(RequestObject {
@@ -413,14 +480,6 @@ mod test {
 
     fn oid() -> Result<Sha256, Error> {
         Sha256::from_str(TWOS_HASH)
-    }
-
-    fn uri_builder(self_uri: &str, upstream_uri: &str) -> Result<UriBuilder, Error> {
-        let server = ServerUris::new(self_uri, Some(upstream_uri))?;
-        Ok(UriBuilder {
-            repository: "repo123".to_string(),
-            server: Arc::new(server),
-        })
     }
 
     #[test]

@@ -230,6 +230,13 @@ where
     }
 }
 
+pub fn has_redaction_root_cause(e: &Error) -> bool {
+    match e.root_cause().downcast_ref::<ErrorKind>() {
+        Some(ErrorKind::Censored(_, _)) => true,
+        None => false,
+    }
+}
+
 #[cfg(test)]
 mod test {
 
