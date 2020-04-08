@@ -23,7 +23,7 @@ from . import encoding, util
 from .i18n import _
 
 
-_tracer = tracing.singleton
+_tracer = util.tracer
 
 
 def spacejoin(*args):

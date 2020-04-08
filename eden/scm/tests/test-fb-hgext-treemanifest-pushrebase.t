@@ -120,7 +120,7 @@ Test that pushrebase hooks can access the commit data
   remote: prepushrebase.cat hook exited with status 1
   abort: push failed on remote
   remote: abort: "unable to find the following nodes locally or on the server: ('', *)" (glob)
-  remote: (commit: 3c53de825716341c3106f00e1062fc7805ae87bb)
+  remote: (commit: *) (glob)
   remote: 
   [255]
 

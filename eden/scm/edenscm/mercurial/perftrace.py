@@ -15,7 +15,7 @@ from . import util
 
 # Native tracing utilities
 
-tracer = tracing.singleton
+tracer = util.tracer
 
 
 def editspan(

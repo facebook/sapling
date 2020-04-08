@@ -3228,7 +3228,6 @@ timecount = unitcountfn(
 )
 
 _timenesting = [0]
-_tracewrap = bindings.tracing.wrapfunc
 
 _sizeunits = (
     ("b", 1),
@@ -3241,6 +3240,10 @@ _sizeunits = (
     ("g", 2 ** 30),
     ("t", 2 ** 40),
 )
+
+tracewrap = bindings.tracing.wrapfunc
+tracemeta = bindings.tracing.meta
+tracer = bindings.tracing.singleton
 
 
 def sizetoint(s):
@@ -4142,7 +4145,7 @@ def timefunction(key, uiposition=None, uiname=None):
         func.meta = [("cat", "timefunction"), ("name", "Timed Function: %s" % key)]
         if istest():
             func.meta.append(("line", "_"))
-        func = _tracewrap(func)
+        func = tracewrap(func)
 
         def inner(*args, **kwargs):
             uiarg = None
@@ -4165,6 +4168,77 @@ def timefunction(key, uiposition=None, uiname=None):
         return inner
 
     return wrapper
+
+
+class traced(object):
+    """Trace a block.
+
+    Examples:
+
+        # Basic usage.
+        with traced("block-name"):
+            ...
+
+        # With extra metadata: category.
+        with traced("editor", cat="time-blocked"):
+            ...
+
+        # Add extra metadata at runtime.
+        # Note: This cannot be done by using "@tracewrap"!
+        with traced("calculating-plus") as span:
+            result = a + b
+            span.record(result=str(result), a=a, b=b)
+
+    For tracing a function, consider using `@tracewrap` directly, which is more
+    efficient:
+
+        # Trace the function name, module, and source location, without
+        # arguments.
+        @util.tracewrap
+        def foo(args):
+            ...
+
+        # Rewrite the "name" to "bar".
+        @util.tracewrap
+        @util.tracemeta(name="bar")
+        def foo(args):
+            ...
+
+        # Add customize metadata "path" using the input of the function.
+        @util.tracewrap
+        @util.tracemeta(lambda path: [("path", path)])
+        def download(path):
+            ...
+    """
+
+    def __init__(self, name, **kwargs):
+        self.name = name
+        meta = [("name", name), ("cat", "tracedblock")]
+        if kwargs:
+            for k, v in sorted(kwargs.items()):
+                if v is not None:
+                    meta.append((k, str(v)))
+        self.spanid = tracer.span(meta)
+
+    def record(self, **kwargs):
+        """Record extra metadata"""
+        for k, v in sorted(kwargs.items()):
+            if v is not None:
+                meta.append((k, str(v)))
+
+    def __enter__(self):
+        tracer.enter(self.spanid)
+        return self
+
+    def __exit__(self, exctype, excvalue, traceback):
+        tracer.exit(self.spanid)
+
+
+def info(name, **kwargs):
+    """Log a instant event in tracing data"""
+    tracer.event(
+        [("name", name)] + [(k, str(v)) for k, v in kwargs.items() if v is not None]
+    )
 
 
 def expanduserpath(path):

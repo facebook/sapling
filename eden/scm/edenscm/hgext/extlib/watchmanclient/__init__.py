@@ -12,6 +12,7 @@ import getpass
 import os
 import sys
 
+from bindings import tracing
 from edenscm.mercurial import blackbox, encoding, progress, pycompat, util
 from edenscm.mercurial.node import hex
 
