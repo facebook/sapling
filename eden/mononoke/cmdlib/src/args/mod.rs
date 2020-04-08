@@ -5,6 +5,12 @@
  * GNU General Public License version 2.
  */
 
+mod cache;
+#[cfg(fbcode_build)]
+mod facebook;
+
+pub use self::cache::{add_cachelib_args, init_cachelib, WITH_CONTENT_SHA1_CACHE};
+
 use std::collections::{HashMap, HashSet};
 use std::io;
 use std::num::NonZeroU32;
@@ -22,7 +28,6 @@ use fbinit::FacebookInit;
 use futures::{FutureExt, TryFutureExt};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
 use futures_old::Future;
-use lazy_static::lazy_static;
 use panichandler::{self, Fate};
 use scuba::ScubaSampleBuilder;
 use slog::{debug, info, o, warn, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
@@ -38,15 +43,15 @@ use metaconfig_types::{
     BlobConfig, CommonConfig, Redaction, RepoConfig, ScrubAction, StorageConfig,
 };
 use mononoke_types::RepositoryId;
-use slog_logview::LogViewDrain;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
 
 use crate::helpers::{
-    create_runtime, init_cachelib_from_settings, open_sql_with_config_and_mysql_options,
-    setup_repo_dir, CachelibSettings, CreateStorage,
+    create_runtime, open_sql_with_config_and_mysql_options, setup_repo_dir, CreateStorage,
 };
 use crate::log;
+
+use self::cache::parse_caching;
 
 const REPO_ID: &str = "repo-id";
 const REPO_NAME: &str = "repo-name";
@@ -61,56 +66,11 @@ const MYSQL_MYROUTER_PORT: &str = "myrouter-port";
 const MYSQL_MASTER_ONLY: &str = "mysql-master-only";
 const RUNTIME_THREADS: &str = "runtime-threads";
 
-const CACHE_SIZE_GB: &str = "cache-size-gb";
-const USE_TUPPERWARE_SHRINKER: &str = "use-tupperware-shrinker";
-const MAX_PROCESS_SIZE: &str = "max-process-size";
-const MIN_PROCESS_SIZE: &str = "min-process-size";
-pub const WITH_CONTENT_SHA1_CACHE: &str = "with-content-sha1-cache";
-const SKIP_CACHING: &str = "skip-caching";
-const CACHELIB_ONLY_BLOBSTORE: &str = "cachelib-only-blobstore";
-const READONLY_STORAGE: &str = "readonly-storage";
-
 const READ_QPS_ARG: &str = "blobstore-read-qps";
 const WRITE_QPS_ARG: &str = "blobstore-write-qps";
 const READ_CHAOS_ARG: &str = "blobstore-read-chaos-rate";
 const WRITE_CHAOS_ARG: &str = "blobstore-write-chaos-rate";
 const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
-
-const PHASES_CACHE_SIZE: &str = "phases-cache-size";
-const BUCKETS_POWER: &str = "buckets-power";
-
-const CACHE_ARGS: &[(&str, &str)] = &[
-    ("blob-cache-size", "override size of the blob cache"),
-    (
-        "presence-cache-size",
-        "override size of the blob presence cache",
-    ),
-    (
-        "changesets-cache-size",
-        "override size of the changesets cache",
-    ),
-    (
-        "filenodes-cache-size",
-        "override size of the filenodes cache (individual filenodes)",
-    ),
-    (
-        "filenodes-history-cache-size",
-        "override size of the filenodes history cache (entire batches of history for a node)",
-    ),
-    (
-        "idmapping-cache-size",
-        "override size of the bonsai/hg mapping cache",
-    ),
-    (
-        "content-sha1-cache-size",
-        "override size of the content SHA1 cache",
-    ),
-    (PHASES_CACHE_SIZE, "override size of the phases cache"),
-    (
-        BUCKETS_POWER,
-        "override the bucket power for cachelib's hashtable",
-    ),
-];
 
 pub struct MononokeApp {
     /// The app name.
@@ -401,17 +361,28 @@ pub fn init_logging<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Logger {
     };
 
     let glog_drain = Arc::new(glog_drain());
-    let root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> =
-        match matches.value_of("logview-category") {
-            Some(category) => {
+    let root_log_drain: Arc<dyn SendSyncRefUnwindSafeDrain<Ok = (), Err = Never>> = match matches
+        .value_of("logview-category")
+    {
+        Some(category) => {
+            #[cfg(fbcode_build)]
+            {
                 // // Sometimes scribe writes can fail due to backpressure - it's OK to drop these
                 // // since logview is sampled anyway.
-                let logview_drain = LogViewDrain::new(fb, category).ignore_res();
+                let logview_drain = ::slog_logview::LogViewDrain::new(fb, category).ignore_res();
                 let drain = slog::Duplicate::new(glog_drain, logview_drain);
                 Arc::new(drain.ignore_res())
             }
-            None => Arc::new(glog_drain.ignore_res()),
-        };
+            #[cfg(not(fbcode_build))]
+            {
+                let _ = (fb, category);
+                unimplemented!(
+                    "Passed --logview-category, but it is supported only for fbcode builds"
+                )
+            }
+        }
+        None => Arc::new(glog_drain.ignore_res()),
+    };
 
     // NOTE: We pass an unfitlered Logger to init_stdlog_once. That's because we do the filtering
     // at the stdlog level there.
@@ -647,143 +618,6 @@ pub fn open_scrub_repo<'a>(
         Scrubbing::Enabled,
         None,
     )
-}
-
-pub fn add_cachelib_args<'a, 'b>(app: App<'a, 'b>, hide_advanced_args: bool) -> App<'a, 'b> {
-    let cache_args: Vec<_> = CACHE_ARGS
-        .iter()
-        .map(|(flag, help)| {
-            // XXX figure out a way to get default values in here -- note that .default_value
-            // takes a &'a str, so we may need to have MononokeApp own it or similar.
-            Arg::with_name(flag)
-                .long(flag)
-                .value_name("SIZE")
-                .hidden(hide_advanced_args)
-                .help(help)
-        })
-        .collect();
-
-    // Computed help strings with lifetime 'b is problematic, so use lazy_static instead:
-    lazy_static! {
-        static ref MIN_PROCESS_SIZE_HELP: std::string::String = format!(
-            "process size at which cachelib will grow back to {} in GiB",
-            CACHE_SIZE_GB
-        );
-    }
-
-    app.arg(
-        Arg::with_name(CACHE_SIZE_GB)
-            .long(CACHE_SIZE_GB)
-            .takes_value(true)
-            .value_name("SIZE")
-            .help("size of the cachelib cache, in GiB"),
-    )
-    .arg(
-        Arg::with_name(USE_TUPPERWARE_SHRINKER)
-            .long(USE_TUPPERWARE_SHRINKER)
-            .help("Use the Tupperware-aware cache shrinker to avoid OOM"),
-    )
-    .arg(
-        Arg::with_name(MAX_PROCESS_SIZE)
-            .long(MAX_PROCESS_SIZE)
-            .takes_value(true)
-            .value_name("SIZE")
-            .help("process size at which cachelib will shrink, in GiB"),
-    )
-    .arg(
-        Arg::with_name(MIN_PROCESS_SIZE)
-            .long(MIN_PROCESS_SIZE)
-            .takes_value(true)
-            .value_name("SIZE")
-            .help(&*MIN_PROCESS_SIZE_HELP),
-    )
-    .arg(
-        Arg::with_name(WITH_CONTENT_SHA1_CACHE)
-            .long(WITH_CONTENT_SHA1_CACHE)
-            .help("[Mononoke API Server only] enable content SHA1 cache"),
-    )
-    .arg(
-        Arg::with_name(SKIP_CACHING)
-            .long(SKIP_CACHING)
-            .help("do not init cachelib and disable caches (useful for tests)"),
-    )
-    .arg(
-        Arg::with_name(CACHELIB_ONLY_BLOBSTORE)
-            .long(CACHELIB_ONLY_BLOBSTORE)
-            .help("do not init memcache for blobstore"),
-    )
-    .arg(
-        Arg::with_name(READONLY_STORAGE)
-            .long(READONLY_STORAGE)
-            .help("Error on any attempts to write to storage"),
-    )
-    .args(&cache_args)
-}
-
-pub fn parse_caching<'a>(matches: &ArgMatches<'a>) -> Caching {
-    if matches.is_present(SKIP_CACHING) {
-        Caching::Disabled
-    } else if matches.is_present(CACHELIB_ONLY_BLOBSTORE) {
-        Caching::CachelibOnlyBlobstore
-    } else {
-        Caching::Enabled
-    }
-}
-
-pub fn init_cachelib<'a>(
-    fb: FacebookInit,
-    matches: &ArgMatches<'a>,
-    expected_item_size_bytes: Option<usize>,
-) -> Caching {
-    let caching = parse_caching(matches);
-
-    if caching == Caching::Enabled || caching == Caching::CachelibOnlyBlobstore {
-        let mut settings = CachelibSettings::default();
-        if let Some(cache_size) = matches.value_of(CACHE_SIZE_GB) {
-            settings.cache_size = cache_size.parse::<usize>().unwrap() * 1024 * 1024 * 1024;
-        }
-        if let Some(max_process_size) = matches.value_of(MAX_PROCESS_SIZE) {
-            settings.max_process_size_gib = Some(max_process_size.parse().unwrap());
-        }
-        if let Some(min_process_size) = matches.value_of(MIN_PROCESS_SIZE) {
-            settings.min_process_size_gib = Some(min_process_size.parse().unwrap());
-        }
-        settings.use_tupperware_shrinker = matches.is_present(USE_TUPPERWARE_SHRINKER);
-        if let Some(presence_cache_size) = matches.value_of("presence-cache-size") {
-            settings.presence_cache_size = Some(presence_cache_size.parse().unwrap());
-        }
-        if let Some(changesets_cache_size) = matches.value_of("changesets-cache-size") {
-            settings.changesets_cache_size = Some(changesets_cache_size.parse().unwrap());
-        }
-        if let Some(filenodes_cache_size) = matches.value_of("filenodes-cache-size") {
-            settings.filenodes_cache_size = Some(filenodes_cache_size.parse().unwrap());
-        }
-        if let Some(filenodes_history_cache_size) = matches.value_of("filenodes-history-cache-size")
-        {
-            settings.filenodes_history_cache_size =
-                Some(filenodes_history_cache_size.parse().unwrap());
-        }
-        if let Some(idmapping_cache_size) = matches.value_of("idmapping-cache-size") {
-            settings.idmapping_cache_size = Some(idmapping_cache_size.parse().unwrap());
-        }
-        settings.with_content_sha1_cache = matches.is_present(WITH_CONTENT_SHA1_CACHE);
-        if let Some(content_sha1_cache_size) = matches.value_of("content-sha1-cache-size") {
-            settings.content_sha1_cache_size = Some(content_sha1_cache_size.parse().unwrap());
-        }
-        if let Some(blob_cache_size) = matches.value_of("blob-cache-size") {
-            settings.blob_cache_size = Some(blob_cache_size.parse().unwrap());
-        }
-        if let Some(phases_cache_size) = matches.value_of(PHASES_CACHE_SIZE) {
-            settings.phases_cache_size = Some(phases_cache_size.parse().unwrap());
-        }
-        if let Some(buckets_power) = matches.value_of(BUCKETS_POWER) {
-            settings.buckets_power = Some(buckets_power.parse().unwrap());
-        }
-
-        init_cachelib_from_settings(fb, settings, expected_item_size_bytes).unwrap();
-    }
-
-    caching
 }
 
 pub fn add_mysql_options_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
@@ -1130,7 +964,18 @@ pub fn parse_blobstore_options<'a>(matches: &ArgMatches<'a>) -> BlobstoreOptions
 
 pub fn maybe_enable_mcrouter<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) {
     if matches.is_present(ENABLE_MCROUTER) {
-        ::ratelim::use_proxy_if_available(fb);
+        #[cfg(fbcode_build)]
+        {
+            ::ratelim::use_proxy_if_available(fb);
+        }
+        #[cfg(not(fbcode_build))]
+        {
+            let _ = fb;
+            unimplemented!(
+                "Passed --{}, but it is supported only for fbcode builds",
+                ENABLE_MCROUTER
+            );
+        }
     }
 }
 

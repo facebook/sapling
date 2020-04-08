@@ -5,15 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::{
-    cmp::{max, min},
-    fs,
-    future::Future,
-    io,
-    path::Path,
-    str::FromStr,
-    time::Duration,
-};
+use std::{fs, future::Future, io, path::Path, str::FromStr, time::Duration};
 
 use anyhow::{bail, format_err, Context, Error, Result};
 use clap::ArgMatches;
@@ -48,8 +40,6 @@ use stats::schedule_stats_aggregation_preview;
 
 pub const ARG_SHUTDOWN_GRACE_PERIOD: &str = "shutdown-grace-period";
 pub const ARG_FORCE_SHUTDOWN_PERIOD: &str = "force-shutdown-period";
-
-const MIN_BUCKET_POWER: u32 = 20;
 
 pub fn upload_and_show_trace(ctx: CoreContext) -> impl OldFuture<Item = (), Error = !> {
     if !ctx.trace().is_enabled() {
@@ -89,175 +79,6 @@ pub fn setup_repo_dir<P: AsRef<Path>>(data_dir: P, create: CreateStorage) -> Res
                 .with_context(|| format!("failed to create subdirectory {:?}", subdir))?;
         }
     }
-    Ok(())
-}
-
-pub struct CachelibSettings {
-    pub cache_size: usize,
-    pub max_process_size_gib: Option<u32>,
-    pub min_process_size_gib: Option<u32>,
-    pub buckets_power: Option<u32>,
-    pub use_tupperware_shrinker: bool,
-    pub presence_cache_size: Option<usize>,
-    pub changesets_cache_size: Option<usize>,
-    pub filenodes_cache_size: Option<usize>,
-    pub filenodes_history_cache_size: Option<usize>,
-    pub idmapping_cache_size: Option<usize>,
-    pub with_content_sha1_cache: bool,
-    pub content_sha1_cache_size: Option<usize>,
-    pub blob_cache_size: Option<usize>,
-    pub phases_cache_size: Option<usize>,
-}
-
-impl Default for CachelibSettings {
-    fn default() -> Self {
-        Self {
-            cache_size: 20 * 1024 * 1024 * 1024,
-            max_process_size_gib: None,
-            min_process_size_gib: None,
-            buckets_power: None,
-            use_tupperware_shrinker: false,
-            presence_cache_size: None,
-            changesets_cache_size: None,
-            filenodes_cache_size: None,
-            filenodes_history_cache_size: None,
-            idmapping_cache_size: None,
-            with_content_sha1_cache: false,
-            content_sha1_cache_size: None,
-            blob_cache_size: None,
-            phases_cache_size: None,
-        }
-    }
-}
-
-pub fn init_cachelib_from_settings(
-    fb: FacebookInit,
-    settings: CachelibSettings,
-    expected_item_size_bytes: Option<usize>,
-) -> Result<()> {
-    // Millions of lookups per second
-    let lock_power = 10;
-
-    let expected_item_size_bytes = expected_item_size_bytes.unwrap_or(200);
-    let cache_size_bytes = settings.cache_size;
-    let item_count = cache_size_bytes / expected_item_size_bytes;
-
-    let buckets_power = if let Some(buckets_power) = settings.buckets_power {
-        max(buckets_power, MIN_BUCKET_POWER)
-    } else {
-        // Because `bucket_count` is a power of 2, bucket_count.trailing_zeros() is log2(bucket_count)
-        let bucket_count = item_count
-            .checked_next_power_of_two()
-            .ok_or_else(|| Error::msg("Cache has too many objects to fit a `usize`?!?"))?;
-
-        min(bucket_count.trailing_zeros() + 1 as u32, 32)
-    };
-
-    let mut cache_config = cachelib::LruCacheConfig::new(cache_size_bytes)
-        .set_pool_rebalance(cachelib::PoolRebalanceConfig {
-            interval: Duration::new(300, 0),
-            strategy: cachelib::RebalanceStrategy::HitsPerSlab {
-                // A small increase in hit ratio is desired
-                diff_ratio: 0.05,
-                min_retained_slabs: 1,
-                // Objects newer than 30 seconds old might be about to become interesting
-                min_tail_age: Duration::new(30, 0),
-                ignore_untouched_slabs: false,
-            },
-        })
-        .set_access_config(buckets_power, lock_power)
-        .set_cache_name("mononoke");
-
-    if settings.use_tupperware_shrinker {
-        if settings.max_process_size_gib.is_some() || settings.min_process_size_gib.is_some() {
-            bail!("Can't use both Tupperware shrinker and manually configured shrinker");
-        }
-        cache_config = cache_config.set_tupperware_shrinker();
-    } else {
-        match (settings.max_process_size_gib, settings.min_process_size_gib) {
-            (None, None) => (),
-            (Some(_), None) | (None, Some(_)) => {
-                bail!("If setting process size limits, must set both max and min");
-            }
-            (Some(max), Some(min)) => {
-                cache_config = cache_config.set_shrinker(cachelib::ShrinkMonitor {
-                    shrinker_type: cachelib::ShrinkMonitorType::ResidentSize {
-                        max_process_size_gib: max,
-                        min_process_size_gib: min,
-                    },
-                    interval: Duration::new(10, 0),
-                    max_resize_per_iteration_percent: 25,
-                    max_removed_percent: 50,
-                    strategy: cachelib::RebalanceStrategy::HitsPerSlab {
-                        // A small increase in hit ratio is desired
-                        diff_ratio: 0.05,
-                        min_retained_slabs: 1,
-                        // Objects newer than 30 seconds old might be about to become interesting
-                        min_tail_age: Duration::new(30, 0),
-                        ignore_untouched_slabs: false,
-                    },
-                });
-            }
-        };
-    }
-
-    cachelib::init_cache_once(fb, cache_config)?;
-    cachelib::init_cacheadmin()?;
-
-    // Give each cache 5% of the available space, bar the blob cache which gets everything left
-    // over. We can adjust this with data.
-    let available_space = cachelib::get_available_space()?;
-    cachelib::get_or_create_volatile_pool(
-        "blobstore-presence",
-        settings.presence_cache_size.unwrap_or(available_space / 20),
-    )?;
-
-    cachelib::get_or_create_volatile_pool(
-        "changesets",
-        settings
-            .changesets_cache_size
-            .unwrap_or(available_space / 20),
-    )?;
-    cachelib::get_or_create_volatile_pool(
-        "filenodes",
-        settings
-            .filenodes_cache_size
-            .unwrap_or(available_space / 20),
-    )?;
-    cachelib::get_or_create_volatile_pool(
-        "filenodes_history",
-        settings
-            .filenodes_history_cache_size
-            .unwrap_or(available_space / 20),
-    )?;
-    cachelib::get_or_create_volatile_pool(
-        "bonsai_hg_mapping",
-        settings
-            .idmapping_cache_size
-            .unwrap_or(available_space / 20),
-    )?;
-
-    if settings.with_content_sha1_cache {
-        cachelib::get_or_create_volatile_pool(
-            "content-sha1",
-            settings
-                .content_sha1_cache_size
-                .unwrap_or(available_space / 20),
-        )?;
-    }
-
-    cachelib::get_or_create_volatile_pool(
-        "phases",
-        settings.phases_cache_size.unwrap_or(available_space / 20),
-    )?;
-
-    cachelib::get_or_create_volatile_pool(
-        "blobstore-blobs",
-        settings
-            .blob_cache_size
-            .unwrap_or(cachelib::get_available_space()?),
-    )?;
-
     Ok(())
 }
 
@@ -438,11 +259,14 @@ where
     let mut runtime = args::init_runtime(&matches)?;
 
     let result = runtime.block_on_std(async {
-        let stats_agg = schedule_stats_aggregation_preview()
-            .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
-        // Note: this returns a JoinHandle, which we drop, thus detaching the task
-        // It thus does not count towards shutdown_on_idle below
-        tokio::task::spawn(stats_agg);
+        #[cfg(not(test))]
+        {
+            let stats_agg = schedule_stats_aggregation_preview()
+                .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
+            // Note: this returns a JoinHandle, which we drop, thus detaching the task
+            // It thus does not count towards shutdown_on_idle below
+            tokio::task::spawn(stats_agg);
+        }
 
         future.await
     });

@@ -35,6 +35,7 @@ members = [
     "bookmarks/dbbookmarks",
     "changesets",
     "changesets/if",
+    "cmdlib",
     "common/async_limiter",
     "common/async_limiter/examples/tokio_v1",
     "common/async_limiter/examples/tokio_v2",
