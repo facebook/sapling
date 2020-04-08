@@ -31,7 +31,7 @@ pub enum ErrorKind {
 /// Implementation of bookmarks as they exist in stock Mercurial inside `.hg/bookmarks`.
 /// The file has a list of entries:
 ///
-/// ```
+/// ```text
 /// <hash1> <bookmark1-name>
 /// <hash2> <bookmark2-name>
 /// ...
