@@ -184,12 +184,15 @@ def _modesetup(ui):
         from . import win32
 
         if not (util.istest() or win32.enablevtmode()):
-            if formatted:
-                ui.warn(
-                    _("couldn't enable VT mode for your terminal, disabling colors\n")
-                )
-            if not always:
-                return None
+            if not ui.pageractive:
+                if formatted:
+                    ui.warn(
+                        _(
+                            "couldn't enable VT mode for your terminal, disabling colors\n"
+                        )
+                    )
+                if not always:
+                    return None
 
     if always or (auto and formatted):
         return "ansi"
