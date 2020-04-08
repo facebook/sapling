@@ -317,6 +317,7 @@ The server sometimes throws spurious errors, see: D14446457
   2 trees fetched over * (glob)
   fetching tree '' fc64d44480b1e632a2561bf8a8500b004eaa8d9a, based on 5fbe397e5ac6cb7ee263c5c67613c4665306d143, found via 4d563be8759a
   abort: "unable to find the following nodes locally or on the server: ('', fc64d44480b1e632a2561bf8a8500b004eaa8d9a)"
+  (commit: 4d563be8759aa4359dd5aa22a8fb5b91bad99412)
 
 - Verify the cache remediates itself from the corruption
 - (now that the revlogs are back)

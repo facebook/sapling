@@ -646,7 +646,11 @@ class changectx(basectx):
     @property
     def _manifestctx(self):
         self._repo.manifestlog.recentlinknode = self.node()
-        return self._repo.manifestlog[self._changeset.manifest]
+        try:
+            return self._repo.manifestlog[self._changeset.manifest]
+        except Exception as ex:
+            error.addcontext(ex, lambda: _("(commit: %s)") % self.hex())
+            raise
 
     @propertycache
     def _parents(self):
@@ -674,6 +678,9 @@ class changectx(basectx):
 
     def description(self):
         return self._changeset.description
+
+    def shortdescription(self):
+        return self.description().splitlines()[0]
 
     def branch(self):
         return encoding.tolocal(self._changeset.extra.get("branch"))

@@ -164,6 +164,7 @@ Test that sqltreestrip deletes trees from history
        4       222      60      3       4 8b833dfa4cc5 0c96405fb5c3 000000000000
   $ hg status --change 4 --config treemanifest.treeonly=True
   abort: "unable to find the following nodes locally or on the server: ('', 8b833dfa4cc566bfd4bcb4d85e4a128be5e49334)"
+  (commit: fc50e1c24ca2045a04dd4ed54838af28a022dd7c)
   [255]
 
 Refill the repository from the non-stripped master

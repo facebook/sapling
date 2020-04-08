@@ -44,6 +44,7 @@ Clone it
 Add a few more public server comits
   $ cd ../master
   $ mkcommit c
+  $ cp -R . ../master-lagged
   $ mkcommit d
   $ mkcommit e
   $ hg phase -p -r 'all()'
@@ -78,4 +79,13 @@ Pull exactly up to d into the client
   { metrics : { ssh : { connections : 1,
                         read : { bytes : 1114},
                         write : { bytes : 690}}}}
+
+Test error message about MissingNodesError
+  $ drawdag --config paths.default=ssh://user@dummy/master-lagged --config remotefilelog.debug=0 --config devel.print-metrics=0 << 'EOS'
+  > x
+  > |
+  > tip
+  > EOS
+  abort: "unable to find the following nodes locally or on the server: ('', f064a7f8e3e138341587096641d86e9d23cd9778)"
+  (commit: 055a42cdd88768532f9cf79daa407fc8d138de9b)
 
