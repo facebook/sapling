@@ -15,10 +15,6 @@ Useful functions
   >   hg commit -m "$1"
   > }
 
-  $ printvisibleheads() {
-  >   hg dbsh -c 'ui.write(m.pycompat.decodeutf8(repo.svfs.read("visibleheads")))' | sort
-  > }
-
 Setup
   $ newrepo
   $ mkcommit root
@@ -29,13 +25,11 @@ Setup
 Simple creation and amending of draft commits
 
   $ mkcommit draft1
-  $ printvisibleheads
-  ca9d66205acae45570c29bea55877bb8031aa453
-  v1
+  $ hg debugvisibleheads
+  ca9d66205acae45570c29bea55877bb8031aa453 draft1
   $ hg amend -m "draft1 amend1"
-  $ printvisibleheads
-  bc066ca12b451d14668c7a3e38757449b7d6a104
-  v1
+  $ hg debugvisibleheads
+  bc066ca12b451d14668c7a3e38757449b7d6a104 draft1 amend1
   $ mkcommit draft2
   $ tglogp --hidden
   @  5: 467d8aa13aef draft 'draft2'
@@ -50,9 +44,8 @@ Simple creation and amending of draft commits
   |
   o  0: 1e4be0697311 public 'root'
   
-  $ printvisibleheads
-  467d8aa13aef105d18160ea682d5cf20d8941d06
-  v1
+  $ hg debugvisibleheads
+  467d8aa13aef105d18160ea682d5cf20d8941d06 draft2
 
   $ hg debugstrip -r . --config amend.safestrip=False
   0 files updated, 0 files merged, 1 files removed, 0 files unresolved
@@ -68,9 +61,8 @@ Simple creation and amending of draft commits
   |
   o  0: 1e4be0697311 public 'root'
   
-  $ printvisibleheads
-  bc066ca12b451d14668c7a3e38757449b7d6a104
-  v1
+  $ hg debugvisibleheads
+  bc066ca12b451d14668c7a3e38757449b7d6a104 draft1 amend1
 
   $ mkcommit draft2a
   $ hg rebase -s ".^" -d 1
@@ -87,9 +79,8 @@ Simple creation and amending of draft commits
   |
   o  0: 1e4be0697311 public 'root'
   
-  $ printvisibleheads
-  ecfc0c412bb878c3e7b1b3468cae773b473fd3ec
-  v1
+  $ hg debugvisibleheads
+  ecfc0c412bb878c3e7b1b3468cae773b473fd3ec draft2a
   $ hg rebase -s . -d 2
   rebasing ecfc0c412bb8 "draft2a"
   $ tglogp
@@ -103,22 +94,19 @@ Simple creation and amending of draft commits
   |
   o  0: 1e4be0697311 public 'root'
   
-  $ printvisibleheads
-  96b7359a7ee5350b94be6e5c5dd480751a031498
-  af54c09bb37da36975b8d482f660f62f95697a35
-  v1
+  $ hg debugvisibleheads
+  af54c09bb37da36975b8d482f660f62f95697a35 draft2a
+  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
 
 Simple phase adjustments
 
   $ hg phase -p 6
-  $ printvisibleheads
-  af54c09bb37da36975b8d482f660f62f95697a35
-  v1
+  $ hg debugvisibleheads
+  af54c09bb37da36975b8d482f660f62f95697a35 draft2a
   $ hg phase -df 6
-  $ printvisibleheads
-  96b7359a7ee5350b94be6e5c5dd480751a031498
-  af54c09bb37da36975b8d482f660f62f95697a35
-  v1
+  $ hg debugvisibleheads
+  af54c09bb37da36975b8d482f660f62f95697a35 draft2a
+  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
 
   $ mkcommit draft3
   $ mkcommit draft4
@@ -137,29 +125,24 @@ Simple phase adjustments
   |
   o  0: 1e4be0697311 public 'root'
   
-  $ printvisibleheads
-  96b7359a7ee5350b94be6e5c5dd480751a031498
-  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4
-  v1
+  $ hg debugvisibleheads
+  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
+  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4 draft4
   $ hg phase -p 9
-  $ printvisibleheads
-  96b7359a7ee5350b94be6e5c5dd480751a031498
-  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4
-  v1
+  $ hg debugvisibleheads
+  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
+  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4 draft4
   $ hg phase -p 10
-  $ printvisibleheads
-  96b7359a7ee5350b94be6e5c5dd480751a031498
-  v1
+  $ hg debugvisibleheads
+  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
   $ hg phase -sf 9
-  $ printvisibleheads
-  96b7359a7ee5350b94be6e5c5dd480751a031498
-  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4
-  v1
+  $ hg debugvisibleheads
+  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
+  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4 draft4
   $ hg phase -df 8
-  $ printvisibleheads
-  96b7359a7ee5350b94be6e5c5dd480751a031498
-  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4
-  v1
+  $ hg debugvisibleheads
+  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
+  f3f5679a1c9cb5a79334a3bbb87b359864c44ce4 draft4
   $ tglogp
   @  10: f3f5679a1c9c secret 'draft4'
   |
@@ -199,32 +182,26 @@ Simple phase adjustments
   |
   o  0: 1e4be0697311 public 'root'
   
-  $ printvisibleheads
-  00c8b0f0741e6ef0696abd63aba22f3d49018b38
-  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
-  v1
+  $ hg debugvisibleheads
+  00c8b0f0741e6ef0696abd63aba22f3d49018b38 merge1
+  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527 merge2
 
   $ hg phase -p 11
-  $ printvisibleheads
-  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
-  v1
+  $ hg debugvisibleheads
+  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527 merge2
   $ hg phase -p 12
-  $ printvisibleheads
-  v1
+  $ hg debugvisibleheads
   $ hg phase -df 11
-  $ printvisibleheads
-  00c8b0f0741e6ef0696abd63aba22f3d49018b38
-  v1
+  $ hg debugvisibleheads
+  00c8b0f0741e6ef0696abd63aba22f3d49018b38 merge1
   $ hg phase -df 10
-  $ printvisibleheads
-  00c8b0f0741e6ef0696abd63aba22f3d49018b38
-  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
-  v1
+  $ hg debugvisibleheads
+  00c8b0f0741e6ef0696abd63aba22f3d49018b38 merge1
+  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527 merge2
   $ hg phase -df 1
-  $ printvisibleheads
-  00c8b0f0741e6ef0696abd63aba22f3d49018b38
-  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
-  v1
+  $ hg debugvisibleheads
+  00c8b0f0741e6ef0696abd63aba22f3d49018b38 merge1
+  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527 merge2
   $ tglogp
   @    12: 8a541e4b5b52 draft 'merge2'
   |\
@@ -250,52 +227,44 @@ Hide and unhide
   $ hg hide 11
   hiding commit 00c8b0f0741e "merge1"
   1 changeset hidden
-  $ printvisibleheads
-  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
-  v1
+  $ hg debugvisibleheads
+  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527 merge2
   $ hg hide 8
   hiding commit af54c09bb37d "draft2a"
   hiding commit 5dabc7b08ef9 "draft3"
   hiding commit f3f5679a1c9c "draft4"
   hiding commit 8a541e4b5b52 "merge2"
   4 changesets hidden
-  $ printvisibleheads
-  4f416a252ac81004d9b35542cb1dc8892b6879eb
-  96b7359a7ee5350b94be6e5c5dd480751a031498
-  v1
+  $ hg debugvisibleheads
+  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
+  4f416a252ac81004d9b35542cb1dc8892b6879eb public2
   $ hg unhide 9
-  $ printvisibleheads
-  5dabc7b08ef934b9e6720285205b2c17695f6491
-  96b7359a7ee5350b94be6e5c5dd480751a031498
-  v1
+  $ hg debugvisibleheads
+  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
+  5dabc7b08ef934b9e6720285205b2c17695f6491 draft3
   $ hg hide 2 6
   hiding commit 4f416a252ac8 "public2"
   hiding commit 96b7359a7ee5 "draft1 amend1"
   hiding commit af54c09bb37d "draft2a"
   hiding commit 5dabc7b08ef9 "draft3"
   4 changesets hidden
-  $ printvisibleheads
-  175dbab47dccefd3ece5916c4f92a6c69f65fcf0
-  v1
+  $ hg debugvisibleheads
+  175dbab47dccefd3ece5916c4f92a6c69f65fcf0 public1
   $ hg unhide 6
-  $ printvisibleheads
-  96b7359a7ee5350b94be6e5c5dd480751a031498
-  v1
+  $ hg debugvisibleheads
+  96b7359a7ee5350b94be6e5c5dd480751a031498 draft1 amend1
   $ hg hide 1
   hiding commit 175dbab47dcc "public1"
   hiding commit 96b7359a7ee5 "draft1 amend1"
   2 changesets hidden
-  $ printvisibleheads
-  v1
+  $ hg debugvisibleheads
   $ hg unhide 11
-  $ printvisibleheads
-  00c8b0f0741e6ef0696abd63aba22f3d49018b38
-  v1
+  $ hg debugvisibleheads
+  00c8b0f0741e6ef0696abd63aba22f3d49018b38 merge1
   $ hg unhide 12
-  $ printvisibleheads
-  00c8b0f0741e6ef0696abd63aba22f3d49018b38
-  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527
-  v1
+  $ hg debugvisibleheads
+  00c8b0f0741e6ef0696abd63aba22f3d49018b38 merge1
+  8a541e4b5b528ca9db5d1f8afd4f2534fcd79527 merge2
 
 Stack navigation and rebases
 

@@ -1068,6 +1068,8 @@ Test list of internal help commands
                  upgrade a repository to use different features
    debugvisibility
                  control visibility tracking
+   debugvisibleheads
+                 print visible heads
    debugwalk     show how files match on given patterns
    debugwireargs
                  (no help text available)

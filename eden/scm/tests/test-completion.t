@@ -165,6 +165,7 @@ Show debug commands if there are no other candidates
   debugupdatecaches
   debugupgraderepo
   debugvisibility
+  debugvisibleheads
   debugwalk
   debugwireargs
 
@@ -367,6 +368,7 @@ Show all commands + options
   debugupdatecaches: 
   debugupgraderepo: optimize, run
   debugvisibility: 
+  debugvisibleheads: style, template
   debugwalk: include, exclude
   debugwireargs: three, four, five, ssh, remotecmd, insecure
   diff: rev, change, text, git, binary, nodates, noprefix, show-function, reverse, ignore-all-space, ignore-space-change, ignore-blank-lines, ignore-space-at-eol, unified, stat, root, only-files-in-revs, include, exclude

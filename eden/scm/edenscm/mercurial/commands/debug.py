@@ -3150,6 +3150,17 @@ def debugupgraderepo(ui, repo, run=False, optimize=None):
     return upgrade.upgraderepo(ui, repo, run=run, optimize=optimize)
 
 
+@command("debugvisibleheads", cmdutil.templateopts)
+def debugvisibleheads(ui, repo, **opts):
+    """print visible heads"""
+    heads = repo.changelog._visibleheads.heads
+    fm = ui.formatter("debugvisibleheads", opts)
+    for head in heads:
+        fm.startitem()
+        fm.write("node desc", "%s %s\n", hex(head), repo[head].shortdescription())
+    fm.end()
+
+
 @command("debugwalk", cmdutil.walkopts, _("[OPTION]... [FILE]..."), inferrepo=True)
 def debugwalk(ui, repo, *pats, **opts):
     """show how files match on given patterns"""
