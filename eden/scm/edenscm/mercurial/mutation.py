@@ -182,6 +182,7 @@ def allpredecessors(repo, nodes, startdepth=None, stopdepth=None):
     thislevel = set(nodes)
     nextlevel = set()
     seen = {nullid}
+    ispublic = getispublicfunc(repo)
     while thislevel and (stopdepth is None or depth < stopdepth):
         for current in thislevel:
             if current in seen:
@@ -195,7 +196,7 @@ def allpredecessors(repo, nodes, startdepth=None, stopdepth=None):
                 pred = entry.preds()
             if pred is not None:
                 for nextnode in pred:
-                    if nextnode not in seen:
+                    if nextnode not in seen and not ispublic(nextnode):
                         nextlevel.add(nextnode)
         depth += 1
         thislevel = nextlevel
@@ -210,6 +211,7 @@ def allsuccessors(repo, nodes, startdepth=None, stopdepth=None):
     thislevel = set(nodes)
     nextlevel = set()
     seen = set()
+    ispublic = getispublicfunc(repo)
     while thislevel and (stopdepth is None or depth < stopdepth):
         for current in thislevel:
             if current in seen:
@@ -217,6 +219,8 @@ def allsuccessors(repo, nodes, startdepth=None, stopdepth=None):
             seen.add(current)
             if startdepth is None or depth >= startdepth:
                 yield current
+            if ispublic(current):
+                continue
             succsets = lookupsuccessors(repo, current)
             if succsets:
                 nextlevel = nextlevel.union(*succsets)
@@ -242,6 +246,9 @@ class obsoletecache(object):
         if node is None:
             return False
         if node not in repo:
+            return False
+        ispublic = getispublicfunc(repo)
+        if ispublic(node):
             return False
         obsolete = self.obsolete[repo.filtername]
         if node in obsolete:
@@ -339,8 +346,7 @@ def fate(repo, node):
     This returns a list of ([nodes], operation) pairs, indicating mutations that
     happened to this node that resulted in one or more visible commits.
     """
-    clrev = repo.changelog.rev
-    phase = repo._phasecache.phase
+    ispublic = getispublicfunc(repo)
     fate = []
     if isobsolete(repo, node):
         for succset in successorssets(repo, node, closest=True):
@@ -351,7 +357,7 @@ def fate(repo, node):
             else:
                 succ = succset[0]
                 # Base the default operation name on the successor's phase
-                if succ in repo and phase(repo, clrev(succ)) == phases.public:
+                if ispublic(succ):
                     op = "land"
                 else:
                     op = "rewrite"
@@ -377,6 +383,7 @@ def predecessorsset(repo, startnode, closest=False):
     the start node.
     """
     seen = {startnode}
+    ispublic = getispublicfunc(repo)
 
     def get(node):
         """Get immediate predecessors
@@ -391,7 +398,9 @@ def predecessorsset(repo, startnode, closest=False):
         if entry is not None:
             preds = entry.preds()
             if preds is not None:
-                return [pred for pred in preds if pred not in seen] or [node]
+                return [
+                    pred for pred in preds if pred not in seen and not ispublic(pred)
+                ] or [node]
         return [node]
 
     preds = [startnode]
@@ -480,6 +489,7 @@ def successorssets(repo, startnode, closest=False, cache=None):
     signature-compatible with ``obsutil.successorssets``.
     """
     seen = {startnode}
+    ispublic = getispublicfunc(repo)
 
     def getsets(node):
         """Get immediate successors sets
@@ -490,6 +500,8 @@ def successorssets(repo, startnode, closest=False, cache=None):
         If the node has no successors, returns a list containing a single
         successors set which contains the node itself.
         """
+        if ispublic(node):
+            return [[node]]
         succsets = [
             succset
             for succset in lookupsuccessors(repo, node)
@@ -826,3 +838,20 @@ def getisvisiblefunc(repo):
     else:
         # Use cl.hasnode to test
         return repo.changelog.hasnode
+
+
+def getispublicfunc(repo):
+    """get a (node) -> bool function to test whether a commit is public"""
+    nodemap = repo.changelog.nodemap
+    getphase = repo._phasecache.phase
+
+    def ispublic(
+        node, nodemap=nodemap, getphase=getphase, repo=repo, public=phases.public
+    ):
+        try:
+            rev = nodemap[node]
+        except error.RevlogError:
+            return False
+        return getphase(repo, rev) == public
+
+    return ispublic
