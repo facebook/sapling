@@ -524,7 +524,7 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
         start_time.elapsed().as_micros_unchecked(),
     );
 
-    let res = res.map_err(HttpError::e502)?;
+    let res = res.map_err(HttpError::e500)?;
     let body = serde_json::to_string(&res).map_err(HttpError::e500)?;
 
     Ok(BytesBody::new(body, git_lfs_mime()))

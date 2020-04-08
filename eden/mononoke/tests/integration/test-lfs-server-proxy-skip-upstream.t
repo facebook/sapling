@@ -62,12 +62,12 @@
 # Downloading a missing blob should however wait (we check that we took ~4 seconds for this)
 
   $ hg --config extensions.lfs= debuglfsreceive 0000000000000000000000000000000000000000000000000000000000000000 2048 "$lfs_proxy"
-  abort: LFS HTTP error: HTTP Error 502: Bad Gateway (action=download)!
+  abort: LFS HTTP error: HTTP Error 500: Internal Server Error (action=download)!
   [255]
 
   $ cat "$log_proxy"
   IN  > POST /lfs_repo/objects/batch -
-  OUT < POST /lfs_repo/objects/batch 502 Bad Gateway
+  OUT < POST /lfs_repo/objects/batch 500 Internal Server Error
 
   $ wait_for_json_record_count "$scuba_proxy" 1
   $ jq -S .normal.batch_order < "$scuba_proxy"

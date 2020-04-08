@@ -190,13 +190,6 @@ impl HttpError {
             status_code: StatusCode::INTERNAL_SERVER_ERROR,
         }
     }
-
-    pub fn e502<E: Into<Error>>(err: E) -> Self {
-        Self {
-            error: err.into(),
-            status_code: StatusCode::BAD_GATEWAY,
-        }
-    }
 }
 
 lazy_static! {
