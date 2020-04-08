@@ -278,9 +278,97 @@ pub fn open_blobrepo_given_datasources(
     })
 }
 
+/// A helper to build test repositories.
+pub struct TestRepoBuilder {
+    repo_id: RepositoryId,
+    blobstore: Arc<dyn Blobstore>,
+    redacted: Option<HashMap<String, String>>,
+}
+
+impl TestRepoBuilder {
+    pub fn new() -> Self {
+        Self {
+            repo_id: RepositoryId::new(0),
+            blobstore: Arc::new(EagerMemblob::new()),
+            redacted: None,
+        }
+    }
+
+    pub fn id(mut self, repo_id: RepositoryId) -> Self {
+        self.repo_id = repo_id;
+        self
+    }
+
+    pub fn redacted(mut self, redacted: Option<HashMap<String, String>>) -> Self {
+        self.redacted = redacted;
+        self
+    }
+
+    pub fn blobstore(mut self, blobstore: Arc<dyn Blobstore>) -> Self {
+        self.blobstore = blobstore;
+        self
+    }
+
+    fn maybe_blobstore(self, maybe_blobstore: Option<Arc<dyn Blobstore>>) -> Self {
+        if let Some(blobstore) = maybe_blobstore {
+            return self.blobstore(blobstore);
+        }
+        self
+    }
+
+    pub fn build(self) -> Result<BlobRepo> {
+        let Self {
+            repo_id,
+            blobstore,
+            redacted,
+        } = self;
+
+        let repo_blobstore_args = RepoBlobstoreArgs::new(
+            blobstore,
+            redacted,
+            repo_id,
+            ScubaSampleBuilder::with_discard(),
+        );
+
+        let phases_factory = SqlPhasesFactory::with_sqlite_in_memory()?;
+
+        Ok(BlobRepo::new(
+            Arc::new(SqlBookmarks::with_sqlite_in_memory()?),
+            repo_blobstore_args,
+            Arc::new(
+                NewFilenodesBuilder::with_sqlite_in_memory()
+                    .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?
+                    .build(),
+            ),
+            Arc::new(
+                SqlChangesets::with_sqlite_in_memory()
+                    .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?,
+            ),
+            Arc::new(
+                SqlBonsaiGitMappingConnection::with_sqlite_in_memory()
+                    .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))?
+                    .with_repo_id(repo_id),
+            ),
+            Arc::new(
+                SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()
+                    .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGlobalrevMapping))?,
+            ),
+            Arc::new(
+                SqlBonsaiHgMapping::with_sqlite_in_memory()
+                    .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?,
+            ),
+            Arc::new(InProcessLease::new()),
+            FilestoreConfig::default(),
+            phases_factory,
+            init_all_derived_data(),
+            "testrepo".to_string(),
+        ))
+    }
+}
+
 /// Used by tests
 pub fn new_memblob_empty(blobstore: Option<Arc<dyn Blobstore>>) -> Result<BlobRepo> {
-    new_memblob_empty_with_id(blobstore, RepositoryId::new(0))
+    TestRepoBuilder::new().maybe_blobstore(blobstore).build()
 }
 
 /// Used by cross-repo syncing tests
@@ -288,46 +376,10 @@ pub fn new_memblob_empty_with_id(
     blobstore: Option<Arc<dyn Blobstore>>,
     repo_id: RepositoryId,
 ) -> Result<BlobRepo> {
-    let repo_blobstore_args = RepoBlobstoreArgs::new(
-        blobstore.unwrap_or_else(|| Arc::new(EagerMemblob::new())),
-        None,
-        repo_id,
-        ScubaSampleBuilder::with_discard(),
-    );
-
-    let phases_factory = SqlPhasesFactory::with_sqlite_in_memory()?;
-
-    Ok(BlobRepo::new(
-        Arc::new(SqlBookmarks::with_sqlite_in_memory()?),
-        repo_blobstore_args,
-        Arc::new(
-            NewFilenodesBuilder::with_sqlite_in_memory()
-                .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?
-                .build(),
-        ),
-        Arc::new(
-            SqlChangesets::with_sqlite_in_memory()
-                .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?,
-        ),
-        Arc::new(
-            SqlBonsaiGitMappingConnection::with_sqlite_in_memory()
-                .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))?
-                .with_repo_id(repo_id),
-        ),
-        Arc::new(
-            SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()
-                .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGlobalrevMapping))?,
-        ),
-        Arc::new(
-            SqlBonsaiHgMapping::with_sqlite_in_memory()
-                .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?,
-        ),
-        Arc::new(InProcessLease::new()),
-        FilestoreConfig::default(),
-        phases_factory,
-        init_all_derived_data(),
-        "testrepo".to_string(),
-    ))
+    TestRepoBuilder::new()
+        .maybe_blobstore(blobstore)
+        .id(repo_id)
+        .build()
 }
 
 pub fn init_all_derived_data() -> DerivedDataConfig {
