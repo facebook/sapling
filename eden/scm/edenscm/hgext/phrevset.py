@@ -53,7 +53,7 @@ DESCRIPTION_REGEX = re.compile(
 )
 
 
-def getdiff(repo, diffid):
+def graphqlgetdiff(repo, diffid):
     """Resolves a phabricator Diff number to a commit hash of it's latest version """
     timeout = repo.ui.configint("ssl", "timeout", 10)
     ca_certs = repo.ui.configpath("web", "cacerts")
@@ -69,7 +69,7 @@ def getdiff(repo, diffid):
         )
 
 
-def finddiff(repo, diffid, querythread=None):
+def localgetdiff(repo, diffid, querythread=None):
     """Scans the changelog for commit lines mentioning the Differential ID
 
     If the optional querythread parameter is provided, it must be a threading.Thread
@@ -105,13 +105,13 @@ def forksearch(repo, diffid):
 
     repo.ui.debug("[diffrev] Starting graphql call\n")
     if repo.ui.configbool("phrevset", "graphqlonly"):
-        return getdiff(repo, diffid)
+        return (None, graphqlgetdiff(repo, diffid))
 
     result = [None, None]
 
     def makegraphqlcall():
         try:
-            result[0] = getdiff(repo, diffid)
+            result[0] = graphqlgetdiff(repo, diffid)
         except Exception as exc:
             result[1] = exc
 
@@ -121,7 +121,7 @@ def forksearch(repo, diffid):
 
     try:
         repo.ui.debug("[diffrev] Starting log walk\n")
-        rev = finddiff(repo, diffid, querythread)
+        rev = localgetdiff(repo, diffid, querythread)
 
         repo.ui.debug("[diffrev] Parallel log walk completed with %s\n" % rev)
 
@@ -181,7 +181,7 @@ def revsetdiff(repo, diffid):
         hint = _("This will be slow if the diff was not committed recently\n")
         repo.ui.warn(msg)
         repo.ui.warn(hint)
-        rev = finddiff(repo, diffid)
+        rev = localgetdiff(repo, diffid)
         if rev is None:
             raise error.Abort("Could not find diff D%s in changelog" % diffid)
         else:
@@ -212,7 +212,7 @@ def revsetdiff(repo, diffid):
         repo.ui.debug("[diffrev] HG rev is %s\n" % remoterev.encode("hex"))
         if not remoterev:
             repo.ui.debug("[diffrev] Falling back to linear search\n")
-            linear_search_result = finddiff(repo, diffid)
+            linear_search_result = localgetdiff(repo, diffid)
             if linear_search_result is None:
                 # walked the entire repo and couldn't find the diff
                 raise error.Abort("Could not find diff D%s in changelog" % diffid)
