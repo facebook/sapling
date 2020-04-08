@@ -27,15 +27,14 @@ use crate::{ChangesetHook, FileHook, Hook, HookChangeset, HookFile, HookManager}
 use anyhow::Error;
 use fbinit::FacebookInit;
 use metaconfig_types::RepoConfig;
-use std::collections::HashSet;
-use std::sync::Arc;
+use std::{collections::HashSet, sync::Arc};
 
 enum LoadedRustHook {
+    #[allow(dead_code)]
     ChangesetHook(Arc<dyn Hook<HookChangeset>>),
+    #[allow(dead_code)]
     FileHook(Arc<dyn Hook<HookFile>>),
-    #[allow(dead_code)]
     BonsaiChangesetHook(Box<dyn ChangesetHook>),
-    #[allow(dead_code)]
     BonsaiFileHook(Box<dyn FileHook>),
 }
 
@@ -65,34 +64,41 @@ pub fn load_hooks(
         };
 
         let rust_hook = match hook_name.as_ref() {
-            "always_fail_changeset" => ChangesetHook(Arc::new(AlwaysFailChangeset::new())),
-            "block_cross_repo_commits" => FileHook(Arc::new(BlockCrossRepoCommits::new())),
-            "block_empty_commit" => ChangesetHook(Arc::new(BlockEmptyCommit::new())),
-            "check_nocommit" => FileHook(Arc::new(CheckNocommitHook::new(&hook.config)?)),
-            "check_unittests" => ChangesetHook(Arc::new(CheckUnittestsHook::new(&hook.config)?)),
-            "conflict_markers" => FileHook(Arc::new(ConflictMarkers::new())),
-            "deny_files" => FileHook(Arc::new(DenyFiles::new()?)),
+            "always_fail_changeset" => BonsaiChangesetHook(Box::new(AlwaysFailChangeset::new())),
+            "block_cross_repo_commits" => BonsaiFileHook(Box::new(BlockCrossRepoCommits::new()?)),
+            "block_empty_commit" => BonsaiChangesetHook(Box::new(BlockEmptyCommit::new())),
+            "check_nocommit" => BonsaiFileHook(Box::new(CheckNocommitHook::new(&hook.config)?)),
+            "check_unittests" => {
+                BonsaiChangesetHook(Box::new(CheckUnittestsHook::new(&hook.config)?))
+            }
+            "conflict_markers" => BonsaiFileHook(Box::new(ConflictMarkers::new())),
+            "deny_files" => BonsaiFileHook(Box::new(DenyFiles::new()?)),
             "ensure_valid_email" => {
-                ChangesetHook(Arc::new(EnsureValidEmailHook::new(fb, &hook.config)?))
+                BonsaiChangesetHook(Box::new(EnsureValidEmailHook::new(fb, &hook.config)?))
             }
             "gitattributes-textdirectives" => {
-                FileHook(Arc::new(GitattributesTextDirectives::new()?))
+                BonsaiFileHook(Box::new(GitattributesTextDirectives::new()?))
             }
             "limit_commit_message_length" => {
-                ChangesetHook(Arc::new(LimitCommitMessageLength::new(&hook.config)?))
+                BonsaiChangesetHook(Box::new(LimitCommitMessageLength::new(&hook.config)?))
             }
-            "limit_commitsize" => ChangesetHook(Arc::new(LimitCommitsize::new(&hook.config))),
-            "limit_filesize" => FileHook(Arc::new(LimitFilesize::new(&hook.config))),
-            "limit_path_length" => FileHook(Arc::new(LimitPathLengthHook::new(&hook.config)?)),
+            "limit_commitsize" => BonsaiChangesetHook(Box::new(LimitCommitsize::new(&hook.config))),
+            "limit_filesize" => BonsaiFileHook(Box::new(LimitFilesize::new(&hook.config))),
+            "limit_path_length" => {
+                BonsaiFileHook(Box::new(LimitPathLengthHook::new(&hook.config)?))
+            }
             "no_bad_filenames" => FileHook(Arc::new(NoBadFilenames::new()?)),
-            "no_insecure_filenames" => FileHook(Arc::new(NoInsecureFilenames::new()?)),
+            "no_insecure_filenames" => BonsaiFileHook(Box::new(NoInsecureFilenames::new()?)),
             "no_questionable_filenames" => FileHook(Arc::new(NoQuestionableFilenames::new()?)),
-            "signed_source" => FileHook(Arc::new(SignedSourceHook::new(&hook.config)?)),
-            "tp2_symlinks_only" => FileHook(Arc::new(TP2SymlinksOnly::new())),
-            "verify_integrity" => ChangesetHook(Arc::new(VerifyIntegrityHook::new(&hook.config)?)),
-            "verify_reviewedby_info" => {
-                ChangesetHook(Arc::new(VerifyReviewedbyInfo::new(&hook.config)?))
+            "signed_source" => BonsaiFileHook(Box::new(SignedSourceHook::new(&hook.config)?)),
+            "tp2_symlinks_only" => BonsaiFileHook(Box::new(TP2SymlinksOnly::new()?)),
+            "verify_integrity" => {
+                BonsaiChangesetHook(Box::new(VerifyIntegrityHook::new(&hook.config)?))
             }
+            "verify_reviewedby_info" => BonsaiChangesetHook(Box::new(VerifyReviewedbyInfo::new(
+                &hook.config,
+                hook_manager.get_reviewers_acl_checker(),
+            )?)),
             _ => return Err(ErrorKind::InvalidRustHook(name.clone()).into()),
         };
 
