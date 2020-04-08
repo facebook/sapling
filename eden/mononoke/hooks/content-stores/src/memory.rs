@@ -5,15 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use crate::{ChangedFileType, ChangesetStore, FileContentStore};
+use crate::{ErrorKind, FileContentFetcher};
 use anyhow::Error;
+
 use async_trait::async_trait;
 use bytes::Bytes;
 use context::CoreContext;
 use mercurial_types::{blobs::HgBlobChangeset, FileBytes, HgChangesetId, HgFileNodeId, MPath};
+use mononoke_types::ContentId;
 use mononoke_types::FileType;
 use std::collections::HashMap;
-
-use crate::{ChangedFileType, ChangesetStore, ErrorKind, FileContentStore};
 
 pub struct InMemoryChangesetStore {
     map_files:
@@ -69,13 +71,13 @@ impl InMemoryChangesetStore {
 
 #[derive(Clone)]
 pub enum InMemoryFileText {
-    Present(FileBytes),
+    Present(Bytes),
     Elided(u64),
 }
 
 impl Into<InMemoryFileText> for Bytes {
     fn into(self) -> InMemoryFileText {
-        InMemoryFileText::Present(FileBytes(self))
+        InMemoryFileText::Present(self)
     }
 }
 
@@ -118,7 +120,7 @@ impl FileContentStore for InMemoryFileContentStore {
             .get(&id)
             .ok_or(Error::msg("file not found"))
             .map(|c| match c {
-                InMemoryFileText::Present(ref bytes) => Some(bytes.clone()),
+                InMemoryFileText::Present(ref bytes) => Some(FileBytes(bytes.clone())),
                 InMemoryFileText::Elided(_) => None,
             })
     }
@@ -132,7 +134,7 @@ impl FileContentStore for InMemoryFileContentStore {
             .get(&id)
             .ok_or(Error::msg("file not found"))
             .map(|c| match c {
-                InMemoryFileText::Present(ref bytes) => bytes.size() as u64,
+                InMemoryFileText::Present(ref bytes) => bytes.len() as u64,
                 InMemoryFileText::Elided(size) => *size,
             })
     }
@@ -155,5 +157,53 @@ impl InMemoryFileContentStore {
     ) {
         self.id_to_text.insert(key, text.into());
         self.path_to_filenode.insert((cs_id, path), key);
+    }
+}
+
+#[derive(Clone)]
+pub struct InMemoryFileContentFetcher {
+    id_to_text: HashMap<ContentId, InMemoryFileText>,
+}
+
+#[async_trait]
+impl FileContentFetcher for InMemoryFileContentFetcher {
+    async fn get_file_size<'a, 'b: 'a>(
+        &'a self,
+        _ctx: &'b CoreContext,
+        id: ContentId,
+    ) -> Result<u64, ErrorKind> {
+        self.id_to_text
+            .get(&id)
+            .ok_or(ErrorKind::ContentIdNotFound(id))
+            .map(|maybe_bytes| match maybe_bytes {
+                InMemoryFileText::Present(bytes) => bytes.len() as u64,
+                InMemoryFileText::Elided(size) => *size,
+            })
+    }
+
+    async fn get_file_text<'a, 'b: 'a>(
+        &'a self,
+        _ctx: &'b CoreContext,
+        id: ContentId,
+    ) -> Result<Option<Bytes>, ErrorKind> {
+        self.id_to_text
+            .get(&id)
+            .ok_or(ErrorKind::ContentIdNotFound(id))
+            .map(|maybe_bytes| match maybe_bytes {
+                InMemoryFileText::Present(bytes) => Some(bytes.clone()),
+                InMemoryFileText::Elided(_) => None,
+            })
+    }
+}
+
+impl InMemoryFileContentFetcher {
+    pub fn new() -> InMemoryFileContentFetcher {
+        InMemoryFileContentFetcher {
+            id_to_text: HashMap::new(),
+        }
+    }
+
+    pub fn insert(&mut self, key: ContentId, text: impl Into<InMemoryFileText>) {
+        self.id_to_text.insert(key, text.into());
     }
 }

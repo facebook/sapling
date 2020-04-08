@@ -5,10 +5,15 @@
  * GNU General Public License version 2.
  */
 
+use crate::ErrorKind;
+
 use anyhow::Error;
+
 use async_trait::async_trait;
+use bytes::Bytes;
 use context::CoreContext;
 use mercurial_types::{blobs::HgBlobChangeset, FileBytes, HgChangesetId, HgFileNodeId, MPath};
+use mononoke_types::ContentId;
 use mononoke_types::FileType;
 
 #[derive(Clone, PartialEq, Eq)]
@@ -16,6 +21,21 @@ pub enum ChangedFileType {
     Added,
     Deleted,
     Modified,
+}
+
+#[async_trait]
+pub trait FileContentFetcher: Send + Sync {
+    async fn get_file_size<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
+        id: ContentId,
+    ) -> Result<u64, ErrorKind>;
+
+    async fn get_file_text<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
+        id: ContentId,
+    ) -> Result<Option<Bytes>, ErrorKind>;
 }
 
 #[async_trait]

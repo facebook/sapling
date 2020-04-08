@@ -27,7 +27,9 @@ use context::CoreContext;
 use cross_repo_sync::create_commit_syncers;
 use fbinit::FacebookInit;
 use hooks::{hook_loader::load_hooks, HookManager};
-use hooks_content_stores::{blobrepo_text_only_store, BlobRepoChangesetStore};
+use hooks_content_stores::{
+    blobrepo_text_only_fetcher, blobrepo_text_only_store, BlobRepoChangesetStore,
+};
 use metaconfig_types::{
     CommitSyncConfig, MetadataDatabaseConfig, RepoConfig, WireprotoLoggingConfig,
 };
@@ -288,6 +290,7 @@ pub fn repo_handlers(
                     ctx.fb,
                     Box::new(BlobRepoChangesetStore::new(blobrepo.clone())),
                     blobrepo_text_only_store(blobrepo.clone(), hook_max_file_size),
+                    blobrepo_text_only_fetcher(blobrepo.clone(), hook_max_file_size),
                     hook_manager_params.unwrap_or_default(),
                     hooks_scuba,
                 );

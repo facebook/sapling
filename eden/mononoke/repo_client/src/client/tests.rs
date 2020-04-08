@@ -12,7 +12,9 @@ use fbinit::FacebookInit;
 use fixtures::many_files_dirs;
 use futures::compat::Future01CompatExt;
 use hooks::HookManager;
-use hooks_content_stores::{InMemoryChangesetStore, InMemoryFileContentStore};
+use hooks_content_stores::{
+    InMemoryChangesetStore, InMemoryFileContentFetcher, InMemoryFileContentStore,
+};
 use manifest::{Entry, ManifestOps};
 use maplit::hashset;
 use mercurial_types::HgFileNodeId;
@@ -481,6 +483,7 @@ async fn run_and_check_if_lfs(
             ctx.fb,
             Box::new(InMemoryChangesetStore::new()),
             Arc::new(InMemoryFileContentStore::new()),
+            Box::new(InMemoryFileContentFetcher::new()),
             HookManagerParams {
                 disable_acl_checker: true,
             },

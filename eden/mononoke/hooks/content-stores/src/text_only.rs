@@ -5,13 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use crate::FileContentStore;
+use crate::{ErrorKind, FileContentFetcher};
+
 use anyhow::Error;
+
 use async_trait::async_trait;
+use bytes::Bytes;
 use context::CoreContext;
 use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, MPath};
+use mononoke_types::ContentId;
 use std::sync::Arc;
-
-use crate::FileContentStore;
 
 const NULL: u8 = 0;
 
@@ -28,7 +32,6 @@ impl<T> TextOnlyFileContentStore<T> {
         }
     }
 }
-
 #[async_trait]
 impl<T: FileContentStore + 'static> FileContentStore for TextOnlyFileContentStore<T> {
     async fn resolve_path<'a, 'b: 'a>(
@@ -40,8 +43,6 @@ impl<T: FileContentStore + 'static> FileContentStore for TextOnlyFileContentStor
         self.inner.resolve_path(ctx, changeset_id, path).await
     }
 
-    /// Override the inner store's get_file_text by filtering out files that are to large or
-    /// contain null bytes (those are assumed to be binary).
     async fn get_file_text<'a, 'b: 'a>(
         &'a self,
         ctx: &'b CoreContext,
@@ -54,7 +55,7 @@ impl<T: FileContentStore + 'static> FileContentStore for TextOnlyFileContentStor
 
         let file_bytes = self.inner.get_file_text(ctx, id).await?;
         Ok(match file_bytes {
-            Some(ref file_bytes) if looks_like_binary(file_bytes) => None,
+            Some(ref file_bytes) if looks_like_binary(file_bytes.as_bytes()) => None,
             _ => file_bytes,
         })
     }
@@ -68,16 +69,65 @@ impl<T: FileContentStore + 'static> FileContentStore for TextOnlyFileContentStor
     }
 }
 
-fn looks_like_binary(file_bytes: &FileBytes) -> bool {
-    file_bytes.as_bytes().as_ref().contains(&NULL)
+pub struct TextOnlyFileContentFetcher<T> {
+    inner: Arc<T>,
+    max_size: u64,
+}
+
+impl<T> TextOnlyFileContentFetcher<T> {
+    pub fn new(inner: T, max_size: u64) -> Self {
+        Self {
+            inner: Arc::new(inner),
+            max_size,
+        }
+    }
+}
+
+#[async_trait]
+impl<T: FileContentFetcher + 'static> FileContentFetcher for TextOnlyFileContentFetcher<T> {
+    async fn get_file_size<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
+        id: ContentId,
+    ) -> Result<u64, ErrorKind> {
+        self.inner.get_file_size(ctx, id).await
+    }
+
+    /// Override the inner store's get_file_text by filtering out files that are to large or
+    /// contain null bytes (those are assumed to be binary).
+    async fn get_file_text<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
+        id: ContentId,
+    ) -> Result<Option<Bytes>, ErrorKind> {
+        // Don't fetch content if we know the object is too large
+        let size = self.get_file_size(ctx, id).await?;
+        if size > self.max_size {
+            return Ok(None);
+        }
+
+        let file_bytes = self.inner.get_file_text(ctx, id).await?;
+
+        Ok(file_bytes.and_then(|bytes| {
+            if looks_like_binary(&bytes) {
+                None
+            } else {
+                Some(bytes)
+            }
+        }))
+    }
+}
+
+fn looks_like_binary(file_bytes: &[u8]) -> bool {
+    file_bytes.contains(&NULL)
 }
 
 #[cfg(test)]
 mod test {
     use super::*;
-    use crate::InMemoryFileContentStore;
+    use crate::InMemoryFileContentFetcher;
     use fbinit::FacebookInit;
-    use mercurial_types_mocks::nodehash::{ONES_CSID, TWOS_FNID};
+    use mononoke_types_mocks::contentid::ONES_CTID;
     use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
@@ -85,14 +135,18 @@ mod test {
         let mut rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
-        let mut inner = InMemoryFileContentStore::new();
-        inner.insert(ONES_CSID, MPath::new("f1").unwrap(), TWOS_FNID, "foobar");
+        let mut inner = InMemoryFileContentFetcher::new();
+        inner.insert(ONES_CTID, "foobar");
 
-        let store = TextOnlyFileContentStore::new(inner, 10);
+        let store = TextOnlyFileContentFetcher::new(inner, 10);
         let ret = rt
-            .block_on_std(store.get_file_text(&ctx, TWOS_FNID))
+            .block_on_std(store.get_file_text(&ctx, ONES_CTID))
             .unwrap();
-        assert_eq!(ret, Some(FileBytes("foobar".into())));
+        assert_eq!(ret, Some("foobar".into()));
+        let ret = rt
+            .block_on_std(store.get_file_size(&ctx, ONES_CTID))
+            .unwrap();
+        assert_eq!(ret, 6);
     }
 
     #[fbinit::test]
@@ -100,14 +154,19 @@ mod test {
         let mut rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
-        let mut inner = InMemoryFileContentStore::new();
-        inner.insert(ONES_CSID, MPath::new("f1").unwrap(), TWOS_FNID, "foobar");
+        let mut inner = InMemoryFileContentFetcher::new();
+        inner.insert(ONES_CTID, "foobar");
 
-        let store = TextOnlyFileContentStore::new(inner, 2);
+        let store = TextOnlyFileContentFetcher::new(inner, 2);
         let ret = rt
-            .block_on_std(store.get_file_text(&ctx, TWOS_FNID))
+            .block_on_std(store.get_file_text(&ctx, ONES_CTID))
             .unwrap();
         assert_eq!(ret, None);
+
+        let ret = rt
+            .block_on_std(store.get_file_size(&ctx, ONES_CTID))
+            .unwrap();
+        assert_eq!(ret, 6);
     }
 
     #[fbinit::test]
@@ -115,13 +174,17 @@ mod test {
         let mut rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
-        let mut inner = InMemoryFileContentStore::new();
-        inner.insert(ONES_CSID, MPath::new("f1").unwrap(), TWOS_FNID, "foo\0");
+        let mut inner = InMemoryFileContentFetcher::new();
+        inner.insert(ONES_CTID, "foo\0");
 
-        let store = TextOnlyFileContentStore::new(inner, 10);
+        let store = TextOnlyFileContentFetcher::new(inner, 10);
         let ret = rt
-            .block_on_std(store.get_file_text(&ctx, TWOS_FNID))
+            .block_on_std(store.get_file_text(&ctx, ONES_CTID))
             .unwrap();
         assert_eq!(ret, None);
+        let ret = rt
+            .block_on_std(store.get_file_size(&ctx, ONES_CTID))
+            .unwrap();
+        assert_eq!(ret, 4);
     }
 }

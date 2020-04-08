@@ -7,8 +7,22 @@
 
 use thiserror::Error;
 
+use mononoke_types::ContentId;
+
 #[derive(Debug, Error)]
 pub enum ErrorKind {
     #[error("No changeset with id '{0}'")]
     NoSuchChangeset(String),
+    #[error("Content with id '{0}' not found")]
+    ContentIdNotFound(ContentId),
+    #[error(transparent)]
+    BackingStore(#[from] anyhow::Error),
+    #[error("Content too large to fit in memory")]
+    ContentTooLarge,
+}
+
+impl From<std::num::TryFromIntError> for ErrorKind {
+    fn from(_: std::num::TryFromIntError) -> Self {
+        Self::ContentTooLarge
+    }
 }

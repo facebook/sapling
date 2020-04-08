@@ -18,7 +18,6 @@ pub mod errors;
 mod facebook;
 pub mod hook_loader;
 mod phabricator_message_parser;
-pub mod rust_hook;
 
 use aclchecker::{AclChecker, Identity};
 use anyhow::{bail, Error};
@@ -35,15 +34,16 @@ use futures::{
     Future, TryFutureExt,
 };
 use futures_stats::TimedFutureExt;
+use hooks_content_stores::FileContentFetcher;
 use hooks_content_stores::{ChangedFileType, ChangesetStore, FileContentStore};
-use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgParents, MPath};
+use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, HgParents};
 use metaconfig_types::{BookmarkOrRegex, HookBypass, HookConfig, HookManagerParams};
-use mononoke_types::FileType;
+use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, FileType, MPath};
 use regex::Regex;
 use scuba::builder::ServerData;
 use scuba_ext::ScubaSampleBuilder;
 use slog::debug;
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 use std::fmt;
 use std::hash::{Hash, Hasher};
 use std::str;
@@ -58,10 +58,12 @@ type FileHooks = HashMap<String, (Arc<dyn Hook<HookFile>>, HookConfig)>;
 pub struct HookManager {
     changeset_hooks: ChangesetHooks,
     file_hooks: FileHooks,
+    hooks: HashMap<String, BonsaiHook>,
     bookmark_hooks: HashMap<BookmarkName, Vec<String>>,
     regex_hooks: Vec<(Regex, Vec<String>)>,
     changeset_store: Box<dyn ChangesetStore>,
     content_store: Arc<dyn FileContentStore>,
+    content_fetcher: Box<dyn FileContentFetcher>,
     reviewers_acl_checker: Arc<Option<AclChecker>>,
     scuba: ScubaSampleBuilder,
 }
@@ -71,11 +73,13 @@ impl HookManager {
         fb: FacebookInit,
         changeset_store: Box<dyn ChangesetStore>,
         content_store: Arc<dyn FileContentStore>,
+        content_fetcher: Box<dyn FileContentFetcher>,
         hook_manager_params: HookManagerParams,
         mut scuba: ScubaSampleBuilder,
     ) -> HookManager {
         let changeset_hooks = HashMap::new();
         let file_hooks = HashMap::new();
+        let hooks = HashMap::new();
 
         scuba
             .add("driver", "mononoke")
@@ -105,10 +109,12 @@ impl HookManager {
         HookManager {
             changeset_hooks,
             file_hooks,
+            hooks,
             bookmark_hooks: HashMap::new(),
             regex_hooks: Vec::new(),
             changeset_store,
             content_store,
+            content_fetcher,
             reviewers_acl_checker: Arc::new(reviewers_acl_checker),
             scuba,
         }
@@ -134,6 +140,28 @@ impl HookManager {
             .insert(hook_name.to_string(), (hook, config));
     }
 
+    pub fn register_changeset_hook_new(
+        &mut self,
+        hook_name: &str,
+        hook: Box<dyn ChangesetHook>,
+        config: HookConfig,
+    ) {
+        self.hooks.insert(
+            hook_name.to_string(),
+            BonsaiHook::from_changeset(hook, config),
+        );
+    }
+
+    pub fn register_file_hook_new(
+        &mut self,
+        hook_name: &str,
+        hook: Box<dyn FileHook>,
+        config: HookConfig,
+    ) {
+        self.hooks
+            .insert(hook_name.to_string(), BonsaiHook::from_file(hook, config));
+    }
+
     pub fn set_hooks_for_bookmark(&mut self, bookmark: BookmarkOrRegex, hooks: Vec<String>) {
         match bookmark {
             BookmarkOrRegex::Bookmark(bookmark) => {
@@ -145,21 +173,13 @@ impl HookManager {
         }
     }
 
-    pub fn changeset_hook_names(&self) -> HashSet<String> {
-        self.changeset_hooks
-            .iter()
-            .map(|(name, _)| name.clone())
-            .collect()
+    // Temporary as hooks will need it later
+    #[allow(dead_code)]
+    pub(crate) fn get_reviewers_acl_checker(&self) -> Arc<Option<AclChecker>> {
+        self.reviewers_acl_checker.clone()
     }
 
-    pub fn file_hook_names(&self) -> HashSet<String> {
-        self.file_hooks
-            .iter()
-            .map(|(name, _)| name.clone())
-            .collect()
-    }
-
-    fn hooks_for_bookmark(&self, bookmark: &BookmarkName) -> Vec<String> {
+    fn hooks_for_bookmark_old(&self, bookmark: &BookmarkName) -> Vec<String> {
         let mut hooks: Vec<_> = match self.bookmark_hooks.get(bookmark) {
             Some(hooks) => hooks.clone().into_iter().collect(),
             None => Vec::new(),
@@ -176,17 +196,39 @@ impl HookManager {
     }
 
     fn file_hooks_for_bookmark(&self, bookmark: &BookmarkName) -> Vec<String> {
-        self.hooks_for_bookmark(bookmark)
+        self.hooks_for_bookmark_old(bookmark)
             .into_iter()
             .filter(|name| self.file_hooks.contains_key(name))
             .collect()
     }
 
     fn changeset_hooks_for_bookmark(&self, bookmark: &BookmarkName) -> Vec<String> {
-        self.hooks_for_bookmark(bookmark)
+        self.hooks_for_bookmark_old(bookmark)
             .into_iter()
             .filter(|name| self.changeset_hooks.contains_key(name))
             .collect()
+    }
+
+    fn hooks_for_bookmark<'a>(
+        &'a self,
+        bookmark: &BookmarkName,
+    ) -> impl Iterator<Item = &'a str> + Clone {
+        let mut hooks: Vec<&'a str> = match self.bookmark_hooks.get(bookmark) {
+            Some(hooks) => hooks.iter().map(|a| a.as_str()).collect(),
+            None => Vec::new(),
+        };
+
+        let bookmark_str = bookmark.to_string();
+        for (regex, r_hooks) in &self.regex_hooks {
+            if regex.is_match(&bookmark_str) {
+                hooks.extend(r_hooks.iter().map(|a| a.as_str()));
+            }
+        }
+
+        cloned!(self.file_hooks, self.changeset_hooks);
+        hooks.into_iter().filter(move |hook| {
+            !(file_hooks.contains_key(*hook) || changeset_hooks.contains_key(*hook))
+        })
     }
 
     pub async fn run_hooks_for_bookmark(
@@ -379,12 +421,14 @@ impl HookManager {
             HookManager::run_hook(ctx, hook, hook_context, scuba).map_ok({
                 cloned!(file, bookmark);
                 move |(hook_name, exec)| {
+                    let path = MPath::new(&file.path).expect("Path did not roundtrip via String");
                     HookOutcome::FileHook(
                         FileHookExecutionID {
                             cs_id,
                             hook_name,
                             file,
                             bookmark,
+                            path,
                         },
                         exec,
                     )
@@ -413,7 +457,6 @@ impl HookManager {
         if let Some(user) = user_option {
             scuba.add("user", user);
         }
-
         scuba.add("hook", hook_name.clone());
 
         let (stats, result) = hook.run(ctx, hook_context).timed().await;
@@ -484,43 +527,86 @@ impl HookManager {
             .clone()
             .into_iter()
             .filter_map(|(hook_name, (hook, config))| {
-                let maybe_bypassed_hook = match config.bypass {
-                    Some(ref bypass) => {
-                        if HookManager::is_hook_bypassed(bypass, commit_msg, maybe_pushvars) {
-                            None
-                        } else {
-                            Some(())
-                        }
-                    }
-                    None => Some(()),
-                };
-                maybe_bypassed_hook.map(move |()| (hook_name, hook, config))
+                if is_hook_bypassed(config.bypass.as_ref(), commit_msg, maybe_pushvars) {
+                    None
+                } else {
+                    Some((hook_name, hook, config))
+                }
             })
             .collect()
     }
 
-    fn is_hook_bypassed(
-        bypass: &HookBypass,
-        cs_msg: &String,
+    pub async fn run_hooks_for_bookmark_bonsai(
+        &self,
+        ctx: &CoreContext,
+        changesets: impl Iterator<Item = &BonsaiChangeset> + Clone + itertools::Itertools,
+        bookmark: &BookmarkName,
         maybe_pushvars: Option<&HashMap<String, Bytes>>,
-    ) -> bool {
-        match bypass {
-            HookBypass::CommitMessage(bypass_string) => cs_msg.contains(bypass_string),
-            HookBypass::Pushvar { name, value } => {
-                if let Some(pushvars) = maybe_pushvars {
-                    let pushvar_val = pushvars
-                        .get(name)
-                        .map(|bytes| String::from_utf8(bytes.to_vec()));
+    ) -> Result<Vec<HookOutcome>, Error> {
+        debug!(ctx.logger(), "Running hooks for bookmark {:?}", bookmark);
 
-                    if let Some(Ok(pushvar_val)) = pushvar_val {
-                        return &pushvar_val == value;
-                    }
-                    return false;
+        let hooks = self.hooks_for_bookmark(bookmark);
+
+        let futs = FuturesUnordered::new();
+
+        let mut scuba = self.scuba.clone();
+        let user_option = ctx
+            .source_hostname()
+            .as_ref()
+            .or_else(|| ctx.user_unix_name().as_ref())
+            .map(|s| s.as_str());
+
+        if let Some(user) = user_option {
+            scuba.add("user", user);
+        }
+
+        for (cs, hook_name) in changesets.cartesian_product(hooks) {
+            let hook = self
+                .hooks
+                .get(hook_name)
+                .ok_or_else(|| ErrorKind::NoSuchHook(hook_name.to_string()))?;
+            if is_hook_bypassed(
+                hook.get_config().bypass.as_ref(),
+                cs.message(),
+                maybe_pushvars,
+            ) {
+                continue;
+            }
+
+            let mut scuba = scuba.clone();
+            scuba.add("hook", hook_name.to_string());
+
+            for future in
+                hook.get_futures(ctx, bookmark, &*self.content_fetcher, hook_name, cs, scuba)
+            {
+                futs.push(future);
+            }
+        }
+        futs.try_collect().await
+    }
+}
+
+fn is_hook_bypassed(
+    bypass: Option<&HookBypass>,
+    cs_msg: &str,
+    maybe_pushvars: Option<&HashMap<String, Bytes>>,
+) -> bool {
+    bypass.map_or(false, move |bypass| match bypass {
+        HookBypass::CommitMessage(bypass_string) => cs_msg.contains(bypass_string),
+        HookBypass::Pushvar { name, value } => {
+            if let Some(pushvars) = maybe_pushvars {
+                let pushvar_val = pushvars
+                    .get(name)
+                    .map(|bytes| String::from_utf8(bytes.to_vec()));
+
+                if let Some(Ok(pushvar_val)) = pushvar_val {
+                    return &pushvar_val == value;
                 }
                 return false;
             }
+            false
         }
-    }
+    })
 }
 
 #[async_trait]
@@ -682,8 +768,150 @@ impl HookChangeset {
     }
 }
 
+enum BonsaiHook {
+    Changeset(Box<dyn ChangesetHook>, HookConfig),
+    File(Box<dyn FileHook>, HookConfig),
+}
+
+enum BonsaiHookInstance<'a> {
+    Changeset(&'a dyn ChangesetHook),
+    File(&'a dyn FileHook, &'a MPath, Option<&'a FileChange>),
+}
+
+impl<'a> BonsaiHookInstance<'a> {
+    async fn run(
+        self,
+        ctx: &CoreContext,
+        bookmark: &BookmarkName,
+        content_fetcher: &dyn FileContentFetcher,
+        hook_name: &str,
+        mut scuba: ScubaSampleBuilder,
+        cs: &BonsaiChangeset,
+    ) -> Result<HookOutcome, Error> {
+        let (stats, result) = match self {
+            Self::Changeset(hook) => {
+                hook.run(ctx, bookmark, cs, content_fetcher)
+                    .map_ok(|exec| {
+                        HookOutcome::BonsaiChangesetHook(
+                            BonsaiChangesetHookExecutionID {
+                                cs_id: cs.get_changeset_id(),
+                                hook_name: hook_name.to_string(),
+                            },
+                            exec,
+                        )
+                    })
+                    .timed()
+                    .await
+            }
+            Self::File(hook, path, change) => {
+                hook.run(ctx, content_fetcher, change, path)
+                    .map_ok(|exec| {
+                        HookOutcome::BonsaiFileHook(
+                            BonsaiFileHookExecutionID {
+                                cs_id: cs.get_changeset_id(),
+                                path: path.clone(),
+                                hook_name: hook_name.to_string(),
+                            },
+                            exec,
+                        )
+                    })
+                    .timed()
+                    .await
+            }
+        };
+
+        if let Err(e) = result.as_ref() {
+            scuba.add("stderr", e.to_string());
+        }
+
+        let elapsed = stats.completion_time.as_millis() as i64;
+        scuba
+            .add("elapsed", elapsed)
+            .add("total_time", elapsed)
+            .add("errorcode", result.is_err() as i32)
+            .add("failed_hooks", result.is_err() as i32)
+            .log();
+
+        result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
+    }
+}
+
+impl BonsaiHook {
+    pub fn from_changeset(hook: Box<dyn ChangesetHook>, config: HookConfig) -> Self {
+        Self::Changeset(hook, config)
+    }
+
+    pub fn from_file(hook: Box<dyn FileHook>, config: HookConfig) -> Self {
+        Self::File(hook, config)
+    }
+
+    pub fn get_config(&self) -> &HookConfig {
+        match self {
+            Self::Changeset(_, config) => config,
+            Self::File(_, config) => config,
+        }
+    }
+
+    pub fn get_futures<'a: 'cs, 'cs>(
+        &'a self,
+        ctx: &'a CoreContext,
+        bookmark: &'a BookmarkName,
+        content_fetcher: &'a dyn FileContentFetcher,
+        hook_name: &'cs str,
+        cs: &'cs BonsaiChangeset,
+        scuba: ScubaSampleBuilder,
+    ) -> impl Iterator<Item = impl Future<Output = Result<HookOutcome, Error>> + 'cs> + 'cs {
+        let mut futures = Vec::new();
+        match self {
+            Self::Changeset(hook, _) => futures.push(BonsaiHookInstance::Changeset(&**hook).run(
+                ctx,
+                bookmark,
+                content_fetcher,
+                &hook_name,
+                scuba,
+                cs,
+            )),
+            Self::File(hook, _) => futures.extend(cs.file_changes().map(move |(path, change)| {
+                BonsaiHookInstance::File(&**hook, path, change).run(
+                    ctx,
+                    bookmark,
+                    content_fetcher,
+                    &hook_name,
+                    scuba.clone(),
+                    cs,
+                )
+            })),
+        };
+        futures.into_iter()
+    }
+}
+
+#[async_trait]
+pub trait ChangesetHook: Send + Sync {
+    async fn run<'this: 'cs, 'ctx: 'this, 'cs, 'fetcher: 'cs>(
+        &'this self,
+        ctx: &'ctx CoreContext,
+        bookmark: &BookmarkName,
+        changeset: &'cs BonsaiChangeset,
+        content_fetcher: &'fetcher dyn FileContentFetcher,
+    ) -> Result<HookExecution, Error>;
+}
+
+#[async_trait]
+pub trait FileHook: Send + Sync {
+    async fn run<'this: 'change, 'ctx: 'this, 'change, 'fetcher: 'change, 'path: 'change>(
+        &'this self,
+        ctx: &'ctx CoreContext,
+        content_fetcher: &'fetcher dyn FileContentFetcher,
+        change: Option<&'change FileChange>,
+        path: &'path MPath,
+    ) -> Result<HookExecution, Error>;
+}
+
 #[derive(Clone, Debug, PartialEq)]
 pub enum HookOutcome {
+    BonsaiChangesetHook(BonsaiChangesetHookExecutionID, HookExecution),
+    BonsaiFileHook(BonsaiFileHookExecutionID, HookExecution),
     ChangesetHook(ChangesetHookExecutionID, HookExecution),
     FileHook(FileHookExecutionID, HookExecution),
 }
@@ -691,6 +919,14 @@ pub enum HookOutcome {
 impl fmt::Display for HookOutcome {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            HookOutcome::BonsaiChangesetHook(id, exec) => {
+                write!(f, "{} for {}: {}", id.hook_name, id.cs_id, exec)
+            }
+            HookOutcome::BonsaiFileHook(id, exec) => write!(
+                f,
+                "{} for {} file {}: {}",
+                id.hook_name, id.cs_id, id.path, exec
+            ),
             HookOutcome::ChangesetHook(id, exec) => {
                 write!(f, "{} for {}: {}", id.hook_name, id.cs_id, exec)
             }
@@ -705,27 +941,31 @@ impl fmt::Display for HookOutcome {
 
 impl HookOutcome {
     pub fn is_rejection(&self) -> bool {
-        let exec = match self {
-            HookOutcome::ChangesetHook(_, exec) => exec,
-            HookOutcome::FileHook(_, exec) => exec,
-        };
-        match exec {
+        match self.get_execution() {
             HookExecution::Accepted => false,
             HookExecution::Rejected(_) => true,
         }
+    }
+
+    pub fn is_accept(&self) -> bool {
+        !self.is_rejection()
     }
 
     pub fn get_hook_name(&self) -> &str {
         match self {
             HookOutcome::ChangesetHook(id, _) => &id.hook_name,
             HookOutcome::FileHook(id, _) => &id.hook_name,
+            HookOutcome::BonsaiChangesetHook(id, _) => &id.hook_name,
+            HookOutcome::BonsaiFileHook(id, _) => &id.hook_name,
         }
     }
 
-    pub fn get_file_path(&self) -> Option<&str> {
+    pub fn get_file_path(&self) -> Option<&MPath> {
         match self {
             HookOutcome::ChangesetHook(..) => None,
-            HookOutcome::FileHook(id, _) => Some(&id.file.path),
+            HookOutcome::FileHook(id, _) => Some(&id.path),
+            HookOutcome::BonsaiChangesetHook(..) => None,
+            HookOutcome::BonsaiFileHook(id, _) => Some(&id.path),
         }
     }
 
@@ -733,6 +973,15 @@ impl HookOutcome {
         match self {
             HookOutcome::ChangesetHook(id, _) => id.cs_id,
             HookOutcome::FileHook(id, _) => id.cs_id,
+            _ => panic!("Can't get Mercurial ID from Bonsai hook run"),
+        }
+    }
+
+    pub fn get_changeset_id(&self) -> ChangesetId {
+        match self {
+            HookOutcome::BonsaiChangesetHook(id, _) => id.cs_id,
+            HookOutcome::BonsaiFileHook(id, _) => id.cs_id,
+            _ => panic!("Can't get bonsai ID from Mercurial hook run"),
         }
     }
 
@@ -740,6 +989,8 @@ impl HookOutcome {
         match self {
             HookOutcome::ChangesetHook(_, exec) => exec,
             HookOutcome::FileHook(_, exec) => exec,
+            HookOutcome::BonsaiChangesetHook(_, exec) => exec,
+            HookOutcome::BonsaiFileHook(_, exec) => exec,
         }
     }
 }
@@ -755,6 +1006,8 @@ impl From<HookOutcome> for HookExecution {
         match outcome {
             HookOutcome::ChangesetHook(_, r) => r,
             HookOutcome::FileHook(_, r) => r,
+            HookOutcome::BonsaiChangesetHook(_, r) => r,
+            HookOutcome::BonsaiFileHook(_, r) => r,
         }
     }
 }
@@ -800,11 +1053,25 @@ impl HookRejectionInfo {
 }
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]
+pub struct BonsaiFileHookExecutionID {
+    pub cs_id: ChangesetId,
+    pub hook_name: String,
+    pub path: MPath,
+}
+
+#[derive(Clone, Debug, PartialEq, Hash, Eq)]
+pub struct BonsaiChangesetHookExecutionID {
+    pub cs_id: ChangesetId,
+    pub hook_name: String,
+}
+
+#[derive(Clone, Debug, PartialEq, Hash, Eq)]
 pub struct FileHookExecutionID {
     pub cs_id: HgChangesetId,
     pub hook_name: String,
     pub file: HookFile,
     pub bookmark: BookmarkName,
+    pub path: MPath,
 }
 
 #[derive(Clone, Debug, PartialEq, Hash, Eq)]

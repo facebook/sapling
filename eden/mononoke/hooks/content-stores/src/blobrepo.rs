@@ -9,6 +9,7 @@ use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
+use bytes::Bytes;
 use context::CoreContext;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
@@ -17,9 +18,10 @@ use futures::{
 };
 use manifest::{Diff, Entry, ManifestOps};
 use mercurial_types::{blobs::HgBlobChangeset, FileBytes, HgChangesetId, HgFileNodeId, MPath};
+use mononoke_types::ContentId;
 use mononoke_types::FileType;
 
-use crate::{ChangedFileType, ChangesetStore, FileContentStore};
+use crate::{ChangedFileType, ChangesetStore, ErrorKind, FileContentFetcher, FileContentStore};
 
 // TODO this can cache file content locally to prevent unnecessary lookup of changeset,
 // manifest and walk of manifest each time
@@ -169,5 +171,44 @@ impl ChangesetStore for BlobRepoChangesetStore {
 impl BlobRepoChangesetStore {
     pub fn new(repo: BlobRepo) -> BlobRepoChangesetStore {
         BlobRepoChangesetStore { repo }
+    }
+}
+
+pub struct BlobRepoFileContentFetcher {
+    pub repo: BlobRepo,
+}
+
+#[async_trait]
+impl FileContentFetcher for BlobRepoFileContentFetcher {
+    async fn get_file_size<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
+        id: ContentId,
+    ) -> Result<u64, ErrorKind> {
+        let store = self.repo.get_blobstore();
+        Ok(filestore::get_metadata(&store, ctx.clone(), &id.into())
+            .compat()
+            .await?
+            .ok_or(ErrorKind::ContentIdNotFound(id))?
+            .total_size)
+    }
+
+    async fn get_file_text<'a, 'b: 'a>(
+        &'a self,
+        ctx: &'b CoreContext,
+        id: ContentId,
+    ) -> Result<Option<Bytes>, ErrorKind> {
+        let store = self.repo.get_blobstore();
+        filestore::fetch_concat_opt(&store, ctx.clone(), &id.into())
+            .compat()
+            .await?
+            .ok_or(ErrorKind::ContentIdNotFound(id))
+            .map(Option::Some)
+    }
+}
+
+impl BlobRepoFileContentFetcher {
+    pub fn new(repo: BlobRepo) -> BlobRepoFileContentFetcher {
+        BlobRepoFileContentFetcher { repo }
     }
 }
