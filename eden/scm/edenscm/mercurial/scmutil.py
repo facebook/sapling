@@ -174,6 +174,7 @@ def callcatch(ui, func):
             ui.warn("(%s)\n" % inst.hint)
     except error.RepoError as inst:
         ui.warn(_("%s!\n") % inst, error=_("abort"))
+        inst.printcontext(ui)
         if inst.hint:
             ui.warn(_("(%s)\n") % inst.hint)
     except error.ResponseError as inst:
@@ -188,6 +189,7 @@ def callcatch(ui, func):
         ui.warn(_("file censored %s!\n") % inst, error=_("abort"))
     except error.RevlogError as inst:
         ui.warn(_("%s!\n") % inst, error=_("abort"))
+        inst.printcontext(ui)
     except error.InterventionRequired as inst:
         ui.warn("%s\n" % inst)
         if inst.hint:
@@ -197,6 +199,7 @@ def callcatch(ui, func):
         ui.warn(_("working directory revision cannot be specified\n"), error=_("abort"))
     except error.Abort as inst:
         ui.warn(_("%s\n") % inst, error=_("abort"), component=inst.component)
+        inst.printcontext(ui)
         if inst.hint:
             ui.warn(_("(%s)\n") % inst.hint)
         return inst.exitcode

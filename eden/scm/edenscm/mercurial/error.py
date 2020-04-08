@@ -52,6 +52,34 @@ class Hint(object):
         super(Hint, self).__init__(*args, **kw)
 
 
+class Context(object):
+    """Mix-in to provide extra context about an error"""
+
+    def context(self):
+        return getattr(self, "_context", [])
+
+    def addcontext(self, messageorfunc):
+        context = self.context()
+        context.append(messageorfunc)
+        self._context = context
+
+    def inheritcontext(self, ex):
+        context = self.context() + ex.context()
+        self._context = context
+
+    def printcontext(self, ui):
+        context = self.context()
+        for messageorfunc in context:
+            if callable(messageorfunc):
+                try:
+                    message = messageorfunc()
+                except Exception:
+                    pass
+            else:
+                message = messageorfunc
+            ui.warn(("%s\n") % message)
+
+
 class Component(object):
     """Mix-in to privide component identity of an error
 
@@ -64,7 +92,7 @@ class Component(object):
         super(Component, self).__init__(*args, **kw)
 
 
-class RevlogError(Hint, Exception):
+class RevlogError(Hint, Context, Exception):
     __bytes__ = _tobytes
 
 
@@ -110,13 +138,13 @@ class CommandError(Exception):
     __bytes__ = _tobytes
 
 
-class InterventionRequired(Hint, Exception):
+class InterventionRequired(Hint, Context, Exception):
     """Exception raised when a command requires human intervention."""
 
     __bytes__ = _tobytes
 
 
-class Abort(Hint, Component, Exception):
+class Abort(Hint, Context, Component, Exception):
     """Raised if a command needs to print an error and exit."""
 
     __bytes__ = _tobytes
@@ -176,13 +204,13 @@ class ResponseExpected(Abort):
         Abort.__init__(self, _("response expected"))
 
 
-class OutOfBandError(Hint, Exception):
+class OutOfBandError(Hint, Context, Exception):
     """Exception raised when a remote repo reports failure"""
 
     __bytes__ = _tobytes
 
 
-class ParseError(Hint, Exception):
+class ParseError(Hint, Context, Exception):
     """Raised when parsing config files and {rev,file}sets (msg[, pos])"""
 
     __bytes__ = _tobytes
@@ -203,7 +231,7 @@ class UnknownIdentifier(ParseError):
         self.symbols = symbols
 
 
-class RepoError(Hint, Exception):
+class RepoError(Hint, Context, Exception):
     __bytes__ = _tobytes
 
 
@@ -339,7 +367,7 @@ class PushRaced(RuntimeError):
     __bytes__ = _tobytes
 
 
-class ProgrammingError(Hint, RuntimeError):
+class ProgrammingError(Hint, Context, RuntimeError):
     """Raised if a mercurial (core or extension) developer made a mistake"""
 
     __bytes__ = _tobytes
@@ -497,3 +525,8 @@ class NetworkError(Abort):
             _("stream ended unexpectedly (got %d bytes, expected %d)")
             % (read, expected)
         )
+
+
+def addcontext(ex, messageorfunc):
+    if isinstance(ex, Context):
+        ex.addcontext(messageorfunc)
