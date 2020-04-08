@@ -290,7 +290,7 @@ async fn maybe_unbundle(
     let hooks_outcome = match hook_manager {
         Some(hook_manager) => {
             let (hook_stats, hooks_outcome) =
-                run_hooks(ctx.clone(), hook_manager.clone(), &resolution)
+                run_hooks(ctx.clone(), repo.clone(), hook_manager.clone(), &resolution)
                     .compat()
                     .timed()
                     .await;

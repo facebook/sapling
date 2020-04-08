@@ -1431,9 +1431,9 @@ impl HgCommands for RepoClient {
                 .boxed()
                 .compat()
                 .and_then({
-                    cloned!(ctx);
+                    cloned!(ctx, blobrepo);
                     move |action| {
-                        run_hooks(ctx, hook_manager, &action)
+                        run_hooks(ctx, blobrepo, hook_manager, &action)
                             .map(move |_| action)
                     }
                 }).and_then({
@@ -1508,7 +1508,7 @@ impl HgCommands for RepoClient {
                             use unbundle::BundleResolverError::*;
                             match err {
                                 HookError(hooks) => {
-                                    let failed_hooks: HashSet<String> = hooks.into_iter().filter_map(|res| if res.is_rejection() { Some(res.get_hook_name().to_string())} else {None}).collect();
+                                    let failed_hooks: HashSet<String> = hooks.iter().map(|fail| fail.get_hook_name().to_string()).collect();
 
                                     for failed_hook in failed_hooks {
                                         STATS::push_hook_failure.add_value(

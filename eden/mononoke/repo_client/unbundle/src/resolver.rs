@@ -34,7 +34,7 @@ use futures_old::{Future as OldFuture, Stream as OldStream};
 use futures_util::{
     compat::Future01CompatExt, try_join, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
 };
-use hooks::{HookExecution, HookOutcome};
+use hooks::HookRejectionInfo;
 use lazy_static::lazy_static;
 use limits::types::RateLimit;
 use mercurial_bundles::{Bundle2Item, PartHeader, PartHeaderInner, PartHeaderType, PartId};
@@ -101,8 +101,20 @@ impl From<bool> for NonFastForwardPolicy {
     }
 }
 
+pub struct HookFailure {
+    pub(crate) hook_name: String,
+    pub(crate) cs_id: HgChangesetId,
+    pub(crate) info: HookRejectionInfo,
+}
+
+impl HookFailure {
+    pub fn get_hook_name(&self) -> &str {
+        &self.hook_name
+    }
+}
+
 pub enum BundleResolverError {
-    HookError(Vec<HookOutcome>),
+    HookError(Vec<HookFailure>),
     PushrebaseConflicts(Vec<pushrebase::PushrebaseConflict>),
     Error(Error),
     RateLimitExceeded {
@@ -126,17 +138,11 @@ impl From<BundleResolverError> for Error {
             HookError(hook_outcomes) => {
                 let err_msgs: Vec<_> = hook_outcomes
                     .into_iter()
-                    .filter_map(|outcome| {
-                        let exec = outcome.get_execution();
-                        match exec {
-                            HookExecution::Accepted => None,
-                            HookExecution::Rejected(info) => Some(format!(
-                                "{} for {}: {}",
-                                outcome.get_hook_name(),
-                                outcome.get_cs_id(),
-                                info.long_description
-                            )),
-                        }
+                    .map(|failure| {
+                        format!(
+                            "{} for {}: {}",
+                            failure.hook_name, failure.cs_id, failure.info.long_description
+                        )
                     })
                     .collect();
                 format_err!("hooks failed:\n{}", err_msgs.join("\n"))

@@ -9,10 +9,11 @@
 
 use anyhow::{format_err, Error, Result};
 use blobrepo::BlobRepo;
+use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{FutureExt, TryFutureExt};
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
 use futures_ext::{spawn_future, BoxFuture, FutureExt as OldFutureExt};
 use futures_old::{Future, Stream};
 use hooks::{hook_loader::load_hooks, HookManager, HookOutcome};
@@ -87,38 +88,35 @@ impl Tailer {
         ctx: CoreContext,
         repo: BlobRepo,
         hm: Arc<HookManager>,
-        last_rev: HgChangesetId,
-        end_rev: HgChangesetId,
+        last_rev: ChangesetId,
+        end_rev: ChangesetId,
         bm: BookmarkName,
         excludes: HashSet<ChangesetId>,
     ) -> BoxFuture<Vec<HookOutcome>, Error> {
         debug!(ctx.logger(), "Running in range {} to {}", last_rev, end_rev);
-        nodehash_to_bonsai(ctx.clone(), &repo, end_rev)
-            .and_then(move |end_rev| {
-                AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), end_rev)
-                    .take(1000) // Limit number so we don't process too many
-                    .filter(move |cs| !excludes.contains(cs))
-                    .map({
-                        move |cs| {
-                            cloned!(ctx, bm, hm, repo);
-                            run_hooks_for_changeset(ctx, repo, hm, bm, cs)
-                        }
-                    })
-                    .map(spawn_future)
-                    .buffered(100)
-                    .take_while(move |(hg_cs, _)| {
-                        Ok(*hg_cs != last_rev)
-                    })
-                    .map(|(_, res)| res)
-                    .concat2()
+        AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), end_rev)
+            .take(1000) // Limit number so we don't process too many
+            .filter(move |cs| !excludes.contains(cs))
+            .map({
+                move |cs| {
+                    cloned!(ctx, bm, hm, repo);
+                    run_hooks_for_changeset(ctx, repo, hm, bm, cs)
+                }
             })
+            .map(spawn_future)
+            .buffered(100)
+            .take_while(move |(cs, _)| {
+                Ok(*cs != last_rev)
+            })
+            .map(|(_, res)| res)
+            .concat2()
             .boxify()
     }
 
     pub fn run_in_range(
         &self,
-        last_rev: HgChangesetId,
-        end_rev: HgChangesetId,
+        last_rev: ChangesetId,
+        end_rev: ChangesetId,
     ) -> BoxFuture<Vec<HookOutcome>, Error> {
         cloned!(
             self.ctx,
@@ -204,7 +202,7 @@ impl Tailer {
         );
 
         self.repo
-            .get_bookmark(self.ctx.clone(), &self.bookmark.clone())
+            .get_bonsai_bookmark(self.ctx.clone(), &self.bookmark.clone())
             .and_then({
                 cloned!(self.bookmark);
                 |opt| opt.ok_or(ErrorKind::NoSuchBookmark(bookmark).into())
@@ -222,7 +220,7 @@ impl Tailer {
                 None => Err(ErrorKind::NoLastRevision.into()),
             })
             .and_then(|(current_bm_cs, last_rev_bytes)| {
-                let node_hash = HgChangesetId::from_bytes(&*last_rev_bytes.payload.payload)?;
+                let node_hash = ChangesetId::from_bytes(&*last_rev_bytes.payload.payload)?;
                 Ok((current_bm_cs, node_hash))
             })
             .and_then({
@@ -263,7 +261,7 @@ impl Tailer {
                         ctx.logger(),
                         "Setting last processed revision to {:?}", end_rev
                     );
-                    let bytes = end_rev.as_bytes().into();
+                    let bytes = end_rev.as_ref().into();
                     manifold_client.write(last_rev_key, bytes).map(|()| res)
                 }
             })
@@ -285,19 +283,29 @@ fn run_hooks_for_changeset(
     repo: BlobRepo,
     hm: Arc<HookManager>,
     bm: BookmarkName,
-    cs: ChangesetId,
-) -> impl Future<Item = (HgChangesetId, Vec<HookOutcome>), Error = Error> {
-    repo.get_hg_from_bonsai_changeset(ctx.clone(), cs)
-        .and_then(move |hg_cs| {
+    cs_id: ChangesetId,
+) -> impl Future<Item = (ChangesetId, Vec<HookOutcome>), Error = Error> {
+    cs_id
+        .load(ctx.clone(), repo.blobstore())
+        .from_err()
+        .and_then(move |cs| {
             let ctx = ctx.clone();
             let hm = hm.clone();
             let bm = bm.clone();
             async move {
-                debug!(ctx.logger(), "Running hooks for changeset {:?}", hg_cs);
-                let hook_results = hm
+                debug!(ctx.logger(), "Running hooks for changeset {:?}", cs);
+                let mut hook_results = hm
+                    .run_hooks_for_bookmark_bonsai(&ctx, vec![cs].iter(), &bm, None)
+                    .await?;
+                let hg_cs = repo
+                    .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+                    .compat()
+                    .await?;
+                let old_hook_results = hm
                     .run_hooks_for_bookmark(&ctx, vec![hg_cs], &bm, None)
                     .await?;
-                Ok((hg_cs, hook_results))
+                hook_results.extend(old_hook_results);
+                Ok((cs_id, hook_results))
             }
             .boxed()
             .compat()
