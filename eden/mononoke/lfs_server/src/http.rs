@@ -177,6 +177,13 @@ impl HttpError {
         }
     }
 
+    pub fn e410<E: Into<Error>>(err: E) -> Self {
+        Self {
+            error: err.into(),
+            status_code: StatusCode::GONE,
+        }
+    }
+
     pub fn e429<E: Into<Error>>(err: E) -> Self {
         Self {
             error: err.into(),

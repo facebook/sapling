@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use mononoke_types::hash::Sha256;
-
 use failure_ext::chain::ChainExt;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
@@ -18,7 +16,8 @@ use serde::Deserialize;
 use std::str::FromStr;
 
 use filestore::{self, Alias, FetchKey};
-use mononoke_types::ContentId;
+use mononoke_types::{hash::Sha256, ContentId};
+use redactedblobstore::has_redaction_root_cause;
 use stats::prelude::*;
 
 use crate::errors::ErrorKind;
@@ -55,8 +54,13 @@ async fn fetch_by_key(
     let fetched = filestore::fetch_with_size(ctx.repo.blobstore(), ctx.ctx.clone(), &key)
         .compat()
         .await
-        .chain_err(ErrorKind::FilestoreReadFailure)
-        .map_err(HttpError::e500)?;
+        .map_err(|e| {
+            if has_redaction_root_cause(&e) {
+                HttpError::e410(e)
+            } else {
+                HttpError::e500(e.chain_err(ErrorKind::FilestoreReadFailure))
+            }
+        })?;
 
     // Return a 404 if the stream doesn't exist.
     let (stream, size) = fetched
@@ -114,4 +118,40 @@ pub async fn download_sha256(state: &mut State) -> Result<impl TryIntoResponse, 
     )?;
 
     fetch_by_key(ctx, key).await
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    use anyhow::Error;
+    use blobrepo_factory::TestRepoBuilder;
+    use fbinit::FacebookInit;
+    use http::StatusCode;
+    use maplit::hashmap;
+    use mononoke_types::typed_hash::MononokeId;
+    use mononoke_types_mocks::contentid::ONES_CTID;
+
+    #[fbinit::compat_test]
+    async fn test_redacted_fetch(fb: FacebookInit) -> Result<(), Error> {
+        let content_id = ONES_CTID;
+        let reason = "test reason";
+
+        let repo = TestRepoBuilder::new()
+            .redacted(Some(
+                hashmap! { content_id.blobstore_key() => reason.to_string() },
+            ))
+            .build()?;
+
+        let ctx = RepositoryRequestContext::test_builder(fb)?
+            .repo(repo)
+            .build()?;
+
+        let key = FetchKey::Canonical(content_id);
+
+        let err = fetch_by_key(ctx, key).await.map(|_| ()).unwrap_err();
+        assert_eq!(err.status_code, StatusCode::GONE);
+        assert!(err.error.to_string().contains(reason));
+        Ok(())
+    }
 }
