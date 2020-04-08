@@ -42,8 +42,8 @@ use synced_commit_mapping::{SyncedCommitMapping, SyncedCommitMappingEntry};
 use crate::changeset::UploadChangesets;
 
 fn derive_data_for_csids(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     csids: Vec<ChangesetId>,
     derived_data_types: &[String],
 ) -> Result<impl Future<Output = Result<(), Error>>, Error> {
@@ -260,8 +260,8 @@ impl<'a> Blobimport<'a> {
                     }
 
                     let derivation_work = derive_data_for_csids(
-                        ctx.clone(),
-                        blobrepo.clone(),
+                        ctx,
+                        blobrepo,
                         changesets.iter().map(|cs| cs.get_changeset_id()).collect(),
                         &derived_data_types[..],
                     )?;
