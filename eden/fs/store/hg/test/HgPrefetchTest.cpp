@@ -71,6 +71,7 @@ ssh = {0}
 fastmanifest =
 treemanifest =
 remotefilelog =
+remotenames =
 
 [remotefilelog]
 pullprefetch =
