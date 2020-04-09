@@ -17,7 +17,7 @@ from __future__ import absolute_import
 
 import collections
 
-from . import error, util
+from . import error, pycompat, util
 from .i18n import _
 from .node import hex, short
 
@@ -181,6 +181,7 @@ def extendrange(repo, state, nodes, good):
 def load_state(repo):
     state = {"current": [], "good": [], "bad": [], "skip": []}
     for l in repo.localvfs.tryreadlines("bisect.state"):
+        l = pycompat.decodeutf8(l)
         kind, node = l[:-1].split()
         node = repo.lookup(node)
         if kind not in state:
@@ -190,11 +191,11 @@ def load_state(repo):
 
 
 def save_state(repo, state):
-    f = repo.localvfs("bisect.state", "w", atomictemp=True)
+    f = repo.localvfs("bisect.state", "wb", atomictemp=True)
     with repo.wlock():
         for kind in sorted(state):
             for node in state[kind]:
-                f.write("%s %s\n" % (kind, hex(node)))
+                f.writeutf8("%s %s\n" % (kind, hex(node)))
         f.close()
 
 
