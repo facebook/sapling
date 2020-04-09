@@ -121,11 +121,11 @@ def localconfig(ui):
     return result
 
 
-def overriddenconfig(ui):
+def allconfig(ui):
     result = []
     for section, name, value in ui.walkconfig():
         source = ui.configsource(section, name)
-        if source.find("overrides") > -1:
+        if source.find("builtin") == -1:
             result.append("%s.%s=%s  # %s" % (section, name, value, source))
     return result
 
@@ -371,7 +371,7 @@ def _makerage(ui, repo, **opts):
         ("scm daemon logs", lambda: scmdaemonlog(ui, repo)),
         ("debugstatus", lambda: hgcmd("debugstatus")),
         ("debugtree", lambda: hgcmd("debugtree")),
-        ("hg config (overrides)", lambda: "\n".join(overriddenconfig(ui))),
+        ("hg config (all)", lambda: "\n".join(allconfig(ui))),
         ("edenfs rage", lambda: shcmd("edenfsctl rage --stdout")),
         (
             "environment variables",
