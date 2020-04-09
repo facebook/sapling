@@ -35,28 +35,28 @@ def debugbruterebase(ui, repo, source, dest):
         def getdesc(rev):
             result = cl.changelogrevision(rev).description
             if rev >= repolen:
-                result += b"'"
+                result += "'"
             return result
 
         for i in xrange(1, 2 ** len(srevs)):
             subset = [rev for j, rev in enumerate(srevs) if i & (1 << j) != 0]
-            spec = revsetlang.formatspec(b"%ld", subset)
-            tr = repo.transaction(b"rebase")
+            spec = revsetlang.formatspec("%ld", subset)
+            tr = repo.transaction("rebase")
             tr.report = lambda x: 0  # hide "transaction abort"
 
             ui.pushbuffer()
             try:
                 rebase.rebase(ui, repo, dest=dest, rev=[spec])
             except error.Abort as ex:
-                summary = b"ABORT: %s" % ex
+                summary = "ABORT: %s" % ex
             except Exception as ex:
-                summary = b"CRASH: %s" % ex
+                summary = "CRASH: %s" % ex
             else:
                 # short summary about new nodes
                 cl = repo.changelog
                 descs = []
                 for rev in xrange(repolen, len(repo)):
-                    desc = b"%s:" % getdesc(rev)
+                    desc = "%s:" % getdesc(rev)
                     for prev in cl.parentrevs(rev):
                         if prev > -1:
                             desc += getdesc(prev)
@@ -64,8 +64,8 @@ def debugbruterebase(ui, repo, source, dest):
                 descs.sort()
                 summary = " ".join(descs)
             ui.popbuffer()
-            repo.localvfs.tryunlink(b"rebasestate")
+            repo.localvfs.tryunlink("rebasestate")
 
-            subsetdesc = b"".join(getdesc(rev) for rev in subset)
-            ui.write((b"%s: %s\n") % (subsetdesc.rjust(len(srevs)), summary))
+            subsetdesc = "".join(getdesc(rev) for rev in subset)
+            ui.write(("%s: %s\n") % (subsetdesc.rjust(len(srevs)), summary))
             tr.abort()
