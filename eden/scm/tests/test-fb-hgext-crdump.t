@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ configure evolution dummyssh
@@ -237,6 +236,7 @@ Test basic dump of two commits
       "output_directory": "*" (glob)
   }
 
+  >>> import codecs
   >>> import json
   >>> from os import path
   >>> with open("../json_output") as f:
@@ -249,10 +249,10 @@ Test basic dump of two commits
   ...             print("######## file %s" % binfile['file_name'])
   ...             if binfile['old_file'] is not None:
   ...                 print("######## old")
-  ...                 print(open(path.join(outdir, binfile['old_file'])).read().encode('hex'))
+  ...                 print(codecs.encode(open(path.join(outdir, binfile['old_file']), "rb").read(), 'hex').decode("utf-8"))
   ...             if binfile['new_file'] is not None:
   ...                 print("######## new")
-  ...                 print(open(path.join(outdir, binfile['new_file'])).read().encode('hex'))
+  ...                 print(codecs.encode(open(path.join(outdir, binfile['new_file']), "rb").read(), 'hex').decode("utf-8"))
   ...     import shutil
   ...     shutil.rmtree(outdir)
   #### commit 65d913976cc18347138f7b9f5186010d39b39b0f
