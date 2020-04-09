@@ -315,6 +315,9 @@ class EdenInstance:
         return parser.get_str(section, option, default=default)
 
     def should_use_experimental_systemd_mode(self) -> bool:
+        if not sys.platform.startswith("linux"):
+            return False
+
         # TODO(T33122320): Delete this environment variable when systemd is properly
         # integrated.
         env_var_value = os.getenv("EDEN_EXPERIMENTAL_SYSTEMD")

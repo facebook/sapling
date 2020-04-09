@@ -7,6 +7,7 @@
 import configparser
 import io
 import os
+import sys
 import unittest
 from pathlib import Path
 
@@ -376,10 +377,16 @@ test_option = "test value"
         self.assertFalse(self.get_config().should_use_experimental_systemd_mode())
 
     def test_experimental_systemd_is_enabled_with_environment_variable(self) -> None:
+        if not sys.platform.startswith("linux"):
+            return
+
         self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "1")
         self.assertTrue(self.get_config().should_use_experimental_systemd_mode())
 
     def test_experimental_systemd_is_enabled_with_user_config_setting(self) -> None:
+        if not sys.platform.startswith("linux"):
+            return
+
         self.write_user_config(
             """[service]
 experimental_systemd = true
@@ -388,6 +395,9 @@ experimental_systemd = true
         self.assertTrue(self.get_config().should_use_experimental_systemd_mode())
 
     def test_experimental_systemd_environment_variable_overrides_config(self) -> None:
+        if not sys.platform.startswith("linux"):
+            return
+
         self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "1")
         self.write_user_config(
             f"""[service]
@@ -407,6 +417,9 @@ experimental_systemd = true
     def test_empty_experimental_systemd_environment_variable_does_not_override_config(
         self
     ) -> None:
+        if not sys.platform.startswith("linux"):
+            return
+
         self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "")
         self.write_user_config(
             f"""[service]
