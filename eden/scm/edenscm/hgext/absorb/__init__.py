@@ -436,7 +436,7 @@ class filefixupstate(object):
         this is similar to running a partial "annotate".
         """
         llog = linelog.linelog()
-        a, alines = "", []
+        a, alines = b"", []
         for i in range(len(self.contents)):
             b, blines = self.contents[i], self.contentlines[i]
             llrev = i * 2 + 1

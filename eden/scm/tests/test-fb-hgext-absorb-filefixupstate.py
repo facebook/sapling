@@ -6,14 +6,12 @@ from edenscm.hgext import absorb
 from hghave import require
 
 
-require(["py2"])
-
-
 class simplefctx(object):
     def __init__(self, content):
-        self.content = content
+        self.content = content.encode("utf-8")
 
     def data(self):
+        assert isinstance(self.content, bytes)
         return self.content
 
 
@@ -27,6 +25,8 @@ def insertreturns(x):
 
 def removereturns(x):
     # the revert of "insertreturns"
+    if isinstance(x, bytes):
+        x = x.decode("utf-8")
     if isinstance(x, str):
         return x.replace("\n", "")
     else:
@@ -34,7 +34,7 @@ def removereturns(x):
 
 
 def assertlistequal(lhs, rhs, decorator=lambda x: x):
-    if lhs != rhs:
+    if lhs != rhs and decorator(lhs) != decorator(rhs):
         raise RuntimeError(
             "mismatch:\n actual:   %r\n expected: %r"
             % tuple(map(decorator, [lhs, rhs]))
