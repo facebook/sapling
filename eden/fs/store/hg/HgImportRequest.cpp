@@ -11,37 +11,56 @@
 #include <folly/futures/Future.h>
 #include <folly/futures/Promise.h>
 
+#include "eden/fs/telemetry/RequestMetricsScope.h"
+
 namespace facebook {
 namespace eden {
 
 namespace {
 template <typename Request, typename Input>
 std::pair<HgImportRequest, folly::SemiFuture<typename Request::Response>>
-makeRequest(Input&& input, ImportPriority priority) {
+makeRequest(
+    Input&& input,
+    ImportPriority priority,
+    std::unique_ptr<RequestMetricsScope> metricsScope) {
   auto [promise, future] =
       folly::makePromiseContract<typename Request::Response>();
   return std::make_pair(
-      HgImportRequest{
-          Request{std::forward<Input>(input)}, priority, std::move(promise)},
+      HgImportRequest{Request{std::forward<Input>(input)},
+                      priority,
+                      std::move(promise),
+                      std::move(metricsScope)},
       std::move(future));
 }
 } // namespace
 
 std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Blob>>>
-HgImportRequest::makeBlobImportRequest(Hash hash, ImportPriority priority) {
-  return makeRequest<BlobImport>(hash, priority);
+HgImportRequest::makeBlobImportRequest(
+    Hash hash,
+    ImportPriority priority,
+    std::unique_ptr<RequestMetricsScope> metricsScope) {
+  return makeRequest<BlobImport>(hash, priority, std::move(metricsScope));
 }
 
 std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Tree>>>
-HgImportRequest::makeTreeImportRequest(Hash hash, ImportPriority priority) {
-  return makeRequest<TreeImport>(hash, priority);
+HgImportRequest::makeTreeImportRequest(
+    Hash hash,
+    ImportPriority priority,
+    std::unique_ptr<RequestMetricsScope> metricsScope) {
+  return makeRequest<TreeImport>(hash, priority, std::move(metricsScope));
 }
 
 std::pair<HgImportRequest, folly::SemiFuture<folly::Unit>>
 HgImportRequest::makePrefetchRequest(
     std::vector<Hash> hashes,
-    ImportPriority priority) {
-  return makeRequest<Prefetch>(hashes, priority);
+    ImportPriority priority,
+    std::unique_ptr<RequestMetricsScope> metricsScope) {
+  return makeRequest<Prefetch>(hashes, priority, std::move(metricsScope));
+}
+
+std::unique_ptr<RequestMetricsScope>
+HgImportRequest::getOwnershipOfImportTracker() {
+  return std::move(metrics_);
 }
 
 } // namespace eden

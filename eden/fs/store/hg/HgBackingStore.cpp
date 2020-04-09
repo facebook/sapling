@@ -536,8 +536,6 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
     Hash edenTreeID,
     RelativePath path,
     std::shared_ptr<LocalStore::WriteBatch> writeBatch) {
-  auto queueTracker =
-      std::make_unique<RequestMetricsScope>(&pendingImportTreeWatches_);
   return folly::via(
              importThreadPool_.get(),
              [path,
@@ -563,8 +561,7 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
         auto content =
             unionStoreGet(*unionStore_->wlock(), ownedPath.stringPiece(), node);
         return processTree(content, node, treeID, ownedPath, batch.get());
-      })
-      .ensure([tracker = std::move(queueTracker)] {});
+      });
 }
 
 std::unique_ptr<Tree> HgBackingStore::processTree(
@@ -744,29 +741,24 @@ SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
 SemiFuture<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(
     const RelativePathPiece& path,
     const Hash& id) {
-  auto queueTracker =
-      std::make_unique<RequestMetricsScope>(&pendingImportBlobWatches_);
   return folly::via(
-             importThreadPool_.get(),
-             [path = path.copy(),
-              stats = stats_,
-              id,
-              &liveImportBlobWatches = liveImportBlobWatches_] {
-               Importer& importer = getThreadLocalImporter();
-               folly::stop_watch<std::chrono::milliseconds> watch;
-               RequestMetricsScope queueTracker{&liveImportBlobWatches};
-               auto blob = importer.importFileContents(path, id);
-               stats->getHgBackingStoreStatsForCurrentThread()
-                   .hgBackingStoreImportBlob.addValue(watch.elapsed().count());
-               return blob;
-             })
-      .ensure([tracker = std::move(queueTracker)] {});
+      importThreadPool_.get(),
+      [path = path.copy(),
+       stats = stats_,
+       id,
+       &liveImportBlobWatches = liveImportBlobWatches_] {
+        Importer& importer = getThreadLocalImporter();
+        folly::stop_watch<std::chrono::milliseconds> watch;
+        RequestMetricsScope queueTracker{&liveImportBlobWatches};
+        auto blob = importer.importFileContents(path, id);
+        stats->getHgBackingStoreStatsForCurrentThread()
+            .hgBackingStoreImportBlob.addValue(watch.elapsed().count());
+        return blob;
+      });
 }
 
 SemiFuture<folly::Unit> HgBackingStore::prefetchBlobs(
     const std::vector<Hash>& ids) {
-  auto queueTracker =
-      std::make_unique<RequestMetricsScope>(&pendingImportPrefetchWatches_);
   return HgProxyHash::getBatch(localStore_, ids)
       .via(importThreadPool_.get())
       .thenValue(
@@ -775,8 +767,7 @@ SemiFuture<folly::Unit> HgBackingStore::prefetchBlobs(
             RequestMetricsScope queueTracker{&liveImportPrefetchWatches};
             return getThreadLocalImporter().prefetchFiles(hgPathHashes);
           })
-      .via(serverThreadPool_)
-      .ensure([tracker = std::move(queueTracker)] {});
+      .via(serverThreadPool_);
 }
 
 SemiFuture<unique_ptr<Tree>> HgBackingStore::getTreeForCommit(
@@ -860,19 +851,6 @@ std::string HgBackingStore::stringOfHgImportObject(HgImportObject object) {
       return "tree";
     case HgImportObject::PREFETCH:
       return "prefetch";
-  }
-  EDEN_BUG() << "unknown hg import object " << static_cast<int>(object);
-}
-
-RequestMetricsScope::LockedRequestWatchList&
-HgBackingStore::getPendingImportWatches(HgImportObject object) const {
-  switch (object) {
-    case HgImportObject::BLOB:
-      return pendingImportBlobWatches_;
-    case HgImportObject::TREE:
-      return pendingImportTreeWatches_;
-    case HgImportObject::PREFETCH:
-      return pendingImportPrefetchWatches_;
   }
   EDEN_BUG() << "unknown hg import object " << static_cast<int>(object);
 }

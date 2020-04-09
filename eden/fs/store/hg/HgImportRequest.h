@@ -15,6 +15,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/store/ImportPriority.h"
+#include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Bug.h"
 
 namespace facebook {
@@ -45,23 +46,40 @@ class HgImportRequest {
     std::vector<Hash> hashes;
   };
 
+  HgImportRequest(HgImportRequest&&) = default;
+  HgImportRequest& operator=(HgImportRequest&&) = default;
+
+  HgImportRequest(const HgImportRequest&) = delete;
+  HgImportRequest& operator=(const HgImportRequest&) = delete;
+
   static std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Blob>>>
-  makeBlobImportRequest(Hash hash, ImportPriority priority);
+  makeBlobImportRequest(
+      Hash hash,
+      ImportPriority priority,
+      std::unique_ptr<RequestMetricsScope> metricsScope);
 
   static std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Tree>>>
-  makeTreeImportRequest(Hash hash, ImportPriority priority);
+  makeTreeImportRequest(
+      Hash hash,
+      ImportPriority priority,
+      std::unique_ptr<RequestMetricsScope> metricsScope);
 
   static std::pair<HgImportRequest, folly::SemiFuture<folly::Unit>>
-  makePrefetchRequest(std::vector<Hash> hashes, ImportPriority priority);
+  makePrefetchRequest(
+      std::vector<Hash> hashes,
+      ImportPriority priority,
+      std::unique_ptr<RequestMetricsScope> metricsScope);
 
   template <typename RequestType>
   HgImportRequest(
       RequestType request,
       ImportPriority priority,
-      folly::Promise<typename RequestType::Response>&& promise)
+      folly::Promise<typename RequestType::Response>&& promise,
+      std::unique_ptr<RequestMetricsScope> metricsScope)
       : request_(std::move(request)),
         priority_(priority),
-        promise_(std::move(promise)) {}
+        promise_(std::move(promise)),
+        metrics_(std::move(metricsScope)) {}
 
   template <typename T>
   const T* getRequest() noexcept {
@@ -91,6 +109,14 @@ class HgImportRequest {
     }
   }
 
+  /**
+   * Returns pointer for the RequestMetricsScope that is
+   * tracking this request, this should be used to transfer
+   * ownership of this scope when the request is removed from
+   * the queue, and the import is processed.
+   */
+  std::unique_ptr<RequestMetricsScope> getOwnershipOfImportTracker();
+
  private:
   using Request = std::variant<BlobImport, TreeImport, Prefetch>;
   using Response = std::variant<
@@ -101,6 +127,7 @@ class HgImportRequest {
   Request request_;
   ImportPriority priority_;
   Response promise_;
+  std::unique_ptr<RequestMetricsScope> metrics_;
 
   friend bool operator<(
       const HgImportRequest& lhs,

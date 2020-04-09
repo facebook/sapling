@@ -14,6 +14,7 @@
 #include "eden/fs/store/ImportPriority.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
+#include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/IDGen.h"
 
 using namespace facebook::eden;
@@ -25,26 +26,34 @@ Hash uniqueHash() {
   return Hash{bytes};
 }
 
-std::pair<Hash, HgImportRequest> makeImportRequest(ImportPriority priority) {
+std::pair<Hash, HgImportRequest> makeImportRequest(
+    ImportPriority priority,
+    RequestMetricsScope::LockedRequestWatchList& pendingImportWatches) {
   auto hash = uniqueHash();
+  auto importTracker =
+      std::make_unique<RequestMetricsScope>(&pendingImportWatches);
   return std::make_pair(
-      hash, HgImportRequest::makeBlobImportRequest(hash, priority).first);
+      hash,
+      HgImportRequest::makeBlobImportRequest(
+          hash, priority, std::move(importTracker))
+          .first);
 }
 
 TEST(HgImportRequestQueueTest, getRequestByPriority) {
   auto queue = HgImportRequestQueue{};
   std::vector<Hash> enqueued;
+  RequestMetricsScope::LockedRequestWatchList pendingImportWatches;
 
   for (int i = 0; i < 10; i++) {
-    auto [hash, request] =
-        makeImportRequest(ImportPriority(ImportPriorityKind::Normal, i));
+    auto [hash, request] = makeImportRequest(
+        ImportPriority(ImportPriorityKind::Normal, i), pendingImportWatches);
 
     queue.enqueue(std::move(request));
     enqueued.push_back(hash);
   }
 
-  auto [smallHash, smallRequest] =
-      makeImportRequest(ImportPriority(ImportPriorityKind::Low, 0));
+  auto [smallHash, smallRequest] = makeImportRequest(
+      ImportPriority(ImportPriorityKind::Low, 0), pendingImportWatches);
   queue.enqueue(std::move(smallRequest));
 
   // the queue should give requests in the reverse order of pushing
@@ -65,17 +74,19 @@ TEST(HgImportRequestQueueTest, getRequestByPriority) {
 TEST(HgImportRequestQueueTest, getRequestByPriorityReverse) {
   auto queue = HgImportRequestQueue{};
   std::deque<Hash> enqueued;
+  RequestMetricsScope::LockedRequestWatchList pendingImportWatches;
 
   for (int i = 0; i < 10; i++) {
-    auto [hash, request] =
-        makeImportRequest(ImportPriority(ImportPriorityKind::Normal, 10 - i));
+    auto [hash, request] = makeImportRequest(
+        ImportPriority(ImportPriorityKind::Normal, 10 - i),
+        pendingImportWatches);
 
     queue.enqueue(std::move(request));
     enqueued.push_back(hash);
   }
 
-  auto [largeHash, largeRequest] =
-      makeImportRequest(ImportPriority(ImportPriority::kHigh()));
+  auto [largeHash, largeRequest] = makeImportRequest(
+      ImportPriority(ImportPriority::kHigh()), pendingImportWatches);
   queue.enqueue(std::move(largeRequest));
   EXPECT_EQ(
       largeHash,

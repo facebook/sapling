@@ -112,16 +112,6 @@ class HgBackingStore : public BackingStore {
   static std::string stringOfHgImportObject(HgImportObject object);
 
   /**
-   * Gets the watches timing pending `object` imports
-   *   ex. HgBackingStore::getPendingImportWatches(
-   *          RequestMetricsScope::HgImportObject::BLOB,
-   *        )
-   *    gets the watches timing pending blob imports
-   */
-  RequestMetricsScope::LockedRequestWatchList& getPendingImportWatches(
-      HgImportObject object) const;
-
-  /**
    * Gets the watches timing live `object` imports
    *   ex. HgBackingStore::getLiveImportWatches(
    *          RequestMetricsScope::HgImportObject::BLOB,
@@ -254,11 +244,6 @@ class HgBackingStore : public BackingStore {
   std::optional<HgDatapackStore> datapackStore_;
 #endif
 
-  // Track metrics for imports that are queued, live or fetching data from cache
-  mutable RequestMetricsScope::LockedRequestWatchList pendingImportBlobWatches_;
-  mutable RequestMetricsScope::LockedRequestWatchList pendingImportTreeWatches_;
-  mutable RequestMetricsScope::LockedRequestWatchList
-      pendingImportPrefetchWatches_;
   // Track metrics for imports currently fetching data from hg
   mutable RequestMetricsScope::LockedRequestWatchList liveImportBlobWatches_;
   mutable RequestMetricsScope::LockedRequestWatchList liveImportTreeWatches_;

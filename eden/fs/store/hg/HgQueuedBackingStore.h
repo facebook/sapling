@@ -14,6 +14,7 @@
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
+#include "eden/fs/telemetry/RequestMetricsScope.h"
 
 namespace facebook {
 namespace eden {
@@ -113,6 +114,16 @@ class HgQueuedBackingStore : public BackingStore {
       HgImportStage stage,
       HgBackingStore::HgImportObject object) const;
 
+  /**
+   * Gets the watches timing pending `object` imports
+   *   ex. HgBackingStore::getPendingImportWatches(
+   *          RequestMetricsScope::HgImportObject::BLOB,
+   *        )
+   *    gets the watches timing pending blob imports
+   */
+  RequestMetricsScope::LockedRequestWatchList& getPendingImportWatches(
+      HgBackingStore::HgImportObject object) const;
+
   std::unique_ptr<HgBackingStore> backingStore_;
 
   /**
@@ -126,6 +137,12 @@ class HgQueuedBackingStore : public BackingStore {
    * forever to process incoming import requests
    */
   std::vector<std::thread> threads_;
+
+  // Track metrics for queued imports
+  mutable RequestMetricsScope::LockedRequestWatchList pendingImportBlobWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList pendingImportTreeWatches_;
+  mutable RequestMetricsScope::LockedRequestWatchList
+      pendingImportPrefetchWatches_;
 };
 
 } // namespace eden
