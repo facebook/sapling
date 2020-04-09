@@ -33,6 +33,7 @@
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
+#include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/LazyInitialize.h"
 #include "eden/fs/utils/SSLContext.h"
 #include "eden/fs/utils/ServiceAddress.h"
@@ -851,31 +852,42 @@ folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::importTreeForCommit(
       });
 }
 
-size_t HgBackingStore::getPendingBlobImports() const {
-  return pendingImportBlobWatches_.rlock()->size();
+std::string HgBackingStore::stringOfHgImportObject(HgImportObject object) {
+  switch (object) {
+    case HgImportObject::BLOB:
+      return "blob";
+    case HgImportObject::TREE:
+      return "tree";
+    case HgImportObject::PREFETCH:
+      return "prefetch";
+  }
+  EDEN_BUG() << "unknown hg import object " << static_cast<int>(object);
 }
 
-size_t HgBackingStore::getPendingTreeImports() const {
-  return pendingImportTreeWatches_.rlock()->size();
+RequestMetricsScope::LockedRequestWatchList&
+HgBackingStore::getPendingImportWatches(HgImportObject object) const {
+  switch (object) {
+    case HgImportObject::BLOB:
+      return pendingImportBlobWatches_;
+    case HgImportObject::TREE:
+      return pendingImportTreeWatches_;
+    case HgImportObject::PREFETCH:
+      return pendingImportPrefetchWatches_;
+  }
+  EDEN_BUG() << "unknown hg import object " << static_cast<int>(object);
 }
 
-size_t HgBackingStore::getPendingPrefetchImports() const {
-  return pendingImportPrefetchWatches_.rlock()->size();
-}
-
-RequestMetricsScope::DefaultRequestDuration
-HgBackingStore::getPendingBlobImportMaxDuration() const {
-  return RequestMetricsScope::getMaxDuration(pendingImportBlobWatches_);
-}
-
-RequestMetricsScope::DefaultRequestDuration
-HgBackingStore::getPendingTreeImportMaxDuration() const {
-  return RequestMetricsScope::getMaxDuration(pendingImportTreeWatches_);
-}
-
-RequestMetricsScope::DefaultRequestDuration
-HgBackingStore::getPendingPrefetchImportMaxDuration() const {
-  return RequestMetricsScope::getMaxDuration(pendingImportPrefetchWatches_);
+RequestMetricsScope::LockedRequestWatchList&
+HgBackingStore::getLiveImportWatches(HgImportObject object) const {
+  switch (object) {
+    case HgImportObject::BLOB:
+      return liveImportBlobWatches_;
+    case HgImportObject::TREE:
+      return liveImportTreeWatches_;
+    case HgImportObject::PREFETCH:
+      return liveImportPrefetchWatches_;
+  }
+  EDEN_BUG() << "unknown hg import object " << static_cast<int>(object);
 }
 
 void HgBackingStore::periodicManagementTask() {

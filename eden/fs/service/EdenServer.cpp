@@ -8,9 +8,12 @@
 #include "eden/fs/service/EdenServer.h"
 
 #include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
+#include <algorithm>
 #include <atomic>
 #include <fstream>
+#include <functional>
 #include <memory>
+#include <numeric>
 #include <sstream>
 
 #include <fb303/ServiceData.h>
@@ -42,6 +45,7 @@
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/telemetry/StructuredLoggerFactory.h"
@@ -152,14 +156,38 @@ using namespace std::chrono_literals;
 
 namespace {
 
+using namespace facebook::eden;
+
 constexpr StringPiece kRocksDBPath{"storage/rocks-db"};
 constexpr StringPiece kSqlitePath{"storage/sqlite.db"};
 constexpr StringPiece kConfig{"config.toml"};
+static const std::string kHgStorePrefix{"store.hg"};
 
 std::optional<std::string> getUnixDomainSocketPath(
     const folly::SocketAddress& address) {
   return AF_UNIX == address.getFamily() ? std::make_optional(address.getPath())
                                         : std::nullopt;
+}
+
+std::string getCounterNameForImportMetric(
+    HgQueuedBackingStore::HgImportStage stage,
+    RequestMetricsScope::RequestMetric metric,
+    std::optional<HgBackingStore::HgImportObject> object = std::nullopt) {
+  if (object.has_value()) {
+    // base prefix . stage . object . metric
+    return folly::join(
+        ".",
+        {kHgStorePrefix,
+         HgQueuedBackingStore::stringOfHgImportStage(stage),
+         HgBackingStore::stringOfHgImportObject(object.value()),
+         RequestMetricsScope::stringOfRequestMetric(metric)});
+  }
+  // base prefix . stage . metric
+  return folly::join(
+      ".",
+      {kHgStorePrefix,
+       HgQueuedBackingStore::stringOfHgImportStage(stage),
+       RequestMetricsScope::stringOfRequestMetric(metric)});
 }
 
 } // namespace
@@ -222,22 +250,6 @@ class EdenServer::ThriftServerEventHandler
 };
 
 static constexpr folly::StringPiece kBlobCacheMemory{"blob_cache.memory"};
-static constexpr folly::StringPiece kPendingBlobImportCount{
-    "store.hg.pending_import.blob.count"};
-static constexpr folly::StringPiece kPendingTreeImportCount{
-    "store.hg.pending_import.tree.count"};
-static constexpr folly::StringPiece kPendingPrefetchImportCount{
-    "store.hg.pending_import.prefetch.count"};
-static constexpr folly::StringPiece kPendingImportCountSummary{
-    "store.hg.pending_import.count"};
-static constexpr folly::StringPiece kPendingBlobImportMaxDuration{
-    "store.hg.pending_import.blob.max_duration_us"};
-static constexpr folly::StringPiece kPendingTreeImportMaxDuration{
-    "store.hg.pending_import.tree.max_duration_us"};
-static constexpr folly::StringPiece kPendingPrefetchImportMaxDuration{
-    "store.hg.pending_import.prefetch.max_duration_us"};
-static constexpr folly::StringPiece kPendingImportMaxDurationSummary{
-    "store.hg.pending_import.max_duration_us"};
 
 EdenServer::EdenServer(
     std::vector<std::string> originalCommandLine,
@@ -265,84 +277,58 @@ EdenServer::EdenServer(
   counters->registerCallback(kBlobCacheMemory, [this] {
     return this->getBlobCache()->getStats().totalSizeInBytes;
   });
-  counters->registerCallback(kPendingBlobImportCount, [this] {
-    return this->sumHgQueuedBackingStoreCounters(
-        [](const HgQueuedBackingStore& store) {
-          return store.getHgBackingStore()->getPendingBlobImports();
+
+  for (auto stage : HgQueuedBackingStore::hgImportStages) {
+    for (auto metric : RequestMetricsScope::requestMetrics) {
+      for (auto object : HgBackingStore::hgImportObjects) {
+        std::string counterName =
+            getCounterNameForImportMetric(stage, metric, object);
+        counters->registerCallback(counterName, [this, stage, object, metric] {
+          auto individual_counters = this->collectHgQueuedBackingStoreCounters(
+              [stage, object, metric](const HgQueuedBackingStore& store) {
+                return store.getImportMetric(stage, object, metric);
+              });
+          return this->aggregateHgQueuedBackingStoreCounters(
+              metric, individual_counters);
         });
-  });
-  counters->registerCallback(kPendingTreeImportCount, [this] {
-    return this->sumHgQueuedBackingStoreCounters(
-        [](const HgQueuedBackingStore& store) {
-          return store.getHgBackingStore()->getPendingTreeImports();
-        });
-  });
-  counters->registerCallback(kPendingPrefetchImportCount, [this] {
-    return this->sumHgQueuedBackingStoreCounters(
-        [](const HgQueuedBackingStore& store) {
-          return store.getHgBackingStore()->getPendingPrefetchImports();
-        });
-  });
-  counters->registerCallback(kPendingImportCountSummary, [this] {
-    return this->sumHgQueuedBackingStoreCounters(
-        [](const HgQueuedBackingStore& store) {
-          return store.getHgBackingStore()->getPendingBlobImports() +
-              store.getHgBackingStore()->getPendingTreeImports() +
-              store.getHgBackingStore()->getPendingPrefetchImports();
-        });
-  });
-  counters->registerCallback(kPendingBlobImportMaxDuration, [this] {
-    return this->maxHgQueuedBackingStoreCounters(
-        [](const HgQueuedBackingStore& store) {
-          return static_cast<size_t>(
-              std::chrono::duration_cast<std::chrono::microseconds>(
-                  store.getHgBackingStore()->getPendingBlobImportMaxDuration())
-                  .count());
-        });
-  });
-  counters->registerCallback(kPendingTreeImportMaxDuration, [this] {
-    return this->maxHgQueuedBackingStoreCounters(
-        [](const HgQueuedBackingStore& store) {
-          return static_cast<size_t>(
-              std::chrono::duration_cast<std::chrono::microseconds>(
-                  store.getHgBackingStore()->getPendingTreeImportMaxDuration())
-                  .count());
-        });
-  });
-  counters->registerCallback(kPendingPrefetchImportMaxDuration, [this] {
-    return this->maxHgQueuedBackingStoreCounters([](const HgQueuedBackingStore&
-                                                        store) {
-      return static_cast<size_t>(
-          std::chrono::duration_cast<std::chrono::microseconds>(
-              store.getHgBackingStore()->getPendingPrefetchImportMaxDuration())
-              .count());
-    });
-  });
-  counters->registerCallback(kPendingImportMaxDurationSummary, [this] {
-    return this->maxHgQueuedBackingStoreCounters([](const HgQueuedBackingStore&
-                                                        store) {
-      auto max_duration = std::max(
-          {store.getHgBackingStore()->getPendingBlobImportMaxDuration(),
-           store.getHgBackingStore()->getPendingTreeImportMaxDuration(),
-           store.getHgBackingStore()->getPendingPrefetchImportMaxDuration()});
-      return static_cast<size_t>(
-          std::chrono::duration_cast<std::chrono::microseconds>(max_duration)
-              .count());
-    });
-  });
+      }
+      std::string summaryCounterName =
+          getCounterNameForImportMetric(stage, metric);
+      counters->registerCallback(summaryCounterName, [this, stage, metric] {
+        std::vector<size_t> individual_counters;
+        for (auto object : HgBackingStore::hgImportObjects) {
+          auto more_counters = this->collectHgQueuedBackingStoreCounters(
+              [stage, object, metric](const HgQueuedBackingStore& store) {
+                return store.getImportMetric(stage, object, metric);
+              });
+          individual_counters.insert(
+              individual_counters.end(),
+              more_counters.begin(),
+              more_counters.end());
+        }
+        return this->aggregateHgQueuedBackingStoreCounters(
+            metric, individual_counters);
+      });
+    }
+  }
 }
 
 EdenServer::~EdenServer() {
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->unregisterCallback(kBlobCacheMemory);
-  counters->unregisterCallback(kPendingBlobImportCount);
-  counters->unregisterCallback(kPendingTreeImportCount);
-  counters->unregisterCallback(kPendingPrefetchImportCount);
-  counters->unregisterCallback(kPendingImportCountSummary);
-  counters->unregisterCallback(kPendingBlobImportMaxDuration);
-  counters->unregisterCallback(kPendingTreeImportMaxDuration);
-  counters->unregisterCallback(kPendingPrefetchImportMaxDuration);
-  counters->unregisterCallback(kPendingImportMaxDurationSummary);
+
+  for (auto stage : HgQueuedBackingStore::hgImportStages) {
+    for (auto metric : RequestMetricsScope::requestMetrics) {
+      for (auto object : HgBackingStore::hgImportObjects) {
+        std::string counterName =
+            getCounterNameForImportMetric(stage, metric, object);
+        counters->unregisterCallback(counterName);
+      }
+      std::string summaryCounterName =
+          getCounterNameForImportMetric(stage, metric);
+      counters->unregisterCallback(summaryCounterName);
+    }
+  }
 }
 
 Future<Unit> EdenServer::unmountAll() {
@@ -1404,23 +1390,25 @@ EdenServer::getHgQueuedBackingStores() {
   return hgBackingStores;
 }
 
-size_t EdenServer::sumHgQueuedBackingStoreCounters(
-    size_t getCounterFromStore(const HgQueuedBackingStore&)) {
-  size_t aggregatedCounter{0};
-  for (const auto& store : this->getHgQueuedBackingStores()) {
-    aggregatedCounter += getCounterFromStore(*store);
+size_t EdenServer::aggregateHgQueuedBackingStoreCounters(
+    RequestMetricsScope::RequestMetric metric,
+    std::vector<size_t>& counters) {
+  switch (metric) {
+    case RequestMetricsScope::RequestMetric::COUNT:
+      return std::accumulate(counters.begin(), counters.end(), 0);
+    case RequestMetricsScope::RequestMetric::MAX_DURATION_US:
+      auto max = std::max_element(counters.begin(), counters.end());
+      return max == counters.end() ? 0 : *max;
   }
-  return aggregatedCounter;
 }
 
-size_t EdenServer::maxHgQueuedBackingStoreCounters(
-    size_t getCounterFromStore(const HgQueuedBackingStore&)) {
-  size_t aggregatedCounter{0};
+std::vector<size_t> EdenServer::collectHgQueuedBackingStoreCounters(
+    std::function<size_t(const HgQueuedBackingStore&)> getCounterFromStore) {
+  std::vector<size_t> counters;
   for (const auto& store : this->getHgQueuedBackingStores()) {
-    aggregatedCounter =
-        std::max(aggregatedCounter, getCounterFromStore(*store));
+    counters.emplace_back(getCounterFromStore(*store));
   }
-  return aggregatedCounter;
+  return counters;
 }
 
 shared_ptr<BackingStore> EdenServer::createBackingStore(

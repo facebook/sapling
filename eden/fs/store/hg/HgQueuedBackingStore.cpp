@@ -15,6 +15,7 @@
 #include "eden/fs/config/ReloadableConfig.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgImportRequest.h"
+#include "eden/fs/utils/Bug.h"
 
 namespace facebook {
 namespace eden {
@@ -108,5 +109,37 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
 
   return std::move(future);
 }
+
+std::string HgQueuedBackingStore::stringOfHgImportStage(HgImportStage stage) {
+  switch (stage) {
+    case HgImportStage::PENDING:
+      return "pending_import";
+    case HgImportStage::LIVE:
+      return "live_import";
+  }
+  EDEN_BUG() << "unknown hg import stage " << static_cast<int>(stage);
+}
+
+size_t HgQueuedBackingStore::getImportMetric(
+    HgImportStage stage,
+    HgBackingStore::HgImportObject object,
+    RequestMetricsScope::RequestMetric metric) const {
+  return RequestMetricsScope::getMetricFromWatches(
+      metric, getImportWatches(stage, object));
+}
+
+RequestMetricsScope::LockedRequestWatchList&
+HgQueuedBackingStore::getImportWatches(
+    HgImportStage stage,
+    HgBackingStore::HgImportObject object) const {
+  switch (stage) {
+    case HgImportStage::PENDING:
+      return backingStore_->getPendingImportWatches(object);
+    case HgImportStage::LIVE:
+      return backingStore_->getLiveImportWatches(object);
+  }
+  EDEN_BUG() << "unknown hg import stage " << static_cast<int>(stage);
+}
+
 } // namespace eden
 } // namespace facebook

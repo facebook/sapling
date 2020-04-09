@@ -7,6 +7,14 @@
 
 #pragma once
 
+#include <functional>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <vector>
+
 #include <folly/Executor.h>
 #include <folly/File.h>
 #include <folly/Portability.h>
@@ -17,18 +25,14 @@
 #include <folly/experimental/StringKeyedMap.h>
 #include <folly/futures/SharedPromise.h>
 #include <condition_variable>
-#include <memory>
-#include <mutex>
-#include <optional>
-#include <string>
-#include <unordered_map>
-#include <vector>
+
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/service/EdenStateDir.h"
 #include "eden/fs/service/PeriodicTask.h"
 #include "eden/fs/takeover/TakeoverHandler.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifdef _WIN32
@@ -522,27 +526,27 @@ class EdenServer : private TakeoverHandler {
   getHgQueuedBackingStores();
 
   /**
-   * sum the values of the counter for each HgQueuedBackingStore
+   * combine the values of the counters in a way that makes sense
+   * for the `metric` being calculated
+   */
+  size_t aggregateHgQueuedBackingStoreCounters(
+      RequestMetricsScope::RequestMetric metric,
+      std::vector<size_t>& counters);
+
+  /**
+   * collect the values of the counter for each HgQueuedBackingStore
    * accessed by calling the getCounterFromStore function on the
    * each store
    */
-  size_t sumHgQueuedBackingStoreCounters(
-      size_t getCounterFromStore(const HgQueuedBackingStore&));
-
-  /**
-   * take the max of the values of the counter for each
-   * HgQueuedBackingStore accessed by calling the getCounterFromStore
-   * function on the each store
-   */
-  size_t maxHgQueuedBackingStoreCounters(
-      size_t getCounterFromStore(const HgQueuedBackingStore&));
+  std::vector<size_t> collectHgQueuedBackingStoreCounters(
+      std::function<size_t(const HgQueuedBackingStore&)> getCounterFromStore);
 
   /*
    * Member variables.
    *
    * Note that the declaration order below is important for initialization
-   * and cleanup order.  edenDir_ is near the top so it will be destroyed last,
-   * as it holds the process-wide lock for our on-disk state.
+   * and cleanup order.  edenDir_ is near the top so it will be destroyed
+   * last, as it holds the process-wide lock for our on-disk state.
    * mountPoints_ are near the bottom, so they get destroyed before the
    * backingStores_ and localStore_.
    */

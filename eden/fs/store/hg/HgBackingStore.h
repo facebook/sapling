@@ -99,15 +99,37 @@ class HgBackingStore : public BackingStore {
    */
   folly::Future<std::unique_ptr<Tree>> importTreeManifest(const Hash& commitId);
 
-  size_t getPendingBlobImports() const;
-  size_t getPendingTreeImports() const;
-  size_t getPendingPrefetchImports() const;
-  RequestMetricsScope::DefaultRequestDuration getPendingBlobImportMaxDuration()
-      const;
-  RequestMetricsScope::DefaultRequestDuration getPendingTreeImportMaxDuration()
-      const;
-  RequestMetricsScope::DefaultRequestDuration
-  getPendingPrefetchImportMaxDuration() const;
+  /**
+   * Objects that can be imported from Hg
+   */
+  enum HgImportObject { BLOB, TREE, PREFETCH };
+
+  constexpr static std::array<HgImportObject, 3> hgImportObjects{
+      HgImportObject::BLOB,
+      HgImportObject::TREE,
+      HgImportObject::PREFETCH};
+
+  static std::string stringOfHgImportObject(HgImportObject object);
+
+  /**
+   * Gets the watches timing pending `object` imports
+   *   ex. HgBackingStore::getPendingImportWatches(
+   *          RequestMetricsScope::HgImportObject::BLOB,
+   *        )
+   *    gets the watches timing pending blob imports
+   */
+  RequestMetricsScope::LockedRequestWatchList& getPendingImportWatches(
+      HgImportObject object) const;
+
+  /**
+   * Gets the watches timing live `object` imports
+   *   ex. HgBackingStore::getLiveImportWatches(
+   *          RequestMetricsScope::HgImportObject::BLOB,
+   *        )
+   *    gets the watches timing live blob imports
+   */
+  RequestMetricsScope::LockedRequestWatchList& getLiveImportWatches(
+      HgImportObject object) const;
 
  private:
   // Forbidden copy constructor and assignment operator

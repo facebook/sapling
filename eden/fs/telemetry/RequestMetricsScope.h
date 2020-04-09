@@ -9,6 +9,7 @@
 
 #include <list>
 #include <memory>
+#include <string>
 
 #include <folly/Synchronized.h>
 #include <folly/stop_watch.h>
@@ -17,7 +18,12 @@ namespace facebook {
 namespace eden {
 
 /**
- * manages the pointer to metrics for Imports
+ * Represents a request tracked in a RequestMetricsScope::RequestWatchList.
+ * To track a request a RequestMetricsScope object should be in scope for the
+ * duration of the request.
+ *
+ * The scope inserts a watch into the given list on construction and removes
+ * that watch on destruction.
  */
 class RequestMetricsScope {
  public:
@@ -26,45 +32,47 @@ class RequestMetricsScope {
   using DefaultRequestDuration =
       std::chrono::steady_clock::steady_clock::duration;
 
-  RequestMetricsScope(LockedRequestWatchList* pendingRequestWatches)
-      : pendingRequestWatches_(pendingRequestWatches) {
-    folly::stop_watch<> watch;
-    {
-      auto startTimes = pendingRequestWatches_->wlock();
-      requestWatch_ = startTimes->insert(startTimes->end(), watch);
-    }
-  }
+  RequestMetricsScope(LockedRequestWatchList* pendingRequestWatches);
 
-  ~RequestMetricsScope() {
-    {
-      auto startTimes = pendingRequestWatches_->wlock();
-      startTimes->erase(requestWatch_);
-    }
-  }
+  ~RequestMetricsScope();
 
   RequestMetricsScope(RequestMetricsScope&&) = delete;
   RequestMetricsScope& operator=(RequestMetricsScope&&) = delete;
 
   /**
+   * Metrics to calculated for any type of request tracked with
+   * RequestMetricsScope
+   */
+  enum RequestMetric {
+    // number of requests
+    COUNT,
+    // duration of the longest current import
+    MAX_DURATION_US,
+  };
+
+  constexpr static std::array<RequestMetric, 2> requestMetrics{
+      RequestMetric::COUNT,
+      RequestMetric::MAX_DURATION_US};
+
+  static std::string stringOfRequestMetric(RequestMetric metric);
+
+  /**
+   * calculates the `metric` from the `watches` which track
+   * the duration of all of a certain type of request
+   */
+  static size_t getMetricFromWatches(
+      RequestMetric metric,
+      LockedRequestWatchList& watches);
+
+  /**
    * finds the watch in `watches` for which the time that has elapsed
    * is the greatest and returns the duration of time that has elapsed
    */
-  static DefaultRequestDuration getMaxDuration(
-      LockedRequestWatchList& watches) {
-    DefaultRequestDuration maxDurationImport{0};
-    {
-      auto lockedWatches = watches.rlock();
-      for (const auto& watch : *lockedWatches) {
-        maxDurationImport = std::max(maxDurationImport, watch.elapsed());
-      }
-    }
-    return maxDurationImport;
-  }
+  static DefaultRequestDuration getMaxDuration(LockedRequestWatchList& watches);
 
  private:
   LockedRequestWatchList* pendingRequestWatches_;
   RequestWatchList::iterator requestWatch_;
-};
-
+}; // namespace eden
 } // namespace eden
 } // namespace facebook

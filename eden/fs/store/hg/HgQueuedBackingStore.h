@@ -57,6 +57,40 @@ class HgQueuedBackingStore : public BackingStore {
     return backingStore_.get();
   }
 
+  /**
+   * stages of hg import that are tracked, these represent where an import is in
+   * the import process (for example an import could be queued, fetching from
+   * hg, or checking cache)
+   */
+  enum HgImportStage {
+    // represents any import that has been requested but not yet completed
+    // (imports in this stage could be in the queue, checking the cache, or
+    // fetching data from hg
+    PENDING,
+    // represents imports that are currently fetching data from hg
+    LIVE,
+  };
+
+  constexpr static std::array<HgImportStage, 2> hgImportStages{
+      HgImportStage::PENDING,
+      HgImportStage::LIVE};
+
+  static std::string stringOfHgImportStage(HgImportStage stage);
+
+  /**
+   * calculates `metric` for `object` imports that are `stage`.
+   *    ex. HgQueuedBackingStore::getImportMetrics(
+   *          RequestMetricsScope::HgImportStage::PENDING,
+   *          RequestMetricsScope::HgImportObject::BLOB,
+   *          RequestMetricsScope::Metric::COUNT,
+   *        )
+   *    calculates the number of blob imports that are pending
+   */
+  size_t getImportMetric(
+      HgImportStage stage,
+      HgBackingStore::HgImportObject object,
+      RequestMetricsScope::RequestMetric metric) const;
+
  private:
   // Forbidden copy constructor and assignment operator
   HgQueuedBackingStore(const HgQueuedBackingStore&) = delete;
@@ -66,6 +100,18 @@ class HgQueuedBackingStore : public BackingStore {
    * The worker runloop function.
    */
   void processRequest();
+
+  /**
+   * gets the watches timing `object` imports that are `stage`
+   *    ex. HgQueuedBackingStore::getImportWatches(
+   *          RequestMetricsScope::HgImportStage::PENDING,
+   *          RequestMetricsScope::HgImportObject::BLOB,
+   *        )
+   *    gets the watches timing blob imports that are pending
+   */
+  RequestMetricsScope::LockedRequestWatchList& getImportWatches(
+      HgImportStage stage,
+      HgBackingStore::HgImportObject object) const;
 
   std::unique_ptr<HgBackingStore> backingStore_;
 

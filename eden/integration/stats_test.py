@@ -131,6 +131,14 @@ class HgBackingStoreStatsTest(testcase.EdenRepoTest):
             "store.hg.pending_import.tree.max_duration_us",
             "store.hg.pending_import.prefetch.max_duration_us",
             "store.hg.pending_import.max_duration_us",
+            "store.hg.live_import.blob.count",
+            "store.hg.live_import.tree.count",
+            "store.hg.live_import.prefetch.count",
+            "store.hg.live_import.count",
+            "store.hg.live_import.blob.max_duration_us",
+            "store.hg.live_import.tree.max_duration_us",
+            "store.hg.live_import.prefetch.max_duration_us",
+            "store.hg.live_import.max_duration_us",
         ]
 
         for counter_name in counter_names_to_check:
