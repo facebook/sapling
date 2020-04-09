@@ -289,7 +289,7 @@ std::string readFileContents(const AbsolutePath& path) {
 std::string readFsckLog(const OverlayChecker::RepairResult& result) {
   auto logPath = result.repairDir + "fsck.log"_pc;
   auto contents = readFileContents(logPath);
-  XLOG(DBG4) << "fsck log:\n" << contents;
+  XLOG(DBG4) << "fsck log " << logPath << ":\n" << contents;
   return contents;
 }
 

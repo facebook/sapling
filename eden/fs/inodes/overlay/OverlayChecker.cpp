@@ -148,7 +148,7 @@ class OverlayChecker::RepairState {
     auto timestampStr = folly::sformat(
         "{:04d}{:02d}{:02d}_{:02d}{:02d}{:02d}",
         now.tm_year + 1900,
-        now.tm_mon,
+        now.tm_mon + 1,
         now.tm_mday,
         now.tm_hour,
         now.tm_min,
@@ -190,7 +190,7 @@ class OverlayChecker::RepairState {
     auto header = folly::sformat(
         "{:04d}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}.{:06d}: ",
         timeFields.tm_year + 1900,
-        timeFields.tm_mon,
+        timeFields.tm_mon + 1,
         timeFields.tm_mday,
         timeFields.tm_hour,
         timeFields.tm_min,
