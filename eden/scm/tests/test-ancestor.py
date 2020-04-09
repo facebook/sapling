@@ -13,8 +13,6 @@ from edenscm.mercurial.node import nullrev
 from hghave import require
 
 
-require(["py2"])
-
 if sys.version_info[0] >= 3:
     long = int
     xrange = range
@@ -252,7 +250,7 @@ dagtests = [
 def test_gca():
     u = uimod.ui.load()
     for i, (dag, tests) in enumerate(dagtests):
-        repo = hg.repository(u, b"gca%d" % i, create=1)
+        repo = hg.repository(u, "gca%d" % i, create=1)
         cl = repo.changelog
         if not util.safehasattr(cl.index, "ancestors"):
             # C version not available
