@@ -514,9 +514,16 @@ Do you want to run `eden mount %s` instead?"""
             if len(os.listdir(path)) > 0:
                 raise OSError(errno.ENOTEMPTY, os.strerror(errno.ENOTEMPTY), path)
 
-        # Populate the directory with a file containing instructions about how to get
-        # Eden to remount the checkout.  If Eden is not running or does not have this
-        # checkout mounted users will see this file.
+        # On non-Windows platforms, put a README file in the mount point directory.
+        # This will be visible to users when the EdenFS checkout is not mounted,
+        # and will contain instructions for how to get the checkout re-mounted.
+        #
+        # On Windows anything we put in this directory will be visible in the checkout
+        # itself, so we don't want to put a README file here.
+        if sys.platform != "win32":
+            self._create_checkout_readme_file(path)
+
+    def _create_checkout_readme_file(self, path: str) -> None:
         help_path = Path(path) / NOT_MOUNTED_README_PATH
         site_readme_path = self._etc_eden_dir / NOT_MOUNTED_SITE_SPECIFIC_README_PATH
         help_contents: Optional[str] = NOT_MOUNTED_DEFAULT_TEXT
