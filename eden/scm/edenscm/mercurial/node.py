@@ -21,7 +21,13 @@ bhex = binascii.hexlify
 bbin = binascii.unhexlify
 
 if sys.version_info.major == 3:
-    bin = bbin
+
+    def bin(node):
+        try:
+            return bbin(node)
+        except binascii.Error as e:
+            raise TypeError(e)
+
     hex = bytes.hex
 else:
     bin = bbin
