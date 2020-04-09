@@ -142,7 +142,8 @@ def run(args=None, fin=None, fout=None, ferr=None):
             status = -1
     if util.safehasattr(req.ui, "ferr"):
         if err is not None and err.errno != errno.EPIPE:
-            req.ui.ferr.write("abort: %s\n" % encoding.strtolocal(err.strerror))
+            errormsg = pycompat.encodeutf8(err.strerror)
+            req.ui.ferr.write(b"abort: %s\n" % errormsg)
         req.ui.ferr.flush()
     sys.exit(status & 255)
 
