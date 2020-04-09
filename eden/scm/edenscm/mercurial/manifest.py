@@ -398,7 +398,7 @@ _noop = lambda s: None
 
 
 class treemanifest(object):
-    def __init__(self, dir="", text=""):
+    def __init__(self, dir="", text=b""):
         self._dir = dir
         self._node = revlog.nullid
         self._loadfunc = _noop
@@ -492,7 +492,7 @@ class treemanifest(object):
         return list(self.iterkeys())
 
     def __iter__(self):
-        return pycompat.iterkeys(self)
+        return self.iterkeys()
 
     def __contains__(self, f):
         if f is None:
