@@ -198,12 +198,15 @@ def safehasattr(thing, attr):
 
 
 def bytesinput(fin, fout, *args, **kwargs):
-    sin, sout = sys.stdin, sys.stdout
-    try:
-        sys.stdin, sys.stdout = encoding.strio(fin), encoding.strio(fout)
+    if sys.version_info[0] >= 3:
         return encoding.strtolocal(pycompat.rawinput(*args, **kwargs))
-    finally:
-        sys.stdin, sys.stdout = sin, sout
+    else:
+        sin, sout = sys.stdin, sys.stdout
+        try:
+            sys.stdin, sys.stdout = encoding.strio(fin), encoding.strio(fout)
+            return encoding.strtolocal(pycompat.rawinput(*args, **kwargs))
+        finally:
+            sys.stdin, sys.stdout = sin, sout
 
 
 def bitsfrom(container):
