@@ -9,9 +9,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require(["py2"])
-
-
 sh % "setconfig 'extensions.treemanifest=!'"
 sh % "cat" << r'''
 """A small extension to test bundle2 pushback parts.
@@ -32,7 +29,7 @@ def _newhandlechangegroup(op, inpart):
                   'new': 'tip'}
         op.reply.newpart('pushkey', mandatoryparams=params.items())
     else:
-        op.reply.newpart('output', data='pushback not enabled')
+        op.reply.newpart('output', data=b'pushback not enabled')
     return result
 _newhandlechangegroup.params = bundle2.handlechangegroup.params
 bundle2.parthandlermapping['changegroup'] = _newhandlechangegroup

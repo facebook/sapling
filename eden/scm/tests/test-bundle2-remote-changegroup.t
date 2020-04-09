@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ disable treemanifest
@@ -13,7 +12,7 @@ Create an extension to test bundle2 remote-changegroup parts
   > Current bundle2 implementation doesn't provide a way to generate those
   > parts, so they must be created by extensions.
   > """
-  > from edenscm.mercurial import bundle2, changegroup, discovery, exchange, util
+  > from edenscm.mercurial import bundle2, changegroup, discovery, exchange, util, pycompat
   > 
   > def _getbundlechangegrouppart(bundler, repo, source, bundlecaps=None,
   >                               b2caps=None, heads=None, common=None,
@@ -37,10 +36,10 @@ Create an extension to test bundle2 remote-changegroup parts
   >           Python expression as parameters. The Python expression is
   >           evaluated with eval, and is expected to be a dict.
   >     """
-  >     def newpart(name, data=''):
+  >     def newpart(name, data=b''):
   >         """wrapper around bundler.newpart adding an extra part making the
   >         client output information about each processed part"""
-  >         bundler.newpart('output', data=name)
+  >         bundler.newpart('output', data=pycompat.encodeutf8(name))
   >         part = bundler.newpart(name, data=data)
   >         return part
   > 

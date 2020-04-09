@@ -418,7 +418,7 @@ def pushbookmark(repo, key, old, new):
         l = repo.lock()
         tr = repo.transaction("bookmarks")
         marks = repo._bookmarks
-        existing = hex(marks.get(key, ""))
+        existing = hex(marks.get(key, b""))
         if existing != old and existing != new:
             return False
         if new == "":

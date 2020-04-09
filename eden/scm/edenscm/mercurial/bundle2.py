@@ -629,13 +629,13 @@ def encodecaps(caps):
 
 
 bundletypes = {
-    "": (b"", b"UN"),  # only when using unbundle on ssh and old http servers
+    "": (b"", "UN"),  # only when using unbundle on ssh and old http servers
     # since the unification ssh accepts a header but there
     # is no capability signaling it.
     "HG20": (),  # special-cased below
-    "HG10UN": (b"HG10UN", b"UN"),
-    "HG10BZ": (b"HG10", b"BZ"),
-    "HG10GZ": (b"HG10GZ", b"GZ"),
+    "HG10UN": (b"HG10UN", "UN"),
+    "HG10BZ": (b"HG10", "BZ"),
+    "HG10GZ": (b"HG10GZ", "GZ"),
 }
 
 # hgweb uses this list to communicate its preferred type
@@ -1019,6 +1019,11 @@ class bundlepart(object):
         validateparttype(parttype)
         self.id = None
         self.type = parttype
+        assert (
+            isinstance(data, bytes)
+            or util.safehasattr(data, "next")
+            or util.safehasattr(data, "__next__")
+        )
         self._data = data
         self._mandatoryparams = list(mandatoryparams)  # type: List[Tuple[str, str]]
         self._advisoryparams = list(advisoryparams)  # type: List[Tuple[str, str]]
@@ -2009,7 +2014,7 @@ def handleoutput(op, inpart):
     # type: (bundleoperation, unbundlepart) -> None
     """forward output captured on the server to the client"""
     for line in inpart.read().splitlines():
-        op.ui.status(_("remote: %s\n") % line)
+        op.ui.status(_("remote: %s\n") % pycompat.decodeutf8(line))
 
 
 @parthandler("replycaps")

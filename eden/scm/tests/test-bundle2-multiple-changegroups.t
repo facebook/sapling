@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ disable treemanifest
@@ -19,13 +18,13 @@ Create an extension to test bundle2 with multiple changegroups
   >     outgoing = discovery.outgoing(repo, common, intermediates)
   >     cg = changegroup.makechangegroup(repo, outgoing, '02',
   >                                      source, bundlecaps=bundlecaps)
-  >     bundler.newpart('output', data='changegroup1')
+  >     bundler.newpart('output', data=b'changegroup1')
   >     part = bundler.newpart('changegroup', data=cg.getchunks())
   >     part.addparam('version', '02')
   >     outgoing = discovery.outgoing(repo, common + intermediates, heads)
   >     cg = changegroup.makechangegroup(repo, outgoing, '02',
   >                                      source, bundlecaps=bundlecaps)
-  >     bundler.newpart('output', data='changegroup2')
+  >     bundler.newpart('output', data=b'changegroup2')
   >     part = bundler.newpart('changegroup', data=cg.getchunks())
   >     part.addparam('version', '02')
   > 
