@@ -263,7 +263,6 @@ EdenServiceHandler::EdenServiceHandler(
     : BaseService{kServiceName},
       originalCommandLine_{std::move(originalCommandLine)},
       server_{server} {
-#ifndef _WIN32
   struct HistConfig {
     int64_t bucketSize{250};
     int64_t min{0};
@@ -308,7 +307,6 @@ EdenServiceHandler::EdenServiceHandler(
         histConfig.min,
         histConfig.max);
   }
-#endif
 }
 
 std::unique_ptr<apache::thrift::AsyncProcessor>
