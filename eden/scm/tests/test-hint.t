@@ -1,5 +1,4 @@
-#require py2
-#chg-compatible
+`#chg-compatible
 
   $ newext showhint << EOF
   > from edenscm.mercurial import (

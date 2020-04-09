@@ -106,7 +106,7 @@ def editconfig(path, section, name, value):
     path = os.path.realpath(path)
     content = ""
     try:
-        content = util.readfile(path)
+        content = util.readfileutf8(path)
     except IOError as ex:
         if ex.errno != errno.ENOENT:
             raise
@@ -119,7 +119,7 @@ def editconfig(path, section, name, value):
     if source.startswith(":"):
         # line index
         index = int(source[1:]) - 1
-        lines = mdiff.splitnewlines(content)
+        lines = content.splitlines(True)
         # for simple case, we can edit the line in-place
         if (  # config line should still exist
             index < len(lines)
@@ -131,12 +131,14 @@ def editconfig(path, section, name, value):
             edited = True
             # edit the line
             content = "".join(
-                lines[:index] + ["%s = %s\n" % (name, value)] + lines[index + 1 :]
+                lines[:index]
+                + ["%s = %s%s" % (name, value, os.linesep)]
+                + lines[index + 1 :]
             )
     if not edited:
         # append as new config
         if content:
-            content += "\n"
-        content += "[%s]\n%s = %s\n" % (section, name, value)
+            content += os.linesep
+        content += "[%s]%s%s = %s%s" % (section, os.linesep, name, value, os.linesep)
     with util.atomictempfile(path) as f:
-        f.write(content)
+        f.write(pycompat.encodeutf8(content))
