@@ -3846,7 +3846,7 @@ class _truncatedbz2engine(compressionengine):
         def gen():
             # The input stream doesn't have the 'BZ' header. So add it back.
             d = bz2.BZ2Decompressor()
-            d.decompress("BZ")
+            d.decompress(b"BZ")
             for chunk in filechunkiter(fh):
                 yield d.decompress(chunk)
 

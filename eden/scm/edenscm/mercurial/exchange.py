@@ -196,7 +196,7 @@ def readbundle(ui, fh, fname, vfs=None):
         raise error.Abort(_("%s: not a Mercurial bundle") % fname)
     if version == "10":
         if alg is None:
-            alg = changegroup.readexactly(fh, 2)
+            alg = pycompat.decodeutf8(changegroup.readexactly(fh, 2))
         return changegroup.cg1unpacker(fh, alg)
     elif version.startswith("2"):
         return bundle2.getunbundler(ui, fh, magicstring=magic + version)
