@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Do not strip innocent children. See https://bitbucket.org/facebook/hg-experimental/issues/6/hg-absorb-merges-diverged-commits

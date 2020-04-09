@@ -46,7 +46,7 @@ from edenscm.mercurial import (
     util,
 )
 from edenscm.mercurial.i18n import _, _n
-from edenscm.mercurial.pycompat import range
+from edenscm.mercurial.pycompat import decodeutf8, encodeutf8, range
 from edenscmnative import linelog
 
 
@@ -88,7 +88,7 @@ class emptyfilecontext(object):
     """minimal filecontext representing an empty file"""
 
     def data(self):
-        return ""
+        return b""
 
     def node(self):
         return node.nullid
@@ -452,7 +452,7 @@ class filefixupstate(object):
         for i in range(len(self.contents)):
             rev = (i + 1) * 2
             self.linelog.annotate(rev)
-            content = "".join(map(self._getline, self.linelog.annotateresult))
+            content = b"".join(map(self._getline, self.linelog.annotateresult))
             contents.append(content)
         return contents
 
@@ -492,22 +492,22 @@ class filefixupstate(object):
         for l in alllines:
             editortext += "    %s : %s" % (
                 "".join([("y" if i in lineset[l] else " ") for i, _f in visiblefctxs]),
-                self._getline(l),
+                decodeutf8(self._getline(l)),
             )
         # run editor
         editedtext = self.ui.edit(editortext, "", action="absorb")
         if not editedtext:
             raise error.Abort(_("empty editor text"))
         # parse edited result
-        contents = ["" for i in self.fctxs]
+        contents = [b"" for i in self.fctxs]
         leftpadpos = 4
         colonpos = leftpadpos + len(visiblefctxs) + 1
-        for l in mdiff.splitnewlines(editedtext):
+        for l in editedtext.splitlines(True):
             if l.startswith("HG:"):
                 continue
             if l[colonpos - 1 : colonpos + 2] != " : ":
                 raise error.Abort(_("malformed line: %s") % l)
-            linecontent = l[colonpos + 2 :]
+            linecontent = encodeutf8(l[colonpos + 2 :])
             for i, ch in enumerate(l[leftpadpos : colonpos - 1]):
                 if ch == "y":
                     contents[visiblefctxs[i][0]] += linecontent
@@ -575,7 +575,7 @@ class filefixupstate(object):
 
     def _showchanges(self, fm, alines, blines, chunk, fixups):
         def trim(line):
-            if line.endswith("\n"):
+            if line.endswith(b"\n"):
                 line = line[:-1]
             return line
 
@@ -607,13 +607,15 @@ class filefixupstate(object):
                 node = ctx.hex()
                 self.ctxaffected.add(ctx)
             fm.write("node", "%-7.7s ", node, label="absorb.node")
-            fm.write("diffchar " + linetype, "%s%s\n", diffchar, line, label=linelabel)
+            fm.writebytes(
+                "diffchar " + linetype, b"%s%s\n", diffchar, line, label=linelabel
+            )
             fm.data(path=self.path, linetype=linetype)
 
         for i in range(a1, a2):
-            writeline(aidxs[i - a1], "-", trim(alines[i]), "deleted", "diff.deleted")
+            writeline(aidxs[i - a1], b"-", trim(alines[i]), "deleted", "diff.deleted")
         for i in range(b1, b2):
-            writeline(bidxs[i - b1], "+", trim(blines[i]), "inserted", "diff.inserted")
+            writeline(bidxs[i - b1], b"+", trim(blines[i]), "inserted", "diff.inserted")
 
 
 class fixupstate(object):
