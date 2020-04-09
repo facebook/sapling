@@ -2247,12 +2247,20 @@ fn serialize_getcommitdata(
     hg_cs_id: HgChangesetId,
     revlog_changeset: Option<RevlogChangeset>,
 ) -> Result<BytesOld> {
+    // For each changeset, write:
+    //
+    //   HEX(HASH) + ' ' + STR(LEN(SERIALIZED)) + '\n' + SERIALIZED + '\n'
+    //
+    // For known changesets, SERIALIZED is the payload that SHA1(SERIALIZED)
+    // matches HASH. The client relies on this for data integrity check.
+    //
+    // For unknown and NULL changesets, SERIALIZED is empty and the client
+    // should check that to know that commits are missing on the server.
     let mut revlog_commit = Vec::new();
-    // When we don't find a given changeset, we write an empty line for the result.
-    // For the NULLID the output will have content according to Mercurial description. For example
-    // the manifest hash will be 40*"0".
-    if let Some(real_changeset) = revlog_changeset {
-        mercurial_revlog::changeset::serialize_cs(&real_changeset, &mut revlog_commit)?;
+    if hg_cs_id != NULL_CSID {
+        if let Some(real_changeset) = revlog_changeset {
+            real_changeset.generate_for_hash_verification(&mut revlog_commit)?;
+        }
     }
     // capacity = hash + " " + length + "\n" + content + "\n"
     let mut buffer = BytesMutOld::with_capacity(40 + 1 + 10 + 1 + revlog_commit.len() + 1);
