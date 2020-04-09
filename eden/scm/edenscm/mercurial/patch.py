@@ -1530,28 +1530,28 @@ class binhunk(object):
         def getline(lr, hunk):
             l = lr.readline()
             hunk.append(l)
-            return l.rstrip("\r\n")
+            return l.rstrip(b"\r\n")
 
         size = 0
         while True:
             line = getline(lr, self.hunk)
             if not line:
                 raise PatchError(_('could not extract "%s" binary data') % self._fname)
-            if line.startswith("literal "):
+            if line.startswith(b"literal "):
                 size = int(line[8:].rstrip())
                 break
-            if line.startswith("delta "):
+            if line.startswith(b"delta "):
                 size = int(line[6:].rstrip())
                 self.delta = True
                 break
         dec = []
         line = getline(lr, self.hunk)
         while len(line) > 1:
-            l = line[0]
-            if l <= "Z" and l >= "A":
-                l = ord(l) - ord("A") + 1
+            l = ord(line[0])
+            if l <= ord("Z") and l >= ord("A"):
+                l = l - ord("A") + 1
             else:
-                l = ord(l) - ord("a") + 27
+                l = l - ord("a") + 27
             try:
                 dec.append(util.b85decode(line[1:])[:l])
             except ValueError as e:
@@ -1559,7 +1559,7 @@ class binhunk(object):
                     _('could not decode "%s" binary patch: %s') % (self._fname, str(e))
                 )
             line = getline(lr, self.hunk)
-        text = zlib.decompress("".join(dec))
+        text = zlib.decompress(b"".join(dec))
         if len(text) != size:
             raise PatchError(
                 _('"%s" length is %d bytes, should be %d')
