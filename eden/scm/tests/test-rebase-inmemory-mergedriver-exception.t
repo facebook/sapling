@@ -1,4 +1,3 @@
-#require py2
 TODO: configure mutation
   $ configure noevolution
 Test a mergedriver that raises exceptions in its preprocess() hook:
@@ -11,7 +10,8 @@ Test a mergedriver that raises exceptions in its preprocess() hook:
   $ mkdir driver
   $ cat > driver/__init__.py <<EOF
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels=None):
-  >     print("in preprocess()")
+  >     ui.write("in preprocess()\n")
+  >     ui.flush()
   >     raise Exception("some exception in preprocess()")
   > def conclude(ui, repo, hooktype, mergestate, wctx, labels=None):
   >     pass
@@ -39,7 +39,7 @@ Now make two conflicting commits:
 
 Without IMM:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=0
-  rebasing c1d523ef4657 "B" (B)
+  rebasing fc2212436a6e "B" (B)
   in preprocess()
   error: preprocess hook raised an exception: some exception in preprocess()
   (run with --traceback for stack trace)
@@ -53,14 +53,14 @@ Without IMM:
 With IMM:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=1
   rebasing in-memory!
-  rebasing c1d523ef4657 "B" (B)
+  rebasing fc2212436a6e "B" (B)
   in preprocess()
   error: preprocess hook raised an exception: some exception in preprocess()
   (run with --traceback for stack trace)
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   hit merge conflicts (in FILE); switching to on-disk merge
-  rebasing c1d523ef4657 "B" (B)
+  rebasing fc2212436a6e "B" (B)
   in preprocess()
   error: preprocess hook raised an exception: some exception in preprocess()
   (run with --traceback for stack trace)
@@ -87,23 +87,23 @@ have to try it both ways. (It might be nice to change that.)
   (activating bookmark base)
   $ cat > driver/__init__.py <<EOF
   > def preprocess(ui, repo, hooktype, mergestate, wctx, labels=None):
-  >     print("in preprocess()")
+  >     ui.write("in preprocess()\n")
   >     for f in mergestate:
   >         mergestate.resolve(f, wctx)
-  >     print("done with preprocess()")
+  >     ui.write("done with preprocess()\n")
   > def conclude(ui, repo, hooktype, mergestate, wctx, labels=None):
   >     pass
   > EOF
   $ hg commit -m "new base"
   $ hg rebase -r A+B -d .
-  rebasing 6cc5ed361a96 "A" (A)
-  rebasing c1d523ef4657 "B" (B)
-  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/c1d523ef4657-4b35995e-rebase.hg
+  rebasing 93f95d9ff88f "A" (A)
+  rebasing fc2212436a6e "B" (B)
+  saved backup bundle to $TESTTMP/repo1/.hg/strip-backup/fc2212436a6e-2ac0b0a5-rebase.hg
 
 Without IMM, you can see we try to merge FILE twice (once in preprocess() and once later),
 and it fails:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=0
-  rebasing ffa05d84855d "B" (B)
+  rebasing 20a5af1b69ab "B" (B)
   in preprocess()
   warning: 1 conflicts while merging FILE! (edit, then use 'hg resolve --mark')
   done with preprocess()
@@ -112,25 +112,25 @@ and it fails:
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ cat FILE
-  <<<<<<< dest:   18c12c72605a A - test: A
+  <<<<<<< dest:   07aeb7042f36 A - test: A
   v1
   =======
   conflict
-  >>>>>>> source: ffa05d84855d B - test: B
+  >>>>>>> source: 20a5af1b69ab B - test: B
   $ hg rebase --abort
   rebase aborted
 
 With IMM, it's *very* noisy, but we do eventually get to the same place:
   $ hg rebase -r B -d A --config rebase.experimental.inmemory=1
   rebasing in-memory!
-  rebasing ffa05d84855d "B" (B)
+  rebasing 20a5af1b69ab "B" (B)
   in preprocess()
   error: preprocess hook raised an exception: in-memory merge does not support merge conflicts
   (run with --traceback for stack trace)
   warning: merge driver failed to preprocess files
   (hg resolve --all to retry, or hg resolve --all --skip to skip merge driver)
   hit merge conflicts (in FILE); switching to on-disk merge
-  rebasing ffa05d84855d "B" (B)
+  rebasing 20a5af1b69ab "B" (B)
   in preprocess()
   warning: 1 conflicts while merging FILE! (edit, then use 'hg resolve --mark')
   done with preprocess()
@@ -139,8 +139,8 @@ With IMM, it's *very* noisy, but we do eventually get to the same place:
   unresolved conflicts (see hg resolve, then hg rebase --continue)
   [1]
   $ cat FILE
-  <<<<<<< dest:   18c12c72605a A - test: A
+  <<<<<<< dest:   07aeb7042f36 A - test: A
   v1
   =======
   conflict
-  >>>>>>> source: ffa05d84855d B - test: B
+  >>>>>>> source: 20a5af1b69ab B - test: B
