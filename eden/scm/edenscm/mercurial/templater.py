@@ -711,7 +711,7 @@ def diff(context, mapping, args):
     ctx = mapping["ctx"]
     chunks = ctx.diff(match=ctx.match([], getpatterns(0), getpatterns(1)))
 
-    return "".join(chunks)
+    return pycompat.decodeutf8(b"".join(chunks))
 
 
 @templatefunc("extdata(source)", argspec="source")
