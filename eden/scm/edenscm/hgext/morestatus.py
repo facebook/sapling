@@ -167,7 +167,7 @@ def extsetup(ui):
 def saveupdateargs(repo, args, **kwargs):
     # args is a string containing all flags and arguments
     with repo.wlock():
-        repo.localvfs.write(UPDATEARGS, args)
+        repo.localvfs.writeutf8(UPDATEARGS, args)
 
 
 def cleanupdateargs(repo, **kwargs):
