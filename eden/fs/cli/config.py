@@ -75,7 +75,7 @@ SNAPSHOT_MAGIC = b"eden\x00\x00\x00\x01"
 
 DEFAULT_REVISION = {  # supported repo name -> default bookmark
     "git": "refs/heads/master",
-    "hg": ".",
+    "hg": "first(present(master) + .)",
 }
 
 SUPPORTED_REPOS = DEFAULT_REVISION.keys()
