@@ -12,6 +12,7 @@ import os
 import shlex
 import socket
 import time
+from enum import Enum
 from typing import Any, Dict, List, Optional
 
 from facebook.eden.ttypes import AccessCounts
@@ -74,7 +75,18 @@ COLOR_SELECTED = 1
 LOWER_WARN_THRESHOLD_COLOR = 2
 UPPER_WARN_THRESHOLD_COLOR = 3
 
-IMPORT_TYPES = ["blob", "tree", "prefetch"]
+
+class ImportStage(Enum):
+    PENDING = "pending"
+    LIVE = "live"
+
+
+class ImportObject(Enum):
+    BLOB = "blob"
+    TREE = "tree"
+    PREFETCH = "prefetch"
+
+
 IMPORT_TIME_LOWER_WARN_THRESHOLD = 10  # seconds
 IMPORT_TIME_UPPER_WARN_THRESHOLD = 30  # seconds
 
@@ -100,7 +112,10 @@ class Top:
         self.height = 0
         self.width = 0
 
-        self.pending_imports = {import_type: {} for import_type in IMPORT_TYPES}
+        self.pending_imports = {
+            import_stage: {import_type: {} for import_type in ImportObject}
+            for import_stage in ImportStage
+        }
 
     def start(self, args: argparse.Namespace) -> int:
         self.running = True
@@ -157,22 +172,26 @@ class Top:
     def _update_summary_stats(self, client):
         client.flushStatsNow()
         counters = client.getCounters()
-        for import_type in IMPORT_TYPES:
-            number_requests = counters.get(
-                f"store.hg.pending_import.{import_type}.count", -1
-            )
-            longest_outstanding_request = counters.get(
-                f"store.hg.pending_import.{import_type}.max_duration_us", -1
-            )  # us
-            longest_outstanding_request = (
-                -1
-                if longest_outstanding_request == -1
-                else (longest_outstanding_request / 1000000)
-            )  # s
-            self.pending_imports[import_type]["number_requests"] = number_requests
-            self.pending_imports[import_type][
-                "max_request_duration"
-            ] = longest_outstanding_request
+        for import_stage in ImportStage:
+            for import_type in ImportObject:
+                stage_counter_piece = f"{import_stage.value}_import"
+                type_counter_piece = import_type.value
+                counter_prefix = f"store.hg.{stage_counter_piece}.{type_counter_piece}"
+                number_requests = counters.get(f"{counter_prefix}.count", -1)
+                longest_outstanding_request = counters.get(
+                    f"{counter_prefix}.max_duration_us", -1
+                )  # us
+                longest_outstanding_request = (
+                    -1
+                    if longest_outstanding_request == -1
+                    else (longest_outstanding_request / 1000000)
+                )  # s
+                self.pending_imports[import_stage][import_type][
+                    "number_requests"
+                ] = number_requests
+                self.pending_imports[import_stage][import_type][
+                    "max_request_duration"
+                ] = longest_outstanding_request
 
     def render(self, stdscr):
         stdscr.erase()
@@ -204,12 +223,23 @@ class Top:
     def render_summary_section(self, stdscr):
         imports_header = "outstanding object imports:"
         self.write_line(stdscr, imports_header, len(imports_header))
+        len_longest_stage = max(
+            len(self.get_display_name_for_import_stage(stage)) for stage in ImportStage
+        )
+        for import_stage in ImportStage:
+            self.render_import_row(stdscr, import_stage, len_longest_stage)
 
-        mid_section_size = self.width // 3
+    def render_import_row(self, stdscr, import_stage, len_longest_stage):
+        stage_display = self.get_display_name_for_import_stage(import_stage)
+        header = f"{stage_display:<{len_longest_stage}} -- "
+        self.write_part_of_line(stdscr, header, len(header))
+
+        whole_mid_section_size = self.width - len(header)
+        mid_section_size = whole_mid_section_size // 3
 
         separator = ""
-        for import_type in IMPORT_TYPES:
-            label = f"{separator}{import_type}: "
+        for import_type in ImportObject:
+            label = f"{separator}{import_type.value}: "
             self.write_part_of_line(stdscr, label, len(label))
 
             # split the section between the number of imports and
@@ -219,15 +249,17 @@ class Top:
             import_time_size = import_metric_size - import_count_size
 
             # number of imports
-            imports_for_type = self.pending_imports[import_type]["number_requests"]
+            imports_for_type = self.pending_imports[import_stage][import_type][
+                "number_requests"
+            ]
             if imports_for_type == -1:
                 imports_for_type = "N/A"
             imports_for_type_display = f"{imports_for_type:>{import_count_size-1}} "
 
             # duration of the longest import
-            longest_request = self.pending_imports[import_type][
+            longest_request = self.pending_imports[import_stage][import_type][
                 "max_request_duration"
-            ]  # us
+            ]  # s
             color = self._get_color_for_pending_import_display(longest_request)
             if longest_request == -1:
                 longest_request_display = "N/A"
@@ -249,6 +281,12 @@ class Top:
 
             separator = " | "
         self.write_new_line()
+
+    def get_display_name_for_import_stage(self, import_stage):
+        if import_stage == ImportStage.PENDING:
+            return "total pending"
+        else:
+            return import_stage.value
 
     def _get_color_for_pending_import_display(self, longest_request) -> Optional[int]:
         if longest_request == 0 or longest_request < IMPORT_TIME_LOWER_WARN_THRESHOLD:
