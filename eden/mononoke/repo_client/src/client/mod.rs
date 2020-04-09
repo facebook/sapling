@@ -220,6 +220,7 @@ fn wireprotocaps() -> Vec<String> {
         "treeonly".to_string(),
         "knownnodes".to_string(),
         "designatednodes".to_string(),
+        "getcommitdata".to_string(),
     ]
 }
 
