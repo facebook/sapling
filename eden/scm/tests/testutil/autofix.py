@@ -122,7 +122,7 @@ def _repr(x, indent=0):
 def _fix():
     """Apply code changes"""
     for path, entries in _fixes.items():
-        lines = open(path, "rb").read().splitlines(True)
+        lines = open(path, "rb").read().decode("utf-8").splitlines(True)
         for span, code in sorted(entries, reverse=True):
             # Note: line starts with 1, col starts with 0.
             startline, startcol = span[0]
@@ -141,7 +141,7 @@ def _fix():
             lines = "".join(lines).splitlines(True)
 
         with open(path, "wb") as f:
-            f.write("".join(lines))
+            f.write("".join(lines).encode("utf-8"))
 
 
 def _removeindent(text):
