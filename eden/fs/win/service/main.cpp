@@ -150,12 +150,17 @@ int __cdecl main(int argc, char** argv) {
         std::move(edenConfig));
     prepareFuture = server->prepare(startupLogger);
   } catch (const std::exception& ex) {
-    fprintf(stderr, "Error: failed to start Eden: %s\n", ex.what());
+    fprintf(stderr, "Error: failed to start EdenFS: %s\n", ex.what());
     return -1;
   }
 
-  server->getServer()->serve();
-  server->performCleanup();
+  try {
+    server->getServer()->serve();
+    server->performCleanup();
+  } catch (const std::exception& ex) {
+    fprintf(stderr, "Error while running EdenFS: %s\n", ex.what());
+    return -1;
+  }
 
   XLOG(INFO) << "Eden Windows - exiting";
   return 0;
