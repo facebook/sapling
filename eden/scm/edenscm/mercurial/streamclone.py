@@ -298,7 +298,7 @@ def generatebundlev1(repo, compression=b"UN"):
 
         yield struct.pack(">QQ", filecount, bytecount)
         yield struct.pack(">H", len(requires) + 1)
-        yield requires + "\0"
+        yield requires + b"\0"
 
         # This is where we'll add compression in the future.
         assert compression == b"UN"

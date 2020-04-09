@@ -711,7 +711,9 @@ class bundle20(object):
     def getchunks(self):
         # type: () -> Iterable[bytes]
         if self.ui.debugflag:
-            msg = ['bundle2-output-bundle: "%s",' % self._magicstring]
+            msg = [
+                'bundle2-output-bundle: "%s",' % pycompat.decodeutf8(self._magicstring)
+            ]
             if self._params:
                 msg.append(" (%i params)" % len(self._params))
             msg.append(" %i parts total\n" % len(self._parts))
