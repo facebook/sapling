@@ -9,9 +9,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
 
 
-feature.require(["py2"])
-
-
 sh % "setconfig 'experimental.evolution='"
 sh % "enable absorb"
 
@@ -34,6 +31,8 @@ amendflag = correlated
 def sedi(pattern, *paths):
     # pattern looks like 's/foo/bar/'
     _s, a, b = pattern.split("/")[:3]
+    a = a.encode("utf-8")
+    b = b.encode("utf-8")
     for path in paths:
         content = open(path, "rb").read().replace(a, b)
         open(path, "wb").write(content)
@@ -52,7 +51,7 @@ sh % "hg absorb" == r"""
 # Make some commits:
 
 for i in range(1, 6):
-    open("a", "ab").write("%s\n" % i)
+    open("a", "a").write("%s\n" % i)
     sh % ("hg commit -A a -q -m 'commit %s'" % i)
 
 # Change a few lines:
@@ -121,7 +120,7 @@ sh % "cat" << r"""
 2b
 4d
 """ > "a"
-sh % "echo y" | "hg absorb --config 'ui.interactive=1'" == r"""
+sh % "hg absorb -a" == r"""
     showing changes for a
             @@ -0,1 +0,0 @@
     f548282 -1a
@@ -134,7 +133,6 @@ sh % "echo y" | "hg absorb --config 'ui.interactive=1'" == r"""
     84e5416 commit 5
     ff5d556 commit 3
     f548282 commit 1
-    apply changes (yn)?  y
     saved backup bundle to * (glob)
     3 of 3 chunks applied"""
 sh % "hg annotate a" == r"""
@@ -320,7 +318,8 @@ sh % "newrepo"
 
 for f in ["a", "b"]:
     for i in [1, 2]:
-        open(f, "ab").write("%s line %s\n" % (f, i))
+        line = "%s line %s\n" % (f, i)
+        open(f, "ab").write(line.encode("utf-8"))
         sh.hg("commit", "-A", f, "-m", "commit %s %s" % (f, i), "-q")
 
 # Use pattern to select files to be fixed up:
@@ -464,24 +463,25 @@ sh % "cat b" == r"""
 """
 sh % "cat" << "b line 1\nINS\nb line 2\n" > "b"
 
-sh % "echo END" >> "b"
-sh % "hg rm a"
-sh % "echo y" | "hg amend --correlated --config 'ui.interactive=1'" == r"""
-    showing changes for b
-            @@ -1,0 +1,1 @@
-            +INS
-            @@ -2,0 +3,1 @@
-    a478955 +END
-
-    1 changeset affected
-    a478955 commit b 2
-    apply changes (yn)?  y
-    1 of 2 chunks applied
-
-    # changes not applied and left in working directory:
-    # M b : 1 modified chunks were ignored
-    # M c : unsupported file type (ex. binary or link)
-    # R a : removed files were ignored"""
+if feature.check(["py2"]):
+    sh % "echo END" >> "b"
+    sh % "hg rm a"
+    sh % "echo y" | "hg amend --correlated --config 'ui.interactive=1'" == r"""
+        showing changes for b
+                @@ -1,0 +1,1 @@
+                +INS
+                @@ -2,0 +3,1 @@
+        a478955 +END
+    
+        1 changeset affected
+        a478955 commit b 2
+        apply changes (yn)?  y
+        1 of 2 chunks applied
+    
+        # changes not applied and left in working directory:
+        # M b : 1 modified chunks were ignored
+        # M c : unsupported file type (ex. binary or link)
+        # R a : removed files were ignored"""
 
 # Executable files:
 
