@@ -451,7 +451,7 @@ def debugverifylinkrevcache(ui, repo, *pats, **opts):
     db = repo._linkrevcache
     paths = dict(db._getdb(db._pathdbname))
     nodes = dict(db._getdb(db._nodedbname))
-    pathsrev = dict((v, k) for k, v in pycompat.iteritems(paths))
+    pathsrev = dict((v, pycompat.decodeutf8(k)) for k, v in pycompat.iteritems(paths))
     nodesrev = dict((v, k) for k, v in pycompat.iteritems(nodes))
     lrevs = dict(db._getdb(db._linkrevdbname))
 
@@ -461,10 +461,10 @@ def debugverifylinkrevcache(ui, repo, *pats, **opts):
     with progress.bar(ui, _("verifying"), total=total) as prog:
         for i, (k, v) in enumerate(pycompat.iteritems(lrevs)):
             prog.value = i
-            pathid, nodeid = k.split("\0")
+            pathid, nodeid = k.split(b"\0")
             path = pathsrev[pathid]
             fnode = nodesrev[nodeid]
-            linkrevs = _str2intlist(v)
+            linkrevs = _str2intlist(pycompat.decodeutf8(v))
             linkrevs.sort()
 
             for linkrev in linkrevs:
