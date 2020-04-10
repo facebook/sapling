@@ -658,7 +658,7 @@ class repobackend(abstractbackend):
 
 # @@ -start,len +start,len @@ or @@ -start +start @@ if len is 1
 unidesc = re.compile(b"@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@")
-contextdesc = re.compile("(?:---|\*\*\*) (\d+)(?:,(\d+))? (?:---|\*\*\*)")
+contextdesc = re.compile(b"(?:---|\*\*\*) (\d+)(?:,(\d+))? (?:---|\*\*\*)")
 eolmodes = ["strict", "crlf", "lf", "auto"]
 
 
@@ -1378,22 +1378,22 @@ class hunk(object):
             self.lena += 1
         for x in range(self.lena):
             l = lr.readline()
-            if l.startswith("---"):
+            if l.startswith(b"---"):
                 # lines addition, old block is empty
                 lr.push(l)
                 break
             s = l[2:]
-            if l.startswith("- ") or l.startswith("! "):
-                u = "-" + s
-            elif l.startswith("  "):
-                u = " " + s
+            if l.startswith(b"- ") or l.startswith(b"! "):
+                u = b"-" + s
+            elif l.startswith(b"  "):
+                u = b" " + s
             else:
                 raise PatchError(_("bad hunk #%d old text line %d") % (self.number, x))
             self.a.append(u)
             self.hunk.append(u)
 
         l = lr.readline()
-        if l.startswith("\ "):
+        if l.startswith(b"\ "):
             s = self.a[-1][:-1]
             self.a[-1] = s
             self.hunk[-1] = s
@@ -1411,7 +1411,7 @@ class hunk(object):
         hunki = 1
         for x in range(self.lenb):
             l = lr.readline()
-            if l.startswith("\ "):
+            if l.startswith(b"\ "):
                 # XXX: the only way to hit this is with an invalid line range.
                 # The no-eol marker is not counted in the line range, but I
                 # guess there are diff(1) out there which behave differently.
@@ -1424,10 +1424,10 @@ class hunk(object):
                 lr.push(l)
                 break
             s = l[2:]
-            if l.startswith("+ ") or l.startswith("! "):
-                u = "+" + s
-            elif l.startswith("  "):
-                u = " " + s
+            if l.startswith(b"+ ") or l.startswith(b"! "):
+                u = b"+" + s
+            elif l.startswith(b"  "):
+                u = b" " + s
             elif len(self.b) == 0:
                 # line deletions, new block is empty
                 lr.push(l)
@@ -1437,13 +1437,13 @@ class hunk(object):
             self.b.append(s)
             while True:
                 if hunki >= len(self.hunk):
-                    h = ""
+                    h = b""
                 else:
                     h = self.hunk[hunki]
                 hunki += 1
                 if h == u:
                     break
-                elif h.startswith("-"):
+                elif h.startswith(b"-"):
                     continue
                 else:
                     self.hunk.insert(hunki - 1, u)
@@ -1452,15 +1452,15 @@ class hunk(object):
         if not self.a:
             # this happens when lines were only added to the hunk
             for x in self.hunk:
-                if x.startswith("-") or x.startswith(" "):
+                if x.startswith(b"-") or x.startswith(b" "):
                     self.a.append(x)
         if not self.b:
             # this happens when lines were only deleted from the hunk
             for x in self.hunk:
-                if x.startswith("+") or x.startswith(" "):
+                if x.startswith(b"+") or x.startswith(b" "):
                     self.b.append(x[1:])
         # @@ -start,len +start,len @@
-        self.desc = "@@ -%d,%d +%d,%d @@\n" % (
+        self.desc = b"@@ -%d,%d +%d,%d @@\n" % (
             self.starta,
             self.lena,
             self.startb,
