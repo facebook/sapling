@@ -35,8 +35,8 @@
 
 """
 
+import codecs
 import collections
-import json
 import os
 import sys
 import time
@@ -48,6 +48,7 @@ from edenscm.mercurial import (
     dispatch,
     extensions,
     filemerge,
+    json,
     node,
     phases,
     pycompat,
@@ -138,6 +139,7 @@ def _filemerge(
     *args,
     **kwargs
 ):
+
     if premerge:
         # copytracing worked if files to merge have different file names
         # and filelog contents are different (fco.cmp(fcd) returns True if
@@ -257,7 +259,10 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
 
         orig_encoded = json.loads(orig_data)
         orig_amend_copies = dict(
-            (k.decode("base64"), v.decode("base64"))
+            (
+                pycompat.decodeutf8(codecs.decode(pycompat.encodeutf8(k), "base64")),
+                pycompat.decodeutf8(codecs.decode(pycompat.encodeutf8(v), "base64")),
+            )
             for (k, v) in pycompat.iteritems(orig_encoded)
         )
 
@@ -281,7 +286,10 @@ def _amend(orig, ui, repo, old, extra, pats, opts):
 
         # Write out the entry for the new amend commit.
         encoded = dict(
-            (k.encode("base64"), v.encode("base64"))
+            (
+                pycompat.decodeutf8(codecs.encode(pycompat.encodeutf8(k), "base64")),
+                pycompat.decodeutf8(codecs.encode(pycompat.encodeutf8(v), "base64")),
+            )
             for (k, v) in pycompat.iteritems(amend_copies)
         )
         db[node] = json.dumps(encoded)
