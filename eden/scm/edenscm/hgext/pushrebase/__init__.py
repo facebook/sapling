@@ -69,6 +69,7 @@ from edenscm.mercurial import (
     obsolete,
     phases as phasesmod,
     pushkey,
+    pycompat,
     registrar,
     revsetlang,
     scmutil,
@@ -974,7 +975,7 @@ def _exchangesetup():
             op, replacements, markers, markerdate, clientobsmarkerversions
         )
 
-        for k in replacements.keys():
+        for k in list(replacements.keys()):
             replacements[hex(k)] = hex(replacements[k])
         op.records.add(rebaseparttype, replacements)
 
@@ -1464,7 +1465,7 @@ def getontotarget(op, params, bundle):
 
 def getpushmessage(revs, getmessage):
     # Notify the user of what is being pushed
-    io = util.stringio()
+    io = pycompat.stringutf8io()
     io.write(
         _n("pushing %s changeset:\n", "pushing %s changesets:\n", len(revs)) % len(revs)
     )
@@ -1532,7 +1533,7 @@ def bundle2pushkey(orig, op, part):
     # Merges many dicts into one. First it converts them to list of pairs,
     # then concatenates them (using sum), and then creates a diff out of them.
     replacements = dict(
-        sum([record.items() for record in op.records[rebaseparttype]], [])
+        sum([list(record.items()) for record in op.records[rebaseparttype]], [])
     )
 
     namespace = part.params["namespace"]
@@ -1564,7 +1565,7 @@ def bundle2phaseheads(orig, op, part):
     # Merges many dicts into one. First it converts them to list of pairs,
     # then concatenates them (using sum), and then creates a diff out of them.
     replacements = dict(
-        sum([record.items() for record in op.records[rebaseparttype]], [])
+        sum([list(record.items()) for record in op.records[rebaseparttype]], [])
     )
 
     decodedphases = phasesmod.binarydecode(part)

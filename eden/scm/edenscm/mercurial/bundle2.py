@@ -585,7 +585,8 @@ def _processpart(op, part):
         if output is not None:
             output = op.ui.popbuffer()
         if output:
-            outpart = op.reply.newpart("output", data=output, mandatory=False)
+            outpart = op.reply.newpart("output",
+                    data=pycompat.encodeutf8(output), mandatory=False)
             outpart.addparam("in-reply-to", pycompat.bytestr(part.id), mandatory=False)
 
 

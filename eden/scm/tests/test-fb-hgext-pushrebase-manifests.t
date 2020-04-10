@@ -95,22 +95,26 @@ Add an extension that logs whenever `manifest.readmf()` is called when the lock 
   > from edenscm.mercurial import extensions, manifest
   > from edenscm.mercurial.node import nullrev
   > def uisetup(ui):
-  >     extensions.wrapfunction(manifest.manifestrevlog, 'revision', readmf)
+  >     def captureui(*args, **kwargs):
+  >         kwargs["ui"] = ui
+  >         return readmf(*args, **kwargs)
+  >     extensions.wrapfunction(manifest.manifestrevlog, 'revision', captureui)
   > def readmf(orig, self, nodeorrev, **kwargs):
+  >     ui = kwargs.pop("ui")
   >     haslock = False
   >     try:
   >       haslock = os.path.lexists(os.path.join(self.opener.join(''), "../wlock"))
   >     except Exception as e:
-  >       print('manifest: %s' % e, file=sys.stderr)
+  >       ui.warn('manifest: %s\n' % e)
   >       pass
   >     if nodeorrev != nullrev:
   >         if haslock:
-  >           print('read flat manifest :(', file=sys.stderr)
+  >           ui.warn('read flat manifest :(\n')
   >           stack = traceback.extract_stack()
   >           # Uncomment for context:
   >           # print(''.join(traceback.format_list(stack[-5:-3])), file=sys.stderr)
   >         else:
-  >           print("read manifest outside the lock :)", file=sys.stderr)
+  >           ui.warn("read manifest outside the lock :)\n")
   >     return orig(self, nodeorrev, **kwargs)
   > EOF
 

@@ -1219,7 +1219,7 @@ def system(cmd, environ=None, cwd=None, out=None):
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,
         )
-        for line in iter(proc.stdout.readline, ""):
+        for line in iter(proc.stdout.readline, b""):
             out.write(line)
         proc.wait()
         rc = proc.returncode
