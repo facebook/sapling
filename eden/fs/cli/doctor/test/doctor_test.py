@@ -214,7 +214,7 @@ https://fb.facebook.com/groups/eden.users/
             out=out,
         )
 
-        self.assertEqual("Eden is not in use.\n", out.getvalue())
+        self.assertEqual("EdenFS is not in use.\n", out.getvalue())
         self.assertEqual(0, exit_code)
 
     @patch("eden.fs.cli.doctor.check_watchman._call_watchman")

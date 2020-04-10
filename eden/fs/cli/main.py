@@ -719,6 +719,13 @@ class ConfigCmd(Subcmd):
 class DoctorCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
+            "--current-edenfs-only",
+            action="store_true",
+            default=False,
+            help="Only report problems with the current EdenFS instance, and skip "
+            "system-wide checks (e.g., low disk space, stale mount points, etc).",
+        )
+        parser.add_argument(
             "--dry-run",
             "-n",
             action="store_true",
@@ -727,13 +734,10 @@ class DoctorCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
-        return doctor_mod.cure_what_ails_you(
-            instance,
-            args.dry_run,
-            mount_table=mtab.new(),
-            fs_util=filesystem.LinuxFsUtil(),
-            proc_utils=proc_utils.new(),
-        )
+        doctor = doctor_mod.EdenDoctor(instance, args.dry_run)
+        if args.current_edenfs_only:
+            doctor.run_system_wide_checks = False
+        return doctor.cure_what_ails_you()
 
 
 @subcmd("top", "Monitor Eden accesses by process.")

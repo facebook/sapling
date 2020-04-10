@@ -71,16 +71,10 @@ def print_rpm_version(out: IO[bytes]) -> None:
 
 
 def print_eden_doctor_report(instance: EdenInstance, out: IO[bytes]) -> None:
-    dry_run = True
     doctor_output = io.StringIO()
     try:
         doctor_rc = doctor_mod.cure_what_ails_you(
-            instance=instance,
-            dry_run=dry_run,
-            mount_table=mtab.new(),
-            fs_util=filesystem.LinuxFsUtil(),
-            proc_utils=proc_utils.new(),
-            out=ui_mod.PlainOutput(doctor_output),
+            instance, dry_run=True, out=ui_mod.PlainOutput(doctor_output)
         )
         out.write(
             b"\neden doctor --dry-run (exit code %d):\n%s\n"

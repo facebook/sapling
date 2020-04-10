@@ -28,6 +28,12 @@ class DoctorTest(EdenHgTestCase):
         repo.write_file("numbers", "1\n")
         self.commit2 = repo.commit("New commit.")
 
+    def run_doctor(self, dry_run: bool) -> subprocess.CompletedProcess:
+        args = ["doctor", "--current-edenfs-only"]
+        if dry_run:
+            args.append("-n")
+        return self.eden.run_unchecked(*args, stdout=subprocess.PIPE)
+
     def test_eden_doctor_fixes_valid_mismatched_parents(self) -> None:
         # this specifically tests when EdenFS and Mercurial are out of sync,
         # but and mercurial does know about EdenFS's WCP
@@ -53,7 +59,7 @@ class DoctorTest(EdenHgTestCase):
         # make sure that eden and mercurial are out of sync
         self.assertNotEqual(eden_parent, hg_parent)
 
-        cmd_result = self.eden.run_unchecked("doctor", "-n", stdout=subprocess.PIPE)
+        cmd_result = self.run_doctor(dry_run=True)
         error_msg = (
             "mercurial's parent commit is %s, but Eden's internal parent commit is %s"
             % (self.commit2, self.commit1)
@@ -61,7 +67,7 @@ class DoctorTest(EdenHgTestCase):
         self.assertIn(error_msg.encode("utf-8"), cmd_result.stdout)
 
         # run eden doctor and make sure eden and mercurial are in sync again
-        fixed_result = self.eden.run_unchecked("doctor", stdout=subprocess.PIPE)
+        fixed_result = self.run_doctor(dry_run=False)
         self.assertIn(b"Successfully fixed 1 problem", fixed_result.stdout)
 
         eden_parent_fixed = self.hg("whereami").strip("\n")
@@ -99,11 +105,11 @@ class DoctorTest(EdenHgTestCase):
         # make sure that eden and mercurial are out of sync
         self.assertNotEqual(eden_parent, hg_parent)
 
-        cmd_result = self.eden.run_unchecked("doctor", "-n", stdout=subprocess.PIPE)
+        cmd_result = self.run_doctor(dry_run=True)
         self.assertIn(b"Eden's snapshot file points to a bad commit", cmd_result.stdout)
 
         # run eden doctor and make sure eden and mercurial are in sync again
-        fixed_result = self.eden.run_unchecked("doctor", stdout=subprocess.PIPE)
+        fixed_result = self.run_doctor(dry_run=False)
         self.assertIn(b"Successfully fixed 1 problem", fixed_result.stdout)
 
         eden_parent_fixed = self.hg("whereami").strip("\n")
@@ -119,12 +125,12 @@ class DoctorTest(EdenHgTestCase):
         # replace .hg/dirstate with an empty file
         (repo_path / ".hg" / "dirstate").write_bytes(b"")
 
-        cmd_result = self.eden.run_unchecked("doctor", "-n", stdout=subprocess.PIPE)
+        cmd_result = self.run_doctor(dry_run=True)
         doctor_out = cmd_result.stdout.decode("utf-8")
         self.assertIn(f"Found inconsistent/missing data in {repo_path}/.hg", doctor_out)
         self.assertIn(f"error parsing .hg/dirstate", doctor_out)
 
-        fixed_result = self.eden.run_unchecked("doctor", stdout=subprocess.PIPE)
+        fixed_result = self.run_doctor(dry_run=False)
         self.assertIn(b"Successfully fixed 1 problem", fixed_result.stdout)
 
         fixed_parent = self.hg("log", "-r.", "-T{node}")

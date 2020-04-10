@@ -4,13 +4,22 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import os
 import shlex
 from pathlib import Path
 from textwrap import dedent
 from typing import Dict, Optional
 
-from eden.fs.cli import config as config_mod, filesystem, mtab, proc_utils, ui, version
+from eden.fs.cli import (
+    config as config_mod,
+    filesystem,
+    mtab,
+    proc_utils as proc_utils_mod,
+    ui,
+    version,
+)
 from eden.fs.cli.config import EdenCheckout, EdenInstance
 from facebook.eden.ttypes import MountState
 from fb303_core.ttypes import fb303_status
@@ -41,108 +50,267 @@ working_directory_was_stale = False
 def cure_what_ails_you(
     instance: EdenInstance,
     dry_run: bool,
-    mount_table: mtab.MountTable,
-    fs_util: filesystem.FsUtil,
-    proc_utils: proc_utils.ProcUtils,
+    mount_table: Optional[mtab.MountTable] = None,
+    fs_util: Optional[filesystem.FsUtil] = None,
+    proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
     out: Optional[ui.Output] = None,
 ) -> int:
-    if out is None:
-        out = ui.get_output()
+    return EdenDoctor(
+        instance, dry_run, mount_table, fs_util, proc_utils, out
+    ).cure_what_ails_you()
 
-    if not dry_run:
-        fixer = ProblemFixer(out)
-    else:
-        fixer = DryRunFixer(out)
 
-    check_working_directory(fixer)
+class CheckoutInfo:
+    def __init__(
+        self,
+        instance: EdenInstance,
+        path: Path,
+        running_state_dir: Optional[Path] = None,
+        configured_state_dir: Optional[Path] = None,
+        state: Optional[MountState] = None,
+    ) -> None:
+        self.instance = instance
+        self.path = path
+        self.running_state_dir = running_state_dir
+        self.configured_state_dir = configured_state_dir
+        self.state = state
 
-    # check OS type, kernel version etc.
-    check_os.run_operating_system_checks(fixer, instance, out)
-
-    # check multiple edenfs running with some rogue stale PIDs
-    check_rogue_edenfs.check_many_edenfs_are_running(fixer, proc_utils)
-
-    status = instance.check_health()
-    if status.status == fb303_status.ALIVE:
-        run_normal_checks(fixer, instance, out, mount_table, fs_util)
-    elif status.status == fb303_status.STARTING:
-        fixer.add_problem(EdenfsStarting())
-    elif status.status == fb303_status.STOPPING:
-        fixer.add_problem(EdenfsStopping())
-    elif status.status == fb303_status.DEAD:
-        run_edenfs_not_healthy_checks(
-            fixer, instance, out, status, mount_table, fs_util
+    def get_checkout(self) -> EdenCheckout:
+        state_dir = (
+            self.running_state_dir
+            if self.running_state_dir is not None
+            else self.configured_state_dir
         )
+        assert state_dir is not None
+        return EdenCheckout(self.instance, self.path, state_dir)
+
+
+class EdenDoctorChecker:
+    """EdenDoctorChecker is a base class for EdenDoctor, and only supports
+    running checks, without reporting or fixing problems.
+    """
+
+    instance: EdenInstance
+    mount_table: mtab.MountTable
+    fs_util: filesystem.FsUtil
+    proc_utils: proc_utils_mod.ProcUtils
+    tracker: ProblemTracker
+    out: ui.Output
+    # Setting run_system_wide_checks to False causes EdenDoctor to skip checks that
+    # try to detect system-wide problems (e.g., stale mount points, old OS/kernel
+    # version, low disk space, etc.).  It is often desirable to disable this during
+    # integration tests, since tests normally only want to report issues with their
+    # specific EdenFS instance under test.
+    run_system_wide_checks: bool = True
+
+    def __init__(
+        self,
+        instance: EdenInstance,
+        tracker: ProblemTracker,
+        mount_table: Optional[mtab.MountTable] = None,
+        fs_util: Optional[filesystem.FsUtil] = None,
+        proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
+        out: Optional[ui.Output] = None,
+    ) -> None:
+        self.instance = instance
+        self.tracker = tracker
+        self.mount_table = mount_table if mount_table is not None else mtab.new()
+        self.fs_util = fs_util if fs_util is not None else filesystem.LinuxFsUtil()
+        self.proc_utils = proc_utils if proc_utils is not None else proc_utils_mod.new()
+        self.out = out if out is not None else ui.get_output()
+
+    def run_checks(self) -> None:
+        self.check_working_directory()
+
+        if self.run_system_wide_checks:
+            # check OS type, kernel version etc.
+            check_os.run_operating_system_checks(self.tracker, self.instance, self.out)
+
+            # check multiple edenfs running with some rogue stale PIDs
+            check_rogue_edenfs.check_many_edenfs_are_running(
+                self.tracker, self.proc_utils
+            )
+
+        status = self.instance.check_health()
+        if status.status == fb303_status.ALIVE:
+            self.run_normal_checks()
+        elif status.status == fb303_status.STARTING:
+            self.tracker.add_problem(EdenfsStarting())
+        elif status.status == fb303_status.STOPPING:
+            self.tracker.add_problem(EdenfsStopping())
+        elif status.status == fb303_status.DEAD:
+            self.run_edenfs_not_healthy_checks()
+        else:
+            self.tracker.add_problem(EdenfsUnexpectedStatus(status))
+
+    def check_working_directory(self) -> None:
+        problem = check_for_working_directory_problem()
+        if problem:
+            self.tracker.add_problem(problem)
+
+    def run_edenfs_not_healthy_checks(self) -> None:
+        configured_mounts = self.instance.get_mount_paths()
+        if configured_mounts:
+            self.tracker.add_problem(EdenfsNotHealthy())
+        else:
+            self.tracker.using_edenfs = False
+            return
+
+        if self.run_system_wide_checks:
+            check_stale_mounts.check_for_stale_mounts(self.tracker, self.mount_table)
+            check_filesystems.check_disk_usage(
+                self.tracker,
+                list(configured_mounts),
+                self.instance,
+                fs_util=self.fs_util,
+            )
+
+    def _get_checkouts_info(self) -> Dict[Path, CheckoutInfo]:
+        checkouts: Dict[Path, CheckoutInfo] = {}
+        # Get information about the checkouts currently known to the running
+        # edenfs process
+        with self.instance.get_thrift_client() as client:
+            for mount in client.listMounts():
+                # Old versions of edenfs did not return a mount state field.
+                # These versions only listed running mounts, so treat the mount state
+                # as running in this case.
+                mount_state = (
+                    mount.state if mount.state is not None else MountState.RUNNING
+                )
+                path = Path(os.fsdecode(mount.mountPoint))
+                checkout = CheckoutInfo(
+                    self.instance,
+                    path,
+                    running_state_dir=Path(os.fsdecode(mount.edenClientPath)),
+                    state=mount_state,
+                )
+                checkouts[path] = checkout
+
+        # Get information about the checkouts listed in the config file
+        for configured_checkout in self.instance.get_checkouts():
+            checkout_info = checkouts.get(configured_checkout.path, None)
+            if checkout_info is None:
+                checkout_info = CheckoutInfo(self.instance, configured_checkout.path)
+                checkout_info.configured_state_dir = configured_checkout.state_dir
+                checkouts[checkout_info.path] = checkout_info
+
+            checkout_info.configured_state_dir = configured_checkout.state_dir
+
+        return checkouts
+
+    def run_normal_checks(self) -> None:
+        check_edenfs_version(self.tracker, self.instance)
+        checkouts = self._get_checkouts_info()
+
+        if self.run_system_wide_checks:
+            check_filesystems.check_eden_directory(self.tracker, self.instance)
+            check_stale_mounts.check_for_stale_mounts(self.tracker, self.mount_table)
+            check_filesystems.check_disk_usage(
+                self.tracker,
+                list(self.instance.get_mount_paths()),
+                self.instance,
+                fs_util=self.fs_util,
+            )
+
+        watchman_info = check_watchman.pre_check()
+
+        for path, checkout in sorted(checkouts.items()):
+            self.out.writeln(f"Checking {path}")
+            try:
+                check_mount(self.tracker, checkout, watchman_info)
+            except Exception as ex:
+                self.tracker.add_problem(
+                    Problem(f"unexpected error while checking {path}: {ex}")
+                )
+
+
+class EdenDoctor(EdenDoctorChecker):
+    fixer: ProblemFixer
+    dry_run: bool
+
+    def __init__(
+        self,
+        instance: EdenInstance,
+        dry_run: bool,
+        mount_table: Optional[mtab.MountTable] = None,
+        fs_util: Optional[filesystem.FsUtil] = None,
+        proc_utils: Optional[proc_utils_mod.ProcUtils] = None,
+        out: Optional[ui.Output] = None,
+    ) -> None:
+        self.dry_run = dry_run
+        out = out if out is not None else ui.get_output()
+        if dry_run:
+            self.fixer = DryRunFixer(out)
+        else:
+            self.fixer = ProblemFixer(out)
+
+        super().__init__(
+            instance,
+            tracker=self.fixer,
+            mount_table=mount_table,
+            fs_util=fs_util,
+            proc_utils=proc_utils,
+            out=out,
+        )
+
+    def cure_what_ails_you(self) -> int:
+        self.run_checks()
+        return self._report_problems()
+
+    def _report_problems(self) -> int:
+        fixer = self.fixer
+        out = self.out
+
+        if not self.dry_run:
+            self.instance.log_sample(
+                "eden_doctor",
+                num_problems=fixer.num_problems,
+                problems=fixer.problem_types,
+            )
+
         if fixer.num_problems == 0:
-            out.writeln("Eden is not in use.")
+            if not fixer.using_edenfs:
+                out.writeln("EdenFS is not in use.")
+            else:
+                out.writeln("No issues detected.", fg=out.GREEN)
             return 0
-    else:
-        fixer.add_problem(EdenfsUnexpectedStatus(status))
 
-    # num_problems and problem_types are only defined for ProblemFixer
-    if not dry_run:
-        instance.log_sample(
-            "eden_doctor", num_problems=fixer.num_problems, problems=fixer.problem_types
-        )
+        def problem_count(num: int) -> str:
+            if num == 1:
+                return "1 problem"
+            return f"{num} problems"
 
-    if fixer.num_problems == 0:
-        out.writeln("No issues detected.", fg=out.GREEN)
-        return 0
+        if self.dry_run:
+            out.writeln(
+                f"Discovered {problem_count(fixer.num_problems)} during --dry-run",
+                fg=out.YELLOW,
+            )
+            return 1
 
-    def problem_count(num: int) -> str:
-        if num == 1:
-            return "1 problem"
-        return f"{num} problems"
+        if fixer.num_fixed_problems:
+            out.writeln(
+                f"Successfully fixed {problem_count(fixer.num_fixed_problems)}.",
+                fg=out.YELLOW,
+            )
+        if fixer.num_failed_fixes:
+            out.writeln(
+                f"Failed to fix {problem_count(fixer.num_failed_fixes)}.", fg=out.RED
+            )
+        if fixer.num_manual_fixes:
+            if fixer.num_manual_fixes == 1:
+                msg = f"1 issue requires manual attention."
+            else:
+                msg = f"{fixer.num_manual_fixes} issues require manual attention."
+            out.writeln(msg, fg=out.YELLOW)
 
-    if dry_run:
-        out.writeln(
-            f"Discovered {problem_count(fixer.num_problems)} during --dry-run",
-            fg=out.YELLOW,
+        if fixer.num_fixed_problems == fixer.num_problems:
+            return 0
+
+        out.write(
+            "Ask in the Eden Users group if you need help fixing issues with Eden:\n"
+            "https://fb.facebook.com/groups/eden.users/\n"
         )
         return 1
-
-    if fixer.num_fixed_problems:
-        out.writeln(
-            f"Successfully fixed {problem_count(fixer.num_fixed_problems)}.",
-            fg=out.YELLOW,
-        )
-    if fixer.num_failed_fixes:
-        out.writeln(
-            f"Failed to fix {problem_count(fixer.num_failed_fixes)}.", fg=out.RED
-        )
-    if fixer.num_manual_fixes:
-        if fixer.num_manual_fixes == 1:
-            msg = f"1 issue requires manual attention."
-        else:
-            msg = f"{fixer.num_manual_fixes} issues require manual attention."
-        out.writeln(msg, fg=out.YELLOW)
-
-    if fixer.num_fixed_problems == fixer.num_problems:
-        return 0
-
-    out.write(
-        "Ask in the Eden Users group if you need help fixing issues with Eden:\n"
-        "https://fb.facebook.com/groups/eden.users/\n"
-    )
-    return 1
-
-
-def run_edenfs_not_healthy_checks(
-    tracker: ProblemTracker,
-    instance: EdenInstance,
-    out: ui.Output,
-    status: config_mod.HealthStatus,
-    mount_table: mtab.MountTable,
-    fs_util: filesystem.FsUtil,
-) -> None:
-    check_stale_mounts.check_for_stale_mounts(tracker, mount_table)
-
-    configured_mounts = instance.get_mount_paths()
-    check_filesystems.check_disk_usage(
-        tracker, list(configured_mounts), instance, fs_util=fs_util
-    )
-    if configured_mounts:
-        tracker.add_problem(EdenfsNotHealthy())
 
 
 class EdenfsNotHealthy(Problem):
@@ -177,96 +345,16 @@ class EdenfsUnexpectedStatus(Problem):
         super().__init__(msg, remediation=remediation)
 
 
-class CheckoutInfo:
-    def __init__(
-        self,
-        instance: EdenInstance,
-        path: Path,
-        running_state_dir: Optional[Path] = None,
-        configured_state_dir: Optional[Path] = None,
-        state: Optional[MountState] = None,
-    ):
-        self.instance = instance
-        self.path = path
-        self.running_state_dir = running_state_dir
-        self.configured_state_dir = configured_state_dir
-        self.state = state
-
-    def get_checkout(self) -> EdenCheckout:
-        state_dir = (
-            self.running_state_dir
-            if self.running_state_dir is not None
-            else self.configured_state_dir
-        )
-        assert state_dir is not None
-        return EdenCheckout(self.instance, self.path, state_dir)
-
-
-def run_normal_checks(
-    tracker: ProblemTracker,
-    instance: EdenInstance,
-    out: ui.Output,
-    mount_table: mtab.MountTable,
-    fs_util: filesystem.FsUtil,
-) -> None:
-    checkouts: Dict[Path, CheckoutInfo] = {}
-    # Get information about the checkouts currently known to the running edenfs process
-    with instance.get_thrift_client() as client:
-        for mount in client.listMounts():
-            # Old versions of edenfs did not return a mount state field.
-            # These versions only listed running mounts, so treat the mount state
-            # as running in this case.
-            mount_state = mount.state if mount.state is not None else MountState.RUNNING
-            path = Path(os.fsdecode(mount.mountPoint))
-            checkout = CheckoutInfo(
-                instance,
-                path,
-                running_state_dir=Path(os.fsdecode(mount.edenClientPath)),
-                state=mount_state,
-            )
-            checkouts[path] = checkout
-
-    # Get information about the checkouts listed in the config file
-    for configured_checkout in instance.get_checkouts():
-        checkout_info = checkouts.get(configured_checkout.path, None)
-        if checkout_info is None:
-            checkout_info = CheckoutInfo(instance, configured_checkout.path)
-            checkout_info.configured_state_dir = configured_checkout.state_dir
-            checkouts[checkout_info.path] = checkout_info
-
-        checkout_info.configured_state_dir = configured_checkout.state_dir
-
-    check_filesystems.check_eden_directory(tracker, instance)
-    check_stale_mounts.check_for_stale_mounts(tracker, mount_table)
-    check_edenfs_version(tracker, instance)
-    check_filesystems.check_disk_usage(
-        tracker, list(instance.get_mount_paths()), instance, fs_util=fs_util
-    )
-
-    watchman_info = check_watchman.pre_check()
-
-    for path, checkout in sorted(checkouts.items()):
-        out.writeln(f"Checking {path}")
-        try:
-            check_mount(tracker, checkout, mount_table, fs_util, watchman_info)
-        except Exception as ex:
-            tracker.add_problem(
-                Problem(f"unexpected error while checking {path}: {ex}")
-            )
-
-
 def check_mount(
     tracker: ProblemTracker,
     checkout: CheckoutInfo,
-    mount_table: mtab.MountTable,
-    fs_util: filesystem.FsUtil,
     watchman_info: check_watchman.WatchmanCheckInfo,
 ) -> None:
     if checkout.state is None:
         # This checkout is configured but not currently running.
         tracker.add_problem(CheckoutNotMounted(checkout))
     elif checkout.state == MountState.RUNNING:
-        check_running_mount(tracker, checkout, mount_table, fs_util, watchman_info)
+        check_running_mount(tracker, checkout, watchman_info)
     elif checkout.state in (
         MountState.UNINITIALIZED,
         MountState.INITIALIZING,
@@ -312,8 +400,6 @@ def check_mount(
 def check_running_mount(
     tracker: ProblemTracker,
     checkout_info: CheckoutInfo,
-    mount_table: mtab.MountTable,
-    fs_util: filesystem.FsUtil,
     watchman_info: check_watchman.WatchmanCheckInfo,
 ) -> None:
     if checkout_info.configured_state_dir is None:
@@ -370,6 +456,9 @@ on-disk configuration."""
 
 
 class CheckoutNotMounted(FixableProblem):
+    _instance: EdenInstance
+    _mount_path: Path
+
     def __init__(self, checkout_info: CheckoutInfo) -> None:
         self._instance = checkout_info.instance
         self._mount_path = checkout_info.path
@@ -410,12 +499,6 @@ class StaleWorkingDirectory(Problem):
         remediation = f"""\
 Run "cd / && cd -" to update your shell's working directory."""
         super().__init__(msg, remediation)
-
-
-def check_working_directory(tracker: ProblemTracker) -> None:
-    problem = check_for_working_directory_problem()
-    if problem:
-        tracker.add_problem(problem)
 
 
 def check_for_working_directory_problem() -> Optional[Problem]:

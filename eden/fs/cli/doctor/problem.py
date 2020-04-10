@@ -87,6 +87,10 @@ class UnexpectedCheckError(Problem):
 
 
 class ProblemTracker(abc.ABC):
+    # using_edenfs will be set to False if EdenFS is not running and there
+    # are no configured EdenFS checkouts.
+    using_edenfs: bool = True
+
     def add_problem(self, problem: ProblemBase) -> None:
         """Record a new problem"""
 
