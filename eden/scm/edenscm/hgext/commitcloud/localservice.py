@@ -178,5 +178,5 @@ class LocalService(baseservice.BaseService):
             "unixname": unixname,
         }
         filename = os.path.join(self.path, "checkoutlocations")
-        with open(filename, "wb+") as f:
+        with open(filename, "w+") as f:
             json.dump(data, f)

@@ -1808,9 +1808,9 @@ def defineparents(repo, rev, destmap, state, skipped, obsskipped):
 
 def storecollapsemsg(repo, collapsemsg):
     "Store the collapse message to allow recovery"
-    collapsemsg = collapsemsg or b""
-    f = repo.localvfs("last-message.txt", "w")
-    f.write(b"%s\n" % collapsemsg)
+    collapsemsg = collapsemsg or ""
+    f = repo.localvfs("last-message.txt", "wb")
+    f.write(b"%s\n" % pycompat.encodeutf8(collapsemsg))
     f.close()
 
 
@@ -1822,15 +1822,15 @@ def clearcollapsemsg(repo):
 def restorecollapsemsg(repo, isabort):
     "Restore previously stored collapse message"
     try:
-        f = repo.localvfs("last-message.txt")
-        collapsemsg = f.readline().strip()
+        f = repo.localvfs("last-message.txt", "rb")
+        collapsemsg = pycompat.decodeutf8(f.readline().strip())
         f.close()
     except IOError as err:
         if err.errno != errno.ENOENT:
             raise
         if isabort:
             # Oh well, just abort like normal
-            collapsemsg = b""
+            collapsemsg = ""
         else:
             raise error.Abort(_("missing .hg/last-message.txt for rebase"))
     return collapsemsg

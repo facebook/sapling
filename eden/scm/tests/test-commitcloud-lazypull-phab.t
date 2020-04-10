@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ configure dummyssh evolution
@@ -193,7 +192,7 @@ Test for `hg diff --since-last-submit`
   (if a8080066a666ffa51c0a171e87d5a0396ecb559a is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
-  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log -r 'lastsubmitted(.)' -T '{node} {desc}'
+  $ HG_ARC_CONDUIT_MOCK=$TESTTMP/mockduit hg log --hidden -r 'lastsubmitted(.)' -T '{node} {desc}'
   pulling from ssh://user@dummy/server
   searching for changes
   adding changesets

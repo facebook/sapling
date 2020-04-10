@@ -44,10 +44,13 @@ def check(repo):
     filename = _uniquefilename(repo.path, reponame, workspacename)
     vfs = _subscriptionvfs(repo)
     if not vfs.exists(filename):
-        with vfs.open(filename, "w") as configfile:
+        with vfs.open(filename, "wb") as configfile:
             configfile.write(
-                ("[commitcloud]\nworkspace=%s\nrepo_name=%s\nrepo_root=%s\n")
-                % (workspacename, reponame, repo.path)
+                encodeutf8("[commitcloud]\nworkspace=%s\nrepo_name=%s\nrepo_root=%s\n"
+                % (workspacename,
+                   reponame,
+                   repo.path,
+                ))
             )
             _restart_service_subscriptions(repo.ui)
     else:
@@ -91,7 +94,7 @@ def _restart_service_subscriptions(ui, warn_service_not_running=True):
     s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     try:
         s.connect(("127.0.0.1", port))
-        s.send('["commitcloud::restart_subscriptions", {}]')
+        s.send(b'["commitcloud::restart_subscriptions", {}]')
     except socket.error:
         if warn_service_not_running:
             _warn_service_not_running(ui)

@@ -837,7 +837,7 @@ def cloudstatus(ui, repo, **opts):
     ui.write(_("Last Sync Time: %s\n") % time.ctime(state.lastupdatetime))
 
     if repo.svfs.isfile(sync._syncstatusfile):
-        status = repo.svfs.read(sync._syncstatusfile)
+        status = pycompat.decodeutf8(repo.svfs.read(sync._syncstatusfile))
     else:
         status = "Not logged"
     ui.write(_("Last Sync Status: %s\n") % status)

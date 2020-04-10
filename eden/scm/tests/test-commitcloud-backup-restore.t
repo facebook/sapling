@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ . helpers-usechg.sh
@@ -244,8 +243,8 @@ Test cloud listbackups command
   $ hg cloud listbackups --json
   {
       ".*": \[ (re)
-          "$TESTTMP/bookmarks/backupsource3", 
-          "$TESTTMP/backupsource2", 
+          "$TESTTMP/bookmarks/backupsource3",* (glob)
+          "$TESTTMP/backupsource2",* (glob)
           "$TESTTMP/backupsource"
       ]
   }

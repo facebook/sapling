@@ -341,8 +341,8 @@ def postshare(sourcerepo, destrepo, bookmarks=True, defaultpath=None):
 
     with destrepo.wlock():
         if bookmarks:
-            fp = destrepo.localvfs("shared", "w")
-            fp.write(sharedbookmarks + "\n")
+            fp = destrepo.localvfs("shared", "wb")
+            fp.write(pycompat.encodeutf8(sharedbookmarks + "\n"))
             fp.close()
 
 

@@ -629,7 +629,8 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
 
     localremotebooks = _getremotebookmarks(repo)
     oldcloudremotebooks = lastsyncstate.remotebookmarks
-    allremotenames = set(localremotebooks.keys() + cloudremotebooks.keys())
+    allremotenames = set(localremotebooks.keys())
+    allremotenames.update(cloudremotebooks.keys())
 
     newremotebooks = {}
     for remotename in allremotenames:
@@ -861,7 +862,7 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
             for head in repo.nodes("heads(draft() & ::%ls - %ld::)", localheads, failed)
         ]
         failedset = set(repo.nodes("draft() & %ld::", failed))
-        for name, bookmarknode in localbookmarks.items():
+        for name, bookmarknode in list(localbookmarks.items()):
             if nodemod.bin(bookmarknode) in failedset:
                 if name in lastsyncstate.bookmarks:
                     localbookmarks[name] = lastsyncstate.bookmarks[name]

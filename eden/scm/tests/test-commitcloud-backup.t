@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ enable amend
@@ -458,7 +457,7 @@ Test hostname option
 Malformed backup state file
   $ echo rubbish > .hg/infinitepushbackups/infinitepushbackupstate*
   $ hg cloud backup
-  corrupt file: infinitepushbackups/infinitepushbackupstate* (No JSON object could be decoded) (glob)
+  corrupt file: infinitepushbackups/infinitepushbackupstate* (*) (glob)
   nothing to back up
 
 Run command that creates multiple transactions. Make sure that just one backup is started

@@ -309,9 +309,10 @@ def cloudremote(repo, subset, x):
     args = [n[1] for n in args]
 
     try:
-        hexnodespulled = missingcloudrevspull(
+        nodespulled = missingcloudrevspull(
             repo, [nodemod.bin(nodehex) for nodehex in args]
         )
+        hexnodespulled = [nodemod.hex(node) for node in nodespulled]
         return subset & repo.unfiltered().revs("%ls", hexnodespulled)
     except Exception as e:
         repo.ui.status(
