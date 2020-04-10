@@ -227,15 +227,14 @@ class CloneTest(testcase.EdenRepoTest):
             f"error: destination path {non_existent_dir} is not a directory\n", stderr
         )
 
-    def test_attempt_clone_invalid_repo_name(self) -> None:
+    def test_attempt_clone_invalid_repo_path(self) -> None:
         tmp = self.make_temporary_directory()
-        repo_name = "repo-name-that-is-not-in-the-config"
+        repo_path = "/this/directory/does/not/exist"
 
         with self.assertRaises(edenclient.EdenCommandError) as context:
-            self.eden.run_cmd("clone", repo_name, tmp)
+            self.eden.run_cmd("clone", repo_path, tmp)
         self.assertIn(
-            f"error: {repo_name!r} does not look like a valid hg or git "
-            "repository or a well-known repository name\n",
+            f"error: {repo_path!r} does not look like a valid hg or git repository\n",
             context.exception.stderr.decode(),
         )
 

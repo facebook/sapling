@@ -56,30 +56,6 @@ via-profile = "bind"
             ],
         )
 
-    def clone_with_legacy_bind_mounts(self) -> str:
-        edenrc = os.path.join(os.environ["HOME"], ".edenrc")
-        with open(edenrc, "w") as f:
-            f.write(
-                """\
-["repository {repo_name}"]
-path = "{repo_path}"
-type = "{repo_type}"
-
-["bindmounts {repo_name}"]
-buck-out = "buck-out"
-""".format(
-                    repo_name=self.repo_name,
-                    repo_path=self.repo.get_canonical_root(),
-                    repo_type=self.repo.get_type(),
-                )
-            )
-
-        basename = "eden_mount"
-        tmp = os.path.join(self.tmp_dir, basename)
-
-        self.eden.run_cmd("clone", self.repo_name, tmp)
-        return tmp
-
     def test_disallow_bind_mount_outside_repo(self) -> None:
         dir_to_mount = os.path.join(self.tmp_dir, "to-mount")
         os.mkdir(dir_to_mount)
@@ -120,11 +96,9 @@ buck-out = "buck-out"
                     msg="Can't mount outside the repo via relative path",
                 )
 
-    def test_list_with_legacy_bind_mount(self) -> None:
-        tmp = self.clone_with_legacy_bind_mounts()
-
-        profile_path = scratch_path(tmp, "edenfs/redirections/via-profile")
-        output = self.eden.run_cmd("redirect", "list", "--json", "--mount", tmp)
+    def test_list(self) -> None:
+        profile_path = scratch_path(self.mount, "edenfs/redirections/via-profile")
+        output = self.eden.run_cmd("redirect", "list", "--json", "--mount", self.mount)
         self.assertEqual(
             json.loads(output),
             [
@@ -140,12 +114,14 @@ buck-out = "buck-out"
         )
 
         output = self.eden.run_cmd(
-            "redirect", "add", "--mount", tmp, "a/new-one", "bind"
+            "redirect", "add", "--mount", self.mount, "a/new-one", "bind"
         )
         self.assertEqual(output, "", msg="we believe we set up a new bind mount")
 
-        list_output = self.eden.run_cmd("redirect", "list", "--json", "--mount", tmp)
-        target_path = scratch_path(tmp, "edenfs/redirections/a/new-one")
+        list_output = self.eden.run_cmd(
+            "redirect", "list", "--json", "--mount", self.mount
+        )
+        target_path = scratch_path(self.mount, "edenfs/redirections/a/new-one")
         self.assertEqual(
             json.loads(list_output),
             [
@@ -167,8 +143,8 @@ buck-out = "buck-out"
             msg="saved config agrees with last output",
         )
 
-        mount_stat = os.stat(tmp)
-        bind_mount_stat = os.stat(os.path.join(tmp, "a/new-one"))
+        mount_stat = os.stat(self.mount)
+        bind_mount_stat = os.stat(os.path.join(self.mount, "a/new-one"))
         self.assertNotEqual(
             mount_stat.st_dev,
             bind_mount_stat.st_dev,
@@ -176,11 +152,13 @@ buck-out = "buck-out"
         )
 
         output = self.eden.run_cmd(
-            "redirect", "add", "--mount", tmp, "a/new-one", "symlink"
+            "redirect", "add", "--mount", self.mount, "a/new-one", "symlink"
         )
         self.assertEqual(output, "", msg="we believe we switched to a symlink")
 
-        list_output = self.eden.run_cmd("redirect", "list", "--json", "--mount", tmp)
+        list_output = self.eden.run_cmd(
+            "redirect", "list", "--json", "--mount", self.mount
+        )
         self.assertEqual(
             json.loads(list_output),
             [
@@ -203,15 +181,19 @@ buck-out = "buck-out"
         )
 
         self.assertEqual(
-            os.readlink(os.path.join(tmp, "a", "new-one")),
+            os.readlink(os.path.join(self.mount, "a", "new-one")),
             target_path,
             msg="symlink points to scratch space",
         )
 
-        output = self.eden.run_cmd("redirect", "del", "--mount", tmp, "a/new-one")
+        output = self.eden.run_cmd(
+            "redirect", "del", "--mount", self.mount, "a/new-one"
+        )
         self.assertEqual(output, "", msg="we believe we removed the symlink")
 
-        list_output = self.eden.run_cmd("redirect", "list", "--json", "--mount", tmp)
+        list_output = self.eden.run_cmd(
+            "redirect", "list", "--json", "--mount", self.mount
+        )
         self.assertEqual(
             json.loads(list_output),
             [
@@ -227,7 +209,8 @@ buck-out = "buck-out"
         )
 
         self.assertFalse(
-            os.path.exists(os.path.join(tmp, "a", "new-one")), msg="symlink is gone"
+            os.path.exists(os.path.join(self.mount, "a", "new-one")),
+            msg="symlink is gone",
         )
 
     def test_fixup_mounts_things(self) -> None:

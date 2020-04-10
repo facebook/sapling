@@ -478,12 +478,10 @@ class RepoError(Exception):
 @subcmd("clone", "Create a clone of a specific repo and check it out")
 class CloneCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
+        parser.add_argument("repo", help="The path to an existing repository to clone")
         parser.add_argument(
-            "repo",
-            help="The path to an existing repo to clone, or the name of a "
-            "known repository configuration",
+            "path", help="The path where the checkout should be mounted"
         )
-        parser.add_argument("path", help="Path where the checkout should be mounted")
         parser.add_argument(
             "--rev", "-r", type=str, help="The initial revision to check out"
         )
@@ -620,55 +618,23 @@ re-run `eden clone` with --allow-empty-repo"""
                 )
             return repo, None, checkout_config
 
-        # Check to see if repo_arg looks like an existing repository path.
+        # Confirm that repo_arg looks like an existing repository path.
         repo = util.get_repo(repo_arg)
         if repo is None:
-            # This is not a valid repository path.
-            # Check to see if this is a repository config name instead.
-            repo_config = instance.find_config_for_alias(repo_arg)
-            if repo_config is None:
-                raise RepoError(
-                    f"{repo_arg!r} does not look like a valid "
-                    "hg or git repository or a well-known "
-                    "repository name"
-                )
-
-            repo = util.get_repo(str(repo_config.backing_repo))
-            if repo is None:
-                raise RepoError(
-                    f"cloning {repo_arg} requires an existing "
-                    f"repository to be present at "
-                    f"{repo_config.backing_repo}"
-                )
-
-            return repo, repo_arg, repo_config
+            raise RepoError(
+                f"{repo_arg!r} does not look like a valid hg or git repository"
+            )
 
         # This is a valid repository path.
-        # Try to identify what type of repository this is, so we can find
-        # the proper configuration to use.
+        # Prepare a CheckoutConfig object for it.
         project_id = util.get_project_id(repo, rev)
-
-        project_config = None
-        if project_id is not None:
-            project_config = instance.find_config_for_alias(project_id)
         repo_type = project_id
-        if project_config is None:
-            repo_config = config_mod.CheckoutConfig(
-                backing_repo=Path(repo.source),
-                scm_type=repo.type,
-                default_revision=config_mod.DEFAULT_REVISION[repo.type],
-                redirections={},
-            )
-        else:
-            # Build our own CheckoutConfig object, using our source repository
-            # path and type, but the bind-mount and revision configuration from the
-            # project configuration.
-            repo_config = config_mod.CheckoutConfig(
-                backing_repo=Path(repo.source),
-                scm_type=repo.type,
-                default_revision=project_config.default_revision,
-                redirections={},
-            )
+        repo_config = config_mod.CheckoutConfig(
+            backing_repo=Path(repo.source),
+            scm_type=repo.type,
+            default_revision=config_mod.DEFAULT_REVISION[repo.type],
+            redirections={},
+        )
 
         return repo, repo_type, repo_config
 

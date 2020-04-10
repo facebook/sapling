@@ -293,15 +293,6 @@ class EdenInstance:
         """
         return version.format_eden_version(self.get_running_version_parts())
 
-    def get_repository_list(self) -> List[str]:
-        result = []
-        parser = self._loadConfig()
-        for section in parser.sections():
-            header = section.split(" ")
-            if len(header) == 2 and header[0] == "repository":
-                result.append(header[1])
-        return sorted(result)
-
     def get_config_value(self, key: str, default: str) -> str:
         parser = self._loadConfig()
         section, option = key.split(".", 1)
@@ -341,42 +332,6 @@ class EdenInstance:
         for section in parser.sections():
             data[section] = parser.get_section_str_to_any(section)
         toml.dump(data, file)  # pyre-ignore[T39129461]
-
-    def find_config_for_alias(self, alias: str) -> Optional[CheckoutConfig]:
-        """Looks through the existing config files and searches for a
-        [repository <alias>] section that defines a config:
-        - If no such section is found, returns None.
-        - If the appropriate section is found, returns a CheckoutConfig if all of
-          the fields for the config data are present and well-formed.
-        - Otherwise, throws an Exception.
-        """
-        parser = self._loadConfig()
-        repository_header = f"repository {alias}"
-        if not parser.has_section(repository_header):
-            return None
-
-        scm_type = parser.get_str(repository_header, "type", default="")
-        if not scm_type:
-            raise Exception(f'repository "{alias}" missing key "type".')
-        if scm_type not in SUPPORTED_REPOS:
-            raise Exception(f'repository "{alias}" has unsupported type.')
-
-        path = parser.get_str(repository_header, "path", default="")
-        if not path:
-            raise Exception(f'repository "{alias}" missing key "path".')
-
-        default_revision = (
-            parser.get_str(repository_header, "default-revision", default="")
-            or parser.get_str("clone", "default-revision", default="")
-            or DEFAULT_REVISION[scm_type]
-        )
-
-        return CheckoutConfig(
-            backing_repo=Path(path),
-            scm_type=scm_type,
-            default_revision=default_revision,
-            redirections={},
-        )
 
     def get_mount_paths(self) -> List[str]:
         """Return the paths of the set mount points stored in config.json"""
@@ -947,10 +902,11 @@ class EdenCheckout:
             curdir = typing.cast(Path, curdir.parent)
 
     def get_config(self) -> CheckoutConfig:
-        if self._config is None:
-            self._config = self._read_config()
-        # pyre-fixme[7]: Expected `CheckoutConfig` but got `Optional[CheckoutConfig]`.
-        return self._config
+        config = self._config
+        if config is None:
+            config = self._read_config()
+            self._config = config
+        return config
 
     def save_config(self, checkout_config: CheckoutConfig) -> None:
         # Store information about the mount in the config.toml file.

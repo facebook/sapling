@@ -44,35 +44,11 @@ reporter = 'arc paste --title "eden rage from $(hostname)" --conduit-uri=https:/
     return cfg_file
 
 
-def get_toml_test_file_fbsource_repo():
-    cfg_file = """
-["repository fbsource"]
-type = "hg"
-path = "/data/users/${USER}/fbsource"
-
-["bindmounts fbsource"]
-fbcode-buck-out = "fbcode/buck-out"
-buck-out = "buck-out"
-"""
-    return cfg_file
-
-
 def get_toml_test_file_user_rc():
     cfg_file = """
 [core]
 ignoreFile = "/home/${USER}/.gitignore-override"
 edenDirectory = "/home/${USER}/.eden"
-
-["repository fbsource"]
-type = "hg"
-path = "/data/users/${USER}/fbsource-override"
-
-["bindmounts fbsource"]
-fbcode-buck-out = "fbcode/buck-out-override"
-
-["repository git"]
-type = "git"
-path = "/home/${USER}/src/git/.git"
 
 ["telemetry"]
 scribe-cat = "/usr/local/bin/scribe_cat"
@@ -115,9 +91,6 @@ class TomlConfigTest(
         path = Path(self._config_d) / "defaults.toml"
         path.write_text(get_toml_test_file_defaults())
 
-        path = Path(self._config_d) / "fbsource.repo.toml"
-        path.write_text(get_toml_test_file_fbsource_repo())
-
         path = Path(self._home_dir) / ".edenrc"
         path.write_text(get_toml_test_file_user_rc())
 
@@ -142,22 +115,6 @@ class TomlConfigTest(
             f"/home/{self._user}/.eden",
         )
 
-    def assert_git_repo_config(self, cfg: EdenInstance) -> None:
-        cc = cfg.find_config_for_alias("git")
-        assert cc is not None
-        self.assertEqual(cc.backing_repo, Path(f"/home/{self._user}/src/git/.git"))
-        self.assertEqual(cc.scm_type, "git")
-        self.assertEqual(cc.default_revision, "master")
-
-    def assert_fbsource_repo_config(self, cfg: EdenInstance) -> None:
-        cc = cfg.find_config_for_alias("fbsource")
-        assert cc is not None
-        self.assertEqual(
-            cc.backing_repo, Path(f"/data/users/{self._user}/fbsource-override")
-        )
-        self.assertEqual(cc.scm_type, "hg")
-        self.assertEqual(cc.default_revision, "master")
-
     def assert_config_precedence(self, cfg: EdenInstance) -> None:
         self.assertEqual(
             cfg.get_config_value("telemetry.scribe-cat", default=""),
@@ -170,16 +127,11 @@ class TomlConfigTest(
 
         # Check the various config sections
         self.assert_core_config(cfg)
-        exp_repos = ["fbsource", "git"]
-        self.assertEqual(cfg.get_repository_list(), exp_repos)
-        self.assert_fbsource_repo_config(cfg)
-        self.assert_git_repo_config(cfg)
         self.assert_config_precedence(cfg)
 
         # Check if test is for toml or cfg by cfg._user_toml_cfg
         exp_rc_files = [
             Path(self._config_d) / "defaults.toml",
-            Path(self._config_d) / "fbsource.repo.toml",
             Path(self._etc_eden_dir) / "edenfs.rc",
             Path(self._home_dir) / ".edenrc",
         ]
@@ -192,9 +144,6 @@ class TomlConfigTest(
         cfg = self.get_config()
         cfg._loadConfig()
 
-        exp_repos = ["fbsource"]
-        self.assertEqual(cfg.get_repository_list(), exp_repos)
-
         self.assertEqual(
             cfg.get_config_value("rage.reporter", default=""),
             'arc paste --title "eden rage from $(hostname)" --conduit-uri=https://phabricator.intern.facebook.com/api/',
@@ -206,84 +155,6 @@ class TomlConfigTest(
         self.assertEqual(
             cfg.get_config_value("core.systemIgnoreFile", default=""),
             "/etc/eden/gitignore",
-        )
-        cc = cfg.find_config_for_alias("fbsource")
-        assert cc is not None
-        self.assertEqual(cc.backing_repo, Path(f"/data/users/{self._user}/fbsource"))
-        self.assertEqual(cc.scm_type, "hg")
-        self.assertEqual(cc.default_revision, "master")
-
-    def test_missing_type_option_in_repository_is_an_error(self) -> None:
-        self.write_user_config(
-            """
-["repository myrepo"]
-path = "/tmp/myrepo"
-"""
-        )
-        with self.assertRaises(Exception) as expectation:
-            cfg = self.get_config()
-            cfg.find_config_for_alias("myrepo")
-        self.assertEqual(
-            str(expectation.exception), 'repository "myrepo" missing key "type".'
-        )
-
-    def test_invalid_type_option_in_repository_is_an_error(self) -> None:
-        self.write_user_config(
-            """
-["repository myrepo"]
-type = "invalidrepotype"
-path = "/tmp/myrepo"
-"""
-        )
-        with self.assertRaises(Exception) as expectation:
-            cfg = self.get_config()
-            cfg.find_config_for_alias("myrepo")
-        self.assertEqual(
-            str(expectation.exception), 'repository "myrepo" has unsupported type.'
-        )
-
-    def test_empty_type_option_in_repository_is_an_error(self) -> None:
-        self.write_user_config(
-            """
-["repository myrepo"]
-type = ""
-path = "/tmp/myrepo"
-"""
-        )
-        with self.assertRaises(Exception) as expectation:
-            cfg = self.get_config()
-            cfg.find_config_for_alias("myrepo")
-        self.assertEqual(
-            str(expectation.exception), 'repository "myrepo" missing key "type".'
-        )
-
-    def test_missing_path_option_in_repository_is_an_error(self) -> None:
-        self.write_user_config(
-            """
-["repository myrepo"]
-type = "hg"
-"""
-        )
-        with self.assertRaises(Exception) as expectation:
-            cfg = self.get_config()
-            cfg.find_config_for_alias("myrepo")
-        self.assertEqual(
-            str(expectation.exception), 'repository "myrepo" missing key "path".'
-        )
-
-    def test_empty_path_option_in_repository_is_an_error(self) -> None:
-        self.write_user_config(
-            """
-["repository myrepo"]
-type = "hg"
-path = ""
-"""
-        )
-        with self.assertRaises(Exception) as expectation:
-            cfg = self.get_config()
-            cfg.find_config_for_alias("myrepo")
-        self.assertEqual(
-            str(expectation.exception), 'repository "myrepo" missing key "path".'
         )
 
     def test_toml_error(self) -> None:
