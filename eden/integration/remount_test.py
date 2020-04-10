@@ -48,6 +48,7 @@ class RemountTest(testcase.EdenRepoTest):
         repo_names = {"git": "git_repo", "hg": "hg_repo"}
         git_repo = self.create_git_repo(repo_names["git"])
         hg_repo = self.create_hg_repo(repo_names["hg"])
+        repos = {"git_repo": git_repo, "hg_repo": hg_repo}
 
         git_repo.write_file("hello", "hola\n")
         git_repo.commit("Initial commit.")
@@ -55,21 +56,17 @@ class RemountTest(testcase.EdenRepoTest):
         hg_repo.write_file("hello", "hola\n")
         hg_repo.commit("Initial commit.")
 
-        self.eden.add_repository(repo_names["git"], git_repo.path)
-        self.eden.add_repository(repo_names["hg"], hg_repo.path)
-
         # Mount git and hg clients
-        for name in repo_names.values():
+        for name, repo in repos.items():
             for i in range(3):
-                self.eden.clone(
-                    name, os.path.join(self.mounts_dir, name + "-" + str(i))
-                )
+                self.eden.clone(repo.path, os.path.join(self.mounts_dir, f"{name}-{i}"))
 
         self.eden.shutdown()
         self.eden.start()
 
         # Verify that clients are remounted on startup
-        for scm_type, name in repo_names.items():
+        for name, repo in repos.items():
+            scm_type = repo.get_type()
             for i in range(3):
                 mount_path = os.path.join(self.mounts_dir, f"{name}-{i}")
                 self.assert_checkout_root_entries(
@@ -130,7 +127,7 @@ class RemountTest(testcase.EdenRepoTest):
     def test_try_remount_existing_mount(self) -> None:
         """Verify trying to mount an existing mount prints a sensible error."""
         mount_destination = self.mount + "-0"
-        self.eden.clone(self.repo_name, mount_destination)
+        self.eden.clone(self.repo.path, mount_destination)
         with self.assertRaises(edenclient.EdenCommandError) as context:
             self.eden.run_cmd("mount", mount_destination)
         self.assertIn(
@@ -199,7 +196,7 @@ class RemountTest(testcase.EdenRepoTest):
 
     def _clone_checkouts(self, num_mounts):
         for i in range(num_mounts):
-            self.eden.clone(self.repo_name, self.mount + "-" + str(i))
+            self.eden.clone(self.repo.path, self.mount + "-" + str(i))
 
     def _verify_not_mounted(self, num_mounts, main_mounted=False):
         # Verify that no clients are remounted. No errors should be thrown here

@@ -77,7 +77,6 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
 
     repo: hgrepo.HgRepository
     backing_repo: hgrepo.HgRepository
-    backing_repo_name: str
     config_variant_name: str  # set by the @hg_test decorator
 
     def setup_eden_test(self) -> None:
@@ -86,11 +85,9 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
         # Create the backing repository
         self.backing_repo = self.create_backing_repo()
 
-        self.backing_repo_name = "backing_repo"
-        self.eden.add_repository(self.backing_repo_name, self.backing_repo.path)
         # Edit the edenrc file to set up post-clone hooks that will correctly
         # populate the .hg directory inside the eden client.
-        self.eden.clone(self.backing_repo_name, self.mount, allow_empty=True)
+        self.eden.clone(self.backing_repo.path, self.mount, allow_empty=True)
 
         # Now create the repository object that refers to the eden client
         self.repo = hgrepo.HgRepository(self.mount, system_hgrc=self.system_hgrc)

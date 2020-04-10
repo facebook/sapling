@@ -292,8 +292,7 @@ class EdenRepoTest(EdenTestCase):
         self.populate_repo()
         self.report_time("repository setup done")
 
-        self.eden.add_repository(self.repo_name, self.repo.path)
-        self.eden.clone(self.repo_name, self.mount)
+        self.eden.clone(self.repo.path, self.mount)
         self.report_time("eden clone done")
 
     def populate_repo(self) -> None:

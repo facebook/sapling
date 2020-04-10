@@ -439,19 +439,6 @@ class EdenFS(object):
             # We expect the new process to fail starting.
             pass
 
-    def add_repository(self, name: str, repo_path: str) -> None:
-        """
-        Run "eden repository" to define a repository configuration
-        """
-        self.run_cmd("repository", name, repo_path)
-
-    def repository_cmd(self) -> str:
-        """
-        Executes "eden repository" to list the repositories,
-        and returns the output as a string.
-        """
-        return self.run_cmd("repository")
-
     def list_cmd(self) -> Dict[str, Dict[str, Any]]:
         """
         Executes "eden list --json" to list the Eden checkouts and returns the result as

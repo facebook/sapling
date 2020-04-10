@@ -293,12 +293,9 @@ class EdenInstance:
         """
         return version.format_eden_version(self.get_running_version_parts())
 
-    def get_repository_list(
-        self, parser: Union[configutil.EdenConfigParser, "ConfigUpdater", None] = None
-    ) -> List[str]:
+    def get_repository_list(self) -> List[str]:
         result = []
-        if not parser:
-            parser = self._loadConfig()
+        parser = self._loadConfig()
         for section in parser.sections():
             header = section.split(" ")
             if len(header) == 2 and header[0] == "repository":
@@ -414,21 +411,6 @@ class EdenInstance:
                 ("client-dir", str(checkout.state_dir)),
             ]
         )
-
-    def add_repository(self, name: str, repo_type: str, source: str) -> None:
-        # Check if repository already exists
-        with ConfigUpdater(self._user_config_path) as config:
-            if name in self.get_repository_list(config):
-                raise UsageError(
-                    """\
-repository %s already exists. You will need to edit the ~/.edenrc config file \
-by hand to make changes to the repository or remove it."""
-                    % name
-                )
-
-            # Add repository to INI file
-            config["repository " + name] = {"type": repo_type, "path": source}
-            config.save()
 
     def clone(
         self, checkout_config: CheckoutConfig, path: str, snapshot_id: str
@@ -892,140 +874,6 @@ Do you want to run `eden mount %s` instead?"""
             since_in_seconds = client.aliveSince()
         since = datetime.datetime.fromtimestamp(since_in_seconds)
         return now - since
-
-
-class ConfigUpdater(object):
-    """
-    A helper class to safely update an eden config file.
-
-    This acquires a lock on the config file, reads it in, and then provide APIs
-    to save it back.  This ensures that another process cannot change the file
-    in between the time that we read it and when we write it back.
-
-    This also saves the file to a temporary name first, then renames it into
-    place, so that the main config file is always in a good state, and never
-    has partially written contents.
-    """
-
-    def __init__(self, path: Path) -> None:
-        self.path = path
-        self._lock_path = self.path.with_suffix(".lock")
-        self._lock_file: Optional[typing.TextIO] = None
-        self.config = configutil.EdenConfigParser()
-
-        # Acquire a lock.
-        # This makes sure that another process can't modify the config in the
-        # middle of a read-modify-write operation.  (We can't stop a user
-        # from manually editing the file while we work, but we can stop
-        # other eden CLI processes.)
-        self._acquire_lock()
-        try:
-            toml_cfg = load_toml_config(self.path)
-            self.config.read_dict(toml_cfg)
-        except FileNotFoundError:
-            pass
-
-    def __enter__(self) -> "ConfigUpdater":
-        return self
-
-    def __exit__(
-        self,
-        exc_type: Optional[Type[BaseException]],
-        exc_value: Optional[BaseException],
-        exc_traceback: Optional[types.TracebackType],
-    ) -> bool:
-        self.close()
-        return False
-
-    def __del__(self) -> None:
-        self.close()
-
-    def sections(self) -> List[str]:
-        return self.config.sections()
-
-    def __setitem__(self, key: str, value: Dict[str, Any]) -> None:
-        self.config[key] = value
-
-    def _acquire_lock(self) -> None:
-        # Skipping locks on Windows for two reasons:
-        # First, locking the config file is not a strict requirement even on
-        # POSIX. Plus we don't have a similar flock implementation on Windows.
-        # We could make a locking scheme with LockFileEx(), but it would
-        # have different symentics than flock (For one, we can't unlink a
-        # locked file).
-        if sys.platform == "win32":
-            return
-        while True:
-            self._lock_file = typing.cast(typing.TextIO, open(self._lock_path, "w+"))
-            # pyre-fixme[16]: `Optional` has no attribute `fileno`.
-            fcntl.flock(self._lock_file.fileno(), fcntl.LOCK_EX)
-            # The original creator of the lock file will unlink it when
-            # it is finished.  Make sure we grab the lock on the file still on
-            # disk, and not an unlinked file.
-            st1 = os.fstat(self._lock_file.fileno())
-            st2 = os.lstat(self._lock_path)
-            if st1.st_dev == st2.st_dev and st1.st_ino == st2.st_ino:
-                # We got the real lock
-                return
-
-            # We acquired a lock on an old deleted file.
-            # Close it, and try to acquire the current lock file again.
-            # pyre-fixme[16]: `Optional` has no attribute `close`.
-            self._lock_file.close()
-            self._lock_file = None
-            continue
-
-    def _unlock(self) -> None:
-        if sys.platform == "win32":
-            return
-        assert self._lock_file is not None
-        # Remove the file on disk before we unlock it.
-        # This way processes currently waiting in _acquire_lock() that already
-        # opened our lock file will see that it isn't the current file on disk
-        # once they acquire the lock.
-        os.unlink(self._lock_path)
-        # pyre-fixme[16]: `Optional` has no attribute `close`.
-        self._lock_file.close()
-        self._lock_file = None
-
-    def close(self) -> None:
-        if self._lock_file is not None:
-            self._unlock()
-
-    def save(self) -> None:
-        if self._lock_file is None:
-            raise Exception("Cannot save the config without holding the lock")
-
-        try:
-            st = os.stat(self.path)
-            perms = st.st_mode & 0o777
-        except OSError as ex:
-            if ex.errno != errno.ENOENT:
-                raise
-            perms = 0o644
-
-        # Write the contents to a temporary file first, then atomically rename
-        # it to the desired destination.  This makes sure the .edenrc file
-        # always has valid contents at all points in time.
-        prefix = USER_CONFIG + ".tmp."
-        dirname = self.path.parent
-        tmpf = tempfile.NamedTemporaryFile(
-            "w", dir=str(dirname), prefix=prefix, delete=False
-        )
-        try:
-            toml_config = self.config.to_raw_dict()
-            toml_data = toml.dumps(typing.cast(Mapping[str, Any], toml_config))
-            tmpf.write(toml_data)
-            tmpf.close()
-            os.chmod(tmpf.name, perms)
-            os.rename(tmpf.name, self.path)
-        except BaseException:
-            # Remove temporary file on error
-            try:
-                os.unlink(tmpf.name)
-            except Exception:
-                pass
-            raise
 
 
 class EdenCheckout:

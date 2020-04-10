@@ -240,7 +240,7 @@ class BasicTest(testcase.EdenRepoTest):
         self.assertFalse(self.eden.in_proc_mounts(self.mount))
         self.assertFalse(os.path.exists(self.mount))
 
-        self.eden.clone(self.repo_name, self.mount)
+        self.eden.clone(self.repo.path, self.mount)
 
         self.assert_checkout_root_entries(self.expected_mount_entries)
         self.assertTrue(self.eden.in_proc_mounts(self.mount))

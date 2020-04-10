@@ -213,40 +213,6 @@ class TomlConfigTest(
         self.assertEqual(cc.scm_type, "hg")
         self.assertEqual(cc.default_revision, "master")
 
-    def test_add_existing_repo(self) -> None:
-        self.copy_config_files()
-
-        cfg = self.get_config()
-        with self.assertRaisesRegex(
-            config_mod.UsageError,
-            "repository fbsource already exists. You will need to edit "
-            "the ~/.edenrc config file by hand to make changes to the "
-            "repository or remove it.",
-        ):
-            cfg.add_repository("fbsource", "hg", f"/data/users/{self._user}/fbsource")
-
-    def test_add_repo(self) -> None:
-        self.copy_config_files()
-
-        cfg = self.get_config()
-        cfg.add_repository("fbandroid", "hg", f"/data/users/{self._user}/fbandroid")
-
-        # Lets reload our config
-        cfg = self.get_config()
-        # Check the various config sections
-        self.assert_core_config(cfg)
-        exp_repos = ["fbandroid", "fbsource", "git"]
-        self.assertEqual(cfg.get_repository_list(), exp_repos)
-        self.assert_fbsource_repo_config(cfg)
-        self.assert_git_repo_config(cfg)
-
-        # Check the newly added repo
-        cc = cfg.find_config_for_alias("fbandroid")
-        assert cc is not None
-        self.assertEqual(cc.backing_repo, Path(f"/data/users/{self._user}/fbandroid"))
-        self.assertEqual(cc.scm_type, "hg")
-        self.assertEqual(cc.default_revision, "master")
-
     def test_missing_type_option_in_repository_is_an_error(self) -> None:
         self.write_user_config(
             """

@@ -230,7 +230,7 @@ class CountersTest(testcase.EdenRepoTest):
         self.eden.unmount(self.mount_path)
         counters = self.get_nonthrift_set(self.get_counters().keys())
         mount2 = os.path.join(self.mounts_dir, "mount2")
-        self.eden.clone(self.repo_name, mount2)
+        self.eden.clone(self.repo.path, mount2)
         self.eden.unmount(Path(mount2))
         counters2 = self.get_nonthrift_set(self.get_counters().keys())
         self.assertEqual(counters, counters2)

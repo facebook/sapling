@@ -47,7 +47,7 @@ class MountTest(testcase.EdenRepoTest):
     def test_remove_unmounted_checkout(self) -> None:
         # Clone a second checkout mount point
         mount2 = os.path.join(self.mounts_dir, "mount2")
-        self.eden.clone(self.repo_name, mount2)
+        self.eden.clone(self.repo.path, mount2)
         self.assertEqual(
             {self.mount: "RUNNING", mount2: "RUNNING"}, self.eden.list_cmd_simple()
         )
@@ -317,9 +317,9 @@ class MountTest(testcase.EdenRepoTest):
     def test_start_with_mount_failures(self) -> None:
         # Clone a few other checkouts
         mount2 = os.path.join(self.mounts_dir, "extra_mount_1")
-        self.eden.clone(self.repo_name, mount2)
+        self.eden.clone(self.repo.path, mount2)
         mount3 = os.path.join(self.mounts_dir, "extra_mount_2")
-        self.eden.clone(self.repo_name, mount3)
+        self.eden.clone(self.repo.path, mount3)
         self.assertEqual(
             {self.mount: "RUNNING", mount2: "RUNNING", mount3: "RUNNING"},
             self.eden.list_cmd_simple(),

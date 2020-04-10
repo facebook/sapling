@@ -123,9 +123,9 @@ class FsckTest(testcase.EdenRepoTest):
         mount3 = Path(self.mounts_dir) / "third_mount"
         mount4 = Path(self.mounts_dir) / "fourth_mount"
 
-        self.eden.clone(self.repo_name, mount2)
-        self.eden.clone(self.repo_name, mount3)
-        self.eden.clone(self.repo_name, mount4)
+        self.eden.clone(self.repo.path, mount2)
+        self.eden.clone(self.repo.path, mount3)
+        self.eden.clone(self.repo.path, mount4)
 
         # Unmount all but mount3
         self.eden.unmount(Path(self.mount))

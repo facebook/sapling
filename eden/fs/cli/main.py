@@ -352,40 +352,6 @@ class StatusCmd(Subcmd):
         return 1
 
 
-@subcmd("repository", "List all repositories")
-class RepositoryCmd(Subcmd):
-    def setup_parser(self, parser: argparse.ArgumentParser) -> None:
-        parser.add_argument(
-            "name", nargs="?", default=None, help="Name of the checkout to mount"
-        )
-        parser.add_argument(
-            "path", nargs="?", default=None, help="Path to the repository to import"
-        )
-
-    def run(self, args: argparse.Namespace) -> int:
-        instance = get_eden_instance(args)
-        if args.name and args.path:
-            repo = util.get_repo(args.path)
-            if repo is None:
-                print_stderr("%s does not look like a git or hg repository" % args.path)
-                return 1
-            try:
-                instance.add_repository(
-                    args.name, repo_type=repo.type, source=repo.source
-                )
-            except config_mod.UsageError as ex:
-                print_stderr("error: {}", ex)
-                return 1
-        elif args.name or args.path:
-            print_stderr("repository command called with incorrect arguments")
-            return 1
-        else:
-            repo_list = instance.get_repository_list()
-            for repo_name in sorted(repo_list):
-                print(repo_name)
-        return 0
-
-
 class ListMountInfo(typing.NamedTuple):
     path: Path
     data_dir: Path
