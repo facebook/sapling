@@ -170,25 +170,6 @@ ConstantStringRef unionStoreGetWithRefresh(
     return unionStoreGet(unionStore, name, id);
   }
 }
-
-std::unique_ptr<Blob> getBlobFromUnionStore(
-    UnionDatapackStore& unionStore,
-    const Hash& id,
-    const HgProxyHash& hgInfo) {
-  try {
-    auto content = unionStoreGetWithRefresh(
-        unionStore, hgInfo.path().stringPiece(), hgInfo.revHash());
-    if (content.content()) {
-      XLOG(DBG5) << "loaded datapack for " << hgInfo.path() << " hash "
-                 << hgInfo.revHash() << ", it has size " << content.size();
-      return make_unique<Blob>(
-          id, IOBuf(IOBuf::CopyBufferOp{}, content.content(), content.size()));
-    }
-  } catch (const MissingKeyError&) {
-    // Data for this blob was not present locally.
-  }
-  return nullptr;
-}
 } // namespace
 
 HgBackingStore::HgBackingStore(
@@ -688,15 +669,8 @@ SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
                  << hgInfo.revHash().toString() << " from datapack store";
       return makeFuture(std::move(content));
     }
-  } else
-#endif
-      // Prefer using the above rust implementation over the C++ implementation
-      if (edenConfig->useHgCache.getValue() && unionStore_) {
-    auto content = getBlobFromUnionStore(*unionStore_->wlock(), id, hgInfo);
-    if (content) {
-      return makeFuture(std::move(content));
-    }
   }
+#endif
 
   folly::small_vector<SemiFuture<unique_ptr<Blob>>, 2> futures;
   folly::stop_watch<std::chrono::milliseconds> watch;
