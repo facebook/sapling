@@ -8,13 +8,10 @@ from bindings import zstd
 from hghave import require
 
 
-require(["py2"])
-
-
 class testzstd(unittest.TestCase):
     def testdelta(self):
         base = os.urandom(100000)
-        data = base[:1000] + "x" + base[1000:90000] + base[90500:]
+        data = base[:1000] + b"x" + base[1000:90000] + base[90500:]
         delta = zstd.diff(base, data)
 
         # The delta is tiny
