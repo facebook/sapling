@@ -1372,12 +1372,6 @@ extmodules = [
         depends=common_depends + ["edenscm/mercurial/bdiff.h"],
     ),
     Extension(
-        "edenscmnative.diffhelpers",
-        ["edenscm/mercurial/cext/diffhelpers.c"],
-        include_dirs=include_dirs,
-        depends=common_depends,
-    ),
-    Extension(
         "edenscmnative.mpatch",
         ["edenscm/mercurial/mpatch.c", "edenscm/mercurial/cext/mpatch.c"],
         include_dirs=include_dirs,

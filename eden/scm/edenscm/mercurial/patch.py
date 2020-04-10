@@ -27,7 +27,7 @@ import tempfile
 import zlib
 from typing import List, Optional, Sequence, Tuple
 
-from edenscmnative import diffhelpers
+from bindings import diffhelpers
 
 from . import (
     copies,
