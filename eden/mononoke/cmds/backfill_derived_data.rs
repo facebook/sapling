@@ -423,27 +423,28 @@ async fn subcommand_backfill<P: AsRef<Path>>(
 
     stream::iter(changesets)
         .chunks(CHUNK_SIZE)
-        .then({
-            move |chunk| {
-                derived_utils
-                    .pending(ctx.clone(), repo.clone(), chunk.clone())
-                    .compat()
-            }
-        })
-        .and_then({
-            move |chunk| async move {
-                warmup(ctx, repo, derived_data_type, &chunk).await?;
-                Ok(chunk)
-            }
-        })
+        .map(Ok)
         .try_for_each({
             move |chunk| async move {
-                let chunk_size = chunk.len();
-                let (stats, out) = derived_utils
-                    .derive_batch(ctx.clone(), repo.clone(), chunk)
-                    .compat()
-                    .timed()
-                    .await;
+                let (stats, chunk_size) = async {
+                    let chunk = derived_utils
+                        .pending(ctx.clone(), repo.clone(), chunk)
+                        .compat()
+                        .await?;
+                    let chunk_size = chunk.len();
+
+                    warmup(ctx, repo, derived_data_type, &chunk).await?;
+
+                    derived_utils
+                        .derive_batch(ctx.clone(), repo.clone(), chunk)
+                        .compat()
+                        .await?;
+                    Result::<_, Error>::Ok(chunk_size)
+                }
+                .timed()
+                .await;
+
+                let chunk_size = chunk_size?;
                 generated_count.fetch_add(chunk_size, Ordering::SeqCst);
                 let elapsed = total_duration.with(|total_duration| {
                     *total_duration += stats.completion_time;
@@ -465,7 +466,7 @@ async fn subcommand_backfill<P: AsRef<Path>>(
                     );
                 }
 
-                out
+                Ok(())
             }
         })
         .await
