@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ disable treemanifest
@@ -365,3 +364,4 @@ data. If not, diff both heads to debug it.
 #endif
 
   $ cd ..
+
