@@ -19,4 +19,4 @@ futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-util = "0.3"
 nonzero_ext = "0.2"
 ratelimit_meter = "5"
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "=0.2.11", features = ["full"] }

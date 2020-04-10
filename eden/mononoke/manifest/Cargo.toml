@@ -28,5 +28,5 @@ thiserror = "1.0"
 memblob = { path = "../blobstore/memblob" }
 pretty_assertions = "0.6"
 serde_cbor = "0.11"
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "=0.2.11", features = ["full"] }
 tokio-compat = "0.1"

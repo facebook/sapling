@@ -62,7 +62,7 @@ serde_derive = "1.0"
 serde_json = "1.0"
 slog = { version="2.5", features=["max_level_debug"] }
 thiserror = "1.0"
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "=0.2.11", features = ["full"] }
 tokio-compat = "0.1"
 uuid = { version = "0.8.1", features=["v4"] }
 

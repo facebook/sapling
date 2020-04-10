@@ -36,7 +36,7 @@ itertools = "0.8"
 rand = { version = "0.7", features = ["small_rng"] }
 scopeguard = "1.0.0"
 thiserror = "1.0"
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "=0.2.11", features = ["full"] }
 
 [dev-dependencies]
 mercurial_types-mocks = { path = "../mercurial/types/mocks" }

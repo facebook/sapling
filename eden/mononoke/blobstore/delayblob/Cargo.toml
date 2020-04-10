@@ -17,5 +17,5 @@ futures-old = { package = "futures", version = "0.1" }
 futures-util = "0.3"
 rand = { version = "0.7", features = ["small_rng"] }
 rand_distr = "0.2"
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "=0.2.11", features = ["full"] }
 tokio-compat = "0.1"

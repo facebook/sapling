@@ -30,7 +30,7 @@ bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 slog = { version="2.5", features=["max_level_debug"] }
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "=0.2.11", features = ["full"] }
 tokio-compat = "0.1"
 tokio-old = { package = "tokio", version = "0.1" }
 tokio-timer = "0.2"

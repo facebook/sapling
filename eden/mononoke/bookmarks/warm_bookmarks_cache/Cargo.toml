@@ -36,7 +36,7 @@ itertools = "0.8"
 maplit = "1.0"
 scopeguard = "1.0.0"
 slog = { version="2.5", features=["max_level_debug"] }
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "=0.2.11", features = ["full"] }
 tokio-compat = "0.1"
 
 [dev-dependencies]

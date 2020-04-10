@@ -8,7 +8,7 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 futures = { version = "0.3", features = ["async-await", "compat"] }
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "=0.2.11", features = ["full"] }
 
 [dev-dependencies]
 lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

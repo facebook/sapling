@@ -35,7 +35,7 @@ pretty_assertions = "0.6"
 rand = { version = "0.7", features = ["small_rng"] }
 rand_xorshift = "0.2"
 thiserror = "1.0"
-tokio = { version = "0.2", features = ["full"] }
+tokio = { version = "=0.2.11", features = ["full"] }
 tokio-compat = "0.1"
 
 [dev-dependencies]
