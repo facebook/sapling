@@ -1,10 +1,7 @@
 from __future__ import absolute_import, print_function
 
-from edenscm.mercurial import ui, util, wireproto
+from edenscm.mercurial import pycompat, ui, util, wireproto
 from hghave import require
-
-
-require(["py2"])
 
 
 stringio = util.stringio
@@ -48,7 +45,9 @@ class clientpeer(wireproto.wirepeer):
         return ["batch"]
 
     def _call(self, cmd, **args):
-        return wireproto.dispatch(self.serverrepo, proto(args), cmd)
+        return pycompat.encodeutf8(
+            wireproto.dispatch(self.serverrepo, proto(args), cmd)
+        )
 
     def _callstream(self, cmd, **args):
         return stringio(self._call(cmd, **args))
@@ -57,7 +56,7 @@ class clientpeer(wireproto.wirepeer):
     def greet(self, name):
         f = wireproto.future()
         yield {"name": mangle(name)}, f
-        yield unmangle(f.value)
+        yield unmangle(pycompat.decodeutf8(f.value))
 
 
 class serverrepo(object):

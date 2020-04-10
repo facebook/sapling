@@ -520,7 +520,7 @@ class wirepeer(repository.legacypeer):
             while b";" not in chunk and chunk:
                 chunk = rsp.read(1024)
                 work.append(chunk)
-            merged = "".join(work)
+            merged = b"".join(work)
             while b";" in merged:
                 one, merged = merged.split(b";", 1)
                 yield unescapebytearg(one)
