@@ -24,6 +24,7 @@ pybookmarkstore = { path = "modules/pybookmarkstore" }
 pycliparser = { path = "modules/pycliparser" }
 pyconfigparser = { path = "modules/pyconfigparser" }
 pydag = { path = "modules/pydag" }
+pydiffhelpers = { path = "modules/pydiffhelpers" }
 pydirs = { path = "modules/pydirs" }
 pyedenapi = { path = "modules/pyedenapi" }
 pyerror = { path = "modules/pyerror" }
