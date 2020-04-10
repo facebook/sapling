@@ -281,10 +281,10 @@ impl ToPyObject for Flag {
 
     fn to_py_object(&self, py: Python) -> Self::ObjectType {
         (
-            Bytes::from(self.short_name.map(|s| s.to_string()).unwrap_or_default()),
-            Bytes::from(self.long_name.to_string()),
+            Str::from(self.short_name.map(|s| s.to_string()).unwrap_or_default()),
+            Str::from(self.long_name.to_string()),
             &self.default_value,
-            Bytes::from(self.description.to_string()),
+            Str::from(self.description.to_string()),
         )
             .to_py_object(py)
             .into_object()

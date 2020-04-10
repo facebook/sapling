@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 # Portions Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -36,8 +35,8 @@ demandimport.enable()
 table = commands.table
 helptable = help.helptable
 
-level2mark = [b'"', b"=", b"-", b".", b"#"]
-reservedmarks = [b'"']
+level2mark = ['"', "=", "-", ".", "#"]
+reservedmarks = ['"']
 
 mark2level = {}
 for m, l in zip(level2mark, range(len(level2mark))):
@@ -59,16 +58,14 @@ def showavailables(ui, initlevel):
 
 def checkseclevel(ui, doc, name, initlevel):
     ui.note(('checking "%s"\n') % name)
-    if not isinstance(doc, bytes):
-        doc = doc.encode("utf-8")
     blocks, pruned = minirst.parse(doc, 0, ["verbose"])
     errorcnt = 0
     curlevel = initlevel
     for block in blocks:
-        if block[b"type"] != b"section":
+        if block["type"] != "section":
             continue
-        mark = block[b"underline"]
-        title = block[b"lines"][0]
+        mark = block["underline"]
+        title = block["lines"][0]
         if (mark not in mark2level) or (mark2level[mark] <= initlevel):
             ui.warn(
                 (
@@ -97,7 +94,7 @@ def checkseclevel(ui, doc, name, initlevel):
 def checkcmdtable(ui, cmdtable, namefmt, initlevel):
     errorcnt = 0
     for k, entry in cmdtable.items():
-        name = k.split(b"|")[0].lstrip(b"^")
+        name = k.split("|")[0].lstrip("^")
         if not entry[0].__doc__:
             ui.note(("skip checking %s: no help document\n") % (namefmt % name))
             continue

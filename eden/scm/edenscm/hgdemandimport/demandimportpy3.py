@@ -98,7 +98,11 @@ class LazyFinder(object):
 
     def find_spec(self, *args, **kwargs):
         finder = object.__getattribute__(self, "_finder")
-        spec = finder.find_spec(*args, **kwargs)
+        find_spec = getattr(finder, "find_spec", None)
+        if find_spec:
+            spec = find_spec(*args, **kwargs)
+        else:
+            spec = None
 
         # Lazy loader requires exec_module().
         if (

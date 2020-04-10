@@ -821,8 +821,6 @@ def _parse(ui, args):
 
     # combine global options into local
     c += commands.globalopts
-    # for o in commands.globalopts:
-    #    c.append((o[0], o[1], options[o[1]], o[3]))
 
     try:
         flagdefs = [(flagdef[0], flagdef[1], flagdef[2]) for flagdef in c]

@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 #require no-fsmonitor
@@ -781,14 +780,14 @@ this is a section and erroring out weirdly.
   > command = registrar.command(cmdtable)
   > 
   > @command('nohelp',
-  >     [(b'', b'longdesc', 3, b'x'*90),
-  >     (b'n', b'', None, b'normal desc'),
-  >     (b'', b'newline', b'', b'line1\nline2')],
-  >     b'hg nohelp',
+  >     [('', 'longdesc', 3, 'x'*90),
+  >     ('n', '', None, 'normal desc'),
+  >     ('', 'newline', '', 'line1\nline2')],
+  >     'hg nohelp',
   >     norepo=True)
-  > @command('debugoptADV', [(b'', b'aopt', None, b'option is (ADVANCED)')])
-  > @command('debugoptDEP', [(b'', b'dopt', None, b'option is (DEPRECATED)')])
-  > @command('debugoptEXP', [(b'', b'eopt', None, b'option is (EXPERIMENTAL)')])
+  > @command('debugoptADV', [('', 'aopt', None, 'option is (ADVANCED)')])
+  > @command('debugoptDEP', [('', 'dopt', None, 'option is (DEPRECATED)')])
+  > @command('debugoptEXP', [('', 'eopt', None, 'option is (EXPERIMENTAL)')])
   > def nohelp(ui, *args, **kwargs):
   >     pass
   > 

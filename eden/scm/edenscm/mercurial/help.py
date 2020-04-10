@@ -280,8 +280,7 @@ def makeitemsdoc(ui, topic, doc, marker, items, dedent=False):
             continue
         text = gettext(text)
         if dedent:
-            # Abuse latin1 to use textwrap.dedent() on bytes.
-            text = textwrap.dedent(text.decode("latin1")).encode("latin1")
+            text = textwrap.dedent(text)
         lines = text.splitlines()
         doclines = [(lines[0])]
         for l in lines[1:]:
