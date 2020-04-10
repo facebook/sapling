@@ -341,6 +341,25 @@ class patchmeta(object):
         self.op = "MODIFY"
         self.binary = False
 
+    @property
+    def path(self):
+        return self._path
+
+    @path.setter
+    def path(self, path):
+        assert isinstance(path, str)
+        self._path = path
+
+    @property
+    def oldpath(self):
+        return self._oldpath
+
+    @oldpath.setter
+    def oldpath(self, oldpath):
+        if oldpath is not None:
+            assert isinstance(oldpath, str)
+        self._oldpath = oldpath
+
     def setmode(self, mode):
         islink = mode & 0o20000
         isexec = mode & 0o100
@@ -480,7 +499,8 @@ class fsbackend(abstractbackend):
 
     def getfile(self, fname):
         if self.opener.islink(fname):
-            return (self.opener.readlink(fname), (True, False))
+            name = self.opener.readlink(fname)
+            return (encodeutf8(name), (True, False))
 
         isexec = False
         try:
@@ -517,9 +537,8 @@ class fsbackend(abstractbackend):
             _("%d out of %d hunks FAILED -- saving rejects to file %s\n")
             % (failed, total, fname)
         )
-        fp = self.opener(fname, "w")
-        fp.writelines(lines)
-        fp.close()
+        with self.opener(fname, "w") as fp:
+            fp.writelines(lines)
 
     def exists(self, fname):
         return self.opener.lexists(fname)
@@ -681,6 +700,7 @@ class patchfile(object):
         else:
             data, mode = store.getfile(self.copysource)[:2]
         if data is not None:
+            assert isinstance(data, bytes)
             self.exists = self.copysource is None or backend.exists(self.fname)
             self.missing = False
             if data:
@@ -772,12 +792,12 @@ class patchfile(object):
         if not self.rej:
             return
         base = os.path.basename(self.fname)
-        lines = ["--- %s\n+++ %s\n" % (base, base)]
+        lines = [encodeutf8("--- %s\n+++ %s\n" % (base, base))]
         for x in self.rej:
             for l in x.hunk:
                 lines.append(l)
-                if l[-1:] != "\n":
-                    lines.append("\n\ No newline at end of file\n")
+                if l[-1:] != b"\n":
+                    lines.append(b"\n\ No newline at end of file\n")
         self.backend.writerej(self.fname, len(self.rej), self.hunks, lines)
 
     def apply(self, h):
@@ -1533,7 +1553,7 @@ class binhunk(object):
 
     def new(self, lines):
         if self.delta:
-            return [applybindelta(self.text, "".join(lines))]
+            return [applybindelta(self.text, b"".join(lines))]
         return [self.text]
 
     def _read(self, lr):
@@ -2021,11 +2041,7 @@ def iterhunks(fp):
             bfile = "b/" + pycompat.decodeutf8(m.group(2))
             while gitpatches and not gitpatches[-1].ispatching(afile, bfile):
                 gp = gitpatches.pop()
-                # FIXME: Figure out whether gp.path should be bytes or str.
-                if isinstance(gp.path, str):
-                    file = gp.path
-                else:
-                    file = pycompat.decodeutf8(gp.path)
+                file = gp.path
                 yield "file", ("a/" + file, "b/" + file, None, gp.copy())
             if not gitpatches:
                 raise PatchError(
@@ -2067,7 +2083,7 @@ def iterhunks(fp):
 
     while gitpatches:
         gp = gitpatches.pop()
-        file = pycompat.decodeutf8(gp.path)
+        file = gp.path
         yield "file", ("a/" + file, "b/" + file, None, gp.copy())
 
 
@@ -2079,43 +2095,46 @@ def applybindelta(binchunk, data):
     def deltahead(binchunk):
         i = 0
         for c in binchunk:
+            if not isinstance(c, int):
+                c = ord(c)
             i += 1
-            if not (ord(c) & 0x80):
+            if not (c & 0x80):
                 return i
         return i
 
-    out = ""
+    out = b""
     s = deltahead(binchunk)
     binchunk = binchunk[s:]
     s = deltahead(binchunk)
     binchunk = binchunk[s:]
     i = 0
-    while i < len(binchunk):
-        cmd = ord(binchunk[i])
+    binarray = bytearray(binchunk)
+    while i < len(binarray):
+        cmd = binarray[i]
         i += 1
         if cmd & 0x80:
             offset = 0
             size = 0
             if cmd & 0x01:
-                offset = ord(binchunk[i])
+                offset = binarray[i]
                 i += 1
             if cmd & 0x02:
-                offset |= ord(binchunk[i]) << 8
+                offset |= binarray[i] << 8
                 i += 1
             if cmd & 0x04:
-                offset |= ord(binchunk[i]) << 16
+                offset |= binarray[i] << 16
                 i += 1
             if cmd & 0x08:
-                offset |= ord(binchunk[i]) << 24
+                offset |= binarray[i] << 24
                 i += 1
             if cmd & 0x10:
-                size = ord(binchunk[i])
+                size = binarray[i]
                 i += 1
             if cmd & 0x20:
-                size |= ord(binchunk[i]) << 8
+                size |= binarray[i] << 8
                 i += 1
             if cmd & 0x40:
-                size |= ord(binchunk[i]) << 16
+                size |= binarray[i] << 16
                 i += 1
             if size == 0:
                 size = 0x10000
@@ -2157,6 +2176,7 @@ def _applydiff(ui, fp, patcher, backend, store, strip=1, prefix="", eolmode="str
     prefix = _canonprefix(backend.repo, prefix)
 
     def pstrip(p):
+        assert isinstance(p, str)
         return pathtransform(p, strip - 1, prefix)[1]
 
     rejects = 0
