@@ -1170,8 +1170,11 @@ def _sethgexecutable(path):
 
 
 def _isstdout(f):
-    fileno = getattr(f, "fileno", None)
-    return fileno and fileno() == sys.__stdout__.fileno()
+    try:
+        fileno = getattr(f, "fileno", None)
+        return fileno and fileno() == sys.__stdout__.fileno()
+    except Exception:
+        return False
 
 
 def shellenviron(environ=None):

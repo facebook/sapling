@@ -10,9 +10,6 @@ from testutil.autofix import eq
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require(["py2"])
-
-
 sh % "setconfig 'extensions.treemanifest=!'"
 
 sh % "hg init a"
@@ -168,7 +165,7 @@ sh % "hg --cwd b4 diff --nodates" == r"""
 
 sh % "hg clone -qr0 a b5"
 
-content = open("diffed-tip.patch").read().replace("1,1", "foo")
+content = open("diffed-tip.patch", "rb").read().replace(b"1,1", b"foo")
 open("broken.patch", "wb").write(content)
 
 sh % "hg --cwd b5 import -mpatch ../broken.patch" == r"""
@@ -214,14 +211,16 @@ sh % "hg --cwd b8 log -r tip -T '{desc}'" == "override"
 
 
 def mkmsg(path1, path2):
-    import email.Message, sys
+    import email, sys
 
-    msg = email.Message.Message()
+    Message = email.message.Message
+
+    msg = Message()
     patch = open(path1, "rb").read()
-    msg.set_payload("email commit message\n" + patch)
+    msg.set_payload(b"email commit message\n" + patch)
     msg["Subject"] = "email patch"
     msg["From"] = "email patcher"
-    open(path2, "wb").write(msg.as_string())
+    open(path2, "wb").write(msg.as_string().encode("utf-8"))
 
 
 # plain diff in email, subject, message body
@@ -252,14 +251,14 @@ sh % "hg --cwd b10 log -r tip -T '{desc}'" == "second change"
 
 
 def mkmsg2(path1, path2):
-    import email.Message, sys
+    import email, sys
 
-    msg = email.Message.Message()
+    msg = email.message.Message()
     patch = open(path1, "rb").read()
-    msg.set_payload("email patch\n\nnext line\n---\n" + patch)
+    msg.set_payload(b"email patch\n\nnext line\n---\n" + patch)
     msg["Subject"] = "[PATCH] email patch"
     msg["From"] = "email patcher"
-    open(path2, "wb").write(msg.as_string())
+    open(path2, "wb").write(msg.as_string().encode("utf-8"))
 
 
 # plain diff in email, [PATCH] subject, message body with subject
@@ -339,7 +338,7 @@ sh % "hg clone -r0 a b13" == r"""
     updating to branch default
     2 files updated, 0 files merged, 0 files removed, 0 files unresolved"""
 sh % "hg --cwd a export tip" > "tmp"
-open("subdir-tip.patch", "wb").write(open("tmp").read().replace("d1/d2", ""))
+open("subdir-tip.patch", "wb").write(open("tmp", "rb").read().replace(b"d1/d2", b""))
 
 sh % "cd b13/d1/d2"
 sh % "hg import ../../../subdir-tip.patch" == "applying ../../../subdir-tip.patch"
@@ -471,7 +470,7 @@ sh % "cd .."
 sh % "hg init binaryremoval"
 sh % "cd binaryremoval"
 sh % "echo a" > "a"
-open("b", "wb").write("a\0b")
+open("b", "wb").write(b"a\0b")
 sh % "hg ci -Am addall" == r"""
     adding a
     adding b"""
@@ -746,7 +745,7 @@ sh % "hg parents -v" == r"""
 sh % "cd .."
 
 open("trickyheaders.patch", "wb").write(
-    """
+    b"""
 From: User A <user@a>
 Subject: [PATCH] from: tricky!
 
@@ -1452,7 +1451,7 @@ def postimport(ctx):
     if 'foo' in ctx.extra():
         ctx.repo().ui.write('imported-foo: %s\n' % ctx.extra()['foo'])
 
-edenscm.mercurial.patch.patchheadermap.append(('Foo', 'foo'))
+edenscm.mercurial.patch.patchheadermap.append((b'Foo', 'foo'))
 edenscm.mercurial.cmdutil.extrapreimport.append('foo')
 edenscm.mercurial.cmdutil.extrapreimportmap['foo'] = processfoo
 edenscm.mercurial.cmdutil.extrapostimport.append('foo')

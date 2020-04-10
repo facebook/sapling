@@ -251,7 +251,7 @@ def extract(ui, fileobj):
             ui.debug("From: %s\n" % data["user"])
         diffs_seen = 0
         ok_types = ("text/plain", "text/x-diff", "text/x-patch")
-        message = ""
+        message = b""
         for part in msg.walk():
             content_type = part.get_content_type()
             ui.debug("Content-Type: %s\n" % content_type)
@@ -289,7 +289,7 @@ def extract(ui, fileobj):
                                     data[key] = pycompat.decodeutf8(line[len(prefix) :])
                         else:
                             hgpatchheader = False
-                    elif line == "---":
+                    elif line == b"---":
                         ignoretext = True
                     if not hgpatchheader and not ignoretext:
                         cfp.write(line)
@@ -1510,13 +1510,13 @@ class hunk(object):
             hlen = len(self.hunk)
             for x in range(hlen - 1):
                 # the hunk starts with the @@ line, so use x+1
-                if self.hunk[x + 1][0] == " ":
+                if self.hunk[x + 1][0:1] == b" ":
                     top += 1
                 else:
                     break
             if not toponly:
                 for x in range(hlen - 1):
-                    if self.hunk[hlen - bot - 1][0] == " ":
+                    if self.hunk[hlen - bot - 1][0:1] == b" ":
                         bot += 1
                     else:
                         break
