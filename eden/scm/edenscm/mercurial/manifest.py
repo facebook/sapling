@@ -691,7 +691,7 @@ class treemanifest(object):
 
         # yield this dir's files and walk its submanifests
         self._load()
-        for p in sorted(self._dirs.keys() + self._files.keys()):
+        for p in sorted(list(self._dirs.keys()) + list(self._files.keys())):
             if p in self._files:
                 fullp = self._subpath(p)
                 if match(fullp):
