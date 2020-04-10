@@ -90,7 +90,7 @@ def update(
             vfs = repo.localvfs
         except AttributeError:
             vfs = repo.vfs
-        vfs.write("updatestate", destctx.hex())
+        vfs.writeutf8("updatestate", destctx.hex())
 
         # Ask eden to perform the checkout
         if force:
