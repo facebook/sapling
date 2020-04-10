@@ -559,7 +559,6 @@ def apply_redirection_configs_to_checkout_config(
         backing_repo=config.backing_repo,
         scm_type=config.scm_type,
         default_revision=config.default_revision,
-        bind_mounts={},
         redirections=redirections,
     )
 

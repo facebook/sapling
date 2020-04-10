@@ -147,7 +147,6 @@ class TomlConfigTest(
         assert cc is not None
         self.assertEqual(cc.backing_repo, Path(f"/home/{self._user}/src/git/.git"))
         self.assertEqual(cc.scm_type, "git")
-        self.assertEqual(cc.bind_mounts, {})
         self.assertEqual(cc.default_revision, "master")
 
     def assert_fbsource_repo_config(self, cfg: EdenInstance) -> None:
@@ -157,10 +156,6 @@ class TomlConfigTest(
             cc.backing_repo, Path(f"/data/users/{self._user}/fbsource-override")
         )
         self.assertEqual(cc.scm_type, "hg")
-        self.assertEqual(
-            cc.bind_mounts,
-            {"fbcode-buck-out": "fbcode/buck-out-override", "buck-out": "buck-out"},
-        )
         self.assertEqual(cc.default_revision, "master")
 
     def assert_config_precedence(self, cfg: EdenInstance) -> None:
@@ -216,10 +211,6 @@ class TomlConfigTest(
         assert cc is not None
         self.assertEqual(cc.backing_repo, Path(f"/data/users/{self._user}/fbsource"))
         self.assertEqual(cc.scm_type, "hg")
-        self.assertEqual(
-            cc.bind_mounts,
-            {"fbcode-buck-out": "fbcode/buck-out", "buck-out": "buck-out"},
-        )
         self.assertEqual(cc.default_revision, "master")
 
     def test_add_existing_repo(self) -> None:
@@ -254,7 +245,6 @@ class TomlConfigTest(
         assert cc is not None
         self.assertEqual(cc.backing_repo, Path(f"/data/users/{self._user}/fbandroid"))
         self.assertEqual(cc.scm_type, "hg")
-        self.assertEqual(cc.bind_mounts, {})
         self.assertEqual(cc.default_revision, "master")
 
     def test_missing_type_option_in_repository_is_an_error(self) -> None:

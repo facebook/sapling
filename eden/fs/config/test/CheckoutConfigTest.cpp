@@ -48,9 +48,7 @@ class CheckoutConfigTest : public ::testing::Test {
     auto localData =
         "[repository]\n"
         "path = \"/data/users/carenthomas/fbsource\"\n"
-        "type = \"git\"\n"
-        "[bind-mounts]\n"
-        "my-path = \"path/to-my-path\"\n";
+        "type = \"git\"\n";
     folly::writeFile(folly::StringPiece{localData}, configDotToml_.c_str());
   }
 
@@ -74,12 +72,15 @@ TEST_F(CheckoutConfigTest, testLoadFromClientDirectory) {
   EXPECT_EQ("/tmp/someplace", config->getMountPath());
 }
 
-TEST_F(CheckoutConfigTest, testLoadFromClientDirectoryWithNoBindMounts) {
-  // Overwrite config.toml with no bind-mounts entry.
+TEST_F(CheckoutConfigTest, testLoadWithIgnoredSettings) {
+  // Overwrite config.toml with extra ignored data in the config file
   auto data =
       "[repository]\n"
       "path = \"/data/users/carenthomas/fbsource\"\n"
-      "type = \"git\"\n";
+      "type = \"git\"\n"
+      "color = \"blue\"\n"
+      "[bind-mounts]\n"
+      "my-path = \"path/to-my-path\"\n";
   folly::writeFile(folly::StringPiece{data}, configDotToml_.c_str());
 
   auto config = CheckoutConfig::loadFromClientDirectory(

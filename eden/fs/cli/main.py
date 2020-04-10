@@ -361,12 +361,6 @@ class RepositoryCmd(Subcmd):
         parser.add_argument(
             "path", nargs="?", default=None, help="Path to the repository to import"
         )
-        parser.add_argument(
-            "--with-buck",
-            "-b",
-            action="store_true",
-            help="Checkout should create a bind mount for buck-out/.",
-        )
 
     def run(self, args: argparse.Namespace) -> int:
         instance = get_eden_instance(args)
@@ -377,10 +371,7 @@ class RepositoryCmd(Subcmd):
                 return 1
             try:
                 instance.add_repository(
-                    args.name,
-                    repo_type=repo.type,
-                    source=repo.source,
-                    with_buck=args.with_buck,
+                    args.name, repo_type=repo.type, source=repo.source
                 )
             except config_mod.UsageError as ex:
                 print_stderr("error: {}", ex)
@@ -699,7 +690,6 @@ re-run `eden clone` with --allow-empty-repo"""
             repo_config = config_mod.CheckoutConfig(
                 backing_repo=Path(repo.source),
                 scm_type=repo.type,
-                bind_mounts={},
                 default_revision=config_mod.DEFAULT_REVISION[repo.type],
                 redirections={},
             )
@@ -710,7 +700,6 @@ re-run `eden clone` with --allow-empty-repo"""
             repo_config = config_mod.CheckoutConfig(
                 backing_repo=Path(repo.source),
                 scm_type=repo.type,
-                bind_mounts=project_config.bind_mounts,
                 default_revision=project_config.default_revision,
                 redirections={},
             )

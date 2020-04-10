@@ -116,17 +116,13 @@ class CheckoutConfig(typing.NamedTuple):
     - backing_repo: The path where the true repo resides on disk.  For mercurial backing
         repositories this does not include the final ".hg" directory component.
     - scm_type: "hg" or "git"
-    - bind_mounts: dict where keys are private pathnames under ~/.eden where the
-      files are actually stored and values are the relative pathnames in the
-      EdenFS mount that maps to them.
     - redirections: dict where keys are relative pathnames in the EdenFS mount
       and the values are RedirectionType enum values that describe the type of
-      the redirection.  This configuration supersedes the older bind_mounts config.
+      the redirection.
     """
 
     backing_repo: Path
     scm_type: str
-    bind_mounts: Dict[str, str]
     default_revision: str
     redirections: Dict[str, "RedirectionType"]
 
@@ -362,14 +358,6 @@ class EdenInstance:
         if not parser.has_section(repository_header):
             return None
 
-        bind_mounts_header = f"bindmounts {alias}"
-        if parser.has_section(bind_mounts_header):
-            # Convert the EdenConfigParser section into a dict so it is JSON
-            # serializable for the `eden info` command.
-            bind_mounts = dict(parser.get_section_str_to_str(bind_mounts_header))
-        else:
-            bind_mounts = {}
-
         scm_type = parser.get_str(repository_header, "type", default="")
         if not scm_type:
             raise Exception(f'repository "{alias}" missing key "type".')
@@ -389,7 +377,6 @@ class EdenInstance:
         return CheckoutConfig(
             backing_repo=Path(path),
             scm_type=scm_type,
-            bind_mounts=bind_mounts,
             default_revision=default_revision,
             redirections={},
         )
@@ -421,7 +408,6 @@ class EdenInstance:
         snapshot = checkout.get_snapshot()
         return collections.OrderedDict(
             [
-                ("bind-mounts", checkout_config.bind_mounts),
                 ("mount", str(checkout.path)),
                 ("scm_type", checkout_config.scm_type),
                 ("snapshot", snapshot),
@@ -429,9 +415,7 @@ class EdenInstance:
             ]
         )
 
-    def add_repository(
-        self, name: str, repo_type: str, source: str, with_buck: bool = False
-    ) -> None:
+    def add_repository(self, name: str, repo_type: str, source: str) -> None:
         # Check if repository already exists
         with ConfigUpdater(self._user_config_path) as config:
             if name in self.get_repository_list(config):
@@ -442,16 +426,8 @@ by hand to make changes to the repository or remove it."""
                     % name
                 )
 
-            # Create a directory for client to store repository metadata
-            bind_mounts = {}
-            if with_buck:
-                bind_mount_name = "buck-out"
-                bind_mounts[bind_mount_name] = "buck-out"
-
             # Add repository to INI file
             config["repository " + name] = {"type": repo_type, "path": source}
-            if bind_mounts:
-                config["bindmounts " + name] = bind_mounts
             config.save()
 
     def clone(
@@ -479,12 +455,6 @@ Do you want to run `eden mount %s` instead?"""
             checkout.save_snapshot(snapshot_id)
         else:
             raise Exception("snapshot id not provided")
-
-        # Create bind mounts directories
-        bind_mounts_dir = os.path.join(client_dir, "bind-mounts")
-        util.mkdir_p(bind_mounts_dir)
-        for mount in checkout_config.bind_mounts:
-            util.mkdir_p(os.path.join(bind_mounts_dir, mount))
 
         checkout.save_config(checkout_config)
 
@@ -1147,7 +1117,6 @@ class EdenCheckout:
                 "path": str(checkout_config.backing_repo),
                 "type": checkout_config.scm_type,
             },
-            "bind-mounts": checkout_config.bind_mounts,
             "redirections": redirections,
         }
 
@@ -1185,22 +1154,6 @@ class EdenCheckout:
                 f'repository "{config_path}" has unsupported type ' f'"{scm_type}"'
             )
 
-        bind_mounts = {}
-        bind_mounts_dict = config.get("bind-mounts")
-        if bind_mounts_dict is not None:
-            if not isinstance(bind_mounts_dict, dict):
-                raise Exception(
-                    f"{config_path} has an invalid " "[bind-mounts] section"
-                )
-            for key, value in bind_mounts_dict.items():
-                if not isinstance(value, str):
-                    raise Exception(
-                        f"{config_path} has invalid value in "
-                        f"[bind-mounts] for {key}: {value} "
-                        "(string expected)"
-                    )
-                bind_mounts[key] = value
-
         redirections = {}
         redirections_dict = config.get("redirections")
 
@@ -1228,7 +1181,6 @@ class EdenCheckout:
         return CheckoutConfig(
             backing_repo=Path(get_field("path")),
             scm_type=scm_type,
-            bind_mounts=bind_mounts,
             redirections=redirections,
             default_revision=(
                 repository.get("default-revision") or DEFAULT_REVISION[scm_type]

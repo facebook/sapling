@@ -69,15 +69,16 @@ class PrivHelper {
       bool readOnly) = 0;
 
   /**
-   * Ask the priveleged helper process to perform a fuse unmount.
+   * Ask the privileged helper process to perform a fuse unmount.
    */
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> fuseUnmount(
       folly::StringPiece mountPath) = 0;
 
   /**
-   * @param clientPath Absolute path (that should be under
-   *     .eden/clients/<client-name>/bind-mounts/) where the "real" storage is.
-   * @param mountPath Absolute path where the bind mount should be applied.
+   * @param clientPath Absolute path to the existing directory where the "real"
+   *     storage is.
+   * @param mountPath Absolute path to the mount point directory where the bind
+   *     mount should be created.
    */
   FOLLY_NODISCARD virtual folly::Future<folly::Unit> bindMount(
       folly::StringPiece clientPath,

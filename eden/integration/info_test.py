@@ -16,43 +16,6 @@ class InfoTest(testcase.EdenRepoTest):
         self.repo.write_file("hello", "hola\n")
         self.repo.commit("Initial commit.")
 
-    def test_info_with_bind_mounts(self) -> None:
-        edenrc = os.path.join(os.environ["HOME"], ".edenrc")
-        with open(edenrc, "w") as f:
-            f.write(
-                """\
-["repository {repo_name}"]
-path = "{repo_path}"
-type = "{repo_type}"
-
-["bindmounts {repo_name}"]
-buck-out = "buck-out"
-""".format(
-                    repo_name=self.repo_name,
-                    repo_path=self.repo.get_canonical_root(),
-                    repo_type=self.repo.get_type(),
-                )
-            )
-
-        basename = "eden_mount"
-        tmp = os.path.join(self.tmp_dir, basename)
-
-        self.eden.run_cmd("clone", self.repo_name, tmp)
-        info = self.eden.run_cmd("info", tmp)
-
-        client_info = json.loads(info)
-        client_dir = os.path.join(self.eden_dir, "clients", basename)
-        self.assertEqual(
-            {
-                "bind-mounts": {"buck-out": "buck-out"},
-                "client-dir": client_dir,
-                "scm_type": self.repo.get_type(),
-                "mount": tmp,
-                "snapshot": self.repo.get_head_hash(),
-            },
-            client_info,
-        )
-
     def test_relative_path(self) -> None:
         """
         Test calling "eden info <relative_path>" and make sure it gives
@@ -66,7 +29,6 @@ buck-out = "buck-out"
         )
         self.assertEqual(
             {
-                "bind-mounts": {},
                 "client-dir": client_dir,
                 "scm_type": self.repo.get_type(),
                 "mount": self.mount,

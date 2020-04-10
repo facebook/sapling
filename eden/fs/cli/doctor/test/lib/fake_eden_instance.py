@@ -68,7 +68,6 @@ class FakeEdenInstance:
         self,
         path: str,
         snapshot: Optional[str] = None,
-        bind_mounts: Optional[Dict[str, str]] = None,
         client_name: Optional[str] = None,
         scm_type: str = "hg",
         active: bool = True,
@@ -95,8 +94,6 @@ class FakeEdenInstance:
 
         if snapshot is None:
             snapshot = self.default_commit_hash
-        if bind_mounts is None:
-            bind_mounts = {}
         if client_name is None:
             client_name = path.replace("/", "_")
         backing_repo_path = (
@@ -108,7 +105,6 @@ class FakeEdenInstance:
         config = CheckoutConfig(
             backing_repo=backing_repo_path,
             scm_type=scm_type,
-            bind_mounts=bind_mounts,
             default_revision=snapshot,
             redirections={},
         )
@@ -217,7 +213,6 @@ class FakeEdenInstance:
         checkout = self._checkouts_by_path[mount_path]
         return collections.OrderedDict(
             [
-                ("bind-mounts", checkout.config.bind_mounts),
                 ("mount", mount_path),
                 ("scm_type", checkout.config.scm_type),
                 ("snapshot", checkout.snapshot),
