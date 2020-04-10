@@ -1557,7 +1557,7 @@ class binhunk(object):
         dec = []
         line = getline(lr, self.hunk)
         while len(line) > 1:
-            l = ord(line[0])
+            l = ord(line[0:1])
             if l <= ord("Z") and l >= ord("A"):
                 l = l - ord("A") + 1
             else:
