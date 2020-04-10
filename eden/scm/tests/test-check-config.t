@@ -132,5 +132,6 @@ New errors are not allowed. Warnings are strongly discouraged.
   undocumented: treestate.required (bool) [True]
   undocumented: ui.editor.chunkselector (str)
   undocumented: ui.hyperlink (bool)
+  undocumented: web.allowhgweb (bool)
   undocumented: worker.rustworkers (bool)
   undocumented: workingcopy.enablerustwalker (bool)

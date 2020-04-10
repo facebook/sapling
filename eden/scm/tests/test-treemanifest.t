@@ -218,15 +218,11 @@ Create a few commits with flat manifest
   (branch merge, don't forget to commit)
   $ hg ci -m 'merge of flat manifests to new flat manifest'
 
-  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --errorlog=errors.log
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
-
 Create clone with tree manifests enabled
 
   $ cd ..
   $ hg clone --config experimental.treemanifest=1 \
-  >   http://localhost:$HGPORT repo-mixed -r 1
+  >   ssh://user@dummy/repo-flat repo-mixed -r 1
   adding changesets
   adding manifests
   adding file changes
@@ -589,9 +585,6 @@ Rebuilt fncache includes dirlogs
   adding meta/b/foo/apple/bees/00manifest.i
   16 items added, 0 removed from fncache
 
-Finish first server
-  $ killdaemons.py
-
 Back up the recently added revlogs
   $ cp -R .hg/store .hg/store-newcopy
 
@@ -650,15 +643,13 @@ Verify reports missing dirlog entry
   [1]
   $ cp -R .hg/store-newcopy/. .hg/store
 
-Test cloning a treemanifest repo over http.
-  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --errorlog=errors.log
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
+Test cloning a treemanifest repo over ssh.
   $ cd ..
+
 We can clone even with the knob turned off and we'll get a treemanifest repo.
   $ hg clone --config experimental.treemanifest=False \
   >   --config experimental.changegroup3=True \
-  >   http://localhost:$HGPORT deepclone
+  >   ssh://user@dummy/deeprepo deepclone
   requesting all changes
   adding changesets
   adding manifests
@@ -666,8 +657,6 @@ We can clone even with the knob turned off and we'll get a treemanifest repo.
   added 4 changesets with 18 changes to 8 files
   updating to branch default
   8 files updated, 0 files merged, 0 files removed, 0 files unresolved
-No server errors.
-  $ cat deeprepo/errors.log
 requires got updated to include treemanifest
   $ cat deepclone/.hg/requires | grep treemanifest
   treemanifest
@@ -704,7 +693,7 @@ Verify passes.
 Create clones using old repo formats to use in later tests
   $ hg clone --config format.usestore=False \
   >   --config experimental.changegroup3=True \
-  >   http://localhost:$HGPORT deeprepo-basicstore
+  >   ssh://user@dummy/deeprepo deeprepo-basicstore
   requesting all changes
   adding changesets
   adding manifests
@@ -715,13 +704,10 @@ Create clones using old repo formats to use in later tests
   $ cd deeprepo-basicstore
   $ grep store .hg/requires
   [1]
-  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --errorlog=errors.log
-  $ HGPORT1=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
   $ hg clone --config format.usefncache=False \
   >   --config experimental.changegroup3=True \
-  >   http://localhost:$HGPORT deeprepo-encodedstore
+  >   ssh://user@dummy/deeprepo deeprepo-encodedstore
   requesting all changes
   adding changesets
   adding manifests
@@ -732,9 +718,6 @@ Create clones using old repo formats to use in later tests
   $ cd deeprepo-encodedstore
   $ grep fncache .hg/requires
   [1]
-  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --errorlog=errors.log
-  $ HGPORT2=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 
 Local clone with basicstore
@@ -769,7 +752,7 @@ Local clone with fncachestore
 
 Stream clone with basicstore
   $ hg clone --config experimental.changegroup3=True --stream -U \
-  >   http://localhost:$HGPORT1 stream-clone-basicstore
+  >   ssh://user@dummy/deeprepo-basicstore stream-clone-basicstore
   streaming all changes
   19 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
@@ -785,7 +768,7 @@ Stream clone with basicstore
 
 Stream clone with encodedstore
   $ hg clone --config experimental.changegroup3=True --stream -U \
-  >   http://localhost:$HGPORT2 stream-clone-encodedstore
+  >   ssh://user@dummy/deeprepo-encodedstore stream-clone-encodedstore
   streaming all changes
   19 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
@@ -801,7 +784,7 @@ Stream clone with encodedstore
 
 Stream clone with fncachestore
   $ hg clone --config experimental.changegroup3=True --stream -U \
-  >   http://localhost:$HGPORT stream-clone-fncachestore
+  >   ssh://user@dummy/deeprepo stream-clone-fncachestore
   streaming all changes
   19 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)

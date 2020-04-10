@@ -1,5 +1,6 @@
 #require py2
-#chg-compatible
+# This test is not chg compatible due to the number of hgrc changes. It causes
+# some changes to not get picked up.
 
   $ disable treemanifest
   $ configure dummyssh
@@ -292,14 +293,10 @@ pull over ssh
   3333333333333333333333333333333333333333 eea13746799a9e0bfd88f29d3c2e9dc9389f524f 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   4444444444444444444444444444444444444444 02de42196ebee42ef284b6780a87cdc96e8eaab6 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
 
-pull over http
+pull over ssh
 
-  $ hg serve -R main -p 0 --port-file $TESTTMP/.port -d --pid-file=main.pid -E main-error.log
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat main.pid >> $DAEMON_PIDS
-
-  $ hg -R other pull http://localhost:$HGPORT/ -r 42ccdea3bb16 --bookmark book_42cc
-  pulling from http://localhost:$HGPORT/ (glob)
+  $ hg -R other pull ssh://user@dummy/main -r 42ccdea3bb16 --bookmark book_42cc
+  pulling from ssh://user@dummy/main
   searching for changes
   adding changesets
   adding manifests
@@ -309,8 +306,7 @@ pull over http
   updating bookmark book_42cc
   pre-close-tip:42ccdea3bb16 draft book_42cc
   postclose-tip:42ccdea3bb16 draft book_42cc
-  txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_NODE_LAST=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull HG_URL=http://localhost:$HGPORT/ (glob)
-  $ cat main-error.log
+  txnclose hook: HG_BOOKMARK_MOVED=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_NODE_LAST=42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 HG_PHASES_MOVED=1 HG_SOURCE=pull HG_TXNID=TXN:$ID$ HG_TXNNAME=pull HG_URL=ssh://user@dummy/main (glob)
   $ hg -R other debugobsolete
   1111111111111111111111111111111111111111 9520eea781bcca16c1e15acc0ba14335a0e8e5ba 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   2222222222222222222222222222222222222222 24b6387c8c8cae37178880f3fa95ded3cb1cf785 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
@@ -359,18 +355,14 @@ push over ssh
   5555555555555555555555555555555555555555 42ccdea3bb16d28e1848c95fe2e44c000f3f21b1 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
   6666666666666666666666666666666666666666 5fddd98957c8a54a4d436dfe1da9d87f21a1b97b 0 (Thu Jan 01 00:00:00 1970 +0000) {'user': 'test'}
 
-push over http
-
-  $ hg serve -R other -p 0 --port-file $TESTTMP/.port -d --pid-file=other.pid -E other-error.log
-  $ HGPORT2=`cat $TESTTMP/.port`
-  $ cat other.pid >> $DAEMON_PIDS
+push over ssh
 
   $ hg -R main phase --public 32af7686d403
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
   txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_PHASES_MOVED=1 HG_TXNID=TXN:$ID$ HG_TXNNAME=phase
-  $ hg -R main push http://localhost:$HGPORT2/ -r 32af7686d403 --bookmark book_32af
-  pushing to http://localhost:$HGPORT2/ (glob)
+  $ hg -R main push ssh://user@dummy/other -r 32af7686d403 --bookmark book_32af
+  pushing to ssh://user@dummy/other
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -379,13 +371,12 @@ push over http
   remote: 1 new obsolescence markers
   remote: pre-close-tip:32af7686d403 public book_32af
   remote: postclose-tip:32af7686d403 public book_32af
-  remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=32af7686d403cf45b5d95f2d70cebea587ac806a HG_NODE_LAST=32af7686d403cf45b5d95f2d70cebea587ac806a HG_PHASES_MOVED=1 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_TXNNAME=serve HG_URL=remote:http:$LOCALIP: (glob)
+  remote: txnclose hook: HG_BOOKMARK_MOVED=1 HG_BUNDLE2=1 HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_NEW_OBSMARKERS=1 HG_NODE=32af7686d403cf45b5d95f2d70cebea587ac806a HG_NODE_LAST=32af7686d403cf45b5d95f2d70cebea587ac806a HG_PHASES_MOVED=1 HG_SOURCE=serve HG_TXNID=TXN:$ID$ HG_TXNNAME=serve HG_URL=remote:ssh:$LOCALIP (glob)
   updating bookmark book_32af
   pre-close-tip:02de42196ebe draft book_02de
   postclose-tip:02de42196ebe draft book_02de
   txnclose hook: HG_HOOKNAME=txnclose.env HG_HOOKTYPE=txnclose HG_SOURCE=push-response HG_TXNID=TXN:$ID$ HG_TXNNAME=push-response
-  http://localhost:$HGPORT2/ HG_URL=http://localhost:$HGPORT2/ (glob)
-  $ cat other-error.log
+  ssh://user@dummy/other HG_URL=ssh://user@dummy/other (glob)
 
 Check final content.
 
@@ -485,11 +476,6 @@ Setting up
   > failpush=$TESTTMP/failpush.py
   > EOF
 
-  $ killdaemons.py
-  $ hg serve -R other -p 0 --port-file $TESTTMP/.port -d --pid-file=other.pid -E other-error.log
-  $ HGPORT2=`cat $TESTTMP/.port`
-  $ cat other.pid >> $DAEMON_PIDS
-
 Doing the actual push: Abort error
 
   $ cat << EOF >> $HGRCPATH
@@ -506,14 +492,6 @@ Doing the actual push: Abort error
 
   $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
   pushing to ssh://user@dummy/other
-  searching for changes
-  remote: Abandon ship!
-  remote: (don't panic)
-  abort: push failed on remote
-  [255]
-
-  $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/ (glob)
   searching for changes
   remote: Abandon ship!
   remote: (don't panic)
@@ -540,12 +518,6 @@ Doing the actual push: unknown mandatory parts
   abort: missing support for test:unknown
   [255]
 
-  $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/ (glob)
-  searching for changes
-  abort: missing support for test:unknown
-  [255]
-
 Doing the actual push: hook abort
 
   $ cat << EOF >> $HGRCPATH
@@ -555,11 +527,6 @@ Doing the actual push: hook abort
   > pretxnclose.failpush = sh -c "echo 'You shall not pass!'; false"
   > txnabort.failpush = sh -c "echo 'Cleaning up the mess...'"
   > EOF
-
-  $ killdaemons.py
-  $ hg serve -R other -p 0 --port-file $TESTTMP/.port -d --pid-file=other.pid -E other-error.log
-  $ HGPORT2=`cat $TESTTMP/.port`
-  $ cat other.pid >> $DAEMON_PIDS
 
   $ hg -R main push other -r e7ec4e813ba6
   pushing to other
@@ -592,22 +559,6 @@ Doing the actual push: hook abort
   abort: push failed on remote
   [255]
 
-  $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/ (glob)
-  searching for changes
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
-  remote: pre-close-tip:e7ec4e813ba6 draft 
-  remote: You shall not pass!
-  remote: transaction abort!
-  remote: Cleaning up the mess...
-  remote: rollback completed
-  remote: pretxnclose.failpush hook exited with status 1
-  abort: push failed on remote
-  [255]
-
 (check that no 'pending' files remain)
 
   $ ls -1 other/.hg/store/phaseroots*
@@ -620,10 +571,6 @@ Check error from hook during the unbundling process itself
   $ cat << EOF >> $HGRCPATH
   > pretxnchangegroup = sh -c "echo 'Fail early!'; false"
   > EOF
-  $ killdaemons.py # reload http config
-  $ hg serve -R other -p 0 --port-file $TESTTMP/.port -d --pid-file=other.pid -E other-error.log
-  $ HGPORT2=`cat $TESTTMP/.port`
-  $ cat other.pid >> $DAEMON_PIDS
 
   $ hg -R main push other -r e7ec4e813ba6
   pushing to other
@@ -640,20 +587,6 @@ Check error from hook during the unbundling process itself
   [255]
   $ hg -R main push ssh://user@dummy/other -r e7ec4e813ba6
   pushing to ssh://user@dummy/other
-  searching for changes
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
-  remote: Fail early!
-  remote: transaction abort!
-  remote: Cleaning up the mess...
-  remote: rollback completed
-  remote: pretxnchangegroup hook exited with status 1
-  abort: push failed on remote
-  [255]
-  $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/ (glob)
   searching for changes
   remote: adding changesets
   remote: adding manifests
@@ -703,20 +636,6 @@ Check output capture control.
   remote: Cleaning up the mess...
   remote: rollback completed
   [255]
-  $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/ (glob)
-  searching for changes
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
-  remote: Fail early!
-  remote: transaction abort!
-  remote: Cleaning up the mess...
-  remote: rollback completed
-  remote: pretxnchangegroup hook exited with status 1
-  abort: push failed on remote
-  [255]
 
 Check abort from mandatory pushkey
 
@@ -744,10 +663,6 @@ Check abort from mandatory pushkey
   > [extensions]
   > mandatorypart=$TESTTMP/mandatorypart.py
   > EOF
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS # reload http config
-  $ hg serve -R other -p 0 --port-file $TESTTMP/.port -d --pid-file=other.pid -E other-error.log
-  $ HGPORT2=`cat $TESTTMP/.port`
-  $ cat other.pid >> $DAEMON_PIDS
 
 (Failure from a hook)
 
@@ -779,20 +694,6 @@ Check abort from mandatory pushkey
   remote: Cleaning up the mess...
   remote: rollback completed
   [255]
-  $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/ (glob)
-  searching for changes
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
-  remote: do not push the key !
-  remote: pushkey-abort: prepushkey.failpush hook exited with status 1
-  remote: transaction abort!
-  remote: Cleaning up the mess...
-  remote: rollback completed
-  abort: Correct phase push failed (because hooks)
-  [255]
 
 (Failure from a the pushkey)
 
@@ -816,10 +717,6 @@ Check abort from mandatory pushkey
   > [hooks]
   > prepushkey.failpush =
   > EOF
-  $ "$TESTDIR/killdaemons.py" $DAEMON_PIDS # reload http config
-  $ hg serve -R other -p 0 --port-file $TESTTMP/.port -d --pid-file=other.pid -E other-error.log
-  $ HGPORT2=`cat $TESTTMP/.port`
-  $ cat other.pid >> $DAEMON_PIDS
 
   $ hg -R main push other -r e7ec4e813ba6
   pushing to other
@@ -856,24 +753,6 @@ Check abort from mandatory pushkey
   remote: undolog/lock:  absent
   remote: prefetchlock:  free
   remote: infinitepushbackup.lock: free
-  [255]
-  $ hg -R main push http://localhost:$HGPORT2/ -r e7ec4e813ba6
-  pushing to http://localhost:$HGPORT2/ (glob)
-  searching for changes
-  remote: adding changesets
-  remote: adding manifests
-  remote: adding file changes
-  remote: added 1 changesets with 1 changes to 1 files
-  remote: transaction abort!
-  remote: Cleaning up the mess...
-  remote: rollback completed
-  remote: pushkey: lock state after "phases"
-  remote: lock:          free
-  remote: wlock:         free
-  remote: undolog/lock:  absent
-  remote: prefetchlock:  free
-  remote: infinitepushbackup.lock: free
-  abort: Clown phase push failed
   [255]
 
 Test lazily acquiring the lock during unbundle
@@ -937,15 +816,14 @@ Servers can disable bundle1 for clone/pull operations
   $ touch foo
   $ hg -q commit -A -m initial
 
-  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
-
-  $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2
+  $ hg --config devel.legacy.exchange=bundle1 clone ssh://user@dummy/bundle2onlyserver  not-bundle2
   requesting all changes
-  abort: remote error:
-  incompatible Mercurial client; bundle2 required
-  (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  adding changesets
+  remote: abort: incompatible Mercurial client; bundle2 required
+  remote: (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  transaction abort!
+  rollback completed
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ killdaemons.py
   $ cd ..
@@ -963,11 +841,8 @@ bundle1 can still pull non-generaldelta repos when generaldelta bundle1 disabled
 
   $ touch foo
   $ hg -q commit -A -m initial
-  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
 
-  $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2-1
+  $ hg --config devel.legacy.exchange=bundle1 clone ssh://user@dummy/notgdserver not-bundle2-1
   requesting all changes
   adding changesets
   adding manifests
@@ -975,8 +850,9 @@ bundle1 can still pull non-generaldelta repos when generaldelta bundle1 disabled
   added 1 changesets with 1 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  remote: devel-warn: using deprecated bundlev1 format
+  remote:  at: */exchange.py:* (getbundlechunks) (glob)
 
-  $ killdaemons.py
   $ cd ../bundle2onlyserver
 
 bundle1 pull can be disabled for generaldelta repos only
@@ -988,17 +864,15 @@ bundle1 pull can be disabled for generaldelta repos only
   > allowbundle1=True
   > EOF
 
-  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
-  $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2
+  $ hg --config devel.legacy.exchange=bundle1 clone ssh://user@dummy/bundle2onlyserver not-bundle2
   requesting all changes
-  abort: remote error:
-  incompatible Mercurial client; bundle2 required
-  (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  adding changesets
+  remote: abort: incompatible Mercurial client; bundle2 required
+  remote: (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  transaction abort!
+  rollback completed
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
-
-  $ killdaemons.py
 
 Verify the global server.bundle1 option works
 
@@ -1009,16 +883,15 @@ Verify the global server.bundle1 option works
   > [format]
   > allowbundle1=True
   > EOF
-  $ hg serve -R bundle2onlyserver -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
-  $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT not-bundle2
+  $ hg --config devel.legacy.exchange=bundle1 clone ssh://user@dummy/bundle2onlyserver not-bundle2
   requesting all changes
-  abort: remote error:
-  incompatible Mercurial client; bundle2 required
-  (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  adding changesets
+  remote: abort: incompatible Mercurial client; bundle2 required
+  remote: (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  transaction abort!
+  rollback completed
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
-  $ killdaemons.py
 
   $ hg --config devel.legacy.exchange=bundle1 clone ssh://user@dummy/bundle2onlyserver not-bundle2-ssh 2>&1 | grep "remote:"
   remote: abort: incompatible Mercurial client; bundle2 required
@@ -1028,18 +901,16 @@ Verify the global server.bundle1 option works
   > [server]
   > bundle1gd = false
   > EOF
-  $ hg serve -R bundle2onlyserver -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
 
-  $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2
+  $ hg --config devel.legacy.exchange=bundle1 clone ssh://user@dummy/bundle2onlyserver not-bundle2
   requesting all changes
-  abort: remote error:
-  incompatible Mercurial client; bundle2 required
-  (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  adding changesets
+  remote: abort: incompatible Mercurial client; bundle2 required
+  remote: (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
+  transaction abort!
+  rollback completed
+  abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
-
-  $ killdaemons.py
 
   $ cd notgdserver
   $ cat > .hg/hgrc << EOF
@@ -1048,11 +919,8 @@ Verify the global server.bundle1 option works
   > [format]
   > allowbundle1=True
   > EOF
-  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
 
-  $ hg --config devel.legacy.exchange=bundle1 clone http://localhost:$HGPORT/ not-bundle2-2
+  $ hg --config devel.legacy.exchange=bundle1 clone ssh://user@dummy/notgdserver not-bundle2-2
   requesting all changes
   adding changesets
   adding manifests
@@ -1060,8 +928,9 @@ Verify the global server.bundle1 option works
   added 1 changesets with 1 changes to 1 files
   updating to branch default
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  remote: devel-warn: using deprecated bundlev1 format
+  remote:  at: */exchange.py:* (getbundlechunks) (glob)
 
-  $ killdaemons.py
   $ cd ../bundle2onlyserver
 
 Verify bundle1 pushes can be disabled
@@ -1073,13 +942,9 @@ Verify bundle1 pushes can be disabled
   > allow_push = *
   > push_ssl = false
   > EOF
-
-  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -E error.log
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 
-  $ hg clone http://localhost:$HGPORT bundle2-only
+  $ hg clone ssh://user@dummy/bundle2onlyserver bundle2-only
   requesting all changes
   adding changesets
   adding manifests
@@ -1090,15 +955,6 @@ Verify bundle1 pushes can be disabled
   $ cd bundle2-only
   $ echo commit > foo
   $ hg commit -m commit
-  $ hg --config devel.legacy.exchange=bundle1 push
-  pushing to http://localhost:$HGPORT/ (glob)
-  searching for changes
-  devel-warn: using deprecated bundlev1 format
-   at: */changegroup.py:* (makechangegroup) (glob)
-  abort: remote error:
-  incompatible Mercurial client; bundle2 required
-  (see https://www.mercurial-scm.org/wiki/IncompatibleClient)
-  [255]
 
 (also check with ssh)
 
@@ -1112,7 +968,7 @@ Verify bundle1 pushes can be disabled
   [1]
 
   $ hg push
-  pushing to http://localhost:$HGPORT/ (glob)
+  pushing to ssh://user@dummy/bundle2onlyserver
   searching for changes
   remote: adding changesets
   remote: adding manifests

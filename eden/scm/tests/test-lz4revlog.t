@@ -1,5 +1,5 @@
-#require py2
   $ disable treemanifest
+  $ configure dummyssh
 
   $ hg init a
   $ cd a
@@ -111,17 +111,10 @@ vanilla hg should bail in an lz4 repo
   (see https://mercurial-scm.org/wiki/MissingRequirement for more information)
   [255]
 
-start a server
-
-XXX: this should be tested with hghave
-
-  $ hg --config server.uncompressed=True serve -p $HGPORT -d --pid-file=../hg1.pid -E ../error.log
-  $ cat ../hg1.pid >> $DAEMON_PIDS
-
 uncompressed clone from lz4 to lz4 should be fine
 
   $ cd ..
-  $ hg clone --uncompressed http://localhost:$HGPORT/ happy
+  $ hg clone --uncompressed ssh://user@dummy/lz happy
   streaming all changes
   5 files to transfer, * of data (glob)
   transferred 785 bytes in * seconds * (glob)
@@ -132,7 +125,7 @@ uncompressed clone from lz4 to lz4 should be fine
 
 uncompressed clone from lz4 to non-lz4 should fall back to pull
 
-  $ hg --config 'extensions.lz4revlog=!' clone -U --uncompressed http://localhost:$HGPORT/ nonesuch
+  $ hg --config 'extensions.lz4revlog=!' clone -U --uncompressed ssh://user@dummy/lz nonesuch
   warning: stream clone requested but client is missing requirements: lz4revlog
   (see https://www.mercurial-scm.org/wiki/MissingRequirement for more information)
   requesting all changes

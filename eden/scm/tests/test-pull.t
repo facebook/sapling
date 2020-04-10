@@ -2,6 +2,7 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ configure dummyssh
 #require serve
 
   $ hg init test
@@ -19,12 +20,9 @@
   checking files
   1 files, 1 changesets, 1 total revisions
 
-  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 
-  $ hg clone --pull http://foo:bar@localhost:$HGPORT/ copy
+  $ hg clone --pull ssh://user@dummy/test copy
   requesting all changes
   adding changesets
   adding manifests
@@ -50,7 +48,7 @@
   2ed2a3912a0b24502043eae84ee4b279c18b90dd 644   foo
 
   $ hg pull
-  pulling from http://foo@localhost:$HGPORT/ (glob)
+  pulling from ssh://user@dummy/test (glob)
   searching for changes
   no changes found
 
@@ -61,11 +59,11 @@ Test pull of non-existing 20 character revision specification, making sure plain
 not are encoded like a node:
 
   $ hg pull -r 'xxxxxxxxxxxxxxxxxxxy'
-  pulling from http://foo@localhost:$HGPORT/ (glob)
+  pulling from ssh://user@dummy/test (glob)
   abort: unknown revision 'xxxxxxxxxxxxxxxxxxxy'!
   [255]
   $ hg pull -r 'xxxxxxxxxxxxxxxxxx y'
-  pulling from http://foo@localhost:$HGPORT/ (glob)
+  pulling from ssh://user@dummy/test (glob)
   abort: unknown revision '7878787878787878787878787878787878782079'!
   [255]
 

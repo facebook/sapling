@@ -1,7 +1,7 @@
-#require py2
 #chg-compatible
 
   $ disable treemanifest
+  $ configure dummyssh
   $ hg init repo
   $ cd repo
   $ echo foo > foo
@@ -104,7 +104,6 @@ This used to abort: received changelog group is empty:
 Test race condition with -r and -U (issue4707)
 
 We pull '-U -r <name>' and the name change right after/during the changegroup emission.
-We use http because http is better is our racy-est option.
 
 
   $ echo babar > ../repo/jungle
@@ -112,17 +111,16 @@ We use http because http is better is our racy-est option.
   > [hooks]
   > outgoing.makecommit = hg ci -Am 'racy commit'; echo committed in pull-race
   > EOF
-  $ hg serve -R ../repo -p 0 --port-file $TESTTMP/.port -d --pid-file=../repo.pid
-  $ HGPORT2=`cat $TESTTMP/.port`
-  $ cat ../repo.pid >> $DAEMON_PIDS
-  $ hg pull --rev default --update http://localhost:$HGPORT2/
-  pulling from http://localhost:$HGPORT2/ (glob)
+  $ hg pull --rev default --update ssh://user@dummy/repo
+  pulling from ssh://user@dummy/repo (glob)
   searching for changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  remote: adding jungle
+  remote: committed in pull-race
   $ hg log -G
   @  changeset:   2:effea6de0384
   |  parent:      0:bbd179dfa0a7

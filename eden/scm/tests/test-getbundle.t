@@ -2,6 +2,7 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ configure dummyssh
 #require serve
 
   $ cat >> $HGRCPATH <<EOF
@@ -212,14 +213,13 @@ Get branch and merge:
       0b2f73f04880d9cb6a5cd8a757f0db0ad01e32c3
       4801a72e5d88cb515b0c7e40fae34180f3f837f2
       10c14a2cc935e1d8c31f9e98587dcf27fb08a6da
-= Test via HTTP =
+= Test via SSH =
 
 Get everything:
 
-  $ hg serve -R repo -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -E error.log -A access.log
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
-  $ hg debuggetbundle http://localhost:$HGPORT/ bundle
+  $ hg debuggetbundle ssh://user@dummy/repo bundle
+  remote: devel-warn: using deprecated bundlev1 format
+  remote:  at: * (getbundlechunks) (glob)
   $ hg debugbundle bundle
   7704483d56b2a7b5db54dcee7c62378ac629b348
   29a4d1f17bd3f0779ca0525bebb1cfb51067c738
@@ -242,7 +242,9 @@ Get everything:
 
 Get parts of two branches:
 
-  $ hg debuggetbundle http://localhost:$HGPORT/ bundle -H 13c0170174366b441dc68e8e33757232fa744458 -C 700b7e19db54103633c4bf4a6a6b6d55f4d50c03 -H bac16991d12ff45f9dc43c52da1946dfadb83e80 -C d5f6e1ea452285324836a49d7d3c2a63cfed1d31
+  $ hg debuggetbundle ssh://user@dummy/repo bundle -H 13c0170174366b441dc68e8e33757232fa744458 -C 700b7e19db54103633c4bf4a6a6b6d55f4d50c03 -H bac16991d12ff45f9dc43c52da1946dfadb83e80 -C d5f6e1ea452285324836a49d7d3c2a63cfed1d31
+  remote: devel-warn: using deprecated bundlev1 format
+  remote:  at: * (getbundlechunks) (glob)
   $ hg debugbundle bundle
   ff42371d57168345fdf1a3aac66a51f6a45d41d2
   bac16991d12ff45f9dc43c52da1946dfadb83e80
@@ -283,14 +285,4 @@ Check that we get all needed file changes:
   
   nf5
   0dbd89c185f53a1727c54cd1ce256482fa23968e 0000000000000000000000000000000000000000 0000000000000000000000000000000000000000 bac16991d12ff45f9dc43c52da1946dfadb83e80 0000000000000000000000000000000000000000 15
-
-Verify we hit the HTTP server:
-
-  $ cat access.log
-  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
-  $LOCALIP - - [$LOGDATE$] "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$ (glob)
-  * - - [*] "GET /?cmd=capabilities HTTP/1.1" 200 - (glob)
-  $LOCALIP - - [$LOGDATE$] "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:common=700b7e19db54103633c4bf4a6a6b6d55f4d50c03+d5f6e1ea452285324836a49d7d3c2a63cfed1d31&heads=13c0170174366b441dc68e8e33757232fa744458+bac16991d12ff45f9dc43c52da1946dfadb83e80 x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$ (glob)
-
-  $ cat error.log
 

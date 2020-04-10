@@ -1,7 +1,8 @@
-#require py2
 #chg-compatible
 
 #require killdaemons
+
+  $ configure dummyssh
 
 = Test the known() protocol function =
 
@@ -29,15 +30,9 @@ Test locally:
 
 Test via HTTP:
 
-  $ hg serve -R repo -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -E error.log -A access.log
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
-  $ hg debugknown http://localhost:$HGPORT/ 991a3460af53952d10ec8a295d3d2cc2e5fa9690 0e067c57feba1a5694ca4844f05588bb1bf82342 3903775176ed42b1458a6281db4a0ccf4d9f287a
+  $ hg debugknown ssh://user@dummy/repo 991a3460af53952d10ec8a295d3d2cc2e5fa9690 0e067c57feba1a5694ca4844f05588bb1bf82342 3903775176ed42b1458a6281db4a0ccf4d9f287a
   111
-  $ hg debugknown http://localhost:$HGPORT/ 000a3460af53952d10ec8a295d3d2cc2e5fa9690 0e067c57feba1a5694ca4844f05588bb1bf82342 0003775176ed42b1458a6281db4a0ccf4d9f287a
+  $ hg debugknown ssh://user@dummy/repo 000a3460af53952d10ec8a295d3d2cc2e5fa9690 0e067c57feba1a5694ca4844f05588bb1bf82342 0003775176ed42b1458a6281db4a0ccf4d9f287a
   010
-  $ hg debugknown http://localhost:$HGPORT/
+  $ hg debugknown ssh://user@dummy/repo
   
-  $ cat error.log
-  $ killdaemons.py
-

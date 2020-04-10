@@ -13,6 +13,8 @@ no repo
 
 #endif
 
+  $ configure dummyssh
+
 create repo
 
   $ hg init test
@@ -88,24 +90,21 @@ other local repo
   cb9a9f314b8b+ tip
 #endif
 
-with remote http repo
+with remote ssh repo
 
   $ cd test
-  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
-  $ HGPORT1=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
-  $ hg id http://localhost:$HGPORT1/
+  $ hg id ssh://user@dummy/test
   cb9a9f314b8b
 
 remote with rev number?
 
-  $ hg id -n http://localhost:$HGPORT1/
+  $ hg id -n ssh://user@dummy/test
   abort: can't query remote revision number or branch
   [255]
 
 remote with branch?
 
-  $ hg id -b http://localhost:$HGPORT1/
+  $ hg id -b ssh://user@dummy/test
   abort: can't query remote revision number or branch
   [255]
 
@@ -123,18 +122,18 @@ test bookmark support
 
 test remote identify with bookmarks
 
-  $ hg id http://localhost:$HGPORT1/
+  $ hg id ssh://user@dummy/test
   cb9a9f314b8b Y/Z
-  $ hg id --bookmarks http://localhost:$HGPORT1/
+  $ hg id --bookmarks ssh://user@dummy/test
   Y Z
-  $ hg id -r . http://localhost:$HGPORT1/
+  $ hg id -r . ssh://user@dummy/test
   cb9a9f314b8b Y/Z
-  $ hg id --bookmarks -r . http://localhost:$HGPORT1/
+  $ hg id --bookmarks -r . ssh://user@dummy/test
   Y Z
 
 test invalid lookup
 
-  $ hg id -r noNoNO http://localhost:$HGPORT1/
+  $ hg id -r noNoNO ssh://user@dummy/test
   abort: unknown revision 'noNoNO'!
   [255]
 

@@ -133,6 +133,10 @@ def _createcmdservice(ui, repo, opts):
 
 
 def _createhgwebservice(ui, repo, opts):
+    if not ui.configbool("web", "allowhgweb", False):
+        raise error.Abort(_("hgweb is deprecated and services should stop using it"),
+                hint="set `--config web.allowhgweb=True` to bypass the block temporarily, but this will be going away soon")
+
     # this way we can check if something was given in the command-line
     if opts.get("port"):
         opts["port"] = util.getport(opts.get("port"))

@@ -1,4 +1,3 @@
-#require py2
   $ disable treemanifest
 
 Function to test discovery between two repos in both directions, using both the local shortcut
@@ -502,24 +501,14 @@ Test actual protocol when pulling one new head in addition to common heads
   $ hg -R c id -i
   ecb0e2f146b3
 
-  $ hg serve -R c -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid -A access.log -E errors.log
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
-
-  $ hg -R b incoming http://localhost:$HGPORT/ -T '{node|short}\n'
-  comparing with http://localhost:$HGPORT/ (glob)
+  $ cd b
+  $ configure dummyssh
+  $ hg incoming ssh://user@dummy/manyheads/c -T '{node|short}\n'
+  comparing with ssh://user@dummy/manyheads/c
   searching for changes
   ecb0e2f146b3
 
-  $ killdaemons.py
-  $ cut -d' ' -f6- access.log | grep -v cmd=known # cmd=known uses random sampling
-  "GET /?cmd=capabilities HTTP/1.1" 200 -
-  "GET /?cmd=batch HTTP/1.1" 200 - x-hgarg-1:cmds=heads+%3Bknown+nodes%3D513314ca8b3ae4dac8eec56966265b00fcf866db x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
-  "GET /?cmd=getbundle HTTP/1.1" 200 - x-hgarg-1:$USUAL_BUNDLE_CAPS$&cg=1&common=513314ca8b3ae4dac8eec56966265b00fcf866db&heads=ecb0e2f146b32093fe33ffb1754570ae15c706b9 x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
-  "GET /?cmd=listkeys HTTP/1.1" 200 - x-hgarg-1:namespace=phases x-hgproto-1:0.1 0.2 comp=$USUAL_COMPRESSIONS$
-  $ cat errors.log
-
-  $ cd ..
+  $ cd ../..
 
 
 Issue 4438 - test coverage for 3ef893520a85 issues.

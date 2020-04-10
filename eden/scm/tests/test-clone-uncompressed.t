@@ -17,14 +17,11 @@ the status call is to check for issue5130
   ...         fh.write(str(i))
   $ hg -q commit -A -m 'add a lot of files'
   $ hg st
-  $ hg serve -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
   $ cd ..
 
 Basic clone
 
-  $ hg clone --stream -U http://localhost:$HGPORT clone1
+  $ hg clone --stream -U ssh://user@dummy/server clone1
   streaming all changes
   1028 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
@@ -52,7 +49,7 @@ Block full streaming clones
 
 --uncompressed is an alias to --stream
 
-  $ hg clone --uncompressed -U http://localhost:$HGPORT clone1-uncompressed
+  $ hg clone --uncompressed -U ssh://user@dummy/server clone1-uncompressed
   streaming all changes
   1028 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
@@ -61,9 +58,13 @@ Block full streaming clones
 
 Clone with background file closing enabled
 
-  $ hg --debug --config worker.backgroundclose=true --config worker.backgroundcloseminfilecount=1 clone --stream -U http://localhost:$HGPORT clone-background | grep -v adding
-  using http://localhost:$HGPORT/ (glob)
-  sending capabilities command
+  $ hg --debug --config worker.backgroundclose=true --config worker.backgroundcloseminfilecount=1 clone --stream -U ssh://user@dummy/server clone-background | grep -v adding
+  running * 'user@dummy' 'hg -R server serve --stdio' (glob)
+  sending hello command
+  sending between command
+  remote: 398
+  remote: capabilities: lookup changegroupsubset branchmap pushkey known getbundle unbundlehash unbundlereplay batch streamreqs=generaldelta,revlogv1 stream_option $USUAL_BUNDLE2_CAPS$ unbundle=HG10GZ,HG10BZ,HG10UN
+  remote: 1
   streaming all changes
   sending stream_out_option command
   1028 files to transfer, * of data (glob)
@@ -85,7 +86,7 @@ Clone with background file closing enabled
 Cannot stream clone when there are secret changesets
 
   $ hg -R server phase --force --secret -r tip
-  $ hg clone --stream -U http://localhost:$HGPORT secret-denied
+  $ hg clone --stream -U ssh://user@dummy/server secret-denied
   warning: stream clone requested but server has them disabled
   requesting all changes
   adding changesets
@@ -93,57 +94,63 @@ Cannot stream clone when there are secret changesets
   adding file changes
   added 1 changesets with 1 changes to 1 files
 
-  $ killdaemons.py
-
 Streaming of secrets can be overridden by server config
 
-  $ cd server
-  $ hg serve --config server.uncompressedallowsecret=true -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid > $DAEMON_PIDS
-  $ cd ..
+  $ cat >>server/.hg/hgrc <<EOF
+  > [server]
+  > uncompressedallowsecret=true
+  > EOF
 
-  $ hg clone --stream -U http://localhost:$HGPORT secret-allowed
+  $ hg clone --stream -U ssh://user@dummy/server secret-allowed
   streaming all changes
   1028 files to transfer, * of data (glob)
   transferred * in * seconds (*) (glob)
   searching for changes
   no changes found
 
-  $ killdaemons.py
+  $ cat >>server/.hg/hgrc <<EOF
+  > [server]
+  > uncompressedallowsecret=false
+  > EOF
 
 Verify interaction between preferuncompressed and secret presence
 
-  $ cd server
-  $ hg serve --config server.preferuncompressed=true -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid > $DAEMON_PIDS
-  $ cd ..
+  $ cat >>server/.hg/hgrc <<EOF
+  > [server]
+  > preferuncomprssed=true
+  > EOF
 
-  $ hg clone -U http://localhost:$HGPORT preferuncompressed-secret
+  $ hg clone -U ssh://user@dummy/server preferuncompressed-secret
   requesting all changes
   adding changesets
   adding manifests
   adding file changes
   added 1 changesets with 1 changes to 1 files
 
-  $ killdaemons.py
+  $ cat >>server/.hg/hgrc <<EOF
+  > [server]
+  > preferuncomprssed=false
+  > EOF
 
 Clone not allowed when full bundles disabled and can't serve secrets
 
-  $ cd server
-  $ hg serve --config server.disablefullbundle=true -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid
-  $ HGPORT=`cat $TESTTMP/.port`
-  $ cat hg.pid > $DAEMON_PIDS
-  $ cd ..
+  $ cat >>server/.hg/hgrc <<EOF
+  > [server]
+  > disablefullbundle=true
+  > EOF
 
-  $ hg clone --stream http://localhost:$HGPORT secret-full-disabled
+  $ hg clone --stream ssh://user@dummy/server secret-full-disabled
   warning: stream clone requested but server has them disabled
   requesting all changes
   remote: abort: server has pull-based clones disabled
   abort: pull failed on remote
   (remove --pull if specified or upgrade Mercurial)
   [255]
+
+  $ cat >>server/.hg/hgrc <<EOF
+  > [server]
+  > disablefullbundle=false
+  > EOF
 
 Local stream clone with secrets involved
 (This is just a test over behavior: if you have access to the repo's files,
@@ -181,14 +188,16 @@ prepare repo with small and big file to cover both code paths in emitrevlogdata
   $ touch repo/f1
   $ $TESTDIR/seq.py 50000 > repo/f2
   $ hg -R repo ci -Aqm "0"
-  $ hg serve -R repo -p 0 --port-file $TESTTMP/.port -d --pid-file=hg.pid --config extensions.delayer=delayer.py
-  $ HGPORT1=`cat $TESTTMP/.port`
-  $ cat hg.pid >> $DAEMON_PIDS
+
+  $ cat >>repo/.hg/hgrc <<EOF
+  > [extensions]
+  > delayer=$TESTTMP/changing/delayer.py
+  > EOF
 
 clone while modifying the repo between stating file with write lock and
 actually serving file content
 
-  $ hg clone -q --stream -U http://localhost:$HGPORT1 clone &
+  $ hg clone -q --stream -U ssh://user@dummy/changing/repo clone &
   $ sleep 1
   $ echo >> repo/f1
   $ echo >> repo/f2
