@@ -45,9 +45,10 @@ class SystemdTest(
     # TODO(T33122320): Test without --foreground.
     def test_eden_start_says_systemd_mode_is_enabled(self) -> None:
         def test(start_args: typing.List[str]) -> None:
+            eden_cli: str = FindExe.EDEN_CLI  # pyre-ignore[9]: T38947910
             with self.subTest(start_args=start_args):
                 start_process: "pexpect.spawn[str]" = pexpect.spawn(
-                    FindExe.EDEN_CLI,  # pyre-ignore[6]: T38947910
+                    eden_cli,
                     self.get_required_eden_cli_args()
                     + ["start", "--foreground"]
                     + start_args,
@@ -56,7 +57,11 @@ class SystemdTest(
                 )
                 start_process.expect_exact("Running in experimental systemd mode")
                 start_process.expect_exact("Started edenfs")
-                start_process.kill(signal.SIGINT)
+                subprocess.check_call(
+                    [eden_cli]
+                    + self.get_required_eden_cli_args()
+                    + ["stop", "--timeout", "0"]
+                )
                 start_process.wait()
 
         test(start_args=["--", "--allowRoot"])
@@ -70,9 +75,10 @@ class SystemdTest(
         self.unset_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD")
 
         def test(start_args: typing.List[str]) -> None:
+            eden_cli: str = FindExe.EDEN_CLI  # pyre-ignore[9]: T38947910
             with self.subTest(start_args=start_args):
                 start_process: "pexpect.spawn[str]" = pexpect.spawn(
-                    FindExe.EDEN_CLI,  # pyre-ignore[6]: T38947910
+                    eden_cli,
                     self.get_required_eden_cli_args()
                     + ["start", "--foreground"]
                     + start_args,
@@ -83,7 +89,11 @@ class SystemdTest(
                 self.assertNotIn(
                     "Running in experimental systemd mode", start_process.before
                 )
-                start_process.kill(signal.SIGINT)
+                subprocess.check_call(
+                    [eden_cli]
+                    + self.get_required_eden_cli_args()
+                    + ["stop", "--timeout", "0"]
+                )
                 start_process.wait()
 
         test(start_args=["--", "--allowRoot"])
