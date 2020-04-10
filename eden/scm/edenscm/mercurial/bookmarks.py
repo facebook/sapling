@@ -1021,7 +1021,7 @@ class remotenames(dict):
         if not self._node2marks:
             mark2nodes = self.mark2nodes()
             self._node2marks = {}
-            for name, node in pycompat.iteritems(mark2nodes):
+            for name, node in mark2nodes.items():
                 self._node2marks.setdefault(node[0], []).append(name)
         return self._node2marks
 
@@ -1030,7 +1030,7 @@ class remotenames(dict):
             mark2nodes = self.mark2nodes()
             self._hoist2nodes = {}
             hoist += "/"
-            for name, node in pycompat.iteritems(mark2nodes):
+            for name, node in mark2nodes.items():
                 if name.startswith(hoist):
                     name = name[len(hoist) :]
                     self._hoist2nodes[name] = node
@@ -1041,7 +1041,7 @@ class remotenames(dict):
             mark2nodes = self.mark2nodes()
             self._node2hoists = {}
             hoist += "/"
-            for name, node in pycompat.iteritems(mark2nodes):
+            for name, node in mark2nodes.items():
                 if name.startswith(hoist):
                     name = name[len(hoist) :]
                     self._node2hoists.setdefault(node[0], []).append(name)
@@ -1195,7 +1195,7 @@ class lazyremotenamedict(pycompat.Mapping):
             self._load()
         return self.potentialentries.keys()
 
-    def iteritems(self):
+    def items(self):
         """Iterate over (name, node) tuples"""
         if not self.loaded:
             self._load()
@@ -1203,7 +1203,7 @@ class lazyremotenamedict(pycompat.Mapping):
             yield (k, [bin(vtup[0])])
 
     def __iter__(self):
-        for k, v in self.iteritems():
+        for k, v in self.items():
             yield k
 
     def __len__(self):
