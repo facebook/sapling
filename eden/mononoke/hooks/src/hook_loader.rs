@@ -87,9 +87,11 @@ pub fn load_hooks(
             "limit_path_length" => {
                 BonsaiFileHook(Box::new(LimitPathLengthHook::new(&hook.config)?))
             }
-            "no_bad_filenames" => FileHook(Arc::new(NoBadFilenames::new()?)),
+            "no_bad_filenames" => BonsaiFileHook(Box::new(NoBadFilenames::new()?)),
             "no_insecure_filenames" => BonsaiFileHook(Box::new(NoInsecureFilenames::new()?)),
-            "no_questionable_filenames" => FileHook(Arc::new(NoQuestionableFilenames::new()?)),
+            "no_questionable_filenames" => {
+                BonsaiFileHook(Box::new(NoQuestionableFilenames::new()?))
+            }
             "signed_source" => BonsaiFileHook(Box::new(SignedSourceHook::new(&hook.config)?)),
             "tp2_symlinks_only" => BonsaiFileHook(Box::new(TP2SymlinksOnly::new()?)),
             "verify_integrity" => {
