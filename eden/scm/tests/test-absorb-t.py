@@ -51,7 +51,7 @@ sh % "hg absorb" == r"""
 # Make some commits:
 
 for i in range(1, 6):
-    open("a", "a").write("%s\n" % i)
+    open("a", "ab").write(b"%s\n" % i)
     sh % ("hg commit -A a -q -m 'commit %s'" % i)
 
 # Change a few lines:
@@ -472,12 +472,12 @@ if feature.check(["py2"]):
                 +INS
                 @@ -2,0 +3,1 @@
         a478955 +END
-    
+
         1 changeset affected
         a478955 commit b 2
         apply changes (yn)?  y
         1 of 2 chunks applied
-    
+
         # changes not applied and left in working directory:
         # M b : 1 modified chunks were ignored
         # M c : unsupported file type (ex. binary or link)
