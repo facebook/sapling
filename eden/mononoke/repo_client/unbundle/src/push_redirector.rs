@@ -208,7 +208,6 @@ impl PushRedirector {
             maybe_pushvars,
             commonheads,
             uploaded_bonsais,
-            uploaded_hg_changeset_ids,
         } = orig;
 
         let uploaded_bonsais = self
@@ -252,7 +251,6 @@ impl PushRedirector {
             maybe_pushvars,
             commonheads,
             uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
-            uploaded_hg_changeset_ids,
         })
     }
 

@@ -27,9 +27,7 @@ use futures::{
 use futures_stats::TimedFutureExt;
 use hgproto::HgCommands;
 use hooks::HookManager;
-use hooks_content_stores::{
-    InMemoryChangesetStore, InMemoryFileContentFetcher, InMemoryFileContentStore,
-};
+use hooks_content_stores::InMemoryFileContentFetcher;
 use metaconfig_types::{BlobConfig, HookManagerParams};
 use mononoke_types::Timestamp;
 use nonzero_ext::nonzero;
@@ -196,8 +194,6 @@ async fn dispatch(
 fn build_noop_hook_manager(fb: FacebookInit) -> HookManager {
     HookManager::new(
         fb,
-        Box::new(InMemoryChangesetStore::new()),
-        Arc::new(InMemoryFileContentStore::new()),
         Box::new(InMemoryFileContentFetcher::new()),
         HookManagerParams {
             disable_acl_checker: true,

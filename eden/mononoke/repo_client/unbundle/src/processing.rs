@@ -246,7 +246,6 @@ fn run_pushrebase(
         maybe_pushvars: _,
         commonheads,
         uploaded_bonsais,
-        uploaded_hg_changeset_ids: _,
     } = action;
 
     // FIXME: stop cloning when this fn is async

@@ -29,9 +29,7 @@ use futures::{
 };
 use futures_old::stream::Stream as OldStream;
 use futures_stats::{FutureStats, TimedFutureExt};
-use hooks_content_stores::{
-    blobrepo_text_only_fetcher, blobrepo_text_only_store, BlobRepoChangesetStore,
-};
+use hooks_content_stores::blobrepo_text_only_fetcher;
 use mercurial_bundles::bundle2::{Bundle2Stream, StreamEvent};
 use metaconfig_types::{RepoConfig, RepoReadOnly};
 use mononoke_types::{BonsaiChangeset, ChangesetId, Timestamp};
@@ -323,7 +321,6 @@ async fn maybe_unbundle(
         maybe_pushvars: _,
         commonheads: _,
         uploaded_bonsais: changesets,
-        uploaded_hg_changeset_ids: _,
     } = action;
 
     let onto_params = match bookmark_spec {
@@ -420,8 +417,6 @@ async fn do_main(
         info!(logger, "Creating HookManager");
         let mut hook_manager = HookManager::new(
             ctx.fb,
-            Box::new(BlobRepoChangesetStore::new(repo.clone())),
-            blobrepo_text_only_store(repo.clone(), repo_config.hook_max_file_size),
             blobrepo_text_only_fetcher(repo.clone(), repo_config.hook_max_file_size),
             repo_config.hook_manager_params.clone().unwrap_or_default(),
             ScubaSampleBuilder::with_discard(),

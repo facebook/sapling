@@ -5,69 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use crate::FileContentStore;
 use crate::{ErrorKind, FileContentFetcher};
-
-use anyhow::Error;
 
 use async_trait::async_trait;
 use bytes::Bytes;
 use context::CoreContext;
-use mercurial_types::{FileBytes, HgChangesetId, HgFileNodeId, MPath};
 use mononoke_types::ContentId;
 use std::sync::Arc;
 
 const NULL: u8 = 0;
-
-pub struct TextOnlyFileContentStore<T> {
-    inner: Arc<T>,
-    max_size: u64,
-}
-
-impl<T> TextOnlyFileContentStore<T> {
-    pub fn new(inner: T, max_size: u64) -> Self {
-        Self {
-            inner: Arc::new(inner),
-            max_size,
-        }
-    }
-}
-#[async_trait]
-impl<T: FileContentStore + 'static> FileContentStore for TextOnlyFileContentStore<T> {
-    async fn resolve_path<'a, 'b: 'a>(
-        &'a self,
-        ctx: &'b CoreContext,
-        changeset_id: HgChangesetId,
-        path: MPath,
-    ) -> Result<Option<HgFileNodeId>, Error> {
-        self.inner.resolve_path(ctx, changeset_id, path).await
-    }
-
-    async fn get_file_text<'a, 'b: 'a>(
-        &'a self,
-        ctx: &'b CoreContext,
-        id: HgFileNodeId,
-    ) -> Result<Option<FileBytes>, Error> {
-        let file_size = self.get_file_size(ctx, id).await?;
-        if file_size > self.max_size {
-            return Ok(None);
-        }
-
-        let file_bytes = self.inner.get_file_text(ctx, id).await?;
-        Ok(match file_bytes {
-            Some(ref file_bytes) if looks_like_binary(file_bytes.as_bytes()) => None,
-            _ => file_bytes,
-        })
-    }
-
-    async fn get_file_size<'a, 'b: 'a>(
-        &'a self,
-        ctx: &'b CoreContext,
-        id: HgFileNodeId,
-    ) -> Result<u64, Error> {
-        self.inner.get_file_size(ctx, id).await
-    }
-}
 
 pub struct TextOnlyFileContentFetcher<T> {
     inner: Arc<T>,

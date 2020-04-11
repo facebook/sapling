@@ -12,16 +12,10 @@ use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
 use context::CoreContext;
-use futures::{
-    compat::Future01CompatExt,
-    future::try_join,
-    stream::{self, TryStreamExt},
-    FutureExt, TryFutureExt,
-};
+use futures::{compat::Future01CompatExt, stream::TryStreamExt, FutureExt, TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::future::ok;
 use hooks::{HookExecution, HookManager, HookOutcome};
-use mercurial_types::HgChangesetId;
 use mononoke_types::BonsaiChangeset;
 use std::{collections::HashMap, sync::Arc};
 
@@ -50,22 +44,18 @@ fn run_pushrebase_hooks(
 ) -> BoxFuture<(), BundleResolverError> {
     // The changesets that will be pushed
     let changesets = action.uploaded_bonsais.clone();
-    let hg = action.uploaded_hg_changeset_ids.clone();
     let maybe_pushvars = action.maybe_pushvars.clone();
     // FIXME: stop cloning when this fn is async
     let bookmark = action.bookmark_spec.get_bookmark_name().clone();
 
     async move {
-        let ((), ()) = try_join(
-            run_hooks_on_changesets(
-                &ctx,
-                &repo,
-                &*hook_manager,
-                changesets.iter(),
-                bookmark.clone(),
-                maybe_pushvars.clone(),
-            ),
-            run_hooks_on_changesets_hg(&ctx, &*hook_manager, hg, bookmark, maybe_pushvars),
+        run_hooks_on_changesets(
+            &ctx,
+            &repo,
+            &*hook_manager,
+            changesets.iter(),
+            bookmark,
+            maybe_pushvars,
         )
         .await?;
         Ok(())
@@ -84,7 +74,7 @@ async fn run_hooks_on_changesets(
     maybe_pushvars: Option<HashMap<String, Bytes>>,
 ) -> Result<(), BundleResolverError> {
     let hook_outcomes = hook_manager
-        .run_hooks_for_bookmark_bonsai(&ctx, changesets, &bookmark, maybe_pushvars.as_ref())
+        .run_hooks_for_bookmark(&ctx, changesets, &bookmark, maybe_pushvars.as_ref())
         .await?;
     if hook_outcomes.iter().all(HookOutcome::is_accept) {
         Ok(())
@@ -117,42 +107,6 @@ async fn run_hooks_on_changesets(
             .collect::<futures::stream::FuturesUnordered<_>>()
             .try_collect()
             .await?;
-        Err(BundleResolverError::HookError(hook_failures))
-    }
-}
-
-async fn run_hooks_on_changesets_hg(
-    ctx: &CoreContext,
-    hook_manager: &HookManager,
-    changesets: impl IntoIterator<Item = HgChangesetId>,
-    bookmark: BookmarkName,
-    maybe_pushvars: Option<HashMap<String, Bytes>>,
-) -> Result<(), BundleResolverError> {
-    let hook_outcomes = hook_manager
-        .run_hooks_for_bookmark(&ctx, changesets, &bookmark, maybe_pushvars.as_ref())
-        .await?;
-    if hook_outcomes.iter().all(HookOutcome::is_accept) {
-        Ok(())
-    } else {
-        let hook_failures = stream::iter(
-            hook_outcomes
-                .into_iter()
-                .map(|o| -> Result<_, BundleResolverError> { Ok(o) }),
-        )
-        .try_filter_map(|outcome| async move {
-            let hook_name = outcome.get_hook_name().to_string();
-            let cs_id = outcome.get_cs_id();
-            match outcome.into() {
-                HookExecution::Accepted => Ok(None),
-                HookExecution::Rejected(info) => Ok(Some(HookFailure {
-                    hook_name,
-                    cs_id,
-                    info,
-                })),
-            }
-        })
-        .try_collect()
-        .await?;
         Err(BundleResolverError::HookError(hook_failures))
     }
 }

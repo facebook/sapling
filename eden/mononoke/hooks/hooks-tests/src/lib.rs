@@ -24,8 +24,7 @@ use hooks::{
     HookRejectionInfo,
 };
 use hooks_content_stores::{
-    BlobRepoFileContentFetcher, FileContentFetcher, InMemoryChangesetStore,
-    InMemoryFileContentFetcher, InMemoryFileContentStore,
+    BlobRepoFileContentFetcher, FileContentFetcher, InMemoryFileContentFetcher,
 };
 use maplit::{btreemap, hashmap, hashset};
 use metaconfig_types::{
@@ -41,7 +40,6 @@ use regex::Regex;
 use scuba_ext::ScubaSampleBuilder;
 use std::collections::hash_map::Entry;
 use std::collections::{BTreeMap, HashMap, HashSet};
-use std::sync::Arc;
 use tests_utils::{create_commit, store_files};
 
 #[derive(Clone, Debug)]
@@ -966,10 +964,10 @@ async fn run_changeset_hooks_with_mgr(
     let mut hook_manager =
         setup_hook_manager(ctx.fb, bookmarks, regexes, content_fetcher_type).await;
     for (hook_name, hook) in hooks {
-        hook_manager.register_changeset_hook_new(&hook_name, hook, Default::default());
+        hook_manager.register_changeset_hook(&hook_name, hook, Default::default());
     }
     let res = hook_manager
-        .run_hooks_for_bookmark_bonsai(
+        .run_hooks_for_bookmark(
             &ctx,
             vec![default_changeset()].iter(),
             &BookmarkName::new(bookmark_name).unwrap(),
@@ -1047,10 +1045,10 @@ async fn run_file_hooks_with_mgr(
     let mut hook_manager =
         setup_hook_manager(ctx.fb, bookmarks, regexes, content_fetcher_type).await;
     for (hook_name, hook) in hooks {
-        hook_manager.register_file_hook_new(&hook_name, hook, Default::default());
+        hook_manager.register_file_hook(&hook_name, hook, Default::default());
     }
     let res = hook_manager
-        .run_hooks_for_bookmark_bonsai(
+        .run_hooks_for_bookmark(
             &ctx,
             vec![cs].iter(),
             &BookmarkName::new(bookmark_name).unwrap(),
@@ -1116,14 +1114,10 @@ fn default_changeset() -> BonsaiChangeset {
 
 fn hook_manager_blobrepo(fb: FacebookInit, repo: BlobRepo) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
-    let changeset_store = Box::new(InMemoryChangesetStore::new());
-    let content_store = Arc::new(InMemoryFileContentStore::new());
 
     let content_fetcher = BlobRepoFileContentFetcher::new(repo);
     HookManager::new(
         ctx.fb,
-        changeset_store,
-        content_store,
         Box::new(content_fetcher),
         Default::default(),
         ScubaSampleBuilder::with_discard(),
@@ -1142,9 +1136,6 @@ fn to_mpath(string: &str) -> MPath {
 async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
 
-    let changeset_store = Box::new(InMemoryChangesetStore::new());
-    let content_store = Arc::new(InMemoryFileContentStore::new());
-
     let mut content_fetcher = InMemoryFileContentFetcher::new();
     content_fetcher.insert(ONES_CTID, "elephants");
     content_fetcher.insert(TWOS_CTID, "hippopatami");
@@ -1152,8 +1143,6 @@ async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
 
     HookManager::new(
         ctx.fb,
-        changeset_store,
-        content_store,
         Box::new(content_fetcher),
         Default::default(),
         ScubaSampleBuilder::with_discard(),

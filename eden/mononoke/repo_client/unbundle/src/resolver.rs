@@ -74,7 +74,6 @@ type Filelogs = HashMap<HgNodeKey, Shared<OldBoxFuture<(HgBlobEntry, RepoPath), 
 type ContentBlobs = HashMap<HgNodeKey, ContentBlobInfo>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 pub type UploadedBonsais = HashSet<BonsaiChangeset>;
-pub type UploadedHgChangesetIds = HashSet<HgChangesetId>;
 
 // This is to match the core hg behavior from https://fburl.com/jf3iyl7y
 // Mercurial substitutes the `onto` parameter with this bookmark name when
@@ -196,7 +195,6 @@ pub struct PostResolvePushRebase {
     pub maybe_pushvars: Option<HashMap<String, Bytes>>,
     pub commonheads: CommonHeads,
     pub uploaded_bonsais: UploadedBonsais,
-    pub uploaded_hg_changeset_ids: UploadedHgChangesetIds,
 }
 
 /// Data, needed to perform post-resolve `BookmarkOnlyPushRebase` action
@@ -367,8 +365,7 @@ async fn resolve_push<'r>(
 
     let (changegroup_id, uploaded_bonsais) = if let Some((cg_push, manifests)) = cg_and_manifests {
         let changegroup_id = Some(cg_push.part_id);
-        let (uploaded_bonsais, _uploaded_hg_changesets) =
-            resolver.upload_changesets(cg_push, manifests).await?;
+        let uploaded_bonsais = resolver.upload_changesets(cg_push, manifests).await?;
 
         // Note: we do not care about `_uploaded_hg_changesets`, as we currently
         // do not run hooks on pure pushes. This probably has to be changed later.
@@ -476,8 +473,7 @@ async fn resolve_pushrebase<'r>(
         }
     }
 
-    let (uploaded_bonsais, uploaded_hg_changeset_ids) =
-        resolver.upload_changesets(cg_push, manifests).await?;
+    let uploaded_bonsais = resolver.upload_changesets(cg_push, manifests).await?;
 
     let (pushkeys, bundle2) = resolver
         .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
@@ -536,7 +532,6 @@ async fn resolve_pushrebase<'r>(
         maybe_pushvars,
         commonheads,
         uploaded_bonsais,
-        uploaded_hg_changeset_ids,
     }))
 }
 
@@ -983,7 +978,7 @@ impl<'r> Bundle2Resolver<'r> {
         &self,
         cg_push: ChangegroupPush,
         manifests: Manifests,
-    ) -> Result<(UploadedBonsais, UploadedHgChangesetIds), Error> {
+    ) -> Result<UploadedBonsais, Error> {
         let changesets = toposort_changesets(cg_push.changesets)?;
         let filelogs = cg_push.filelogs;
         let content_blobs = cg_push.content_blobs;
@@ -1021,7 +1016,6 @@ impl<'r> Bundle2Resolver<'r> {
         let chunk_size = 100;
 
         let mut bonsais = UploadedBonsais::new();
-        let mut hg_css = UploadedHgChangesetIds::new();
         for chunk in changesets.chunks(chunk_size) {
             let mut uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle> = HashMap::new();
             for (node, revlog_cs) in chunk {
@@ -1041,8 +1035,8 @@ impl<'r> Bundle2Resolver<'r> {
                 .with_context(err_context)?;
             }
 
-            let uploaded: Vec<(BonsaiChangeset, HgChangesetId)> = stream::iter(uploaded_changesets)
-                .map(move |(hg_cs_id, handle): (HgChangesetId, _)| async move {
+            let uploaded: Vec<BonsaiChangeset> = stream::iter(uploaded_changesets)
+                .map(move |(_, handle)| async move {
                     let shared_item_bcs_and_something = handle
                         .get_completed_changeset()
                         .map_err(Error::from)
@@ -1050,19 +1044,17 @@ impl<'r> Bundle2Resolver<'r> {
                         .await?;
 
                     let bcs = shared_item_bcs_and_something.0.clone();
-                    Result::<_, Error>::Ok((bcs, hg_cs_id))
+                    Result::<_, Error>::Ok(bcs)
                 })
                 .buffered(chunk_size)
                 .try_collect()
                 .await
                 .with_context(err_context)?;
 
-            let (more_bonsais, more_hg_css): (Vec<_>, Vec<_>) = uploaded.into_iter().unzip();
-            bonsais.extend(more_bonsais.into_iter());
-            hg_css.extend(more_hg_css.into_iter());
+            bonsais.extend(uploaded.into_iter());
         }
 
-        Ok((bonsais, hg_css))
+        Ok(bonsais)
     }
 
     /// Ensures that the next item in stream is None

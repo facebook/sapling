@@ -12,9 +12,7 @@ use fbinit::FacebookInit;
 use fixtures::many_files_dirs;
 use futures::compat::Future01CompatExt;
 use hooks::HookManager;
-use hooks_content_stores::{
-    InMemoryChangesetStore, InMemoryFileContentFetcher, InMemoryFileContentStore,
-};
+use hooks_content_stores::InMemoryFileContentFetcher;
 use manifest::{Entry, ManifestOps};
 use maplit::hashset;
 use mercurial_types::HgFileNodeId;
@@ -140,7 +138,6 @@ fn test_pushredirect_config() {
         maybe_pushvars: None,
         commonheads: CommonHeads { heads: Vec::new() },
         uploaded_bonsais: HashSet::new(),
-        uploaded_hg_changeset_ids: HashSet::new(),
     });
     let bookmark_only_action =
         PostResolveAction::BookmarkOnlyPushRebase(PostResolveBookmarkOnlyPushRebase {
@@ -481,8 +478,6 @@ async fn run_and_check_if_lfs(
         vec![],
         Arc::new(HookManager::new(
             ctx.fb,
-            Box::new(InMemoryChangesetStore::new()),
-            Arc::new(InMemoryFileContentStore::new()),
             Box::new(InMemoryFileContentFetcher::new()),
             HookManagerParams {
                 disable_acl_checker: true,

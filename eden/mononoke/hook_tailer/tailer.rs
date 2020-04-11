@@ -13,13 +13,11 @@ use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
+use futures::{FutureExt, TryFutureExt};
 use futures_ext::{spawn_future, BoxFuture, FutureExt as OldFutureExt};
 use futures_old::{Future, Stream};
 use hooks::{hook_loader::load_hooks, HookManager, HookOutcome};
-use hooks_content_stores::{
-    blobrepo_text_only_fetcher, blobrepo_text_only_store, BlobRepoChangesetStore,
-};
+use hooks_content_stores::blobrepo_text_only_fetcher;
 use manifold::{ManifoldHttpClient, PayloadRange};
 use mercurial_types::HgChangesetId;
 use metaconfig_types::RepoConfig;
@@ -51,14 +49,10 @@ impl Tailer {
         excludes: HashSet<ChangesetId>,
         disabled_hooks: &HashSet<String>,
     ) -> Result<Tailer> {
-        let changeset_store = BlobRepoChangesetStore::new(repo.clone());
-        let content_store = blobrepo_text_only_store(repo.clone(), config.hook_max_file_size);
         let content_fetcher = blobrepo_text_only_fetcher(repo.clone(), config.hook_max_file_size);
 
         let mut hook_manager = HookManager::new(
             ctx.fb,
-            Box::new(changeset_store),
-            content_store,
             content_fetcher,
             Default::default(),
             ScubaSampleBuilder::with_discard(),
@@ -294,17 +288,9 @@ fn run_hooks_for_changeset(
             let bm = bm.clone();
             async move {
                 debug!(ctx.logger(), "Running hooks for changeset {:?}", cs);
-                let mut hook_results = hm
-                    .run_hooks_for_bookmark_bonsai(&ctx, vec![cs].iter(), &bm, None)
+                let hook_results = hm
+                    .run_hooks_for_bookmark(&ctx, vec![cs].iter(), &bm, None)
                     .await?;
-                let hg_cs = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                    .compat()
-                    .await?;
-                let old_hook_results = hm
-                    .run_hooks_for_bookmark(&ctx, vec![hg_cs], &bm, None)
-                    .await?;
-                hook_results.extend(old_hook_results);
                 Ok((cs_id, hook_results))
             }
             .boxed()
