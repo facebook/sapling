@@ -689,6 +689,7 @@ test missing .gitmodules
 
   $ git submodule add ../git-repo4 >/dev/null 2>/dev/null
   $ git checkout HEAD .gitmodules
+  Updated 1 path from * (glob) (?)
   $ git rm .gitmodules
   rm '.gitmodules'
   $ git commit -q -m "remove .gitmodules" .gitmodules

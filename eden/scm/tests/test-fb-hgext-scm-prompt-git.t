@@ -60,7 +60,7 @@ Test rebase
   $ cmd git rebase --abort
   (work)
   $ quietcmd git rebase --merge master
-  (eef45076|REBASE-m|work)
+  (eef45076|REBASE-*|work) (glob)
   $ cmd git rebase --abort
   (work)
 
