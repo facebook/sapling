@@ -175,9 +175,9 @@ def _isselectivepull(ui):
 
 def _readisselectivepullenabledfile(repo):
     try:
-        with repo.sharedvfs(_selectivepullenabledfile) as f:
+        with repo.sharedvfs(_selectivepullenabledfile, "rb") as f:
             for line in f:
-                yield line.strip()
+                yield pycompat.decodeutf8(line.strip())
     except EnvironmentError as er:
         if er.errno != errno.ENOENT:
             raise
@@ -196,7 +196,7 @@ def _enableselectivepullforremote(repo, remote):
     with lockmod.lock(vfs, _selectivepullenabledfilelock):
         enabledremotes = set(_readisselectivepullenabledfile(repo))
         enabledremotes.add(remote)
-        with vfs(_selectivepullenabledfile, "w", atomictemp=True) as f:
+        with vfs(_selectivepullenabledfile, "wb", atomictemp=True) as f:
             for renabled in enabledremotes:
                 f.write(pycompat.encodeutf8("%s\n" % renabled))
 
