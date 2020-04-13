@@ -171,11 +171,11 @@ configtable = {}
 configitem = registrar.configitem(configtable)
 testedwith = "ships-with-fb-hgext"
 colortable = {
-    "sparse.profile.active": "brightyellow",
+    "sparse.profile.active": "brightyellow:yellow",
     "sparse.profile.included": "yellow",
-    "sparse.profile.inactive": "brightblack",
-    "sparse.include": "brightgreen",
-    "sparse.exclude": "brightred",
+    "sparse.profile.inactive": "brightblack:black",
+    "sparse.include": "brightgreen:green",
+    "sparse.exclude": "brightred:red",
 }
 
 cwdrealtivepatkinds = ("glob", "relpath")
