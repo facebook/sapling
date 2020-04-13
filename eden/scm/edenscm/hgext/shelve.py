@@ -44,6 +44,7 @@ from edenscm.mercurial import (
     node as nodemod,
     obsolete,
     patch,
+    pycompat,
     registrar,
     repair,
     scmutil,
@@ -643,8 +644,8 @@ def listcmd(ui, repo, pats, opts):
                 line = fp.readline()
                 if not line:
                     break
-                if not line.startswith("#"):
-                    desc = line.rstrip()
+                if not line.startswith(b"#"):
+                    desc = pycompat.decodeutf8(line.rstrip())
                     if ui.formatted:
                         desc = util.ellipsis(desc, width - used)
                     ui.write(desc)
@@ -655,7 +656,7 @@ def listcmd(ui, repo, pats, opts):
             difflines = fp.readlines()
             if opts["patch"]:
                 for chunk, label in patch.difflabel(iter, difflines):
-                    ui.write(chunk, label=label)
+                    ui.writebytes(chunk, label=label)
             if opts["stat"]:
                 for chunk, label in patch.diffstatui(difflines, width=width):
                     ui.write(chunk, label=label)
