@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ disable treemanifest
@@ -64,7 +63,8 @@ not are encoded like a node:
   [255]
   $ hg pull -r 'xxxxxxxxxxxxxxxxxx y'
   pulling from ssh://user@dummy/test (glob)
-  abort: unknown revision '7878787878787878787878787878787878782079'!
+  abort: unknown revision '7878787878787878787878787878787878782079'! (py2 !)
+  abort: unknown revision 'xxxxxxxxxxxxxxxxxx y'! (no-py2 !)
   [255]
 
 Issue622: hg init && hg pull -u URL doesn't checkout default branch

@@ -277,7 +277,7 @@ class wirepeer(repository.legacypeer):
         if int(success):
             yield bbin(data)
         else:
-            self._abort(error.RepoError(data))
+            self._abort(error.RepoError(pycompat.decodeutf8(data, errors="replace")))
 
     @batchable
     def heads(self):
@@ -538,7 +538,9 @@ class wirepeer(repository.legacypeer):
             opts[r"three"] = three
         if four is not None:
             opts[r"four"] = four
-        return self._call("debugwireargs", one=one, two=two, **opts)
+        return pycompat.decodeutf8(
+            self._call("debugwireargs", one=one, two=two, **opts)
+        )
 
     def _call(self, cmd, **args):
         """execute <cmd> on the server

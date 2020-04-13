@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ disable treemanifest
@@ -13,8 +12,8 @@ the status call is to check for issue5130
   $ touch foo
   $ hg -q commit -A -m initial
   >>> for i in range(1024):
-  ...     with open(str(i), 'wb') as fh:
-  ...         fh.write(str(i))
+  ...     with open(str(i), 'w') as fh:
+  ...         x = fh.write("%s" % (str(i),))
   $ hg -q commit -A -m 'add a lot of files'
   $ hg st
   $ cd ..

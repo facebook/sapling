@@ -229,7 +229,9 @@ def debugbuilddag(
                             pa = p1.ancestor(p2)
                             base, local, other = [x[fn].data() for x in (pa, p1, p2)]
                             m3 = simplemerge.Merge3Text(base, local, other)
-                            ml = [l.strip() for l in m3.merge_lines()]
+                            ml = [
+                                pycompat.decodeutf8(l.strip()) for l in m3.merge_lines()
+                            ]
                             ml.append("")
                         elif at > 0:
                             datastr = pycompat.decodeutf8(p1[fn].data())
@@ -237,6 +239,7 @@ def debugbuilddag(
                         else:
                             ml = initialmergedlines
                         ml[id * linesperrev] += " r%i" % id
+
                         mergedtext = "\n".join(ml)
                         files.append(fn)
                         filecontent[fn] = mergedtext
@@ -256,7 +259,7 @@ def debugbuilddag(
                             for fn in p2:
                                 if fn.startswith("nf"):
                                     files.append(fn)
-                                    filecontent[fn] = p2[fn].data()
+                                    filecontent[fn] = pycompat.decodeutf8(p2[fn].data())
 
                     def fctxfn(repo, cx, path):
                         if path in filecontent:

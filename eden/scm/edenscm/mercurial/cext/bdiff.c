@@ -67,6 +67,7 @@ nomem:
 static PyObject* bdiff(PyObject* self, PyObject* args) {
   char *sa, *sb, *rb, *ia, *ib;
   PyObject* result = NULL;
+  Py_buffer ya, yb;
   struct bdiff_line *al, *bl;
   struct bdiff_hunk l, *h;
   int an, bn, count;
@@ -75,8 +76,17 @@ static PyObject* bdiff(PyObject* self, PyObject* args) {
 
   l.next = NULL;
 
-  if (!PyArg_ParseTuple(args, "s#s#:bdiff", &sa, &la, &sb, &lb))
+#ifdef IS_PY3K
+  if (!PyArg_ParseTuple(args, "y*y*:bdiff", &ya, &yb))
     return NULL;
+#else
+  if (!PyArg_ParseTuple(args, "s*s*:bdiff", &ya, &yb))
+    return NULL;
+#endif
+  sa = ya.buf;
+  sb = yb.buf;
+  la = ya.len;
+  lb = yb.len;
 
   if (la > UINT_MAX || lb > UINT_MAX) {
     PyErr_SetString(PyExc_ValueError, "bdiff inputs too large");
