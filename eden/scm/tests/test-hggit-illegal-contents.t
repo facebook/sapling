@@ -52,7 +52,13 @@ We can override if needed:
   $ git clone hg/.hg/git git
   Cloning into 'git'...
   done.
-  error: Invalid path 'nested/.git/hooks/post-update'
+  error: invalid path 'nested/.git/hooks/post-update'
+  fatal: unable to checkout working tree
+  warning: Clone succeeded, but checkout failed.
+  You can inspect what was checked out with 'git status'
+  and retry with 'git restore --source=HEAD :/'
+  
+  [128]
 
 Now check something that case-folds to .git, which might let you own
 Mac users:
