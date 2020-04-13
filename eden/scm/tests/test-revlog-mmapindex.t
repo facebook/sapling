@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 create verbosemmap.py
@@ -9,13 +8,12 @@ create verbosemmap.py
   > 
   > from edenscm.mercurial import (
   >     extensions,
-  >     pycompat,
   >     util,
   > )
   > 
   > def extsetup(ui):
   >     def mmapread(orig, fp):
-  >         ui.write(b"mmapping %s\n" % pycompat.bytestr(fp.name))
+  >         ui.write("mmapping %s\n" % fp.name)
   >         ui.flush()
   >         return orig(fp)
   > 
