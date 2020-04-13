@@ -83,8 +83,8 @@ py_class!(class metalog |py| {
     }
 
     /// Why the change was made.
-    def message(&self) -> PyResult<Bytes> {
-        Ok(Bytes::from(self.log(py).borrow().message().to_string()))
+    def message(&self) -> PyResult<Str> {
+        Ok(Str::from(self.log(py).borrow().message().to_string()))
     }
 
     /// When the change was made.

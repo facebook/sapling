@@ -8,7 +8,7 @@ from __future__ import absolute_import
 import collections
 from typing import Set, Tuple
 
-from .. import cmdutil, graphmod, phases, util
+from .. import cmdutil, graphmod, phases, pycompat, util
 from ..i18n import _
 from ..node import bin, hex, short
 from .cmdtable import command
@@ -73,16 +73,16 @@ def parsenodenames(meta):
     """Parse a metalog entry.  Return nodes and their names."""
 
     nodenames = set()
-    for line in (meta.get("bookmarks") or "").splitlines():
-        hexnode, name = line.split(" ", 1)
-        nodenames.add((bin(hexnode), name))
+    for line in (meta.get("bookmarks") or b"").splitlines():
+        hexnode, name = line.split(b" ", 1)
+        nodenames.add((bin(hexnode), pycompat.decodeutf8(name)))
 
-    for line in (meta.get("remotenames") or "").splitlines():
-        hexnode, typename, name = line.split(" ", 2)
+    for line in (meta.get("remotenames") or b"").splitlines():
+        hexnode, typename, name = line.split(b" ", 2)
         if typename == "bookmarks":
-            nodenames.add((bin(hexnode), name))
+            nodenames.add((bin(hexnode), pycompat.decodeutf8(name)))
 
-    for hexnode in (meta.get("visibleheads") or "").splitlines()[1:]:
+    for hexnode in (meta.get("visibleheads") or b"").splitlines()[1:]:
         nodenames.add((bin(hexnode), "."))
 
     return nodenames

@@ -598,7 +598,7 @@ class metavfs(object):
         metalog = bindings.metalog.metalog(vfs.join("metalog"), metaroot)
 
         # Keys that are previously tracked in metalog.
-        tracked = set((metalog.get("tracked") or "").split())
+        tracked = set(pycompat.decodeutf8((metalog.get("tracked") or b"")).split())
         # Keys that should be tracked (specified by config).
         desired = set(self.metapaths)
 
