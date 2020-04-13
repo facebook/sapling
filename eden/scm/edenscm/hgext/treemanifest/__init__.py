@@ -1767,7 +1767,7 @@ def _convertdeltatotree(
     # Get flat manifests
     parentflat = manifest.manifestdict(parenttext)
 
-    newflattext = str(mdiff.patch(deltabasetext, delta))
+    newflattext = bytes(mdiff.patch(deltabasetext, delta))
     lrucache[node] = newflattext
     newflat = manifest.manifestdict(newflattext)
 
