@@ -722,10 +722,13 @@ class bundle20(object):
                 msg.append(" (%i params)" % len(self._params))
             msg.append(" %i parts total\n" % len(self._parts))
             self.ui.debug("".join(msg))
-        outdebug(self.ui, "start emission of %s stream" % self._magicstring)
+        outdebug(
+            self.ui,
+            "start emission of %s stream" % pycompat.decodeutf8(self._magicstring),
+        )
         yield self._magicstring
         param = self._paramchunk()
-        outdebug(self.ui, "bundle parameter: %s" % param)
+        outdebug(self.ui, "bundle parameter: %s" % pycompat.decodeutf8(param))
         yield _pack(_fstreamparamsize, len(param))
         if param:
             yield param
