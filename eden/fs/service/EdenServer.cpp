@@ -1400,6 +1400,7 @@ size_t EdenServer::aggregateHgQueuedBackingStoreCounters(
       auto max = std::max_element(counters.begin(), counters.end());
       return max == counters.end() ? 0 : *max;
   }
+  EDEN_BUG() << "unknown request metric type " << static_cast<int>(metric);
 }
 
 std::vector<size_t> EdenServer::collectHgQueuedBackingStoreCounters(

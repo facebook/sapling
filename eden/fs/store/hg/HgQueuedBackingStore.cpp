@@ -174,6 +174,7 @@ HgQueuedBackingStore::getPendingImportWatches(
     case HgBackingStore::HgImportObject::PREFETCH:
       return pendingImportPrefetchWatches_;
   }
+  EDEN_BUG() << "unknown hg import object type " << static_cast<int>(object);
 }
 
 } // namespace eden
