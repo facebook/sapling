@@ -94,7 +94,7 @@ class sshserver(wireproto.abstractserverproto):
 
     def sendpushresponse(self, rsp):
         self.sendresponse("")
-        self.sendresponse(bytes(rsp.res))
+        self.sendresponse(str(rsp.res))
 
     def sendpusherror(self, rsp):
         self.sendresponse(rsp.res)

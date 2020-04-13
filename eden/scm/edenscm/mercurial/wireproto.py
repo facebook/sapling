@@ -354,7 +354,7 @@ class wirepeer(repository.legacypeer):
             "old": encoding.fromlocal(old),
             "new": encoding.fromlocal(new),
         }, f
-        d = f.value
+        d = decodeutf8(f.value)
         d, output = d.split("\n", 1)
         try:
             d = bool(int(d))
@@ -1283,9 +1283,9 @@ def unbundleimpl(repo, proto, heads, replaydata=None, respondlightly=False):
                 # We did not change it to minimise code change.
                 # This need to be moved to something proper.
                 # Feel free to do it.
-                util.stderr.write("abort: %s\n" % exc)
+                util.stderr.write(pycompat.encodeutf8("abort: %s\n" % exc))
                 if exc.hint is not None:
-                    util.stderr.write("(%s)\n" % exc.hint)
+                    util.stderr.write(pycompat.encodeutf8("(%s)\n" % exc.hint))
                 return pushres(0)
             except error.PushRaced:
                 return pusherr(str(exc))

@@ -178,7 +178,7 @@ def parsebundlespec(repo, spec, strict=True, externalnames=False):
 
 
 def readbundle(ui, fh, fname, vfs=None):
-    header = pycompat.decodeutf8(changegroup.readexactly(fh, 4))
+    header = pycompat.decodeutf8(changegroup.readexactly(fh, 4), errors="replace")
 
     alg = None
     if not fname:
@@ -2096,7 +2096,12 @@ def unbundle(repo, cg, heads, source, url, replaydata=None, respondlightly=False
     finally:
         lockmod.release(lockandtr[2], lockandtr[1], lockandtr[0])
         if recordout is not None:
-            recordout(repo.ui.popbuffer())
+            out = b"".join(
+                buf if isinstance(buf, bytes) else pycompat.encodeutf8(buf)
+                for buf in repo.ui.popbufferlist()
+            )
+
+            recordout(out)
     return r
 
 

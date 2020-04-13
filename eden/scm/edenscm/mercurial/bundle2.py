@@ -578,15 +578,18 @@ def _processpart(op, part):
     output = None
     if op.captureoutput and op.reply is not None:
         op.ui.pushbuffer(error=True, subproc=True)
-        output = ""
+        output = b""
     try:
         handler(op, part)
     finally:
         if output is not None:
-            output = op.ui.popbuffer()
+            output = b"".join(
+                buf if isinstance(buf, bytes) else pycompat.encodeutf8(buf)
+                for buf in op.ui.popbufferlist()
+            )
+
         if output:
-            outpart = op.reply.newpart("output",
-                    data=pycompat.encodeutf8(output), mandatory=False)
+            outpart = op.reply.newpart("output", data=output, mandatory=False)
             outpart.addparam("in-reply-to", pycompat.bytestr(part.id), mandatory=False)
 
 

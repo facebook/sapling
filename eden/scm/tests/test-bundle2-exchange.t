@@ -1,4 +1,3 @@
-#require py2
 # This test is not chg compatible due to the number of hgrc changes. It causes
 # some changes to not get picked up.
 
