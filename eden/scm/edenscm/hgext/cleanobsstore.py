@@ -32,7 +32,7 @@ from edenscm.mercurial import obsutil, repair
 from edenscm.mercurial.i18n import _
 
 
-_cleanedobsstorefile = b"cleanedobsstore"
+_cleanedobsstorefile = "cleanedobsstore"
 
 
 def reposetup(ui, repo):
@@ -73,8 +73,8 @@ def _needtoclean(ui, repo):
 
 
 def _markcleaned(repo):
-    with repo.localvfs(_cleanedobsstorefile, "w") as f:
-        f.write("1")  # any text will do
+    with repo.localvfs(_cleanedobsstorefile, "wb") as f:
+        f.write(b"1")  # any text will do
 
 
 def _write(ui, msg):
