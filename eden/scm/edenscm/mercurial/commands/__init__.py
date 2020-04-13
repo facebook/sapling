@@ -2416,7 +2416,7 @@ def _dograft(ui, repo, *revs, **opts):
 
         # read in unfinished revisions
         try:
-            nodes = repo.localvfs.read("graftstate").splitlines()
+            nodes = repo.localvfs.readutf8("graftstate").splitlines()
             revs = [repo[node].rev() for node in nodes]
         except IOError as inst:
             if inst.errno != errno.ENOENT:
@@ -2560,7 +2560,7 @@ def _dograft(ui, repo, *revs, **opts):
             if stats and stats[3] > 0:
                 # write out state for --continue
                 nodelines = [repo[rev].hex() + "\n" for rev in revs[pos:]]
-                repo.localvfs.write("graftstate", "".join(nodelines))
+                repo.localvfs.writeutf8("graftstate", "".join(nodelines))
                 extra = ""
                 if opts.get("user"):
                     extra += " --user %s" % util.shellquote(opts["user"])
