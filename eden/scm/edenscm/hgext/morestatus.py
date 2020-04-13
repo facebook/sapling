@@ -93,7 +93,7 @@ def graftmsg(repo, ui):
 
 
 def updatemsg(repo, ui):
-    previousargs = repo.localvfs.tryread(UPDATEARGS)
+    previousargs = repo.localvfs.tryreadutf8(UPDATEARGS)
     if previousargs:
         continuecmd = "hg " + previousargs
     else:
