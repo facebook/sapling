@@ -19,6 +19,10 @@ use context::CoreContext;
 mod parallel_puts;
 mod single_puts;
 
+mod parallel_different_blob_gets;
+mod parallel_same_blob_gets;
+mod single_gets;
+
 pub const KB: usize = 1024;
 pub const MB: usize = KB * 1024;
 const ARG_STORAGE_CONFIG_NAME: &'static str = "storage-config-name";
@@ -112,6 +116,19 @@ fn main(fb: fbinit::FacebookInit) {
     // Tests are run from here
     single_puts::benchmark(&mut criterion, ctx.clone(), blobstore.clone(), &mut runtime);
     parallel_puts::benchmark(&mut criterion, ctx.clone(), blobstore.clone(), &mut runtime);
+    single_gets::benchmark(&mut criterion, ctx.clone(), blobstore.clone(), &mut runtime);
+    parallel_same_blob_gets::benchmark(
+        &mut criterion,
+        ctx.clone(),
+        blobstore.clone(),
+        &mut runtime,
+    );
+    parallel_different_blob_gets::benchmark(
+        &mut criterion,
+        ctx.clone(),
+        blobstore.clone(),
+        &mut runtime,
+    );
 
     runtime.shutdown_on_idle();
     criterion.final_summary();
