@@ -8,9 +8,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require(["py2"])
-
-
 sh % "newrepo server"
 sh % "drawdag" << r"""
   D
@@ -33,7 +30,7 @@ sh % "hg pull" == r"""
     adding file changes
     added 4 changesets with 4 changes to 4 files
     adding remote bookmark master"""
-sh % 'hg dbsh -c "ui.write(repo.svfs.tryread(\\"remotenames\\") + \\"\\n\\")"' == "112478962961147124edd43549aedd1a335e44bf bookmarks default/master"
+sh % 'hg dbsh -c "ui.write(repo.svfs.tryreadutf8(\\"remotenames\\") + \\"\\n\\")"' == "112478962961147124edd43549aedd1a335e44bf bookmarks default/master"
 
 # pull -r should also pull master.
 
