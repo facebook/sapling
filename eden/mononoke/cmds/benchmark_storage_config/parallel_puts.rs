@@ -38,8 +38,7 @@ pub fn benchmark(
                     let blocks: Vec<_> = std::iter::repeat(())
                         .take(*concurrency)
                         .map(|()| {
-                            let mut block = Vec::with_capacity(size);
-                            block.resize(size, 0u8);
+                            let mut block = vec![0; size];
                             thread_rng().fill(&mut block as &mut [u8]);
 
                             BlobstoreBytes::from_bytes(block)

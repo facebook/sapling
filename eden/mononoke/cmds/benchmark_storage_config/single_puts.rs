@@ -28,8 +28,7 @@ pub fn benchmark(
     for size in [128, 16 * KB, 512 * KB, 8 * MB].iter() {
         group.throughput(Throughput::Bytes(*size as u64));
         group.bench_with_input(BenchmarkId::from_parameter(size), size, |b, &size| {
-            let mut block = Vec::with_capacity(size);
-            block.resize(size, 0u8);
+            let mut block = vec![0; size];
             thread_rng().fill(&mut block as &mut [u8]);
 
             let block = BlobstoreBytes::from_bytes(block);

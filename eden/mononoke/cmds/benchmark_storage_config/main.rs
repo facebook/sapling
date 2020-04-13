@@ -30,10 +30,10 @@ mod single_gets;
 
 pub const KB: usize = 1024;
 pub const MB: usize = KB * 1024;
-const ARG_STORAGE_CONFIG_NAME: &'static str = "storage-config-name";
-const ARG_SAVE_BASELINE: &'static str = "save-baseline";
-const ARG_USE_BASELINE: &'static str = "use-baseline";
-const ARG_FILTER_BENCHMARKS: &'static str = "filter";
+const ARG_STORAGE_CONFIG_NAME: &str = "storage-config-name";
+const ARG_SAVE_BASELINE: &str = "save-baseline";
+const ARG_USE_BASELINE: &str = "use-baseline";
+const ARG_FILTER_BENCHMARKS: &str = "filter";
 
 const BLOBSTORE_BLOBS_CACHE_POOL: &str = "blobstore-blobs";
 const BLOBSTORE_PRESENCE_CACHE_POOL: &str = "blobstore-presence";
