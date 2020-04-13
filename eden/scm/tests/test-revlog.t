@@ -7,7 +7,7 @@
 Flags on revlog version 0 are rejected
 
   >>> with open('.hg/store/00changelog.i', 'wb') as fh:
-  ...     _ = fh.write('\x00\x01\x00\x00')
+  ...     _ = fh.write(b'\x00\x01\x00\x00')
 
   $ hg log
   abort: repo is corrupted: 00changelog.i
@@ -16,7 +16,7 @@ Flags on revlog version 0 are rejected
 Unknown flags on revlog version 1 are rejected
 
   >>> with open('.hg/store/00changelog.i', 'wb') as fh:
-  ...     _ = fh.write('\x00\x04\x00\x01')
+  ...     _ = fh.write(b'\x00\x04\x00\x01')
 
   $ hg log
   abort: unknown flags (0x04) in version 1 revlog 00changelog.i!
@@ -25,7 +25,7 @@ Unknown flags on revlog version 1 are rejected
 Unknown version is rejected
 
   >>> with open('.hg/store/00changelog.i', 'wb') as fh:
-  ...     _ = fh.write('\x00\x00\x00\x02')
+  ...     _ = fh.write(b'\x00\x00\x00\x02')
 
   $ hg log
   abort: unknown version (2) in revlog 00changelog.i!
@@ -37,10 +37,11 @@ Test for CVE-2016-3630
 
   $ hg init
 
-  >>> _ = open("a.i", "w").write(
-  ... """eJxjYGZgZIAAYQYGxhgom+k/FMx8YKx9ZUaKSOyqo4cnuKb8mbqHV5cBCVTMWb1Cwqkhe4Gsg9AD
+  >>> import codecs
+  >>> data = b"""eJxjYGZgZIAAYQYGxhgom+k/FMx8YKx9ZUaKSOyqo4cnuKb8mbqHV5cBCVTMWb1Cwqkhe4Gsg9AD
   ... Joa3dYtcYYYBAQ8Qr4OqZAYRICPTSr5WKd/42rV36d+8/VmrNpv7NP1jQAXrQE4BqQUARngwVA=="""
-  ... .decode("base64").decode("zlib"))
+  >>> data = codecs.decode(codecs.decode(data, "base64"), "zlib")
+  >>> _ = open("a.i", "wb").write(data)
 
   $ hg debugindex a.i
      rev    offset  length  delta linkrev nodeid       p1           p2
