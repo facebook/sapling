@@ -1,4 +1,3 @@
-#require py2
   $ disable treemanifest
   $ setconfig devel.legacy.exchange=bookmarks
 

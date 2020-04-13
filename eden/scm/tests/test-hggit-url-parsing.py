@@ -8,9 +8,6 @@ from edenscm.mercurial import commands, hg, ui
 from hghave import require
 
 
-require(["py2"])
-
-
 try:
     from edenscm.hgext.hggit.git_handler import GitHandler
 except ImportError:

@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 #require test-repo normal-layout

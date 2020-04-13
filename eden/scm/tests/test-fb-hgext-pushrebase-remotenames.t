@@ -1,4 +1,3 @@
-#require py2
   $ disable treemanifest
   $ configure mutation dummyssh
 

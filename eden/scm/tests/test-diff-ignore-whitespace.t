@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 GNU diff is the reference for all of these results.

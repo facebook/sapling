@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Push treeonly commits from a treeonly shallow repo to a treeonly server

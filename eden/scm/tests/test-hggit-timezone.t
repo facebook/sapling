@@ -1,4 +1,3 @@
-#require py2
 This test shows how dulwich fails to convert a commit accepted by hg.
 
 In the real world case, it was a hand edit by the user to change the

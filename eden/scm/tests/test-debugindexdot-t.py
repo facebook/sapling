@@ -9,9 +9,6 @@ from __future__ import absolute_import
 from testutil.dott import feature, sh, testtmp  # noqa: F401
 
 
-feature.require(["py2"])
-
-
 # Just exercise debugindexdot
 # Create a short file history including a merge.
 sh % "hg init t"

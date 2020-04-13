@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 Push merge commits from a treeonly shallow repo to a hybrid treemanifest server
