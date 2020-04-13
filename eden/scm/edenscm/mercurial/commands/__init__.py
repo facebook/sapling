@@ -3158,6 +3158,7 @@ def histgrep(ui, repo, pattern, *pats, **opts):
     getfile = util.lrucachefunc(repo.file)
 
     def matchlines(body):
+        body = pycompat.decodeutf8(body, errors="replace")
         begin = 0
         linenum = 0
         while begin < len(body):

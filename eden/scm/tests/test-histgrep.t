@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ hg init t
@@ -21,7 +20,7 @@
 pattern error
 
   $ hg histgrep '**test**'
-  grep: invalid match pattern: nothing to repeat
+  grep: invalid match pattern: nothing to repeat* (glob)
   [1]
 
 simple
