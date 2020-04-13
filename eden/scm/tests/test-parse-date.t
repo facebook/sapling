@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 This runs with TZ="GMT"
@@ -258,8 +257,8 @@ Test issue 3764 (interpreting 'today' and 'yesterday')
   >>> today = datetime.date.today().strftime("%b %d")
   >>> yesterday = (datetime.date.today() - datetime.timedelta(days=1)).strftime("%b %d")
   >>> dates = open('dates', 'w')
-  >>> dates.write(today + '\n')
-  >>> dates.write(yesterday + '\n')
+  >>> _ = dates.write(today + '\n')
+  >>> _ = dates.write(yesterday + '\n')
   >>> dates.close()
   $ hg ci -d "`sed -n '1p' dates`" -m "today is a good day to code"
   $ hg log -d today --template '{desc}\n'
