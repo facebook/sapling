@@ -14,6 +14,7 @@ from __future__ import absolute_import
 import os
 import shlex
 import shutil
+import sys
 
 from edenscm.hgext.convert.repo import repo_source
 from edenscm.mercurial import encoding, error, hg, progress, pycompat, scmutil, util
@@ -39,10 +40,13 @@ orig_encoding = "ascii"
 
 
 def recode(s):
-    if isinstance(s, pycompat.unicode):
-        return s.encode(orig_encoding, "replace")
+    if sys.version_info[0] < 3:
+        if isinstance(s, pycompat.unicode):
+            return s.encode(orig_encoding, "replace")
+        else:
+            return s.decode("utf-8").encode(orig_encoding, "replace")
     else:
-        return s.decode("utf-8").encode(orig_encoding, "replace")
+        return s
 
 
 def mapbranch(branch, branchmap):
