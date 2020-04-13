@@ -6,10 +6,8 @@
 
 from __future__ import absolute_import
 
+from edenscm.mercurial import pycompat
 from testutil.dott import feature, sh, shlib, testtmp  # noqa: F401
-
-
-feature.require(["py2"])
 
 
 sh % "setconfig 'extensions.treemanifest=!'"
@@ -43,7 +41,7 @@ fatelogcount = log -G -T '{node|short} {succsandmarkers}'
 
 
 def mkcommit(name):
-    open(name, "wb").write("%s\n" % name)
+    open(name, "wb").write(pycompat.encodeutf8("%s\n" % name))
     sh.hg("commit", "-m%s" % name, "-A", name)
 
 
