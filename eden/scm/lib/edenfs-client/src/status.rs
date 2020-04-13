@@ -145,40 +145,25 @@ fn maybe_status_fastpath_internal(
             let _ = io.write_err(BOLD);
         }
         // TODO: in the future we can have this look at some configuration that
-        // we ship with the eden server, but for now, let's just hard code the
-        // version check and advice.
-        if version < 20180825 {
+        // we ship with the eden server to provide a version check and advice
+
+        use chrono::offset::TimeZone;
+        let today = chrono::Local::today();
+
+        // Construct a date object from the version number
+        let day = version % 100;
+        let month = (version % 10_000) / 100;
+        let year = version / 10_000;
+        let version_date = chrono::Local.ymd(year as i32, month, day);
+
+        if today - version_date > chrono::Duration::days(45) {
             let _ = io.write_err(
                 "
-IMPORTANT: Your running Eden server version is known to have issues importing
-data from mercurial.  You should run `eden restart` at your earliest opportunity
-to pick up the fix.\n",
-            );
-        } else if version == 20181023 {
-            let _ = io.write_err(
-                "
-IMPORTANT: Your running Eden server version is known to have issues importing
-data from mercurial.  You should run `eden restart && eden gc` at your earliest
-opportunity to pick up the fix and fixup the cache.\n",
-            );
-        } else {
-            use chrono::offset::TimeZone;
-            let today = chrono::Local::today();
-
-            // Construct a date object from the version number
-            let day = version % 100;
-            let month = (version % 10_000) / 100;
-            let year = version / 10_000;
-            let version_date = chrono::Local.ymd(year as i32, month, day);
-
-            if today - version_date > chrono::Duration::days(45) {
-                let _ = io.write_err(
-                    "
 Your running Eden server is more than 45 days old.  You should run
-`eden restart` to update to the current release.\n",
-                );
-            }
+`eden restart --graceful` to update to the current release.\n",
+            );
         }
+
         if use_color {
             let _ = io.write_err(RESET);
         }
