@@ -1442,10 +1442,12 @@ def hyperlink(context, mapping, args):
     if len(args) != 2:
         raise error.ParseError("hyperlink expects two arguments, got %s" % len(args))
 
+    title = evalstring(context, mapping, args[1])
+    if not title:
+        return ""
+
     ui = mapping["ui"]
     hyperlink = ui.formatted and ui.configbool("ui", "hyperlink", False)
-
-    title = evalstring(context, mapping, args[1])
 
     if hyperlink:
         return "\x1b]8;;{link}\x1b\\{title}\x1b]8;;\x1b\\".format(
