@@ -8,9 +8,6 @@ from edenscm.mercurial import commands, fscap, hg, ui as uimod, util
 from hghave import require
 
 
-require(["py2"])
-
-
 TESTDIR = os.environ["TESTDIR"]
 BUNDLEPATH = os.path.join(TESTDIR, "bundles", "test-no-symlinks.hg")
 
@@ -19,8 +16,8 @@ if not getattr(os, "symlink", False):
     sys.exit(80)  # SKIPPED_STATUS defined in run-tests.py
 
 with open(os.environ["HGRCPATH"], "a+") as f:
-    f.write(b"[extensions]\n")
-    f.write(b"treemanifest=!\n")
+    f.write("[extensions]\n")
+    f.write("treemanifest=!\n")
 
 u = uimod.ui.load()
 # hide outer repo

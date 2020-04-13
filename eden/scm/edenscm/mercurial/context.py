@@ -1901,7 +1901,7 @@ class workingctx(committablectx):
         sane = []
         for f in files:
             if self.flags(f) == "l":
-                d = self[f].data()
+                d = pycompat.decodeutf8(self[f].data())
                 if d == "" or len(d) >= 1024 or "\n" in d or util.binary(d):
                     self._repo.ui.debug(
                         "ignoring suspect symlink placeholder" ' "%s"\n' % f
