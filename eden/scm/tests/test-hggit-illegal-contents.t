@@ -1,4 +1,3 @@
-#require py2
 Check for contents we should refuse to export to git repositories (or
 at least warn).
 

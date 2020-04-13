@@ -3,6 +3,7 @@ import itertools
 import os
 import re
 import shutil
+import sys
 
 from bindings import nodemap
 from dulwich import client, config as dul_config, diff_tree
@@ -33,7 +34,7 @@ RE_GIT_AUTHOR = re.compile("^(.*?) ?\<(.*?)(?:\>(.*))?$")
 
 RE_GIT_SANITIZE_AUTHOR = re.compile("[<>\n]")
 
-RE_GIT_AUTHOR_EXTRA = re.compile("^(.*?)\ ext:\((.*)\) <(.*)\>$")
+RE_GIT_AUTHOR_EXTRA = re.compile(b"^(.*?)\ ext:\((.*)\) <(.*)\>$")
 
 RE_GIT_EXTRA_KEY = re.compile("GIT([0-9]*)-(.*)")
 
@@ -66,6 +67,7 @@ class GitProgress(object):
     def progress(self, msg):
         # 'Counting objects: 33640, done.\n'
         # 'Compressing objects:   0% (1/9955)   \r
+        msg = pycompat.decodeutf8(msg)
         msgs = RE_NEWLINES.split(self.msgbuf + msg)
         self.msgbuf = msgs.pop()
 
@@ -130,13 +132,7 @@ class GitHandler(object):
 
     @hgutil.propertycache
     def git(self):
-        # Dulwich is going to try and join unicode ref names against
-        # the repository path to try and read unpacked refs. This
-        # doesn't match hg's bytes-only view of filesystems, we just
-        # have to cope with that. As a workaround, try decoding our
-        # (bytes) path to the repo in hg's active encoding and hope
-        # for the best.
-        gitpath = self.gitdir.decode(encoding.encoding, encoding.encodingmode)
+        gitpath = self.gitdir
         # make the git data directory
         if os.path.exists(self.gitdir):
             return Repo(gitpath)
@@ -220,7 +216,7 @@ class GitHandler(object):
                     gitnode = map.lookupbysecond(hgnode)
                     if gitnode is None:
                         raise KeyError(hex(hgnode))
-                    bwrite("%s %s\n" % (hex(gitnode), hex(hgnode)))
+                    bwrite(pycompat.encodeutf8("%s %s\n" % (hex(gitnode), hex(hgnode))))
                 file.write(buf.getvalue())
                 buf.close()
                 # If this complains, atomictempfile no longer has close
@@ -554,7 +550,7 @@ class GitHandler(object):
                 raise KeyError(hex(pnode))
             gitsha = hex(gitnode)
             try:
-                gitcommit = self.git[gitsha]
+                gitcommit = self.git[pycompat.encodeutf8(gitsha)]
             except KeyError:
                 raise error.Abort(
                     _("Parent SHA-1 not present in Git " "repo: %s") % gitsha
@@ -598,7 +594,7 @@ class GitHandler(object):
         # there is no reason to round one way or the other, so do the
         # simplest and round down.
         timezone -= timezone % 60
-        commit.author = self.get_git_author(ctx)
+        commit.author = pycompat.encodeutf8(self.get_git_author(ctx))
         commit.author_time = int(time)
         commit.author_timezone = -timezone
 
@@ -629,9 +625,11 @@ class GitHandler(object):
             hgsha = hex(parent.node())
             git_sha = self.map_git_get(hgsha)
             if git_sha:
+                git_sha = pycompat.encodeutf8(git_sha)
                 if git_sha not in self.git.object_store:
                     raise error.Abort(
-                        _("Parent SHA-1 not present in Git " "repo: %s") % git_sha
+                        _("Parent SHA-1 not present in Git " "repo: %s")
+                        % pycompat.decodeutf8(git_sha)
                     )
 
                 commit.parents.append(git_sha)
@@ -792,7 +790,10 @@ class GitHandler(object):
         git_extraitems.sort()
         for i, field, value in git_extraitems:
             git_extra.append(
-                (hgutil.urlreq.unquote(field), hgutil.urlreq.unquote(value))
+                (
+                    pycompat.encodeutf8(hgutil.urlreq.unquote(field)),
+                    pycompat.encodeutf8(hgutil.urlreq.unquote(value)),
+                )
             )
 
         if extra.get("hg-git-rename-source", None) != "git":
@@ -813,10 +814,10 @@ class GitHandler(object):
                             hgutil.urlreq.quote(oldfile),
                             hgutil.urlreq.quote(newfile),
                         )
-                        git_extra.append(("HG:rename", spec))
+                        git_extra.append((b"HG:rename", pycompat.encodeutf8(spec)))
 
         # hg extra items always go at the end
-        extraitems = extra.items()
+        extraitems = list(extra.items())
         extraitems.sort()
         for key, value in extraitems:
             if key in (
@@ -839,7 +840,7 @@ class GitHandler(object):
                         hgutil.urlreq.quote(key),
                         hgutil.urlreq.quote(value),
                     )
-                    git_extra.append(("HG:extra", spec))
+                    git_extra.append((b"HG:extra", pycompat.encodeutf8(spec)))
 
         if extra_message:
             message += "\n--HG--\n" + extra_message
@@ -853,9 +854,9 @@ class GitHandler(object):
             # We need to store this if no other metadata is stored. This
             # indicates that when reimporting the commit into Mercurial we'll
             # know not to detect renames.
-            git_extra.append(("HG:rename-source", "hg"))
+            git_extra.append((b"HG:rename-source", b"hg"))
 
-        return message, git_extra
+        return pycompat.encodeutf8(message), git_extra
 
     def get_git_incoming(self, refs):
         return git2hg.find_incoming(self.git.object_store, self._map, refs)
@@ -912,7 +913,7 @@ class GitHandler(object):
         # to compute the git/hg mapping without having the entire git repo.
         # "convert_revision" was chosen to match the hgsubversion and hg convert
         # extra field.
-        extra["convert_revision"] = commit.id
+        extra["convert_revision"] = pycompat.decodeutf8(commit.id)
 
         if hg_renames is None:
             detect_renames = True
@@ -951,10 +952,11 @@ class GitHandler(object):
         text = strip_message
 
         origtext = text
-        try:
-            text.decode("utf-8")
-        except UnicodeDecodeError:
-            text = self.decode_guess(text, commit.encoding)
+        if sys.version_info[0] < 3:
+            try:
+                text.decode("utf-8")
+            except UnicodeDecodeError:
+                text = self.decode_guess(text, commit.encoding)
 
         text = "\n".join([l.rstrip() for l in text.splitlines()]).strip("\n")
         if text + "\n" != origtext:
@@ -963,7 +965,7 @@ class GitHandler(object):
         author = commit.author
 
         # convert extra data back to the end
-        if " ext:" in commit.author:
+        if b" ext:" in commit.author:
             m = RE_GIT_AUTHOR_EXTRA.match(commit.author)
             if m:
                 name = m.group(1)
@@ -971,11 +973,13 @@ class GitHandler(object):
                 email = m.group(3)
                 author = name + " <" + email + ">" + ex
 
-        if " <none@none>" in commit.author:
+        if b" <none@none>" in commit.author:
             author = commit.author[:-12]
 
         try:
-            author.decode("utf-8")
+            decodedauthor = author.decode("utf-8")
+            if sys.version_info[0] == 3:
+                author = decodedauthor
         except UnicodeDecodeError:
             origauthor = author
             author = self.decode_guess(author, commit.encoding)
@@ -1213,12 +1217,12 @@ class GitHandler(object):
         # capabilities^{} key when the dict should have been
         # empty. That check can probably be removed at some point in
         # the future.)
-        if not refs or refs.keys()[0] == "capabilities^{}":
+        if not refs or list(refs.keys())[0] == b"capabilities^{}":
             if not exportable:
                 tip = self.repo.lookup("tip")
                 if tip != nullid:
-                    if "capabilities^{}" in new_refs:
-                        del new_refs["capabilities^{}"]
+                    if b"capabilities^{}" in new_refs:
+                        del new_refs[b"capabilities^{}"]
                     tip = hex(tip)
                     try:
                         commands.bookmark(
@@ -1233,7 +1237,7 @@ class GitHandler(object):
                     except AttributeError:
                         # hg < 3.5
                         bookmarks.setcurrent(self.repo, "master")
-                    new_refs["refs/heads/master"] = self.map_git_get(tip)
+                    new_refs[b"refs/heads/master"] = self.map_git_get(tip)
 
         # mapped nodes might be hidden
         unfiltered = self.repo.unfiltered()
@@ -1269,12 +1273,13 @@ class GitHandler(object):
                 uptodate_annotated_tags.append(ref)
 
             for ref in rev_refs:
+                ref = pycompat.encodeutf8(ref)
                 if ref not in refs:
-                    new_refs[ref] = self.map_git_get(ctx.hex())
+                    new_refs[ref] = pycompat.encodeutf8(self.map_git_get(ctx.hex()))
                 elif self._map.lookupbyfirst(bin(new_refs[ref])) is not None:
                     rctx = unfiltered[self.map_hg_get(new_refs[ref])]
                     if rctx.ancestor(ctx) == rctx or force:
-                        new_refs[ref] = self.map_git_get(ctx.hex())
+                        new_refs[ref] = pycompat.encodeutf8(self.map_git_get(ctx.hex()))
                     else:
                         raise error.Abort("pushing %s overwrites %s" % (ref, ctx))
                 elif ref in uptodate_annotated_tags:
@@ -1296,8 +1301,8 @@ class GitHandler(object):
         # can't just do 'refs/' here because the tag class doesn't have a
         # parents function for walking, and older versions of dulwich don't like
         # that.
-        haveheads = self.git.refs.as_dict("refs/remotes/").values()
-        haveheads.extend(self.git.refs.as_dict("refs/heads/").values())
+        haveheads = list(self.git.refs.as_dict(b"refs/remotes/").values())
+        haveheads.extend(self.git.refs.as_dict(b"refs/heads/").values())
         graphwalker = self.git.get_graph_walker(heads=haveheads)
 
         def determine_wants(refs):
@@ -1342,9 +1347,9 @@ class GitHandler(object):
         if heads is not None:
             # contains pairs of ('refs/(heads|tags|...)/foo', 'foo')
             # if ref is just '<foo>', then we get ('foo', 'foo')
-            stripped_refs = [(r, r[r.find("/", r.find("/") + 1) + 1 :]) for r in refs]
+            stripped_refs = [(r, r[r.find(b"/", r.find(b"/") + 1) + 1 :]) for r in refs]
             for h in heads:
-                if h.endswith("/*"):
+                if h.endswith(b"/*"):
                     prefix = h[:-1]  # include the / but not the *
                     r = [
                         pair[0] for pair in stripped_refs if pair[1].startswith(prefix)
@@ -1361,8 +1366,8 @@ class GitHandler(object):
                         raise error.Abort("ambiguous reference %s: %r" % (h, r))
         else:
             for ref, sha in pycompat.iteritems(refs):
-                if not ref.endswith("^{}") and (
-                    ref.startswith("refs/heads/") or ref.startswith("refs/tags/")
+                if not ref.endswith(b"^{}") and (
+                    ref.startswith(b"refs/heads/") or ref.startswith(b"refs/tags/")
                 ):
                     filteredrefs.append(ref)
             filteredrefs.sort()
@@ -1404,7 +1409,9 @@ class GitHandler(object):
             for git_ref in refs.heads:
                 git_sha = self.map_git_get(hg_sha)
                 if git_sha:
-                    self.git.refs[git_ref] = git_sha
+                    self.git.refs[pycompat.encodeutf8(git_ref)] = pycompat.encodeutf8(
+                        git_sha
+                    )
 
     def _filter_for_bookmarks(self, bms):
         if not self.branch_bookmark_suffix:
@@ -1447,7 +1454,11 @@ class GitHandler(object):
             bms = self.repo._bookmarks
 
             heads = dict(
-                [(ref[11:], refs[ref]) for ref in refs if ref.startswith("refs/heads/")]
+                [
+                    (ref[11:], refs[ref])
+                    for ref in refs
+                    if ref.startswith(b"refs/heads/")
+                ]
             )
 
             suffix = self.branch_bookmark_suffix or ""
@@ -1459,6 +1470,7 @@ class GitHandler(object):
                 if hgsha is None:
                     continue
                 hgsha = bin(hgsha)
+                head = pycompat.decodeutf8(head)
                 if head not in bms:
                     # new branch
                     changes.append((head + suffix, hgsha))
@@ -1485,16 +1497,18 @@ class GitHandler(object):
             if t.startswith(remote_name + "/"):
                 del remote_refs[t]
         for ref_name, sha in pycompat.iteritems(refs):
-            if ref_name.startswith("refs/heads"):
+            if ref_name.startswith(b"refs/heads"):
                 hgsha = self.map_hg_get(sha)
                 if hgsha is None or hgsha not in self.repo:
                     continue
-                head = ref_name[11:]
+                head = pycompat.decodeutf8(ref_name[11:])
                 remote_refs["/".join((remote_name, head))] = bin(hgsha)
                 # TODO(durin42): what is this doing?
-                new_ref = "refs/remotes/%s/%s" % (remote_name, head)
+                new_ref = pycompat.encodeutf8(
+                    "refs/remotes/%s/%s" % (remote_name, head)
+                )
                 self.git.refs[new_ref] = sha
-            elif ref_name.startswith("refs/tags") and not ref_name.endswith("^{}"):
+            elif ref_name.startswith(b"refs/tags") and not ref_name.endswith(b"^{}"):
                 self.git.refs[ref_name] = sha
 
     # UTILITY FUNCTIONS
@@ -1543,6 +1557,10 @@ class GitHandler(object):
         for change in changes:
             oldfile, oldmode, oldsha = change.old
             newfile, newmode, newsha = change.new
+            if oldfile:
+                oldfile = pycompat.decodeutf8(oldfile)
+            if newfile:
+                newfile = pycompat.decodeutf8(newfile)
             # actions are described by the following table ('no' means 'does
             # not exist'):
             #    old        new     |    action

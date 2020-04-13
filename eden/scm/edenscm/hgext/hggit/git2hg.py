@@ -34,7 +34,7 @@ def find_incoming(git_object_store, git_map, refs):
                     obj = git_object_store[sha]
                 if isinstance(obj, Commit) and sha not in seenheads:
                     seenheads.add(sha)
-                    todo.append(sha)
+                    todo.append(pycompat.decodeutf8(sha))
 
         todo.sort(key=commitdate, reverse=True)
         return todo
@@ -85,6 +85,7 @@ class GitIncomingResult(object):
 
 
 def extract_hg_metadata(message, git_extra):
+    message = pycompat.decodeutf8(message)
     split = message.split("\n--HG--\n", 1)
     # Renames are explicitly stored in Mercurial but inferred in Git. For
     # commits that originated in Git we'd like to optionally infer rename
@@ -126,6 +127,7 @@ def extract_hg_metadata(message, git_extra):
 
     git_fn = 0
     for field, data in git_extra:
+        field = pycompat.decodeutf8(field)
         if field.startswith("HG:"):
             if renames is None:
                 renames = {}

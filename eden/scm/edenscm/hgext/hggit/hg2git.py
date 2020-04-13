@@ -6,7 +6,7 @@ import os
 import stat
 
 import dulwich.objects as dulobjs
-from edenscm.mercurial import util as hgutil
+from edenscm.mercurial import pycompat, util as hgutil
 from edenscm.mercurial.i18n import _
 
 from . import compat, util
@@ -76,12 +76,14 @@ class GitTreeDict(object):
         self.trees[""] = store[commit.tree] if commit is not None else dulobjs.Tree()
 
     def __getitem__(self, path):
+        assert isinstance(path, str)
         value = self.get(path)
         if value is None:
             raise KeyError("no path %s" % path)
         return value
 
     def get(self, path, default=None):
+        assert isinstance(path, str)
         value = self.trees.get(path)
         if value is None:
             # It's not in our cache, so let's find the parent so we can add this
@@ -104,6 +106,7 @@ class GitTreeDict(object):
         return value
 
     def __setitem__(self, path, value):
+        assert isinstance(path, str)
         base, name = os.path.split(path)
         parent = self.get(base)
         if parent is None:
@@ -117,11 +120,13 @@ class GitTreeDict(object):
         self.trees[path] = value
 
     def __delitem__(self, path):
+        assert isinstance(path, str)
         if path == "":
             raise KeyError("cannot delete root path")
         del self.trees[path]
 
     def setdefault(self, path, default):
+        assert isinstance(path, str)
         value = self.get(path)
         if value is None:
             value = default
@@ -365,7 +370,10 @@ class IncrementalChangesetExporter(object):
             # and incurs SHA-1 recalculation. So, it's in our interest to avoid
             # invalidating trees. Since we only update the entries of dirty
             # trees, this should hold true.
-            parent_tree[os.path.basename(d)] = (stat.S_IFDIR, tree.id)
+            parent_tree[pycompat.encodeutf8(os.path.basename(d))] = (
+                stat.S_IFDIR,
+                tree.id,
+            )
 
     @staticmethod
     def tree_entry(fctx, blob_cache):
@@ -392,4 +400,9 @@ class IncrementalChangesetExporter(object):
         else:
             mode = 0o100644
 
-        return (dulobjs.TreeEntry(os.path.basename(fctx.path()), mode, blob_id), blob)
+        return (
+            dulobjs.TreeEntry(
+                pycompat.encodeutf8(os.path.basename(fctx.path())), mode, blob_id
+            ),
+            blob,
+        )

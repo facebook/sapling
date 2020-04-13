@@ -49,15 +49,15 @@ def read_pkt_refs(proto):
     refs = {}
     # Receive refs from server
     for pkt in proto.read_pkt_seq():
-        (sha, ref) = pkt.rstrip("\n").split(None, 1)
-        if sha == "ERR":
+        (sha, ref) = pkt.rstrip(b"\n").split(None, 1)
+        if sha == b"ERR":
             raise GitProtocolError(ref)
         if server_capabilities is None:
             (ref, server_capabilities) = extract_capabilities(ref)
-            symref = "symref=HEAD:"
+            symref = b"symref=HEAD:"
             for cap in server_capabilities:
                 if cap.startswith(symref):
-                    sha = cap.replace(symref, "")
+                    sha = cap.replace(symref, b"")
         refs[ref] = sha
 
     if len(refs) == 0:
