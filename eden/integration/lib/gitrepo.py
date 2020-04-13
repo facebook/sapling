@@ -7,10 +7,11 @@
 import datetime
 import os
 import subprocess
-import tempfile
 import time
 import typing
 from typing import Dict, List, Optional
+
+from eden.test_support.temporary_directory import TempFileManager
 
 from . import repobase
 from .error import CommandError
@@ -22,9 +23,13 @@ class GitError(CommandError):
 
 
 class GitRepository(repobase.Repository):
-    def __init__(self, path: str) -> None:
+    git_bin: str
+    temp_mgr: TempFileManager
+
+    def __init__(self, path: str, temp_mgr: Optional[TempFileManager] = None) -> None:
         super().__init__(path)
-        self.git_bin = FindExe.GIT
+        self.git_bin = FindExe.GIT  # pyre-ignore[8]: T38947910
+        self.temp_mgr = temp_mgr or TempFileManager("gitrepo")
 
     def git(
         self, *args: str, encoding: str = "utf-8", env: Optional[Dict[str, str]] = None
@@ -128,9 +133,7 @@ class GitRepository(repobase.Repository):
             "GIT_COMMITTER_DATE": committer_date_str,
         }
 
-        with tempfile.NamedTemporaryFile(
-            prefix="eden_commit_msg.", mode="w", encoding="utf-8"
-        ) as msgf:
+        with self.temp_mgr.make_temp_file("git_commit.") as msgf:
             msgf.write(message)
             msgf.flush()
 

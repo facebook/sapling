@@ -28,7 +28,7 @@ from typing import (
 )
 
 from eden.test_support.environment_variable import EnvironmentVariableMixin
-from eden.test_support.temporary_directory import TemporaryDirectoryMixin
+from eden.test_support.temporary_directory import TempFileManager
 from eden.thrift import EdenClient
 
 from . import edenclient, gitrepo, hgrepo, repobase
@@ -42,9 +42,7 @@ else:
 
 
 @unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
-class EdenTestCase(
-    unittest.TestCase, EnvironmentVariableMixin, TemporaryDirectoryMixin
-):
+class EdenTestCase(unittest.TestCase, EnvironmentVariableMixin):
     """
     Base class for eden integration test cases.
 
@@ -56,6 +54,7 @@ class EdenTestCase(
     eden: edenclient.EdenFS
     start: float
     last_event: float
+    temp_mgr: TempFileManager
 
     # Override enable_fault_injection to True in subclasses to enable Eden's fault
     # injection framework when starting edenfs
@@ -77,18 +76,34 @@ class EdenTestCase(
         logging.info("=== %s at %.03fs (+%0.3fs)", event, since_start, since_last)
         self.last_event = now
 
+    def _get_tmp_prefix(self) -> str:
+        """Get a prefix to use for the test's temporary directory name. """
+        # Attempt to include a potion of the test name in the temporary directory
+        # prefix, but limit it to 20 characters.  If the path is too long EdenFS will
+        # fail to start since its Unix socket path won't fit in sockaddr_un, which has a
+        # 108 byte maximum path length.
+        method_name = self._testMethodName
+        for strip_prefix in ("test_", "test"):
+            if method_name.startswith(strip_prefix):
+                method_name = method_name[len(strip_prefix) :]
+                break
+        return f"eden_test.{method_name[:20]}."
+
     def setUp(self) -> None:
         self.start = time.time()
         self.last_event = self.start
         self.system_hgrc: Optional[str] = None
 
-        # Set an environment variable to prevent telemetry logging
-        # during integration tests
-        os.environ["INTEGRATION_TEST"] = "1"
-
         # Add a cleanup event just to log once the other cleanup
         # actions have completed.
         self.addCleanup(self.report_time, "clean up done")
+
+        self.temp_mgr = TempFileManager(self._get_tmp_prefix())
+        self.addCleanup(self.temp_mgr.cleanup)
+
+        # Set an environment variable to prevent telemetry logging
+        # during integration tests
+        os.environ["INTEGRATION_TEST"] = "1"
 
         self.setup_eden_test()
         self.report_time("test setup done")
@@ -96,7 +111,7 @@ class EdenTestCase(
         self.addCleanup(self.report_time, "clean up started")
 
     def setup_eden_test(self) -> None:
-        self.tmp_dir = self.make_temporary_directory()
+        self.tmp_dir = self.temp_mgr.top_level_tmp_dir()
 
         # Place scratch configuration somewhere deterministic for the tests
         scratch_config_file = os.path.join(self.tmp_dir, "scratch.toml")
@@ -159,6 +174,9 @@ class EdenTestCase(
     def mount_path_bytes(self) -> bytes:
         return bytes(self.mount_path)
 
+    def make_temporary_directory(self, prefix: Optional[str] = None) -> str:
+        return str(self.temp_mgr.make_temp_dir(prefix=prefix))
+
     def get_thrift_client(self) -> EdenClient:
         """
         Get a thrift client to the edenfs daemon.
@@ -202,7 +220,9 @@ class EdenTestCase(
                 f.write(hgrepo.HgRepository.get_system_hgrc_contents())
             self.system_hgrc = system_hgrc_path
 
-        repo = hgrepo.HgRepository(repo_path, system_hgrc=self.system_hgrc)
+        repo = hgrepo.HgRepository(
+            repo_path, system_hgrc=self.system_hgrc, temp_mgr=self.temp_mgr
+        )
         repo.init(hgrc=hgrc)
 
         return repo
@@ -210,7 +230,7 @@ class EdenTestCase(
     def create_git_repo(self, name: str) -> gitrepo.GitRepository:
         repo_path = os.path.join(self.repos_dir, name)
         os.mkdir(repo_path)
-        repo = gitrepo.GitRepository(repo_path)
+        repo = gitrepo.GitRepository(repo_path, temp_mgr=self.temp_mgr)
         repo.init()
 
         return repo

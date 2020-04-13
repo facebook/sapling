@@ -4,6 +4,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import abc
 import logging
 import os
@@ -13,7 +15,18 @@ import tempfile
 import types
 import typing
 from pathlib import Path
-from typing import Any, Callable, Tuple, Type, Union
+from typing import (
+    Any,
+    BinaryIO,
+    Callable,
+    Generic,
+    Optional,
+    TextIO,
+    Tuple,
+    Type,
+    TypeVar,
+    Union,
+)
 
 
 def cleanup_tmp_dir(tmp_dir: Path) -> None:
@@ -29,9 +42,9 @@ def cleanup_tmp_dir(tmp_dir: Path) -> None:
     # If we encounter an EPERM or EACCESS error removing a file try making its parent
     # directory writable and then retry the removal.
     def _remove_readonly(
-        func: Callable[[Union[os.PathLike, str]], Any],
+        func: Callable[[Union[os.PathLike, str]], Any],  # pyre-fixme[2]
         path: Union[os.PathLike, str],
-        exc_info: Tuple[Type, BaseException, types.TracebackType],
+        exc_info: Tuple[Type[BaseException], BaseException, types.TracebackType],
     ) -> None:
         _ex_type, ex, _traceback = exc_info
         # pyre-fixme[29]: `Union[Callable[[object], bool], Callable[[object], bool],
@@ -60,22 +73,152 @@ def cleanup_tmp_dir(tmp_dir: Path) -> None:
     shutil.rmtree(tmp_dir, onerror=_remove_readonly)
 
 
-class TemporaryDirectoryMixin(metaclass=abc.ABCMeta):
-    def make_temporary_directory(self) -> str:
-        def clean_up(path_str: str) -> None:
-            if os.environ.get("EDEN_TEST_NO_CLEANUP"):
-                print("Leaving behind eden test directory %r" % path_str)
-            else:
-                cleanup_tmp_dir(pathlib.Path(path_str))
+class TempFileManager:
+    """TempFileManager exists for managing a set of temporary files and directories.
 
-        path_str = tempfile.mkdtemp(prefix="eden_test.")
-        self.addCleanup(lambda: clean_up(path_str))
-        return path_str
+    It creates all temporary files and directories in a single top-level directory,
+    which can later be cleaned up in one pass.
+
+    This helps make it a little easier to track temporary test artifacts while
+    debugging, and helps make it easier to identify when tests have failed to clean up
+    their temporary files.
+
+    This is also necessary on Windows because the standard tempfile.NamedTemporaryFile
+    class unfortunately does not work well there: the temporary files it creates cannot
+    be opened by other processes.
+    """
+
+    _temp_dir: Optional[Path] = None
+    _prefix: Optional[str]
+
+    def __init__(self, prefix: Optional[str] = "eden_test.") -> None:
+        self._prefix = prefix
+
+    def __enter__(self) -> "TempFileManager":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        tb: Optional[types.TracebackType],
+    ) -> None:
+        self.cleanup()
+
+    def cleanup(self) -> None:
+        temp_dir = self._temp_dir
+        if temp_dir is None:
+            return
+
+        if os.environ.get("EDEN_TEST_NO_CLEANUP"):
+            print(f"Leaving behind eden test directory {temp_dir}")
+        cleanup_tmp_dir(temp_dir)
+        self._temp_dir = None
+
+    def make_temp_dir(self, prefix: Optional[str] = None) -> Path:
+        top_level = self.top_level_tmp_dir()
+        path_str = tempfile.mkdtemp(prefix=prefix, dir=str(top_level))
+        return Path(path_str)
+
+    def make_temp_file(
+        self, prefix: Optional[str] = None, mode: str = "r+"
+    ) -> "TemporaryTextFile":
+        top_level = self.top_level_tmp_dir()
+        fd, path_str = tempfile.mkstemp(prefix=prefix, dir=str(top_level))
+        file_obj = os.fdopen(fd, mode, encoding="utf-8")
+        return TemporaryTextFile(file_obj, Path(path_str))
+
+    def make_temp_binary(
+        self, prefix: Optional[str] = None, mode: str = "rb+"
+    ) -> "TemporaryBinaryFile":
+        top_level = self.top_level_tmp_dir()
+        fd, path_str = tempfile.mkstemp(prefix=prefix, dir=str(top_level))
+        file_obj = os.fdopen(fd, mode)
+        return TemporaryBinaryFile(file_obj, Path(path_str))
+
+    def top_level_tmp_dir(self) -> Path:
+        top = self._temp_dir
+        if top is None:
+            top = Path(tempfile.mkdtemp(prefix=self._prefix))
+            self._temp_dir = top
+
+        return top
+
+    def set_tmp_prefix(self, prefix: str) -> None:
+        if self._temp_dir is not None:
+            logging.warning(
+                f"cannot update temporary directory prefix to {prefix}: "
+                f"temporary directory {self._temp_dir} was already created"
+            )
+            return
+        self._prefix = prefix
+
+
+IOType = TypeVar("IOType", TextIO, BinaryIO)
+T = TypeVar("T")
+
+
+class TemporaryFileBase(Generic[IOType]):
+    """This class is largely equivalent to tempfile.NamedTemporaryFile,
+    but it also works on Windows.  (The standard library NamedTemporaryFile class
+    creates files that cannot be opened by other processes.)
+
+    We don't have any logic for closing the file here since the entire containing
+    directory will eventually be removed by TempFileManager.
+    """
+
+    file: IOType
+    name: str
+    path: Path
+
+    def __init__(self, file: IOType, path: Path) -> None:
+        self.file = file
+        self.path = path
+        self.name = str(path)
+
+    def __getattr__(self, name: str) -> Any:  # pyre-fixme[3]
+        if name in ("name", "path"):
+            return self.__dict__[name]
+        else:
+            file = self.__dict__["file"]
+            value = getattr(file, name)
+            setattr(self, name, value)
+            return value
+
+    def __enter__(self: T) -> T:
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        tb: Optional[types.TracebackType],
+    ) -> None:
+        pass
+
+
+class TemporaryTextFile(TemporaryFileBase[TextIO]):
+    pass
+
+
+class TemporaryBinaryFile(TemporaryFileBase[BinaryIO]):
+    pass
+
+
+class TemporaryDirectoryMixin(metaclass=abc.ABCMeta):
+    temp_file_manager: TempFileManager = TempFileManager()
+    _temp_cleanup_added: bool = False
+
+    def make_temporary_directory(self, prefix: Optional[str] = None) -> str:
+        self._ensure_temp_cleanup()
+        return str(self.temp_file_manager.make_temp_dir(prefix=prefix))
+
+    def _ensure_temp_cleanup(self) -> None:
+        if not self._temp_cleanup_added:
+            self.addCleanup(self.temp_file_manager.cleanup)
+            self._temp_cleanup_added = True
 
     def addCleanup(
-        self,
-        function: typing.Callable[..., typing.Any],
-        *args: typing.Any,
-        **kwargs: typing.Any,
+        self, function: Callable[[], None], *args: Any, **kwargs: Any
     ) -> None:
         raise NotImplementedError()

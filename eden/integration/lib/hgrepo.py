@@ -9,10 +9,11 @@ import datetime
 import json
 import os
 import subprocess
-import tempfile
 import textwrap
 import typing
 from typing import Any, Dict, List, Optional
+
+from eden.test_support.temporary_directory import TempFileManager
 
 from . import repobase
 from .error import CommandError
@@ -24,12 +25,22 @@ class HgError(CommandError):
 
 
 class HgRepository(repobase.Repository):
-    def __init__(self, path: str, system_hgrc: Optional[str] = None) -> None:
+    hg_bin: str
+    hg_environment: Dict[str, str]
+    temp_mgr: TempFileManager
+
+    def __init__(
+        self,
+        path: str,
+        system_hgrc: Optional[str] = None,
+        temp_mgr: Optional[TempFileManager] = None,
+    ) -> None:
         """
         If hgrc is specified, it will be used as the value of the HGRCPATH
         environment variable when `hg` is run.
         """
         super().__init__(path)
+        self.temp_mgr = temp_mgr or TempFileManager("hgrepo")
         self.hg_environment = os.environ.copy()
         # Drop any environment variables starting with 'HG'
         # to ensure the user's environment does not affect the tests.
@@ -37,6 +48,7 @@ class HgRepository(repobase.Repository):
             k: v for k, v in os.environ.items() if not k.startswith("HG")
         }
         self.hg_environment["HGPLAIN"] = "1"
+        # pyre-ignore[6]: T38947910
         self.hg_environment["HG_REAL_BIN"] = FindExe.HG_REAL
         self.hg_environment["NOSCMLOG"] = "1"
         # Set HGRCPATH to make sure we aren't affected by the local system's
@@ -45,7 +57,7 @@ class HgRepository(repobase.Repository):
             self.hg_environment["HGRCPATH"] = system_hgrc
         else:
             self.hg_environment["HGRCPATH"] = ""
-        self.hg_bin = FindExe.HG
+        self.hg_bin = FindExe.HG  # pyre-ignore[8]: T38947910
 
     @classmethod
     def get_system_hgrc_contents(cls) -> str:
@@ -222,9 +234,7 @@ class HgRepository(repobase.Repository):
 
         user_config = "ui.username={} <{}>".format(author_name, author_email)
 
-        with tempfile.NamedTemporaryFile(
-            prefix="eden_commit_msg.", mode="w", encoding="utf-8"
-        ) as msgf:
+        with self.temp_mgr.make_temp_file(prefix="hg_commit_msg.") as msgf:
             msgf.write(message)
             msgf.flush()
 
