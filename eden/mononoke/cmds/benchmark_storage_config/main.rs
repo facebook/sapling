@@ -7,12 +7,17 @@
 
 #![deny(warnings)]
 
-use std::time::Duration;
+use std::{sync::Arc, time::Duration};
 
 use clap::Arg;
 use criterion::Criterion;
+use futures::compat::Future01CompatExt;
+use tokio_compat::runtime::Runtime;
 
+use blobrepo_factory::Caching;
+use blobstore::Blobstore;
 use blobstore_factory::make_blobstore;
+use cacheblob::{new_cachelib_blobstore_no_lease, new_memcache_blobstore_no_lease};
 use cmdlib::args;
 use context::CoreContext;
 
@@ -29,6 +34,9 @@ const ARG_STORAGE_CONFIG_NAME: &'static str = "storage-config-name";
 const ARG_SAVE_BASELINE: &'static str = "save-baseline";
 const ARG_USE_BASELINE: &'static str = "use-baseline";
 const ARG_FILTER_BENCHMARKS: &'static str = "filter";
+
+const BLOBSTORE_BLOBS_CACHE_POOL: &str = "blobstore-blobs";
+const BLOBSTORE_PRESENCE_CACHE_POOL: &str = "blobstore-presence";
 
 #[fbinit::main]
 fn main(fb: fbinit::FacebookInit) {
@@ -87,7 +95,7 @@ fn main(fb: fbinit::FacebookInit) {
     }
 
     let logger = args::init_logging(fb, &matches);
-    args::init_cachelib(fb, &matches, None);
+    let caching = args::init_cachelib(fb, &matches, None);
 
     let storage_config = args::read_storage_configs(fb, &matches)
         .expect("Could not read storage configs")
@@ -102,33 +110,67 @@ fn main(fb: fbinit::FacebookInit) {
     let mut runtime = args::init_runtime(&matches).expect("Cannot start tokio");
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let blobstore = runtime
-        .block_on(make_blobstore(
+    let blobstore = runtime.block_on_std(async {
+        let blobstore = make_blobstore(
             fb,
             storage_config.blobstore,
             mysql_options,
             blobstore_factory::ReadOnlyStorage(false),
             blobstore_options,
             logger,
-        ))
+        )
+        .compat()
+        .await
         .expect("Could not make blobstore");
+        match caching {
+            Caching::Disabled => blobstore,
+            Caching::CachelibOnlyBlobstore => {
+                let blob_pool = Arc::new(
+                    cachelib::get_pool(BLOBSTORE_BLOBS_CACHE_POOL)
+                        .expect("Could not get blob pool"),
+                );
+                let presence_pool = Arc::new(
+                    cachelib::get_pool(BLOBSTORE_PRESENCE_CACHE_POOL)
+                        .expect("Could not get presence pool"),
+                );
+                Arc::new(new_cachelib_blobstore_no_lease(
+                    blobstore,
+                    blob_pool,
+                    presence_pool,
+                ))
+            }
+            Caching::Enabled => {
+                let blob_pool = Arc::new(
+                    cachelib::get_pool(BLOBSTORE_BLOBS_CACHE_POOL)
+                        .expect("Could not get blob pool"),
+                );
+                let presence_pool = Arc::new(
+                    cachelib::get_pool(BLOBSTORE_PRESENCE_CACHE_POOL)
+                        .expect("Could not get presence pool"),
+                );
+                let cachelib_blobstore =
+                    new_cachelib_blobstore_no_lease(blobstore, blob_pool, presence_pool);
+                Arc::new(
+                    new_memcache_blobstore_no_lease(fb, cachelib_blobstore, "benchmark", "")
+                        .expect("Memcache blobstore issues"),
+                )
+            }
+        }
+    });
+
+    // Cut all the repetition around running a benchmark. Note that a fresh cachee shouldn't be needed,
+    // as the warmup will fill it, and the key is randomised
+    let mut run_benchmark =
+        |bench: fn(&mut Criterion, CoreContext, Arc<dyn Blobstore>, &mut Runtime)| {
+            bench(&mut criterion, ctx.clone(), blobstore.clone(), &mut runtime)
+        };
 
     // Tests are run from here
-    single_puts::benchmark(&mut criterion, ctx.clone(), blobstore.clone(), &mut runtime);
-    parallel_puts::benchmark(&mut criterion, ctx.clone(), blobstore.clone(), &mut runtime);
-    single_gets::benchmark(&mut criterion, ctx.clone(), blobstore.clone(), &mut runtime);
-    parallel_same_blob_gets::benchmark(
-        &mut criterion,
-        ctx.clone(),
-        blobstore.clone(),
-        &mut runtime,
-    );
-    parallel_different_blob_gets::benchmark(
-        &mut criterion,
-        ctx.clone(),
-        blobstore.clone(),
-        &mut runtime,
-    );
+    run_benchmark(single_puts::benchmark);
+    run_benchmark(single_gets::benchmark);
+    run_benchmark(parallel_same_blob_gets::benchmark);
+    run_benchmark(parallel_different_blob_gets::benchmark);
+    run_benchmark(parallel_puts::benchmark);
 
     runtime.shutdown_on_idle();
     criterion.final_summary();
