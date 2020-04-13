@@ -9,9 +9,6 @@ from edenscm.mercurial.node import hex, nullid
 from hghave import require
 
 
-require(["py2"])
-
-
 myui = uimod.ui.load()
 repo = hg.repository(myui, path=".", create=True)
 
@@ -42,8 +39,8 @@ def error(text):
     print("ERROR: " + text)
 
 
-textwith = "\1\nfoo"
-without = "foo"
+textwith = b"\1\nfoo"
+without = b"foo"
 
 node = addrev(textwith)
 if not textwith == fl.read(node):
