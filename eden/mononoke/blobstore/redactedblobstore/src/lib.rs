@@ -35,25 +35,54 @@ pub mod config {
     pub const MIN_REPORT_TIME_DIFFERENCE_NS: i64 = 1_000_000_000;
 }
 
-#[derive(Debug)]
-pub struct RedactedBlobstoreInner<T: Blobstore + Clone> {
-    blobstore: T,
+#[derive(Debug, Clone)]
+pub struct RedactedBlobstoreConfigInner {
     redacted: Option<HashMap<String, String>>,
     scuba_builder: ScubaSampleBuilder,
+}
+
+#[derive(Debug, Clone)]
+pub struct RedactedBlobstoreConfig {
+    inner: Arc<RedactedBlobstoreConfigInner>,
+}
+
+impl Deref for RedactedBlobstoreConfig {
+    type Target = RedactedBlobstoreConfigInner;
+
+    fn deref(&self) -> &Self::Target {
+        &self.inner
+    }
+}
+
+impl RedactedBlobstoreConfig {
+    pub fn new(
+        redacted: Option<HashMap<String, String>>,
+        scuba_builder: ScubaSampleBuilder,
+    ) -> Self {
+        Self {
+            inner: Arc::new(RedactedBlobstoreConfigInner {
+                redacted,
+                scuba_builder,
+            }),
+        }
+    }
+}
+
+#[derive(Debug)]
+pub struct RedactedBlobstoreInner<T> {
+    blobstore: T,
+    config: RedactedBlobstoreConfig,
     timestamp: Arc<AtomicI64>,
 }
 
 // A wrapper for any blobstore, which provides a verification layer for the redacted blobs.
 // The goal is to deny access to fetch sensitive data from the repository.
 #[derive(Debug, Clone)]
-pub struct RedactedBlobstore<T: Blobstore + Clone> {
+pub struct RedactedBlobstore<T> {
     inner: Arc<RedactedBlobstoreInner<T>>,
 }
 
-impl<T> Deref for RedactedBlobstore<T>
-where
-    T: Blobstore + Clone,
-{
+impl<T> Deref for RedactedBlobstore<T> {
     type Target = RedactedBlobstoreInner<T>;
 
     #[inline]
@@ -63,65 +92,42 @@ where
 }
 
 impl<T: Blobstore + Clone> RedactedBlobstore<T> {
-    pub fn new(
-        blobstore: T,
-        redacted: Option<HashMap<String, String>>,
-        scuba_builder: ScubaSampleBuilder,
-    ) -> Self {
+    pub fn new(blobstore: T, config: RedactedBlobstoreConfig) -> Self {
         Self {
-            inner: Arc::new(RedactedBlobstoreInner::new(
-                blobstore,
-                redacted,
-                scuba_builder,
-            )),
+            inner: Arc::new(RedactedBlobstoreInner::new(blobstore, config)),
         }
     }
 
     pub fn boxed(&self) -> Arc<dyn Blobstore> {
         self.inner.clone()
     }
+
+    pub fn as_parts(&self) -> (T, RedactedBlobstoreConfig) {
+        (self.blobstore.clone(), self.config.clone())
+    }
 }
 
 impl<T: Blobstore + Clone> RedactedBlobstoreInner<T> {
-    pub fn new(
-        blobstore: T,
-        redacted: Option<HashMap<String, String>>,
-        scuba_builder: ScubaSampleBuilder,
-    ) -> Self {
+    pub fn new(blobstore: T, config: RedactedBlobstoreConfig) -> Self {
         let timestamp = Arc::new(AtomicI64::new(Timestamp::now().timestamp_nanos()));
         Self {
             blobstore,
-            redacted,
-            scuba_builder,
+            config,
             timestamp,
         }
     }
 
-    pub fn err_if_redacted(&self, key: &String) -> Result<(), Error> {
-        match &self.redacted {
-            Some(redacted) => redacted.get(key).map_or(Ok(()), |task| {
+    // Checks for access to this key, then yields the blobstore if access is allowed.
+    pub fn access_blobstore(&self, key: &str) -> Result<&T, Error> {
+        match &self.config.redacted {
+            Some(redacted) => redacted.get(key).map_or(Ok(&self.blobstore), |task| {
                 Err(ErrorKind::Censored(key.to_string(), task.to_string()).into())
             }),
-            None => Ok(()),
+            None => Ok(&self.blobstore),
         }
     }
 
-    #[inline]
-    pub fn into_inner(self) -> T {
-        self.blobstore.clone()
-    }
-
-    #[inline]
-    pub fn as_inner(&self) -> &T {
-        &self.blobstore
-    }
-
-    pub fn to_scuba_redacted_blob_accessed(
-        &self,
-        ctx: &CoreContext,
-        key: &String,
-        operation: &str,
-    ) {
+    pub fn to_scuba_redacted_blob_accessed(&self, ctx: &CoreContext, key: &str, operation: &str) {
         let curr_timestamp = Timestamp::now().timestamp_nanos();
         let last_timestamp = self.timestamp.load(Ordering::Acquire);
         if config::MIN_REPORT_TIME_DIFFERENCE_NS < curr_timestamp - last_timestamp {
@@ -133,7 +139,7 @@ impl<T: Blobstore + Clone> RedactedBlobstoreInner<T> {
             );
 
             if res.is_ok() {
-                let mut scuba_builder = self.scuba_builder.clone();
+                let mut scuba_builder = self.config.scuba_builder.clone();
                 let session = &ctx.session_id();
                 scuba_builder
                     .add("time", curr_timestamp)
@@ -149,19 +155,11 @@ impl<T: Blobstore + Clone> RedactedBlobstoreInner<T> {
             }
         }
     }
-
-    pub fn into_parts(&self) -> (T, Option<HashMap<String, String>>, ScubaSampleBuilder) {
-        (
-            self.blobstore.clone(),
-            self.redacted.clone(),
-            self.scuba_builder.clone(),
-        )
-    }
 }
 
 impl<T: Blobstore + Clone> Blobstore for RedactedBlobstoreInner<T> {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.err_if_redacted(&key)
+        self.access_blobstore(&key)
             .map_err({
                 cloned!(ctx, key);
                 move |err| {
@@ -173,16 +171,14 @@ impl<T: Blobstore + Clone> Blobstore for RedactedBlobstoreInner<T> {
                     err
                 }
             })
+            .map({ move |blobstore| blobstore.get(ctx, key) })
             .into_future()
-            .and_then({
-                cloned!(self.blobstore);
-                move |()| blobstore.get(ctx, key)
-            })
+            .flatten()
             .boxify()
     }
 
     fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        self.err_if_redacted(&key)
+        self.access_blobstore(&key)
             .map_err({
                 cloned!(ctx, key);
                 move |err| {
@@ -195,11 +191,9 @@ impl<T: Blobstore + Clone> Blobstore for RedactedBlobstoreInner<T> {
                     err
                 }
             })
+            .map({ move |blobstore| blobstore.put(ctx, key, value) })
             .into_future()
-            .and_then({
-                cloned!(self.blobstore);
-                move |()| blobstore.put(ctx, key, value)
-            })
+            .flatten()
             .boxify()
     }
 
@@ -266,8 +260,7 @@ mod test {
 
         let blob = RedactedBlobstore::new(
             PrefixBlobstore::new(inner, "prefix"),
-            Some(redacted_pairs),
-            ScubaSampleBuilder::with_discard(),
+            RedactedBlobstoreConfig::new(Some(redacted_pairs), ScubaSampleBuilder::with_discard()),
         );
 
         //Test put with redacted key

@@ -28,7 +28,7 @@ use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
 use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, ScrubAction, StorageConfig};
 use mononoke_types::{BlobstoreBytes, FileContents, RepositoryId};
 use prefixblob::PrefixBlobstore;
-use redactedblobstore::{RedactedBlobstore, SqlRedactedContentStore};
+use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig, SqlRedactedContentStore};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use slog::{info, warn, Logger};
 use sql_ext::facebook::MysqlOptions;
@@ -225,8 +225,10 @@ fn get_from_sources<T: Blobstore + Clone>(
                 false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
                 true => PrefixBlobstore::new(blobstore, empty_prefix),
             };
-            let blobstore =
-                RedactedBlobstore::new(blobstore, redacted_blobs, scuba_redaction_builder);
+            let blobstore = RedactedBlobstore::new(
+                blobstore,
+                RedactedBlobstoreConfig::new(redacted_blobs, scuba_redaction_builder),
+            );
             get_cache(ctx.clone(), &blobstore, key.clone(), mode)
         }
         None => {
@@ -234,8 +236,10 @@ fn get_from_sources<T: Blobstore + Clone>(
                 false => PrefixBlobstore::new(blobstore, repo_id.prefix()),
                 true => PrefixBlobstore::new(blobstore, empty_prefix),
             };
-            let blobstore =
-                RedactedBlobstore::new(blobstore, redacted_blobs, scuba_redaction_builder);
+            let blobstore = RedactedBlobstore::new(
+                blobstore,
+                RedactedBlobstoreConfig::new(redacted_blobs, scuba_redaction_builder),
+            );
             blobstore.get(ctx, key.clone()).boxify()
         }
     }

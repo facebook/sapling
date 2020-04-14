@@ -413,7 +413,7 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for RedactedBlobstore<T> {
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.err_if_redacted(&key)
+        self.access_blobstore(&key)
             .map_err({
                 cloned!(ctx, key);
                 move |err| {
@@ -425,11 +425,9 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for RedactedBlobstore<T> {
                     err
                 }
             })
+            .map({ move |blobstore| blobstore.get_no_cache_fill(ctx, key) })
             .into_future()
-            .and_then({
-                let cache_blob = self.clone();
-                move |()| cache_blob.as_inner().get_no_cache_fill(ctx, key)
-            })
+            .flatten()
             .boxify()
     }
 
@@ -439,7 +437,7 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for RedactedBlobstore<T> {
         ctx: CoreContext,
         key: String,
     ) -> BoxFuture<Option<BlobstoreBytes>, Error> {
-        self.err_if_redacted(&key)
+        self.access_blobstore(&key)
             .map_err({
                 cloned!(ctx, key);
                 move |err| {
@@ -451,11 +449,9 @@ impl<T: CacheBlobstoreExt + Clone> CacheBlobstoreExt for RedactedBlobstore<T> {
                     err
                 }
             })
+            .map({ move |blobstore| blobstore.get_cache_only(ctx, key) })
             .into_future()
-            .and_then({
-                let cache_blob = self.clone();
-                move |()| cache_blob.as_inner().get_cache_only(ctx, key)
-            })
+            .flatten()
             .boxify()
     }
 }

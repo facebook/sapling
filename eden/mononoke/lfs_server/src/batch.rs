@@ -818,10 +818,8 @@ mod test {
         .compat()
         .await?;
 
-        // NOTE: It's not ideal that we have to do as_inner 3 times here, but that's how
-        // the structure of RepoBlobstore works right now: it's just a type name. So, we
-        // get to the inner blobstore, and then clone that. It's where our data is!
-        let stub_blobstore = stub.blobstore().as_inner().as_inner().as_inner().clone();
+        // Get the internal blobstore from the stub we just wrote into.
+        let stub_blobstore = stub.blobstore().as_parts().0;
 
         // Now, create a new blob repo with redaction, then swap the blobstore from the stub repo
         // into it, which has the data (but now it is redacted)!

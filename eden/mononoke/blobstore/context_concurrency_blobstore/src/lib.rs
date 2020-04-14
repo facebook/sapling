@@ -16,21 +16,23 @@ use scopeguard::defer;
 
 /// A layer over an existing blobstore that respects a CoreContext's blobstore concurrency
 #[derive(Clone, Debug)]
-pub struct ContextConcurrencyBlobstore<T: Blobstore + Clone> {
+pub struct ContextConcurrencyBlobstore<T> {
     blobstore: T,
 }
 
-impl<T: Blobstore + Clone> ContextConcurrencyBlobstore<T> {
-    pub fn new(blobstore: T) -> Self {
-        Self { blobstore }
-    }
-
+impl<T> ContextConcurrencyBlobstore<T> {
     pub fn as_inner(&self) -> &T {
         &self.blobstore
     }
 
     pub fn into_inner(self) -> T {
         self.blobstore
+    }
+}
+
+impl<T: Blobstore + Clone> ContextConcurrencyBlobstore<T> {
+    pub fn new(blobstore: T) -> Self {
+        Self { blobstore }
     }
 }
 

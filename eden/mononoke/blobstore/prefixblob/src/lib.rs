@@ -17,26 +17,26 @@ use mononoke_types::BlobstoreBytes;
 
 /// A layer over an existing blobstore that prepends a fixed string to each get and put.
 #[derive(Clone, Debug)]
-pub struct PrefixBlobstore<T: Blobstore + Clone> {
+pub struct PrefixBlobstore<T> {
     // Try to inline the prefix to ensure copies remain cheap. Most prefixes are short anyway.
     prefix: InlinableString,
     blobstore: T,
+}
+
+impl<T> PrefixBlobstore<T> {
+    pub fn into_inner(self) -> T {
+        self.blobstore
+    }
+
+    pub fn as_inner(&self) -> &T {
+        &self.blobstore
+    }
 }
 
 impl<T: Blobstore + Clone> PrefixBlobstore<T> {
     pub fn new<S: Into<InlinableString>>(blobstore: T, prefix: S) -> Self {
         let prefix = prefix.into();
         Self { prefix, blobstore }
-    }
-
-    #[inline]
-    pub fn into_inner(self) -> T {
-        self.blobstore
-    }
-
-    #[inline]
-    pub fn as_inner(&self) -> &T {
-        &self.blobstore
     }
 
     #[inline]
