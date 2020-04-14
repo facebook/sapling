@@ -32,9 +32,9 @@ use fastlog::{fetch_parent_root_unodes, RootFastlog};
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::{
-    compat::Future01CompatExt,
-    future::{self, ready, try_join, try_join3, FutureExt, TryFutureExt},
-    stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{self, ready, try_join, try_join3, TryFutureExt},
+    stream::{self, FuturesUnordered, Stream, StreamExt, TryStreamExt},
 };
 use futures_ext::{spawn_future, FutureExt as OldFutureExt};
 use futures_old::{
@@ -294,15 +294,10 @@ async fn run_subcmd<'a>(
             .await?;
             let phases = repo.get_phases();
             let sql_phases = phases.get_sql_phases();
-            let css = fetch_all_public_changesets(
-                ctx.clone(),
-                repo.get_repoid(),
-                changesets,
-                sql_phases.clone(),
-            )
-            .collect()
-            .compat()
-            .await?;
+            let css =
+                fetch_all_public_changesets(&ctx, repo.get_repoid(), &changesets, &sql_phases)
+                    .try_collect()
+                    .await?;
 
             let serialized = serialize_cs_entries(css);
             fs::write(out_filename, serialized).map_err(Error::from)
@@ -337,46 +332,40 @@ fn windows(start: u64, stop: u64, step: u64) -> impl Iterator<Item = (u64, u64)>
 
 // This function is not optimal since it could be made faster by doing more processing
 // on XDB side, but for the puprpose of this binary it is good enough
-fn fetch_all_public_changesets(
-    ctx: CoreContext,
+fn fetch_all_public_changesets<'a>(
+    ctx: &'a CoreContext,
     repo_id: RepositoryId,
-    changesets: SqlChangesets,
-    phases: SqlPhases,
-) -> impl OldStream<Item = ChangesetEntry, Error = Error> {
-    changesets
-        .get_changesets_ids_bounds(repo_id.clone())
-        .and_then(move |(start, stop)| {
-            let start = start.ok_or_else(|| Error::msg("changesets table is empty"))?;
-            // Add "+ 1" because get_list_bs_cs_id_in_range_exclusive returns exclusive ranges
-            let stop = stop.ok_or_else(|| Error::msg("changesets table is empty"))? + 1;
-            let step = 65536;
-            Ok(old_stream::iter_ok(windows(start, stop, step)))
-        })
-        .flatten_stream()
-        .and_then(move |(lower_bound, upper_bound)| {
-            changesets
-                .get_list_bs_cs_id_in_range_exclusive(repo_id, lower_bound, upper_bound)
-                .collect()
-                .and_then({
-                    cloned!(ctx, changesets, phases);
-                    move |ids| {
-                        changesets.get_many(ctx.clone(), repo_id, ids).and_then(
-                            move |mut entries| {
-                                let cs_ids =
-                                    entries.iter().map(|entry| entry.cs_id).collect::<Vec<_>>();
-                                async move { phases.get_public_raw(&ctx, &cs_ids).await }
-                                    .boxed()
-                                    .compat()
-                                    .map(move |public| {
-                                        entries.retain(|entry| public.contains(&entry.cs_id));
-                                        old_stream::iter_ok(entries)
-                                    })
-                            },
-                        )
-                    }
-                })
-        })
-        .flatten()
+    changesets: &'a SqlChangesets,
+    phases: &'a SqlPhases,
+) -> impl Stream<Item = Result<ChangesetEntry, Error>> + 'a {
+    async move {
+        let (start, stop) = changesets
+            .get_changesets_ids_bounds(repo_id.clone())
+            .compat()
+            .await?;
+
+        let start = start.ok_or_else(|| Error::msg("changesets table is empty"))?;
+        let stop = stop.ok_or_else(|| Error::msg("changesets table is empty"))? + 1;
+        let step = 65536;
+        Ok(stream::iter(windows(start, stop, step)).map(Ok))
+    }
+    .try_flatten_stream()
+    .and_then(move |(lower_bound, upper_bound)| async move {
+        let ids = changesets
+            .get_list_bs_cs_id_in_range_exclusive(repo_id, lower_bound, upper_bound)
+            .compat()
+            .try_collect()
+            .await?;
+        let mut entries = changesets
+            .get_many(ctx.clone(), repo_id, ids)
+            .compat()
+            .await?;
+        let cs_ids = entries.iter().map(|entry| entry.cs_id).collect::<Vec<_>>();
+        let public = phases.get_public_raw(ctx, &cs_ids).await?;
+        entries.retain(|entry| public.contains(&entry.cs_id));
+        Ok::<_, Error>(stream::iter(entries).map(Ok))
+    })
+    .try_flatten()
 }
 
 fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntry>, Error> {
