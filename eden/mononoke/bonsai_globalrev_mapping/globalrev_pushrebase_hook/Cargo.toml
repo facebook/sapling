@@ -20,14 +20,13 @@ sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = 
 anyhow = "1.0"
 async-trait = "0.1.29"
 futures = { version = "0.3", features = ["async-await", "compat"] }
-maplit = "1.0"
-thiserror = "1.0"
-tokio = { version = "=0.2.11", features = ["full"] }
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
 blobstore = { path = "../../blobstore" }
 tests_utils = { path = "../../tests/utils" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+maplit = "1.0"
 rand = { version = "0.7", features = ["small_rng"] }
+tokio = { version = "=0.2.11", features = ["full"] }
 tokio-compat = "0.1"

@@ -14,8 +14,6 @@ scuba = { git = "https://github.com/facebookexperimental/rust-shed.git", branch 
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 ascii = "1.0"
-bytes = { version = "0.5", features = ["serde"] }
-futures = "0.1"
 nonzero_ext = "0.2"
 regex = "1.0"
 serde = { version = "1.0", features = ["derive", "rc"] }

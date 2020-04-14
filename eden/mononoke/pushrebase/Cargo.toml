@@ -11,7 +11,6 @@ blobrepo = { path = "../blobrepo" }
 blobrepo_utils = { path = "../blobrepo_utils" }
 blobstore = { path = "../blobstore" }
 bookmarks = { path = "../bookmarks" }
-cmdlib = { path = "../cmdlib" }
 context = { path = "../server/context" }
 derived_data = { path = "../derived_data" }
 derived_data_filenodes = { path = "../derived_data/filenodes" }
@@ -20,22 +19,14 @@ mercurial_types = { path = "../mercurial/types" }
 metaconfig_types = { path = "../metaconfig/types" }
 mononoke_types = { path = "../mononoke_types" }
 revset = { path = "../revset" }
-scuba_ext = { path = "../common/scuba_ext" }
-sql_construct = { path = "../common/sql_construct" }
-sql_ext = { path = "../common/rust/sql_ext" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 async-trait = "0.1.29"
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 maplit = "1.0"
-rand = { version = "0.7", features = ["small_rng"] }
 slog = { version="2.5", features=["max_level_debug"] }
 thiserror = "1.0"
 
@@ -46,9 +37,12 @@ filestore = { path = "../filestore" }
 fixtures = { path = "../tests/fixtures" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
 mutable_counters = { path = "../mutable_counters" }
+sql_construct = { path = "../common/sql_construct" }
+sql_ext = { path = "../common/rust/sql_ext" }
 tests_utils = { path = "../tests/utils" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 itertools = "0.8"
+rand = { version = "0.7", features = ["small_rng"] }
 tokio = { version = "=0.2.11", features = ["full"] }
 tokio-compat = "0.1"

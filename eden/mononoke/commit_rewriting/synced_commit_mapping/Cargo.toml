@@ -24,7 +24,6 @@ sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = 
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 futures-old = { package = "futures", version = "0.1" }
-itertools = "0.8"
 thiserror = "1.0"
 
 [dev-dependencies]
@@ -32,4 +31,3 @@ mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures = { version = "0.3", features = ["async-await", "compat"] }
-maplit = "1.0"

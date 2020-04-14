@@ -14,7 +14,6 @@ futures-util = "0.3"
 ratelimit_meter = "5"
 thiserror = "1.0"
 tokio = { version = "=0.2.11", features = ["full"] }
-tokio-compat = "0.1"
 tokio-old = { package = "tokio", version = "0.1" }
 
 [dev-dependencies]

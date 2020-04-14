@@ -26,13 +26,9 @@ metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
 movers = { path = "../movers" }
 pushrebase = { path = "../../pushrebase" }
-revset = { path = "../../revset" }
-sql_construct = { path = "../../common/sql_construct" }
-sql_ext = { path = "../../common/rust/sql_ext" }
 synced_commit_mapping = { path = "../synced_commit_mapping" }
 topo_sort = { path = "../../common/topo_sort" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
@@ -43,14 +39,16 @@ futures-util = "0.3"
 maplit = "1.0"
 slog = { version="2.5", features=["max_level_debug"] }
 thiserror = "1.0"
-tokio = { version = "=0.2.11", features = ["full"] }
-tokio-compat = "0.1"
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
 cross_repo_sync_test_utils = { path = "test_utils" }
 fixtures = { path = "../../tests/fixtures" }
-mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
+revset = { path = "../../revset" }
+sql_construct = { path = "../../common/sql_construct" }
+sql_ext = { path = "../../common/rust/sql_ext" }
 tests_utils = { path = "../../tests/utils" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 bytes = { version = "0.5", features = ["serde"] }
+tokio-compat = "0.1"

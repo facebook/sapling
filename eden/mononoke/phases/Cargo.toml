@@ -37,14 +37,12 @@ bytes = { version = "0.5", features = ["serde"] }
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 thiserror = "1.0"
-tokio = "0.1"
-tokio-compat = "0.1"
 
 [dev-dependencies]
 blobrepo = { path = "../blobrepo" }
-blobrepo_factory = { path = "../blobrepo/factory" }
 bookmarks = { path = "../bookmarks" }
 fixtures = { path = "../tests/fixtures" }
 mercurial_types-mocks = { path = "../mercurial/types/mocks" }
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
 maplit = "1.0"
+tokio-compat = "0.1"

@@ -25,7 +25,5 @@ futures = "0.1"
 
 [dev-dependencies]
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
-async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-tokio = "0.1"
 tokio-compat = "0.1"

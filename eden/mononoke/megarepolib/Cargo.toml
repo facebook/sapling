@@ -8,41 +8,24 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 blobrepo = { path = "../blobrepo" }
-blobrepo_utils = { path = "../blobrepo_utils" }
 blobstore = { path = "../blobstore" }
 bookmarks = { path = "../bookmarks" }
-cmdlib = { path = "../cmdlib" }
 context = { path = "../server/context" }
-cross_repo_sync = { path = "../commit_rewriting/cross_repo_sync" }
 manifest = { path = "../manifest" }
 mercurial_types = { path = "../mercurial/types" }
-metaconfig_types = { path = "../metaconfig/types" }
 mononoke_types = { path = "../mononoke_types" }
 movers = { path = "../commit_rewriting/movers" }
-phases = { path = "../phases" }
-revset = { path = "../revset" }
-skiplist = { path = "../reachabilityindex/skiplist" }
-synced_commit_mapping = { path = "../commit_rewriting/synced_commit_mapping" }
-cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
-clap = "2.33"
-futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
-futures-util = "0.3"
-itertools = "0.8"
-lazy_static = "1.0"
-maplit = "1.0"
-openssl = "0.10"
 slog = { version="2.5", features=["max_level_debug"] }
-slog-term = "2.4.2"
-tokio = "0.1"
-tokio-compat = "0.1"
-tokio-openssl = "0.2"
 
 [dev-dependencies]
 blobrepo_factory = { path = "../blobrepo/factory" }
 fixtures = { path = "../tests/fixtures" }
 async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures = { version = "0.3", features = ["async-await", "compat"] }
+maplit = "1.0"
+tokio-compat = "0.1"

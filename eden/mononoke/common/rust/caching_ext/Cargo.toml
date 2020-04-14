@@ -13,12 +13,11 @@ cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 memcache = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
-bufsize = "0.4"
 bytes = { version = "0.5", features = ["serde"] }
 futures = "0.1"
-maplit = "1.0"
 tokio = "0.1"
-tokio-compat = "0.1"
 
 [dev-dependencies]
+maplit = "1.0"
 quickcheck = "0.9"
+tokio-compat = "0.1"

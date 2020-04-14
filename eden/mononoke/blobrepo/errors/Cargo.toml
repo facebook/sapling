@@ -7,14 +7,8 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
-changesets = { path = "../../changesets" }
-context = { path = "../../server/context" }
 mercurial_types = { path = "../../mercurial/types" }
 mononoke_types = { path = "../../mononoke_types" }
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 ascii = "1.0"
 bincode = "1.2"
-futures = "0.1"
-maplit = "1.0"
-quickcheck = "0.9"
 thiserror = "1.0"
