@@ -11,6 +11,7 @@ use anyhow::Error;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::{err, ok};
 use futures_old::Future;
+use metaconfig_types::HgsqlName;
 use sql::{queries, Connection};
 use sql_construct::{SqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::SqlConnections;
@@ -105,20 +106,23 @@ impl SqlConstructFromMetadataDatabaseConfig for SqlRepoReadWriteStatus {}
 impl SqlRepoReadWriteStatus {
     fn query_read_write_state(
         &self,
-        repo_name: &String,
+        hgsql_name: &HgsqlName,
     ) -> impl Future<Item = Option<(HgMononokeReadWrite, Option<String>)>, Error = Error> {
-        GetReadWriteStatus::query(&self.read_connection, &repo_name)
+        GetReadWriteStatus::query(&self.read_connection, hgsql_name.as_ref())
             .map(|rows| rows.into_iter().next())
     }
 
     fn set_state(
         &self,
-        repo_name: &String,
+        hgsql_name: &HgsqlName,
         state: &HgMononokeReadWrite,
         reason: &String,
     ) -> impl Future<Item = bool, Error = Error> {
-        SetReadWriteStatus::query(&self.write_connection, &[(&repo_name, &state, &reason)])
-            .map(|res| res.affected_rows() > 0)
+        SetReadWriteStatus::query(
+            &self.write_connection,
+            &[(hgsql_name.as_ref(), &state, &reason)],
+        )
+        .map(|res| res.affected_rows() > 0)
     }
 }
 
@@ -126,26 +130,26 @@ impl SqlRepoReadWriteStatus {
 pub struct RepoReadWriteFetcher {
     sql_repo_read_write_status: Option<SqlRepoReadWriteStatus>,
     readonly_config: RepoReadOnly,
-    repo_name: String,
+    hgsql_name: HgsqlName,
 }
 
 impl RepoReadWriteFetcher {
     pub fn new(
         sql_repo_read_write_status: Option<SqlRepoReadWriteStatus>,
         readonly_config: RepoReadOnly,
-        repo_name: String,
+        hgsql_name: HgsqlName,
     ) -> Self {
         Self {
             sql_repo_read_write_status,
             readonly_config,
-            repo_name,
+            hgsql_name,
         }
     }
 
     fn query_read_write_state(&self) -> impl Future<Item = RepoReadOnly, Error = Error> {
         match &self.sql_repo_read_write_status {
             Some(status) => status
-                .query_read_write_state(&self.repo_name)
+                .query_read_write_state(&self.hgsql_name)
                 .map(|item| match item {
                     Some((HgMononokeReadWrite::MononokeWrite, _)) => RepoReadOnly::ReadWrite,
                     Some((_, reason)) => {
@@ -178,7 +182,7 @@ impl RepoReadWriteFetcher {
     ) -> impl Future<Item = bool, Error = Error> {
         match &self.sql_repo_read_write_status {
             Some(status) => status
-                .set_state(&self.repo_name, &state, &reason)
+                .set_state(&self.hgsql_name, &state, &reason)
                 .left_future(),
             None => err(Error::msg("db name is not specified")).right_future(),
         }
@@ -224,7 +228,7 @@ mod test {
             let fetcher = RepoReadWriteFetcher::new(
                 None,
                 ReadOnly(CONFIG_MSG.to_string()),
-                "repo".to_string(),
+                HgsqlName("repo".to_string()),
             );
 
             assert_eq!(
@@ -237,7 +241,7 @@ mod test {
     #[test]
     fn test_readwrite_config_no_sqlite() {
         async_unit::tokio_unit_test(async move {
-            let fetcher = RepoReadWriteFetcher::new(None, ReadWrite, "repo".to_string());
+            let fetcher = RepoReadWriteFetcher::new(None, ReadWrite, HgsqlName("repo".to_string()));
             assert_eq!(fetcher.readonly().compat().await.unwrap(), ReadWrite);
         });
     }
@@ -250,7 +254,7 @@ mod test {
             let fetcher = RepoReadWriteFetcher::new(
                 Some(sql_repo_read_write_status),
                 ReadOnly(CONFIG_MSG.to_string()),
-                "repo".to_string(),
+                HgsqlName("repo".to_string()),
             );
             assert_eq!(
                 fetcher.readonly().compat().await.unwrap(),
@@ -267,7 +271,7 @@ mod test {
             let fetcher = RepoReadWriteFetcher::new(
                 Some(sql_repo_read_write_status),
                 ReadWrite,
-                "repo".to_string(),
+                HgsqlName("repo".to_string()),
             );
             // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
             assert_eq!(
@@ -316,7 +320,7 @@ mod test {
             let fetcher = RepoReadWriteFetcher::new(
                 Some(sql_repo_read_write_status),
                 ReadWrite,
-                "repo".to_string(),
+                HgsqlName("repo".to_string()),
             );
 
             InsertStateWithReason::query(
@@ -346,7 +350,7 @@ mod test {
             let fetcher = RepoReadWriteFetcher::new(
                 Some(sql_repo_read_write_status),
                 ReadWrite,
-                "repo".to_string(),
+                HgsqlName("repo".to_string()),
             );
             // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
             assert_eq!(
@@ -395,7 +399,7 @@ mod test {
             let fetcher = RepoReadWriteFetcher::new(
                 Some(sql_repo_read_write_status),
                 ReadWrite,
-                "repo".to_string(),
+                HgsqlName("repo".to_string()),
             );
             // As the DB hasn't been populated for this row, ensure that we mark the repo as locked.
             assert_eq!(

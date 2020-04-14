@@ -84,6 +84,7 @@ impl MononokeRepoBuilder {
             list_keys_patterns_max,
             readonly,
             skiplist_index_blobstore_key,
+            hgsql_name,
             ..
         } = config;
 
@@ -145,7 +146,7 @@ impl MononokeRepoBuilder {
             .await?;
 
         let read_write_fetcher =
-            RepoReadWriteFetcher::new(sql_read_write_status, readonly, repo.name().clone());
+            RepoReadWriteFetcher::new(sql_read_write_status, readonly, hgsql_name);
 
         let lca_hint: Arc<dyn LeastCommonAncestorsHint> = skiplist;
 
