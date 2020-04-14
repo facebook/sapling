@@ -882,8 +882,7 @@ class EdenCheckout:
             # This is the checkout root
             return Path()
 
-        # pyre-fixme[22]: The cast is redundant.
-        curdir = cast(Path, path.parent)
+        curdir = path.parent
         path_parts = [path.name]
         while True:
             stat = curdir.lstat()
@@ -898,8 +897,7 @@ class EdenCheckout:
                 )
 
             path_parts.append(curdir.name)
-            # pyre-fixme[22]: The cast is redundant.
-            curdir = typing.cast(Path, curdir.parent)
+            curdir = curdir.parent
 
     def get_config(self) -> CheckoutConfig:
         config = self._config
