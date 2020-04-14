@@ -36,21 +36,17 @@ use futures::{
     future::{self, ready, try_join, try_join3, TryFutureExt},
     stream::{self, FuturesUnordered, Stream, StreamExt, TryStreamExt},
 };
-use futures_ext::{spawn_future, FutureExt as OldFutureExt};
-use futures_old::{
-    future as old_future, stream as old_stream, Future as OldFuture, IntoFuture,
-    Stream as OldStream,
-};
+use futures_ext::FutureExt as OldFutureExt;
+use futures_old::{stream as old_stream, Future as OldFuture, Stream as OldStream};
 use futures_stats::Timed;
 use futures_stats::TimedFutureExt;
 use lock_ext::LockExt;
 use manifest::find_intersection_of_diffs;
-use mononoke_types::{ChangesetId, FileUnodeId, MPath, RepositoryId};
+use mononoke_types::{ChangesetId, FileUnodeId, RepositoryId};
 use phases::SqlPhases;
 use slog::{info, Logger};
 use stats::prelude::*;
 use std::{
-    collections::HashMap,
     fs,
     path::Path,
     sync::{
@@ -541,8 +537,8 @@ async fn unode_warmup(
                 unode_mf_id,
                 parent_unodes,
             )
-            .for_each(|_| Ok(()))
             .compat()
+            .try_for_each(|_| async { Ok(()) })
             .await
         };
         futs.push(f);
@@ -687,40 +683,34 @@ async fn prefetch_content(
     repo: &BlobRepo,
     csid: &ChangesetId,
 ) -> Result<(), Error> {
-    // TODO convert to new future when no longer using spawn_future
-    fn prefetch_content_unode(
+    async fn prefetch_content_unode<'a>(
         ctx: CoreContext,
         blobstore: Arc<dyn Blobstore>,
-        renames: &HashMap<MPath, FileUnodeId>,
-        path: MPath,
+        rename: Option<FileUnodeId>,
         file_unode_id: FileUnodeId,
-    ) -> impl OldFuture<Item = (), Error = Error> {
-        let rename = renames.get(&path).copied();
-        file_unode_id
-            .load(ctx.clone(), &blobstore)
-            .from_err()
-            .and_then(move |file_unode| {
-                let parents_content: Vec<_> = file_unode
-                    .parents()
-                    .iter()
-                    .cloned()
-                    .chain(rename)
-                    .map({
-                        cloned!(ctx, blobstore);
-                        move |file_unode_id| {
-                            fetch_file_full_content(ctx.clone(), blobstore.clone(), file_unode_id)
-                        }
-                    })
-                    .collect();
-
-                (
-                    fetch_file_full_content(ctx.clone(), blobstore.clone(), file_unode_id),
-                    old_future::join_all(parents_content),
-                )
-                    .into_future()
-                    .map(|_| ())
+    ) -> Result<(), Error> {
+        let ctx = &ctx;
+        let file_unode = file_unode_id.load(ctx.clone(), &blobstore).compat().await?;
+        let parents_content: Vec<_> = file_unode
+            .parents()
+            .iter()
+            .cloned()
+            .chain(rename)
+            .map({
+                cloned!(blobstore);
+                move |file_unode_id| {
+                    fetch_file_full_content(ctx.clone(), blobstore.clone(), file_unode_id).compat()
+                }
             })
-            .boxify()
+            .collect();
+
+        // the assignment is needed to avoid unused_must_use warnings
+        let _ = future::try_join(
+            fetch_file_full_content(ctx.clone(), blobstore.clone(), file_unode_id).compat(),
+            future::try_join_all(parents_content),
+        )
+        .await?;
+        Ok(())
     }
 
     let bonsai = csid.load(ctx.clone(), repo.blobstore()).compat().await?;
@@ -745,6 +735,7 @@ async fn prefetch_content(
     .await?;
 
     let blobstore = repo.get_blobstore().boxed();
+
     find_intersection_of_diffs(
         ctx.clone(),
         blobstore.clone(),
@@ -752,18 +743,20 @@ async fn prefetch_content(
         parents_manifests,
     )
     .filter_map(|(path, entry)| Some((path?, entry.into_leaf()?)))
-    .map(move |(path, file)| {
-        spawn_future(prefetch_content_unode(
-            ctx.clone(),
-            blobstore.clone(),
-            &renames,
-            path,
-            file,
-        ))
+    .compat()
+    .map(|result| async {
+        match result {
+            Ok((path, file)) => {
+                let rename = renames.get(&path).copied();
+                let fut = prefetch_content_unode(ctx.clone(), blobstore.clone(), rename, file);
+                let join_handle = tokio::task::spawn(fut);
+                join_handle.await?
+            }
+            Err(e) => Err(e),
+        }
     })
     .buffered(256)
-    .for_each(|_| Ok(()))
-    .compat()
+    .try_for_each(|()| future::ready(Ok(())))
     .await
 }
 
