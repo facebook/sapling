@@ -30,17 +30,9 @@ hint = registrar.hint()
 revsetpredicate = registrar.revsetpredicate()
 
 
-@hint("since-last-arc-diff")
-def sincelastarcdiff():
-    return _("--since-last-arc-diff is deprecated, use --since-last-submit")
-
-
 def extsetup(ui):
     entry = extensions.wrapcommand(commands.table, "diff", _diff)
     options = entry[1]
-    options.append(
-        ("", "since-last-arc-diff", None, _("Deprecated alias for --since-last-submit"))
-    )
     options.append(
         ("", "since-last-submit", None, _("show changes since last Phabricator submit"))
     )
@@ -151,11 +143,8 @@ def _diff(orig, ui, repo, *pats, **opts):
     ):
         return orig(ui, repo, *pats, **opts)
 
-    if opts.get("since_last_arc_diff"):
-        hintutil.trigger("since-last-arc-diff")
-
     if len(opts["rev"]) > 1:
-        mess = _("cannot specify --since-last-arc-diff with multiple revisions")
+        mess = _("cannot specify --since-last-submit with multiple revisions")
         raise error.Abort(mess)
     try:
         targetrev = opts["rev"][0]
