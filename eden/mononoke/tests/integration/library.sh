@@ -593,6 +593,12 @@ enabled=${ENABLED:-true}
 hash_validation_percentage=100
 CONFIG
 
+if [[ -v HGSQL_NAME ]]; then
+  cat >> "repos/$reponame/server.toml" <<CONFIG
+hgsql_name="$HGSQL_NAME"
+CONFIG
+fi
+
 if [[ ! -v NO_BOOKMARKS_CACHE ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG
 bookmarks_cache_ttl=2000

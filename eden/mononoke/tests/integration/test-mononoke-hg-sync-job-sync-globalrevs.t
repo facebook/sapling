@@ -8,7 +8,12 @@
 
 setup configuration
 
-  $ DISALLOW_NON_PUSHREBASE=1 ASSIGN_GLOBALREVS=1 EMIT_OBSMARKERS=1 BLOB_TYPE="blob_files" quiet default_setup
+  $ DISALLOW_NON_PUSHREBASE=1 \
+  > ASSIGN_GLOBALREVS=1 \
+  > EMIT_OBSMARKERS=1 \
+  > BLOB_TYPE="blob_files" \
+  > HGSQL_NAME=foorepo \
+  > quiet default_setup
   $ hg up -q master_bookmark
 
 Push commit, check a globalrev was assigned
@@ -25,16 +30,15 @@ Sync a pushrebase bookmark move. This will fail because Globalrevs aren't initia
   $ GLOBALREVS_DB="$TESTTMP/globalrevs"
   $ cd "$TESTTMP"
   $ mononoke_hg_sync repo-hg 1 --generate-bundles --hgsql-globalrevs-use-sqlite --hgsql-globalrevs-db-addr "$GLOBALREVS_DB" 2>&1 | grep "Attempted to move Globalrev"
-      Attempted to move Globalrev for repository HgsqlName("repo") backwards to 1000147970
+      Attempted to move Globalrev for repository HgsqlName("foorepo") backwards to 1000147970
 
 Update the repo. Sync again
-  $ sqlite3 "$GLOBALREVS_DB" "INSERT INTO revision_references(repo, namespace, name, value) VALUES (CAST('repo' AS BLOB), 'counter', 'commit', 1);"
-  $ mononoke_hg_sync repo-hg 1 --generate-bundles --hgsql-globalrevs-use-sqlite --hgsql-globalrevs-db-addr "$GLOBALREVS_DB" 2>&1 | grep "successful sync"
-  * successful sync of entries [2] (glob)
+  $ sqlite3 "$GLOBALREVS_DB" "INSERT INTO revision_references(repo, namespace, name, value) VALUES (CAST('foorepo' AS BLOB), 'counter', 'commit', 1);"
+  $ quiet mononoke_hg_sync repo-hg 1 --generate-bundles --hgsql-globalrevs-use-sqlite --hgsql-globalrevs-db-addr "$GLOBALREVS_DB"
 
 Check the DB
   $ sqlite3 "$GLOBALREVS_DB" "SELECT * FROM revision_references;"
-  repo|counter|commit|1000147970
+  foorepo|counter|commit|1000147970
 
 Check that running wihtout generate bundles fails
 
