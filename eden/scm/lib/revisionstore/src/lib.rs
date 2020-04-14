@@ -47,8 +47,7 @@ pub mod unionhistorystore;
 pub use crate::contentstore::{ContentStore, ContentStoreBuilder};
 pub use crate::datapack::{DataEntry, DataPack, DataPackVersion};
 pub use crate::datastore::{
-    ContentDataStore, ContentMetadata, Delta, HgIdDataStore, HgIdMutableDeltaStore, Metadata,
-    RemoteDataStore,
+    ContentDataStore, ContentMetadata, Delta, HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore,
 };
 pub use crate::edenapi::EdenApiHgIdRemoteStore;
 pub use crate::historypack::{HistoryEntry, HistoryPack, HistoryPackVersion};
@@ -72,6 +71,7 @@ pub use crate::uniondatastore::UnionHgIdDataStore;
 pub use crate::util::Error;
 
 pub use indexedlog::Repair as IndexedlogRepair;
+pub use revisionstore_types::*;
 
 #[cfg(any(test, feature = "for-tests"))]
 pub mod testutil;

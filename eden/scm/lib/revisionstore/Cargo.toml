@@ -27,6 +27,7 @@ lfs_protocol = { path = "../../../mononoke/lfs_protocol" }
 parking_lot = "0.9"
 rand = "0.7"
 reqwest = "0.10"
+revisionstore_types = { path = "types" }
 serde = "1.0.84"
 serde_derive = "1.0.84"
 serde_json = "1.0"

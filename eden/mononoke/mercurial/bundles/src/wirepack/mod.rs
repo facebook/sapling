@@ -15,7 +15,7 @@ use byteorder::{BigEndian, ByteOrder};
 use bytes_old::{BufMut, BytesMut};
 
 use mercurial_types::{Delta, HgNodeHash, RepoPath, NULL_HASH};
-use revisionstore::Metadata;
+use revisionstore_types::Metadata;
 
 use crate::delta;
 use crate::errors::ErrorKind;

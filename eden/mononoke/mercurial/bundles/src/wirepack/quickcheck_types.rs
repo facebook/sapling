@@ -11,7 +11,7 @@ use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use rand::Rng;
 
 use mercurial_types::{Delta, HgNodeHash, MPath, RepoPath, NULL_HASH};
-use revisionstore::Metadata;
+use revisionstore_types::Metadata;
 
 use super::{DataEntry, HistoryEntry, Kind};
 
