@@ -137,7 +137,7 @@ struct EffectiveUserScope {
   ~EffectiveUserScope();
 
  private:
-  EffectiveUserScope() = delete;
+  explicit EffectiveUserScope() = delete;
   EffectiveUserScope(const EffectiveUserScope&) = delete;
   EffectiveUserScope(EffectiveUserScope&&) = delete;
   EffectiveUserScope& operator=(const EffectiveUserScope&) = delete;

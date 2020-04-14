@@ -28,7 +28,7 @@ class Enumerator {
       const std::wstring& path,
       std::vector<FileMetadata> entryList);
 
-  Enumerator() = delete;
+  explicit Enumerator() = delete;
 
   const FileMetadata* current();
 

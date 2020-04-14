@@ -21,7 +21,7 @@ template <typename Record>
 struct InodeTableEntry {
   enum { VERSION = Record::VERSION };
 
-  InodeTableEntry() = delete;
+  explicit InodeTableEntry() = delete;
   InodeTableEntry(InodeNumber ino, const Record& rec)
       : inode{ino}, record{rec} {}
 
@@ -79,7 +79,7 @@ class InodeTable {
  public:
   using Entry = detail::InodeTableEntry<Record>;
 
-  InodeTable() = delete;
+  explicit InodeTable() = delete;
   InodeTable(const InodeTable&) = delete;
   InodeTable(InodeTable&&) = delete;
 

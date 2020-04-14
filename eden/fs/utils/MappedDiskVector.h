@@ -235,7 +235,7 @@ class MappedDiskVector {
     return initializeFromScratch(std::move(file));
   }
 
-  MappedDiskVector() = delete;
+  explicit MappedDiskVector() = delete;
   MappedDiskVector(const MappedDiskVector&) = delete;
   MappedDiskVector& operator=(const MappedDiskVector&) = delete;
 

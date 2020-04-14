@@ -395,7 +395,7 @@ class PathComponentBase : public PathBase<
   using base_type::base_type;
 
   /// Forbid empty PathComponents
-  PathComponentBase() = delete;
+  explicit PathComponentBase() = delete;
 };
 
 /**

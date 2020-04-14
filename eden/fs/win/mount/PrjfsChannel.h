@@ -23,7 +23,7 @@ class PrjfsChannel : public FsChannel {
   PrjfsChannel(const PrjfsChannel&) = delete;
   PrjfsChannel& operator=(const PrjfsChannel&) = delete;
 
-  PrjfsChannel() = delete;
+  explicit PrjfsChannel() = delete;
 
   PrjfsChannel(EdenMount* mount);
   ~PrjfsChannel();
