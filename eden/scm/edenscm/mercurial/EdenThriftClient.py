@@ -112,10 +112,6 @@ class EdenThriftClient(object):
         """
         return create_thrift_client(socket_path=self._socket_path)
 
-    def getManifestEntry(self, relativePath):
-        with self._get_client() as client:
-            return client.getManifestEntry(self._eden_root, relativePath)
-
     def setHgParents(self, p1, p2, need_flush=True):
         if p2 == node.nullid:
             p2 = None
