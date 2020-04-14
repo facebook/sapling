@@ -25,7 +25,7 @@ Sync a pushrebase bookmark move. This will fail because Globalrevs aren't initia
   $ GLOBALREVS_DB="$TESTTMP/globalrevs"
   $ cd "$TESTTMP"
   $ mononoke_hg_sync repo-hg 1 --generate-bundles --hgsql-globalrevs-use-sqlite --hgsql-globalrevs-db-addr "$GLOBALREVS_DB" 2>&1 | grep "Attempted to move Globalrev"
-      Attempted to move Globalrev for repository repo backwards to 1000147970
+      Attempted to move Globalrev for repository HgsqlName("repo") backwards to 1000147970
 
 Update the repo. Sync again
   $ sqlite3 "$GLOBALREVS_DB" "INSERT INTO revision_references(repo, namespace, name, value) VALUES (CAST('repo' AS BLOB), 'counter', 'commit', 1);"

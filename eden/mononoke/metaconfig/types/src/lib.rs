@@ -1221,3 +1221,15 @@ impl TryFrom<RawSourceControlServiceMonitoring> for SourceControlServiceMonitori
 /// Represents the repository name for this repository in Hgsql.
 #[derive(Debug, Default, Clone, Eq, PartialEq)]
 pub struct HgsqlName(pub String);
+
+impl AsRef<str> for HgsqlName {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl AsRef<String> for HgsqlName {
+    fn as_ref(&self) -> &String {
+        &self.0
+    }
+}
