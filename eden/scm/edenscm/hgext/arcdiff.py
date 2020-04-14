@@ -136,11 +136,7 @@ def _maybepull(repo, hexrev):
 
 
 def _diff(orig, ui, repo, *pats, **opts):
-    if (
-        not opts.get("since_last_submit")
-        and not opts.get("since_last_arc_diff")
-        and not opts.get("since_last_submit_2o")
-    ):
+    if not opts.get("since_last_submit") and not opts.get("since_last_submit_2o"):
         return orig(ui, repo, *pats, **opts)
 
     if len(opts["rev"]) > 1:
