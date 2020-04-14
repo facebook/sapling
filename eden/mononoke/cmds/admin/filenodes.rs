@@ -119,7 +119,7 @@ fn log_filenode(
     info!(logger, "-- linknode: {:?}", linknode);
     info!(logger, "-- content id: {:?}", envelope?.content_id());
     info!(logger, "-- content size: {:?}", envelope?.content_size());
-
+    info!(logger, "-- metadata: {:?}", envelope?.metadata());
     Some(())
 }
 
