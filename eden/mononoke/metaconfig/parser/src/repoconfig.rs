@@ -29,10 +29,11 @@ use maplit::hashmap;
 use metaconfig_types::{
     BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, CommitSyncConfig,
     CommitSyncDirection, CommonConfig, DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig,
-    HookBypass, HookConfig, HookManagerParams, HookParams, HookType, InfinitepushNamespace,
-    InfinitepushParams, LfsParams, PushParams, PushrebaseFlags, PushrebaseParams, Redaction,
-    RepoConfig, RepoReadOnly, SmallRepoCommitSyncConfig, SourceControlServiceParams, StorageConfig,
-    UnodeVersion, WhitelistEntry, WireprotoLoggingConfig,
+    HgsqlName, HookBypass, HookConfig, HookManagerParams, HookParams, HookType,
+    InfinitepushNamespace, InfinitepushParams, LfsParams, PushParams, PushrebaseFlags,
+    PushrebaseParams, Redaction, RepoConfig, RepoReadOnly, SmallRepoCommitSyncConfig,
+    SourceControlServiceParams, StorageConfig, UnodeVersion, WhitelistEntry,
+    WireprotoLoggingConfig,
 };
 use mononoke_types::{MPath, RepositoryId};
 use regex::Regex;
@@ -74,6 +75,7 @@ impl RepoConfigs {
 
         for (reponame, raw_repo_config) in &repos {
             let config = RepoConfigs::process_single_repo_config(
+                &reponame,
                 raw_repo_config.clone(),
                 &storage,
                 &commit_sync,
@@ -370,6 +372,7 @@ impl RepoConfigs {
     }
 
     fn process_single_repo_config(
+        reponame: &str,
         raw_config: RawRepoConfig,
         storage_config: &HashMap<String, RawStorageConfig>,
         commit_sync: &HashMap<String, CommitSyncConfig>,
@@ -393,6 +396,7 @@ impl RepoConfigs {
             all_hook_params.push(hook_params);
         }
         Ok(RepoConfigs::convert_conf(
+            reponame,
             raw_config,
             storage_config,
             commit_sync,
@@ -443,6 +447,7 @@ impl RepoConfigs {
     }
 
     fn convert_conf(
+        reponame: &str,
         this: RawRepoConfig,
         common_storage: &HashMap<String, RawStorageConfig>,
         commit_sync: &HashMap<String, CommitSyncConfig>,
@@ -807,6 +812,7 @@ impl RepoConfigs {
             source_control_service,
             source_control_service_monitoring,
             derived_data_config,
+            hgsql_name: HgsqlName(this.hgsql_name.unwrap_or_else(|| reponame.to_string())),
         })
     }
 
@@ -1434,6 +1440,7 @@ mod test {
             scuba_table="scuba_table"
             scuba_table_hooks="scm_hooks"
             storage_config="files"
+            hgsql_name = "www-foobar"
 
             [storage.files.metadata.local]
             local_db_path = "/tmp/www"
@@ -1626,6 +1633,7 @@ mod test {
                     scuba_table: None,
                     unode_version: UnodeVersion::V2,
                 },
+                hgsql_name: HgsqlName("fbsource".to_string()),
             },
         );
 
@@ -1671,6 +1679,7 @@ mod test {
                 source_control_service: SourceControlServiceParams::default(),
                 source_control_service_monitoring: None,
                 derived_data_config: DerivedDataConfig::default(),
+                hgsql_name: HgsqlName("www-foobar".to_string()),
             },
         );
         assert_eq!(
@@ -1926,6 +1935,7 @@ mod test {
                 generation_cache_size: 10 * 1024 * 1024,
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,
+                hgsql_name: HgsqlName("test".to_string()),
                 ..Default::default()
             }
         };
@@ -1995,6 +2005,7 @@ mod test {
                 generation_cache_size: 10 * 1024 * 1024,
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,
+                hgsql_name: HgsqlName("test".to_string()),
                 ..Default::default()
             }
         };

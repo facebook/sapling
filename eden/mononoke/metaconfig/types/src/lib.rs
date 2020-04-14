@@ -136,6 +136,8 @@ pub struct RepoConfig {
     pub source_control_service_monitoring: Option<SourceControlServiceMonitoring>,
     /// Derived data config for this repo
     pub derived_data_config: DerivedDataConfig,
+    /// Name of this repository in hgsql.
+    pub hgsql_name: HgsqlName,
 }
 
 /// Config for derived data
@@ -1215,3 +1217,7 @@ impl TryFrom<RawSourceControlServiceMonitoring> for SourceControlServiceMonitori
         })
     }
 }
+
+/// Represents the repository name for this repository in Hgsql.
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct HgsqlName(pub String);

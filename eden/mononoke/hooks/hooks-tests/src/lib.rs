@@ -27,14 +27,8 @@ use hooks_content_stores::{
     BlobRepoFileContentFetcher, FileContentFetcher, InMemoryFileContentFetcher,
 };
 use maplit::{btreemap, hashmap, hashset};
-use metaconfig_types::{
-    BlobConfig, BookmarkParams, Bundle2ReplayParams, DerivedDataConfig, HookConfig, HookParams,
-    HookType, InfinitepushParams, LocalDatabaseConfig, MetadataDatabaseConfig, Redaction,
-    RepoConfig, RepoReadOnly, SourceControlServiceParams, StorageConfig,
-};
-use mononoke_types::{
-    BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileType, MPath, RepositoryId,
-};
+use metaconfig_types::{BookmarkParams, HookConfig, HookParams, HookType, RepoConfig};
+use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileType, MPath};
 use mononoke_types_mocks::contentid::{ONES_CTID, THREES_CTID, TWOS_CTID};
 use regex::Regex;
 use scuba_ext::ScubaSampleBuilder;
@@ -1149,52 +1143,10 @@ async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
     )
 }
 
-fn default_repo_config() -> RepoConfig {
-    RepoConfig {
-        storage_config: StorageConfig {
-            blobstore: BlobConfig::Disabled,
-            metadata: MetadataDatabaseConfig::Local(LocalDatabaseConfig {
-                path: "/some/place".into(),
-            }),
-        },
-        write_lock_db_address: None,
-        enabled: true,
-        generation_cache_size: 1,
-        repoid: RepositoryId::new(1),
-        scuba_table: None,
-        scuba_local_path: None,
-        scuba_table_hooks: None,
-        scuba_local_path_hooks: None,
-        cache_warmup: None,
-        hook_manager_params: None,
-        bookmarks_cache_ttl: None,
-        bookmarks: vec![],
-        hooks: vec![],
-        push: Default::default(),
-        pushrebase: Default::default(),
-        lfs: Default::default(),
-        wireproto_logging: Default::default(),
-        hash_validation_percentage: 0,
-        readonly: RepoReadOnly::ReadWrite,
-        redaction: Redaction::Enabled,
-        skiplist_index_blobstore_key: None,
-        bundle2_replay_params: Bundle2ReplayParams::default(),
-        infinitepush: InfinitepushParams::default(),
-        list_keys_patterns_max: 123,
-        filestore: None,
-        commit_sync_config: None,
-        hook_max_file_size: 456,
-        hipster_acl: None,
-        source_control_service: SourceControlServiceParams::default(),
-        source_control_service_monitoring: None,
-        derived_data_config: DerivedDataConfig::default(),
-    }
-}
-
 #[fbinit::test]
 fn test_verify_integrity_fast_failure(fb: FacebookInit) {
     async_unit::tokio_unit_test(async move {
-        let mut config = default_repo_config();
+        let mut config = RepoConfig::default();
         config.bookmarks = vec![BookmarkParams {
             bookmark: Regex::new("bm2").unwrap().into(),
             hooks: vec!["rust:verify_integrity".into()],
@@ -1220,7 +1172,7 @@ fn test_verify_integrity_fast_failure(fb: FacebookInit) {
 #[fbinit::test]
 fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
     async_unit::tokio_unit_test(async move {
-        let mut config = default_repo_config();
+        let mut config = RepoConfig::default();
         config.bookmarks = vec![BookmarkParams {
             bookmark: BookmarkName::new("bm1").unwrap().into(),
             hooks: vec!["rust:hook1".into()],
@@ -1252,7 +1204,7 @@ fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
 #[fbinit::test]
 fn test_load_disabled_hooks(fb: FacebookInit) {
     async_unit::tokio_unit_test(async move {
-        let mut config = default_repo_config();
+        let mut config = RepoConfig::default();
 
         config.bookmarks = vec![];
 
@@ -1272,7 +1224,7 @@ fn test_load_disabled_hooks(fb: FacebookInit) {
 #[fbinit::test]
 fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
     async_unit::tokio_unit_test(async move {
-        let mut config = default_repo_config();
+        let mut config = RepoConfig::default();
 
         config.bookmarks = vec![BookmarkParams {
             bookmark: BookmarkName::new("bm1").unwrap().into(),
@@ -1298,7 +1250,7 @@ fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
 #[fbinit::test]
 fn test_load_disabled_hooks_hook_does_not_exist(fb: FacebookInit) {
     async_unit::tokio_unit_test(async move {
-        let mut config = default_repo_config();
+        let mut config = RepoConfig::default();
 
         config.bookmarks = vec![];
         config.hooks = vec![];
