@@ -142,7 +142,7 @@ Push files
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark master_bookmark)
 
-Update blacklisted blob
+Update redacted blob
   $ cd "$TESTTMP/repo-push"
   $ echo "testcupdate" > c
   $ hg ci -q -m "uncensore c"
@@ -165,7 +165,7 @@ Update blacklisted blob
   14961831bd3af3a6331fef7e63367d61cb6c9f6b
   ac82d8b1f7c418c61a493ed229ffaa981bda8e90
 
-Censore the blacklisted blob (file 'c' in commit '064d994d0240f9738dba1ef7479f0a4ce8486b05')
+Censore the redacted blob (file 'c' in commit '064d994d0240f9738dba1ef7479f0a4ce8486b05')
   $ mononoke_admin redaction add my_task 064d994d0240f9738dba1ef7479f0a4ce8486b05 c
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: * (glob)
@@ -198,7 +198,7 @@ Restart mononoke
   o  ac82d8b1f7c4 public 'add a'
   
 
-The content of the blacklisted file is replaced by a string
+The content of the redacted file is replaced by a string
   $ cat c
   This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.
 
@@ -206,7 +206,7 @@ Diff and Status should not see any change made to file c, even if it contains th
   $ hgmn status
   $ hgmn diff
 
-Try push a new version of a blacklisted blob
+Try push a new version of a redacted blob
   $ cd "$TESTTMP/repo-push2"
   $ touch "test12" > c
   $ hg ci -q -m "update c"
@@ -221,7 +221,7 @@ Try push a new version of a blacklisted blob
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 
-As of the time of writing, updating blacklisted files throws an error - artifact of the existing implementation.
+As of the time of writing, updating redacted files throws an error - artifact of the existing implementation.
   $ hgmn push -r . --to master_bookmark
   pushing rev bb65510879c8 to destination ssh://user@dummy/repo bookmark master_bookmark
   searching for changes
@@ -280,7 +280,7 @@ As of the time of writing, updating blacklisted files throws an error - artifact
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (leaving bookmark master_bookmark)
 
-Expect success (no blob in this commit is blacklisted)
+Expect success (no blob in this commit is redacted)
   $ hgmn up bbb84cdc8ec0
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
@@ -352,7 +352,7 @@ Should be successful
   o  ac82d8b1f7c4 public 'add a'
   
 
-Updating from a commit that contains a blacklisted file to another commit should succeed
+Updating from a commit that contains a redacted file to another commit should succeed
   $ hgmn up -q bbb84cdc8ec0
 
   $ tglogpnr

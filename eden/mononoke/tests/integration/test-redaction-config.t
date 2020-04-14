@@ -67,7 +67,7 @@ start mononoke
   $ hgmn pull -q
   $ hgmn up -q 14961831bd3a
 
-Censor the blacklisted blob (file 'b' in commit '14961831bd3af3a6331fef7e63367d61cb6c9f6b')
+Censor the redacted blob (file 'b' in commit '14961831bd3af3a6331fef7e63367d61cb6c9f6b')
   $ mononoke_admin redaction add my_task 14961831bd3af3a6331fef7e63367d61cb6c9f6b b
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: * (glob)
@@ -97,7 +97,7 @@ Restart mononoke
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 
-Should not succeed since the commit modifies a blacklisted file
+Should not succeed since the commit modifies a redacted file
   $ hgmn push -q -r .  --to master_bookmark
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
@@ -128,7 +128,7 @@ Restart mononoke and disable redaction verification
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 
-Even is file b is blacklisted, push won't fail because redaction verification is disabled
+Even is file b is redacted, push won't fail because redaction verification is disabled
   $ hgmn push -q -r .  --to master_bookmark
 
   $ tglogpnr

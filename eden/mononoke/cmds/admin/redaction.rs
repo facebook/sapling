@@ -277,7 +277,7 @@ fn redaction_list(
         .and_then(move |(ctx, blobrepo, redacted_blobs, cs_id)| {
             info!(
                 logger,
-                "Listing blacklisted files for ChangesetId: {:?}", cs_id
+                "Listing redacted files for ChangesetId: {:?}", cs_id
             );
             info!(logger, "Please be patient.");
             redacted_blobs
@@ -297,7 +297,7 @@ fn redaction_list(
                             cloned!(logger);
                             move |mut res| {
                                 if res.len() == 0 {
-                                    info!(logger, "No files are blacklisted at this commit");
+                                    info!(logger, "No files are redacted at this commit");
                                 } else {
                                     res.sort();
                                     res.into_iter().for_each(|(task_id, file_path)| {

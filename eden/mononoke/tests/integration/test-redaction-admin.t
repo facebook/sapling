@@ -123,25 +123,25 @@ Fewer entries in the table
   1|content.blake2.21c519fe0eb401bc97888f270902935f858d0c5361211f892fd26ed9ce127ff9|[TASK]Censor b|* (glob)
   2|content.blake2.096c8cc4a38f793ac05fc3506ed6346deb5b857100642adbf4de6720411b10e2|[TASK]Censor c|* (glob)
 
-Let's make sure multiple files can be blacklisted under the same task
+Let's make sure multiple files can be redacted under the same task
   $ mononoke_admin redaction add "[TASK]Censor b" 2cc2702dde1d7133c30a1ed763ee82c04befb237 dir/g
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
 
-List blacklisted files:
+List redacted files:
   $ mononoke_admin redaction list 2cc2702dde1d7133c30a1ed763ee82c04befb237
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
-  * Listing blacklisted files for ChangesetId: HgChangesetId(HgNodeHash(Sha1(2cc2702dde1d7133c30a1ed763ee82c04befb237))) (glob)
+  * Listing redacted files for ChangesetId: HgChangesetId(HgNodeHash(Sha1(2cc2702dde1d7133c30a1ed763ee82c04befb237))) (glob)
   * Please be patient. (glob)
   * [TASK]Censor b      : b (glob)
   * [TASK]Censor b      : dir/g (glob)
   * [TASK]Censor c      : dir/c (glob)
 
-List blacklisted files for a commit without any
+List redacted files for a commit without any
   $ mononoke_admin redaction list ac82d8b1f7c418c61a493ed229ffaa981bda8e90
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(*)) (glob)
-  * Listing blacklisted files for ChangesetId: HgChangesetId(HgNodeHash(Sha1(ac82d8b1f7c418c61a493ed229ffaa981bda8e90))) (glob)
+  * Listing redacted files for ChangesetId: HgChangesetId(HgNodeHash(Sha1(ac82d8b1f7c418c61a493ed229ffaa981bda8e90))) (glob)
   * Please be patient. (glob)
-  * No files are blacklisted at this commit (glob)
+  * No files are redacted at this commit (glob)
