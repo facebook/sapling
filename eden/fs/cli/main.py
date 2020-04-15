@@ -26,6 +26,7 @@ from fb303_core.ttypes import fb303_status
 from . import (
     buck,
     config as config_mod,
+    daemon,
     debug as debug_mod,
     doctor as doctor_mod,
     filesystem,
@@ -50,7 +51,7 @@ from .util import ShutdownError, print_stderr
 if sys.platform == "win32":
     from . import daemon_util, winproc
 else:
-    from . import daemon, fsck as fsck_mod, rage as rage_mod
+    from . import fsck as fsck_mod, rage as rage_mod
 
 
 subcmd = subcmd_mod.Decorator()
@@ -574,16 +575,9 @@ re-run `eden clone` with --allow-empty-repo"""
             print("edenfs daemon is not currently running.  Starting edenfs...")
             # Sometimes this returns a non-zero exit code if it does not finish
             # startup within the default timeout.
-            if instance.should_use_experimental_systemd_mode():
-                exit_code = daemon.start_systemd_service(
-                    instance=instance,
-                    daemon_binary=args.daemon_binary,
-                    edenfs_args=args.edenfs_args,
-                )
-            else:
-                exit_code = daemon.start_daemon(
-                    instance, args.daemon_binary, args.edenfs_args
-                )
+            exit_code = daemon.start_daemon(
+                instance, args.daemon_binary, args.edenfs_args
+            )
             if exit_code != 0:
                 return exit_code
 
@@ -1250,7 +1244,9 @@ class StartCmd(Subcmd):
                 "TODO(T33122320): Implement 'eden start --takeover'"
             )
 
-        return daemon.start_systemd_service(
+        from . import systemd_service
+
+        return systemd_service.start_systemd_service(
             instance=instance,
             daemon_binary=args.daemon_binary,
             edenfs_args=args.edenfs_args,
@@ -1413,12 +1409,7 @@ class RestartCmd(Subcmd):
 
     def _start(self, instance: EdenInstance) -> int:
         print("Eden is not currently running.  Starting it...")
-        if instance.should_use_experimental_systemd_mode():
-            return daemon.start_systemd_service(
-                instance=instance, daemon_binary=self.args.daemon_binary
-            )
-        else:
-            return daemon.start_daemon(instance, daemon_binary=self.args.daemon_binary)
+        return daemon.start_daemon(instance, daemon_binary=self.args.daemon_binary)
 
     def _full_restart(self, instance: EdenInstance, old_pid: int) -> int:
         print(
@@ -1475,14 +1466,7 @@ re-open these files after Eden is restarted.
         self._wait_for_stop(instance, pid, timeout)
 
     def _finish_restart(self, instance: EdenInstance) -> int:
-        if instance.should_use_experimental_systemd_mode():
-            exit_code = daemon.start_systemd_service(
-                instance=instance, daemon_binary=self.args.daemon_binary
-            )
-        else:
-            exit_code = daemon.start_daemon(
-                instance, daemon_binary=self.args.daemon_binary
-            )
+        exit_code = daemon.start_daemon(instance, daemon_binary=self.args.daemon_binary)
         if exit_code != 0:
             print("Failed to start edenfs!", file=sys.stderr)
             return exit_code
