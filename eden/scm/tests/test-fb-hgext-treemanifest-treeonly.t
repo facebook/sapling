@@ -300,7 +300,7 @@ Test peer-to-peer push/pull of tree only commits
   $ hg pull -r tip ssh://user@dummy/client --debug 2>&1 | egrep "(payload|treegroup|running)"
   running python "*" 'user@dummy' 'hg -R client serve --stdio' (glob)
   running python "*" 'user@dummy' 'hg -R master serve --stdio' (glob)
-  bundle2-input-part: total payload size 827
+  bundle2-input-part: total payload size 831
   bundle2-input-part: total payload size 48
   bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
   bundle2-input-part: total payload size 663

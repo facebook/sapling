@@ -29,6 +29,8 @@ create master bookmark
 setup repo-pull and repo-push
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-push --noupdate
   $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull --noupdate
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull2 --noupdate
+  $ hgclone_treemanifest ssh://user@dummy/repo-hg repo-pull3 --noupdate
 
 blobimport
   $ blobimport repo-hg/.hg repo
@@ -45,6 +47,20 @@ start mononoke
   > EOF
 
   $ cd ../repo-pull
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase =
+  > remotenames =
+  > EOF
+
+  $ cd ../repo-pull2
+  $ cat >> .hg/hgrc <<EOF
+  > [extensions]
+  > pushrebase =
+  > remotenames =
+  > EOF
+
+  $ cd ../repo-pull3
   $ cat >> .hg/hgrc <<EOF
   > [extensions]
   > pushrebase =
@@ -79,36 +95,19 @@ Restart mononoke
   $ mononoke
   $ wait_for_mononoke
 
-  $ cd "$TESTTMP/repo-pull"
+  $ cd "$TESTTMP/repo-pull2"
+  $ hgmn pull -q
+  $ hgmn up -q 14961831bd3a
+
   $ tglogpnr
   @  14961831bd3a public 'add b'
   |
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 
-  $ echo "test" > b
-  $ hg ci -q -m "up b"
-
-  $ tglogpnr
-  @  0269a088f56a draft 'up b'
-  |
-  o  14961831bd3a public 'add b'
-  |
-  o  ac82d8b1f7c4 public 'add a' master_bookmark
-  
-
-Should not succeed since the commit modifies a redacted file
-  $ hgmn push -q -r .  --to master_bookmark
-  abort: stream ended unexpectedly (got 0 bytes, expected 4)
-  [255]
-
-  $ tglogpnr
-  @  0269a088f56a draft 'up b'
-  |
-  o  14961831bd3a public 'add b'
-  |
-  o  ac82d8b1f7c4 public 'add a' master_bookmark
-  
+Should gives us the tombstone file since it is redacted
+  $ cat b
+  This version of the file is redacted and you are not allowed to access it. Update or rebase to a newer commit.
 
 Restart mononoke and disable redaction verification
   $ kill $MONONOKE_PID
@@ -118,23 +117,16 @@ Restart mononoke and disable redaction verification
   $ mononoke
   $ wait_for_mononoke
 
-  $ cd "$TESTTMP/repo-pull"
+  $ cd "$TESTTMP/repo-pull3"
+  $ hgmn pull -q
+  $ hgmn up -q 14961831bd3a
 
   $ tglogpnr
-  @  0269a088f56a draft 'up b'
-  |
-  o  14961831bd3a public 'add b'
+  @  14961831bd3a public 'add b'
   |
   o  ac82d8b1f7c4 public 'add a' master_bookmark
   
 
-Even is file b is redacted, push won't fail because redaction verification is disabled
-  $ hgmn push -q -r .  --to master_bookmark
-
-  $ tglogpnr
-  @  0269a088f56a public 'up b'
-  |
-  o  14961831bd3a public 'add b'
-  |
-  o  ac82d8b1f7c4 public 'add a' master_bookmark
-  
+Even is file b is redacted, we will get its content
+  $ cat b
+  b

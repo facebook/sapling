@@ -104,7 +104,7 @@ the server supports our custom getfiles method.
   2 files fetched over 1 fetches - (2 misses, 0.00% hit ratio) over *s (glob) (?)
   { metrics : { ssh : { connections : 2,
                         getpack : { calls : 1,  revs : 2},
-                        read : { bytes : 2925},
+                        read : { bytes : 2929},
                         write : { bytes : 792}}}}
 
   $ hg up
