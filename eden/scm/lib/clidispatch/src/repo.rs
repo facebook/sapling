@@ -17,6 +17,8 @@ pub struct Repo {
     config: ConfigSet,
     bundle_path: Option<PathBuf>,
     shared_path: PathBuf,
+    dot_hg_path: PathBuf,
+    repo_name: Option<String>,
 }
 
 /// Either an optional [`Repo`] which owns a [`ConfigSet`], or a [`ConfigSet`]
@@ -100,11 +102,17 @@ impl Repo {
             Err(error.into())
         } else {
             let shared_path = read_sharedpath(&path)?;
+            let dot_hg_path = path.join(".hg");
+            let repo_name = config
+                .get("remotefilelog", "reponame")
+                .map(|v| v.to_string());
             Ok(Repo {
                 path,
                 config,
                 bundle_path: None,
                 shared_path,
+                dot_hg_path,
+                repo_name,
             })
         }
     }
@@ -120,8 +128,17 @@ impl Repo {
         self.path.as_path()
     }
 
+    /// Repo root path, with `.hg`. Equivalent to self.path().join(".hg")
+    pub fn dot_hg_path(&self) -> &Path {
+        &self.dot_hg_path
+    }
+
     pub fn config(&self) -> &ConfigSet {
         &self.config
+    }
+
+    pub fn repo_name(&self) -> Option<&str> {
+        self.repo_name.as_ref().map(|s| s.as_ref())
     }
 }
 

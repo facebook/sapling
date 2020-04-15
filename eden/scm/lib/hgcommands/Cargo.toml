@@ -16,6 +16,7 @@ clidispatch = { path = "../clidispatch" }
 cliparser = { path = "../cliparser", features = ["python"] }
 cpython-ext = { path = "../cpython-ext", default-features = false }
 cpython = { version = "0.4", default-features = false }
+dynamicconfig = { path = "../dynamicconfig" }
 edenapi = { path = "../edenapi" }
 edenfs-client = { path = "../edenfs-client"}
 encoding = { path = "../encoding" }

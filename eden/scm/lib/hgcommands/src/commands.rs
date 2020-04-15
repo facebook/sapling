@@ -15,11 +15,12 @@ use clidispatch::{
 use cliparser::define_flags;
 
 use blackbox::{event::Event, json, SessionId};
+use dynamicconfig;
 use edenapi::{Config as EdenApiConfig, EdenApi, EdenApiCurlClient};
 use revisionstore::{
     CorruptionPolicy, DataPackStore, HgIdDataStore, IndexedLogHgIdDataStore, UnionHgIdDataStore,
 };
-use std::{path::Path, str::FromStr};
+use std::{fs, path::Path, str::FromStr};
 use types::{HgId, Key, RepoPathBuf};
 
 use crate::status;
@@ -62,6 +63,11 @@ pub fn table() -> CommandTable {
         debughttp,
         "debughttp",
         "check whether api server is reachable",
+    );
+    table.register(
+        debugdynamicconfig,
+        "debugdynamicconfig",
+        "generate the dynamic configuration",
     );
 
     table
@@ -128,6 +134,9 @@ define_flags! {
     }
 
     pub struct DebugHttpOpts {}
+
+    pub struct DebugDynamicConfigOpts {
+    }
 }
 
 pub fn root(opts: RootOpts, io: &mut IO, repo: Repo) -> Result<u8> {
@@ -262,5 +271,12 @@ pub fn debughttp(_opts: DebugHttpOpts, io: &mut IO, repo: Repo) -> Result<u8> {
     let client = EdenApiCurlClient::new(config)?;
     let hostname = client.hostname()?;
     io.write(format!("successfully connected to: {}\n", hostname))?;
+    Ok(0)
+}
+
+pub fn debugdynamicconfig(_opts: DebugDynamicConfigOpts, _io: &mut IO, repo: Repo) -> Result<u8> {
+    let config_str = dynamicconfig::generate_configs(repo.repo_name())?;
+    let repo_path = repo.dot_hg_path();
+    fs::write(repo_path.join("hgrc.dynamic"), config_str)?;
     Ok(0)
 }

@@ -974,6 +974,8 @@ Test list of internal help commands
    debugdiscovery
                  runs the changeset discovery protocol in isolation
    debugdrawdag  read an ASCII graph from stdin and create changesets
+   debugdynamicconfig
+                 generate the dynamic configuration
    debugedenimporthelper
                  Obtain data for edenfs
    debugedenrunpostupdatehook

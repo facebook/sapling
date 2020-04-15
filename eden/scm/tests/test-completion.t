@@ -109,6 +109,7 @@ Show debug commands if there are no other candidates
   debugdirstate
   debugdiscovery
   debugdrawdag
+  debugdynamicconfig
   debugedenimporthelper
   debugedenrunpostupdatehook
   debugexistingcasecollisions
@@ -312,6 +313,7 @@ Show all commands + options
   debugdirstate: nodates, datesort, json
   debugdiscovery: old, nonheads, rev, ssh, remotecmd, insecure
   debugdrawdag: print
+  debugdynamicconfig: 
   debugedenimporthelper: in-fd, out-fd, manifest, get-manifest-node, cat-file, get-file-size, fetch-tree
   debugedenrunpostupdatehook: 
   debugexistingcasecollisions: rev

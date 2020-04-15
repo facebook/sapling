@@ -1,0 +1,13 @@
+[package]
+name = "dynamicconfig"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0.19"
+configparser = { path = "../configparser" }
+hgtime = { path = "../hgtime" }
+hostname = "0.3"
+
+[dev-dependencies]
+tempdir = "0.3.7"
