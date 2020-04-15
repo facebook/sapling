@@ -1559,9 +1559,11 @@ class StopCmd(Subcmd):
                     stop_aux_processes(client)
                     # Ask the client to shutdown
                     print(f"Stopping edenfs daemon (pid {pid})...")
-                    client.initiateShutdown(
-                        f"`eden stop` requested by pid={os.getpid()} uid={os.getuid()}"
-                    )
+                    request_info = f"pid={os.getpid()}"
+                    if sys.platform != "win32":
+                        # os.getuid() is not available on Windows
+                        request_info += f" uid={os.getuid()}"
+                    client.initiateShutdown(f"`eden stop` requested by {request_info}")
             except thrift.transport.TTransport.TTransportException as e:
                 print_stderr(f"warning: edenfs is not responding: {e}")
                 if pid is None:

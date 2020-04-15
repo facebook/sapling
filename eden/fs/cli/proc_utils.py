@@ -7,9 +7,11 @@
 # pyre-strict
 
 import abc
+import errno
 import logging
 import os
 import platform
+import signal
 import subprocess
 import sys
 import time
@@ -112,6 +114,14 @@ class ProcUtils(abc.ABC):
         raise NotImplementedError()
 
     @abc.abstractmethod
+    def kill_process(self, pid: int) -> None:
+        """Attempt to forcibly kill a process.
+
+        May raise an OSError on failure.
+        """
+        raise NotImplementedError()
+
+    @abc.abstractmethod
     def is_process_alive(self, pid: int) -> bool:
         """Return true if a process is currently running with the specified
         process ID.
@@ -140,6 +150,18 @@ class ProcUtils(abc.ABC):
 
 
 class UnixProcUtils(ProcUtils):
+    def kill_process(self, pid: int) -> None:
+        try:
+            os.kill(pid, signal.SIGKILL)
+        except OSError as ex:
+            if ex.errno == errno.ESRCH:
+                # The process exited before the SIGKILL was received.
+                # Treat this just like a normal shutdown since it exited on its
+                # own.
+                return
+            else:
+                raise
+
     def is_process_alive(self, pid: int) -> bool:
         try:
             os.kill(pid, 0)

@@ -6,6 +6,7 @@
 
 import ctypes
 import sys
+import types
 from ctypes.wintypes import (
     BOOL as _BOOL,
     DWORD as _DWORD,
@@ -13,7 +14,7 @@ from ctypes.wintypes import (
     LPSTR as _LPSTR,
     WORD as _WORD,
 )
-from typing import Iterable
+from typing import Iterable, NoReturn, Optional, Type
 
 from . import proc_utils
 
@@ -22,6 +23,11 @@ if sys.platform == "win32":
     _win32 = ctypes.windll.kernel32
     _win32.OpenProcess.argtypes = [_DWORD, _BOOL, _DWORD]
     _win32.OpenProcess.restype = _HANDLE
+
+    def raise_win_error() -> NoReturn:
+        raise ctypes.WinError()
+
+
 else:
     # This entire file is only ever imported in Windows.  However on our continuous
     # integration environments Pyre currently does all of its type checking assuming
@@ -44,7 +50,15 @@ else:
         def CreateProcessW(*args) -> bool:
             ...
 
+        @staticmethod
+        def TerminateProcess(handle: _HANDLE, exit_code: int) -> bool:
+            ...
 
+    def raise_win_error() -> NoReturn:
+        ...
+
+
+_PROCESS_TERMINATE = 0x0001
 _PROCESS_QUERY_LIMITED_INFORMATION = 0x1000
 _ERROR_ACCESS_DENIED = 5
 _CREATE_NO_WINDOW = 0x08000000
@@ -101,10 +115,40 @@ def create_process_shim(cmd_str: str) -> None:
     )
 
     if not res:
-        raise ctypes.WinError()  # pyre-ignore[16]
+        raise_win_error()
 
     _win32.CloseHandle(pi.hProcess)
     _win32.CloseHandle(pi.hThread)
+
+
+class Handle:
+    handle: _HANDLE
+
+    def __init__(self, handle: _HANDLE) -> None:
+        self.handle = handle
+
+    def __enter__(self) -> "Handle":
+        return self
+
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc_value: Optional[BaseException],
+        tb: Optional[types.TracebackType],
+    ) -> None:
+        self.close()
+
+    def close(self) -> None:
+        if self.handle:
+            _win32.CloseHandle(self.handle)
+            self.handle = _HANDLE()
+
+
+def open_process(pid: int, access: int = _PROCESS_QUERY_LIMITED_INFORMATION) -> Handle:
+    handle_value = _win32.OpenProcess(access, False, pid)
+    if handle_value is None:
+        raise_win_error()
+    return Handle(handle_value)
 
 
 class WinProcUtils(proc_utils.ProcUtils):
@@ -120,15 +164,22 @@ class WinProcUtils(proc_utils.ProcUtils):
             "Windows does not currently implement get_process_start_time()"
         )
 
+    def kill_process(self, pid: int) -> None:
+        with open_process(pid, _PROCESS_TERMINATE) as p:
+            exit_code = 1
+            if not _win32.TerminateProcess(p.handle, exit_code):
+                raise_win_error()
+
     def is_process_alive(self, pid: int) -> bool:
-        handle = _win32.OpenProcess(_PROCESS_QUERY_LIMITED_INFORMATION, False, pid)
-        if handle is None:
-            error = _win32.GetLastError()
-            if error == _ERROR_ACCESS_DENIED:
-                # The process exists, but we don't have permission to query it.
-                return True
+        try:
+            handle = open_process(pid)
+        except PermissionError:
+            # The process exists, but we don't have permission to query it.
+            return True
+        except OSError:
             return False
-        _win32.CloseHandle(handle)
+
+        handle.close()
         return True
 
     def is_edenfs_process(self, pid: int) -> bool:

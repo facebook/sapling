@@ -4,9 +4,7 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-import errno
 import os
-import signal
 import subprocess
 from typing import Dict, List, NoReturn, Optional, Tuple
 
@@ -87,21 +85,14 @@ def sigkill_process(pid: int, timeout: float = DEFAULT_SIGKILL_TIMEOUT) -> None:
     This is done to handle situations where the process exited on its own just before we
     could send SIGKILL.
     """
+    proc_utils: proc_utils_mod.ProcUtils = proc_utils_mod.new()
     try:
-        os.kill(pid, signal.SIGKILL)
-    except OSError as ex:
-        if ex.errno == errno.ESRCH:
-            # The process exited before the SIGKILL was received.
-            # Treat this just like a normal shutdown since it exited on its
-            # own.
-            return
-        elif ex.errno == errno.EPERM:
-            raise ShutdownError(
-                "Received EPERM when sending SIGKILL. "
-                "Perhaps edenfs failed to drop root privileges properly?"
-            )
-        else:
-            raise
+        proc_utils.kill_process(pid)
+    except PermissionError:
+        raise ShutdownError(
+            "Received a permissions when attempting to kill EdenFS. "
+            "Perhaps EdenFS failed to drop root privileges properly?"
+        )
 
     if timeout <= 0:
         return

@@ -367,7 +367,8 @@ Future<Unit> EdenServer::unmountAll() {
         }
       });
 #else
-  NOT_IMPLEMENTED();
+  // TODO: shut down any currently running mounts
+  return folly::makeFuture();
 #endif // !_WIN32
 }
 
@@ -966,13 +967,10 @@ Future<optional<TakeoverData>> EdenServer::performTakeoverShutdown(
 Future<Unit> EdenServer::performNormalShutdown() {
 #ifndef _WIN32
   takeoverServer_.reset();
-
-  // Clean up all the server mount points before shutting down the privhelper.
-  // Return an uninitalized optional here to avoid an attempted recovery
-  return unmountAll();
-#else
-  NOT_IMPLEMENTED();
 #endif // !_WIN32
+
+  // Clean up all the server mount points
+  return unmountAll();
 }
 
 void EdenServer::shutdownPrivhelper() {
@@ -1548,16 +1546,12 @@ void EdenServer::shutdownSubscribers() {
   // If we have any subscription sessions from watchman, we want to shut
   // those down now, otherwise they will block the server_->stop() call
   // below
-#ifndef _WIN32
   XLOG(DBG1) << "cancel all subscribers prior to stopping thrift";
   auto mountPoints = mountPoints_.wlock();
   for (auto& entry : *mountPoints) {
     auto& info = entry.second;
     info.edenMount->getJournal().cancelAllSubscribers();
   }
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServer::flushStatsNow() {
