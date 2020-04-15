@@ -9,7 +9,7 @@ use std::fmt;
 use std::future::Future;
 use std::pin::Pin;
 
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use blame::{fetch_blame, BlameError};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
@@ -18,7 +18,7 @@ use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
-use fastlog::list_file_history;
+use fastlog::{list_file_history, FastlogError};
 use filestore::FetchKey;
 use futures::compat::Future01CompatExt;
 use futures::future::{FutureExt, Shared};
@@ -177,6 +177,7 @@ impl ChangesetPathContext {
         self.fsnode_id.clone().await
     }
 
+    #[allow(dead_code)]
     async fn unode_id(&self) -> Result<Option<Entry<ManifestUnodeId, FileUnodeId>>, MononokeError> {
         self.unode_id.clone().await
     }
@@ -280,12 +281,6 @@ impl ChangesetPathContext {
     {
         let ctx = self.changeset.ctx().clone();
         let repo = self.repo().blob_repo().clone();
-        let unode_entry = (self.unode_id().await?).ok_or_else(|| {
-            MononokeError::InvalidRequest(format!(
-                "path '{}' does not exist in the given commit",
-                self.path(),
-            ))
-        })?;
         let mpath = self.path.as_mpath();
 
         let terminator_until =
@@ -313,9 +308,15 @@ impl ChangesetPathContext {
             None
         };
 
-        let history = list_file_history(ctx, repo, mpath.cloned(), unode_entry, terminator)
+        let history = list_file_history(ctx, repo, mpath.cloned(), self.changeset.id(), terminator)
             .await
-            .map_err(MononokeError::from)?;
+            .map_err(|error| match error {
+                FastlogError::NoSuchPath(_) => MononokeError::InvalidRequest(error.to_string()),
+                FastlogError::InternalError(e) => MononokeError::from(format_err!(e)),
+                FastlogError::DeriveError(e) => MononokeError::from(e),
+                FastlogError::LoadableError(e) => MononokeError::from(e),
+                FastlogError::Error(e) => MononokeError::from(e),
+            })?;
 
         Ok(history
             .map_err(MononokeError::from)

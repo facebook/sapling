@@ -14,6 +14,7 @@ blobrepo = { path = "../../blobrepo" }
 blobstore = { path = "../../blobstore" }
 bounded_traversal = { path = "../../common/bounded_traversal" }
 context = { path = "../../server/context" }
+deleted_files_manifest = { path = "../deleted_files_manifest" }
 derived_data = { path = ".." }
 manifest = { path = "../../manifest" }
 mononoke_types = { path = "../../mononoke_types" }
@@ -46,3 +47,4 @@ fixtures = { path = "../../tests/fixtures" }
 mercurial_types = { path = "../../mercurial/types" }
 mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
 revset = { path = "../../revset" }
+tests_utils = { path = "../../tests/utils" }

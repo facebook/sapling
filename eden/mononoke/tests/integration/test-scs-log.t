@@ -41,6 +41,13 @@ Commits with dates to test time filters
   $ echo -e "b\nn\ne\nw\nl" > b
   $ commit F "2020-01-01"
 
+  $ echo -e "a\nb\nc\ne\nf" > d
+  $ commit G "2020-01-02"
+
+  $ rm b
+  $ echo -e "a\nb\nc\nd\ne" > d
+  $ commit H "2020-01-03"
+
 import testing repo to mononoke
   $ cd ..
   $ blobimport repo-hg/.hg repo
@@ -195,6 +202,25 @@ log skip and time filters conflict
 
 log request a single commit
   $ scsc log --repo repo -i "$COMMIT_F" --path b --limit 1
+  Commit: 3a61e10442a9b76f8826b05e7ef1a60d33c3bc2d
+  Parent: ecbf21bc13d7ec53c820078066ca1dfeb1e8191d
+  Date: 2020-01-01 00:00:00 +00:00
+  Author: test
+  Generation: 6
+  
+  F
+  
+
+log request history for deleted file
+  $ scsc log --repo repo -i "$COMMIT_H" --path b --limit 2
+  Commit: 159ed529f60d23c614fe315d46a4b2eb5d27b569
+  Parent: d603e69354506a00833ddb9422cac6053debb733
+  Date: 2020-01-03 00:00:00 +00:00
+  Author: test
+  Generation: 8
+  
+  H
+  
   Commit: 3a61e10442a9b76f8826b05e7ef1a60d33c3bc2d
   Parent: ecbf21bc13d7ec53c820078066ca1dfeb1e8191d
   Date: 2020-01-01 00:00:00 +00:00

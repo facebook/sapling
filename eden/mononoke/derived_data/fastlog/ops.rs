@@ -7,14 +7,15 @@
 
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
-use blobstore::{Blobstore, Loadable};
+use blobstore::{Blobstore, Loadable, LoadableError};
 use bounded_traversal::bounded_traversal_stream;
 use cloned::cloned;
 use context::CoreContext;
-use derived_data::BonsaiDerived;
+use deleted_files_manifest::{self as deleted_manifest, RootDeletedManifestId};
+use derived_data::{BonsaiDerived, DeriveError};
 use futures::{
     compat::Future01CompatExt,
-    future::{self as new_future, FutureExt as NewFutureExt, TryFutureExt},
+    future::{FutureExt as NewFutureExt, TryFutureExt},
     stream::{self, Stream as NewStream},
 };
 use futures_ext::{BoxFuture, FutureExt};
@@ -26,10 +27,25 @@ use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::future::Future as NewFuture;
 use std::sync::Arc;
+use thiserror::Error;
 use unodes::RootUnodeManifestId;
 
 use crate::fastlog_impl::{fetch_fastlog_batch_by_unode_id, fetch_flattened};
 use crate::mapping::{FastlogParent, RootFastlog};
+
+#[derive(Debug, Error)]
+pub enum FastlogError {
+    #[error("No such path: {0}")]
+    NoSuchPath(MPath),
+    #[error("Internal error: {0}")]
+    InternalError(String),
+    #[error("{0}")]
+    DeriveError(#[from] DeriveError),
+    #[error("{0}")]
+    LoadableError(#[from] LoadableError),
+    #[error("{0}")]
+    Error(#[from] Error),
+}
 
 /// Returns a full history of the given path starting from the given unode in BFS order.
 ///
@@ -80,13 +96,32 @@ pub async fn list_file_history<Terminator, TFut>(
     ctx: CoreContext,
     repo: BlobRepo,
     path: Option<MPath>,
-    unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
+    changeset_id: ChangesetId,
     terminator: Option<Terminator>,
-) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, Error>
+) -> Result<impl NewStream<Item = Result<ChangesetId, Error>>, FastlogError>
 where
-    Terminator: Fn(ChangesetId) -> TFut + Clone,
-    TFut: NewFuture<Output = Result<bool, Error>>,
+    Terminator: Fn(ChangesetId) -> TFut + 'static + Clone + Send + Sync,
+    TFut: NewFuture<Output = Result<bool, Error>> + Send,
 {
+    let mut top_history = vec![];
+    // get unode entry
+    let resolved = resolve_path_state(&ctx, &repo, changeset_id, &path).await?;
+    let unode_entry = match resolved {
+        Some(PathState::Deleted(deleted_linknode, last_unode_entry)) => {
+            // we want to show commit, where path was deleted
+            top_history.push(Ok(deleted_linknode));
+            last_unode_entry
+        }
+        Some(PathState::Exists(unode_entry)) => unode_entry,
+        None => {
+            return Err(if let Some(p) = path {
+                FastlogError::NoSuchPath(p)
+            } else {
+                FastlogError::InternalError("cannot find unode for the repo root".to_string())
+            });
+        }
+    };
+
     let unode = unode_entry
         .load(ctx.clone(), &repo.get_blobstore())
         .compat()
@@ -96,9 +131,11 @@ where
         Entry::Tree(mf_unode) => mf_unode.linknode().clone(),
         Entry::Leaf(file_unode) => file_unode.linknode().clone(),
     };
+    top_history.push(Ok(changeset_id.clone()));
 
-    Ok(
-        stream::once(new_future::ready(Ok(changeset_id.clone()))).chain({
+    // generate file history
+    Ok(stream::iter(top_history)
+        .chain({
             let history_graph = hashmap! { changeset_id.clone() => None };
             let visited = hashset! { changeset_id.clone() };
             let bfs = VecDeque::new();
@@ -129,8 +166,8 @@ where
             )
             .map_ok(|history| stream::iter(history).map(Ok))
             .try_flatten()
-        }),
-    )
+        })
+        .boxed())
 }
 
 /// Returns history for a given unode if it exists.
@@ -140,7 +177,7 @@ where
 pub fn prefetch_history(
     ctx: CoreContext,
     repo: BlobRepo,
-    unode_entry: Entry<ManifestUnodeId, FileUnodeId>,
+    unode_entry: UnodeEntry,
 ) -> impl Future<Item = Option<Vec<(ChangesetId, Vec<FastlogParent>)>>, Error = Error> {
     let blobstore: Arc<dyn Blobstore> = Arc::new(repo.get_blobstore());
     async move {
@@ -158,6 +195,109 @@ pub fn prefetch_history(
     }
     .boxed()
     .compat()
+}
+
+type UnodeEntry = Entry<ManifestUnodeId, FileUnodeId>;
+
+enum PathState {
+    // changeset where the path was deleted and unode where the path was last changed
+    Deleted(ChangesetId, UnodeEntry),
+    // unode if the path exists
+    Exists(UnodeEntry),
+}
+
+async fn derive_unode_entry(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+    path: &Option<MPath>,
+) -> Result<Option<UnodeEntry>, Error> {
+    let root_unode_mf_id = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), cs_id)
+        .compat()
+        .await?;
+    root_unode_mf_id
+        .manifest_unode_id()
+        .find_entry(ctx.clone(), repo.get_blobstore(), path.clone())
+        .compat()
+        .await
+}
+
+async fn resolve_path_state(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    cs_id: ChangesetId,
+    path: &Option<MPath>,
+) -> Result<Option<PathState>, FastlogError> {
+    // if unode exists return entry
+    let unode_entry = derive_unode_entry(ctx, repo, cs_id.clone(), path).await?;
+    if let Some(unode_entry) = unode_entry {
+        return Ok(Some(PathState::Exists(unode_entry)));
+    }
+
+    let use_deleted_manifest = repo
+        .get_derived_data_config()
+        .derived_data_types
+        .contains(RootDeletedManifestId::NAME);
+    if !use_deleted_manifest {
+        return Ok(None);
+    }
+
+    // if there is no unode for the commit:path, check deleted manifest
+    // the path might be deleted
+    let root_dfm_id = RootDeletedManifestId::derive(ctx.clone(), repo.clone(), cs_id)
+        .compat()
+        .await?;
+    let dfm_id = root_dfm_id.deleted_manifest_id();
+    let deleted_entry =
+        deleted_manifest::find_entry(ctx.clone(), repo.get_blobstore(), *dfm_id, path.clone())
+            .compat()
+            .await?;
+
+    let internal_err = |p: &Option<MPath>| {
+        let message = format!(
+            "couldn't find '{}' last change before deletion",
+            MPath::display_opt(p.as_ref())
+        );
+        Err(FastlogError::InternalError(message))
+    };
+    if let Some(deleted_entry) = deleted_entry {
+        let deleted_node = deleted_entry
+            .load(ctx.clone(), repo.blobstore())
+            .compat()
+            .await?;
+        if let Some(linknode) = deleted_node.linknode() {
+            // the path was deleted, let's find the last unode
+            let parents = repo
+                .get_changeset_parents_by_bonsai(ctx.clone(), linknode.clone())
+                .compat()
+                .await?;
+            match *parents {
+                [] => {
+                    // the linknode must have a parent, otherwise the path couldn't be deleted
+                    return internal_err(path);
+                }
+                [parent] => {
+                    let unode_entry = derive_unode_entry(ctx, repo, parent, path).await?;
+                    if let Some(unode_entry) = unode_entry {
+                        // we've found the last path change before deletion
+                        return Ok(Some(PathState::Deleted(*linknode, unode_entry)));
+                    }
+
+                    // the unode entry must exist
+                    return internal_err(path);
+                }
+                [..] => {
+                    // merged repos are not supported yet
+                    return Ok(None);
+                }
+            }
+        } else {
+            // there is an entry in the deleted manifest but the path hasn't been deleted
+            return Ok(None);
+        }
+    }
+
+    Ok(None)
 }
 
 type CommitGraph = HashMap<ChangesetId, Option<Vec<ChangesetId>>>;
@@ -379,10 +519,10 @@ mod test {
     use fbinit::FacebookInit;
     use fixtures::{create_bonsai_changeset_with_files, store_files};
     use futures::future;
-    use manifest::{Entry, ManifestOps};
     use maplit::btreemap;
-    use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
+    use mononoke_types::{ChangesetId, MPath};
     use std::collections::{HashMap, HashSet, VecDeque};
+    use tests_utils::CreateCommitContext;
     use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
@@ -420,14 +560,7 @@ mod test {
         rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
             .unwrap();
 
-        let unode_entry = derive_and_get_unode_entry(
-            ctx.clone(),
-            repo.clone(),
-            &mut rt,
-            latest.clone(),
-            filepath.clone(),
-        );
-        derive_fastlog(ctx.clone(), repo.clone(), &mut rt, latest);
+        derive_fastlog(ctx.clone(), repo.clone(), &mut rt, latest.clone());
 
         let terminator = |_cs_id| future::ready(Ok(false));
         let history = rt
@@ -435,7 +568,7 @@ mod test {
                 ctx,
                 repo,
                 filepath,
-                unode_entry,
+                latest,
                 Some(terminator),
             ))
             .unwrap();
@@ -519,14 +652,7 @@ mod test {
         rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
             .unwrap();
 
-        let unode_entry = derive_and_get_unode_entry(
-            ctx.clone(),
-            repo.clone(),
-            &mut rt,
-            top.clone(),
-            filepath.clone(),
-        );
-        derive_fastlog(ctx.clone(), repo.clone(), &mut rt, top);
+        derive_fastlog(ctx.clone(), repo.clone(), &mut rt, top.clone());
 
         let terminator = |_cs_id| future::ready(Ok(false));
         let history = rt
@@ -534,7 +660,7 @@ mod test {
                 ctx,
                 repo,
                 filepath,
-                unode_entry,
+                top,
                 Some(terminator),
             ))
             .unwrap();
@@ -640,14 +766,7 @@ mod test {
         rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
             .unwrap();
 
-        let unode_entry = derive_and_get_unode_entry(
-            ctx.clone(),
-            repo.clone(),
-            &mut rt,
-            prev_id.clone(),
-            filepath.clone(),
-        );
-        derive_fastlog(ctx.clone(), repo.clone(), &mut rt, prev_id);
+        derive_fastlog(ctx.clone(), repo.clone(), &mut rt, prev_id.clone());
 
         let terminator = |_cs_id| future::ready(Ok(false));
         let history = rt
@@ -655,7 +774,7 @@ mod test {
                 ctx,
                 repo,
                 filepath,
-                unode_entry,
+                prev_id,
                 Some(terminator),
             ))
             .unwrap();
@@ -728,14 +847,7 @@ mod test {
         rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
             .unwrap();
 
-        let unode_entry = derive_and_get_unode_entry(
-            ctx.clone(),
-            repo.clone(),
-            &mut rt,
-            top.clone(),
-            filepath.clone(),
-        );
-        derive_fastlog(ctx.clone(), repo.clone(), &mut rt, top);
+        derive_fastlog(ctx.clone(), repo.clone(), &mut rt, top.clone());
 
         // prune all fastlog batch fetchings
         let terminator = Some(|_cs_id| future::ready(Ok(true)));
@@ -744,7 +856,7 @@ mod test {
                 ctx.clone(),
                 repo.clone(),
                 filepath.clone(),
-                unode_entry.clone(),
+                top.clone(),
                 terminator,
             ))
             .unwrap();
@@ -763,13 +875,7 @@ mod test {
             move |cs_id| terminator(ctx.clone(), repo.clone(), cs_id)
         });
         let history = rt
-            .block_on_std(list_file_history(
-                ctx,
-                repo,
-                filepath,
-                unode_entry,
-                terminator,
-            ))
+            .block_on_std(list_file_history(ctx, repo, filepath, top, terminator))
             .unwrap();
         let history = rt.block_on_std(history.try_collect::<Vec<_>>()).unwrap();
 
@@ -780,6 +886,70 @@ mod test {
         // last 15 commits of the history should be last 15 of the branch A
         a_branch.reverse();
         assert_eq!(history[109..], a_branch[5..]);
+    }
+
+    #[fbinit::compat_test]
+    async fn test_list_history_deleted(fb: FacebookInit) -> Result<(), Error> {
+        let repo = new_memblob_empty(None).unwrap();
+        let ctx = CoreContext::test_mock(fb);
+
+        let filename = "dir/1";
+        let mut expected = vec![];
+
+        let bcs_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file(filename, "blah")
+            .commit()
+            .await?;
+        expected.push(bcs_id.clone());
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .add_file("other_file", "1")
+            .commit()
+            .await?;
+
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .add_file(filename, "blah-blah")
+            .commit()
+            .await?;
+        expected.push(bcs_id.clone());
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .add_file("other_file", "1-2")
+            .commit()
+            .await?;
+
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .delete_file(filename)
+            .commit()
+            .await?;
+        expected.push(bcs_id.clone());
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .add_file("other_file", "1-2-3")
+            .commit()
+            .await?;
+
+        let history = |cs_id, path| {
+            cloned!(ctx, repo);
+            async move {
+                let terminator = Some(|_cs_id| future::ready(Ok(false)));
+                let history_stream =
+                    list_file_history(ctx.clone(), repo.clone(), path, cs_id, terminator).await?;
+                history_stream.try_collect::<Vec<_>>().await
+            }
+        };
+
+        expected.reverse();
+        // check deleted file
+        assert_eq!(history(bcs_id.clone(), path(filename)).await?, expected);
+        // check deleted directory
+        assert_eq!(history(bcs_id.clone(), path("dir")).await?, expected);
+
+        // recreate dir and check
+        let bcs_id = CreateCommitContext::new(&ctx, &repo, vec![bcs_id])
+            .add_file("dir/otherfile", "boo")
+            .commit()
+            .await?;
+        assert_eq!(history(bcs_id.clone(), path("dir")).await?, vec![bcs_id]);
+
+        Ok(())
     }
 
     fn bfs(graph: &HashMap<ChangesetId, Vec<ChangesetId>>, node: ChangesetId) -> Vec<ChangesetId> {
@@ -800,29 +970,6 @@ mod test {
             response.push(node);
         }
         response
-    }
-
-    fn derive_and_get_unode_entry(
-        ctx: CoreContext,
-        repo: BlobRepo,
-        rt: &mut Runtime,
-        bcs_id: ChangesetId,
-        path: Option<MPath>,
-    ) -> Entry<ManifestUnodeId, FileUnodeId> {
-        let root_unode = rt
-            .block_on(RootUnodeManifestId::derive(
-                ctx.clone(),
-                repo.clone(),
-                bcs_id.clone(),
-            ))
-            .unwrap();
-        rt.block_on(root_unode.manifest_unode_id().find_entry(
-            ctx.clone(),
-            repo.get_blobstore(),
-            path,
-        ))
-        .unwrap()
-        .unwrap()
     }
 
     fn derive_fastlog(ctx: CoreContext, repo: BlobRepo, rt: &mut Runtime, bcs_id: ChangesetId) {
