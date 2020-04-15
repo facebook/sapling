@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{format_err, Error};
 use bookmarks::Freshness;
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
@@ -16,7 +16,7 @@ use futures_old::{future, Future, IntoFuture, Stream};
 use mercurial_types::HgChangesetId;
 use mononoke_types::Timestamp;
 use serde_json::{json, to_string_pretty};
-use slog::Logger;
+use slog::{info, Logger};
 
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
@@ -315,15 +315,41 @@ fn handle_set<'a>(
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
 
     repo.and_then(move |repo| {
-        fetch_bonsai_changeset(ctx.clone(), &rev, &repo).and_then(move |bonsai_cs| {
-            let mut transaction = repo.update_bookmark_transaction(ctx);
-            try_boxfuture!(transaction.force_set(
-                &bookmark,
-                bonsai_cs.get_changeset_id(),
-                BookmarkUpdateReason::ManualMove
-            ));
-            transaction.commit().map(|_| ()).from_err().boxify()
-        })
+        fetch_bonsai_changeset(ctx.clone(), &rev, &repo)
+            .and_then({
+                cloned!(ctx, repo, bookmark);
+                move |new_bcs| {
+                    repo.get_bonsai_bookmark(ctx.clone(), &bookmark)
+                        .map(move |maybe_old_bcs_id| (maybe_old_bcs_id, new_bcs))
+                }
+            })
+            .and_then({
+                move |(maybe_old_bcs_id, new_bcs)| {
+                    info!(
+                        ctx.logger(),
+                        "Current position of {:?} is {:?}", bookmark, maybe_old_bcs_id
+                    );
+                    let mut transaction = repo.update_bookmark_transaction(ctx);
+                    match maybe_old_bcs_id {
+                        Some(old_bcs_id) => {
+                            try_boxfuture!(transaction.update(
+                                &bookmark,
+                                new_bcs.get_changeset_id(),
+                                old_bcs_id,
+                                BookmarkUpdateReason::ManualMove
+                            ));
+                        }
+                        None => {
+                            try_boxfuture!(transaction.create(
+                                &bookmark,
+                                new_bcs.get_changeset_id(),
+                                BookmarkUpdateReason::ManualMove
+                            ));
+                        }
+                    }
+                    transaction.commit().map(|_| ()).from_err().boxify()
+                }
+            })
     })
 }
 
@@ -334,11 +360,33 @@ fn handle_delete<'a>(
 ) -> impl Future<Item = (), Error = Error> {
     let bookmark_name = args.value_of("BOOKMARK_NAME").unwrap().to_string();
     let bookmark = BookmarkName::new(bookmark_name).unwrap();
-    repo.and_then(move |repo| {
-        let mut transaction = repo.update_bookmark_transaction(ctx);
-        try_boxfuture!(transaction.force_delete(&bookmark, BookmarkUpdateReason::ManualMove));
-        transaction.commit().map(|_| ()).from_err().boxify()
+
+    repo.and_then({
+        cloned!(bookmark);
+        move |repo| {
+            repo.get_bonsai_bookmark(ctx.clone(), &bookmark).and_then({
+                move |maybe_bcs_id| {
+                    info!(
+                        ctx.logger(),
+                        "Current position of {:?} is {:?}", bookmark, maybe_bcs_id
+                    );
+                    match maybe_bcs_id {
+                        Some(bcs_id) => {
+                            let mut transaction = repo.update_bookmark_transaction(ctx);
+                            try_boxfuture!(transaction.delete(
+                                &bookmark,
+                                bcs_id,
+                                BookmarkUpdateReason::ManualMove
+                            ));
+                            transaction.commit().map(|_| ()).from_err().boxify()
+                        }
+                        None => future::err(format_err!("Cannot delete missing bookmark")).boxify(),
+                    }
+                }
+            })
+        }
     })
+    .boxify()
 }
 
 #[cfg(test)]

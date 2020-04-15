@@ -33,6 +33,7 @@
   $ mononoke_admin bookmarks set master 967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0
   * using repo "repo" repoid RepositoryId(0) (glob)
   * changeset resolved as: ChangesetId(Blake2(967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0)) (glob)
+  * Current position of BookmarkName { bookmark: "master" } is None (glob)
 
 # Start Mononoke
   $ mononoke
