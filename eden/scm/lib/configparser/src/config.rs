@@ -382,6 +382,37 @@ impl ConfigSet {
             }
         }
     }
+
+    pub fn to_string(&self) -> String {
+        let mut result = String::new();
+
+        for (name, section) in self.sections.iter() {
+            result.push_str("[");
+            result.push_str(name);
+            result.push_str("]\n");
+
+            for (key, values) in section.items.iter() {
+                if let Some(value) = values.last() {
+                    // value.value() being None indicates the value was unset.
+                    if let Some(value) = value.value() {
+                        result.push_str(key);
+                        result.push_str("=");
+                        // When a newline delimited list is loaded, the whitespace around each
+                        // entry is trimmed. In order for the serialized config to be parsable, we
+                        // need some indentation after each newline. Since this whitespace will be
+                        // stripped on load, it shouldn't hurt anything.
+                        let value = value.replace("\n", "\n ");
+                        result.push_str(&value);
+                        result.push_str("\n");
+                    }
+                }
+            }
+
+            result.push_str("\n");
+        }
+
+        result
+    }
 }
 
 impl ValueSource {
@@ -903,5 +934,50 @@ pub(crate) mod tests {
 
         assert_eq!(cfg.get("x", "a"), Some(Text::from("1")));
         assert_eq!(cfg.get("y", "b"), Some(Text::from("2")));
+    }
+
+    #[test]
+    fn test_serialize() {
+        let mut cfg = ConfigSet::new();
+        let errors = cfg.parse(
+            "[section_one]
+normal=normal_value
+space key=space value
+newline=new \n line
+unset_me=foo
+%unset unset_me
+
+[section_two]
+empty=
+list=value1,value2,value3
+space_list=value1.a value1.b
+    value2.a value2.b
+",
+            &"".into(),
+        );
+        assert!(errors.is_empty(), "cfg.parse had errors {:?}", errors);
+
+        let serialized = cfg.to_string();
+        assert_eq!(
+            serialized,
+            "[section_one]
+normal=normal_value
+space key=space value
+newline=new\n line
+
+[section_two]
+empty=
+list=value1,value2,value3
+space_list=value1.a value1.b
+ value2.a value2.b
+
+"
+        );
+
+        // Verify it round trips
+        let mut cfg2 = ConfigSet::new();
+        let errors = cfg2.parse(serialized, &"".into());
+        assert!(errors.is_empty(), "cfg2.parse had errors {:?}", errors);
+        assert_eq!(cfg.sections(), cfg2.sections());
     }
 }
