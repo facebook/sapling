@@ -280,7 +280,7 @@ class IncrementalChangesetExporter(object):
         d = os.path.dirname(path)
         tree = self._dirs.get(d, dulobjs.Tree())
 
-        del tree[os.path.basename(path)]
+        del tree[pycompat.encodeutf8(os.path.basename(path))]
         dirty_trees.add(d)
 
         # If removing this file made the tree empty, we should delete this
@@ -316,7 +316,7 @@ class IncrementalChangesetExporter(object):
                 return
 
             try:
-                del tree[basename]
+                del tree[pycompat.encodeutf8(basename)]
             except KeyError:
                 return
 

@@ -20,6 +20,7 @@ For more information and instructions, see :hg:`help git`
 # global modules
 import os
 import shutil
+import sys
 import warnings
 from bisect import insort
 
@@ -223,7 +224,11 @@ def getversion():
 # defend against tracebacks if we specify -r in 'hg pull'
 def safebranchrevs(orig, lrepo, repo, branches, revs):
     revs, co = orig(lrepo, repo, branches, revs)
-    if hgutil.safehasattr(lrepo, "changelog") and co not in lrepo.changelog:
+    if (
+        isinstance(co, int)
+        and hgutil.safehasattr(lrepo, "changelog")
+        and co not in lrepo.changelog
+    ):
         co = None
     return revs, co
 
@@ -333,7 +338,7 @@ def git_cleanup(ui, repo):
     new_map = []
     for gitsha, hgsha in items:
         if hgsha in repo:
-            new_map.append("%s %s\n" % (hex(gitsha), hex(hgsha)))
+            new_map.append(pycompat.encodeutf8("%s %s\n" % (hex(gitsha), hex(hgsha))))
     wlock = repo.wlock()
     try:
         f = repo.sharedvfs(GitHandler.map_file, "wb")
@@ -369,7 +374,7 @@ def gitupdatemeta(ui, repo):
                 commitdata = clrevision(node)
                 if (
                     commitdata._rawextra is not None
-                    and "convert_revision" in commitdata._rawextra
+                    and b"convert_revision" in commitdata._rawextra
                 ):
                     gitsha = commitdata.extra.get("convert_revision")
 
@@ -416,8 +421,12 @@ def getremotechanges(orig, ui, repo, other, *args, **opts):
             revs = opts.get("onlyheads", opts.get("revs"))
         r, c, cleanup = repo.githandler.getremotechanges(other, revs)
         # ugh. This is ugly even by mercurial API compatibility standards
-        if "onlyheads" not in orig.func_code.co_varnames:
-            cleanup = None
+        if sys.version_info[0] >= 3:
+            if "onlyheads" not in orig.__code__.co_varnames:
+                cleanup = None
+        else:
+            if "onlyheads" not in orig.func_code.co_varnames:
+                cleanup = None
         return r, c, cleanup
     return orig(ui, repo, other, *args, **opts)
 

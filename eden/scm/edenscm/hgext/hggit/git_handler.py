@@ -418,6 +418,8 @@ class GitHandler(object):
         if remote_name and new_refs:
             for ref, new_sha in sorted(pycompat.iteritems(new_refs)):
                 old_sha = old_refs.get(ref)
+
+                ref = pycompat.decodeutf8(ref)
                 if old_sha is None:
                     if self.ui.verbose:
                         self.ui.note(
@@ -969,9 +971,11 @@ class GitHandler(object):
             m = RE_GIT_AUTHOR_EXTRA.match(commit.author)
             if m:
                 name = m.group(1)
-                ex = hgutil.urlreq.unquote(m.group(2))
+                ex = pycompat.encodeutf8(
+                    hgutil.urlreq.unquote(pycompat.decodeutf8(m.group(2)))
+                )
                 email = m.group(3)
-                author = name + " <" + email + ">" + ex
+                author = name + b" <" + email + b">" + ex
 
         if b" <none@none>" in commit.author:
             author = commit.author[:-12]
@@ -1281,14 +1285,17 @@ class GitHandler(object):
                     if rctx.ancestor(ctx) == rctx or force:
                         new_refs[ref] = pycompat.encodeutf8(self.map_git_get(ctx.hex()))
                     else:
-                        raise error.Abort("pushing %s overwrites %s" % (ref, ctx))
+                        raise error.Abort(
+                            "pushing %s overwrites %s" % (pycompat.decodeutf8(ref), ctx)
+                        )
                 elif ref in uptodate_annotated_tags:
                     # we already have the annotated tag.
                     pass
                 else:
                     raise error.Abort(
                         "branch '%s' changed on the server, "
-                        "please pull and merge before pushing" % ref
+                        "please pull and merge before pushing"
+                        % pycompat.decodeutf8(ref)
                     )
 
         return new_refs
@@ -1349,6 +1356,7 @@ class GitHandler(object):
             # if ref is just '<foo>', then we get ('foo', 'foo')
             stripped_refs = [(r, r[r.find(b"/", r.find(b"/") + 1) + 1 :]) for r in refs]
             for h in heads:
+                h = pycompat.encodeutf8(h)
                 if h.endswith(b"/*"):
                     prefix = h[:-1]  # include the / but not the *
                     r = [

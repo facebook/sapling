@@ -4791,7 +4791,7 @@ def pull(ui, repo, source="default", **opts):
 
         # Run 'update' in another transaction.
         if checkout and checkout in repo:
-            checkout = str(repo.changelog.rev(checkout))
+            checkout = str(repo[checkout].rev())
 
             # order below depends on implementation of
             # hg.addbranchrevs(). opts['bookmark'] is ignored,

@@ -1,4 +1,4 @@
-from edenscm.mercurial import error, util
+from edenscm.mercurial import error, pycompat, util
 from edenscm.mercurial.error import RepoError
 
 from .util import isgitsshuri
@@ -57,9 +57,12 @@ class gitrepo(peerrepository):
                 # map any git shas that exist in hg to hg shas
                 stripped_refs = dict(
                     [
-                        (ref[11:], handler.map_hg_get(refs[ref]) or refs[ref])
+                        (
+                            pycompat.decodeutf8(ref[11:]),
+                            handler.map_hg_get(refs[ref]) or refs[ref],
+                        )
                         for ref in refs.keys()
-                        if ref.startswith("refs/heads/")
+                        if ref.startswith(b"refs/heads/")
                     ]
                 )
                 return stripped_refs

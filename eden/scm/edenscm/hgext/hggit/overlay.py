@@ -67,9 +67,9 @@ class overlaymanifest(object):
                 if entry.mode & 0o40000:
                     # expand directory
                     subtree = self.repo.handler.git.get_object(entry.sha)
-                    addtree(subtree, dirname + entry.path + "/")
+                    addtree(subtree, dirname + pycompat.decodeutf8(entry.path) + "/")
                 else:
-                    path = dirname + entry.path
+                    path = dirname + pycompat.decodeutf8(entry.path)
                     self._map[path] = bin(entry.sha)
                     self._flags[path] = hgflag(entry.mode)
 
@@ -535,10 +535,10 @@ class overlayrepo(object):
         self.refmap = {}
         self.tagmap = {}
         for ref in refs:
-            if ref.startswith("refs/heads/"):
+            if ref.startswith(b"refs/heads/"):
                 refname = ref[11:]
                 self.refmap.setdefault(bin(refs[ref]), []).append(refname)
-            elif ref.startswith("refs/tags/"):
+            elif ref.startswith(b"refs/tags/"):
                 tagname = ref[10:]
                 self.tagmap.setdefault(bin(refs[ref]), []).append(tagname)
 

@@ -1,7 +1,7 @@
 import subprocess
 
 from dulwich.client import SubprocessWrapper
-from edenscm.mercurial import util
+from edenscm.mercurial import pycompat, util
 
 
 class SSHVendor(object):
@@ -16,7 +16,7 @@ def generate_ssh_vendor(ui):
 
     class _Vendor(SSHVendor):
         def run_command(self, host, command, username=None, port=None):
-            if isinstance(command, (str, bytes, unicode)):
+            if isinstance(command, (str, bytes, pycompat.unicode)):
                 # 0.12.x dulwich sends the raw string
                 command = [command]
             elif len(command) > 1:

@@ -1,4 +1,3 @@
-#require py2
 Other tests make sure that gverify passes. This makes sure that gverify detects
 inconsistencies. Since hg-git is ostensibly correct, we artificially create
 inconsistencies by placing different Mercurial and Git repos in the right spots.

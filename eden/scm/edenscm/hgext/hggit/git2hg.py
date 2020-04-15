@@ -27,17 +27,23 @@ def find_incoming(git_object_store, git_map, refs):
         for ref, sha in pycompat.iteritems(refs):
             # refs could contain refs on the server that we haven't pulled down
             # the objects for; also make sure it's a sha and not a symref
-            if ref != "HEAD" and sha in git_object_store:
+            assert isinstance(sha, bytes), "expected bytes, actual %s %s" % (
+                sha.__class__,
+                sha,
+            )
+            if ref != "HEAD" and len(sha) == 40 and sha in git_object_store:
                 obj = git_object_store[sha]
                 while isinstance(obj, Tag):
                     obj_type, sha = obj.object
                     obj = git_object_store[sha]
                 if isinstance(obj, Commit) and sha not in seenheads:
                     seenheads.add(sha)
-                    todo.append(pycompat.decodeutf8(sha))
+                    todo.append(sha)
 
         todo.sort(key=commitdate, reverse=True)
-        return todo
+
+        # We convert to utf8 after the sort, since commitdate expects byte shas
+        return [pycompat.decodeutf8(s) for s in todo]
 
     def get_unseen_commits(todo):
         """get all unseen commits reachable from todo in topological order
@@ -50,14 +56,14 @@ def find_incoming(git_object_store, git_map, refs):
             if sha in done or git_map.lookupbyfirst(bin(sha)) is not None:
                 todo.pop()
                 continue
-            assert isinstance(sha, str)
             if sha in commit_cache:
                 obj = commit_cache[sha]
             else:
-                obj = git_object_store[sha]
+                obj = git_object_store[pycompat.encodeutf8(sha)]
                 commit_cache[sha] = obj
             assert isinstance(obj, Commit)
             for p in obj.parents:
+                p = pycompat.decodeutf8(p)
                 if p not in done and git_map.lookupbyfirst(bin(p)) is None:
                     todo.append(p)
                     # process parents of a commit before processing the
@@ -128,6 +134,7 @@ def extract_hg_metadata(message, git_extra):
     git_fn = 0
     for field, data in git_extra:
         field = pycompat.decodeutf8(field)
+        data = pycompat.decodeutf8(data)
         if field.startswith("HG:"):
             if renames is None:
                 renames = {}

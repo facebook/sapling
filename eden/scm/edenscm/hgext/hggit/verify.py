@@ -9,7 +9,7 @@ import stat
 
 from dulwich import diff_tree
 from dulwich.objects import S_IFGITLINK, Commit
-from edenscm.mercurial import error, progress, util as hgutil
+from edenscm.mercurial import error, progress, pycompat, util as hgutil
 from edenscm.mercurial.i18n import _
 
 
@@ -32,7 +32,7 @@ def verify(ui, repo, hgctx):
         )
 
     try:
-        gitcommit = handler.git.get_object(gitsha)
+        gitcommit = handler.git.get_object(pycompat.encodeutf8(gitsha))
     except KeyError:
         raise hgutil.Abort(
             _("git equivalent %s for rev %s not found!") % (gitsha, hgctx)
@@ -64,10 +64,11 @@ def verify(ui, repo, hgctx):
                 continue
             prog.value = i
             i += 1
-            gitfiles.add(gitfile.path)
+            gitfilepath = pycompat.decodeutf8(gitfile.path)
+            gitfiles.add(gitfilepath)
 
             try:
-                fctx = hgctx[gitfile.path]
+                fctx = hgctx[gitfilepath]
             except error.LookupError:
                 # we'll deal with this at the end
                 continue
@@ -77,11 +78,11 @@ def verify(ui, repo, hgctx):
             if hgflags != gitflags:
                 ui.write(
                     _("file has different flags: %s (hg '%s', git '%s')\n")
-                    % (gitfile.path, hgflags, gitflags)
+                    % (gitfilepath, hgflags, gitflags)
                 )
                 failed = True
             if fctx.data() != handler.git[gitfile.sha].data:
-                ui.write(_("difference in: %s\n") % gitfile.path)
+                ui.write(_("difference in: %s\n") % gitfilepath)
                 failed = True
 
     if hgfiles != gitfiles:
