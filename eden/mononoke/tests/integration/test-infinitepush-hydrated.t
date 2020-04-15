@@ -59,7 +59,9 @@ Do infinitepush (aka commit cloud) push
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ echo new > newfile
   $ hg addremove -q
-  $ hg ci -m new
+  $ hg ci -m new1
+  $ echo more >> newfile
+  $ hg ci -m new2
   $ hgmn push ssh://user@dummy/repo -r . --bundle-store --debug --allow-anon
   pushing to ssh://user@dummy/repo
   running * (glob)
@@ -83,9 +85,10 @@ Do infinitepush (aka commit cloud) push
   preparing listkeys for "bookmarks"
   sending listkeys command
   received listkey for "bookmarks": 57 bytes
-  1 changesets found
+  2 changesets found
   list of changesets:
-  47da8b81097c5534f3eb7947a8764dd323cffe3d
+  895414f853ef689e40c2af5297febe7b5ff47d67
+  c5564d074f737edcfef195087eeca32cca42c718
   sending unbundle command
   bundle2-output-bundle: "HG20", (1 params) 3 parts total
   bundle2-output-part: "replycaps" * bytes payload (glob)
@@ -102,7 +105,9 @@ Do infinitepush (aka commit cloud) push
   received listkey for "bookmarks": 57 bytes
 
   $ tglogp
-  @  1: 47da8b81097c draft 'new'
+  @  2: c5564d074f73 draft 'new2'
+  |
+  o  1: 895414f853ef draft 'new1'
   |
   o  0: 3903775176ed public 'a' master_bookmark
   
@@ -120,11 +125,11 @@ check unhydrated infinitepush pulls
 -- so that prefetchdraftparents does not cause a `gettreepack`
   $ hgmn up -q 3903775176ed
 
--- pull a draft commit with a fully prefetched public parent
--- note the absense of the `b2x:treegroup2` part and the "0 changes to 0 files" wording,
+-- pull the draft commits with a fully prefetched public parent
+-- note the absence of the `b2x:treegroup2` part and the "0 changes to 0 files" wording,
 -- indicative of the fact that we return an "unhydrated" commit, expecting to fetch
 -- trees and files on the subsequent `update`
-  $ hgmn pull -r 47da8b81097c --debug
+  $ hgmn pull -r c5564d074f73 --debug
   pulling from * (glob)
   running * (glob)
   sending hello command
@@ -145,20 +150,21 @@ check unhydrated infinitepush pulls
   bundle2-input-bundle: 1 params with-transaction
   bundle2-input-part: "changegroup" (params: 1 mandatory) supported
   adding changesets
-  add changeset 47da8b81097c
+  add changeset 895414f853ef
+  add changeset c5564d074f73
   adding manifests
   adding file changes
-  added 1 changesets with 0 changes to 0 files
+  added 2 changesets with 0 changes to 0 files
   bundle2-input-part: total payload size * (glob)
   bundle2-input-part: "phase-heads" supported
   bundle2-input-part: total payload size * (glob)
   bundle2-input-bundle: 1 parts total
   checking for updated bookmarks
 
--- update to the recently pullued draft commit
+-- update to the recently pulled draft commit
 -- note the presence of peer connection, the `gettreepack` and `getpackv1` wireproto commands
 -- indicative of actually fetching commit contents
-  $ hgmn up -r 47da8b81097c --debug
+  $ hgmn up -r c5564d074f73 --debug
   running * (glob)
   sending hello command
   sending between command
@@ -173,7 +179,7 @@ check unhydrated infinitepush pulls
   bundle2-input-bundle: 0 parts total
   resolving manifests
    branchmerge: False, force: False, partial: False
-   ancestor: 3903775176ed, local: 3903775176ed+, remote: 47da8b81097c
+   ancestor: 3903775176ed, local: 3903775176ed+, remote: c5564d074f73
   reusing connection from pool
   sending getpackv1 command
    newfile: remote created -> g
@@ -202,10 +208,10 @@ check hydrated infinitepush pulls
 -- so that prefetchdraftparents does not cause a `gettreepack`
   $ hgmn up -q 3903775176ed
 
--- pull a draft commit with a fully prefetched public parent
--- note the presence of the `b2x:treegroup2` part and the "1 changes to 1 files" wording,
+-- pull the draft commits with a fully prefetched public parent
+-- note the presence of the `b2x:treegroup2` part and the "2 changes to 1 files" wording,
 -- indicative of the fact that we return a "hydrated" commit
-  $ hgmn pull -r 47da8b81097c --debug
+  $ hgmn pull -r c5564d074f73 --debug
   pulling from ssh://user@dummy/repo
   running * (glob)
   sending hello command
@@ -226,11 +232,12 @@ check hydrated infinitepush pulls
   bundle2-input-bundle: 1 params with-transaction
   bundle2-input-part: "changegroup" (params: 1 mandatory) supported
   adding changesets
-  add changeset 47da8b81097c
+  add changeset 895414f853ef
+  add changeset c5564d074f73
   adding manifests
   adding file changes
   adding newfile revisions
-  added 1 changesets with 1 changes to 1 files
+  added 2 changesets with 2 changes to 1 files
   bundle2-input-part: total payload size * (glob)
   bundle2-input-part: "b2x:treegroup2" (params: 3 mandatory) supported
   bundle2-input-part: total payload size * (glob)
@@ -239,12 +246,12 @@ check hydrated infinitepush pulls
   bundle2-input-bundle: 2 parts total
   checking for updated bookmarks
 
--- update to the recently pullued draft commit
--- note the absense of any wireproto commands
-  $ hgmn up -r 47da8b81097c --debug
+-- update to the draft commit in the middle of the stack
+-- note the absence of any wireproto commands
+  $ hgmn up -r 895414f853ef --debug
   resolving manifests
    branchmerge: False, force: False, partial: False
-   ancestor: 3903775176ed, local: 3903775176ed+, remote: 47da8b81097c
+   ancestor: 3903775176ed, local: 3903775176ed+, remote: 895414f853ef
    newfile: remote created -> g
   getting newfile
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved

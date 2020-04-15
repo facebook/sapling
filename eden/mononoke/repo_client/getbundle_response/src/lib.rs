@@ -106,46 +106,27 @@ pub async fn create_getbundle_response(
 
     let heads_len = heads.len();
     let common: HashSet<_> = common.into_iter().collect();
-    let commits_to_send = find_commits_to_send(&ctx, &blobrepo, &common, &heads, &lca_hint);
 
-    let phases = async {
-        // Calculate phases only for heads that will be sent back to client (i.e. only
-        // for heads that are not in "common"). Note that this is different from
-        // "phases" part below, where we want to return phases for all heads.
-        let filtered_heads = heads.iter().filter(|head| !common.contains(&head));
-        let phases = prepare_phases(&ctx, &blobrepo, filtered_heads, &blobrepo.get_phases())
-            .compat()
-            .await?;
-        report_draft_commits(&ctx, phases.iter());
-        derive_filenodes_for_public_heads(&ctx, &blobrepo, &common, &phases).await?;
-        Ok(phases)
-    };
+    let phases = blobrepo.get_phases();
+    let (draft_commits, commits_to_send) = try_join!(
+        find_new_draft_commits_and_derive_filenodes_for_public_roots(
+            &ctx, &blobrepo, &common, &heads, &phases
+        ),
+        find_commits_to_send(&ctx, &blobrepo, &common, &heads, &lca_hint),
+    )?;
 
-    let (phases, commits_to_send) = try_join!(phases, commits_to_send)?;
+    report_draft_commits(&ctx, &draft_commits);
 
     let mut parts = vec![];
     if heads_len != 0 {
         // no heads means bookmark-only pushrebase, and the client
         // does not expect a changegroup part in this case
-
-        let draft_hg_cs_ids: Vec<HgChangesetId> = phases
-            .iter()
-            .filter_map(|(hg_cs_id, hg_phase)| {
-                if HgPhase::Public == *hg_phase {
-                    None
-                } else {
-                    Some(hg_cs_id)
-                }
-            })
-            .cloned()
-            .collect();
-
         let should_include_trees_and_files =
             drafts_in_bundles_policy == DraftsInBundlesPolicy::WithTreesAndFiles;
         let (maybe_manifests, maybe_filenodes): (Option<_>, Option<_>) =
             if should_include_trees_and_files {
                 let (manifests, filenodes) =
-                    get_manifests_and_filenodes(&ctx, &blobrepo, draft_hg_cs_ids, &lfs_params)
+                    get_manifests_and_filenodes(&ctx, &blobrepo, draft_commits, &lfs_params)
                         .await?;
                 report_manifests_and_filenodes(&ctx, reponame, manifests.len(), filenodes.iter());
                 (Some(manifests), Some(filenodes))
@@ -174,33 +155,26 @@ pub async fn create_getbundle_response(
 
     // Phases part has to be after the changegroup part.
     if return_phases {
-        let phases = prepare_phases(&ctx, &blobrepo, heads.iter(), &blobrepo.get_phases())
-            .compat()
-            .await?;
-
+        let phase_heads = find_phase_heads(&ctx, &blobrepo, &heads, &phases).await?;
         parts.push(parts::phases_part(
             ctx.clone(),
-            old_stream::iter_ok(phases),
+            old_stream::iter_ok(phase_heads),
         )?);
     }
 
     Ok(parts)
 }
 
-fn report_draft_commits<'a, I: IntoIterator<Item = &'a (HgChangesetId, HgPhase)>>(
-    ctx: &CoreContext,
-    commit_phases: I,
-) {
-    let num_drafts = commit_phases
-        .into_iter()
-        .filter(|(_, ref phase)| phase == &HgPhase::Draft)
-        .count();
+fn report_draft_commits(ctx: &CoreContext, draft_commits: &HashSet<HgChangesetId>) {
     debug!(
         ctx.logger(),
-        "Getbundle returning {} draft commits", num_drafts
+        "Getbundle returning {} draft commits",
+        draft_commits.len()
     );
-    ctx.perf_counters()
-        .add_to_counter(PerfCounterType::GetbundleNumDrafts, num_drafts as i64);
+    ctx.perf_counters().add_to_counter(
+        PerfCounterType::GetbundleNumDrafts,
+        draft_commits.len() as i64,
+    );
 }
 
 fn report_manifests_and_filenodes<
@@ -245,30 +219,6 @@ fn report_manifests_and_filenodes<
     );
     STATS::filenodes_returned.add_value(num_filenodes, (reponame.clone(),));
     STATS::filenodes_weight.add_value(total_filenodes_weight, (reponame,));
-}
-
-async fn derive_filenodes_for_public_heads(
-    ctx: &CoreContext,
-    blobrepo: &BlobRepo,
-    common_heads: &HashSet<HgChangesetId>,
-    phases: &Vec<(HgChangesetId, HgPhase)>,
-) -> Result<(), Error> {
-    let mut to_derive_filenodes = vec![];
-    for (hg_cs_id, phase) in phases {
-        if !common_heads.contains(&hg_cs_id) && phase == &HgPhase::Public {
-            to_derive_filenodes.push(*hg_cs_id);
-        }
-    }
-
-    let to_derive_filenodes_bonsai =
-        hg_to_bonsai_stream(&ctx, &blobrepo, to_derive_filenodes).await?;
-    Ok(stream::iter(to_derive_filenodes_bonsai)
-        .map(move |bcs_id| {
-            FilenodesOnlyPublic::derive(ctx.clone(), blobrepo.clone(), bcs_id).compat()
-        })
-        .buffered(100)
-        .try_for_each(|_derive| async { Ok(()) })
-        .await?)
 }
 
 async fn find_commits_to_send(
@@ -449,125 +399,232 @@ async fn hg_to_bonsai_stream(
         .await
 }
 
-/// Calculate phases for the heads.
-/// If client is pulling non-public changesets phases for public roots should be included.
-fn prepare_phases<'a>(
+// Given a set of heads and a set of common heads, find the new draft commits,
+// and ensure all the public heads and first public ancestors of the draft commits
+// have had their filenodes derived.
+async fn find_new_draft_commits_and_derive_filenodes_for_public_roots(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    heads: impl IntoIterator<Item = &'a HgChangesetId>,
+    common: &HashSet<HgChangesetId>,
+    heads: &[HgChangesetId],
     phases: &Arc<dyn Phases>,
-) -> impl OldFuture<Item = Vec<(HgChangesetId, HgPhase)>, Error = Error> {
-    // create 'bonsai changesetid' => 'hg changesetid' hash map that will be later used
-    // heads that are not known by the server will be skipped
-    let heads: Vec<_> = heads.into_iter().cloned().collect();
-    repo.get_hg_bonsai_mapping(ctx.clone(), heads)
-        .map(move |hg_bonsai_mapping| {
-            hg_bonsai_mapping
-                .into_iter()
-                .map(|(hg_cs_id, bonsai)| (bonsai, hg_cs_id))
-                .collect::<HashMap<ChangesetId, HgChangesetId>>()
-        })
-        .and_then({
-            // calculate phases for the heads
-            cloned!(ctx, phases);
-            move |bonsai_node_mapping| {
-                phases
-                    .get_public(ctx, bonsai_node_mapping.keys().cloned().collect(), false)
-                    .map(move |public| (public, bonsai_node_mapping))
-            }
-        })
-        .and_then({
-            cloned!(ctx, repo, phases);
-            move |(public, bonsai_node_mapping)| {
-                // select draft heads
-                let drafts = bonsai_node_mapping
-                    .keys()
-                    .filter(|csid| !public.contains(csid))
-                    .cloned()
-                    .collect();
+) -> Result<HashSet<HgChangesetId>, Error> {
+    let (draft, public_heads) =
+        find_new_draft_commits_and_public_roots(ctx, repo, common, heads, phases).await?;
 
-                // find the public roots for the draft heads
-                calculate_public_roots(ctx.clone(), repo.clone(), drafts, phases)
-                    .and_then({
-                        cloned!(ctx);
-                        move |bonsais| {
-                            repo.get_hg_bonsai_mapping(ctx, bonsais.into_iter().collect::<Vec<_>>())
-                        }
-                    })
-                    .map(move |public_roots| {
-                        let phases = bonsai_node_mapping
-                            .into_iter()
-                            .map(move |(csid, hg_csid)| {
-                                let phase = if public.contains(&csid) {
-                                    HgPhase::Public
-                                } else {
-                                    HgPhase::Draft
-                                };
-                                (hg_csid, phase)
-                            })
-                            .chain(
-                                public_roots
-                                    .into_iter()
-                                    .map(|(hg_csid, _)| (hg_csid, HgPhase::Public)),
-                            )
-                            .collect();
-                        phases
-                    })
-            }
-        })
+    // Ensure filenodes are derived for all of the public heads.
+    stream::iter(public_heads)
+        .map(|bcs_id| FilenodesOnlyPublic::derive(ctx.clone(), repo.clone(), bcs_id).compat())
+        .buffered(100)
+        .try_for_each(|_derive| async { Ok(()) })
+        .await?;
+
+    Ok(draft)
 }
 
-/// Calculate public roots for the set of draft changesets
-fn calculate_public_roots(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    drafts: HashSet<ChangesetId>,
-    phases: Arc<dyn Phases>,
-) -> impl OldFuture<Item = HashSet<ChangesetId>, Error = Error> {
-    old_future::loop_fn(
-        (drafts, HashSet::new(), HashSet::new()),
-        move |(drafts, mut public, mut visited)| {
-            if drafts.is_empty() {
-                return old_future::ok(old_future::Loop::Break(public)).left_future();
-            }
+/// Given a set of heads and set of common heads, find the new draft commits,
+/// that is, draft commits that are ancestors of the heads but not ancestors of
+/// the common heads, as well as the new public heads and the first public
+/// ancestors of the new draft commits.
+///
+/// The draft commits are returned as `HgChangesetId`; the public heads are
+/// returned as `ChangesetId`.
+///
+/// For example in the graph:
+/// ```ignore
+///   o F [public]
+///   |
+///   | o E [draft]
+///   | |
+///   | | o D [draft]
+///   | | |
+///   | | o C [draft]
+///   | |/
+///   | o B [public]
+///   |/
+///   o A [public]
+/// ```
+///
+/// If `heads = [D, E, F]` and `common = [C]` then `new_draft_commits = [D, E]`,
+/// and new_public_heads = `[A, B]`.
+///
+async fn find_new_draft_commits_and_public_roots(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    common: &HashSet<HgChangesetId>,
+    heads: &[HgChangesetId],
+    phases: &Arc<dyn Phases>,
+) -> Result<(HashSet<HgChangesetId>, HashSet<ChangesetId>), Error> {
+    // Remove the common heads.
+    let new_heads: Vec<_> = heads
+        .iter()
+        .filter(|hg_cs_id| !common.contains(hg_cs_id))
+        .cloned()
+        .collect();
 
-            old_stream::iter_ok(drafts)
-                .map({
-                    cloned!(repo, ctx);
-                    move |csid| repo.get_changeset_parents_by_bonsai(ctx.clone(), csid)
-                })
-                .buffered(100)
-                .collect()
-                .map(move |parents| {
-                    let parents: HashSet<_> = parents
-                        .into_iter()
-                        .flatten()
-                        .filter(|csid| !visited.contains(csid))
-                        .collect();
-                    visited.extend(parents.iter().cloned());
-                    (parents, visited)
-                })
-                .and_then({
-                    cloned!(ctx, phases);
-                    move |(parents, visited)| {
-                        phases
-                            .get_public(ctx, parents.iter().cloned().collect(), false)
-                            .map(move |public_phases| (public_phases, parents, visited))
-                    }
-                })
-                .and_then(|(public_phases, parents, visited)| {
-                    // split by phase
-                    let (new_public, new_drafts) = parents
-                        .into_iter()
-                        .partition(|csid| public_phases.contains(csid));
-                    // update found public changests
-                    public.extend(new_public);
-                    // continue for the new drafts
-                    old_future::ok(old_future::Loop::Continue((new_drafts, public, visited)))
-                })
-                .right_future()
+    // Traverse the draft commits, accumulating all of the draft commits and the
+    // public heads encountered.
+    let mut new_hg_draft_commits = HashSet::new();
+    let mut new_public_heads = HashSet::new();
+    traverse_draft_commits(
+        ctx,
+        repo,
+        phases,
+        &new_heads,
+        |public_bcs_id, _public_hg_cs_id| {
+            new_public_heads.insert(public_bcs_id);
+        },
+        |_draft_head_bcs_id, _draft_head_hg_cs_id| {},
+        |_draft_bcs_id, draft_hg_cs_id| {
+            // If we encounter a common head, stop traversing there.  Ideally
+            // we would stop if we encountered any ancestor of a common head,
+            // however the common set may be large, and comparing ancestors
+            // against all of these would be too expensive.
+            let traverse = !common.contains(&draft_hg_cs_id);
+            if traverse {
+                new_hg_draft_commits.insert(draft_hg_cs_id);
+            }
+            traverse
         },
     )
+    .await?;
+
+    Ok((new_hg_draft_commits, new_public_heads))
+}
+
+/// Return phase heads for all public and draft heads, and the public roots of
+/// the draft heads, that is, the first public ancestor of the draft heads.
+///
+/// For example in the graph:
+/// ```ignore
+///   o F [public]
+///   |
+///   | o E [draft]
+///   | |
+///   | | o D [draft]
+///   | | |
+///   | | o C [draft]
+///   | |/
+///   | o B [public]
+///   |/
+///   o A [public]
+/// ```
+///
+/// If `heads = [D, E, F]` then this will return
+/// `[(F, public), (E, draft), (D, draft), (B, public)]`
+///
+async fn find_phase_heads(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    heads: &[HgChangesetId],
+    phases: &Arc<dyn Phases>,
+) -> Result<Vec<(HgChangesetId, HgPhase)>, Error> {
+    // Traverse the draft commits, collecting phase heads for the draft heads
+    // and public commits that we encounter.
+    let mut phase_heads = Vec::new();
+    let mut draft_heads = Vec::new();
+    traverse_draft_commits(
+        ctx,
+        repo,
+        phases,
+        heads,
+        |_public_bcs_id, public_hg_cs_id| {
+            phase_heads.push((public_hg_cs_id, HgPhase::Public));
+        },
+        |_draft_head_bcs_id, draft_head_hg_cs_id| {
+            draft_heads.push((draft_head_hg_cs_id, HgPhase::Draft));
+        },
+        |_draft_bcs_id, _draft_hg_cs_id| true,
+    )
+    .await?;
+    phase_heads.append(&mut draft_heads);
+    Ok(phase_heads)
+}
+
+/// Traverses all draft commits, calling `draft_head_callback` on each draft
+/// head encountered, `draft_callback` on each draft commit encountered
+/// (including heads) and `public_callback` on the first public commit
+/// encountered. The parents of draft commits are only traversed if
+/// `draft_callback` returns true.
+async fn traverse_draft_commits(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    phases: &Arc<dyn Phases>,
+    heads: &[HgChangesetId],
+    mut public_callback: impl FnMut(ChangesetId, HgChangesetId),
+    mut draft_head_callback: impl FnMut(ChangesetId, HgChangesetId),
+    mut draft_callback: impl FnMut(ChangesetId, HgChangesetId) -> bool,
+) -> Result<(), Error> {
+    // Find the bonsai changeset id for all of the heads.
+    let hg_bonsai_heads = repo
+        .get_hg_bonsai_mapping(ctx.clone(), heads.to_vec())
+        .compat()
+        .await?;
+
+    // Find the initial set of public changesets.
+    let mut public_changesets = phases
+        .get_public(
+            ctx.clone(),
+            hg_bonsai_heads
+                .iter()
+                .map(|(_hg_cs_id, bcs_id)| *bcs_id)
+                .collect(),
+            false,
+        )
+        .compat()
+        .await?;
+
+    // Call the draft head callback for each of the draft heads.
+    let mut seen = HashSet::new();
+    let mut next_changesets = Vec::new();
+    for (hg_cs_id, bcs_id) in hg_bonsai_heads.into_iter() {
+        if !public_changesets.contains(&bcs_id) {
+            draft_head_callback(bcs_id, hg_cs_id);
+        }
+        next_changesets.push((hg_cs_id, bcs_id));
+        seen.insert(bcs_id);
+    }
+
+    while !next_changesets.is_empty() {
+        let mut traverse = Vec::new();
+        for (hg_cs_id, bcs_id) in next_changesets {
+            if public_changesets.contains(&bcs_id) {
+                public_callback(bcs_id, hg_cs_id);
+            } else if draft_callback(bcs_id, hg_cs_id) {
+                traverse.push(bcs_id);
+            }
+        }
+
+        if traverse.is_empty() {
+            break;
+        }
+
+        // Get the parents of the changesets we are traversing.
+        // TODO(mbthomas): After blobrepo refactoring, change to use a method that calls `Changesets::get_many`.
+        let parents: Vec<_> = stream::iter(traverse)
+            .map(move |csid| async move {
+                repo.get_changeset_parents_by_bonsai(ctx.clone(), csid)
+                    .compat()
+                    .await
+            })
+            .buffered(100)
+            .try_collect::<Vec<_>>()
+            .await?
+            .into_iter()
+            .flatten()
+            .filter(|csid| seen.insert(*csid))
+            .collect();
+
+        let (new_next_changesets, new_public_changesets) = try_join!(
+            repo.get_hg_bonsai_mapping(ctx.clone(), parents.clone())
+                .compat(),
+            phases.get_public(ctx.clone(), parents, false).compat()
+        )?;
+        next_changesets = new_next_changesets;
+        public_changesets = new_public_changesets;
+    }
+
+    Ok(())
 }
 
 pub enum FilenodeEntryContent {
@@ -884,7 +941,7 @@ pub fn create_filenodes(
 pub async fn get_manifests_and_filenodes(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    commits: Vec<HgChangesetId>,
+    commits: impl IntoIterator<Item = HgChangesetId>,
     lfs_params: &SessionLfsParams,
 ) -> Result<
     (
