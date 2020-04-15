@@ -42,33 +42,6 @@ class SystemdTest(
         self.home_dir = self.make_temporary_directory()
 
     # TODO(T33122320): Delete this test when systemd is properly integrated.
-    # TODO(T33122320): Test without --foreground.
-    def test_eden_start_says_systemd_mode_is_enabled(self) -> None:
-        def test(start_args: typing.List[str]) -> None:
-            eden_cli: str = FindExe.EDEN_CLI  # pyre-ignore[9]: T38947910
-            with self.subTest(start_args=start_args):
-                start_process: "pexpect.spawn[str]" = pexpect.spawn(
-                    eden_cli,
-                    self.get_required_eden_cli_args()
-                    + ["start", "--foreground"]
-                    + start_args,
-                    encoding="utf-8",
-                    logfile=sys.stderr,
-                )
-                start_process.expect_exact("Running in experimental systemd mode")
-                start_process.expect_exact("Started edenfs")
-                subprocess.check_call(
-                    [eden_cli]
-                    + self.get_required_eden_cli_args()
-                    + ["stop", "--timeout", "0"]
-                )
-                start_process.wait()
-
-        test(start_args=["--", "--allowRoot"])
-        # pyre-ignore[6]: T38947910
-        test(start_args=["--daemon-binary", FindExe.FAKE_EDENFS])
-
-    # TODO(T33122320): Delete this test when systemd is properly integrated.
     def test_eden_start_with_systemd_disabled_does_not_say_systemd_mode_is_enabled(
         self
     ) -> None:
@@ -199,6 +172,10 @@ class SystemdTest(
         start_process.expect_exact("Started edenfs")
         self.assert_process_succeeds(start_process)
         self.assert_systemd_service_is_active(eden_dir=pathlib.Path(self.eden_dir))
+
+        edenfs_log = pathlib.Path(self.eden_dir) / "logs" / "edenfs.log"
+        log_contents = edenfs_log.read_text(encoding="utf-8", errors="replace")
+        self.assertIn("Running in experimental systemd mode", log_contents)
 
     def spawn_start_with_fake_edenfs(
         self, extra_args: typing.Sequence[str] = ()

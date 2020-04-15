@@ -4,9 +4,13 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# pyre-strict
+
 import os
+import stat
 import subprocess
-from typing import Dict, List, NoReturn, Optional, Tuple
+import sys
+from typing import Dict, List, Optional, Tuple
 
 from . import daemon_util, proc_utils as proc_utils_mod
 from .config import EdenInstance
@@ -32,7 +36,7 @@ def wait_for_process_exit(pid: int, timeout: float) -> bool:
     Returns True if the process exits within the specified timeout, and False if the
     timeout expires while the process is still alive.
     """
-    proc_utils = proc_utils_mod.new()
+    proc_utils: proc_utils_mod.ProcUtils = proc_utils_mod.new()
 
     def process_exited() -> Optional[bool]:
         if not proc_utils.is_process_alive(pid):
@@ -104,47 +108,10 @@ def sigkill_process(pid: int, timeout: float = DEFAULT_SIGKILL_TIMEOUT) -> None:
         )
 
 
-def exec_daemon(
+def start_edenfs_service(
     instance: EdenInstance,
     daemon_binary: Optional[str] = None,
     edenfs_args: Optional[List[str]] = None,
-    takeover: bool = False,
-    gdb: bool = False,
-    gdb_args: Optional[List[str]] = None,
-    strace_file: Optional[str] = None,
-    foreground: bool = False,
-) -> NoReturn:
-    """Execute the edenfs daemon.
-
-    This method uses os.exec() to replace the current process with the edenfs daemon.
-    It does not return on success.  It may throw an exception on error.
-    """
-    try:
-        cmd, env = _get_daemon_args(
-            instance=instance,
-            daemon_binary=daemon_binary,
-            edenfs_args=edenfs_args,
-            takeover=takeover,
-            gdb=gdb,
-            gdb_args=gdb_args,
-            strace_file=strace_file,
-            foreground=foreground,
-        )
-    except daemon_util.DaemonBinaryNotFound as e:
-        print_stderr(f"error: {e}")
-        os._exit(1)
-
-    os.execve(cmd[0], cmd, env)
-    # Throw an exception just to let mypy know that we should never reach here
-    # and will never return normally.
-    raise Exception("execve should never return")
-
-
-def start_daemon(
-    instance: EdenInstance,
-    daemon_binary: Optional[str] = None,
-    edenfs_args: Optional[List[str]] = None,
-    takeover: bool = False,
 ) -> int:
     """Start the edenfs daemon."""
     if instance.should_use_experimental_systemd_mode():
@@ -154,38 +121,157 @@ def start_daemon(
             instance=instance, daemon_binary=daemon_binary, edenfs_args=edenfs_args
         )
 
-    try:
-        cmd, env = _get_daemon_args(
-            instance=instance,
-            daemon_binary=daemon_binary,
-            edenfs_args=edenfs_args,
-            takeover=takeover,
-        )
-    except daemon_util.DaemonBinaryNotFound as e:
-        print_stderr(f"error: {e}")
-        return 1
-
-    return subprocess.call(cmd, env=env)
+    return _start_edenfs_service(
+        instance=instance,
+        daemon_binary=daemon_binary,
+        edenfs_args=edenfs_args,
+        takeover=False,
+    )
 
 
-def _get_daemon_args(
+def gracefully_restart_edenfs_service(
+    instance: EdenInstance,
+    daemon_binary: Optional[str] = None,
+    edenfs_args: Optional[List[str]] = None,
+) -> int:
+    """Gracefully restart the EdenFS service"""
+    if instance.should_use_experimental_systemd_mode():
+        raise NotImplementedError("TODO(T33122320): Implement 'eden start --takeover'")
+
+    return _start_edenfs_service(
+        instance=instance,
+        daemon_binary=daemon_binary,
+        edenfs_args=edenfs_args,
+        takeover=True,
+    )
+
+
+def _start_edenfs_service(
     instance: EdenInstance,
     daemon_binary: Optional[str] = None,
     edenfs_args: Optional[List[str]] = None,
     takeover: bool = False,
-    gdb: bool = False,
-    gdb_args: Optional[List[str]] = None,
-    strace_file: Optional[str] = None,
-    foreground: bool = False,
-) -> Tuple[List[str], Dict[str, str]]:
+) -> int:
     """Get the command and environment to use to start edenfs."""
     daemon_binary = daemon_util.find_daemon_binary(daemon_binary)
-    return instance.get_edenfs_start_cmd(
+    cmd = get_edenfs_cmd(instance, daemon_binary)
+
+    if takeover:
+        cmd.append("--takeover")
+    if edenfs_args:
+        cmd.extend(edenfs_args)
+
+    if sys.platform == "win32":
+        from . import winproc
+
+        winproc.start_edenfs_service(cmd)
+        print("EdenFS started")
+        return 0
+
+    eden_env = get_edenfs_environment()
+
+    # Wrap the command in sudo, if necessary
+    cmd, eden_env = prepare_edenfs_privileges(daemon_binary, cmd, eden_env)
+    return subprocess.call(cmd, env=eden_env)
+
+
+def get_edenfs_cmd(instance: EdenInstance, daemon_binary: str) -> List[str]:
+    """Get the command line arguments to use to start the edenfs daemon."""
+    cmd = [
         daemon_binary,
-        edenfs_args,
-        takeover=takeover,
-        gdb=gdb,
-        gdb_args=gdb_args,
-        strace_file=strace_file,
-        foreground=foreground,
-    )
+        "--edenfs",
+        "--edenDir",
+        str(instance.state_dir),
+        "--etcEdenDir",
+        str(instance.etc_eden_dir),
+        "--configPath",
+        str(instance.user_config_path),
+    ]
+
+    if sys.platform != "win32":
+        edenfsctl = os.environ.get("EDENFS_CLI_PATH", os.path.abspath(sys.argv[0]))
+        cmd += ["--edenfsctlPath", edenfsctl]
+
+    return cmd
+
+
+def prepare_edenfs_privileges(
+    daemon_binary: str, cmd: List[str], env: Dict[str, str]
+) -> Tuple[List[str], Dict[str, str]]:
+    """Update the EdenFS command and environment settings in order to run it as root.
+
+    This wraps the command using sudo, if necessary.
+    """
+    # Nothing to do on Windows
+    if sys.platform == "win32":
+        return (cmd, env)
+
+    # If we already have root privileges we don't need to do anything.
+    if os.geteuid() == 0:
+        return (cmd, env)
+
+    # If the EdenFS binary is installed as setuid root we don't need to use sudo.
+    s = os.stat(daemon_binary)
+    if s.st_uid == 0 and (s.st_mode & stat.S_ISUID):
+        return (cmd, env)
+
+    # If we're still here we need to run edenfs under sudo
+    sudo_cmd = ["/usr/bin/sudo"]
+    # Add environment variable settings
+    # Depending on the sudo configuration, these may not
+    # necessarily get passed through automatically even when
+    # using "sudo -E".
+    for key, value in env.items():
+        sudo_cmd.append("%s=%s" % (key, value))
+
+    cmd = sudo_cmd + cmd
+    return cmd, env
+
+
+def get_edenfs_environment() -> Dict[str, str]:
+    """Get the environment to use to start the edenfs daemon."""
+    # On Windows simply use the existing environment unchanged for now.
+    if sys.platform == "win32":
+        return os.environ.copy()
+
+    # Reset $PATH to the following contents, so that everyone has the
+    # same consistent settings.
+    path_dirs = ["/opt/facebook/hg/bin", "/usr/local/bin", "/bin", "/usr/bin"]
+
+    eden_env = {"PATH": ":".join(path_dirs)}
+
+    # Preserve the following environment settings
+    preserve = [
+        "USER",
+        "LOGNAME",
+        "HOME",
+        "EMAIL",
+        "NAME",
+        "ASAN_OPTIONS",
+        # When we import data from mercurial, the remotefilelog extension
+        # may need to SSH to a remote mercurial server to get the file
+        # contents.  Preserve SSH environment variables needed to do this.
+        "SSH_AUTH_SOCK",
+        "SSH_AGENT_PID",
+        "KRB5CCNAME",
+    ]
+
+    for name, value in os.environ.items():
+        # Preserve any environment variable starting with "TESTPILOT_".
+        # TestPilot uses a few environment variables to keep track of
+        # processes started during test runs, so it can track down and kill
+        # runaway processes that weren't cleaned up by the test itself.
+        # We want to make sure this behavior works during the eden
+        # integration tests.
+        # Similarly, we want to preserve EDENFS_ env vars which are
+        # populated by our own test infra to relay paths to important
+        # build artifacts in our build tree.
+        if name.startswith("TESTPILOT_") or name.startswith("EDENFS_"):
+            eden_env[name] = value
+        elif name in preserve:
+            eden_env[name] = value
+        else:
+            # Drop any environment variable not matching the above cases
+            pass
+
+    return eden_env

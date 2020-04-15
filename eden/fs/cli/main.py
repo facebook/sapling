@@ -27,6 +27,7 @@ from . import (
     buck,
     config as config_mod,
     daemon,
+    daemon_util,
     debug as debug_mod,
     doctor as doctor_mod,
     filesystem,
@@ -49,7 +50,7 @@ from .util import ShutdownError, print_stderr
 
 
 if sys.platform == "win32":
-    from . import daemon_util, winproc
+    from . import winproc
 else:
     from . import fsck as fsck_mod, rage as rage_mod
 
@@ -575,7 +576,7 @@ re-run `eden clone` with --allow-empty-repo"""
             print("edenfs daemon is not currently running.  Starting edenfs...")
             # Sometimes this returns a non-zero exit code if it does not finish
             # startup within the default timeout.
-            exit_code = daemon.start_daemon(
+            exit_code = daemon.start_edenfs_service(
                 instance, args.daemon_binary, args.edenfs_args
             )
             if exit_code != 0:
@@ -1150,26 +1151,31 @@ class StartCmd(Subcmd):
             action="store_true",
             help="Run eden in the foreground, rather than daemonizing",
         )
-        parser.add_argument(
-            "--takeover",
-            "-t",
-            action="store_true",
-            help="If an existing edenfs daemon is running, gracefully take "
-            "over its mount points.",
-        )
-        parser.add_argument("--gdb", "-g", action="store_true", help="Run under gdb")
-        parser.add_argument(
-            "--gdb-arg",
-            action="append",
-            default=[],
-            help="Extra arguments to pass to gdb",
-        )
-        parser.add_argument(
-            "--strace",
-            "-s",
-            metavar="FILE",
-            help="Run eden under strace, and write strace output to FILE",
-        )
+
+        if sys.platform != "win32":
+            parser.add_argument(
+                "--takeover",
+                "-t",
+                action="store_true",
+                help="If an existing edenfs daemon is running, gracefully take "
+                "over its mount points.",
+            )
+            parser.add_argument(
+                "--gdb", "-g", action="store_true", help="Run under gdb"
+            )
+            parser.add_argument(
+                "--gdb-arg",
+                action="append",
+                default=[],
+                help="Extra arguments to pass to gdb",
+            )
+            parser.add_argument(
+                "--strace",
+                "-s",
+                metavar="FILE",
+                help="Run eden under strace, and write strace output to FILE",
+            )
+
         parser.add_argument(
             "edenfs_args",
             nargs=argparse.REMAINDER,
@@ -1185,19 +1191,31 @@ class StartCmd(Subcmd):
         except ValueError:
             pass
 
-        if args.takeover and args.if_not_running:
-            raise config_mod.UsageError(
-                "the --takeover and --if-not-running flags cannot be combined"
-            )
+        if sys.platform != "win32":
+            is_takeover = bool(args.takeover)
+            if args.takeover and args.if_not_running:
+                raise config_mod.UsageError(
+                    "the --takeover and --if-not-running flags cannot be combined"
+                )
+            if args.gdb or args.strace:
+                if args.gdb and args.strace is not None:
+                    msg = "error: cannot run eden under gdb and strace together"
+                    raise subcmd_mod.CmdError(msg)
+                # --gdb or --strace imply foreground mode
+                args.foreground = True
+        else:
+            is_takeover: bool = False
 
         instance = get_eden_instance(args)
         if args.if_necessary and not instance.get_mount_paths():
             print("No Eden mount points configured.")
             return 0
 
+        daemon_binary = daemon_util.find_daemon_binary(args.daemon_binary)
+
         # Check to see if edenfs is already running
-        if not args.takeover:
-            health_info = instance.check_health()
+        health_info = instance.check_health()
+        if not is_takeover:
             if health_info.is_healthy():
                 msg = f"EdenFS is already running (pid {health_info.pid})"
                 if args.if_not_running:
@@ -1205,52 +1223,44 @@ class StartCmd(Subcmd):
                     return 0
                 raise subcmd_mod.CmdError(msg)
 
-        if instance.should_use_experimental_systemd_mode():
-            if args.foreground or args.gdb:
-                return self.start(args, instance)
-            else:
-                return self.start_using_systemd(args, instance)
-        else:
-            return self.start(args, instance)
+        if args.foreground:
+            return self.start_in_foreground(instance, daemon_binary, args)
 
-    def start(self, args: argparse.Namespace, instance: EdenInstance) -> int:
-        if sys.platform == "win32":
-            daemon_binary = daemon_util.find_daemon_binary(args.daemon_binary)
-            winproc.start_edenfs(instance, daemon_binary, args.edenfs_args)
-        else:
-            daemon.exec_daemon(
-                instance,
-                args.daemon_binary,
-                args.edenfs_args,
-                takeover=args.takeover,
-                gdb=args.gdb,
-                gdb_args=args.gdb_arg,
-                strace_file=args.strace,
-                foreground=args.foreground,
+        if is_takeover and health_info.is_healthy():
+            daemon.gracefully_restart_edenfs_service(
+                instance, daemon_binary, args.edenfs_args
             )
 
-        # Return success if no is exception is raised
-        return 0
+        return daemon.start_edenfs_service(instance, daemon_binary, args.edenfs_args)
 
-    def start_using_systemd(
-        self, args: argparse.Namespace, instance: EdenInstance
+    def start_in_foreground(
+        self, instance: EdenInstance, daemon_binary: str, args: argparse.Namespace
     ) -> int:
-        if args.strace:
-            raise NotImplementedError(
-                "TODO(T33122320): Implement 'eden start --strace'"
-            )
-        if args.takeover:
-            raise NotImplementedError(
-                "TODO(T33122320): Implement 'eden start --takeover'"
-            )
+        # Build the core command
+        cmd = daemon.get_edenfs_cmd(instance, daemon_binary)
+        cmd.append("--foreground")
+        if sys.platform != "win32" and args.takeover:
+            cmd.append("--takeover")
+        if args.edenfs_args:
+            cmd.extend(args.edenfs_args)
 
-        from . import systemd_service
+        if sys.platform == "win32":
+            return winproc.run_edenfs_foreground(cmd)
 
-        return systemd_service.start_systemd_service(
-            instance=instance,
-            daemon_binary=args.daemon_binary,
-            edenfs_args=args.edenfs_args,
-        )
+        # Update the command with additional arguments
+        if args.gdb:
+            cmd = ["gdb"] + args.gdb_arg + ["--args"] + cmd
+        if args.strace is not None:
+            cmd = ["strace", "-fttT", "-o", args.strace] + cmd
+
+        # Wrap the command in sudo, if necessary
+        eden_env = daemon.get_edenfs_environment()
+        cmd, eden_env = daemon.prepare_edenfs_privileges(daemon_binary, cmd, eden_env)
+
+        os.execve(cmd[0], cmd, env=eden_env)
+        # Throw an exception just to let mypy know that we should never reach here
+        # and will never return normally.
+        raise Exception("execve should never return")
 
 
 def unmount_redirections_for_path(repo_path: str) -> None:
@@ -1403,13 +1413,15 @@ class RestartCmd(Subcmd):
                 "TODO(T33122320): Implement 'eden restart --graceful'"
             )
         else:
-            return daemon.start_daemon(
-                instance, daemon_binary=self.args.daemon_binary, takeover=True
+            return daemon.gracefully_restart_edenfs_service(
+                instance, daemon_binary=self.args.daemon_binary
             )
 
     def _start(self, instance: EdenInstance) -> int:
         print("Eden is not currently running.  Starting it...")
-        return daemon.start_daemon(instance, daemon_binary=self.args.daemon_binary)
+        return daemon.start_edenfs_service(
+            instance, daemon_binary=self.args.daemon_binary
+        )
 
     def _full_restart(self, instance: EdenInstance, old_pid: int) -> int:
         print(
@@ -1466,7 +1478,9 @@ re-open these files after Eden is restarted.
         self._wait_for_stop(instance, pid, timeout)
 
     def _finish_restart(self, instance: EdenInstance) -> int:
-        exit_code = daemon.start_daemon(instance, daemon_binary=self.args.daemon_binary)
+        exit_code = daemon.start_edenfs_service(
+            instance, daemon_binary=self.args.daemon_binary
+        )
         if exit_code != 0:
             print("Failed to start edenfs!", file=sys.stderr)
             return exit_code
@@ -1754,6 +1768,9 @@ def main() -> int:
     try:
         return_code: int = args.func(args)
     except subcmd_mod.CmdError as ex:
+        print(f"error: {ex}", file=sys.stderr)
+        return EX_SOFTWARE
+    except daemon_util.DaemonBinaryNotFound as ex:
         print(f"error: {ex}", file=sys.stderr)
         return EX_SOFTWARE
     except config_mod.UsageError as ex:

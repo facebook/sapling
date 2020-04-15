@@ -12,7 +12,6 @@ import json
 import logging
 import os
 import shutil
-import stat
 import subprocess
 import sys
 import tempfile
@@ -173,6 +172,14 @@ class EdenInstance:
     @property
     def state_dir(self) -> Path:
         return self._config_dir
+
+    @property
+    def etc_eden_dir(self) -> Path:
+        return self._etc_eden_dir
+
+    @property
+    def user_config_path(self) -> Path:
+        return self._user_config_path
 
     def _loadConfig(self) -> configutil.EdenConfigParser:
         """ to facilitate templatizing a centrally deployed config, we
@@ -621,116 +628,8 @@ Do you want to run `eden mount %s` instead?"""
             lambda: self.get_thrift_client(), self._config_dir, timeout=timeout
         )
 
-    def get_edenfs_start_cmd(
-        self,
-        daemon_binary: str,
-        extra_args: Optional[List[str]] = None,
-        takeover: bool = False,
-        gdb: bool = False,
-        gdb_args: Optional[List[str]] = None,
-        strace_file: Optional[str] = None,
-        foreground: bool = False,
-    ) -> Tuple[List[str], Dict[str, str]]:
-        """Get the command and environment to use to start edenfs."""
-        if gdb and strace_file is not None:
-            raise EdenStartError("cannot run eden under gdb and " "strace together")
-
-        # Compute the command.
-        cmd = [
-            daemon_binary,
-            "--edenfs",
-            "--edenfsctlPath",
-            os.environ.get("EDENFS_CLI_PATH", os.path.abspath(sys.argv[0])),
-            "--edenDir",
-            str(self._config_dir),
-            "--etcEdenDir",
-            str(self._etc_eden_dir),
-            "--configPath",
-            str(self._user_config_path),
-        ]
-        if gdb:
-            gdb_args = gdb_args or []
-            cmd = ["gdb"] + gdb_args + ["--args"] + cmd
-            foreground = True
-        if strace_file is not None:
-            cmd = ["strace", "-fttT", "-o", strace_file] + cmd
-        if extra_args:
-            cmd.extend(extra_args)
-        if self.should_use_experimental_systemd_mode():
-            # TODO(T33122320): Delete this after making 'eden restart' and other
-            # callers support systemd mode. (--foreground should never set
-            # --experimentalSystemd.)
-            cmd.append("--experimentalSystemd")
-        if takeover:
-            cmd.append("--takeover")
-        if foreground:
-            cmd.append("--foreground")
-
-        eden_env = self._build_eden_environment()
-
-        # Run edenfs using sudo, unless we already have root privileges,
-        # or the edenfs binary is setuid root.
-        if os.geteuid() != 0:
-            s = os.stat(daemon_binary)
-            if not (s.st_uid == 0 and (s.st_mode & stat.S_ISUID)):
-                # We need to run edenfs under sudo
-                sudo_cmd = ["/usr/bin/sudo"]
-                # Add environment variable settings
-                # Depending on the sudo configuration, these may not
-                # necessarily get passed through automatically even when
-                # using "sudo -E".
-                for key, value in eden_env.items():
-                    sudo_cmd.append("%s=%s" % (key, value))
-
-                cmd = sudo_cmd + cmd
-
-        return cmd, eden_env
-
     def get_log_path(self) -> Path:
         return self._config_dir / "logs" / "edenfs.log"
-
-    def _build_eden_environment(self) -> Dict[str, str]:
-        # Reset $PATH to the following contents, so that everyone has the
-        # same consistent settings.
-        path_dirs = ["/opt/facebook/hg/bin", "/usr/local/bin", "/bin", "/usr/bin"]
-
-        eden_env = {"PATH": ":".join(path_dirs)}
-
-        # Preserve the following environment settings
-        preserve = [
-            "USER",
-            "LOGNAME",
-            "HOME",
-            "EMAIL",
-            "NAME",
-            "ASAN_OPTIONS",
-            # When we import data from mercurial, the remotefilelog extension
-            # may need to SSH to a remote mercurial server to get the file
-            # contents.  Preserve SSH environment variables needed to do this.
-            "SSH_AUTH_SOCK",
-            "SSH_AGENT_PID",
-            "KRB5CCNAME",
-        ]
-
-        for name, value in os.environ.items():
-            # Preserve any environment variable starting with "TESTPILOT_".
-            # TestPilot uses a few environment variables to keep track of
-            # processes started during test runs, so it can track down and kill
-            # runaway processes that weren't cleaned up by the test itself.
-            # We want to make sure this behavior works during the eden
-            # integration tests.
-            # Similarly, we want to preserve EDENFS_ env vars which are
-            # populated by our own test infra to relay paths to important
-            # build artifacts in our build tree.
-            if name.startswith("TESTPILOT_") or name.startswith("EDENFS_"):
-                eden_env[name] = value
-            elif name in preserve:
-                eden_env[name] = value
-            else:
-                # Drop any environment variable not matching the above cases
-                pass
-
-        return eden_env
 
     def get_checkout_config_for_path(self, path: str) -> Optional[CheckoutConfig]:
         client_link = os.path.join(path, ".eden", "client")

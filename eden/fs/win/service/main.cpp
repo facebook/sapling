@@ -42,6 +42,16 @@ using namespace folly;
 
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG4");
 
+// The --edenfs flag is defined to help make the flags consistent across Windows
+// and non-Windows platforms.  On non-Windows platform this flag is required, as
+// a check to help ensure that users do not accidentally invoke `edenfs` when
+// they meant to run `edenfsctl`.
+// It probably would be nice to eventually require this behavior on Windows too.
+DEFINE_bool(
+    edenfs,
+    false,
+    "This optional argument is currently ignored on Windows");
+
 namespace {
 
 constexpr StringPiece kEdenVersion = "edenwin";
