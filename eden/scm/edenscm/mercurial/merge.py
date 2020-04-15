@@ -1660,7 +1660,15 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
     numupdates = sum(len(l) for m, l in actions.items() if m != "k")
     z = 0
 
-    rustworkers = repo.ui.configbool("worker", "rustworkers") and not wctx.isinmemory()
+    def userustworker():
+        return (
+            "remotefilelog" in repo.requirements
+            and repo.fileslog._ruststore
+            and repo.ui.configbool("worker", "rustworkers")
+            and not wctx.isinmemory()
+        )
+
+    rustworkers = userustworker()
 
     # record path conflicts
     with progress.bar(
