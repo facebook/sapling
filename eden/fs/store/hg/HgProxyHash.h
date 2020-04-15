@@ -69,7 +69,7 @@ class HgProxyHash {
 
   Hash revHash() const;
 
-  static folly::Future<std::vector<std::pair<RelativePath, Hash>>> getBatch(
+  static folly::Future<std::vector<HgProxyHash>> getBatch(
       LocalStore* store,
       const std::vector<Hash>& blobHashes);
 

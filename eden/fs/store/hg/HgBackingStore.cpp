@@ -735,12 +735,11 @@ SemiFuture<folly::Unit> HgBackingStore::prefetchBlobs(
     const std::vector<Hash>& ids) {
   return HgProxyHash::getBatch(localStore_, ids)
       .via(importThreadPool_.get())
-      .thenValue(
-          [&liveImportPrefetchWatches = liveImportPrefetchWatches_](
-              std::vector<std::pair<RelativePath, Hash>>&& hgPathHashes) {
-            RequestMetricsScope queueTracker{&liveImportPrefetchWatches};
-            return getThreadLocalImporter().prefetchFiles(hgPathHashes);
-          })
+      .thenValue([&liveImportPrefetchWatches = liveImportPrefetchWatches_](
+                     std::vector<HgProxyHash>&& hgPathHashes) {
+        RequestMetricsScope queueTracker{&liveImportPrefetchWatches};
+        return getThreadLocalImporter().prefetchFiles(hgPathHashes);
+      })
       .via(serverThreadPool_);
 }
 

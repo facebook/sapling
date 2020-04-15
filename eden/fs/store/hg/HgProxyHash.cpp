@@ -41,7 +41,7 @@ HgProxyHash::HgProxyHash(
   validate(edenBlobHash);
 }
 
-folly::Future<std::vector<std::pair<RelativePath, Hash>>> HgProxyHash::getBatch(
+folly::Future<std::vector<HgProxyHash>> HgProxyHash::getBatch(
     LocalStore* store,
     const std::vector<Hash>& blobHashes) {
   auto hashCopies = std::make_shared<std::vector<Hash>>(blobHashes);
@@ -51,13 +51,11 @@ folly::Future<std::vector<std::pair<RelativePath, Hash>>> HgProxyHash::getBatch(
   }
   return store->getBatch(KeySpace::HgProxyHashFamily, byteRanges)
       .thenValue([blobHashes = hashCopies](std::vector<StoreResult>&& data) {
-        std::vector<std::pair<RelativePath, Hash>> results;
+        std::vector<HgProxyHash> results;
 
         for (size_t i = 0; i < blobHashes->size(); ++i) {
-          HgProxyHash hgInfo(
-              blobHashes->at(i), data[i], "prefetchFiles getBatch");
-
-          results.emplace_back(hgInfo.path().copy(), hgInfo.revHash());
+          results.emplace_back(HgProxyHash{
+              blobHashes->at(i), data[i], "prefetchFiles getBatch"});
         }
 
         return results;

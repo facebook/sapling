@@ -386,8 +386,7 @@ unique_ptr<Blob> HgImporter::importFileContents(
   return make_unique<Blob>(blobHash, std::move(buf));
 }
 
-void HgImporter::prefetchFiles(
-    const std::vector<std::pair<RelativePath, Hash>>& files) {
+void HgImporter::prefetchFiles(const std::vector<HgProxyHash>& files) {
   auto requestID = sendPrefetchFilesRequest(files);
 
   // Read the response; throws if there was any error.
@@ -553,7 +552,7 @@ HgImporter::TransactionID HgImporter::sendFileRequest(
 }
 
 HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
-    const std::vector<std::pair<RelativePath, Hash>>& files) {
+    const std::vector<HgProxyHash>& files) {
   stats_->getHgImporterStatsForCurrentThread().prefetchFiles.addValue(1);
 
   auto txnID = nextRequestID_++;
@@ -564,8 +563,8 @@ HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
 
   // Compute the length of the body
   size_t dataLength = sizeof(uint32_t);
-  for (const auto& pair : files) {
-    dataLength += sizeof(uint32_t) + pair.first.stringPiece().size() +
+  for (const auto& file : files) {
+    dataLength += sizeof(uint32_t) + file.path().stringPiece().size() +
         (Hash::RAW_SIZE * 2);
   }
   if (dataLength > std::numeric_limits<uint32_t>::max()) {
@@ -584,17 +583,17 @@ HgImporter::TransactionID HgImporter::sendPrefetchFilesRequest(
   IOBuf buf(IOBuf::CREATE, dataLength);
   Appender appender(&buf, 0);
   appender.writeBE<uint32_t>(folly::to_narrow(files.size()));
-  for (const auto& pair : files) {
-    auto fileName = pair.first.stringPiece();
+  for (const auto& file : files) {
+    auto fileName = file.path().stringPiece();
     appender.writeBE<uint32_t>(folly::to_narrow(fileName.size()));
   }
-  for (const auto& pair : files) {
-    auto fileName = pair.first.stringPiece();
+  for (const auto& file : files) {
+    auto fileName = file.path().stringPiece();
     appender.push(fileName);
     // TODO: It would be nice to have a function that can hexlify the hash
     // data directly into the IOBuf without making a copy in a temporary string.
     // This isn't really that big of a deal though.
-    appender.push(StringPiece(pair.second.toString()));
+    appender.push(StringPiece(file.revHash().toString()));
   }
   DCHECK_EQ(buf.length(), dataLength);
 
@@ -769,8 +768,7 @@ unique_ptr<Blob> HgImporterManager::importFileContents(
   });
 }
 
-void HgImporterManager::prefetchFiles(
-    const std::vector<std::pair<RelativePath, Hash>>& files) {
+void HgImporterManager::prefetchFiles(const std::vector<HgProxyHash>& files) {
   return retryOnError(
       [&](HgImporter* importer) { return importer->prefetchFiles(files); });
 }

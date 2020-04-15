@@ -38,6 +38,7 @@ class Hash;
 class HgManifestImporter;
 class StoreResult;
 class Tree;
+class HgProxyHash;
 
 #ifdef _WIN32
 typedef HANDLE edenfd_t;
@@ -93,8 +94,7 @@ class Importer {
       RelativePathPiece path,
       Hash blobHash) = 0;
 
-  virtual void prefetchFiles(
-      const std::vector<std::pair<RelativePath, Hash>>& files) = 0;
+  virtual void prefetchFiles(const std::vector<HgProxyHash>& files) = 0;
 
   /**
    * Import tree and store it in the datapack
@@ -140,8 +140,7 @@ class HgImporter : public Importer {
   std::unique_ptr<Blob> importFileContents(
       RelativePathPiece path,
       Hash blobHash) override;
-  void prefetchFiles(
-      const std::vector<std::pair<RelativePath, Hash>>& files) override;
+  void prefetchFiles(const std::vector<HgProxyHash>& files) override;
   void fetchTree(RelativePathPiece path, Hash pathManifestNode) override;
 
   const ImporterOptions& getOptions() const;
@@ -267,8 +266,7 @@ class HgImporter : public Importer {
   // Note: intentional RelativePath rather than RelativePathPiece here because
   // HgProxyHash is not movable and it was less work to make a copy here than
   // to implement its move constructor :-p
-  TransactionID sendPrefetchFilesRequest(
-      const std::vector<std::pair<RelativePath, Hash>>& files);
+  TransactionID sendPrefetchFilesRequest(const std::vector<HgProxyHash>& files);
 
 #ifndef _WIN32
   folly::Subprocess helper_;
@@ -324,8 +322,7 @@ class HgImporterManager : public Importer {
   std::unique_ptr<Blob> importFileContents(
       RelativePathPiece path,
       Hash blobHash) override;
-  void prefetchFiles(
-      const std::vector<std::pair<RelativePath, Hash>>& files) override;
+  void prefetchFiles(const std::vector<HgProxyHash>& files) override;
   void fetchTree(RelativePathPiece path, Hash pathManifestNode) override;
 
  private:
