@@ -571,17 +571,29 @@ def is_empty_dir(path: Path) -> bool:
     return True
 
 
+def prepare_redirection_list(checkout: EdenCheckout) -> str:
+    mount_table = mtab.new()
+    redirs = get_effective_redirections(checkout, mount_table)
+    return create_redirection_configs(checkout, redirs.values(), False)
+
+
 def print_redirection_configs(
-    checkout: EdenCheckout, redirs: Iterable[Redirection], use_json
+    checkout: EdenCheckout, redirs: Iterable[Redirection], use_json: bool
 ) -> None:
+    print(create_redirection_configs(checkout, redirs, use_json))
+
+
+def create_redirection_configs(
+    checkout: EdenCheckout, redirs: Iterable[Redirection], use_json: bool
+) -> str:
     redirs = sorted(redirs, key=lambda r: r.repo_path)
     data = [r.as_dict(checkout) for r in redirs]
 
     if use_json:
-        print(json.dumps(data))
+        return json.dumps(data)
     else:
         columns = ["repo_path", "type", "target", "source", "state"]
-        print(tabulate.tabulate(columns, data))
+        return tabulate.tabulate(columns, data)
 
 
 @redirect_cmd("list", "List redirections")

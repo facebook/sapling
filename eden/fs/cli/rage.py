@@ -19,6 +19,7 @@ from . import (
     filesystem,
     mtab,
     proc_utils,
+    redirect as redirect_mod,
     stats as stats_mod,
     ui as ui_mod,
 )
@@ -44,6 +45,8 @@ def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
     if health_status.is_healthy() and health_status.pid is not None:
         # pyre-fixme[6]: Expected `int` for 1st param but got `Optional[int]`.
         print_edenfs_process_tree(health_status.pid, out)
+
+    print_eden_redirections(instance, out)
 
     out.write(b"\nList of mount points:\n")
     mountpoint_paths = []
@@ -136,3 +139,17 @@ def print_edenfs_process_tree(pid: int, out: IO[bytes]) -> None:
         out.write(output)
     except Exception as e:
         out.write(b"Error getting edenfs process tree: %s\n" % str(e).encode())
+
+
+def print_eden_redirections(instance: EdenInstance, out: IO[bytes]) -> None:
+    try:
+        out.write(b"\nedenfs redirections:\n")
+        checkouts = instance.get_checkouts()
+        for checkout in checkouts:
+            out.write(bytes(checkout.path) + b"\n")
+            output = redirect_mod.prepare_redirection_list(checkout)
+            # append a tab at the beginning of every new line to indent
+            output = output.replace("\n", "\n\t")
+            out.write(b"\t" + output.encode() + b"\n")
+    except Exception as e:
+        out.write(b"Error getting edenfs redirections %s\n" % str(e).encode())
