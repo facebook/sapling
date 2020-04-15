@@ -44,5 +44,5 @@ async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", br
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 itertools = "0.8"
 rand = { version = "0.7", features = ["small_rng"] }
-tokio = { version = "=0.2.11", features = ["full"] }
+tokio = { version = "=0.2.13", features = ["full"] }
 tokio-compat = "0.1"

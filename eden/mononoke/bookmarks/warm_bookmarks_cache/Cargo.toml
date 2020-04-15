@@ -29,7 +29,7 @@ futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
 itertools = "0.8"
 slog = { version="2.5", features=["max_level_debug"] }
-tokio = { version = "=0.2.11", features = ["full"] }
+tokio = { version = "=0.2.13", features = ["full"] }
 
 [dev-dependencies]
 blobstore = { path = "../../blobstore" }

@@ -31,4 +31,4 @@ thiserror = "1.0"
 mononoke_types-mocks = { path = "../mononoke_types/mocks" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 assert_matches = "1.3"
-tokio = { version = "=0.2.11", features = ["full"] }
+tokio = { version = "=0.2.13", features = ["full"] }

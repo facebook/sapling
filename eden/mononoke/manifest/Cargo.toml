@@ -28,5 +28,5 @@ fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch
 lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 pretty_assertions = "0.6"
 serde_cbor = "0.11"
-tokio = { version = "=0.2.11", features = ["full"] }
+tokio = { version = "=0.2.13", features = ["full"] }
 tokio-compat = "0.1"
