@@ -8,8 +8,10 @@
 #![deny(warnings)]
 
 use anyhow::Error;
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use context::CoreContext;
+use futures::{compat::Future01CompatExt, stream, StreamExt, TryStreamExt};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::Future;
 use lock_ext::LockExt;
@@ -41,6 +43,7 @@ pub enum DeriveError {
 
 /// Trait for the data that can be derived from bonsai changeset.
 /// Examples of that are hg changeset id, unodes root manifest id, git changeset ids etc
+#[async_trait]
 pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
     /// Name of derived data
     ///
@@ -127,6 +130,29 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         Self::count_underived(ctx, repo, csid, 1)
             .map(|count| count == 0)
             .boxify()
+    }
+
+    /// This method might be overridden by BonsaiDerived implementors if there's a more efficienta
+    /// way to derive a batch of commits
+    async fn batch_derive<'a, Iter>(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csids: Iter,
+    ) -> Result<HashMap<ChangesetId, Self>, Error>
+    where
+        Iter: IntoIterator<Item = ChangesetId> + Send,
+        Iter::IntoIter: Send,
+    {
+        let iter = csids.into_iter();
+        stream::iter(iter.map(|cs_id| async move {
+            let derived = Self::derive(ctx.clone(), repo.clone(), cs_id)
+                .compat()
+                .await?;
+            Ok((cs_id, derived))
+        }))
+        .buffered(100)
+        .try_collect::<HashMap<_, _>>()
+        .await
     }
 }
 

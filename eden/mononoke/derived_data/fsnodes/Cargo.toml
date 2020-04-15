@@ -28,6 +28,7 @@ futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", b
 lock_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"
 ascii = "1.0"
+async-trait = "0.1.29"
 bytes = { version = "0.5", features = ["serde"] }
 digest = "0.8"
 futures = { version = "0.3", features = ["async-await", "compat"] }

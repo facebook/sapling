@@ -896,6 +896,51 @@ mod test {
         Ok(())
     }
 
+    #[fbinit::compat_test]
+    async fn test_batch_derive(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let from_batch = {
+            let repo = linear::getrepo(fb).await;
+            let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
+                derived_data_config
+                    .derived_data_types
+                    .insert(TestGenNum::NAME.to_string());
+                derived_data_config
+            });
+            let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+
+            let cs_ids =
+                AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), master_cs_id)
+                    .collect()
+                    .compat()
+                    .await?;
+            // Reverse them to derive parents before children
+            let cs_ids = cs_ids.clone().into_iter().rev().collect::<Vec<_>>();
+            let derived_batch = TestGenNum::batch_derive(&ctx, &repo, cs_ids).await?;
+            derived_batch
+                .get(&master_cs_id)
+                .unwrap_or_else(|| panic!("{} has not been derived", master_cs_id))
+                .clone()
+        };
+
+        let sequential = {
+            let repo = linear::getrepo(fb).await;
+            let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
+                derived_data_config
+                    .derived_data_types
+                    .insert(TestGenNum::NAME.to_string());
+                derived_data_config
+            });
+            let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
+            TestGenNum::derive(ctx.clone(), repo.clone(), master_cs_id)
+                .compat()
+                .await?
+        };
+
+        assert_eq!(from_batch, sequential);
+        Ok(())
+    }
+
     #[fbinit::test]
     fn test_leases(fb: FacebookInit) -> Result<(), Error> {
         let ctx = CoreContext::test_mock(fb);
