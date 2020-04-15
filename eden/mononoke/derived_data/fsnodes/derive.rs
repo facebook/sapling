@@ -88,7 +88,7 @@ pub(crate) fn derive_fsnode(
 }
 
 // Prefetch metadata for all content IDs introduced by a changeset.
-fn prefetch_content_metadata(
+pub fn prefetch_content_metadata(
     ctx: CoreContext,
     blobstore: RepoBlobstore,
     content_ids: HashSet<ContentId>,

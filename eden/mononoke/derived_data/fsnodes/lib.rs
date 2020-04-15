@@ -14,6 +14,7 @@ use thiserror::Error;
 mod derive;
 mod mapping;
 
+pub use derive::prefetch_content_metadata;
 pub use mapping::{RootFsnodeId, RootFsnodeMapping};
 
 #[derive(Debug, Error)]
