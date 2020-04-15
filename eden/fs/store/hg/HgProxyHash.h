@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/FixedString.h>
 #include <string>
 #include <vector>
 #include "eden/fs/model/Hash.h"
@@ -21,6 +22,13 @@ class IOBuf;
 
 namespace facebook {
 namespace eden {
+namespace {
+// An empty ProxyHash. It contains an all zeros hash and zero length path.
+constexpr auto kDefaultProxyHash =
+    folly::FixedString<Hash::RAW_SIZE + sizeof(uint32_t)>().append(
+        Hash::RAW_SIZE + sizeof(uint32_t),
+        '\x00');
+} // namespace
 
 /**
  * HgProxyHash manages mercurial (path, revHash) data in the LocalStore.
@@ -30,10 +38,10 @@ namespace eden {
  * path.  To use the data in eden, we need to create a blob hash that we can
  * use instead.
  *
- * To do so, we hash the (path, revHash) tuple, and use this hash as the blob
- * hash in eden.  We store the eden_blob_hash --> (path, hgRevHash) mapping
- * in the LocalStore.  The HgProxyHash class helps store and retrieve these
- * mappings.
+ * To do so, we hash the (path, revHash) tuple, and use this hash as the
+ * blob hash in eden.  We store the eden_blob_hash --> (path, hgRevHash)
+ * mapping in the LocalStore.  The HgProxyHash class helps store and
+ * retrieve these mappings.
  */
 class HgProxyHash {
  public:
@@ -42,15 +50,24 @@ class HgProxyHash {
    */
   HgProxyHash(LocalStore* store, Hash edenBlobHash, folly::StringPiece context);
 
-  ~HgProxyHash() {}
+  ~HgProxyHash() = default;
 
-  const RelativePathPiece& path() const {
-    return path_;
+  HgProxyHash(const HgProxyHash& other) = default;
+  HgProxyHash& operator=(const HgProxyHash& other) = default;
+
+  HgProxyHash(HgProxyHash&& other) noexcept(false) {
+    value_.swap(other.value_);
   }
 
-  const Hash& revHash() const {
-    return revHash_;
+  HgProxyHash& operator=(HgProxyHash&& other) noexcept(false) {
+    value_.swap(other.value_);
+    other.value_ = kDefaultProxyHash;
+    return *this;
   }
+
+  RelativePathPiece path() const;
+
+  Hash revHash() const;
 
   static folly::Future<std::vector<std::pair<RelativePath, Hash>>> getBatch(
       LocalStore* store,
@@ -89,15 +106,6 @@ class HgProxyHash {
       LocalStore::WriteBatch* writeBatch);
 
  private:
-  // Not movable or copyable.
-  // path_ points into value_, and would need to be updated after
-  // copying/moving the data.  Since no-one needs to copy or move HgProxyHash
-  // objects, we don't implement this for now.
-  HgProxyHash(const HgProxyHash&) = delete;
-  HgProxyHash& operator=(const HgProxyHash&) = delete;
-  HgProxyHash(HgProxyHash&&) = delete;
-  HgProxyHash& operator=(HgProxyHash&&) = delete;
-
   HgProxyHash(
       Hash edenBlobHash,
       StoreResult& infoResult,
@@ -110,30 +118,19 @@ class HgProxyHash {
   static folly::IOBuf serialize(RelativePathPiece path, Hash hgRevHash);
 
   /**
-   * Parse the serialized data found in value_, and set revHash_ and path_.
+   * Validate data found in value_.
    *
    * The value_ member variable should already contain the serialized data,
    * (as returned by serialize()).
    *
-   * Note that path_ will be set to a RelativePathPiece pointing into the
-   * string data owned by value_.  (This lets us avoid copying the string data
-   * out.)
+   * Note there will be an exception being thrown if `value_` is invalid.
    */
-  void parseValue(Hash edenBlobHash);
+  void validate(Hash edenBlobHash);
 
   /**
    * The serialized data as written in the LocalStore.
    */
-  std::string value_;
-  /**
-   * The revision hash.
-   */
-  Hash revHash_;
-  /**
-   * The path name.  Note that this points into the serialized value_ data.
-   * path_ itself does not own the data it points to.
-   */
-  RelativePathPiece path_;
+  std::string value_ = kDefaultProxyHash;
 };
 
 } // namespace eden

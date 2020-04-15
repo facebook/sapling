@@ -38,7 +38,7 @@ HgProxyHash::HgProxyHash(
   }
 
   value_ = infoResult.extractValue();
-  parseValue(edenBlobHash);
+  validate(edenBlobHash);
 }
 
 folly::Future<std::vector<std::pair<RelativePath, Hash>>> HgProxyHash::getBatch(
@@ -108,7 +108,7 @@ HgProxyHash::HgProxyHash(
   }
 
   value_ = infoResult.extractValue();
-  parseValue(edenBlobHash);
+  validate(edenBlobHash);
 }
 
 IOBuf HgProxyHash::serialize(RelativePathPiece path, Hash hgRevHash) {
@@ -125,7 +125,19 @@ IOBuf HgProxyHash::serialize(RelativePathPiece path, Hash hgRevHash) {
   return buf;
 }
 
-void HgProxyHash::parseValue(Hash edenBlobHash) {
+RelativePathPiece HgProxyHash::path() const {
+  DCHECK_GE(value_.size(), Hash::RAW_SIZE + sizeof(uint32_t));
+  StringPiece data{value_.data(), value_.size()};
+  data.advance(Hash::RAW_SIZE + sizeof(uint32_t));
+  return RelativePathPiece{data};
+}
+
+Hash HgProxyHash::revHash() const {
+  DCHECK_GE(value_.size(), Hash::RAW_SIZE);
+  return Hash{ByteRange{StringPiece{value_.data(), Hash::RAW_SIZE}}};
+}
+
+void HgProxyHash::validate(Hash edenBlobHash) {
   ByteRange infoBytes = StringPiece(value_);
   // Make sure the data is long enough to contain the rev hash and path length
   if (infoBytes.size() < Hash::RAW_SIZE + sizeof(uint32_t)) {
@@ -139,8 +151,6 @@ void HgProxyHash::parseValue(Hash edenBlobHash) {
     throw std::length_error(msg);
   }
 
-  // Extract the revHash_
-  revHash_ = Hash(infoBytes.subpiece(0, Hash::RAW_SIZE));
   infoBytes.advance(Hash::RAW_SIZE);
 
   // Extract the path length
@@ -157,10 +167,6 @@ void HgProxyHash::parseValue(Hash edenBlobHash) {
     XLOG(ERR) << msg;
     throw std::length_error(msg);
   }
-
-  // Extract the path_
-  path_ = RelativePathPiece(StringPiece(infoBytes));
 }
-
 } // namespace eden
 } // namespace facebook
