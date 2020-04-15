@@ -1273,7 +1273,9 @@ void FuseChannel::processSession() {
               .catchErrors(
                   folly::makeFutureWith([&] {
                     request.startRequest(
-                        dispatcher_->getStats(), entry.histogram);
+                        dispatcher_->getStats(),
+                        entry.histogram,
+                        liveRequestWatches_);
                     return (this->*entry.handler)(&request.getReq(), arg);
                   })
                       .within(requestTimeout_),

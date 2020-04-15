@@ -26,6 +26,7 @@
 
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/fuse/InodeNumber.h"
+#include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessAccessLog.h"
 
@@ -583,6 +584,8 @@ class FuseChannel {
   std::thread invalidationThread_;
 
   ProcessAccessLog processAccessLog_;
+
+  RequestMetricsScope::LockedRequestWatchList liveRequestWatches_;
 
   static const HandlerMap handlerMap_;
 };

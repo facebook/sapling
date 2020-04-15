@@ -12,6 +12,7 @@
 
 #include "eden/fs/fuse/Dispatcher.h"
 #include "eden/fs/notifications/Notifications.h"
+#include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/SystemError.h"
 
 using namespace folly;
@@ -53,11 +54,13 @@ RequestData& RequestData::create(
 
 void RequestData::startRequest(
     EdenStats* stats,
-    FuseThreadStats::HistogramPtr histogram) {
+    FuseThreadStats::HistogramPtr histogram,
+    RequestMetricsScope::LockedRequestWatchList& requestWatches) {
   startTime_ = steady_clock::now();
   DCHECK(latencyHistogram_ == nullptr);
   latencyHistogram_ = histogram;
   stats_ = stats;
+  requestMetricsScope_ = RequestMetricsScope(&requestWatches);
 }
 
 void RequestData::finishRequest() {
@@ -72,6 +75,7 @@ void RequestData::finishRequest() {
       latencyHistogram_, diff_us, now_since_epoch);
   latencyHistogram_ = nullptr;
   stats_ = nullptr;
+  auto temp = std::move(requestMetricsScope_);
 
   auto& pal = channel_->getProcessAccessLog();
   if (getEdenTopStats().didImportFromBackingStore()) {

@@ -33,11 +33,13 @@ class RequestMetricsScope {
       std::chrono::steady_clock::steady_clock::duration;
 
   RequestMetricsScope(LockedRequestWatchList* pendingRequestWatches);
+  RequestMetricsScope();
+  RequestMetricsScope(RequestMetricsScope&&) noexcept;
+  RequestMetricsScope& operator=(RequestMetricsScope&&);
+  RequestMetricsScope(const RequestMetricsScope&) = delete;
+  RequestMetricsScope& operator=(const RequestMetricsScope&) = delete;
 
   ~RequestMetricsScope();
-
-  RequestMetricsScope(RequestMetricsScope&&) = delete;
-  RequestMetricsScope& operator=(RequestMetricsScope&&) = delete;
 
   /**
    * Metrics to calculated for any type of request tracked with

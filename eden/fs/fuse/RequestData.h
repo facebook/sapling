@@ -15,6 +15,7 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/telemetry/RequestMetricsScope.h"
 
 namespace facebook {
 namespace eden {
@@ -29,6 +30,7 @@ class RequestData : public folly::RequestData {
   FuseThreadStats::HistogramPtr latencyHistogram_{nullptr};
   EdenStats* stats_{nullptr};
   Dispatcher* dispatcher_{nullptr};
+  RequestMetricsScope requestMetricsScope_;
 
   struct EdenTopStats {
    public:
@@ -70,7 +72,10 @@ class RequestData : public folly::RequestData {
   // a FUSE request, false otherwise.
   static bool isFuseRequest();
 
-  void startRequest(EdenStats* stats, FuseThreadStats::HistogramPtr histogram);
+  void startRequest(
+      EdenStats* stats,
+      FuseThreadStats::HistogramPtr histogram,
+      RequestMetricsScope::LockedRequestWatchList& requestWatches);
   void finishRequest();
 
   // Returns the associated dispatcher instance

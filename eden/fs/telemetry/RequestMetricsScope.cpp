@@ -22,8 +22,24 @@ RequestMetricsScope::RequestMetricsScope(
   }
 }
 
+RequestMetricsScope::RequestMetricsScope() : pendingRequestWatches_(nullptr) {}
+
+RequestMetricsScope::RequestMetricsScope(RequestMetricsScope&& other) noexcept
+    : pendingRequestWatches_(std::move(other.pendingRequestWatches_)),
+      requestWatch_(std::move(other.requestWatch_)) {
+  other.pendingRequestWatches_ = nullptr;
+}
+
+RequestMetricsScope& RequestMetricsScope::operator=(
+    RequestMetricsScope&& other) {
+  this->pendingRequestWatches_ = std::move(other.pendingRequestWatches_);
+  this->requestWatch_ = std::move(other.requestWatch_);
+  other.pendingRequestWatches_ = nullptr;
+  return *this;
+}
+
 RequestMetricsScope::~RequestMetricsScope() {
-  {
+  if (pendingRequestWatches_ != nullptr) {
     auto startTimes = pendingRequestWatches_->wlock();
     startTimes->erase(requestWatch_);
   }
