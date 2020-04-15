@@ -247,6 +247,7 @@ impl<'a> HookInstance<'a> {
         hook_name: &str,
         mut scuba: ScubaSampleBuilder,
         cs: &BonsaiChangeset,
+        cs_id: ChangesetId,
     ) -> Result<HookOutcome, Error> {
         let (stats, result) = match self {
             Self::Changeset(hook) => {
@@ -254,7 +255,7 @@ impl<'a> HookInstance<'a> {
                     .map_ok(|exec| {
                         HookOutcome::ChangesetHook(
                             ChangesetHookExecutionID {
-                                cs_id: cs.get_changeset_id(),
+                                cs_id,
                                 hook_name: hook_name.to_string(),
                             },
                             exec,
@@ -268,7 +269,7 @@ impl<'a> HookInstance<'a> {
                     .map_ok(|exec| {
                         HookOutcome::FileHook(
                             FileHookExecutionID {
-                                cs_id: cs.get_changeset_id(),
+                                cs_id,
                                 path: path.clone(),
                                 hook_name: hook_name.to_string(),
                             },
@@ -322,6 +323,9 @@ impl Hook {
         scuba: ScubaSampleBuilder,
     ) -> impl Iterator<Item = impl Future<Output = Result<HookOutcome, Error>> + 'cs> + 'cs {
         let mut futures = Vec::new();
+
+        let cs_id = cs.get_changeset_id();
+
         match self {
             Self::Changeset(hook, _) => futures.push(HookInstance::Changeset(&**hook).run(
                 ctx,
@@ -330,6 +334,7 @@ impl Hook {
                 &hook_name,
                 scuba,
                 cs,
+                cs_id,
             )),
             Self::File(hook, _) => futures.extend(cs.file_changes().map(move |(path, change)| {
                 HookInstance::File(&**hook, path, change).run(
@@ -339,6 +344,7 @@ impl Hook {
                     &hook_name,
                     scuba.clone(),
                     cs,
+                    cs_id,
                 )
             })),
         };
