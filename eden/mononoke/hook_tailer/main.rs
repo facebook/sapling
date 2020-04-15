@@ -24,6 +24,7 @@ use futures::{
 };
 use futures_ext::BoxFuture;
 use futures_old::Future as OldFuture;
+use futures_stats::TimedFutureExt;
 use hooks::HookOutcome;
 use manifold::{ManifoldHttpClient, RequestContext};
 use mercurial_types::{HgChangesetId, HgNodeHash};
@@ -37,6 +38,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use tailer::Tailer;
 use thiserror::Error;
+use time_ext::DurationExt;
 use tokio_timer::sleep;
 
 #[fbinit::main]
@@ -195,7 +197,8 @@ async fn process_hook_results(
     fut: BoxFuture<Vec<HookOutcome>, Error>,
     logger: &Logger,
 ) -> Result<(), Error> {
-    let res = fut.compat().await?;
+    let (stats, res) = fut.compat().timed().await;
+    let res = res?;
 
     let mut hooks_stat = HookExecutionStat::new();
 
@@ -211,6 +214,12 @@ async fn process_hook_results(
     });
 
     info!(logger, "==== Hooks stat: {} ====", hooks_stat);
+    info!(
+        logger,
+        "==== Completion Time: {}us, Poll time: {}us ===",
+        stats.completion_time.as_micros_unchecked(),
+        stats.poll_time.as_micros_unchecked(),
+    );
 
     if hooks_stat.rejected > 0 {
         Err(format_err!("Hook rejections: {}", hooks_stat.rejected,))
