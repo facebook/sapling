@@ -14,6 +14,7 @@ using folly::StringPiece;
 
 namespace {
 constexpr StringPiece kLockFileName{"lock"};
+constexpr StringPiece kPidFileName{"pid"};
 constexpr StringPiece kTakeoverSocketName{"takeover"};
 constexpr StringPiece kThriftSocketName{"socket"};
 } // namespace
@@ -42,6 +43,13 @@ void EdenStateDir::takeoverLock(folly::File lockFile) {
   int rc = fstat(lockFile.fd(), &lockFileStat_);
   folly::checkUnixError(rc, "error getting lock file attributes");
   lockFile_ = std::move(lockFile);
+
+  // On Windows, also write the pid to a separate file.
+  // Other processes cannot read the lock file while we are holding the lock,
+  // so we store it in a separate file too.
+  auto pidFilePath = path_ + PathComponentPiece(kPidFileName);
+  folly::File pidFile(pidFilePath.c_str(), O_WRONLY | O_CREAT, 0644);
+  writePidToLockFile(pidFile);
 }
 
 folly::File EdenStateDir::extractLock() {

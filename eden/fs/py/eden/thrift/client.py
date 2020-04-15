@@ -18,9 +18,12 @@ from thrift.transport.TTransport import TTransportException
 
 
 if sys.platform == "win32":
-    from eden.thrift.windows_thrift import WinTSocket  # @manual
+    from eden.thrift.windows_thrift import WinTSocket, WindowsSocketException  # @manual
 else:
     from thrift.transport.TSocket import TSocket
+
+    class WindowsSocketException(Exception):
+        pass
 
 
 SOCKET_PATH = "socket"
@@ -91,15 +94,18 @@ class EdenClient(EdenService.Client):
 
     def open(self):
         # type: () -> None
+        transport = self._transport
+        assert transport is not None
         try:
-            assert self._transport is not None
-            # pyre-fixme[16]: `Optional` has no attribute `open`.
-            self._transport.open()
+            transport.open()
         except TTransportException as ex:
             self.close()
             if ex.type == TTransportException.NOT_OPEN:
                 raise EdenNotRunningError(self._socket_path)
             raise
+        except WindowsSocketException:
+            self.close()
+            raise EdenNotRunningError(self._socket_path)
 
     def close(self):
         # type: () -> None

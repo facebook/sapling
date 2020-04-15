@@ -30,6 +30,7 @@ if sys.platform != "win32":
 
 # These paths are relative to the user's client directory.
 LOCK_FILE = "lock"
+PID_FILE = "pid"
 
 
 class EdenStartError(Exception):
@@ -102,7 +103,16 @@ def poll_until(
 def get_pid_using_lockfile(config_dir: Path) -> int:
     """Read the pid from the Eden lockfile, throwing an exception upon failure.
     """
-    lockfile = config_dir / LOCK_FILE
+    if sys.platform == "win32":
+        # On Windows read the separate pid file.  We will not be able to read the
+        # lock file if EdenFS is running and holding the lock.
+        lockfile = config_dir / PID_FILE
+    else:
+        # On other platforms we still prefer reading the pid from the lock file,
+        # just to support older instances of EdenFS that only wrote the pid to the lock
+        # file.
+        lockfile = config_dir / LOCK_FILE
+
     with lockfile.open("r") as f:
         lockfile_contents = f.read()
     return int(lockfile_contents.rstrip())
