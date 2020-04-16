@@ -142,41 +142,41 @@ fn main(fb: FacebookInit) -> Result<()> {
         .build()
         .arg(
             Arg::with_name(ARG_LISTEN_HOST)
-                .long("--listen-host")
+                .long(ARG_LISTEN_HOST)
                 .takes_value(true)
                 .default_value(DEFAULT_HOST)
                 .help("The host to listen on locally"),
         )
         .arg(
             Arg::with_name(ARG_LISTEN_PORT)
-                .long("--listen-port")
+                .long(ARG_LISTEN_PORT)
                 .takes_value(true)
                 .default_value(DEFAULT_PORT)
                 .help("The port to listen on locally"),
         )
         .arg(
             Arg::with_name(ARG_TLS_CERTIFICATE)
-                .long("--tls-certificate")
+                .long(ARG_TLS_CERTIFICATE)
                 .takes_value(true),
         )
         .arg(
             Arg::with_name(ARG_TLS_PRIVATE_KEY)
-                .long("--tls-private-key")
+                .long(ARG_TLS_PRIVATE_KEY)
                 .takes_value(true),
         )
         .arg(
             Arg::with_name(ARG_TLS_CA)
-                .long("--tls-ca")
+                .long(ARG_TLS_CA)
                 .takes_value(true),
         )
         .arg(
             Arg::with_name(ARG_TLS_TICKET_SEEDS)
-                .long("--tls-ticket-seeds")
+                .long(ARG_TLS_TICKET_SEEDS)
                 .takes_value(true),
         )
         .arg(
             Arg::with_name(ARG_TRUSTED_PROXY_IDENTITY)
-                .long("--trusted-proxy-identity")
+                .long(ARG_TRUSTED_PROXY_IDENTITY)
                 .takes_value(true)
                 .multiple(true)
                 .number_of_values(1)
@@ -185,7 +185,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         )
         .arg(
             Arg::with_name(ARG_TLS_SESSION_DATA_LOG_FILE)
-                .long("--tls-session-data-log-file")
+                .long(ARG_TLS_SESSION_DATA_LOG_FILE)
                 .takes_value(true)
                 .required(false)
                 .help(
