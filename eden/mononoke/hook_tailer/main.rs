@@ -28,11 +28,9 @@ use futures_stats::TimedFutureExt;
 use hooks::HookOutcome;
 use manifold::{ManifoldHttpClient, RequestContext};
 use mercurial_types::{HgChangesetId, HgNodeHash};
-use slog::{debug, info, o, Drain, Level, Logger};
-use slog_glog_fmt::{kv_categorizer, kv_defaults, GlogFormat};
+use slog::{debug, info, Logger};
 use std::fmt;
 use std::fs::File;
-use std::io;
 use std::io::{BufRead, BufReader};
 use std::str::FromStr;
 use std::time::Duration;
@@ -43,11 +41,9 @@ use tokio_timer::sleep;
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
-    panichandler::set_panichandler(panichandler::Fate::Abort);
-
     let matches = setup_app().get_matches();
     let (repo_name, config) = cmdlib::args::get_config(fb, &matches)?;
-    let logger = setup_logger(&matches, repo_name.to_string());
+    let logger = cmdlib::args::init_logging(fb, &matches);
     info!(logger, "Hook tailer is starting");
 
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
@@ -318,38 +314,9 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .long("init_revision")
                 .takes_value(true)
                 .help("the initial revision to start at"),
-        )
-        .arg(
-            Arg::with_name("debug")
-                .long("debug")
-                .short("d")
-                .help("print debug level output"),
         );
 
     cmdlib::args::add_disabled_hooks_args(app)
-}
-
-fn setup_logger<'a>(matches: &ArgMatches<'a>, repo_name: String) -> Logger {
-    let level = if matches.is_present("debug") {
-        Level::Debug
-    } else {
-        Level::Info
-    };
-
-    let drain = {
-        let drain = {
-            let decorator = slog_term::PlainSyncDecorator::new(io::stdout());
-            GlogFormat::new(decorator, kv_categorizer::FacebookCategorizer)
-        };
-        let drain = slog_stats::StatsDrain::new(drain);
-        drain.filter_level(level)
-    };
-
-    Logger::root(
-        drain.ignore_res(),
-        o!("repo" => repo_name,
-        kv_defaults::FacebookKV::new().expect("Failed to initialize logging")),
-    )
 }
 
 #[derive(Debug, Error)]
