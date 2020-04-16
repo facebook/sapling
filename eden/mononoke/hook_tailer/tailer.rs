@@ -15,11 +15,9 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, FutureExt, TryFutureExt},
+    future,
     stream::{StreamExt, TryStreamExt},
 };
-use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
-use futures_old::Future as OldFuture;
 use hooks::{hook_loader::load_hooks, HookManager, HookOutcome};
 use hooks_content_stores::blobrepo_text_only_fetcher;
 use mercurial_types::HgChangesetId;
@@ -70,14 +68,18 @@ impl Tailer {
         })
     }
 
-    pub fn run_single_changeset(
+    pub async fn run_single_changeset(
         &self,
         changeset: ChangesetId,
-    ) -> BoxFuture<Vec<HookOutcome>, Error> {
-        cloned!(self.ctx, self.repo, self.hook_manager, self.bookmark,);
-        run_hooks_for_changeset(ctx, repo, hook_manager, bookmark, changeset)
-            .map(|(_, result)| result)
-            .boxify()
+    ) -> Result<Vec<HookOutcome>, Error> {
+        run_hooks_for_changeset(
+            &self.ctx,
+            &self.repo,
+            self.hook_manager.as_ref(),
+            &self.bookmark,
+            changeset,
+        )
+        .await
     }
 
     pub async fn run_with_limit(&self, limit: usize) -> Result<Vec<HookOutcome>, Error> {
@@ -96,16 +98,18 @@ impl Tailer {
                 .map(|cs_id| async move {
                     match cs_id {
                         Ok(cs_id) => {
-                            let (_, outcomes) = task::spawn(
+                            cloned!(self.ctx, self.repo, self.hook_manager, self.bookmark);
+
+                            let outcomes = task::spawn(async move {
                                 run_hooks_for_changeset(
-                                    self.ctx.clone(),
-                                    self.repo.clone(),
-                                    self.hook_manager.clone(),
-                                    self.bookmark.clone(),
+                                    &ctx,
+                                    &repo,
+                                    hook_manager.as_ref(),
+                                    &bookmark,
                                     cs_id,
                                 )
-                                .compat(),
-                            )
+                                .await
+                            })
                             .await??;
 
                             Ok(outcomes)
@@ -121,27 +125,22 @@ impl Tailer {
     }
 }
 
-fn run_hooks_for_changeset(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    hm: Arc<HookManager>,
-    bm: BookmarkName,
+async fn run_hooks_for_changeset(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    hm: &HookManager,
+    bm: &BookmarkName,
     cs_id: ChangesetId,
-) -> impl OldFuture<Item = (ChangesetId, Vec<HookOutcome>), Error = Error> {
-    cs_id
-        .load(ctx.clone(), repo.blobstore())
-        .from_err()
-        .and_then(move |cs| {
-            async move {
-                debug!(ctx.logger(), "Running hooks for changeset {:?}", cs);
-                let hook_results = hm
-                    .run_hooks_for_bookmark(&ctx, vec![cs].iter(), &bm, None)
-                    .await?;
-                Ok((cs_id, hook_results))
-            }
-            .boxed()
-            .compat()
-        })
+) -> Result<Vec<HookOutcome>, Error> {
+    let cs = cs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
+
+    debug!(ctx.logger(), "Running hooks for changeset {:?}", cs);
+
+    let hook_results = hm
+        .run_hooks_for_bookmark(ctx, vec![cs].iter(), bm, None)
+        .await?;
+
+    Ok(hook_results)
 }
 
 #[derive(Debug, Error)]

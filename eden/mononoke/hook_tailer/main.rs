@@ -127,9 +127,7 @@ async fn run_hook_tailer<'a>(
     )?;
 
     match changeset {
-        Some(changeset) => {
-            process_hook_results(tail.run_single_changeset(changeset).compat(), logger).await
-        }
+        Some(changeset) => process_hook_results(tail.run_single_changeset(changeset), logger).await,
         None => process_hook_results(tail.run_with_limit(limit), logger).await,
     }
 }
