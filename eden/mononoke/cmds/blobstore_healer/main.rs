@@ -27,19 +27,15 @@ use cmdlib::{
 use context::{CoreContext, SessionContainer};
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
-use futures::future::{FutureExt as _, TryFutureExt};
+use futures::{compat::Future01CompatExt, future};
 use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{
-    future::{self, join_all},
-    prelude::*,
-};
+use futures_old::prelude::*;
 use healer::Healer;
 use lazy_static::lazy_static;
 use metaconfig_types::{BlobConfig, LocalDatabaseConfig, MetadataDatabaseConfig, StorageConfig};
 use mononoke_types::DateTime;
 use replication_lag::wait_for_replication;
-use slog::{error, info, o, warn};
+use slog::{info, o, warn};
 use sql::Connection;
 use sql_construct::SqlConstructFromDatabaseConfig;
 use sql_ext::{facebook::MysqlOptions, open_sqlite_path};
@@ -87,7 +83,7 @@ fn open_mysql_raw_replicas(
                 })
         }
     });
-    join_all(raw_conns)
+    futures_old::future::join_all(raw_conns)
         .map({
             cloned!(ctx);
             move |raw_conns| {
@@ -109,9 +105,9 @@ fn open_mysql_raw_replicas(
         .boxify()
 }
 
-fn maybe_schedule_healer_for_storage(
+async fn maybe_schedule_healer_for_storage(
     fb: FacebookInit,
-    ctx: CoreContext,
+    ctx: &CoreContext,
     dry_run: bool,
     drain_only: bool,
     blobstore_sync_queue_limit: usize,
@@ -119,10 +115,10 @@ fn maybe_schedule_healer_for_storage(
     mysql_options: MysqlOptions,
     source_blobstore_key: Option<String>,
     readonly_storage: ReadOnlyStorage,
-    blobstore_options: BlobstoreOptions,
+    blobstore_options: &BlobstoreOptions,
     iter_limit: Option<u64>,
     heal_min_age: ChronoDuration,
-) -> Result<BoxFuture<(), Error>> {
+) -> Result<(), Error> {
     let (blobstore_configs, multiplex_id, queue_db) = match storage_config.blobstore {
         BlobConfig::Multiplexed {
             blobstores,
@@ -133,26 +129,24 @@ fn maybe_schedule_healer_for_storage(
         s => bail!("Storage doesn't use Multiplexed blobstore, got {:?}", s),
     };
 
-    let sync_queue = {
-        // FIXME: remove boxing and cloning when this crate is converted to new futures
-        cloned!(queue_db);
-        async move {
-            SqlBlobstoreSyncQueue::with_database_config(
-                fb,
-                &queue_db,
-                mysql_options,
-                readonly_storage.0,
-            )
-            .await
-            .map(|queue| Arc::new(queue) as Arc<dyn BlobstoreSyncQueue>)
-        }
-    }
-    .boxed()
-    .compat();
+    let sync_queue = SqlBlobstoreSyncQueue::with_database_config(
+        fb,
+        &queue_db,
+        mysql_options,
+        readonly_storage.0,
+    )
+    .await?;
 
-    let blobstores: HashMap<_, BoxFuture<Arc<dyn Blobstore + 'static>, _>> = {
-        let mut blobstores = HashMap::new();
-        for (id, blobconfig) in blobstore_configs {
+    let sync_queue: Arc<dyn BlobstoreSyncQueue> = if dry_run {
+        let logger = ctx.logger().new(o!("sync_queue" => ""));
+        Arc::new(DummyBlobstoreSyncQueue::new(sync_queue, logger))
+    } else {
+        Arc::new(sync_queue)
+    };
+
+    let blobstores = blobstore_configs
+        .into_iter()
+        .map(|(id, blobconfig)| async move {
             let blobstore = make_blobstore(
                 fb,
                 blobconfig,
@@ -160,116 +154,82 @@ fn maybe_schedule_healer_for_storage(
                 readonly_storage,
                 blobstore_options.clone(),
                 ctx.logger().clone(),
-            );
-            blobstores.insert(id, blobstore.boxify());
-        }
+            )
+            .compat()
+            .await?;
 
-        if !dry_run {
-            blobstores
-        } else {
-            blobstores
-                .into_iter()
-                .map(|(id, blobstore)| {
-                    let logger = ctx.logger().new(o!("blobstore" => format!("{:?}", id)));
-                    let blobstore = blobstore
-                        .map(move |blobstore| -> Arc<dyn Blobstore> {
-                            Arc::new(DummyBlobstore::new(blobstore, logger))
-                        })
-                        .boxify();
-                    (id, blobstore)
-                })
-                .collect()
-        }
-    };
+            let blobstore: Arc<dyn Blobstore> = if dry_run {
+                let logger = ctx.logger().new(o!("blobstore" => format!("{:?}", id)));
+                Arc::new(DummyBlobstore::new(blobstore, logger))
+            } else {
+                blobstore
+            };
 
-    let blobstores = join_all(
-        blobstores
-            .into_iter()
-            .map(|(key, value)| value.map(move |value| (key, value))),
-    )
-    .map(|blobstores| blobstores.into_iter().collect::<HashMap<_, _>>());
+            Result::<_, Error>::Ok((id, blobstore))
+        });
 
-    let sync_queue = if !dry_run {
-        sync_queue.boxify()
-    } else {
-        sync_queue
-            .map({
-                cloned!(ctx);
-                move |sync_queue| {
-                    let logger = ctx.logger().new(o!("sync_queue" => ""));
-                    Arc::new(DummyBlobstoreSyncQueue::new(sync_queue, logger))
-                        as Arc<dyn BlobstoreSyncQueue>
-                }
-            })
-            .boxify()
-    };
+    let blobstores = future::try_join_all(blobstores)
+        .await?
+        .into_iter()
+        .collect::<HashMap<_, _>>();
 
     let regional_conns = match storage_config.metadata {
         MetadataDatabaseConfig::Local(LocalDatabaseConfig { path }) => {
-            open_sqlite_path(path.join("sqlite_dbs"), readonly_storage.0)
-                .into_future()
-                .map(|c| vec![("sqlite_region".to_string(), Connection::with_sqlite(c))])
-                .boxify()
+            let c = open_sqlite_path(path.join("sqlite_dbs"), readonly_storage.0)?;
+            vec![("sqlite_region".to_string(), Connection::with_sqlite(c))]
         }
         MetadataDatabaseConfig::Remote(remote) => {
             let db_address = remote.primary.db_address;
             let regions = ConfigStore::configerator(fb, None, None, Duration::from_secs(5))?
                 .get_config_handle::<Vec<String>>(CONFIGERATOR_REGIONS_CONFIG.to_owned())?
                 .get();
+            info!(ctx.logger(), "Monitoring regions: {:?}", *regions);
             if let Some(myrouter_port) = mysql_options.myrouter_port {
-                info!(ctx.logger(), "Monitoring regions: {:?}", *regions);
                 let mut conn_builder = myrouter::Builder::new();
                 conn_builder
                     .service_type(myrouter::ServiceType::SLAVE)
                     .locality(myrouter::DbLocality::EXPLICIT)
                     .tier(db_address, None)
                     .port(myrouter_port);
-                let mut myrouter_conns = vec![];
-                for region in &*regions {
-                    conn_builder.explicit_region(region.clone());
-                    let conn: Connection = conn_builder.build_read_only().into();
-                    let conn_fut = future::ok((region.clone(), conn));
-                    myrouter_conns.push(conn_fut);
-                }
-                join_all(myrouter_conns).boxify()
+
+                regions
+                    .iter()
+                    .map(|region| {
+                        conn_builder.explicit_region(region.clone());
+                        let conn: Connection = conn_builder.build_read_only().into();
+                        (region.clone(), conn)
+                    })
+                    .collect::<Vec<_>>()
             } else {
                 open_mysql_raw_replicas(fb, ctx.clone(), db_address, regions)
+                    .compat()
+                    .await?
             }
         }
     };
 
-    let heal = regional_conns.join3(blobstores, sync_queue).and_then(
-        move |(regional_conns, blobstores, sync_queue): (
-            Vec<(String, Connection)>,
-            HashMap<_, Arc<dyn Blobstore + 'static>>,
-            Arc<dyn BlobstoreSyncQueue>,
-        )| {
-            let multiplex_healer = Healer::new(
-                blobstore_sync_queue_limit,
-                sync_queue,
-                Arc::new(blobstores),
-                multiplex_id,
-                source_blobstore_key,
-                drain_only,
-            );
-            schedule_healing(
-                ctx,
-                multiplex_healer,
-                regional_conns,
-                iter_limit,
-                heal_min_age,
-            )
-            .boxed()
-            .compat()
-        },
+    let multiplex_healer = Healer::new(
+        blobstore_sync_queue_limit,
+        sync_queue,
+        Arc::new(blobstores),
+        multiplex_id,
+        source_blobstore_key,
+        drain_only,
     );
 
-    Ok(heal.boxify())
+    schedule_healing(
+        ctx,
+        multiplex_healer,
+        regional_conns,
+        iter_limit,
+        heal_min_age,
+    )
+    .await
 }
 
 // Pass None as iter_limit for never ending run
 async fn schedule_healing(
-    ctx: CoreContext,
+    ctx: &CoreContext,
     multiplex_healer: Healer,
     conns: Vec<(String, Connection)>,
     iter_limit: Option<u64>,
@@ -379,33 +339,23 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let ctx = SessionContainer::new_with_defaults(fb).new_context(logger.clone(), scuba);
 
-    let healer = {
-        let scheduled = maybe_schedule_healer_for_storage(
-            fb,
-            ctx,
-            dry_run,
-            drain_only,
-            blobstore_sync_queue_limit,
-            storage_config,
-            mysql_options,
-            source_blobstore_key.map(|s| s.to_string()),
-            readonly_storage,
-            blobstore_options,
-            iter_limit,
-            healing_min_age,
-        );
-
-        match scheduled {
-            Err(err) => {
-                error!(logger, "Did not schedule, because of: {:#?}", err);
-                return Err(err);
-            }
-            Ok(scheduled) => scheduled,
-        }
-    };
+    let healer = maybe_schedule_healer_for_storage(
+        fb,
+        &ctx,
+        dry_run,
+        drain_only,
+        blobstore_sync_queue_limit,
+        storage_config,
+        mysql_options,
+        source_blobstore_key.map(|s| s.to_string()),
+        readonly_storage,
+        &blobstore_options,
+        iter_limit,
+        healing_min_age,
+    );
 
     block_execute(
-        healer.compat(),
+        healer,
         fb,
         app_name,
         &logger,
