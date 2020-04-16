@@ -962,6 +962,48 @@ function scsc {
   GLOG_minloglevel=5 "$SCS_CLIENT" --host "localhost:$SCS_PORT" "$@"
 }
 
+function start_edenapi_server {
+  local port log attempts timeout
+  port=$(get_free_socket)
+  log="$TESTTMP/edenapi_server.out"
+
+  # Start the EdenAPI server, using test TLS credentials.
+  # This means that tests must use TLS to connect to the
+  # server. The `sslcurl` function should help with this.
+  GLOG_minloglevel=5 "$EDENAPI_SERVER" "$@" \
+    --debug \
+    --listen-host 127.0.0.1 \
+    --listen-port "$port" \
+    --mononoke-config-path "$TESTTMP/mononoke-config" \
+    --tls-ca "$TEST_CERTDIR/root-ca.crt" \
+    --tls-private-key "$TEST_CERTDIR/localhost.key" \
+    --tls-certificate "$TEST_CERTDIR/localhost.crt" \
+    --tls-ticket-seeds "$TEST_CERTDIR/server.pem.seeds" \
+    --trusted-proxy-identity USER:myusername0 \
+    "${COMMON_ARGS[@]}" >> "$log" 2>&1 &
+
+  # Record the PID of the spawned process so the test framework
+  # can kill it later during cleanup.
+  echo "$!" >> "$DAEMON_PIDS"
+
+  # Export the URI that tests will use to connect to the server.
+  export EDENAPI_URI="https://localhost:$port"
+
+  # Wait for the server to start listening for HTTP requests.
+  timeout="${MONONOKE_START_TIMEOUT:-"$MONONOKE_DEFAULT_START_TIMEOUT"}"
+  attempts="$((timeout * 10))"
+  for _ in $(seq 1 $attempts); do
+    if sslcurl -q "$EDENAPI_URI/health_check" > /dev/null 2>&1; then
+      truncate -s 0 "$log"
+      return 0
+    fi
+    sleep 0.1
+  done
+
+  echo "EdenAPI server failed to start" >&2
+  cat "$log" >&2
+  return 1
+}
 
 function lfs_server {
   local port uri log opts args proto poll lfs_server_pid
