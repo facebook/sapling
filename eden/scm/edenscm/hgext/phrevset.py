@@ -101,17 +101,43 @@ def localgetdiff(repo, diffid, querythread=None):
 
     repo.ui.debug("[diffrev] Traversing log for %s\n" % diffid)
 
-    # traverse the changelog backwards
-    for rev in repo.changelog.revs(start=len(repo.changelog), stop=0):
-        if rev % 100 == 0 and querythread and querythread.is_alive() is False:
-            raise StopIteration("Parallel query completed")
-
+    def check(repo, rev, diffid):
         changectx = repo[rev]
         desc = changectx.description()
         match = DIFFERENTIAL_REGEX.search(desc)
 
         if match and match.group("id") == diffid:
             return changectx.rev()
+        else:
+            return None
+
+    # Search through draft commits first. This is still needed as there are
+    # cases where Phabricator GraphQL cannot resolve the commit for some reason
+    # and the user really wants to resolve the commit locally (ex. S199694).
+    for rev in repo.revs("sort(draft(), -rev)"):
+        matched = check(repo, rev, diffid)
+        if matched is not None:
+            return matched
+        if querythread and querythread.is_alive() is False:
+            raise StopIteration("Parallel query completed")
+
+    repo.ui.warn(
+        _("D%s not found in drafts. Perform (slow) full changelog scan.\n") % diffid
+    )
+
+    # Search through the whole changelog. This does not scale. Log this as we
+    # plan to remove it at some point.
+    repo.ui.log(
+        "features",
+        fullargs=repr(pycompat.sysargv),
+        feature="phrevset-full-changelog-scan",
+    )
+    for rev in repo.changelog.revs(start=len(repo.changelog), stop=0):
+        matched = check(repo, rev, diffid)
+        if matched is not None:
+            return matched
+        if rev % 100 == 0 and querythread and querythread.is_alive() is False:
+            raise StopIteration("Parallel query completed")
 
     return None
 
