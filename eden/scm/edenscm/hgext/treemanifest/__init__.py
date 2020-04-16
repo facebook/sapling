@@ -723,35 +723,16 @@ def wraprepo(repo):
 
 
 def _prunesharedpacks(repo, packpath):
-    """Wipe the packpath if it has too many packs in it"""
+    """Repack the packpath if it has too many packs in it"""
     try:
         numentries = len(os.listdir(packpath))
-        # Note this is based on file count, not pack count.
-        config = repo.ui.configint("packs", "maxpackfilecount")
-        if config and numentries > config:
-            try:
-                with flock(
-                    repacklockvfs(repo).join("repacklock"),
-                    _("purging excess packs for %s") % packpath,
-                    timeout=0,
-                ):
-                    repo.ui.warn(
-                        (
-                            "purging shared treemanifest pack cache (%d entries) "
-                            "-- too many files\n" % numentries
-                        )
-                    )
-                    shutil.rmtree(packpath, True)
-            except error.LockHeld:
-                repo.ui.warn(
-                    (
-                        "not purging shared treemanifest pack cache (%d entries) "
-                        "as repack is still running\n"
-                    )
-                    % numentries
-                )
     except OSError:
-        pass
+        return
+
+    # Note this is based on file count, not pack count.
+    config = repo.ui.configint("packs", "maxpackfilecount")
+    if config and numentries > config:
+        domaintenancerepack(repo)
 
 
 def setuptreestores(repo, mfl):
