@@ -21,7 +21,7 @@ use futures::{
     channel::oneshot,
     future::{lazy, select, FutureExt, TryFutureExt},
 };
-use gotham::bind_server;
+use gotham::{bind_server, bind_server_with_socket_data};
 use hyper::header::HeaderValue;
 use openssl::ssl::SslAcceptor;
 use slog::{debug, error, info, warn, Logger};
@@ -36,7 +36,8 @@ use cmdlib::{
 use fbinit::FacebookInit;
 use gotham_ext::{
     handler::MononokeHttpHandler,
-    middleware::{ClientIdentityMiddleware, ServerIdentityMiddleware},
+    middleware::{ClientIdentityMiddleware, ServerIdentityMiddleware, TlsSessionDataMiddleware},
+    socket_data::TlsSocketData,
 };
 use mononoke_api::Mononoke;
 use secure_utils::SslConfig;
@@ -56,6 +57,7 @@ const ARG_TLS_PRIVATE_KEY: &str = "tls-private-key";
 const ARG_TLS_CA: &str = "tls-ca";
 const ARG_TLS_TICKET_SEEDS: &str = "tls-ticket-seeds";
 const ARG_TRUSTED_PROXY_IDENTITY: &str = "trusted-proxy-identity";
+const ARG_TLS_SESSION_DATA_LOG_FILE: &str = "tls-session-data-log-file";
 
 const SERVICE_NAME: &str = "mononoke_edenapi_server";
 
@@ -174,12 +176,23 @@ fn main(fb: FacebookInit) -> Result<()> {
         )
         .arg(
             Arg::with_name(ARG_TRUSTED_PROXY_IDENTITY)
-                .long(ARG_TRUSTED_PROXY_IDENTITY)
+                .long("--trusted-proxy-identity")
                 .takes_value(true)
                 .multiple(true)
                 .number_of_values(1)
                 .required(false)
                 .help("Proxy identity to trust"),
+        )
+        .arg(
+            Arg::with_name(ARG_TLS_SESSION_DATA_LOG_FILE)
+                .long("--tls-session-data-log-file")
+                .takes_value(true)
+                .required(false)
+                .help(
+                    "A file to which to log TLS session data, including master secrets. \
+                     Use this for debugging with tcpdump. \
+                     Note that this compromises the secrecy of TLS sessions.",
+                ),
         );
 
     let matches = app.get_matches();
@@ -192,6 +205,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
     let trusted_proxy_idents = parse_identities(&matches)?;
+    let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
 
     debug!(logger, "Initializing cachelib");
     let caching = args::init_cachelib(fb, &matches, None);
@@ -227,6 +241,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     // middleware is set up during router setup in build_router.
     let router = build_router(ctx);
     let handler = MononokeHttpHandler::builder()
+        .add(TlsSessionDataMiddleware::new(tls_session_data_log)?)
         .add(ClientIdentityMiddleware::new(trusted_proxy_idents))
         .add(ServerIdentityMiddleware::new(HeaderValue::from_static(
             "edenapi_server",
@@ -246,7 +261,9 @@ fn main(fb: FacebookInit) -> Result<()> {
     let server = match acceptor {
         Some(acceptor) => {
             let acceptor = Arc::new(acceptor);
-            bind_server(listener, handler, {
+            let capture_session_data = tls_session_data_log.is_some();
+
+            bind_server_with_socket_data(listener, handler, {
                 cloned!(logger);
                 move |socket| {
                     cloned!(acceptor, logger);
@@ -259,7 +276,10 @@ fn main(fb: FacebookInit) -> Result<()> {
                             }
                         };
 
-                        Ok(ssl_socket)
+                        let socket_data =
+                            TlsSocketData::from_ssl(ssl_socket.ssl(), capture_session_data);
+
+                        Ok((socket_data, ssl_socket))
                     }
                 }
             })
