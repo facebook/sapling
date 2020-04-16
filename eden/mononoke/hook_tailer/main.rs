@@ -14,7 +14,7 @@ use anyhow::{format_err, Error, Result};
 use blobrepo_factory::BlobrepoBuilder;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches};
-use cmdlib::helpers::block_execute;
+use cmdlib::helpers::{block_execute, csid_resolve};
 use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
@@ -76,9 +76,7 @@ async fn run_hook_tailer<'a>(
     let init_revision = matches.value_of("init_revision").map(String::from);
     let continuous = matches.is_present("continuous");
     let limit = cmdlib::args::get_u64(&matches, "limit", 1000);
-    let changeset = matches.value_of("changeset").map_or(None, |cs| {
-        Some(HgChangesetId::from_str(cs).expect("Invalid changesetid"))
-    });
+    let changeset = matches.value_of("changeset");
 
     let mut excludes = matches
         .values_of("exclude")
@@ -129,6 +127,15 @@ async fn run_hook_tailer<'a>(
     let manifold_client = ManifoldHttpClient::new(fb, id, rc)?;
 
     let blobrepo = builder.build().await?;
+
+    let changeset = match changeset {
+        Some(changeset) => Some(
+            csid_resolve(ctx.clone(), blobrepo.clone(), changeset)
+                .compat()
+                .await?,
+        ),
+        None => None,
+    };
 
     let excl = blobrepo
         .get_hg_bonsai_mapping(ctx.clone(), excludes)

@@ -7,7 +7,7 @@
 
 #![deny(warnings)]
 
-use anyhow::{format_err, Error, Result};
+use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
@@ -132,20 +132,10 @@ impl Tailer {
 
     pub fn run_single_changeset(
         &self,
-        changeset: HgChangesetId,
+        changeset: ChangesetId,
     ) -> BoxFuture<Vec<HookOutcome>, Error> {
         cloned!(self.ctx, self.repo, self.hook_manager, self.bookmark,);
-        repo.get_bonsai_from_hg(ctx, changeset)
-            .and_then(move |maybe_bonsai| {
-                maybe_bonsai.ok_or(format_err!(
-                    "changeset does not exist {}",
-                    changeset.to_string()
-                ))
-            })
-            .and_then({
-                cloned!(self.ctx);
-                move |bonsai| run_hooks_for_changeset(ctx, repo, hook_manager, bookmark, bonsai)
-            })
+        run_hooks_for_changeset(ctx, repo, hook_manager, bookmark, changeset)
             .map(|(_, result)| result)
             .boxify()
     }
