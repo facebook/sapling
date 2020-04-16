@@ -93,8 +93,8 @@ impl IO {
             return Ok(());
         }
 
-        let mut pager = Pager::new_using_system_terminal()
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        let mut pager =
+            Pager::new_using_stdio().map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
         let (out_read, out_write) = pipe();
         let (err_read, err_write) = pipe();
 
