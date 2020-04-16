@@ -900,6 +900,16 @@ pub enum DatabaseConfig {
     Remote(RemoteDatabaseConfig),
 }
 
+impl DatabaseConfig {
+    /// The address of this database, if this is a remote database.
+    pub fn remote_address(&self) -> Option<String> {
+        match self {
+            Self::Remote(remote) => Some(remote.db_address.clone()),
+            Self::Local(_) => None,
+        }
+    }
+}
+
 /// Configuration for the Metadata database when it is remote.
 #[derive(Debug, Clone, Eq, PartialEq)]
 pub struct RemoteMetadataDatabaseConfig {

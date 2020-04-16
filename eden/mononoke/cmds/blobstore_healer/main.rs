@@ -35,6 +35,7 @@ use replication_lag::wait_for_replication;
 use slog::{info, o, warn};
 use sql::Connection;
 use sql_construct::SqlConstructFromDatabaseConfig;
+use sql_ext::facebook::myrouter_ready;
 use sql_ext::{facebook::MysqlOptions, open_sqlite_path};
 use sql_facebook::{myrouter, raw};
 use std::collections::HashMap;
@@ -118,6 +119,14 @@ async fn maybe_schedule_healer_for_storage(
         } => (blobstores, multiplex_id, queue_db),
         s => bail!("Storage doesn't use Multiplexed blobstore, got {:?}", s),
     };
+
+    myrouter_ready(
+        queue_db.remote_address(),
+        mysql_options,
+        ctx.logger().clone(),
+    )
+    .compat()
+    .await?;
 
     let sync_queue = SqlBlobstoreSyncQueue::with_database_config(
         fb,
