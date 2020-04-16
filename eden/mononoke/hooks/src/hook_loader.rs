@@ -13,7 +13,8 @@ use crate::errors::*;
 use crate::facebook::rust_hooks::{
     always_fail_changeset::AlwaysFailChangeset, block_cross_repo_commits::BlockCrossRepoCommits,
     block_empty_commit::BlockEmptyCommit, check_nocommit::CheckNocommitHook,
-    check_unittests::CheckUnittestsHook, conflict_markers::ConflictMarkers, deny_files::DenyFiles,
+    check_unittests::CheckUnittestsHook, chef_test_hosts::ChefTestHostsHook,
+    conflict_markers::ConflictMarkers, deny_files::DenyFiles,
     ensure_valid_email::EnsureValidEmailHook,
     gitattributes_textdirectives::GitattributesTextDirectives,
     limit_commit_message_length::LimitCommitMessageLength, limit_commitsize::LimitCommitsize,
@@ -70,6 +71,7 @@ pub fn load_hooks(
             "ensure_valid_email" => {
                 ChangesetHook(Box::new(EnsureValidEmailHook::new(fb, &hook.config)?))
             }
+            "chef_test_hosts" => ChangesetHook(Box::new(ChefTestHostsHook::new())),
             "gitattributes-textdirectives" => {
                 FileHook(Box::new(GitattributesTextDirectives::new()?))
             }
