@@ -31,6 +31,7 @@ When everything looks okay:
 
   $ hg doctor
   checking internal storage
+  checking commit references
 
 Break the repo in various ways:
 
@@ -65,6 +66,7 @@ Test that 'hg doctor' can fix them:
   metalog: repaired
   allheads: repaired
   indexedlogdatastore: repaired
+  checking commit references
 
 Check the repo is usable again:
 
@@ -109,6 +111,7 @@ Check changelog repiar:
   truncating 00changelog.d from 165 to 110 bytes
   changelog: repaired
   visibleheads: removed 1 heads, added tip
+  checking commit references
   $ hg log -Gr 'all()' -T '{desc}'
   o  B
   |
@@ -128,6 +131,10 @@ Check unknown visibleheads format:
   $ hg doctor
   checking internal storage
   visibleheads: skipped
+  checking commit references
+  warning: failed to inspect working copy parent
+  abort: invalid visibleheads file format 'v-1'
+  [255]
 
 Check dirstate pointing to a stripped commit:
 
@@ -179,6 +186,7 @@ Check dirstate pointing to a stripped commit:
   checking internal storage
   visibleheads: removed 1 heads, added tip
   treestate: repaired
+  checking commit references
 
   $ hg log -r . -T '{desc}\n'
   A
@@ -204,6 +212,7 @@ Try other kinds of dirstate corruptions:
   $ hg doctor
   checking internal storage
   treestate: repaired
+  checking commit references
   $ hg status
   M A2
   A A0

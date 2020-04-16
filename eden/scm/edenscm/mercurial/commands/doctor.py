@@ -18,7 +18,16 @@ from bindings import (
     treestate as rawtreestate,
 )
 
-from .. import error, hg, progress, revlog, treestate, util, vfs as vfsmod
+from .. import (
+    bookmarks as bookmod,
+    error,
+    hg,
+    progress,
+    revlog,
+    treestate,
+    util,
+    vfs as vfsmod,
+)
 from ..i18n import _
 from ..node import bin, hex, nullhex, nullid
 from ..pycompat import decodeutf8, encodeutf8
@@ -89,6 +98,9 @@ def doctor(ui, **opts):
                 path,
                 revisionstore.indexedloghistorystore.repair,
             )
+
+    ui.write(_("checking commit references\n"))
+    _try(ui, checklaggingremotename, repo)
 
     # Run eden doctor on an edenfs repo.
     if "eden" in repo.requirements:
@@ -340,6 +352,39 @@ def repairtreestate(ui, vfs, root, cl):
     ui.write_err(
         _("treestate: cannot fix automatically (consider create a new workdir)\n")
     )
+
+
+def _try(ui, func, *args, **kwargs):
+    try:
+        return func(*args, **kwargs)
+    except Exception as ex:
+        ui.warn(_("exception %r ignored during %s\n") % (ex, func.__name__))
+
+
+def checklaggingremotename(repo, master=None, source="default"):
+    """Check remote bookmarks:
+    Pull selected bookmarks if they look like "lagging".
+    """
+    ui = repo.ui
+    master = master or ui.config("doctor", "check-lag-name")
+    if (
+        not master
+        or master not in bookmod.selectivepullbookmarknames(repo, source)
+        or master not in repo
+    ):
+        return
+    threshold = ui.configint("doctor", "check-lag-threshold")
+    try:
+        lag = len(repo.revs("limit(tip %% %s, %r)", master, str(threshold)))
+    except Exception as ex:
+        ui.write_err(_("check failed: %s\n") % ex)
+        return
+    if lag >= threshold:
+        ui.write(_("%s might be lagging, running pull\n") % master)
+        try:
+            repo.pull(source, [master])
+        except Exception as ex:
+            ui.write_err(_("pull failed: %s\n") % ex)
 
 
 def fshash(path):
