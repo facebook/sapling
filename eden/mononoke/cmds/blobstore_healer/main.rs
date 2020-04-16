@@ -19,7 +19,6 @@ use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
 use cached_config::ConfigStore;
 use chrono::Duration as ChronoDuration;
 use clap::{value_t, App, Arg};
-use cloned::cloned;
 use cmdlib::{
     args::{self, get_scuba_sample_builder},
     helpers::block_execute,
@@ -28,8 +27,6 @@ use context::{CoreContext, SessionContainer};
 use dummy::{DummyBlobstore, DummyBlobstoreSyncQueue};
 use fbinit::FacebookInit;
 use futures::{compat::Future01CompatExt, future};
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::prelude::*;
 use healer::Healer;
 use lazy_static::lazy_static;
 use metaconfig_types::{BlobConfig, LocalDatabaseConfig, MetadataDatabaseConfig, StorageConfig};
@@ -54,55 +51,48 @@ lazy_static! {
     static ref DEFAULT_ENTRY_HEALING_MIN_AGE: ChronoDuration = ChronoDuration::minutes(2);
 }
 
-fn open_mysql_raw_replicas(
+async fn open_mysql_raw_replicas(
     fb: FacebookInit,
-    ctx: CoreContext,
-    db_address: String,
+    ctx: &CoreContext,
+    tier: &str,
     regions: Arc<Vec<String>>,
-) -> BoxFuture<Vec<(String, Connection)>, Error> {
-    let raw_conns = (*regions).clone().into_iter().map({
-        cloned!(ctx);
-        move |region| {
-            let tier: &str = &db_address;
+) -> Result<Vec<(String, Connection)>, Error> {
+    let raw_conns = regions.iter().cloned().map({
+        move |region| async move {
             let mut conn_builder = raw::Builder::new(tier, raw::InstanceRequirement::ReplicaOnly);
             conn_builder.role_override("scriptro");
             conn_builder.explicit_region(&region);
-            conn_builder
-                .build(fb)
-                .then({
-                    cloned!(ctx);
-                    move |r| match r {
-                        Ok(c) =>
-                            Ok((region, Some(Connection::Mysql(c)))),
-                        Err(_e) => {
-                            warn!(ctx.logger(),
-                                "Could not connect to a replica in {}, likely that region does not have one.", region);
-                            Ok((region, None))
-                        }
-                    }
-                })
+
+            let conn = match conn_builder.build(fb).compat().await {
+                Ok(c) =>
+                    Some(Connection::Mysql(c)),
+                Err(_e) => {
+                    warn!(ctx.logger(),
+                        "Could not connect to a replica in {}, likely that region does not have one.", region);
+                    None
+                }
+            };
+
+            (region, conn)
         }
     });
-    futures_old::future::join_all(raw_conns)
-        .map({
-            cloned!(ctx);
-            move |raw_conns| {
-                let filtered: Vec<_> = raw_conns
-                    .into_iter()
-                    .filter_map(|(region, conn)| match conn {
-                        Some(conn) => Some((region, conn)),
-                        None => None,
-                    })
-                    .collect::<Vec<_>>();
-                info!(
-                    ctx.logger(),
-                    "Monitoring regions: {:?}",
-                    filtered.iter().map(|(r, _)| r).collect::<Vec<_>>()
-                );
-                filtered
-            }
+
+    let filtered: Vec<_> = future::join_all(raw_conns)
+        .await
+        .into_iter()
+        .filter_map(|(region, conn)| match conn {
+            Some(conn) => Some((region, conn)),
+            None => None,
         })
-        .boxify()
+        .collect::<Vec<_>>();
+
+    info!(
+        ctx.logger(),
+        "Monitoring regions: {:?}",
+        filtered.iter().map(|(r, _)| r).collect::<Vec<_>>()
+    );
+
+    Ok(filtered)
 }
 
 async fn maybe_schedule_healer_for_storage(
@@ -183,7 +173,7 @@ async fn maybe_schedule_healer_for_storage(
             let regions = ConfigStore::configerator(fb, None, None, Duration::from_secs(5))?
                 .get_config_handle::<Vec<String>>(CONFIGERATOR_REGIONS_CONFIG.to_owned())?
                 .get();
-            info!(ctx.logger(), "Monitoring regions: {:?}", *regions);
+            info!(ctx.logger(), "Discovered regions: {:?}", *regions);
             if let Some(myrouter_port) = mysql_options.myrouter_port {
                 let mut conn_builder = myrouter::Builder::new();
                 conn_builder
@@ -201,9 +191,7 @@ async fn maybe_schedule_healer_for_storage(
                     })
                     .collect::<Vec<_>>()
             } else {
-                open_mysql_raw_replicas(fb, ctx.clone(), db_address, regions)
-                    .compat()
-                    .await?
+                open_mysql_raw_replicas(fb, ctx, &db_address, regions).await?
             }
         }
     };
