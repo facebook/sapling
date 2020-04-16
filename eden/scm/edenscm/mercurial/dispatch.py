@@ -73,6 +73,13 @@ class request(object):
         self.repo = repo
 
         # input/output/error streams
+        if fin and not isinstance(fin, util.refcell):
+            fin = util.refcell(fin)
+        if fout and not isinstance(fout, util.refcell):
+            fout = util.refcell(fout)
+        if ferr and not isinstance(ferr, util.refcell):
+            ferr = util.refcell(ferr)
+
         self.fin = fin
         self.fout = fout
         self.ferr = ferr

@@ -204,9 +204,9 @@ class ui(object):
         else:
             self._uiconfig = uiconfig.uiconfig()
 
-            self.fout = util.stdout
-            self.ferr = util.stderr
-            self.fin = util.stdin
+            self.fout = util.refcell(util.stdout)
+            self.ferr = util.refcell(util.stderr)
+            self.fin = util.refcell(util.stdin)
             self.pageractive = False
             self._disablepager = False
             self._tweaked = False
@@ -825,8 +825,6 @@ class ui(object):
 
     def _runinternalstreampager(self):
         """Start the builtin streampager"""
-        origfout = self.fout
-        origferr = self.ferr
         origencoding = encoding.outputencoding
         self.flush()
 
@@ -850,15 +848,17 @@ class ui(object):
             def close(self):
                 pass
 
-        self.fout = stream(pager.write)
-        self.ferr = stream(pager.write_err)
+        assert isinstance(self.fout, util.refcell)
+        assert isinstance(self.ferr, util.refcell)
+        origfout = self.fout.swap(stream(pager.write))
+        origferr = self.ferr.swap(stream(pager.write_err))
 
         @self.atexit
         def waitpager():
             with self.timeblockedsection("pager"):
                 pager.close()
-            self.fout = origfout
-            self.ferr = origferr
+            self.fout.swap(origfout)
+            self.ferr.swap(origferr)
             encoding.outputencoding = origencoding
 
         self.pageractive = True

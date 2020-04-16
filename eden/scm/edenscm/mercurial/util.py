@@ -645,6 +645,34 @@ class transactional(pycompat.ABC):
             self.release()
 
 
+class refcell(object):
+    """Similar to Rust's Rc<RefCell>. Shared *mutable* reference.
+
+    This is useful when object mutation needs to affect shared copies.
+
+    >>> a = refcell("abc")
+    >>> b = a
+    >>> a.swap("defg")
+    'abc'
+    >>> b.upper()
+    'DEFG'
+    """
+
+    def __init__(self, obj):
+        self._obj = obj
+
+    def __getattr__(self, name):
+        return getattr(self._obj, name)
+
+    def __iter__(self):
+        return iter(self._obj)
+
+    def swap(self, obj):
+        origobj = self._obj
+        self._obj = obj
+        return origobj
+
+
 @contextlib.contextmanager
 def acceptintervention(tr=None):
     """A context manager that closes the transaction on InterventionRequired

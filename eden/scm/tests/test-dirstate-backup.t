@@ -1,9 +1,5 @@
 #chg-compatible
 
-#chg-compatible
-
-#chg-compatible
-
 #testcases v0 v1 v2
 
 #if v0
