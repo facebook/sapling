@@ -88,12 +88,9 @@ def graphqlgetdiff(repo, diffid):
         )
 
 
-def localgetdiff(repo, diffid, querythread=None):
-    """Scans the changelog for commit lines mentioning the Differential ID
+def localgetdiff(repo, diffid):
+    """Scans the changelog for commit lines mentioning the Differential ID"""
 
-    If the optional querythread parameter is provided, it must be a threading.Thread
-    instance. It will be polled during the iteration and if it indicates that
-    the thread has finished, the function will raise StopIteration"""
     if repo.ui.configbool("phrevset", "graphqlonly"):
         raise error.Abort(
             _("phrevset.graphqlonly is set and Phabricator cannot resolve D%s") % diffid
@@ -118,8 +115,6 @@ def localgetdiff(repo, diffid, querythread=None):
         matched = check(repo, rev, diffid)
         if matched is not None:
             return matched
-        if querythread and querythread.is_alive() is False:
-            raise StopIteration("Parallel query completed")
 
     repo.ui.warn(
         _("D%s not found in drafts. Perform (slow) full changelog scan.\n") % diffid
@@ -136,56 +131,32 @@ def localgetdiff(repo, diffid, querythread=None):
         matched = check(repo, rev, diffid)
         if matched is not None:
             return matched
-        if rev % 100 == 0 and querythread and querythread.is_alive() is False:
-            raise StopIteration("Parallel query completed")
 
     return None
 
 
-def forksearch(repo, diffid):
-    """Perform a log traversal and GraphQL call in parallel
+def search(repo, diffid):
+    """Perform a GraphQL query first. If it fails, fallback to local search.
 
     Returns a (revisions, graphql_response) tuple, where one of the items will be
-    None, depending on which process terminated first"""
+    None."""
 
     repo.ui.debug("[diffrev] Starting graphql call\n")
     if repo.ui.configbool("phrevset", "graphqlonly"):
         return (None, graphqlgetdiff(repo, diffid))
 
-    result = [None, None]
-
-    def makegraphqlcall():
-        try:
-            result[0] = graphqlgetdiff(repo, diffid)
-        except Exception as exc:
-            result[1] = exc
-
-    querythread = threading.Thread(target=makegraphqlcall, name="graphqlquery")
-    querythread.daemon = True
-    querythread.start()
-
     try:
+        return (None, graphqlgetdiff(repo, diffid))
+    except Exception as ex:
+        repo.ui.warn(_("cannot resolve D%s via GraphQL: %s\n") % (diffid, ex))
+        repo.ui.warn(_("falling back to search commits locally\n"))
         repo.ui.debug("[diffrev] Starting log walk\n")
-        rev = localgetdiff(repo, diffid, querythread)
-
+        rev = localgetdiff(repo, diffid)
         repo.ui.debug("[diffrev] Parallel log walk completed with %s\n" % rev)
-
         if rev is None:
             # walked the entire repo and couldn't find the diff
             raise error.Abort("Could not find diff D%s in changelog" % diffid)
-
         return ([rev], None)
-
-    except StopIteration:
-        # search terminated because arc returned
-        # if returncode == 0, return arc's output
-
-        repo.ui.debug("[diffrev] graphql call returned %s\n" % result[0])
-
-        if result[1] is not None:
-            raise result[1]
-
-        return (None, result[0])
 
 
 def parsedesc(repo, resp, ignoreparsefailure):
@@ -232,7 +203,7 @@ def revsetdiff(repo, diffid):
         else:
             return [rev]
 
-    revs, resp = forksearch(repo, diffid)
+    revs, resp = search(repo, diffid)
 
     if revs is not None:
         # The log walk found the diff, nothing more to do
