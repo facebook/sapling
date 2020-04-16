@@ -14,7 +14,7 @@ use cpython::*;
 
 use cpython_ext::PyPathBuf;
 use pypathmatcher::UnsafePythonMatcher;
-use workingcopy::{WalkError, Walker};
+use workingcopy::walker::{WalkError, Walker};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "workingcopy"].join(".");
