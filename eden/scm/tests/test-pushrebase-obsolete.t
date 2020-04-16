@@ -28,13 +28,15 @@ Push with obsoleted commits with successors not in the destination.
   o  A
   
 
-BUG: D should be pushable.
   $ hg bookmark -r $D foo
   $ hg push -r $D --to foo --create
   pushing rev be0ef73c17ad to destination ssh://user@dummy/server bookmark foo
   searching for changes
-  abort: cannot rebase obsolete changesets
-  [255]
+  exporting bookmark foo
+  remote: pushing 3 changesets:
+  remote:     426bada5c675  A
+  remote:     112478962961  B
+  remote:     be0ef73c17ad  D
 
 Push with obsoleted commits with successors in the destination.
 
@@ -57,6 +59,5 @@ Push with obsoleted commits with successors in the destination.
   $ hg push -r $D --to foo
   pushing rev be0ef73c17ad to destination ssh://user@dummy/server2 bookmark foo
   searching for changes
-  abort: cannot rebase obsolete changesets
+  abort: commits already rebased to destination as dc0947a82db8
   [255]
-

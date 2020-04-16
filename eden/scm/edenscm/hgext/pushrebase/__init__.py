@@ -341,7 +341,7 @@ def unbundle(orig, repo, cg, heads, source, url, replaydata=None, respondlightly
         raise
 
 
-def validaterevset(repo, revset):
+def validaterevset(repo, revset, onto):
     "Abort if this is a rebasable revset, return None otherwise"
     if not repo.revs(revset):
         raise error.Abort(_("nothing to rebase"))
@@ -357,8 +357,15 @@ def validaterevset(repo, revset):
         revstring = ", ".join(nodes)
         raise error.Abort(_("cannot rebase public changesets: %s") % revstring)
 
-    if repo.revs("%r and obsolete()", revset):
-        raise error.Abort(_("cannot rebase obsolete changesets"))
+    # 'onto' is not always present in the client-repo. If it is missing, then
+    # rely on the server-side check for "already rebased" commits.
+    if onto != donotrebasemarker and onto in repo:
+        rebased = list(repo.set("(successors(%r) & ::%s) - %r", revset, onto, revset))
+        if rebased:
+            raise error.Abort(
+                _("commits already rebased to destination as %s")
+                % ", ".join(str(c) for c in rebased)
+            )
 
     heads = repo.revs("heads(%r)", revset)
     if len(heads) > 1:
@@ -393,7 +400,7 @@ def createrebasepart(repo, peer, outgoing, onto):
     if rebaseparttype not in bundle2.bundle2caps(peer):
         raise error.Abort(_("no server support for %r") % rebaseparttype)
 
-    validaterevset(repo, revsetlang.formatspec("%ln", outgoing.missing))
+    validaterevset(repo, revsetlang.formatspec("%ln", outgoing.missing), onto)
 
     version = changegroup.safeversion(repo)
     cg = changegroup.makestream(repo, outgoing, version, "push")
@@ -1036,7 +1043,7 @@ def _getrenamesrcs(op, rev):
 
 def _getrevs(op, bundle, onto, renamesrccache):
     "extracts and validates the revs to be imported"
-    validaterevset(bundle, "bundle()")
+    validaterevset(bundle, "bundle()", onto)
     revs = [bundle[r] for r in bundle.revs("sort(bundle())")]
     onto = bundle[onto.hex()]
     # Fast forward update, no rebase needed
