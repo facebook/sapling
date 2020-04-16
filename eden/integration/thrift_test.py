@@ -7,7 +7,9 @@
 import binascii
 import hashlib
 import os
+import re
 from pathlib import Path
+from typing import Pattern, Union
 
 from facebook.eden.ttypes import ScmFileStatus, SHA1Result, TimeSpec
 
@@ -84,7 +86,8 @@ class ThriftTest(testcase.EdenRepoTest):
         results = self.client.getSHA1(self.mount_path_bytes, [b"./hello"])
         self.assertEqual(1, len(results))
         self.assert_error(
-            results[0], "std::domain_error: PathComponent must not be . or .."
+            results[0],
+            re.compile(r".*domain_error.*: PathComponent must not be \. or \.\."),
         )
 
     def test_get_sha1_throws_for_empty_string(self) -> None:
@@ -108,14 +111,19 @@ class ThriftTest(testcase.EdenRepoTest):
         self.assertEqual(1, len(results))
         self.assert_error(results[0], "slink: file is a symlink: Invalid argument")
 
-    def assert_error(self, sha1result: SHA1Result, error_message: str) -> None:
+    def assert_error(
+        self, sha1result: SHA1Result, error_message: Union[str, Pattern]
+    ) -> None:
         self.assertIsNotNone(sha1result, msg="Must pass a SHA1Result")
         self.assertEqual(
             SHA1Result.ERROR, sha1result.getType(), msg="SHA1Result must be an error"
         )
         error = sha1result.get_error()
         self.assertIsNotNone(error)
-        self.assertEqual(error_message, error.message)
+        if isinstance(error_message, str):
+            self.assertEqual(error_message, error.message)
+        else:
+            self.assertRegex(error.message, error_message)
 
     def test_unload_free_inodes(self) -> None:
         for i in range(100):
