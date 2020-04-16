@@ -78,58 +78,6 @@ impl Tailer {
         self.last_rev_key.clone()
     }
 
-    fn run_in_range0(
-        ctx: CoreContext,
-        repo: BlobRepo,
-        hm: Arc<HookManager>,
-        last_rev: ChangesetId,
-        end_rev: ChangesetId,
-        bm: BookmarkName,
-        excludes: HashSet<ChangesetId>,
-    ) -> BoxFuture<Vec<HookOutcome>, Error> {
-        debug!(ctx.logger(), "Running in range {} to {}", last_rev, end_rev);
-        AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), end_rev)
-            .take(1000) // Limit number so we don't process too many
-            .filter(move |cs| !excludes.contains(cs))
-            .map({
-                move |cs| {
-                    cloned!(ctx, bm, hm, repo);
-                    run_hooks_for_changeset(ctx, repo, hm, bm, cs)
-                }
-            })
-            .map(spawn_future)
-            .buffered(100)
-            .take_while(move |(cs, _)| {
-                Ok(*cs != last_rev)
-            })
-            .map(|(_, res)| res)
-            .concat2()
-            .boxify()
-    }
-
-    pub fn run_in_range(
-        &self,
-        last_rev: ChangesetId,
-        end_rev: ChangesetId,
-    ) -> BoxFuture<Vec<HookOutcome>, Error> {
-        cloned!(
-            self.ctx,
-            self.repo,
-            self.hook_manager,
-            self.bookmark,
-            self.excludes
-        );
-        Tailer::run_in_range0(
-            ctx,
-            repo,
-            hook_manager,
-            last_rev,
-            end_rev,
-            bookmark,
-            excludes,
-        )
-    }
-
     pub fn run_single_changeset(
         &self,
         changeset: ChangesetId,
@@ -219,7 +167,7 @@ impl Tailer {
                     if last_rev == end_rev {
                         info!(ctx.logger(), "Nothing to do");
                     }
-                    Tailer::run_in_range0(
+                    run_in_range0(
                         ctx,
                         repo,
                         hook_manager,
@@ -270,6 +218,35 @@ fn run_hooks_for_changeset(
             .boxed()
             .compat()
         })
+}
+
+fn run_in_range0(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    hm: Arc<HookManager>,
+    last_rev: ChangesetId,
+    end_rev: ChangesetId,
+    bm: BookmarkName,
+    excludes: HashSet<ChangesetId>,
+) -> BoxFuture<Vec<HookOutcome>, Error> {
+    debug!(ctx.logger(), "Running in range {} to {}", last_rev, end_rev);
+    AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), end_rev)
+            .take(1000) // Limit number so we don't process too many
+            .filter(move |cs| !excludes.contains(cs))
+            .map({
+                move |cs| {
+                    cloned!(ctx, bm, hm, repo);
+                    run_hooks_for_changeset(ctx, repo, hm, bm, cs)
+                }
+            })
+            .map(spawn_future)
+            .buffered(100)
+            .take_while(move |(cs, _)| {
+                Ok(*cs != last_rev)
+            })
+            .map(|(_, res)| res)
+            .concat2()
+            .boxify()
 }
 
 #[derive(Debug, Error)]
