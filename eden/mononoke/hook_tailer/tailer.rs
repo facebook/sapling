@@ -13,9 +13,13 @@ use blobstore::Loadable;
 use bookmarks::BookmarkName;
 use cloned::cloned;
 use context::CoreContext;
-use futures::{FutureExt, TryFutureExt};
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{self, FutureExt, TryFutureExt},
+    stream::{StreamExt, TryStreamExt},
+};
 use futures_ext::{spawn_future, BoxFuture, FutureExt as OldFutureExt};
-use futures_old::{Future, Stream};
+use futures_old::{Future as OldFuture, Stream as OldStream};
 use hooks::{hook_loader::load_hooks, HookManager, HookOutcome};
 use hooks_content_stores::blobrepo_text_only_fetcher;
 use manifold::{ManifoldHttpClient, PayloadRange};
@@ -28,6 +32,7 @@ use slog::{debug, info};
 use std::collections::HashSet;
 use std::sync::Arc;
 use thiserror::Error;
+use tokio::task;
 
 pub struct Tailer {
     ctx: CoreContext,
@@ -88,35 +93,44 @@ impl Tailer {
             .boxify()
     }
 
-    pub fn run_with_limit(&self, limit: u64) -> BoxFuture<Vec<HookOutcome>, Error> {
-        let ctx = self.ctx.clone();
-        let bm = self.bookmark.clone();
-        let hm = self.hook_manager.clone();
-        let excludes = self.excludes.clone();
+    pub async fn run_with_limit(&self, limit: usize) -> Result<Vec<HookOutcome>, Error> {
+        let bm_rev = self
+            .repo
+            .get_bonsai_bookmark(self.ctx.clone(), &self.bookmark)
+            .compat()
+            .await?
+            .ok_or_else(|| ErrorKind::NoSuchBookmark(self.bookmark.clone()))?;
 
-        let bm_rev = self.repo.get_bonsai_bookmark(ctx.clone(), &bm).and_then({
-            cloned!(bm);
-            |opt| opt.ok_or(ErrorKind::NoSuchBookmark(bm).into())
-        });
+        let res =
+            AncestorsNodeStream::new(self.ctx.clone(), &self.repo.get_changeset_fetcher(), bm_rev)
+                .compat()
+                .take(limit)
+                .try_filter(|cs_id| future::ready(!self.excludes.contains(cs_id)))
+                .map(|cs_id| async move {
+                    match cs_id {
+                        Ok(cs_id) => {
+                            let (_, outcomes) = task::spawn(
+                                run_hooks_for_changeset(
+                                    self.ctx.clone(),
+                                    self.repo.clone(),
+                                    self.hook_manager.clone(),
+                                    self.bookmark.clone(),
+                                    cs_id,
+                                )
+                                .compat(),
+                            )
+                            .await??;
 
-        cloned!(self.ctx, self.repo);
-        bm_rev
-            .and_then(move |bm_rev| {
-                AncestorsNodeStream::new(ctx.clone(), &repo.get_changeset_fetcher(), bm_rev)
-                    .take(limit)
-                    .filter(move |cs| !excludes.contains(cs))
-                    .map({
-                        move |cs| {
-                            cloned!(ctx, bm, hm, repo);
-                            run_hooks_for_changeset(ctx, repo, hm, bm, cs)
+                            Ok(outcomes)
                         }
-                    })
-                    .map(spawn_future)
-                    .buffered(100)
-                    .map(|(_, res)| res)
-                    .concat2()
-            })
-            .boxify()
+                        Err(e) => Err(e),
+                    }
+                })
+                .buffered(100)
+                .try_concat()
+                .await?;
+
+        Ok(res)
     }
 
     pub fn run(&self) -> BoxFuture<Vec<HookOutcome>, Error> {
@@ -200,14 +214,11 @@ fn run_hooks_for_changeset(
     hm: Arc<HookManager>,
     bm: BookmarkName,
     cs_id: ChangesetId,
-) -> impl Future<Item = (ChangesetId, Vec<HookOutcome>), Error = Error> {
+) -> impl OldFuture<Item = (ChangesetId, Vec<HookOutcome>), Error = Error> {
     cs_id
         .load(ctx.clone(), repo.blobstore())
         .from_err()
         .and_then(move |cs| {
-            let ctx = ctx.clone();
-            let hm = hm.clone();
-            let bm = bm.clone();
             async move {
                 debug!(ctx.logger(), "Running hooks for changeset {:?}", cs);
                 let hook_results = hm

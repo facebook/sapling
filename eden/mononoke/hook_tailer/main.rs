@@ -19,10 +19,9 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future::FutureExt,
+    future::{Future, FutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
-use futures_ext::BoxFuture;
 use futures_old::Future as OldFuture;
 use futures_stats::TimedFutureExt;
 use hooks::HookOutcome;
@@ -71,7 +70,7 @@ async fn run_hook_tailer<'a>(
     let common_config = cmdlib::args::read_common_config(fb, &matches)?;
     let init_revision = matches.value_of("init_revision").map(String::from);
     let continuous = matches.is_present("continuous");
-    let limit = cmdlib::args::get_u64(&matches, "limit", 1000);
+    let limit = cmdlib::args::get_usize(&matches, "limit", 1000);
     let changeset = matches.value_of("changeset");
 
     let mut excludes = matches
@@ -174,7 +173,7 @@ async fn run_hook_tailer<'a>(
                     .map(Ok)
                     .try_for_each({
                         move |()| async move {
-                            process_hook_results(tail.run(), logger).await?;
+                            process_hook_results(tail.run().compat(), logger).await?;
                             sleep(Duration::new(10, 0))
                                 .map_err(|err| format_err!("Tokio timer error {:?}", err))
                                 .compat()
@@ -186,7 +185,7 @@ async fn run_hook_tailer<'a>(
             .boxed()
         }
         (_, Some(changeset)) => {
-            process_hook_results(tail.run_single_changeset(changeset), logger).boxed()
+            process_hook_results(tail.run_single_changeset(changeset).compat(), logger).boxed()
         }
         _ => {
             f.await?;
@@ -196,11 +195,11 @@ async fn run_hook_tailer<'a>(
     .await
 }
 
-async fn process_hook_results(
-    fut: BoxFuture<Vec<HookOutcome>, Error>,
+async fn process_hook_results<F: Future<Output = Result<Vec<HookOutcome>, Error>>>(
+    fut: F,
     logger: &Logger,
 ) -> Result<(), Error> {
-    let (stats, res) = fut.compat().timed().await;
+    let (stats, res) = fut.timed().await;
     let res = res?;
 
     let mut hooks_stat = HookExecutionStat::new();
