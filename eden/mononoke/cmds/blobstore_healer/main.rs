@@ -12,7 +12,7 @@ mod dummy;
 mod healer;
 mod replication_lag;
 
-use anyhow::{bail, format_err, Error, Result};
+use anyhow::{bail, format_err, Context, Error, Result};
 use blobstore::Blobstore;
 use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use blobstore_sync_queue::{BlobstoreSyncQueue, SqlBlobstoreSyncQueue};
@@ -125,7 +125,8 @@ async fn maybe_schedule_healer_for_storage(
         mysql_options,
         readonly_storage.0,
     )
-    .await?;
+    .await
+    .context("While opening sync queue")?;
 
     let sync_queue: Arc<dyn BlobstoreSyncQueue> = if dry_run {
         let logger = ctx.logger().new(o!("sync_queue" => ""));
@@ -233,14 +234,17 @@ async fn schedule_healing(
             }
         }
 
-        wait_for_replication(ctx.logger(), conns.as_ref()).await?;
+        wait_for_replication(ctx.logger(), conns.as_ref())
+            .await
+            .context("While waiting for replication")?;
 
         let now = DateTime::now().into_chrono();
         let healing_deadline = DateTime::new(now - heal_min_age);
         let last_batch_was_full_size = multiplex_healer
             .heal(ctx.clone(), healing_deadline)
             .compat()
-            .await?;
+            .await
+            .context("While healing")?;
 
         // if last batch read was not full,  wait at least 1 second, to avoid busy looping as don't
         // want to hammer the database with thousands of reads a second.

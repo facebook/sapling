@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 use async_trait::async_trait;
 use futures::compat::Future01CompatExt;
 use futures::future;
@@ -73,12 +73,16 @@ async fn get_max_replication_lag<'a, C: Laggable>(
     conns: &'a [(String, C)],
 ) -> Result<Option<(&'a str, u64)>, Error> {
     let futs = conns.iter().map(|(region, conn)| async move {
-        let lag = conn.get_lag_secs().await?.ok_or_else(|| {
-            format_err!(
-                "Could not fetch db replication lag for {}. Failing to avoid overloading db",
-                region
-            )
-        })?;
+        let lag = conn
+            .get_lag_secs()
+            .await
+            .with_context(|| format!("While fetching replication lag for {}", region))?
+            .ok_or_else(|| {
+                format_err!(
+                    "Could not fetch db replication lag for {}. Failing to avoid overloading db",
+                    region
+                )
+            })?;
 
         Result::<_, Error>::Ok((region, lag))
     });
