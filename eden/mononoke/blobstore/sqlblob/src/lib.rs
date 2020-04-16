@@ -114,6 +114,22 @@ impl Sqlblob<MemcacheOps> {
         })
     }
 
+    pub fn with_raw_xdb_unsharded(
+        fb: FacebookInit,
+        db_address: String,
+        read_con_type: ReadConnectionType,
+        readonly: bool,
+    ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
+        Self::with_connection_factory(
+            fb,
+            db_address.clone(),
+            NonZeroUsize::new(1).expect("One should be greater than zero"),
+            move |_shard_id| {
+                create_raw_xdb_connections(fb, db_address.clone(), read_con_type, readonly).boxify()
+            },
+        )
+    }
+
     fn with_connection_factory(
         fb: FacebookInit,
         label: String,

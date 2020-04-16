@@ -19,7 +19,10 @@ use futures_old::{
     future::{self, IntoFuture},
     Future,
 };
-use metaconfig_types::{BlobConfig, BlobstoreId, DatabaseConfig, MultiplexId, ScrubAction};
+use metaconfig_types::{
+    BlobConfig, BlobstoreId, DatabaseConfig, MultiplexId, ScrubAction,
+    ShardableRemoteDatabaseConfig,
+};
 use multiplexedblob::{LoggingScrubHandler, MultiplexedBlobstore, ScrubBlobstore, ScrubHandler};
 use readonlyblob::ReadOnlyBlobstore;
 use scuba::ScubaSampleBuilder;
@@ -99,26 +102,33 @@ pub fn make_blobstore(
             .into_future()
             .boxify(),
 
-        Mysql {
-            shard_map,
-            shard_num,
-        } => if let Some(myrouter_port) = mysql_options.myrouter_port {
-            Sqlblob::with_myrouter(
+        Mysql { remote } => match remote {
+            ShardableRemoteDatabaseConfig::Unsharded(config) => Sqlblob::with_raw_xdb_unsharded(
                 fb,
-                shard_map.clone(),
-                myrouter_port,
+                config.db_address,
                 mysql_options.read_connection_type(),
-                shard_num,
                 readonly_storage.0,
-            )
-        } else {
-            Sqlblob::with_raw_xdb_shardmap(
-                fb,
-                shard_map.clone(),
-                mysql_options.read_connection_type(),
-                shard_num,
-                readonly_storage.0,
-            )
+            ),
+            ShardableRemoteDatabaseConfig::Sharded(config) => {
+                if let Some(myrouter_port) = mysql_options.myrouter_port {
+                    Sqlblob::with_myrouter(
+                        fb,
+                        config.shard_map.clone(),
+                        myrouter_port,
+                        mysql_options.read_connection_type(),
+                        config.shard_num,
+                        readonly_storage.0,
+                    )
+                } else {
+                    Sqlblob::with_raw_xdb_shardmap(
+                        fb,
+                        config.shard_map.clone(),
+                        mysql_options.read_connection_type(),
+                        config.shard_num,
+                        readonly_storage.0,
+                    )
+                }
+            }
         }
         .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
         .into_future()

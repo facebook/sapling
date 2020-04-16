@@ -685,10 +685,8 @@ pub enum BlobConfig {
     },
     /// Store in a sharded Mysql
     Mysql {
-        /// Name of the Mysql shardmap to use
-        shard_map: String,
-        /// Number of shards in the Mysql shardmap
-        shard_num: NonZeroUsize,
+        /// The remote database config
+        remote: ShardableRemoteDatabaseConfig,
     },
     /// Multiplex across multiple blobstores for redundancy
     Multiplexed {
@@ -798,12 +796,23 @@ impl TryFrom<RawBlobstoreConfig> for BlobConfig {
                 bucket: def.manifold_bucket,
                 prefix: def.manifold_prefix,
             },
-            RawBlobstoreConfig::mysql(def) => BlobConfig::Mysql {
-                shard_map: def.mysql_shardmap,
-                shard_num: NonZeroUsize::new(def.mysql_shard_num.try_into()?).ok_or(anyhow!(
-                    "mysql shard num must be specified and an interger larger than 0"
-                ))?,
-            },
+            RawBlobstoreConfig::mysql(def) => {
+                if let Some(remote) = def.remote {
+                    BlobConfig::Mysql {
+                        remote: remote.try_into()?,
+                    }
+                } else {
+                    BlobConfig::Mysql {
+                        remote: ShardableRemoteDatabaseConfig::Sharded(
+                            ShardedRemoteDatabaseConfig {
+                                shard_map: def.mysql_shardmap.ok_or_else(|| anyhow!("mysql shard name must be specified"))?,
+                                shard_num: NonZeroUsize::new(def.mysql_shard_num.ok_or_else(|| anyhow!("mysql shard num must be specified"))?.try_into()?)
+                                    .ok_or_else(|| anyhow!("mysql shard num must be specified and an integer larger than 0"))?,
+                            },
+                        ),
+                    }
+                }
+            }
             RawBlobstoreConfig::multiplexed(def) => BlobConfig::Multiplexed {
                 multiplex_id: def
                     .multiplex_id
