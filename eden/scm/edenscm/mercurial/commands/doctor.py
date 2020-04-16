@@ -250,12 +250,8 @@ def repairvisibleheads(ui, metalog, cl):
     """Attempt to fix visibleheads by removing invalid commit hashes"""
     oldtext = decodeutf8(metalog.get("visibleheads") or b"")
     oldlines = oldtext.splitlines()
-    # Only support v1 right now.
-    if oldlines[0:1] != ["v1"]:
-        ui.write_err(_("visibleheads: skipped\n"))
-        return
     nodemap = cl.nodemap
-    newlines = [oldlines[0]] + [
+    newlines = ["v1"] + [
         hexnode
         for hexnode in oldlines[1:]
         if len(hexnode) == 40 and bin(hexnode) in nodemap

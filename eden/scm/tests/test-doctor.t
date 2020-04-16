@@ -130,11 +130,8 @@ Check unknown visibleheads format:
   > EOS
   $ hg doctor
   checking internal storage
-  visibleheads: skipped
+  visibleheads: removed 0 heads, added tip
   checking commit references
-  warning: failed to inspect working copy parent
-  abort: invalid visibleheads file format 'v-1'
-  [255]
 
 Check dirstate pointing to a stripped commit:
 
