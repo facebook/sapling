@@ -69,7 +69,6 @@ Create new commits
   lfs: processed: f9f7889fcedc8580403673810e2be90e35980f10234f80d08a6497bbda16a245
   lfs: uploading 177507a4ee8737f0930661b3261e9e50edcec96d5cca59b7a4ef3b260936ce09 (13 bytes)
   lfs: processed: 177507a4ee8737f0930661b3261e9e50edcec96d5cca59b7a4ef3b260936ce09
-  lfs: computing set of blobs to upload
   1 changesets found
   list of changesets:
   48d4d2fa17e54179e24de7fcb4a8ced38738ca4e

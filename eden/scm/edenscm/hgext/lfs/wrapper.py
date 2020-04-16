@@ -297,12 +297,6 @@ def writenewbundle(
     return orig(ui, repo, source, filename, bundletype, outgoing, *args, **kwargs)
 
 
-def _pushbundle2(orig, pushop):
-    """upload LFS blobs added by outgoing revisions on 'hg push' using bundle2"""
-    uploadblobsfromrevs(pushop.repo, pushop.outgoing.missing)
-    return orig(pushop)
-
-
 def checkrevs(orig, repo, revs):
     """verify LFS objects were uploaded when receiving pushes"""
     verify = repo.ui.config("lfs", "verify") or "none"

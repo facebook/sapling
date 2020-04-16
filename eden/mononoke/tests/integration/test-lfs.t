@@ -98,8 +98,6 @@
   OUT < POST /repo/objects/batch 200 OK
   IN  > PUT /repo/upload/2a49733d725b4e6dfa94410d29da9e64803ff946339c54ecc471eccc951047fe/2000 -
   OUT < PUT /repo/upload/2a49733d725b4e6dfa94410d29da9e64803ff946339c54ecc471eccc951047fe/2000 200 OK
-  IN  > POST /repo/objects/batch -
-  OUT < POST /repo/objects/batch 200 OK
   $ truncate -s 0 "$LFS_LOG"
 
 # Create a new hg repository, and update to the new file

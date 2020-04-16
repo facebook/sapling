@@ -495,6 +495,7 @@ def push(repo, remote, force=False, revs=None, bookmarks=(), opargs=None):
     with wlock or util.nullcontextmanager(), lock or util.nullcontextmanager(), pushop.trmanager or util.nullcontextmanager():
         pushop.repo.checkpush(pushop)
         _pushdiscovery(pushop)
+        pushop.repo.prepushoutgoinghooks(pushop)
         if not _forcebundle1(pushop):
             _pushbundle2(pushop)
         _pushchangeset(pushop)
@@ -790,7 +791,6 @@ def _pushb2ctx(pushop, bundler):
     # Send known heads to the server for race detection.
     if not _pushcheckoutgoing(pushop):
         return
-    pushop.repo.prepushoutgoinghooks(pushop)
 
     b2caps = bundle2.bundle2caps(pushop.remote)
     version = "01"
@@ -1077,7 +1077,6 @@ def _pushchangeset(pushop):
     # Should have verified this in push().
     assert pushop.remote.capable("unbundle")
 
-    pushop.repo.prepushoutgoinghooks(pushop)
     outgoing = pushop.outgoing
     # TODO: get bundlecaps from remote
     bundlecaps = None
