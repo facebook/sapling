@@ -122,8 +122,6 @@ def repair(ui, name, path, fixfunc):
             else:
                 if oldfshash != newfshash:
                     ui.write_err(_("%s: repaired\n") % name)
-                else:
-                    ui.write_err(_("%s: looks okay\n") % name)
 
 
 def quickchecklog(ui, log, name, knownbroken):
@@ -177,7 +175,6 @@ def quickchecklog(ui, log, name, knownbroken):
                     _("%s: corrupted at rev %d (linkrev=%d)\n") % (name, rev, linkrev)
                 )
                 return rev, linkrev
-    ui.write(_("%s: looks okay\n") % name)
     return None, None
 
 
@@ -252,9 +249,7 @@ def repairvisibleheads(ui, metalog, cl):
         if len(hexnode) == 40 and bin(hexnode) in nodemap
     ]
     removedcount = len(oldlines) - len(newlines)
-    if removedcount == 0:
-        ui.write_err(_("visibleheads: looks okay\n"))
-    else:
+    if removedcount or oldlines[:1] != ["v1"]:
         # Also add the "tip" node.
         hextip = hex(cl.tip())
         if hextip not in newlines:
@@ -282,7 +277,6 @@ def repairtreestate(ui, vfs, root, cl):
     except Exception:
         needrebuild = True
     if not needrebuild:
-        ui.write_err(_("treestate: looks okay\n"))
         return
 
     nodemap = cl.nodemap

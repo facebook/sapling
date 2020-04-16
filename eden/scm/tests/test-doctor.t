@@ -31,13 +31,6 @@ When everything looks okay:
 
   $ hg doctor
   checking internal storage
-  mutation: looks okay
-  changelog: looks okay
-  metalog: looks okay
-  visibleheads: looks okay
-  treestate: looks okay
-  allheads: looks okay
-  indexedlogdatastore: looks okay
 
 Break the repo in various ways:
 
@@ -69,10 +62,7 @@ Test that 'hg doctor' can fix them:
   $ hg doctor
   checking internal storage
   mutation: repaired
-  changelog: looks okay
   metalog: repaired
-  visibleheads: looks okay
-  treestate: looks okay
   allheads: repaired
   indexedlogdatastore: repaired
 
@@ -114,15 +104,11 @@ Check changelog repiar:
   ...     f.write(b"x" * 64)
   $ hg doctor
   checking internal storage
-  mutation: looks okay
   changelog: corrupted at rev 2 (linkrev=2021161080)
   truncating 00changelog.i from 192 to 128 bytes
   truncating 00changelog.d from 165 to 110 bytes
   changelog: repaired
-  metalog: looks okay
   visibleheads: removed 1 heads, added tip
-  treestate: looks okay
-  allheads: looks okay
   $ hg log -Gr 'all()' -T '{desc}'
   o  B
   |
@@ -141,12 +127,7 @@ Check unknown visibleheads format:
   > EOS
   $ hg doctor
   checking internal storage
-  mutation: looks okay
-  changelog: looks okay
-  metalog: looks okay
   visibleheads: skipped
-  treestate: looks okay
-  allheads: looks okay
 
 Check dirstate pointing to a stripped commit:
 
@@ -196,12 +177,8 @@ Check dirstate pointing to a stripped commit:
  (hg doctor can fix dirstate/treestate)
   $ hg doctor
   checking internal storage
-  mutation: looks okay
-  changelog: looks okay
-  metalog: looks okay
   visibleheads: removed 1 heads, added tip
   treestate: repaired
-  allheads: looks okay
 
   $ hg log -r . -T '{desc}\n'
   A
@@ -226,12 +203,7 @@ Try other kinds of dirstate corruptions:
   ...     f.write(b"x" * 1024);
   $ hg doctor
   checking internal storage
-  mutation: looks okay
-  changelog: looks okay
-  metalog: looks okay
-  visibleheads: looks okay
   treestate: repaired
-  allheads: looks okay
   $ hg status
   M A2
   A A0

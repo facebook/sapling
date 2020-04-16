@@ -54,8 +54,6 @@ Nothing wrong
 
   $ rebuildrepo
   $ hg debugfixcorrupt
-  changelog: looks okay
-  manifest: looks okay
   nothing to do
   [1]
 
@@ -83,7 +81,6 @@ Manifest corruption
   $ corrupt 00manifest.d 150
   $ cp -R .hg/store .hg/store.bak
   $ hg debugfixcorrupt --no-dryrun
-  changelog: looks okay
   manifest: corrupted at rev 2 (linkrev=2)
   changelog: will lose 3 revisions
   truncating 00changelog.d from 275 to 110 bytes
@@ -137,7 +134,6 @@ Changelog.i ends with 0s
   ...     f.write(b'\0' * 128)
   $ hg debugfixcorrupt
   changelog: corrupted at rev 5 (linkrev=0)
-  manifest: looks okay
   changelog: will lose 2 revisions
   truncating 00changelog.i from 448 to 320 bytes
   re-run with --no-dryrun to fix.
