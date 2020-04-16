@@ -40,6 +40,13 @@ pub trait MutableCounters: Send + Sync + 'static {
         value: i64,
         prev_value: Option<i64>,
     ) -> BoxFuture<bool, Error>;
+
+    /// Get the names and values of all the counters for a given repository
+    fn get_all_counters(
+        &self,
+        ctx: CoreContext,
+        repoid: RepositoryId,
+    ) -> BoxFuture<Vec<(String, i64)>, Error>;
 }
 
 queries! {
@@ -76,6 +83,10 @@ queries! {
         sqlite(
             "SELECT value FROM mutable_counters WHERE repo_id = {repo_id} and name = CAST({name} AS TEXT)"
         )
+    }
+
+    read GetCountersForRepo(repo_id: RepositoryId) -> (String, i64) {
+        "SELECT name, value FROM mutable_counters WHERE repo_id = {repo_id} ORDER BY name"
     }
 }
 
@@ -130,6 +141,16 @@ impl MutableCounters for SqlMutableCounters {
                 TransactionResult::Succeeded(txn) => txn.commit().map(|()| true).left_future(),
                 TransactionResult::Failed => future::ok(false).right_future(),
             })
+            .boxify()
+    }
+
+    fn get_all_counters(
+        &self,
+        _ctx: CoreContext,
+        repoid: RepositoryId,
+    ) -> BoxFuture<Vec<(String, i64)>, Error> {
+        GetCountersForRepo::query(&self.read_master_connection, &repoid)
+            .map(|counters| counters.into_iter().collect())
             .boxify()
     }
 }

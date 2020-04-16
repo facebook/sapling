@@ -23,9 +23,10 @@ use crate::cmdargs::{
     ADD_PUBLIC_PHASES, BLAME, BLOBSTORE_FETCH, BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH, CROSSREPO,
     DELETED_MANIFEST, DERIVED_DATA, FETCH_PHASE, FILENODES, FILESTORE, HASH_CONVERT, HG_CHANGESET,
     HG_CHANGESET_DIFF, HG_CHANGESET_RANGE, HG_SYNC_BUNDLE, HG_SYNC_FETCH_BUNDLE,
-    HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW, HG_SYNC_VERIFY, LIST_PUBLIC, PHASES,
-    REDACTION, REDACTION_ADD, REDACTION_LIST, REDACTION_REMOVE, SKIPLIST, SKIPLIST_BUILD,
-    SKIPLIST_READ, UNODES,
+    HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW, HG_SYNC_VERIFY, LIST_PUBLIC,
+    MUTABLE_COUNTERS, MUTABLE_COUNTERS_GET, MUTABLE_COUNTERS_LIST, MUTABLE_COUNTERS_NAME,
+    MUTABLE_COUNTERS_SET, MUTABLE_COUNTERS_VALUE, PHASES, REDACTION, REDACTION_ADD, REDACTION_LIST,
+    REDACTION_REMOVE, SKIPLIST, SKIPLIST_BUILD, SKIPLIST_READ, UNODES,
 };
 use crate::content_fetch::subcommand_content_fetch;
 use crate::crossrepo::subcommand_crossrepo;
@@ -34,6 +35,7 @@ use crate::filenodes::subcommand_filenodes;
 use crate::hash_convert::subcommand_hash_convert;
 use crate::hg_changeset::subcommand_hg_changeset;
 use crate::hg_sync::subcommand_process_hg_sync;
+use crate::mutable_counters::subcommand_mutable_counters;
 use crate::redaction::subcommand_redaction;
 use crate::skiplist_subcommand::subcommand_skiplist;
 
@@ -51,6 +53,7 @@ mod filestore;
 mod hash_convert;
 mod hg_changeset;
 mod hg_sync;
+mod mutable_counters;
 mod phases;
 mod redaction;
 mod skiplist_subcommand;
@@ -354,6 +357,42 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 )
         );
 
+    let mutable_counters = SubCommand::with_name(MUTABLE_COUNTERS)
+        .about("handle mutable counters")
+        .subcommand(
+            SubCommand::with_name(MUTABLE_COUNTERS_LIST)
+                .about("get all the mutable counters for a repo"),
+        )
+        .subcommand(
+            SubCommand::with_name(MUTABLE_COUNTERS_GET)
+                .about("get the value of the mutable counter")
+                .arg(
+                    Arg::with_name(MUTABLE_COUNTERS_NAME)
+                        .help("name of the mutable counter to get")
+                        .takes_value(true)
+                        .required(true)
+                        .index(1),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(MUTABLE_COUNTERS_SET)
+                .about("set the value of the mutable counter")
+                .arg(
+                    Arg::with_name(MUTABLE_COUNTERS_NAME)
+                        .help("name of the mutable counter to set")
+                        .takes_value(true)
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::with_name(MUTABLE_COUNTERS_VALUE)
+                        .help("value of the mutable counter to set")
+                        .takes_value(true)
+                        .required(true)
+                        .index(2),
+                ),
+        );
+
     args::MononokeApp::new("Mononoke admin command line tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
@@ -370,6 +409,7 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         .subcommand(skiplist)
         .subcommand(convert)
         .subcommand(hg_sync)
+        .subcommand(mutable_counters)
         .subcommand(redaction)
         .subcommand(filenodes::build_subcommand(FILENODES))
         .subcommand(phases)
@@ -419,6 +459,9 @@ fn main(fb: FacebookInit) -> ExitCode {
             (SKIPLIST, Some(sub_m)) => subcommand_skiplist(fb, logger, &matches, sub_m).await,
             (HASH_CONVERT, Some(sub_m)) => {
                 subcommand_hash_convert(fb, logger, &matches, sub_m).await
+            }
+            (MUTABLE_COUNTERS, Some(sub_m)) => {
+                subcommand_mutable_counters(fb, sub_m, &matches, logger.clone()).await
             }
             (REDACTION, Some(sub_m)) => subcommand_redaction(fb, logger, &matches, sub_m).await,
             (FILENODES, Some(sub_m)) => subcommand_filenodes(fb, logger, &matches, sub_m).await,

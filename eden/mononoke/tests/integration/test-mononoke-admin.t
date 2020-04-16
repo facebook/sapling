@@ -65,3 +65,16 @@ Check blobstore-fetch, with scrub actions
   Some(BlobstoreBytes(* (glob)
   $ ls blobstore/1/blobs | wc -l
   30
+
+  $ mononoke_admin mutable-counters list
+  $ mononoke_admin mutable-counters set foo 7
+  * Value of foo in 0 set to 7 (glob)
+  $ mononoke_admin mutable-counters set bar 9
+  * Value of bar in 0 set to 9 (glob)
+  $ mononoke_admin mutable-counters list
+  bar                           =9
+  foo                           =7
+  $ mononoke_admin mutable-counters get bar
+  Some(9)
+  $ mononoke_admin mutable-counters get baz
+  None
