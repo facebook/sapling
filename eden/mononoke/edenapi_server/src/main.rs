@@ -24,7 +24,7 @@ use futures::{
 use gotham::bind_server;
 use hyper::header::HeaderValue;
 use openssl::ssl::SslAcceptor;
-use slog::{error, info, warn, Logger};
+use slog::{debug, error, info, warn, Logger};
 use tokio::net::TcpListener;
 
 use aclchecker::Identity;
@@ -184,17 +184,22 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let matches = app.get_matches();
 
+    let logger = args::init_logging(fb, &matches);
+
+    debug!(logger, "Reading args");
     let repo_configs = args::read_configs(fb, &matches)?;
     let mysql_options = args::parse_mysql_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
     let trusted_proxy_idents = parse_identities(&matches)?;
 
+    debug!(logger, "Initializing cachelib");
     let caching = args::init_cachelib(fb, &matches, None);
-    let logger = args::init_logging(fb, &matches);
+
+    debug!(logger, "Initializing runtime");
     let mut runtime = args::init_runtime(&matches)?;
 
-    // Initialize the Mononoke API.
+    debug!(logger, "Initializing Mononoke API");
     let mononoke = runtime.block_on(
         Mononoke::new(
             fb,
