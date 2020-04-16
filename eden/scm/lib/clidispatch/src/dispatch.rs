@@ -253,7 +253,7 @@ pub fn dispatch(command_table: &CommandTable, args: Vec<String>, io: &mut IO) ->
     initialize_blackbox(&optional_repo)?;
 
     if global_opts.pager == "always" {
-        io.start_pager()?;
+        io.start_pager(optional_repo.config())?;
     }
 
     let handler = def.func();

@@ -5,12 +5,13 @@
  * GNU General Public License version 2.
  */
 
+use configparser::{config::ConfigSet, hg::ConfigSetHgExt};
 use pipe::pipe;
 use std::any::Any;
 use std::io;
 use std::mem;
 use std::thread::{spawn, JoinHandle};
-use streampager::Pager;
+use streampager::{config::InterfaceMode, Pager};
 
 pub struct IO {
     pub input: Box<dyn Read>,
@@ -88,13 +89,30 @@ impl IO {
         }
     }
 
-    pub fn start_pager(&mut self) -> io::Result<()> {
+    pub fn start_pager(&mut self, config: &ConfigSet) -> io::Result<()> {
         if self.pager_handle.is_some() {
             return Ok(());
         }
 
         let mut pager =
             Pager::new_using_stdio().map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+        // Configure the pager.
+        // The Hybrid mode is similar to "-FX" from "less".
+        let mut interface_mode = InterfaceMode::Hybrid;
+        // Similar to "less" default.
+        let mut scroll_past_eof = false;
+        if let Some(mode_str) = config.get("pager", "interface") {
+            let mode = InterfaceMode::from(mode_str.as_ref());
+            interface_mode = mode;
+        }
+        if let Ok(Some(past_eof)) = config.get_opt("pager", "scroll-past-eof") {
+            scroll_past_eof = past_eof;
+        }
+        pager
+            .set_scroll_past_eof(scroll_past_eof)
+            .set_interface_mode(interface_mode);
+
         let (out_read, out_write) = pipe();
         let (err_read, err_write) = pipe();
 

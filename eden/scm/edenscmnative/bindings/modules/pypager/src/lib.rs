@@ -10,6 +10,7 @@
 use clidispatch::io::IO;
 use cpython::*;
 use cpython_ext::{PyNone, ResultPyErrExt};
+use pyconfigparser::config as PyConfig;
 use std::cell::{Cell, RefCell};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -23,9 +24,10 @@ py_class!(class pager |py| {
     data io: RefCell<IO>;
     data closed: Cell<bool>;
 
-    def __new__(_cls) -> PyResult<pager> {
+    def __new__(_cls, config: PyConfig) -> PyResult<pager> {
         let mut io = IO::stdio();
-        io.start_pager().map_pyerr(py)?;
+        let config = &config.get_cfg(py);
+        io.start_pager(config).map_pyerr(py)?;
         Self::create_instance(
             py,
             RefCell::new(io),
