@@ -29,7 +29,6 @@
 #include <signal.h>
 #include <thrift/lib/cpp/concurrency/ThreadManager.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
-#include <thrift/lib/cpp2/transport/rsocket/server/RSRoutingHandler.h>
 
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/service/EdenCPUThreadPool.h"
@@ -1444,8 +1443,6 @@ Future<Unit> EdenServer::createThriftServer() {
   server_->setNumIOWorkerThreads(FLAGS_thrift_num_workers);
   server_->setEnableCodel(FLAGS_thrift_enable_codel);
   server_->setMinCompressBytes(FLAGS_thrift_min_compress_bytes);
-  server_->addRoutingHandler(
-      std::make_unique<apache::thrift::RSRoutingHandler>());
 
   handler_ = make_shared<EdenServiceHandler>(originalCommandLine_, this);
   server_->setInterface(handler_);
