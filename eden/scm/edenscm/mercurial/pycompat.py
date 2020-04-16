@@ -185,16 +185,16 @@ else:
     rawinput = raw_input  # noqa
 
     def encodeutf8(s):
-        # type: (bytes) -> bytes
+        # type: (str) -> bytes
         if istest():
-            assert isinstance(s, bytes)
+            assert isinstance(s, str), "expected str, actual %s" % s.__class__
 
         return s
 
     def decodeutf8(s, errors="strict"):
         # type: (bytes, str) -> bytes
         if istest():
-            assert isinstance(s, bytes)
+            assert isinstance(s, bytes), "expected bytes, actual %s" % s.__class__
         return s
 
     def iteritems(s):

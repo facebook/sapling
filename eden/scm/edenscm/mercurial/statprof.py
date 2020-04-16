@@ -709,14 +709,16 @@ def display_hotpath(data, fp, limit=0.05, **kwargs):
     def _write(node, depth, multiple_siblings):
         site = node.site
         visiblechildren = [
-            c for c in node.children.itervalues() if c.count >= (limit * root.count)
+            c
+            for c in pycompat.itervalues(node.children)
+            if c.count >= (limit * root.count)
         ]
         if site:
             indent = depth * 2 - 1
             filename = ""
             function = ""
             if len(node.children) > 0:
-                childsite = list(node.children.itervalues())[0].site
+                childsite = list(node.children.values())[0].site
                 filename = (childsite.filename() + ":").ljust(15)
                 function = childsite.function
 
@@ -735,7 +737,7 @@ def display_hotpath(data, fp, limit=0.05, **kwargs):
             codestring = codepattern % ("line", site.lineno, site.getsource(30))
 
             finalstring = liststring + codestring
-            childrensamples = sum([c.count for c in node.children.itervalues()])
+            childrensamples = sum([c.count for c in pycompat.itervalues(node.children)])
             # Make frames that performed more than 10% of the operation red
             if node.count - childrensamples > (0.1 * root.count):
                 finalstring = redformat % finalstring

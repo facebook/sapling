@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ . "$TESTDIR/hgsql/library.sh"
@@ -115,7 +114,7 @@ Verify master is broken
 
   $ cd ../master
   $ hg log 2>&1 | egrep 'CorruptionException:'
-  CorruptionException: heads don't match after sync
+  *CorruptionException: heads don't match after sync (glob)
 
 Run sqlstrip on master as well
 

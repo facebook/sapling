@@ -70,7 +70,7 @@ from edenscm.mercurial import (
 )
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullid, nullrev
-from edenscm.mercurial.pycompat import encodeutf8, queue, range
+from edenscm.mercurial.pycompat import decodeutf8, encodeutf8, queue, range
 
 
 wrapcommand = extensions.wrapcommand
@@ -733,6 +733,8 @@ def wraprepo(repo):
 
             if reason is None:
                 reason = {MONONOKE_WRITE: MONONOKE_REASON}.get(state, DEFAULT_REASON)
+            else:
+                reason = decodeutf8(reason)
 
             return (readonly, reason)
 
@@ -763,12 +765,14 @@ def wraprepo(repo):
                 # SELECT GET_LOCK(...) will block. Break the lock attempt into
                 # smaller lock attempts
                 starttime = time.time()
+                locktimeout = float(self.locktimeout)
                 while True:
                     elapsed = time.time() - starttime
-                    if elapsed >= self.locktimeout:
+                    if elapsed >= locktimeout:
                         raise util.Abort(
                             "timed out waiting for mysql repo lock (%s)" % lockname
                         )
+
                     # Sync outside the SQL lock hoping that the repo is closer
                     # to the SQL repo when we got the lock.
                     self.pullfromdb(enforcepullfromdb=True)
@@ -922,7 +926,7 @@ def wraprepo(repo):
             sqlsynchash = sqlresults[0][0][0]
             if len(sqlsynchash) != 40:
                 raise RuntimeError("malicious SHA1 returned by MySQL: %r" % sqlsynchash)
-            return sqlsynchash
+            return decodeutf8(sqlsynchash)
 
         def needsync(self):
             """Returns True if the local repo is not in sync with the database.
@@ -939,11 +943,11 @@ def wraprepo(repo):
             sqlbookmarks = {}
             tip = -1
             for namespace, name, value in self.sqlcursor:
-                if namespace == "heads":
+                if namespace == b"heads":
                     sqlheads.add(bin(value))
-                elif namespace == "bookmarks":
-                    sqlbookmarks[name] = bin(value)
-                elif namespace == "tip":
+                elif namespace == b"bookmarks":
+                    sqlbookmarks[decodeutf8(name)] = bin(value)
+                elif namespace == b"tip":
                     tip = int(value)
 
             # Since we don't have the lock right now, and since this is the
@@ -1156,7 +1160,10 @@ def wraprepo(repo):
                         WHERE namespace = 'bookmarks' AND repo = %s""",
                         (self.sqlreponame,),
                     )
-                    fetchedbookmarks = self.sqlcursor.fetchall()
+                    fetchedbookmarks = [
+                        (decodeutf8(name), node)
+                        for name, node in self.sqlcursor.fetchall()
+                    ]
 
                     changes = []
                     for name, node in fetchedbookmarks:
@@ -1184,7 +1191,7 @@ def wraprepo(repo):
             # that don't exist in the loaded changelog. So let's force loading
             # bookmarks now.
             bm = self._bookmarks
-            self.sharedvfs.write("lastsqlsync", str(int(time.time())))
+            self.sharedvfs.write("lastsqlsync", encodeutf8(str(int(time.time()))))
 
         def fetchthread(self, queue, abort, fetchstart, fetchend):
             """Fetches every revision from fetchstart to fetchend (inclusive)
@@ -1209,6 +1216,8 @@ def wraprepo(repo):
                     # Put split chunks back together into a single revision
                     groupedrevdata = {}
                     for revdata in self.sqlcursor:
+                        revdata = (decodeutf8(revdata[0]),) + revdata[1:]
+
                         name = revdata[0]
                         chunk = revdata[1]
                         linkrev = revdata[3]
@@ -1286,7 +1295,7 @@ def wraprepo(repo):
             )
             headsindb = cursor.fetchall()
             for head in headsindb:
-                head = head[0]
+                head = decodeutf8(head[0])
                 if head in newheads:
                     newheads.discard(head)
                 else:
@@ -1316,6 +1325,8 @@ def wraprepo(repo):
             )
             bookmarksindb = cursor.fetchall()
             for k, v in bookmarksindb:
+                k = decodeutf8(k)
+                v = decodeutf8(v)
                 if newbookmarks.get(k) == v:
                     del newbookmarks[k]
                 else:
@@ -1596,6 +1607,8 @@ def wraprepo(repo):
                 )
 
                 for path, rev, node in cursor:
+                    path = decodeutf8(path)
+                    node = decodeutf8(node)
                     rev = int(rev)
                     checkrevs.remove((path, rev))
                     rl = None
@@ -1665,16 +1678,19 @@ def wraprepo(repo):
         (versus the default byte arrays)."""
 
         def _STRING_to_python(self, value, dsc=None):
-            return str(value)
+            return bytes(value)
 
         def _VAR_STRING_to_python(self, value, dsc=None):
-            return str(value)
+            return bytes(value)
 
         def _BLOB_to_python(self, value, dsc=None):
-            return str(value)
+            return bytes(value)
 
         def _bytearray_to_mysql(self, value, dsc=None):
-            return str(value)
+            return bytes(value)
+
+        def _memoryview_to_mysql(self, value, dsc=None):
+            return value.tobytes()
 
 
 class bufferedopener(object):
@@ -1700,7 +1716,7 @@ class bufferedopener(object):
 
         if buffer:
             fp = self.opener(self.path, self.mode)
-            fp.write("".join(buffer))
+            fp.write(b"".join(buffer))
             fp.close()
 
     def close(self):

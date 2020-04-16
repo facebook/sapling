@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
 #testcases case-innodb case-rocksdb
@@ -155,14 +154,16 @@
   > from edenscm.mercurial import demandimport, extensions
   > with demandimport.deactivated():
   >     import mysql.connector
-  > watchstrings = os.environ.get("INSPECTSQL")
-  > if watchstrings:
-  >     watchstrings = watchstrings.split(',')
-  > def printsql(orig, *args, **kwargs):
-  >     if not watchstrings or any(s for s in watchstrings if s in args[1]):
-  >         print(args[1] % args[2], file=sys.stderr)
-  >     return orig(*args, **kwargs)
-  > extensions.wrapfunction(mysql.connector.cursor.MySQLCursor, "execute", printsql)
+  > def uisetup(ui):
+  >     watchstrings = os.environ.get("INSPECTSQL")
+  >     if watchstrings:
+  >         watchstrings = watchstrings.split(',')
+  >     def printsql(orig, *args, **kwargs):
+  >         if not watchstrings or any(s for s in watchstrings if s in args[1]):
+  >             ui.warn(args[1] % args[2], file=sys.stderr)
+  >             ui.warn("\n")
+  >         return orig(*args, **kwargs)
+  >     extensions.wrapfunction(mysql.connector.cursor.MySQLCursor, "execute", printsql)
   > EOF
   $ cat >> $HGRCPATH <<EOF
   > [extensions]

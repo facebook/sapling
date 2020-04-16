@@ -1,4 +1,3 @@
-#require py2
 #require no-windows
 
 Test:
@@ -57,10 +56,11 @@ Another prepushrebase hook just to warm up in-memory repo states (changelog and
 manifest).
 
   $ cat > $TESTTMP/prepushrebase.py <<EOF
+  > from mercurial.pycompat import decodeutf8
   > def warmup(ui, repo, *args, **kwds):
   >     # Just have some side-effect loading the changelog and manifest
   >     data = repo['tip']['A'].data()
-  >     ui.write_err('prepushrebase hook called. A = %r\n' % data)
+  >     ui.write_err('prepushrebase hook called. A = %r\n' % decodeutf8(data))
   > EOF
 
 Setup prepushrebase hooks.

@@ -1,4 +1,3 @@
-#require py2
 #chg-compatible
 
   $ . "$TESTDIR/hgsql/library.sh"
@@ -30,8 +29,8 @@
 - The huge number in the output below is because we're trying to apply rev 0
 (which contains the generaldelta bit in the offset int) to a non-rev 0
 location (so the generaldelta bit isn't stripped before the comparison)
-  $ hg log -l 1 2>&1 | egrep 'Corruption'
-  CorruptionException: revision offset doesn't match prior length (12884967424 offset vs 3 length): data/z.i
+  $ hg log -l 1 2>&1 | egrep 'Corruption.*offset'
+  *CorruptionException: revision offset doesn't match prior length (12884967424 offset vs 3 length): data/z.i (glob)
 
 # Recover middle commit, but on top, then try syncing (succeeds)
 
@@ -51,8 +50,8 @@ location (so the generaldelta bit isn't stripped before the comparison)
   $ echo a > a
   $ hg commit -qAm a
   $ cd ../master
-  $ hg pull ../client 2>&1 | egrep 'Corruption'
-  CorruptionException: expected node d34c38483be9d08f205eaae60c380a29b48e0189 at rev 1 of 00changelog.i but found bc3a71defa4a8fb6e8e5c192c02a26d94853d281
+  $ hg pull ../client 2>&1 | egrep 'Corruption.*node'
+  *CorruptionException: expected node d34c38483be9d08f205eaae60c380a29b48e0189 at rev 1 of 00changelog.i but found bc3a71defa4a8fb6e8e5c192c02a26d94853d281 (glob)
 
 # Fix ordering, can pull now
 

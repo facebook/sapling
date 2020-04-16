@@ -156,14 +156,14 @@ hg cloud listbackups should also go in MRU order
   $ hg cloud listbackups --json
   {
       "mydevhost": [
-          "$TESTTMP/client5", 
+          "$TESTTMP/client5",* (glob)
           "$TESTTMP/client1"
-      ], 
+      ],* (glob)
       "ourdevhost": [
           "$TESTTMP/client4"
-      ], 
+      ],* (glob)
       "devhost": [
-          "$TESTTMP/client3", 
+          "$TESTTMP/client3",* (glob)
           "$TESTTMP/client2\\dev"
       ]
   }

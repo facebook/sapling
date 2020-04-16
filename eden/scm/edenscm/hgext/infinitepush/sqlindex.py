@@ -436,14 +436,14 @@ class CustomConverter(mysql.connector.conversion.MySQLConverter):
     (versus the default byte arrays)."""
 
     def _STRING_to_python(self, value, dsc=None):
-        return str(value)
+        return bytes(value)
 
     def _VAR_STRING_to_python(self, value, dsc=None):
-        return str(value)
+        return bytes(value)
 
     def _BLOB_to_python(self, value, dsc=None):
-        return str(value)
+        return bytes(value)
 
     # localstr is Mercurial-specific. See encoding.py
     def _localstr_to_mysql(self, value):
-        return str(value)
+        return bytes(value)
