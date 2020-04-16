@@ -66,3 +66,52 @@ Test too many names:
   B: .
   C: .
   D: remote/master.
+
+Test less relevant branches:
+
+  $ cd $TESTTMP
+  $ clone server1 client2
+  $ cd client2
+  $ hg log -Gr 'all()' -T '{desc} {remotenames}'
+  @  D remote/master
+  |
+  o  B
+  |
+  o  A
+  
+  $ drawdag << 'EOS'
+  > F3  G3 G4 # amend: G3 -> G4
+  > |   | /
+  > F2  G2
+  > |   |
+  > F1  G1
+  > |  /
+  > tip
+  > EOS
+
+  $ hg doctor
+  checking internal storage
+  checking commit references
+
+Changing the authoer, F branch becomes "less relevant". G is okay as it has
+local modifications.
+
+  $ HGUSER='Foo <f@o.o>' hg doctor
+  checking internal storage
+  checking commit references
+  1 branches (627e777a207b) look less relevant
+  hide those branches (Yn)? y
+
+  $ hg log -Gr 'all()' -T '{desc} {remotenames}'
+  o  G4
+  |
+  o  G2
+  |
+  o  G1
+  |
+  @  D remote/master
+  |
+  o  B
+  |
+  o  A
+  

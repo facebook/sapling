@@ -29,7 +29,7 @@ from .. import (
     vfs as vfsmod,
 )
 from ..i18n import _
-from ..node import bin, hex, nullhex, nullid
+from ..node import bin, hex, nullhex, nullid, short
 from ..pycompat import decodeutf8, encodeutf8
 from .cmdtable import command
 
@@ -102,6 +102,7 @@ def doctor(ui, **opts):
     ui.write(_("checking commit references\n"))
     _try(ui, checklaggingremotename, repo)
     _try(ui, checktoomanynames, repo)
+    _try(ui, checknoisybranches, repo)
 
     # Run eden doctor on an edenfs repo.
     if "eden" in repo.requirements:
@@ -419,6 +420,42 @@ def checktoomanynames(repo, source="default"):
             if remotename == defaultname and name.strip() in selected:
                 newremotenames += line
         repo.svfs.writeutf8("remotenames", newremotenames)
+
+
+def checknoisybranches(repo):
+    """Check draft branches that are likely not interesting and hide them.
+
+    A draft branch (x) is not interesting if:
+    - Not edited locally ('predecessors(x) - x' is empty).
+    - Most (> 50%) changes are not authored by the current user.
+    """
+    repo = repo.unfiltered()
+    ui = repo.ui
+    heads = repo.changelog._visibleheads.heads
+    noisyheads = set()
+    for head in heads:
+        x = list(repo.nodes("draft() & ::%n", head))
+        predecessors = repo.revs("predecessors(%ln) - %ln", x, x)
+        if predecessors:
+            # The stack has local modifications. Skip it.
+            continue
+        authored = len(repo.revs("%ln & user(%s)", x, ui.username()))
+        if authored * 2 >= len(x):
+            # The stack is authored. Skip it.
+            continue
+        noisyheads.add(head)
+    if not noisyheads:
+        return
+    ui.write(
+        _("%s branches (%s) look less relevant\n")
+        % (len(noisyheads), ", ".join(short(h) for h in noisyheads))
+    )
+    if ui.promptchoice(_("hide those branches (Yn)?$$ &Yes $$ &No")) != 0:
+        return
+    with repo.wlock(), repo.lock(), repo.transaction("doctor") as tr:
+        heads = set(repo.changelog._visibleheads.heads)
+        heads -= noisyheads
+        repo.changelog._visibleheads.setvisibleheads(repo, heads, tr)
 
 
 def fshash(path):

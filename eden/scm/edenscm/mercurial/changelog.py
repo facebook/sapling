@@ -423,7 +423,8 @@ class changelog(revlog.revlog):
                 else:
                     visibleheads = self._visibleheads.heads
                 nodes += visibleheads
-            revs = list(map(torev, nodes))
+            # Do not report nullid. index2.headsancestors does not support it.
+            revs = [r for r in map(torev, nodes) if r >= 0]
             r = self.index2.headsancestors(revs)
             return r
 
