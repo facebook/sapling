@@ -43,3 +43,26 @@ The latest master is pulled:
 
   $ hg log -r master -T '{desc}\n'
   D
+
+Test too many names:
+
+  $ hg debugremotebookmark name1 .
+  $ hg debugremotebookmark name2 .
+  $ hg debugremotebookmark name3 .
+  $ hg log -r 'all()' -T '{desc}: {remotenames}.\n'
+  A: .
+  B: debugremote/name1 debugremote/name2 debugremote/name3.
+  C: .
+  D: remote/master.
+
+  $ hg doctor --config doctor.check-too-many-names-threshold=1
+  checking internal storage
+  checking commit references
+  repo has too many (4) remote bookmarks
+  (only 1 of them (master) are essential)
+  only keep essential remote bookmarks (Yn)? y
+  $ hg log -r 'all()' -T '{desc}: {remotenames}.\n'
+  A: .
+  B: .
+  C: .
+  D: remote/master.

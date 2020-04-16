@@ -101,6 +101,7 @@ def doctor(ui, **opts):
 
     ui.write(_("checking commit references\n"))
     _try(ui, checklaggingremotename, repo)
+    _try(ui, checktoomanynames, repo)
 
     # Run eden doctor on an edenfs repo.
     if "eden" in repo.requirements:
@@ -381,6 +382,43 @@ def checklaggingremotename(repo, master=None, source="default"):
             repo.pull(source, [master])
         except Exception as ex:
             ui.write_err(_("pull failed: %s\n") % ex)
+
+
+def checktoomanynames(repo, source="default"):
+    """Check if there are too many remotenames.
+    """
+    ui = repo.ui
+    threshold = ui.configint("doctor", "check-too-many-names-threshold")
+    count = len(repo.svfs.read("remotenames").splitlines())
+    # Exclude accessed bookmarks because the accessed bookmarks might also be
+    # "too many".
+    selected = set(
+        bookmod.selectivepullbookmarknames(repo, source, includeaccessed=False)
+    )
+    threshold += len(selected)
+    if count < threshold:
+        return
+    defaultname = ui.paths.getname(ui.paths.getpath(source).rawloc)
+    if not defaultname:
+        return
+    ui.write(_("repo has too many (%s) remote bookmarks\n") % count)
+    ui.write(
+        _("(only %s of them (%s) are essential)\n")
+        % (len(selected), ", ".join(sorted(selected)))
+    )
+    if (
+        ui.promptchoice(_("only keep essential remote bookmarks (Yn)?$$ &Yes $$ &No"))
+        != 0
+    ):
+        return
+    with repo.wlock(), repo.lock(), repo.transaction("doctor"):
+        newremotenames = ""
+        for line in (repo.svfs.tryreadutf8("remotenames") or "").splitlines(True):
+            hexnode, typename, fullname = line.split(" ", 2)
+            remotename, name = bookmod.splitremotename(fullname)
+            if remotename == defaultname and name.strip() in selected:
+                newremotenames += line
+        repo.svfs.writeutf8("remotenames", newremotenames)
 
 
 def fshash(path):

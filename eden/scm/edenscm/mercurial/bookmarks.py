@@ -1293,26 +1293,27 @@ def _readremotenamesfrom(vfs, filename):
             yield node, nametype, remote, rname
 
 
-def selectivepullbookmarknames(repo, remote):
+def selectivepullbookmarknames(repo, remote, includeaccessed=True):
     """Returns the bookmark names that should be pulled during a pull."""
     initbooks = set(repo.ui.configlist("remotenames", "selectivepulldefault"))
 
-    vfs = repo.sharedvfs
-    try:
-        accessedbooks = _readremotenamesfrom(vfs, _selectivepullaccessedbookmarks)
-    except error.CorruptedState:
-        # if the file is corrupted, let's remove it
-        repo.ui.warn(
-            _(
-                "'selectivepullaccessedbookmarks' file was corrupted, removing it and proceeding further\n"
+    if includeaccessed:
+        vfs = repo.sharedvfs
+        try:
+            accessedbooks = _readremotenamesfrom(vfs, _selectivepullaccessedbookmarks)
+        except error.CorruptedState:
+            # if the file is corrupted, let's remove it
+            repo.ui.warn(
+                _(
+                    "'selectivepullaccessedbookmarks' file was corrupted, removing it and proceeding further\n"
+                )
             )
-        )
-        with lockmod.lock(vfs, _selectivepullaccessedbookmarkslock):
-            vfs.unlink(_selectivepullaccessedbookmarks)
+            with lockmod.lock(vfs, _selectivepullaccessedbookmarkslock):
+                vfs.unlink(_selectivepullaccessedbookmarks)
 
-    for node, nametype, remotepath, name in accessedbooks:
-        if nametype == "bookmarks" and remotepath == remote:
-            initbooks.add(name)
+        for node, nametype, remotepath, name in accessedbooks:
+            if nametype == "bookmarks" and remotepath == remote:
+                initbooks.add(name)
 
     if not initbooks:
         raise error.Abort(_("no bookmarks to subscribe specified for selectivepull"))
