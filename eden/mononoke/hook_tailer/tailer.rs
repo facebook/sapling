@@ -146,17 +146,10 @@ impl Tailer {
         let hm = self.hook_manager.clone();
         let excludes = self.excludes.clone();
 
-        let bm_rev = self
-            .repo
-            .get_bookmark(ctx.clone(), &bm)
-            .and_then({
-                cloned!(bm);
-                |opt| opt.ok_or(ErrorKind::NoSuchBookmark(bm).into())
-            })
-            .and_then({
-                cloned!(ctx, self.repo);
-                move |bm_rev| nodehash_to_bonsai(ctx, &repo, bm_rev)
-            });
+        let bm_rev = self.repo.get_bonsai_bookmark(ctx.clone(), &bm).and_then({
+            cloned!(bm);
+            |opt| opt.ok_or(ErrorKind::NoSuchBookmark(bm).into())
+        });
 
         cloned!(self.ctx, self.repo);
         bm_rev
@@ -251,15 +244,6 @@ impl Tailer {
             })
             .boxify()
     }
-}
-
-fn nodehash_to_bonsai(
-    ctx: CoreContext,
-    repo: &BlobRepo,
-    hg_cs: HgChangesetId,
-) -> impl Future<Item = ChangesetId, Error = Error> {
-    repo.get_bonsai_from_hg(ctx, hg_cs)
-        .and_then(move |maybe_node| maybe_node.ok_or(ErrorKind::BonsaiNotFound(hg_cs).into()))
 }
 
 fn run_hooks_for_changeset(
