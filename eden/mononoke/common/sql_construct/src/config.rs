@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use fbinit::FacebookInit;
 use metaconfig_types::{
@@ -34,6 +34,12 @@ pub trait SqlConstructFromDatabaseConfig: FbSqlConstruct + SqlConstruct {
                 Self::with_xdb(fb, config.db_address.clone(), mysql_options, readonly).await
             }
         }
+        .with_context(|| {
+            format!(
+                "While connecting to {:?} (with options {:?})",
+                database_config, mysql_options
+            )
+        })
     }
 }
 
