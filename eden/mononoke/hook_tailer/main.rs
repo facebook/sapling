@@ -17,26 +17,18 @@ use clap::{App, Arg, ArgMatches};
 use cmdlib::helpers::{block_execute, csid_resolve};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{
-    compat::Future01CompatExt,
-    future::{Future, FutureExt},
-    stream::{self, StreamExt, TryStreamExt},
-};
-use futures_old::Future as OldFuture;
+use futures::{compat::Future01CompatExt, future::Future};
 use futures_stats::TimedFutureExt;
 use hooks::HookOutcome;
-use manifold::{ManifoldHttpClient, RequestContext};
-use mercurial_types::{HgChangesetId, HgNodeHash};
+use mercurial_types::HgChangesetId;
 use slog::{debug, info, Logger};
 use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::str::FromStr;
-use std::time::Duration;
 use tailer::Tailer;
 use thiserror::Error;
 use time_ext::DurationExt;
-use tokio_timer::sleep;
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
@@ -66,10 +58,8 @@ async fn run_hook_tailer<'a>(
     logger: &Logger,
 ) -> Result<(), Error> {
     let bookmark_name = matches.value_of("bookmark").unwrap();
-    let bookmark = BookmarkName::new(bookmark_name).unwrap();
+    let bookmark = BookmarkName::new(bookmark_name)?;
     let common_config = cmdlib::args::read_common_config(fb, &matches)?;
-    let init_revision = matches.value_of("init_revision").map(String::from);
-    let continuous = matches.is_present("continuous");
     let limit = cmdlib::args::get_usize(&matches, "limit", 1000);
     let changeset = matches.value_of("changeset");
 
@@ -111,16 +101,6 @@ async fn run_hook_tailer<'a>(
         &logger,
     );
 
-    let rc = RequestContext {
-        bucket_name: "mononoke_prod".into(),
-        api_key: "mononoke_prod-key".into(),
-        timeout_msec: 10000,
-    };
-
-    let id = "ManifoldBlob";
-
-    let manifold_client = ManifoldHttpClient::new(fb, id, rc)?;
-
     let blobrepo = builder.build().await?;
 
     let changeset = match changeset {
@@ -142,57 +122,16 @@ async fn run_hook_tailer<'a>(
         blobrepo.clone(),
         config.clone(),
         bookmark,
-        manifold_client.clone(),
         excl.into_iter().map(|(_, cs)| cs).collect(),
         &disabled_hooks,
     )?;
 
-    let f = match init_revision {
-        Some(init_rev) => {
-            info!(
-                *logger,
-                "Initial revision specified as argument {}", init_rev
-            );
-            let hash = HgNodeHash::from_str(&init_rev)?;
-            let bytes = hash.as_bytes().into();
-            manifold_client
-                .write(tail.get_last_rev_key(), bytes)
-                .map(|_| ())
-                .compat()
-                .boxed()
+    match changeset {
+        Some(changeset) => {
+            process_hook_results(tail.run_single_changeset(changeset).compat(), logger).await
         }
-        None => async { Ok(()) }.boxed(),
-    };
-
-    match (continuous, changeset) {
-        (true, _) => {
-            // Tail new commits and run hooks on them
-            async move {
-                f.await?;
-                stream::repeat(())
-                    .map(Ok)
-                    .try_for_each({
-                        move |()| async move {
-                            process_hook_results(tail.run().compat(), logger).await?;
-                            sleep(Duration::new(10, 0))
-                                .map_err(|err| format_err!("Tokio timer error {:?}", err))
-                                .compat()
-                                .await
-                        }
-                    })
-                    .await
-            }
-            .boxed()
-        }
-        (_, Some(changeset)) => {
-            process_hook_results(tail.run_single_changeset(changeset).compat(), logger).boxed()
-        }
-        _ => {
-            f.await?;
-            process_hook_results(tail.run_with_limit(limit), logger).boxed()
-        }
+        None => process_hook_results(tail.run_with_limit(limit), logger).await,
     }
-    .await
 }
 
 async fn process_hook_results<F: Future<Output = Result<Vec<HookOutcome>, Error>>>(
@@ -302,17 +241,6 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .long("limit")
                 .takes_value(true)
                 .help("limit number of commits to process (non-continuous only). Default: 1000"),
-        )
-        .arg(
-            Arg::with_name("continuous")
-                .long("continuous")
-                .help("continuously run hooks on new commits"),
-        )
-        .arg(
-            Arg::with_name("init_revision")
-                .long("init_revision")
-                .takes_value(true)
-                .help("the initial revision to start at"),
         );
 
     cmdlib::args::add_disabled_hooks_args(app)
