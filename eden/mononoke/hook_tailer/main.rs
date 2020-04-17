@@ -18,14 +18,12 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    stream::{self, StreamExt},
+    stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
 };
-use mercurial_types::HgChangesetId;
 use slog::{debug, info, Logger};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::iter::Extend;
-use std::str::FromStr;
 use std::time::Duration;
 use time_ext::DurationExt;
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
@@ -83,26 +81,17 @@ async fn run_hook_tailer<'a>(
         None => None,
     };
 
-    let mut excludes = matches
+    let mut exclusions = matches
         .values_of("exclude")
-        .map(|matches| {
-            matches
-                .map(|cs| HgChangesetId::from_str(cs).expect("Invalid changeset"))
-                .collect()
-        })
+        .map(|matches| matches.map(|cs| cs.to_string()).collect())
         .unwrap_or(vec![]);
 
     if let Some(path) = matches.value_of("exclude_file") {
         let changesets = BufReader::new(File::open(path)?)
             .lines()
-            .filter_map(|cs_str| {
-                cs_str
-                    .map_err(Error::from)
-                    .and_then(|cs_str| HgChangesetId::from_str(&cs_str))
-                    .ok()
-            });
-
-        excludes.extend(changesets);
+            .map(|cs_str| cs_str.map(|c| c.to_string()))
+            .collect::<Result<Vec<_>, _>>()?;
+        exclusions.extend(changesets);
     }
 
     let disabled_hooks = cmdlib::args::parse_disabled_hooks_no_repo_prefix(&matches, &logger);
@@ -132,9 +121,11 @@ async fn run_hook_tailer<'a>(
         None => None,
     };
 
-    let excl = blobrepo
-        .get_hg_bonsai_mapping(ctx.clone(), excludes)
-        .compat()
+    let exclusions = exclusions
+        .into_iter()
+        .map(|cs| csid_resolve(ctx.clone(), blobrepo.clone(), cs).compat())
+        .collect::<FuturesUnordered<_>>()
+        .try_collect()
         .await?;
 
     let tail = &Tailer::new(
@@ -142,7 +133,7 @@ async fn run_hook_tailer<'a>(
         blobrepo.clone(),
         config.clone(),
         bookmark,
-        excl.into_iter().map(|(_, cs)| cs).collect(),
+        exclusions,
         &disabled_hooks,
     )?;
 
