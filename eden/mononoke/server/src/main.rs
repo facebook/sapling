@@ -13,12 +13,9 @@ use cached_config::ConfigStore;
 use clap::{App, ArgMatches};
 use cmdlib::{args, monitoring::ReadyFlagService};
 use fbinit::FacebookInit;
-use futures::{
-    compat::Future01CompatExt,
-    future::{FutureExt, TryFutureExt},
-};
+use futures::compat::Future01CompatExt;
 use metaconfig_parser::RepoConfigs;
-use slog::{error, info};
+use slog::info;
 use std::path::PathBuf;
 use std::sync::{
     atomic::{AtomicBool, Ordering},
@@ -149,13 +146,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     cmdlib::helpers::serve_forever(
         runtime,
-        repo_listeners
-            .compat()
-            .map_err({
-                let logger = root_log.clone();
-                move |e| error!(&logger, "Unhandled error: {:?}", e)
-            })
-            .map(|_| ()),
+        repo_listeners.compat(),
         &root_log,
         || {},
         args::get_shutdown_grace_period(&matches)?,

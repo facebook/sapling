@@ -189,7 +189,7 @@ pub fn serve_forever<Server, QuiesceFn, ShutdownFut>(
     shutdown_timeout: Duration,
 ) -> Result<(), Error>
 where
-    Server: Future<Output = ()> + Send + 'static,
+    Server: Future<Output = Result<(), Error>> + Send + 'static,
     QuiesceFn: FnOnce(),
     ShutdownFut: Future<Output = ()>,
 {
@@ -217,12 +217,15 @@ where
         let server_handle = tokio::task::spawn(server);
 
         // Now wait for the termination signal, or a server exit.
-        match future::select(server_handle, signalled).await {
-            Either::Left(..) => {
+        let server_result: Result<(), Error> = match future::select(server_handle, signalled).await
+        {
+            Either::Left((join_handle_res, _)) => {
                 error!(&logger, "Server has exited! Starting shutdown...");
+                join_handle_res.map_err(Error::from).and_then(|res| res)
             }
             Either::Right(..) => {
                 info!(&logger, "Signalled! Starting shutdown...");
+                Ok(())
             }
         };
 
@@ -237,9 +240,11 @@ where
         time::delay_for(shutdown_grace_period).await;
 
         info!(&logger, "Shutting down...");
-        time::timeout(shutdown_timeout, shutdown)
+        let () = time::timeout(shutdown_timeout, shutdown)
             .map_err(|_| Error::msg("Timed out shutting down server"))
-            .await
+            .await?;
+
+        server_result
     })
 }
 

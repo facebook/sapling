@@ -14,7 +14,7 @@ use std::sync::{
     Arc,
 };
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use clap::{Arg, ArgMatches};
 use cloned::cloned;
 use futures::{
@@ -24,7 +24,7 @@ use futures::{
 use gotham::{bind_server, bind_server_with_socket_data};
 use hyper::header::HeaderValue;
 use openssl::ssl::SslAcceptor;
-use slog::{debug, error, info, warn, Logger};
+use slog::{debug, info, warn, Logger};
 use tokio::net::TcpListener;
 
 use aclchecker::Identity;
@@ -297,13 +297,10 @@ fn main(fb: FacebookInit) -> Result<()> {
     serve_forever(
         runtime,
         select(
-            server.boxed().map_err({
-                let logger = logger.clone();
-                move |e| error!(&logger, "Unhandled error: {:?}", e)
-            }),
-            shutdown_rx,
+            server.boxed().map_err(|()| anyhow!("unexpected error")),
+            shutdown_rx.map_err(|err| anyhow!("Cancelled channel: {}", err)),
         )
-        .map(|_| ()),
+        .map(|res| res.factor_first().0),
         &logger,
         move || will_exit.store(true, Ordering::Relaxed),
         args::get_shutdown_grace_period(&matches)?,

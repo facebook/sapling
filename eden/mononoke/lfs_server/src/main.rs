@@ -10,7 +10,7 @@
 #![deny(warnings)]
 
 use aclchecker::Identity;
-use anyhow::{bail, Error};
+use anyhow::{anyhow, bail, Error};
 use clap::{Arg, Values};
 use cloned::cloned;
 use fbinit::FacebookInit;
@@ -23,7 +23,7 @@ use futures_util::try_join;
 use gotham::{bind_server, bind_server_with_socket_data};
 use gotham_ext::{handler::MononokeHttpHandler, socket_data::TlsSocketData};
 use hyper::header::HeaderValue;
-use slog::{error, info, warn};
+use slog::{info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
 use std::str::FromStr;
@@ -421,13 +421,10 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     serve_forever(
         runtime,
         select(
-            server.boxed().map_err({
-                let logger = logger.clone();
-                move |e| error!(&logger, "Unhandled error: {:?}", e)
-            }),
-            shutdown_rx,
+            server.boxed().map_err(|()| anyhow!("Unhandled error")),
+            shutdown_rx.map_err(|err| anyhow!("Cancelled channel: {}", err)),
         )
-        .map(|_| ()),
+        .map(|res| res.factor_first().0),
         &logger,
         move || will_exit.store(true, Ordering::Relaxed),
         args::get_shutdown_grace_period(&matches)?,
