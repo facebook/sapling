@@ -103,12 +103,24 @@ pub fn make_blobstore(
             .boxify(),
 
         Mysql { remote } => match remote {
-            ShardableRemoteDatabaseConfig::Unsharded(config) => Sqlblob::with_raw_xdb_unsharded(
-                fb,
-                config.db_address,
-                mysql_options.read_connection_type(),
-                readonly_storage.0,
-            ),
+            ShardableRemoteDatabaseConfig::Unsharded(config) => {
+                if let Some(myrouter_port) = mysql_options.myrouter_port {
+                    Sqlblob::with_myrouter_unsharded(
+                        fb,
+                        config.db_address,
+                        myrouter_port,
+                        mysql_options.read_connection_type(),
+                        readonly_storage.0,
+                    )
+                } else {
+                    Sqlblob::with_raw_xdb_unsharded(
+                        fb,
+                        config.db_address,
+                        mysql_options.read_connection_type(),
+                        readonly_storage.0,
+                    )
+                }
+            }
             ShardableRemoteDatabaseConfig::Sharded(config) => {
                 if let Some(myrouter_port) = mysql_options.myrouter_port {
                     Sqlblob::with_myrouter(

@@ -96,6 +96,33 @@ impl Sqlblob<MemcacheOps> {
         })
     }
 
+    pub fn with_myrouter_unsharded(
+        fb: FacebookInit,
+        db_address: String,
+        port: u16,
+        read_con_type: ReadConnectionType,
+        readonly: bool,
+    ) -> BoxFuture<CountedSqlblob<MemcacheOps>, Error> {
+        Self::with_connection_factory(
+            fb,
+            db_address.clone(),
+            NonZeroUsize::new(1).expect("One should be greater than zero"),
+            move |_shard_id| {
+                Ok(create_myrouter_connections(
+                    db_address.clone(),
+                    None,
+                    port,
+                    read_con_type,
+                    PoolSizeConfig::for_sharded_connection(),
+                    "blobstore".into(),
+                    readonly,
+                ))
+                .into_future()
+                .boxify()
+            },
+        )
+    }
+
     pub fn with_raw_xdb_shardmap(
         fb: FacebookInit,
         shardmap: String,
