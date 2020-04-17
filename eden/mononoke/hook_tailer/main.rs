@@ -18,8 +18,7 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    future,
-    stream::{self, StreamExt, TryStreamExt},
+    stream::{self, StreamExt},
 };
 use mercurial_types::HgChangesetId;
 use slog::{debug, info, Logger};
@@ -30,6 +29,7 @@ use std::str::FromStr;
 use std::time::Duration;
 use thiserror::Error;
 use time_ext::DurationExt;
+use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 
 use tailer::{HookExecutionInstance, Tailer};
 
@@ -65,6 +65,24 @@ async fn run_hook_tailer<'a>(
     let common_config = cmdlib::args::read_common_config(fb, &matches)?;
     let limit = cmdlib::args::get_usize(&matches, "limit", 1000);
     let changeset = matches.value_of("changeset");
+    let stats_file = matches.value_of("stats-file");
+
+    let mut stats_file = match stats_file {
+        Some(stats_file) => {
+            let mut stats_file = OpenOptions::new()
+                .create(true)
+                .write(true)
+                .truncate(true)
+                .open(stats_file)
+                .await?;
+
+            let header = "Changeset ID,File Count,Outcomes,Completion Time us,Poll Time us\n";
+            stats_file.write_all(header.as_ref()).await?;
+
+            Some(stats_file)
+        }
+        None => None,
+    };
 
     let mut excludes = matches
         .values_of("exclude")
@@ -129,19 +147,32 @@ async fn run_hook_tailer<'a>(
         &disabled_hooks,
     )?;
 
-    let stream = match changeset {
+    let mut stream = match changeset {
         Some(changeset) => stream::once(tail.run_single_changeset(changeset)).boxed(),
         None => tail.run_with_limit(limit).boxed(),
     };
 
+    let mut summary = HookExecutionSummary::default();
+
     info!(logger, "==== Hooks results ====");
 
-    let summary = stream
-        .try_fold(HookExecutionSummary::default(), |mut summary, instance| {
-            summary.add_instance(&instance, &logger);
-            future::ready(Ok(summary))
-        })
-        .await?;
+    while let Some(instance) = stream.next().await {
+        let instance = instance?;
+
+        if let Some(ref mut stats_file) = stats_file {
+            let line = format!(
+                "{},{},{},{},{}\n",
+                instance.cs_id,
+                instance.file_count,
+                instance.outcomes.len(),
+                instance.stats.completion_time.as_micros_unchecked(),
+                instance.stats.poll_time.as_micros_unchecked(),
+            );
+            stats_file.write_all(line.as_ref()).await?;
+        }
+
+        summary.add_instance(&instance, &logger);
+    }
 
     info!(logger, "==== Hooks stats ====");
     info!(
@@ -236,6 +267,12 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .long("limit")
                 .takes_value(true)
                 .help("limit number of commits to process (non-continuous only). Default: 1000"),
+        )
+        .arg(
+            Arg::with_name("stats-file")
+                .long("stats-file")
+                .takes_value(true)
+                .help("Log hook execution statistics to a file (CSV format)"),
         );
 
     cmdlib::args::add_disabled_hooks_args(app)
