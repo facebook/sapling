@@ -6,7 +6,6 @@
  */
 
 #![deny(warnings)]
-#![feature(never_type)]
 
 pub mod tailer;
 
@@ -17,18 +16,22 @@ use clap::{App, Arg, ArgMatches};
 use cmdlib::helpers::{block_execute, csid_resolve};
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::{compat::Future01CompatExt, future::Future};
-use futures_stats::TimedFutureExt;
-use hooks::HookOutcome;
+use futures::{
+    compat::Future01CompatExt,
+    future,
+    stream::{self, StreamExt, TryStreamExt},
+};
 use mercurial_types::HgChangesetId;
 use slog::{debug, info, Logger};
-use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
+use std::iter::Extend;
 use std::str::FromStr;
-use tailer::Tailer;
+use std::time::Duration;
 use thiserror::Error;
 use time_ext::DurationExt;
+
+use tailer::{HookExecutionInstance, Tailer};
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
@@ -126,76 +129,70 @@ async fn run_hook_tailer<'a>(
         &disabled_hooks,
     )?;
 
-    match changeset {
-        Some(changeset) => process_hook_results(tail.run_single_changeset(changeset), logger).await,
-        None => process_hook_results(tail.run_with_limit(limit), logger).await,
-    }
-}
+    let stream = match changeset {
+        Some(changeset) => stream::once(tail.run_single_changeset(changeset)).boxed(),
+        None => tail.run_with_limit(limit).boxed(),
+    };
 
-async fn process_hook_results<F: Future<Output = Result<Vec<HookOutcome>, Error>>>(
-    fut: F,
-    logger: &Logger,
-) -> Result<(), Error> {
-    let (stats, res) = fut.timed().await;
-    let res = res?;
+    info!(logger, "==== Hooks results ====");
 
-    let mut hooks_stat = HookExecutionStat::new();
+    let summary = stream
+        .try_fold(HookExecutionSummary::default(), |mut summary, instance| {
+            summary.add_instance(&instance, &logger);
+            future::ready(Ok(summary))
+        })
+        .await?;
 
-    debug!(logger, "==== Hooks results ====");
-    res.into_iter().for_each(|outcome| {
-        hooks_stat.record_hook_execution(&outcome);
-
-        if outcome.is_rejection() {
-            info!(logger, "{}", outcome);
-        } else {
-            debug!(logger, "{}", outcome);
-        }
-    });
-
-    info!(logger, "==== Hooks stat: {} ====", hooks_stat);
+    info!(logger, "==== Hooks stats ====");
     info!(
         logger,
-        "==== Completion Time: {}us, Poll time: {}us ===",
-        stats.completion_time.as_micros_unchecked(),
-        stats.poll_time.as_micros_unchecked(),
+        "Completion time: {}us",
+        summary.completion_time.as_micros_unchecked()
     );
+    info!(
+        logger,
+        "Poll time: {}us",
+        summary.poll_time.as_micros_unchecked()
+    );
+    info!(logger, "Changesets accepted: {}", summary.accepted);
+    info!(logger, "Changesets rejected: {}", summary.rejected);
 
-    if hooks_stat.rejected > 0 {
-        Err(format_err!("Hook rejections: {}", hooks_stat.rejected,))
-    } else {
-        Ok(())
+    if summary.rejected > 0 {
+        return Err(format_err!("Hook rejections: {}", summary.rejected));
     }
+
+    Ok(())
 }
 
-struct HookExecutionStat {
-    accepted: usize,
-    rejected: usize,
+#[derive(Default)]
+struct HookExecutionSummary {
+    accepted: u64,
+    rejected: u64,
+    completion_time: Duration,
+    poll_time: Duration,
 }
 
-impl HookExecutionStat {
-    pub fn new() -> Self {
-        Self {
-            accepted: 0,
-            rejected: 0,
+impl HookExecutionSummary {
+    pub fn add_instance(&mut self, instance: &HookExecutionInstance, logger: &Logger) {
+        let mut is_rejected = false;
+
+        for outcome in instance.outcomes.iter() {
+            if outcome.is_rejection() {
+                is_rejected = true;
+                info!(logger, "{}", outcome);
+            } else {
+                debug!(logger, "{}", outcome);
+            }
         }
-    }
 
-    pub fn record_hook_execution(&mut self, outcome: &hooks::HookOutcome) {
-        if outcome.is_rejection() {
+        if is_rejected {
             self.rejected += 1;
         } else {
             self.accepted += 1;
         }
-    }
-}
 
-impl fmt::Display for HookExecutionStat {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "accepted: {}, rejected: {}",
-            self.accepted, self.rejected
-        )
+        self.completion_time += instance.stats.completion_time;
+        self.poll_time += instance.stats.poll_time;
     }
 }
 

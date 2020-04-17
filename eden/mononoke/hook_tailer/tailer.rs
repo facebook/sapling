@@ -15,9 +15,10 @@ use cloned::cloned;
 use context::CoreContext;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future,
-    stream::{StreamExt, TryStreamExt},
+    future::{self, TryFutureExt},
+    stream::{Stream, StreamExt, TryStreamExt},
 };
+use futures_stats::{FutureStats, TimedFutureExt};
 use hooks::{hook_loader::load_hooks, HookManager, HookOutcome};
 use hooks_content_stores::blobrepo_text_only_fetcher;
 use mercurial_types::HgChangesetId;
@@ -30,6 +31,13 @@ use std::collections::HashSet;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::task;
+
+pub struct HookExecutionInstance {
+    pub cs_id: ChangesetId,
+    pub file_count: usize,
+    pub stats: FutureStats,
+    pub outcomes: Vec<HookOutcome>,
+}
 
 pub struct Tailer {
     ctx: CoreContext,
@@ -71,7 +79,7 @@ impl Tailer {
     pub async fn run_single_changeset(
         &self,
         changeset: ChangesetId,
-    ) -> Result<Vec<HookOutcome>, Error> {
+    ) -> Result<HookExecutionInstance, Error> {
         run_hooks_for_changeset(
             &self.ctx,
             &self.repo,
@@ -82,46 +90,53 @@ impl Tailer {
         .await
     }
 
-    pub async fn run_with_limit(&self, limit: usize) -> Result<Vec<HookOutcome>, Error> {
-        let bm_rev = self
-            .repo
-            .get_bonsai_bookmark(self.ctx.clone(), &self.bookmark)
-            .compat()
-            .await?
-            .ok_or_else(|| ErrorKind::NoSuchBookmark(self.bookmark.clone()))?;
-
-        let res =
-            AncestorsNodeStream::new(self.ctx.clone(), &self.repo.get_changeset_fetcher(), bm_rev)
+    pub fn run_with_limit<'a>(
+        &'a self,
+        limit: usize,
+    ) -> impl Stream<Item = Result<HookExecutionInstance, Error>> + 'a {
+        async move {
+            let bm_rev = self
+                .repo
+                .get_bonsai_bookmark(self.ctx.clone(), &self.bookmark)
                 .compat()
-                .take(limit)
-                .try_filter(|cs_id| future::ready(!self.excludes.contains(cs_id)))
-                .map(|cs_id| async move {
-                    match cs_id {
-                        Ok(cs_id) => {
-                            cloned!(self.ctx, self.repo, self.hook_manager, self.bookmark);
+                .await?
+                .ok_or_else(|| ErrorKind::NoSuchBookmark(self.bookmark.clone()))?;
 
-                            let outcomes = task::spawn(async move {
-                                run_hooks_for_changeset(
-                                    &ctx,
-                                    &repo,
-                                    hook_manager.as_ref(),
-                                    &bookmark,
-                                    cs_id,
-                                )
-                                .await
-                            })
-                            .await??;
+            let stream = AncestorsNodeStream::new(
+                self.ctx.clone(),
+                &self.repo.get_changeset_fetcher(),
+                bm_rev,
+            )
+            .compat()
+            .take(limit)
+            .try_filter(move |cs_id| future::ready(!self.excludes.contains(cs_id)))
+            .map(move |cs_id| async move {
+                match cs_id {
+                    Ok(cs_id) => {
+                        cloned!(self.ctx, self.repo, self.hook_manager, self.bookmark);
 
-                            Ok(outcomes)
-                        }
-                        Err(e) => Err(e),
+                        let outcomes = task::spawn(async move {
+                            run_hooks_for_changeset(
+                                &ctx,
+                                &repo,
+                                hook_manager.as_ref(),
+                                &bookmark,
+                                cs_id,
+                            )
+                            .await
+                        })
+                        .await??;
+
+                        Ok(outcomes)
                     }
-                })
-                .buffered(100)
-                .try_concat()
-                .await?;
+                    Err(e) => Err(e),
+                }
+            })
+            .buffered(100);
 
-        Ok(res)
+            Ok(stream)
+        }
+        .try_flatten_stream()
     }
 }
 
@@ -131,16 +146,26 @@ async fn run_hooks_for_changeset(
     hm: &HookManager,
     bm: &BookmarkName,
     cs_id: ChangesetId,
-) -> Result<Vec<HookOutcome>, Error> {
+) -> Result<HookExecutionInstance, Error> {
     let cs = cs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
 
     debug!(ctx.logger(), "Running hooks for changeset {:?}", cs);
 
-    let hook_results = hm
-        .run_hooks_for_bookmark(ctx, vec![cs].iter(), bm, None)
-        .await?;
+    let file_count = cs.file_changes_map().len();
 
-    Ok(hook_results)
+    let (stats, outcomes) = hm
+        .run_hooks_for_bookmark(ctx, vec![cs].iter(), bm, None)
+        .timed()
+        .await;
+
+    let outcomes = outcomes?;
+
+    Ok(HookExecutionInstance {
+        cs_id,
+        file_count,
+        stats,
+        outcomes,
+    })
 }
 
 #[derive(Debug, Error)]
