@@ -60,7 +60,7 @@ impl Tailer {
         let mut hook_manager = HookManager::new(
             ctx.fb,
             content_fetcher,
-            Default::default(),
+            config.hook_manager_params.clone().unwrap_or_default(),
             ScubaSampleBuilder::with_discard(),
         );
 

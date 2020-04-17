@@ -1597,6 +1597,14 @@ function unbundle_replay() {
     "$@"
 }
 
+function hook_tailer() {
+  "$MONONOKE_HOOK_TAILER" \
+    "${COMMON_ARGS[@]}" \
+    --repo-id "$REPOID" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "$@"
+}
+
 function quiet() {
   local log="$TESTTMP/quiet.last.log"
   "$@" >"$log" 2>&1
