@@ -10,6 +10,7 @@
 pub mod tailer;
 
 use anyhow::{format_err, Error, Result};
+use blobrepo::BlobRepo;
 use blobrepo_factory::BlobrepoBuilder;
 use bookmarks::BookmarkName;
 use clap::{App, Arg, ArgMatches};
@@ -18,17 +19,50 @@ use context::CoreContext;
 use fbinit::FacebookInit;
 use futures::{
     compat::Future01CompatExt,
-    stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
+    future,
+    stream::{FuturesUnordered, StreamExt, TryStreamExt},
 };
+use mononoke_types::ChangesetId;
 use slog::{debug, info, Logger};
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::iter::Extend;
+use std::collections::HashSet;
 use std::time::Duration;
 use time_ext::DurationExt;
-use tokio::{fs::OpenOptions, io::AsyncWriteExt};
+use tokio::{
+    fs::{File, OpenOptions},
+    io::{AsyncBufReadExt, AsyncWriteExt, BufReader},
+};
 
 use tailer::{HookExecutionInstance, Tailer};
+
+async fn get_changesets<'a>(
+    matches: &'a ArgMatches<'a>,
+    inline_arg: &str,
+    file_arg: &str,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+) -> Result<HashSet<ChangesetId>> {
+    let mut ids = matches
+        .values_of(inline_arg)
+        .map(|matches| matches.map(|cs| cs.to_string()).collect())
+        .unwrap_or_else(|| vec![]);
+
+    if let Some(path) = matches.value_of(file_arg) {
+        let file = File::open(path).await?;
+        let mut lines = BufReader::new(file).lines();
+        while let Some(line) = lines.next().await {
+            ids.push(line?);
+        }
+    }
+
+    let ret = ids
+        .into_iter()
+        .map(|cs| csid_resolve(ctx.clone(), repo.clone(), cs).compat())
+        .collect::<FuturesUnordered<_>>()
+        .try_collect()
+        .await?;
+
+    Ok(ret)
+}
 
 #[fbinit::main]
 fn main(fb: FacebookInit) -> Result<()> {
@@ -61,7 +95,6 @@ async fn run_hook_tailer<'a>(
     let bookmark = BookmarkName::new(bookmark_name)?;
     let common_config = cmdlib::args::read_common_config(fb, &matches)?;
     let limit = cmdlib::args::get_usize(&matches, "limit", 1000);
-    let changeset = matches.value_of("changeset");
     let stats_file = matches.value_of("stats-file");
 
     let mut stats_file = match stats_file {
@@ -81,19 +114,6 @@ async fn run_hook_tailer<'a>(
         None => None,
     };
 
-    let mut exclusions = matches
-        .values_of("exclude")
-        .map(|matches| matches.map(|cs| cs.to_string()).collect())
-        .unwrap_or(vec![]);
-
-    if let Some(path) = matches.value_of("exclude_file") {
-        let changesets = BufReader::new(File::open(path)?)
-            .lines()
-            .map(|cs_str| cs_str.map(|c| c.to_string()))
-            .collect::<Result<Vec<_>, _>>()?;
-        exclusions.extend(changesets);
-    }
-
     let disabled_hooks = cmdlib::args::parse_disabled_hooks_no_repo_prefix(&matches, &logger);
 
     let caching = cmdlib::args::init_cachelib(fb, &matches, None);
@@ -112,21 +132,11 @@ async fn run_hook_tailer<'a>(
 
     let blobrepo = builder.build().await?;
 
-    let changeset = match changeset {
-        Some(changeset) => Some(
-            csid_resolve(ctx.clone(), blobrepo.clone(), changeset)
-                .compat()
-                .await?,
-        ),
-        None => None,
-    };
-
-    let exclusions = exclusions
-        .into_iter()
-        .map(|cs| csid_resolve(ctx.clone(), blobrepo.clone(), cs).compat())
-        .collect::<FuturesUnordered<_>>()
-        .try_collect()
-        .await?;
+    let (exclusions, inclusions) = future::try_join(
+        get_changesets(matches, "exclude", "exclude_file", &ctx, &blobrepo),
+        get_changesets(matches, "changeset", "changeset_file", &ctx, &blobrepo),
+    )
+    .await?;
 
     let tail = &Tailer::new(
         ctx.clone(),
@@ -137,9 +147,10 @@ async fn run_hook_tailer<'a>(
         &disabled_hooks,
     )?;
 
-    let mut stream = match changeset {
-        Some(changeset) => stream::once(tail.run_single_changeset(changeset)).boxed(),
-        None => tail.run_with_limit(limit).boxed(),
+    let mut stream = if inclusions.is_empty() {
+        tail.run_with_limit(limit).boxed()
+    } else {
+        tail.run_changesets(inclusions).boxed()
     };
 
     let mut summary = HookExecutionSummary::default();
@@ -234,7 +245,14 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
             Arg::with_name("changeset")
                 .long("changeset")
                 .short("c")
+                .multiple(true)
                 .help("the changeset to run hooks for")
+                .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("changeset_file")
+                .long("changeset_file")
+                .help("a file containing chnagesets to explicitly run hooks for")
                 .takes_value(true),
         )
         .arg(

@@ -72,7 +72,7 @@ Test excluding multiple commits
   Changesets accepted: 1
   Changesets rejected: 0
 
-Test a single commit
+Test explicit commits
 
   $ hook_tailer --bookmark master_bookmark --changeset "master_bookmark" 2>&1 | strip_glog
   Hook tailer is starting
@@ -82,4 +82,28 @@ Test a single commit
   Completion time: *us (glob)
   Poll time: *us (glob)
   Changesets accepted: 1
+  Changesets rejected: 0
+
+  $ hook_tailer --bookmark master_bookmark --changeset 459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66 --changeset 9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec 2>&1 | strip_glog
+  Hook tailer is starting
+  changeset resolved as: ChangesetId(Blake2(*)) (glob)
+  changeset resolved as: ChangesetId(Blake2(*)) (glob)
+  ==== Hooks results ====
+  ==== Hooks stats ====
+  Completion time: *us (glob)
+  Poll time: *us (glob)
+  Changesets accepted: 2
+  Changesets rejected: 0
+
+  $ echo "459f16ae564c501cb408c1e5b60fc98a1e8b8e97b9409c7520658bfa1577fb66" >> "$TESTTMP/included"
+  $ echo "9feb8ddd3e8eddcfa3a4913b57df7842bedf84b8ea3b7b3fcb14c6424aa81fec" >> "$TESTTMP/included"
+  $ hook_tailer --bookmark master_bookmark --changeset_file "$TESTTMP/included" 2>&1 | strip_glog
+  Hook tailer is starting
+  changeset resolved as: ChangesetId(Blake2(*)) (glob)
+  changeset resolved as: ChangesetId(Blake2(*)) (glob)
+  ==== Hooks results ====
+  ==== Hooks stats ====
+  Completion time: *us (glob)
+  Poll time: *us (glob)
+  Changesets accepted: 2
   Changesets rejected: 0

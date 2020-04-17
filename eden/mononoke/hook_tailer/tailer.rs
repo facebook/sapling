@@ -16,7 +16,7 @@ use context::CoreContext;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, TryFutureExt},
-    stream::{Stream, StreamExt, TryStreamExt},
+    stream::{self, Stream, StreamExt, TryStreamExt},
 };
 use futures_stats::{FutureStats, TimedFutureExt};
 use hooks::{hook_loader::load_hooks, HookManager, HookOutcome};
@@ -27,6 +27,7 @@ use revset::AncestorsNodeStream;
 use scuba_ext::ScubaSampleBuilder;
 use slog::debug;
 use std::collections::HashSet;
+use std::iter::IntoIterator;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::task;
@@ -75,18 +76,15 @@ impl Tailer {
         })
     }
 
-    pub async fn run_single_changeset(
-        &self,
-        changeset: ChangesetId,
-    ) -> Result<HookExecutionInstance, Error> {
-        run_hooks_for_changeset(
-            &self.ctx,
-            &self.repo,
-            self.hook_manager.as_ref(),
-            &self.bookmark,
-            changeset,
-        )
-        .await
+    pub fn run_changesets<'a, I>(
+        &'a self,
+        changesets: I,
+    ) -> impl Stream<Item = Result<HookExecutionInstance, Error>> + 'a
+    where
+        I: IntoIterator<Item = ChangesetId> + 'a,
+    {
+        let stream = stream::iter(changesets.into_iter().map(Ok));
+        self.run_on_stream(stream)
     }
 
     pub fn run_with_limit<'a>(
@@ -107,7 +105,21 @@ impl Tailer {
                 bm_rev,
             )
             .compat()
-            .take(limit)
+            .take(limit);
+
+            Ok(self.run_on_stream(stream))
+        }
+        .try_flatten_stream()
+    }
+
+    fn run_on_stream<'a, S>(
+        &'a self,
+        stream: S,
+    ) -> impl Stream<Item = Result<HookExecutionInstance, Error>> + 'a
+    where
+        S: Stream<Item = Result<ChangesetId, Error>> + 'a,
+    {
+        stream
             .try_filter(move |cs_id| future::ready(!self.excludes.contains(cs_id)))
             .map(move |cs_id| async move {
                 match cs_id {
@@ -131,11 +143,7 @@ impl Tailer {
                     Err(e) => Err(e),
                 }
             })
-            .buffered(100);
-
-            Ok(stream)
-        }
-        .try_flatten_stream()
+            .buffered(100)
     }
 }
 
