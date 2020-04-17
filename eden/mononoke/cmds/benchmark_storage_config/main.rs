@@ -110,14 +110,14 @@ fn main(fb: fbinit::FacebookInit) {
     let mut runtime = args::init_runtime(&matches).expect("Cannot start tokio");
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-    let blobstore = runtime.block_on_std(async {
+    let blobstore = || async {
         let blobstore = make_blobstore(
             fb,
-            storage_config.blobstore,
-            mysql_options,
+            storage_config.blobstore.clone(),
+            mysql_options.clone(),
             blobstore_factory::ReadOnlyStorage(false),
-            blobstore_options,
-            logger,
+            blobstore_options.clone(),
+            logger.clone(),
         )
         .compat()
         .await
@@ -156,14 +156,18 @@ fn main(fb: fbinit::FacebookInit) {
                 )
             }
         }
-    });
+    };
 
     // Cut all the repetition around running a benchmark. Note that a fresh cachee shouldn't be needed,
     // as the warmup will fill it, and the key is randomised
-    let mut run_benchmark =
-        |bench: fn(&mut Criterion, CoreContext, Arc<dyn Blobstore>, &mut Runtime)| {
-            bench(&mut criterion, ctx.clone(), blobstore.clone(), &mut runtime)
-        };
+    let mut run_benchmark = {
+        let runtime = &mut runtime;
+        let criterion = &mut criterion;
+        move |bench: fn(&mut Criterion, CoreContext, Arc<dyn Blobstore>, &mut Runtime)| {
+            let blobstore = runtime.block_on_std(blobstore());
+            bench(criterion, ctx.clone(), blobstore, runtime)
+        }
+    };
 
     // Tests are run from here
     run_benchmark(single_puts::benchmark);
@@ -172,6 +176,5 @@ fn main(fb: fbinit::FacebookInit) {
     run_benchmark(parallel_different_blob_gets::benchmark);
     run_benchmark(parallel_puts::benchmark);
 
-    runtime.shutdown_on_idle();
     criterion.final_summary();
 }
