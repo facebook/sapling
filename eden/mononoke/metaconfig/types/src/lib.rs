@@ -138,6 +138,9 @@ pub struct RepoConfig {
     pub derived_data_config: DerivedDataConfig,
     /// Name of this repository in hgsql.
     pub hgsql_name: HgsqlName,
+    /// Name of this repository in hgsql ... for globalrevs. This could, in some cases, not be the
+    /// same as HgsqlName.
+    pub hgsql_globalrevs_name: HgsqlGlobalrevsName,
 }
 
 /// Config for derived data
@@ -1248,6 +1251,22 @@ impl AsRef<str> for HgsqlName {
 }
 
 impl AsRef<String> for HgsqlName {
+    fn as_ref(&self) -> &String {
+        &self.0
+    }
+}
+
+/// Represents the repository name for Globalrevs for this repository in Hgsql.
+#[derive(Debug, Default, Clone, Eq, PartialEq)]
+pub struct HgsqlGlobalrevsName(pub String);
+
+impl AsRef<str> for HgsqlGlobalrevsName {
+    fn as_ref(&self) -> &str {
+        &self.0
+    }
+}
+
+impl AsRef<String> for HgsqlGlobalrevsName {
     fn as_ref(&self) -> &String {
         &self.0
     }

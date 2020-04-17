@@ -29,8 +29,8 @@ use maplit::hashmap;
 use metaconfig_types::{
     BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, CommitSyncConfig,
     CommitSyncDirection, CommonConfig, DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig,
-    HgsqlName, HookBypass, HookConfig, HookManagerParams, HookParams, HookType,
-    InfinitepushNamespace, InfinitepushParams, LfsParams, PushParams, PushrebaseFlags,
+    HgsqlGlobalrevsName, HgsqlName, HookBypass, HookConfig, HookManagerParams, HookParams,
+    HookType, InfinitepushNamespace, InfinitepushParams, LfsParams, PushParams, PushrebaseFlags,
     PushrebaseParams, Redaction, RepoConfig, RepoReadOnly, SmallRepoCommitSyncConfig,
     SourceControlServiceParams, StorageConfig, UnodeVersion, WhitelistEntry,
     WireprotoLoggingConfig,
@@ -779,6 +779,13 @@ impl RepoConfigs {
             .transpose()?
             .unwrap_or(DerivedDataConfig::default());
 
+        let hgsql_name = HgsqlName(this.hgsql_name.unwrap_or_else(|| reponame.to_string()));
+
+        let hgsql_globalrevs_name = HgsqlGlobalrevsName(
+            this.hgsql_globalrevs_name
+                .unwrap_or_else(|| hgsql_name.0.clone()),
+        );
+
         Ok(RepoConfig {
             enabled,
             storage_config,
@@ -812,7 +819,8 @@ impl RepoConfigs {
             source_control_service,
             source_control_service_monitoring,
             derived_data_config,
-            hgsql_name: HgsqlName(this.hgsql_name.unwrap_or_else(|| reponame.to_string())),
+            hgsql_name,
+            hgsql_globalrevs_name,
         })
     }
 
@@ -1441,6 +1449,7 @@ mod test {
             scuba_table_hooks="scm_hooks"
             storage_config="files"
             hgsql_name = "www-foobar"
+            hgsql_globalrevs_name = "www-barfoo"
 
             [storage.files.metadata.local]
             local_db_path = "/tmp/www"
@@ -1634,6 +1643,7 @@ mod test {
                     unode_version: UnodeVersion::V2,
                 },
                 hgsql_name: HgsqlName("fbsource".to_string()),
+                hgsql_globalrevs_name: HgsqlGlobalrevsName("fbsource".to_string()),
             },
         );
 
@@ -1680,6 +1690,7 @@ mod test {
                 source_control_service_monitoring: None,
                 derived_data_config: DerivedDataConfig::default(),
                 hgsql_name: HgsqlName("www-foobar".to_string()),
+                hgsql_globalrevs_name: HgsqlGlobalrevsName("www-barfoo".to_string()),
             },
         );
         assert_eq!(
@@ -1936,6 +1947,7 @@ mod test {
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,
                 hgsql_name: HgsqlName("test".to_string()),
+                hgsql_globalrevs_name: HgsqlGlobalrevsName("test".to_string()),
                 ..Default::default()
             }
         };
@@ -2006,6 +2018,7 @@ mod test {
                 list_keys_patterns_max: LIST_KEYS_PATTERNS_MAX_DEFAULT,
                 hook_max_file_size: HOOK_MAX_FILE_SIZE_DEFAULT,
                 hgsql_name: HgsqlName("test".to_string()),
+                hgsql_globalrevs_name: HgsqlGlobalrevsName("test".to_string()),
                 ..Default::default()
             }
         };
