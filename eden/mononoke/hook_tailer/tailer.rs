@@ -21,7 +21,6 @@ use futures::{
 use futures_stats::{FutureStats, TimedFutureExt};
 use hooks::{hook_loader::load_hooks, HookManager, HookOutcome};
 use hooks_content_stores::blobrepo_text_only_fetcher;
-use mercurial_types::HgChangesetId;
 use metaconfig_types::RepoConfig;
 use mononoke_types::ChangesetId;
 use revset::AncestorsNodeStream;
@@ -172,8 +171,4 @@ async fn run_hooks_for_changeset(
 pub enum ErrorKind {
     #[error("No such bookmark '{0}'")]
     NoSuchBookmark(BookmarkName),
-    #[error("Cannot find last revision in blobstore")]
-    NoLastRevision,
-    #[error("Cannot find bonsai for {0}")]
-    BonsaiNotFound(HgChangesetId),
 }

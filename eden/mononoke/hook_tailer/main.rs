@@ -27,7 +27,6 @@ use std::io::{BufRead, BufReader};
 use std::iter::Extend;
 use std::str::FromStr;
 use std::time::Duration;
-use thiserror::Error;
 use time_ext::DurationExt;
 use tokio::{fs::OpenOptions, io::AsyncWriteExt};
 
@@ -276,10 +275,4 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
         );
 
     cmdlib::args::add_disabled_hooks_args(app)
-}
-
-#[derive(Debug, Error)]
-pub enum ErrorKind {
-    #[error("No such repo '{0}'")]
-    NoSuchRepo(String),
 }
