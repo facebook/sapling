@@ -44,6 +44,7 @@ pub struct Tailer {
     repo: BlobRepo,
     hook_manager: Arc<HookManager>,
     bookmark: BookmarkName,
+    concurrency: usize,
     excludes: HashSet<ChangesetId>,
 }
 
@@ -53,6 +54,7 @@ impl Tailer {
         repo: BlobRepo,
         config: RepoConfig,
         bookmark: BookmarkName,
+        concurrency: usize,
         excludes: HashSet<ChangesetId>,
         disabled_hooks: &HashSet<String>,
     ) -> Result<Tailer> {
@@ -72,6 +74,7 @@ impl Tailer {
             repo,
             hook_manager: Arc::new(hook_manager),
             bookmark,
+            concurrency,
             excludes,
         })
     }
@@ -143,7 +146,7 @@ impl Tailer {
                     Err(e) => Err(e),
                 }
             })
-            .buffered(100)
+            .buffered(self.concurrency)
     }
 }
 

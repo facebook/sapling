@@ -95,6 +95,7 @@ async fn run_hook_tailer<'a>(
     let bookmark = BookmarkName::new(bookmark_name)?;
     let common_config = cmdlib::args::read_common_config(fb, &matches)?;
     let limit = cmdlib::args::get_usize(&matches, "limit", 1000);
+    let concurrency = cmdlib::args::get_usize(&matches, "concurrency", 100);
     let stats_file = matches.value_of("stats-file");
 
     let mut stats_file = match stats_file {
@@ -143,6 +144,7 @@ async fn run_hook_tailer<'a>(
         blobrepo.clone(),
         config.clone(),
         bookmark,
+        concurrency,
         exclusions,
         &disabled_hooks,
     )?;
@@ -240,6 +242,12 @@ fn setup_app<'a, 'b>() -> App<'a, 'b> {
                 .help("bookmark to tail")
                 .takes_value(true)
                 .required(true),
+        )
+        .arg(
+            Arg::with_name("concurrency")
+                .long("concurrency")
+                .help("the number of changesets to run hooks for in parallel")
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("changeset")
