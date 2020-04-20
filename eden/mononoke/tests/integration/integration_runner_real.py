@@ -181,6 +181,11 @@ def _hg_runner(
     interactive: bool = False,
     quiet: bool = False,
 ):
+    if "SANDCASTLE" in os.environ:
+        # Sandcastle's /tmp might be mounted on a slow device
+        # In that case let's move the test tmp dir to /dev/shm
+        os.environ["TMPDIR"] = "/dev/shm"
+
     with tempfile.TemporaryDirectory() as output_dir:
         args = [
             manifest_env["BINARY_HGPYTHON"],
