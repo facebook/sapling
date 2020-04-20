@@ -42,6 +42,7 @@ use futures_stats::Timed;
 use futures_stats::TimedFutureExt;
 use lock_ext::LockExt;
 use manifest::find_intersection_of_diffs;
+use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{ChangesetId, FileUnodeId, RepositoryId};
 use phases::SqlPhases;
 use slog::{info, Logger};
@@ -236,6 +237,17 @@ async fn run_subcmd<'a>(
             let repo = open_repo_maybe_unredacted(fb, &logger, &matches, &derived_data_type)
                 .compat()
                 .await?;
+
+            // Backfill is used when when a derived data type is not enabled yet, and so
+            // any attempt to call BonsaiDerived::derive() fails. However calling
+            // BonsaiDerived::derive() might be useful, and so the lines below explicitly
+            // enable `derived_data_type` to allow calling BonsaiDerived::derive() if necessary.
+            let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
+                derived_data_config
+                    .derived_data_types
+                    .insert(derived_data_type.clone());
+                derived_data_config
+            });
 
             subcommand_backfill(
                 &ctx,
