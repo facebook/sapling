@@ -245,18 +245,12 @@ class RebaseTest(EdenHgTestCase):
         self.assertEqual(
             num_fast_path,
             stdout.count("using eden update code path\n"),
-            msg=(
-                "Number of times `hg update` should exercise the fast path: "
-                + str(num_fast_path)
-            ),
+            msg=f"`hg update` output:\n{stdout}\n",
         )
         self.assertEqual(
             num_slow_path,
             stdout.count("falling back to non-eden update code path: "),
-            msg=(
-                "Number of times `hg update` should exercise the slow path: "
-                + str(num_slow_path)
-            ),
+            msg=f"`hg update` output:\n{stdout}\n",
         )
 
     def test_rebase_with_concurrent_status(self) -> None:
