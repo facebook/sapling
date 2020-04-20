@@ -5,13 +5,18 @@
  * GNU General Public License version 2.
  */
 
+use crate::batch::derive_fsnode_in_batch;
 use crate::derive::derive_fsnode;
 use anyhow::{Error, Result};
+use async_trait::async_trait;
 use blobrepo::BlobRepo;
 use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
+use futures::{
+    compat::Future01CompatExt, stream as new_stream, StreamExt as NewStreamExt, TryStreamExt,
+};
 use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_old::{
     stream::{self, FuturesUnordered},
@@ -34,6 +39,9 @@ impl RootFsnodeId {
     pub fn fsnode_id(&self) -> &FsnodeId {
         &self.0
     }
+    pub fn into_fsnode_id(self) -> FsnodeId {
+        self.0
+    }
 }
 
 impl TryFrom<BlobstoreBytes> for RootFsnodeId {
@@ -50,6 +58,7 @@ impl From<RootFsnodeId> for BlobstoreBytes {
     }
 }
 
+#[async_trait]
 impl BonsaiDerived for RootFsnodeId {
     const NAME: &'static str = "fsnodes";
     type Mapping = RootFsnodeMapping;
@@ -75,6 +84,36 @@ impl BonsaiDerived for RootFsnodeId {
         )
         .map(RootFsnodeId)
         .boxify()
+    }
+
+    async fn batch_derive<'a, Iter>(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csids: Iter,
+    ) -> Result<HashMap<ChangesetId, Self>, Error>
+    where
+        Iter: IntoIterator<Item = ChangesetId> + Send,
+        Iter::IntoIter: Send,
+    {
+        let csids = csids.into_iter().collect::<Vec<_>>();
+        let derived = derive_fsnode_in_batch(ctx, repo, csids.clone()).await?;
+
+        let mapping = Self::mapping(ctx, repo);
+
+        new_stream::iter(derived.into_iter().map(|(cs_id, derived)| {
+            let mapping = mapping.clone();
+            async move {
+                let derived = RootFsnodeId(derived);
+                mapping
+                    .put(ctx.clone(), cs_id.clone(), derived.clone())
+                    .compat()
+                    .await?;
+                Ok((cs_id, derived))
+            }
+        }))
+        .buffered(100)
+        .try_collect::<HashMap<_, _>>()
+        .await
     }
 }
 

@@ -33,16 +33,18 @@ bytes = { version = "0.5", features = ["serde"] }
 digest = "0.8"
 futures = { version = "0.3", features = ["async-await", "compat"] }
 futures-old = { package = "futures", version = "0.1" }
+itertools = "0.8"
 maplit = "1.0"
 serde = { version = "1.0", features = ["derive", "rc"] }
 serde_derive = "1.0"
 sha-1 = "0.8"
 sha2 = "0.8"
 thiserror = "1.0"
-tokio = "0.1"
+tokio = { version = "=0.2.13", features = ["full"] }
 tokio-compat = "0.1"
 
 [dev-dependencies]
 blobrepo_factory = { path = "../../blobrepo/factory" }
 fixtures = { path = "../../tests/fixtures" }
 test_utils = { path = "../../manifest/test_utils" }
+tests_utils = { path = "../../tests/utils" }

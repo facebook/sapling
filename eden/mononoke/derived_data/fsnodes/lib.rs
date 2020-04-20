@@ -11,6 +11,7 @@
 use mononoke_types::{ContentId, FsnodeId};
 use thiserror::Error;
 
+mod batch;
 mod derive;
 mod mapping;
 
