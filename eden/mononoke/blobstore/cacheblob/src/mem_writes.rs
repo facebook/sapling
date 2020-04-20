@@ -18,17 +18,11 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-#[derive(Clone, Debug)]
-enum Cache {
-    Put(BlobstoreBytes),
-    Get(Option<BlobstoreBytes>),
-}
-
 /// A blobstore wrapper that reads from the underlying blobstore but writes to memory.
 #[derive(Clone, Debug)]
 pub struct MemWritesBlobstore<T: Blobstore + Clone> {
     inner: T,
-    cache: Arc<Mutex<HashMap<String, Cache>>>,
+    cache: Arc<Mutex<HashMap<String, BlobstoreBytes>>>,
 }
 
 impl<T: Blobstore + Clone> MemWritesBlobstore<T> {
@@ -45,10 +39,6 @@ impl<T: Blobstore + Clone> MemWritesBlobstore<T> {
     pub fn persist(&self, ctx: CoreContext) -> impl Future<Item = (), Error = Error> {
         let items = self.cache.with(|cache| mem::replace(cache, HashMap::new()));
         stream::iter_ok(items)
-            .filter_map(|(key, cache)| match cache {
-                Cache::Put(value) => Some((key, value)),
-                Cache::Get(_) => None,
-            })
             .map({
                 let inner = self.inner.clone();
                 move |(key, value)| inner.put(ctx.clone(), key, value)
@@ -60,35 +50,22 @@ impl<T: Blobstore + Clone> MemWritesBlobstore<T> {
     pub fn get_inner(&self) -> T {
         self.inner.clone()
     }
+
+    pub fn get_cache(&self) -> &Arc<Mutex<HashMap<String, BlobstoreBytes>>> {
+        &self.cache
+    }
 }
 
 impl<T: Blobstore + Clone> Blobstore for MemWritesBlobstore<T> {
     fn put(&self, _ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        self.cache
-            .with(|cache| cache.insert(key, Cache::Put(value)));
+        self.cache.with(|cache| cache.insert(key, value));
         future::ok(()).boxify()
     }
 
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
         match self.cache.with(|cache| cache.get(&key).cloned()) {
-            Some(cache) => {
-                let result = match cache {
-                    Cache::Put(value) => Some(value),
-                    Cache::Get(result) => result,
-                };
-                future::ok(result).boxify()
-            }
-            None => self
-                .inner
-                .get(ctx, key.clone())
-                .map({
-                    let cache = self.cache.clone();
-                    move |result| {
-                        cache.with(|cache| cache.insert(key, Cache::Get(result.clone())));
-                        result
-                    }
-                })
-                .boxify(),
+            Some(value) => future::ok(Some(value)).boxify(),
+            None => self.inner.get(ctx, key).boxify(),
         }
     }
 
