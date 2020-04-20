@@ -1493,7 +1493,8 @@ Note: any programs running inside of an Eden-managed directory will need to cd
 out of and back into the repository to pick up the new working directory state.
 If you see "Transport endpoint not connected" errors from any program this
 means it is still attempting to use the old mount point from the previous Eden
-process."""
+process, and if you see this in your terminal, you should run "cd / && cd -" to
+update your shell's working directory."""
         )
         return 0
 
