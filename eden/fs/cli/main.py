@@ -17,7 +17,8 @@ from typing import Any, Dict, List, Optional, Set, Tuple, Type
 
 import eden.thrift
 import thrift.transport
-from eden.fs.cli.util import check_health_using_lockfile
+from eden.fs.cli.telemetry import TelemetrySample
+from eden.fs.cli.util import check_health_using_lockfile, wait_for_instance_healthy
 from eden.thrift import EdenNotRunningError
 from facebook.eden import EdenService
 from facebook.eden.ttypes import GlobParams, MountInfo as ThriftMountInfo, MountState
@@ -1360,10 +1361,7 @@ class RestartCmd(Subcmd):
         if health.is_healthy():
             assert edenfs_pid is not None
             if self.args.restart_type == RESTART_MODE_GRACEFUL:
-                status = self._graceful_restart(instance)
-                success = status == 0
-                instance.log_sample("graceful_restart", success=success)
-                return status
+                return self._graceful_restart(instance)
             else:
                 status = self._full_restart(instance, edenfs_pid)
                 success = status == 0
@@ -1406,6 +1404,68 @@ class RestartCmd(Subcmd):
                 return 1
             return self._force_restart(instance, edenfs_pid, stop_timeout)
 
+    def _recover_after_failed_graceful_restart(
+        self, instance: EdenInstance, telemetry_sample: TelemetrySample
+    ) -> int:
+        health = instance.check_health()
+        edenfs_pid = health.pid
+        if edenfs_pid is None:
+            # The daemon is not running
+            print(
+                "The daemon in not running after failed graceful restart, "
+                "starting it"
+            )
+            telemetry_sample.fail("EdenFS was not running after graceful restart")
+            return self._start(instance)
+
+        print(
+            "Attempting to recover the current edenfs daemon "
+            f"(pid {edenfs_pid}) after a failed graceful restart"
+        )
+        try:
+            # We will give ourselves a fairly long period (1 hr)
+            # to recover from a failed graceful restart before
+            # forcing a restart. We could hit this case if we are
+            # waiting for in process thrift calls to finish, so we
+            # want to wait for a reasonable time before we force
+            # kill the process (if it is stuck somewhere)
+            wait_for_instance_healthy(instance, 3600)
+            telemetry_sample.fail(
+                "Graceful restart failed, and old EdenFS process resumed"
+            )
+            print(
+                "error: failed to perform graceful restart. The old "
+                "EdenFS daemon has resumed processing and was not restarted.",
+                file=sys.stderr,
+            )
+            return 1
+        except Exception:
+            # If we timed out waiting to become healthy, just pass
+            # and continue with a force restart
+            pass
+
+        print("Recovery unsucessful, forcing a full restart by sending SIGTERM")
+        try:
+            os.kill(edenfs_pid, signal.SIGTERM)
+            self._wait_for_stop(instance, edenfs_pid, timeout=5)
+        except Exception:
+            # In case we race and the process does not exist by the time we
+            # timeout waiting and by the time we call os.kill, just
+            # continue on with the restart
+            pass
+        if self._finish_restart(instance) == 0:
+            telemetry_sample.fail(
+                "EdenFS was not healthy after graceful restart; performed a "
+                "hard restart"
+            )
+            return 2
+        else:
+            telemetry_sample.fail(
+                "EdenFS was not healthy after graceful restart, and we failed "
+                "to restart it"
+            )
+            return 3
+
     def _graceful_restart(self, instance: EdenInstance) -> int:
         print("Performing a graceful restart...")
         if instance.should_use_experimental_systemd_mode():
@@ -1413,9 +1473,28 @@ class RestartCmd(Subcmd):
                 "TODO(T33122320): Implement 'eden restart --graceful'"
             )
         else:
-            return daemon.gracefully_restart_edenfs_service(
-                instance, daemon_binary=self.args.daemon_binary
-            )
+            with instance.get_telemetry_logger().new_sample(
+                "graceful_restart"
+            ) as telemetry_sample:
+                # The status here is returned by the exit status of the startup
+                # logger. If this is successful, we will ensure the new process
+                # itself starts. If this was not successful, we will assume that
+                # the process didn't start up correctly and continue directly to
+                # our recovery logic.
+                status = daemon.gracefully_restart_edenfs_service(
+                    instance, daemon_binary=self.args.daemon_binary
+                )
+                success = status == 0
+                if success:
+                    print("Successful graceful restart")
+                    return 0
+
+                # After this point, the initial graceful restart was unsuccessful.
+                # Make sure that the old process recovers. If it does not recover,
+                # run start to make sure that an EdenFS process is running.
+                return self._recover_after_failed_graceful_restart(
+                    instance, telemetry_sample
+                )
 
     def _start(self, instance: EdenInstance) -> int:
         print("Eden is not currently running.  Starting it...")

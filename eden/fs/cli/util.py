@@ -16,7 +16,7 @@ import sys
 import time
 import typing
 from pathlib import Path
-from typing import Any, Callable, List, Optional, TypeVar, Union
+from typing import TYPE_CHECKING, Any, Callable, List, Optional, TypeVar, Union
 
 import eden.thrift
 import thrift.transport
@@ -24,6 +24,9 @@ from facebook.eden.ttypes import TreeInodeDebugInfo
 from fb303_core.ttypes import fb303_status
 from thrift import Thrift
 
+
+if TYPE_CHECKING:
+    from .config import EdenInstance
 
 if sys.platform != "win32":
     import pwd
@@ -222,6 +225,34 @@ def wait_for_daemon_healthy(
             else:
                 msg = "exit status {}".format(status)
             raise EdenStartError("edenfs exited before becoming healthy: " + msg)
+
+        # Still starting
+        return None
+
+    timeout_ex = EdenStartError("timed out waiting for edenfs to become healthy")
+    return poll_until(check_daemon_health, timeout=timeout, timeout_ex=timeout_ex)
+
+
+def wait_for_instance_healthy(instance: "EdenInstance", timeout: float) -> HealthStatus:
+    """
+    Wait for EdenFS to become healthy. This method differs from wait_for_daemon_healthy
+    because wait_for_daemon_healthy is used for EdenFS instances spawned by a direct
+    child, while this method is for use to wait on an existent process.
+    """
+    from . import proc_utils as proc_utils_mod
+
+    proc_utils = proc_utils_mod.new()
+
+    def check_daemon_health() -> Optional[HealthStatus]:
+        # Check the thrift status
+        health_info = instance.check_health()
+        if health_info.is_healthy():
+            return health_info
+
+        # Make sure that the edenfs process is still alive
+        pid = health_info.pid
+        if pid is None or not proc_utils.is_process_alive(pid):
+            raise EdenStartError("edenfs exited before becoming healthy")
 
         # Still starting
         return None
