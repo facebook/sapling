@@ -17,6 +17,7 @@ target_link_libraries(
   PUBLIC
     eden_fuse_privhelper
     eden_notifications
+    eden_telemetry
     Folly::folly
 )
 
