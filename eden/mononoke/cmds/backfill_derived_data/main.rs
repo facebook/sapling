@@ -408,55 +408,49 @@ async fn subcommand_backfill<P: AsRef<Path>>(
         derived_utils.regenerate(&changesets);
     }
 
-    stream::iter(changesets)
-        .chunks(CHUNK_SIZE)
-        .map(Ok)
-        .try_for_each({
-            move |chunk| async move {
-                let (stats, chunk_size) = async {
-                    let chunk = derived_utils
-                        .pending(ctx.clone(), repo.clone(), chunk)
-                        .compat()
-                        .await?;
-                    let chunk_size = chunk.len();
+    for chunk in changesets.chunks(CHUNK_SIZE) {
+        let (stats, chunk_size) = async {
+            let chunk = derived_utils
+                .pending(ctx.clone(), repo.clone(), chunk.to_vec())
+                .compat()
+                .await?;
+            let chunk_size = chunk.len();
 
-                    warmup(ctx, repo, derived_data_type, &chunk).await?;
+            warmup(ctx, repo, derived_data_type, &chunk).await?;
 
-                    derived_utils
-                        .derive_batch(ctx.clone(), repo.clone(), chunk)
-                        .compat()
-                        .await?;
-                    Result::<_, Error>::Ok(chunk_size)
-                }
-                .timed()
-                .await;
+            derived_utils
+                .derive_batch(ctx.clone(), repo.clone(), chunk)
+                .compat()
+                .await?;
+            Result::<_, Error>::Ok(chunk_size)
+        }
+        .timed()
+        .await;
 
-                let chunk_size = chunk_size?;
-                generated_count.fetch_add(chunk_size, Ordering::SeqCst);
-                let elapsed = total_duration.with(|total_duration| {
-                    *total_duration += stats.completion_time;
-                    *total_duration
-                });
+        let chunk_size = chunk_size?;
+        generated_count.fetch_add(chunk_size, Ordering::SeqCst);
+        let elapsed = total_duration.with(|total_duration| {
+            *total_duration += stats.completion_time;
+            *total_duration
+        });
 
-                let generated = generated_count.load(Ordering::SeqCst);
-                if generated != 0 {
-                    let generated = generated as f32;
-                    let total = total_count as f32;
-                    info!(
-                        ctx.logger(),
-                        "{}/{} estimate:{:.2?} speed:{:.2}/s mean_speed:{:.2}/s",
-                        generated,
-                        total_count,
-                        elapsed.mul_f32((total - generated) / generated),
-                        chunk_size as f32 / stats.completion_time.as_secs() as f32,
-                        generated / elapsed.as_secs() as f32,
-                    );
-                }
+        let generated = generated_count.load(Ordering::SeqCst);
+        if generated != 0 {
+            let generated = generated as f32;
+            let total = total_count as f32;
+            info!(
+                ctx.logger(),
+                "{}/{} estimate:{:.2?} speed:{:.2}/s mean_speed:{:.2}/s",
+                generated,
+                total_count,
+                elapsed.mul_f32((total - generated) / generated),
+                chunk_size as f32 / stats.completion_time.as_secs() as f32,
+                generated / elapsed.as_secs() as f32,
+            );
+        }
+    }
 
-                Ok(())
-            }
-        })
-        .await
+    Ok(())
 }
 
 async fn warmup(
