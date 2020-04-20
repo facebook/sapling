@@ -475,73 +475,55 @@ async fn prefetch_fastlog_by_changeset(
 mod test {
     use super::*;
     use crate::mapping::RootFastlog;
-    use blobrepo::save_bonsai_changesets;
     use blobrepo_factory::new_memblob_empty;
     use context::CoreContext;
     use fbinit::FacebookInit;
-    use fixtures::{create_bonsai_changeset_with_files, store_files};
     use futures::future;
-    use maplit::btreemap;
     use mononoke_types::{ChangesetId, MPath};
     use std::collections::{HashMap, HashSet, VecDeque};
     use tests_utils::CreateCommitContext;
-    use tokio_compat::runtime::Runtime;
 
-    #[fbinit::test]
-    fn test_list_linear_history(fb: FacebookInit) {
+    #[fbinit::compat_test]
+    async fn test_list_linear_history(fb: FacebookInit) -> Result<(), Error> {
         // generate couple of hundreds linear file changes and list history
         let repo = new_memblob_empty(None).unwrap();
-        let mut rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "1";
-        let filepath = path(filename);
 
-        let mut bonsais = vec![];
         let mut parents = vec![];
         let mut expected = vec![];
         for i in 1..300 {
             let file = if i % 2 == 1 { "2" } else { filename };
             let content = format!("{}", i);
-            let stored_files = rt.block_on_std(store_files(
-                ctx.clone(),
-                btreemap! { file => Some(content.as_str()) },
-                repo.clone(),
-            ));
 
-            let bcs = create_bonsai_changeset_with_files(parents, stored_files);
-            let bcs_id = bcs.get_changeset_id();
-            bonsais.push(bcs);
+            let bcs_id = CreateCommitContext::new(&ctx, &repo, parents)
+                .add_file(file, content)
+                .commit()
+                .await?;
             if i % 2 != 1 {
                 expected.push(bcs_id.clone());
             }
             parents = vec![bcs_id];
         }
 
-        let latest = parents.get(0).unwrap().clone();
-        rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
-            .unwrap();
+        let top = parents.get(0).unwrap().clone();
 
-        derive_fastlog(ctx.clone(), repo.clone(), &mut rt, latest.clone());
+        RootFastlog::derive(ctx.clone(), repo.clone(), top.clone())
+            .compat()
+            .await?;
 
         let terminator = |_cs_id| future::ready(Ok(false));
-        let history = rt
-            .block_on_std(list_file_history(
-                ctx,
-                repo,
-                filepath,
-                latest,
-                Some(terminator),
-            ))
-            .unwrap();
-        let history = rt.block_on_std(history.try_collect::<Vec<_>>()).unwrap();
+        let history = list_file_history(ctx, repo, path(filename), top, Some(terminator)).await?;
+        let history = history.try_collect::<Vec<_>>().await?;
 
         expected.reverse();
         assert_eq!(history, expected);
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_list_history_with_merges(fb: FacebookInit) {
+    #[fbinit::compat_test]
+    async fn test_list_history_with_merges(fb: FacebookInit) -> Result<(), Error> {
         // test generates commit graph with merges and compares result of list_file_history with
         // the result of BFS sorting on the graph
         //
@@ -570,70 +552,45 @@ mod test {
         //
 
         let repo = new_memblob_empty(None).unwrap();
-        let mut rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "1";
-        let filepath = path(filename);
-
-        let mut bonsais = vec![];
-        let mut graph = HashMap::new();
-        let mut create_branch = |branch, number, mut parents: Vec<_>| {
-            for i in 0..number {
-                let content = format!("{} - {}", branch, i);
-                let stored_files = rt.block_on_std(store_files(
-                    ctx.clone(),
-                    btreemap! { filename => Some(content.as_str()) },
-                    repo.clone(),
-                ));
-
-                let bcs = create_bonsai_changeset_with_files(parents.clone(), stored_files);
-                let bcs_id = bcs.get_changeset_id();
-                bonsais.push(bcs);
-
-                graph.insert(bcs_id.clone(), parents);
-                parents = vec![bcs_id];
-            }
-            parents.get(0).unwrap().clone()
+        let graph = HashMap::new();
+        let branch_head = |branch, number, parents, graph| {
+            create_branch(&ctx, &repo, branch, number, false, parents, graph)
+                .map_ok(|(commits, graph)| (commits.last().unwrap().clone(), graph))
         };
 
-        let a_top = create_branch("A", 4, vec![]);
-        let b_top = create_branch("B", 1, vec![]);
-        let ab_top = create_branch("A+B", 1, vec![a_top, b_top]);
+        let (a_top, graph) = branch_head("A", 4, vec![], graph).await?;
+        let (b_top, graph) = branch_head("B", 1, vec![], graph).await?;
+        let (ab_top, graph) = branch_head("AB", 1, vec![a_top, b_top], graph).await?;
 
-        let c_top = create_branch("C", 2, vec![]);
-        let d_top = create_branch("D", 2, vec![]);
-        let cd_top = create_branch("C+D", 2, vec![c_top, d_top]);
+        let (c_top, graph) = branch_head("C", 2, vec![], graph).await?;
+        let (d_top, graph) = branch_head("D", 2, vec![], graph).await?;
+        let (cd_top, graph) = branch_head("CD", 2, vec![c_top, d_top], graph).await?;
 
-        let all_top = create_branch("A+B+C+D", 105, vec![ab_top, cd_top]);
+        let (all_top, graph) = branch_head("ABCD", 105, vec![ab_top, cd_top], graph).await?;
 
-        let l_top = create_branch("L", 1, vec![all_top.clone()]);
-        let m_top = create_branch("M", 1, vec![all_top.clone()]);
-        let top = create_branch("Top", 2, vec![l_top, m_top]);
+        let (l_top, graph) = branch_head("L", 1, vec![all_top.clone()], graph).await?;
+        let (m_top, graph) = branch_head("M", 1, vec![all_top.clone()], graph).await?;
+        let (top, graph) = branch_head("Top", 2, vec![l_top, m_top], graph).await?;
 
-        rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
-            .unwrap();
-
-        derive_fastlog(ctx.clone(), repo.clone(), &mut rt, top.clone());
+        RootFastlog::derive(ctx.clone(), repo.clone(), top.clone())
+            .compat()
+            .await?;
 
         let terminator = |_cs_id| future::ready(Ok(false));
-        let history = rt
-            .block_on_std(list_file_history(
-                ctx,
-                repo,
-                filepath,
-                top,
-                Some(terminator),
-            ))
-            .unwrap();
-        let history = rt.block_on_std(history.try_collect::<Vec<_>>()).unwrap();
+        let history = list_file_history(ctx, repo, path(filename), top, Some(terminator)).await?;
+        let history = history.try_collect::<Vec<_>>().await?;
 
         let expected = bfs(&graph, top);
         assert_eq!(history, expected);
+
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_list_history_many_diamonds(fb: FacebookInit) {
+    #[fbinit::compat_test]
+    async fn test_list_history_many_diamonds(fb: FacebookInit) -> Result<(), Error> {
         // test generates commit graph with 50 diamonds
         //
         //              o - top
@@ -660,94 +617,39 @@ mod test {
         //
 
         let repo = new_memblob_empty(None).unwrap();
-        let mut rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "1";
-        let filepath = path(filename);
-
-        let create_changeset = |content: String, parents: Vec<_>| {
-            let ctx = &ctx;
-            let repo = &repo;
-            async move {
-                let stored_files = store_files(
-                    ctx.clone(),
-                    btreemap! { filename => Some(content.as_str()) },
-                    repo.clone(),
-                )
-                .await;
-
-                create_bonsai_changeset_with_files(parents, stored_files)
-            }
-        };
-
-        let mut bonsais = vec![];
         let mut expected = vec![];
 
-        let root = rt.block_on_std(create_changeset("root".to_string(), vec![]));
-        let root_id = root.get_changeset_id();
-        bonsais.push(root);
+        let root_id = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file(filename, "root")
+            .commit()
+            .await?;
         expected.push(root_id.clone());
 
-        let mut create_diamond = |number, parents: Vec<_>| {
-            // bottom
-            let bcs = rt.block_on_std(create_changeset(format!("B - {}", number), parents.clone()));
-            let bottom_id = bcs.get_changeset_id();
-            bonsais.push(bcs);
-            expected.push(bottom_id.clone());
-
-            // right
-            let bcs = rt.block_on_std(create_changeset(format!("R - {}", number), vec![bottom_id]));
-            let right_id = bcs.get_changeset_id();
-            bonsais.push(bcs);
-            expected.push(right_id.clone());
-
-            // left
-            let bcs = rt.block_on_std(create_changeset(format!("L - {}", number), vec![bottom_id]));
-            let left_id = bcs.get_changeset_id();
-            bonsais.push(bcs);
-            expected.push(left_id.clone());
-
-            // up
-            let bcs = rt.block_on_std(create_changeset(
-                format!("U - {}", number),
-                vec![left_id, right_id],
-            ));
-            let up_id = bcs.get_changeset_id();
-            bonsais.push(bcs);
-            expected.push(up_id.clone());
-
-            up_id
-        };
-
         let mut prev_id = root_id;
-        for i in 0..50 {
-            prev_id = create_diamond(i, vec![prev_id]);
+        for _ in 0..50 {
+            prev_id = create_diamond(&ctx, &repo, vec![prev_id], &mut expected).await?;
         }
 
-        rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
-            .unwrap();
-
-        derive_fastlog(ctx.clone(), repo.clone(), &mut rt, prev_id.clone());
+        RootFastlog::derive(ctx.clone(), repo.clone(), prev_id.clone())
+            .compat()
+            .await?;
 
         let terminator = |_cs_id| future::ready(Ok(false));
-        let history = rt
-            .block_on_std(list_file_history(
-                ctx,
-                repo,
-                filepath,
-                prev_id,
-                Some(terminator),
-            ))
-            .unwrap();
-        let history = rt.block_on_std(history.try_collect::<Vec<_>>()).unwrap();
+        let history =
+            list_file_history(ctx, repo, path(filename), prev_id, Some(terminator)).await?;
+        let history = history.try_collect::<Vec<_>>().await?;
 
         expected.reverse();
         assert_eq!(history, expected);
+
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_list_history_terminator(fb: FacebookInit) {
+    #[fbinit::compat_test]
+    async fn test_list_history_terminator(fb: FacebookInit) -> Result<(), Error> {
         // Test history termination on one of the history branches.
         // The main branch (top) and branch A have commits that change only single file.
         // Branch B changes 2 files and this is used as a termination condition.
@@ -769,60 +671,36 @@ mod test {
         //        o   o
         //
         let repo = new_memblob_empty(None).unwrap();
-        let mut rt = Runtime::new().unwrap();
         let ctx = CoreContext::test_mock(fb);
 
         let filename = "1";
         let filepath = path(filename);
 
-        let mut bonsais = vec![];
-        let mut graph = HashMap::new();
-        let mut create_branch = |branch, number, mut parents: Vec<_>, save_branch, branch_file| {
-            let mut br = vec![];
-            for i in 0..number {
-                let content = format!("{} - {}", branch, i);
-                let c = format!("{}", i);
-                let mut changes = btreemap! { filename => Some(content.as_str()) };
-                if branch_file {
-                    changes.insert(branch, Some(c.as_str()));
-                }
+        let graph = HashMap::new();
 
-                let stored_files = rt.block_on_std(store_files(ctx.clone(), changes, repo.clone()));
+        let (mut a_branch, graph) =
+            create_branch(&ctx, &repo, "A", 20, false, vec![], graph).await?;
+        let a_top = a_branch.last().unwrap().clone();
 
-                let bcs = create_bonsai_changeset_with_files(parents.clone(), stored_files);
-                let bcs_id = bcs.get_changeset_id();
-                bonsais.push(bcs);
+        let (b_branch, graph) = create_branch(&ctx, &repo, "B", 20, true, vec![], graph).await?;
+        let b_top = *b_branch.last().unwrap();
 
-                if save_branch {
-                    br.push(bcs_id.clone());
-                }
-                graph.insert(bcs_id.clone(), parents);
-                parents = vec![bcs_id];
-            }
-            (parents.get(0).unwrap().clone(), br)
-        };
-
-        let (a_top, mut a_branch) = create_branch("A", 20, vec![], true, false);
-        let (b_top, _) = create_branch("B", 20, vec![], false, true);
-        let (top, _) = create_branch("top", 100, vec![a_top, b_top], false, false);
-
-        rt.block_on(save_bonsai_changesets(bonsais, ctx.clone(), repo.clone()))
-            .unwrap();
-
-        derive_fastlog(ctx.clone(), repo.clone(), &mut rt, top.clone());
+        let (main_branch, graph) =
+            create_branch(&ctx, &repo, "top", 100, false, vec![a_top, b_top], graph).await?;
+        let top = *main_branch.last().unwrap();
 
         // prune all fastlog batch fetchings
         let terminator = Some(|_cs_id| future::ready(Ok(true)));
-        let history = rt
-            .block_on_std(list_file_history(
-                ctx.clone(),
-                repo.clone(),
-                filepath.clone(),
-                top.clone(),
-                terminator,
-            ))
-            .unwrap();
-        let history = rt.block_on_std(history.try_collect::<Vec<_>>()).unwrap();
+        let history = list_file_history(
+            ctx.clone(),
+            repo.clone(),
+            filepath.clone(),
+            top.clone(),
+            terminator,
+        )
+        .await?;
+        let history = history.try_collect::<Vec<_>>().await?;
+
         // history now should represent only a single commit - the first one
         assert_eq!(history, vec![top.clone()]);
 
@@ -836,10 +714,8 @@ mod test {
             cloned!(ctx, repo);
             move |cs_id| terminator(ctx.clone(), repo.clone(), cs_id)
         });
-        let history = rt
-            .block_on_std(list_file_history(ctx, repo, filepath, top, terminator))
-            .unwrap();
-        let history = rt.block_on_std(history.try_collect::<Vec<_>>()).unwrap();
+        let history = list_file_history(ctx, repo, filepath, top, terminator).await?;
+        let history = history.try_collect::<Vec<_>>().await?;
 
         // the beginning of the history should be same as bfs
         let expected = bfs(&graph, top);
@@ -848,6 +724,8 @@ mod test {
         // last 15 commits of the history should be last 15 of the branch A
         a_branch.reverse();
         assert_eq!(history[109..], a_branch[5..]);
+
+        Ok(())
     }
 
     #[fbinit::compat_test]
@@ -914,7 +792,74 @@ mod test {
         Ok(())
     }
 
-    fn bfs(graph: &HashMap<ChangesetId, Vec<ChangesetId>>, node: ChangesetId) -> Vec<ChangesetId> {
+    type TestCommitGraph = HashMap<ChangesetId, Vec<ChangesetId>>;
+
+    async fn create_branch(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        branch: &str,
+        number: i32,
+        // add one more file change for each commit in the branch
+        branch_file: bool,
+        mut parents: Vec<ChangesetId>,
+        mut graph: TestCommitGraph,
+    ) -> Result<(Vec<ChangesetId>, TestCommitGraph), Error> {
+        let filename = "1";
+        let mut commits = vec![];
+        for i in 0..number {
+            let mut bcs = CreateCommitContext::new(ctx, repo, parents.clone())
+                .add_file(filename, format!("{} - {}", branch, i));
+            if branch_file {
+                bcs = bcs.add_file(branch, format!("{}", i));
+            }
+            let bcs_id = bcs.commit().await?;
+
+            graph.insert(bcs_id.clone(), parents);
+            commits.push(bcs_id);
+            parents = vec![bcs_id];
+        }
+        Ok((commits, graph))
+    }
+
+    async fn create_diamond(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        parents: Vec<ChangesetId>,
+        expected: &mut Vec<ChangesetId>,
+    ) -> Result<ChangesetId, Error> {
+        let filename = "1";
+        // bottom
+        let bottom_id = CreateCommitContext::new(ctx, repo, parents.clone())
+            .add_file(filename, format!("B - {:?}", parents))
+            .commit()
+            .await?;
+        expected.push(bottom_id.clone());
+
+        // right
+        let right_id = CreateCommitContext::new(ctx, repo, vec![bottom_id])
+            .add_file(filename, format!("R - {:?}", parents))
+            .commit()
+            .await?;
+        expected.push(right_id.clone());
+
+        // left
+        let left_id = CreateCommitContext::new(ctx, repo, vec![bottom_id])
+            .add_file(filename, format!("L - {:?}", parents))
+            .commit()
+            .await?;
+        expected.push(left_id.clone());
+
+        // up
+        let up_id = CreateCommitContext::new(ctx, repo, vec![left_id, right_id])
+            .add_file(filename, format!("U - {:?}", parents))
+            .commit()
+            .await?;
+        expected.push(up_id.clone());
+
+        Ok(up_id)
+    }
+
+    fn bfs(graph: &TestCommitGraph, node: ChangesetId) -> Vec<ChangesetId> {
         let mut response = vec![];
         let mut queue = VecDeque::new();
         let mut visited = HashSet::new();
@@ -932,10 +877,6 @@ mod test {
             response.push(node);
         }
         response
-    }
-
-    fn derive_fastlog(ctx: CoreContext, repo: BlobRepo, rt: &mut Runtime, bcs_id: ChangesetId) {
-        rt.block_on(RootFastlog::derive(ctx, repo, bcs_id)).unwrap();
     }
 
     fn path(path_str: &str) -> Option<MPath> {
