@@ -18,8 +18,7 @@ use futures::{
     future::{FutureExt as NewFutureExt, TryFutureExt},
     stream::{self, Stream as NewStream},
 };
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future, Future};
+use futures_old::Future;
 use futures_util::{StreamExt, TryStreamExt};
 use manifest::{Entry, ManifestOps};
 use maplit::{hashmap, hashset};
@@ -332,7 +331,7 @@ where
         _ => false,
     };
     let history_graph = if !terminate {
-        prefetch_and_process_history(ctx, repo, path, prefetch.clone(), history_graph).await?
+        prefetch_and_process_history(&ctx, &repo, &path, prefetch.clone(), history_graph).await?
     } else {
         history_graph
     };
@@ -391,15 +390,13 @@ where
 
 /// prefetches and processes fastlog batch for the given changeset id
 async fn prefetch_and_process_history(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    path: Option<MPath>,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    path: &Option<MPath>,
     changeset_id: ChangesetId,
     mut history_graph: CommitGraph,
 ) -> Result<CommitGraph, Error> {
-    let fastlog_batch = prefetch_fastlog_by_changeset(ctx, repo, changeset_id, path)
-        .compat()
-        .await?;
+    let fastlog_batch = prefetch_fastlog_by_changeset(ctx, repo, changeset_id, path).await?;
     process_unode_batch(fastlog_batch, &mut history_graph);
     Ok(history_graph)
 }
@@ -444,69 +441,34 @@ fn process_unode_batch(
     }
 }
 
-fn prefetch_fastlog_by_changeset(
-    ctx: CoreContext,
-    repo: BlobRepo,
+async fn prefetch_fastlog_by_changeset(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     changeset_id: ChangesetId,
-    path: Option<MPath>,
-) -> BoxFuture<Vec<(ChangesetId, Vec<FastlogParent>)>, Error> {
-    cloned!(ctx, repo);
-    let blobstore = repo.get_blobstore();
-    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), changeset_id.clone())
-        .from_err()
-        .and_then({
-            cloned!(blobstore, ctx, path);
-            move |root_unode_mf_id| {
-                root_unode_mf_id
-                    .manifest_unode_id()
-                    .find_entry(ctx, blobstore, path)
-            }
-        })
-        .and_then({
-            cloned!(path);
-            move |entry_opt| {
-                entry_opt.ok_or_else(|| {
-                    format_err!(
-                        "Unode entry is not found {:?} {:?}",
-                        changeset_id.clone(),
-                        path,
-                    )
-                })
-            }
-        })
-        .and_then({
-            cloned!(ctx, repo, path);
-            move |entry| {
-                // optimistically try to fetch history for a unode
-                prefetch_history(ctx.clone(), repo.clone(), entry).and_then({
-                    move |maybe_history| match maybe_history {
-                        Some(history) => future::ok(history).left_future(),
-                        // if there is no history, let's try to derive batched fastlog data
-                        // and fetch history again
-                        None => RootFastlog::derive(ctx.clone(), repo.clone(), changeset_id)
-                            .from_err()
-                            .and_then({
-                                cloned!(ctx, repo);
-                                move |_| {
-                                    prefetch_history(ctx.clone(), repo.clone(), entry).and_then(
-                                        move |history_opt| {
-                                            history_opt.ok_or_else(|| {
-                                                format_err!(
-                                                    "Fastlog data is not found {:?} {:?}",
-                                                    changeset_id,
-                                                    path
-                                                )
-                                            })
-                                        },
-                                    )
-                                }
-                            })
-                            .right_future(),
-                    }
-                })
-            }
-        })
-        .boxify()
+    path: &Option<MPath>,
+) -> Result<Vec<(ChangesetId, Vec<FastlogParent>)>, Error> {
+    let unode_entry_opt = derive_unode_entry(ctx, repo, changeset_id.clone(), path).await?;
+    let entry = unode_entry_opt
+        .ok_or_else(|| format_err!("Unode entry is not found {:?} {:?}", changeset_id, path))?;
+
+    // optimistically try to fetch history for a unode
+    let fastlog_batch_opt = prefetch_history(ctx.clone(), repo.clone(), entry.clone())
+        .compat()
+        .await?;
+    if let Some(batch) = fastlog_batch_opt {
+        return Ok(batch);
+    }
+
+    // if there is no history, let's try to derive batched fastlog data
+    // and fetch history again
+    RootFastlog::derive(ctx.clone(), repo.clone(), changeset_id.clone())
+        .compat()
+        .await?;
+    let fastlog_batch_opt = prefetch_history(ctx.clone(), repo.clone(), entry)
+        .compat()
+        .await?;
+    fastlog_batch_opt
+        .ok_or_else(|| format_err!("Fastlog data is not found {:?} {:?}", changeset_id, path))
 }
 
 #[cfg(test)]
