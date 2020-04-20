@@ -50,6 +50,7 @@ use topo_sort::sort_topological;
 use pushrebase_hook::CrossRepoSyncPushrebaseHook;
 
 mod pushrebase_hook;
+pub mod types;
 pub mod validation;
 
 #[derive(Debug, Error)]
