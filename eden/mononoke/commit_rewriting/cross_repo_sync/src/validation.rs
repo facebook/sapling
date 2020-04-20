@@ -10,6 +10,8 @@ use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_old::{stream, Future, Stream};
 
 use super::{CommitSyncOutcome, CommitSyncer};
+use crate::types::{Source, Target};
+
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::BookmarkName;
@@ -24,12 +26,15 @@ use manifest::{Entry, ManifestOps};
 use mercurial_types::{FileType, HgFileNodeId, HgManifestId};
 use mononoke_types::{ChangesetId, MPath};
 use movers::Mover;
+use ref_cast::RefCast;
 use slog::{debug, error, info};
 use std::collections::{HashMap, HashSet};
 use std::fmt::Debug;
 use synced_commit_mapping::SyncedCommitMapping;
 
 pub type PathToFileNodeIdMapping = HashMap<MPath, (FileType, HgFileNodeId)>;
+type SourceRepo = Source<BlobRepo>;
+type TargetRepo = Target<BlobRepo>;
 
 pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
     ctx: CoreContext,
@@ -61,11 +66,11 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
 
     verify_filenode_mapping_equivalence(
         ctx,
-        source_hash,
-        source_repo,
-        target_repo,
-        &moved_source_repo_entries,
-        &target_repo_entries,
+        Source(source_hash),
+        SourceRepo::ref_cast(source_repo),
+        TargetRepo::ref_cast(target_repo),
+        &Source(moved_source_repo_entries),
+        &Target(target_repo_entries),
         commit_syncer.get_reverse_mover(),
     )
     .await
@@ -75,13 +80,13 @@ pub async fn verify_working_copy<M: SyncedCommitMapping + Clone + 'static>(
 /// equivalent, save for paths rewritten into nothingness
 /// by the `reverse_mover` (Note that the name `reverse_mover`
 /// means that it moves paths from `target_repo` to `source_repo`)
-pub async fn verify_filenode_mapping_equivalence<'a>(
+async fn verify_filenode_mapping_equivalence<'a>(
     ctx: CoreContext,
-    source_hash: ChangesetId,
-    source_repo: &'a BlobRepo,
-    target_repo: &'a BlobRepo,
-    moved_source_repo_entries: &'a PathToFileNodeIdMapping,
-    target_repo_entries: &'a PathToFileNodeIdMapping,
+    source_hash: Source<ChangesetId>,
+    source_repo: &'a Source<BlobRepo>,
+    target_repo: &'a Target<BlobRepo>,
+    moved_source_repo_entries: &'a Source<PathToFileNodeIdMapping>,
+    target_repo_entries: &'a Target<PathToFileNodeIdMapping>,
     reverse_mover: &'a Mover,
 ) -> Result<(), Error> {
     // If you are wondering, why the lifetime is needed,
@@ -89,31 +94,35 @@ pub async fn verify_filenode_mapping_equivalence<'a>(
     // https://github.com/rust-lang/rust/issues/63033
     compare_contents(
         ctx.clone(),
-        (source_repo.clone(), &moved_source_repo_entries),
-        (target_repo.clone(), &target_repo_entries),
+        (source_repo.clone(), moved_source_repo_entries),
+        (target_repo.clone(), target_repo_entries),
         source_hash,
     )
     .await?;
 
     let mut extra_target_files_count = 0;
-    for (path, _) in target_repo_entries {
+    for path in target_repo_entries.0.keys() {
         // "path" is not present in the source, however that might be expected - we use
         // reverse_mover to check that.
-        if moved_source_repo_entries.get(&path).is_none() && !reverse_mover(&path)?.is_none() {
+        if moved_source_repo_entries.0.get(&path).is_none() && reverse_mover(&path)?.is_some() {
             error!(
                 ctx.logger(),
-                "{:?} is present in target repo, but not in source", path
+                "{:?} is present in {}, but not in {}",
+                path,
+                target_repo.0.name(),
+                source_repo.0.name(),
             );
-            extra_target_files_count = extra_target_files_count + 1;
+            extra_target_files_count += 1;
         }
     }
 
     if extra_target_files_count > 0 {
         return Err(format_err!(
-            "{} files are present in target repo, but not in source",
-            extra_target_files_count
-        )
-        .into());
+            "{} files are present in {}, but not in {}",
+            extra_target_files_count,
+            target_repo.0.name(),
+            source_repo.0.name(),
+        ));
     }
 
     info!(ctx.logger(), "all is well!");
@@ -257,63 +266,78 @@ pub fn list_all_filenode_ids(
         .boxify()
 }
 
-pub async fn compare_contents(
+async fn compare_contents(
     ctx: CoreContext,
-    (large_repo, large_filenodes): (BlobRepo, &PathToFileNodeIdMapping),
-    (small_repo, small_filenodes): (BlobRepo, &PathToFileNodeIdMapping),
-    large_hash: ChangesetId,
+    (source_repo, source_filenodes): (Source<BlobRepo>, &Source<PathToFileNodeIdMapping>),
+    (target_repo, target_filenodes): (Target<BlobRepo>, &Target<PathToFileNodeIdMapping>),
+    source_hash: Source<ChangesetId>,
 ) -> Result<(), Error> {
     // Both of these sets have three-element tuples as their elements:
-    // `(MPath, SmallThing, LargeThing)`, where `Thing` is a `FileType`
+    // `(MPath, SourceThing, TargetThing)`, where `Thing` is a `FileType`
     // or a `HgFileNodeId` for different sets
     let mut different_filenodes = HashSet::new();
     let mut different_filetypes = HashSet::new();
-    for (path, (large_file_type, large_filenode_id)) in large_filenodes {
-        let maybe_small_type_and_filenode_id = small_filenodes.get(&path);
-        let (maybe_small_file_type, maybe_small_filenode_id) =
-            match maybe_small_type_and_filenode_id {
-                Some((small_file_type, small_filenode_id)) => {
-                    (Some(small_file_type), Some(small_filenode_id))
+    for (path, (target_file_type, target_filenode_id)) in &target_filenodes.0 {
+        let maybe_source_type_and_filenode_id = &source_filenodes.0.get(&path);
+        let (maybe_source_file_type, maybe_source_filenode_id) =
+            match maybe_source_type_and_filenode_id {
+                Some((source_file_type, source_filenode_id)) => {
+                    (Some(source_file_type), Some(source_filenode_id))
                 }
                 None => (None, None),
             };
 
-        if maybe_small_filenode_id != Some(&large_filenode_id) {
-            match maybe_small_filenode_id {
-                Some(small_filenode_id) => {
+        if maybe_source_filenode_id != Some(&target_filenode_id) {
+            match maybe_source_filenode_id {
+                Some(source_filenode_id) => {
                     different_filenodes.insert((
                         path.clone(),
-                        *small_filenode_id,
-                        *large_filenode_id,
+                        Source(*source_filenode_id),
+                        Target(*target_filenode_id),
                     ));
                 }
                 None => {
                     return Err(format_err!(
-                        "{:?} exists in large repo but not in small repo",
-                        path
+                        "{:?} exists in {} but not in {}",
+                        path,
+                        target_repo.0.name(),
+                        source_repo.0.name(),
                     ));
                 }
             }
         }
 
-        if maybe_small_file_type != Some(&large_file_type) {
-            match maybe_small_file_type {
-                Some(small_file_type) => {
-                    different_filetypes.insert((path.clone(), *small_file_type, *large_file_type));
+        if maybe_source_file_type != Some(&target_file_type) {
+            match maybe_source_file_type {
+                Some(source_file_type) => {
+                    different_filetypes.insert((
+                        path.clone(),
+                        Source(*source_file_type),
+                        Target(*target_file_type),
+                    ));
                 }
                 None => {
                     // This should really be unreachable, as we should've early
                     // exited on the previous iteration
                     return Err(format_err!(
-                        "{:?} exists in large repo but not in small repo",
-                        path
+                        "{:?} exists in {} but not in {}",
+                        path,
+                        target_repo.0.name(),
+                        source_repo.0.name(),
                     ));
                 }
             };
         }
     }
 
-    report_different(&ctx, different_filetypes, &large_hash, "filetype")?;
+    report_different(
+        &ctx,
+        different_filetypes,
+        &source_hash,
+        "filetype",
+        Source(source_repo.0.name()),
+        Target(target_repo.0.name()),
+    )?;
 
     info!(
         ctx.logger(),
@@ -323,9 +347,9 @@ pub async fn compare_contents(
 
     verify_filenodes_have_same_contents(
         &ctx,
-        &small_repo,
-        &large_repo,
-        &large_hash,
+        &target_repo,
+        &source_repo,
+        &source_hash,
         different_filenodes,
     )
     .await
@@ -333,30 +357,32 @@ pub async fn compare_contents(
 
 pub async fn verify_filenodes_have_same_contents<
     // item is a tuple: (MPath, large filenode id, small filenode id)
-    I: IntoIterator<Item = (MPath, HgFileNodeId, HgFileNodeId)>,
+    I: IntoIterator<Item = (MPath, Source<HgFileNodeId>, Target<HgFileNodeId>)>,
 >(
     ctx: &CoreContext,
-    small_repo: &BlobRepo,
-    large_repo: &BlobRepo,
-    large_hash: &ChangesetId,
+    target_repo: &Target<BlobRepo>,
+    source_repo: &Source<BlobRepo>,
+    source_hash: &Source<ChangesetId>,
     should_be_equivalent: I,
 ) -> Result<(), Error> {
     let fetched_content_ids = stream::iter_ok(should_be_equivalent)
         .map({
-            cloned!(ctx, large_repo, small_repo);
-            move |(path, small_filenode_id, large_filenode_id)| {
+            cloned!(ctx, target_repo, source_repo);
+            move |(path, source_filenode_id, target_filenode_id)| {
                 debug!(
                     ctx.logger(),
-                    "checking content for different filenodes: {} vs {}",
-                    small_filenode_id,
-                    large_filenode_id,
+                    "checking content for different filenodes: source {} vs target {}",
+                    source_filenode_id,
+                    target_filenode_id,
                 );
-                let f1 = small_filenode_id
-                    .load(ctx.clone(), small_repo.blobstore())
-                    .map(|e| e.content_id());
-                let f2 = large_filenode_id
-                    .load(ctx.clone(), large_repo.blobstore())
-                    .map(|e| e.content_id());
+                let f1 = source_filenode_id
+                    .0
+                    .load(ctx.clone(), source_repo.0.blobstore())
+                    .map(|e| Source(e.content_id()));
+                let f2 = target_filenode_id
+                    .0
+                    .load(ctx.clone(), target_repo.0.blobstore())
+                    .map(|e| Target(e.content_id()));
 
                 f1.join(f2).map(move |(c1, c2)| (path, c1, c2))
             }
@@ -368,62 +394,76 @@ pub async fn verify_filenodes_have_same_contents<
 
     let different_contents: Vec<_> = fetched_content_ids
         .into_iter()
-        .filter(|(_mpath, c1, c2)| c1 != c2)
+        .filter(|(_mpath, c1, c2)| c1.0 != c2.0)
         .collect();
 
-    report_different(ctx, different_contents, large_hash, "contents")
+    report_different(
+        ctx,
+        different_contents,
+        source_hash,
+        "contents",
+        Source(source_repo.0.name()),
+        Target(target_repo.0.name()),
+    )
 }
 
 /// Given a list of differences of a given type (`T`)
 /// report them in the logs and return an appropriate result
 pub fn report_different<
     T: Debug,
-    E: ExactSizeIterator<Item = (MPath, T, T)>,
+    E: ExactSizeIterator<Item = (MPath, Source<T>, Target<T>)>,
     I: IntoIterator<IntoIter = E, Item = <E as Iterator>::Item>,
 >(
     ctx: &CoreContext,
     different_things: I,
-    large_hash: &ChangesetId,
+    source_hash: &Source<ChangesetId>,
     name: &str,
+    source_repo_name: Source<&String>,
+    target_repo_name: Target<&String>,
 ) -> Result<(), Error> {
     let mut different_things = different_things.into_iter();
     let len = different_things.len();
     if len > 0 {
         // The very first value is preserved for error formatting
-        let (mpath, small_thing, large_thing) = match different_things.next() {
+        let (mpath, source_thing, target_thing) = match different_things.next() {
             None => unreachable!("length of iterator is guaranteed to be >0"),
-            Some((mpath, small_thing, large_thing)) => (mpath, small_thing, large_thing),
+            Some((mpath, source_thing, target_thing)) => (mpath, source_thing, target_thing),
         };
 
         // And we also want a debug print of it
         debug!(
             ctx.logger(),
-            "Different {} for path {:?}: small repo: {:?} large repo: {:?}",
+            "Different {} for path {:?}: {}: {:?} {}: {:?}",
             name,
             mpath,
-            small_thing,
-            large_thing
+            source_repo_name,
+            source_thing,
+            target_repo_name,
+            target_thing
         );
 
         let mut rest_of_different_things = different_things.take(9);
-        while let Some((mpath, small_thing, large_thing)) = rest_of_different_things.next() {
+        while let Some((mpath, source_thing, target_thing)) = rest_of_different_things.next() {
             debug!(
                 ctx.logger(),
-                "Different {} for path {:?}: small repo: {:?} large repo: {:?}",
+                "Different {} for path {:?}: {}: {:?} {}: {:?}",
                 name,
                 mpath,
-                small_thing,
-                large_thing
+                source_repo_name,
+                source_thing,
+                target_repo_name,
+                target_thing
             );
         }
 
-        return Err(format_err!(
-            "Found {} files with different {} in large repo cs {} (example: {:?})",
+        Err(format_err!(
+            "Found {} files with different {} in {} cs {} (example: {:?})",
             len,
             name,
-            large_hash,
-            (mpath, small_thing, large_thing),
-        ));
+            source_repo_name,
+            source_hash,
+            (mpath, source_thing, target_thing),
+        ))
     } else {
         Ok(())
     }

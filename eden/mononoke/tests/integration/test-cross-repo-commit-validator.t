@@ -125,7 +125,7 @@ Check that we validate the file type
 
 -- run the validator one more time, expect to fail and say it's because of filetypes
   $ REPOIDLARGE=0 validate_commit_sync 7 |& grep "Different filetype"
-  * Different filetype for path MPath("fbcode/fbcodefile3_fbsource"): small repo: Regular large repo: Executable (glob)
+  * Different filetype for path MPath("fbcode/fbcodefile3_fbsource"): meg-mon: Executable fbs-mon: Regular (glob)
 
 -- restore the original commit mapping
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE synced_commit_mapping SET large_bcs_id = X'$MEGAREPO_MASTER_BONSAI' WHERE small_bcs_id = X'$FBSOURCE_MASTER_BONSAI'"
@@ -146,7 +146,7 @@ Check that we validate the file contents
 
 -- run the validator one more time, expect to fail and say it's because of contents
   $ REPOIDLARGE=0 validate_commit_sync 8 |& grep 'Different contents'
-  * Different contents for path MPath("fbcode/fbcodefile3_fbsource"): small repo: * large repo: * (glob)
+  * Different contents for path MPath("fbcode/fbcodefile3_fbsource"): meg-mon: * fbs-mon: * (glob)
 
 -- restore the original commit mapping
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "UPDATE synced_commit_mapping SET large_bcs_id = X'$MEGAREPO_MASTER_BONSAI' WHERE small_bcs_id = X'$FBSOURCE_MASTER_BONSAI'"
@@ -293,7 +293,7 @@ attention to more than just the last commit (failed validation of inner commit)
   $ REPOIDLARGE=0 validate_commit_sync 13 |& grep -E "(Preparing entry|Different contents)"
   * Preparing entry Entry *(0/3); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
   * Preparing entry Entry *(1/3); book: master_bookmark; cs_id: ChangesetId(Blake2(*)); remaining queue: 0 (glob)
-  * Different contents for path MPath("arvr/tripple_2"): small repo: ContentId(Blake2(*)) large repo: ContentId(Blake2(*)) (glob)
+  * Different contents for path MPath("arvr/tripple_2"): meg-mon: ContentId(Blake2(*)) fbs-mon: ContentId(Blake2(*)) (glob)
 
 Check that we validate the topological order
 -- Create three commits in the large repo
