@@ -162,8 +162,8 @@ class EdenServer : private TakeoverHandler {
    * but uses a TakeoverData object from a failed takeover request
    * to recover itself.
    *
-   * This function resets the TakeoverServer, resets the takeoverPromise,
-   * sets takeoverShutdown to false, and sets the state to RUNNING
+   * This function resets the TakeoverServer, resets the shutdownFuture, and
+   * sets the state to RUNNING
    */
   FOLLY_NODISCARD folly::Future<folly::Unit> recover(TakeoverData&& data);
 #endif // _WIN32
@@ -238,7 +238,8 @@ class EdenServer : private TakeoverHandler {
    * Stop all mount points maintained by this server so that they can then be
    * transferred to a new edenfs process to perform a graceful restart.
    */
-  FOLLY_NODISCARD folly::Future<TakeoverData> stopMountsForTakeover();
+  FOLLY_NODISCARD folly::Future<TakeoverData> stopMountsForTakeover(
+      folly::Promise<std::optional<TakeoverData>>&& takeoverPromise);
 
   const std::shared_ptr<EdenServiceHandler>& getHandler() const {
     return handler_;
@@ -465,11 +466,6 @@ class EdenServer : private TakeoverHandler {
       std::optional<TakeoverData::MountInfo> takeover);
 
   FOLLY_NODISCARD folly::Future<folly::Unit> performNormalShutdown();
-  // If the takeover was successful, this returns std::nullopt. If a
-  // TakeoverData object is returned, that means the takeover attempt failed and
-  // the server should be resumed using the given TakeoverData.
-  FOLLY_NODISCARD folly::Future<std::optional<TakeoverData>>
-  performTakeoverShutdown(folly::File thriftSocket);
   void shutdownPrivhelper();
 
   // Starts up a new fuse mount for edenMount, starting up the thread
@@ -577,9 +573,17 @@ class EdenServer : private TakeoverHandler {
    */
   struct RunStateData {
     RunState state{RunState::STARTING};
-    bool takeoverShutdown{false};
     folly::File takeoverThriftSocket;
-    folly::Promise<TakeoverData> takeoverPromise;
+    /**
+     * In the case of a takeover shutdown, this will be fulfilled after the
+     * TakeoverServer sends the TakeoverData to the TakeoverClient.
+     *
+     * If the takeover was successful, this returns std::nullopt. If a
+     * TakeoverData object is returned, that means the takeover attempt failed
+     * and the server should be resumed using the given TakeoverData.
+     */
+    folly::Future<std::optional<TakeoverData>> shutdownFuture =
+        folly::Future<std::optional<TakeoverData>>::makeEmpty();
   };
   folly::Synchronized<RunStateData> runningState_;
 

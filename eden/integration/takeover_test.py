@@ -6,15 +6,21 @@
 
 import os
 import resource
+import signal
 import sys
 import threading
+from multiprocessing import Process
 from pathlib import Path
-from typing import Dict
+from typing import Dict, Optional
 
-from eden.fs.cli.util import get_pid_using_lockfile
-from facebook.eden.ttypes import FaultDefinition
+import pexpect
+from eden.fs.cli.util import get_pid_using_lockfile, poll_until
+from eden.thrift import EdenClient
+from facebook.eden.ttypes import FaultDefinition, UnblockFaultArg
+from fb303_core.ttypes import fb303_status
 
 from .lib import testcase
+from .lib.find_executables import FindExe
 
 
 @testcase.eden_repo_test
@@ -25,6 +31,7 @@ class TakeoverTest(testcase.EdenRepoTest):
     page2: str
     commit1: str
     commit2: str
+    enable_fault_injection: bool = True
 
     def populate_repo(self) -> None:
         self.pagesize = resource.getpagesize()
@@ -54,6 +61,7 @@ class TakeoverTest(testcase.EdenRepoTest):
             "eden.fs.fuse": "DBG7",
             "eden.fs.inodes.InodeMap": "DBG6",
             "eden.fs.takeover": "DBG7",
+            "eden.fs.service": "DBG4",
         }
 
     def do_takeover_test(self) -> None:
@@ -309,6 +317,118 @@ class TakeoverTest(testcase.EdenRepoTest):
         self.eden.takeover_without_ping_response()
         print("=== restart complete ===", file=sys.stderr)
         self.assertTrue(self.eden.wait_for_is_healthy())
+
+    def run_restart(self) -> "pexpect.spawn[bytes]":
+        restart_cmd = [
+            FindExe.EDEN_CLI,
+            "--config-dir",
+            str(self.eden_dir),
+            "--etc-eden-dir",
+            str(self.etc_eden_dir),
+            "--home-dir",
+            str(self.home_dir),
+            "restart",
+            "--daemon-binary",
+            FindExe.FAKE_EDENFS,
+        ]
+
+        print("Restarting eden: %r" % (restart_cmd,))
+        return pexpect.spawn(
+            # pyre-ignore[6]: T38947910
+            restart_cmd[0],
+            restart_cmd[1:],
+            logfile=sys.stdout.buffer,
+            timeout=5,
+        )
+
+    def assert_restart_fails_with_in_progress_graceful_restart(
+        self, client: EdenClient
+    ) -> None:
+        pid = self.eden.get_pid_via_thrift()
+        p = self.run_restart()
+        p.expect_exact(
+            f"The current edenfs daemon (pid {pid}) is in the middle of stopping."
+            f"\r\nUse --force if you want to forcibly restart the current daemon\r\n"
+        )
+        p.wait()
+        self.assertEqual(p.exitstatus, 1)
+
+        self.assertEqual(client.getStatus(), fb303_status.STOPPING)
+
+    def assert_shutdown_fails_with_in_progress_graceful_restart(
+        self, client: EdenClient
+    ) -> None:
+        # call initiateShutdown. This should not throw.
+        try:
+            client.initiateShutdown("shutdown requested during graceful restart")
+        except Exception:
+            self.fail(
+                "initiateShutdown should not throw when graceful restart is in progress"
+            )
+
+        self.assertEqual(client.getStatus(), fb303_status.STOPPING)
+
+    def assert_sigkill_fails_with_in_progress_graceful_restart(
+        self, client: EdenClient
+    ) -> None:
+        # send SIGTERM to process. This should not throw.
+        pid = self.eden.get_pid_via_thrift()
+        try:
+            os.kill(pid, signal.SIGTERM)
+        except Exception:
+            self.fail(
+                "sending SIGTERM should not throw when graceful restart is in progress"
+            )
+
+        self.assertEqual(client.getStatus(), fb303_status.STOPPING)
+
+    def test_stop_during_takeover(self) -> None:
+        # block graceful restart
+        with self.eden.get_thrift_client() as client:
+            client.injectFault(
+                FaultDefinition(
+                    keyClass="takeover", keyValueRegex="server_shutdown", block=True
+                )
+            )
+
+            self.eden.wait_for_is_healthy()
+
+            # Run a graceful restart
+            # This won't succeed until we unblock the shutdown.
+            p = Process(target=self.eden.graceful_restart)
+            p.start()
+
+            # Wait for the state to be shutting down
+            def state_shutting_down() -> Optional[bool]:
+                if not p.is_alive():
+                    raise Exception(
+                        f"eden restart --graceful command finished while "
+                        f"graceful restart was still blocked"
+                    )
+                if client.getStatus() is fb303_status.STOPPING:
+                    return True
+                return None
+
+            poll_until(state_shutting_down, timeout=60)
+
+            # Normal restart should be rejected while a graceful restart
+            # is in progress
+            self.assert_restart_fails_with_in_progress_graceful_restart(client)
+
+            # Normal shutdown should be rejected while a graceful restart
+            # is in progress
+            self.assert_shutdown_fails_with_in_progress_graceful_restart(client)
+
+            # Getting SIGTERM should not kill process while a graceful restart is in
+            # progress
+            self.assert_sigkill_fails_with_in_progress_graceful_restart(client)
+
+            # Unblock the server shutdown and wait for the graceful restart to complete.
+            client.unblockFault(
+                UnblockFaultArg(keyClass="takeover", keyValueRegex="server_shutdown")
+            )
+
+            p.join()
 
 
 @testcase.eden_repo_test

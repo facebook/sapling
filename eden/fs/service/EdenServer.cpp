@@ -372,7 +372,8 @@ Future<Unit> EdenServer::unmountAll() {
 }
 
 #ifndef _WIN32
-Future<TakeoverData> EdenServer::stopMountsForTakeover() {
+Future<TakeoverData> EdenServer::stopMountsForTakeover(
+    folly::Promise<std::optional<TakeoverData>>&& takeoverPromise) {
   std::vector<Future<optional<TakeoverData::MountInfo>>> futures;
   {
     const auto mountPoints = mountPoints_.wlock();
@@ -408,8 +409,11 @@ Future<TakeoverData> EdenServer::stopMountsForTakeover() {
   // Use collectAll() rather than collect() to wait for all of the unmounts
   // to complete, and only check for errors once everything has finished.
   return folly::collectAll(futures).toUnsafeFuture().thenValue(
-      [](std::vector<folly::Try<optional<TakeoverData::MountInfo>>> results) {
+      [takeoverPromise = std::move(takeoverPromise)](
+          std::vector<folly::Try<optional<TakeoverData::MountInfo>>>
+              results) mutable {
         TakeoverData data;
+        data.takeoverComplete = std::move(takeoverPromise);
         data.mountPoints.reserve(results.size());
         for (auto& result : results) {
           // If something went wrong shutting down a mount point,
@@ -535,12 +539,11 @@ Future<Unit> EdenServer::recover(TakeoverData&& data) {
       .ensure(
           // Mark the server state as RUNNING once we finish setting up the
           // mount points. Even if an error occurs we still transition to the
-          // running state. Additionally, set the takeoverShutdown state to
-          // false in order to allow for future graceful restart requests.
+          // running state.
           [this] {
             auto state = runningState_.wlock();
-            state->takeoverShutdown = false;
-            state->takeoverPromise = folly::Promise<TakeoverData>();
+            state->shutdownFuture =
+                folly::Future<std::optional<TakeoverData>>::makeEmpty();
             state->state = RunState::RUNNING;
           });
 }
@@ -896,19 +899,24 @@ bool EdenServer::performCleanup() {
         DaemonStop{shutdownTimeInSeconds, takeover, shutdownSuccess});
   };
 #endif
-
-  folly::File thriftSocket;
+  auto&& shutdownFuture =
+      folly::Future<std::optional<TakeoverData>>::makeEmpty();
   {
     auto state = runningState_.wlock();
-    takeover = state->takeoverShutdown;
+    takeover = state->shutdownFuture.valid();
     if (takeover) {
-      thriftSocket = std::move(state->takeoverThriftSocket);
+      shutdownFuture = std::move(state->shutdownFuture);
     }
+    XDCHECK_EQ(state->state, RunState::SHUTTING_DOWN);
     state->state = RunState::SHUTTING_DOWN;
   }
-  auto shutdownFuture = takeover
-      ? performTakeoverShutdown(std::move(thriftSocket))
-      : performNormalShutdown().thenValue([](auto&&) { return std::nullopt; });
+  if (!takeover) {
+    shutdownFuture =
+        performNormalShutdown().thenValue([](auto&&) { return std::nullopt; });
+  }
+
+  DCHECK(shutdownFuture.valid())
+      << "shutdownFuture should not be empty during cleanup";
 
   // Drive the main event base until shutdownFuture completes
   CHECK_EQ(mainEventBase_, folly::EventBaseManager::get()->getEventBase());
@@ -942,25 +950,6 @@ bool EdenServer::performCleanup() {
   shutdownResult.throwIfFailed();
 
   return true;
-}
-
-Future<optional<TakeoverData>> EdenServer::performTakeoverShutdown(
-    folly::File thriftSocket) {
-#ifndef _WIN32
-  // stop processing new FUSE requests for the mounts,
-  return stopMountsForTakeover().thenValue(
-      [this,
-       socket = std::move(thriftSocket)](TakeoverData&& takeover) mutable {
-        takeover.lockFile = edenDir_.extractLock();
-        auto future = takeover.takeoverComplete.getFuture();
-        takeover.thriftSocket = std::move(socket);
-
-        runningState_.wlock()->takeoverPromise.setValue(std::move(takeover));
-        return future;
-      });
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 Future<Unit> EdenServer::performNormalShutdown() {
@@ -1476,6 +1465,17 @@ void EdenServer::prepareThriftAddress() {
 }
 
 void EdenServer::stop() {
+  {
+    auto state = runningState_.wlock();
+    if (state->state == RunState::SHUTTING_DOWN) {
+      // If we are already shutting down, we don't want to continue down this
+      // code path in case we are doing a graceful restart. That could result in
+      // a race which could trigger a failure in performCleanup.
+      XLOG(INFO) << "stop was called while server was already shutting down";
+      return;
+    }
+    state->state = RunState::SHUTTING_DOWN;
+  }
   shutdownSubscribers();
   server_->stop();
 }
@@ -1485,7 +1485,8 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
   // Make sure we aren't already shutting down, then update our state
   // to indicate that we should perform mount point takeover shutdown
   // once runServer() returns.
-  auto result = Future<TakeoverData>::makeEmpty();
+  folly::Promise<std::optional<TakeoverData>> takeoverPromise;
+  folly::File thriftSocket;
   {
     auto state = runningState_.wlock();
     if (state->state != RunState::RUNNING) {
@@ -1496,14 +1497,6 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
           "current state is ",
           static_cast<int>(state->state))));
     }
-    if (state->takeoverShutdown) {
-      // This can happen if startTakeoverShutdown() is called twice
-      // before runServer() exits.
-      return makeFuture<TakeoverData>(std::runtime_error(
-          "another takeover shutdown has already been started"));
-    }
-
-    state->takeoverShutdown = true;
 
     // Make a copy of the thrift server socket so we can transfer it to the
     // new edenfs process.  Our local thrift will close its own socket when
@@ -1514,23 +1507,57 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
     folly::checkUnixError(
         takeoverThriftSocket,
         "error duplicating thrift server socket during graceful takeover");
-    state->takeoverThriftSocket =
-        folly::File{takeoverThriftSocket, /* ownsFd */ true};
-    result = state->takeoverPromise.getFuture();
+    thriftSocket = folly::File{takeoverThriftSocket, /* ownsFd */ true};
+
+    // The TakeoverServer will fulfill shutdownFuture with std::nullopt
+    // upon successfully sending the TakeoverData, or with the TakeoverData
+    // if the takeover was unsuccessful.
+    XCHECK(!state->shutdownFuture.valid());
+    state->shutdownFuture = takeoverPromise.getFuture();
+    state->state = RunState::SHUTTING_DOWN;
   }
 
-  // Compact storage for all key spaces in order to speed up the
-  // takeover start of the new process. We could potentially test this more
-  // and change it in the future to simply flush instead of compact if this
-  // proves to be too expensive.
-  localStore_->compactStorage();
+  return serverState_->getFaultInjector()
+      .checkAsync("takeover", "server_shutdown")
+      .via(serverState_->getThreadPool().get())
+      .thenValue([this](auto&&) {
+        // Compact storage for all key spaces in order to speed up the
+        // takeover start of the new process. We could potentially test this
+        // more and change it in the future to simply flush instead of
+        // compact if this proves to be too expensive.
+        localStore_->compactStorage();
 
-  shutdownSubscribers();
+        shutdownSubscribers();
 
-  // Stop the thrift server.  We will fulfill takeoverPromise once it
-  // stops.
-  server_->stop();
-  return result;
+        // Stop listening on the thrift socket. This call will wait for in
+        // process thrift requests to finish. We would like to wait for in
+        // process thrift calls to finish here in order to let calls like
+        // checkout still write to the overlay. In the future, we'd like to
+        // keep listening and instead start internally queueing thrift calls
+        // to pass with the takeover data below, while waiting here for
+        // currently processing thrift calls to finish.
+        server_->stopListening();
+      })
+      .thenTry([this, takeoverPromise = std::move(takeoverPromise)](
+                   auto&& t) mutable {
+        if (t.hasException()) {
+          takeoverPromise.setException(t.exception());
+          t.throwIfFailed();
+        }
+        return stopMountsForTakeover(std::move(takeoverPromise));
+      })
+      .thenValue([this, socket = std::move(thriftSocket)](
+                     TakeoverData&& takeover) mutable {
+        takeover.lockFile = edenDir_.extractLock();
+
+        takeover.thriftSocket = std::move(socket);
+
+        // Stop the thrift server.
+        server_->stopWorkers();
+        server_->stop();
+
+        return std::move(takeover);
+      });
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32
