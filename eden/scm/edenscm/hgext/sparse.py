@@ -2484,7 +2484,7 @@ def _refresh(ui, repo, origstatus, origsparsematch, force):
     # Apply changes to disk
     if len(actions) > 0:
         ui.note(_("applying changes to disk (%d actions)\n") % len(actions))
-    typeactions = dict((m, []) for m in "a f g am cd dc r dm dg m e k p pr".split())
+    typeactions = dict((m, []) for m in "a f g am cd dc r rg dm dg m e k p pr".split())
 
     with progress.bar(ui, _("applying"), total=len(actions)) as prog:
         for f, (m, args, msg) in pycompat.iteritems(actions):

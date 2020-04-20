@@ -181,6 +181,7 @@ def _determine_actions_for_conflicts(repo, src, conflicts):
             "p",  # path conflicts
             "pr",  # files to rename
             "r",
+            "rg",
         ]
     )
 
@@ -245,7 +246,7 @@ def _check_actions_and_raise_if_there_are_conflicts(actions):
     for action_type, list_of_tuples in pycompat.iteritems(actions):
         if len(list_of_tuples) == 0:
             continue  # Note `actions` defaults to [] for all keys.
-        if action_type not in ("g", "k", "e", "r", "pr"):
+        if action_type not in ("g", "k", "e", "r", "rg", "pr"):
             conflict_paths.extend(t[0] for t in list_of_tuples)
 
     # Report the exact files with conflicts.

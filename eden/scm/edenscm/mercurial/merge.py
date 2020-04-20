@@ -943,7 +943,7 @@ def _checkcollision(repo, wmf, actions):
 
     if actions:
         # k, dr, e and rd are no-op
-        for m in "a", "am", "f", "g", "cd", "dc":
+        for m in "a", "am", "f", "g", "cd", "dc", "rg":
             for f, args, msg in actions[m]:
                 pmmf.add(f)
         for f, args, msg in actions["r"]:
@@ -1229,8 +1229,10 @@ def manifestmerge(
                 elif n1 == a and fl1 == fla:  # local unchanged - use remote
                     if n1 == n2:  # optimization: keep local content
                         actions[f] = ("e", (fl2,), "update permissions")
-                    else:
+                    elif fl1 == fl2:
                         actions[f] = ("g", (fl2, False), "remote is newer")
+                    else:
+                        actions[f] = ("rg", (fl2, False), "flag differ")
                 elif nol and n2 == a:  # remote only changed 'x'
                     actions[f] = ("e", (fl2,), "update permissions")
                 elif nol and n1 == a:  # local only changed 'x'
@@ -1473,6 +1475,13 @@ def calculateupdates(
                     repo.ui.note(_(" %s: picking 'get' action\n") % f)
                     actions[f] = ga0
                     continue
+            # Same for symlink->file change
+            if "rg" in bids:
+                ga0 = bids["rg"][0]
+                if all(a == ga0 for a in bids["rg"][1:]):
+                    repo.ui.note(_(" %s: picking 'remove-then-get' action\n") % f)
+                    actions[f] = ga0
+                    continue
             # TODO: Consider other simple actions such as mode changes
             # Handle inefficient democrazy.
             repo.ui.note(_(" %s: multiple bids for merge action:\n") % f)
@@ -1706,7 +1715,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         if rustworkers:
             numworkers = worker._numworkers(repo.ui)
             remover = rustworker.removerworker(repo.wvfs.base, numworkers)
-            for f, args, msg in actions["r"]:
+            for f, args, msg in actions["r"] + actions["rg"]:
                 # The remove method will either return immediately or block if
                 # the internal worker queue is full.
                 remover.remove(f)
@@ -1718,11 +1727,12 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 removeone(repo, wctx, f)
         else:
             workerprog = worker.worker(
-                repo.ui, cost, batchremove, (repo, wctx), actions["r"]
+                repo.ui, cost, batchremove, (repo, wctx), actions["r"] + actions["rg"]
             )
             for i, size, item in workerprog:
                 z += i
                 prog.value = (z, item)
+        # "rg" actions are counted in updated below
         removed = len(actions["r"])
 
         # resolve path conflicts (must come before getting)
@@ -1746,7 +1756,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 repo.fileslog.contentstore, repo.wvfs.base, numworkers
             )
             fctx = mctx.filectx
-            for f, (flags, backup), msg in actions["g"]:
+            for f, (flags, backup), msg in actions["g"] + actions["rg"]:
                 fnode = fctx(f).filenode()
                 # The write method will either return immediately or block if
                 # the internal worker queue is full.
@@ -1761,13 +1771,17 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
                 writesize += updateone(repo, fctx, wctx, f, flag)
         else:
             workerprog = worker.worker(
-                repo.ui, cost, batchget, (repo, mctx, wctx), actions["g"]
+                repo.ui,
+                cost,
+                batchget,
+                (repo, mctx, wctx),
+                actions["g"] + actions["rg"],
             )
             for i, size, item in workerprog:
                 z += i
                 writesize += size
                 prog.value = (z, item)
-        updated = len(actions["g"])
+        updated = len(actions["g"]) + len(actions["rg"])
         perftrace.tracebytes("Disk Writes", writesize)
 
         # forget (manifest only, just log it) (must come first)
@@ -2024,7 +2038,7 @@ def recordupdates(repo, actions, branchmerge):
             prog.value += 1
 
         # get
-        for f, args, msg in actions.get("g", []):
+        for f, args, msg in actions.get("g", []) + actions.get("rg", []):
             if branchmerge:
                 repo.dirstate.otherparent(f)
             else:
@@ -2339,7 +2353,7 @@ def update(
             paths = []
             cwd = repo.getcwd()
             for f, (m, args, msg) in pycompat.iteritems(actionbyfile):
-                if m not in ("g", "k", "e", "r", "pr"):
+                if m not in ("g", "k", "e", "r", "rg", "pr"):
                     paths.append(repo.pathto(f, cwd))
 
             paths = sorted(paths)
@@ -2354,7 +2368,7 @@ def update(
                 raise error.Abort(msg.strip(), hint=hint)
 
         # Convert to dictionary-of-lists format
-        actions = dict((m, []) for m in "a am f g cd dc r dm dg m e k p pr".split())
+        actions = dict((m, []) for m in "a am f g cd dc r rg dm dg m e k p pr".split())
         for f, (m, args, msg) in pycompat.iteritems(actionbyfile):
             if m not in actions:
                 actions[m] = []
