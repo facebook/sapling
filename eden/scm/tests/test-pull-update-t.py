@@ -128,7 +128,7 @@ sh % "hg rollback -q"
 
 # (2) activating by URL#BOOKMARK
 
-sh % "hg bookmark -f active-before-pull"
+sh % "hg bookmark -f active-before-pull" == "unknown reference in .hg/bookmarks: active-after-pull f815b3da61635081d9570544593e2ad30a0d9655"
 sh % "hg bookmarks" == " * active-before-pull        3:483b76ad4309"
 
 sh % "hg pull -u '$TESTTMP/t#active-after-pull'" == r"""
@@ -163,7 +163,7 @@ sh % "cd ../tt"
 
 # (1) deactivating by --rev REV
 
-sh % "hg bookmark -f active-before-pull"
+sh % "hg bookmark -f active-before-pull" == "unknown reference in .hg/bookmarks: active-after-pull f815b3da61635081d9570544593e2ad30a0d9655"
 sh % "hg bookmarks" == " * active-before-pull        3:483b76ad4309"
 
 sh % "hg pull -u -r f815b3da6163" == r"""

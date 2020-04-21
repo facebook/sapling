@@ -129,9 +129,11 @@ Changing original repo:
   repository tip rolled back to revision 1 (undo push)
 
   $ hg -q incoming
+  unknown reference in .hg/bookmarks: foo 7d4251d04d20dbc31ba80930dc39d0db4550506b
   2:7d4251d04d20
 
   $ hg -q pull
+  unknown reference in .hg/bookmarks: foo 7d4251d04d20dbc31ba80930dc39d0db4550506b
 
   $ hg heads
   changeset:   2:7d4251d04d20
@@ -227,6 +229,7 @@ Test handling common incoming revisions between "default" and
   $ echo modified >> bar
   $ hg commit -m "new head to push current default head"
   $ hg -q push -r ".^1" '../clone'
+  unknown reference in .hg/bookmarks: foo 7d4251d04d20dbc31ba80930dc39d0db4550506b
 
   $ hg -q outgoing '../clone'
   4:44b4e0c07491

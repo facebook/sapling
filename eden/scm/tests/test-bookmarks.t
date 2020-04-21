@@ -518,6 +518,7 @@ test rollback
   repository tip rolled back to revision 2 (undo commit)
   working directory now based on revision 2
   $ hg bookmarks
+  unknown reference in .hg/bookmarks: tmp-rollback 2bf5cfec5864a07e71c9d3a2a96f5c9766595ba1
      X2                        1:925d80f479bb
      Y                         2:db815d6d32e6
      Z                         2:db815d6d32e6
@@ -526,6 +527,7 @@ test rollback
 activate bookmark on working dir parent without --force
 
   $ hg bookmark --inactive Z
+  unknown reference in .hg/bookmarks: tmp-rollback 2bf5cfec5864a07e71c9d3a2a96f5c9766595ba1
   $ hg bookmark Z
 
 test clone
