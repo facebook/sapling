@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use crate::cmdargs::DELETED_MANIFEST;
 use crate::error::SubcommandError;
+
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
@@ -32,7 +34,7 @@ const ARG_CSID: &'static str = "csid";
 const ARG_LIMIT: &'static str = "limit";
 const ARG_PATH: &'static str = "path";
 
-pub fn subcommand_deleted_manifest_build(name: &str) -> App {
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let csid_arg = Arg::with_name(ARG_CSID)
         .help("{hg|boinsai} changset id or bookmark name")
         .index(1)
@@ -43,7 +45,7 @@ pub fn subcommand_deleted_manifest_build(name: &str) -> App {
         .index(2)
         .default_value("");
 
-    SubCommand::with_name(name)
+    SubCommand::with_name(DELETED_MANIFEST)
         .about("derive, inspect and verify deleted files manifest")
         .subcommand(
             SubCommand::with_name(COMMAND_MANIFEST)

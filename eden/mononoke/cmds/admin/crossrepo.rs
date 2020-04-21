@@ -30,6 +30,7 @@ use movers::{get_large_to_small_mover, get_small_to_large_mover};
 use slog::{info, warn, Logger};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 
+use crate::cmdargs::CROSSREPO;
 use crate::error::SubcommandError;
 
 const MAP_SUBCOMMAND: &str = "map";
@@ -339,7 +340,7 @@ async fn update_large_repo_bookmarks(
     Ok(())
 }
 
-pub fn build_subcommand(name: &str) -> App {
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let map_subcommand = SubCommand::with_name(MAP_SUBCOMMAND)
         .about("Check cross-repo commit mapping")
         .arg(
@@ -366,7 +367,7 @@ pub fn build_subcommand(name: &str) -> App {
             .help("update any inconsistencies between bookmarks (except for the common bookmarks between large and small repo e.g. 'master')"),
     );
 
-    SubCommand::with_name(name)
+    SubCommand::with_name(CROSSREPO)
         .subcommand(map_subcommand)
         .subcommand(verify_wc_subcommand)
         .subcommand(verify_bookmarks_subcommand)

@@ -10,7 +10,7 @@ use std::fmt;
 use std::sync::Arc;
 
 use anyhow::{format_err, Error, Result};
-use clap::ArgMatches;
+use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
@@ -36,9 +36,54 @@ use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::str::FromStr;
 
+use crate::cmdargs::{BLOBSTORE_FETCH, SCRUB_BLOBSTORE_ACTION_ARG};
 use crate::error::SubcommandError;
 
-pub const SCRUB_BLOBSTORE_ACTION_ARG: &'static str = "scrub-blobstore-action";
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(BLOBSTORE_FETCH)
+        .about("fetches blobs from manifold")
+        .args_from_usage("[KEY]    'key of the blob to be fetched'")
+        .arg(
+            Arg::with_name("decode-as")
+                .long("decode-as")
+                .short("d")
+                .takes_value(true)
+                .possible_values(&["auto", "changeset", "manifest", "file", "contents", "git-tree"])
+                .required(false)
+                .help("if provided decode the value"),
+        )
+        .arg(
+            Arg::with_name("use-memcache")
+                .long("use-memcache")
+                .short("m")
+                .takes_value(true)
+                .possible_values(&["cache-only", "no-fill", "fill-mc"])
+                .required(false)
+                .help("Use memcache to cache access to the blob store"),
+        )
+        .arg(
+            Arg::with_name("no-prefix")
+                .long("no-prefix")
+                .short("P")
+                .takes_value(false)
+                .required(false)
+                .help("Don't prepend a prefix based on the repo id to the key"),
+        )
+        .arg(
+            Arg::with_name("inner-blobstore-id")
+                .long("inner-blobstore-id")
+                .takes_value(true)
+                .required(false)
+                .help("If main blobstore in the storage config is a multiplexed one, use inner blobstore with this id")
+        )
+        .arg(
+            Arg::with_name(SCRUB_BLOBSTORE_ACTION_ARG)
+                .long(SCRUB_BLOBSTORE_ACTION_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("Enable ScrubBlobstore with the given action. Checks for keys missing from stores. In ReportOnly mode this logs only, otherwise it performs a copy to the missing stores."),
+        )
+}
 
 fn get_blobconfig(
     blob_config: BlobConfig,

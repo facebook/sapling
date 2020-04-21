@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use crate::cmdargs::BLAME;
 use crate::error::SubcommandError;
+
 use anyhow::{format_err, Error};
 use blame::{fetch_blame, fetch_file_full_content};
 use blobrepo::BlobRepo;
@@ -41,7 +43,7 @@ const ARG_CSID: &'static str = "csid";
 const ARG_PATH: &'static str = "path";
 const ARG_LINE: &'static str = "line";
 
-pub fn subcommand_blame_build(name: &str) -> App {
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let csid_arg = Arg::with_name(ARG_CSID)
         .help("{hg|bonsai} changeset id or bookmark name")
         .index(1)
@@ -57,7 +59,7 @@ pub fn subcommand_blame_build(name: &str) -> App {
         .takes_value(false)
         .required(false);
 
-    SubCommand::with_name(name)
+    SubCommand::with_name(BLAME)
         .about("fetch/derive blame for specified changeset and path")
         .subcommand(
             SubCommand::with_name(COMMAND_DERIVE)

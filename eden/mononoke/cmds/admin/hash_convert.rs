@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use clap::ArgMatches;
+use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use futures_ext::FutureExt;
@@ -18,7 +18,32 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use slog::Logger;
 
+use crate::cmdargs::HASH_CONVERT;
 use crate::error::SubcommandError;
+
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(HASH_CONVERT)
+        .about("convert between bonsai and hg changeset hashes")
+        .arg(
+            Arg::with_name("from")
+                .long("from")
+                .short("f")
+                .required(true)
+                .takes_value(true)
+                .possible_values(&["hg", "bonsai"])
+                .help("Source hash type"),
+        )
+        .arg(
+            Arg::with_name("to")
+                .long("to")
+                .short("t")
+                .required(true)
+                .takes_value(true)
+                .possible_values(&["hg", "bonsai"])
+                .help("Target hash type"),
+        )
+        .args_from_usage("<HASH>  'source hash'")
+}
 
 pub async fn subcommand_hash_convert<'a>(
     fb: FacebookInit,

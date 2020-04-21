@@ -5,9 +5,9 @@
  * GNU General Public License version 2.
  */
 
-use crate::cmdargs::{ADD_PUBLIC_PHASES, FETCH_PHASE, LIST_PUBLIC};
+use crate::cmdargs::{ADD_PUBLIC_PHASES, FETCH_PHASE, LIST_PUBLIC, PHASES};
 use anyhow::{bail, format_err, Error};
-use clap::ArgMatches;
+use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::{
@@ -35,6 +35,62 @@ use mononoke_types::ChangesetId;
 use slog::{info, Logger};
 
 use crate::error::SubcommandError;
+
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(PHASES)
+        .about("commands to work with phases")
+        .subcommand(
+            SubCommand::with_name(ADD_PUBLIC_PHASES)
+                .about("mark mercurial commits as public from provided new-line separated list")
+                .arg(
+                    Arg::with_name("input-file")
+                        .help("new-line separated mercurial public commits")
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::with_name("chunk-size")
+                        .help("partition input file to chunks of specified size")
+                        .long("chunk-size")
+                        .takes_value(true),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(FETCH_PHASE)
+                .about("fetch phase of a commit")
+                .arg(
+                    Arg::with_name("changeset-type")
+                        .long("changeset-type")
+                        .short("c")
+                        .takes_value(true)
+                        .possible_values(&["bonsai", "hg"])
+                        .required(false)
+                        .help(
+                            "What changeset type to return, either bonsai or hg. Defaults to hg.",
+                        ),
+                )
+                .arg(
+                    Arg::with_name("hash")
+                        .help("changeset hash")
+                        .takes_value(true),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(LIST_PUBLIC)
+                .arg(
+                    Arg::with_name("changeset-type")
+                        .long("changeset-type")
+                        .short("c")
+                        .takes_value(true)
+                        .possible_values(&["bonsai", "hg"])
+                        .required(false)
+                        .help(
+                            "What changeset type to return, either bonsai or hg. Defaults to hg.",
+                        ),
+                )
+                .about("List all public commits"),
+        )
+}
 
 pub async fn subcommand_phases<'a>(
     fb: FacebookInit,

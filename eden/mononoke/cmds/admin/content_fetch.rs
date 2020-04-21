@@ -9,7 +9,7 @@ use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bytes::BytesMut;
-use clap::ArgMatches;
+use clap::{App, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
@@ -23,7 +23,17 @@ use mercurial_types::manifest::Content;
 use mercurial_types::{HgManifest, MPath, MPathElement};
 use slog::{debug, Logger};
 
+use crate::cmdargs::CONTENT_FETCH;
 use crate::error::SubcommandError;
+
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(CONTENT_FETCH)
+        .about("fetches content of the file or manifest from blobrepo")
+        .args_from_usage(
+            "<CHANGESET_ID>    'hg/bonsai id or bookmark to fetch file from'
+             <PATH>            'path to fetch'",
+        )
+}
 
 pub async fn subcommand_content_fetch<'a>(
     fb: FacebookInit,

@@ -7,7 +7,7 @@
 
 use anyhow::Error;
 use bookmarks::{BookmarkUpdateReason, Bookmarks, Freshness};
-use clap::ArgMatches;
+use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
@@ -25,10 +25,89 @@ use mutable_counters::{MutableCounters, SqlMutableCounters};
 use slog::{info, Logger};
 
 use crate::cmdargs::{
-    HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW, HG_SYNC_VERIFY,
+    HG_SYNC_BUNDLE, HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW,
+    HG_SYNC_VERIFY,
 };
 use crate::common::{format_bookmark_log_entry, LATEST_REPLAYED_REQUEST_KEY};
 use crate::error::SubcommandError;
+
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(HG_SYNC_BUNDLE)
+        .about("things related to mononoke-hg-sync counters")
+        .subcommand(
+            SubCommand::with_name(HG_SYNC_LAST_PROCESSED)
+                .about("inspect/change mononoke-hg sync last processed counter")
+                .arg(
+                    Arg::with_name("set")
+                        .long("set")
+                        .required(false)
+                        .takes_value(true)
+                        .help("set the value of the latest processed mononoke-hg-sync counter"),
+                )
+                .arg(
+                    Arg::with_name("skip-blobimport")
+                        .long("skip-blobimport")
+                        .required(false)
+                        .help("skip to the next non-blobimport entry in mononoke-hg-sync counter"),
+                )
+                .arg(
+                    Arg::with_name("dry-run")
+                        .long("dry-run")
+                        .required(false)
+                        .help("don't make changes, only show what would have been done (--skip-blobimport only)"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(HG_SYNC_REMAINS)
+                .about("get the value of the last mononoke-hg-sync counter to be processed")
+                .arg(
+                    Arg::with_name("quiet")
+                        .long("quiet")
+                        .required(false)
+                        .takes_value(false)
+                        .help("only print the number if present"),
+                )
+                .arg(
+                    Arg::with_name("without-blobimport")
+                        .long("without-blobimport")
+                        .required(false)
+                        .takes_value(false)
+                        .help("exclude blobimport entries from the count"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(HG_SYNC_SHOW).about("show hg hashes of yet to be replayed bundles")
+                .arg(
+                    Arg::with_name("limit")
+                        .long("limit")
+                        .required(false)
+                        .takes_value(true)
+                        .help("how many bundles to show"),
+                )
+        )
+        .subcommand(
+            SubCommand::with_name(HG_SYNC_FETCH_BUNDLE)
+                .about("fetches a bundle by id")
+                .arg(
+                    Arg::with_name("id")
+                        .long("id")
+                        .required(true)
+                        .takes_value(true)
+                        .help("bookmark log id. If it has associated bundle it will be fetched."),
+                )
+                .arg(
+                    Arg::with_name("output-file")
+                        .long("output-file")
+                        .required(true)
+                        .takes_value(true)
+                        .help("where a bundle will be saved"),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(HG_SYNC_VERIFY)
+                .about("verify the consistency of yet-to-be-processed bookmark log entries"),
+        )
+}
 
 pub async fn subcommand_process_hg_sync<'a>(
     fb: FacebookInit,

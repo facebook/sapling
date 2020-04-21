@@ -8,7 +8,7 @@
 #![deny(warnings)]
 #![feature(process_exitcode_placeholder)]
 
-use clap::{App, Arg, SubCommand};
+use clap::App;
 use fbinit::FacebookInit;
 use futures_ext::FutureExt as Future01Ext;
 use std::process::ExitCode;
@@ -20,13 +20,9 @@ use slog::error;
 use crate::blobstore_fetch::subcommand_blobstore_fetch;
 use crate::bonsai_fetch::subcommand_bonsai_fetch;
 use crate::cmdargs::{
-    ADD_PUBLIC_PHASES, BLAME, BLOBSTORE_FETCH, BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH, CROSSREPO,
-    DELETED_MANIFEST, DERIVED_DATA, FETCH_PHASE, FILENODES, FILESTORE, HASH_CONVERT, HG_CHANGESET,
-    HG_CHANGESET_DIFF, HG_CHANGESET_RANGE, HG_SYNC_BUNDLE, HG_SYNC_FETCH_BUNDLE,
-    HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW, HG_SYNC_VERIFY, LIST_PUBLIC,
-    MUTABLE_COUNTERS, MUTABLE_COUNTERS_GET, MUTABLE_COUNTERS_LIST, MUTABLE_COUNTERS_NAME,
-    MUTABLE_COUNTERS_SET, MUTABLE_COUNTERS_VALUE, PHASES, REDACTION, REDACTION_ADD, REDACTION_LIST,
-    REDACTION_REMOVE, SKIPLIST, SKIPLIST_BUILD, SKIPLIST_READ, UNODES,
+    BLAME, BLOBSTORE_FETCH, BONSAI_FETCH, BOOKMARKS, CONTENT_FETCH, CROSSREPO, DELETED_MANIFEST,
+    DERIVED_DATA, FILENODES, FILESTORE, HASH_CONVERT, HG_CHANGESET, HG_SYNC_BUNDLE,
+    MUTABLE_COUNTERS, PHASES, REDACTION, SKIPLIST, UNODES,
 };
 use crate::content_fetch::subcommand_content_fetch;
 use crate::crossrepo::subcommand_crossrepo;
@@ -62,365 +58,30 @@ mod subcommand_deleted_manifest;
 mod subcommand_unodes;
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
-    let blobstore_fetch = SubCommand::with_name(BLOBSTORE_FETCH)
-        .about("fetches blobs from manifold")
-        .args_from_usage("[KEY]    'key of the blob to be fetched'")
-        .arg(
-            Arg::with_name("decode-as")
-                .long("decode-as")
-                .short("d")
-                .takes_value(true)
-                .possible_values(&["auto", "changeset", "manifest", "file", "contents", "git-tree"])
-                .required(false)
-                .help("if provided decode the value"),
-        )
-        .arg(
-            Arg::with_name("use-memcache")
-                .long("use-memcache")
-                .short("m")
-                .takes_value(true)
-                .possible_values(&["cache-only", "no-fill", "fill-mc"])
-                .required(false)
-                .help("Use memcache to cache access to the blob store"),
-        )
-        .arg(
-            Arg::with_name("no-prefix")
-                .long("no-prefix")
-                .short("P")
-                .takes_value(false)
-                .required(false)
-                .help("Don't prepend a prefix based on the repo id to the key"),
-        )
-        .arg(
-            Arg::with_name("inner-blobstore-id")
-                .long("inner-blobstore-id")
-                .takes_value(true)
-                .required(false)
-                .help("If main blobstore in the storage config is a multiplexed one, use inner blobstore with this id")
-        )
-        .arg(
-            Arg::with_name(blobstore_fetch::SCRUB_BLOBSTORE_ACTION_ARG)
-                .long(blobstore_fetch::SCRUB_BLOBSTORE_ACTION_ARG)
-                .takes_value(true)
-                .required(false)
-                .help("Enable ScrubBlobstore with the given action. Checks for keys missing from stores. In ReportOnly mode this logs only, otherwise it performs a copy to the missing stores."),
-        );
-
-    let content_fetch = SubCommand::with_name(CONTENT_FETCH)
-        .about("fetches content of the file or manifest from blobrepo")
-        .args_from_usage(
-            "<CHANGESET_ID>    'hg/bonsai id or bookmark to fetch file from'
-             <PATH>            'path to fetch'",
-        );
-
-    let bonsai_fetch = SubCommand::with_name(BONSAI_FETCH)
-        .about("fetches content of the file or manifest from blobrepo")
-        .args_from_usage(
-            r#"<CHANGESET_ID>    'hg/bonsai id or bookmark to fetch file from'
-                          --json            'if provided json will be returned'"#,
-        );
-
-    let hg_changeset = SubCommand::with_name(HG_CHANGESET)
-        .about("mercural changeset level queries")
-        .subcommand(
-            SubCommand::with_name(HG_CHANGESET_DIFF)
-                .about("compare two changeset (used by pushrebase replayer)")
-                .args_from_usage(
-                    "<LEFT_CS>  'left changeset id'
-                     <RIGHT_CS> 'right changeset id'",
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name(HG_CHANGESET_RANGE)
-                .about("returns `x::y` revset")
-                .args_from_usage(
-                    "<START_CS> 'start changeset id'
-                     <STOP_CS>  'stop changeset id'",
-                ),
-        );
-
-    let skiplist = SubCommand::with_name(SKIPLIST)
-        .about("commands to build or read skiplist indexes")
-        .subcommand(
-            SubCommand::with_name(SKIPLIST_BUILD)
-                .about("build skiplist index")
-                .args_from_usage(
-                    "<BLOBSTORE_KEY>  'Blobstore key where to store the built skiplist'",
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name(SKIPLIST_READ)
-                .about("read skiplist index")
-                .args_from_usage(
-                    "<BLOBSTORE_KEY>  'Blobstore key from where to read the skiplist'",
-                ),
-        );
-
-    let convert = SubCommand::with_name(HASH_CONVERT)
-        .about("convert between bonsai and hg changeset hashes")
-        .arg(
-            Arg::with_name("from")
-                .long("from")
-                .short("f")
-                .required(true)
-                .takes_value(true)
-                .possible_values(&["hg", "bonsai"])
-                .help("Source hash type"),
-        )
-        .arg(
-            Arg::with_name("to")
-                .long("to")
-                .short("t")
-                .required(true)
-                .takes_value(true)
-                .possible_values(&["hg", "bonsai"])
-                .help("Target hash type"),
-        )
-        .args_from_usage("<HASH>  'source hash'");
-
-    let hg_sync = SubCommand::with_name(HG_SYNC_BUNDLE)
-        .about("things related to mononoke-hg-sync counters")
-        .subcommand(
-            SubCommand::with_name(HG_SYNC_LAST_PROCESSED)
-                .about("inspect/change mononoke-hg sync last processed counter")
-                .arg(
-                    Arg::with_name("set")
-                        .long("set")
-                        .required(false)
-                        .takes_value(true)
-                        .help("set the value of the latest processed mononoke-hg-sync counter"),
-                )
-                .arg(
-                    Arg::with_name("skip-blobimport")
-                        .long("skip-blobimport")
-                        .required(false)
-                        .help("skip to the next non-blobimport entry in mononoke-hg-sync counter"),
-                )
-                .arg(
-                    Arg::with_name("dry-run")
-                        .long("dry-run")
-                        .required(false)
-                        .help("don't make changes, only show what would have been done (--skip-blobimport only)"),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name(HG_SYNC_REMAINS)
-                .about("get the value of the last mononoke-hg-sync counter to be processed")
-                .arg(
-                    Arg::with_name("quiet")
-                        .long("quiet")
-                        .required(false)
-                        .takes_value(false)
-                        .help("only print the number if present"),
-                )
-                .arg(
-                    Arg::with_name("without-blobimport")
-                        .long("without-blobimport")
-                        .required(false)
-                        .takes_value(false)
-                        .help("exclude blobimport entries from the count"),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name(HG_SYNC_SHOW).about("show hg hashes of yet to be replayed bundles")
-                .arg(
-                    Arg::with_name("limit")
-                        .long("limit")
-                        .required(false)
-                        .takes_value(true)
-                        .help("how many bundles to show"),
-                )
-        )
-        .subcommand(
-            SubCommand::with_name(HG_SYNC_FETCH_BUNDLE)
-                .about("fetches a bundle by id")
-                .arg(
-                    Arg::with_name("id")
-                        .long("id")
-                        .required(true)
-                        .takes_value(true)
-                        .help("bookmark log id. If it has associated bundle it will be fetched."),
-                )
-                .arg(
-                    Arg::with_name("output-file")
-                        .long("output-file")
-                        .required(true)
-                        .takes_value(true)
-                        .help("where a bundle will be saved"),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name(HG_SYNC_VERIFY)
-                .about("verify the consistency of yet-to-be-processed bookmark log entries"),
-        );
-
-    let phases = SubCommand::with_name(PHASES)
-        .about("commands to work with phases")
-        .subcommand(
-            SubCommand::with_name(ADD_PUBLIC_PHASES)
-                .about("mark mercurial commits as public from provided new-line separated list")
-                .arg(
-                    Arg::with_name("input-file")
-                        .help("new-line separated mercurial public commits")
-                        .required(true)
-                        .index(1),
-                )
-                .arg(
-                    Arg::with_name("chunk-size")
-                        .help("partition input file to chunks of specified size")
-                        .long("chunk-size")
-                        .takes_value(true),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name(FETCH_PHASE)
-                .about("fetch phase of a commit")
-                .arg(
-                    Arg::with_name("changeset-type")
-                        .long("changeset-type")
-                        .short("c")
-                        .takes_value(true)
-                        .possible_values(&["bonsai", "hg"])
-                        .required(false)
-                        .help(
-                            "What changeset type to return, either bonsai or hg. Defaults to hg.",
-                        ),
-                )
-                .arg(
-                    Arg::with_name("hash")
-                        .help("changeset hash")
-                        .takes_value(true),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name(LIST_PUBLIC)
-                .arg(
-                    Arg::with_name("changeset-type")
-                        .long("changeset-type")
-                        .short("c")
-                        .takes_value(true)
-                        .possible_values(&["bonsai", "hg"])
-                        .required(false)
-                        .help(
-                            "What changeset type to return, either bonsai or hg. Defaults to hg.",
-                        ),
-                )
-                .about("List all public commits"),
-        );
-
-    let redaction = SubCommand::with_name(REDACTION)
-        .about("handle file redaction")
-        .subcommand(
-            SubCommand::with_name(REDACTION_ADD)
-                .about("add a new redacted file at a given commit")
-                .arg(
-                    Arg::with_name("task")
-                        .help("Task tracking the redaction request")
-                        .takes_value(true)
-                        .required(true),
-                )
-                .arg(
-                    Arg::with_name("hash")
-                        .help("hg commit hash")
-                        .takes_value(true)
-                        .required(true),
-                )
-                .args_from_usage(
-                    r#"
-                        <FILES_LIST>...                             'list of files to be be redacted'
-                        "#,
-                )
-        )
-        .subcommand(
-            SubCommand::with_name(REDACTION_REMOVE)
-                .about("remove a file from the redaction")
-                .arg(
-                    Arg::with_name("hash")
-                        .help("hg commit hash")
-                        .takes_value(true)
-                        .required(true),
-                )
-                .args_from_usage(
-                    r#"
-                        <FILES_LIST>...                             'list of files to be be unredacted'
-                        "#,
-                )
-        )
-        .subcommand(
-            SubCommand::with_name(REDACTION_LIST)
-                .about("list all redacted file for a given commit")
-                .arg(
-                    Arg::with_name("hash")
-                        .help("hg commit hash or a bookmark")
-                        .takes_value(true)
-                        .required(true),
-                )
-        );
-
-    let mutable_counters = SubCommand::with_name(MUTABLE_COUNTERS)
-        .about("handle mutable counters")
-        .subcommand(
-            SubCommand::with_name(MUTABLE_COUNTERS_LIST)
-                .about("get all the mutable counters for a repo"),
-        )
-        .subcommand(
-            SubCommand::with_name(MUTABLE_COUNTERS_GET)
-                .about("get the value of the mutable counter")
-                .arg(
-                    Arg::with_name(MUTABLE_COUNTERS_NAME)
-                        .help("name of the mutable counter to get")
-                        .takes_value(true)
-                        .required(true)
-                        .index(1),
-                ),
-        )
-        .subcommand(
-            SubCommand::with_name(MUTABLE_COUNTERS_SET)
-                .about("set the value of the mutable counter")
-                .arg(
-                    Arg::with_name(MUTABLE_COUNTERS_NAME)
-                        .help("name of the mutable counter to set")
-                        .takes_value(true)
-                        .required(true)
-                        .index(1),
-                )
-                .arg(
-                    Arg::with_name(MUTABLE_COUNTERS_VALUE)
-                        .help("value of the mutable counter to set")
-                        .takes_value(true)
-                        .required(true)
-                        .index(2),
-                ),
-        );
-
     args::MononokeApp::new("Mononoke admin command line tool")
         .with_advanced_args_hidden()
         .with_source_and_target_repos()
         .build()
         .version("0.0.0")
         .about("Poke at mononoke internals for debugging and investigating data structures.")
-        .subcommand(blobstore_fetch)
-        .subcommand(bonsai_fetch)
-        .subcommand(content_fetch)
-        .subcommand(bookmarks_manager::prepare_command(SubCommand::with_name(
-            BOOKMARKS,
-        )))
-        .subcommand(hg_changeset)
-        .subcommand(skiplist)
-        .subcommand(convert)
-        .subcommand(hg_sync)
-        .subcommand(mutable_counters)
-        .subcommand(redaction)
-        .subcommand(filenodes::build_subcommand(FILENODES))
-        .subcommand(phases)
-        .subcommand(filestore::build_subcommand(FILESTORE))
-        .subcommand(subcommand_unodes::subcommand_unodes_build(UNODES))
-        .subcommand(crossrepo::build_subcommand(CROSSREPO))
-        .subcommand(subcommand_blame::subcommand_blame_build(BLAME))
-        .subcommand(
-            subcommand_deleted_manifest::subcommand_deleted_manifest_build(DELETED_MANIFEST),
-        )
-        .subcommand(derived_data::build_subcommand(DERIVED_DATA))
+        .subcommand(blobstore_fetch::build_subcommand())
+        .subcommand(bonsai_fetch::build_subcommand())
+        .subcommand(content_fetch::build_subcommand())
+        .subcommand(bookmarks_manager::build_subcommand())
+        .subcommand(hg_changeset::build_subcommand())
+        .subcommand(skiplist_subcommand::build_subcommand())
+        .subcommand(hash_convert::build_subcommand())
+        .subcommand(hg_sync::build_subcommand())
+        .subcommand(mutable_counters::build_subcommand())
+        .subcommand(redaction::build_subcommand())
+        .subcommand(filenodes::build_subcommand())
+        .subcommand(phases::build_subcommand())
+        .subcommand(filestore::build_subcommand())
+        .subcommand(subcommand_unodes::build_subcommand())
+        .subcommand(crossrepo::build_subcommand())
+        .subcommand(subcommand_blame::build_subcommand())
+        .subcommand(subcommand_deleted_manifest::build_subcommand())
+        .subcommand(derived_data::build_subcommand())
 }
 
 #[fbinit::main]

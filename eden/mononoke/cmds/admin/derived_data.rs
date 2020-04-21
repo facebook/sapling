@@ -17,6 +17,7 @@ use futures::{compat::Future01CompatExt, future::FutureExt as PreviewFutureExt, 
 use futures_util::future::try_join_all;
 use slog::Logger;
 
+use crate::cmdargs::DERIVED_DATA;
 use crate::error::SubcommandError;
 
 const SUBCOMMAND_EXISTS: &'static str = "exists";
@@ -24,8 +25,8 @@ const SUBCOMMAND_EXISTS: &'static str = "exists";
 const ARG_HASH_OR_BOOKMARK: &'static str = "hash-or-bookmark";
 const ARG_TYPE: &'static str = "type";
 
-pub fn build_subcommand(name: &str) -> App {
-    SubCommand::with_name(name)
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(DERIVED_DATA)
         .about("request information about derived data")
         .subcommand(
             SubCommand::with_name(SUBCOMMAND_EXISTS)

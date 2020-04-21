@@ -6,13 +6,13 @@
  */
 
 use crate::cmdargs::{
-    MUTABLE_COUNTERS_GET, MUTABLE_COUNTERS_LIST, MUTABLE_COUNTERS_NAME, MUTABLE_COUNTERS_SET,
-    MUTABLE_COUNTERS_VALUE,
+    MUTABLE_COUNTERS, MUTABLE_COUNTERS_GET, MUTABLE_COUNTERS_LIST, MUTABLE_COUNTERS_NAME,
+    MUTABLE_COUNTERS_SET, MUTABLE_COUNTERS_VALUE,
 };
 use crate::error::SubcommandError;
 use anyhow::{format_err, Error};
 
-use clap::ArgMatches;
+use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
 use failure_ext::FutureFailureErrorExt;
@@ -21,6 +21,44 @@ use futures::compat::Future01CompatExt;
 use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use slog::{info, Logger};
+
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(MUTABLE_COUNTERS)
+        .about("handle mutable counters")
+        .subcommand(
+            SubCommand::with_name(MUTABLE_COUNTERS_LIST)
+                .about("get all the mutable counters for a repo"),
+        )
+        .subcommand(
+            SubCommand::with_name(MUTABLE_COUNTERS_GET)
+                .about("get the value of the mutable counter")
+                .arg(
+                    Arg::with_name(MUTABLE_COUNTERS_NAME)
+                        .help("name of the mutable counter to get")
+                        .takes_value(true)
+                        .required(true)
+                        .index(1),
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(MUTABLE_COUNTERS_SET)
+                .about("set the value of the mutable counter")
+                .arg(
+                    Arg::with_name(MUTABLE_COUNTERS_NAME)
+                        .help("name of the mutable counter to set")
+                        .takes_value(true)
+                        .required(true)
+                        .index(1),
+                )
+                .arg(
+                    Arg::with_name(MUTABLE_COUNTERS_VALUE)
+                        .help("value of the mutable counter to set")
+                        .takes_value(true)
+                        .required(true)
+                        .index(2),
+                ),
+        )
+}
 
 pub async fn subcommand_mutable_counters<'a>(
     fb: FacebookInit,

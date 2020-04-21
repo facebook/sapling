@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use clap::ArgMatches;
+use clap::{App, ArgMatches, SubCommand};
 use cloned::cloned;
 use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
@@ -28,8 +28,27 @@ use mononoke_types::{BlobstoreBytes, ChangesetId, Generation, RepositoryId};
 use skiplist::{deserialize_skiplist_index, SkiplistIndex, SkiplistNodeType};
 use slog::{debug, info, Logger};
 
-use crate::cmdargs::{SKIPLIST_BUILD, SKIPLIST_READ};
+use crate::cmdargs::{SKIPLIST, SKIPLIST_BUILD, SKIPLIST_READ};
 use crate::error::SubcommandError;
+
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(SKIPLIST)
+        .about("commands to build or read skiplist indexes")
+        .subcommand(
+            SubCommand::with_name(SKIPLIST_BUILD)
+                .about("build skiplist index")
+                .args_from_usage(
+                    "<BLOBSTORE_KEY>  'Blobstore key where to store the built skiplist'",
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(SKIPLIST_READ)
+                .about("read skiplist index")
+                .args_from_usage(
+                    "<BLOBSTORE_KEY>  'Blobstore key from where to read the skiplist'",
+                ),
+        )
+}
 
 pub async fn subcommand_skiplist<'a>(
     fb: FacebookInit,

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use clap::ArgMatches;
+use clap::{App, ArgMatches, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -16,8 +16,18 @@ use serde_derive::Serialize;
 use slog::Logger;
 use std::collections::BTreeMap;
 
+use crate::cmdargs::BONSAI_FETCH;
 use crate::common::fetch_bonsai_changeset;
 use crate::error::SubcommandError;
+
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(BONSAI_FETCH)
+        .about("fetches content of the file or manifest from blobrepo")
+        .args_from_usage(
+            r#"<CHANGESET_ID>    'hg/bonsai id or bookmark to fetch file from'
+                          --json            'if provided json will be returned'"#,
+        )
+}
 
 pub async fn subcommand_bonsai_fetch<'a>(
     fb: FacebookInit,

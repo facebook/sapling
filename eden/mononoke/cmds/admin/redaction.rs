@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::cmdargs::{REDACTION_ADD, REDACTION_LIST, REDACTION_REMOVE};
+use crate::cmdargs::{REDACTION, REDACTION_ADD, REDACTION_LIST, REDACTION_REMOVE};
 use crate::common::get_file_nodes;
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use clap::ArgMatches;
+use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
@@ -31,6 +31,57 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::error::SubcommandError;
+
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(REDACTION)
+        .about("handle file redaction")
+        .subcommand(
+            SubCommand::with_name(REDACTION_ADD)
+                .about("add a new redacted file at a given commit")
+                .arg(
+                    Arg::with_name("task")
+                        .help("Task tracking the redaction request")
+                        .takes_value(true)
+                        .required(true),
+                )
+                .arg(
+                    Arg::with_name("hash")
+                        .help("hg commit hash")
+                        .takes_value(true)
+                        .required(true),
+                )
+                .args_from_usage(
+                    r#"
+                        <FILES_LIST>...                             'list of files to be be redacted'
+                        "#,
+                )
+        )
+        .subcommand(
+            SubCommand::with_name(REDACTION_REMOVE)
+                .about("remove a file from the redaction")
+                .arg(
+                    Arg::with_name("hash")
+                        .help("hg commit hash")
+                        .takes_value(true)
+                        .required(true),
+                )
+                .args_from_usage(
+                    r#"
+                        <FILES_LIST>...                             'list of files to be be unredacted'
+                        "#,
+                )
+        )
+        .subcommand(
+            SubCommand::with_name(REDACTION_LIST)
+                .about("list all redacted file for a given commit")
+                .arg(
+                    Arg::with_name("hash")
+                        .help("hg commit hash or a bookmark")
+                        .takes_value(true)
+                        .required(true),
+                )
+        )
+}
 
 fn find_files_with_given_content_id_blobstore_keys(
     logger: Logger,

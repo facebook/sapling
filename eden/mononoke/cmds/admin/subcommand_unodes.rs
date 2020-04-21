@@ -5,7 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use crate::cmdargs::UNODES;
 use crate::error::SubcommandError;
+
 use anyhow::{bail, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
@@ -40,7 +42,7 @@ fn path_resolve(path: &str) -> Result<Option<MPath>, Error> {
     }
 }
 
-pub fn subcommand_unodes_build(name: &str) -> App {
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let csid_arg = Arg::with_name(ARG_CSID)
         .help("{hg|boinsai} changset id or bookmark name")
         .index(1)
@@ -51,7 +53,7 @@ pub fn subcommand_unodes_build(name: &str) -> App {
         .index(2)
         .default_value("/");
 
-    SubCommand::with_name(name)
+    SubCommand::with_name(UNODES)
         .about("inspect and interact with unodes")
         .arg(
             Arg::with_name(ARG_TRACE)

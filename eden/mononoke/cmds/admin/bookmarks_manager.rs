@@ -21,6 +21,7 @@ use slog::{info, Logger};
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 
+use crate::cmdargs::BOOKMARKS;
 use crate::common::{fetch_bonsai_changeset, format_bookmark_log_entry};
 use crate::error::SubcommandError;
 
@@ -30,7 +31,8 @@ const LOG_CMD: &'static str = "log";
 const LIST_CMD: &'static str = "list";
 const DEL_CMD: &'static str = "delete";
 
-pub fn prepare_command<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
+    let parent_subcommand = SubCommand::with_name(BOOKMARKS);
     let set = SubCommand::with_name(SET_CMD)
         .about(
             "sets a bookmark to a specific hg changeset, if the bookmark does not exist it will
@@ -102,7 +104,8 @@ pub fn prepare_command<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
             "#,
         );
 
-    app.about("set of commands to manipulate bookmarks")
+    parent_subcommand
+        .about("set of commands to manipulate bookmarks")
         .subcommand(set)
         .subcommand(get)
         .subcommand(log)

@@ -25,6 +25,7 @@ use mercurial_types::{HgFileEnvelope, HgFileNodeId, MPath};
 use mononoke_types::RepoPath;
 use slog::{debug, info, Logger};
 
+use crate::cmdargs::FILENODES;
 use crate::common::get_file_nodes;
 use crate::error::SubcommandError;
 
@@ -40,8 +41,8 @@ const ARG_PATHS: &str = "paths";
 const ARG_ID: &str = "id";
 const ARG_PATH: &str = "path";
 
-pub fn build_subcommand(name: &str) -> App {
-    SubCommand::with_name(name)
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(FILENODES)
         .about("fetches hg filenodes information for a commit and one or more paths")
         .arg(
             Arg::with_name(ARG_ENVELOPE)

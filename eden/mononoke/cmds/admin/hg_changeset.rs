@@ -8,7 +8,7 @@
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
-use clap::ArgMatches;
+use clap::{App, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
@@ -26,8 +26,29 @@ use std::collections::BTreeMap;
 use std::io;
 use std::str::FromStr;
 
-use crate::cmdargs::{HG_CHANGESET_DIFF, HG_CHANGESET_RANGE};
+use crate::cmdargs::{HG_CHANGESET, HG_CHANGESET_DIFF, HG_CHANGESET_RANGE};
 use crate::error::SubcommandError;
+
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
+    SubCommand::with_name(HG_CHANGESET)
+        .about("mercural changeset level queries")
+        .subcommand(
+            SubCommand::with_name(HG_CHANGESET_DIFF)
+                .about("compare two changeset (used by pushrebase replayer)")
+                .args_from_usage(
+                    "<LEFT_CS>  'left changeset id'
+                     <RIGHT_CS> 'right changeset id'",
+                ),
+        )
+        .subcommand(
+            SubCommand::with_name(HG_CHANGESET_RANGE)
+                .about("returns `x::y` revset")
+                .args_from_usage(
+                    "<START_CS> 'start changeset id'
+                     <STOP_CS>  'stop changeset id'",
+                ),
+        )
+}
 
 pub async fn subcommand_hg_changeset<'a>(
     fb: FacebookInit,

@@ -26,6 +26,7 @@ use std::io::BufReader;
 use std::str::FromStr;
 use tokio_old::{codec, fs::File};
 
+use crate::cmdargs::FILESTORE;
 use crate::error::SubcommandError;
 
 const COMMAND_METADATA: &str = "metadata";
@@ -40,7 +41,7 @@ const ARG_FILE: &str = "file";
 // NOTE: Fetching by GitSha1 is not concurrently supported since that needs a size to instantiate.
 const VALID_KINDS: [&str; 3] = ["id", "sha1", "sha256"];
 
-pub fn build_subcommand(name: &str) -> App {
+pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let kind_arg = Arg::with_name(ARG_KIND)
         .possible_values(&VALID_KINDS)
         .help("Identifier kind")
@@ -52,7 +53,7 @@ pub fn build_subcommand(name: &str) -> App {
         .takes_value(true)
         .required(true);
 
-    SubCommand::with_name(name)
+    SubCommand::with_name(FILESTORE)
         .about("inspect and interact with filestore data")
         .subcommand(
             SubCommand::with_name(COMMAND_METADATA)
