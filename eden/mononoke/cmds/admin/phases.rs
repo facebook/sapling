@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::cmdargs::{ADD_PUBLIC_PHASES, FETCH_PHASE, LIST_PUBLIC, PHASES};
 use anyhow::{bail, format_err, Error};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cloned::cloned;
@@ -35,6 +34,11 @@ use mononoke_types::ChangesetId;
 use slog::{info, Logger};
 
 use crate::error::SubcommandError;
+
+pub const PHASES: &str = "phases";
+const ADD_PUBLIC_PHASES: &str = "add-public";
+const FETCH_PHASE: &str = "fetch";
+const LIST_PUBLIC: &str = "list-public";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(PHASES)

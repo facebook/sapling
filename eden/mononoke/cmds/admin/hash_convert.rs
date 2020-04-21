@@ -18,15 +18,18 @@ use mercurial_types::HgChangesetId;
 use mononoke_types::ChangesetId;
 use slog::Logger;
 
-use crate::cmdargs::HASH_CONVERT;
 use crate::error::SubcommandError;
+
+pub const HASH_CONVERT: &str = "convert";
+const ARG_FROM: &str = "from";
+const ARG_TO: &str = "to";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(HASH_CONVERT)
         .about("convert between bonsai and hg changeset hashes")
         .arg(
-            Arg::with_name("from")
-                .long("from")
+            Arg::with_name(ARG_FROM)
+                .long(ARG_FROM)
                 .short("f")
                 .required(true)
                 .takes_value(true)
@@ -34,8 +37,8 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                 .help("Source hash type"),
         )
         .arg(
-            Arg::with_name("to")
-                .long("to")
+            Arg::with_name(ARG_TO)
+                .long(ARG_TO)
                 .short("t")
                 .required(true)
                 .takes_value(true)

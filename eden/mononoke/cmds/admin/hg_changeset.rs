@@ -26,8 +26,11 @@ use std::collections::BTreeMap;
 use std::io;
 use std::str::FromStr;
 
-use crate::cmdargs::{HG_CHANGESET, HG_CHANGESET_DIFF, HG_CHANGESET_RANGE};
 use crate::error::SubcommandError;
+
+pub const HG_CHANGESET: &str = "hg-changeset";
+const HG_CHANGESET_DIFF: &str = "diff";
+const HG_CHANGESET_RANGE: &str = "range";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(HG_CHANGESET)

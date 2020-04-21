@@ -28,8 +28,11 @@ use mononoke_types::{BlobstoreBytes, ChangesetId, Generation, RepositoryId};
 use skiplist::{deserialize_skiplist_index, SkiplistIndex, SkiplistNodeType};
 use slog::{debug, info, Logger};
 
-use crate::cmdargs::{SKIPLIST, SKIPLIST_BUILD, SKIPLIST_READ};
 use crate::error::SubcommandError;
+
+pub const SKIPLIST: &str = "skiplist";
+const SKIPLIST_BUILD: &str = "build";
+const SKIPLIST_READ: &str = "read";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(SKIPLIST)

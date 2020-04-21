@@ -30,9 +30,9 @@ use movers::{get_large_to_small_mover, get_small_to_large_mover};
 use slog::{info, warn, Logger};
 use synced_commit_mapping::{SqlSyncedCommitMapping, SyncedCommitMapping};
 
-use crate::cmdargs::CROSSREPO;
 use crate::error::SubcommandError;
 
+pub const CROSSREPO: &str = "crossrepo";
 const MAP_SUBCOMMAND: &str = "map";
 const VERIFY_WC_SUBCOMMAND: &str = "verify-wc";
 const VERIFY_BOOKMARKS_SUBCOMMAND: &str = "verify-bookmarks";

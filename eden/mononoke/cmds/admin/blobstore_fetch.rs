@@ -36,8 +36,10 @@ use std::collections::HashMap;
 use std::iter::FromIterator;
 use std::str::FromStr;
 
-use crate::cmdargs::{BLOBSTORE_FETCH, SCRUB_BLOBSTORE_ACTION_ARG};
 use crate::error::SubcommandError;
+
+pub const BLOBSTORE_FETCH: &str = "blobstore-fetch";
+const SCRUB_BLOBSTORE_ACTION_ARG: &str = "scrub-blobstore-action";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(BLOBSTORE_FETCH)

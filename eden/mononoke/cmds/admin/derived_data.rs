@@ -17,9 +17,9 @@ use futures::{compat::Future01CompatExt, future::FutureExt as PreviewFutureExt, 
 use futures_util::future::try_join_all;
 use slog::Logger;
 
-use crate::cmdargs::DERIVED_DATA;
 use crate::error::SubcommandError;
 
+pub const DERIVED_DATA: &str = "derived-data";
 const SUBCOMMAND_EXISTS: &'static str = "exists";
 
 const ARG_HASH_OR_BOOKMARK: &'static str = "hash-or-bookmark";

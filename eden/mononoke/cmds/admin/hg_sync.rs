@@ -24,12 +24,15 @@ use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use slog::{info, Logger};
 
-use crate::cmdargs::{
-    HG_SYNC_BUNDLE, HG_SYNC_FETCH_BUNDLE, HG_SYNC_LAST_PROCESSED, HG_SYNC_REMAINS, HG_SYNC_SHOW,
-    HG_SYNC_VERIFY,
-};
 use crate::common::{format_bookmark_log_entry, LATEST_REPLAYED_REQUEST_KEY};
 use crate::error::SubcommandError;
+
+pub const HG_SYNC_BUNDLE: &str = "hg-sync-bundle";
+const HG_SYNC_REMAINS: &str = "remains";
+const HG_SYNC_SHOW: &str = "show";
+const HG_SYNC_FETCH_BUNDLE: &str = "fetch-bundle";
+const HG_SYNC_LAST_PROCESSED: &str = "last-processed";
+const HG_SYNC_VERIFY: &str = "verify";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(HG_SYNC_BUNDLE)

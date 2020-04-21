@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::cmdargs::{REDACTION, REDACTION_ADD, REDACTION_LIST, REDACTION_REMOVE};
 use crate::common::get_file_nodes;
 use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
@@ -31,6 +30,11 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 use crate::error::SubcommandError;
+
+pub const REDACTION: &str = "redaction";
+const REDACTION_ADD: &str = "add";
+const REDACTION_REMOVE: &str = "remove";
+const REDACTION_LIST: &str = "list";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(REDACTION)

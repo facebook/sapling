@@ -25,10 +25,10 @@ use mercurial_types::{HgFileEnvelope, HgFileNodeId, MPath};
 use mononoke_types::RepoPath;
 use slog::{debug, info, Logger};
 
-use crate::cmdargs::FILENODES;
 use crate::common::get_file_nodes;
 use crate::error::SubcommandError;
 
+pub const FILENODES: &str = "filenodes";
 const COMMAND_ID: &str = "by-id";
 const COMMAND_REVISION: &str = "by-revision";
 const COMMAND_VALIDATE: &str = "validate";

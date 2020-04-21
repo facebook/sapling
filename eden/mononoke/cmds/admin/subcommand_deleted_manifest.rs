@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::cmdargs::DELETED_MANIFEST;
 use crate::error::SubcommandError;
 
 use anyhow::{format_err, Error};
@@ -28,6 +27,7 @@ use revset::AncestorsNodeStream;
 use slog::{debug, Logger};
 use std::collections::BTreeSet;
 
+pub const DELETED_MANIFEST: &str = "deleted-manifest";
 const COMMAND_MANIFEST: &'static str = "manifest";
 const COMMAND_VERIFY: &'static str = "verify";
 const ARG_CSID: &'static str = "csid";

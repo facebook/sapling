@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::cmdargs::UNODES;
 use crate::error::SubcommandError;
 
 use anyhow::{bail, Error};
@@ -28,6 +27,7 @@ use slog::Logger;
 use std::collections::BTreeSet;
 use unodes::RootUnodeManifestId;
 
+pub const UNODES: &str = "unodes";
 const COMMAND_TREE: &'static str = "tree";
 const COMMAND_VERIFY: &'static str = "verify";
 const ARG_CSID: &'static str = "csid";

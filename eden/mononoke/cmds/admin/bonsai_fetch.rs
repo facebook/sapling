@@ -16,9 +16,10 @@ use serde_derive::Serialize;
 use slog::Logger;
 use std::collections::BTreeMap;
 
-use crate::cmdargs::BONSAI_FETCH;
 use crate::common::fetch_bonsai_changeset;
 use crate::error::SubcommandError;
+
+pub const BONSAI_FETCH: &str = "bonsai-fetch";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(BONSAI_FETCH)

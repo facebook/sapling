@@ -26,9 +26,9 @@ use std::io::BufReader;
 use std::str::FromStr;
 use tokio_old::{codec, fs::File};
 
-use crate::cmdargs::FILESTORE;
 use crate::error::SubcommandError;
 
+pub const FILESTORE: &str = "filestore";
 const COMMAND_METADATA: &str = "metadata";
 const COMMAND_STORE: &str = "store";
 const COMMAND_VERIFY: &str = "verify";

@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::cmdargs::BLAME;
 use crate::error::SubcommandError;
 
 use anyhow::{format_err, Error};
@@ -35,6 +34,7 @@ use std::fmt::Write;
 use std::{collections::HashMap, sync::Arc};
 use unodes::RootUnodeManifestId;
 
+pub const BLAME: &str = "blame";
 const COMMAND_DERIVE: &'static str = "derive";
 const COMMAND_COMPUTE: &'static str = "compute";
 const COMMAND_DIFF: &'static str = "diff";

@@ -5,10 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use crate::cmdargs::{
-    MUTABLE_COUNTERS, MUTABLE_COUNTERS_GET, MUTABLE_COUNTERS_LIST, MUTABLE_COUNTERS_NAME,
-    MUTABLE_COUNTERS_SET, MUTABLE_COUNTERS_VALUE,
-};
 use crate::error::SubcommandError;
 use anyhow::{format_err, Error};
 
@@ -21,6 +17,13 @@ use futures::compat::Future01CompatExt;
 use mononoke_types::RepositoryId;
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use slog::{info, Logger};
+
+pub const MUTABLE_COUNTERS: &str = "mutable-counters";
+const MUTABLE_COUNTERS_NAME: &str = "name";
+const MUTABLE_COUNTERS_VALUE: &str = "value";
+const MUTABLE_COUNTERS_LIST: &str = "list";
+const MUTABLE_COUNTERS_GET: &str = "get";
+const MUTABLE_COUNTERS_SET: &str = "set";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(MUTABLE_COUNTERS)

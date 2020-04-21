@@ -21,10 +21,10 @@ use slog::{info, Logger};
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason};
 
-use crate::cmdargs::BOOKMARKS;
 use crate::common::{fetch_bonsai_changeset, format_bookmark_log_entry};
 use crate::error::SubcommandError;
 
+pub const BOOKMARKS: &str = "bookmarks";
 const SET_CMD: &'static str = "set";
 const GET_CMD: &'static str = "get";
 const LOG_CMD: &'static str = "log";

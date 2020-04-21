@@ -23,8 +23,9 @@ use mercurial_types::manifest::Content;
 use mercurial_types::{HgManifest, MPath, MPathElement};
 use slog::{debug, Logger};
 
-use crate::cmdargs::CONTENT_FETCH;
 use crate::error::SubcommandError;
+
+pub const CONTENT_FETCH: &str = "content-fetch";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(CONTENT_FETCH)
