@@ -78,7 +78,7 @@ struct StatusTest {
     auto commitHash = testMount().getEdenMount()->getParentCommits().parent1();
     return (testMount().getMount()->diff(
         commitHash,
-        /*listIgnored=*/false,
+        listIgnored,
         /*enforceCurrentParent=*/false,
         /*ResponseChannelRequest* =*/nullptr));
   }
