@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 TODO: Make this test work with obsstore

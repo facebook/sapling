@@ -1,3 +1,4 @@
+#require py2
 #chg-compatible
 
 #testcases case-innodb case-rocksdb
