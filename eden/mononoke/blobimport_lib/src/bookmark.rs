@@ -32,7 +32,9 @@ pub fn read_bookmarks(revlogrepo: RevlogRepo) -> BoxFuture<Vec<(Vec<u8>, HgChang
             move |key| {
                 (*bookmarks).get(&key).and_then(move |cs_id| {
                     cs_id
-                        .ok_or_else(|| format_err!("Bookmark value missing: {:?}", key))
+                        .ok_or_else(|| {
+                            format_err!("Bookmark value missing: {}", String::from_utf8_lossy(&key))
+                        })
                         .map(move |cs_id| (key, cs_id))
                 })
             }
@@ -78,10 +80,10 @@ pub fn upload_bookmarks(
                                     (false, Some(stale_cs_id)) => {
                                         info!(
                                             logger,
-                                            "current version of bookmark {:?} couldn't be \
+                                            "current version of bookmark {} couldn't be \
                                             imported, because cs {:?} was not present in blobrepo \
                                             yet; using stale version instead {:?}",
-                                            key,
+                                            String::from_utf8_lossy(&key),
                                             cs_id,
                                             stale_cs_id,
                                         );
@@ -107,8 +109,8 @@ pub fn upload_bookmarks(
                                 } else {
                                     info!(
                                         logger,
-                                        "did not update bookmark {:?}, because cs {:?} was not imported yet",
-                                        key,
+                                        "did not update bookmark {}, because cs {:?} was not imported yet",
+                                        String::from_utf8_lossy(&key),
                                         cs_id,
                                     );
                                     Ok(None).into_future().right_future()
