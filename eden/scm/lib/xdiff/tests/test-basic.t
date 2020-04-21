@@ -25,7 +25,7 @@ Generate test files
   > g
   > EOF
 
-  $ printf "" > empty
+  $ touch empty
   $ printf "a\0" > binary_a
   $ printf "b\0" > binary_b
   $ cp a a_exec
@@ -53,7 +53,7 @@ Test with empty file
   diff --git a/a b/empty
   --- a/a
   +++ b/empty
-  @@ -1,6 +1,1 @@
+  @@ -1,6 +1,0 @@
   -a
   -b
   -c

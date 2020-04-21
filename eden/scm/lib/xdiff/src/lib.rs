@@ -281,8 +281,9 @@ where
     let mut old_lines: Vec<_> = old_text.split(|c| c == &b'\n').collect();
     let mut new_lines: Vec<_> = new_text.split(|c| c == &b'\n').collect();
 
-    let old_has_trailing_newline = old_text.last() == Some(&b'\n');
-    let new_has_trailing_newline = new_text.last() == Some(&b'\n');
+    // No trailing newline in empty files is expected, for any other file a warning is displayed.
+    let old_has_trailing_newline = old_text.is_empty() || old_text.last() == Some(&b'\n');
+    let new_has_trailing_newline = new_text.is_empty() || new_text.last() == Some(&b'\n');
 
     // The last empty line traditionally doesn't count as line. Not having it is a case for warnings.
     if old_has_trailing_newline {
@@ -815,7 +816,7 @@ z"#;
     }
 
     #[test]
-    fn test_diff_unified_with_empty() {
+    fn test_diff_unified_file_removal() {
         let a = r#"a
 b
 c
@@ -843,6 +844,42 @@ deleted file mode 100644
 -b
 -c
 -d
+"
+        );
+    }
+
+    #[test]
+    fn test_diff_unified_with_empty() {
+        let a = r#"a
+b
+c
+d
+"#;
+        assert_eq!(
+            String::from_utf8_lossy(&diff_unified(
+                Some(DiffFile {
+                    contents: FileContent::Inline(&""),
+                    path: "x",
+                    file_type: FileType::Regular,
+                }),
+                Some(DiffFile {
+                    contents: FileContent::Inline(&a),
+                    path: "x",
+                    file_type: FileType::Regular,
+                }),
+                DiffOpts {
+                    context: 10,
+                    copy_info: CopyInfo::None,
+                }
+            )),
+            r"diff --git a/x b/x
+--- a/x
++++ b/x
+@@ -1,0 +1,4 @@
++a
++b
++c
++d
 "
         );
     }
