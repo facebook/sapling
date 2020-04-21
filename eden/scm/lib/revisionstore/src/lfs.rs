@@ -1254,11 +1254,13 @@ impl RemoteDataStore for LfsRemoteStore {
         })
     }
 
-    fn upload(&self, keys: &[StoreKey]) -> Result<()> {
+    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         let local_store = match self.remote.local.as_ref() {
-            None => return Ok(()),
+            None => return Ok(keys.to_vec()),
             Some(local) => local,
         };
+
+        let mut not_uploaded = Vec::new();
 
         let objs = keys
             .iter()
@@ -1272,6 +1274,7 @@ impl RemoteDataStore for LfsRemoteStore {
                         ))),
                     }
                 } else {
+                    not_uploaded.push(k.clone());
                     Ok(None)
                 }
             })
@@ -1284,7 +1287,9 @@ impl RemoteDataStore for LfsRemoteStore {
                 let key = StoreKey::from(ContentHash::Sha256(sha256));
                 local_store.blob(&key)
             }
-        })
+        })?;
+
+        Ok(not_uploaded)
     }
 }
 

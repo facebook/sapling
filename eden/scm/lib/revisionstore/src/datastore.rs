@@ -49,7 +49,7 @@ pub trait RemoteDataStore: HgIdDataStore + Send + Sync {
     fn prefetch(&self, keys: &[StoreKey]) -> Result<()>;
 
     /// Send all the blobs referenced by the keys to the remote store.
-    fn upload(&self, keys: &[StoreKey]) -> Result<()>;
+    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>>;
 }
 
 pub trait HgIdMutableDeltaStore: HgIdDataStore + Send + Sync {
@@ -104,7 +104,7 @@ impl<T: RemoteDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> RemoteData
         T::prefetch(self, keys)
     }
 
-    fn upload(&self, keys: &[StoreKey]) -> Result<()> {
+    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         T::upload(self, keys)
     }
 }

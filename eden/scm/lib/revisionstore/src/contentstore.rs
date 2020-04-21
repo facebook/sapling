@@ -138,11 +138,11 @@ impl RemoteDataStore for ContentStore {
         }
     }
 
-    fn upload(&self, keys: &[StoreKey]) -> Result<()> {
+    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         if let Some(remote_store) = self.remote_store.as_ref() {
             remote_store.upload(keys)
         } else {
-            Ok(())
+            Ok(keys.to_vec())
         }
     }
 }

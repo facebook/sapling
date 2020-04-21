@@ -681,8 +681,8 @@ impl RemoteDataStore for PyRemoteDataStore {
         self.0.prefetch(keys)
     }
 
-    fn upload(&self, _keys: &[StoreKey]) -> Result<()> {
-        Ok(())
+    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        Ok(keys.to_vec())
     }
 }
 
@@ -848,7 +848,7 @@ py_class!(pub class contentstore |py| {
         store.prefetch_py(py, keys)
     }
 
-    def upload(&self, keys: PyList) -> PyResult<PyNone> {
+    def upload(&self, keys: PyList) -> PyResult<PyList> {
         let store = self.store(py);
         store.upload_py(py, keys)
     }

@@ -244,8 +244,8 @@ impl RemoteDataStore for MemcacheHgIdDataStore {
         Ok(())
     }
 
-    fn upload(&self, _keys: &[StoreKey]) -> Result<()> {
-        Ok(())
+    fn upload(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        Ok(keys.to_vec())
     }
 }
 

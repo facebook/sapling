@@ -109,7 +109,7 @@ impl RemoteDataStore for FakeRemoteDataStore {
         Ok(())
     }
 
-    fn upload(&self, _keys: &[StoreKey]) -> Result<()> {
+    fn upload(&self, _keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         unimplemented!()
     }
 }
