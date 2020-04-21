@@ -7,13 +7,14 @@
 
 use crate::graph::{FileContentData, Node, NodeData, NodeType};
 use crate::progress::{
-    progress_stream, report_state, ProgressRecorderUnprotected, ProgressReporterUnprotected,
-    ProgressStateMutex,
+    progress_stream, report_state, ProgressReporter, ProgressReporterUnprotected,
+    ProgressStateCountByType, ProgressStateMutex,
 };
 use crate::sampling::{NodeSamplingHandler, SamplingWalkVisitor};
 use crate::setup::{
     parse_node_types, setup_common, COMPRESSION_BENEFIT, COMPRESSION_LEVEL_ARG,
-    EXCLUDE_SAMPLE_NODE_TYPE_ARG, INCLUDE_SAMPLE_NODE_TYPE_ARG, SAMPLE_RATE_ARG,
+    DEFAULT_INCLUDE_NODE_TYPES, EXCLUDE_SAMPLE_NODE_TYPE_ARG, INCLUDE_SAMPLE_NODE_TYPE_ARG,
+    PROGRESS_SAMPLE_DURATION_S, SAMPLE_RATE_ARG,
 };
 use crate::state::WalkState;
 use crate::tail::{walk_exact_tail, RepoWalkRun};
@@ -25,7 +26,7 @@ use clap::ArgMatches;
 use cloned::cloned;
 use cmdlib::args;
 use context::CoreContext;
-use derive_more::Add;
+use derive_more::{Add, Div, Mul, Sub};
 use fbinit::FacebookInit;
 use futures::{
     future::{self, BoxFuture, FutureExt, TryFutureExt},
@@ -33,26 +34,24 @@ use futures::{
 };
 use mononoke_types::BlobstoreBytes;
 use samplingblob::SamplingHandler;
-use scuba_ext::ScubaSampleBuilder;
 use slog::{info, Logger};
 use std::{
     cmp::min,
     collections::HashMap,
+    fmt,
     io::{Cursor, Write},
     sync::Arc,
-    time::{Duration, Instant},
+    time::Duration,
 };
 
-const DEFAULT_SAMPLING_NODE_TYPES: &[NodeType] = &[NodeType::FileContent];
-
-#[derive(Add, Clone, Copy, Default, Debug)]
+#[derive(Add, Div, Mul, Sub, Clone, Copy, Default, Debug)]
 struct SizingStats {
-    raw: usize,
-    compressed: usize,
+    raw: u64,
+    compressed: u64,
 }
 
 impl SizingStats {
-    fn compression_benefit_pct(&self) -> usize {
+    fn compression_benefit_pct(&self) -> u64 {
         if self.raw == 0 {
             0
         } else {
@@ -61,14 +60,26 @@ impl SizingStats {
     }
 }
 
+impl fmt::Display for SizingStats {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(
+            fmt,
+            "{},{},{}%",
+            self.raw,
+            self.compressed,
+            self.compression_benefit_pct()
+        )
+    }
+}
+
 fn try_compress(raw_data: &Bytes, compressor_type: CompressorType) -> Result<SizingStats, Error> {
-    let raw = raw_data.len();
+    let raw = raw_data.len() as u64;
     let compressed_buf = MeteredWrite::new(Cursor::new(Vec::with_capacity(4 * 1024)));
     let mut compressor = Compressor::new(compressed_buf, compressor_type);
     compressor.write_all(raw_data)?;
     let compressed_buf = compressor.try_finish().map_err(|(_encoder, e)| e)?;
     // Assume we wouldn't compress if its bigger
-    let compressed = min(raw, compressed_buf.total_thru() as usize);
+    let compressed = min(raw, compressed_buf.total_thru());
     Ok(SizingStats { raw, compressed })
 }
 
@@ -129,77 +140,96 @@ where
             .left_future()
         }
         (_, data_opt) => {
-            // Free the memory
-            sampler.complete_node(&n);
-            future::ok((n, data_opt, None)).right_future()
+            // Report the blobstore sizes in sizing stats, more accurate than stream sizes, as headers included
+            let sizes = sampler
+                .complete_node(&n)
+                .map(|sizing_sample| {
+                    sizing_sample
+                        .data
+                        .values()
+                        .try_fold(SizingStats::default(), |acc, v| {
+                            try_compress(v.as_bytes(), compressor_type).map(|sizes| acc + sizes)
+                        })
+                })
+                .transpose();
+
+            future::ready(sizes.map(|sizes| (n, data_opt, sizes))).right_future()
         }
     })
     .try_buffer_unordered(scheduled_max)
 }
 
-struct SizingState {
-    logger: Logger,
-    sample: SizingStats,
-    total: SizingStats,
-    num_sampled: u64,
-    throttle_sample_rate: u64,
-    throttle_duration: Duration,
-    last_update: Instant,
-}
+impl ProgressStateCountByType<SizingStats, SizingStats> {
+    pub fn report_progress_log(self: &mut Self, delta_time: Option<Duration>) {
+        let summary_by_type: HashMap<NodeType, SizingStats> = self
+            .work_stats
+            .stats_by_type
+            .iter()
+            .map(|(k, (_i, v))| (*k, *v))
+            .collect();
+        let new_summary = summary_by_type
+            .values()
+            .fold(SizingStats::default(), |acc, v| acc + *v);
+        let delta_summary = new_summary - self.reporting_stats.last_summary;
 
-impl SizingState {
-    pub fn new(logger: Logger, sample_rate: u64) -> Self {
-        let now = Instant::now();
-        Self {
-            logger,
-            sample: SizingStats::default(),
-            total: SizingStats::default(),
-            num_sampled: 0,
-            throttle_sample_rate: sample_rate,
-            throttle_duration: Duration::from_secs(1),
-            last_update: now,
-        }
-    }
-}
+        let def = SizingStats::default();
+        let detail = &self
+            .params
+            .types_sorted_by_name
+            .iter()
+            .map(|t| {
+                let s = summary_by_type.get(t).unwrap_or(&def);
+                format!("{}:{}", t, s)
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
 
-impl ProgressRecorderUnprotected<SizingStats> for SizingState {
-    fn record_step(self: &mut Self, _n: &Node, opt: Option<&SizingStats>) {
-        if let Some(file_stats) = opt {
-            self.num_sampled += 1;
-            self.total = self.total + *file_stats;
-            self.sample = *file_stats;
-        }
-    }
+        let (delta_s, delta_summary_per_s) =
+            delta_time.map_or((0, SizingStats::default()), |delta_time| {
+                (
+                    delta_time.as_secs(),
+                    delta_summary * 1000 / (delta_time.as_millis() as u64),
+                )
+            });
 
-    fn set_sample_builder(&mut self, _s: ScubaSampleBuilder) {}
-}
+        let total_time = self
+            .reporting_stats
+            .last_update
+            .duration_since(self.reporting_stats.start_time);
 
-impl ProgressReporterUnprotected for SizingState {
-    // For size sampling we report via glog
-    fn report_progress(self: &mut Self) {
-        info!(
-            self.logger,
-            "Samples={}, Raw,Compressed,%OfRaw; Total: {:?},{:03}% File: {:?},{:03}%",
-            self.num_sampled,
-            self.total,
-            self.total.compression_benefit_pct(),
-            self.sample,
-            self.sample.compression_benefit_pct()
-        );
-    }
-
-    // Drive the report sampling by the number of files we have tried compressing
-    fn report_throttled(self: &mut Self) -> Option<Duration> {
-        if self.num_sampled % self.throttle_sample_rate == 0 {
-            let new_update = Instant::now();
-            let delta_time = new_update.duration_since(self.last_update);
-            if delta_time >= self.throttle_duration {
-                self.report_progress();
-                self.last_update = new_update;
-            }
-            Some(delta_time)
+        let total_summary_per_s = if total_time.as_millis() > 0 {
+            new_summary * 1000 / (total_time.as_millis() as u64)
         } else {
-            None
+            SizingStats::default()
+        };
+
+        info!(
+            self.params.logger,
+            "Raw/s,Compressed/s,Raw,Compressed,%Saving; Delta {:06}/s,{:06}/s,{},{}s; Run {:06}/s,{:06}/s,{},{}s; Type:Raw,Compressed,%Saving {}",
+            delta_summary_per_s.raw,
+            delta_summary_per_s.compressed,
+            delta_summary,
+            delta_s,
+            total_summary_per_s.raw,
+            total_summary_per_s.compressed,
+            new_summary,
+            total_time.as_secs(),
+            detail,
+        );
+
+        self.reporting_stats.last_summary_by_type = summary_by_type;
+        self.reporting_stats.last_summary = new_summary;
+    }
+}
+
+impl ProgressReporterUnprotected for ProgressStateCountByType<SizingStats, SizingStats> {
+    fn report_progress(self: &mut Self) {
+        self.report_progress_log(None);
+    }
+
+    fn report_throttled(self: &mut Self) {
+        if let Some(delta_time) = self.should_log_throttled() {
+            self.report_progress_log(Some(delta_time));
         }
     }
 }
@@ -225,10 +255,6 @@ impl SamplingHandler for NodeSamplingHandler<SizingSample> {
                 .map(|mut guard| value.map(|value| guard.data.insert(key.clone(), value.clone())))
         });
     }
-
-    fn sample_put(&self, _ctx: &CoreContext, _key: &str, _value: &BlobstoreBytes) {}
-
-    fn sample_is_present(&self, _ctx: CoreContext, _key: String, _value: bool) {}
 }
 
 // Subcommand entry point for estimate of file compression benefit
@@ -244,15 +270,19 @@ pub fn compression_benefit(
         COMPRESSION_BENEFIT,
         fb,
         &logger,
-        Some(sizing_sampler.clone() as Arc<dyn SamplingHandler>),
+        Some(sizing_sampler.clone()),
         matches,
         sub_m,
-    ) {
+    )
+    .and_then(|(datasources, walk_params)| {
+        args::get_repo_name(fb, &matches)
+            .map(|repo_stats_key| (datasources, walk_params, repo_stats_key))
+    }) {
         Err(e) => future::err::<_, Error>(e).boxed(),
-        Ok((datasources, walk_params)) => {
-            let sizing_state = ProgressStateMutex::new(SizingState::new(logger.clone(), 1));
+        Ok((datasources, walk_params, repo_stats_key)) => {
             let compression_level = args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3);
             let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(100);
+
             cloned!(
                 walk_params.include_node_types,
                 walk_params.include_edge_types
@@ -261,12 +291,21 @@ pub fn compression_benefit(
                 sub_m,
                 INCLUDE_SAMPLE_NODE_TYPE_ARG,
                 EXCLUDE_SAMPLE_NODE_TYPE_ARG,
-                DEFAULT_SAMPLING_NODE_TYPES,
+                DEFAULT_INCLUDE_NODE_TYPES,
             ) {
                 Err(e) => return future::err::<_, Error>(e).boxed(),
                 Ok(v) => v,
             };
             sampling_node_types.retain(|i| include_node_types.contains(i));
+            let sizing_progress_state =
+                ProgressStateMutex::new(ProgressStateCountByType::<SizingStats, SizingStats>::new(
+                    logger.clone(),
+                    COMPRESSION_BENEFIT,
+                    repo_stats_key,
+                    sampling_node_types.clone(),
+                    sample_rate,
+                    Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
+                ));
 
             let make_sink = {
                 cloned!(
@@ -278,7 +317,7 @@ pub fn compression_benefit(
                 move |run: RepoWalkRun| {
                     cloned!(run.ctx);
                     async move |walk_output| {
-                        cloned!(ctx, sizing_state);
+                        cloned!(ctx, sizing_progress_state);
                         let walk_progress =
                             progress_stream(quiet, &progress_state.clone(), walk_output);
 
@@ -291,8 +330,16 @@ pub fn compression_benefit(
                             sizing_sampler,
                         );
                         let report_sizing =
-                            progress_stream(quiet, &sizing_state.clone(), compressor);
-                        report_state(ctx, sizing_state, report_sizing).await
+                            progress_stream(quiet, &sizing_progress_state.clone(), compressor);
+                        report_state(ctx, sizing_progress_state, report_sizing)
+                            .map({
+                                cloned!(progress_state);
+                                move |d| {
+                                    progress_state.report_progress();
+                                    d
+                                }
+                            })
+                            .await
                     }
                 }
             };

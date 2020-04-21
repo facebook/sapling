@@ -33,7 +33,7 @@ use context::CoreContext;
 use derive_more::AddAssign;
 use fbinit::FacebookInit;
 use futures::{
-    future::{self, BoxFuture, FutureExt},
+    future::{self, BoxFuture, FutureExt, TryFutureExt},
     stream::TryStreamExt,
 };
 use itertools::Itertools;
@@ -473,7 +473,7 @@ impl ProgressReporterUnprotected for ValidateProgressState {
         self.report_progress_stats();
     }
 
-    fn report_throttled(self: &mut Self) -> Option<Duration> {
+    fn report_throttled(self: &mut Self) {
         if self.checked_nodes % self.throttle_reporting_rate == 0 {
             let new_update = Instant::now();
             let delta_time = new_update.duration_since(self.last_update);
@@ -481,9 +481,6 @@ impl ProgressReporterUnprotected for ValidateProgressState {
                 self.report_progress_log();
                 self.last_update = new_update;
             }
-            Some(delta_time)
-        } else {
-            None
         }
     }
 }
@@ -557,8 +554,8 @@ pub fn validate(
                     let validate_progress =
                         progress_stream(quiet, &validate_progress_state.clone(), walk_progress);
 
-                    let one_fut =
-                        report_state(ctx.clone(), progress_state, validate_progress).map({
+                    let one_fut = report_state(ctx.clone(), progress_state, validate_progress)
+                        .map_ok({
                             cloned!(validate_progress_state);
                             move |d| {
                                 validate_progress_state.report_progress();

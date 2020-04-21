@@ -17,10 +17,20 @@ setup configuration
   $
   blobimporting
 
-compression-benefit, not expecting any compression from the tiny test files
+compression-benefit, file content only, not expecting any compression from the tiny test files
+  $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore compression-benefit -q --bookmark master_bookmark --sample-rate 1 --include-sample-node-type FileContent 2>&1 | strip_glog
+  Walking roots * (glob)
+  Walking edge types * (glob)
+  Walking node types * (glob)
+  Final count: * (glob)
+  Raw/s,Compressed/s,Raw,Compressed,%Saving; Delta */s,*/s,12,12,0%* (glob)
+  Walked/s,* (glob)
+
+compression-benefit, all compressible types
   $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore compression-benefit -q --bookmark master_bookmark --sample-rate 1 2>&1 | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
-  * Total: SizingStats { raw: 12, compressed: 12 },000% * (glob)
+  Raw/s,Compressed/s,Raw,Compressed,%Saving; Delta */s,*/s,2168,2139,1%,0s; Run */s,*/s,2168,2139,1%,*s; Type:Raw,Compressed,%Saving AliasContentMapping:333,333,0% BonsaiChangeset:277,277,0% BonsaiHgMapping:281,281,0% Bookmark:0,0,0% FileContent:12,12,0% FileContentMetadata:351,351,0% HgBonsaiMapping:0,0,0% HgChangeset:281,281,0% HgFileEnvelope:189,189,0% HgFileNode:0,0,0% HgManifest:444,415,6%* (glob)
+  Walked/s,* (glob)

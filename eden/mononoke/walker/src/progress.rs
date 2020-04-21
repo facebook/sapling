@@ -46,23 +46,23 @@ pub trait ProgressReporterUnprotected {
 
     /// Apply your own throttling criteria, once called might chose to do nothing,
     /// in which case return None, otherwise return how long since last report.
-    fn report_throttled(&mut self) -> Option<Duration>;
+    fn report_throttled(&mut self);
 }
 
-struct ProgressStateByTypeParams {
-    logger: Logger,
+pub struct ProgressStateByTypeParams {
+    pub logger: Logger,
     subcommand_stats_key: &'static str,
     repo_stats_key: String,
-    types_sorted_by_name: Vec<NodeType>,
+    pub types_sorted_by_name: Vec<NodeType>,
     throttle_sample_rate: u64,
     throttle_duration: Duration,
 }
 
-struct ProgressStateWorkByType<SS>
+pub struct ProgressStateWorkByType<SS>
 where
     SS: Add<SS, Output = SS> + Default,
 {
-    stats_by_type: HashMap<NodeType, (u64, SS)>,
+    pub stats_by_type: HashMap<NodeType, (u64, SS)>,
     total_progress: u64,
 }
 
@@ -87,28 +87,29 @@ where
 }
 
 #[derive(Add, Sub, Mul, Div, Clone, Copy, Default, Debug)]
-struct ProgressSummary {
+pub struct ProgressSummary {
     walked: u64,
     checked: u64,
     queued: u64,
     errors: u64,
 }
 
-struct ProgressStateReporting {
-    start_time: Instant,
-    last_summary_by_type: HashMap<NodeType, ProgressSummary>,
-    last_summary: ProgressSummary,
-    last_update: Instant,
+// Takes a summary type as a parameter. e.g. ProgressSummary
+pub struct ProgressStateReporting<T> {
+    pub start_time: Instant,
+    pub last_summary_by_type: HashMap<NodeType, T>,
+    pub last_summary: T,
+    pub last_update: Instant,
 }
 
 // Can retain between runs to have cumulative progress reported
-pub struct ProgressStateCountByType<SS>
+pub struct ProgressStateCountByType<SS, T>
 where
     SS: Add<SS, Output = SS> + Default,
 {
-    params: ProgressStateByTypeParams,
-    work_stats: ProgressStateWorkByType<SS>,
-    reporting_stats: ProgressStateReporting,
+    pub params: ProgressStateByTypeParams,
+    pub work_stats: ProgressStateWorkByType<SS>,
+    pub reporting_stats: ProgressStateReporting<T>,
 }
 
 pub fn sort_by_string<C, T>(c: C) -> Vec<T>
@@ -121,9 +122,10 @@ where
     v
 }
 
-impl<SS> ProgressStateCountByType<SS>
+impl<SS, T> ProgressStateCountByType<SS, T>
 where
     SS: Add<SS, Output = SS> + Default,
+    T: Default,
 {
     pub fn new(
         logger: Logger,
@@ -151,17 +153,30 @@ where
                 total_progress: 0,
             },
             // Updated by report_*
-            reporting_stats: ProgressStateReporting {
+            reporting_stats: ProgressStateReporting::<T> {
                 start_time: now,
                 last_summary_by_type: HashMap::new(),
-                last_summary: ProgressSummary::default(),
+                last_summary: T::default(),
                 last_update: now,
             },
         }
     }
+
+    // Throttle by sample, then time
+    pub fn should_log_throttled(self: &mut Self) -> Option<Duration> {
+        if self.work_stats.total_progress % self.params.throttle_sample_rate == 0 {
+            let new_update = Instant::now();
+            let delta_time = new_update.duration_since(self.reporting_stats.last_update);
+            if delta_time >= self.params.throttle_duration {
+                self.reporting_stats.last_update = new_update;
+                return Some(delta_time);
+            }
+        }
+        None
+    }
 }
 
-impl ProgressStateCountByType<StepStats> {
+impl ProgressStateCountByType<StepStats, ProgressSummary> {
     fn report_stats(&self, node_type: &NodeType, summary: &ProgressSummary) {
         STATS::walk_progress_walked_by_type.add_value(
             summary.walked as i64,
@@ -181,7 +196,7 @@ impl ProgressStateCountByType<StepStats> {
         );
     }
 
-    fn report_progress_log(self: &mut Self, delta_time: Option<Duration>) {
+    pub fn report_progress_log(self: &mut Self, delta_time: Option<Duration>) {
         let summary_by_type: HashMap<NodeType, ProgressSummary> = self
             .work_stats
             .stats_by_type
@@ -286,7 +301,7 @@ impl ProgressStateCountByType<StepStats> {
     }
 }
 
-impl<SS> ProgressRecorderUnprotected<SS> for ProgressStateCountByType<SS>
+impl<SS, T> ProgressRecorderUnprotected<SS> for ProgressStateCountByType<SS, T>
 where
     SS: Add<SS, Output = SS> + Copy + Default,
 {
@@ -299,23 +314,14 @@ where
     }
 }
 
-impl ProgressReporterUnprotected for ProgressStateCountByType<StepStats> {
+impl ProgressReporterUnprotected for ProgressStateCountByType<StepStats, ProgressSummary> {
     fn report_progress(self: &mut Self) {
         self.report_progress_log(None);
     }
 
-    // Throttle by sample, then time
-    fn report_throttled(self: &mut Self) -> Option<Duration> {
-        if self.work_stats.total_progress % self.params.throttle_sample_rate == 0 {
-            let new_update = Instant::now();
-            let delta_time = new_update.duration_since(self.reporting_stats.last_update);
-            if delta_time >= self.params.throttle_duration {
-                self.report_progress_log(Some(delta_time));
-                self.reporting_stats.last_update = new_update;
-            }
-            Some(delta_time)
-        } else {
-            None
+    fn report_throttled(self: &mut Self) {
+        if let Some(delta_time) = self.should_log_throttled() {
+            self.report_progress_log(Some(delta_time));
         }
     }
 }
@@ -327,7 +333,7 @@ pub trait ProgressRecorder<SS> {
 
 pub trait ProgressReporter {
     fn report_progress(&self);
-    fn report_throttled(&self) -> Option<Duration>;
+    fn report_throttled(&self);
 }
 
 #[derive(Debug)]
@@ -364,7 +370,7 @@ where
         self.inner.lock().unwrap().report_progress()
     }
 
-    fn report_throttled(&self) -> Option<Duration> {
+    fn report_throttled(&self) {
         self.inner.lock().unwrap().report_throttled()
     }
 }

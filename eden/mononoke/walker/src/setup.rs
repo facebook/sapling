@@ -8,7 +8,9 @@
 use crate::blobstore;
 use crate::graph::{EdgeType, Node, NodeType};
 use crate::parse_node::parse_node;
-use crate::progress::{sort_by_string, ProgressStateCountByType, ProgressStateMutex};
+use crate::progress::{
+    sort_by_string, ProgressStateCountByType, ProgressStateMutex, ProgressSummary,
+};
 use crate::state::StepStats;
 use crate::validate::{CheckType, REPO, WALK_TYPE};
 use crate::walk::OutgoingEdge;
@@ -47,7 +49,7 @@ pub struct RepoWalkParams {
     pub include_edge_types: HashSet<EdgeType>,
     pub tail_secs: Option<u64>,
     pub quiet: bool,
-    pub progress_state: ProgressStateMutex<ProgressStateCountByType<StepStats>>,
+    pub progress_state: ProgressStateMutex<ProgressStateCountByType<StepStats, ProgressSummary>>,
     pub error_as_data_node_types: HashSet<NodeType>,
     pub error_as_data_edge_types: HashSet<EdgeType>,
 }
@@ -99,7 +101,7 @@ const CONTENT_META_VALUE_ARG: &str = "contentmeta";
 // so keeping it there for consistency
 const STORAGE_ID_ARG: &str = "storage-id";
 
-const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
+pub const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
     NodeType::Bookmark,
     NodeType::BonsaiChangeset,
     NodeType::BonsaiHgMapping,
