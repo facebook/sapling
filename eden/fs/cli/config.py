@@ -815,7 +815,8 @@ class EdenCheckout:
         redirections = {k: str(v) for k, v in checkout_config.redirections.items()}
         config_data = {
             "repository": {
-                "path": str(checkout_config.backing_repo),
+                # TODO: replace is needed to workaround a bug in toml
+                "path": str(checkout_config.backing_repo).replace("\\", "/"),
                 "type": checkout_config.scm_type,
             },
             "redirections": redirections,
