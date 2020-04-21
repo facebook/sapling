@@ -15,6 +15,7 @@ blobrepo = { path = "../../blobrepo" }
 bookmarks = { path = ".." }
 changeset_info = { path = "../../derived_data/changeset_info" }
 context = { path = "../../server/context" }
+deleted_files_manifest = { path = "../../derived_data/deleted_files_manifest" }
 derived_data = { path = "../../derived_data" }
 fsnodes = { path = "../../derived_data/fsnodes" }
 mercurial_derived_data = { path = "../../derived_data/mercurial_derived_data" }

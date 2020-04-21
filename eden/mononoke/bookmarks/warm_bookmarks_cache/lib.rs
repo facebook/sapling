@@ -18,6 +18,7 @@ use bookmarks::{BookmarkName, Freshness};
 use changeset_info::ChangesetInfo;
 use cloned::cloned;
 use context::CoreContext;
+use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::{
@@ -95,6 +96,9 @@ impl WarmBookmarksCache {
         }
         if derived_data_types.contains(ChangesetInfo::NAME) {
             warmers.push(create_warmer::<ChangesetInfo>(&ctx));
+        }
+        if derived_data_types.contains(RootDeletedManifestId::NAME) {
+            warmers.push(create_warmer::<RootDeletedManifestId>(&ctx));
         }
 
         let warmers = Arc::new(warmers);
