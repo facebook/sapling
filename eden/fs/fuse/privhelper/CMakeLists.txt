@@ -16,6 +16,15 @@ target_link_libraries(
     Folly::folly
 )
 
+if (APPLE)
+  target_link_libraries(
+    eden_fuse_privhelper
+    PUBLIC
+      "-framework CoreFoundation"
+      "-framework IOKit"
+  )
+endif()
+
 if (SELINUX_INCLUDE_DIR)
   target_include_directories(
     eden_fuse_privhelper

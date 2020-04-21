@@ -106,12 +106,3 @@ if (CURL_FOUND)
       CURL::libcurl
   )
 endif()
-
-if (APPLE)
-  target_link_libraries(
-    eden_service
-    PUBLIC
-    "-framework CoreFoundation"
-    "-framework IOKit"
-  )
-endif()
