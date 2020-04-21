@@ -77,6 +77,8 @@ class bmstore(dict):
     """
 
     def __init__(self, repo):
+        if util.istest():
+            repo.hook("pre-bookmark-load", throw=True)
         dict.__init__(self)
         self._repo = repo
         self._clean = True
