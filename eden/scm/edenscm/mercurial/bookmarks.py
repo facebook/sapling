@@ -96,9 +96,6 @@ class bmstore(dict):
                     try:
                         sha, refspec = line.split(" ", 1)
                         node = tonode(sha)
-                        if node in nm:
-                            refspec = encoding.tolocal(refspec)
-                            setitem(self, refspec, node)
                     except (TypeError, ValueError):
                         # TypeError:
                         # - bin(...)
@@ -106,6 +103,35 @@ class bmstore(dict):
                         # - node in nm, for non-20-bytes entry
                         # - split(...), for string without ' '
                         repo.ui.warn(_("malformed line in .hg/bookmarks: %r\n") % line)
+                    else:
+                        if node in nm:
+                            refspec = encoding.tolocal(refspec)
+                            setitem(self, refspec, node)
+                        else:
+                            # This might happen if:
+                            # - changelog was loaded, bookmarks are not loaded
+                            # - bookmarks was changed to point to unknown nodes
+                            # - bookmarks are loaded
+                            #
+                            # Try to mitigate by reloading changelog.
+                            repo.invalidate(clearfilecache=True)
+                            nm = repo.changelog.nodemap
+                            if node in nm:
+                                refspec = encoding.tolocal(refspec)
+                                setitem(self, refspec, node)
+                                repo.ui.log(
+                                    "features", feature="fix-bookmark-changelog-order"
+                                )
+                            else:
+                                repo.ui.log(
+                                    "features",
+                                    feature="fix-bookmark-changelog-order-failed",
+                                )
+                                repo.ui.warn(
+                                    _("unknown reference in .hg/bookmarks: %s %s\n")
+                                    % (refspec, sha)
+                                )
+
         except IOError as inst:
             if inst.errno != errno.ENOENT:
                 raise

@@ -20,10 +20,8 @@ With metalog it works fine:
   $ hg log -r A -T '{desc}\n' --config hooks.pre-bookmark-load='hg commit -m A3'
   A2
 
-Without metalog it causes errors:
+Without metalog:
 
   $ setconfig experimental.metalog=false
   $ hg log -r A -T '{desc}\n' --config hooks.pre-bookmark-load='hg commit -m A4'
-  abort: unknown revision 'A'!
-  (if A is a remote bookmark or commit, try to 'hg pull' it first)
-  [255]
+  A4
