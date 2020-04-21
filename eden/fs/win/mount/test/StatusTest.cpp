@@ -121,7 +121,7 @@ struct StatusTest {
   FakeTreeBuilder builder_;
 };
 
-TEST(StatusTest, DISABLED_emptyClone) {
+TEST(StatusTest, emptyClone) {
   FakeTreeBuilder builder;
   builder.setFile("a/b/c/d/e/file1.txt", "file1 contents");
   builder.setFile("a/b/file2.txt", "file 2 contents");
@@ -135,7 +135,7 @@ TEST(StatusTest, DISABLED_emptyClone) {
   EXPECT_EQ(statusTest.getStatus()->entries.size(), 0);
 }
 
-TEST(StatusTest, DISABLED_basicStatusTests) {
+TEST(StatusTest, basicStatusTests) {
   FakeTreeBuilder builder;
   builder.setFile("a/b/c/d/e/file1.txt", "file1 contents");
   builder.setFile("a/b/file2.txt", "file 2 contents");
@@ -222,7 +222,7 @@ TEST(StatusTest, DISABLED_basicStatusTests) {
   EXPECT_EQ(statusTest.getStatus()->entries, expectedStatus);
 }
 
-TEST(StatusTest, DISABLED_removeSubTree) {
+TEST(StatusTest, removeSubTree) {
   FakeTreeBuilder builder;
   builder.setFile("aa/bb/cc/dd/ee/file1.txt", "file1 contents");
   builder.setFile("aa/bb/cc/dd/ee/file2.txt", "file2 contents");
@@ -291,7 +291,7 @@ TEST(StatusTest, DISABLED_removeSubTree) {
   EXPECT_EQ(statusTest.getStatus()->entries, expectedStatus);
 }
 
-TEST(StatusTest, DISABLED_fileModified) {
+TEST(StatusTest, fileModified) {
   StatusTest test;
   TestMount& mount = test.testMount();
   mount.createEntry(L"src", /*isDirectory=*/true, "1");
@@ -305,7 +305,7 @@ TEST(StatusTest, DISABLED_fileModified) {
           std::make_pair("src/1.txt", ScmFileStatus::MODIFIED)));
 }
 
-TEST(StatusTest, DISABLED_fileRemoved) {
+TEST(StatusTest, fileRemoved) {
   StatusTest test;
   TestMount& mount = test.testMount();
 
@@ -332,7 +332,7 @@ TEST(StatusTest, DISABLED_fileAdded) {
           std::make_pair("src/new.txt", ScmFileStatus::ADDED)));
 }
 
-TEST(StatusTest, DISABLED_directoryRemoved) {
+TEST(StatusTest, directoryRemoved) {
   StatusTest test;
   TestMount& mount = test.testMount();
   mount.createEntry(L"src", /*isDirectory=*/true, "1");
@@ -376,7 +376,7 @@ TEST(StatusTest, DISABLED_directoryAdded) {
           std::make_pair("src/new/subdir/bar.txt", ScmFileStatus::ADDED)));
 }
 
-TEST(StatusTest, DISABLED_dirReplacedWithFile) {
+TEST(StatusTest, dirReplacedWithFile) {
   StatusTest test;
   TestMount& mount = test.testMount();
   mount.createEntry(L"src", /*isDirectory=*/true, "1");
@@ -404,7 +404,7 @@ TEST(StatusTest, DISABLED_dirReplacedWithFile) {
           std::make_pair("src/a/b/c/4.txt", ScmFileStatus::REMOVED)));
 }
 
-TEST(StatusTest, DISABLED_fileReplacedWithDir) {
+TEST(StatusTest, fileReplacedWithDir) {
   StatusTest test;
   TestMount& mount = test.testMount();
   mount.createEntry(L"src", /*isDirectory=*/true, "1");
