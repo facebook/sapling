@@ -157,53 +157,49 @@ fn bonsai_phase_step(
         .compat()
 }
 
-fn bonsai_changeset_step(
-    ctx: CoreContext,
+async fn bonsai_changeset_step(
+    ctx: &CoreContext,
     repo: &BlobRepo,
-    bcs_id: ChangesetId,
-) -> impl Future<Output = Result<StepOutput, Error>> {
+    bcs_id: &ChangesetId,
+) -> Result<StepOutput, Error> {
     // Get the data, and add direct file data for this bonsai changeset
-    bcs_id
-        .load(ctx.clone(), repo.blobstore())
-        .from_err()
-        .map(move |bcs| {
-            // Parents deliberately first to resolve dependent reads as early as possible
-            let mut recurse: Vec<OutgoingEdge> = bcs
-                .parents()
-                .map(|parent_id| {
-                    OutgoingEdge::new(
-                        EdgeType::BonsaiChangesetToBonsaiParent,
-                        Node::BonsaiChangeset(parent_id),
-                    )
-                })
-                .collect();
-            // Allow Hg based lookup
-            recurse.push(OutgoingEdge::new(
-                EdgeType::BonsaiChangesetToBonsaiHgMapping,
-                Node::BonsaiHgMapping(bcs_id),
-            ));
-            // Lookup phases
-            recurse.push(OutgoingEdge::new(
-                EdgeType::BonsaiChangesetToBonsaiPhaseMapping,
-                Node::BonsaiPhaseMapping(bcs_id),
-            ));
-            recurse.append(
-                &mut bcs
-                    .file_changes()
-                    .filter_map(|(_mpath, fc_opt)| {
-                        fc_opt // remove None
-                    })
-                    .map(|fc| {
-                        OutgoingEdge::new(
-                            EdgeType::BonsaiChangesetToFileContent,
-                            Node::FileContent(fc.content_id()),
-                        )
-                    })
-                    .collect::<Vec<OutgoingEdge>>(),
-            );
-            StepOutput(NodeData::BonsaiChangeset(bcs), recurse)
+    let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
+
+    // Parents deliberately first to resolve dependent reads as early as possible
+    let mut recurse: Vec<OutgoingEdge> = bcs
+        .parents()
+        .map(|parent_id| {
+            OutgoingEdge::new(
+                EdgeType::BonsaiChangesetToBonsaiParent,
+                Node::BonsaiChangeset(parent_id),
+            )
         })
-        .compat()
+        .collect();
+    // Allow Hg based lookup
+    recurse.push(OutgoingEdge::new(
+        EdgeType::BonsaiChangesetToBonsaiHgMapping,
+        Node::BonsaiHgMapping(*bcs_id),
+    ));
+    // Lookup phases
+    recurse.push(OutgoingEdge::new(
+        EdgeType::BonsaiChangesetToBonsaiPhaseMapping,
+        Node::BonsaiPhaseMapping(*bcs_id),
+    ));
+    recurse.append(
+        &mut bcs
+            .file_changes()
+            .filter_map(|(_mpath, fc_opt)| {
+                fc_opt // remove None
+            })
+            .map(|fc| {
+                OutgoingEdge::new(
+                    EdgeType::BonsaiChangesetToFileContent,
+                    Node::FileContent(fc.content_id()),
+                )
+            })
+            .collect::<Vec<OutgoingEdge>>(),
+    );
+    Ok(StepOutput(NodeData::BonsaiChangeset(bcs), recurse))
 }
 
 fn file_content_step(
@@ -667,7 +663,7 @@ where
             )
             .await
         }
-        Node::BonsaiChangeset(bcs_id) => bonsai_changeset_step(ctx.clone(), &repo, bcs_id).await,
+        Node::BonsaiChangeset(bcs_id) => bonsai_changeset_step(&ctx, &repo, &bcs_id).await,
         Node::BonsaiHgMapping(bcs_id) => {
             bonsai_to_hg_mapping_step(ctx.clone(), &repo, bcs_id, enable_derive).await
         }
