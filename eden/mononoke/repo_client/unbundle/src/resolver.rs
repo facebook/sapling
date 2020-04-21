@@ -317,28 +317,29 @@ fn report_unbundle_type(
     post_resolve_action: &Result<PostResolveAction, BundleResolverError>,
 ) {
     let repo_name = repo.name().clone();
+    let unbundle_resolved = "Unbundle resolved";
     match post_resolve_action {
         Ok(PostResolveAction::Push(_)) => {
             ctx.scuba()
                 .clone()
-                .log_with_msg("Unbundle resolved", Some("push".to_owned()));
+                .log_with_msg(unbundle_resolved, Some("push".to_owned()));
             UNBUNDLE_STATS::push.add_value(1, (repo_name,))
         }
         Ok(PostResolveAction::PushRebase(_)) => {
             ctx.scuba()
                 .clone()
-                .log_with_msg("Unbundle resolved", Some("pushrebase".to_owned()));
+                .log_with_msg(unbundle_resolved, Some("pushrebase".to_owned()));
             UNBUNDLE_STATS::pushrebase.add_value(1, (repo_name,))
         }
         Ok(PostResolveAction::InfinitePush(_)) => {
             ctx.scuba()
                 .clone()
-                .log_with_msg("Unbunble resolved", Some("infinitepush".to_owned()));
+                .log_with_msg(unbundle_resolved, Some("infinitepush".to_owned()));
             UNBUNDLE_STATS::infinitepush.add_value(1, (repo_name,))
         }
         Ok(PostResolveAction::BookmarkOnlyPushRebase(_)) => {
             ctx.scuba().clone().log_with_msg(
-                "Unbundle resolved",
+                unbundle_resolved,
                 Some("bookmark_only_pushrebase".to_owned()),
             );
             UNBUNDLE_STATS::bookmark_only_pushrebase.add_value(1, (repo_name,))
