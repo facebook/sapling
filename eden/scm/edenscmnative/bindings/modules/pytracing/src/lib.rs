@@ -215,9 +215,17 @@ py_class!(class wrapfunc |py| {
     data meta: Option<PyObject>;
     data is_generator: bool;
     data last_espan_id: Cell<EspanId>;
+    data push_callback: Option<PyObject>;
+    data pop_callback: Option<PyObject>;
 
-    def __new__(_cls, obj: PyObject, meta: Option<PyObject> = None, classname: Option<String> = None) -> PyResult<PyObject> {
-        Self::new(py, obj, meta, classname)
+    def __new__(_cls,
+        obj: PyObject,
+        meta: Option<PyObject> = None,
+        classname: Option<String> = None,
+        push_callback: Option<PyObject> = None,
+        pop_callback: Option<PyObject> = None
+    ) -> PyResult<PyObject> {
+        Self::new(py, obj, meta, classname, push_callback, pop_callback)
     }
 
     def __call__(&self, *args, **kwargs) -> PyResult<PyObject> {
@@ -274,6 +282,10 @@ py_class!(class wrapfunc |py| {
         };
         self.last_espan_id(py).set(espan_id);
 
+        if let Some(callback) = &self.push_callback(py) {
+            callback.call(py, (espan_id.0,), None)?;
+        }
+
         // This calls into Python and cannot take DATA.lock().
         let mut result = self.inner(py).call(py, args, kwargs);
 
@@ -284,6 +296,10 @@ py_class!(class wrapfunc |py| {
                     result = Ok(obj.into_object());
                 }
             }
+        }
+
+        if let Some(callback) = &self.pop_callback(py) {
+            callback.call(py, NoArgs, None)?;
         }
 
         // Exit Span.
@@ -306,6 +322,8 @@ impl wrapfunc {
         obj: PyObject,
         meta: Option<PyObject>,
         class_name: Option<String>,
+        push_callback: Option<PyObject>,
+        pop_callback: Option<PyObject>,
     ) -> PyResult<PyObject> {
         if let Ok(wrapped) = obj.extract::<wrapfunc>(py) {
             // No need to wrap again.
@@ -371,6 +389,8 @@ impl wrapfunc {
             meta,
             is_generator,
             Cell::new(EspanId(0)),
+            push_callback,
+            pop_callback,
         )?;
         Ok(wrapped.into_object())
     }

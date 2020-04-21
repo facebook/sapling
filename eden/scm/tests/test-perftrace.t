@@ -30,9 +30,9 @@
      35     +5   \ Repo Setup                               edenscm.mercurial.hg line _
                   | - flag = local                          :
      45   +125   \ Update                                   edenscm.mercurial.util line _
-                  | - A/M/R Files = 0                       :
      50   +115    | Timed Function: mergeupdate             edenscm.mercurial.merge line _
      55    +35     \ Status                                 edenscm.mercurial.dirstate line _
+                    | - A/M/R Files = 0                     :
      60     +5      \ Timed Function: fswalk                edenscm.mercurial.filesystem line _
      70     +5      \ _rustwalk.next                        (generator)
      80     +5      \ _rustwalk.next                        (generator)

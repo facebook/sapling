@@ -6,6 +6,7 @@
 # perftrace.py - Module for tracing performance
 
 import inspect
+import threading
 from contextlib import contextmanager
 
 from bindings import tracing
@@ -17,6 +18,8 @@ from . import util
 
 tracer = util.tracer
 
+threadlocal = threading.local()
+
 
 def editspan(
     meta,
@@ -26,21 +29,11 @@ def editspan(
     _spanid=tracing.wrapfunc.spanid,
 ):
     """Edit the current native span. meta: [(key, value)]"""
-    # Find the "spanid" from the callsite stack
-    spanid = None
-    frame = _currentframe().f_back
-    while frame is not None:
-        funcname = frame.f_code.co_name
-        func = frame.f_globals.get(funcname)
-        if getattr(func, "isperftrace", False) and isinstance(func, _wrapfunc):
-            # Got the function! Use wrapfunc.spanid to read the spanid.
-            frame = None
-            spanid = _spanid(func)
-            break
-        # Try the parent frame
-        frame = frame.f_back
-    if spanid is not None:
-        _edit(spanid, meta)
+    stack = threadlocal.__dict__.get("stack", [])
+    if not stack:
+        return
+    spanid = stack[-1]
+    _edit(spanid, meta)
 
 
 # PerfTrace wrappers
@@ -49,11 +42,13 @@ def editspan(
 @contextmanager
 def trace(name):
     spanid = tracer.span([("name", name), ("cat", "perftrace")])
+    threadlocal.__dict__.setdefault("stack", []).append(spanid)
     tracer.enter(spanid)
     try:
         yield
     finally:
         tracer.exit(spanid)
+        threadlocal.stack.pop()
 
 
 def traceflag(flagname):
@@ -87,6 +82,13 @@ def tracefunc(name):
         if util.istest():
             func.meta.append(("line", "_"))
         func.isperftrace = True
-        return tracing.wrapfunc(func)
+
+        def pushspan(spanid):
+            threadlocal.__dict__.setdefault("stack", []).append(spanid)
+
+        def popspan():
+            threadlocal.__dict__.setdefault("stack", []).pop()
+
+        return tracing.wrapfunc(func, push_callback=pushspan, pop_callback=popspan)
 
     return wrapper
