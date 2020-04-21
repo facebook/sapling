@@ -138,7 +138,8 @@
   $TESTTMP/hgcache/master/packs/fe74acc023664cd7eda12330d321b4a2423cc4f8.datapack
   $TESTTMP/hgcache/master/packs/repacklock
 
-  $ hg repack --background
+  $ hg repack --background 2>$TESTTMP/repack.stderr
+  $ cat $TESTTMP/repack.stderr
   (running background repack)
   $ sleep 0.5
   $ hg debugwaitonrepack >/dev/null 2>&1

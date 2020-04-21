@@ -40,7 +40,8 @@ def backgroundrepack(repo, incremental=True):
 
     cmd = " ".join(map(util.shellquote, cmd))
 
-    repo.ui.status(msg)
+    if not repo.ui.quiet:
+        repo.ui.write_err(msg)
     runshellcommand(cmd, encoding.environ)
 
 
