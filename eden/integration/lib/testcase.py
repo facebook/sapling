@@ -27,6 +27,7 @@ from typing import (
     Union,
 )
 
+import eden.config
 from eden.test_support.environment_variable import EnvironmentVariableMixin
 from eden.test_support.temporary_directory import TempFileManager
 from eden.thrift import EdenClient
@@ -433,10 +434,12 @@ def _replicate_eden_repo_test(
     class GitRepoTest(GitRepoTestMixin, test_class):  # type: ignore
         pass
 
-    return [
-        ("Hg", typing.cast(Type[EdenRepoTest], HgRepoTest)),
-        ("Git", typing.cast(Type[EdenRepoTest], GitRepoTest)),
-    ]
+    variants = [("Hg", typing.cast(Type[EdenRepoTest], HgRepoTest))]
+    # Only run the git tests if EdenFS was built with git support.
+    if eden.config.HAVE_GIT:
+        variants.append(("Git", typing.cast(Type[EdenRepoTest], GitRepoTest)))
+
+    return variants
 
 
 # A decorator function used to create EdenHgTest and EdenGitTest
