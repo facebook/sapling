@@ -42,8 +42,7 @@ class RageTest(testcase.EdenRepoTest):
         # or crash partway through the output.
         self.assertRegex(output, r"^User\s*:")
         self.assertRegex(output, r"\nHostname\s*:")
-        # Allow the test to succeed even if the fb-eden RPM is not installed
-        self.assertRegex(output, r"\n(Rpm Version\s*:|Error getting the Rpm version)")
+        self.assertRegex(output, r"\nVersion\s*:")
         self.assertIn("\neden doctor --dry-run", output)
         self.assertIn("\nMost recent Eden logs:\n", output)
         self.assertIn("\nList of running Eden processes:\n", output)

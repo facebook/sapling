@@ -73,7 +73,7 @@ except AttributeError:  # On a non-unix system
 
 def do_version(args: argparse.Namespace) -> int:
     instance = get_eden_instance(args)
-    print("Installed: %s" % version_mod.get_installed_eden_rpm_version())
+    print("Installed: %s" % version_mod.get_current_version())
 
     try:
         rv = instance.get_running_version()

@@ -792,15 +792,15 @@ Repairing hg directory contents for {checkout.path}...<green>fixed<reset>
         check_hg.check_hg(fixer, checkout)
         return checkout, fixer, out.getvalue()
 
-    @patch("eden.fs.cli.version.get_installed_eden_rpm_version")
-    def test_edenfs_when_installed_and_running_match(self, mock_gierv):
-        fixer, out = self._test_edenfs_version(mock_gierv, "20171213-165642")
+    @patch("eden.fs.cli.version.get_current_version_parts")
+    def test_edenfs_when_installed_and_running_match(self, mock_getver):
+        fixer, out = self._test_edenfs_version(mock_getver, ("20171213", "165642"))
         self.assertEqual("", out)
         self.assert_results(fixer, num_problems=0)
 
-    @patch("eden.fs.cli.version.get_installed_eden_rpm_version")
-    def test_edenfs_when_installed_and_running_differ(self, mock_gierv):
-        fixer, out = self._test_edenfs_version(mock_gierv, "20171120-246561")
+    @patch("eden.fs.cli.version.get_current_version_parts")
+    def test_edenfs_when_installed_and_running_differ(self, mock_getver):
+        fixer, out = self._test_edenfs_version(mock_getver, ("20171120", "246561"))
         self.assertEqual(
             """\
 <yellow>- Found problem:<reset>

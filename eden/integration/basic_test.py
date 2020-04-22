@@ -42,22 +42,28 @@ class BasicTest(testcase.EdenRepoTest):
         output = self.eden.run_cmd("version", cwd=self.mount)
         lines = output.splitlines()
 
-        # The first line reports info about the installed RPM version
-        rpm_info = lines[0]
-        self.assertTrue(rpm_info.startswith("Installed: "))
-        if "Not Installed" in rpm_info:
-            # This system does not have Eden installed as an RPM.
+        # The first line reports info about the edenfsctl version
+        cli_info = lines[0]
+        self.assertTrue(cli_info.startswith("Installed: "), cli_info)
+        cli_version = cli_info[len("Installed: ") :]
+        if cli_version == "-":
+            # For a dev build the code currently prints "-"
             pass
         else:
-            parts = rpm_info[11:].split("-")
+            parts = cli_version.split("-")
             self.assertEqual(len(parts[0]), 8)
             self.assertEqual(len(parts[1]), 6)
             self.assertTrue(parts[0].isdigit())
             self.assertTrue(parts[1].isdigit())
 
-        # The second line reports info about the current running edenfs process
+        # The second line reports info about the current running edenfs daemon
         running_info = lines[1]
-        self.assertTrue(running_info.startswith("Running: "))
+        self.assertTrue(running_info.startswith("Running: "), running_info)
+        running_version = running_info[len("Running: ") :].strip()
+
+        # During the integration tests we expect to always be running the same version
+        # of edenfsctl and the edenfs daemon.
+        self.assertEqual(cli_version, running_version)
 
     def test_file_list(self) -> None:
         self.assert_checkout_root_entries(self.expected_mount_entries)

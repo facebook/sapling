@@ -22,14 +22,23 @@ from . import (
     redirect as redirect_mod,
     stats as stats_mod,
     ui as ui_mod,
+    version as version_mod,
 )
 from .config import EdenInstance
 
 
 def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
-    out.write(b"User                    : %s\n" % getpass.getuser().encode())
-    out.write(b"Hostname                : %s\n" % socket.gethostname().encode())
-    print_rpm_version(out)
+    header = (
+        f"User                    : {getpass.getuser()}\n"
+        f"Hostname                : {socket.gethostname()}\n"
+        f"Version                 : {version_mod.get_current_version()}\n"
+    )
+    out.write(header.encode("utf-8"))
+    if sys.platform != "win32":
+        # We attempt to report the RPM version on Linux as well as Mac, since Mac OS
+        # can use RPMs as well.  If the RPM command fails this will just report that
+        # and will continue reporting the rest of the rage data.
+        print_rpm_version(out)
 
     health_status = instance.check_health()
     if health_status.is_healthy():
@@ -66,11 +75,10 @@ def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
 
 def print_rpm_version(out: IO[bytes]) -> None:
     try:
-        queryformat = "%{VERSION}"
-        output = subprocess.check_output(["rpm", "-q", "--qf", queryformat, "fb-eden"])
-        out.write(b"Rpm Version             : %s\n" % output)
+        rpm_version = version_mod.get_installed_eden_rpm_version()
+        out.write(f"RPM Version             : {rpm_version}\n".encode("utf-8"))
     except Exception as e:
-        out.write(b"Error getting the Rpm version : %s\n" % str(e).encode())
+        out.write(f"Error getting the RPM version : {e}\n".encode("utf-8"))
 
 
 def print_eden_doctor_report(instance: EdenInstance, out: IO[bytes]) -> None:

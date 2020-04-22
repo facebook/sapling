@@ -557,7 +557,7 @@ def check_edenfs_version(tracker: ProblemTracker, instance: EdenInstance) -> Non
         return
 
     running_version = version.format_eden_version((rver, release))
-    installed_version = version.get_installed_eden_rpm_version()
+    installed_version = version.get_current_version()
     if running_version == installed_version:
         return
 

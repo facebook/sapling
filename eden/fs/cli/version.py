@@ -42,14 +42,9 @@ def get_current_version_parts() -> Tuple[str, str]:
     The version and release strings will both be the empty string if this code is part
     of a development build that is not a released package.
     """
-    try:
-        from __manifest__ import fbmake
+    import eden.config
 
-        return (fbmake.get("version", ""), fbmake.get("release", ""))
-    except ImportError:
-        # Builds outside of fbsource won't have __manifest__.fbmake
-        # TODO: we should eventually generate a manifest file in CMake-based builds.
-        return ("", "")
+    return (eden.config.VERSION, eden.config.RELEASE)
 
 
 def get_current_version() -> str:
