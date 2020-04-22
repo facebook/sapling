@@ -43,6 +43,13 @@ macro_rules! define_type_enum {
             pub const ALL_VARIANTS: &'static [$enum_name] = &[
                 $($enum_name::$variant),*
             ];
+
+            #[allow(dead_code)]
+            pub fn to_str(&self) -> &'static str {
+                match self {
+                    $($enum_name::$variant=>stringify!($variant),)*
+                }
+            }
         }
     }
 }

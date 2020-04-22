@@ -299,6 +299,7 @@ pub fn compression_benefit(
             sampling_node_types.retain(|i| include_node_types.contains(i));
             let sizing_progress_state =
                 ProgressStateMutex::new(ProgressStateCountByType::<SizingStats, SizingStats>::new(
+                    fb,
                     logger.clone(),
                     COMPRESSION_BENEFIT,
                     repo_stats_key,

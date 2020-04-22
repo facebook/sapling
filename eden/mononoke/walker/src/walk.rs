@@ -707,7 +707,7 @@ where
             // Log to scuba regardless
             add_node_to_scuba(None, &walk_item.target, &mut scuba);
             scuba
-                .add(EDGE_TYPE, edge_label.to_string())
+                .add(EDGE_TYPE, edge_label.to_str())
                 .add(CHECK_TYPE, "step")
                 .add(CHECK_FAIL, 1)
                 .log();

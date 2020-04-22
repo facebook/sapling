@@ -19,6 +19,7 @@ use crate::setup::{
 };
 use crate::state::WalkState;
 use crate::tail::{walk_exact_tail, RepoWalkRun};
+use crate::validate::TOTAL;
 
 use anyhow::Error;
 use clap::ArgMatches;
@@ -34,7 +35,17 @@ use futures::{
 use mononoke_types::BlobstoreBytes;
 use samplingblob::SamplingHandler;
 use slog::{info, Logger};
+use stats::prelude::*;
 use std::{collections::HashMap, fmt, sync::Arc, time::Duration};
+
+define_stats! {
+    prefix = "mononoke.walker";
+    walk_progress_keys: dynamic_timeseries("{}.progress.{}.blobstore_keys", (subcommand: &'static str, repo: String); Rate, Sum),
+    walk_progress_bytes: dynamic_timeseries("{}.progress.{}.blobstore_bytes", (subcommand: &'static str, repo: String); Rate, Sum),
+    walk_progress_keys_by_type: dynamic_timeseries("{}.progress.{}.{}.blobstore_keys", (subcommand: &'static str, repo: String, node_type: &'static str); Rate, Sum),
+    walk_progress_bytes_by_type: dynamic_timeseries("{}.progress.{}.{}.blobstore_bytes", (subcommand: &'static str, repo: String, node_type: &'static str); Rate, Sum),
+    walk_last_completed_by_type: dynamic_singleton_counter("{}.last_completed.{}.{}.{}", (subcommand: &'static str, repo: String, node_type: &'static str, desc: &'static str)),
+}
 
 #[derive(Add, Div, Mul, Sub, Clone, Copy, Default, Debug)]
 struct ScrubStats {
@@ -122,6 +133,50 @@ impl SamplingHandler for NodeSamplingHandler<ScrubSample> {
 }
 
 impl ProgressStateCountByType<ScrubStats, ScrubStats> {
+    fn report_stats(&self, node_type: &NodeType, summary: &ScrubStats) {
+        STATS::walk_progress_bytes_by_type.add_value(
+            summary.blobstore_bytes as i64,
+            (
+                self.params.subcommand_stats_key,
+                self.params.repo_stats_key.clone(),
+                node_type.to_str(),
+            ),
+        );
+        STATS::walk_progress_keys_by_type.add_value(
+            summary.blobstore_keys as i64,
+            (
+                self.params.subcommand_stats_key,
+                self.params.repo_stats_key.clone(),
+                node_type.to_str(),
+            ),
+        );
+    }
+
+    fn report_completion_stat(&self, stat: &ScrubStats, stat_key: &'static str) {
+        for (desc, value) in &[
+            ("blobstore_bytes", stat.blobstore_bytes),
+            ("blobstore_keys", stat.blobstore_keys),
+        ] {
+            STATS::walk_last_completed_by_type.set_value(
+                self.params.fb,
+                *value as i64,
+                (
+                    self.params.subcommand_stats_key,
+                    self.params.repo_stats_key.clone(),
+                    stat_key,
+                    desc,
+                ),
+            );
+        }
+    }
+
+    fn report_completion_stats(&self) {
+        for (k, v) in self.reporting_stats.last_summary_by_type.iter() {
+            self.report_completion_stat(v, k.to_str())
+        }
+        self.report_completion_stat(&self.reporting_stats.last_summary, TOTAL)
+    }
+
     pub fn report_progress_log(self: &mut Self, delta_time: Option<Duration>) {
         let summary_by_type: HashMap<NodeType, ScrubStats> = self
             .work_stats
@@ -129,6 +184,16 @@ impl ProgressStateCountByType<ScrubStats, ScrubStats> {
             .iter()
             .map(|(k, (_i, v))| (*k, *v))
             .collect();
+        for (k, v) in &summary_by_type {
+            let delta = *v
+                - self
+                    .reporting_stats
+                    .last_summary_by_type
+                    .get(k)
+                    .cloned()
+                    .unwrap_or_default();
+            self.report_stats(k, &delta);
+        }
         let new_summary = summary_by_type
             .values()
             .fold(ScrubStats::default(), |acc, v| acc + *v);
@@ -179,8 +244,27 @@ impl ProgressStateCountByType<ScrubStats, ScrubStats> {
             detail,
         );
 
+        STATS::walk_progress_bytes.add_value(
+            delta_summary.blobstore_bytes as i64,
+            (
+                self.params.subcommand_stats_key,
+                self.params.repo_stats_key.clone(),
+            ),
+        );
+        STATS::walk_progress_keys.add_value(
+            delta_summary.blobstore_keys as i64,
+            (
+                self.params.subcommand_stats_key,
+                self.params.repo_stats_key.clone(),
+            ),
+        );
+
         self.reporting_stats.last_summary_by_type = summary_by_type;
         self.reporting_stats.last_summary = new_summary;
+
+        if delta_time.is_none() {
+            self.report_completion_stats()
+        }
     }
 }
 
@@ -242,6 +326,7 @@ pub fn scrub_objects(
 
             let sizing_progress_state =
                 ProgressStateMutex::new(ProgressStateCountByType::<ScrubStats, ScrubStats>::new(
+                    fb,
                     logger.clone(),
                     SCRUB,
                     repo_stats_key,

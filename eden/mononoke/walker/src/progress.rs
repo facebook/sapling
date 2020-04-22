@@ -11,6 +11,7 @@ use anyhow::Error;
 use cloned::cloned;
 use context::CoreContext;
 use derive_more::{Add, Div, Mul, Sub};
+use fbinit::FacebookInit;
 use futures::{
     future::FutureExt,
     stream::{Stream, StreamExt, TryStreamExt},
@@ -50,9 +51,10 @@ pub trait ProgressReporterUnprotected {
 }
 
 pub struct ProgressStateByTypeParams {
+    pub fb: FacebookInit,
     pub logger: Logger,
-    subcommand_stats_key: &'static str,
-    repo_stats_key: String,
+    pub subcommand_stats_key: &'static str,
+    pub repo_stats_key: String,
     pub types_sorted_by_name: Vec<NodeType>,
     throttle_sample_rate: u64,
     throttle_duration: Duration,
@@ -128,6 +130,7 @@ where
     T: Default,
 {
     pub fn new(
+        fb: FacebookInit,
         logger: Logger,
         subcommand_stats_key: &'static str,
         repo_stats_key: String,
@@ -140,6 +143,7 @@ where
         let now = Instant::now();
         Self {
             params: ProgressStateByTypeParams {
+                fb,
                 logger,
                 subcommand_stats_key,
                 repo_stats_key,

@@ -825,6 +825,7 @@ pub fn setup_common(
     }
 
     let progress_state = ProgressStateMutex::new(ProgressStateCountByType::new(
+        fb,
         logger.clone(),
         walk_stats_key,
         repo_name,

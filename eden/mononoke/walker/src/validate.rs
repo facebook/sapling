@@ -53,7 +53,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-pub const STATS_PREFIX: &'static str = "mononoke.walker.validate";
+const STATS_PREFIX: &str = "mononoke.walker.validate";
 pub const NODES: &'static str = "nodes";
 pub const EDGES: &'static str = "edges";
 pub const PASS: &'static str = "pass";
@@ -394,7 +394,7 @@ fn scuba_log_node(
     path_key: &'static str,
 ) {
     scuba
-        .add(type_key, n.get_type().to_string())
+        .add(type_key, n.get_type().to_str())
         .add(key_key, n.stats_key());
     if let Some(path) = n.stats_path() {
         scuba.add(path_key, MPath::display_opt(path).to_string());
