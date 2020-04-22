@@ -49,6 +49,7 @@ Stripping normally should fail
   [255]
 
   $ hg verify
+  unknown reference in .hg/bookmarks: foo bc3a71defa4a8fb6e8e5c192c02a26d94853d281
   checking changesets
   checking manifests
   crosschecking files in changesets and manifests
