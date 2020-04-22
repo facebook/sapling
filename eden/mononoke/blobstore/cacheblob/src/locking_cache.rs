@@ -9,7 +9,8 @@ use anyhow::Error;
 use blobstore::{Blobstore, CountedBlobstore};
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
-use futures_ext::{BoxFuture, FutureExt};
+use futures::{compat::Future01CompatExt, FutureExt, TryFutureExt};
+use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
 use futures_old::{future, future::Either, Future, IntoFuture};
 use mononoke_types::BlobstoreBytes;
 use prefixblob::PrefixBlobstore;
@@ -167,7 +168,7 @@ impl CacheOpsUtil {
         cache: &C,
         key: &str,
         value: BlobstoreBytes,
-    ) -> impl Future<Item = (), Error = Error> + Send {
+    ) -> impl Future<Item = (), Error = ()> + Send {
         let key = key.to_string();
         let cache = cache.clone();
 
@@ -278,24 +279,23 @@ where
         let can_put = self.take_put_lease(&key);
         let cache_put = CacheOpsUtil::put(&self.cache, &key, value.clone());
 
-        let blobstore_put = future::lazy({
-            cloned!(self.blobstore, key);
-            move || blobstore.put(ctx, key, value)
-        });
+        cloned!(self.blobstore, self.lease);
+        async move {
+            if can_put.compat().await? {
+                let () = blobstore.put(ctx, key.clone(), value).compat().await?;
 
-        cloned!(self.lease);
-        can_put
-            .and_then(move |can_put| {
-                if can_put {
-                    blobstore_put
-                        .and_then(|_| cache_put)
-                        .then(move |res| lease.release_lease(&key).then(move |_| res))
-                        .left_future()
-                } else {
-                    Ok(()).into_future().right_future()
-                }
-            })
-            .boxify()
+                tokio::spawn(
+                    cache_put
+                        .then(move |_: Result<(), ()>| lease.release_lease(&key))
+                        .compat(),
+                );
+            }
+
+            Ok(())
+        }
+        .boxed()
+        .compat()
+        .boxify()
     }
 
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
