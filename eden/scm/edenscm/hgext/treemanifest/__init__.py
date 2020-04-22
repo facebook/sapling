@@ -540,6 +540,7 @@ def wraprepo(repo):
         def _prefetchtrees(
             self, rootdir, mfnodes, basemfnodes, directories, depth=None
         ):
+            self._treefetches += 1
             # If possible, use remotefilelog's more expressive fallbackpath
             fallbackpath = getfallbackpath(self)
             if mfnodes == basemfnodes:
@@ -572,6 +573,11 @@ def wraprepo(repo):
                         start,
                         depth,
                     )
+
+        def resettreefetches(self):
+            fetches = self._treefetches
+            self._treefetches = 0
+            return fetches
 
         def _restrictcapabilities(self, caps):
             caps = super(treerepository, self)._restrictcapabilities(caps)
@@ -720,6 +726,7 @@ def wraprepo(repo):
                 self.ui.warn(_("%s\n") % stats.to_str())
 
     repo.__class__ = treerepository
+    repo._treefetches = 0
 
 
 def _prunesharedpacks(repo, packpath):

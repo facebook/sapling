@@ -12,6 +12,7 @@ use std::{
 
 use anyhow::{format_err, Result};
 use bytes::Bytes;
+use tracing::info_span;
 
 use configparser::{
     config::ConfigSet,
@@ -149,7 +150,8 @@ impl RemoteDataStore for ContentStore {
 
 impl LocalStore for ContentStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        self.datastore.get_missing(keys)
+        let span = info_span!("Get Missing", keys = keys.len(),);
+        span.in_scope(|| self.datastore.get_missing(keys))
     }
 }
 

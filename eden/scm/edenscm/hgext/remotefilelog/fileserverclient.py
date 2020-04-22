@@ -336,12 +336,15 @@ class getpackclient(object):
 
             return len(receiveddata)
 
+    @perftrace.tracefunc("Fetch Pack")
     def prefetch(self, datastore, historystore, fileids):
         total = len(fileids)
+        perftrace.tracevalue("Files requested", len(fileids))
 
         try:
             rcvd = None
             if self.repo.ui.configbool("remotefilelog", "retryprefetch"):
+                retries = 0
                 for backoff in [1, 5, 10, 20]:
                     try:
                         rcvd = self.getpack(datastore, historystore, fileids)
@@ -360,7 +363,10 @@ class getpackclient(object):
                             % backoff
                         )
                         time.sleep(backoff)
+                        retries += 1
                         continue
+                if retries > 0:
+                    perftrace.tracevalue("Retries", retries)
 
             if rcvd is None:
                 rcvd = self.getpack(datastore, historystore, fileids)
@@ -721,13 +727,14 @@ class fileserverclient(object):
 
         perftrace.tracevalue("Keys", len(idstocheck))
         missingids = set()
-        if fetchdata:
-            missingids.update(datastore.getmissing(idstocheck))
-            perftrace.tracevalue("Missing Data", len(missingids))
-        if fetchhistory:
-            missinghistory = historystore.getmissing(idstocheck)
-            missingids.update(missinghistory)
-            perftrace.tracevalue("Missing History", len(missinghistory))
+        with perftrace.trace("Get Missing"):
+            if fetchdata:
+                missingids.update(datastore.getmissing(idstocheck))
+                perftrace.tracevalue("Missing Data", len(missingids))
+            if fetchhistory:
+                missinghistory = historystore.getmissing(idstocheck)
+                missingids.update(missinghistory)
+                perftrace.tracevalue("Missing History", len(missinghistory))
 
         # partition missing nodes into nullid and not-nullid so we can
         # warn about this filtering potentially shadowing bugs.

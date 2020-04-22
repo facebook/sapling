@@ -55,7 +55,7 @@ def traceflag(flagname):
     """Records the given flag name as being associated with the latest trace
     point."""
     # XXX: No multi-flag support for now.
-    editspan([("flag", flagname)])
+    editspan([("%s" % flagname, "true")])
 
 
 def tracevalue(name, value):

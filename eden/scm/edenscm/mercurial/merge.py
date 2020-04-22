@@ -1202,7 +1202,13 @@ def manifestmerge(
             sparsematcher = matchmod.unionmatcher([sparsematcher, filesmatcher])
         matcher = matchmod.intersectmatchers(matcher, sparsematcher)
 
-    diff = m1.diff(m2, matcher=matcher)
+    with perftrace.trace("Manifest Diff"):
+        if util.safehasattr(repo, "resettreefetches"):
+            repo.resettreefetches()
+        diff = m1.diff(m2, matcher=matcher)
+        perftrace.tracevalue("Differences", len(diff))
+        if util.safehasattr(repo, "resettreefetches"):
+            perftrace.tracevalue("Tree Fetches", repo.resettreefetches())
 
     if matcher is None:
         matcher = matchmod.always("", "")
