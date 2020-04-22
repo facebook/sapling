@@ -921,9 +921,11 @@ mod tests {
             assert_eq!(data_get.unwrap(), data);
 
             loop {
-                let memcache_data = memcache.get(&k)?;
-                if let Some(memcache_data) = memcache_data {
-                    assert_eq!(memcache_data, data);
+                let memcache_data = memcache
+                    .get_data_iter(&[k.clone()])
+                    .collect::<Result<Vec<_>>>()?;
+                if !memcache_data.is_empty() {
+                    assert_eq!(memcache_data[0].data, data);
                     break;
                 }
             }
@@ -959,8 +961,8 @@ mod tests {
             let data_get = store.get(&k)?;
             assert_eq!(data_get.unwrap(), data);
 
-            let memcache_data = memcache.get(&k)?;
-            assert_eq!(memcache_data, None);
+            let memcache_data = memcache.get_data_iter(&[k]).collect::<Result<Vec<_>>>()?;
+            assert_eq!(memcache_data, vec![]);
             Ok(())
         }
 

@@ -571,15 +571,14 @@ mod tests {
             assert_eq!(nodeinfo_get, Some(nodeinfo.clone()));
 
             loop {
-                let memcache_nodeinfo = memcache.get_node_info(&k)?;
-                if let Some(memcache_nodeinfo) = memcache_nodeinfo {
-                    assert_eq!(memcache_nodeinfo, nodeinfo);
+                let memcache_nodeinfo = memcache
+                    .get_hist_iter(&[k.clone()])
+                    .collect::<Result<Vec<_>>>()?;
+                if !memcache_nodeinfo.is_empty() {
+                    assert_eq!(memcache_nodeinfo[0].nodeinfo, nodeinfo);
                     break;
                 }
             }
-
-            let memcache_nodeinfo = memcache.get_node_info(&k)?;
-            assert_eq!(memcache_nodeinfo, Some(nodeinfo));
             Ok(())
         }
     }

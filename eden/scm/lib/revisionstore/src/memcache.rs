@@ -28,7 +28,7 @@ use crate::{
 ///
 /// Whenever this type is changed, the `CODE_VERSION` value must be incremented to avoid
 /// incompatibilities.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) struct McData {
     pub key: Key,
     pub data: Bytes,
@@ -39,7 +39,7 @@ pub(crate) struct McData {
 ///
 /// Whenever this type is changed, the `CODE_VERSION` value must be incremented to avoid
 /// incompatibilities.
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug, PartialEq)]
 pub(crate) struct McHist {
     pub key: Key,
     pub nodeinfo: NodeInfo,
@@ -65,18 +65,10 @@ mod dummy {
             empty()
         }
 
-        pub(super) fn get_data(&self, _key: &Key) -> Result<Option<McData>> {
-            Ok(None)
-        }
-
         pub(super) fn add_data(&self, _delta: &Delta, _metadata: &Metadata) {}
 
         pub(super) fn get_hist_iter(&self, _key: &[Key]) -> impl Iterator<Item = Result<McHist>> {
             empty()
-        }
-
-        pub(super) fn get_hist(&self, _key: &Key) -> Result<Option<McHist>> {
-            Ok(None)
         }
 
         pub(super) fn add_hist(&self, _key: &Key, _info: &NodeInfo) {}
@@ -90,28 +82,20 @@ pub use crate::facebook::MemcacheStore;
 pub use dummy::MemcacheStore;
 
 impl HgIdDataStore for MemcacheStore {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        self.get_data(key)
-            .map(|opt| opt.map(|mcdata| mcdata.data.as_ref().to_vec()))
+    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
+        unreachable!();
     }
 
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        self.get_data(key).map(|opt| {
-            opt.map(|mcdata| Delta {
-                data: mcdata.data,
-                base: None,
-                key: mcdata.key,
-            })
-        })
+    fn get_delta(&self, _key: &Key) -> Result<Option<Delta>> {
+        Ok(None)
     }
 
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        self.get_delta(key).map(|opt| opt.map(|delta| vec![delta]))
+    fn get_delta_chain(&self, _key: &Key) -> Result<Option<Vec<Delta>>> {
+        Ok(None)
     }
 
-    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        self.get_data(key)
-            .map(|opt| opt.map(|mcdata| mcdata.metadata))
+    fn get_meta(&self, _key: &Key) -> Result<Option<Metadata>> {
+        Ok(None)
     }
 }
 
@@ -127,9 +111,8 @@ impl HgIdMutableDeltaStore for MemcacheStore {
 }
 
 impl HgIdHistoryStore for MemcacheStore {
-    fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
-        self.get_hist(key)
-            .map(|opt| opt.map(|mchist| mchist.nodeinfo))
+    fn get_node_info(&self, _key: &Key) -> Result<Option<NodeInfo>> {
+        Ok(None)
     }
 }
 
@@ -178,20 +161,29 @@ impl MemcacheHgIdDataStore {
 }
 
 impl HgIdDataStore for MemcacheHgIdDataStore {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        self.memcache.get(key)
+    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
+        unreachable!();
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        self.memcache.get_delta(key)
+        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
+            Ok(()) => self.store.get_delta(key),
+            Err(_) => Ok(None),
+        }
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        self.memcache.get_delta_chain(key)
+        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
+            Ok(()) => self.store.get_delta_chain(key),
+            Err(_) => Ok(None),
+        }
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        self.memcache.get_meta(key)
+        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
+            Ok(()) => self.store.get_meta(key),
+            Err(_) => Ok(None),
+        }
     }
 }
 
@@ -262,7 +254,10 @@ impl MemcacheHgIdHistoryStore {
 
 impl HgIdHistoryStore for MemcacheHgIdHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
-        self.memcache.get_node_info(key)
+        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
+            Ok(()) => self.store.get_node_info(key),
+            Err(_) => Ok(None),
+        }
     }
 }
 
