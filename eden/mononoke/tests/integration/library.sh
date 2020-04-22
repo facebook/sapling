@@ -730,14 +730,10 @@ CONFIG
 fi
 
   cat >> "repos/$reponame/server.toml" <<CONFIG
-CONFIG
 
-if [[ ! -v ENABLE_ACL_CHECKER ]]; then
-  cat >> "repos/$reponame/server.toml" <<CONFIG
 [hook_manager_params]
 disable_acl_checker=true
 CONFIG
-fi
 
 if [[ -v ENABLE_PRESERVE_BUNDLE2 ]]; then
   cat >> "repos/$reponame/server.toml" <<CONFIG

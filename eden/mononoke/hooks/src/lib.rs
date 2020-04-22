@@ -20,7 +20,7 @@ pub mod hook_loader;
 mod phabricator_message_parser;
 
 use aclchecker::{AclChecker, Identity};
-use anyhow::{bail, Error};
+use anyhow::Error;
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
@@ -77,16 +77,14 @@ impl HookManager {
         let reviewers_acl_checker = if !hook_manager_params.disable_acl_checker {
             let identity = Identity::from_groupname(facebook::REVIEWERS_ACL_GROUP_NAME);
 
+            let reviewers_acl_checker = AclChecker::new(fb, &identity)
+                .expect("Failed to create an AclChecker for reviewers group");
             // This can block, but not too big a deal as we create hook manager in server startup
-            AclChecker::new(fb, &identity)
-                .and_then(|reviewers_acl_checker| {
-                    if reviewers_acl_checker.do_wait_updated(10000) {
-                        Ok(reviewers_acl_checker)
-                    } else {
-                        bail!("did not update acl checker")
-                    }
-                })
-                .ok()
+            assert!(
+                reviewers_acl_checker.do_wait_updated(10000),
+                "AclChecker update failed after timeout"
+            );
+            Some(reviewers_acl_checker)
         } else {
             None
         };
