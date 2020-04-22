@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{EdgeType, FileContentData, Node, NodeData, NodeType};
+use crate::graph::{EdgeType, FileContentData, Node, NodeData, NodeType, WrappedPath};
 use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE};
 
 use anyhow::{format_err, Error};
@@ -347,7 +347,7 @@ fn hg_changeset_step(
             let manifest_id = hgchangeset.manifestid();
             let mut recurse = vec![OutgoingEdge::new(
                 EdgeType::HgChangesetToHgManifest,
-                Node::HgManifest((None, manifest_id)),
+                Node::HgManifest((WrappedPath::Root, manifest_id)),
             )];
             for p in hgchangeset.parents().into_iter() {
                 let step = OutgoingEdge::new(
@@ -385,12 +385,12 @@ fn hg_file_envelope_step(
 fn hg_file_node_step(
     ctx: CoreContext,
     repo: &BlobRepo,
-    path: Option<MPath>,
+    path: WrappedPath,
     hg_file_node_id: HgFileNodeId,
 ) -> impl Future<Output = Result<StepOutput, Error>> {
-    let repo_path = match path.clone() {
-        None => RepoPath::RootPath,
-        Some(mpath) => RepoPath::FilePath(mpath),
+    let repo_path = match &path {
+        WrappedPath::Root => RepoPath::RootPath,
+        WrappedPath::NonRoot(mpath) => RepoPath::FilePath(mpath.as_ref().clone()),
     };
     repo.get_filenode_opt(ctx, &repo_path, hg_file_node_id)
         .map(move |file_node_opt| match file_node_opt {
@@ -421,15 +421,15 @@ fn hg_file_node_step(
                     ))
                 });
                 // Copyfrom is like another parent
-                file_node_info
-                    .clone()
-                    .copyfrom
-                    .map(|(repo_path, file_node_id)| {
-                        recurse.push(OutgoingEdge::new(
-                            EdgeType::HgFileNodeToHgCopyfromFileNode,
-                            Node::HgFileNode((repo_path.into_mpath(), file_node_id)),
-                        ))
-                    });
+                for (repo_path, file_node_id) in &file_node_info.copyfrom {
+                    recurse.push(OutgoingEdge::new(
+                        EdgeType::HgFileNodeToHgCopyfromFileNode,
+                        Node::HgFileNode((
+                            WrappedPath::from(repo_path.clone().into_mpath()),
+                            *file_node_id,
+                        )),
+                    ))
+                }
                 StepOutput(NodeData::HgFileNode(Some(file_node_info)), recurse)
             }
             None => StepOutput(NodeData::HgFileNode(None), vec![]),
@@ -440,7 +440,7 @@ fn hg_file_node_step(
 fn hg_manifest_step(
     ctx: CoreContext,
     repo: &BlobRepo,
-    path: Option<MPath>,
+    path: WrappedPath,
     hg_manifest_id: HgManifestId,
 ) -> impl Future<Output = Result<StepOutput, Error>> {
     hg_manifest_id
@@ -450,13 +450,16 @@ fn hg_manifest_step(
             move |hgmanifest| {
                 let (manifests, filenodes): (Vec<_>, Vec<_>) =
                     hgmanifest.list().partition_map(|child| {
-                        let mpath_opt = MPath::join_element_opt(path.as_ref(), child.get_name());
+                        let path_opt = WrappedPath::from(MPath::join_element_opt(
+                            path.as_ref(),
+                            child.get_name(),
+                        ));
                         match child.get_hash() {
                             HgEntryId::File(_, filenode_id) => {
-                                Either::Right((mpath_opt, filenode_id))
+                                Either::Right((path_opt, filenode_id))
                             }
                             HgEntryId::Manifest(manifest_id) => {
-                                Either::Left((mpath_opt, manifest_id))
+                                Either::Left((path_opt, manifest_id))
                             }
                         }
                     });

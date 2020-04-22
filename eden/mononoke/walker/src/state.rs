@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{EdgeType, Node, NodeData, NodeType};
+use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
 use crate::walk::{expand_checked_nodes, OutgoingEdge, ResolvedNode, WalkVisitor};
 use chashmap::CHashMap;
 use context::CoreContext;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
-use mononoke_types::{ChangesetId, ContentId, MPath, MPathHash};
+use mononoke_types::{ChangesetId, ContentId, MPathHash};
 use phases::Phase;
 use std::{cmp, collections::HashSet, hash::Hash, ops::Add, sync::Arc};
 
@@ -57,7 +57,7 @@ pub struct WalkStateCHashMap {
 /// If the state did not have this value present, true is returned.
 fn record_with_path<K>(
     visited_with_path: &CHashMap<(Option<MPathHash>, K), ()>,
-    k: &(Option<MPath>, K),
+    k: &(WrappedPath, K),
 ) -> bool
 where
     K: Eq + Hash + Copy,

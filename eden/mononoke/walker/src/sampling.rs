@@ -5,13 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{EdgeType, Node, NodeData, NodeType};
+use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
 use crate::state::{StepStats, WalkStateCHashMap};
 use crate::walk::{OutgoingEdge, ResolvedNode, WalkVisitor};
 
 use context::{CoreContext, SamplingKey};
 use dashmap::DashMap;
-use mononoke_types::MPath;
 use std::{collections::HashSet, sync::Arc};
 
 #[derive(Debug)]
@@ -39,33 +38,9 @@ impl<T> SamplingWalkVisitor<T> {
     }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum WrappedPath {
-    Root,
-    NonRoot(Arc<MPath>),
-}
-
-impl WrappedPath {
-    pub fn as_ref(&self) -> Option<&Arc<MPath>> {
-        match self {
-            WrappedPath::Root => None,
-            WrappedPath::NonRoot(path) => Some(&path),
-        }
-    }
-}
-
-impl From<Option<MPath>> for WrappedPath {
-    fn from(mpath: Option<MPath>) -> Self {
-        match mpath {
-            Some(mpath) => WrappedPath::NonRoot(Arc::new(mpath)),
-            None => WrappedPath::Root,
-        }
-    }
-}
-
 #[derive(Clone, Debug, Default, PartialEq, Eq, Hash)]
 pub struct PathTrackingRoute {
-    // The path we reached this by.  Some(None) means root.
+    // The path we reached this by
     pub path: Option<WrappedPath>,
 }
 
@@ -74,24 +49,6 @@ impl PathTrackingRoute {
         self.path
             .as_ref()
             .and_then(|o| o.as_ref().map(|p| p.get_path_hash().sampling_fingerprint()))
-    }
-}
-
-// A non-root path
-impl From<MPath> for PathTrackingRoute {
-    fn from(mpath: MPath) -> Self {
-        Self {
-            path: Some(WrappedPath::from(Some(mpath))),
-        }
-    }
-}
-
-// A path that might be root
-impl From<Option<MPath>> for PathTrackingRoute {
-    fn from(mpath: Option<MPath>) -> Self {
-        Self {
-            path: Some(WrappedPath::from(mpath)),
-        }
     }
 }
 
@@ -148,7 +105,9 @@ where
         Vec<OutgoingEdge>,
     ) {
         let route = match current.node.stats_path() {
-            Some(mpath) => PathTrackingRoute::from(mpath.cloned()),
+            Some(path) => PathTrackingRoute {
+                path: Some(path.clone()),
+            },
             None => match route {
                 Some(route) => route,
                 None => PathTrackingRoute::default(),

@@ -397,7 +397,7 @@ fn scuba_log_node(
         .add(type_key, n.get_type().to_str())
         .add(key_key, n.stats_key());
     if let Some(path) = n.stats_path() {
-        scuba.add(path_key, MPath::display_opt(path).to_string());
+        scuba.add(path_key, MPath::display_opt(path.as_ref()).to_string());
     }
 }
 

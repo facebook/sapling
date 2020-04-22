@@ -16,8 +16,7 @@ use mercurial_types::{
 };
 use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath, MononokeId};
 use phases::Phase;
-use std::fmt;
-use std::str::FromStr;
+use std::{fmt, str::FromStr, sync::Arc};
 
 // Helper to save repetition for the type enums
 macro_rules! define_type_enum {
@@ -106,6 +105,30 @@ impl NodeType {
     }
 }
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum WrappedPath {
+    Root,
+    NonRoot(Arc<MPath>),
+}
+
+impl WrappedPath {
+    pub fn as_ref(&self) -> Option<&MPath> {
+        match self {
+            WrappedPath::Root => None,
+            WrappedPath::NonRoot(path) => Some(path.as_ref()),
+        }
+    }
+}
+
+impl From<Option<MPath>> for WrappedPath {
+    fn from(mpath: Option<MPath>) -> Self {
+        match mpath {
+            Some(mpath) => WrappedPath::NonRoot(Arc::new(mpath)),
+            None => WrappedPath::Root,
+        }
+    }
+}
+
 // Set of keys to look up items by, name is the type of lookup, payload is the key used.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum Node {
@@ -119,9 +142,9 @@ pub enum Node {
     // Hg
     HgBonsaiMapping(HgChangesetId),
     HgChangeset(HgChangesetId),
-    HgManifest((Option<MPath>, HgManifestId)),
+    HgManifest((WrappedPath, HgManifestId)),
     HgFileEnvelope(HgFileNodeId),
-    HgFileNode((Option<MPath>, HgFileNodeId)),
+    HgFileNode((WrappedPath, HgFileNodeId)),
     // Content
     FileContent(ContentId),
     FileContentMetadata(ContentId),
@@ -366,8 +389,7 @@ impl Node {
         }
     }
 
-    /// None means no path at all,  Some(None) means its the root MPath
-    pub fn stats_path(&self) -> Option<Option<&MPath>> {
+    pub fn stats_path(&self) -> Option<&WrappedPath> {
         match self {
             Node::Root => None,
             // Bonsai
@@ -379,9 +401,9 @@ impl Node {
             // Hg
             Node::HgBonsaiMapping(_) => None,
             Node::HgChangeset(_) => None,
-            Node::HgManifest((p, _)) => Some(p.as_ref()),
+            Node::HgManifest((p, _)) => Some(&p),
             Node::HgFileEnvelope(_) => None,
-            Node::HgFileNode((p, _)) => Some(p.as_ref()),
+            Node::HgFileNode((p, _)) => Some(&p),
             // Content
             Node::FileContent(_) => None,
             Node::FileContentMetadata(_) => None,

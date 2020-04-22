@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{AliasType, Node, NodeType};
+use crate::graph::{AliasType, Node, NodeType, WrappedPath};
 
 use anyhow::{format_err, Error};
 use bookmarks::BookmarkName;
@@ -73,7 +73,7 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
         NodeType::HgManifest => {
             let mpath = check_and_build_mpath(node_type, parts)?;
             let id = HgManifestId::from_str(parts[0])?;
-            Node::HgManifest((mpath, id))
+            Node::HgManifest((WrappedPath::from(mpath), id))
         }
         NodeType::HgFileEnvelope => {
             Node::HgFileEnvelope(HgFileNodeId::from_str(&parts.join(NODE_SEP))?)
@@ -81,7 +81,7 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
         NodeType::HgFileNode => {
             let mpath = check_and_build_mpath(node_type, parts)?;
             let id = HgFileNodeId::from_str(parts[0])?;
-            Node::HgFileNode((mpath, id))
+            Node::HgFileNode((WrappedPath::from(mpath), id))
         }
         // Content
         NodeType::FileContent => Node::FileContent(ContentId::from_str(&parts.join(NODE_SEP))?),
