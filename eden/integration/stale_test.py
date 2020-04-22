@@ -8,7 +8,7 @@ import errno
 import os
 import subprocess
 
-import __manifest__
+import eden.config
 
 from .lib import testcase
 
@@ -19,7 +19,7 @@ class StaleTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
     """
 
     def setup_eden_test(self) -> None:
-        super().setup_eden_test()  # type: ignore (pyre does not follow MRO correctly)
+        super().setup_eden_test()  # pyre-ignore[16]: pyre does not follow MRO correctly
 
         # Change into the mount point directory.
         # We have to do this before unmounting the mount point--the chdir() call itself
@@ -47,9 +47,16 @@ class StaleTest(testcase.HgRepoTestMixin, testcase.EdenRepoTest):
         subprocess.call(cmd)
 
     def _expected_to_fail(self) -> bool:
-        # xar files are able to start correctly even when the current working
-        # directory is not working, but unfortunately lpar files aren't.
-        # Some core python library code fails early on during import bootstrapping.
+        # Unfortunately some core python library code fails early on during import
+        # bootstrapping if we are running with a stale working directory.
+        #
+        # However, it can start correctly if we are running as a xar file built with
+        # Buck.  In all other cases we expect this to fail.
+        if eden.config.BUILD_FLAVOR != "Buck":
+            return True
+
+        import __manifest__
+
         return __manifest__.fbmake["par_style"] == "live"
 
     def test_list(self) -> None:

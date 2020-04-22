@@ -15,14 +15,7 @@ import os
 import sys
 from typing import Callable, Dict, List, Optional, Type
 
-
-try:
-    import __manifest__
-
-    assert __manifest__.fbmake.get("build_tool", None) == "buck"
-    _is_buck_build = True
-except ImportError:
-    _is_buck_build = False
+import eden.config
 
 
 class cached_property(object):
@@ -52,13 +45,13 @@ class FindExeClass(object):
         self._cache: Dict[str, str] = {}
 
     def is_buck_build(self) -> bool:
-        return _is_buck_build
+        return eden.config.BUILD_FLAVOR == "Buck"
 
     @property
     def BUCK_OUT(self) -> str:
-        if not _is_buck_build:
-            raise Exception("There is no buck-out path in a non-Buck build")
         if self._BUCK_OUT is None:
+            if not self.is_buck_build():
+                raise Exception("There is no buck-out path in a non-Buck build")
             self._find_repo_root_and_buck_out()
             assert self._BUCK_OUT is not None
         # pyre-fixme[7]: Expected `str` but got `Optional[str]`.
@@ -67,7 +60,7 @@ class FindExeClass(object):
     @property
     def EDEN_SRC_ROOT(self) -> str:
         if self._EDEN_SRC_ROOT is None:
-            if _is_buck_build:
+            if self.is_buck_build():
                 self._find_repo_root_and_buck_out()
                 assert self._EDEN_SRC_ROOT is not None
             else:
@@ -234,7 +227,7 @@ class FindExeClass(object):
                 return path
 
         candidates = []
-        if _is_buck_build:
+        if self.is_buck_build():
             if buck_path is not None:
                 candidates.append(os.path.join(self.BUCK_OUT, "gen", buck_path))
         else:
