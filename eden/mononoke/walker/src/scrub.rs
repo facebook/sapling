@@ -18,7 +18,6 @@ use crate::setup::{
     PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE, PROGRESS_SAMPLE_RATE_ARG, SAMPLE_RATE_ARG,
     SCRUB,
 };
-use crate::state::WalkState;
 use crate::tail::{walk_exact_tail, RepoWalkRun};
 use crate::validate::TOTAL;
 
@@ -359,7 +358,7 @@ pub async fn scrub_objects<'a>(
         }
     };
 
-    let walk_state = WalkState::new(SamplingWalkVisitor::new(
+    let walk_state = Arc::new(SamplingWalkVisitor::new(
         include_node_types,
         include_edge_types,
         sampling_node_types,

@@ -117,6 +117,32 @@ pub trait WalkVisitor<VOut, Route> {
     ) -> (VOut, Route, Vec<OutgoingEdge>);
 }
 
+impl<V, VOut, Route> WalkVisitor<VOut, Route> for Arc<V>
+where
+    V: 'static + WalkVisitor<VOut, Route> + Sync + Send,
+    VOut: Send + 'static,
+    Route: Send + 'static,
+{
+    fn start_step(
+        &self,
+        ctx: CoreContext,
+        route: Option<&Route>,
+        step: &OutgoingEdge,
+    ) -> CoreContext {
+        self.as_ref().start_step(ctx, route, step)
+    }
+
+    fn visit(
+        &self,
+        ctx: &CoreContext,
+        source: ResolvedNode,
+        route: Option<Route>,
+        outgoing: Vec<OutgoingEdge>,
+    ) -> (VOut, Route, Vec<OutgoingEdge>) {
+        self.as_ref().visit(ctx, source, route, outgoing)
+    }
+}
+
 // Data found for this node, plus next steps
 struct StepOutput(NodeData, Vec<OutgoingEdge>);
 

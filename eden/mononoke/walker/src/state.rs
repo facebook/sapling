@@ -12,7 +12,7 @@ use context::CoreContext;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{ChangesetId, ContentId, MPathHash};
 use phases::Phase;
-use std::{cmp, collections::HashSet, hash::Hash, ops::Add, sync::Arc};
+use std::{cmp, collections::HashSet, hash::Hash, ops::Add};
 
 #[derive(Clone, Copy, Default, Debug, PartialEq)]
 pub struct StepStats {
@@ -198,51 +198,5 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), ()> for WalkStateC
         });
 
         ((node, node_data, stats), (), outgoing)
-    }
-}
-
-#[derive(Debug)]
-pub struct WalkState<Inner> {
-    inner: Arc<Inner>,
-}
-
-impl<Inner> WalkState<Inner> {
-    pub fn new(inner: Inner) -> Self {
-        Self {
-            inner: Arc::new(inner),
-        }
-    }
-}
-
-impl<Inner> Clone for WalkState<Inner> {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-        }
-    }
-}
-
-impl<Inner, VOut, Route> WalkVisitor<VOut, Route> for WalkState<Inner>
-where
-    Inner: WalkVisitor<VOut, Route>,
-    VOut: Send,
-{
-    fn start_step(
-        &self,
-        ctx: CoreContext,
-        route: Option<&Route>,
-        step: &OutgoingEdge,
-    ) -> CoreContext {
-        self.inner.start_step(ctx, route, step)
-    }
-
-    fn visit(
-        &self,
-        ctx: &CoreContext,
-        current: ResolvedNode,
-        route: Option<Route>,
-        outgoing_edge: Vec<OutgoingEdge>,
-    ) -> (VOut, Route, Vec<OutgoingEdge>) {
-        self.inner.visit(ctx, current, route, outgoing_edge)
     }
 }

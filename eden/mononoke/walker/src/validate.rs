@@ -21,7 +21,7 @@ use crate::setup::{
     setup_common, EXCLUDE_CHECK_TYPE_ARG, INCLUDE_CHECK_TYPE_ARG, PROGRESS_SAMPLE_DURATION_S,
     PROGRESS_SAMPLE_RATE, VALIDATE,
 };
-use crate::state::{StepStats, WalkState, WalkStateCHashMap};
+use crate::state::{StepStats, WalkStateCHashMap};
 use crate::tail::{walk_exact_tail, RepoWalkRun};
 use crate::walk::{OutgoingEdge, ResolvedNode, WalkVisitor};
 
@@ -47,6 +47,7 @@ use std::{
     iter::FromIterator,
     result::Result,
     str::FromStr,
+    sync::Arc,
     time::{Duration, Instant},
 };
 
@@ -504,7 +505,7 @@ pub async fn validate<'a>(
         sort_by_string(&include_check_types)
     );
 
-    let stateful_visitor = WalkState::new(ValidatingVisitor::new(
+    let stateful_visitor = Arc::new(ValidatingVisitor::new(
         repo_stats_key.clone(),
         include_node_types,
         include_edge_types,

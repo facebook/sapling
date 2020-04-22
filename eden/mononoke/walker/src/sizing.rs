@@ -17,7 +17,6 @@ use crate::setup::{
     PROGRESS_INTERVAL_ARG, PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE,
     PROGRESS_SAMPLE_RATE_ARG, SAMPLE_RATE_ARG,
 };
-use crate::state::WalkState;
 use crate::tail::{walk_exact_tail, RepoWalkRun};
 
 use anyhow::Error;
@@ -342,7 +341,7 @@ pub async fn compression_benefit<'a>(
         }
     };
 
-    let walk_state = WalkState::new(SamplingWalkVisitor::new(
+    let walk_state = Arc::new(SamplingWalkVisitor::new(
         include_node_types,
         include_edge_types,
         sampling_node_types,
