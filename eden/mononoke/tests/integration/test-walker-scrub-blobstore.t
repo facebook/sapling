@@ -26,6 +26,7 @@ Base case, check can walk fine
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: (37, 37)
+  Bytes/s,* (glob)
   Walked* (glob)
 
 Delete all data from one side of the multiplex
@@ -50,6 +51,7 @@ Check can walk fine on the only remaining side
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: (37, 37)
+  Bytes/s,Keys/s,Bytes,Keys; Delta */s,*/s,2168,30,0s; Run */s,*/s,2168,30,*s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiChangeset:277,3 BonsaiHgMapping:281,3 Bookmark:0,0 FileContent:12,3 FileContentMetadata:351,3 HgBonsaiMapping:0,0 HgChangeset:281,3 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3* (glob)
   Walked* (glob)
 
 Check can walk fine on the multiplex remaining side
@@ -58,6 +60,7 @@ Check can walk fine on the multiplex remaining side
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: (37, 37)
+  Bytes/s,* (glob)
   Walked* (glob)
 
 Check can walk fine on the multiplex with scrub-blobstore enabled in ReportOnly mode, should log the scrub repairs needed
@@ -67,6 +70,7 @@ Check can walk fine on the multiplex with scrub-blobstore enabled in ReportOnly 
   1 Walking node types * (glob)
   * scrub: blobstore_id BlobstoreId(0) not repaired for repo0000. (glob)
   1 Final count: (37, 37)
+  1 Bytes/s,* (glob)
   1 Walked* (glob)
 
 Check scuba data
@@ -109,6 +113,7 @@ Check can walk fine on the multiplex with scrub-blobstore enabled in Repair mode
   1 Walking node types * (glob)
   27 scrub: blobstore_id BlobstoreId(0) repaired for repo0000.
   1 Final count: (37, 37)
+  1 Bytes/s,* (glob)
   1 Walked* (glob)
 
 Check scuba data
@@ -150,6 +155,7 @@ Check that all is repaired by running on only the deleted side
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: (37, 37)
+  Bytes/s,* (glob)
   Walked* (glob)
 
 Check the files after restore.  The blobstore filenode_lookup representation is currently not traversed, so remains as a difference

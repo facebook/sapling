@@ -10,7 +10,7 @@ use crate::progress::{
     progress_stream, report_state, ProgressReporter, ProgressReporterUnprotected,
     ProgressStateCountByType, ProgressStateMutex,
 };
-use crate::sampling::{NodeSamplingHandler, SamplingWalkVisitor};
+use crate::sampling::{NodeSamplingHandler, PathTrackingRoute, SamplingWalkVisitor};
 use crate::setup::{
     parse_node_types, setup_common, COMPRESSION_BENEFIT, COMPRESSION_LEVEL_ARG,
     DEFAULT_INCLUDE_NODE_TYPES, EXCLUDE_SAMPLE_NODE_TYPE_ARG, INCLUDE_SAMPLE_NODE_TYPE_ARG,
@@ -351,7 +351,15 @@ pub fn compression_benefit(
                 sizing_sampler,
                 sample_rate,
             ));
-            walk_exact_tail(fb, logger, datasources, walk_params, walk_state, make_sink).boxed()
+            walk_exact_tail::<_, _, _, _, _, PathTrackingRoute>(
+                fb,
+                logger,
+                datasources,
+                walk_params,
+                walk_state,
+                make_sink,
+            )
+            .boxed()
         }
     }
 }

@@ -23,6 +23,7 @@ Base case, check can walk fine
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: (37, 37)
+  Bytes/s,* (glob)
   Walked* (glob)
 
 Delete a gitsha1 alias so that we get errors
@@ -59,6 +60,7 @@ Check counts with error-as-data-node-type
   1 Error as data enabled, walk results may not be complete. Errors as data enabled for node types [AliasContentMapping] edge types []
   1 Could not step to
   1 Final count: (37, 36)
+  1 Bytes/s,* (glob)
   1 Walked* (glob)
 
 Check scuba data
@@ -87,4 +89,5 @@ Check error-as-data-edge-type, should get no errors as FileContentMetadataToGitS
   1 Error as data enabled, walk results may not be complete. Errors as data enabled for node types [AliasContentMapping] edge types [FileContentMetadataToGitSha1Alias]
   1 Could not step to
   1 Final count: (37, 36)
+  1 Bytes/s,* (glob)
   1 Walked* (glob)

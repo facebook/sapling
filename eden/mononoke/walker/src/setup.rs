@@ -248,6 +248,32 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
                 .takes_value(false)
                 .required(false)
                 .help("Limit the amount of data fetched from stores, by not streaming large files to the end."),
+        ).arg(
+            Arg::with_name(SAMPLE_RATE_ARG)
+                .long(SAMPLE_RATE_ARG)
+                .takes_value(true)
+                .required(false)
+                .help("How many nodes to sample for size. Pass 1 to try all, 120 to do 1 in 120, etc."),
+        )
+        .arg(
+            Arg::with_name(EXCLUDE_SAMPLE_NODE_TYPE_ARG)
+                .long(EXCLUDE_SAMPLE_NODE_TYPE_ARG)
+                .short("S")
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1)
+                .required(false)
+                .help("Node types to exclude from sampling for size"),
+        )
+        .arg(
+            Arg::with_name(INCLUDE_SAMPLE_NODE_TYPE_ARG)
+                .long(INCLUDE_SAMPLE_NODE_TYPE_ARG)
+                .short("s")
+                .takes_value(true)
+                .multiple(true)
+                .number_of_values(1)
+                .required(false)
+                .help("Node types to sample for size"),
         );
 
     let compression_benefit = setup_subcommand_args(

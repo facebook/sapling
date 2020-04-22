@@ -160,6 +160,53 @@ where
     }
 }
 
+// Super simple sampling visitor impl for scrubbing
+impl<T> WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), ()> for SamplingWalkVisitor<T>
+where
+    T: Default,
+{
+    fn start_step(
+        &self,
+        mut ctx: CoreContext,
+        route: Option<&()>,
+        step: &OutgoingEdge,
+    ) -> CoreContext {
+        if self.sample_node_types.contains(&step.target.get_type()) {
+            let should_sample = if self.sample_rate == 1 {
+                true
+            } else if self.sample_rate == 0 {
+                false
+            } else {
+                step.target
+                    .sampling_fingerprint()
+                    .map_or(true, |fp| fp % self.sample_rate == 0)
+            };
+
+            if should_sample {
+                ctx = ctx.clone_and_sample(SamplingKey::new());
+                if let Some(k) = ctx.sampling_key() {
+                    self.sampler.start_node(*k, step.target.clone())
+                }
+            }
+        }
+        self.inner.start_step(ctx, route.map(|_| &()), step)
+    }
+
+    fn visit(
+        &self,
+        ctx: &CoreContext,
+        current: ResolvedNode,
+        route: Option<()>,
+        outgoing: Vec<OutgoingEdge>,
+    ) -> (
+        (Node, Option<NodeData>, Option<StepStats>),
+        (),
+        Vec<OutgoingEdge>,
+    ) {
+        self.inner.visit(ctx, current, route, outgoing)
+    }
+}
+
 #[derive(Debug)]
 pub struct NodeSamplingHandler<T> {
     // T can keep a one to many mapping, e.g. some nodes like

@@ -33,4 +33,5 @@ Check that scrub doesnt report issues despite one store being missing, as the en
   1 Walking edge types * (glob)
   1 Walking node types * (glob)
   1 Final count: (37, 37)
+  1 Bytes/s,* (glob)
   1 Walked* (glob)

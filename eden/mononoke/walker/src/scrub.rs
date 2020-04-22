@@ -5,49 +5,195 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{FileContentData, Node, NodeData};
-use crate::progress::{progress_stream, report_state};
-use crate::setup::{setup_common, LIMIT_DATA_FETCH_ARG, SCRUB};
-use crate::state::{WalkState, WalkStateCHashMap};
+use crate::args;
+use crate::graph::{FileContentData, Node, NodeData, NodeType};
+use crate::progress::{
+    progress_stream, report_state, ProgressReporter, ProgressReporterUnprotected,
+    ProgressStateCountByType, ProgressStateMutex,
+};
+use crate::sampling::{NodeSamplingHandler, SamplingWalkVisitor};
+use crate::setup::{
+    parse_node_types, setup_common, DEFAULT_INCLUDE_NODE_TYPES, EXCLUDE_SAMPLE_NODE_TYPE_ARG,
+    INCLUDE_SAMPLE_NODE_TYPE_ARG, LIMIT_DATA_FETCH_ARG, PROGRESS_SAMPLE_DURATION_S,
+    SAMPLE_RATE_ARG, SCRUB,
+};
+use crate::state::WalkState;
 use crate::tail::{walk_exact_tail, RepoWalkRun};
 
 use anyhow::Error;
 use clap::ArgMatches;
+use cloned::cloned;
+use context::CoreContext;
+use derive_more::{Add, Div, Mul, Sub};
 use fbinit::FacebookInit;
 use futures::{
     future::{self, BoxFuture, FutureExt},
     stream::{Stream, TryStreamExt},
     TryFutureExt,
 };
-use slog::Logger;
+use mononoke_types::BlobstoreBytes;
+use samplingblob::SamplingHandler;
+use slog::{info, Logger};
+use std::{collections::HashMap, fmt, sync::Arc, time::Duration};
+
+#[derive(Add, Div, Mul, Sub, Clone, Copy, Default, Debug)]
+struct ScrubStats {
+    blobstore_bytes: u64,
+    blobstore_keys: u64,
+}
+
+impl ScrubStats {
+    fn new(sample: Option<ScrubSample>) -> Self {
+        sample
+            .map(|sample| ScrubStats {
+                blobstore_keys: sample.data.values().len() as u64,
+                blobstore_bytes: sample.data.values().sum(),
+            })
+            .unwrap_or_default()
+    }
+}
+
+impl fmt::Display for ScrubStats {
+    fn fmt(&self, fmt: &mut fmt::Formatter) -> fmt::Result {
+        write!(fmt, "{},{}", self.blobstore_bytes, self.blobstore_keys,)
+    }
+}
 
 // Force load of leaf data like file contents that graph traversal did not need
-pub fn loading_stream<InStream, SS>(
+fn loading_stream<InStream, SS>(
     limit_data_fetch: bool,
     scheduled_max: usize,
     s: InStream,
-) -> impl Stream<Item = Result<(Node, Option<NodeData>, Option<SS>), Error>>
+    sampler: Arc<NodeSamplingHandler<ScrubSample>>,
+) -> impl Stream<Item = Result<(Node, Option<NodeData>, Option<ScrubStats>), Error>>
 where
     InStream: Stream<Item = Result<(Node, Option<NodeData>, Option<SS>), Error>> + 'static + Send,
 {
-    s.map_ok(move |(n, nd, ss)| match nd {
+    s.map_ok(move |(n, nd, _progress_stats)| match nd {
         Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream)))
             if !limit_data_fetch =>
         {
+            cloned!(sampler);
             file_bytes_stream
                 .try_fold(0, |acc, file_bytes| future::ok(acc + file_bytes.size()))
-                .map_ok(|bytes| {
+                .map_ok(move |num_bytes| {
+                    let size = ScrubStats::new(sampler.complete_node(&n));
                     (
                         n,
-                        Some(NodeData::FileContent(FileContentData::Consumed(bytes))),
-                        ss,
+                        Some(NodeData::FileContent(FileContentData::Consumed(num_bytes))),
+                        Some(size),
                     )
                 })
                 .left_future()
         }
-        _ => future::ok((n, nd, ss)).right_future(),
+        data_opt => {
+            let size = data_opt
+                .as_ref()
+                .map(|_d| ScrubStats::new(sampler.complete_node(&n)));
+            future::ok((n, data_opt, size)).right_future()
+        }
     })
     .try_buffer_unordered(scheduled_max)
+}
+
+#[derive(Debug)]
+struct ScrubSample {
+    data: HashMap<String, u64>,
+}
+
+impl Default for ScrubSample {
+    fn default() -> Self {
+        Self {
+            data: HashMap::with_capacity(1),
+        }
+    }
+}
+
+impl SamplingHandler for NodeSamplingHandler<ScrubSample> {
+    fn sample_get(&self, ctx: CoreContext, key: String, value: Option<&BlobstoreBytes>) {
+        ctx.sampling_key().map(|sampling_key| {
+            self.inflight().get_mut(sampling_key).map(|mut guard| {
+                value.map(|value| guard.data.insert(key.clone(), value.len() as u64))
+            })
+        });
+    }
+    fn sample_put(&self, _ctx: &CoreContext, _key: &str, _value: &BlobstoreBytes) {}
+    fn sample_is_present(&self, _ctx: CoreContext, _key: String, _value: bool) {}
+}
+
+impl ProgressStateCountByType<ScrubStats, ScrubStats> {
+    pub fn report_progress_log(self: &mut Self, delta_time: Option<Duration>) {
+        let summary_by_type: HashMap<NodeType, ScrubStats> = self
+            .work_stats
+            .stats_by_type
+            .iter()
+            .map(|(k, (_i, v))| (*k, *v))
+            .collect();
+        let new_summary = summary_by_type
+            .values()
+            .fold(ScrubStats::default(), |acc, v| acc + *v);
+        let delta_summary = new_summary - self.reporting_stats.last_summary;
+
+        let def = ScrubStats::default();
+        let detail = &self
+            .params
+            .types_sorted_by_name
+            .iter()
+            .map(|t| {
+                let s = summary_by_type.get(t).unwrap_or(&def);
+                format!("{}:{}", t, s)
+            })
+            .collect::<Vec<_>>()
+            .join(" ");
+
+        let (delta_s, delta_summary_per_s) =
+            delta_time.map_or((0, ScrubStats::default()), |delta_time| {
+                (
+                    delta_time.as_secs(),
+                    delta_summary * 1000 / (delta_time.as_millis() as u64),
+                )
+            });
+
+        let total_time = self
+            .reporting_stats
+            .last_update
+            .duration_since(self.reporting_stats.start_time);
+
+        let total_summary_per_s = if total_time.as_millis() > 0 {
+            new_summary * 1000 / (total_time.as_millis() as u64)
+        } else {
+            ScrubStats::default()
+        };
+
+        info!(
+            self.params.logger,
+            "Bytes/s,Keys/s,Bytes,Keys; Delta {:06}/s,{:06}/s,{},{}s; Run {:06}/s,{:06}/s,{},{}s; Type:Raw,Compressed {}",
+            delta_summary_per_s.blobstore_bytes,
+            delta_summary_per_s.blobstore_keys,
+            delta_summary,
+            delta_s,
+            total_summary_per_s.blobstore_bytes,
+            total_summary_per_s.blobstore_keys,
+            new_summary,
+            total_time.as_secs(),
+            detail,
+        );
+
+        self.reporting_stats.last_summary_by_type = summary_by_type;
+        self.reporting_stats.last_summary = new_summary;
+    }
+}
+
+impl ProgressReporterUnprotected for ProgressStateCountByType<ScrubStats, ScrubStats> {
+    fn report_progress(self: &mut Self) {
+        self.report_progress_log(None);
+    }
+
+    fn report_throttled(self: &mut Self) {
+        if let Some(delta_time) = self.should_log_throttled() {
+            self.report_progress_log(Some(delta_time));
+        }
+    }
 }
 
 // Starts from the graph, (as opposed to walking from blobstore enumeration)
@@ -57,27 +203,97 @@ pub fn scrub_objects(
     matches: &ArgMatches<'_>,
     sub_m: &ArgMatches<'_>,
 ) -> BoxFuture<'static, Result<(), Error>> {
-    match setup_common(SCRUB, fb, &logger, None, matches, sub_m) {
+    let scrub_sampler = Arc::new(NodeSamplingHandler::<ScrubSample>::new());
+
+    match setup_common(
+        SCRUB,
+        fb,
+        &logger,
+        Some(scrub_sampler.clone()),
+        matches,
+        sub_m,
+    )
+    .and_then(|(datasources, walk_params)| {
+        args::get_repo_name(fb, &matches)
+            .map(|repo_stats_key| (datasources, walk_params, repo_stats_key))
+    }) {
         Err(e) => future::err::<_, Error>(e).boxed(),
-        Ok((datasources, walk_params)) => {
+        Ok((datasources, walk_params, repo_stats_key)) => {
+            let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(1);
             let limit_data_fetch = sub_m.is_present(LIMIT_DATA_FETCH_ARG);
             let scheduled_max = walk_params.scheduled_max;
             let quiet = walk_params.quiet;
             let progress_state = walk_params.progress_state.clone();
 
-            let make_sink = move |run: RepoWalkRun| {
-                async move |walk_output| {
-                    let loading = loading_stream(limit_data_fetch, scheduled_max, walk_output);
-                    let show_progress = progress_stream(quiet, &progress_state, loading);
-                    report_state(run.ctx, progress_state, show_progress).await
+            cloned!(
+                walk_params.include_node_types,
+                walk_params.include_edge_types
+            );
+            let mut sampling_node_types = match parse_node_types(
+                sub_m,
+                INCLUDE_SAMPLE_NODE_TYPE_ARG,
+                EXCLUDE_SAMPLE_NODE_TYPE_ARG,
+                DEFAULT_INCLUDE_NODE_TYPES,
+            ) {
+                Err(e) => return future::err::<_, Error>(e).boxed(),
+                Ok(v) => v,
+            };
+            sampling_node_types.retain(|i| include_node_types.contains(i));
+
+            let sizing_progress_state =
+                ProgressStateMutex::new(ProgressStateCountByType::<ScrubStats, ScrubStats>::new(
+                    logger.clone(),
+                    SCRUB,
+                    repo_stats_key,
+                    sampling_node_types.clone(),
+                    sample_rate,
+                    Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
+                ));
+
+            let make_sink = {
+                cloned!(scrub_sampler);
+                move |run: RepoWalkRun| {
+                    cloned!(run.ctx);
+                    async move |walk_output| {
+                        let walk_progress = progress_stream(quiet, &progress_state, walk_output);
+                        let loading = loading_stream(
+                            limit_data_fetch,
+                            scheduled_max,
+                            walk_progress,
+                            scrub_sampler,
+                        );
+                        let report_sizing =
+                            progress_stream(quiet, &sizing_progress_state.clone(), loading);
+
+                        report_state(ctx, sizing_progress_state, report_sizing)
+                            .map_ok({
+                                cloned!(progress_state);
+                                move |d| {
+                                    progress_state.report_progress();
+                                    d
+                                }
+                            })
+                            .await
+                    }
                 }
             };
 
-            let walk_state = WalkState::new(WalkStateCHashMap::new(
-                walk_params.include_node_types.clone(),
-                walk_params.include_edge_types.clone(),
+            let walk_state = WalkState::new(SamplingWalkVisitor::new(
+                include_node_types,
+                include_edge_types,
+                sampling_node_types,
+                scrub_sampler,
+                sample_rate,
             ));
-            walk_exact_tail(fb, logger, datasources, walk_params, walk_state, make_sink).boxed()
+            walk_exact_tail::<_, _, _, _, _, ()>(
+                fb,
+                logger,
+                datasources,
+                walk_params,
+                walk_state,
+                make_sink,
+            )
+            .boxed()
         }
     }
 }

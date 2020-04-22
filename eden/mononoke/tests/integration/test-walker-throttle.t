@@ -26,6 +26,7 @@ Base case, check can walk fine
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: (37, 37)
+  Bytes/s,* (glob)
   Walked* (glob)
 
 Check reads throttle
@@ -35,6 +36,7 @@ Check reads throttle
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: (37, 37)
+  Bytes/s,* (glob)
   Walked* (glob)
   $ END_SECS=$(/usr/bin/date "+%s")
   $ ELAPSED_SECS=$(( "$END_SECS" - "$START_SECS" ))
@@ -54,6 +56,7 @@ Check writes throttle in Repair mode
   1 Walking node types * (glob)
   * scrub: blobstore_id BlobstoreId(0) repaired for repo0000. (glob)
   1 Final count: (37, 37)
+  1 Bytes/s,* (glob)
   1 Walked* (glob)
   $ END_SECS=$(/usr/bin/date "+%s")
   $ ELAPSED_SECS=$(( "$END_SECS" - "$START_SECS" ))
