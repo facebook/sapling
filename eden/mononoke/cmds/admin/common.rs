@@ -24,7 +24,7 @@ use serde_json::{json, to_string_pretty};
 use slog::{debug, Logger};
 use std::collections::HashMap;
 
-pub const LATEST_REPLAYED_REQUEST_KEY: &'static str = "latest-replayed-request";
+pub const LATEST_REPLAYED_REQUEST_KEY: &str = "latest-replayed-request";
 
 pub fn fetch_bonsai_changeset(
     ctx: CoreContext,

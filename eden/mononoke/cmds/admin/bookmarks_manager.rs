@@ -25,11 +25,11 @@ use crate::common::{fetch_bonsai_changeset, format_bookmark_log_entry};
 use crate::error::SubcommandError;
 
 pub const BOOKMARKS: &str = "bookmarks";
-const SET_CMD: &'static str = "set";
-const GET_CMD: &'static str = "get";
-const LOG_CMD: &'static str = "log";
-const LIST_CMD: &'static str = "list";
-const DEL_CMD: &'static str = "delete";
+const SET_CMD: &str = "set";
+const GET_CMD: &str = "get";
+const LOG_CMD: &str = "log";
+const LIST_CMD: &str = "list";
+const DEL_CMD: &str = "delete";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let parent_subcommand = SubCommand::with_name(BOOKMARKS);

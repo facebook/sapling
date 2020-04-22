@@ -20,10 +20,10 @@ use slog::Logger;
 use crate::error::SubcommandError;
 
 pub const DERIVED_DATA: &str = "derived-data";
-const SUBCOMMAND_EXISTS: &'static str = "exists";
+const SUBCOMMAND_EXISTS: &str = "exists";
 
-const ARG_HASH_OR_BOOKMARK: &'static str = "hash-or-bookmark";
-const ARG_TYPE: &'static str = "type";
+const ARG_HASH_OR_BOOKMARK: &str = "hash-or-bookmark";
+const ARG_TYPE: &str = "type";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(DERIVED_DATA)

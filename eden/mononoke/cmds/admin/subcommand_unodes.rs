@@ -28,12 +28,12 @@ use std::collections::BTreeSet;
 use unodes::RootUnodeManifestId;
 
 pub const UNODES: &str = "unodes";
-const COMMAND_TREE: &'static str = "tree";
-const COMMAND_VERIFY: &'static str = "verify";
-const ARG_CSID: &'static str = "csid";
-const ARG_PATH: &'static str = "path";
-const ARG_LIMIT: &'static str = "limit";
-const ARG_TRACE: &'static str = "trace";
+const COMMAND_TREE: &str = "tree";
+const COMMAND_VERIFY: &str = "verify";
+const ARG_CSID: &str = "csid";
+const ARG_PATH: &str = "path";
+const ARG_LIMIT: &str = "limit";
+const ARG_TRACE: &str = "trace";
 
 fn path_resolve(path: &str) -> Result<Option<MPath>, Error> {
     match path {

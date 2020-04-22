@@ -35,13 +35,13 @@ use std::{collections::HashMap, sync::Arc};
 use unodes::RootUnodeManifestId;
 
 pub const BLAME: &str = "blame";
-const COMMAND_DERIVE: &'static str = "derive";
-const COMMAND_COMPUTE: &'static str = "compute";
-const COMMAND_DIFF: &'static str = "diff";
+const COMMAND_DERIVE: &str = "derive";
+const COMMAND_COMPUTE: &str = "compute";
+const COMMAND_DIFF: &str = "diff";
 
-const ARG_CSID: &'static str = "csid";
-const ARG_PATH: &'static str = "path";
-const ARG_LINE: &'static str = "line";
+const ARG_CSID: &str = "csid";
+const ARG_PATH: &str = "path";
+const ARG_LINE: &str = "line";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let csid_arg = Arg::with_name(ARG_CSID)

@@ -30,10 +30,10 @@ use std::sync::Arc;
 use tokio_compat::runtime::Runtime;
 use unodes::RootUnodeManifestId;
 
-const HG_CHANGESET_TYPE: &'static str = "hg-changeset";
-const ARG_SEED: &'static str = "seed";
-const ARG_TYPE: &'static str = "type";
-const ARG_STACK_SIZE: &'static str = "stack-size";
+const HG_CHANGESET_TYPE: &str = "hg-changeset";
+const ARG_SEED: &str = "seed";
+const ARG_TYPE: &str = "type";
+const ARG_STACK_SIZE: &str = "stack-size";
 
 type DeriveFn = Arc<dyn Fn(ChangesetId) -> OldBoxFuture<String, Error> + Send + Sync + 'static>;
 

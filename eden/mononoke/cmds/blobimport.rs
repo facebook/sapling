@@ -39,7 +39,7 @@ use std::str::FromStr;
 use std::sync::Arc;
 use synced_commit_mapping::SqlSyncedCommitMapping;
 
-const ARG_DERIVED_DATA_TYPE: &'static str = "derived-data-type";
+const ARG_DERIVED_DATA_TYPE: &str = "derived-data-type";
 
 fn setup_app<'a, 'b>() -> App<'a, 'b> {
     args::MononokeApp::new("revlog to blob importer")

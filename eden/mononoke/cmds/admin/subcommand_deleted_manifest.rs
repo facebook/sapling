@@ -28,11 +28,11 @@ use slog::{debug, Logger};
 use std::collections::BTreeSet;
 
 pub const DELETED_MANIFEST: &str = "deleted-manifest";
-const COMMAND_MANIFEST: &'static str = "manifest";
-const COMMAND_VERIFY: &'static str = "verify";
-const ARG_CSID: &'static str = "csid";
-const ARG_LIMIT: &'static str = "limit";
-const ARG_PATH: &'static str = "path";
+const COMMAND_MANIFEST: &str = "manifest";
+const COMMAND_VERIFY: &str = "verify";
+const ARG_CSID: &str = "csid";
+const ARG_LIMIT: &str = "limit";
+const ARG_PATH: &str = "path";
 
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     let csid_arg = Arg::with_name(ARG_CSID)

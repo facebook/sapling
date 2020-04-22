@@ -42,9 +42,9 @@ define_stats! {
     calculated_changesets: timeseries(Rate, Sum),
 }
 
-const ARG_IN_FILENAME: &'static str = "in-filename";
+const ARG_IN_FILENAME: &str = "in-filename";
 
-const SUBCOMMAND_STATISTICS_FROM_FILE: &'static str = "statistics-from-commits-in-file";
+const SUBCOMMAND_STATISTICS_FROM_FILE: &str = "statistics-from-commits-in-file";
 
 const SCUBA_DATASET_NAME: &str = "mononoke_repository_statistics";
 // Tool doesn't count number of lines from files with size greater than 10MB
