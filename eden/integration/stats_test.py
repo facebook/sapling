@@ -8,7 +8,7 @@ import logging
 import os
 import time
 import typing
-from pathlib import Path
+from pathlib import Path, PurePath
 
 from facebook.eden.ttypes import JournalInfo
 
@@ -47,6 +47,18 @@ class FUSEStatsTest(testcase.EdenRepoTest):
                 f"Writing to {path} should increment fuse.write_us.count",
             )
         )
+
+    def test_summary_counters_available(self) -> None:
+        mountName = PurePath(self.mount).name
+        counter_names_to_check = [
+            f"fuse.{mountName}.live_requests.count",
+            f"fuse.{mountName}.live_requests.max_duration_us",
+        ]
+
+        counters = self.get_counters()
+
+        for counter_name in counter_names_to_check:
+            self.assertIn(counter_name, counters, f"{counter_name} should be available")
 
     def create_repo(self, name: str) -> HgRepository:
         return self.create_hg_repo(name)

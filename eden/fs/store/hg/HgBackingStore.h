@@ -13,6 +13,7 @@
 
 #include <folly/Executor.h>
 #include <folly/Range.h>
+#include <folly/String.h>
 #include <folly/Synchronized.h>
 
 #include "eden/fs/config/EdenConfig.h"
@@ -109,7 +110,7 @@ class HgBackingStore : public BackingStore {
       HgImportObject::TREE,
       HgImportObject::PREFETCH};
 
-  static std::string stringOfHgImportObject(HgImportObject object);
+  static folly::StringPiece stringOfHgImportObject(HgImportObject object);
 
   /**
    * Gets the watches timing live `object` imports

@@ -49,6 +49,7 @@
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/telemetry/StructuredLoggerFactory.h"
 #include "eden/fs/utils/Clock.h"
+#include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcUtil.h"
 
 #ifdef _WIN32
@@ -160,7 +161,9 @@ using namespace facebook::eden;
 constexpr StringPiece kRocksDBPath{"storage/rocks-db"};
 constexpr StringPiece kSqlitePath{"storage/sqlite.db"};
 constexpr StringPiece kConfig{"config.toml"};
-static const std::string kHgStorePrefix{"store.hg"};
+constexpr StringPiece kHgStorePrefix{"store.hg"};
+constexpr StringPiece kFuseRequestPrefix{"fuse"};
+constexpr StringPiece kFuseRequestLiveStage{"live_requests"};
 
 std::optional<std::string> getUnixDomainSocketPath(
     const folly::SocketAddress& address) {
@@ -174,19 +177,37 @@ std::string getCounterNameForImportMetric(
     std::optional<HgBackingStore::HgImportObject> object = std::nullopt) {
   if (object.has_value()) {
     // base prefix . stage . object . metric
-    return folly::join(
+    return folly::to<std::string>(
+        kHgStorePrefix,
         ".",
-        {kHgStorePrefix,
-         HgQueuedBackingStore::stringOfHgImportStage(stage),
-         HgBackingStore::stringOfHgImportObject(object.value()),
-         RequestMetricsScope::stringOfRequestMetric(metric)});
+        HgQueuedBackingStore::stringOfHgImportStage(stage),
+        ".",
+        HgBackingStore::stringOfHgImportObject(object.value()),
+        ".",
+        RequestMetricsScope::stringOfRequestMetric(metric));
   }
   // base prefix . stage . metric
-  return folly::join(
+  return folly::to<std::string>(
+      kHgStorePrefix,
       ".",
-      {kHgStorePrefix,
-       HgQueuedBackingStore::stringOfHgImportStage(stage),
-       RequestMetricsScope::stringOfRequestMetric(metric)});
+      HgQueuedBackingStore::stringOfHgImportStage(stage),
+      ".",
+      RequestMetricsScope::stringOfRequestMetric(metric));
+}
+
+std::string getCounterNameForFuseRequests(
+    RequestMetricsScope::RequestMetric metric,
+    const EdenMount* mount) {
+  auto mountName = basename(mount->getPath().stringPiece());
+  // prefix . mount . stage . metric
+  return folly::to<std::string>(
+      kFuseRequestPrefix,
+      ".",
+      mountName,
+      ".",
+      kFuseRequestLiveStage,
+      ".",
+      RequestMetricsScope::stringOfRequestMetric(metric));
 }
 
 } // namespace
@@ -280,8 +301,7 @@ EdenServer::EdenServer(
   for (auto stage : HgQueuedBackingStore::hgImportStages) {
     for (auto metric : RequestMetricsScope::requestMetrics) {
       for (auto object : HgBackingStore::hgImportObjects) {
-        std::string counterName =
-            getCounterNameForImportMetric(stage, metric, object);
+        auto counterName = getCounterNameForImportMetric(stage, metric, object);
         counters->registerCallback(counterName, [this, stage, object, metric] {
           auto individual_counters = this->collectHgQueuedBackingStoreCounters(
               [stage, object, metric](const HgQueuedBackingStore& store) {
@@ -291,8 +311,7 @@ EdenServer::EdenServer(
               metric, individual_counters);
         });
       }
-      std::string summaryCounterName =
-          getCounterNameForImportMetric(stage, metric);
+      auto summaryCounterName = getCounterNameForImportMetric(stage, metric);
       counters->registerCallback(summaryCounterName, [this, stage, metric] {
         std::vector<size_t> individual_counters;
         for (auto object : HgBackingStore::hgImportObjects) {
@@ -319,12 +338,10 @@ EdenServer::~EdenServer() {
   for (auto stage : HgQueuedBackingStore::hgImportStages) {
     for (auto metric : RequestMetricsScope::requestMetrics) {
       for (auto object : HgBackingStore::hgImportObjects) {
-        std::string counterName =
-            getCounterNameForImportMetric(stage, metric, object);
+        auto counterName = getCounterNameForImportMetric(stage, metric, object);
         counters->unregisterCallback(counterName);
       }
-      std::string summaryCounterName =
-          getCounterNameForImportMetric(stage, metric);
+      auto summaryCounterName = getCounterNameForImportMetric(stage, metric);
       counters->unregisterCallback(summaryCounterName);
     }
   }
@@ -1024,6 +1041,13 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
         auto stats = edenMount->getJournal().getStats();
         return stats ? stats->maxFilesAccumulated : 0;
       });
+  for (auto metric : RequestMetricsScope::requestMetrics) {
+    counters->registerCallback(
+        getCounterNameForFuseRequests(metric, edenMount.get()),
+        [edenMount, metric] {
+          return edenMount->getFuseChannel()->getRequestMetric(metric);
+        });
+  }
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32
@@ -1044,6 +1068,10 @@ void EdenServer::unregisterStats(EdenMount* edenMount) {
       edenMount->getCounterName(CounterName::JOURNAL_DURATION));
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::JOURNAL_MAX_FILES_ACCUMULATED));
+  for (auto metric : RequestMetricsScope::requestMetrics) {
+    counters->unregisterCallback(
+        getCounterNameForFuseRequests(metric, edenMount));
+  }
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32

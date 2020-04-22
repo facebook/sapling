@@ -7,6 +7,8 @@
 
 #include "RequestMetricsScope.h"
 
+#include <folly/String.h>
+
 #include "eden/fs/utils/Bug.h"
 
 namespace facebook {
@@ -45,7 +47,8 @@ RequestMetricsScope::~RequestMetricsScope() {
   }
 }
 
-std::string RequestMetricsScope::stringOfRequestMetric(RequestMetric metric) {
+folly::StringPiece RequestMetricsScope::stringOfRequestMetric(
+    RequestMetric metric) {
   switch (metric) {
     case RequestMetric::COUNT:
       return "count";
@@ -57,7 +60,7 @@ std::string RequestMetricsScope::stringOfRequestMetric(RequestMetric metric) {
 
 size_t RequestMetricsScope::getMetricFromWatches(
     RequestMetric metric,
-    LockedRequestWatchList& watches) {
+    const LockedRequestWatchList& watches) {
   switch (metric) {
     case COUNT:
       return watches.rlock()->size();
@@ -71,7 +74,7 @@ size_t RequestMetricsScope::getMetricFromWatches(
 }
 
 RequestMetricsScope::DefaultRequestDuration RequestMetricsScope::getMaxDuration(
-    LockedRequestWatchList& watches) {
+    const LockedRequestWatchList& watches) {
   DefaultRequestDuration maxDurationImport{0};
   {
     auto lockedWatches = watches.rlock();

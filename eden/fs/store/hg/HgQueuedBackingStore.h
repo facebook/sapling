@@ -7,6 +7,7 @@
 
 #pragma once
 
+#include <folly/String.h>
 #include <folly/executors/CPUThreadPoolExecutor.h>
 #include <memory>
 
@@ -76,7 +77,7 @@ class HgQueuedBackingStore : public BackingStore {
       HgImportStage::PENDING,
       HgImportStage::LIVE};
 
-  static std::string stringOfHgImportStage(HgImportStage stage);
+  static folly::StringPiece stringOfHgImportStage(HgImportStage stage);
 
   /**
    * calculates `metric` for `object` imports that are `stage`.

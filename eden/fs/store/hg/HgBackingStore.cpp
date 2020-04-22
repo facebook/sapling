@@ -9,6 +9,7 @@
 
 #include <list>
 
+#include <folly/String.h>
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
 #include <folly/Try.h>
@@ -816,7 +817,8 @@ folly::SemiFuture<unique_ptr<Tree>> HgBackingStore::importTreeForCommit(
       });
 }
 
-std::string HgBackingStore::stringOfHgImportObject(HgImportObject object) {
+folly::StringPiece HgBackingStore::stringOfHgImportObject(
+    HgImportObject object) {
   switch (object) {
     case HgImportObject::BLOB:
       return "blob";

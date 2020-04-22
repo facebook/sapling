@@ -299,6 +299,8 @@ class FuseChannel {
     return notifications_;
   }
 
+  size_t getRequestMetric(RequestMetricsScope::RequestMetric metric) const;
+
  private:
   struct HandlerEntry;
   using HandlerMap = std::unordered_map<uint32_t, HandlerEntry>;

@@ -1900,5 +1900,10 @@ FuseDeviceUnmountedDuringInitialization::
           mountPath,
           "\" was unmounted before we received the INIT packet"_sp)} {}
 
+size_t FuseChannel::getRequestMetric(
+    RequestMetricsScope::RequestMetric metric) const {
+  return RequestMetricsScope::getMetricFromWatches(metric, liveRequestWatches_);
+}
+
 } // namespace eden
 } // namespace facebook

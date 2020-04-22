@@ -10,6 +10,7 @@
 #include <utility>
 #include <variant>
 
+#include <folly/String.h>
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <folly/futures/Future.h>
 
@@ -132,7 +133,8 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
   return std::move(future);
 }
 
-std::string HgQueuedBackingStore::stringOfHgImportStage(HgImportStage stage) {
+folly::StringPiece HgQueuedBackingStore::stringOfHgImportStage(
+    HgImportStage stage) {
   switch (stage) {
     case HgImportStage::PENDING:
       return "pending_import";

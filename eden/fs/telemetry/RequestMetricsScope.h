@@ -11,6 +11,7 @@
 #include <memory>
 #include <string>
 
+#include <folly/String.h>
 #include <folly/Synchronized.h>
 #include <folly/stop_watch.h>
 
@@ -56,7 +57,7 @@ class RequestMetricsScope {
       RequestMetric::COUNT,
       RequestMetric::MAX_DURATION_US};
 
-  static std::string stringOfRequestMetric(RequestMetric metric);
+  static folly::StringPiece stringOfRequestMetric(RequestMetric metric);
 
   /**
    * calculates the `metric` from the `watches` which track
@@ -64,13 +65,14 @@ class RequestMetricsScope {
    */
   static size_t getMetricFromWatches(
       RequestMetric metric,
-      LockedRequestWatchList& watches);
+      const LockedRequestWatchList& watches);
 
   /**
    * finds the watch in `watches` for which the time that has elapsed
    * is the greatest and returns the duration of time that has elapsed
    */
-  static DefaultRequestDuration getMaxDuration(LockedRequestWatchList& watches);
+  static DefaultRequestDuration getMaxDuration(
+      const LockedRequestWatchList& watches);
 
  private:
   LockedRequestWatchList* pendingRequestWatches_;
