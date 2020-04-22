@@ -58,6 +58,9 @@ DEFINE_bool(
 // messages asynchronously rather than blocking in the logging thread.
 FOLLY_INIT_LOGGING_CONFIG("eden=DBG2; default:async=true");
 
+using folly::StringPiece;
+using std::string;
+
 namespace {
 using namespace facebook::eden;
 
@@ -79,15 +82,25 @@ namespace facebook {
 namespace eden {
 
 std::string DefaultEdenMain::getEdenfsBuildName() {
-  // Subclasses can override this if desired to include a version number
-  // or other build information.
-  return "edenfs";
+  StringPiece version(EDEN_VERSION);
+  StringPiece release(EDEN_RELEASE);
+
+  if (!version.empty()) {
+    return folly::to<string>("edenfs ", version, "-", release);
+  }
+
+  // Assume this is a development build if EDEN_VERSION is unset.
+  return "edenfs (dev build)";
 }
 
 std::string DefaultEdenMain::getEdenfsVersion() {
-  // Subclasses can override this if desired to return specific version
-  // information
-  return std::string{};
+  StringPiece version(EDEN_VERSION);
+
+  if (!version.empty()) {
+    return folly::to<string>(version);
+  }
+
+  return "(dev build)";
 }
 
 std::string DefaultEdenMain::getLocalHostname() {
@@ -105,6 +118,13 @@ void DefaultEdenMain::runServer(const EdenServer& server) {
   CHECK_EQ(
       server.getMainEventBase(),
       folly::EventBaseManager::get()->getEventBase());
+
+  fb303::fbData->setExportedValue("build_package_name", EDEN_PACKAGE_NAME);
+  fb303::fbData->setExportedValue("build_package_version", EDEN_VERSION);
+  fb303::fbData->setExportedValue("build_package_release", EDEN_RELEASE);
+  fb303::fbData->setExportedValue("build_revision", EDEN_BUILD_REVISION);
+  fb303::fbData->setExportedValue(
+      "build_time_unix", folly::to<std::string>(EDEN_BUILD_TIME_UNIX));
 
   fb303::withThriftFunctionStats(kServiceName, server.getHandler().get(), [&] {
     server.getServer()->serve();
