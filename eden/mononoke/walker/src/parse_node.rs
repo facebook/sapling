@@ -41,6 +41,12 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
     let node_type = NodeType::from_str(parts[0])?;
     match (node_type, parts.len()) {
         (NodeType::Root, 1) | (NodeType::PublishedBookmarks, 1) => (),
+        (NodeType::Root, _) | (NodeType::PublishedBookmarks, _) => {
+            return Err(format_err!(
+                "parse_node expects {} not to be followed by any parts",
+                node_type
+            ))
+        }
         (_, l) if l < 2 => {
             return Err(format_err!(
                 "parse_node for {} requires at least NodeType:node_key",
@@ -120,7 +126,13 @@ mod tests {
 
     fn test_node_type(node_type: &NodeType) -> Result<(), Error> {
         let v = match node_type {
-            NodeType::Root => assert_eq!(Node::Root, parse_node("Root")?),
+            NodeType::Root => {
+                assert_eq!(Node::Root, parse_node("Root")?);
+                assert_eq!(
+                    "Err(parse_node expects Root not to be followed by any parts)",
+                    format!("{:?}", parse_node("Root:garbage"))
+                );
+            }
             NodeType::Bookmark => assert_eq!(
                 Node::Bookmark(BookmarkName::new("foo")?),
                 parse_node(&format!("Bookmark{}foo", NODE_SEP))?
@@ -139,7 +151,11 @@ mod tests {
                     .get_type()
             ),
             NodeType::PublishedBookmarks => {
-                assert_eq!(Node::PublishedBookmarks, parse_node("PublishedBookmarks")?)
+                assert_eq!(Node::PublishedBookmarks, parse_node("PublishedBookmarks")?);
+                assert_eq!(
+                    "Err(parse_node expects PublishedBookmarks not to be followed by any parts)",
+                    format!("{:?}", parse_node("PublishedBookmarks:garbage"))
+                );
             }
             // Hg
             NodeType::HgBonsaiMapping => assert_eq!(
