@@ -13,7 +13,7 @@ import distutils.spawn
 import logging
 import os
 import sys
-from typing import Callable, Dict, List, Optional, Type
+from typing import Callable, Dict, Optional, Tuple, Type
 
 import eden.config
 
@@ -24,13 +24,12 @@ class cached_property(object):
         self.find = find
 
     def __get__(self, instance: "FindExeClass", owner: Type["FindExeClass"]) -> str:
-        assert self.name is not None
-        # pyre-fixme[6]: Expected `str` for 1st param but got `Optional[str]`.
-        result = instance._cache.get(self.name, None)
+        name = self.name
+        assert name is not None
+        result = instance._cache.get(name, None)
         if result is None:
             result = self.find(instance)
-            # pyre-fixme[6]: Expected `str` for 1st param but got `Optional[str]`.
-            instance._cache[self.name] = result
+            instance._cache[name] = result
         return result
 
     def __set_name__(self, owner: Type["FindExeClass"], name: str) -> None:
@@ -49,24 +48,25 @@ class FindExeClass(object):
 
     @property
     def BUCK_OUT(self) -> str:
-        if self._BUCK_OUT is None:
+        buck_out = self._BUCK_OUT
+        if buck_out is None:
             if not self.is_buck_build():
                 raise Exception("There is no buck-out path in a non-Buck build")
-            self._find_repo_root_and_buck_out()
+            repo_root, buck_out = self._find_repo_root_and_buck_out()
             assert self._BUCK_OUT is not None
-        # pyre-fixme[7]: Expected `str` but got `Optional[str]`.
-        return self._BUCK_OUT
+        return buck_out
 
     @property
     def EDEN_SRC_ROOT(self) -> str:
-        if self._EDEN_SRC_ROOT is None:
+        src_root = self._EDEN_SRC_ROOT
+        if src_root is None:
             if self.is_buck_build():
-                self._find_repo_root_and_buck_out()
+                src_root, buck_out = self._find_repo_root_and_buck_out()
                 assert self._EDEN_SRC_ROOT is not None
             else:
-                self._EDEN_SRC_ROOT = self._find_cmake_src_dir()
-        # pyre-fixme[7]: Expected `str` but got `Optional[str]`.
-        return self._EDEN_SRC_ROOT
+                src_root = self._find_cmake_src_dir()
+                self._EDEN_SRC_ROOT = src_root
+        return src_root
 
     @cached_property
     def EDEN_CLI(self) -> str:
@@ -247,8 +247,8 @@ class FindExeClass(object):
 
         return None
 
-    def _find_repo_root_and_buck_out(self) -> None:
-        """Finds the paths to buck-out and the repo root.
+    def _find_repo_root_and_buck_out(self) -> Tuple[str, str]:
+        """Finds the paths to the repo root and the buck-out directory.
 
         Note that the path to buck-out may not be "buck-out" under the repo
         root because Buck could have been run with `buck --config
@@ -261,12 +261,14 @@ class FindExeClass(object):
             parent = os.path.dirname(path)
             parent_basename = os.path.basename(parent)
             if parent_basename == "buck-out":
-                self._EDEN_SRC_ROOT = os.path.dirname(parent)
+                src_root = os.path.dirname(parent)
                 if os.path.basename(path) in ["bin", "gen"]:
-                    self._BUCK_OUT = parent
+                    buck_out = parent
                 else:
-                    self._BUCK_OUT = path
-                return
+                    buck_out = path
+                self._EDEN_SRC_ROOT = src_root
+                self._BUCK_OUT = buck_out
+                return (src_root, buck_out)
             if parent == path:
                 raise Exception("Path to repo root not found from %s" % executable)
             path = parent
