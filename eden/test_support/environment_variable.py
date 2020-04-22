@@ -5,8 +5,32 @@
 # GNU General Public License version 2.
 
 import abc
+import contextlib
 import os
-import typing
+from typing import Any, Callable, Generator, Mapping, Optional
+
+
+def _setenv(name: str, value: Optional[str]) -> None:
+    if value is None:
+        os.environ.pop(name, None)
+    else:
+        os.environ[name] = value
+
+
+@contextlib.contextmanager
+def setenv_scope(name: str, value: Optional[str]) -> Generator[None, None, None]:
+    old_value = os.environ.get(name)
+    _setenv(name, value)
+    yield
+    _setenv(name, old_value)
+
+
+@contextlib.contextmanager
+def unsetenv_scope(name: str) -> Generator[None, None, None]:
+    old_value = os.environ.get(name)
+    os.environ.pop(name, None)
+    yield
+    _setenv(name, old_value)
 
 
 class EnvironmentVariableMixin(metaclass=abc.ABCMeta):
@@ -14,37 +38,19 @@ class EnvironmentVariableMixin(metaclass=abc.ABCMeta):
         self.__add_cleanup_for_environment_variable(name)
         os.environ[name] = value
 
-    def set_environment_variables(self, variables: typing.Mapping[str, str]) -> None:
+    def set_environment_variables(self, variables: Mapping[str, str]) -> None:
         for name, value in variables.items():
             self.set_environment_variable(name, value)
 
     def unset_environment_variable(self, name: str) -> None:
         self.__add_cleanup_for_environment_variable(name)
-        self.__unset_environment_variable_with_cleanup(name)
+        os.environ.pop(name, None)
 
     def __add_cleanup_for_environment_variable(self, name: str) -> None:
-        old_value = os.getenv(name)
-
-        def restore() -> None:
-            if old_value is None:
-                # pyre-fixme[16]: `EnvironmentVariableMixin` has no attribute
-                #  `__unset_environment_variable_with_cleanup`.
-                self.__unset_environment_variable_with_cleanup(name)
-            else:
-                os.environ[name] = old_value
-
-        self.addCleanup(restore)
-
-    def __unset_environment_variable_with_cleanup(self, name: str) -> None:
-        try:
-            del os.environ[name]
-        except KeyError:
-            pass
+        old_value = os.environ.get(name)
+        self.addCleanup(_setenv, name, old_value)
 
     def addCleanup(
-        self,
-        function: typing.Callable[..., typing.Any],
-        *args: typing.Any,
-        **kwargs: typing.Any
+        self, function: Callable[..., Any], *args: Any, **kwargs: Any
     ) -> None:
         raise NotImplementedError()

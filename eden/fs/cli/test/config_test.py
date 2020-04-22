@@ -13,8 +13,8 @@ from pathlib import Path
 
 import toml
 import toml.decoder
-from eden.test_support.environment_variable import EnvironmentVariableMixin
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
+from eden.test_support.testcase import EdenTestCaseBase
 
 from .. import config as config_mod, configutil, util
 from ..config import EdenInstance
@@ -64,37 +64,34 @@ scribe-cat = "/bad/path/to/scribe_cat"
     return cfg_file
 
 
-class TomlConfigTest(
-    unittest.TestCase, TemporaryDirectoryMixin, EnvironmentVariableMixin
-):
+class TomlConfigTest(EdenTestCaseBase):
     def setUp(self) -> None:
-        self._test_dir = self.make_temporary_directory()
-
+        super().setUp()
         self._user = "bob"
-        self._state_dir = os.path.join(self._test_dir, ".eden")
-        self._etc_eden_dir = os.path.join(self._test_dir, "etc/eden")
-        self._config_d = os.path.join(self._test_dir, "etc/eden/config.d")
-        self._home_dir = os.path.join(self._test_dir, "home", self._user)
+        self._state_dir = self.tmp_dir / ".eden"
+        self._etc_eden_dir = self.tmp_dir / "etc/eden"
+        self._config_d = self.tmp_dir / "etc/eden/config.d"
+        self._home_dir = self.tmp_dir / "home" / self._user
         self._interpolate_dict = {
             "USER": self._user,
             "USER_ID": "42",
-            "HOME": self._home_dir,
+            "HOME": str(self._home_dir),
         }
 
-        os.mkdir(self._state_dir)
-        util.mkdir_p(self._config_d)
-        util.mkdir_p(self._home_dir)
+        self._state_dir.mkdir()
+        self._config_d.mkdir(exist_ok=True, parents=True)
+        self._home_dir.mkdir(exist_ok=True, parents=True)
 
-        self.unset_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD")
+        self.unsetenv("EDEN_EXPERIMENTAL_SYSTEMD")
 
     def copy_config_files(self) -> None:
-        path = Path(self._config_d) / "defaults.toml"
+        path = self._config_d / "defaults.toml"
         path.write_text(get_toml_test_file_defaults())
 
-        path = Path(self._home_dir) / ".edenrc"
+        path = self._home_dir / ".edenrc"
         path.write_text(get_toml_test_file_user_rc())
 
-        path = Path(self._etc_eden_dir) / "edenfs.rc"
+        path = self._etc_eden_dir / "edenfs.rc"
         path.write_text(get_toml_test_file_system_rc())
 
     def assert_core_config(self, cfg: EdenInstance) -> None:
@@ -131,16 +128,16 @@ class TomlConfigTest(
 
         # Check if test is for toml or cfg by cfg._user_toml_cfg
         exp_rc_files = [
-            Path(self._config_d) / "defaults.toml",
-            Path(self._etc_eden_dir) / "edenfs.rc",
-            Path(self._home_dir) / ".edenrc",
+            self._config_d / "defaults.toml",
+            self._etc_eden_dir / "edenfs.rc",
+            self._home_dir / ".edenrc",
         ]
         self.assertEqual(cfg.get_rc_files(), exp_rc_files)
 
     def test_no_dot_edenrc(self) -> None:
         self.copy_config_files()
 
-        os.remove(os.path.join(self._home_dir, ".edenrc"))
+        (self._home_dir / ".edenrc").unlink()
         cfg = self.get_config()
         cfg._loadConfig()
 
@@ -207,7 +204,7 @@ test_option = "test value"
         if not sys.platform.startswith("linux"):
             return
 
-        self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "1")
+        self.setenv("EDEN_EXPERIMENTAL_SYSTEMD", "1")
         self.assertTrue(self.get_config().should_use_experimental_systemd_mode())
 
     def test_experimental_systemd_is_enabled_with_user_config_setting(self) -> None:
@@ -225,7 +222,7 @@ experimental_systemd = true
         if not sys.platform.startswith("linux"):
             return
 
-        self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "1")
+        self.setenv("EDEN_EXPERIMENTAL_SYSTEMD", "1")
         self.write_user_config(
             f"""[service]
 experimental_systemd = false
@@ -233,7 +230,7 @@ experimental_systemd = false
         )
         self.assertTrue(self.get_config().should_use_experimental_systemd_mode())
 
-        self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "0")
+        self.setenv("EDEN_EXPERIMENTAL_SYSTEMD", "0")
         self.write_user_config(
             f"""[service]
 experimental_systemd = true
@@ -247,7 +244,7 @@ experimental_systemd = true
         if not sys.platform.startswith("linux"):
             return
 
-        self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "")
+        self.setenv("EDEN_EXPERIMENTAL_SYSTEMD", "")
         self.write_user_config(
             f"""[service]
 experimental_systemd = true
@@ -255,7 +252,7 @@ experimental_systemd = true
         )
         self.assertTrue(self.get_config().should_use_experimental_systemd_mode())
 
-        self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "")
+        self.setenv("EDEN_EXPERIMENTAL_SYSTEMD", "")
         self.write_user_config(
             f"""[service]
 experimental_systemd = false
@@ -348,9 +345,7 @@ experimental_systemd = true
         )
 
     def write_user_config(self, content: str) -> None:
-        path = os.path.join(self._home_dir, ".edenrc")
-        with open(path, "w") as text_file:
-            text_file.write(content)
+        (self._home_dir / ".edenrc").write_text(content)
 
 
 class EdenConfigParserTest(unittest.TestCase):

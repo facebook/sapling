@@ -29,7 +29,7 @@ from typing import (
 
 import eden.config
 from eden.test_support.environment_variable import EnvironmentVariableMixin
-from eden.test_support.temporary_directory import TempFileManager
+from eden.test_support.testcase import EdenTestCaseBase
 from eden.thrift import EdenClient
 
 from . import blacklist, edenclient, gitrepo, hgrepo, repobase
@@ -43,7 +43,7 @@ else:
 
 
 @unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
-class EdenTestCase(unittest.TestCase, EnvironmentVariableMixin):
+class EdenTestCase(EdenTestCaseBase, EnvironmentVariableMixin):
     """
     Base class for eden integration test cases.
 
@@ -55,7 +55,6 @@ class EdenTestCase(unittest.TestCase, EnvironmentVariableMixin):
     eden: edenclient.EdenFS
     start: float
     last_event: float
-    temp_mgr: TempFileManager
 
     # Override enable_fault_injection to True in subclasses to enable Eden's fault
     # injection framework when starting edenfs
@@ -77,19 +76,6 @@ class EdenTestCase(unittest.TestCase, EnvironmentVariableMixin):
         logging.info("=== %s at %.03fs (+%0.3fs)", event, since_start, since_last)
         self.last_event = now
 
-    def _get_tmp_prefix(self) -> str:
-        """Get a prefix to use for the test's temporary directory name. """
-        # Attempt to include a potion of the test name in the temporary directory
-        # prefix, but limit it to 20 characters.  If the path is too long EdenFS will
-        # fail to start since its Unix socket path won't fit in sockaddr_un, which has a
-        # 108 byte maximum path length.
-        method_name = self._testMethodName
-        for strip_prefix in ("test_", "test"):
-            if method_name.startswith(strip_prefix):
-                method_name = method_name[len(strip_prefix) :]
-                break
-        return f"eden_test.{method_name[:20]}."
-
     def setUp(self) -> None:
         blacklist.skip_test_if_blacklisted(self, self._testMethodName)
 
@@ -101,27 +87,26 @@ class EdenTestCase(unittest.TestCase, EnvironmentVariableMixin):
         # actions have completed.
         self.addCleanup(self.report_time, "clean up done")
 
-        self.temp_mgr = TempFileManager(self._get_tmp_prefix())
-        self.addCleanup(self.temp_mgr.cleanup)
+        super().setUp()
 
         # Set an environment variable to prevent telemetry logging
         # during integration tests
-        os.environ["INTEGRATION_TEST"] = "1"
+        self.setenv("INTEGRATION_TEST", "1")
 
         self.setup_eden_test()
         self.report_time("test setup done")
 
-        self.addCleanup(self.report_time, "clean up started")
+    def tearDown(self) -> None:
+        self.report_time("clean up started")
+        super().tearDown()
 
     def setup_eden_test(self) -> None:
-        self.tmp_dir = self.temp_mgr.top_level_tmp_dir()
-
         # Place scratch configuration somewhere deterministic for the tests
         scratch_config_file = os.path.join(self.tmp_dir, "scratch.toml")
         with open(scratch_config_file, "w") as f:
             f.write('template = "%s/scratch"\n' % self.tmp_dir)
             f.write("overrides = {}\n")
-        self.set_environment_variable("SCRATCH_CONFIG_PATH", scratch_config_file)
+        self.setenv("SCRATCH_CONFIG_PATH", scratch_config_file)
 
         # Parent directory for any git/hg repositories created during the test
         self.repos_dir = os.path.join(self.tmp_dir, "repos")
@@ -150,7 +135,7 @@ class EdenTestCase(unittest.TestCase, EnvironmentVariableMixin):
         )
         # Just to better reflect normal user environments, update $HOME
         # to point to our test home directory for the duration of the test.
-        self.set_environment_variable("HOME", str(self.eden.home_dir))
+        self.setenv("HOME", str(self.eden.home_dir))
         self.eden.start()
         self.addCleanup(self.eden.cleanup)
         self.report_time("eden daemon started")
