@@ -14,38 +14,25 @@ import unittest
 
 import pexpect
 import toml
-from eden.test_support.environment_variable import EnvironmentVariableMixin
-from eden.test_support.temporary_directory import TemporaryDirectoryMixin
+from eden.test_support.testcase import EdenTestCaseBase
 
-from .lib.edenfs_systemd import EdenFSSystemdMixin
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin
-from .lib.systemd import SystemdUserServiceManagerMixin
+from .lib.service_test_case import SystemdServiceTest
 
 
-class SystemdTest(
-    unittest.TestCase,
-    EnvironmentVariableMixin,
-    TemporaryDirectoryMixin,
-    SystemdUserServiceManagerMixin,
-    EdenFSSystemdMixin,
-    PexpectAssertionMixin,
-):
+class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
     """Test Eden's systemd service for Linux."""
 
     def setUp(self) -> None:
         super().setUp()
-
-        self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "1")
-        self.eden_dir = self.make_temporary_directory()
-        self.etc_eden_dir = self.make_temporary_directory()
-        self.home_dir = self.make_temporary_directory()
+        self.eden_dir = self.make_test_dir("eden")
 
     # TODO(T33122320): Delete this test when systemd is properly integrated.
     def test_eden_start_with_systemd_disabled_does_not_say_systemd_mode_is_enabled(
         self
     ) -> None:
-        self.unset_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD")
+        self.unsetenv("EDEN_EXPERIMENTAL_SYSTEMD")
 
         def test(start_args: typing.List[str]) -> None:
             eden_cli: str = FindExe.EDEN_CLI  # pyre-ignore[9]: T38947910
@@ -74,17 +61,15 @@ class SystemdTest(
         test(start_args=["--daemon-binary", FindExe.FAKE_EDENFS])
 
     def test_eden_start_starts_systemd_service(self) -> None:
-        self.set_up_edenfs_systemd_service()
         subprocess.check_call(
             self.get_edenfsctl_cmd()
             # pyre-ignore[6]: T38947910
             + ["start", "--daemon-binary", FindExe.FAKE_EDENFS]
         )
-        self.assert_systemd_service_is_active(eden_dir=pathlib.Path(self.eden_dir))
+        self.assert_systemd_service_is_active(eden_dir=self.eden_dir)
 
     def test_systemd_service_is_failed_if_edenfs_crashes_on_start(self) -> None:
-        self.set_up_edenfs_systemd_service()
-        self.assert_systemd_service_is_stopped(eden_dir=pathlib.Path(self.eden_dir))
+        self.assert_systemd_service_is_stopped(eden_dir=self.eden_dir)
         subprocess.call(
             self.get_edenfsctl_cmd()
             + [  # pyre-ignore[6]: T38947910
@@ -95,12 +80,11 @@ class SystemdTest(
                 "--failDuringStartup",
             ]
         )
-        self.assert_systemd_service_is_failed(eden_dir=pathlib.Path(self.eden_dir))
+        self.assert_systemd_service_is_failed(eden_dir=self.eden_dir)
 
     def test_eden_start_reports_service_failure_if_edenfs_fails_during_startup(
         self
     ) -> None:
-        self.set_up_edenfs_systemd_service()
         start_process = self.spawn_start_with_fake_edenfs(
             extra_args=["--", "--failDuringStartup"]
         )
@@ -121,7 +105,6 @@ class SystemdTest(
         )
 
     def test_eden_start_reports_error_if_systemd_is_dead(self) -> None:
-        self.set_up_edenfs_systemd_service()
         systemd = self.systemd
         assert systemd is not None
         systemd.exit()
@@ -139,7 +122,6 @@ class SystemdTest(
         start_process.expect_exact("sudo systemctl start user@testuser.service")
 
     def test_eden_start_reports_error_if_systemd_is_dead_and_cleaned_up(self) -> None:
-        self.set_up_edenfs_systemd_service()
         systemd = self.systemd
         assert systemd is not None
         systemd.exit()
@@ -154,7 +136,6 @@ class SystemdTest(
         start_process.expect_exact("sudo systemctl start user@testuser.service")
 
     def test_eden_start_uses_fallback_if_systemd_environment_is_missing(self) -> None:
-        self.set_up_edenfs_systemd_service()
         systemd = self.systemd
         assert systemd is not None
 
@@ -162,7 +143,7 @@ class SystemdTest(
         self.set_eden_config(
             {"service": {"fallback_systemd_xdg_runtime_dir": fallback_xdg_runtime_dir}}
         )
-        self.unset_environment_variable("XDG_RUNTIME_DIR")
+        self.unsetenv("XDG_RUNTIME_DIR")
 
         start_process = self.spawn_start_with_fake_edenfs()
         start_process.expect_exact(
@@ -171,9 +152,9 @@ class SystemdTest(
         )
         start_process.expect_exact("Started edenfs")
         self.assert_process_succeeds(start_process)
-        self.assert_systemd_service_is_active(eden_dir=pathlib.Path(self.eden_dir))
+        self.assert_systemd_service_is_active(eden_dir=self.eden_dir)
 
-        edenfs_log = pathlib.Path(self.eden_dir) / "logs" / "edenfs.log"
+        edenfs_log = self.eden_dir / "logs" / "edenfs.log"
         log_contents = edenfs_log.read_text(encoding="utf-8", errors="replace")
         self.assertIn("Running in experimental systemd mode", log_contents)
 
@@ -197,20 +178,20 @@ class SystemdTest(
     def get_required_eden_cli_args(self) -> typing.List[str]:
         return [
             "--config-dir",
-            self.eden_dir,
+            str(self.eden_dir),
             "--etc-eden-dir",
-            self.etc_eden_dir,
+            str(self.etc_eden_dir),
             "--home-dir",
-            self.home_dir,
+            str(self.home_dir),
         ]
 
     def set_eden_config(self, config) -> None:
-        config_d = pathlib.Path(self.etc_eden_dir) / "config.d"
+        config_d = self.etc_eden_dir / "config.d"
         config_d.mkdir()
         with open(config_d / "systemd.toml", "w") as config_file:
             # pyre-ignore[6]: T39129461
             toml.dump(config, config_file)
 
     def spoof_user_name(self, user_name: str) -> None:
-        self.set_environment_variable("LOGNAME", user_name)
-        self.set_environment_variable("USER", user_name)
+        self.setenv("LOGNAME", user_name)
+        self.setenv("USER", user_name)

@@ -14,7 +14,6 @@ from typing import List, Optional, Sequence
 import pexpect
 from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.util import HealthStatus
-from eden.test_support.environment_variable import EnvironmentVariableMixin
 from fb303_core.ttypes import fb303_status
 
 from .lib import testcase
@@ -22,12 +21,7 @@ from .lib.edenfs_systemd import EdenFSSystemdMixin
 from .lib.fake_edenfs import get_fake_edenfs_argv
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
-from .lib.service_test_case import (
-    ServiceTestCaseBase,
-    SystemdServiceTestCaseMarker,
-    service_test,
-)
-from .lib.systemd import SystemdUserServiceManagerMixin
+from .lib.service_test_case import ServiceTestCaseBase, SystemdServiceTest, service_test
 
 
 class StartTest(testcase.EdenTestCase):
@@ -102,12 +96,7 @@ class StartTest(testcase.EdenTestCase):
 
 
 @testcase.eden_repo_test
-class StartWithRepoTest(
-    testcase.EdenRepoTest,
-    EnvironmentVariableMixin,
-    SystemdUserServiceManagerMixin,
-    EdenFSSystemdMixin,
-):
+class StartWithRepoTest(testcase.EdenRepoTest, EdenFSSystemdMixin):
     """Test 'eden start' with a repo and checkout already configured.
     """
 
@@ -174,7 +163,7 @@ Did you mean to run "eden" instead of "edenfs"?
 class StartFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
     def setUp(self) -> None:
         super().setUp()
-        self.eden_dir = pathlib.Path(self.make_temporary_directory())
+        self.eden_dir = self.make_temp_dir("eden")
 
     def spawn_start(
         self,
@@ -209,7 +198,7 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase, PexpectAssertionMixin):
         self
     ) -> None:
         eden_dir_1 = self.eden_dir
-        eden_dir_2 = pathlib.Path(self.make_temporary_directory())
+        eden_dir_2 = self.make_temp_dir("eden2")
 
         start_1_process = self.spawn_start(eden_dir=eden_dir_1)
         self.assert_process_succeeds(start_1_process)
@@ -362,8 +351,7 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase, PexpectAssertionMixin):
         self.assert_process_fails(start_process, 1)
 
 
-@service_test
-class StartWithSystemdTest(StartFakeEdenFSTestBase, SystemdServiceTestCaseMarker):
+class StartWithSystemdTest(SystemdServiceTest, StartFakeEdenFSTestBase):
     def test_eden_start_fails_if_service_is_running(self) -> None:
         with self.spawn_fake_edenfs(self.eden_dir):
             # Make fake_edenfs inaccessible and undetectable (without talking to

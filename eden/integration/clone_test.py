@@ -19,11 +19,7 @@ from .lib import edenclient, testcase
 from .lib.fake_edenfs import get_fake_edenfs_argv
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
-from .lib.service_test_case import (
-    ServiceTestCaseBase,
-    SystemdServiceTestCaseMarker,
-    service_test,
-)
+from .lib.service_test_case import ServiceTestCaseBase, SystemdServiceTest, service_test
 
 
 @testcase.eden_repo_test
@@ -357,10 +353,7 @@ class CloneFakeEdenFSTest(CloneFakeEdenFSTestBase):
         )
 
 
-@service_test
-class CloneFakeEdenFSWithSystemdTest(
-    CloneFakeEdenFSTestBase, SystemdServiceTestCaseMarker
-):
+class CloneFakeEdenFSWithSystemdTest(SystemdServiceTest, CloneFakeEdenFSTestBase):
     def test_clone_starts_systemd_service(self) -> None:
         repo = self.make_dummy_hg_repo()
         mount_path = Path(self.make_temporary_directory())

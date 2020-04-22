@@ -16,13 +16,14 @@ import sys
 import tempfile
 import types
 import typing
+from typing import Iterator
 
 from eden.fs.cli.daemon import wait_for_process_exit
 from eden.fs.cli.util import poll_until
+from eden.test_support.temporary_directory import TempFileManager
 
 from .find_executables import FindExe
 from .linux import LinuxCgroup, ProcessID
-from .temporary_directory import create_tmp_dir
 
 
 logger: logging.Logger = logging.getLogger(__name__)
@@ -337,29 +338,9 @@ class _SystemctlCLI:
         return command
 
 
-class SystemdUserServiceManagerMixin(metaclass=abc.ABCMeta):
-    def make_temporary_systemd_user_service_manager(self) -> SystemdUserServiceManager:
-        context_manager = temporary_systemd_user_service_manager()
-        exit = context_manager.__exit__
-        systemd = context_manager.__enter__()
-        self.addCleanup(lambda: exit(None, None, None))
-        return systemd
-
-    def addCleanup(
-        self,
-        function: typing.Callable[..., typing.Any],
-        *args: typing.Any,
-        **kwargs: typing.Any,
-    ) -> None:
-        raise NotImplementedError()
-
-
 @contextlib.contextmanager
-def temporary_systemd_user_service_manager() -> typing.Iterator[
-    SystemdUserServiceManager
-]:
+def temp_systemd(temp_mgr: TempFileManager) -> Iterator[SystemdUserServiceManager]:
     """Create an isolated systemd instance for tests."""
-
     parent_systemd: BaseSystemdUserServiceManager = BaseSystemdUserServiceManager(
         xdg_runtime_dir=_get_current_xdg_runtime_dir()
     )
@@ -394,19 +375,28 @@ def temporary_systemd_user_service_manager() -> typing.Iterator[
         return True
 
     lifetime_duration = 30
-    with create_tmp_dir() as xdg_runtime_dir:
-        if should_create_managed():
-            with _transient_managed_systemd_user_service_manager(
-                xdg_runtime_dir=xdg_runtime_dir,
-                parent_systemd=parent_systemd,
-                lifetime_duration=lifetime_duration,
-            ) as child_systemd:
-                yield child_systemd
-        else:
-            with _TransientUnmanagedSystemdUserServiceManager(
-                xdg_runtime_dir=xdg_runtime_dir, lifetime_duration=lifetime_duration
-            ) as systemd:
-                yield systemd
+    xdg_runtime_dir = temp_mgr.make_temp_dir("xdg_runtime")
+    if should_create_managed():
+        with _transient_managed_systemd_user_service_manager(
+            xdg_runtime_dir=xdg_runtime_dir,
+            parent_systemd=parent_systemd,
+            lifetime_duration=lifetime_duration,
+        ) as child_systemd:
+            yield child_systemd
+    else:
+        with _TransientUnmanagedSystemdUserServiceManager(
+            xdg_runtime_dir=xdg_runtime_dir, lifetime_duration=lifetime_duration
+        ) as systemd:
+            yield systemd
+
+
+@contextlib.contextmanager
+def temporary_systemd_user_service_manager() -> typing.Iterator[
+    SystemdUserServiceManager
+]:
+    temp_mgr = TempFileManager()
+    with temp_systemd(temp_mgr) as systemd:
+        yield systemd
 
 
 def _is_system_booted_with_systemd() -> bool:

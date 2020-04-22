@@ -31,26 +31,3 @@ def unsetenv_scope(name: str) -> Generator[None, None, None]:
     os.environ.pop(name, None)
     yield
     _setenv(name, old_value)
-
-
-class EnvironmentVariableMixin(metaclass=abc.ABCMeta):
-    def set_environment_variable(self, name: str, value: str) -> None:
-        self.__add_cleanup_for_environment_variable(name)
-        os.environ[name] = value
-
-    def set_environment_variables(self, variables: Mapping[str, str]) -> None:
-        for name, value in variables.items():
-            self.set_environment_variable(name, value)
-
-    def unset_environment_variable(self, name: str) -> None:
-        self.__add_cleanup_for_environment_variable(name)
-        os.environ.pop(name, None)
-
-    def __add_cleanup_for_environment_variable(self, name: str) -> None:
-        old_value = os.environ.get(name)
-        self.addCleanup(_setenv, name, old_value)
-
-    def addCleanup(
-        self, function: Callable[..., Any], *args: Any, **kwargs: Any
-    ) -> None:
-        raise NotImplementedError()

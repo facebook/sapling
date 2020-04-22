@@ -28,7 +28,6 @@ from typing import (
 )
 
 import eden.config
-from eden.test_support.environment_variable import EnvironmentVariableMixin
 from eden.test_support.testcase import EdenTestCaseBase
 from eden.thrift import EdenClient
 
@@ -43,7 +42,7 @@ else:
 
 
 @unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
-class EdenTestCase(EdenTestCaseBase, EnvironmentVariableMixin):
+class EdenTestCase(EdenTestCaseBase):
     """
     Base class for eden integration test cases.
 

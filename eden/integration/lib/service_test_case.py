@@ -9,20 +9,16 @@ import pathlib
 import typing
 import unittest
 
-from eden.test_support.environment_variable import EnvironmentVariableMixin
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
+from eden.test_support.testcase import EdenTestCaseBase
 
 from .edenfs_systemd import EdenFSSystemdMixin
 from .fake_edenfs import FakeEdenFS
-from .systemd import SystemdUserServiceManagerMixin
 from .testcase import test_replicator
 
 
 class ServiceTestCaseBase(
-    unittest.TestCase,
-    EnvironmentVariableMixin,
-    TemporaryDirectoryMixin,
-    metaclass=abc.ABCMeta,
+    EdenTestCaseBase, TemporaryDirectoryMixin, metaclass=abc.ABCMeta
 ):
     """Abstract base class for tests covering 'eden start', 'eden stop', etc.
 
@@ -41,9 +37,6 @@ class ServiceTestCaseBase(
     ) -> FakeEdenFS:
         raise NotImplementedError()
 
-    def skip_if_systemd(self, message: str) -> None:
-        pass
-
     def get_required_eden_cli_args(self) -> typing.List[str]:
         return [
             "--etc-eden-dir",
@@ -53,63 +46,23 @@ class ServiceTestCaseBase(
         ]
 
     @property
-    def tmp_dir(self) -> pathlib.Path:
-        if self.__tmp_dir is None:
-            self.__tmp_dir = pathlib.Path(self.make_temporary_directory())
-        # pyre-fixme[7]: Expected `Path` but got `Optional[Path]`.
-        return self.__tmp_dir
-
-    @property
     def etc_eden_dir(self) -> pathlib.Path:
-        if self.__etc_eden_dir is None:
-            self.__etc_eden_dir = self.tmp_dir / "etc_eden"
-            # pyre-fixme[16]: Optional type has no attribute `mkdir`.
-            self.__etc_eden_dir.mkdir()
-        # pyre-fixme[7]: Expected `Path` but got `Optional[Path]`.
-        return self.__etc_eden_dir
+        etc_eden_dir = self.__etc_eden_dir
+        if etc_eden_dir is None:
+            etc_eden_dir = self.make_test_dir("etc_eden")
+            self.__etc_eden_dir = etc_eden_dir
+        return etc_eden_dir
 
     @property
     def home_dir(self) -> pathlib.Path:
-        if self.__home_dir is None:
-            self.__home_dir = self.tmp_dir / "home"
-            # pyre-fixme[16]: Optional type has no attribute `mkdir`.
-            self.__home_dir.mkdir()
-        # pyre-fixme[7]: Expected `Path` but got `Optional[Path]`.
-        return self.__home_dir
+        home_dir = self.__home_dir
+        if home_dir is None:
+            home_dir = self.make_test_dir("home")
+            self.__home_dir = home_dir
+        return home_dir
 
 
-class ServiceTestCaseMixinBase:
-    if typing.TYPE_CHECKING:
-
-        @property
-        @abc.abstractmethod
-        def etc_eden_dir(self) -> pathlib.Path:
-            raise NotImplementedError()
-
-        @property
-        @abc.abstractmethod
-        def home_dir(self) -> pathlib.Path:
-            raise NotImplementedError()
-
-
-if typing.TYPE_CHECKING:
-
-    class SystemdServiceTestCaseMarker(EdenFSSystemdMixin):
-        pass
-
-
-else:
-
-    class SystemdServiceTestCaseMarker:
-        """Marker base class for tests requiring systemd integration.
-
-        Only use SystemdServiceTestCaseMarker with @service_test.
-
-        Subclasses can use any method in EdenFSSystemdMixin.
-        """
-
-
-class AdHocFakeEdenFSMixin(ServiceTestCaseMixinBase):
+class AdHocFakeEdenFSMixin(ServiceTestCaseBase):
     """Test by spawning fake_edenfs directly.
 
     Use the @service_test decorator to use this mixin automatically.
@@ -128,7 +81,7 @@ class AdHocFakeEdenFSMixin(ServiceTestCaseMixinBase):
         )
 
 
-class ManagedFakeEdenFSMixin(ServiceTestCaseMixinBase):
+class ManagedFakeEdenFSMixin(ServiceTestCaseBase):
     """Test by using 'eden start' to spawn fake_edenfs.
 
     Use the @service_test decorator to use this mixin automatically.
@@ -149,7 +102,7 @@ class ManagedFakeEdenFSMixin(ServiceTestCaseMixinBase):
         )
 
 
-class SystemdEdenCLIFakeEdenFSMixin(ServiceTestCaseMixinBase):
+class SystemdEdenCLIFakeEdenFSMixin(ServiceTestCaseBase, EdenFSSystemdMixin):
     """Test by using 'eden start' with systemd enabled to spawn fake_edenfs.
 
     Use the @service_test decorator to use this mixin automatically.
@@ -159,7 +112,7 @@ class SystemdEdenCLIFakeEdenFSMixin(ServiceTestCaseMixinBase):
         super().setUp()  # type: ignore
         # TODO(T33122320): Don't set EDEN_EXPERIMENTAL_SYSTEMD when using
         # systemd is the default option.
-        self.set_environment_variable("EDEN_EXPERIMENTAL_SYSTEMD", "1")
+        self.setenv("EDEN_EXPERIMENTAL_SYSTEMD", "1")
         self.set_up_edenfs_systemd_service()
 
     def spawn_fake_edenfs(
@@ -174,55 +127,33 @@ class SystemdEdenCLIFakeEdenFSMixin(ServiceTestCaseMixinBase):
             extra_arguments=extra_arguments,
         )
 
-    def skip_if_systemd(self, message: str) -> None:
-        self.skipTest(message)
 
-    if typing.TYPE_CHECKING:
-
-        @abc.abstractmethod
-        def set_environment_variable(self, name: str, value: str) -> None:
-            raise NotImplementedError()
-
-        @abc.abstractmethod
-        def set_up_edenfs_systemd_service(self) -> None:
-            raise NotImplementedError()
-
-        @abc.abstractmethod
-        def skipTest(self, reason: typing.Any) -> None:
-            raise NotImplementedError()
+class SystemdServiceTest(SystemdEdenCLIFakeEdenFSMixin):
+    pass
 
 
 def _replicate_service_test(
     test_class: typing.Type[ServiceTestCaseBase], skip_systemd: bool = False
 ) -> typing.Iterable[typing.Tuple[str, typing.Type[ServiceTestCaseBase]]]:
-    only_systemd = issubclass(test_class, SystemdServiceTestCaseMarker)
-    assert not (only_systemd and skip_systemd)
-
     tests = []
 
-    if not only_systemd:
+    class AdHocTest(AdHocFakeEdenFSMixin, test_class):  # type: ignore
+        pass
 
-        class AdHocTest(AdHocFakeEdenFSMixin, test_class):  # type: ignore
-            pass
+    tests.append(("AdHoc", typing.cast(typing.Type[ServiceTestCaseBase], AdHocTest)))
 
-        tests.append(
-            ("AdHoc", typing.cast(typing.Type[ServiceTestCaseBase], AdHocTest))
-        )
+    class ManagedTest(ManagedFakeEdenFSMixin, test_class):  # type: ignore
+        pass
 
-        class ManagedTest(ManagedFakeEdenFSMixin, test_class):  # type: ignore
-            pass
-
-        tests.append(
-            ("Managed", typing.cast(typing.Type[ServiceTestCaseBase], ManagedTest))
-        )
+    tests.append(
+        ("Managed", typing.cast(typing.Type[ServiceTestCaseBase], ManagedTest))
+    )
 
     if not skip_systemd:
 
         class SystemdEdenCLITest(
-            SystemdEdenCLIFakeEdenFSMixin,
             test_class,  # type: ignore
-            SystemdUserServiceManagerMixin,
-            EdenFSSystemdMixin,
+            SystemdEdenCLIFakeEdenFSMixin,
         ):
             pass
 
@@ -247,7 +178,4 @@ def _replicate_service_test(
 #   integration disabled) [1]
 # * MyTestSystemdEdenCLI tests with 'eden start' edenfs processes with systemd
 #   integration enabled
-#
-# [1] This class is *not* created if the input test class derives from
-#     SystemdServiceTestCaseMarker.
 service_test = test_replicator(_replicate_service_test)

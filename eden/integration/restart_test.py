@@ -16,15 +16,12 @@ from eden.fs.cli.util import HealthStatus
 
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin
-from .lib.service_test_case import (
-    ServiceTestCaseBase,
-    SystemdServiceTestCaseMarker,
-    service_test,
-)
+from .lib.service_test_case import ServiceTestCaseBase, SystemdServiceTest, service_test
 
 
 class RestartTestBase(ServiceTestCaseBase):
     def setUp(self) -> None:
+        super().setUp()
         self.eden_dir = self.tmp_dir / "eden"
         self.eden_dir.mkdir()
 
@@ -248,9 +245,8 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         self.assert_process_fails(restart_process, 1)
 
 
-@service_test
 class RestartWithSystemdTest(
-    RestartTestBase, SystemdServiceTestCaseMarker, PexpectAssertionMixin
+    SystemdServiceTest, RestartTestBase, PexpectAssertionMixin
 ):
     def test_eden_restart_starts_service_if_not_running(self) -> None:
         restart_process = self._spawn_restart()

@@ -21,7 +21,7 @@ class ServiceLogTestBase(ServiceTestCaseBase):
 
     def setUp(self) -> None:
         super().setUp()
-        self.eden_dir = pathlib.Path(self.make_temporary_directory())
+        self.eden_dir = self.make_temp_dir("eden")
 
     @property
     def log_file_path(self) -> pathlib.Path:

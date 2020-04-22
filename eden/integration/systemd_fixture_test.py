@@ -14,22 +14,23 @@ import typing
 import unittest
 
 from eden.fs.cli import proc_utils as proc_utils_mod
-from eden.test_support.environment_variable import EnvironmentVariableMixin
-from eden.test_support.temporary_directory import TemporaryDirectoryMixin
+from eden.test_support.testcase import EdenTestCaseBase
 
 from .lib.linux import ProcessID, is_cgroup_v2_mounted
 from .lib.systemd import (
     SystemdService,
     SystemdUnitName,
     SystemdUserServiceManager,
-    SystemdUserServiceManagerMixin,
-    temporary_systemd_user_service_manager,
+    temp_systemd,
 )
 
 
-class TemporarySystemdUserServiceManagerTest(
-    unittest.TestCase, SystemdUserServiceManagerMixin
-):
+class SystemdTestCaseBase(EdenTestCaseBase):
+    def make_temporary_systemd_user_service_manager(self) -> SystemdUserServiceManager:
+        return self.exit_stack.enter_context(temp_systemd(self.temp_mgr))
+
+
+class TemporarySystemdUserServiceManagerTest(SystemdTestCaseBase):
     def test_unit_paths_includes_manager_specific_directories(self) -> None:
         systemd = self.make_temporary_systemd_user_service_manager()
         paths = systemd.get_unit_paths()
@@ -61,11 +62,11 @@ class TemporarySystemdUserServiceManagerTest(
         )
 
     def test_manager_process_id_is_valid(self) -> None:
-        with temporary_systemd_user_service_manager() as systemd:
+        with temp_systemd(self.temp_mgr) as systemd:
             self.assertTrue(does_process_exist(systemd.process_id))
 
     def test_closing_manager_kills_process(self) -> None:
-        with temporary_systemd_user_service_manager() as systemd:
+        with temp_systemd(self.temp_mgr) as systemd:
             process_id = systemd.process_id
         self.assertFalse(does_process_exist(process_id))
 
@@ -78,12 +79,7 @@ class TemporarySystemdUserServiceManagerTest(
         self.assertFalse(proc_utils.is_process_alive(process_id))
 
 
-class TemporarySystemdUserServiceManagerIsolationTest(
-    unittest.TestCase,
-    EnvironmentVariableMixin,
-    SystemdUserServiceManagerMixin,
-    TemporaryDirectoryMixin,
-):
+class TemporarySystemdUserServiceManagerIsolationTest(SystemdTestCaseBase):
     def test_services_with_same_name_by_different_managers_are_independent(
         self
     ) -> None:
@@ -130,9 +126,7 @@ class TemporarySystemdUserServiceManagerIsolationTest(
 
     def test_environment_variables_do_not_leak_to_services(self) -> None:
         spy_variable_name = "EDEN_TEST_VARIABLE"
-        self.set_environment_variable(
-            spy_variable_name, "this should not propogate to the service"
-        )
+        self.setenv(spy_variable_name, "this should not propogate to the service")
 
         systemd = self.make_temporary_systemd_user_service_manager()
         env_variables = self.get_service_environment(systemd)
@@ -156,10 +150,8 @@ class TemporarySystemdUserServiceManagerIsolationTest(
             "/bin",
         }
 
-        spy_path_entry = self.make_temporary_directory()
-        self.set_environment_variable(
-            "PATH", spy_path_entry + os.pathsep + os.environ["PATH"]
-        )
+        spy_path_entry = self.make_temp_dir()
+        self.setenv("PATH", str(spy_path_entry) + os.pathsep + os.environ["PATH"])
 
         systemd = self.make_temporary_systemd_user_service_manager()
         env_variables = self.get_service_environment(systemd)
@@ -175,7 +167,7 @@ class TemporarySystemdUserServiceManagerIsolationTest(
     def get_service_environment(
         self, systemd: SystemdUserServiceManager
     ) -> typing.List[typing.Tuple[str, str]]:
-        env_output_file = pathlib.Path(self.make_temporary_directory()) / "env_output"
+        env_output_file = self.make_temp_dir() / "env_output"
         env_service = systemd.systemd_run(
             command=["/usr/bin/env", "-0"],
             properties={"StandardOutput": f"file:{env_output_file}"},
@@ -193,9 +185,7 @@ class TemporarySystemdUserServiceManagerIsolationTest(
         ]
 
 
-class SystemdServiceTest(
-    unittest.TestCase, TemporaryDirectoryMixin, SystemdUserServiceManagerMixin
-):
+class SystemdServiceTest(SystemdTestCaseBase):
     systemd: SystemdUserServiceManager
 
     def setUp(self) -> None:
@@ -226,7 +216,7 @@ class SystemdServiceTest(
         )
 
     def test_start_executes_oneshot_service(self) -> None:
-        message_file = pathlib.Path(self.make_temporary_directory()) / "message.txt"
+        message_file = self.make_temp_dir() / "message.txt"
         service = self.enable_service(
             "test-SystemdServiceTest.service",
             f"""
@@ -240,10 +230,9 @@ StandardOutput=file:{message_file}
         self.assertEqual(message_file.read_text(), "Hello from service\n")
 
     def test_start_executes_oneshot_instanced_service(self) -> None:
-        temp_dir = pathlib.Path(self.make_temporary_directory())
-        message_file = temp_dir / "message.txt"
+        message_file = self.tmp_dir / "message.txt"
 
-        unit_file = temp_dir / "test-SystemdServiceTest@.service"
+        unit_file = self.tmp_dir / "test-SystemdServiceTest@.service"
         unit_file.write_text(
             f"""
 [Service]
@@ -337,7 +326,7 @@ ExecStart=/bin/sh -c "/bin/sleep 30 | /bin/cat & exit"
     def enable_service(
         self, service_name: SystemdUnitName, unit_file_content: str
     ) -> SystemdService:
-        unit_file = pathlib.Path(self.make_temporary_directory()) / service_name
+        unit_file = self.make_temp_dir() / service_name
         unit_file.write_text(unit_file_content)
         self.systemd.enable_runtime_unit_from_file(unit_file=unit_file)
         return self.systemd.get_service(service_name)

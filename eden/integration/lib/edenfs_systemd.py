@@ -5,41 +5,49 @@
 # GNU General Public License version 2.
 
 import abc
+import contextlib
 import pathlib
 import typing
 import unittest
+from typing import Optional
 
 from eden.fs.cli.systemd import edenfs_systemd_service_name
+from eden.test_support.temporary_directory import TempFileManager
 
 from .find_executables import FindExe
-from .systemd import SystemdService, SystemdUserServiceManager
+from .systemd import SystemdService, SystemdUserServiceManager, temp_systemd
 
 
 class EdenFSSystemdMixin(metaclass=abc.ABCMeta):
-    systemd: typing.Optional[SystemdUserServiceManager] = None
+    systemd: Optional[SystemdUserServiceManager] = None
+
+    if typing.TYPE_CHECKING:
+        # Subclasses must provide the following member variables
+        exit_stack: contextlib.ExitStack
+        temp_mgr: TempFileManager
 
     def set_up_edenfs_systemd_service(self) -> None:
+        systemd = self.systemd
         assert self.systemd is None
-        self.systemd = self.make_temporary_systemd_user_service_manager()
-        # pyre-fixme[16]: Optional type has no attribute
-        #  `enable_runtime_unit_from_file`.
-        self.systemd.enable_runtime_unit_from_file(
+        systemd = self.make_temporary_systemd_user_service_manager()
+        self.systemd = systemd
+        systemd.enable_runtime_unit_from_file(
+            # pyre-ignore[6]: T38947910
             unit_file=pathlib.Path(FindExe.SYSTEMD_FB_EDENFS_SERVICE)
         )
-        # pyre-fixme[16]: Optional type has no attribute `extra_env`.
-        self.set_environment_variables(self.systemd.extra_env)
+        for name, value in systemd.extra_env.items():
+            self.setenv(name, value)
+
+    def make_temporary_systemd_user_service_manager(self) -> SystemdUserServiceManager:
+        return self.exit_stack.enter_context(temp_systemd(self.temp_mgr))
 
     def get_edenfs_systemd_service(self, eden_dir: pathlib.Path) -> SystemdService:
-        assert self.systemd is not None
-        # pyre-fixme[16]: Optional type has no attribute `get_service`.
-        return self.systemd.get_service(edenfs_systemd_service_name(eden_dir))
+        systemd = self.systemd
+        assert systemd is not None
+        return systemd.get_service(edenfs_systemd_service_name(eden_dir))
 
     @abc.abstractmethod
-    def make_temporary_systemd_user_service_manager(self) -> SystemdUserServiceManager:
-        raise NotImplementedError()
-
-    @abc.abstractmethod
-    def set_environment_variables(self, variables: typing.Mapping[str, str]) -> None:
+    def setenv(self, name: str, value: Optional[str]) -> None:
         raise NotImplementedError()
 
     def assert_systemd_service_is_active(self, eden_dir: pathlib.Path) -> None:
