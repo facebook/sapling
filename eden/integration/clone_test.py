@@ -12,13 +12,11 @@ from pathlib import Path
 from textwrap import dedent
 from typing import Optional, Sequence, Set
 
-import pexpect
 from eden.integration.lib.hgrepo import HgRepository
 
 from .lib import edenclient, testcase
 from .lib.fake_edenfs import get_fake_edenfs_argv
 from .lib.find_executables import FindExe
-from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
 from .lib.service_test_case import ServiceTestCaseBase, SystemdServiceTest, service_test
 
 
@@ -259,6 +257,7 @@ class CloneTest(testcase.EdenRepoTest):
             "--daemon-args",
             *extra_daemon_args,
         )
+        self.exit_stack.callback(self.eden.run_cmd, "stop")
         self.assertIn("Starting edenfs", clone_output)
         self.assertTrue(self.eden.is_healthy(), msg="clone should start Eden.")
         mount_points = {self.mount: "RUNNING", str(tmp): "RUNNING"}
@@ -291,7 +290,7 @@ class CloneTest(testcase.EdenRepoTest):
         self.assertEqual(custom_readme_text, readme_path.read_text())
 
 
-class CloneFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
+class CloneFakeEdenFSTestBase(ServiceTestCaseBase):
     def setUp(self) -> None:
         super().setUp()
         self.eden_dir = Path(self.make_temporary_directory())
@@ -308,27 +307,44 @@ class CloneFakeEdenFSTestBase(ServiceTestCaseBase, PexpectAssertionMixin):
         repo_path: Path,
         mount_path: Path,
         extra_args: Optional[Sequence[str]] = None,
-    ) -> "pexpect.spawn[str]":
-        args = (
-            ["--config-dir", str(self.eden_dir)]
-            + self.get_required_eden_cli_args()
-            + [  # pyre-ignore[6]: T38947910
-                "clone",
-                "--daemon-binary",
-                FindExe.FAKE_EDENFS,
-                str(repo_path),
-                str(mount_path),
-            ]
-        )
+    ) -> subprocess.CompletedProcess:
+        eden_cli: str = FindExe.EDEN_CLI  # pyre-ignore[9]: T38947910
+        fake_edenfs: str = FindExe.FAKE_EDENFS  # pyre-ignore[9]: T38947910
+        base_args = [
+            eden_cli,
+            "--config-dir",
+            str(self.eden_dir),
+        ] + self.get_required_eden_cli_args()
+        clone_cmd = base_args + [
+            "clone",
+            "--daemon-binary",
+            fake_edenfs,
+            str(repo_path),
+            str(mount_path),
+        ]
         if extra_args:
-            args.extend(extra_args)
-        return pexpect.spawn(
-            # pyre-ignore[6]: T38947910
-            FindExe.EDEN_CLI,
-            args,
+            clone_cmd.extend(extra_args)
+
+        proc = subprocess.run(
+            clone_cmd,
             encoding="utf-8",
-            logfile=sys.stderr,
+            errors="replace",
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
         )
+
+        stop_cmd = base_args + ["stop"]
+        self.exit_stack.callback(subprocess.call, stop_cmd)
+
+        # Pass through any output from the clone command
+        sys.stdout.write(proc.stdout)
+        sys.stderr.write(proc.stderr)
+
+        # Note that the clone operation will actually fail here, since we started
+        # fake_edenfs rather than the real edenfs daemon, and it can't mount checkouts.
+        # However we only care about testing that the daemon got started, so that's
+        # fine.
+        return proc
 
 
 @service_test
@@ -338,15 +354,14 @@ class CloneFakeEdenFSTest(CloneFakeEdenFSTestBase):
         mount_path = Path(self.make_temporary_directory())
 
         extra_daemon_args = ["--allowExtraArgs", "hello world"]
-        clone_process = self.spawn_clone(
+        self.spawn_clone(
             repo_path=Path(repo.path),
             mount_path=mount_path,
             extra_args=["--daemon-args"] + extra_daemon_args,
         )
-        wait_for_pexpect_process(clone_process)
 
         argv = get_fake_edenfs_argv(self.eden_dir)
-        self.assertEquals(
+        self.assertEqual(
             argv[-len(extra_daemon_args) :],
             extra_daemon_args,
             f"fake_edenfs should have received arguments verbatim\nargv: {argv}",
@@ -360,8 +375,9 @@ class CloneFakeEdenFSWithSystemdTest(SystemdServiceTest, CloneFakeEdenFSTestBase
         clone_process = self.spawn_clone(
             repo_path=Path(repo.path), mount_path=mount_path
         )
-        clone_process.expect_exact(
-            "edenfs daemon is not currently running.  Starting edenfs..."
+        self.assertIn(
+            "edenfs daemon is not currently running.  Starting edenfs...",
+            clone_process.stdout,
         )
-        clone_process.expect_exact("Started edenfs")
+        self.assertIn("Started edenfs", clone_process.stderr)
         self.assert_systemd_service_is_active(eden_dir=self.eden_dir)

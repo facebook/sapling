@@ -56,15 +56,15 @@ class ServiceLogRealEdenFSTest(ManagedFakeEdenFSMixin, ServiceLogTestBase):
             self.log_file_path.exists(),
             f"{self.log_file_path} should not exist before starting edenfs",
         )
-        run_eden_start_with_real_daemon(
-            eden_dir=self.eden_dir,
-            etc_eden_dir=self.etc_eden_dir,
-            home_dir=self.home_dir,
-            systemd=False,
-        )
-        with FakeEdenFS.from_existing_process(eden_dir=self.eden_dir):
-            self.assertTrue(
-                self.log_file_path.exists(),
-                f"edenfs should create {self.log_file_path}",
+        self.exit_stack.enter_context(
+            run_eden_start_with_real_daemon(
+                eden_dir=self.eden_dir,
+                etc_eden_dir=self.etc_eden_dir,
+                home_dir=self.home_dir,
+                systemd=False,
             )
-            self.assertIn("Starting edenfs", self.log_file_path.read_text())
+        )
+        self.assertTrue(
+            self.log_file_path.exists(), f"edenfs should create {self.log_file_path}"
+        )
+        self.assertIn("Starting edenfs", self.log_file_path.read_text())
