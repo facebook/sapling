@@ -16,3 +16,13 @@ target_link_libraries(
     ${LIBGMOCK_LIBRARIES}
 )
 gtest_discover_tests(eden_utils_test)
+
+add_library(
+  eden_utils_test_lib STATIC
+    ScopedEnvVar.h
+    ScopedEnvVar.cpp
+)
+target_link_libraries(
+  eden_utils_test_lib
+    Folly::folly
+)

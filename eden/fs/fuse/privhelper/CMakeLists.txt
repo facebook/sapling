@@ -37,3 +37,5 @@ if (SELINUX_INCLUDE_DIR)
       ${SELINUX_LIBRARIES}
   )
 endif()
+
+add_subdirectory(test)
