@@ -157,20 +157,15 @@ pub fn derive_impl<
                 stats.completion_time,
                 ctx.trace().id(),
             );
-            ctx.scuba()
-                .clone()
-                .add("trace", ctx.trace().id().to_string())
-                .add_future_stats(&stats)
-                .log_with_msg(
-                    "Slow derivation",
-                    Some(format!(
-                        "type={},count={},csid={}",
-                        Derived::NAME,
-                        count,
-                        start_csid.to_string()
-                    )),
-                );
-            tokio_old::spawn(ctx.trace_upload().discard());
+            ctx.scuba().clone().add_future_stats(&stats).log_with_msg(
+                "Slow derivation",
+                Some(format!(
+                    "type={},count={},csid={}",
+                    Derived::NAME,
+                    count,
+                    start_csid.to_string()
+                )),
+            );
         }
 
         res?;
