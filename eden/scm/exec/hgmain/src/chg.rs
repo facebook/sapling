@@ -52,7 +52,7 @@ fn env_to_local_cstrings() -> Vec<CString> {
             envstr.push(name);
             envstr.push("=");
             envstr.push(value);
-            osstring_to_local_cstring(&envstr).clone()
+            osstring_to_local_cstring(&envstr)
         })
         .collect()
 }
@@ -63,8 +63,7 @@ fn env_to_local_cstrings() -> Vec<CString> {
 /// - `Some(false)` otherwise
 fn file_decision(path: Option<impl AsRef<Path>>) -> Option<bool> {
     path.and_then(|p| std::fs::read(p).ok())
-        .and_then(|bytes| String::from_utf8(bytes).ok())
-        .map(|s| s.starts_with("1"))
+        .map(|bytes| bytes.starts_with(b"1"))
 }
 
 /// Checks if chg should be used to execute a command
@@ -80,11 +79,9 @@ fn should_call_chg(args: &Vec<String>) -> bool {
         return false;
     }
 
-    if let Some(arg) = args.get(1) {
-        if arg == "debugpython" {
-            // debugpython is incompatible with chg.
-            return false;
-        }
+    // debugpython is incompatible with chg.
+    if args.get(1).map_or(false, |x| x == "debugpython") {
+        return false;
     }
 
     // Bash might translate `<(...)` to `/dev/fd/x` instead of using a real fifo. That
@@ -100,7 +97,7 @@ fn should_call_chg(args: &Vec<String>) -> bool {
     // CHGDISABLE=1 means that we want to disable it
     // regardless of the other conditions, but CHGDISABLE=0
     // does not guarantee that we want to enable it
-    if Some(OsString::from("1")) == std::env::var_os("CHGDISABLE") {
+    if std::env::var_os("CHGDISABLE").map_or(false, |x| x == "1") {
         return false;
     }
 
