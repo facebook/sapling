@@ -81,6 +81,7 @@ def debugshell(ui, repo, **opts):
     command = opts.get("command")
 
     _assignobjects(locals(), repo)
+    globals().update(locals())
 
     if command:
         exec(command)
