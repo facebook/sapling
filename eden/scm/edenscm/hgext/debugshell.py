@@ -21,6 +21,7 @@ import bindings
 import edenscm
 import edenscmnative
 from edenscm import hgext, mercurial
+from edenscm.hgext import commitcloud as cc
 from edenscm.mercurial import registrar
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.pycompat import decodeutf8
@@ -33,19 +34,41 @@ command = registrar.command(cmdtable)
 def _assignobjects(objects, repo):
     objects.update(
         {
-            "m": mercurial,
-            "e": edenscm,
-            "n": edenscmnative,
+            # Shortcuts
             "b": bindings,
+            "m": mercurial,
             "x": hgext,
+            # Modules
+            "bindings": bindings,
+            "edenscm": edenscm,
+            "edenscmnative": edenscmnative,
             "mercurial": mercurial,
+            # Utilities
+            "util": mercurial.util,
+            "hex": mercurial.node.hex,
+            "bin": mercurial.node.bin,
         }
     )
     if repo:
-        objects.update({"repo": repo, "cl": repo.changelog, "mf": repo.manifestlog})
+        objects.update(
+            {
+                "repo": repo,
+                "cl": repo.changelog,
+                "mf": repo.manifestlog,
+                # metalog is not available on hg server-side repos. Consider making it
+                # available unconditionally once we get rid of hg servers.
+                "ml": getattr(repo.svfs, "metalog", None),
+            }
+        )
+
+        # Commit cloud service.
+        ui = repo.ui
+        token = cc.token.TokenLocator(ui).token
+        if token is not None:
+            objects["serv"] = cc.service.get(ui, token)
 
     # Import other handy modules
-    for name in ["os", "subprocess", "re"]:
+    for name in ["os", "sys", "subprocess", "re"]:
         objects[name] = __import__(name)
 
 
@@ -73,16 +96,18 @@ def debugshell(ui, repo, **opts):
         mercurial.__path__[0],
     ) + (
         "\n\nAvailable variables:\n"
-        " e:  edenscm\n"
-        " n:  edenscmnative\n"
         " m:  edenscm.mercurial\n"
         " x:  edenscm.hgext\n"
         " b:  bindings\n"
-        " ui: the ui object"
+        " ui: the ui object\n"
     )
     if repo:
         bannermsg += (
-            "\n repo: the repo object\n cl: repo.changelog\n mf: repo.manifestlog"
+            " repo: the repo object\n"
+            " serv: commitcloud service\n"
+            " cl: repo.changelog\n"
+            " mf: repo.manifestlog\n"
+            " ml: repo.svfs.metalog\n"
         )
 
     import IPython
