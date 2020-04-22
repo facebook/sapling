@@ -14,8 +14,9 @@ use crate::progress::{
 use crate::sampling::{NodeSamplingHandler, SamplingWalkVisitor};
 use crate::setup::{
     parse_node_types, setup_common, DEFAULT_INCLUDE_NODE_TYPES, EXCLUDE_SAMPLE_NODE_TYPE_ARG,
-    INCLUDE_SAMPLE_NODE_TYPE_ARG, LIMIT_DATA_FETCH_ARG, PROGRESS_SAMPLE_DURATION_S,
-    SAMPLE_RATE_ARG, SCRUB,
+    INCLUDE_SAMPLE_NODE_TYPE_ARG, LIMIT_DATA_FETCH_ARG, PROGRESS_INTERVAL_ARG,
+    PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE, PROGRESS_SAMPLE_RATE_ARG, SAMPLE_RATE_ARG,
+    SCRUB,
 };
 use crate::state::WalkState;
 use crate::tail::{walk_exact_tail, RepoWalkRun};
@@ -28,7 +29,7 @@ use context::CoreContext;
 use derive_more::{Add, Div, Mul, Sub};
 use fbinit::FacebookInit;
 use futures::{
-    future::{self, BoxFuture, FutureExt},
+    future::{self, FutureExt},
     stream::{Stream, TryStreamExt},
     TryFutureExt,
 };
@@ -281,105 +282,98 @@ impl ProgressReporterUnprotected for ProgressStateCountByType<ScrubStats, ScrubS
 }
 
 // Starts from the graph, (as opposed to walking from blobstore enumeration)
-pub fn scrub_objects(
+pub async fn scrub_objects<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> BoxFuture<'static, Result<(), Error>> {
+    matches: &'a ArgMatches<'a>,
+    sub_m: &'a ArgMatches<'a>,
+) -> Result<(), Error> {
     let scrub_sampler = Arc::new(NodeSamplingHandler::<ScrubSample>::new());
 
-    match setup_common(
+    let (datasources, walk_params) = setup_common(
         SCRUB,
         fb,
         &logger,
         Some(scrub_sampler.clone()),
         matches,
         sub_m,
-    )
-    .and_then(|(datasources, walk_params)| {
-        args::get_repo_name(fb, &matches)
-            .map(|repo_stats_key| (datasources, walk_params, repo_stats_key))
-    }) {
-        Err(e) => future::err::<_, Error>(e).boxed(),
-        Ok((datasources, walk_params, repo_stats_key)) => {
-            let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(1);
-            let limit_data_fetch = sub_m.is_present(LIMIT_DATA_FETCH_ARG);
-            let scheduled_max = walk_params.scheduled_max;
-            let quiet = walk_params.quiet;
-            let progress_state = walk_params.progress_state.clone();
+    )?;
 
-            cloned!(
-                walk_params.include_node_types,
-                walk_params.include_edge_types
-            );
-            let mut sampling_node_types = match parse_node_types(
-                sub_m,
-                INCLUDE_SAMPLE_NODE_TYPE_ARG,
-                EXCLUDE_SAMPLE_NODE_TYPE_ARG,
-                DEFAULT_INCLUDE_NODE_TYPES,
-            ) {
-                Err(e) => return future::err::<_, Error>(e).boxed(),
-                Ok(v) => v,
-            };
-            sampling_node_types.retain(|i| include_node_types.contains(i));
+    let repo_stats_key = args::get_repo_name(fb, &matches)?;
 
-            let sizing_progress_state =
-                ProgressStateMutex::new(ProgressStateCountByType::<ScrubStats, ScrubStats>::new(
-                    fb,
-                    logger.clone(),
-                    SCRUB,
-                    repo_stats_key,
-                    sampling_node_types.clone(),
-                    sample_rate,
-                    Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
-                ));
+    let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(1);
+    let progress_interval_secs = args::get_u64_opt(&sub_m, PROGRESS_INTERVAL_ARG);
+    let progress_sample_rate = args::get_u64_opt(&sub_m, PROGRESS_SAMPLE_RATE_ARG);
+    let limit_data_fetch = sub_m.is_present(LIMIT_DATA_FETCH_ARG);
+    let scheduled_max = walk_params.scheduled_max;
+    let quiet = walk_params.quiet;
+    let progress_state = walk_params.progress_state.clone();
 
-            let make_sink = {
-                cloned!(scrub_sampler);
-                move |run: RepoWalkRun| {
-                    cloned!(run.ctx);
-                    async move |walk_output| {
-                        let walk_progress = progress_stream(quiet, &progress_state, walk_output);
-                        let loading = loading_stream(
-                            limit_data_fetch,
-                            scheduled_max,
-                            walk_progress,
-                            scrub_sampler,
-                        );
-                        let report_sizing =
-                            progress_stream(quiet, &sizing_progress_state.clone(), loading);
+    cloned!(
+        walk_params.include_node_types,
+        walk_params.include_edge_types
+    );
+    let mut sampling_node_types = parse_node_types(
+        sub_m,
+        INCLUDE_SAMPLE_NODE_TYPE_ARG,
+        EXCLUDE_SAMPLE_NODE_TYPE_ARG,
+        DEFAULT_INCLUDE_NODE_TYPES,
+    )?;
+    sampling_node_types.retain(|i| include_node_types.contains(i));
 
-                        report_state(ctx, sizing_progress_state, report_sizing)
-                            .map_ok({
-                                cloned!(progress_state);
-                                move |d| {
-                                    progress_state.report_progress();
-                                    d
-                                }
-                            })
-                            .await
-                    }
-                }
-            };
+    let sizing_progress_state =
+        ProgressStateMutex::new(ProgressStateCountByType::<ScrubStats, ScrubStats>::new(
+            fb,
+            logger.clone(),
+            SCRUB,
+            repo_stats_key,
+            sampling_node_types.clone(),
+            progress_sample_rate.unwrap_or(PROGRESS_SAMPLE_RATE),
+            Duration::from_secs(progress_interval_secs.unwrap_or(PROGRESS_SAMPLE_DURATION_S)),
+        ));
 
-            let walk_state = WalkState::new(SamplingWalkVisitor::new(
-                include_node_types,
-                include_edge_types,
-                sampling_node_types,
-                scrub_sampler,
-                sample_rate,
-            ));
-            walk_exact_tail::<_, _, _, _, _, ()>(
-                fb,
-                logger,
-                datasources,
-                walk_params,
-                walk_state,
-                make_sink,
-                false,
-            )
-            .boxed()
+    let make_sink = {
+        cloned!(scrub_sampler);
+        move |run: RepoWalkRun| {
+            cloned!(run.ctx);
+            async move |walk_output| {
+                let walk_progress = progress_stream(quiet, &progress_state, walk_output);
+                let loading = loading_stream(
+                    limit_data_fetch,
+                    scheduled_max,
+                    walk_progress,
+                    scrub_sampler,
+                );
+                let report_sizing = progress_stream(quiet, &sizing_progress_state.clone(), loading);
+
+                report_state(ctx, sizing_progress_state, report_sizing)
+                    .map_ok({
+                        cloned!(progress_state);
+                        move |d| {
+                            progress_state.report_progress();
+                            d
+                        }
+                    })
+                    .await
+            }
         }
-    }
+    };
+
+    let walk_state = WalkState::new(SamplingWalkVisitor::new(
+        include_node_types,
+        include_edge_types,
+        sampling_node_types,
+        scrub_sampler,
+        sample_rate,
+    ));
+    walk_exact_tail::<_, _, _, _, _, ()>(
+        fb,
+        logger,
+        datasources,
+        walk_params,
+        walk_state,
+        make_sink,
+        false,
+    )
+    .await
 }

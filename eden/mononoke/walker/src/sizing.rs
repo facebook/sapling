@@ -14,7 +14,8 @@ use crate::sampling::{NodeSamplingHandler, PathTrackingRoute, SamplingWalkVisito
 use crate::setup::{
     parse_node_types, setup_common, COMPRESSION_BENEFIT, COMPRESSION_LEVEL_ARG,
     DEFAULT_INCLUDE_NODE_TYPES, EXCLUDE_SAMPLE_NODE_TYPE_ARG, INCLUDE_SAMPLE_NODE_TYPE_ARG,
-    PROGRESS_SAMPLE_DURATION_S, SAMPLE_RATE_ARG,
+    PROGRESS_INTERVAL_ARG, PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE,
+    PROGRESS_SAMPLE_RATE_ARG, SAMPLE_RATE_ARG,
 };
 use crate::state::WalkState;
 use crate::tail::{walk_exact_tail, RepoWalkRun};
@@ -29,7 +30,7 @@ use context::CoreContext;
 use derive_more::{Add, Div, Mul, Sub};
 use fbinit::FacebookInit;
 use futures::{
-    future::{self, BoxFuture, FutureExt, TryFutureExt},
+    future::{self, FutureExt, TryFutureExt},
     stream::{Stream, TryStreamExt},
 };
 use mononoke_types::BlobstoreBytes;
@@ -258,110 +259,104 @@ impl SamplingHandler for NodeSamplingHandler<SizingSample> {
 }
 
 // Subcommand entry point for estimate of file compression benefit
-pub fn compression_benefit(
+pub async fn compression_benefit<'a>(
     fb: FacebookInit,
     logger: Logger,
-    matches: &ArgMatches<'_>,
-    sub_m: &ArgMatches<'_>,
-) -> BoxFuture<'static, Result<(), Error>> {
+    matches: &'a ArgMatches<'a>,
+    sub_m: &'a ArgMatches<'a>,
+) -> Result<(), Error> {
     let sizing_sampler = Arc::new(NodeSamplingHandler::<SizingSample>::new());
 
-    match setup_common(
+    let (datasources, walk_params) = setup_common(
         COMPRESSION_BENEFIT,
         fb,
         &logger,
         Some(sizing_sampler.clone()),
         matches,
         sub_m,
-    )
-    .and_then(|(datasources, walk_params)| {
-        args::get_repo_name(fb, &matches)
-            .map(|repo_stats_key| (datasources, walk_params, repo_stats_key))
-    }) {
-        Err(e) => future::err::<_, Error>(e).boxed(),
-        Ok((datasources, walk_params, repo_stats_key)) => {
-            let compression_level = args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3);
-            let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(100);
+    )?;
 
-            cloned!(
-                walk_params.include_node_types,
-                walk_params.include_edge_types
-            );
-            let mut sampling_node_types = match parse_node_types(
-                sub_m,
-                INCLUDE_SAMPLE_NODE_TYPE_ARG,
-                EXCLUDE_SAMPLE_NODE_TYPE_ARG,
-                DEFAULT_INCLUDE_NODE_TYPES,
-            ) {
-                Err(e) => return future::err::<_, Error>(e).boxed(),
-                Ok(v) => v,
-            };
-            sampling_node_types.retain(|i| include_node_types.contains(i));
-            let sizing_progress_state =
-                ProgressStateMutex::new(ProgressStateCountByType::<SizingStats, SizingStats>::new(
-                    fb,
-                    logger.clone(),
-                    COMPRESSION_BENEFIT,
-                    repo_stats_key,
-                    sampling_node_types.clone(),
-                    sample_rate,
-                    Duration::from_secs(PROGRESS_SAMPLE_DURATION_S),
-                ));
+    let repo_stats_key = args::get_repo_name(fb, &matches)?;
 
-            let make_sink = {
-                cloned!(
-                    walk_params.progress_state,
-                    walk_params.quiet,
-                    walk_params.scheduled_max,
-                    sizing_sampler
+    let compression_level = args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3);
+    let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(100);
+    let progress_interval_secs = args::get_u64_opt(&sub_m, PROGRESS_INTERVAL_ARG);
+    let progress_sample_rate = args::get_u64_opt(&sub_m, PROGRESS_SAMPLE_RATE_ARG);
+
+    cloned!(
+        walk_params.include_node_types,
+        walk_params.include_edge_types
+    );
+    let mut sampling_node_types = parse_node_types(
+        sub_m,
+        INCLUDE_SAMPLE_NODE_TYPE_ARG,
+        EXCLUDE_SAMPLE_NODE_TYPE_ARG,
+        DEFAULT_INCLUDE_NODE_TYPES,
+    )?;
+    sampling_node_types.retain(|i| include_node_types.contains(i));
+
+    let sizing_progress_state =
+        ProgressStateMutex::new(ProgressStateCountByType::<SizingStats, SizingStats>::new(
+            fb,
+            logger.clone(),
+            COMPRESSION_BENEFIT,
+            repo_stats_key,
+            sampling_node_types.clone(),
+            progress_sample_rate.unwrap_or(PROGRESS_SAMPLE_RATE),
+            Duration::from_secs(progress_interval_secs.unwrap_or(PROGRESS_SAMPLE_DURATION_S)),
+        ));
+
+    let make_sink = {
+        cloned!(
+            walk_params.progress_state,
+            walk_params.quiet,
+            walk_params.scheduled_max,
+            sizing_sampler
+        );
+        move |run: RepoWalkRun| {
+            cloned!(run.ctx);
+            async move |walk_output| {
+                cloned!(ctx, sizing_progress_state);
+                let walk_progress = progress_stream(quiet, &progress_state.clone(), walk_output);
+
+                let compressor = size_sampling_stream(
+                    scheduled_max,
+                    walk_progress,
+                    CompressorType::Zstd {
+                        level: compression_level,
+                    },
+                    sizing_sampler,
                 );
-                move |run: RepoWalkRun| {
-                    cloned!(run.ctx);
-                    async move |walk_output| {
-                        cloned!(ctx, sizing_progress_state);
-                        let walk_progress =
-                            progress_stream(quiet, &progress_state.clone(), walk_output);
-
-                        let compressor = size_sampling_stream(
-                            scheduled_max,
-                            walk_progress,
-                            CompressorType::Zstd {
-                                level: compression_level,
-                            },
-                            sizing_sampler,
-                        );
-                        let report_sizing =
-                            progress_stream(quiet, &sizing_progress_state.clone(), compressor);
-                        report_state(ctx, sizing_progress_state, report_sizing)
-                            .map({
-                                cloned!(progress_state);
-                                move |d| {
-                                    progress_state.report_progress();
-                                    d
-                                }
-                            })
-                            .await
-                    }
-                }
-            };
-
-            let walk_state = WalkState::new(SamplingWalkVisitor::new(
-                include_node_types,
-                include_edge_types,
-                sampling_node_types,
-                sizing_sampler,
-                sample_rate,
-            ));
-            walk_exact_tail::<_, _, _, _, _, PathTrackingRoute>(
-                fb,
-                logger,
-                datasources,
-                walk_params,
-                walk_state,
-                make_sink,
-                true,
-            )
-            .boxed()
+                let report_sizing =
+                    progress_stream(quiet, &sizing_progress_state.clone(), compressor);
+                report_state(ctx, sizing_progress_state, report_sizing)
+                    .map({
+                        cloned!(progress_state);
+                        move |d| {
+                            progress_state.report_progress();
+                            d
+                        }
+                    })
+                    .await
+            }
         }
-    }
+    };
+
+    let walk_state = WalkState::new(SamplingWalkVisitor::new(
+        include_node_types,
+        include_edge_types,
+        sampling_node_types,
+        sizing_sampler,
+        sample_rate,
+    ));
+    walk_exact_tail::<_, _, _, _, _, PathTrackingRoute>(
+        fb,
+        logger,
+        datasources,
+        walk_params,
+        walk_state,
+        make_sink,
+        true,
+    )
+    .await
 }

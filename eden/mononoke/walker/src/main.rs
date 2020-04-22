@@ -38,11 +38,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let logger = args::init_logging(fb, &matches);
 
     let future = match matches.subcommand() {
-        (setup::SCRUB, Some(sub_m)) => scrub::scrub_objects(fb, logger.clone(), &matches, sub_m),
-        (setup::COMPRESSION_BENEFIT, Some(sub_m)) => {
-            sizing::compression_benefit(fb, logger.clone(), &matches, sub_m)
+        (setup::SCRUB, Some(sub_m)) => {
+            scrub::scrub_objects(fb, logger.clone(), &matches, sub_m).boxed()
         }
-        (setup::VALIDATE, Some(sub_m)) => validate::validate(fb, logger.clone(), &matches, sub_m),
+        (setup::COMPRESSION_BENEFIT, Some(sub_m)) => {
+            sizing::compression_benefit(fb, logger.clone(), &matches, sub_m).boxed()
+        }
+        (setup::VALIDATE, Some(sub_m)) => {
+            validate::validate(fb, logger.clone(), &matches, sub_m).boxed()
+        }
         _ => {
             future::err::<_, Error>(Error::msg("Invalid Arguments, pass --help for usage.")).boxed()
         }
