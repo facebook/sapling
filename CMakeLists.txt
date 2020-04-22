@@ -17,6 +17,59 @@ endif()
 # Project information
 project("eden" LANGUAGES CXX C)
 
+set(EDEN_BUILD_REVISION "")
+if(DEFINED ENV{FBSOURCE_DATE})
+  # If set, we expect FBSOURCE_DATE to have the form "20200324.113140"
+  set(PACKAGE_VERSION "$ENV{FBSOURCE_DATE}.0")
+  set(EDEN_BUILD_REVISION "$ENV{FBSOURCE_HASH}")
+else()
+  find_program(GIT git)
+  if(GIT)
+    execute_process(
+      COMMAND
+      "${GIT}" "log" "-1" "--format=%H;%cd" "--date=format:%Y%m%d.%H%M%S.0"
+      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
+      RESULT_VARIABLE git_result
+      OUTPUT_VARIABLE git_data
+      ERROR_VARIABLE git_err
+      OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    if(git_result EQUAL 0)
+      list(GET git_data 0 EDEN_BUILD_REVISION)
+      list(GET git_data 1 PACKAGE_VERSION)
+    endif()
+  endif()
+endif()
+
+set(
+  EDEN_VERSION_OVERRIDE "" CACHE STRING
+  "Use this version number instead of the default that would be selected"
+)
+if(EDEN_VERSION_OVERRIDE)
+  set(PACKAGE_VERSION "${EDEN_VERSION_OVERRIDE}")
+elseif(DEFINED ENV{EDEN_VERSION_OVERRIDE})
+  set(PACKAGE_VERSION "$ENV{EDEN_VERSION_OVERRIDE}")
+endif()
+if(PACKAGE_VERSION)
+  string(REPLACE "." ";" VERSION_FIELDS "${PACKAGE_VERSION}")
+  list(LENGTH VERSION_FIELDS NUM_VERSION_FIELDS)
+  if(NOT "${NUM_VERSION_FIELDS}" EQUAL 3)
+    message(
+      FATAL_ERROR
+      "Bad version string \"${PACKAGE_VERSION}\": must be in X.Y.Z format"
+    )
+  endif()
+  list(GET VERSION_FIELDS 0 EDEN_VERSION)
+  list(GET VERSION_FIELDS 1 EDEN_RELEASE)
+  message(STATUS "Eden Version: ${EDEN_VERSION}-${EDEN_RELEASE}")
+else()
+  set(EDEN_VERSION "")
+  set(EDEN_RELEASE "")
+  set(PACKAGE_VERSION "0.0.0")
+  message(STATUS "Eden Version: (dev build)")
+endif()
+string(TIMESTAMP EDEN_BUILD_TIME_UNIX "%s")
+
 # Tell CMake to also look in the directories where getdeps.py installs
 # our third-party dependencies.
 list(APPEND CMAKE_PREFIX_PATH "${CMAKE_CURRENT_SOURCE_DIR}/external/install")
@@ -106,4 +159,17 @@ endif()
 configure_file(
   ${CMAKE_CURRENT_SOURCE_DIR}/CMake/eden-config.h.in
   ${CMAKE_CURRENT_BINARY_DIR}/eden/fs/eden-config.h
+)
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/CMake/eden-config.cpp.in
+  ${CMAKE_CURRENT_BINARY_DIR}/eden/fs/eden-config.cpp
+)
+if(EDEN_HAVE_GIT)
+  set(EDEN_HAVE_GIT_PY "True")
+else()
+  set(EDEN_HAVE_GIT_PY "False")
+endif()
+configure_file(
+  ${CMAKE_CURRENT_SOURCE_DIR}/CMake/eden-config.py.in
+  ${CMAKE_CURRENT_BINARY_DIR}/eden/fs/py/eden/config.py
 )

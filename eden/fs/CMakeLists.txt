@@ -28,6 +28,11 @@ target_link_libraries(
     Folly::folly
 )
 
+add_library(
+  eden_build_config STATIC
+  eden-config.cpp
+)
+
 if (WIN32)
   add_compile_definitions(_UNICODE UNICODE)
 endif()

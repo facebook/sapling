@@ -71,6 +71,7 @@ target_link_libraries(
   PUBLIC
     eden_service_thrift_util
     streamingeden_thrift_cpp
+    eden_build_config
     eden_config
     eden_inodes
     eden_model

@@ -29,6 +29,7 @@ add_library(
 target_link_libraries(
   eden_utils
   PUBLIC
+    eden_build_config
     eden_service_thrift_cpp
     Folly::folly
 )
