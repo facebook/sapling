@@ -181,7 +181,7 @@ pub struct PostResolvePush {
 /// Data, needed to perform post-resolve `InfinitePush` action
 pub struct PostResolveInfinitePush {
     pub changegroup_id: Option<PartId>,
-    pub bookmark_push: InfiniteBookmarkPush<ChangesetId>,
+    pub maybe_bookmark_push: Option<InfiniteBookmarkPush<ChangesetId>>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
     pub uploaded_bonsais: UploadedBonsais,
 }
@@ -364,11 +364,16 @@ async fn resolve_push<'r>(
         .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
         .await
         .context("While resolving Pushkey")?;
+    let is_infinitepush = cg_push
+        .as_ref()
+        .and_then(|cg_push| cg_push.infinitepush_payload.as_ref())
+        .is_some();
     let infinitepush_bp = cg_push
         .as_ref()
         .and_then(|cg_push| cg_push.infinitepush_payload.as_ref())
         .and_then(|ip_payload| ip_payload.bookmark_push.as_ref());
-    let bookmark_push = try_collect_all_bookmark_pushes(pushkeys, infinitepush_bp.cloned())?;
+    let maybe_hg_bookmark_push =
+        try_collect_all_bookmark_pushes(pushkeys, infinitepush_bp.cloned())?;
 
     let (cg_and_manifests, bundle2) = if let Some(cg_push) = cg_push {
         let (manifests, bundle2) = resolver
@@ -398,27 +403,81 @@ async fn resolve_push<'r>(
     let maybe_raw_bundle2_id = resolver
         .ensure_stream_finished(bundle2, maybe_full_content)
         .await?;
-    let bookmark_push =
-        hg_all_bookmark_pushes_to_bonsai(ctx, &resolver.repo, bookmark_push).await?;
 
-    Ok(match bookmark_push {
-        AllBookmarkPushes::PlainPushes(bookmark_pushes) => {
-            PostResolveAction::Push(PostResolvePush {
-                changegroup_id,
-                bookmark_pushes,
-                maybe_raw_bundle2_id,
-                non_fast_forward_policy,
-                uploaded_bonsais,
-            })
+    let maybe_bonsai_bookmark_push = match maybe_hg_bookmark_push {
+        Some(hg_bookmark_push) => {
+            Some(hg_all_bookmark_pushes_to_bonsai(ctx, &resolver.repo, hg_bookmark_push).await?)
         }
-        AllBookmarkPushes::Inifinitepush(bookmark_push) => {
-            PostResolveAction::InfinitePush(PostResolveInfinitePush {
-                changegroup_id,
-                bookmark_push,
-                maybe_raw_bundle2_id,
-                uploaded_bonsais,
-            })
+        None => None,
+    };
+
+    if is_infinitepush {
+        get_post_resolve_infinitepush(
+            changegroup_id,
+            maybe_bonsai_bookmark_push,
+            maybe_raw_bundle2_id,
+            uploaded_bonsais,
+        )
+        .map(PostResolveAction::InfinitePush)
+    } else {
+        get_post_resolve_push(
+            changegroup_id,
+            maybe_bonsai_bookmark_push,
+            maybe_raw_bundle2_id,
+            non_fast_forward_policy,
+            uploaded_bonsais,
+        )
+        .map(PostResolveAction::Push)
+    }
+}
+
+fn get_post_resolve_infinitepush(
+    changegroup_id: Option<PartId>,
+    maybe_bonsai_bookmark_push: Option<AllBookmarkPushes<ChangesetId>>,
+    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    uploaded_bonsais: UploadedBonsais,
+) -> Result<PostResolveInfinitePush, Error> {
+    let maybe_bookmark_push = match maybe_bonsai_bookmark_push {
+        Some(AllBookmarkPushes::PlainPushes(_)) => {
+            return Err(format_err!(
+                "Infinitepush push cannot contain regular bookmarks"
+            ))
         }
+        Some(AllBookmarkPushes::Inifinitepush(bookmark_push)) => Some(bookmark_push),
+        None => None,
+    };
+
+    Ok(PostResolveInfinitePush {
+        changegroup_id,
+        maybe_bookmark_push,
+        maybe_raw_bundle2_id,
+        uploaded_bonsais,
+    })
+}
+
+fn get_post_resolve_push(
+    changegroup_id: Option<PartId>,
+    maybe_bonsai_bookmark_push: Option<AllBookmarkPushes<ChangesetId>>,
+    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+    non_fast_forward_policy: NonFastForwardPolicy,
+    uploaded_bonsais: UploadedBonsais,
+) -> Result<PostResolvePush, Error> {
+    let bookmark_pushes = match maybe_bonsai_bookmark_push {
+        Some(AllBookmarkPushes::Inifinitepush(_bookmark_push)) => {
+            return Err(format_err!(
+            "This should actually be impossible: non-infinitepush push with infinitepush bookmarks"
+        ))
+        }
+        Some(AllBookmarkPushes::PlainPushes(bookmark_pushes)) => bookmark_pushes,
+        None => vec![],
+    };
+
+    Ok(PostResolvePush {
+        changegroup_id,
+        bookmark_pushes,
+        maybe_raw_bundle2_id,
+        non_fast_forward_policy,
+        uploaded_bonsais,
     })
 }
 
@@ -1221,7 +1280,7 @@ fn collect_pushkey_bookmark_pushes(
 fn try_collect_all_bookmark_pushes(
     pushkeys: Vec<Pushkey>,
     infinitepush_bookmark_push: Option<InfiniteBookmarkPush<HgChangesetId>>,
-) -> Result<AllBookmarkPushes<HgChangesetId>> {
+) -> Result<Option<AllBookmarkPushes<HgChangesetId>>> {
     let bookmark_pushes: Vec<_> = collect_pushkey_bookmark_pushes(pushkeys)
         .into_iter()
         .collect();
@@ -1229,15 +1288,20 @@ fn try_collect_all_bookmark_pushes(
     match (bookmark_pushes_len, infinitepush_bookmark_push) {
         (0, Some(infinitepush_bookmark_push)) => {
             STATS::bookmark_pushkeys_count.add_value(1);
-            Ok(AllBookmarkPushes::Inifinitepush(infinitepush_bookmark_push))
+            Ok(Some(AllBookmarkPushes::Inifinitepush(
+                infinitepush_bookmark_push,
+            )))
         }
-        (bookmark_pushes_len, None) => {
+        (bookmark_pushes_len, None) if bookmark_pushes_len > 0 => {
             STATS::bookmark_pushkeys_count.add_value(bookmark_pushes_len as i64);
-            Ok(AllBookmarkPushes::PlainPushes(bookmark_pushes))
+            Ok(Some(AllBookmarkPushes::PlainPushes(bookmark_pushes)))
         }
+        // Neither plain, not infinitepush bookmark pushes are present
+        (0, None) => Ok(None),
         (_, Some(_)) => Err(format_err!(
             "Same bundle2 can not be used for both plain and infinite push"
         )),
+        (_, _) => Err(format_err!("An unreachable pattern. Programmer's error")),
     }
 }
 

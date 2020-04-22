@@ -29,7 +29,7 @@ use pushrebase::{self, PushrebaseHook};
 use reachabilityindex::LeastCommonAncestorsHint;
 use scribe_commit_queue::{self, ScribeCommitQueue};
 use scuba_ext::ScubaSampleBuilderExt;
-use slog::{o, warn};
+use slog::{debug, o, warn};
 use stats::prelude::*;
 use std::{collections::HashSet, sync::Arc};
 
@@ -132,6 +132,7 @@ fn run_push(
     infinitepush_params: InfinitepushParams,
     action: PostResolvePush,
 ) -> BoxFuture<UnbundlePushResponse, BundleResolverError> {
+    debug!(ctx.logger(), "unbundle processing: running push.");
     let PostResolvePush {
         changegroup_id,
         bookmark_pushes,
@@ -140,48 +141,43 @@ fn run_push(
         uploaded_bonsais: _,
     } = action;
 
-    ({
-        cloned!(ctx);
-        move || {
-            let bookmark_ids = bookmark_pushes.iter().map(|bp| bp.part_id).collect();
-            let reason = BookmarkUpdateReason::Push {
-                bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
-            };
+    let bookmark_ids = bookmark_pushes.iter().map(|bp| bp.part_id).collect();
+    let reason = BookmarkUpdateReason::Push {
+        bundle_replay_data: maybe_raw_bundle2_id.map(BundleReplayData::new),
+    };
 
-            let bookmark_pushes_futures = bookmark_pushes.into_iter().map({
-                cloned!(ctx, repo, lca_hint, bookmark_attrs, infinitepush_params);
-                move |bookmark_push| {
-                    check_plain_bookmark_push_allowed(
-                        ctx.clone(),
-                        repo.clone(),
-                        bookmark_attrs.clone(),
-                        non_fast_forward_policy,
-                        infinitepush_params.clone(),
-                        bookmark_push,
-                        lca_hint.clone(),
-                    )
-                    .map(|bp| Some(BookmarkPush::PlainPush(bp)))
-                }
-            });
-
-            future::join_all(bookmark_pushes_futures)
-                .and_then({
-                    cloned!(ctx, repo);
-                    move |maybe_bookmark_pushes| {
-                        save_bookmark_pushes_to_db(ctx, repo, reason, maybe_bookmark_pushes)
-                    }
-                })
-                .map(move |()| (changegroup_id, bookmark_ids))
-                .boxify()
+    let bookmark_pushes_futures = bookmark_pushes.into_iter().map({
+        cloned!(ctx, repo, lca_hint, bookmark_attrs, infinitepush_params);
+        move |bookmark_push| {
+            check_plain_bookmark_push_allowed(
+                ctx.clone(),
+                repo.clone(),
+                bookmark_attrs.clone(),
+                non_fast_forward_policy,
+                infinitepush_params.clone(),
+                bookmark_push,
+                lca_hint.clone(),
+            )
+            .map(|bp| Some(BookmarkPush::PlainPush(bp)))
         }
-    })()
-    .context("While doing a push")
-    .from_err()
-    .map(move |(changegroup_id, bookmark_ids)| UnbundlePushResponse {
-        changegroup_id,
-        bookmark_ids,
-    })
-    .boxify()
+    });
+
+    future::join_all(bookmark_pushes_futures)
+        .and_then({
+            cloned!(ctx, repo);
+            move |maybe_bookmark_pushes| {
+                save_bookmark_pushes_to_db(ctx, repo, reason, maybe_bookmark_pushes)
+            }
+        })
+        .map(move |()| (changegroup_id, bookmark_ids))
+        .boxify()
+        .context("While doing a push")
+        .from_err()
+        .map(move |(changegroup_id, bookmark_ids)| UnbundlePushResponse {
+            changegroup_id,
+            bookmark_ids,
+        })
+        .boxify()
 }
 
 fn run_infinitepush(
@@ -191,38 +187,43 @@ fn run_infinitepush(
     infinitepush_params: InfinitepushParams,
     action: PostResolveInfinitePush,
 ) -> BoxFuture<UnbundleInfinitePushResponse, BundleResolverError> {
+    debug!(ctx.logger(), "unbundle processing: running infinitepush.");
     let PostResolveInfinitePush {
         changegroup_id,
-        bookmark_push,
+        maybe_bookmark_push,
         maybe_raw_bundle2_id,
         uploaded_bonsais: _,
     } = action;
 
-    ({
-        cloned!(ctx);
-        move || {
-            let reason = BookmarkUpdateReason::Push {
-                bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
-            };
-
-            filter_or_check_infinitepush_allowed(
-                ctx.clone(),
-                repo.clone(),
-                lca_hint,
-                infinitepush_params,
-                bookmark_push,
-            )
-            .map(|maybe_bp| maybe_bp.map(BookmarkPush::Infinitepush))
-            .and_then({
-                cloned!(ctx, repo);
-                move |maybe_bonsai_bookmark_push| {
-                    save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bonsai_bookmark_push])
-                }
-            })
-            .map(move |()| changegroup_id)
-            .boxify()
+    let bookmark_push = match maybe_bookmark_push {
+        Some(bookmark_push) => bookmark_push,
+        None => {
+            // Changegroup was saved during bundle2 resolution
+            // there's nothing we need to do here.
+            return ok(UnbundleInfinitePushResponse { changegroup_id }).boxify();
         }
-    })()
+    };
+
+    let reason = BookmarkUpdateReason::Push {
+        bundle_replay_data: maybe_raw_bundle2_id.map(BundleReplayData::new),
+    };
+
+    filter_or_check_infinitepush_allowed(
+        ctx.clone(),
+        repo.clone(),
+        lca_hint,
+        infinitepush_params,
+        bookmark_push,
+    )
+    .map(|maybe_bp| maybe_bp.map(BookmarkPush::Infinitepush))
+    .and_then({
+        cloned!(ctx, repo);
+        move |maybe_bonsai_bookmark_push| {
+            save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bonsai_bookmark_push])
+        }
+    })
+    .map(move |()| changegroup_id)
+    .boxify()
     .context("While doing an infinitepush")
     .from_err()
     .map(move |changegroup_id| UnbundleInfinitePushResponse { changegroup_id })
@@ -238,6 +239,7 @@ fn run_pushrebase(
     pushrebase_params: PushrebaseParams,
     action: PostResolvePushRebase,
 ) -> BoxFuture<UnbundlePushRebaseResponse, BundleResolverError> {
+    debug!(ctx.logger(), "unbundle processing: running pushrebase.");
     let PostResolvePushRebase {
         any_merges,
         bookmark_push_part_id,
@@ -333,6 +335,10 @@ fn run_bookmark_only_pushrebase(
     infinitepush_params: InfinitepushParams,
     action: PostResolveBookmarkOnlyPushRebase,
 ) -> BoxFuture<UnbundleBookmarkOnlyPushRebaseResponse, BundleResolverError> {
+    debug!(
+        ctx.logger(),
+        "unbundle processing: running bookmark-only pushrebase."
+    );
     let PostResolveBookmarkOnlyPushRebase {
         bookmark_push,
         maybe_raw_bundle2_id,

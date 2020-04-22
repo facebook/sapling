@@ -264,19 +264,24 @@ impl PushRedirector {
     ) -> Result<PostResolveInfinitePush, Error> {
         let PostResolveInfinitePush {
             changegroup_id,
-            bookmark_push,
+            maybe_bookmark_push,
             maybe_raw_bundle2_id,
             uploaded_bonsais,
         } = orig;
         let uploaded_bonsais = self
             .sync_uploaded_changesets(ctx.clone(), uploaded_bonsais)
             .await?;
-        let bookmark_push = self
-            .convert_infinite_bookmark_push_small_to_large(ctx.clone(), bookmark_push)
-            .await?;
+        let maybe_bookmark_push = match maybe_bookmark_push {
+            Some(bookmark_push) => Some(
+                self.convert_infinite_bookmark_push_small_to_large(ctx.clone(), bookmark_push)
+                    .await?,
+            ),
+            None => None,
+        };
+
         Ok(PostResolveInfinitePush {
             changegroup_id,
-            bookmark_push,
+            maybe_bookmark_push,
             maybe_raw_bundle2_id,
             uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
         })

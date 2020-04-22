@@ -115,13 +115,13 @@ fn test_pushredirect_config() {
     });
     let infinitepush_action = PostResolveAction::InfinitePush(PostResolveInfinitePush {
         changegroup_id: None,
-        bookmark_push: InfiniteBookmarkPush {
+        maybe_bookmark_push: Some(InfiniteBookmarkPush {
             name: BookmarkName::new("").unwrap(),
             create: true,
             force: true,
             old: None,
             new: ONES_CSID,
-        },
+        }),
         maybe_raw_bundle2_id: None,
         uploaded_bonsais: HashSet::new(),
     });
