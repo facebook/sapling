@@ -30,6 +30,7 @@ pub async fn walk_exact_tail<RunFac, SinkFac, SinkOut, WS, VOut, Route>(
     walk_params: RepoWalkParams,
     walk_state: WS,
     make_run: RunFac,
+    keep_edge_paths: bool,
 ) -> Result<(), Error>
 where
     RunFac: 'static + Clone + Send + Sync + FnOnce(RepoWalkRun) -> SinkFac,
@@ -62,6 +63,7 @@ where
             walk_params.error_as_data_node_types.clone(),
             walk_params.error_as_data_edge_types.clone(),
             scuba_builder,
+            keep_edge_paths,
         );
 
         let make_sink = make_run(walk_run);

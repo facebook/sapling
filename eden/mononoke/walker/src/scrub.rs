@@ -377,6 +377,7 @@ pub fn scrub_objects(
                 walk_params,
                 walk_state,
                 make_sink,
+                false,
             )
             .boxed()
         }

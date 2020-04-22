@@ -48,11 +48,24 @@ use thiserror::Error;
 pub struct OutgoingEdge {
     pub label: EdgeType,
     pub target: Node,
+    pub path: Option<WrappedPath>,
 }
 
 impl OutgoingEdge {
     pub fn new(label: EdgeType, target: Node) -> Self {
-        Self { label, target }
+        Self {
+            label,
+            target,
+            path: None,
+        }
+    }
+
+    pub fn new_with_path(label: EdgeType, target: Node, path: Option<WrappedPath>) -> Self {
+        Self {
+            label,
+            target,
+            path,
+        }
     }
 }
 
@@ -65,12 +78,23 @@ pub enum ErrorKind {
 pub struct ResolvedNode {
     pub node: Node,
     pub data: NodeData,
+    pub path: Option<WrappedPath>,
     pub via: Option<EdgeType>,
 }
 
 impl ResolvedNode {
-    pub fn new(node: Node, data: NodeData, via: Option<EdgeType>) -> Self {
-        Self { node, data, via }
+    pub fn new(
+        node: Node,
+        data: NodeData,
+        via: Option<EdgeType>,
+        path: Option<WrappedPath>,
+    ) -> Self {
+        Self {
+            node,
+            data,
+            via,
+            path,
+        }
     }
 }
 
@@ -161,6 +185,7 @@ async fn bonsai_changeset_step(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bcs_id: &ChangesetId,
+    keep_edge_paths: bool,
 ) -> Result<StepOutput, Error> {
     // Get the data, and add direct file data for this bonsai changeset
     let bcs = bcs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
@@ -188,13 +213,18 @@ async fn bonsai_changeset_step(
     recurse.append(
         &mut bcs
             .file_changes()
-            .filter_map(|(_mpath, fc_opt)| {
-                fc_opt // remove None
+            .filter_map(|(mpath, fc_opt)| {
+                fc_opt.map(|fc| (fc, mpath)) // remove None
             })
-            .map(|fc| {
-                OutgoingEdge::new(
+            .map(|(fc, mpath)| {
+                OutgoingEdge::new_with_path(
                     EdgeType::BonsaiChangesetToFileContent,
                     Node::FileContent(fc.content_id()),
+                    if keep_edge_paths {
+                        Some(WrappedPath::from(Some(mpath.clone())))
+                    } else {
+                        None
+                    },
                 )
             })
             .collect::<Vec<OutgoingEdge>>(),
@@ -365,6 +395,7 @@ fn hg_file_envelope_step(
     ctx: CoreContext,
     repo: &BlobRepo,
     hg_file_node_id: HgFileNodeId,
+    path: Option<WrappedPath>,
 ) -> impl Future<Output = Result<StepOutput, Error>> {
     hg_file_node_id
         .load(ctx, repo.blobstore())
@@ -372,9 +403,10 @@ fn hg_file_envelope_step(
         .map({
             move |envelope| {
                 let file_content_id = envelope.content_id();
-                let fnode = OutgoingEdge::new(
+                let fnode = OutgoingEdge::new_with_path(
                     EdgeType::HgFileEnvelopeToFileContent,
                     Node::FileContent(file_content_id),
+                    path,
                 );
                 StepOutput(NodeData::HgFileEnvelope(envelope), vec![fnode])
             }
@@ -442,6 +474,7 @@ fn hg_manifest_step(
     repo: &BlobRepo,
     path: WrappedPath,
     hg_manifest_id: HgManifestId,
+    keep_edge_paths: bool,
 ) -> impl Future<Output = Result<StepOutput, Error>> {
     hg_manifest_id
         .load(ctx, repo.blobstore())
@@ -468,9 +501,14 @@ fn hg_manifest_step(
                     .into_iter()
                     .map(move |(full_path, hg_file_node_id)| {
                         vec![
-                            OutgoingEdge::new(
+                            OutgoingEdge::new_with_path(
                                 EdgeType::HgManifestToHgFileEnvelope,
                                 Node::HgFileEnvelope(hg_file_node_id),
+                                if keep_edge_paths {
+                                    Some(full_path.clone())
+                                } else {
+                                    None
+                                },
                             ),
                             OutgoingEdge::new(
                                 EdgeType::HgManifestToHgFileNode,
@@ -526,10 +564,12 @@ pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
             OutgoingEdge {
                 label: _,
                 target: Node::FileContent(fc_id),
+                path,
             } => {
-                extra.push(OutgoingEdge::new(
+                extra.push(OutgoingEdge::new_with_path(
                     EdgeType::FileContentToFileContentMetadata,
                     Node::FileContentMetadata(*fc_id),
+                    path.clone(),
                 ));
             }
             _ => (),
@@ -551,6 +591,7 @@ pub fn walk_exact<V, VOut, Route>(
     error_as_data_node_types: HashSet<NodeType>,
     error_as_data_edge_types: HashSet<EdgeType>,
     scuba: ScubaSampleBuilder,
+    keep_edge_paths: bool,
 ) -> BoxStream<'static, Result<VOut, Error>>
 where
     V: 'static + Clone + WalkVisitor<VOut, Route> + Send,
@@ -560,7 +601,7 @@ where
     // record the roots so the stats add up
     visitor.visit(
         &ctx,
-        ResolvedNode::new(Node::Root, NodeData::Root, None),
+        ResolvedNode::new(Node::Root, NodeData::Root, None, None),
         None,
         walk_roots.clone(),
     );
@@ -620,6 +661,7 @@ where
                                 )
                                 .boxed()
                             }),
+                            keep_edge_paths,
                         );
 
                         let handle = tokio::task::spawn(next);
@@ -645,6 +687,7 @@ async fn walk_one<V, VOut, Route>(
     mut scuba: ScubaSampleBuilder,
     published_bookmarks: Arc<HashMap<BookmarkName, ChangesetId>>,
     heads_fetcher: HeadsFetcher,
+    keep_edge_paths: bool,
 ) -> Result<(VOut, Vec<(Option<Route>, OutgoingEdge)>), Error>
 where
     V: 'static + Clone + WalkVisitor<VOut, Route> + Send,
@@ -653,6 +696,7 @@ where
 {
     let logger = ctx.logger().clone();
     let node = walk_item.target.clone();
+    let node_path = walk_item.path.clone();
     let node_type = node.get_type();
     let step_result = match node.clone() {
         Node::Root => Err(format_err!("Not expecting Roots to be generated")),
@@ -666,7 +710,9 @@ where
             )
             .await
         }
-        Node::BonsaiChangeset(bcs_id) => bonsai_changeset_step(&ctx, &repo, &bcs_id).await,
+        Node::BonsaiChangeset(bcs_id) => {
+            bonsai_changeset_step(&ctx, &repo, &bcs_id, keep_edge_paths).await
+        }
         Node::BonsaiHgMapping(bcs_id) => {
             bonsai_to_hg_mapping_step(ctx.clone(), &repo, bcs_id, enable_derive).await
         }
@@ -685,13 +731,23 @@ where
         }
         Node::HgChangeset(hg_csid) => hg_changeset_step(ctx.clone(), &repo, hg_csid).await,
         Node::HgFileEnvelope(hg_file_node_id) => {
-            hg_file_envelope_step(ctx.clone(), &repo, hg_file_node_id).await
+            hg_file_envelope_step(
+                ctx.clone(),
+                &repo,
+                hg_file_node_id,
+                if keep_edge_paths {
+                    node_path.clone()
+                } else {
+                    None
+                },
+            )
+            .await
         }
         Node::HgFileNode((path, hg_file_node_id)) => {
             hg_file_node_step(ctx.clone(), &repo, path, hg_file_node_id).await
         }
         Node::HgManifest((path, hg_manifest_id)) => {
-            hg_manifest_step(ctx.clone(), &repo, path, hg_manifest_id).await
+            hg_manifest_step(ctx.clone(), &repo, path, hg_manifest_id, keep_edge_paths).await
         }
         // Content
         Node::FileContent(content_id) => file_content_step(ctx.clone(), &repo, content_id),
@@ -772,7 +828,7 @@ where
             // Allow WalkVisitor to record state and decline outgoing nodes if already visited
             Ok(visitor.visit(
                 &ctx,
-                ResolvedNode::new(node, node_data, Some(edge_label)),
+                ResolvedNode::new(node, node_data, Some(edge_label), node_path),
                 via,
                 children,
             ))

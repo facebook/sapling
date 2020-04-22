@@ -46,9 +46,7 @@ pub struct PathTrackingRoute {
 
 impl PathTrackingRoute {
     fn sampling_fingerprint(&self) -> Option<u64> {
-        self.path
-            .as_ref()
-            .and_then(|o| o.as_ref().map(|p| p.get_path_hash().sampling_fingerprint()))
+        self.path.as_ref().and_then(|p| p.sampling_fingerprint())
     }
 }
 
@@ -69,13 +67,21 @@ where
             } else if self.sample_rate == 0 {
                 false
             } else {
-                let sampling_fingerprint = match step.target.stats_path() {
-                    Some(path_opt) => path_opt
-                        .as_ref()
-                        .map(|p| p.get_path_hash().sampling_fingerprint()),
-                    None => match route {
-                        Some(route) => route.sampling_fingerprint(),
-                        None => step.target.sampling_fingerprint(),
+                let sampling_fingerprint = match &step.path {
+                    // Step has set explicit path, e.g. bonsai file
+                    Some(_) => step.path.as_ref().and_then(|p| p.sampling_fingerprint()),
+                    None => match step.target.stats_path() {
+                        // Path is part of node identity
+                        Some(path_opt) => path_opt
+                            .as_ref()
+                            .map(|p| p.get_path_hash().sampling_fingerprint()),
+                        // No per-node path, so use the route
+                        None => match route {
+                            // A previous node provided a route
+                            Some(route) => route.sampling_fingerprint(),
+                            // No route available, e.g. at start
+                            None => step.target.sampling_fingerprint(),
+                        },
                     },
                 };
 
@@ -104,13 +110,23 @@ where
         PathTrackingRoute,
         Vec<OutgoingEdge>,
     ) {
-        let route = match current.node.stats_path() {
+        let route = match &current.path {
+            // Step has set explicit path, e.g. bonsai file
             Some(path) => PathTrackingRoute {
                 path: Some(path.clone()),
             },
-            None => match route {
-                Some(route) => route,
-                None => PathTrackingRoute::default(),
+            None => match current.node.stats_path() {
+                // Path is part of node identity
+                Some(path) => PathTrackingRoute {
+                    path: Some(path.clone()),
+                },
+                // No per-node path, so use the route
+                None => match route {
+                    // A previous node provided a route
+                    Some(route) => route,
+                    // No route available, e.g. at start
+                    None => PathTrackingRoute::default(),
+                },
             },
         };
 

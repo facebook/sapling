@@ -572,6 +572,7 @@ pub fn validate(
                 walk_params,
                 stateful_visitor,
                 make_sink,
+                false,
             )
             .boxed()
         }

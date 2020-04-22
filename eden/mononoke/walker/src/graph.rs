@@ -118,6 +118,11 @@ impl WrappedPath {
             WrappedPath::NonRoot(path) => Some(path.as_ref()),
         }
     }
+
+    pub fn sampling_fingerprint(&self) -> Option<u64> {
+        self.as_ref()
+            .map(|o| o.get_path_hash().sampling_fingerprint())
+    }
 }
 
 impl From<Option<MPath>> for WrappedPath {

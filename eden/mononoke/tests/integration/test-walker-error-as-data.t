@@ -38,7 +38,7 @@ Check we get an error due to the missing aliases
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Execution error: Could not step to OutgoingEdge { label: FileContentMetadataToGitSha1Alias, target: AliasContentMapping(GitSha1(GitSha1(96d80cd6c4e7158dbebd0849f4fb7ce513e5828c))) }
+  Execution error: Could not step to OutgoingEdge { label: FileContentMetadataToGitSha1Alias, target: AliasContentMapping(GitSha1(GitSha1(96d80cd6c4e7158dbebd0849f4fb7ce513e5828c)))* (glob)
   * (glob)
   Caused by:
       Blob is missing: alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c
@@ -75,7 +75,7 @@ Check error-as-data-edge-type, should get an error on FileContentMetadataToGitSh
   Walking edge types * (glob)
   Walking node types * (glob)
   Error as data enabled, walk results may not be complete. Errors as data enabled for node types [AliasContentMapping] edge types [FileContentMetadataToSha1Alias]
-  Execution error: Could not step to OutgoingEdge { label: FileContentMetadataToGitSha1Alias, target: AliasContentMapping(GitSha1(GitSha1(96d80cd6c4e7158dbebd0849f4fb7ce513e5828c))) }
+  Execution error: Could not step to OutgoingEdge { label: FileContentMetadataToGitSha1Alias, target: AliasContentMapping(GitSha1(GitSha1(96d80cd6c4e7158dbebd0849f4fb7ce513e5828c)))* (glob)
   * (glob)
   Caused by:
       Blob is missing: alias.gitsha1.96d80cd6c4e7158dbebd0849f4fb7ce513e5828c

@@ -359,6 +359,7 @@ pub fn compression_benefit(
                 walk_params,
                 walk_state,
                 make_sink,
+                true,
             )
             .boxed()
         }
