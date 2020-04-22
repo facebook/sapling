@@ -31,7 +31,7 @@ from eden.test_support.environment_variable import EnvironmentVariableMixin
 from eden.test_support.temporary_directory import TempFileManager
 from eden.thrift import EdenClient
 
-from . import edenclient, gitrepo, hgrepo, repobase
+from . import blacklist, edenclient, gitrepo, hgrepo, repobase
 from .find_executables import FindExe
 
 
@@ -90,6 +90,8 @@ class EdenTestCase(unittest.TestCase, EnvironmentVariableMixin):
         return f"eden_test.{method_name[:20]}."
 
     def setUp(self) -> None:
+        blacklist.skip_test_if_blacklisted(self, self._testMethodName)
+
         self.start = time.time()
         self.last_event = self.start
         self.system_hgrc: Optional[str] = None
