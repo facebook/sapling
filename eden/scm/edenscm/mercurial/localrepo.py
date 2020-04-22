@@ -2470,7 +2470,8 @@ class localrepository(object):
                 # if minimal phase was 0 we don't need to retract anything
                 phases.registernew(self, tr, targetphase, [n])
             # Newly committed commits shouldn't be obsoleted.
-            obsolete.revive([self[n]], "commit")
+            if obsolete.isenabled(self, obsolete.createmarkersopt):
+                obsolete.revive([self[n]], "commit")
             # Newly committed commits should be visible.
             if targetphase > phases.public:
                 visibility.add(self, [n])
