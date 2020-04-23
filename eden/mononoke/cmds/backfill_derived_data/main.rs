@@ -9,9 +9,8 @@
 #![deny(warnings)]
 
 use anyhow::{format_err, Error};
-use blame::{fetch_file_full_content, BlameRoot};
+use blame::BlameRoot;
 use blobrepo::{BlobRepo, DangerousOverride};
-use blobstore::{Blobstore, Loadable};
 use bookmarks::{BookmarkPrefix, Bookmarks, Freshness};
 use bytes::Bytes;
 use cacheblob::{dummy::DummyLease, LeaseOps};
@@ -23,32 +22,29 @@ use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
 use dbbookmarks::SqlBookmarks;
-use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
 use derived_data_utils::{
     derived_data_utils, derived_data_utils_unsafe, DerivedUtils, POSSIBLE_DERIVED_TYPES,
 };
-use fastlog::{fetch_parent_root_unodes, RootFastlog};
 use fbinit::FacebookInit;
-use fsnodes::{prefetch_content_metadata, RootFsnodeId};
+use fsnodes::RootFsnodeId;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, ready, try_join, try_join3, try_join4, TryFutureExt},
-    stream::{self, FuturesUnordered, Stream, StreamExt, TryStreamExt},
+    future::{self, try_join, try_join3, TryFutureExt},
+    stream::{self, StreamExt, TryStreamExt},
+    Stream,
 };
 use futures_ext::FutureExt as OldFutureExt;
-use futures_old::{stream as old_stream, Future as OldFuture, Stream as OldStream};
+use futures_old::{Future as OldFuture, Stream as OldStream};
 use futures_stats::Timed;
 use futures_stats::TimedFutureExt;
 use lock_ext::LockExt;
-use manifest::find_intersection_of_diffs;
 use metaconfig_types::DerivedDataConfig;
-use mononoke_types::{ChangesetId, FileUnodeId, RepositoryId};
+use mononoke_types::{ChangesetId, RepositoryId};
 use phases::SqlPhases;
 use slog::{info, Logger};
 use stats::prelude::*;
 use std::{
-    collections::HashSet,
     fs,
     path::Path,
     sync::{
@@ -57,7 +53,8 @@ use std::{
     },
     time::Duration,
 };
-use unodes::{find_unode_renames, RootUnodeManifestId};
+
+mod warmup;
 
 define_stats_struct! {
     DerivedDataStats("mononoke.backfill_derived_data.{}.{}", repo_name: String, data_type: &'static str),
@@ -93,12 +90,6 @@ const UNREDACTED_TYPES: &[&str] = &[
     // Blame does not contain any content of the file itself
     BlameRoot::NAME,
 ];
-
-/// Types of derived data for which prefetching content for changed files
-/// migth speed up derivation.
-const PREFETCH_CONTENT_TYPES: &[&str] = &[BlameRoot::NAME];
-const PREFETCH_CONTENT_METADATA_TYPES: &[&str] = &[RootFsnodeId::NAME];
-const PREFETCH_UNODE_TYPES: &[&str] = &[RootFastlog::NAME, RootDeletedManifestId::NAME];
 
 fn open_repo_maybe_unredacted<'a>(
     fb: FacebookInit,
@@ -428,7 +419,7 @@ async fn subcommand_backfill<P: AsRef<Path>>(
                 .await?;
             let chunk_size = chunk.len();
 
-            warmup(ctx, repo, derived_data_type, &chunk).await?;
+            warmup::warmup(ctx, repo, derived_data_type, &chunk).await?;
 
             derived_utils
                 .derive_batch(ctx.clone(), repo.clone(), chunk)
@@ -463,132 +454,6 @@ async fn subcommand_backfill<P: AsRef<Path>>(
     }
 
     Ok(())
-}
-
-async fn warmup(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    derived_data_type: &String,
-    chunk: &Vec<ChangesetId>,
-) -> Result<(), Error> {
-    // Warmup bonsai changesets unconditionally because
-    // most likely all derived data needs it. And they are cheap to warm up anyway
-
-    let bcs_warmup = {
-        cloned!(ctx, chunk, repo);
-        async move {
-            old_stream::iter_ok(chunk.clone())
-                .map({
-                    cloned!(ctx, repo);
-                    move |cs_id| cs_id.load(ctx.clone(), repo.blobstore())
-                })
-                .buffer_unordered(100)
-                .for_each(|_| Ok(()))
-                .compat()
-                .await
-        }
-    };
-
-    let content_warmup = async {
-        if PREFETCH_CONTENT_TYPES.contains(&derived_data_type.as_ref()) {
-            content_warmup(ctx, repo, chunk).await?
-        }
-        Ok(())
-    };
-
-    let metadata_warmup = async {
-        if PREFETCH_CONTENT_METADATA_TYPES.contains(&derived_data_type.as_ref()) {
-            content_metadata_warmup(ctx, repo, chunk).await?
-        }
-        Ok(())
-    };
-
-    let unode_warmup = async {
-        if PREFETCH_UNODE_TYPES.contains(&derived_data_type.as_ref()) {
-            unode_warmup(ctx, repo, chunk).await?
-        }
-        Ok(())
-    };
-
-    try_join4(bcs_warmup, content_warmup, metadata_warmup, unode_warmup).await?;
-
-    Ok(())
-}
-
-async fn content_warmup(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    chunk: &Vec<ChangesetId>,
-) -> Result<(), Error> {
-    stream::iter(chunk)
-        .map({ move |csid| prefetch_content(ctx, repo, csid) })
-        .buffered(CHUNK_SIZE)
-        .try_for_each(|_| async { Ok(()) })
-        .await
-}
-
-async fn content_metadata_warmup(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    chunk: &Vec<ChangesetId>,
-) -> Result<(), Error> {
-    stream::iter(chunk)
-        .map({
-            |cs_id| async move {
-                let bcs = cs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
-
-                let mut content_ids = HashSet::new();
-                for (_, maybe_file_change) in bcs.file_changes() {
-                    if let Some(file_change) = maybe_file_change {
-                        content_ids.insert(file_change.content_id());
-                    }
-                }
-                prefetch_content_metadata(ctx.clone(), repo.blobstore().clone(), content_ids)
-                    .compat()
-                    .await?;
-
-                Result::<_, Error>::Ok(())
-            }
-        })
-        .map(Result::<_, Error>::Ok)
-        .try_for_each_concurrent(100, |f| f)
-        .await?;
-    Ok(())
-}
-
-async fn unode_warmup(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    chunk: &Vec<ChangesetId>,
-) -> Result<(), Error> {
-    let futs = FuturesUnordered::new();
-    for cs_id in chunk {
-        cloned!(ctx, repo);
-        let f = async move {
-            let bcs = cs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
-
-            let root_mf_id =
-                RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs.get_changeset_id())
-                    .from_err();
-
-            let parent_unodes = fetch_parent_root_unodes(ctx.clone(), repo.clone(), bcs);
-            let (root_mf_id, parent_unodes) =
-                try_join(root_mf_id.compat(), parent_unodes.compat()).await?;
-            let unode_mf_id = root_mf_id.manifest_unode_id().clone();
-            find_intersection_of_diffs(
-                ctx.clone(),
-                Arc::new(repo.get_blobstore()),
-                unode_mf_id,
-                parent_unodes,
-            )
-            .compat()
-            .try_for_each(|_| async { Ok(()) })
-            .await
-        };
-        futs.push(f);
-    }
-
-    futs.try_for_each(|_| ready(Ok(()))).await
 }
 
 async fn subcommand_tail(
@@ -721,99 +586,17 @@ async fn subcommand_single(
         .await
 }
 
-// Prefetch content of changed files between parents
-async fn prefetch_content(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    csid: &ChangesetId,
-) -> Result<(), Error> {
-    async fn prefetch_content_unode<'a>(
-        ctx: CoreContext,
-        blobstore: Arc<dyn Blobstore>,
-        rename: Option<FileUnodeId>,
-        file_unode_id: FileUnodeId,
-    ) -> Result<(), Error> {
-        let ctx = &ctx;
-        let file_unode = file_unode_id.load(ctx.clone(), &blobstore).compat().await?;
-        let parents_content: Vec<_> = file_unode
-            .parents()
-            .iter()
-            .cloned()
-            .chain(rename)
-            .map({
-                cloned!(blobstore);
-                move |file_unode_id| {
-                    fetch_file_full_content(ctx.clone(), blobstore.clone(), file_unode_id).compat()
-                }
-            })
-            .collect();
-
-        // the assignment is needed to avoid unused_must_use warnings
-        let _ = future::try_join(
-            fetch_file_full_content(ctx.clone(), blobstore.clone(), file_unode_id).compat(),
-            future::try_join_all(parents_content),
-        )
-        .await?;
-        Ok(())
-    }
-
-    let bonsai = csid.load(ctx.clone(), repo.blobstore()).compat().await?;
-
-    let root_manifest_fut = RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid.clone())
-        .from_err()
-        .map(|mf| mf.manifest_unode_id().clone())
-        .compat();
-    let parents_manifest_futs = bonsai.parents().collect::<Vec<_>>().into_iter().map({
-        move |csid| {
-            RootUnodeManifestId::derive(ctx.clone(), repo.clone(), csid)
-                .from_err()
-                .map(|mf| mf.manifest_unode_id().clone())
-                .compat()
-        }
-    });
-    let (root_manifest, parents_manifests, renames) = try_join3(
-        root_manifest_fut,
-        future::try_join_all(parents_manifest_futs),
-        find_unode_renames(ctx.clone(), repo.clone(), &bonsai).compat(),
-    )
-    .await?;
-
-    let blobstore = repo.get_blobstore().boxed();
-
-    find_intersection_of_diffs(
-        ctx.clone(),
-        blobstore.clone(),
-        root_manifest,
-        parents_manifests,
-    )
-    .filter_map(|(path, entry)| Some((path?, entry.into_leaf()?)))
-    .compat()
-    .map(|result| async {
-        match result {
-            Ok((path, file)) => {
-                let rename = renames.get(&path).copied();
-                let fut = prefetch_content_unode(ctx.clone(), blobstore.clone(), rename, file);
-                let join_handle = tokio::task::spawn(fut);
-                join_handle.await?
-            }
-            Err(e) => Err(e),
-        }
-    })
-    .buffered(256)
-    .try_for_each(|()| future::ready(Ok(())))
-    .await
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use blobstore::BlobstoreBytes;
+    use blobstore::{Blobstore, BlobstoreBytes};
     use fixtures::linear;
     use futures::future::FutureExt;
     use futures_ext::BoxFuture;
     use mercurial_types::HgChangesetId;
     use std::str::FromStr;
     use tokio_compat::runtime::Runtime;
+    use unodes::RootUnodeManifestId;
 
     #[fbinit::test]
     fn test_backfill_data_latest(fb: FacebookInit) -> Result<(), Error> {
