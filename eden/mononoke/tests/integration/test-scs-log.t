@@ -55,8 +55,62 @@ import testing repo to mononoke
 start SCS server
   $ start_and_wait_for_scs_server --scuba-log-file "$TESTTMP/scuba.json"
 
-Test log
+Test full log
+  $ scsc log --repo repo -i "$COMMIT_H"
+  Commit: 159ed529f60d23c614fe315d46a4b2eb5d27b569
+  Date: 2020-01-03 00:00:00 +00:00
+  Author: test
+  Summary: H
+  
+  Commit: d603e69354506a00833ddb9422cac6053debb733
+  Date: 2020-01-02 00:00:00 +00:00
+  Author: test
+  Summary: G
+  
+  Commit: 3a61e10442a9b76f8826b05e7ef1a60d33c3bc2d
+  Date: 2020-01-01 00:00:00 +00:00
+  Author: test
+  Summary: F
+  
+  Commit: ecbf21bc13d7ec53c820078066ca1dfeb1e8191d
+  Date: 2019-01-01 00:00:00 +00:00
+  Author: test
+  Summary: E
+  
+  Commit: aaff25985c53d3ba33e0292b2a271c6cdf34e521
+  Date: 2018-01-01 00:00:00 +00:00
+  Author: test
+  Summary: D
+  
+  Commit: dba4093ee164cd983101ff9e37751e2a5465c6a9
+  Date: 2017-01-01 00:00:00 +00:00
+  Author: test
+  Summary: C
+  
+  Commit: 88619a661eeda8bca794249b9852c83dacada01a
+  Date: 2016-01-01 00:00:00 +00:00
+  Author: test
+  Summary: B
+  
+  Commit: 7b9ef4e3cdfffb431178532bb75534439c14c014
+  Date: 2015-01-01 00:00:00 +00:00
+  Author: test
+  Summary: A
+  
+
+Test log with path
   $ scsc log --repo repo -i "$COMMIT_C" --path b 
+  Commit: dba4093ee164cd983101ff9e37751e2a5465c6a9
+  Date: 2017-01-01 00:00:00 +00:00
+  Author: test
+  Summary: C
+  
+  Commit: 88619a661eeda8bca794249b9852c83dacada01a
+  Date: 2016-01-01 00:00:00 +00:00
+  Author: test
+  Summary: B
+  
+  $ scsc log --verbose --repo repo -i "$COMMIT_C" --path b 
   Commit: dba4093ee164cd983101ff9e37751e2a5465c6a9
   Parent: 88619a661eeda8bca794249b9852c83dacada01a
   Date: 2017-01-01 00:00:00 +00:00
@@ -121,66 +175,45 @@ Test log
 
   $ scsc log --repo repo -i "$COMMIT_F" --path b --limit 1 --skip 1
   Commit: ecbf21bc13d7ec53c820078066ca1dfeb1e8191d
-  Parent: aaff25985c53d3ba33e0292b2a271c6cdf34e521
   Date: 2019-01-01 00:00:00 +00:00
   Author: test
-  Generation: 5
-  
-  E
+  Summary: E
   
 log between 2017/01/01 and 2019/05/05
   $ scsc log --repo repo -i "$COMMIT_F" --path b --after 1483228800 --before 1557061200
   Commit: ecbf21bc13d7ec53c820078066ca1dfeb1e8191d
-  Parent: aaff25985c53d3ba33e0292b2a271c6cdf34e521
   Date: 2019-01-01 00:00:00 +00:00
   Author: test
-  Generation: 5
-  
-  E
+  Summary: E
   
   Commit: dba4093ee164cd983101ff9e37751e2a5465c6a9
-  Parent: 88619a661eeda8bca794249b9852c83dacada01a
   Date: 2017-01-01 00:00:00 +00:00
   Author: test
-  Generation: 3
-  
-  C
+  Summary: C
   
   $ scsc log --repo repo -i "$COMMIT_F" --path b --after "2017-01-01 00:00:00" --before "2019-05-05 13:00:00"
   Commit: ecbf21bc13d7ec53c820078066ca1dfeb1e8191d
-  Parent: aaff25985c53d3ba33e0292b2a271c6cdf34e521
   Date: 2019-01-01 00:00:00 +00:00
   Author: test
-  Generation: 5
-  
-  E
+  Summary: E
   
   Commit: dba4093ee164cd983101ff9e37751e2a5465c6a9
-  Parent: 88619a661eeda8bca794249b9852c83dacada01a
   Date: 2017-01-01 00:00:00 +00:00
   Author: test
-  Generation: 3
-  
-  C
+  Summary: C
   
 
 log check the timezone parsing
   $ scsc log --repo repo -i "$COMMIT_F" --path b --after "2019-01-01 05:00:00 +08:00"
   Commit: 3a61e10442a9b76f8826b05e7ef1a60d33c3bc2d
-  Parent: ecbf21bc13d7ec53c820078066ca1dfeb1e8191d
   Date: 2020-01-01 00:00:00 +00:00
   Author: test
-  Generation: 6
-  
-  F
+  Summary: F
   
   Commit: ecbf21bc13d7ec53c820078066ca1dfeb1e8191d
-  Parent: aaff25985c53d3ba33e0292b2a271c6cdf34e521
   Date: 2019-01-01 00:00:00 +00:00
   Author: test
-  Generation: 5
-  
-  E
+  Summary: E
   
 log for the "zero" timestamp
   $ scsc log --repo repo -i "$COMMIT_F" --path b --before 0 --limit 1
@@ -195,7 +228,7 @@ log skip and time filters conflict
   error: The argument '--skip <SKIP>' cannot be used with '--after <AFTER>'
   
   USAGE:
-      scsc <--tier <TIER>|--host <HOST:PORT>> log --after <AFTER> --limit <LIMIT> --path <PATH> --repo <REPO> --schemes <SCHEMES>... --skip <SKIP> <--commit-id <COMMIT_ID>|--bookmark <BOOKMARK>|--hg-commit-id <HG_COMMIT_ID>|--bonsai-id <BONSAI_ID>|--git <GIT_SHA1>|--globalrev <GLOBALREV>>
+      scsc * (glob)
   
   For more information try --help
   [1]
@@ -203,29 +236,20 @@ log skip and time filters conflict
 log request a single commit
   $ scsc log --repo repo -i "$COMMIT_F" --path b --limit 1
   Commit: 3a61e10442a9b76f8826b05e7ef1a60d33c3bc2d
-  Parent: ecbf21bc13d7ec53c820078066ca1dfeb1e8191d
   Date: 2020-01-01 00:00:00 +00:00
   Author: test
-  Generation: 6
-  
-  F
+  Summary: F
   
 
 log request history for deleted file
   $ scsc log --repo repo -i "$COMMIT_H" --path b --limit 2
   Commit: 159ed529f60d23c614fe315d46a4b2eb5d27b569
-  Parent: d603e69354506a00833ddb9422cac6053debb733
   Date: 2020-01-03 00:00:00 +00:00
   Author: test
-  Generation: 8
-  
-  H
+  Summary: H
   
   Commit: 3a61e10442a9b76f8826b05e7ef1a60d33c3bc2d
-  Parent: ecbf21bc13d7ec53c820078066ca1dfeb1e8191d
   Date: 2020-01-01 00:00:00 +00:00
   Author: test
-  Generation: 6
-  
-  F
+  Summary: F
   
