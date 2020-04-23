@@ -709,6 +709,7 @@ where
         F: FnMut(KeyRef) -> Result<Key>,
     {
         let (elem, path) = split_key(name);
+        let elem = trim_separator(elem);
         if self.filtered_keys.is_none()
             || self.filtered_keys.as_ref().unwrap().filter_id != filter_id
         {
@@ -716,7 +717,7 @@ where
                 let entries = self.load_entries(store)?;
                 let mut new_map: VecMap<Key, Vec<Key>> = VecMap::with_capacity(entries.len());
                 for (k, _v) in entries.iter() {
-                    let filtered = filter(k)?;
+                    let filtered = filter(trim_separator(k))?;
                     let inserted = match new_map.get_mut(&filtered) {
                         Some(keys) => {
                             keys.push(k.to_vec().into_boxed_slice());
@@ -764,7 +765,7 @@ where
                 .cloned()
                 .unwrap_or_else(|| Vec::new())
                 .iter()
-                .map(|e| vec![e.to_vec().into_boxed_slice()])
+                .map(|e| vec![trim_separator(e).to_vec().into_boxed_slice()])
                 .collect())
         }
     }
@@ -1049,6 +1050,15 @@ where
     }
 }
 
+fn trim_separator(path: &[u8]) -> &[u8] {
+    // Strip trailing slashes
+    if path.last() == Some(&b'/') {
+        &path[..path.len() - 1]
+    } else {
+        path
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1330,12 +1340,12 @@ mod tests {
         }
 
         assert_eq!(
-            t.get_filtered_key(&ms, b"A/A/", &mut map_upper_a, 0)
+            t.get_filtered_key(&ms, b"A/A", &mut map_upper_a, 0)
                 .unwrap(),
             vec![
-                b"A/A/".to_vec().into_boxed_slice(),
-                b"A/a/".to_vec().into_boxed_slice(),
-                b"a/a/".to_vec().into_boxed_slice(),
+                b"A/A".to_vec().into_boxed_slice(),
+                b"A/a".to_vec().into_boxed_slice(),
+                b"a/a".to_vec().into_boxed_slice(),
             ]
         );
 
