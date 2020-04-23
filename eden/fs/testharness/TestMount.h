@@ -13,6 +13,7 @@
 #include <sys/stat.h>
 #include <optional>
 #include <vector>
+#include "eden/fs/fuse/InodeNumber.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodePtr.h"
 #include "eden/fs/inodes/ServerState.h"
@@ -20,6 +21,10 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/testharness/FakeClock.h"
 #include "eden/fs/utils/PathFuncs.h"
+
+#ifdef _WIN32
+#include "eden/fs/win/utils/StringConv.h" // @manual
+#endif
 
 namespace folly {
 template <typename T>
@@ -189,7 +194,9 @@ class TestMount {
     return blobCache_;
   }
 
+#ifndef _WIN32
   Dispatcher* getDispatcher() const;
+#endif // !_WIN32
 
   /**
    * Access to the TestMount's FakeClock which is referenced by the underlying
@@ -220,11 +227,6 @@ class TestMount {
    */
   void addFile(folly::StringPiece path, folly::StringPiece contents);
 
-  /**
-   * Creaate symlink named path pointing to pointsTo or throw exception if fail
-   */
-  void addSymlink(folly::StringPiece path, folly::StringPiece pointsTo);
-
   void mkdir(folly::StringPiece path);
 
   /** Overwrites the contents of an existing file. */
@@ -241,7 +243,14 @@ class TestMount {
   void deleteFile(folly::StringPiece path);
   void rmdir(folly::StringPiece path);
 
+#ifndef _WIN32
+  /**
+   * Create symlink named path pointing to pointsTo or throw exception if fail
+   */
+  void addSymlink(folly::StringPiece path, folly::StringPiece pointsTo);
+
   void chmod(folly::StringPiece path, mode_t permissions);
+#endif
 
   InodePtr getInode(RelativePathPiece path) const;
   InodePtr getInode(folly::StringPiece path) const;
@@ -281,9 +290,11 @@ class TestMount {
     return edenMount_;
   }
 
+#ifndef _WIN32
   const std::shared_ptr<FakePrivHelper>& getPrivHelper() const {
     return privHelper_;
   }
+#endif // !_WIN32
 
   void registerFakeFuse(std::shared_ptr<FakeFuse> fuse);
 
@@ -333,6 +344,12 @@ class TestMount {
   void initTestDirectory();
   void setInitialCommit(Hash commitHash);
   void setInitialCommit(Hash commitHash, Hash rootTreeHash);
+
+  /**
+   * Initialize the Eden mount. This is an internal function to initialize and
+   * start the EdenMount.
+   */
+  void initializeEdenMount();
 
   /**
    * The temporary directory for this TestMount.

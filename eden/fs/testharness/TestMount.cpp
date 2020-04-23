@@ -19,10 +19,7 @@
 #include <sys/types.h>
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/fuse/privhelper/UserInfo.h"
-#include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/FileInode.h"
-#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/model/Blob.h"
@@ -36,13 +33,27 @@
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeClock.h"
-#include "eden/fs/testharness/FakeFuse.h"
-#include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/testharness/TestUtil.h"
-#include "eden/fs/utils/ProcessNameCache.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
+
+#ifdef _WIN32
+#include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h" // @manual
+#include "eden/fs/win/store/WinStore.h" // @manual
+#include "eden/fs/win/testharness/TestFsChannel.h" // @manual
+#include "eden/fs/win/utils/FileUtils.h" // @manual
+#include "eden/fs/win/utils/Guid.h" // @manual
+#include "eden/fs/win/utils/Stub.h" // @manual
+#include "eden/fs/win/utils/UserInfo.h" // @manual
+#else
+#include "eden/fs/fuse/privhelper/UserInfo.h"
+#include "eden/fs/inodes/EdenDispatcher.h"
+#include "eden/fs/inodes/InodeTable.h"
+#include "eden/fs/testharness/FakeFuse.h"
+#include "eden/fs/testharness/FakePrivHelper.h"
+#include "eden/fs/utils/ProcessNameCache.h"
+#endif
 
 using folly::Future;
 using folly::makeFuture;
@@ -52,6 +63,10 @@ using std::make_shared;
 using std::make_unique;
 using std::shared_ptr;
 using std::string;
+
+#ifndef _WIN32
+using folly::writeFileAtomic;
+#endif
 
 DEFINE_int32(
     num_eden_test_threads,
@@ -81,8 +96,14 @@ TestMount::TestMount()
   // This sets both testDir_, config_, localStore_, and backingStore_
   initTestDirectory();
 
+#ifdef _WIN32
+  UserInfo userInfo;
+#else
+  auto userInfo = UserInfo::lookup();
+#endif
+
   serverState_ = {make_shared<ServerState>(
-      UserInfo::lookup(),
+      userInfo,
       privHelper_,
       make_shared<UnboundedQueueExecutor>(serverExecutor_),
       clock_,
@@ -139,7 +160,8 @@ void TestMount::initialize(
 
   // Create edenMount_
   createMount();
-  edenMount_->initialize().getVia(serverExecutor_.get());
+
+  initializeEdenMount();
   edenMount_->setLastCheckoutTime(lastCheckoutTime);
 }
 
@@ -149,7 +171,7 @@ void TestMount::initialize(Hash commitHash, Hash rootTreeHash) {
 
   // Create edenMount_
   createMount();
-  edenMount_->initialize().getVia(serverExecutor_.get());
+  initializeEdenMount();
 }
 
 void TestMount::initialize(
@@ -158,7 +180,17 @@ void TestMount::initialize(
     bool startReady) {
   createMountWithoutInitializing(
       initialCommitHash, rootBuilder, /*startReady=*/startReady);
+  initializeEdenMount();
+}
+
+void TestMount::initializeEdenMount() {
+#ifdef _WIN32
+  edenMount_->initialize(std::move(std::make_unique<TestFsChannel>()))
+      .getVia(serverExecutor_.get());
+  edenMount_->start();
+#else
   edenMount_->initialize().getVia(serverExecutor_.get());
+#endif
 }
 
 void TestMount::createMountWithoutInitializing(
@@ -194,9 +226,11 @@ void TestMount::createMount() {
       std::move(journal));
 }
 
+#ifndef _WIN32
 void TestMount::registerFakeFuse(std::shared_ptr<FakeFuse> fuse) {
   privHelper_->registerMount(edenMount_->getPath(), std::move(fuse));
 }
+#endif
 
 Hash TestMount::nextCommitHash() {
   auto number = commitNumber_.fetch_add(1);
@@ -219,15 +253,12 @@ void TestMount::initTestDirectory() {
 
   // Make the mount point and the eden client storage directories
   // inside the test directory.
-  auto makedir = [](AbsolutePathPiece path) {
-    ::mkdir(path.stringPiece().str().c_str(), 0755);
-  };
-  auto testDirPath = AbsolutePath{testDir_->path().string()};
+  auto tmpPath = testDir_->path().string();
+  auto testDirPath = AbsolutePath{tmpPath};
   auto clientDirectory = testDirPath + "eden"_pc;
-  makedir(clientDirectory);
-  makedir(clientDirectory + "local"_pc);
+  ensureDirectoryExists(clientDirectory + "local"_pc);
   auto mountPath = testDirPath + "mount"_pc;
-  makedir(mountPath);
+  ensureDirectoryExists(mountPath);
 
   // Create the CheckoutConfig using our newly-populated client directory
   config_ = make_unique<CheckoutConfig>(mountPath, clientDirectory);
@@ -239,6 +270,7 @@ void TestMount::initTestDirectory() {
   stats_ = make_shared<EdenStats>();
 }
 
+#ifndef _WIN32
 Dispatcher* TestMount::getDispatcher() const {
   return edenMount_->getDispatcher();
 }
@@ -253,6 +285,7 @@ void TestMount::startFuseAndWait(std::shared_ptr<FakeFuse> fuse) {
   drainServerExecutor();
   std::move(startFuseFuture).get(kTimeout);
 }
+#endif
 
 void TestMount::remount() {
   // Create a new copy of the CheckoutConfig
@@ -284,9 +317,16 @@ void TestMount::remount() {
       blobCache_,
       serverState_,
       std::move(journal));
+#ifdef _WIN32
+  edenMount_->initialize(std::move(std::make_unique<TestFsChannel>()))
+      .getVia(serverExecutor_.get());
+  edenMount_->start();
+#else
   edenMount_->initialize().getVia(serverExecutor_.get());
+#endif
 }
 
+#ifndef _WIN32
 void TestMount::remountGracefully() {
   // Create a new copy of the CheckoutConfig
   auto config = make_unique<CheckoutConfig>(*edenMount_->getConfig());
@@ -326,6 +366,7 @@ void TestMount::remountGracefully() {
       std::move(journal));
   edenMount_->initialize(takeoverData).getVia(serverExecutor_.get());
 }
+#endif
 
 void TestMount::resetCommit(FakeTreeBuilder& builder, bool setReady) {
   resetCommit(nextCommitHash(), builder, setReady);
@@ -353,9 +394,12 @@ bool TestMount::hasOverlayData(InodeNumber ino) const {
   return edenMount_->getOverlay()->hasOverlayData(ino);
 }
 
+#ifndef _WIN32
 bool TestMount::hasMetadata(InodeNumber ino) const {
   return edenMount_->getInodeMetadataTable()->getOptional(ino).has_value();
 }
+
+#endif // !_WIN32
 
 size_t TestMount::drainServerExecutor() {
   return serverExecutor_->drain();
@@ -364,8 +408,7 @@ size_t TestMount::drainServerExecutor() {
 void TestMount::setInitialCommit(Hash commitHash) {
   // Write the commit hash to the snapshot file
   auto snapshotPath = config_->getSnapshotPath();
-  folly::writeFileAtomic(
-      snapshotPath.stringPiece(), commitHash.toString() + "\n");
+  writeFileAtomic(snapshotPath.c_str(), commitHash.toString() + "\n");
 }
 
 void TestMount::setInitialCommit(Hash commitHash, Hash rootTreeHash) {
@@ -377,6 +420,81 @@ void TestMount::setInitialCommit(Hash commitHash, Hash rootTreeHash) {
   setInitialCommit(commitHash);
 }
 
+#ifdef _WIN32
+void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
+  auto relPath = RelativePathPiece{path};
+  auto absolutePath = edenMount_->getConfig()->getMountPath() + relPath;
+
+  // Make sure the directory exist.
+  ensureDirectoryExists(absolutePath.dirname());
+
+  // Write the file in the File System and also update the EdenMount. In the
+  // real system with Projected FS, the closing of a modified file with send the
+  // notification which will update the EdenMount.
+  writeFile(absolutePath.c_str(), folly::Range{contents.c_str()});
+  getEdenMount()->materializeFile(relPath);
+}
+
+void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
+  auto relPath = RelativePathPiece{path};
+  auto absolutePath = edenMount_->getConfig()->getMountPath() + relPath;
+
+  // Make sure the parent exist.
+  ensureDirectoryExists(absolutePath.dirname());
+
+  // Create the file in the File System and also update the EdenMount. In the
+  // real system with Projected FS, the creation of a file with send the
+  // notification which will update the EdenMount.
+  writeFile(absolutePath.c_str(), contents);
+  getEdenMount()->createFile(relPath, /*isDirectory=*/false);
+}
+
+void TestMount::move(folly::StringPiece src, folly::StringPiece dest) {
+  auto srcPath = RelativePathPiece{src};
+  auto absoluteSrcPath = edenMount_->getConfig()->getMountPath() + srcPath;
+  auto destPath = RelativePathPiece{dest};
+  auto absoluteDestPath = edenMount_->getConfig()->getMountPath() + destPath;
+
+  renameWithAbsolutePath(absoluteSrcPath, absoluteDestPath);
+  getEdenMount()->renameFile(srcPath, destPath);
+}
+
+std::string TestMount::readFile(folly::StringPiece path) {
+  auto relPath = RelativePathPiece{path};
+  auto absolutePath = edenMount_->getConfig()->getMountPath() + relPath;
+  auto contents = getEdenMount()->readFile(relPath);
+
+  // Make sure the directory exist.
+  ensureDirectoryExists(absolutePath.dirname());
+
+  // Reading of a file will also end up creating the file on the mount point.
+  writeFile(absolutePath.c_str(), contents);
+  return contents;
+}
+
+void TestMount::mkdir(folly::StringPiece path) {
+  auto relPath = RelativePathPiece{path};
+  auto absolutePath = edenMount_->getConfig()->getMountPath() + relPath;
+  ensureDirectoryExists(absolutePath);
+  getEdenMount()->createFile(relPath, /*isDirectory=*/true);
+}
+
+void TestMount::deleteFile(folly::StringPiece path) {
+  auto relPath = RelativePathPiece{path};
+  auto absolutePath = edenMount_->getConfig()->getMountPath() + relPath;
+  removeFileWithAbsolutePath(absolutePath);
+  getEdenMount()->removeFile(relPath, /*isDirectory=*/false);
+}
+
+void TestMount::rmdir(folly::StringPiece path) {
+  auto relPath = RelativePathPiece{path};
+  auto absolutePath = edenMount_->getConfig()->getMountPath() + relPath;
+
+  removeRecursively(absolutePath);
+  getEdenMount()->removeFile(relPath, /*isDirectory=*/true);
+}
+
+#else
 void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
   RelativePathPiece relativePath(path);
   const auto treeInode = getTreeInode(relativePath.dirname());
@@ -469,6 +587,7 @@ void TestMount::chmod(folly::StringPiece path, mode_t permissions) {
   desiredAttr.valid = FATTR_MODE;
   inode->setattr(desiredAttr).get();
 }
+#endif
 
 InodePtr TestMount::getInode(RelativePathPiece path) const {
   // Call future.get() with a timeout.  Generally in tests we expect the future

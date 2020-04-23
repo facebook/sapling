@@ -1724,6 +1724,23 @@ bool ensureDirectoryExists(AbsolutePathPiece path);
 bool removeRecursively(AbsolutePathPiece path);
 
 /**
+ * Remove a file or directory.
+ *
+ * Returns false if the file/directory did not exist, and true if it was
+ * successfully removed.  Throws an exception on error.
+ */
+bool removeFileWithAbsolutePath(AbsolutePathPiece path);
+
+/**
+ * Rename a file or directory
+ *
+ * It will throw an exception on error.
+ */
+void renameWithAbsolutePath(
+    AbsolutePathPiece srcPath,
+    AbsolutePathPiece destPath);
+
+/**
  * Convenient literals for constructing path types.
  */
 inline namespace path_literals {

@@ -9,6 +9,8 @@ set(
   "FakeBackingStore.cpp"
   "FakeTreeBuilder.cpp"
   "FakeTreeBuilder.h"
+  "TempFile.cpp"
+  "TempFile.h"
   "TestUtil.cpp"
   "TestUtil.h"
 )

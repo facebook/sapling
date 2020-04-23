@@ -281,6 +281,16 @@ bool removeRecursively(AbsolutePathPiece path) {
   return boost::filesystem::remove_all(toBoostPath(path));
 }
 
+bool removeFileWithAbsolutePath(AbsolutePathPiece path) {
+  return boost::filesystem::remove(toBoostPath(path));
+}
+
+void renameWithAbsolutePath(
+    AbsolutePathPiece srcPath,
+    AbsolutePathPiece destPath) {
+  boost::filesystem::rename(toBoostPath(srcPath), toBoostPath(destPath));
+}
+
 AbsolutePath expandUser(
     folly::StringPiece path,
     std::optional<folly::StringPiece> homeDir) {
