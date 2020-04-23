@@ -32,8 +32,6 @@ class LogForwarder:
         self.__output_file = output_file
 
     def poll(self) -> None:
-        # pyre-fixme[29]: `Union[Callable[[Union[bytearray, bytes]], int],
-        #  Callable[[bytes], int]]` is not a function.
         self.__output_file.write(self.__follower.poll())
         self.__output_file.flush()
 
@@ -57,6 +55,4 @@ class LogFollower:
         self.__file = file
 
     def poll(self) -> bytes:
-        # pyre-fixme[29]: `Union[Callable[[Optional[int]], bytes], Callable[[int],
-        #  bytes]]` is not a function.
         return self.__file.read()

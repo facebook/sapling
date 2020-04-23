@@ -342,6 +342,8 @@ class EdenRepoTest(EdenTestCase):
         This automatically expects to find a ".hg" directory in the root of hg
         checkouts.
         """
+        # pyre-fixme[6]: Expected `Union[_PathLike[str], str]` for 1st param but got
+        #  `Union[None, pathlib.Path, str]`.
         checkout_root = pathlib.Path(path if path is not None else self.mount)
         real_scm_type = scm_type if scm_type is not None else self.repo.get_type()
         if real_scm_type == "hg":
@@ -392,6 +394,7 @@ def test_replicator(
             raise Exception(
                 "we require a python interpreter with " "stack frame support"
             )
+        # pyre-fixme[16]: `Optional` has no attribute `f_locals`.
         caller_scope = current_frame.f_back.f_locals
 
         if len(args) == 1 and not kwargs and isinstance(args[0], type):

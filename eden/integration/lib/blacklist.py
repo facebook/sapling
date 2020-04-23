@@ -170,4 +170,5 @@ def _is_blacklisted(test_class: unittest.TestCase, method_name: str) -> bool:
         # All classes in the test are blacklisted
         return True
     else:
+        # pyre-fixme[16]: Optional type has no attribute `__getitem__`.
         return method_name in class_blacklist

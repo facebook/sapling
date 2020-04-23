@@ -868,7 +868,9 @@ class dirstate(object):
         cleanpaths = []  # type: List[str]
 
         dmap = self._map
+        # pyre-fixme[16]: Callable `_map` has no attribute `preload`.
         dmap.preload()
+        # pyre-fixme[16]: Callable `_map` has no attribute `__getitem__`.
         dget = dmap.__getitem__
         madd = modified.append
         aadd = added.append
@@ -878,6 +880,7 @@ class dirstate(object):
         dadd = deleted.append
         cadd = cleanpaths.append
         ignore = self._ignore
+        # pyre-fixme[16]: Callable `_map` has no attribute `copymap`.
         copymap = self._map.copymap
 
         # We have seen some rare issues that a few "M" or "R" files show up
@@ -899,6 +902,7 @@ class dirstate(object):
                 if t[0] == "?":
                     raise KeyError
             except KeyError:
+                # pyre-fixme[19]: Expected 0 positional arguments.
                 isignored = ignore(fn)
                 if listignored and isignored:
                     iadd(fn)
@@ -920,6 +924,7 @@ class dirstate(object):
         # iteration may change the nonnormalset as lookup states are resolved.
         if util.safehasattr(dmap, "nonnormalsetfiltered"):
             # treestate has a fast path to filter out ignored directories.
+            # pyre-fixme[16]: Callable `_ignore` has no attribute `visitdir`.
             ignorevisitdir = ignore.visitdir
 
             def dirfilter(path):
@@ -927,10 +932,13 @@ class dirstate(object):
                 result = ignorevisitdir(path.rstrip("/"))
                 return result == "all"
 
+            # pyre-fixme[16]: Callable `_map` has no attribute `nonnormalsetfiltered`.
             nonnormalset = dmap.nonnormalsetfiltered(dirfilter)
         else:
+            # pyre-fixme[16]: Callable `_map` has no attribute `nonnormalset`.
             nonnormalset = dmap.nonnormalset
 
+        # pyre-fixme[16]: Callable `_map` has no attribute `otherparentset`.
         otherparentset = dmap.otherparentset
 
         # The seen set is used to prevent steps 2 and 3 from processing things

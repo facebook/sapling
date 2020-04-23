@@ -219,6 +219,7 @@ from edenscm.mercurial.i18n import _
 from edenscm.mercurial.pycompat import range
 
 
+# pyre-fixme[11]: Annotation `pickle` is not defined as a type.
 pickle = util.pickle
 release = lock.release
 cmdtable = {}

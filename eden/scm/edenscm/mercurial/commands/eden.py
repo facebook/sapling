@@ -172,6 +172,7 @@ def cmd(command_id):
 
     def decorator(func):
         # type: (Callable[[Request], None]) -> Callable[[Request], None]
+        # pyre-fixme[16]: Anonymous callable has no attribute `__COMMAND_ID__`.
         func.__COMMAND_ID__ = command_id
         return func
 

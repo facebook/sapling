@@ -101,6 +101,7 @@ from . import pycompat, urllibcompat, util
 from .i18n import _
 
 
+# pyre-fixme[11]: Annotation `client` is not defined as a type.
 httplib = util.httplib
 urlerr = util.urlerr
 urlreq = util.urlreq

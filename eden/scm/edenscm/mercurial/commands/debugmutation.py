@@ -132,7 +132,6 @@ def debugvisibility(ui, repo):
     """control visibility tracking"""
 
 
-# pyre-fixme[16]: Callable `debugvisibility` has no attribute `subcommand`.
 subcmd = debugvisibility.subcommand()
 
 

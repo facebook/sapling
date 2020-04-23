@@ -35,7 +35,6 @@ except NameError:
 _languages = None
 if (
     pycompat.iswindows
-    # pyre-fixme[16]: Optional type has no attribute `__getitem__`.
     and "LANGUAGE" not in encoding.environ
     and "LC_ALL" not in encoding.environ
     and "LC_MESSAGES" not in encoding.environ

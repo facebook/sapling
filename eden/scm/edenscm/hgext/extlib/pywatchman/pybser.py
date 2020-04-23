@@ -37,6 +37,7 @@ import sys
 from . import compat
 
 
+# pyre-fixme[11]: Annotation `abc` is not defined as a type.
 collections_abc = compat.collections_abc
 
 

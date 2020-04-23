@@ -19,6 +19,7 @@ import sys
 from edenscm import hgdemandimport
 
 
+# pyre-fixme[11]: Annotation `hgdemandimport` is not defined as a type.
 demandimport = hgdemandimport
 
 __all__ = []

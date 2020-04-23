@@ -70,7 +70,8 @@ def reraise(tp, value, tb=None):
 if PYTHON3:
     UNICODE = str
 else:
-    # pyre-fixme[18]: Global name `unicode` is undefined.
+    # pyre-fixme[11]: Annotation `unicode` is not defined as a type.
     UNICODE = unicode  # noqa: F821 We handled versioning above
 
+# pyre-fixme[11]: Annotation `abc` is not defined as a type.
 collections_abc = abc

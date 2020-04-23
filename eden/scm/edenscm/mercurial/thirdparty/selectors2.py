@@ -375,8 +375,6 @@ if hasattr(select, "select"):
                 return self._select_func(r, w, [], timeout)
 
         __all__.append("JythonSelectSelector")
-        # pyre-fixme[9]: SelectSelector has type `Type[SelectSelector]`; used as
-        #  `Type[JythonSelectSelector]`.
         SelectSelector = (
             JythonSelectSelector
         )  # Override so the wrong selector isn't used.

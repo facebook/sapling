@@ -21,7 +21,6 @@ def fs(ui, **opts):
 
 
 table = {}
-# pyre-fixme[16]: Callable `fs` has no attribute `subcommand`.
 subcmd = fs.subcommand(
     table,
     categories=[
@@ -193,7 +192,6 @@ def stats(ui, **opts):
     """print statistics for the edenfs daemon"""
 
 
-# pyre-fixme[16]: Callable `stats` has no attribute `subcommand`.
 statscmd = stats.subcommand()
 
 

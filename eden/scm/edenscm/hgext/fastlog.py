@@ -521,6 +521,7 @@ class FastLogThread(Thread):
                 revs = gen
 
         if revs:
+            # pyre-fixme[16]: `None` has no attribute `__iter__`.
             for rev in revs:
                 if self.stopped():
                     break

@@ -74,11 +74,15 @@ from .pycompat import decodeutf8, encodeutf8, range
 b85decode = base85.b85decode
 b85encode = base85.b85encode
 
+# pyre-fixme[11]: Annotation `cookiejar` is not defined as a type.
 cookielib = pycompat.cookielib
 empty = pycompat.empty
+# pyre-fixme[11]: Annotation `client` is not defined as a type.
 httplib = pycompat.httplib
+# pyre-fixme[11]: Annotation `pickle` is not defined as a type.
 pickle = pycompat.pickle
 queue = pycompat.queue.Queue
+# pyre-fixme[11]: Annotation `socketserver` is not defined as a type.
 socketserver = pycompat.socketserver
 stderr = pycompat.stderr
 stdin = pycompat.stdin

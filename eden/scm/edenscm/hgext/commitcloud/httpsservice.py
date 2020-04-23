@@ -18,6 +18,7 @@ from edenscm.mercurial.i18n import _
 from . import baseservice, error as ccerror
 
 
+# pyre-fixme[11]: Annotation `client` is not defined as a type.
 httplib = util.httplib
 
 try:

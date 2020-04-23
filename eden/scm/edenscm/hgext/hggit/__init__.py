@@ -115,7 +115,6 @@ for _scheme in util.gitschemes:
 _oldlocal = hg.schemes["file"]
 
 try:
-    # pyre-fixme[9]: urlcls has type `Type[urlcls]`; used as `Type[url]`.
     urlcls = hgutil.url
 except AttributeError:
 

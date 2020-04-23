@@ -500,9 +500,11 @@ class bundlerepository(localrepo.localrepository):
     # Check if parents exist in localrepo before setting
     def setparents(self, p1, p2=nullid):
         # type: (bytes, bytes) -> None
+        # pyre-fixme[16]: Callable `changelog` has no attribute `rev`.
         p1rev = self.changelog.rev(p1)
         p2rev = self.changelog.rev(p2)
         msg = _("setting parent to node %s that only exists in the bundle\n")
+        # pyre-fixme[16]: Callable `changelog` has no attribute `repotiprev`.
         if self.changelog.repotiprev < p1rev:
             self.ui.warn(msg % nodemod.hex(p1))
         if self.changelog.repotiprev < p2rev:

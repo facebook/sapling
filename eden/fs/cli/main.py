@@ -1600,8 +1600,11 @@ class RageCmd(Subcmd):
             proc = None
             sink = sys.stdout.buffer
 
+        # pyre-fixme[6]: Expected `IO[bytes]` for 2nd param but got
+        #  `Optional[typing.IO[typing.Any]]`.
         rage_mod.print_diagnostic_info(instance, sink)
         if proc:
+            # pyre-fixme[16]: `Optional` has no attribute `close`.
             sink.close()
             proc.wait()
         return 0
@@ -1660,6 +1663,7 @@ class StopCmd(Subcmd):
                     client.initiateShutdown(f"`eden stop` requested by {request_info}")
             except thrift.transport.TTransport.TTransportException as e:
                 print_stderr(f"warning: edenfs is not responding: {e}")
+                # pyre-fixme[25]: Assertion will always fail.
                 if pid is None:
                     pid = check_health_using_lockfile(instance.state_dir).pid
                     if pid is None:

@@ -53,7 +53,6 @@ def snapshot(ui, repo, *args, **opts):
     pass
 
 
-# pyre-fixme[16]: Callable `snapshot` has no attribute `subcommand`.
 subcmd = snapshot.subcommand(
     categories=[
         ("Create/restore a snapshot", ["create", "checkout"]),

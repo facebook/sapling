@@ -328,6 +328,8 @@ class EdenHgTestCase(testcase.EdenTestCase, metaclass=abc.ABCMeta):
                 self.fail("unexpected entry in `hg resolve --list` output: %r" % line)
 
         self.assertEqual(actual_unresolved, set(unresolved))
+        # pyre-fixme[6]: Expected `Iterable[Variable[_T]]` for 1st param but got
+        #  `Union[None, List[str], List[Variable[_T]], Set[str]]`.
         self.assertEqual(actual_resolved, set(resolved or []))
 
     def assert_file_regex(self, path, expected_regex, dedent=True):

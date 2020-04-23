@@ -60,9 +60,7 @@ if ctypes.sizeof(ctypes.c_long) == ctypes.sizeof(ctypes.c_void_p):
     _WPARAM = ctypes.c_ulong
     _LPARAM = ctypes.c_long
 elif ctypes.sizeof(ctypes.c_longlong) == ctypes.sizeof(ctypes.c_void_p):
-    # pyre-fixme[9]: _WPARAM has type `Type[c_ulong]`; used as `Type[c_ulonglong]`.
     _WPARAM = ctypes.c_ulonglong
-    # pyre-fixme[9]: _LPARAM has type `Type[c_long]`; used as `Type[c_longlong]`.
     _LPARAM = ctypes.c_longlong
 
 
@@ -366,7 +364,6 @@ _user32.ShowWindow.restype = _BOOL
 
 # pyre-fixme[16]: Module `ctypes` has no attribute `WINFUNCTYPE`.
 _WNDENUMPROC = ctypes.WINFUNCTYPE(_BOOL, _HWND, _LPARAM)
-# pyre-fixme[18]: Global name `_LPARAM` is undefined.
 _user32.EnumWindows.argtypes = [_WNDENUMPROC, _LPARAM]
 _user32.EnumWindows.restype = _BOOL
 

@@ -25,6 +25,7 @@ from . import common
 
 
 httpservermod = util.httpserver
+# pyre-fixme[11]: Annotation `socketserver` is not defined as a type.
 socketserver = util.socketserver
 urlerr = util.urlerr
 urlreq = util.urlreq

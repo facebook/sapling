@@ -26,6 +26,7 @@ from .node import nullid
 from .pycompat import range
 
 
+# pyre-fixme[11]: Annotation `client` is not defined as a type.
 httplib = util.httplib
 urlerr = util.urlerr
 urlreq = util.urlreq

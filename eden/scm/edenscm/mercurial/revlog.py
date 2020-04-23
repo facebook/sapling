@@ -1502,6 +1502,7 @@ class revlog(object):
                 # duplicated, but good for perf
                 if rev is None:
                     rev = self.rev(node)
+                # pyre-fixme[25]: Assertion will always fail.
                 if flags is None:
                     flags = self.flags(rev)
                 # no extra flags set, no flag processor runs, text = rawtext
@@ -1786,6 +1787,7 @@ class revlog(object):
         if not data:
             return b"", data
 
+        # pyre-fixme[16]: Callable `_compressor` has no attribute `compress`.
         compressed = self._compressor.compress(data)
 
         if compressed:

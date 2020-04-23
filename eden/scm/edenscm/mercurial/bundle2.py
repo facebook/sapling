@@ -1027,6 +1027,7 @@ class bundlepart(object):
         self.id = None
         self.type = parttype
         assert (
+            # pyre-fixme[25]: Assertion will always fail.
             isinstance(data, bytes)
             or util.safehasattr(data, "next")
             or util.safehasattr(data, "__next__")

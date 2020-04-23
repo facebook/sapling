@@ -86,6 +86,7 @@ class MmapTest(testcase.EdenRepoTest):
         with subprocess.Popen(
             ["dd", "of=" + filename, "bs=512"], stdin=subprocess.PIPE
         ) as p:
+            # pyre-fixme[16]: Optional type has no attribute `write`.
             p.stdin.write(new_contents)
 
         fd = os.open(filename, os.O_RDONLY)

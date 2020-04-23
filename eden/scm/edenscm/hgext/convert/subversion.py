@@ -21,6 +21,7 @@ from edenscm.mercurial.i18n import _
 from . import common
 
 
+# pyre-fixme[11]: Annotation `pickle` is not defined as a type.
 pickle = util.pickle
 stringio = util.stringio
 propertycache = util.propertycache

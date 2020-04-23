@@ -31,6 +31,7 @@ from . import (
 from .i18n import _
 
 
+# pyre-fixme[11]: Annotation `client` is not defined as a type.
 httplib = util.httplib
 stringio = util.stringio
 urlerr = util.urlerr

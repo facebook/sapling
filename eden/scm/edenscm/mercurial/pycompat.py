@@ -46,6 +46,7 @@ else:
     import socketserver  # noqa: F401
 
 empty = _queue.Empty
+# pyre-fixme[11]: Annotation `_queue` is not defined as a type.
 queue = _queue
 
 basestring = tuple({type(""), type(b""), type(u"")})

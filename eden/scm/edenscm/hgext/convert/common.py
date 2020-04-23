@@ -22,6 +22,7 @@ from edenscm.mercurial import encoding, error, phases, pycompat, util
 from edenscm.mercurial.i18n import _
 
 
+# pyre-fixme[11]: Annotation `pickle` is not defined as a type.
 pickle = util.pickle
 propertycache = util.propertycache
 

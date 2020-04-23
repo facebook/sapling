@@ -348,9 +348,12 @@ def check_hg(tracker: ProblemTracker, checkout: EdenCheckout) -> None:
     # missing.
     other_checker_classes: List[Type[HgChecker]] = [AbandonedTransactionChecker]
 
+    # pyre-fixme[45]: Cannot instantiate abstract class `HgChecker`.
     file_checkers = [checker_class(checkout) for checker_class in file_checker_classes]
     checkers = file_checkers + [
-        checker_class(checkout) for checker_class in other_checker_classes
+        # pyre-fixme[45]: Cannot instantiate abstract class `HgChecker`.
+        checker_class(checkout)
+        for checker_class in other_checker_classes
     ]
 
     hg_path = checkout.path / ".hg"

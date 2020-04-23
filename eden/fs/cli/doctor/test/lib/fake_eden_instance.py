@@ -173,6 +173,7 @@ class FakeEdenInstance:
         else:
             # Assume we were given a both parent hashes as hex strings
             parents = (
+                # pyre-fixme[16]: `Optional` has no attribute `__getitem__`.
                 binascii.unhexlify(dirstate_parent[0]),
                 binascii.unhexlify(dirstate_parent[1]),
             )

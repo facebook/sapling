@@ -161,6 +161,7 @@ def update_ownership(metadata_path: Path, uid: int, gid: int) -> None:
                 pass
             raise
         finally:
+            # pyre-fixme[25]: Assertion will always fail.
             if tmp_file is not None:
                 tmp_file.close()
 

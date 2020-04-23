@@ -1485,8 +1485,6 @@ class _aliasrules(parser.basealiasrules):
     """Parsing and expansion rule set of template aliases"""
 
     _section = _("template alias")
-    # pyre-fixme[15]: `_parse` overrides attribute defined in `basealiasrules`
-    #  inconsistently.
     _parse = staticmethod(_parseexpr)
 
     @staticmethod

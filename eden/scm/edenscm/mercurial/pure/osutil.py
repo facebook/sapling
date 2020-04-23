@@ -91,12 +91,8 @@ if not pycompat.iswindows:
         _msg_controllen_t = ctypes.c_size_t
         _msg_iovlen_t = ctypes.c_size_t
     else:
-        # pyre-fixme[9]: _cmsg_len_t has type `Type[c_size_t]`; used as `Type[c_uint]`.
         _cmsg_len_t = _socklen_t
-        # pyre-fixme[9]: _msg_controllen_t has type `Type[c_size_t]`; used as
-        #  `Type[c_uint]`.
         _msg_controllen_t = _socklen_t
-        # pyre-fixme[9]: _msg_iovlen_t has type `Type[c_size_t]`; used as `Type[c_int]`.
         _msg_iovlen_t = ctypes.c_int
 
     class _iovec(ctypes.Structure):

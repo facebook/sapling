@@ -81,7 +81,6 @@ def cloud(ui, repo, **opts):
     pass
 
 
-# pyre-fixme[16]: Callable `cloud` has no attribute `subcommand`.
 subcmd = cloud.subcommand(
     categories=[
         ("Connect to a cloud workspace", ["authenticate", "join", "leave", "rejoin"]),
