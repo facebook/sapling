@@ -22,10 +22,12 @@
 
 use std::cell::RefCell;
 use std::path::PathBuf;
+use std::sync::Arc;
 
 use anyhow::Error;
 use cpython::*;
 use cpython_ext::{AnyhowResultExt, PyNone, PyPath, PyPathBuf, ResultPyErrExt};
+use parking_lot::Mutex;
 
 use ::treestate::{
     errors::ErrorKind,
@@ -431,7 +433,7 @@ py_class!(class treedirstatemap |py| {
 });
 
 py_class!(class treestate |py| {
-    data state: RefCell<TreeState>;
+    data state: Arc<Mutex<TreeState>>;
 
     def __new__(
         _cls,
@@ -444,30 +446,30 @@ py_class!(class treestate |py| {
             Some(BlockId(root_id))
         };
         let state = convert_result(py, TreeState::open(path, root_id))?;
-        treestate::create_instance(py, RefCell::new(state))
+        treestate::create_instance(py, Arc::new(Mutex::new(state)))
     }
 
     def flush(&self) -> PyResult<u64> {
         // Save changes to the existing file.
-        let mut state = self.state(py).borrow_mut();
+        let mut state = self.state(py).lock();
         let root_id = convert_result(py, state.flush())?;
         Ok(root_id.0)
     }
 
     def saveas(&self, path: &PyPath) -> PyResult<u64> {
         // Save as a new file. Return `BlockId` that can be used in constructor.
-        let mut state = self.state(py).borrow_mut();
+        let mut state = self.state(py).lock();
         let root_id = convert_result(py, state.write_as(path))?;
         Ok(root_id.0)
     }
 
     def __len__(&self) -> PyResult<usize> {
-        let state = self.state(py).borrow();
+        let state = self.state(py).lock();
         Ok(state.len())
     }
 
     def __contains__(&self, path: PyPathBuf) -> PyResult<bool> {
-        let mut state = self.state(py).borrow_mut();
+        let mut state = self.state(py).lock();
         let file = convert_result(py, state.get(path.as_utf8_bytes()))?;
         // A lot of places require "__contains__(path)" to be "False" if "path" is "?" state
         let visible_flags = StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT;
@@ -478,7 +480,7 @@ py_class!(class treestate |py| {
     }
 
     def get(&self, path: &PyPath, default: Option<(u16, u32, i32, i32, Option<PyPathBuf>)>) -> PyResult<Option<(u16, u32, i32, i32, Option<PyPathBuf>)>> {
-        let mut state = self.state(py).borrow_mut();
+        let mut state = self.state(py).lock();
         let path = path.as_utf8_bytes();
 
         assert!(!path.ends_with(b"/"));
@@ -510,18 +512,18 @@ py_class!(class treestate |py| {
 
         let file = FileStateV2 { mode, size, mtime, copied: copied.map(|copied| copied.as_utf8_bytes().to_vec().into_boxed_slice()), state: flags };
         let path = path.as_utf8_bytes();
-        let mut state = self.state(py).borrow_mut();
+        let mut state = self.state(py).lock();
         convert_result(py, state.insert(path, &file))?;
         Ok(py.None())
     }
 
     def remove(&self, path: &PyPath) -> PyResult<bool> {
-        let mut state = self.state(py).borrow_mut();
+        let mut state = self.state(py).lock();
         convert_result(py, state.remove(path.as_utf8_bytes()))
     }
 
     def getdir(&self, path: &PyPath) -> PyResult<Option<(u16, u16)>> {
-        let mut state = self.state(py).borrow_mut();
+        let mut state = self.state(py).lock();
         let path = path.as_utf8_bytes();
 
         let dir = convert_result(py, state.get_dir(path))?;
@@ -529,7 +531,7 @@ py_class!(class treestate |py| {
     }
 
     def hasdir(&self, path: &PyPath) -> PyResult<bool> {
-        let mut state = self.state(py).borrow_mut();
+        let mut state = self.state(py).lock();
         let path = path.as_utf8_bytes();
         Ok(convert_result(py, state.has_dir(path))?)
     }
@@ -547,7 +549,7 @@ py_class!(class treestate |py| {
         let setbits = StateFlags::from_bits_truncate(setbits);
         let unsetbits = StateFlags::from_bits_truncate(unsetbits);
         let mask = setbits | unsetbits;
-        let mut state = self.state(py).borrow_mut();
+        let mut state = self.state(py).lock();
         let mut result = Vec::new();
         convert_result(py, state.visit(
             &mut |components, _state| {
@@ -583,7 +585,7 @@ py_class!(class treestate |py| {
         // files, set prefix to an empty list.
         // Not ideal as a special case. But the returned list is large and it needs to be fast.
         // It's basically walk(EXIST_P1, 0) + walk(EXIST_P2, 0) + walk(EXIST_NEXT).
-        let mut state = self.state(py).borrow_mut();
+        let mut state = self.state(py).lock();
         let mut result = Vec::new();
         let mask = StateFlags::EXIST_P1 | StateFlags::EXIST_P2 | StateFlags::EXIST_NEXT;
         let prefix = split_path(prefix.as_utf8_bytes());
@@ -622,7 +624,7 @@ py_class!(class treestate |py| {
     def getfiltered(
         &self, path: &PyPath, filter: PyObject, filterid: u64
     ) -> PyResult<Vec<PyPathBuf>> {
-        let mut state = self.state(py).borrow_mut();
+        let mut state = self.state(py).lock();
 
         let result = convert_result(py, state.get_filtered_key(
             path.as_utf8_bytes(),
@@ -646,7 +648,7 @@ py_class!(class treestate |py| {
         let setbits = StateFlags::from_bits_truncate(setbits);
         let unsetbits = StateFlags::from_bits_truncate(unsetbits);
         let mask = setbits | unsetbits;
-        let mut state = self.state(py).borrow_mut();
+        let mut state = self.state(py).lock();
         let prefix = prefix.as_utf8_bytes();
 
         convert_result(py, state.path_complete(
@@ -665,7 +667,7 @@ py_class!(class treestate |py| {
 
     // Import another map of dirstate tuples into this treestate. Note: copymap is not imported.
     def importmap(&self, old_map: PyObject) -> PyResult<Option<PyObject>> {
-        let mut tree = self.state(py).borrow_mut();
+        let mut tree = self.state(py).lock();
         let items = old_map.call_method(py, "items", NoArgs, None)?;
         let iter = PyIterator::from_object(
             py, items.call_method(py, "__iter__", NoArgs, None)?)?;
@@ -722,7 +724,7 @@ py_class!(class treestate |py| {
         // Note: In TreeState's case, NEED_CHECK might mean "perform a quick mtime check",
         // or "perform a content check" depending on the caller. Be careful when removing
         // "mtime = -1" statement.
-        let mut state = self.state(py).borrow_mut();
+        let mut state = self.state(py).lock();
         convert_result(py, state.visit(
             &mut |_, state| {
                 if state.mtime >= fsnow {
@@ -748,13 +750,13 @@ py_class!(class treestate |py| {
     }
 
     def getmetadata(&self) -> PyResult<PyBytes> {
-        let state = self.state(py).borrow();
+        let state = self.state(py).lock();
         let metadata = PyBytes::new(py, state.get_metadata());
         Ok(metadata)
     }
 
     def setmetadata(&self, metadata: PyBytes) -> PyResult<PyObject> {
-        let mut state = self.state(py).borrow_mut();
+        let mut state = self.state(py).lock();
         let metadata = metadata.data(py);
         state.set_metadata(metadata);
         Ok(py.None())

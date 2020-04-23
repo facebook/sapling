@@ -7,6 +7,7 @@ edition = "2018"
 anyhow = "1.0.20"
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.4", default-features = false }
+parking_lot = "0.9"
 treestate = { path = "../../../../lib/treestate" }
 
 [features]
