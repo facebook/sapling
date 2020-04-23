@@ -5,6 +5,9 @@
  * GNU General Public License version 2.
  */
 
+use std::collections::HashMap;
+use std::str::FromStr;
+
 use anyhow::Error;
 use bytes::Bytes;
 use futures::{
@@ -17,11 +20,10 @@ use gotham_derive::{StateData, StaticResponseExtender};
 use hyper::{Body, Request};
 use serde::Deserialize;
 use stats::prelude::*;
-use std::collections::HashMap;
-use std::str::FromStr;
 
 use failure_ext::chain::ChainExt;
 use filestore::StoreRequest;
+use gotham_ext::error::HttpError;
 use lfs_protocol::{
     ObjectAction, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
     Sha256 as LfsSha256, Transfer,
@@ -29,7 +31,7 @@ use lfs_protocol::{
 use mononoke_types::hash::Sha256;
 
 use crate::errors::ErrorKind;
-use crate::http::{EmptyBody, HttpError, TryIntoResponse};
+use crate::http::{EmptyBody, TryIntoResponse};
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::{LfsMethod, ScubaKey, ScubaMiddlewareState};
 

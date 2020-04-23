@@ -11,6 +11,7 @@ use fbinit::FacebookInit;
 use futures::future::{self, FutureExt};
 use gotham::{handler::HandlerFuture, middleware::Middleware, state::State};
 use gotham_derive::NewMiddleware;
+use gotham_ext::error::HttpError;
 use rand::Rng;
 use stats_facebook::service_data::{get_service_data_singleton, ServiceData, ServiceDataWrapper};
 use std::convert::TryInto;
@@ -20,7 +21,6 @@ use std::time::Duration;
 use crate::config::{Limit, ServerConfig};
 
 use crate::errors::ErrorKind;
-use crate::http::HttpError;
 use crate::middleware::ClientIdentity;
 
 use super::util::http_error_to_handler_error;

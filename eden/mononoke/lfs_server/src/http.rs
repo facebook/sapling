@@ -6,6 +6,7 @@
  */
 
 use std::convert::TryInto;
+use std::pin::Pin;
 use std::str::FromStr;
 
 use anyhow::Error;
@@ -17,25 +18,19 @@ use futures::{
 };
 use gotham::state::State;
 use gotham_derive::StateData;
+use gotham_ext::error::HttpError;
 use hyper::{
     header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE},
     Body, Response, StatusCode,
 };
 use lazy_static::lazy_static;
 use mime::Mime;
-use std::pin::Pin;
 
 use crate::errors::LfsServerContextErrorKind;
 use crate::middleware::RequestContext;
 
 #[derive(StateData)]
 pub struct ResponseContentLength(pub u64);
-
-// Provide an easy way to map from Error -> Http code
-pub struct HttpError {
-    pub error: Error,
-    pub status_code: StatusCode,
-}
 
 impl From<LfsServerContextErrorKind> for HttpError {
     fn from(e: LfsServerContextErrorKind) -> HttpError {
@@ -152,50 +147,6 @@ where
             .status(StatusCode::OK)
             .body(Body::wrap_stream(stream))
             .map_err(Error::from)
-    }
-}
-
-impl HttpError {
-    pub fn e400<E: Into<Error>>(err: E) -> Self {
-        Self {
-            error: err.into(),
-            status_code: StatusCode::BAD_REQUEST,
-        }
-    }
-
-    pub fn e403<E: Into<Error>>(err: E) -> Self {
-        Self {
-            error: err.into(),
-            status_code: StatusCode::FORBIDDEN,
-        }
-    }
-
-    pub fn e404<E: Into<Error>>(err: E) -> Self {
-        Self {
-            error: err.into(),
-            status_code: StatusCode::NOT_FOUND,
-        }
-    }
-
-    pub fn e410<E: Into<Error>>(err: E) -> Self {
-        Self {
-            error: err.into(),
-            status_code: StatusCode::GONE,
-        }
-    }
-
-    pub fn e429<E: Into<Error>>(err: E) -> Self {
-        Self {
-            error: err.into(),
-            status_code: StatusCode::TOO_MANY_REQUESTS,
-        }
-    }
-
-    pub fn e500<E: Into<Error>>(err: E) -> Self {
-        Self {
-            error: err.into(),
-            status_code: StatusCode::INTERNAL_SERVER_ERROR,
-        }
     }
 }
 

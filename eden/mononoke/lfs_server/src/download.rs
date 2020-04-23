@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+use std::str::FromStr;
+
 use failure_ext::chain::ChainExt;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
@@ -13,15 +15,15 @@ use futures::{
 use gotham::state::State;
 use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
-use std::str::FromStr;
 
 use filestore::{self, Alias, FetchKey};
+use gotham_ext::error::HttpError;
 use mononoke_types::{hash::Sha256, ContentId};
 use redactedblobstore::has_redaction_root_cause;
 use stats::prelude::*;
 
 use crate::errors::ErrorKind;
-use crate::http::{HttpError, StreamBody, TryIntoResponse};
+use crate::http::{StreamBody, TryIntoResponse};
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::LfsMethod;
 

@@ -25,6 +25,7 @@ use time_ext::DurationExt;
 use blobstore::{Blobstore, Loadable, LoadableError};
 use failure_ext::chain::ChainExt;
 use filestore::Alias;
+use gotham_ext::error::HttpError;
 use lfs_protocol::{
     ObjectAction, ObjectError, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
     ResponseObject, Transfer,
@@ -32,7 +33,7 @@ use lfs_protocol::{
 use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
 
 use crate::errors::ErrorKind;
-use crate::http::{git_lfs_mime, BytesBody, HttpError, TryIntoResponse};
+use crate::http::{git_lfs_mime, BytesBody, TryIntoResponse};
 use crate::lfs_server_context::{RepositoryRequestContext, UriBuilder};
 use crate::middleware::{LfsMethod, RequestContext, ScubaKey, ScubaMiddlewareState};
 
