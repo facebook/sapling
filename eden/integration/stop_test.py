@@ -19,7 +19,12 @@ from eden.fs.cli.util import poll_until
 
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
-from .lib.service_test_case import ServiceTestCaseBase, SystemdServiceTest, service_test
+from .lib.service_test_case import (
+    ServiceTestCaseBase,
+    SystemdServiceTest,
+    service_test,
+    systemd_test,
+)
 from .lib.testcase import EdenTestCase
 
 
@@ -162,6 +167,7 @@ class StopTest(StopTestBase, PexpectAssertionMixin):
             self.assert_process_exit_code(stop_process, SHUTDOWN_EXIT_CODE_NORMAL)
 
 
+@systemd_test
 class StopWithSystemdTest(SystemdServiceTest, StopTestBase, PexpectAssertionMixin):
     def test_stop_stops_systemd_service(self) -> None:
         with self.spawn_fake_edenfs(self.eden_dir):

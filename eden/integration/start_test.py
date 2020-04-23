@@ -17,10 +17,14 @@ from eden.fs.cli.util import HealthStatus
 from fb303_core.ttypes import fb303_status
 
 from .lib import testcase
-from .lib.edenfs_systemd import EdenFSSystemdMixin
 from .lib.fake_edenfs import get_fake_edenfs_argv
 from .lib.find_executables import FindExe
-from .lib.service_test_case import ServiceTestCaseBase, SystemdServiceTest, service_test
+from .lib.service_test_case import (
+    ServiceTestCaseBase,
+    SystemdServiceTest,
+    service_test,
+    systemd_test,
+)
 
 
 class StartTest(testcase.EdenTestCase):
@@ -100,32 +104,20 @@ class StartTest(testcase.EdenTestCase):
 
 
 @testcase.eden_repo_test
-class StartWithRepoTest(testcase.EdenRepoTest, EdenFSSystemdMixin):
+class StartWithRepoTest(testcase.EdenRepoTest):
     """Test 'eden start' with a repo and checkout already configured.
     """
 
-    def setUp(self) -> None:
-        super().setUp()
+    def test_eden_start_mounts_checkouts(self) -> None:
         self.eden.shutdown()
 
-    def test_eden_start_mounts_checkouts(self) -> None:
-        self.run_eden_start(systemd=False)
-        self.assert_checkout_is_mounted()
-
-    def test_eden_start_with_systemd_mounts_checkouts(self) -> None:
-        self.set_up_edenfs_systemd_service()
-        self.run_eden_start(systemd=True)
-        self.assert_checkout_is_mounted()
-
-    def run_eden_start(self, systemd: bool) -> None:
-        self.exit_stack.enter_context(
-            run_eden_start_with_real_daemon(
-                eden_dir=pathlib.Path(self.eden_dir),
-                etc_eden_dir=pathlib.Path(self.etc_eden_dir),
-                home_dir=pathlib.Path(self.home_dir),
-                systemd=systemd,
-            )
-        )
+        with run_eden_start_with_real_daemon(
+            eden_dir=pathlib.Path(self.eden_dir),
+            etc_eden_dir=pathlib.Path(self.etc_eden_dir),
+            home_dir=pathlib.Path(self.home_dir),
+            systemd=False,
+        ):
+            self.assert_checkout_is_mounted()
 
     def assert_checkout_is_mounted(self) -> None:
         file = pathlib.Path(self.mount) / "hello"
@@ -374,6 +366,7 @@ class StartFakeEdenFSTest(StartFakeEdenFSTestBase):
         )
 
 
+@systemd_test
 class StartWithSystemdTest(SystemdServiceTest, StartFakeEdenFSTestBase):
     def test_eden_start_fails_if_service_is_running(self) -> None:
         with self.spawn_fake_edenfs(self.eden_dir):

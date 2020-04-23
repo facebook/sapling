@@ -18,9 +18,10 @@ from eden.test_support.testcase import EdenTestCaseBase
 
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin
-from .lib.service_test_case import SystemdServiceTest
+from .lib.service_test_case import SystemdServiceTest, systemd_test
 
 
+@systemd_test
 class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
     """Test Eden's systemd service for Linux."""
 

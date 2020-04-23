@@ -16,7 +16,12 @@ from eden.fs.cli.util import HealthStatus
 
 from .lib.find_executables import FindExe
 from .lib.pexpect import PexpectAssertionMixin
-from .lib.service_test_case import ServiceTestCaseBase, SystemdServiceTest, service_test
+from .lib.service_test_case import (
+    ServiceTestCaseBase,
+    SystemdServiceTest,
+    service_test,
+    systemd_test,
+)
 
 
 class RestartTestBase(ServiceTestCaseBase):
@@ -245,6 +250,7 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         self.assert_process_fails(restart_process, 1)
 
 
+@systemd_test
 class RestartWithSystemdTest(
     SystemdServiceTest, RestartTestBase, PexpectAssertionMixin
 ):

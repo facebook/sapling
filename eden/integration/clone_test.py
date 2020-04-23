@@ -17,7 +17,12 @@ from eden.integration.lib.hgrepo import HgRepository
 from .lib import edenclient, testcase
 from .lib.fake_edenfs import get_fake_edenfs_argv
 from .lib.find_executables import FindExe
-from .lib.service_test_case import ServiceTestCaseBase, SystemdServiceTest, service_test
+from .lib.service_test_case import (
+    ServiceTestCaseBase,
+    SystemdServiceTest,
+    service_test,
+    systemd_test,
+)
 
 
 @testcase.eden_repo_test
@@ -368,6 +373,7 @@ class CloneFakeEdenFSTest(CloneFakeEdenFSTestBase):
         )
 
 
+@systemd_test
 class CloneFakeEdenFSWithSystemdTest(SystemdServiceTest, CloneFakeEdenFSTestBase):
     def test_clone_starts_systemd_service(self) -> None:
         repo = self.make_dummy_hg_repo()
