@@ -431,6 +431,8 @@ mod tests {
     use util::path::create_dir;
 
     use crate::{
+        metadatastore::MetadataStore,
+        repack::{repack, RepackKind, RepackLocation},
         testutil::{make_config, make_lfs_config, FakeHgIdRemoteStore},
         types::ContentHash,
     };
@@ -780,6 +782,39 @@ mod tests {
 
         let lfs_store = LfsStore::local(&localdir, &config)?;
         assert_eq!(lfs_store.get_delta(&k1)?, Some(delta));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_repack_one_datapack_lfs() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let localdir = TempDir::new()?;
+        let mut config = make_lfs_config(&cachedir);
+        config.set("lfs", "threshold", Some("10M"), &Default::default());
+
+        let k1 = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from(&[1, 2, 3, 4, 5][..]),
+            base: None,
+            key: k1.clone(),
+        };
+
+        let store = Arc::new(ContentStore::new(&localdir, &config)?);
+        store.add(&delta, &Default::default())?;
+        store.flush()?;
+
+        let metadata = Arc::new(MetadataStore::new(&localdir, &config)?);
+
+        repack(
+            get_packs_path(&localdir, &None)?,
+            Some((store, metadata)),
+            RepackKind::Full,
+            RepackLocation::Local,
+        )?;
+
+        let store = Arc::new(ContentStore::new(&localdir, &config)?);
+        assert_eq!(store.get_delta(&k1)?, Some(delta));
 
         Ok(())
     }

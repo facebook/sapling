@@ -61,11 +61,16 @@ impl<T: HgIdMutableDeltaStore> HgIdMutableDeltaStore for MultiplexDeltaStore<T> 
     }
 
     fn flush(&self) -> Result<Option<PathBuf>> {
+        let mut ret = None;
         for store in self.stores.iter() {
-            store.flush()?;
+            let opt = store.flush()?;
+            // It's non sensical for the MultiplexStore to be built with multiple pack stores,
+            // therefore let's assert that only one store can ever return a PathBuf.
+            assert!(opt.is_none() || !ret.is_some());
+            ret = ret.or(opt);
         }
 
-        Ok(None)
+        Ok(ret)
     }
 }
 
@@ -127,11 +132,16 @@ impl<T: HgIdMutableHistoryStore> HgIdMutableHistoryStore for MultiplexHgIdHistor
     }
 
     fn flush(&self) -> Result<Option<PathBuf>> {
+        let mut ret = None;
         for store in self.stores.iter() {
-            store.flush()?;
+            let opt = store.flush()?;
+            // It's non sensical for the MultiplexStore to be built with multiple pack stores,
+            // therefore let's assert that only one store can ever return a PathBuf.
+            assert!(opt.is_none() || !ret.is_some());
+            ret = ret.or(opt);
         }
 
-        Ok(None)
+        Ok(ret)
     }
 }
 

@@ -846,9 +846,9 @@ impl HgIdMutableDeltaStore for LfsMultiplexer {
     }
 
     fn flush(&self) -> Result<Option<PathBuf>> {
-        self.non_lfs.flush()?;
+        let ret = self.non_lfs.flush()?;
         self.lfs.flush()?;
-        Ok(None)
+        Ok(ret)
     }
 }
 

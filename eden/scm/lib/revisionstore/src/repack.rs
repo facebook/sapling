@@ -317,6 +317,8 @@ fn repack_datapack_to_contentstore(
     let new_pack = store.commit_pending(location)?;
 
     for path in repacked {
+        // TODO: This is a bit fragile as a bug in commit_pending not returning a path could lead
+        // to data loss. A better return type would avoid this.
         if Some(&path) != new_pack.as_ref() {
             match DataPack::new(&path) {
                 Ok(pack) => pack.delete()?,
