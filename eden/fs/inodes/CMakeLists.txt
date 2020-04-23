@@ -10,6 +10,8 @@ if (WIN32)
   add_library(
     eden_inodes STATIC
       ServerState.cpp
+      win/DirList.cpp
+      win/DirList.h
       win/EdenMount.cpp
       win/EdenMount.h
       win/RepoConfig.cpp

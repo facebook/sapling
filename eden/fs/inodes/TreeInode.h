@@ -141,6 +141,8 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 
 #ifndef _WIN32
   DirList readdir(DirList&& list, off_t off);
+#else
+  DirList readdir();
 #endif
 
   const folly::Synchronized<TreeInodeState>& getContents() const {

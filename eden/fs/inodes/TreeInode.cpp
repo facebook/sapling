@@ -44,6 +44,7 @@
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #ifdef _WIN32
+#include "eden/fs/inodes/win/DirList.h" // @manual
 #include "eden/fs/win/store/WinStore.h" // @manual
 #include "eden/fs/win/utils/StringConv.h" // @manual
 #else
@@ -1816,6 +1817,20 @@ DirList TreeInode::readdir(DirList&& list, off_t off) {
   }
 
   return std::move(list);
+}
+#else
+
+DirList TreeInode::readdir() {
+  auto dir = contents_.rlock();
+  auto& entries = dir->entries;
+  DirList list;
+  for (auto& entry : entries) {
+    list.add(
+        entry.first.stringPiece(),
+        entry.second.getInodeNumber().get(),
+        entry.second.getDtype());
+  }
+  return list;
 }
 #endif // _WIN32
 
