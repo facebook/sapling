@@ -80,14 +80,14 @@ static int unlink(const char* path) {
   return _unlink(path);
 }
 
-#define NOT_IMPLEMENTED()                            \
-  do {                                               \
-    throw newEdenError(                              \
-        EdenErrorType::GENERIC_ERROR,                \
-        " +++++  NOT IMPLEMETED +++++++ Function: ", \
-        __FUNCTION__,                                \
-        " Line: ",                                   \
-        __LINE__);                                   \
+#define NOT_IMPLEMENTED()                             \
+  do {                                                \
+    throw newEdenError(                               \
+        EdenErrorType::GENERIC_ERROR,                 \
+        " +++++  NOT IMPLEMENTED +++++++ Function: ", \
+        __FUNCTION__,                                 \
+        " Line: ",                                    \
+        __LINE__);                                    \
   } while (true)
 
 } // namespace eden
