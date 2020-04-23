@@ -610,7 +610,7 @@ class HgServer(object):
         """
         start = time.time()
         try:
-            ctx = scmutil.revsingle(self.repo, rev)
+            ctx = self.repo[rev]
             mf = ctx.manifest()
         except Exception:
             # The mercurial call may fail with a "no node" error if this
@@ -618,7 +618,7 @@ class HgServer(object):
             # originally opened it.  Invalidate the repository and try again,
             # in case our cached repo data is just stale.
             self.repo.invalidate(clearfilecache=True)
-            ctx = scmutil.revsingle(self.repo, rev)
+            ctx = self.repo[rev]
             mf = ctx.manifest()
 
         # How many paths to send in each chunk
@@ -651,7 +651,7 @@ class HgServer(object):
 
     def _get_manifest_node_impl(self, rev):
         # type: (bytes) -> bytes
-        ctx = scmutil.revsingle(self.repo, rev)
+        ctx = self.repo[rev]
         node_hash = ctx.manifestnode()
         if not node_hash:
             # For some reason ctx.manifestnode() can sometimes successfully
