@@ -211,3 +211,16 @@ where
         Err(errors::invalid_request(msg).into())
     }
 }
+
+pub(crate) fn validate_timestamp(
+    ts: Option<i64>,
+    name: &str,
+) -> Result<Option<i64>, errors::ServiceError> {
+    match ts {
+        None | Some(0) => Ok(None),
+        Some(ts) if ts < 0 => {
+            Err(errors::invalid_request(format!("{} ({}) cannot be negative", name, ts)).into())
+        }
+        Some(ts) => Ok(Some(ts)),
+    }
+}

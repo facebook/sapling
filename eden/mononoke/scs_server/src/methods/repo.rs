@@ -371,12 +371,12 @@ impl SourceControlServiceImpl {
                     try_join_all(
                         draft_commits
                             .into_iter()
-                            .map(|cs| (&repo, cs, &params.identity_schemes).into_response()),
+                            .map(|cs| (cs, &params.identity_schemes).into_response()),
                     ),
                     try_join_all(
                         public_parents
                             .into_iter()
-                            .map(|cs| (&repo, cs, &params.identity_schemes).into_response()),
+                            .map(|cs| (cs, &params.identity_schemes).into_response()),
                     ),
                 )
                 .await?;

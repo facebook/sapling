@@ -14,7 +14,8 @@ use source_control as thrift;
 
 use crate::commit_id::{map_commit_identity, CommitIdExt};
 use crate::errors;
-use crate::from_request::{check_range_and_convert, FromRequest};
+use crate::from_request::{check_range_and_convert, validate_timestamp, FromRequest};
+use crate::history::collect_history;
 use crate::into_response::{AsyncIntoResponse, IntoResponse};
 use crate::source_control_impl::SourceControlServiceImpl;
 use crate::specifiers::SpecifierExt;
@@ -147,10 +148,8 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitInfoParams,
     ) -> Result<thrift::CommitInfo, errors::ServiceError> {
-        let (repo, changeset) = self.repo_changeset(ctx, &commit).await?;
-        (&repo, changeset, &params.identity_schemes)
-            .into_response()
-            .await
+        let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+        (changeset, &params.identity_schemes).into_response().await
     }
 
     /// Returns `true` if this commit is an ancestor of `other_commit`.
@@ -277,6 +276,55 @@ impl SourceControlServiceImpl {
             .try_collect()
             .await?;
         Ok(thrift::CommitFindFilesResponse { files })
+    }
+
+    /// Returns the history of a commit
+    pub(crate) async fn commit_history(
+        &self,
+        ctx: CoreContext,
+        commit: thrift::CommitSpecifier,
+        params: thrift::CommitHistoryParams,
+    ) -> Result<thrift::CommitHistoryResponse, errors::ServiceError> {
+        let (_repo, changeset) = self.repo_changeset(ctx, &commit).await?;
+
+        let limit: usize = check_range_and_convert("limit", params.limit, 0..)?;
+        let skip: usize = check_range_and_convert("skip", params.skip, 0..)?;
+
+        // Time filter equal to zero might be mistaken by users for an unset, like None.
+        // We will consider negative timestamps as invalid and zeros as unset.
+        let after_timestamp = validate_timestamp(params.after_timestamp, "after_timestamp")?;
+        let before_timestamp = validate_timestamp(params.before_timestamp, "before_timestamp")?;
+
+        if let (Some(ats), Some(bts)) = (after_timestamp, before_timestamp) {
+            if bts < ats {
+                return Err(errors::invalid_request(format!(
+                    "after_timestamp ({}) cannot be greater than before_timestamp ({})",
+                    ats, bts,
+                ))
+                .into());
+            }
+        }
+
+        if skip > 0 && (after_timestamp.is_some() || before_timestamp.is_some()) {
+            return Err(errors::invalid_request(
+                "Time filters cannot be applied if skip is not 0".to_string(),
+            )
+            .into());
+        }
+
+        let history_stream = changeset.history(after_timestamp).await;
+        let history = collect_history(
+            history_stream,
+            skip,
+            limit,
+            before_timestamp,
+            after_timestamp,
+            params.format,
+            &params.identity_schemes,
+        )
+        .await?;
+
+        Ok(thrift::CommitHistoryResponse { history })
     }
 
     /// Do a cross-repo lookup to see if a commit exists under a different hash in another repo

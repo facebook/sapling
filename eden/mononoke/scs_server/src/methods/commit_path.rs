@@ -7,10 +7,7 @@
 
 use context::CoreContext;
 use dedupmap::DedupMap;
-use futures_util::{
-    future,
-    stream::{StreamExt, TryStreamExt},
-};
+use futures::future;
 use mononoke_api::{ChangesetSpecifier, MononokeError, PathEntry};
 use source_control as thrift;
 use std::borrow::Cow;
@@ -18,8 +15,9 @@ use std::collections::{BTreeSet, HashMap};
 
 use crate::commit_id::map_commit_identities;
 use crate::errors;
-use crate::from_request::check_range_and_convert;
-use crate::into_response::{AsyncIntoResponse, IntoResponse};
+use crate::from_request::{check_range_and_convert, validate_timestamp};
+use crate::history::collect_history;
+use crate::into_response::IntoResponse;
 use crate::source_control_impl::SourceControlServiceImpl;
 
 impl SourceControlServiceImpl {
@@ -204,38 +202,28 @@ impl SourceControlServiceImpl {
         commit_path: thrift::CommitPathSpecifier,
         params: thrift::CommitPathHistoryParams,
     ) -> Result<thrift::CommitPathHistoryResponse, errors::ServiceError> {
-        let (repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
+        let (_repo, changeset) = self.repo_changeset(ctx, &commit_path.commit).await?;
         let path = changeset.path(&commit_path.path)?;
 
-        let number: usize = check_range_and_convert("limit", params.limit, 0..)?;
+        let limit: usize = check_range_and_convert("limit", params.limit, 0..)?;
         let skip: usize = check_range_and_convert("skip", params.skip, 0..)?;
 
         // Time filter equal to zero might be mistaken by users for an unset, like None.
         // We will consider negative timestamps as invalid and zeros as unset.
-        let validate_ts = |ts_param, name| match ts_param {
-            Some(0) => Ok(None),
-            Some(ts) if ts < 0 => {
-                let err: errors::ServiceError =
-                    errors::invalid_request(format!("{} parameter cannot be negative", name))
-                        .into();
-                Err(err)
-            }
-            Some(ts) => Ok(Some(ts)),
-            None => Ok(None),
-        };
-        let after_timestamp = validate_ts(params.after_timestamp.clone(), "after_timestamp")?;
-        let before_timestamp = validate_ts(params.before_timestamp.clone(), "before_timestamp")?;
+        let after_timestamp = validate_timestamp(params.after_timestamp, "after_timestamp")?;
+        let before_timestamp = validate_timestamp(params.before_timestamp, "before_timestamp")?;
+
         if let (Some(ats), Some(bts)) = (after_timestamp, before_timestamp) {
             if bts < ats {
                 return Err(errors::invalid_request(format!(
-                    "after_timestamp cannot be greater than before_timestamp",
+                    "after_timestamp ({}) cannot be greater than before_timestamp ({})",
+                    ats, bts,
                 ))
                 .into());
             }
         }
 
-        let time_filters = after_timestamp.is_some() || before_timestamp.is_some();
-        if skip > 0 && time_filters {
+        if skip > 0 && (after_timestamp.is_some() || before_timestamp.is_some()) {
             return Err(errors::invalid_request(
                 "Time filters cannot be applied if skip is not 0".to_string(),
             )
@@ -243,64 +231,17 @@ impl SourceControlServiceImpl {
         }
 
         let history_stream = path.history(after_timestamp.clone()).await?;
-        let history_stream = history_stream
-            .map_err(errors::ServiceError::from)
-            .skip(skip);
+        let history = collect_history(
+            history_stream,
+            skip,
+            limit,
+            before_timestamp,
+            after_timestamp,
+            params.format,
+            &params.identity_schemes,
+        )
+        .await?;
 
-        let history = if time_filters {
-            history_stream
-                .map(move |changeset| async move {
-                    let changeset = changeset?;
-                    let date = changeset.author_date().await?;
-
-                    if let Some(after) = after_timestamp {
-                        if after > date.timestamp() {
-                            return Ok(None);
-                        }
-                    }
-                    if let Some(before) = before_timestamp {
-                        if before < date.timestamp() {
-                            return Ok(None);
-                        }
-                    }
-
-                    Ok(Some(changeset))
-                })
-                // to check the date we need to fetch changeset first, that can be expensive
-                // better to try doing it in parallel
-                .buffered(100)
-                .try_filter_map(|x| {
-                    let res: Result<_, errors::ServiceError> = Ok(x);
-                    future::ready(res)
-                })
-                .take(number)
-                .left_stream()
-        } else {
-            history_stream.take(number).right_stream()
-        };
-
-        match params.format {
-            thrift::HistoryFormat::COMMIT_INFO => {
-                let history_resp = history
-                    .map(|cs_ctx| async {
-                        match cs_ctx {
-                            Ok(cs) => (&repo, cs, &params.identity_schemes).into_response().await,
-                            Err(err) => Err(err),
-                        }
-                    })
-                    .buffered(100)
-                    .try_collect::<Vec<_>>()
-                    .await?;
-
-                Ok(thrift::CommitPathHistoryResponse {
-                    history: thrift::History::commit_infos(history_resp),
-                })
-            }
-            other_format => Err(errors::invalid_request(format!(
-                "unsupported file history format {}",
-                other_format
-            ))
-            .into()),
-        }
+        Ok(thrift::CommitPathHistoryResponse { history })
     }
 }

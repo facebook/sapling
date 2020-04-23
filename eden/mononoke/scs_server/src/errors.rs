@@ -93,6 +93,7 @@ impl_into_thrift_error!(service::CommitInfoExn);
 impl_into_thrift_error!(service::CommitCompareExn);
 impl_into_thrift_error!(service::CommitIsAncestorOfExn);
 impl_into_thrift_error!(service::CommitFindFilesExn);
+impl_into_thrift_error!(service::CommitHistoryExn);
 impl_into_thrift_error!(service::CommitPathInfoExn);
 impl_into_thrift_error!(service::CommitPathBlameExn);
 impl_into_thrift_error!(service::CommitPathHistoryExn);

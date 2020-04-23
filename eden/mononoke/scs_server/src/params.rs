@@ -113,6 +113,21 @@ impl AddScubaParams for thrift::CommitLookupParams {
     }
 }
 
+impl AddScubaParams for thrift::CommitHistoryParams {
+    fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
+        scuba.add("param_format", self.format.to_string());
+        scuba.add("param_skip", self.skip);
+        scuba.add("param_limit", self.limit);
+        if let Some(before) = self.before_timestamp {
+            scuba.add("param_before_timestamp", before);
+        }
+        if let Some(after) = self.after_timestamp {
+            scuba.add("param_after_timestamp", after);
+        }
+        self.identity_schemes.add_scuba_params(scuba);
+    }
+}
+
 impl AddScubaParams for thrift::CommitLookupXRepoParams {
     fn add_scuba_params(&self, scuba: &mut ScubaSampleBuilder) {
         scuba.add("other_repo", self.other_repo.name.as_str());

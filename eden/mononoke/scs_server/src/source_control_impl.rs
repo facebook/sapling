@@ -388,6 +388,11 @@ impl SourceControlService for SourceControlServiceThriftImpl {
             params: thrift::CommitFindFilesParams,
         ) -> Result<thrift::CommitFindFilesResponse, service::CommitFindFilesExn>;
 
+        async fn commit_history(
+            commit: thrift::CommitSpecifier,
+            params: thrift::CommitHistoryParams,
+        ) -> Result<thrift::CommitHistoryResponse, service::CommitHistoryExn>;
+
         async fn commit_lookup_xrepo(
             commit: thrift::CommitSpecifier,
             params: thrift::CommitLookupXRepoParams,

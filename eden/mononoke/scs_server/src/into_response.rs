@@ -9,7 +9,7 @@ use async_trait::async_trait;
 use futures_util::try_join;
 use mononoke_api::{
     ChangesetContext, ChangesetPathContext, ChangesetPathDiffContext, FileMetadata, FileType,
-    MononokeError, RepoContext, TreeEntry, UnifiedDiff,
+    MononokeError, TreeEntry, UnifiedDiff,
 };
 use source_control as thrift;
 use std::collections::{BTreeMap, BTreeSet};
@@ -154,23 +154,18 @@ impl AsyncIntoResponse<thrift::CommitCompareFile> for ChangesetPathDiffContext {
 
 #[async_trait]
 impl AsyncIntoResponse<thrift::CommitInfo>
-    for (
-        &RepoContext,
-        ChangesetContext,
-        &BTreeSet<thrift::CommitIdentityScheme>,
-    )
+    for (ChangesetContext, &BTreeSet<thrift::CommitIdentityScheme>)
 {
     async fn into_response(self) -> Result<thrift::CommitInfo, errors::ServiceError> {
-        let (repo, changeset, identity_schemes) = self;
+        let (changeset, identity_schemes) = self;
         async fn map_parent_identities(
-            repo: &RepoContext,
             changeset: &ChangesetContext,
             identity_schemes: &BTreeSet<thrift::CommitIdentityScheme>,
         ) -> Result<Vec<BTreeMap<thrift::CommitIdentityScheme, thrift::CommitId>>, MononokeError>
         {
             let parents = changeset.parents().await?;
             let parent_id_mapping =
-                map_commit_identities(&repo, parents.clone(), identity_schemes).await?;
+                map_commit_identities(changeset.repo(), parents.clone(), identity_schemes).await?;
             Ok(parents
                 .iter()
                 .map(|parent_id| {
@@ -187,7 +182,7 @@ impl AsyncIntoResponse<thrift::CommitInfo>
             changeset.message(),
             changeset.author_date(),
             changeset.author(),
-            map_parent_identities(&repo, &changeset, identity_schemes),
+            map_parent_identities(&changeset, identity_schemes),
             changeset.extras(),
             changeset.generation(),
         )?;

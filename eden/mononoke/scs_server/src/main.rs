@@ -35,6 +35,7 @@ mod commit_id;
 mod errors;
 mod facebook;
 mod from_request;
+mod history;
 mod into_response;
 mod methods;
 mod monitoring;
