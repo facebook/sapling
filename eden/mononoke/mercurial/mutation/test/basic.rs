@@ -10,6 +10,7 @@
 use std::collections::HashMap;
 
 use anyhow::Result;
+use context::CoreContext;
 use fbinit::FacebookInit;
 use maplit::{hashmap, hashset};
 use mercurial_mutation::{HgMutationEntry, HgMutationStore, SqlHgMutationStoreBuilder};
@@ -69,7 +70,8 @@ fn create_entries() -> HashMap<usize, HgMutationEntry> {
 }
 
 #[fbinit::compat_test]
-async fn add_entries_and_fetch_predecessors(_fb: FacebookInit) -> Result<()> {
+async fn add_entries_and_fetch_predecessors(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
     let store = SqlHgMutationStoreBuilder::with_sqlite_in_memory()
         .unwrap()
         .with_repo_id(REPO_ZERO);
@@ -78,15 +80,23 @@ async fn add_entries_and_fetch_predecessors(_fb: FacebookInit) -> Result<()> {
     let mut entries = create_entries();
     store
         .add_entries(
+            &ctx,
             hashset![make_hg_cs_id(6), make_hg_cs_id(7)],
             entries.values().cloned().collect(),
         )
         .await?;
 
-    check_entries(&store, hashset![make_hg_cs_id(6)], &entries, &[2, 4, 5, 6]).await?;
-    check_entries(&store, hashset![make_hg_cs_id(4)], &entries, &[2, 4]).await?;
-    check_entries(&store, hashset![make_hg_cs_id(1)], &entries, &[]).await?;
-    check_entries(&store, hashset![make_hg_cs_id(7)], &entries, &[]).await?;
+    check_entries(
+        &store,
+        &ctx,
+        hashset![make_hg_cs_id(6)],
+        &entries,
+        &[2, 4, 5, 6],
+    )
+    .await?;
+    check_entries(&store, &ctx, hashset![make_hg_cs_id(4)], &entries, &[2, 4]).await?;
+    check_entries(&store, &ctx, hashset![make_hg_cs_id(1)], &entries, &[]).await?;
+    check_entries(&store, &ctx, hashset![make_hg_cs_id(7)], &entries, &[]).await?;
 
     // Add one new entry.
     let new_entry = HgMutationEntry::new(
@@ -99,12 +109,13 @@ async fn add_entries_and_fetch_predecessors(_fb: FacebookInit) -> Result<()> {
         vec![],
     );
     store
-        .add_entries(hashset![make_hg_cs_id(8)], vec![new_entry.clone()])
+        .add_entries(&ctx, hashset![make_hg_cs_id(8)], vec![new_entry.clone()])
         .await?;
     entries.insert(8, new_entry);
 
     check_entries(
         &store,
+        &ctx,
         hashset![make_hg_cs_id(8)],
         &entries,
         &[2, 4, 5, 6, 8],
@@ -134,12 +145,13 @@ async fn add_entries_and_fetch_predecessors(_fb: FacebookInit) -> Result<()> {
     ];
 
     store
-        .add_entries(hashset![make_hg_cs_id(10)], new_entries.clone())
+        .add_entries(&ctx, hashset![make_hg_cs_id(10)], new_entries.clone())
         .await?;
     entries.extend((9..).zip(new_entries));
 
     check_entries(
         &store,
+        &ctx,
         hashset![make_hg_cs_id(10)],
         &entries,
         &[2, 4, 5, 6, 9, 10],
@@ -192,12 +204,13 @@ async fn add_entries_and_fetch_predecessors(_fb: FacebookInit) -> Result<()> {
     ];
 
     store
-        .add_entries(hashset![make_hg_cs_id(13)], new_entries.clone())
+        .add_entries(&ctx, hashset![make_hg_cs_id(13)], new_entries.clone())
         .await?;
     entries.extend(vec![11, 13].into_iter().zip(new_entries));
 
     check_entries(
         &store,
+        &ctx,
         hashset![make_hg_cs_id(13)],
         &entries,
         &[2, 4, 5, 6, 8, 9, 10, 11, 13],

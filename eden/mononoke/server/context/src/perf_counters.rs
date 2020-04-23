@@ -75,6 +75,8 @@ define_perf_counters! {
         GettreepackDesignatedNodes,
         GettreepackNumTreepacks,
         GettreepackResponseSize,
+        HgMutationStoreNumAdded,
+        HgMutationStoreNumFetched,
         MemcacheHits,
         MemcacheMisses,
         NullLinknode,

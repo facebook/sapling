@@ -9,9 +9,11 @@ use std::collections::{hash_map, HashMap, HashSet};
 
 use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
+use context::{CoreContext, PerfCounterType};
 use futures::compat::Future01CompatExt;
 use mercurial_types::HgChangesetId;
 use mononoke_types::{DateTime, RepositoryId};
+use slog::debug;
 use smallvec::SmallVec;
 use sql::{queries, Connection};
 use sql_ext::SqlConnections;
@@ -59,6 +61,7 @@ impl SqlHgMutationStore {
     /// been added to the store.
     async fn store<'a>(
         &self,
+        ctx: &CoreContext,
         entry_set: &HgMutationEntrySet,
         changeset_ids: impl IntoIterator<Item = &'a HgChangesetId>,
     ) -> Result<()> {
@@ -188,6 +191,17 @@ impl SqlHgMutationStore {
             .await?;
 
         txn.commit().compat().await?;
+
+        debug!(
+            ctx.logger(),
+            "Mutation store added {} entries for {} changesets",
+            db_entries.len(),
+            db_csets.len()
+        );
+        ctx.perf_counters().add_to_counter(
+            PerfCounterType::HgMutationStoreNumAdded,
+            db_entries.len() as i64,
+        );
 
         Ok(())
     }
@@ -362,6 +376,7 @@ impl SqlHgMutationStore {
 impl HgMutationStore for SqlHgMutationStore {
     async fn add_entries(
         &self,
+        ctx: &CoreContext,
         new_changeset_ids: HashSet<HgChangesetId>,
         entries: Vec<HgMutationEntry>,
     ) -> Result<()> {
@@ -396,6 +411,13 @@ impl HgMutationStore for SqlHgMutationStore {
             remaining_entries,
         } = entry_set.add_entries(entries, &new_changeset_ids)?;
 
+        debug!(
+            ctx.logger(),
+            "Mutation store fast path found primordial changesets for {} changesets ({} remaining)",
+            added.len(),
+            missing_primordials.len(),
+        );
+
         // If any entries were missing their primoridal IDs, we will need to
         // fetch them and all of their predecessors in order to find which
         // predecessor entries are missing and what their primordial commits
@@ -417,6 +439,12 @@ impl HgMutationStore for SqlHgMutationStore {
                 }
             }
 
+            debug!(
+                ctx.logger(),
+                "Mutation store slow path fetching {} additional entries",
+                predecessor_ids.len(),
+            );
+
             self.fetch_by_successor(
                 &self.connections.read_master_connection,
                 &mut entry_set,
@@ -432,12 +460,13 @@ impl HgMutationStore for SqlHgMutationStore {
         }
 
         // Store the new entries.
-        self.store(&entry_set, &added).await?;
+        self.store(ctx, &entry_set, &added).await?;
         Ok(())
     }
 
     async fn all_predecessors(
         &self,
+        ctx: &CoreContext,
         changeset_ids: HashSet<HgChangesetId>,
     ) -> Result<Vec<HgMutationEntry>> {
         let mut entry_set = HgMutationEntrySet::new();
@@ -446,7 +475,19 @@ impl HgMutationStore for SqlHgMutationStore {
             .await?;
         self.fetch_all_predecessors(connection, &mut entry_set)
             .await?;
-        Ok(entry_set.into_all_predecessors(changeset_ids))
+        let changeset_count = changeset_ids.len();
+        let entries = entry_set.into_all_predecessors(changeset_ids);
+        debug!(
+            ctx.logger(),
+            "Mutation store fetched {} entries for {} changesets",
+            entries.len(),
+            changeset_count,
+        );
+        ctx.perf_counters().add_to_counter(
+            PerfCounterType::HgMutationStoreNumFetched,
+            entries.len() as i64,
+        );
+        Ok(entries)
     }
 }
 

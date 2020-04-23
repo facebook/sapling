@@ -9,6 +9,7 @@ use std::cmp::Ordering;
 use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
+use context::CoreContext;
 use mercurial_mutation::{HgMutationEntry, HgMutationStore};
 use mercurial_types::HgChangesetId;
 
@@ -35,11 +36,12 @@ fn get_successors(entries: &[HgMutationEntry]) -> Vec<&HgChangesetId> {
 
 pub(crate) async fn check_entries(
     store: &dyn HgMutationStore,
+    ctx: &CoreContext,
     changeset_ids: HashSet<HgChangesetId>,
     entries: &HashMap<usize, HgMutationEntry>,
     indexes: &[usize],
 ) -> Result<()> {
-    let mut fetched_entries = store.all_predecessors(changeset_ids).await?;
+    let mut fetched_entries = store.all_predecessors(ctx, changeset_ids).await?;
     let mut expected_entries = get_entries(&entries, indexes);
     fetched_entries.sort_unstable_by(compare_entries);
     expected_entries.sort_unstable_by(compare_entries);

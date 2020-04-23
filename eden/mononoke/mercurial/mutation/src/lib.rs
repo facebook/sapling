@@ -19,6 +19,7 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use async_trait::async_trait;
+use context::CoreContext;
 use mercurial_types::HgChangesetId;
 
 mod builder;
@@ -36,6 +37,7 @@ pub trait HgMutationStore: Send + Sync {
     /// Adds mutation information for `new_changeset_ids` using the given `entries`.
     async fn add_entries(
         &self,
+        ctx: &CoreContext,
         new_changeset_ids: HashSet<HgChangesetId>,
         entries: Vec<HgMutationEntry>,
     ) -> Result<()>;
@@ -45,6 +47,7 @@ pub trait HgMutationStore: Send + Sync {
     /// Returns all entries that describe the mutation history of the commits.
     async fn all_predecessors(
         &self,
+        ctx: &CoreContext,
         changeset_ids: HashSet<HgChangesetId>,
     ) -> Result<Vec<HgMutationEntry>>;
 }
@@ -53,16 +56,18 @@ pub trait HgMutationStore: Send + Sync {
 impl HgMutationStore for Arc<dyn HgMutationStore> {
     async fn add_entries(
         &self,
+        ctx: &CoreContext,
         new_changeset_ids: HashSet<HgChangesetId>,
         entries: Vec<HgMutationEntry>,
     ) -> Result<()> {
-        (**self).add_entries(new_changeset_ids, entries).await
+        (**self).add_entries(ctx, new_changeset_ids, entries).await
     }
 
     async fn all_predecessors(
         &self,
+        ctx: &CoreContext,
         changeset_ids: HashSet<HgChangesetId>,
     ) -> Result<Vec<HgMutationEntry>> {
-        (**self).all_predecessors(changeset_ids).await
+        (**self).all_predecessors(ctx, changeset_ids).await
     }
 }
