@@ -9,4 +9,5 @@ pub mod body_ext;
 pub mod error;
 pub mod handler;
 pub mod middleware;
+pub mod signal_stream;
 pub mod socket_data;
