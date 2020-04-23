@@ -12,7 +12,7 @@ use std::{
     collections::{BTreeSet, HashMap, HashSet},
     convert::{TryFrom, TryInto},
     fs,
-    path::{Path, PathBuf},
+    path::Path,
     str,
     str::FromStr,
     time::Duration,
@@ -88,7 +88,7 @@ impl RepoConfigs {
             repo_configs.insert(reponame.clone(), config);
         }
 
-        let common = Self::read_common_config(fb, &config_path.to_path_buf())?;
+        let common = Self::read_common_config(fb, &config_path)?;
         Ok(Self {
             repos: repo_configs,
             common,
@@ -96,8 +96,12 @@ impl RepoConfigs {
     }
 
     /// Read common config, returns default if it doesn't exist
-    pub fn read_common_config(fb: FacebookInit, config_path: &PathBuf) -> Result<CommonConfig> {
-        let raw_config = Self::read_raw_configs(fb, config_path.as_path())?.common;
+    pub fn read_common_config(
+        fb: FacebookInit,
+        config_path: impl AsRef<Path>,
+    ) -> Result<CommonConfig> {
+        let config_path = config_path.as_ref();
+        let raw_config = Self::read_raw_configs(fb, config_path)?.common;
         let mut tiers_num = 0;
         let whitelisted_entries: Result<Vec<_>> = raw_config
             .whitelist_entry

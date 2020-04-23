@@ -14,7 +14,6 @@ pub use self::cache::{add_cachelib_args, init_cachelib, WITH_CONTENT_SHA1_CACHE}
 use std::collections::{HashMap, HashSet};
 use std::io;
 use std::num::NonZeroU32;
-use std::path::Path;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::Arc;
@@ -65,6 +64,7 @@ const ENABLE_MCROUTER: &str = "enable-mcrouter";
 const MYSQL_MYROUTER_PORT: &str = "myrouter-port";
 const MYSQL_MASTER_ONLY: &str = "mysql-master-only";
 const RUNTIME_THREADS: &str = "runtime-threads";
+const CONFIG_PATH: &str = "mononoke-config-path";
 
 const READ_QPS_ARG: &str = "blobstore-read-qps";
 const WRITE_QPS_ARG: &str = "blobstore-write-qps";
@@ -187,8 +187,8 @@ impl MononokeApp {
     /// Build a `clap::App` for this Mononoke app, which can then be customized further.
     pub fn build<'a, 'b>(self) -> App<'a, 'b> {
         let mut app = App::new(self.name).arg(
-            Arg::with_name("mononoke-config-path")
-                .long("mononoke-config-path")
+            Arg::with_name(CONFIG_PATH)
+                .long(CONFIG_PATH)
                 .value_name("MONONOKE_CONFIG_PATH")
                 .help("Path to the Mononoke configs"),
         );
@@ -766,30 +766,25 @@ pub fn get_scuba_sample_builder<'a>(
     Ok(scuba_logger)
 }
 
+pub fn get_config_path<'a>(matches: &'a ArgMatches<'a>) -> Result<&'a str> {
+    matches
+        .value_of(CONFIG_PATH)
+        .ok_or(Error::msg(format!("{} must be specified", CONFIG_PATH)))
+}
+
 pub fn read_configs<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepoConfigs> {
-    let config_path = matches
-        .value_of("mononoke-config-path")
-        .ok_or(Error::msg("mononoke-config-path must be specified"))?;
-    RepoConfigs::read_configs(fb, config_path)
+    RepoConfigs::read_configs(fb, get_config_path(matches)?)
 }
 
 pub fn read_common_config<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<CommonConfig> {
-    let config_path = matches
-        .value_of("mononoke-config-path")
-        .ok_or(Error::msg("mononoke-config-path must be specified"))?;
-
-    let config_path = Path::new(config_path);
-    RepoConfigs::read_common_config(fb, &config_path.to_path_buf())
+    RepoConfigs::read_common_config(fb, get_config_path(matches)?)
 }
 
 pub fn read_storage_configs<'a>(
     fb: FacebookInit,
     matches: &ArgMatches<'a>,
 ) -> Result<HashMap<String, StorageConfig>> {
-    let config_path = matches
-        .value_of("mononoke-config-path")
-        .ok_or(Error::msg("mononoke-config-path must be specified"))?;
-    RepoConfigs::read_storage_configs(fb, config_path)
+    RepoConfigs::read_storage_configs(fb, get_config_path(matches)?)
 }
 
 pub fn get_config<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<(String, RepoConfig)> {
