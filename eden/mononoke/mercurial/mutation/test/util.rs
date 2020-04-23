@@ -29,6 +29,10 @@ fn get_entries(
     result
 }
 
+fn get_successors(entries: &[HgMutationEntry]) -> Vec<&HgChangesetId> {
+    entries.iter().map(|entry| entry.successor()).collect()
+}
+
 pub(crate) async fn check_entries(
     store: &dyn HgMutationStore,
     changeset_ids: HashSet<HgChangesetId>,
@@ -39,6 +43,10 @@ pub(crate) async fn check_entries(
     let mut expected_entries = get_entries(&entries, indexes);
     fetched_entries.sort_unstable_by(compare_entries);
     expected_entries.sort_unstable_by(compare_entries);
+    assert_eq!(
+        get_successors(&fetched_entries),
+        get_successors(&expected_entries)
+    );
     assert_eq!(fetched_entries, expected_entries);
     Ok(())
 }

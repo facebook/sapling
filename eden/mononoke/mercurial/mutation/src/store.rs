@@ -7,7 +7,7 @@
 
 use std::collections::{hash_map, HashMap, HashSet};
 
-use anyhow::{Context, Result};
+use anyhow::{anyhow, Context, Result};
 use async_trait::async_trait;
 use futures::compat::Future01CompatExt;
 use mercurial_types::HgChangesetId;
@@ -16,7 +16,7 @@ use smallvec::SmallVec;
 use sql::{queries, Connection};
 use sql_ext::SqlConnections;
 
-use crate::entry::{HgMutationEntry, HgMutationEntrySet};
+use crate::entry::{HgMutationEntry, HgMutationEntrySet, HgMutationEntrySetAdded};
 use crate::HgMutationStore;
 
 pub struct SqlHgMutationStore {
@@ -48,10 +48,19 @@ impl SqlHgMutationStore {
         }
     }
 
-    pub async fn add_raw_entries_for_test(
+    /// Store new mutation entries in the mutation store.
+    ///
+    /// Stores the mutation entries for the changesets in `changeset_ids` into
+    /// the store.
+    ///
+    /// Mutation entries in `entry_set` for which these changesets are the
+    /// successor will be written into the store.  Other changesets (which are
+    /// expected to be primordial changesets) will just be recorded as having
+    /// been added to the store.
+    async fn store<'a>(
         &self,
-        entries: Vec<HgMutationEntry>,
-        changeset_primordials: HashMap<HgChangesetId, HgChangesetId>,
+        entry_set: &HgMutationEntrySet,
+        changeset_ids: impl IntoIterator<Item = &'a HgChangesetId>,
     ) -> Result<()> {
         let txn = self
             .connections
@@ -64,13 +73,21 @@ impl SqlHgMutationStore {
         let mut db_entries = Vec::new();
         let mut db_preds = Vec::new();
         let mut db_splits = Vec::new();
-        for changeset in changeset_primordials.keys() {
-            db_csets.push((&self.repo_id, changeset));
-        }
-        for entry in entries.iter() {
-            let primordial = changeset_primordials
+        for changeset_id in changeset_ids.into_iter() {
+            db_csets.push((&self.repo_id, changeset_id));
+            let entry = match entry_set.entries.get(changeset_id) {
+                Some(entry) => entry,
+                None => continue,
+            };
+            let primordial = entry_set
+                .changeset_primordials
                 .get(entry.successor())
-                .expect("successor must have primordial");
+                .ok_or_else(|| {
+                    anyhow!(
+                        "failed to determine primordial commit for successor {}",
+                        entry.successor()
+                    )
+                })?;
             db_entries.push((
                 &self.repo_id,
                 entry.successor(),
@@ -84,9 +101,15 @@ impl SqlHgMutationStore {
                 serde_json::to_string(entry.extra())?,
             ));
             for (index, predecessor) in entry.predecessors().iter().enumerate() {
-                let primordial = changeset_primordials
+                let primordial = entry_set
+                    .changeset_primordials
                     .get(predecessor)
-                    .expect("predecessor must have primordial");
+                    .ok_or_else(|| {
+                        anyhow!(
+                            "failed to determine primordial commit for predecessor {}",
+                            predecessor
+                        )
+                    })?;
                 db_preds.push((
                     &self.repo_id,
                     entry.successor(),
@@ -337,6 +360,82 @@ impl SqlHgMutationStore {
 
 #[async_trait]
 impl HgMutationStore for SqlHgMutationStore {
+    async fn add_entries(
+        &self,
+        new_changeset_ids: HashSet<HgChangesetId>,
+        entries: Vec<HgMutationEntry>,
+    ) -> Result<()> {
+        let mut entry_set = HgMutationEntrySet::new();
+        let entries: HashMap<_, _> = entries
+            .into_iter()
+            .map(|entry| (*entry.successor(), entry))
+            .collect();
+
+        // First fetch all the new changesets and their immediate predecessors.
+        // Most of the time this will be enough, as we can learn the primordial
+        // changeset ID from the immediate predecessor.
+        let mut changeset_ids = HashSet::with_capacity(new_changeset_ids.len() * 2);
+        for changeset_id in &new_changeset_ids {
+            changeset_ids.insert(changeset_id.clone());
+            if let Some(entry) = entries.get(changeset_id) {
+                changeset_ids.extend(entry.predecessors().iter().cloned());
+            }
+        }
+        self.fetch_by_successor(
+            &self.connections.read_master_connection,
+            &mut entry_set,
+            &changeset_ids,
+        )
+        .await?;
+
+        // Attempt to add these new entries to the entry set, and find out which
+        // changesets have missing primordial IDs.
+        let HgMutationEntrySetAdded {
+            mut added,
+            missing_primordials,
+            remaining_entries,
+        } = entry_set.add_entries(entries, &new_changeset_ids)?;
+
+        // If any entries were missing their primoridal IDs, we will need to
+        // fetch them and all of their predecessors in order to find which
+        // predecessor entries are missing and what their primordial commits
+        // are.
+        if !missing_primordials.is_empty() {
+            // Find all predecessors of the entries that are missing in the
+            // store by iterating over the entries provided by the client,
+            // starting with the missing ones, and fetching all of their
+            // predecessors.
+            let mut predecessor_stack = missing_primordials.clone();
+            let mut predecessor_ids = HashSet::new();
+            while let Some(missing_id) = predecessor_stack.pop() {
+                if let Some(entry) = remaining_entries.get(&missing_id) {
+                    for predecessor_id in entry.predecessors() {
+                        if predecessor_ids.insert(*predecessor_id) {
+                            predecessor_stack.push(*predecessor_id);
+                        }
+                    }
+                }
+            }
+
+            self.fetch_by_successor(
+                &self.connections.read_master_connection,
+                &mut entry_set,
+                &predecessor_ids,
+            )
+            .await?;
+
+            // Add these new entries, finding their primordials in the process.
+            added.extend(
+                entry_set
+                    .add_entries_and_find_primordials(remaining_entries, &missing_primordials)?,
+            );
+        }
+
+        // Store the new entries.
+        self.store(&entry_set, &added).await?;
+        Ok(())
+    }
+
     async fn all_predecessors(
         &self,
         changeset_ids: HashSet<HgChangesetId>,

@@ -31,6 +31,15 @@ pub use crate::store::SqlHgMutationStore;
 
 #[async_trait]
 pub trait HgMutationStore: Send + Sync {
+    /// Add new entries to the mutation store.
+    ///
+    /// Adds mutation information for `new_changeset_ids` using the given `entries`.
+    async fn add_entries(
+        &self,
+        new_changeset_ids: HashSet<HgChangesetId>,
+        entries: Vec<HgMutationEntry>,
+    ) -> Result<()>;
+
     /// Get all predecessor information for the given changeset ids.
     ///
     /// Returns all entries that describe the mutation history of the commits.
@@ -42,6 +51,14 @@ pub trait HgMutationStore: Send + Sync {
 
 #[async_trait]
 impl HgMutationStore for Arc<dyn HgMutationStore> {
+    async fn add_entries(
+        &self,
+        new_changeset_ids: HashSet<HgChangesetId>,
+        entries: Vec<HgMutationEntry>,
+    ) -> Result<()> {
+        (**self).add_entries(new_changeset_ids, entries).await
+    }
+
     async fn all_predecessors(
         &self,
         changeset_ids: HashSet<HgChangesetId>,

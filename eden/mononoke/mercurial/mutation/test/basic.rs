@@ -12,8 +12,7 @@ use std::collections::HashMap;
 use anyhow::Result;
 use fbinit::FacebookInit;
 use maplit::{hashmap, hashset};
-use mercurial_mutation::{HgMutationEntry, SqlHgMutationStoreBuilder};
-use mercurial_types::HgChangesetId;
+use mercurial_mutation::{HgMutationEntry, HgMutationStore, SqlHgMutationStoreBuilder};
 use mercurial_types_mocks::nodehash::make_hg_cs_id;
 use mononoke_types_mocks::datetime::EPOCH_ZERO;
 use mononoke_types_mocks::repo::REPO_ZERO;
@@ -22,17 +21,14 @@ use sql_construct::SqlConstruct;
 
 use crate::util::check_entries;
 
-fn create_entries() -> (
-    HashMap<usize, HgMutationEntry>,
-    HashMap<HgChangesetId, HgChangesetId>,
-) {
+fn create_entries() -> HashMap<usize, HgMutationEntry> {
     // Generate the mutation graph:
     //
     //
-    //                   3  --\                                   /--> 7
+    //                   3  --.                                   .--> 7
     //                         \                                 /
     //   1  --(amend)->  2  --(fold)-> 4  --(rebase)->  5  --(split)-> 6
-    let entries = hashmap! {
+    hashmap! {
         2 => HgMutationEntry::new(
             make_hg_cs_id(2),
             smallvec![make_hg_cs_id(1)],
@@ -69,32 +65,144 @@ fn create_entries() -> (
             EPOCH_ZERO.clone(),
             vec![(String::from("testextra"), String::from("testextravalue"))],
         ),
-    };
-    let primordials = hashmap! {
-        make_hg_cs_id(1) => make_hg_cs_id(1),
-        make_hg_cs_id(2) => make_hg_cs_id(1),
-        make_hg_cs_id(3) => make_hg_cs_id(3),
-        make_hg_cs_id(4) => make_hg_cs_id(1),
-        make_hg_cs_id(5) => make_hg_cs_id(1),
-        make_hg_cs_id(6) => make_hg_cs_id(1),
-    };
-
-    (entries, primordials)
+    }
 }
 
 #[fbinit::compat_test]
-async fn fetch_predecessors(_fb: FacebookInit) -> Result<()> {
+async fn add_entries_and_fetch_predecessors(_fb: FacebookInit) -> Result<()> {
     let store = SqlHgMutationStoreBuilder::with_sqlite_in_memory()
         .unwrap()
         .with_repo_id(REPO_ZERO);
-    let (entries, primordials) = create_entries();
+
+    // Add the initial set of entries.
+    let mut entries = create_entries();
     store
-        .add_raw_entries_for_test(entries.values().cloned().collect(), primordials)
-        .await
-        .expect("add raw entries should succeed");
+        .add_entries(
+            hashset![make_hg_cs_id(6), make_hg_cs_id(7)],
+            entries.values().cloned().collect(),
+        )
+        .await?;
 
     check_entries(&store, hashset![make_hg_cs_id(6)], &entries, &[2, 4, 5, 6]).await?;
     check_entries(&store, hashset![make_hg_cs_id(4)], &entries, &[2, 4]).await?;
     check_entries(&store, hashset![make_hg_cs_id(1)], &entries, &[]).await?;
+    check_entries(&store, hashset![make_hg_cs_id(7)], &entries, &[]).await?;
+
+    // Add one new entry.
+    let new_entry = HgMutationEntry::new(
+        make_hg_cs_id(8),
+        smallvec![make_hg_cs_id(6)],
+        vec![],
+        String::from("amend"),
+        String::from("testuser"),
+        EPOCH_ZERO.clone(),
+        vec![],
+    );
+    store
+        .add_entries(hashset![make_hg_cs_id(8)], vec![new_entry.clone()])
+        .await?;
+    entries.insert(8, new_entry);
+
+    check_entries(
+        &store,
+        hashset![make_hg_cs_id(8)],
+        &entries,
+        &[2, 4, 5, 6, 8],
+    )
+    .await?;
+
+    // Add an entry with a gap.
+    let new_entries = vec![
+        HgMutationEntry::new(
+            make_hg_cs_id(9),
+            smallvec![make_hg_cs_id(6)],
+            vec![],
+            String::from("rebase"),
+            String::from("testuser"),
+            EPOCH_ZERO.clone(),
+            vec![],
+        ),
+        HgMutationEntry::new(
+            make_hg_cs_id(10),
+            smallvec![make_hg_cs_id(9)],
+            vec![],
+            String::from("amend"),
+            String::from("testuser"),
+            EPOCH_ZERO.clone(),
+            vec![],
+        ),
+    ];
+
+    store
+        .add_entries(hashset![make_hg_cs_id(10)], new_entries.clone())
+        .await?;
+    entries.extend((9..).zip(new_entries));
+
+    check_entries(
+        &store,
+        hashset![make_hg_cs_id(10)],
+        &entries,
+        &[2, 4, 5, 6, 9, 10],
+    )
+    .await?;
+
+    // Add a more complex fold with some gaps and a new primordial.  This is
+    // somewhat artificial as this kind of entry is unlikely to happen in normal
+    // use, however it will exercise some edge cases.
+    //
+    // Current graph is:
+    //
+    //       3 -.               .-> 7
+    //           \             /
+    //   1 --> 2 --> 4 -->  5 --> 6 --> 8
+    //                             \
+    //                              '-> 9 --> 10
+    //
+    // We will add:
+    //
+    //     10  ------------> 13
+    //      7  ----------/
+    //      8  --> 11 --/
+    //             12 -'
+
+    let new_entries = vec![
+        HgMutationEntry::new(
+            make_hg_cs_id(11),
+            smallvec![make_hg_cs_id(8)],
+            vec![],
+            String::from("amend"),
+            String::from("testuser"),
+            EPOCH_ZERO.clone(),
+            vec![],
+        ),
+        HgMutationEntry::new(
+            make_hg_cs_id(13),
+            smallvec![
+                make_hg_cs_id(10),
+                make_hg_cs_id(7),
+                make_hg_cs_id(11),
+                make_hg_cs_id(12),
+            ],
+            vec![],
+            String::from("combine"),
+            String::from("testuser"),
+            EPOCH_ZERO.clone(),
+            vec![],
+        ),
+    ];
+
+    store
+        .add_entries(hashset![make_hg_cs_id(13)], new_entries.clone())
+        .await?;
+    entries.extend(vec![11, 13].into_iter().zip(new_entries));
+
+    check_entries(
+        &store,
+        hashset![make_hg_cs_id(13)],
+        &entries,
+        &[2, 4, 5, 6, 8, 9, 10, 11, 13],
+    )
+    .await?;
+
     Ok(())
 }
