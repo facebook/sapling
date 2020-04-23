@@ -6,9 +6,6 @@
  */
 
 #pragma once
-#ifdef _WIN32
-#include "eden/fs/inodes/win/EdenMount.h" // @manual
-#else
 
 #include <folly/Portability.h>
 #include <folly/SharedMutex.h>
@@ -24,17 +21,23 @@
 #include <optional>
 #include <shared_mutex>
 #include <stdexcept>
-#include "eden/fs/fuse/Dispatcher.h"
-#include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/CacheHint.h"
 #include "eden/fs/inodes/InodePtrFwd.h"
-#include "eden/fs/inodes/OverlayFileAccess.h"
 #include "eden/fs/journal/Journal.h"
 #include "eden/fs/model/ParentCommits.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobAccess.h"
-#include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/utils/PathFuncs.h"
+
+#ifndef _WIN32
+#include "eden/fs/fuse/Dispatcher.h"
+#include "eden/fs/fuse/FuseChannel.h"
+#include "eden/fs/inodes/OverlayFileAccess.h"
+#include "eden/fs/takeover/TakeoverData.h"
+#else
+#include "eden/fs/win/mount/FsChannel.h" // @manual
+#include "eden/fs/win/utils/Stub.h" // @manual
+#endif
 
 DECLARE_string(edenfsctlPath);
 
@@ -170,9 +173,13 @@ class EdenMount {
    *
    * If takeover data is specified, it is used to initialize the inode map.
    */
+#ifndef _WIN32
   FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
       const std::optional<SerializedInodeMap>& takeover = std::nullopt);
-
+#else
+  FOLLY_NODISCARD folly::Future<folly::Unit> initialize(
+      std::unique_ptr<FsChannel>&& fsChannel);
+#endif
   /**
    * Destroy the EdenMount.
    *
@@ -305,12 +312,15 @@ class EdenMount {
     return &blobAccess_;
   }
 
+#ifndef _WIN32
   /**
    * Return the EdenDispatcher used for this mount.
    */
   EdenDispatcher* getDispatcher() const {
     return dispatcher_.get();
   }
+
+#endif // !_WIN32
 
   /**
    * Return the InodeMap for this mount.
@@ -326,9 +336,12 @@ class EdenMount {
     return overlay_.get();
   }
 
+#ifndef _WIN32
   OverlayFileAccess* getOverlayFileAccess() {
     return &overlayFileAccess_;
   }
+
+#endif // !_WIN32
 
   InodeMetadataTable* getInodeMetadataTable() const;
 
@@ -364,11 +377,13 @@ class EdenMount {
   /** Get the TreeInode for the root of the mount. */
   TreeInodePtr getRootInode() const;
 
+#ifndef _WIN32
   /**
    * Get the inode number for the .eden dir.  Returns an empty InodeNumber
    * prior to the .eden directory being set up.
    */
   InodeNumber getDotEdenInodeNumber() const;
+#endif // !_WIN32
 
   /** Convenience method for getting the Tree for the root of the mount. */
   folly::Future<std::shared_ptr<const Tree>> getRootTree() const;
@@ -646,6 +661,16 @@ class EdenMount {
   FOLLY_NODISCARD std::optional<TreePrefetchLease> tryStartTreePrefetch(
       TreeInodePtr treeInode);
 
+#ifdef _WIN32
+  /**
+   * The following functions are to start and stop Eden Mount on Windows. They
+   * setup and destroy the ProjectedFS channel.
+   */
+  void start();
+  void stop();
+
+#endif
+
  private:
   friend class RenameLock;
   friend class SharedRenameLock;
@@ -701,7 +726,11 @@ class EdenMount {
 
   folly::Future<TreeInodePtr> createRootInode(
       const ParentCommits& parentCommits);
+
+#ifndef _WIN32
   FOLLY_NODISCARD folly::Future<folly::Unit> setupDotEden(TreeInodePtr root);
+#endif // !_WIN32
+
   folly::SemiFuture<SerializedInodeMap> shutdownImpl(bool doTakeover);
 
   /**
@@ -731,6 +760,7 @@ class EdenMount {
       bool enforceCurrentParent,
       apache::thrift::ResponseChannelRequest* FOLLY_NULLABLE request) const;
 
+#ifndef _WIN32
   /**
    * Open the FUSE device and mount it using the mount(2) syscall.
    */
@@ -762,6 +792,7 @@ class EdenMount {
    * correctly when the channel shuts down.
    */
   void fuseInitSuccessful(FuseChannel::StopFuture&& fuseCompleteFuture);
+#endif
 
   /**
    * Private destructor.
@@ -798,13 +829,20 @@ class EdenMount {
   std::shared_ptr<ServerState> serverState_;
 
   std::unique_ptr<InodeMap> inodeMap_;
+
+#ifndef _WIN32
   std::unique_ptr<EdenDispatcher> dispatcher_;
+#endif
+
   std::shared_ptr<ObjectStore> objectStore_;
   std::shared_ptr<BlobCache> blobCache_;
   BlobAccess blobAccess_;
   std::shared_ptr<Overlay> overlay_;
+
+#ifndef _WIN32
   OverlayFileAccess overlayFileAccess_;
   InodeNumber dotEdenInodeNumber_{};
+#endif // !_WIN32
 
   /**
    * A mutex around all name-changing operations in this mount point.
@@ -920,10 +958,17 @@ class EdenMount {
    */
   std::atomic<uint64_t> numPrefetchesInProgress_{0};
 
+#ifdef _WIN32
+  /**
+   * This is the channel between ProjectedFS and rest of Eden.
+   */
+  std::unique_ptr<FsChannel> fsChannel_;
+#else
   /**
    * The associated fuse channel to the kernel.
    */
   std::unique_ptr<FuseChannel, FuseChannelDeleter> channel_;
+#endif // !_WIN32
 
   /**
    * The clock.  This is also available as serverState_->getClock().
@@ -982,4 +1027,3 @@ class EdenMountCancelled : public std::runtime_error {
 
 } // namespace eden
 } // namespace facebook
-#endif

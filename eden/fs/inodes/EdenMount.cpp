@@ -10,8 +10,7 @@
 #include <boost/filesystem.hpp>
 #include <folly/ExceptionWrapper.h>
 #include <folly/FBString.h>
-#include <folly/File.h>
-#include <folly/Subprocess.h>
+
 #include <folly/chrono/Conv.h>
 #include <folly/futures/Future.h>
 #include <folly/io/async/EventBase.h>
@@ -22,14 +21,9 @@
 
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/fuse/FuseChannel.h"
-#include "eden/fs/fuse/privhelper/PrivHelper.h"
-#include "eden/fs/inodes/CheckoutContext.h"
-#include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
-#include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -50,9 +44,21 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/Future.h"
-#include "eden/fs/utils/FutureSubprocess.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
+
+#ifdef _WIN32
+#include "eden/fs/inodes/win/RepoConfig.h" // @manual
+#else
+#include <folly/File.h>
+#include <folly/Subprocess.h>
+#include "eden/fs/fuse/FuseChannel.h"
+#include "eden/fs/fuse/privhelper/PrivHelper.h"
+#include "eden/fs/inodes/CheckoutContext.h"
+#include "eden/fs/inodes/EdenDispatcher.h"
+#include "eden/fs/inodes/InodeTable.h"
+#include "eden/fs/utils/FutureSubprocess.h"
+#endif
 
 using apache::thrift::ResponseChannelRequest;
 using folly::Future;
@@ -192,21 +198,34 @@ EdenMount::EdenMount(
     : config_{std::move(config)},
       serverState_{std::move(serverState)},
       inodeMap_{new InodeMap(this)},
+#ifndef _WIN32
       dispatcher_{new EdenDispatcher(this)},
+#endif
       objectStore_{std::move(objectStore)},
       blobCache_{std::move(blobCache)},
       blobAccess_{objectStore_, blobCache_},
       overlay_{Overlay::create(config_->getOverlayPath())},
+#ifndef _WIN32
       overlayFileAccess_{overlay_.get()},
+#endif
       journal_{std::move(journal)},
       mountGeneration_{globalProcessGeneration | ++mountGeneration},
       straceLogger_{kEdenStracePrefix.str() + config_->getMountPath().value()},
       lastCheckoutTime_{serverState_->getClock()->getRealtime()},
       owner_{Owner{getuid(), getgid()}},
-      clock_{serverState_->getClock()} {}
+      clock_{serverState_->getClock()} {
+}
 
-folly::Future<folly::Unit> EdenMount::initialize(
+#ifdef _WIN32
+FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
+    std::unique_ptr<FsChannel>&& fsChannel) {
+  const bool takeover = false;
+  fsChannel_ = std::move(fsChannel);
+
+#else
+FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::initialize(
     const std::optional<SerializedInodeMap>& takeover) {
+#endif
   transitionState(State::UNINITIALIZED, State::INITIALIZING);
 
   return serverState_->getFaultInjector()
@@ -230,8 +249,13 @@ folly::Future<folly::Unit> EdenMount::initialize(
       .thenValue(
           [this](ParentCommits&& parents) { return createRootInode(parents); })
       .thenValue([this, takeover](TreeInodePtr initTreeNode) {
+#ifdef _WIN32
+        inodeMap_->initialize(std::move(initTreeNode));
+        transitionState(State::INITIALIZING, State::INITIALIZED);
+#else
         if (takeover) {
           inodeMap_->initializeFromTakeover(std::move(initTreeNode), *takeover);
+
         } else {
           inodeMap_->initialize(std::move(initTreeNode));
         }
@@ -248,8 +272,25 @@ folly::Future<folly::Unit> EdenMount::initialize(
           transitionState(State::INITIALIZING, State::INITIALIZED);
         }
         return std::move(result);
+#endif
       });
 }
+
+#ifdef _WIN32
+void EdenMount::start() {
+  transitionState(State::INITIALIZED, State::RUNNING);
+  fsChannel_->start();
+  createRepoConfig(
+      getPath(), serverState_->getSocketPath(), config_->getClientDirectory());
+  XLOGF(INFO, "Started EdenMount (0x{:x})", reinterpret_cast<uintptr_t>(this));
+}
+
+void EdenMount::stop() {
+  transitionState(State::RUNNING, State::INITIALIZED);
+  fsChannel_->stop();
+  XLOGF(INFO, "Stopped EdenMount (0x{:x})", reinterpret_cast<uintptr_t>(this));
+}
+#endif
 
 folly::Future<TreeInodePtr> EdenMount::createRootInode(
     const ParentCommits& parentCommits) {
@@ -268,6 +309,7 @@ folly::Future<TreeInodePtr> EdenMount::createRootInode(
       });
 }
 
+#ifndef _WIN32
 namespace {
 Future<Unit> ensureDotEdenSymlink(
     TreeInodePtr directory,
@@ -282,12 +324,12 @@ Future<Unit> ensureDotEdenSymlink(
   return directory->getOrLoadChild(symlinkName)
       .thenTryInline([=](Try<InodePtr>&& result) -> Future<Action> {
         if (!result.hasValue()) {
-          // If we failed to look up the file this generally means it doesn't
-          // exist.
-          // TODO: it would be nicer to actually check the exception to confirm
-          // it is ENOENT.  However, if it was some other error the symlink
-          // creation attempt below will just fail with some additional details
-          // anyway.
+          // If we failed to look up the file this generally means it
+          // doesn't exist.
+          // TODO: it would be nicer to actually check the exception to
+          // confirm it is ENOENT.  However, if it was some other error the
+          // symlink creation attempt below will just fail with some
+          // additional details anyway.
           return Action::CreateSymlink;
         }
 
@@ -303,8 +345,8 @@ Future<Unit> ensureDotEdenSymlink(
           return Action::Nothing;
         }
 
-        // If there is a regular file at this location, remove it then create
-        // the symlink.
+        // If there is a regular file at this location, remove it then
+        // create the symlink.
         if (dtype_t::Symlink != fileInode->getType()) {
           return Action::UnlinkThenSymlink;
         }
@@ -339,10 +381,10 @@ Future<Unit> ensureDotEdenSymlink(
       })
       .thenError([symlinkName](folly::exception_wrapper&& ew) {
         // Log the error but don't propagate it up to our caller.
-        // We'll continue mounting the checkout even if we encountered an error
-        // setting up some of these symlinks.  There's not much else we can try
-        // here, and it is better to let the user continue mounting the checkout
-        // so that it isn't completely unusable.
+        // We'll continue mounting the checkout even if we encountered an
+        // error setting up some of these symlinks.  There's not much else
+        // we can try here, and it is better to let the user continue
+        // mounting the checkout so that it isn't completely unusable.
         XLOG(ERR) << "error setting up .eden/" << symlinkName
                   << " symlink: " << ew.what();
       });
@@ -388,8 +430,6 @@ folly::Future<folly::Unit> EdenMount::setupDotEden(TreeInodePtr root) {
         });
       });
 }
-
-EdenMount::~EdenMount() {}
 
 FOLLY_NODISCARD folly::Future<folly::Unit> EdenMount::addBindMount(
     RelativePathPiece repoPath,
@@ -443,6 +483,9 @@ folly::SemiFuture<Unit> EdenMount::performBindMounts() {
             folly::exceptionStr(err)));
       });
 }
+#endif // !_WIN32
+
+EdenMount::~EdenMount() {}
 
 bool EdenMount::tryToTransitionState(State expected, State newState) {
   return state_.compare_exchange_strong(
@@ -581,6 +624,7 @@ folly::SemiFuture<SerializedInodeMap> EdenMount::shutdownImpl(bool doTakeover) {
       });
 }
 
+#ifndef _WIN32
 folly::Future<folly::Unit> EdenMount::unmount() {
   return folly::makeFutureWith([this] {
     auto mountingUnmountingState = mountingUnmountingState_.wlock();
@@ -615,10 +659,13 @@ folly::Future<folly::Unit> EdenMount::unmount() {
   });
 }
 
+#endif // !_WIN32
+
 const shared_ptr<UnboundedQueueExecutor>& EdenMount::getThreadPool() const {
   return serverState_->getThreadPool();
 }
 
+#ifndef _WIN32
 InodeMetadataTable* EdenMount::getInodeMetadataTable() const {
   return overlay_->getInodeMetadataTable();
 }
@@ -626,6 +673,7 @@ InodeMetadataTable* EdenMount::getInodeMetadataTable() const {
 FuseChannel* EdenMount::getFuseChannel() const {
   return channel_.get();
 }
+#endif
 
 const AbsolutePath& EdenMount::getPath() const {
   return config_->getMountPath();
@@ -645,9 +693,12 @@ folly::Future<std::shared_ptr<const Tree>> EdenMount::getRootTree() const {
       commitHash, ObjectFetchContext::getNullContext());
 }
 
+#ifndef _WIN32
 InodeNumber EdenMount::getDotEdenInodeNumber() const {
   return dotEdenInodeNumber_;
 }
+
+#endif // !_WIN32
 
 Future<InodePtr> EdenMount::getInode(RelativePathPiece path) const {
   return inodeMap_->getRootInode()->getChildRecursive(path);
@@ -674,6 +725,7 @@ folly::Future<std::string> EdenMount::loadFileContents(
     return makeFuture<std::string>(InodeError(EISDIR, fileInodePtr));
   }
 
+#ifndef _WIN32
   if (dtype_t::Symlink == fileInodePtr->getType()) {
     return resolveSymlink(fetchContext, fileInodePtr, cacheHint)
         .thenValue(
@@ -684,10 +736,12 @@ folly::Future<std::string> EdenMount::loadFileContents(
               return loadFileContents(fetchContext, pResolved, cacheHint);
             });
   }
+#endif
 
   return fileInode->readAll(fetchContext, cacheHint);
 }
 
+#ifndef _WIN32
 folly::Future<InodePtr> EdenMount::resolveSymlink(
     ObjectFetchContext& fetchContext,
     InodePtr pInode,
@@ -737,9 +791,9 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
         }
         XLOG(DBG7) << "joinedExpected.value() = " << joinedExpected.value();
         // getting future below and doing .then on it are two separate
-        // statements due to C++14 semantics (fixed in C++17) wherein RHS may be
-        // executed before LHS, thus moving value of joinedExpected (in RHS)
-        // before using it in LHS
+        // statements due to C++14 semantics (fixed in C++17) wherein RHS may
+        // be executed before LHS, thus moving value of joinedExpected (in
+        // RHS) before using it in LHS
         auto f =
             getInode(joinedExpected.value()); // get inode for symlink target
         return std::move(f).thenValue([this,
@@ -814,11 +868,11 @@ folly::Future<CheckoutResult> EdenMount::checkout(
                          treeResults) {
         checkoutTimes->didLookupTrees = stopWatch.elapsed();
         // Call JournalDiffCallback::performDiff() to compute the changes
-        // between the original working directory state and the source tree
-        // state.
+        // between the original working directory state and the source
+        // tree state.
         //
-        // If we are doing a dry-run update we aren't going to create a journal
-        // entry, so we can skip this step entirely.
+        // If we are doing a dry-run update we aren't going to create a
+        // journal entry, so we can skip this step entirely.
         if (ctx->isDryRun()) {
           return folly::makeFuture(treeResults);
         }
@@ -847,16 +901,17 @@ folly::Future<CheckoutResult> EdenMount::checkout(
          * by FUSE, then checkout is slow, because Eden must precisely
          * manage changes to each one, as if the checkout was actually
          * creating and removing files in each directory. If a tree is
-         * unloaded and unmodified, Eden can pretend the checkout operation
-         * blew away the entire subtree and assigned new inode numbers to
-         * everything under it, which is much cheaper.
+         * unloaded and unmodified, Eden can pretend the checkout
+         * operation blew away the entire subtree and assigned new inode
+         * numbers to everything under it, which is much cheaper.
          *
          * To make checkout faster, enumerate all loaded, unreferenced
          * inodes and unload them, allowing checkout to use the fast path.
          *
-         * Note that this will not unload any inodes currently referenced by
-         * FUSE, including the kernel's cache, so rapidly switching between
-         * commits while working should not be materially affected.
+         * Note that this will not unload any inodes currently referenced
+         * by FUSE, including the kernel's cache, so rapidly switching
+         * between commits while working should not be materially
+         * affected.
          */
         this->getRootInode()->unloadChildrenUnreferencedByFuse();
 
@@ -882,22 +937,22 @@ folly::Future<CheckoutResult> EdenMount::checkout(
             result.conflicts = std::move(conflicts);
             if (ctx->isDryRun()) {
               // This is a dry run, so all we need to do is tell the caller
-              // about the conflicts: we should not modify any files or add any
-              // entries to the journal.
+              // about the conflicts: we should not modify any files or add
+              // any entries to the journal.
               return result;
             }
 
             // Write a journal entry
             //
             // Note that we do not call journalDiffCallback->performDiff() a
-            // second time here to compute the files that are now different from
-            // the new state.  The checkout operation will only touch files that
-            // are changed between fromTree and toTree.
+            // second time here to compute the files that are now different
+            // from the new state.  The checkout operation will only touch
+            // files that are changed between fromTree and toTree.
             //
-            // Any files that are unclean after the checkout operation must have
-            // either been unclean before it started, or different between the
-            // two trees.  Therefore the JournalDelta already includes
-            // information that these files changed.
+            // Any files that are unclean after the checkout operation must
+            // have either been unclean before it started, or different
+            // between the two trees.  Therefore the JournalDelta already
+            // includes information that these files changed.
             auto uncleanPaths = journalDiffCallback->stealUncleanPaths();
             journal_->recordUncleanPaths(
                 oldParents.parent1(), snapshotHash, std::move(uncleanPaths));
@@ -967,6 +1022,7 @@ folly::Future<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
 
   return fuseChannel->flushInvalidations();
 }
+#endif
 
 /*
 During a diff, we have the possiblility of entering a non-mount aware code path.
@@ -1044,8 +1100,8 @@ Future<Unit> EdenMount::diff(
           ".\nTry running `eden doctor` to remediate"));
     }
 
-    // TODO: Should we perhaps hold the parentInfo read-lock for the duration of
-    // the status operation?  This would block new checkout operations from
+    // TODO: Should we perhaps hold the parentInfo read-lock for the duration
+    // of the status operation?  This would block new checkout operations from
     // starting until we have finished computing this status call.
   }
 
@@ -1082,8 +1138,8 @@ void EdenMount::resetParents(const ParentCommits& parents) {
   XLOG(DBG1) << "resetting snapshot for " << this->getPath() << " from "
              << oldParents << " to " << parents;
 
-  // TODO: Maybe we should walk the inodes and see if we can dematerialize some
-  // files using the new source control state.
+  // TODO: Maybe we should walk the inodes and see if we can dematerialize
+  // some files using the new source control state.
 
   config_->setParentCommits(parents);
   parentsLock->parents.setParents(parents);
@@ -1137,6 +1193,7 @@ folly::Future<TakeoverData::MountInfo> EdenMount::getFuseCompletionFuture() {
   return fuseCompletionPromise_.getFuture();
 }
 
+#ifndef _WIN32
 folly::Future<folly::Unit> EdenMount::startFuse(bool readOnly) {
   return folly::makeFutureWith([&]() {
     transitionState(
@@ -1259,8 +1316,8 @@ void EdenMount::createFuseChannel(folly::File fuseDevice) {
 void EdenMount::fuseInitSuccessful(
     FuseChannel::StopFuture&& fuseCompleteFuture) {
   // Try to transition to the RUNNING state.
-  // This state transition could fail if shutdown() was called before we saw the
-  // FUSE_INIT message from the kernel.
+  // This state transition could fail if shutdown() was called before we saw
+  // the FUSE_INIT message from the kernel.
   transitionState(State::STARTING, State::RUNNING);
 
   std::move(fuseCompleteFuture)
@@ -1307,6 +1364,7 @@ InodeMetadata EdenMount::getInitialInodeMetadata(mode_t mode) const {
   return InodeMetadata{
       mode, owner.uid, owner.gid, InodeTimestamps{getLastCheckoutTime()}};
 }
+#endif
 
 namespace {
 Future<Unit> ensureDirectoryExistsHelper(
@@ -1336,8 +1394,8 @@ Future<Unit> ensureDirectoryExistsHelper(
   try {
     child = parent->mkdir(childName, S_IFDIR | 0755);
   } catch (std::system_error& e) {
-    // If two threads are racing to create the subdirectory, that's fine, just
-    // try again.
+    // If two threads are racing to create the subdirectory, that's fine,
+    // just try again.
     if (e.code().value() == EEXIST) {
       return ensureDirectoryExistsHelper(parent, childName, rest);
     }
