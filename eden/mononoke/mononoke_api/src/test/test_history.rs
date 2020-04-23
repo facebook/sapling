@@ -285,3 +285,84 @@ async fn commit_path_history(fb: FacebookInit) -> Result<()> {
 
     Ok(())
 }
+
+#[fbinit::compat_test]
+async fn commit_history(fb: FacebookInit) -> Result<()> {
+    let ctx = CoreContext::test_mock(fb);
+    let (repo, changesets) = init_repo(&ctx).await?;
+
+    let cs = repo
+        .changeset(ChangesetSpecifier::Bonsai(changesets["c2"]))
+        .await?
+        .expect("changeset exists");
+
+    // The commit history includes all commits, including empty ones.
+    let history: Vec<_> = cs
+        .history(None)
+        .await
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_eq!(
+        history,
+        vec![
+            changesets["c2"],
+            changesets["m2"],
+            changesets["e2"],
+            changesets["e3"],
+            changesets["a4"],
+            changesets["b3"],
+            changesets["c1"],
+            changesets["e1"],
+            changesets["m1"],
+            changesets["b2"],
+            changesets["a3"],
+            changesets["b1"],
+            changesets["a2"],
+            changesets["a1"],
+        ]
+    );
+
+    // The commit history of an empty commit starts with itself.
+    let cs = repo
+        .changeset(ChangesetSpecifier::Bonsai(changesets["e1"]))
+        .await?
+        .expect("changeset exists");
+    let history: Vec<_> = cs
+        .history(None)
+        .await
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_eq!(
+        history,
+        vec![
+            changesets["e1"],
+            changesets["m1"],
+            changesets["b2"],
+            changesets["a3"],
+            changesets["b1"],
+            changesets["a2"],
+            changesets["a1"],
+        ]
+    );
+
+    // Setting until_timestamp omits some commits.
+    let history: Vec<_> = cs
+        .history(Some(2500))
+        .await
+        .and_then(|cs| async move { Ok(cs.id()) })
+        .try_collect()
+        .await?;
+    assert_eq!(
+        history,
+        vec![
+            changesets["e1"],
+            changesets["m1"],
+            changesets["b2"],
+            changesets["a3"],
+        ]
+    );
+
+    Ok(())
+}

@@ -274,10 +274,10 @@ impl ChangesetPathContext {
 
     /// Returns a list of `ChangesetContext` for the file at this path that represents
     /// a history of the path.
-    pub async fn history<'a>(
-        &'a self,
+    pub async fn history(
+        &self,
         until_timestamp: Option<i64>,
-    ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + 'a, MononokeError>
+    ) -> Result<impl Stream<Item = Result<ChangesetContext, MononokeError>> + '_, MononokeError>
     {
         let ctx = self.changeset.ctx().clone();
         let repo = self.repo().blob_repo().clone();

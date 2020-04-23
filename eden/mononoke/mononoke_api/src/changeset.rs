@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use std::collections::{BTreeMap, HashMap, HashSet};
+use std::collections::{BTreeMap, HashMap, HashSet, VecDeque};
 use std::convert::TryInto;
 use std::fmt;
 use std::future::Future;
@@ -20,10 +20,10 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use fsnodes::RootFsnodeId;
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
-use futures::stream::Stream;
-use futures_util::future::{self, try_join, FutureExt, Shared};
-use futures_util::stream::{StreamExt, TryStreamExt};
+use futures::future::{self, try_join, FutureExt, Shared};
+use futures::stream::{self, Stream, StreamExt, TryStreamExt};
 use manifest::{Diff as ManifestDiff, Entry as ManifestEntry, ManifestOps, PathOrPrefix};
+use maplit::hashset;
 use mercurial_types::Globalrev;
 pub use mononoke_types::Generation;
 use mononoke_types::{BonsaiChangeset, FileChange, MPath, MPathElement};
@@ -572,5 +572,66 @@ impl ChangesetContext {
         Ok(mpaths
             .map_ok(|mpath| MononokePath::new(Some(mpath)))
             .map_err(MononokeError::from))
+    }
+
+    /// Returns a stream of `ChangesetContext` for the history of the repository from this commit.
+    pub async fn history(
+        &self,
+        until_timestamp: Option<i64>,
+    ) -> impl Stream<Item = Result<ChangesetContext, MononokeError>> + '_ {
+        let cs_info_enabled = self.repo.derive_changeset_info_enabled();
+
+        let terminate = until_timestamp.map(move |until_timestamp| {
+            move |changeset_id| async move {
+                let info = if cs_info_enabled {
+                    ChangesetInfo::derive(
+                        self.ctx().clone(),
+                        self.repo().blob_repo().clone(),
+                        changeset_id,
+                    )
+                    .compat()
+                    .await?
+                } else {
+                    let bonsai = changeset_id
+                        .load(self.ctx().clone(), self.repo().blob_repo().blobstore())
+                        .compat()
+                        .await?;
+                    ChangesetInfo::new(changeset_id, bonsai)
+                };
+                let date = info.author_date().as_chrono().clone();
+                Ok::<_, MononokeError>(date.timestamp() < until_timestamp)
+            }
+        });
+
+        stream::try_unfold(
+            // starting state
+            (hashset! { self.id() }, VecDeque::from(vec![self.id()])),
+            // unfold
+            move |(mut visited, mut queue)| async move {
+                if let Some(changeset_id) = queue.pop_front() {
+                    if let Some(terminate) = terminate {
+                        if terminate(changeset_id).await? {
+                            return Ok(Some((None, (visited, queue))));
+                        }
+                    }
+                    let parents = self
+                        .repo()
+                        .blob_repo()
+                        .get_changeset_parents_by_bonsai(self.ctx().clone(), changeset_id)
+                        .compat()
+                        .await?;
+                    queue.extend(parents.into_iter().filter(|parent| visited.insert(*parent)));
+                    Ok(Some((Some(changeset_id), (visited, queue))))
+                } else {
+                    Ok::<_, MononokeError>(None)
+                }
+            },
+        )
+        .try_filter_map(move |changeset_id| {
+            let changeset = changeset_id
+                .map(|changeset_id| ChangesetContext::new(self.repo().clone(), changeset_id));
+            async move { Ok::<_, MononokeError>(changeset) }
+        })
+        .boxed()
     }
 }
