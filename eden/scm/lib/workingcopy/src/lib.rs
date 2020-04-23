@@ -6,3 +6,7 @@
  */
 
 pub mod walker;
+
+mod pathauditor;
+
+pub use crate::pathauditor::PathAuditor;
