@@ -46,9 +46,9 @@
   .hg/store/packs/manifests/da1b23b92928a4cf48dc85136fde02a3b90cc657.histpack
 
   $ hg push -q --to master --create
-# Only the first one has uploaded a blob. This will change once push is properly support in remotefilelog LFS implementation
   $ findfilessorted $TESTTMP/lfs-server
   $TESTTMP/lfs-server/e4/1d3fc42af9a3407f07926c75946c0aa433ccbd99c175b98474fa19b2ee5963
+  $TESTTMP/lfs-server/f3/8ef89300956a8cf001746d6e4b015708c3d0d883d1a69bf00f4958090cbe21
 
 # Now let's repack to move the LFS pointer to the remotefilelog LFS pointer store.
   $ hg repack

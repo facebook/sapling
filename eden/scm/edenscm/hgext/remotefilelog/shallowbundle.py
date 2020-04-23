@@ -18,6 +18,7 @@ from edenscm.mercurial import (
     phases,
     progress,
     pycompat,
+    revlog,
     util,
 )
 from edenscm.mercurial.i18n import _
@@ -205,7 +206,6 @@ class shallowcg1packer(changegroup.cg1packer):
             yield self.close()
 
     def generatefiles(self, changedfiles, linknodes, commonrevs, source):
-
         if self._repo.ui.configbool("remotefilelog", "server"):
             caps = self._bundlecaps or []
             if requirement in caps:
@@ -326,14 +326,50 @@ class shallowcg1packer(changegroup.cg1packer):
                 results.append(fnode)
         return results
 
-    def nodechunk(self, revlog, node, _prevnode, linknode):
-        prefix = b""
+    def pointer(self, meta, flog, node):
+        """For an LFS blob, the data is uploaded via the LFS protocol, only
+        write a pointer to it in the bundle.
+        """
+        pointer = (
+            "version https://git-lfs.github.com/spec/v1\n"
+            "oid sha256:%s\n"
+            "size %d\n" % (hex(meta["sha256"]), meta["size"])
+        )
 
-        delta = revlog.revision(node, raw=True)
+        renamed = flog.renamed(node)
+        if renamed:
+            path, renamednode = renamed
+            pointer += "x-hg-copy %s\n" "x-hg-copyrev %s\n" % (path, hex(renamednode))
+
+        pointer += "x-is-binary %d\n" % meta["isbinary"]
+
+        return pycompat.encodeutf8(pointer)
+
+    def nodechunk(self, flog, node, _prevnode, linknode):
+        prefix = b""
+        flags = flog.flags(node)
+
+        def getmeta():
+            try:
+                fileslog = flog.repo.fileslog
+                if fileslog._ruststore:
+                    meta = fileslog.contentstore.metadata(flog.filename, node)
+                    return meta
+            except KeyError:
+                pass
+            return None
+
+        meta = getmeta()
+        if meta is not None:
+            delta = self.pointer(meta, flog, node)
+            assert flags == 0
+            flags = revlog.REVIDX_EXTSTORED
+        else:
+            delta = flog.revision(node, raw=True)
+
         prefix = mdiff.trivialdiffheader(len(delta))
 
-        p1, p2 = revlog.parents(node)
-        flags = revlog.flags(node)
+        p1, p2 = flog.parents(node)
         # We always send the full content, no deltas are used.
         meta = self.builddeltaheader(node, p1, p2, nullid, linknode, flags)
         meta += prefix

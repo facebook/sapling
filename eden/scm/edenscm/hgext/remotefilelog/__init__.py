@@ -451,6 +451,24 @@ def reposetup(ui, repo):
         remotefilelogserver.onetimesetup(ui)
 
 
+def uploadblobs(repo, revs):
+    if repo.fileslog._ruststore:
+        toupload = []
+        for r in revs:
+            ctx = repo[r]
+            for f in ctx.files():
+                if f not in ctx:
+                    continue
+
+                fctx = ctx[f]
+                toupload.append((fctx.path(), fctx.filenode()))
+        repo.fileslog.contentstore.upload(toupload)
+
+
+def prepush(pushop):
+    uploadblobs(pushop.repo, pushop.outgoing.missing)
+
+
 def setupclient(ui, repo):
     if not isinstance(repo, localrepo.localrepository):
         return
@@ -459,6 +477,8 @@ def setupclient(ui, repo):
     # wireprotocol endpoints registered.
     remotefilelogserver.onetimesetup(ui)
     onetimeclientsetup(ui)
+
+    repo.prepushoutgoinghooks.add("remotefilelog", prepush)
 
     shallowrepo.wraprepo(repo)
     repo.store = shallowstore.wrapstore(repo.store)
@@ -795,6 +815,16 @@ def onetimeclientsetup(ui):
         wrapfunction(cmdutil, "_revertprefetch", _revertprefetch)
     else:
         wrapfunction(cmdutil, "revert", revert)
+
+    def writenewbundle(
+        orig, ui, repo, source, filename, bundletype, outgoing, *args, **kwargs
+    ):
+        if shallowrepo.requirement in repo.requirements:
+            uploadblobs(repo, outgoing.missing)
+        return orig(ui, repo, source, filename, bundletype, outgoing, *args, **kwargs)
+
+    # when writing a bundle via "hg bundle" command, upload related LFS blobs
+    wrapfunction(bundle2, "writenewbundle", writenewbundle)
 
 
 def getrenamedfn(repo, endrev=None):

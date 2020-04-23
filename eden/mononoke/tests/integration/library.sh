@@ -374,6 +374,8 @@ cachepath=$TESTTMP/cachepath
 commitextras=
 [hint]
 ack=*
+[experimental]
+changegroup3=True
 EOF
 }
 
@@ -1293,6 +1295,21 @@ lfs=
 url=$1
 threshold=$2
 usercache=$3
+EOF
+}
+
+function setup_hg_modern_lfs() {
+  cat >> .hg/hgrc <<EOF
+[remotefilelog]
+lfs=True
+useruststore=True
+[worker]
+rustworkers=True
+[extensions]
+lfs=!
+[lfs]
+url=$1
+threshold=$2
 EOF
 }
 

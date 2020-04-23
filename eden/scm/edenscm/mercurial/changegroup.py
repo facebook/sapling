@@ -1021,7 +1021,10 @@ def supportedoutgoingversions(repo):
         "devel", "legacy.exchange"
     ):
         versions.add("01")
-    if "treemanifest" in repo.requirements:
+    if "treemanifest" in repo.requirements or (
+        "remotefilelog" in repo.requirements
+        and repo.ui.configbool("remotefilelog", "lfs")
+    ):
         # Versions 01 and 02 support only flat manifests and it's just too
         # expensive to convert between the flat manifest and tree manifest on
         # the fly. Since tree manifests are hashed differently, all of history
