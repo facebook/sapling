@@ -8,6 +8,8 @@
 use anyhow::{bail, Error, Result};
 use faster_hex::{hex_decode, hex_string};
 use http::Uri;
+use mime::Mime;
+use once_cell::sync::Lazy;
 use quickcheck::{Arbitrary, Gen};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -21,6 +23,12 @@ use crate::str_serialized;
 
 // This module provides types conforming to the Git-LFS protocol specification:
 // https://github.com/git-lfs/git-lfs/blob/master/docs/api/batch.md
+
+static GIT_LFS_MIME: Lazy<Mime> = Lazy::new(|| "application/vnd.git-lfs+json".parse().unwrap());
+
+pub fn git_lfs_mime() -> Mime {
+    GIT_LFS_MIME.clone()
+}
 
 #[derive(Clone, Serialize, Debug, Deserialize, Eq, PartialEq, Hash)]
 pub enum Operation {

@@ -16,10 +16,9 @@ use itertools::Itertools;
 use std::iter;
 
 use failure_ext::chain::ChainExt;
-use lfs_protocol::ResponseError;
+use lfs_protocol::{git_lfs_mime, ResponseError};
 
 use crate::errors::ErrorKind;
-use crate::http::git_lfs_mime;
 use crate::middleware::RequestContext;
 
 pub fn build_response<IR>(

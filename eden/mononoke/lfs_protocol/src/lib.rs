@@ -11,6 +11,6 @@ mod protocol;
 mod str_serialized;
 
 pub use protocol::{
-    ObjectAction, ObjectError, ObjectStatus, Operation, RequestBatch, RequestObject, ResponseBatch,
-    ResponseError, ResponseObject, Sha256, Transfer,
+    git_lfs_mime, ObjectAction, ObjectError, ObjectStatus, Operation, RequestBatch, RequestObject,
+    ResponseBatch, ResponseError, ResponseObject, Sha256, Transfer,
 };

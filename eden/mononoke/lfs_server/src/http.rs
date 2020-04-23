@@ -5,8 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::str::FromStr;
-
 use anyhow::Error;
 use bytes::Bytes;
 use futures::{
@@ -23,7 +21,6 @@ use hyper::{
     header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE},
     Body, Response, StatusCode,
 };
-use lazy_static::lazy_static;
 use mime::Mime;
 
 use crate::errors::LfsServerContextErrorKind;
@@ -92,13 +89,4 @@ where
             .body(Body::wrap_stream(stream))
             .map_err(Error::from)
     }
-}
-
-lazy_static! {
-    static ref GIT_LFS_MIME: mime::Mime =
-        mime::Mime::from_str("application/vnd.git-lfs+json").unwrap();
-}
-
-pub fn git_lfs_mime() -> mime::Mime {
-    GIT_LFS_MIME.clone()
 }
