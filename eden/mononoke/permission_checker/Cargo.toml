@@ -1,0 +1,14 @@
+[package]
+name = "permission_checker"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+async-trait = "0.1.29"
+maplit = "1.0"
+tokio = { version = "=0.2.13", features = ["full"] }

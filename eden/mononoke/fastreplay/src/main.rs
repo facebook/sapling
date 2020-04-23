@@ -191,7 +191,7 @@ async fn dispatch(
     Ok(DispatchOutcome::Processed)
 }
 
-fn build_noop_hook_manager(fb: FacebookInit) -> HookManager {
+async fn build_noop_hook_manager(fb: FacebookInit) -> Result<HookManager, Error> {
     HookManager::new(
         fb,
         Box::new(InMemoryFileContentFetcher::new()),
@@ -200,6 +200,7 @@ fn build_noop_hook_manager(fb: FacebookInit) -> HookManager {
         },
         ScubaSampleBuilder::with_discard(),
     )
+    .await
 }
 
 fn extract_alias(alias: &str) -> Result<(String, String), Error> {
@@ -246,7 +247,7 @@ async fn bootstrap_repositories<'a>(
         .transpose()?
         .unwrap_or(nonzero!(1000u64));
 
-    let noop_hook_manager = Arc::new(build_noop_hook_manager(fb));
+    let noop_hook_manager = Arc::new(build_noop_hook_manager(fb).await?);
 
     info!(&logger, "Creating {} repositories", config.repos.len());
 

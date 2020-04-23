@@ -10,25 +10,16 @@
 #![deny(warnings)]
 
 use crate::errors::*;
-use crate::facebook::rust_hooks::{
-    always_fail_changeset::AlwaysFailChangeset, block_cross_repo_commits::BlockCrossRepoCommits,
-    block_empty_commit::BlockEmptyCommit, check_nocommit::CheckNocommitHook,
-    check_unittests::CheckUnittestsHook, chef_test_hosts::ChefTestHostsHook,
-    conflict_markers::ConflictMarkers, deny_files::DenyFiles,
-    ensure_valid_email::EnsureValidEmailHook,
-    gitattributes_textdirectives::GitattributesTextDirectives,
-    limit_commit_message_length::LimitCommitMessageLength, limit_commitsize::LimitCommitsize,
-    limit_filesize::LimitFilesize, limit_path_length::LimitPathLengthHook,
-    no_bad_filenames::NoBadFilenames, no_insecure_filenames::NoInsecureFilenames,
-    no_questionable_filenames::NoQuestionableFilenames, signed_source::SignedSourceHook,
-    tp2_symlinks_only::TP2SymlinksOnly, verify_integrity::VerifyIntegrityHook,
-    verify_reviewedby_info::VerifyReviewedbyInfo,
-};
 use crate::{ChangesetHook, FileHook, HookManager};
 use anyhow::Error;
 use fbinit::FacebookInit;
 use metaconfig_types::RepoConfig;
 use std::collections::HashSet;
+
+#[cfg(fbcode_build)]
+use crate::facebook::rust_hooks::{hook_name_to_changeset_hook, hook_name_to_file_hook};
+#[cfg(not(fbcode_build))]
+use crate::rust_hooks::{hook_name_to_changeset_hook, hook_name_to_file_hook};
 
 enum LoadedRustHook {
     ChangesetHook(Box<dyn ChangesetHook>),
@@ -60,38 +51,19 @@ pub fn load_hooks(
             name.clone()
         };
 
-        let rust_hook = match hook_name.as_ref() {
-            "always_fail_changeset" => ChangesetHook(Box::new(AlwaysFailChangeset::new())),
-            "block_cross_repo_commits" => FileHook(Box::new(BlockCrossRepoCommits::new()?)),
-            "block_empty_commit" => ChangesetHook(Box::new(BlockEmptyCommit::new())),
-            "check_nocommit" => FileHook(Box::new(CheckNocommitHook::new(&hook.config)?)),
-            "check_unittests" => ChangesetHook(Box::new(CheckUnittestsHook::new(&hook.config)?)),
-            "conflict_markers" => FileHook(Box::new(ConflictMarkers::new())),
-            "deny_files" => FileHook(Box::new(DenyFiles::new()?)),
-            "ensure_valid_email" => {
-                ChangesetHook(Box::new(EnsureValidEmailHook::new(fb, &hook.config)?))
-            }
-            "chef_test_hosts" => ChangesetHook(Box::new(ChefTestHostsHook::new())),
-            "gitattributes-textdirectives" => {
-                FileHook(Box::new(GitattributesTextDirectives::new()?))
-            }
-            "limit_commit_message_length" => {
-                ChangesetHook(Box::new(LimitCommitMessageLength::new(&hook.config)?))
-            }
-            "limit_commitsize" => ChangesetHook(Box::new(LimitCommitsize::new(&hook.config))),
-            "limit_filesize" => FileHook(Box::new(LimitFilesize::new(&hook.config))),
-            "limit_path_length" => FileHook(Box::new(LimitPathLengthHook::new(&hook.config)?)),
-            "no_bad_filenames" => FileHook(Box::new(NoBadFilenames::new()?)),
-            "no_insecure_filenames" => FileHook(Box::new(NoInsecureFilenames::new()?)),
-            "no_questionable_filenames" => FileHook(Box::new(NoQuestionableFilenames::new()?)),
-            "signed_source" => FileHook(Box::new(SignedSourceHook::new(&hook.config)?)),
-            "tp2_symlinks_only" => FileHook(Box::new(TP2SymlinksOnly::new()?)),
-            "verify_integrity" => ChangesetHook(Box::new(VerifyIntegrityHook::new(&hook.config)?)),
-            "verify_reviewedby_info" => ChangesetHook(Box::new(VerifyReviewedbyInfo::new(
+        let rust_hook = {
+            if let Some(hook) = hook_name_to_changeset_hook(
+                fb,
+                &hook_name,
                 &hook.config,
-                hook_manager.get_reviewers_acl_checker(),
-            )?)),
-            _ => return Err(ErrorKind::InvalidRustHook(name.clone()).into()),
+                hook_manager.get_reviewers_perm_checker(),
+            )? {
+                ChangesetHook(hook)
+            } else if let Some(hook) = hook_name_to_file_hook(&hook_name, &hook.config)? {
+                FileHook(hook)
+            } else {
+                return Err(ErrorKind::InvalidRustHook(name).into());
+            }
         };
 
         match rust_hook {

@@ -289,7 +289,8 @@ pub fn repo_handlers(
                     blobrepo_text_only_fetcher(blobrepo.clone(), hook_max_file_size),
                     hook_manager_params.unwrap_or_default(),
                     hooks_scuba,
-                );
+                )
+                .await?;
 
                 info!(logger, "Loading hooks");
                 load_hooks(fb, &mut hook_manager, hook_config, &disabled_hooks)?;

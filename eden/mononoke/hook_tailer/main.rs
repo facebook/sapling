@@ -147,7 +147,8 @@ async fn run_hook_tailer<'a>(
         concurrency,
         exclusions,
         &disabled_hooks,
-    )?;
+    )
+    .await?;
 
     let mut stream = if inclusions.is_empty() {
         tail.run_with_limit(limit).boxed()

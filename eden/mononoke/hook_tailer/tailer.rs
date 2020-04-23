@@ -49,7 +49,7 @@ pub struct Tailer {
 }
 
 impl Tailer {
-    pub fn new(
+    pub async fn new(
         ctx: CoreContext,
         repo: BlobRepo,
         config: RepoConfig,
@@ -65,7 +65,8 @@ impl Tailer {
             content_fetcher,
             config.hook_manager_params.clone().unwrap_or_default(),
             ScubaSampleBuilder::with_discard(),
-        );
+        )
+        .await?;
 
         load_hooks(ctx.fb, &mut hook_manager, config, disabled_hooks)?;
 

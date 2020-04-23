@@ -15,12 +15,13 @@
 #![deny(warnings)]
 
 pub mod errors;
+#[cfg(fbcode_build)]
 mod facebook;
 pub mod hook_loader;
-mod phabricator_message_parser;
+#[cfg(not(fbcode_build))]
+mod rust_hooks;
 
-use aclchecker::{AclChecker, Identity};
-use anyhow::Error;
+use anyhow::{Error, Result};
 use async_trait::async_trait;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
@@ -35,6 +36,7 @@ use futures_stats::TimedFutureExt;
 use hooks_content_stores::FileContentFetcher;
 use metaconfig_types::{BookmarkOrRegex, HookBypass, HookConfig, HookManagerParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId, FileChange, MPath};
+use permission_checker::{ArcMembershipChecker, MembershipCheckerBuilder};
 use regex::Regex;
 use scuba::builder::ServerData;
 use scuba_ext::ScubaSampleBuilder;
@@ -43,7 +45,6 @@ use std::collections::HashMap;
 use std::fmt;
 use std::hash::Hash;
 use std::str;
-use std::sync::Arc;
 
 /// Manages hooks and allows them to be installed and uninstalled given a name
 /// Knows how to run hooks
@@ -53,17 +54,17 @@ pub struct HookManager {
     bookmark_hooks: HashMap<BookmarkName, Vec<String>>,
     regex_hooks: Vec<(Regex, Vec<String>)>,
     content_fetcher: Box<dyn FileContentFetcher>,
-    reviewers_acl_checker: Arc<Option<AclChecker>>,
+    reviewers_membership: ArcMembershipChecker,
     scuba: ScubaSampleBuilder,
 }
 
 impl HookManager {
-    pub fn new(
+    pub async fn new(
         fb: FacebookInit,
         content_fetcher: Box<dyn FileContentFetcher>,
         hook_manager_params: HookManagerParams,
         mut scuba: ScubaSampleBuilder,
-    ) -> HookManager {
+    ) -> Result<HookManager> {
         let hooks = HashMap::new();
 
         scuba
@@ -74,29 +75,20 @@ impl HookManager {
                 _ => data.default_key(),
             });
 
-        let reviewers_acl_checker = if !hook_manager_params.disable_acl_checker {
-            let identity = Identity::from_groupname(facebook::REVIEWERS_ACL_GROUP_NAME);
-
-            let reviewers_acl_checker = AclChecker::new(fb, &identity)
-                .expect("Failed to create an AclChecker for reviewers group");
-            // This can block, but not too big a deal as we create hook manager in server startup
-            assert!(
-                reviewers_acl_checker.do_wait_updated(10000),
-                "AclChecker update failed after timeout"
-            );
-            Some(reviewers_acl_checker)
+        let reviewers_membership = if !hook_manager_params.disable_acl_checker {
+            MembershipCheckerBuilder::for_reviewers_group(fb).await?
         } else {
-            None
+            MembershipCheckerBuilder::never_member()
         };
 
-        HookManager {
+        Ok(HookManager {
             hooks,
             bookmark_hooks: HashMap::new(),
             regex_hooks: Vec::new(),
             content_fetcher,
-            reviewers_acl_checker: Arc::new(reviewers_acl_checker),
+            reviewers_membership: reviewers_membership.into(),
             scuba,
-        }
+        })
     }
 
     pub fn register_changeset_hook(
@@ -130,8 +122,8 @@ impl HookManager {
         }
     }
 
-    pub(crate) fn get_reviewers_acl_checker(&self) -> Arc<Option<AclChecker>> {
-        self.reviewers_acl_checker.clone()
+    pub(crate) fn get_reviewers_perm_checker(&self) -> ArcMembershipChecker {
+        self.reviewers_membership.clone()
     }
 
     fn hooks_for_bookmark<'a>(

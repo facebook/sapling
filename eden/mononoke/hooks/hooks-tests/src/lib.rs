@@ -1070,7 +1070,7 @@ async fn setup_hook_manager(
 ) -> HookManager {
     let mut hook_manager = match content_fetcher_type {
         ContentFetcherType::InMemory => hook_manager_inmem(fb).await,
-        ContentFetcherType::Blob(repo) => hook_manager_blobrepo(fb, repo),
+        ContentFetcherType::Blob(repo) => hook_manager_blobrepo(fb, repo).await,
     };
     for (bookmark_name, hook_names) in bookmarks {
         hook_manager
@@ -1106,7 +1106,7 @@ fn default_changeset() -> BonsaiChangeset {
     }.freeze().expect("Created changeset")
 }
 
-fn hook_manager_blobrepo(fb: FacebookInit, repo: BlobRepo) -> HookManager {
+async fn hook_manager_blobrepo(fb: FacebookInit, repo: BlobRepo) -> HookManager {
     let ctx = CoreContext::test_mock(fb);
 
     let content_fetcher = BlobRepoFileContentFetcher::new(repo);
@@ -1116,10 +1116,12 @@ fn hook_manager_blobrepo(fb: FacebookInit, repo: BlobRepo) -> HookManager {
         Default::default(),
         ScubaSampleBuilder::with_discard(),
     )
+    .await
+    .expect("Failed to construct HookManager")
 }
 
 async fn hook_manager_many_files_dirs_blobrepo(fb: FacebookInit) -> HookManager {
-    hook_manager_blobrepo(fb, fixtures::many_files_dirs::getrepo(fb).await)
+    hook_manager_blobrepo(fb, fixtures::many_files_dirs::getrepo(fb).await).await
 }
 
 fn to_mpath(string: &str) -> MPath {
@@ -1141,6 +1143,8 @@ async fn hook_manager_inmem(fb: FacebookInit) -> HookManager {
         Default::default(),
         ScubaSampleBuilder::with_discard(),
     )
+    .await
+    .expect("Failed to construct HookManager")
 }
 
 #[fbinit::test]
