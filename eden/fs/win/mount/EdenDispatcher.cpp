@@ -202,9 +202,6 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
           win32ErrorToString(result));
     }
 
-    getMount().getCurrentState()->entryCreated(
-        callbackData.FilePathName, metadata);
-
     return result;
   } catch (const std::exception&) {
     return exceptionToHResult();
@@ -251,8 +248,6 @@ EdenDispatcher::getFileData(
     // TODO: The following assert fails - need to dig more into IOBuf.
     // assert(iobuf.next() == nullptr);
     //
-
-    getMount().getCurrentState()->entryLoaded(callbackData.FilePathName);
 
     if (iobuf.length() <= kMinChunkSize) {
       //
@@ -383,24 +378,19 @@ void EdenDispatcher::notification(
   switch (notificationType) {
     case PRJ_NOTIFICATION_NEW_FILE_CREATED:
       TRACE("CREATED {}", callbackData.FilePathName);
-      getMount().getCurrentState()->fileCreated(
-          callbackData.FilePathName, isDirectory);
       break;
+
     case PRJ_NOTIFICATION_FILE_OVERWRITTEN:
     case PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED:
       TRACE("MODIFIED {}", callbackData.FilePathName);
-      getMount().getCurrentState()->fileModified(
-          callbackData.FilePathName, isDirectory);
       break;
+
     case PRJ_NOTIFICATION_FILE_RENAMED:
       TRACE("RENAMED {} -> {}", callbackData.FilePathName, destinationFileName);
-      getMount().getCurrentState()->fileRenamed(
-          callbackData.FilePathName, destinationFileName, isDirectory);
       break;
+
     case PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED:
       TRACE("DELETED {}", callbackData.FilePathName);
-      getMount().getCurrentState()->fileRemoved(
-          callbackData.FilePathName, isDirectory);
       break;
   }
 }
