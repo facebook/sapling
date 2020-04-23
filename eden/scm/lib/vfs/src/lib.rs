@@ -5,4 +5,8 @@
  * GNU General Public License version 2.
  */
 
-pub mod walker;
+mod pathauditor;
+mod vfs;
+
+pub use crate::pathauditor::PathAuditor;
+pub use crate::vfs::{UpdateFlag, VFS};

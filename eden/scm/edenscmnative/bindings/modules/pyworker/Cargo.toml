@@ -19,8 +19,8 @@ cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 cpython = { version = "0.4", default-features = false }
 types = { path = "../../../../lib/types" }
 tracing = "0.1"
-workingcopy = { path = "../../../../lib/workingcopy" }
 util = { path = "../../../../lib/util" }
+vfs = { path = "../../../../lib/vfs" }
 
 [dev-dependencies]
 tempfile = "3.1"
