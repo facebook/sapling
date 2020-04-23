@@ -52,6 +52,10 @@ impl VFS {
         })
     }
 
+    pub fn root(&self) -> &Path {
+        &self.root
+    }
+
     /// The file `path` can't be written to, attempt to fixup the directories and files so the file can
     /// be created.
     ///

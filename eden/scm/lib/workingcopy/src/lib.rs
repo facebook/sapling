@@ -5,4 +5,5 @@
  * GNU General Public License version 2.
  */
 
+pub mod filesystem;
 pub mod walker;
