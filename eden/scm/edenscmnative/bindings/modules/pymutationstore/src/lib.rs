@@ -15,7 +15,8 @@ use cpython::*;
 use cpython_ext::{PyNone, PyPath, ResultPyErrExt, Str};
 use thiserror::Error;
 
-use ::mutationstore::{MutationEntry, MutationStore, Repair};
+use ::mutationstore::{MutationStore, Repair};
+use types::mutation::MutationEntry;
 use types::node::Node;
 use vlqencoding::{VLQDecode, VLQEncode};
 
@@ -42,7 +43,7 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
 fn bundle(py: Python, entries: Vec<mutationentry>) -> PyResult<PyBytes> {
     // Pre-allocate capacity for all the entries, plus one for the header and extra breathing room.
-    let mut buf = Vec::with_capacity((entries.len() + 1) * ::mutationstore::DEFAULT_ENTRY_SIZE);
+    let mut buf = Vec::with_capacity((entries.len() + 1) * types::mutation::DEFAULT_ENTRY_SIZE);
     buf.write_u8(BUNDLE_FORMAT_VERSION).map_pyerr(py)?;
     buf.write_vlq(entries.len()).map_pyerr(py)?;
     for entry in entries {

@@ -13,6 +13,7 @@ pub mod errors;
 pub mod hgid;
 pub mod historyentry;
 pub mod key;
+pub mod mutation;
 pub mod node;
 pub mod nodeinfo;
 pub mod parents;

@@ -5,7 +5,6 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.20"
-byteorder = "1.2.7"
 indexedlog = { path = "../indexedlog" }
 thiserror = "1.0.5"
 types = { path = "../types" }
