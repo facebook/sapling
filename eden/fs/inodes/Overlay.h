@@ -16,10 +16,16 @@
 #include <optional>
 #include <thread>
 #include "eden/fs/fuse/InodeNumber.h"
-#include "eden/fs/inodes/overlay/FsOverlay.h"
 #include "eden/fs/inodes/overlay/gen-cpp2/overlay_types.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/PathFuncs.h"
+
+#ifdef _WIN32
+#include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h" // @manual
+#else
+#include "eden/fs/inodes/overlay/FsOverlay.h"
+
+#endif
 
 namespace facebook {
 namespace eden {
@@ -30,12 +36,15 @@ class OverlayDir;
 
 struct DirContents;
 class InodeMap;
+class SerializedInodeMap;
+
+#ifndef _WIN32
 struct InodeMetadata;
 template <typename T>
 class InodeTable;
 using InodeMetadataTable = InodeTable<InodeMetadata>;
-class SerializedInodeMap;
 class OverlayFile;
+#endif
 
 /** Manages the write overlay storage area.
  *
@@ -138,6 +147,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * inode values in one atomic operation.
    */
   InodeNumber allocateInodeNumber();
+#ifndef _WIN32
 
   /**
    * Returns an InodeMetadataTable for accessing and storing inode metadata.
@@ -147,6 +157,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
   InodeMetadataTable* getInodeMetadataTable() const {
     return inodeMetadataTable_.get();
   }
+#endif // !_WIN32
 
   void saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir);
 
@@ -170,6 +181,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
 
   bool hasOverlayData(InodeNumber inodeNumber);
 
+#ifndef _WIN32
   /**
    * Helper function that opens an existing overlay file,
    * checks if the file has valid header, and returns the file.
@@ -200,7 +212,7 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    * call statfs(2) on the filesystem in which the overlay is located
    */
   struct statfs statFs();
-
+#endif // !_WIN32
  private:
   explicit Overlay(AbsolutePathPiece localDir);
 
@@ -248,14 +260,18 @@ class Overlay : public std::enable_shared_from_this<Overlay> {
    */
   std::atomic<uint64_t> nextInodeNumber_{0};
 
-  FsOverlay fsOverlay_;
+#ifdef _WIN32
+  SqliteOverlay backingOverlay_;
+#else
+  FsOverlay backingOverlay_;
 
   /**
    * Disk-backed mapping from inode number to InodeMetadata.
-   * Defined below fsOverlay_ because it acquires its own file lock, which
+   * Defined below backingOverlay_ because it acquires its own file lock, which
    * should be released first during shutdown.
    */
   std::unique_ptr<InodeMetadataTable> inodeMetadataTable_;
+#endif // !_WIN32
 
   /**
    * Thread which recursively removes entries from the overlay underneath the

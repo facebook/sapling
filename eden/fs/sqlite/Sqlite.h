@@ -118,6 +118,13 @@ class SqliteStatement {
     bind(paramNo, folly::StringPiece(blob), bindType);
   }
 
+  inline void bind(size_t paramNo, uint64_t id) {
+    checkSqliteResult(db_, sqlite3_bind_int64(stmt_, paramNo, id));
+  }
+
+  inline void bind(size_t paramNo, uint32_t id) {
+    checkSqliteResult(db_, sqlite3_bind_int(stmt_, paramNo, id));
+  }
   /** Reference a blob column in the current row returned by the statement.
    * This is only valid to call once `step()` has returned true.  The
    * return value is invalidated by a subsequent `step()` call or by the
@@ -126,6 +133,7 @@ class SqliteStatement {
    * colNo==0.
    * */
   folly::StringPiece columnBlob(size_t colNo) const;
+  uint64_t columnUint64(size_t colNo) const;
 
   ~SqliteStatement();
 

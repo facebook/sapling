@@ -24,7 +24,7 @@ struct fuse_in_header {
 namespace facebook {
 namespace eden {
 
-struct SerializedInodeMap {
+class SerializedInodeMap {
   int stub;
 };
 

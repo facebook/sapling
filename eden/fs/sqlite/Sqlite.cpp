@@ -102,6 +102,10 @@ StringPiece SqliteStatement::columnBlob(size_t colNo) const {
       sqlite3_column_bytes(stmt_, colNo));
 }
 
+uint64_t SqliteStatement::columnUint64(size_t colNo) const {
+  return sqlite3_column_int64(stmt_, colNo);
+}
+
 SqliteStatement::~SqliteStatement() {
   sqlite3_finalize(stmt_);
 }

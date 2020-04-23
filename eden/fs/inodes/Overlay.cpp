@@ -18,12 +18,21 @@
 #include <folly/io/IOBuf.h>
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/protocol/Serializer.h>
-
 #include "eden/fs/inodes/DirEntry.h"
+#include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/PathFuncs.h"
+
+#ifdef _WIN32
+#include "eden/fs/inodes/InodeBase.h"
+#include "eden/fs/inodes/TreeInode.h"
+#include "eden/fs/win/utils/StringConv.h" // @manual
+#include "eden/fs/win/utils/Stub.h" // @manual
+
+#else
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/OverlayFile.h"
 #include "eden/fs/inodes/overlay/OverlayChecker.h"
-#include "eden/fs/utils/PathFuncs.h"
+#endif // !_WIN32
 
 namespace facebook {
 namespace eden {
@@ -44,7 +53,7 @@ std::shared_ptr<Overlay> Overlay::create(AbsolutePathPiece localDir) {
   return std::make_shared<MakeSharedEnabler>(localDir);
 }
 
-Overlay::Overlay(AbsolutePathPiece localDir) : fsOverlay_{localDir} {}
+Overlay::Overlay(AbsolutePathPiece localDir) : backingOverlay_{localDir} {}
 
 Overlay::~Overlay() {
   close();
@@ -61,7 +70,7 @@ void Overlay::close() {
 
   // Make sure everything is shut down in reverse of construction order.
   // Cleanup is not necessary if overlay was not initialized
-  if (!fsOverlay_.initialized()) {
+  if (!backingOverlay_.initialized()) {
     return;
   }
 
@@ -76,18 +85,23 @@ void Overlay::close() {
   }
 
   closeAndWaitForOutstandingIO();
+#ifndef _WIN32
   inodeMetadataTable_.reset();
-  fsOverlay_.close(optNextInodeNumber);
+#endif // !_WIN32
+
+  backingOverlay_.close(optNextInodeNumber);
 }
 
 bool Overlay::isClosed() {
   return outstandingIORequests_.load(std::memory_order_acquire) & ioClosedMask;
 }
 
+#ifndef _WIN32
 struct statfs Overlay::statFs() {
   IORequest req{this};
-  return fsOverlay_.statFs();
+  return backingOverlay_.statFs();
 }
+#endif // !_WIN32
 
 folly::SemiFuture<Unit> Overlay::initialize() {
   // The initOverlay() call is potentially slow, so we want to avoid
@@ -102,21 +116,27 @@ folly::SemiFuture<Unit> Overlay::initialize() {
       initOverlay();
     } catch (std::exception& ex) {
       XLOG(ERR) << "overlay initialization failed for "
-                << fsOverlay_.getLocalDir() << ": " << ex.what();
+                << backingOverlay_.getLocalDir() << ": " << ex.what();
       promise.setException(
           folly::exception_wrapper(std::current_exception(), ex));
       return;
     }
     promise.setValue();
+#ifndef _WIN32
+    // TODO: On Windows files are cached by the ProjectedFS. We need to clean
+    // the cached files while doing GC.
+
     gcThread();
+#endif
   });
   return std::move(initFuture);
 }
 
 void Overlay::initOverlay() {
   IORequest req{this};
-  auto optNextInodeNumber = fsOverlay_.initOverlay(true);
+  auto optNextInodeNumber = backingOverlay_.initOverlay(true);
   if (!optNextInodeNumber.has_value()) {
+#ifndef _WIN32
     // If the next-inode-number data is missing it means that this overlay was
     // not shut down cleanly the last time it was used.  If this was caused by a
     // hard system reboot this can sometimes cause corruption and/or missing
@@ -124,23 +144,31 @@ void Overlay::initOverlay() {
     //
     // Use OverlayChecker to scan the overlay for any issues, and also compute
     // correct next inode number as it does so.
-    XLOG(WARN) << "Overlay " << fsOverlay_.getLocalDir()
+    XLOG(WARN) << "Overlay " << backingOverlay_.getLocalDir()
                << " was not shut down cleanly.  Performing fsck scan.";
-    OverlayChecker checker(&fsOverlay_, std::nullopt);
+    OverlayChecker checker(&backingOverlay_, std::nullopt);
     checker.scanForErrors();
     checker.repairErrors();
 
     optNextInodeNumber = checker.getNextInodeNumber();
+#else
+    // SqliteOverlay will always return the value of next Inode number, if we
+    // end up here - it's a bug.
+    EDEN_BUG() << "Sqlite Overlay is null value for NextInodeNumber";
+#endif
   } else {
     hadCleanStartup_ = true;
   }
   nextInodeNumber_.store(optNextInodeNumber->get(), std::memory_order_relaxed);
 
+#ifndef _WIN32
   // Open after infoFile_'s lock is acquired because the InodeTable acquires
   // its own lock, which should be released prior to infoFile_.
-  inodeMetadataTable_ = InodeMetadataTable::open(
-      (fsOverlay_.getLocalDir() + PathComponentPiece{FsOverlay::kMetadataFile})
-          .c_str());
+  inodeMetadataTable_ =
+      InodeMetadataTable::open((backingOverlay_.getLocalDir() +
+                                PathComponentPiece{FsOverlay::kMetadataFile})
+                                   .c_str());
+#endif // !_WIN32
 }
 
 InodeNumber Overlay::allocateInodeNumber() {
@@ -158,13 +186,16 @@ InodeNumber Overlay::allocateInodeNumber() {
   // This could be a relaxed atomic operation.  It doesn't matter on x86 but
   // might on ARM.
   auto previous = nextInodeNumber_++;
+#ifdef _WIN32
+  backingOverlay_.updateUsedInodeNumber(previous);
+#endif
   DCHECK_NE(0, previous) << "allocateInodeNumber called before initialize";
   return InodeNumber{previous};
 }
 
 optional<DirContents> Overlay::loadOverlayDir(InodeNumber inodeNumber) {
   IORequest req{this};
-  auto dirData = fsOverlay_.loadOverlayDir(inodeNumber);
+  auto dirData = backingOverlay_.loadOverlayDir(inodeNumber);
   if (!dirData.has_value()) {
     return std::nullopt;
   }
@@ -241,19 +272,25 @@ void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
         std::make_pair(entName.stringPiece().str(), std::move(oent)));
   }
 
-  fsOverlay_.saveOverlayDir(inodeNumber, odir);
+  backingOverlay_.saveOverlayDir(inodeNumber, odir);
 }
 
 void Overlay::removeOverlayData(InodeNumber inodeNumber) {
   IORequest req{this};
+
+#ifndef _WIN32
   // TODO: batch request during GC
   getInodeMetadataTable()->freeInode(inodeNumber);
-  fsOverlay_.removeOverlayFile(inodeNumber);
+  backingOverlay_.removeOverlayFile(inodeNumber);
+#else
+  backingOverlay_.removeOverlayData(inodeNumber);
+#endif // !_WIN32
 }
 
 void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
+#ifndef _WIN32
   IORequest req{this};
-  auto dirData = fsOverlay_.loadOverlayDir(inodeNumber);
+  auto dirData = backingOverlay_.loadOverlayDir(inodeNumber);
 
   // This inode's data must be removed from the overlay before
   // recursivelyRemoveOverlayData returns to avoid a race condition if
@@ -267,8 +304,12 @@ void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
     gcQueue_.lock()->queue.emplace_back(std::move(*dirData));
     gcCondVar_.notify_one();
   }
+#else
+  NOT_IMPLEMENTED();
+#endif
 }
 
+#ifndef _WIN32
 folly::Future<folly::Unit> Overlay::flushPendingAsync() {
   folly::Promise<folly::Unit> promise;
   auto future = promise.getFuture();
@@ -276,12 +317,14 @@ folly::Future<folly::Unit> Overlay::flushPendingAsync() {
   gcCondVar_.notify_one();
   return future;
 }
+#endif // !_WIN32
 
 bool Overlay::hasOverlayData(InodeNumber inodeNumber) {
   IORequest req{this};
-  return fsOverlay_.hasOverlayData(inodeNumber);
+  return backingOverlay_.hasOverlayData(inodeNumber);
 }
 
+#ifndef _WIN32
 // Helper function to open,validate,
 // get file pointer of an overlay file
 OverlayFile Overlay::openFile(
@@ -289,13 +332,13 @@ OverlayFile Overlay::openFile(
     folly::StringPiece headerId) {
   IORequest req{this};
   return OverlayFile(
-      fsOverlay_.openFile(inodeNumber, headerId), weak_from_this());
+      backingOverlay_.openFile(inodeNumber, headerId), weak_from_this());
 }
 
 OverlayFile Overlay::openFileNoVerify(InodeNumber inodeNumber) {
   IORequest req{this};
   return OverlayFile(
-      fsOverlay_.openFileNoVerify(inodeNumber), weak_from_this());
+      backingOverlay_.openFileNoVerify(inodeNumber), weak_from_this());
 }
 
 OverlayFile Overlay::createOverlayFile(
@@ -305,7 +348,8 @@ OverlayFile Overlay::createOverlayFile(
   CHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
       << "createOverlayFile called with unallocated inode number";
   return OverlayFile(
-      fsOverlay_.createOverlayFile(inodeNumber, contents), weak_from_this());
+      backingOverlay_.createOverlayFile(inodeNumber, contents),
+      weak_from_this());
 }
 
 OverlayFile Overlay::createOverlayFile(
@@ -315,8 +359,11 @@ OverlayFile Overlay::createOverlayFile(
   CHECK_LT(inodeNumber.get(), nextInodeNumber_.load(std::memory_order_relaxed))
       << "createOverlayFile called with unallocated inode number";
   return OverlayFile(
-      fsOverlay_.createOverlayFile(inodeNumber, contents), weak_from_this());
+      backingOverlay_.createOverlayFile(inodeNumber, contents),
+      weak_from_this());
 }
+
+#endif // !_WIN32
 
 InodeNumber Overlay::getMaxInodeNumber() {
   auto ino = nextInodeNumber_.load(std::memory_order_relaxed);
@@ -369,6 +416,10 @@ void Overlay::closeAndWaitForOutstandingIO() {
     lastOutstandingRequestIsComplete_.wait();
   }
 }
+
+#ifndef _WIN32
+// TODO: On Windows files are cached by the ProjectedFS. We need to clean that
+// cache before doing GC.
 
 void Overlay::gcThread() noexcept {
   for (;;) {
@@ -449,7 +500,7 @@ void Overlay::handleGCRequest(GCRequest& request) {
 
     overlay::OverlayDir dir;
     try {
-      auto dirData = fsOverlay_.loadOverlayDir(ino);
+      auto dirData = backingOverlay_.loadOverlayDir(ino);
       if (!dirData.has_value()) {
         XLOG(DBG7) << "no dir data for inode " << ino;
         continue;
@@ -466,6 +517,7 @@ void Overlay::handleGCRequest(GCRequest& request) {
     processDir(dir);
   }
 }
+#endif // !1
 
 } // namespace eden
 } // namespace facebook
