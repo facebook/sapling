@@ -17,13 +17,13 @@ use gotham_derive::{StateData, StaticResponseExtender};
 use serde::Deserialize;
 
 use filestore::{self, Alias, FetchKey};
-use gotham_ext::error::HttpError;
+use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use mononoke_types::{hash::Sha256, ContentId};
 use redactedblobstore::has_redaction_root_cause;
 use stats::prelude::*;
 
 use crate::errors::ErrorKind;
-use crate::http::{StreamBody, TryIntoResponse};
+use crate::http::StreamBody;
 use crate::lfs_server_context::RepositoryRequestContext;
 use crate::middleware::LfsMethod;
 

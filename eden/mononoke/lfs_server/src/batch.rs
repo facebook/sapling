@@ -10,7 +10,10 @@ use futures::{compat::Future01CompatExt, future::TryFutureExt};
 use futures_util::{future::try_join_all, pin_mut, select, try_join, FutureExt};
 use gotham::state::{FromState, State};
 use gotham_derive::{StateData, StaticResponseExtender};
-use gotham_ext::body_ext::BodyExt;
+use gotham_ext::{
+    body_ext::BodyExt,
+    response::{BytesBody, TryIntoResponse},
+};
 use http::header::HeaderMap;
 use hyper::{Body, StatusCode};
 use maplit::hashmap;
@@ -33,7 +36,7 @@ use lfs_protocol::{
 use mononoke_types::{hash::Sha256, typed_hash::ContentId, MononokeId};
 
 use crate::errors::ErrorKind;
-use crate::http::{git_lfs_mime, BytesBody, TryIntoResponse};
+use crate::http::git_lfs_mime;
 use crate::lfs_server_context::{RepositoryRequestContext, UriBuilder};
 use crate::middleware::{LfsMethod, RequestContext, ScubaKey, ScubaMiddlewareState};
 

@@ -7,6 +7,10 @@
 
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
+use gotham_ext::{
+    middleware::{ClientIdentity, Middleware},
+    response::ResponseContentLength,
+};
 use hyper::{
     header::{self, AsHeaderName, HeaderMap},
     Method, StatusCode, Uri,
@@ -15,8 +19,7 @@ use hyper::{Body, Response};
 use scuba::{ScubaSampleBuilder, ScubaValue};
 use time_ext::DurationExt;
 
-use super::{ClientIdentity, Middleware, RequestContext, RequestLoad as RequestLoadMiddleware};
-use crate::http::ResponseContentLength;
+use super::{RequestContext, RequestLoad as RequestLoadMiddleware};
 
 #[derive(Copy, Clone, Debug)]
 pub enum ScubaKey {

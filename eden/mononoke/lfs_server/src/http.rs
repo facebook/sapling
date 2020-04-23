@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use std::convert::TryInto;
 use std::str::FromStr;
 
 use anyhow::Error;
@@ -15,8 +14,11 @@ use futures::{
     stream::{Stream, StreamExt},
 };
 use gotham::state::State;
-use gotham_derive::StateData;
-use gotham_ext::{error::HttpError, signal_stream::SignalStream};
+use gotham_ext::{
+    error::HttpError,
+    response::{ResponseContentLength, TryIntoResponse},
+    signal_stream::SignalStream,
+};
 use hyper::{
     header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE},
     Body, Response, StatusCode,
@@ -26,9 +28,6 @@ use mime::Mime;
 
 use crate::errors::LfsServerContextErrorKind;
 use crate::middleware::RequestContext;
-
-#[derive(StateData)]
-pub struct ResponseContentLength(pub u64);
 
 impl From<LfsServerContextErrorKind> for HttpError {
     fn from(e: LfsServerContextErrorKind) -> HttpError {
@@ -40,29 +39,10 @@ impl From<LfsServerContextErrorKind> for HttpError {
     }
 }
 
-pub struct EmptyBody;
-
-pub struct BytesBody<B> {
-    bytes: B,
-    mime: Mime,
-}
-
 pub struct StreamBody<S> {
     stream: S,
     content_length: u64,
     mime: Mime,
-}
-
-impl EmptyBody {
-    pub fn new() -> Self {
-        Self
-    }
-}
-
-impl<B> BytesBody<B> {
-    pub fn new(bytes: B, mime: Mime) -> Self {
-        Self { bytes, mime }
-    }
 }
 
 impl<S> StreamBody<S> {
@@ -72,40 +52,6 @@ impl<S> StreamBody<S> {
             content_length,
             mime,
         }
-    }
-}
-
-pub trait TryIntoResponse {
-    fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error>;
-}
-
-impl TryIntoResponse for EmptyBody {
-    fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
-        state.put(ResponseContentLength(0));
-
-        Response::builder()
-            .status(StatusCode::OK)
-            .header(CONTENT_LENGTH, 0)
-            .body(Body::empty())
-            .map_err(Error::from)
-    }
-}
-
-impl<B> TryIntoResponse for BytesBody<B>
-where
-    B: Into<Bytes>,
-{
-    fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error> {
-        let bytes = self.bytes.into();
-        let mime_header: HeaderValue = self.mime.as_ref().parse()?;
-
-        state.put(ResponseContentLength(bytes.len().try_into()?));
-
-        Response::builder()
-            .header(CONTENT_TYPE, mime_header)
-            .status(StatusCode::OK)
-            .body(bytes.into())
-            .map_err(Error::from)
     }
 }
 

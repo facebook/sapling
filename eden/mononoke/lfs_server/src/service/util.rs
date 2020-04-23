@@ -10,7 +10,7 @@ use gotham::{
     helpers::http::response::create_response,
     state::{request_id, State},
 };
-use gotham_ext::error::HttpError;
+use gotham_ext::{error::HttpError, response::TryIntoResponse};
 use hyper::{Body, Response};
 use itertools::Itertools;
 use std::iter;
@@ -19,7 +19,7 @@ use failure_ext::chain::ChainExt;
 use lfs_protocol::ResponseError;
 
 use crate::errors::ErrorKind;
-use crate::http::{git_lfs_mime, TryIntoResponse};
+use crate::http::git_lfs_mime;
 use crate::middleware::RequestContext;
 
 pub fn build_response<IR>(

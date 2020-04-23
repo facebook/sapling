@@ -12,6 +12,10 @@ use fbinit::FacebookInit;
 use futures::channel::oneshot::{self, Receiver, Sender};
 use gotham::state::{request_id, FromState, State};
 use gotham_derive::StateData;
+use gotham_ext::{
+    middleware::{ClientIdentity, Middleware},
+    response::ResponseContentLength,
+};
 use hyper::{body::Body, Response};
 use scuba::ScubaSampleBuilder;
 use slog::{o, Logger};
@@ -19,9 +23,6 @@ use std::fmt;
 use std::net::IpAddr;
 use std::time::{Duration, Instant};
 use tokio::task;
-
-use super::{ClientIdentity, Middleware};
-use crate::http::ResponseContentLength;
 
 use crate::config::ServerConfig;
 
