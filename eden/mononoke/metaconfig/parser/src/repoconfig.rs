@@ -1383,6 +1383,7 @@ mod test {
             [storage.main.metadata.remote]
             primary = { db_address = "db_address" }
             filenodes = { sharded = { shard_map = "db_address_shards", shard_num = 123 } }
+            mutation = { db_address = "mutation_db_address" }
 
             [storage.main.blobstore.multiplexed]
             multiplex_id = 1
@@ -1518,6 +1519,9 @@ mod test {
                     shard_map: "db_address_shards".into(),
                     shard_num: NonZeroUsize::new(123).unwrap(),
                 }),
+                mutation: RemoteDatabaseConfig {
+                    db_address: "mutation_db_address".into(),
+                },
             }),
         };
 
@@ -1885,6 +1889,7 @@ mod test {
         [multiplex_store.metadata.remote]
         primary = { db_address = "some_db" }
         filenodes = { sharded = { shard_map = "some-shards", shard_num = 123 } }
+        mutation = { db_address = "some_db" }
 
         [multiplex_store.blobstore.multiplexed]
         multiplex_id = 1
@@ -1944,6 +1949,9 @@ mod test {
                         filenodes: ShardableRemoteDatabaseConfig::Sharded(ShardedRemoteDatabaseConfig {
                             shard_map: "some-shards".into(), shard_num: NonZeroUsize::new(123).unwrap()
                         }),
+                        mutation: RemoteDatabaseConfig {
+                            db_address: "some_db".into(),
+                        },
                     }),
                 },
                 repoid: RepositoryId::new(123),
@@ -1978,6 +1986,7 @@ mod test {
         [manifold_store.metadata.remote]
         primary = { db_address = "other_db" }
         filenodes = { sharded = { shard_map = "other-shards", shard_num = 456 } }
+        mutation = { db_address = "other_mutation_db" }
 
         [manifold_store.blobstore.manifold]
         manifold_bucket = "bucketybucket"
@@ -1991,6 +2000,7 @@ mod test {
         [storage.multiplex_store.metadata.remote]
         primary = { db_address = "other_other_db" }
         filenodes = { sharded = { shard_map = "other-other-shards", shard_num = 789 } }
+        mutation = { db_address = "other_other_mutation_db" }
 
         [storage.multiplex_store.blobstore]
         disabled = {}
@@ -2014,6 +2024,7 @@ mod test {
                     metadata: MetadataDatabaseConfig::Remote( RemoteMetadataDatabaseConfig {
                         primary: RemoteDatabaseConfig { db_address: "other_other_db".into(), },
                         filenodes: ShardableRemoteDatabaseConfig::Sharded(ShardedRemoteDatabaseConfig { shard_map: "other-other-shards".into(), shard_num: NonZeroUsize::new(789).unwrap() }),
+                        mutation: RemoteDatabaseConfig { db_address: "other_other_mutation_db".into(), },
                     }),
 
                 },

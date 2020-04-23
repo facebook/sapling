@@ -1,0 +1,35 @@
+[package]
+name = "mercurial_mutation"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["schemas/**/*.sql", "src/**/*.rs", "test/**/*.rs"]
+
+[lib]
+path = "src/lib.rs"
+
+[[test]]
+name = "mercurial_mutation_test"
+path = "test/main.rs"
+
+[dependencies]
+mercurial_types = { path = "../types" }
+metaconfig_types = { path = "../../metaconfig/types" }
+mononoke_types = { path = "../../mononoke_types" }
+sql_construct = { path = "../../common/sql_construct" }
+sql_ext = { path = "../../common/rust/sql_ext" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+sql = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+async-trait = "0.1.29"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+serde_json = "1.0"
+smallvec = { version = "1.3", features = [ "serde", "specialization", "union" ] }
+
+[dev-dependencies]
+mercurial_types-mocks = { path = "../types/mocks" }
+mononoke_types-mocks = { path = "../../mononoke_types/mocks" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+maplit = "1.0"
+tokio-compat = "0.1"

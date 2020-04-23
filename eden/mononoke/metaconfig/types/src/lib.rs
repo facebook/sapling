@@ -920,6 +920,8 @@ pub struct RemoteMetadataDatabaseConfig {
     pub primary: RemoteDatabaseConfig,
     /// Database for possibly sharded filenodes.
     pub filenodes: ShardableRemoteDatabaseConfig,
+    /// Database for commit mutation metadata.
+    pub mutation: RemoteDatabaseConfig,
 }
 
 /// Configuration for the Metadata database
@@ -1028,6 +1030,7 @@ impl TryFrom<RawMetadataConfig> for MetadataDatabaseConfig {
                 RemoteMetadataDatabaseConfig {
                     primary: def.primary.into(),
                     filenodes: def.filenodes.try_into()?,
+                    mutation: def.mutation.into(),
                 },
             )),
             RawMetadataConfig::UnknownField(f) => Err(anyhow!(

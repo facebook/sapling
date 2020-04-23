@@ -79,6 +79,7 @@ members = [
     "manifest/test_utils",
     "megarepolib",
     "mercurial/bundles",
+    "mercurial/mutation",
     "mercurial/revlog",
     "mercurial/types",
     "mercurial/types/if",

@@ -1,0 +1,44 @@
+/*
+ * Copyright (c) Facebook, Inc. and its affiliates.
+ *
+ * This software may be used and distributed according to the terms of the
+ * GNU General Public License version 2.
+ */
+
+use std::cmp::Ordering;
+use std::collections::{HashMap, HashSet};
+
+use anyhow::Result;
+use mercurial_mutation::{HgMutationEntry, HgMutationStore};
+use mercurial_types::HgChangesetId;
+
+fn compare_entries(a: &HgMutationEntry, b: &HgMutationEntry) -> Ordering {
+    a.successor().cmp(b.successor())
+}
+
+fn get_entries(
+    entries: &HashMap<usize, HgMutationEntry>,
+    indexes: &[usize],
+) -> Vec<HgMutationEntry> {
+    let mut result = Vec::new();
+    for index in indexes.iter() {
+        if let Some(entry) = entries.get(index) {
+            result.push(entry.clone());
+        }
+    }
+    result
+}
+
+pub(crate) async fn check_entries(
+    store: &dyn HgMutationStore,
+    changeset_ids: HashSet<HgChangesetId>,
+    entries: &HashMap<usize, HgMutationEntry>,
+    indexes: &[usize],
+) -> Result<()> {
+    let mut fetched_entries = store.all_predecessors(changeset_ids).await?;
+    let mut expected_entries = get_entries(&entries, indexes);
+    fetched_entries.sort_unstable_by(compare_entries);
+    expected_entries.sort_unstable_by(compare_entries);
+    assert_eq!(fetched_entries, expected_entries);
+    Ok(())
+}

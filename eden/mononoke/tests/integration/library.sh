@@ -490,6 +490,7 @@ function db_config() {
     echo "[$blobstorename.metadata.remote]"
     echo "primary = { db_address = \"$DB_SHARD_NAME\" }"
     echo "filenodes = { unsharded = { db_address = \"$DB_SHARD_NAME\" } }"
+    echo "mutation = { db_address = \"$DB_SHARD_NAME\" }"
   else
     echo "[$blobstorename.metadata.local]"
     echo "local_db_path = \"$TESTTMP/monsql\""
