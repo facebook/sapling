@@ -115,6 +115,8 @@ pub const DEFAULT_INCLUDE_NODE_TYPES: &[NodeType] = &[
     NodeType::FileContent,
     NodeType::FileContentMetadata,
     NodeType::AliasContentMapping,
+    NodeType::Fsnode,
+    NodeType::BonsaiFsnodeMapping,
 ];
 
 // Goes as far into history as it can
@@ -127,6 +129,7 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::BonsaiHgMappingToHgChangeset,
     EdgeType::PublishedBookmarksToBonsaiChangeset,
     EdgeType::PublishedBookmarksToBonsaiHgMapping,
+    EdgeType::BonsaiChangesetToBonsaiFsnodeMapping,
     // Hg
     EdgeType::HgBonsaiMappingToBonsaiChangeset,
     EdgeType::HgChangesetToHgParent,
@@ -145,6 +148,9 @@ const DEEP_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::FileContentMetadataToSha256Alias,
     EdgeType::FileContentMetadataToGitSha1Alias,
     EdgeType::AliasContentMappingToFileContent,
+    // Derived data
+    EdgeType::BonsaiToRootFsnode,
+    EdgeType::FsnodeToChildFsnode,
 ];
 
 // Does not recurse into history, edges to parents excluded
@@ -156,6 +162,7 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::BonsaiHgMappingToHgChangeset,
     EdgeType::PublishedBookmarksToBonsaiChangeset,
     EdgeType::PublishedBookmarksToBonsaiHgMapping,
+    EdgeType::BonsaiChangesetToBonsaiFsnodeMapping,
     // Hg
     EdgeType::HgBonsaiMappingToBonsaiChangeset,
     EdgeType::HgChangesetToHgManifest,
@@ -169,6 +176,9 @@ const SHALLOW_INCLUDE_EDGE_TYPES: &[EdgeType] = &[
     EdgeType::FileContentMetadataToSha256Alias,
     EdgeType::FileContentMetadataToGitSha1Alias,
     EdgeType::AliasContentMappingToFileContent,
+    // Derived data
+    EdgeType::BonsaiToRootFsnode,
+    EdgeType::FsnodeToChildFsnode,
 ];
 
 // Types that can result in loading hg data.  Useful for excludes.

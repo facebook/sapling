@@ -14,29 +14,30 @@ use mercurial_types::{
     blobs::{BlobManifest, HgBlobChangeset},
     FileBytes, HgChangesetId, HgFileEnvelope, HgFileNodeId, HgManifestId,
 };
+use mononoke_types::{fsnode::Fsnode, FsnodeId};
 use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath, MononokeId};
 use phases::Phase;
 use std::{fmt, str::FromStr, sync::Arc};
 
 // Helper to save repetition for the type enums
 macro_rules! define_type_enum {
-    (enum $enum_name:ident {
-        $($variant:ident),*,
-    }) => {
-        #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
-        pub enum $enum_name {
-            $($variant),*
-        }
+     (enum $enum_name:ident {
+         $($variant:ident),*,
+     }) => {
+         #[derive(Debug, Copy, Clone, PartialEq, Eq, Hash)]
+         pub enum $enum_name {
+             $($variant),*
+         }
 
-        impl FromStr for $enum_name {
-            type Err = Error;
-            fn from_str(s: &str) -> Result<Self, Self::Err> {
-                match s {
-                    $(stringify!($variant)=>Ok($enum_name::$variant),)*
-                    _ => Err(format_err!("Unknown {} {}",stringify!($enum_name), s)),
-                }
-            }
-        }
+         impl FromStr for $enum_name {
+             type Err = Error;
+             fn from_str(s: &str) -> Result<Self, Self::Err> {
+                 match s {
+                     $(stringify!($variant)=>Ok($enum_name::$variant),)*
+                     _ => Err(format_err!("Unknown {} {}",stringify!($enum_name), s)),
+                 }
+             }
+         }
 
         impl $enum_name {
             pub const ALL_VARIANTS: &'static [$enum_name] = &[
@@ -72,6 +73,9 @@ enum NodeType {
     FileContent,
     FileContentMetadata,
     AliasContentMapping,
+    // Derived data
+    BonsaiFsnodeMapping,
+    Fsnode,
 }
 }
 
@@ -101,6 +105,9 @@ impl NodeType {
             NodeType::FileContent => Some(EdgeType::RootToFileContent),
             NodeType::FileContentMetadata => Some(EdgeType::RootToFileContentMetadata),
             NodeType::AliasContentMapping => Some(EdgeType::RootToAliasContentMapping),
+            // Derived data
+            NodeType::BonsaiFsnodeMapping => Some(EdgeType::RootToBonsaiFsnodeMapping),
+            NodeType::Fsnode => Some(EdgeType::RootToFsnode),
         }
     }
 }
@@ -154,6 +161,9 @@ pub enum Node {
     FileContent(ContentId),
     FileContentMetadata(ContentId),
     AliasContentMapping(Alias),
+    // Derived data
+    BonsaiFsnodeMapping(ChangesetId),
+    Fsnode((WrappedPath, FsnodeId)),
 }
 
 // Some Node types are accessible by more than one type of edge, this allows us to restrict the paths
@@ -176,6 +186,9 @@ enum EdgeType {
     RootToFileContent,
     RootToFileContentMetadata,
     RootToAliasContentMapping,
+    // Derived data Roots
+    RootToBonsaiFsnodeMapping,
+    RootToFsnode,
     // Bonsai
     BookmarkToBonsaiChangeset,
     BookmarkToBonsaiHgMapping,
@@ -186,6 +199,7 @@ enum EdgeType {
     BonsaiHgMappingToHgChangeset,
     PublishedBookmarksToBonsaiChangeset,
     PublishedBookmarksToBonsaiHgMapping,
+    BonsaiChangesetToBonsaiFsnodeMapping,
     // Hg
     HgBonsaiMappingToBonsaiChangeset,
     HgChangesetToHgParent,
@@ -204,6 +218,9 @@ enum EdgeType {
     FileContentMetadataToSha256Alias,
     FileContentMetadataToGitSha1Alias,
     AliasContentMappingToFileContent,
+    // Derived data
+    BonsaiToRootFsnode,
+    FsnodeToChildFsnode,
 }
 }
 
@@ -234,6 +251,9 @@ impl EdgeType {
             EdgeType::RootToFileContent => None,
             EdgeType::RootToFileContentMetadata => None,
             EdgeType::RootToAliasContentMapping => None,
+            // Derived data Roots
+            EdgeType::RootToBonsaiFsnodeMapping => None,
+            EdgeType::RootToFsnode => None,
             // Bonsai
             EdgeType::BookmarkToBonsaiChangeset => Some(NodeType::Bookmark),
             EdgeType::BookmarkToBonsaiHgMapping => Some(NodeType::Bookmark),
@@ -244,6 +264,7 @@ impl EdgeType {
             EdgeType::BonsaiHgMappingToHgChangeset => Some(NodeType::BonsaiHgMapping),
             EdgeType::PublishedBookmarksToBonsaiChangeset => Some(NodeType::PublishedBookmarks),
             EdgeType::PublishedBookmarksToBonsaiHgMapping => Some(NodeType::PublishedBookmarks),
+            EdgeType::BonsaiChangesetToBonsaiFsnodeMapping => Some(NodeType::BonsaiChangeset),
             // Hg
             EdgeType::HgBonsaiMappingToBonsaiChangeset => Some(NodeType::HgBonsaiMapping),
             EdgeType::HgChangesetToHgParent => Some(NodeType::HgChangeset),
@@ -262,6 +283,9 @@ impl EdgeType {
             EdgeType::FileContentMetadataToSha256Alias => Some(NodeType::FileContentMetadata),
             EdgeType::FileContentMetadataToGitSha1Alias => Some(NodeType::FileContentMetadata),
             EdgeType::AliasContentMappingToFileContent => Some(NodeType::AliasContentMapping),
+            // Derived data
+            EdgeType::BonsaiToRootFsnode => Some(NodeType::BonsaiFsnodeMapping),
+            EdgeType::FsnodeToChildFsnode => Some(NodeType::Fsnode),
         }
     }
     pub fn outgoing_type(&self) -> NodeType {
@@ -282,6 +306,9 @@ impl EdgeType {
             EdgeType::RootToFileContent => NodeType::FileContent,
             EdgeType::RootToFileContentMetadata => NodeType::FileContentMetadata,
             EdgeType::RootToAliasContentMapping => NodeType::AliasContentMapping,
+            // Derived data Roots
+            EdgeType::RootToBonsaiFsnodeMapping => NodeType::BonsaiFsnodeMapping,
+            EdgeType::RootToFsnode => NodeType::Fsnode,
             // Bonsai
             EdgeType::BookmarkToBonsaiChangeset => NodeType::BonsaiChangeset,
             EdgeType::BookmarkToBonsaiHgMapping => NodeType::BonsaiHgMapping,
@@ -292,6 +319,7 @@ impl EdgeType {
             EdgeType::BonsaiHgMappingToHgChangeset => NodeType::HgChangeset,
             EdgeType::PublishedBookmarksToBonsaiChangeset => NodeType::BonsaiChangeset,
             EdgeType::PublishedBookmarksToBonsaiHgMapping => NodeType::BonsaiHgMapping,
+            EdgeType::BonsaiChangesetToBonsaiFsnodeMapping => NodeType::BonsaiFsnodeMapping,
             // Hg
             EdgeType::HgBonsaiMappingToBonsaiChangeset => NodeType::BonsaiChangeset,
             EdgeType::HgChangesetToHgParent => NodeType::HgChangeset,
@@ -310,6 +338,9 @@ impl EdgeType {
             EdgeType::FileContentMetadataToSha256Alias => NodeType::AliasContentMapping,
             EdgeType::FileContentMetadataToGitSha1Alias => NodeType::AliasContentMapping,
             EdgeType::AliasContentMappingToFileContent => NodeType::FileContent,
+            // Derived data
+            EdgeType::BonsaiToRootFsnode => NodeType::Fsnode,
+            EdgeType::FsnodeToChildFsnode => NodeType::Fsnode,
         }
     }
 }
@@ -347,6 +378,9 @@ pub enum NodeData {
     FileContent(FileContentData),
     FileContentMetadata(Option<ContentMetadata>),
     AliasContentMapping(ContentId),
+    // Derived data
+    BonsaiFsnodeMapping(Option<FsnodeId>),
+    Fsnode(Fsnode),
 }
 
 impl Node {
@@ -369,6 +403,9 @@ impl Node {
             Node::FileContent(_) => NodeType::FileContent,
             Node::FileContentMetadata(_) => NodeType::FileContentMetadata,
             Node::AliasContentMapping(_) => NodeType::AliasContentMapping,
+            // Derived data
+            Node::BonsaiFsnodeMapping(_) => NodeType::BonsaiFsnodeMapping,
+            Node::Fsnode(_) => NodeType::Fsnode,
         }
     }
 
@@ -391,6 +428,9 @@ impl Node {
             Node::FileContent(k) => k.blobstore_key(),
             Node::FileContentMetadata(k) => k.blobstore_key(),
             Node::AliasContentMapping(k) => k.blobstore_key(),
+            // Derived data
+            Node::BonsaiFsnodeMapping(k) => k.blobstore_key(),
+            Node::Fsnode((_, k)) => k.blobstore_key(),
         }
     }
 
@@ -413,6 +453,9 @@ impl Node {
             Node::FileContent(_) => None,
             Node::FileContentMetadata(_) => None,
             Node::AliasContentMapping(_) => None,
+            // Derived data
+            Node::BonsaiFsnodeMapping(_) => None,
+            Node::Fsnode((p, _)) => Some(&p),
         }
     }
 
@@ -436,6 +479,9 @@ impl Node {
             Node::FileContent(k) => Some(k.sampling_fingerprint()),
             Node::FileContentMetadata(k) => Some(k.sampling_fingerprint()),
             Node::AliasContentMapping(k) => Some(k.sampling_fingerprint()),
+            // Derived data
+            Node::BonsaiFsnodeMapping(k) => Some(k.sampling_fingerprint()),
+            Node::Fsnode((_, k)) => Some(k.sampling_fingerprint()),
         }
     }
 }

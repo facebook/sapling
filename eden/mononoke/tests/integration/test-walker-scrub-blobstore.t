@@ -25,7 +25,7 @@ Base case, check can walk fine
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Final count: (37, 37)
+  Final count: (40, 40)
   Bytes/s,* (glob)
   Walked* (glob)
 
@@ -50,8 +50,8 @@ Check can walk fine on the only remaining side
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Final count: (37, 37)
-  Bytes/s,Keys/s,Bytes,Keys; Delta */s,*/s,2168,30,0s; Run */s,*/s,2168,30,*s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiChangeset:277,3 BonsaiHgMapping:281,3 Bookmark:0,0 FileContent:12,3 FileContentMetadata:351,3 HgBonsaiMapping:0,0 HgChangeset:281,3 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3* (glob)
+  Final count: (40, 40)
+  Bytes/s,Keys/s,Bytes,Keys; Delta */s,*/s,2168,30,0s; Run */s,*/s,2168,30,*s; Type:Raw,Compressed AliasContentMapping:333,9 BonsaiChangeset:277,3 BonsaiFsnodeMapping:0,0 BonsaiHgMapping:281,3 Bookmark:0,0 FileContent:12,3 FileContentMetadata:351,3 Fsnode:0,0 HgBonsaiMapping:0,0 HgChangeset:281,3 HgFileEnvelope:189,3 HgFileNode:0,0 HgManifest:444,3* (glob)
   Walked* (glob)
 
 Check can walk fine on the multiplex remaining side
@@ -59,7 +59,7 @@ Check can walk fine on the multiplex remaining side
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Final count: (37, 37)
+  Final count: (40, 40)
   Bytes/s,* (glob)
   Walked* (glob)
 
@@ -69,7 +69,7 @@ Check can walk fine on the multiplex with scrub-blobstore enabled in ReportOnly 
   1 Walking edge types * (glob)
   1 Walking node types * (glob)
   * scrub: blobstore_id BlobstoreId(0) not repaired for repo0000. (glob)
-  1 Final count: (37, 37)
+  1 Final count: (40, 40)
   1 Bytes/s,* (glob)
   1 Walked* (glob)
 
@@ -112,7 +112,7 @@ Check can walk fine on the multiplex with scrub-blobstore enabled in Repair mode
   1 Walking edge types * (glob)
   1 Walking node types * (glob)
   27 scrub: blobstore_id BlobstoreId(0) repaired for repo0000.
-  1 Final count: (37, 37)
+  1 Final count: (40, 40)
   1 Bytes/s,* (glob)
   1 Walked* (glob)
 
@@ -154,7 +154,7 @@ Check that all is repaired by running on only the deleted side
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
-  Final count: (37, 37)
+  Final count: (40, 40)
   Bytes/s,* (glob)
   Walked* (glob)
 

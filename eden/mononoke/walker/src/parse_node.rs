@@ -13,7 +13,7 @@ use filestore::Alias;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
 use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
-    ChangesetId, ContentId, MPath,
+    ChangesetId, ContentId, FsnodeId, MPath,
 };
 use std::str::FromStr;
 
@@ -110,6 +110,15 @@ pub fn parse_node(s: &str) -> Result<Node, Error> {
                 AliasType::Sha256 => Alias::Sha256(Sha256::from_str(id)?),
             };
             Node::AliasContentMapping(alias)
+        }
+        // Derived data
+        NodeType::BonsaiFsnodeMapping => {
+            Node::BonsaiFsnodeMapping(ChangesetId::from_str(&parts.join(NODE_SEP))?)
+        }
+        NodeType::Fsnode => {
+            let mpath = check_and_build_mpath(node_type, parts)?;
+            let id = FsnodeId::from_str(parts[0])?;
+            Node::Fsnode((WrappedPath::from(mpath), id))
         }
     };
     Ok(node)
@@ -210,6 +219,23 @@ mod tests {
                     &parse_node(&format!(
                         "AliasContentMapping{}{}{}{}",
                         NODE_SEP, "Sha256", NODE_SEP, SAMPLE_SHA256
+                    ))?
+                    .get_type()
+                );
+            }
+            NodeType::BonsaiFsnodeMapping => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!("BonsaiFsnodeMapping{}{}", NODE_SEP, SAMPLE_BLAKE2))?
+                        .get_type()
+                );
+            }
+            NodeType::Fsnode => {
+                assert_eq!(
+                    node_type,
+                    &parse_node(&format!(
+                        "Fsnode{}{}{}{}",
+                        NODE_SEP, SAMPLE_BLAKE2, NODE_SEP, SAMPLE_PATH
                     ))?
                     .get_type()
                 );

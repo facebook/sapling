@@ -19,6 +19,7 @@ use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
 use failure_ext::chain::ChainExt;
 use filestore::{self, Alias};
+use fsnodes::RootFsnodeId;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     future::{self, Future, FutureExt},
@@ -31,7 +32,7 @@ use itertools::{Either, Itertools};
 use mercurial_types::{
     FileBytes, HgChangesetId, HgEntryId, HgFileNodeId, HgManifest, HgManifestId, RepoPath,
 };
-use mononoke_types::{ChangesetId, ContentId, MPath};
+use mononoke_types::{fsnode::FsnodeEntry, ChangesetId, ContentId, FsnodeId, MPath};
 use phases::{HeadsFetcher, Phase, Phases};
 use scuba_ext::ScubaSampleBuilder;
 use slog::warn;
@@ -255,6 +256,10 @@ async fn bonsai_changeset_step(
             })
             .collect::<Vec<OutgoingEdge>>(),
     );
+    recurse.push(OutgoingEdge::new(
+        EdgeType::BonsaiChangesetToBonsaiFsnodeMapping,
+        Node::BonsaiFsnodeMapping(*bcs_id),
+    ));
     Ok(StepOutput(NodeData::BonsaiChangeset(bcs), recurse))
 }
 
@@ -581,6 +586,64 @@ fn alias_content_mapping_step(
         .compat()
 }
 
+async fn bonsai_to_fsnode_mapping_step(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bcs_id: &ChangesetId,
+    enable_derive: bool,
+) -> Result<StepOutput, Error> {
+    let is_derived = RootFsnodeId::is_derived(&ctx, &repo, &bcs_id)
+        .map_err(Error::from)
+        .compat()
+        .await?;
+
+    if is_derived || enable_derive {
+        let root_fsnode_id = RootFsnodeId::derive(ctx.clone(), repo.clone(), *bcs_id)
+            .map_err(Error::from)
+            .compat()
+            .await?;
+
+        Ok(StepOutput(
+            NodeData::BonsaiFsnodeMapping(Some(*root_fsnode_id.fsnode_id())),
+            vec![OutgoingEdge::new(
+                EdgeType::BonsaiToRootFsnode,
+                Node::Fsnode((WrappedPath::Root, *root_fsnode_id.fsnode_id())),
+            )],
+        ))
+    } else {
+        Ok(StepOutput(NodeData::BonsaiFsnodeMapping(None), vec![]))
+    }
+}
+
+async fn fsnode_step(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    path: WrappedPath,
+    fsnode_id: &FsnodeId,
+) -> Result<StepOutput, Error> {
+    let fsnode = fsnode_id
+        .load(ctx.clone(), &repo.get_blobstore())
+        .map_err(Error::from)
+        .compat()
+        .await?;
+
+    let mut edges = vec![];
+    for (child, fsnode_entry) in fsnode.list() {
+        // Fsnode do not have separate "file" entries, so we visit only directories
+        if let FsnodeEntry::Directory(dir) = fsnode_entry {
+            let fsnode_id = dir.id();
+            let mpath_opt = WrappedPath::from(MPath::join_element_opt(path.as_ref(), Some(child)));
+
+            edges.push(OutgoingEdge::new(
+                EdgeType::FsnodeToChildFsnode,
+                Node::Fsnode((WrappedPath::from(mpath_opt), *fsnode_id)),
+            ));
+        }
+    }
+
+    Ok(StepOutput(NodeData::Fsnode(fsnode), edges))
+}
+
 /// Expand nodes where check for a type is used as a check for other types.
 /// e.g. to make sure metadata looked up/considered for files.
 pub fn expand_checked_nodes(children: &mut Vec<OutgoingEdge>) -> () {
@@ -783,6 +846,10 @@ where
         Node::AliasContentMapping(alias) => {
             alias_content_mapping_step(ctx.clone(), &repo, alias).await
         }
+        Node::BonsaiFsnodeMapping(cs_id) => {
+            bonsai_to_fsnode_mapping_step(&ctx, &repo, &cs_id, enable_derive).await
+        }
+        Node::Fsnode((path, fsnode_id)) => fsnode_step(&ctx, &repo, path, &fsnode_id).await,
     };
 
     let edge_label = walk_item.label;

@@ -25,7 +25,7 @@ validate, expecting all valid
   Performing check types [HgLinkNodePopulated]
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:37,3,0; EdgesChecked:9; CheckType:Pass,Fail Total:3,0 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:40,3,0; EdgesChecked:9; CheckType:Pass,Fail Total:3,0 HgLinkNodePopulated:3,0
 
 Remove all filenodes
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM filenodes where linknode=x'112478962961147124EDD43549AEDD1A335E44BF'";
@@ -39,7 +39,7 @@ validate, expecting validation fails
   Validation failed: *hg_link_node_populated* (glob)
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:36,2,1; EdgesChecked:7; CheckType:Pass,Fail Total:2,1 HgLinkNodePopulated:2,1
+  Nodes,Pass,Fail:39,2,1; EdgesChecked:7; CheckType:Pass,Fail Total:2,1 HgLinkNodePopulated:2,1
 
 Check scuba data
   $ wc -l < scuba.json
@@ -58,7 +58,7 @@ validate, expecting all valid, this time checking marker types as well
   Performing check types [BonsaiChangesetPhaseIsPublic, HgLinkNodePopulated]
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:40,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
 
 Remove the phase information, linknodes already point to them
   $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM phases where repo_id >= 0";
@@ -71,7 +71,7 @@ validate, expect no failures on phase info, as the commits are still public, jus
   Performing check types [BonsaiChangesetPhaseIsPublic, HgLinkNodePopulated]
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:40,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
+  Nodes,Pass,Fail:43,6,0; EdgesChecked:12; CheckType:Pass,Fail Total:6,0 BonsaiChangesetPhaseIsPublic:3,0 HgLinkNodePopulated:3,0
 
 Remove all filenodes for the last commit, validation should succeed (i.e. filenodes were not derived yet)
   $ cd "$TESTTMP"
@@ -83,4 +83,4 @@ Remove all filenodes for the last commit, validation should succeed (i.e. fileno
   Performing check types [HgLinkNodePopulated]
   Final count: * (glob)
   Walked* (glob)
-  Nodes,Pass,Fail:32,2,0; EdgesChecked:6; CheckType:Pass,Fail Total:2,0 HgLinkNodePopulated:2,0
+  Nodes,Pass,Fail:35,2,0; EdgesChecked:6; CheckType:Pass,Fail Total:2,0 HgLinkNodePopulated:2,0
