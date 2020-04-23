@@ -587,7 +587,17 @@ class FuseChannel {
 
   ProcessAccessLog processAccessLog_;
 
-  RequestMetricsScope::LockedRequestWatchList liveRequestWatches_;
+  // this tracks metrics for live FUSE requests, this is a thread local
+  // to avoid contention between the FuseWorkerThreads as they kick off
+  // requests.
+  // each thread local is a shared pointer to keep the tracker from being
+  // destroyed when the owning FuseWorkerThread ends if there are outstanding
+  // requests as these may outlive the spawning worker thread.
+  class ThreadLocalTag {};
+  folly::ThreadLocal<
+      std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>,
+      ThreadLocalTag>
+      liveRequestWatches_;
 
   static const HandlerMap handlerMap_;
 };

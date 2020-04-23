@@ -8,12 +8,11 @@
 #include "eden/fs/service/EdenServer.h"
 
 #include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
-#include <algorithm>
+
 #include <atomic>
 #include <fstream>
 #include <functional>
 #include <memory>
-#include <numeric>
 #include <sstream>
 
 #include <fb303/ServiceData.h>
@@ -307,7 +306,7 @@ EdenServer::EdenServer(
               [stage, object, metric](const HgQueuedBackingStore& store) {
                 return store.getImportMetric(stage, object, metric);
               });
-          return this->aggregateHgQueuedBackingStoreCounters(
+          return RequestMetricsScope::aggregateMetricCounters(
               metric, individual_counters);
         });
       }
@@ -324,7 +323,7 @@ EdenServer::EdenServer(
               more_counters.begin(),
               more_counters.end());
         }
-        return this->aggregateHgQueuedBackingStoreCounters(
+        return RequestMetricsScope::aggregateMetricCounters(
             metric, individual_counters);
       });
     }
@@ -1402,19 +1401,6 @@ EdenServer::getHgQueuedBackingStores() {
     }
   }
   return hgBackingStores;
-}
-
-size_t EdenServer::aggregateHgQueuedBackingStoreCounters(
-    RequestMetricsScope::RequestMetric metric,
-    std::vector<size_t>& counters) {
-  switch (metric) {
-    case RequestMetricsScope::RequestMetric::COUNT:
-      return std::accumulate(counters.begin(), counters.end(), 0);
-    case RequestMetricsScope::RequestMetric::MAX_DURATION_US:
-      auto max = std::max_element(counters.begin(), counters.end());
-      return max == counters.end() ? 0 : *max;
-  }
-  EDEN_BUG() << "unknown request metric type " << static_cast<int>(metric);
 }
 
 std::vector<size_t> EdenServer::collectHgQueuedBackingStoreCounters(

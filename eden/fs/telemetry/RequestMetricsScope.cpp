@@ -7,6 +7,9 @@
 
 #include "RequestMetricsScope.h"
 
+#include <algorithm>
+#include <numeric>
+
 #include <folly/String.h>
 
 #include "eden/fs/utils/Bug.h"
@@ -56,6 +59,19 @@ folly::StringPiece RequestMetricsScope::stringOfRequestMetric(
       return "max_duration_us";
   }
   EDEN_BUG() << "unknown metric " << static_cast<int>(metric);
+}
+
+size_t RequestMetricsScope::aggregateMetricCounters(
+    RequestMetricsScope::RequestMetric metric,
+    std::vector<size_t>& counters) {
+  switch (metric) {
+    case RequestMetricsScope::RequestMetric::COUNT:
+      return std::accumulate(counters.begin(), counters.end(), size_t{0});
+    case RequestMetricsScope::RequestMetric::MAX_DURATION_US:
+      auto max = std::max_element(counters.begin(), counters.end());
+      return max == counters.end() ? size_t{0} : *max;
+  }
+  EDEN_BUG() << "unknown request metric type " << static_cast<int>(metric);
 }
 
 size_t RequestMetricsScope::getMetricFromWatches(

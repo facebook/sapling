@@ -522,14 +522,6 @@ class EdenServer : private TakeoverHandler {
   getHgQueuedBackingStores();
 
   /**
-   * combine the values of the counters in a way that makes sense
-   * for the `metric` being calculated
-   */
-  size_t aggregateHgQueuedBackingStoreCounters(
-      RequestMetricsScope::RequestMetric metric,
-      std::vector<size_t>& counters);
-
-  /**
    * collect the values of the counter for each HgQueuedBackingStore
    * accessed by calling the getCounterFromStore function on the
    * each store

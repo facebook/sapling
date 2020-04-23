@@ -22,6 +22,19 @@ namespace eden {
 
 class Dispatcher;
 
+/**
+ * Follows a request across executors and futures. startRequest should be
+ * called before initiating a request and will be run where this is
+ * initated. catchErrors will wrap a request future so that finishRequest is
+ * called when it is completed. finishRequest will be executed where the request
+ * is executed which may be in a different thread than startRequest was run.
+ * Thus this will be run single threaded (only running from one thread at a
+ * time, but may run on different threads.
+ *
+ * see folly/io/async/Request.h for more info on RequestData
+ * see eden/fs/fuse/FuseChannel.cpp FuseChannel::processSession for how this
+ * should be used
+ */
 class RequestData : public folly::RequestData {
   FuseChannel* channel_;
   fuse_in_header fuseHeader_;
@@ -31,6 +44,8 @@ class RequestData : public folly::RequestData {
   EdenStats* stats_{nullptr};
   Dispatcher* dispatcher_{nullptr};
   RequestMetricsScope requestMetricsScope_;
+  std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>
+      channelThreadLocalStats_;
 
   struct EdenTopStats {
    public:
@@ -75,7 +90,8 @@ class RequestData : public folly::RequestData {
   void startRequest(
       EdenStats* stats,
       FuseThreadStats::HistogramPtr histogram,
-      RequestMetricsScope::LockedRequestWatchList& requestWatches);
+      std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
+          requestWatches);
   void finishRequest();
 
   // Returns the associated dispatcher instance

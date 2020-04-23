@@ -60,6 +60,14 @@ class RequestMetricsScope {
   static folly::StringPiece stringOfRequestMetric(RequestMetric metric);
 
   /**
+   * combine the values of the counters in a way that makes sense
+   * for the `metric` being calculated
+   */
+  static size_t aggregateMetricCounters(
+      RequestMetricsScope::RequestMetric metric,
+      std::vector<size_t>& counters);
+
+  /**
    * calculates the `metric` from the `watches` which track
    * the duration of all of a certain type of request
    */

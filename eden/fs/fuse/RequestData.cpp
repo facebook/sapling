@@ -55,12 +55,14 @@ RequestData& RequestData::create(
 void RequestData::startRequest(
     EdenStats* stats,
     FuseThreadStats::HistogramPtr histogram,
-    RequestMetricsScope::LockedRequestWatchList& requestWatches) {
+    std::shared_ptr<RequestMetricsScope::LockedRequestWatchList>&
+        requestWatches) {
   startTime_ = steady_clock::now();
   DCHECK(latencyHistogram_ == nullptr);
   latencyHistogram_ = histogram;
   stats_ = stats;
-  requestMetricsScope_ = RequestMetricsScope(&requestWatches);
+  channelThreadLocalStats_ = requestWatches;
+  requestMetricsScope_ = RequestMetricsScope(channelThreadLocalStats_.get());
 }
 
 void RequestData::finishRequest() {
@@ -75,7 +77,8 @@ void RequestData::finishRequest() {
       latencyHistogram_, diff_us, now_since_epoch);
   latencyHistogram_ = nullptr;
   stats_ = nullptr;
-  auto temp = std::move(requestMetricsScope_);
+  { auto temp = std::move(requestMetricsScope_); }
+  channelThreadLocalStats_.reset();
 
   auto& pal = channel_->getProcessAccessLog();
   if (getEdenTopStats().didImportFromBackingStore()) {

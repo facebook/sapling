@@ -829,6 +829,8 @@ void FuseChannel::initWorkerThread() noexcept {
 void FuseChannel::fuseWorkerThread() noexcept {
   setThreadName(to<std::string>("fuse", mountPath_.basename()));
   setThreadSigmask();
+  *(liveRequestWatches_.get()) =
+      std::make_shared<RequestMetricsScope::LockedRequestWatchList>();
 
   try {
     processSession();
@@ -1275,7 +1277,7 @@ void FuseChannel::processSession() {
                     request.startRequest(
                         dispatcher_->getStats(),
                         entry.histogram,
-                        liveRequestWatches_);
+                        *(liveRequestWatches_.get()));
                     return (this->*entry.handler)(&request.getReq(), arg);
                   })
                       .within(requestTimeout_),
@@ -1902,7 +1904,12 @@ FuseDeviceUnmountedDuringInitialization::
 
 size_t FuseChannel::getRequestMetric(
     RequestMetricsScope::RequestMetric metric) const {
-  return RequestMetricsScope::getMetricFromWatches(metric, liveRequestWatches_);
+  std::vector<size_t> counters;
+  for (auto& thread_watches : liveRequestWatches_.accessAllThreads()) {
+    counters.emplace_back(
+        RequestMetricsScope::getMetricFromWatches(metric, *thread_watches));
+  }
+  return RequestMetricsScope::aggregateMetricCounters(metric, counters);
 }
 
 } // namespace eden
