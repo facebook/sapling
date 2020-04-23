@@ -1,0 +1,10 @@
+[package]
+name = "data_util"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+anyhow = "1.0"
+serde_cbor = "0.11"
+structopt = "0.3"
+types = { path = "../../../types" }
