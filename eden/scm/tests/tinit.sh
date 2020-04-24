@@ -191,7 +191,7 @@ disable() {
 # make commits visible. The function will set environment variables so
 # commits can still be referred as $TAGNAME.
 drawdag() {
-  hg debugdrawdag "$@"
+  hg debugdrawdag "$@" --config remotenames.autopullhoistpattern=
   eval `hg bookmarks -T '{bookmark}={node}\n'`
   BOOKMARKS=$(hg book -T '{bookmark} ')
   if [[ -n "${BOOKMARKS}" ]]; then

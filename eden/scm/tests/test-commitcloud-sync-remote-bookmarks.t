@@ -3,6 +3,7 @@
   $ enable amend commitcloud infinitepush remotenames
   $ disable treemanifest
   $ configure dummyssh
+  $ setconfig remotenames.autopullhoistpattern=re:.*
   $ setconfig commitcloud.hostname=testhost
   $ setconfig remotefilelog.reponame=server
 
@@ -225,8 +226,6 @@ try to create a commit on top of the default/stable
 check that copy with disabled remote bookmarks sync doesn't affect the other copies
   $ cd ../client1
   $ hg up warm -q
-  `warm` not found: assuming it is a remote bookmark and trying to pull it
-  `warm` found remotely
   $ mkcommit draft-3
   $ hg cloud sync -q
   $ showgraph

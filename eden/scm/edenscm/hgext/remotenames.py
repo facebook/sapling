@@ -511,7 +511,11 @@ def updatecmd(orig, ui, repo, node=None, rev=None, **kwargs):
     if rev and node:
         raise error.Abort(_("please specify just one revision"))
 
-    if _isselectivepull(repo.ui) and not kwargs.get("date"):
+    if (
+        _isselectivepull(repo.ui)
+        and not kwargs.get("date")
+        and not ui.config("remotenames", "autopullhoistpattern")
+    ):
         # Make sure that rev or node is present in the repo.
         # Otherwise pull it from remote
         try:
