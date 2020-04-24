@@ -7,7 +7,7 @@
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
 use crate::state::{StepStats, WalkStateCHashMap};
-use crate::walk::{OutgoingEdge, ResolvedNode, WalkVisitor};
+use crate::walk::{OutgoingEdge, WalkVisitor};
 
 use context::{CoreContext, SamplingKey};
 use dashmap::DashMap;
@@ -46,7 +46,7 @@ pub struct PathTrackingRoute {
 
 impl PathTrackingRoute {
     fn evolve_path<'a>(
-        route: Option<&'a Self>,
+        from_route: Option<&'a WrappedPath>,
         from_step: Option<&'a WrappedPath>,
         target: &'a Node,
     ) -> Option<&'a WrappedPath> {
@@ -56,17 +56,18 @@ impl PathTrackingRoute {
             None => match target.stats_path() {
                 // Path is part of node identity
                 Some(from_node) => Some(from_node),
-                // No per-node path, so use the route
-                None => route.and_then(|r| r.path.as_ref()),
+                // No per-node path, so use the path from route
+                None => from_route,
             },
         }
     }
 
     fn evolve(route: Option<Self>, path: Option<&WrappedPath>, target: &Node) -> Self {
-        let new_path = PathTrackingRoute::evolve_path(route.as_ref(), path, target);
+        let existing_path = route.as_ref().and_then(|r| r.path.as_ref());
+        let new_path = PathTrackingRoute::evolve_path(existing_path, path, target);
 
         // reuse same route if possible
-        if new_path == route.as_ref().and_then(|r| r.path.as_ref()) {
+        if new_path == existing_path {
             if let Some(route) = route {
                 return route;
             }
@@ -94,12 +95,15 @@ where
                 0 => false,
                 1 => true,
                 sample_rate => {
-                    let sampling_fingerprint =
-                        PathTrackingRoute::evolve_path(route, step.path.as_ref(), &step.target)
-                            .map_or_else(
-                                || step.target.sampling_fingerprint(),
-                                |r| r.sampling_fingerprint(),
-                            );
+                    let sampling_fingerprint = PathTrackingRoute::evolve_path(
+                        route.and_then(|r| r.path.as_ref()),
+                        step.path.as_ref(),
+                        &step.target,
+                    )
+                    .map_or_else(
+                        || step.target.sampling_fingerprint(),
+                        |r| r.sampling_fingerprint(),
+                    );
                     sampling_fingerprint.map_or(true, |fp| fp % sample_rate == 0)
                 }
             };
@@ -116,7 +120,8 @@ where
     fn visit(
         &self,
         ctx: &CoreContext,
-        current: ResolvedNode,
+        resolved: OutgoingEdge,
+        node_data: Option<NodeData>,
         route: Option<PathTrackingRoute>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (
@@ -124,8 +129,11 @@ where
         PathTrackingRoute,
         Vec<OutgoingEdge>,
     ) {
-        let route = PathTrackingRoute::evolve(route, current.path.as_ref(), &current.node);
-        let (vout, _inner_route, outgoing) = self.inner.visit(ctx, current, Some(()), outgoing);
+        let inner_route = route.as_ref().map(|_| ());
+        let route = PathTrackingRoute::evolve(route, resolved.path.as_ref(), &resolved.target);
+        let (vout, _inner_route, outgoing) =
+            self.inner
+                .visit(ctx, resolved, node_data, inner_route, outgoing);
         (vout, route, outgoing)
     }
 }
@@ -164,7 +172,8 @@ where
     fn visit(
         &self,
         ctx: &CoreContext,
-        current: ResolvedNode,
+        resolved: OutgoingEdge,
+        node_data: Option<NodeData>,
         route: Option<()>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (
@@ -172,7 +181,7 @@ where
         (),
         Vec<OutgoingEdge>,
     ) {
-        self.inner.visit(ctx, current, route, outgoing)
+        self.inner.visit(ctx, resolved, node_data, route, outgoing)
     }
 }
 

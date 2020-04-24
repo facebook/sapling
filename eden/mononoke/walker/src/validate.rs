@@ -23,7 +23,7 @@ use crate::setup::{
 };
 use crate::state::{StepStats, WalkStateCHashMap};
 use crate::tail::{walk_exact_tail, RepoWalkRun};
-use crate::walk::{OutgoingEdge, ResolvedNode, WalkVisitor};
+use crate::walk::{OutgoingEdge, WalkVisitor};
 
 use anyhow::{format_err, Error};
 use clap::ArgMatches;
@@ -152,9 +152,9 @@ impl ValidatingVisitor {
     }
 }
 
-fn check_bonsai_phase_is_public(current: &ResolvedNode) -> CheckStatus {
-    match &current.data {
-        NodeData::BonsaiPhaseMapping(Some(Phase::Public)) => CheckStatus::Pass,
+fn check_bonsai_phase_is_public(node_data: Option<&NodeData>) -> CheckStatus {
+    match node_data {
+        Some(NodeData::BonsaiPhaseMapping(Some(Phase::Public))) => CheckStatus::Pass,
         _ => CheckStatus::Fail,
     }
 }
@@ -196,7 +196,8 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), Node> for Validat
     fn visit(
         &self,
         ctx: &CoreContext,
-        current: ResolvedNode,
+        resolved: OutgoingEdge,
+        node_data: Option<NodeData>,
         route: Option<Node>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (
@@ -205,7 +206,7 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), Node> for Validat
         Vec<OutgoingEdge>,
     ) {
         let checks_to_do: Option<&HashSet<_>> =
-            self.checks_by_node_type.get(&current.node.get_type());
+            self.checks_by_node_type.get(&resolved.target.get_type());
         // The incoming resolved edge counts as one
         let mut num_edges: u64 = 1;
         let mut pass = 0;
@@ -216,7 +217,7 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), Node> for Validat
                     // Lets check!
                     let status = match check {
                         CheckType::BonsaiChangesetPhaseIsPublic => {
-                            check_bonsai_phase_is_public(&current)
+                            check_bonsai_phase_is_public(node_data.as_ref())
                         }
                         CheckType::HgLinkNodePopulated => {
                             num_edges += outgoing.len() as u64;
@@ -241,9 +242,13 @@ impl WalkVisitor<(Node, Option<CheckData>, Option<StepStats>), Node> for Validat
         );
 
         // Call inner after checks. otherwise it will prune outgoing edges we wanted to check.
-        let ((node, _opt_data, opt_stats), _, outgoing) =
-            self.inner
-                .visit(&ctx, current, route.as_ref().map(|_| ()), outgoing);
+        let ((node, _opt_data, opt_stats), _, outgoing) = self.inner.visit(
+            &ctx,
+            resolved,
+            node_data,
+            route.as_ref().map(|_| ()),
+            outgoing,
+        );
 
         let vout = (
             node.clone(),

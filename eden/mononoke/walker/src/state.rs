@@ -6,7 +6,7 @@
  */
 
 use crate::graph::{EdgeType, Node, NodeData, NodeType, WrappedPath};
-use crate::walk::{expand_checked_nodes, OutgoingEdge, ResolvedNode, WalkVisitor};
+use crate::walk::{expand_checked_nodes, OutgoingEdge, WalkVisitor};
 use chashmap::CHashMap;
 use context::CoreContext;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
@@ -117,17 +117,17 @@ impl WalkStateCHashMap {
         }
     }
 
-    fn record_resolved_visit(&self, source: &ResolvedNode) {
-        match (&source.node, &source.data) {
+    fn record_resolved_visit(&self, resolved: &OutgoingEdge, node_data: Option<&NodeData>) {
+        match (&resolved.target, node_data) {
             (
-                &Node::BonsaiPhaseMapping(bcs_id),
-                &NodeData::BonsaiPhaseMapping(Some(Phase::Public)),
+                Node::BonsaiPhaseMapping(bcs_id),
+                Some(NodeData::BonsaiPhaseMapping(Some(Phase::Public))),
             ) => {
                 // Only retain visit if already public, otherwise it could mutate between walks.
-                self.visited_bcs_phase.insert(bcs_id, ());
+                self.visited_bcs_phase.insert(*bcs_id, ());
             }
-            (&Node::BonsaiHgMapping(bcs_id), &NodeData::BonsaiHgMapping(Some(_))) => {
-                self.visited_bcs_mapping.insert(bcs_id, ());
+            (Node::BonsaiHgMapping(bcs_id), Some(NodeData::BonsaiHgMapping(Some(_)))) => {
+                self.visited_bcs_mapping.insert(*bcs_id, ());
             }
             _ => (),
         }
@@ -160,7 +160,8 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), ()> for WalkStateC
     fn visit(
         &self,
         _ctx: &CoreContext,
-        source: ResolvedNode,
+        resolved: OutgoingEdge,
+        node_data: Option<NodeData>,
         _route: Option<()>,
         mut outgoing: Vec<OutgoingEdge>,
     ) -> (
@@ -179,24 +180,25 @@ impl WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), ()> for WalkStateC
         // Make sure we don't expand to types of node and edge not wanted
         outgoing.retain(|e| self.retain_edge(e));
 
-        self.record_resolved_visit(&source);
+        self.record_resolved_visit(&resolved, node_data.as_ref());
 
         // Stats
         let num_expanded_new = outgoing.len();
-        let node = source.node;
-        let via = source.via;
-        let (error_count, node_data) = match source.data {
-            NodeData::ErrorAsData(_key) => (1, None),
-            d => (0, Some(d)),
+        let node = resolved.target;
+
+        let (error_count, node_data) = match node_data {
+            Some(NodeData::ErrorAsData(_key)) => (1, None),
+            Some(d) => (0, Some(d)),
+            None => (0, None),
         };
-        let stats = via.map(|_via| StepStats {
+        let stats = StepStats {
             error_count,
             num_direct,
             num_direct_new,
             num_expanded_new,
             visited_of_type: self.get_visit_count(&node.get_type()),
-        });
+        };
 
-        ((node, node_data, stats), (), outgoing)
+        ((node, node_data, Some(stats)), (), outgoing)
     }
 }

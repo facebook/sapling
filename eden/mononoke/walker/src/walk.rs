@@ -76,29 +76,6 @@ pub enum ErrorKind {
     NotTraversable(OutgoingEdge),
 }
 
-pub struct ResolvedNode {
-    pub node: Node,
-    pub data: NodeData,
-    pub path: Option<WrappedPath>,
-    pub via: Option<EdgeType>,
-}
-
-impl ResolvedNode {
-    pub fn new(
-        node: Node,
-        data: NodeData,
-        via: Option<EdgeType>,
-        path: Option<WrappedPath>,
-    ) -> Self {
-        Self {
-            node,
-            data,
-            via,
-            path,
-        }
-    }
-}
-
 pub trait WalkVisitor<VOut, Route> {
     // Called before the step is attempted
     fn start_step(
@@ -112,7 +89,8 @@ pub trait WalkVisitor<VOut, Route> {
     fn visit(
         &self,
         ctx: &CoreContext,
-        source: ResolvedNode,
+        resolved: OutgoingEdge,
+        node_data: Option<NodeData>,
         route: Option<Route>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (VOut, Route, Vec<OutgoingEdge>);
@@ -136,11 +114,13 @@ where
     fn visit(
         &self,
         ctx: &CoreContext,
-        source: ResolvedNode,
+        resolved: OutgoingEdge,
+        node_data: Option<NodeData>,
         route: Option<Route>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (VOut, Route, Vec<OutgoingEdge>) {
-        self.as_ref().visit(ctx, source, route, outgoing)
+        self.as_ref()
+            .visit(ctx, resolved, node_data, route, outgoing)
     }
 }
 
@@ -687,14 +667,6 @@ where
     VOut: 'static + Send,
     Route: 'static + Send + Clone,
 {
-    // record the roots so the stats add up
-    visitor.visit(
-        &ctx,
-        ResolvedNode::new(Node::Root, NodeData::Root, None, None),
-        None,
-        walk_roots.clone(),
-    );
-
     // Build lookups
     let repoid = *(&repo.get_repoid());
     let published_bookmarks = repo
@@ -784,10 +756,13 @@ where
     Route: 'static + Send + Clone,
 {
     let logger = ctx.logger().clone();
-    let node = walk_item.target.clone();
-    let node_path = walk_item.path.clone();
-    let node_type = node.get_type();
-    let step_result = match node.clone() {
+
+    if via.is_none() {
+        // record stats for the walk_roots
+        visitor.visit(&ctx, walk_item.clone(), None, None, vec![walk_item.clone()]);
+    }
+
+    let step_result = match walk_item.target.clone() {
         Node::Root => Err(format_err!("Not expecting Roots to be generated")),
         // Bonsai
         Node::Bookmark(bookmark_name) => {
@@ -825,7 +800,7 @@ where
                 &repo,
                 hg_file_node_id,
                 if keep_edge_paths {
-                    node_path.clone()
+                    walk_item.path.clone()
                 } else {
                     None
                 },
@@ -853,6 +828,7 @@ where
     };
 
     let edge_label = walk_item.label;
+    let node_type = walk_item.target.get_type();
     let step_output = match step_result {
         Ok(s) => Ok(s),
         Err(e) => {
@@ -884,8 +860,7 @@ where
             }
         }
     }
-    .chain_err(ErrorKind::NotTraversable(walk_item))
-    .map_err(Error::from)?;
+    .map_err(|e| Error::from(e.chain_err(ErrorKind::NotTraversable(walk_item.clone()))))?;
 
     match step_output {
         StepOutput(node_data, children) => {
@@ -905,11 +880,7 @@ where
                         .map(|t| t != node_type)
                         .unwrap_or(false)
                     {
-                        Err(format_err!(
-                            "Bad step {:?} from {:?}",
-                            c.label,
-                            node.get_type()
-                        ))
+                        Err(format_err!("Bad step {:?} from {:?}", c.label, node_type,))
                     } else {
                         Ok(c)
                     }
@@ -919,17 +890,13 @@ where
             let children = children?;
 
             // Allow WalkVisitor to record state and decline outgoing nodes if already visited
-            Ok(visitor.visit(
-                &ctx,
-                ResolvedNode::new(node, node_data, Some(edge_label), node_path),
-                via,
-                children,
-            ))
-            .map(|(vout, via, next)| {
-                let via = Some(via);
-                let next = next.into_iter().map(|e| (via.clone(), e)).collect();
-                (vout, next)
-            })
+            Ok(visitor.visit(&ctx, walk_item, Some(node_data), via, children)).map(
+                |(vout, via, next)| {
+                    let via = Some(via);
+                    let next = next.into_iter().map(|e| (via.clone(), e)).collect();
+                    (vout, next)
+                },
+            )
         }
     }
 }
