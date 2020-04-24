@@ -1048,42 +1048,19 @@ class PrefetchCmd(Subcmd):
             with open(args.pattern_file) as f:
                 args.PATTERN += [pat.strip() for pat in f.readlines()]
 
-        if sys.platform == "win32":
-            if args.no_prefetch:
-                # Not implementing --no-prefetch option right now because no
-                # one is using it. Will come back it.
-                raise NotImplementedError(
-                    "Eden prefetch --no-prefetch is not implemented on Windows."
-                    "You could use hg files to get the similar info from Mercurial"
+        with instance.get_thrift_client() as client:
+            result = client.globFiles(
+                GlobParams(
+                    mountPoint=bytes(checkout.path),
+                    globs=args.PATTERN,
+                    includeDotfiles=False,
+                    prefetchFiles=not args.no_prefetch,
+                    suppressFileList=args.silent,
                 )
-
-            cmd = [
-                "hg",
-                "prefetch",
-                "-r",
-                ".",
-                "--cwd",
-                str(checkout.path),
-                "--",
-            ] + args.PATTERN
-            if args.silent:
-                cmd += ["--quiet"]
-
-            subprocess.check_call(cmd)
-        else:
-            with instance.get_thrift_client() as client:
-                result = client.globFiles(
-                    GlobParams(
-                        mountPoint=bytes(checkout.path),
-                        globs=args.PATTERN,
-                        includeDotfiles=False,
-                        prefetchFiles=not args.no_prefetch,
-                        suppressFileList=args.silent,
-                    )
-                )
-                if not args.silent:
-                    for name in result.matchingFiles:
-                        print(os.fsdecode(name))
+            )
+            if not args.silent:
+                for name in result.matchingFiles:
+                    print(os.fsdecode(name))
 
         return 0
 
