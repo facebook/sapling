@@ -9,5 +9,6 @@ cpython = { version = "0.4", default-features = false }
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
 pathmatcher = { path = "../../../../lib/pathmatcher" }
 pypathmatcher = { path = "../pypathmatcher" }
+pytreestate = { path = "../pytreestate" }
 types = { path = "../../../../lib/types" }
 workingcopy = { path = "../../../../lib/workingcopy" }

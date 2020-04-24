@@ -119,6 +119,15 @@ impl UnsafePythonMatcher {
     }
 }
 
+impl Clone for UnsafePythonMatcher {
+    fn clone(&self) -> Self {
+        let gil = Python::acquire_gil();
+        UnsafePythonMatcher {
+            py_matcher: self.py_matcher.clone_ref(gil.python()),
+        }
+    }
+}
+
 impl<'a> Matcher for UnsafePythonMatcher {
     fn matches_directory(&self, path: &RepoPath) -> DirectoryMatch {
         let assumed_py = unsafe { Python::assume_gil_acquired() };

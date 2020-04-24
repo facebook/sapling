@@ -12,16 +12,68 @@ use std::cell::RefCell;
 use anyhow::Error;
 use cpython::*;
 
+use cpython_ext::error::ResultPyErrExt;
 use cpython_ext::PyPathBuf;
 use pypathmatcher::UnsafePythonMatcher;
+use pytreestate::treestate;
+use workingcopy::filesystem::{
+    ChangeType, PendingChangeResult, PendingChanges, PhysicalFileSystem,
+};
 use workingcopy::walker::{WalkError, Walker};
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
     let name = [package, "workingcopy"].join(".");
     let m = PyModule::new(py, &name)?;
     m.add_class::<walker>(py)?;
+    m.add_class::<pendingchanges>(py)?;
+    m.add_class::<physicalfilesystem>(py)?;
     Ok(m)
 }
+
+py_class!(class physicalfilesystem |py| {
+    data filesystem: RefCell<PhysicalFileSystem>;
+
+    def __new__(_cls, root: PyPathBuf) -> PyResult<physicalfilesystem> {
+        physicalfilesystem::create_instance(py, RefCell::new(PhysicalFileSystem::new(root.to_path_buf()).map_pyerr(py)?))
+    }
+
+    def pendingchanges(&self, pytreestate: treestate, pymatcher: PyObject, include_directories: bool, last_write: u32) -> PyResult<pendingchanges> {
+        let matcher = UnsafePythonMatcher::new(pymatcher);
+        let fs = self.filesystem(py);
+        let treestate = pytreestate.get_state(py);
+        let last_write = last_write.into();
+        let pending = fs.borrow().pending_changes(treestate, matcher, include_directories, last_write);
+        pendingchanges::create_instance(py, RefCell::new(pending))
+    }
+});
+
+py_class!(class pendingchanges |py| {
+    data inner: RefCell<PendingChanges<UnsafePythonMatcher>>;
+
+    def __iter__(&self) -> PyResult<Self> {
+        Ok(self.clone_ref(py))
+    }
+
+    def __next__(&self) -> PyResult<Option<(PyPathBuf, bool)>> {
+        loop {
+            match self.inner(py).borrow_mut().next() {
+                Some(Ok(change)) => {
+                    if let PendingChangeResult::File(change_type) = change {
+                        return Ok(Some(match change_type {
+                            ChangeType::Changed(path) => (path.into(), true),
+                            ChangeType::Deleted(path) => (path.into(), false),
+                        }));
+                    }
+                },
+                Some(Err(_)) => {
+                    // TODO: Add error handling
+                    continue
+                },
+                None => return Ok(None),
+            };
+        }
+    }
+});
 
 py_class!(class walker |py| {
     data walker: RefCell<Walker<UnsafePythonMatcher>>;

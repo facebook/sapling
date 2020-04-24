@@ -28,6 +28,7 @@ _rangemask = 0x7FFFFFFF
 configtable = {}
 configitem = registrar.configitem(configtable)
 configitem("workingcopy", "enablerustwalker", default=False)
+configitem("workingcopy", "rustpendingchanges", default=False)
 
 
 class physicalfilesystem(object):
@@ -167,13 +168,21 @@ class physicalfilesystem(object):
         repo-rooted file path and the bool is whether the file exists on disk
         or not.
         """
-        results = []
-        for fn in self._pendingchanges(match, listignored):
-            results.append(fn[0])
-            yield fn
+        if self.ui.configbool("workingcopy", "rustpendingchanges", False):
+            physicalfs = workingcopy.physicalfilesystem(self.opener.join(""))
+            pendingchanges = physicalfs.pendingchanges(
+                self.dirstate._map._tree, match, False, self.dirstate._lastnormaltime
+            )
+            for fn in pendingchanges:
+                yield fn
+        else:
+            results = []
+            for fn in self._pendingchanges(match, listignored):
+                results.append(fn[0])
+                yield fn
 
-        oldid = self.dirstate.identity()
-        self._postpendingfixup(oldid, results)
+            oldid = self.dirstate.identity()
+            self._postpendingfixup(oldid, results)
 
     def _pendingchanges(self, match, listignored):
         dmap = self.dirstate._map

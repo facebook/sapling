@@ -432,7 +432,13 @@ py_class!(class treedirstatemap |py| {
 
 });
 
-py_class!(class treestate |py| {
+impl treestate {
+    pub fn get_state(&self, py: Python) -> Arc<Mutex<TreeState>> {
+        self.state(py).clone()
+    }
+}
+
+py_class!(pub class treestate |py| {
     data state: Arc<Mutex<TreeState>>;
 
     def __new__(
