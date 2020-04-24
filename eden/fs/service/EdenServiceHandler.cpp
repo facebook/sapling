@@ -374,7 +374,6 @@ void EdenServiceHandler::checkOutRevision(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::string> hash,
     CheckoutMode checkoutMode) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG1,
       *mountPoint,
@@ -385,9 +384,6 @@ void EdenServiceHandler::checkOutRevision(
   auto edenMount = server_->getMount(*mountPoint);
   auto checkoutFuture = edenMount->checkout(hashObj, checkoutMode);
   results = std::move(std::move(checkoutFuture).get().conflicts);
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::resetParentCommits(

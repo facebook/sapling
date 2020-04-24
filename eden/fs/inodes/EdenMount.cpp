@@ -10,6 +10,7 @@
 #include <boost/filesystem.hpp>
 #include <folly/ExceptionWrapper.h>
 #include <folly/FBString.h>
+#include <folly/stop_watch.h>
 
 #include <folly/chrono/Conv.h>
 #include <folly/futures/Future.h>
@@ -21,6 +22,7 @@
 
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeMap.h"
@@ -54,7 +56,6 @@
 #include <folly/Subprocess.h>
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
-#include "eden/fs/inodes/CheckoutContext.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/utils/FutureSubprocess.h"
@@ -808,6 +809,7 @@ folly::Future<InodePtr> EdenMount::resolveSymlinkImpl(
         });
       });
 }
+#endif
 
 folly::Future<CheckoutResult> EdenMount::checkout(
     Hash snapshotHash,
@@ -895,6 +897,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
         ctx->start(this->acquireRenameLock());
 
         checkoutTimes->didAcquireRenameLock = stopWatch.elapsed();
+#ifndef _WIN32
 
         /**
          * If a significant number of tree inodes are loaded or referenced
@@ -914,6 +917,8 @@ folly::Future<CheckoutResult> EdenMount::checkout(
          * affected.
          */
         this->getRootInode()->unloadChildrenUnreferencedByFuse();
+
+#endif // !1
 
         return this->getRootInode()->checkout(ctx.get(), fromTree, toTree);
       })
@@ -998,6 +1003,7 @@ folly::Future<CheckoutResult> EdenMount::checkout(
       });
 }
 
+#ifndef _WIN32
 folly::Future<folly::Unit> EdenMount::chown(uid_t uid, gid_t gid) {
   // 1) Ensure that all future opens will by default provide this owner
   setOwner(uid, gid);
