@@ -45,8 +45,36 @@ pub struct PathTrackingRoute {
 }
 
 impl PathTrackingRoute {
-    fn sampling_fingerprint(&self) -> Option<u64> {
-        self.path.as_ref().and_then(|p| p.sampling_fingerprint())
+    fn evolve_path<'a>(
+        route: Option<&'a Self>,
+        from_step: Option<&'a WrappedPath>,
+        target: &'a Node,
+    ) -> Option<&'a WrappedPath> {
+        match from_step {
+            // Step has set explicit path, e.g. bonsai file
+            Some(from_step) => Some(from_step),
+            None => match target.stats_path() {
+                // Path is part of node identity
+                Some(from_node) => Some(from_node),
+                // No per-node path, so use the route
+                None => route.and_then(|r| r.path.as_ref()),
+            },
+        }
+    }
+
+    fn evolve(route: Option<Self>, path: Option<&WrappedPath>, target: &Node) -> Self {
+        let new_path = PathTrackingRoute::evolve_path(route.as_ref(), path, target);
+
+        // reuse same route if possible
+        if new_path == route.as_ref().and_then(|r| r.path.as_ref()) {
+            if let Some(route) = route {
+                return route;
+            }
+        }
+
+        Self {
+            path: new_path.cloned(),
+        }
     }
 }
 
@@ -62,32 +90,18 @@ where
         step: &OutgoingEdge,
     ) -> CoreContext {
         if self.sample_node_types.contains(&step.target.get_type()) {
-            let should_sample = if self.sample_rate == 1 {
-                true
-            } else if self.sample_rate == 0 {
-                false
-            } else {
-                let sampling_fingerprint = match &step.path {
-                    // Step has set explicit path, e.g. bonsai file
-                    Some(_) => step.path.as_ref().and_then(|p| p.sampling_fingerprint()),
-                    None => match step.target.stats_path() {
-                        // Path is part of node identity
-                        Some(path_opt) => path_opt
-                            .as_ref()
-                            .map(|p| p.get_path_hash().sampling_fingerprint()),
-                        // No per-node path, so use the route
-                        None => match route {
-                            // A previous node provided a route
-                            Some(route) => route.sampling_fingerprint(),
-                            // No route available, e.g. at start
-                            None => step.target.sampling_fingerprint(),
-                        },
-                    },
-                };
-
-                sampling_fingerprint
-                    .map(|fp| fp % self.sample_rate == 0)
-                    .unwrap_or(true)
+            let should_sample = match self.sample_rate {
+                0 => false,
+                1 => true,
+                sample_rate => {
+                    let sampling_fingerprint =
+                        PathTrackingRoute::evolve_path(route, step.path.as_ref(), &step.target)
+                            .map_or_else(
+                                || step.target.sampling_fingerprint(),
+                                |r| r.sampling_fingerprint(),
+                            );
+                    sampling_fingerprint.map_or(true, |fp| fp % sample_rate == 0)
+                }
             };
 
             if should_sample {
@@ -110,26 +124,7 @@ where
         PathTrackingRoute,
         Vec<OutgoingEdge>,
     ) {
-        let route = match &current.path {
-            // Step has set explicit path, e.g. bonsai file
-            Some(path) => PathTrackingRoute {
-                path: Some(path.clone()),
-            },
-            None => match current.node.stats_path() {
-                // Path is part of node identity
-                Some(path) => PathTrackingRoute {
-                    path: Some(path.clone()),
-                },
-                // No per-node path, so use the route
-                None => match route {
-                    // A previous node provided a route
-                    Some(route) => route,
-                    // No route available, e.g. at start
-                    None => PathTrackingRoute::default(),
-                },
-            },
-        };
-
+        let route = PathTrackingRoute::evolve(route, current.path.as_ref(), &current.node);
         let (vout, _inner_route, outgoing) = self.inner.visit(ctx, current, Some(()), outgoing);
         (vout, route, outgoing)
     }
@@ -147,14 +142,13 @@ where
         step: &OutgoingEdge,
     ) -> CoreContext {
         if self.sample_node_types.contains(&step.target.get_type()) {
-            let should_sample = if self.sample_rate == 1 {
-                true
-            } else if self.sample_rate == 0 {
-                false
-            } else {
-                step.target
+            let should_sample = match self.sample_rate {
+                0 => false,
+                1 => true,
+                sample_rate => step
+                    .target
                     .sampling_fingerprint()
-                    .map_or(true, |fp| fp % self.sample_rate == 0)
+                    .map_or(true, |fp| fp % sample_rate == 0),
             };
 
             if should_sample {
