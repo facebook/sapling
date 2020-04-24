@@ -1249,7 +1249,9 @@ int TreeInode::tryRemoveChild(
   }
   deletedInode.reset();
 
-#ifndef _WIN32
+#ifdef _WIN32
+  cleanupPrjfsCache(name);
+#else
   // We have successfully removed the entry.
   // Flush the kernel cache for this entry if requested.
   if (flushKernelCache) {
@@ -2714,10 +2716,19 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   // attempt to finish.
   // We also have to load the inode if it is materialized so we can
   // check its contents to see if there are conflicts or not.
+#ifndef _WIN32
   if (entry.isMaterialized() ||
       getInodeMap()->isInodeRemembered(entry.getInodeNumber()) ||
       (kPreciseInodeNumberMemory && entry.isDirectory() &&
        getOverlay()->hasOverlayData(entry.getInodeNumber()))) {
+#else
+  // On Windows we need to load the all the entries to clean up the contents
+  // from the Projfs cache.
+  if (entry.isMaterialized() ||
+      (entry.isDirectory() &&
+       getOverlay()->hasOverlayData(entry.getInodeNumber()))) {
+#endif
+
     XLOG(DBG6) << "must load child: inode=" << getNodeId() << " child=" << name;
     // This child is potentially modified (or has saved state that must be
     // updated), but is not currently loaded. Start loading it and create a
@@ -2778,6 +2789,7 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
 
   wasDirectoryListModified = true;
 
+#ifndef _WIN32
   // Contents have changed and the entry is not materialized, but we may have
   // allocated and remembered inode numbers for this tree.  It's much faster to
   // simply forget the inode numbers we allocated here -- if we were a real
@@ -2791,7 +2803,6 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
     getOverlay()->recursivelyRemoveOverlayData(oldEntryInodeNumber);
   }
 
-#ifndef _WIN32
   // TODO: contents have changed: we probably should propagate
   // this information up to our caller so it can mark us
   // materialized if necessary.
@@ -2801,6 +2812,8 @@ unique_ptr<CheckoutAction> TreeInode::processCheckoutEntry(
   if (fuseChannel) {
     fuseChannel->invalidateEntry(getNodeId(), name);
   }
+#else
+  cleanupPrjfsCache(name);
 #endif // !_WIN32
 
   return nullptr;
@@ -2856,6 +2869,8 @@ Future<InvalidationRequired> TreeInode::checkoutUpdateEntry(
     // Tell FUSE to invalidate its cache for this entry.
 #ifndef _WIN32
     invalidateFuseEntryCache(name);
+#else
+    cleanupPrjfsCache(name);
 #endif
     // We don't save our own overlay data right now:
     // we'll wait to do that until the checkout operation finishes touching all
@@ -2979,6 +2994,21 @@ void TreeInode::invalidateFuseEntryCacheIfRequired(PathComponentPiece name) {
     return;
   }
   invalidateFuseEntryCache(name);
+}
+#else
+
+void TreeInode::cleanupPrjfsCache(PathComponentPiece name) {
+  {
+    auto optParent = getPath();
+    if (optParent.has_value()) {
+      auto relPath = optParent.value() + name;
+      getMount()->getFsChannel()->removeCachedFile(
+          edenToWinPath(relPath.stringPiece()).c_str());
+      XLOGF(DBG4, "removeCachedFile {}", relPath.stringPiece());
+    } else {
+      XLOG(ERR) << "Failed to get the Inode path to clean up the FS cache";
+    }
+  }
 }
 #endif
 

@@ -287,8 +287,8 @@ void Overlay::removeOverlayData(InodeNumber inodeNumber) {
 #endif // !_WIN32
 }
 
-void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
 #ifndef _WIN32
+void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
   IORequest req{this};
   auto dirData = backingOverlay_.loadOverlayDir(inodeNumber);
 
@@ -304,10 +304,8 @@ void Overlay::recursivelyRemoveOverlayData(InodeNumber inodeNumber) {
     gcQueue_.lock()->queue.emplace_back(std::move(*dirData));
     gcCondVar_.notify_one();
   }
-#else
-  NOT_IMPLEMENTED();
-#endif
 }
+#endif
 
 #ifndef _WIN32
 folly::Future<folly::Unit> Overlay::flushPendingAsync() {

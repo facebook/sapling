@@ -685,6 +685,12 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * need to tell the kernel about the change--it will automatically know.
    */
   void invalidateFuseEntryCacheIfRequired(PathComponentPiece name);
+#else
+  /**
+   * On Windows, Eden manages ProjectedFS cache. This function is to remove a
+   * file or folder from the cache.
+   */
+  void cleanupPrjfsCache(PathComponentPiece name);
 #endif
 
   /**
