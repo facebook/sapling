@@ -160,23 +160,47 @@ class PathMap : private folly::fbvector<std::pair<Key, Value>> {
    */
   iterator find(Piece key) {
     auto iter = lower_bound(key);
-    if (iter != end() && compare_(key, iter->first)) {
-      // We found the right slot, but it is occupied by a different key.
-      return end();
+    if (iter != end() && !compare_(key, iter->first)) {
+      // Found it
+      return iter;
     }
-    return iter;
+#ifdef _WIN32
+    // On Windows we need to do a case insensitive lookup for the file and
+    // directory names. For performance, we will do a case sensitive search
+    // first which should cover most of the cases and if not found then do a
+    // case sensitive search.
+    for (iter = begin(); iter != end(); ++iter) {
+      if (key.stringPiece().equals(
+              iter->first.stringPiece(), folly::AsciiCaseInsensitive())) {
+        return iter;
+      }
+    }
+#endif
+    return end();
   }
 
   /** Find using the Piece representation of a key.
    * Does not allocate a copy of the key string.
    */
   const_iterator find(Piece key) const {
-    const auto iter = lower_bound(key);
-    if (iter != end() && compare_(key, iter->first)) {
-      // We found the right slot, but it is occupied by a different key.
-      return end();
+    auto iter = lower_bound(key);
+    if (iter != end() && !compare_(key, iter->first)) {
+      // Found it
+      return iter;
     }
-    return iter;
+#ifdef _WIN32
+    // On Windows we need to do a case insensitive lookup for the file and
+    // directory names. For performance, we will do a case sensitive search
+    // first which should cover most of the cases and if not found then do a
+    // case sensitive search.
+    for (iter = begin(); iter != end(); ++iter) {
+      if (key.stringPiece().equals(
+              iter->first.stringPiece(), folly::AsciiCaseInsensitive())) {
+        return iter;
+      }
+    }
+#endif
+    return end();
   }
 
   /** Insert a new key-value pair.
