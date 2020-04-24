@@ -176,6 +176,7 @@ TEST(DiffTest, fileModified) {
           std::make_pair("src/1.txt", ScmFileStatus::MODIFIED)));
 }
 
+#ifndef _WIN32
 TEST(DiffTest, fileModeChanged) {
   DiffTest test;
   test.getMount().chmod("src/2.txt", 0755);
@@ -186,6 +187,8 @@ TEST(DiffTest, fileModeChanged) {
       UnorderedElementsAre(
           std::make_pair("src/2.txt", ScmFileStatus::MODIFIED)));
 }
+
+#endif // !_WIN32
 
 TEST(DiffTest, fileRemoved) {
   DiffTest test;
@@ -730,6 +733,7 @@ TEST(DiffTest, ignoreSystemLevelAndUser) {
           std::make_pair("skip_user.txt", ScmFileStatus::ADDED)));
 }
 
+#ifndef _WIN32
 // Test gitignore file which is a symlink
 TEST(DiffTest, ignoreSymlink) {
   DiffTest test({
@@ -772,6 +776,7 @@ TEST(DiffTest, ignoreSymlink) {
           std::make_pair("1.txt", ScmFileStatus::IGNORED),
           std::make_pair("ignore.txt", ScmFileStatus::IGNORED)));
 }
+#endif // !_WIN32
 
 // Test with a .gitignore file in the top-level directory
 TEST(DiffTest, ignoreInSubdirectories) {
