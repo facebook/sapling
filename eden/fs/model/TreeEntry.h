@@ -8,9 +8,7 @@
 #pragma once
 
 #include "eden/fs/model/Hash.h"
-#ifndef _WIN32
 #include "eden/fs/utils/DirType.h"
-#endif
 #include "eden/fs/utils/PathFuncs.h"
 
 #include <folly/String.h>
@@ -81,7 +79,6 @@ class TreeEntry {
     return type_;
   }
 
-#ifndef _WIN32
   dtype_t getDType() const {
     switch (type_) {
       case TreeEntryType::TREE:
@@ -89,13 +86,14 @@ class TreeEntry {
       case TreeEntryType::REGULAR_FILE:
       case TreeEntryType::EXECUTABLE_FILE:
         return dtype_t::Regular;
+#ifndef _WIN32
       case TreeEntryType::SYMLINK:
         return dtype_t::Symlink;
+#endif
       default:
         return dtype_t::Unknown;
     }
   }
-#endif //! _WIN32
 
   std::string toLogString() const;
 

@@ -29,18 +29,19 @@
 #else
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
-#include "eden/fs/inodes/EdenMount.h"
-#include "eden/fs/inodes/FileInode.h"
-#include "eden/fs/inodes/GlobNode.h"
 #include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeLoader.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
-#include "eden/fs/inodes/TreeInode.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 #endif // _WIN32
+
+#include "eden/fs/inodes/EdenMount.h"
+#include "eden/fs/inodes/FileInode.h"
+#include "eden/fs/inodes/GlobNode.h"
+#include "eden/fs/inodes/TreeInode.h"
 
 #include "eden/fs/config/CheckoutConfig.h"
 #include "eden/fs/model/Blob.h"
@@ -792,7 +793,6 @@ void EdenServiceHandler::glob(
     vector<string>& out,
     unique_ptr<string> mountPoint,
     unique_ptr<vector<string>> globs) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*globs));
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
@@ -822,14 +822,10 @@ void EdenServiceHandler::glob(
   } catch (const std::system_error& exc) {
     throw newEdenError(exc);
   }
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
     std::unique_ptr<GlobParams> params) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(
       DBG3,
       params->mountPoint,
@@ -917,9 +913,6 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
           .ensure([globRoot]() {
             // keep globRoot alive until the end
           }));
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 folly::Future<Unit> EdenServiceHandler::future_chown(

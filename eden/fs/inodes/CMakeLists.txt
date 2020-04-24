@@ -9,7 +9,6 @@ if(WIN32)
     REMOVE_ITEM
     INODES_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/EdenDispatcher.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/GlobNode.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/OverlayFile.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/OverlayFileAccess.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/InodeMetadata.cpp
