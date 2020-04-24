@@ -208,6 +208,22 @@ std::string getCounterNameForFuseRequests(
       RequestMetricsScope::stringOfRequestMetric(metric));
 }
 
+std::string normalizeMountPoint(StringPiece mountPath) {
+#ifdef _WIN32
+  auto normalized = mountPath.str();
+  for (auto& c : normalized) {
+    if (c == '/') {
+      c = '\\';
+    } else {
+      c = tolower(c);
+    }
+  }
+  return normalized;
+#else
+  return mountPath.str();
+#endif
+}
+
 } // namespace
 
 namespace facebook {
@@ -994,7 +1010,8 @@ void EdenServer::shutdownPrivhelper() {
 }
 
 void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
-  auto mountPath = edenMount->getPath().stringPiece();
+  auto mountPath = normalizeMountPoint(edenMount->getPath().stringPiece());
+
   {
     const auto mountPoints = mountPoints_.wlock();
     const auto ret = mountPoints->emplace(mountPath, EdenMountInfo(edenMount));
@@ -1354,6 +1371,10 @@ shared_ptr<EdenMount> EdenServer::getMount(StringPiece mountPath) const {
 }
 
 shared_ptr<EdenMount> EdenServer::getMountUnsafe(StringPiece mountPath) const {
+#ifdef _WIN32
+  auto normalized = normalizeMountPoint(mountPath);
+  mountPath = normalized;
+#endif
   const auto mountPoints = mountPoints_.rlock();
   const auto it = mountPoints->find(mountPath);
   if (it == mountPoints->end()) {

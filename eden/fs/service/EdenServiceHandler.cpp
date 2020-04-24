@@ -507,7 +507,6 @@ void EdenServiceHandler::removeBindMount(
 void EdenServiceHandler::getCurrentJournalPosition(
     JournalPosition& out,
     std::unique_ptr<std::string> mountPoint) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto edenMount = server_->getMount(*mountPoint);
   auto latest = edenMount->getJournal().getLatest();
@@ -520,12 +519,8 @@ void EdenServiceHandler::getCurrentJournalPosition(
     out.sequenceNumber = 0;
     out.snapshotHash = thriftHash(kZeroHash);
   }
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
-#ifndef _WIN32
 apache::thrift::ServerStream<JournalPosition>
 EdenServiceHandler::subscribeStreamTemporary(
     std::unique_ptr<std::string> mountPoint) {
@@ -612,7 +607,6 @@ EdenServiceHandler::subscribeStreamTemporary(
 
   return std::move(streamAndPublisher.first);
 }
-#endif // !_WIN32
 
 void EdenServiceHandler::getFilesChangedSince(
     FileDelta& out,
