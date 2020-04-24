@@ -47,14 +47,6 @@ class FakePrivHelper : public PrivHelper {
 using uid_t = int;
 using gid_t = int;
 
-struct InodePtr {
-  int stub;
-};
-
-struct TreeInodePtr {
-  int stub;
-};
-
 class TakeoverData {
  public:
   int stub;

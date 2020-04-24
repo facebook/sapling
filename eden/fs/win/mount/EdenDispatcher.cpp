@@ -10,7 +10,7 @@
 #include <folly/Format.h>
 #include <folly/logging/xlog.h>
 #include "ProjectedFSLib.h"
-#include "eden/fs/inodes/win/EdenMount.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/service/EdenError.h"

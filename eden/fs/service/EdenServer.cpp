@@ -30,6 +30,7 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/service/EdenCPUThreadPool.h"
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/service/EdenServiceHandler.h"
@@ -52,7 +53,6 @@
 #include "eden/fs/utils/ProcUtil.h"
 
 #ifdef _WIN32
-#include "eden/fs/inodes/win/EdenMount.h" // @manual
 #include "eden/fs/win/mount/PrjfsChannel.h" // @manual
 #include "eden/fs/win/service/StartupLogger.h" // @manual
 #include "eden/fs/win/utils/FileUtils.h" // @manual
@@ -61,7 +61,6 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
-#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
@@ -1130,22 +1129,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       serverState_->getThreadPool().get());
   auto journal = std::make_unique<Journal>(getSharedStats());
 
-#if _WIN32
-  // Create the EdenMount object and insert the mount into the mountPoints_
-  // map.
-  auto edenMount = EdenMount::create(
-      std::move(initialConfig),
-      std::move(objectStore),
-      blobCache_,
-      serverState_,
-      std::move(journal));
-  edenMount->initialize(std::make_unique<PrjfsChannel>(edenMount.get()));
-  addToMountPoints(edenMount);
-  edenMount->start();
-  (void)mountStopWatch;
-  return makeFuture<std::shared_ptr<EdenMount>>(std::move(edenMount));
-
-#else
   // Create the EdenMount object and insert the mount into the mountPoints_ map.
   auto edenMount = EdenMount::create(
       std::move(initialConfig),
@@ -1154,6 +1137,16 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       serverState_,
       std::move(journal));
   addToMountPoints(edenMount);
+
+#ifdef _WIN32
+  (void)
+      mountStopWatch; // TODO: log to StructuredLogger once supported on Windows
+  return edenMount->initialize(std::make_unique<PrjfsChannel>(edenMount.get()))
+      .thenValue([edenMount](folly::Unit) {
+        edenMount->start();
+        return edenMount;
+      });
+#else
   registerStats(edenMount);
 
   // Now actually begin starting the mount point
@@ -1221,6 +1214,8 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
               }
             })
             .thenTry([this, mountStopWatch, doTakeover, edenMount](auto&& t) {
+              // TODO: Include this to work on Windows when getting the event
+              // logging working.
               FinishedMount event;
               event.repo_type = edenMount->getConfig()->getRepoType();
               event.repo_source =

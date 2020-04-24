@@ -3,47 +3,61 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-if (WIN32)
-  # We should try detaching ServerState from the inodes
-  # so that we don't need to make the Windows code depend
-  # on it.
-  add_library(
-    eden_inodes STATIC
-      ServerState.cpp
-      win/DirList.cpp
-      win/DirList.h
-      win/EdenMount.cpp
-      win/EdenMount.h
-      win/RepoConfig.cpp
-      win/RepoConfig.h
+if(WIN32)
+  file(GLOB INODES_SRCS "*.cpp" "win/*.cpp" "sqliteoverlay/*.cpp")
+  list(
+    REMOVE_ITEM
+    INODES_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/EdenDispatcher.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/GlobNode.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/OverlayFile.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/OverlayFileAccess.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/InodeMetadata.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/win/EdenMount.cpp
   )
-  target_link_libraries(
-    eden_inodes
-    PUBLIC
-      eden_journal
-      eden_store
-      Folly::folly
+  list(
+    APPEND
+    INODES_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/../fuse/InodeNumber.cpp
   )
 else()
   file(GLOB INODES_SRCS "*.cpp")
-  add_library(
-    eden_inodes STATIC
-      ${INODES_SRCS}
-  )
+endif()
+
+add_library(
+  eden_inodes STATIC
+    ${INODES_SRCS}
+)
+
+target_link_libraries(
+  eden_inodes
+  PUBLIC
+    eden_config
+    eden_journal
+    eden_model_git
+    eden_overlay_thrift_cpp
+    eden_service_thrift_util
+    eden_sqlite
+    eden_store
+    eden_telemetry
+    eden_utils
+    Folly::folly
+)
+
+if (WIN32)
   target_link_libraries(
     eden_inodes
     PUBLIC
-      eden_config
+      eden_win_utils
+  )
+else()
+  target_link_libraries(
+    eden_inodes
+    PUBLIC
       eden_fuse
-      eden_journal
-      eden_model_git
-      eden_overlay_thrift_cpp
       eden_overlay
       eden_service
-      eden_store
       eden_takeover_thrift
-      eden_telemetry
-      eden_utils
   )
 endif()
 

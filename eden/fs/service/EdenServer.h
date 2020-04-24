@@ -27,6 +27,7 @@
 #include <condition_variable>
 
 #include "eden/fs/config/EdenConfig.h"
+#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/ServerState.h"
 #include "eden/fs/service/EdenStateDir.h"
 #include "eden/fs/service/PeriodicTask.h"
@@ -36,12 +37,10 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 #ifdef _WIN32
-#include "eden/fs/inodes/win/EdenMount.h" // @manual
 #include "eden/fs/win/utils/Stub.h" // @manual
 #include "eden/fs/win/utils/UserInfo.h" // @manual
 #else
 #include "eden/fs/fuse/FuseTypes.h"
-#include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #endif
 
