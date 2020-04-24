@@ -367,6 +367,8 @@ Check the repo.pull API
 
   $ setconfig remotenames.autopullprefix=default/
   $ hg log -r default/thirdbook::default/master -T '{node} {desc} {remotenames}\n'
+  pulling bookmark 'thirdbook::default/master' from 'ssh://user@dummy/remoterepo'
+  pull failed: *unknown revision 'thirdbook::default/master'* (glob)
   pulling bookmark 'thirdbook' from 'ssh://user@dummy/remoterepo'
   pulling bookmark 'master' from 'ssh://user@dummy/remoterepo'
   1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 First default/thirdbook
@@ -384,19 +386,18 @@ Check the repo.pull API
   [255]
   $ setconfig 'remotenames.autopullhoistpattern=re:.*'
   $ hg log -r thirdbook::master -T '{node} {desc} {remotenames}\n'
+  pulling bookmark 'thirdbook::master' from 'ssh://user@dummy/remoterepo'
   pulling bookmark 'thirdbook' from 'ssh://user@dummy/remoterepo'
   pulling bookmark 'master' from 'ssh://user@dummy/remoterepo'
   1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 First default/thirdbook
   0238718db2b174d2622ae9c4c75d61745eb12b25 Move master bookmark 
   a81520e7283a6967ec1d82620b75ab92f5478638 push commit default/master
 
--- Suboptimal: Names with revset operators cannot be pulled without escaping.
+-- Names with revset operators can also be auto pulled.
 
-  $ hg log -r book-with-dashes
-  pulling bookmark 'book' from 'ssh://user@dummy/remoterepo'
-  abort: unknown revision 'book'!
-  (if book is a remote bookmark or commit, try to 'hg pull' it first)
-  [255]
+  $ hg log -r book-with-dashes -T '{desc}\n'
+  pulling bookmark 'book-with-dashes' from 'ssh://user@dummy/remoterepo'
+  First
 
 -- Quoting works:
 

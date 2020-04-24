@@ -239,6 +239,7 @@ Changelog missing entry
   $ hg verify -q -r 0
   warning: failed to inspect working copy parent
   warning: failed to inspect working copy parent
+  warning: failed to inspect working copy parent
   $ hg verify -q -r 1
   warning: failed to inspect working copy parent
   abort: 00changelog.i@c5ddb05ab828: no node!
@@ -292,6 +293,7 @@ Changelog and manifest log missing entry
   $ hg verify -q -r 0
   warning: failed to inspect working copy parent
   warning: failed to inspect working copy parent
+  warning: failed to inspect working copy parent
   $ hg verify -q -r 1
   warning: failed to inspect working copy parent
   abort: 00changelog.i@c5ddb05ab828: no node!
@@ -309,6 +311,7 @@ Changelog and filelog missing entry
   3 integrity errors encountered!
   [1]
   $ hg verify -q -r 0
+  warning: failed to inspect working copy parent
   warning: failed to inspect working copy parent
   warning: failed to inspect working copy parent
   $ hg verify -q -r 1

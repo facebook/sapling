@@ -24,7 +24,7 @@ ssh = python "$TESTDIR/dummyssh"
 branchpattern=re:scratch/.*
 bgssh = python "$TESTDIR/dummyssh" -bgssh
 [remotenames]
-autopullhoistpattern=re:.*
+autopullhoistpattern=re:^[a-z0-9A-Z/]*$
 hoist=default
 EOF
 }

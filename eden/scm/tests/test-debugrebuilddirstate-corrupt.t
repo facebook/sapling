@@ -24,3 +24,4 @@ Deliberately corrupt the dirstate.
   $ hg debugrebuilddirstate
   warning: failed to inspect working copy parent
   warning: failed to inspect working copy parent
+  warning: failed to inspect working copy parent

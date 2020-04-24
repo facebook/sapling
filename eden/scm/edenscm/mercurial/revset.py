@@ -195,6 +195,12 @@ _commithashre = re.compile(r"\A[0-9a-f]{6,40}\Z")
 
 def _autopull(repo, x):
     """Pull the given name x. Return true if pull succeeded. Does not raise."""
+    repo._autopulled = getattr(repo, "_autopulled", set())
+    if x in repo._autopulled:
+        # Do not attempt to pull the same name twice.
+        return False
+    repo._autopulled.add(x)
+
     # If paths.default is not set. Do not attempt to pull.
     if repo.ui.paths.get("default") is None:
         return False
@@ -2688,6 +2694,7 @@ def matchany(ui, specs, repo=None, localalias=None):
     lookup = None
     if repo:
         lookup = repo.__contains__
+
     if len(specs) == 1:
         tree = revsetlang.parse(specs[0], lookup)
     else:
@@ -2710,7 +2717,31 @@ def matchany(ui, specs, repo=None, localalias=None):
     if repo is not None:
         lookup = repo.unfiltered().__contains__
         unknownnames = list(scanunknowns([tree], lookup))
+        # If there appears to be unknown names, attempt to auto pull the full
+        # revset name first. For example, for "releases/foo-bar-2010.1.1",
+        # unknown names are "releases/foo", "bar", and "2010.1.1". Attempt to
+        # resolve "releases/foo-bar-2010.1.1" as a whole first. This is an
+        # optimization to reduce network lookups for the common case
+        # (ex. hg up releases/foo-bar-2010.1.1). Other cases (ex.
+        # hg log -r '"releases/foo-2010"::"releases/foo-2020"') will have more
+        # network lookups if `"releases/foo-2010"::"releases/foo-2020"` matches
+        # the configured autopull pattern.
+        #
+        # The order of auto-pull attempts is:
+        # - Use parsed revset if symbols seem to be locally resolvable (no
+        #   auto-pull).
+        # - Auto-pull the whole name.
+        # - Auto-pull individual names in the parsed revset.
         if unknownnames:
+            # Auto-pull the whole name.
+            resolved = False
+            for spec in specs:
+                if not lookup(spec):
+                    resolved = resolved or _autopull(repo, spec)
+            if resolved:
+                # Re-parse the revset specs.
+                return matchany(ui, specs, repo, localalias)
+            # Auto-pull individual names in the parsed revset.
             for name in unknownnames:
                 if not _autopull(repo, name):
                     break
