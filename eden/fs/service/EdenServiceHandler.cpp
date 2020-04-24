@@ -759,7 +759,7 @@ EdenServiceHandler::semifuture_getFileInformation(
                               [](Dispatcher::Attr attr) {
                                 FileInformation info;
                                 info.size = attr.st.st_size;
-                                auto& ts = stMtime(attr.st);
+                                auto ts = stMtime(attr.st);
                                 info.mtime.seconds = ts.tv_sec;
                                 info.mtime.nanoSeconds = ts.tv_nsec;
                                 info.mode = attr.st.st_mode;
