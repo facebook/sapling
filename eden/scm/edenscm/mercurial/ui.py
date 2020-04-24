@@ -1195,6 +1195,15 @@ class ui(object):
             opts[r"label"] = opts.get(r"label", "") + " ui.status"
             self.write(*msg, **opts)
 
+    def status_err(self, *msg, **opts):
+        """write status message to ferr (if ui.quiet is False)
+
+        This adds an output label of "ui.status".
+        """
+        if not self.quiet:
+            opts[r"label"] = opts.get(r"label", "") + " ui.status"
+            self.write_err(*msg, **opts)
+
     def warn(self, *msg, **opts):
         """write warning message to output (stderr)
 
@@ -1211,6 +1220,15 @@ class ui(object):
         if self.verbose:
             opts[r"label"] = opts.get(r"label", "") + " ui.note"
             self.write(*msg, **opts)
+
+    def note_err(self, *msg, **opts):
+        """write note to ferr (if ui.verbose is True)
+
+        This adds an output label of "ui.note".
+        """
+        if self.verbose:
+            opts[r"label"] = opts.get(r"label", "") + " ui.note"
+            self.write_err(*msg, **opts)
 
     def debug(self, *msg, **opts):
         """write debug message to output (if ui.debugflag is True)

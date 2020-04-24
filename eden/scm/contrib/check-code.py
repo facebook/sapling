@@ -455,7 +455,7 @@ split_remote_name sql_buglist start_response stream_in_shallow stream_out
 stream_out_shallow stream_wrap swap_out_encoding test_timeout transform_notgit
 tree_entry update_changeset update_hg_bookmarks update_references
 update_remote_branches upload_pack upstream_revs wrap_socket write_err
-write_rej zc_create_server
+write_rej zc_create_server status_err note_err
 
 active_diff add_padding_line address_family alias_default all_exportable
 all_files allhunks_re all_objects allowed_opts allow_read allow_reuse_address

@@ -225,7 +225,7 @@ Check that log shows the hint about selective pull
 
 By using "default/" the commit gets automatically pulled
   $ hg log -r default/thirdbook
-  attempt to pull default/thirdbook
+  pulling bookmark 'thirdbook' from 'ssh://user@dummy/remoterepo'
   changeset:   0:1449e7934ec1
   bookmark:    default/thirdbook
   hoistedname: thirdbook
@@ -233,7 +233,6 @@ By using "default/" the commit gets automatically pulled
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     First
   
-
 Set two bookmarks in selectivepulldefault, make sure both of them were pulled
   $ setconfig "remotenames.selectivepulldefault=master,thirdbook"
 
@@ -348,12 +347,36 @@ Check the repo.pull API
   
 - Auto pull in revset resolution
 
+-- For remote bookmark names:
+
   $ newrepo
   $ setconfig paths.default=ssh://user@dummy/remoterepo
+  $ setconfig remotenames.autopullprefix=
   $ hg log -r default/thirdbook::default/master -T '{node} {desc} {remotenames}\n'
-  attempt to pull default/thirdbook
-  attempt to pull default/master
+  abort: unknown revision 'default/thirdbook'!
+  (if default/thirdbook is a remote bookmark or commit, try to 'hg pull' it first)
+  [255]
+
+  $ setconfig remotenames.autopullprefix=default/
+  $ hg log -r default/thirdbook::default/master -T '{node} {desc} {remotenames}\n'
+  pulling bookmark 'thirdbook' from 'ssh://user@dummy/remoterepo'
+  pulling bookmark 'master' from 'ssh://user@dummy/remoterepo'
   1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 First default/thirdbook
   0238718db2b174d2622ae9c4c75d61745eb12b25 Move master bookmark 
   a81520e7283a6967ec1d82620b75ab92f5478638 push commit default/master
+
+-- For commit hashes:
+
+  $ newrepo
+  $ setconfig paths.default=ssh://user@dummy/remoterepo
+  $ hg log -r '::1449e7934ec1c4d0c2eefb1194c1cb70e78ba232'
+  pulling 1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 from 'ssh://user@dummy/remoterepo'
+  changeset:   0:1449e7934ec1
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     First
+  
+  $ hg update '0238718db^'
+  pulling 0238718db from 'ssh://user@dummy/remoterepo'
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

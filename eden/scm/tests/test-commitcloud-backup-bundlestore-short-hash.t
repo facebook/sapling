@@ -233,6 +233,14 @@ case 3a: very old commit, hash size 9 characters
     date: 01 Jan 1970 00:00
     summary: someothercommit3
   #commitcloud hint: if you would like to fetch this commit, please provide the full hash
+  pulling * from 'ssh://user@dummy/server' (glob)
+  pull failed: commit '*' is more than 31 days old (glob)
+  description:
+    changeset: * (glob)
+    author: test
+    date: 01 Jan 1970 00:00
+    summary: someothercommit3
+  #commitcloud hint: if you would like to fetch this commit, please provide the full hash
   abort: unknown revision '*'! (glob)
   (if * is a remote bookmark or commit, try to 'hg pull' it first) (glob)
   [255]
@@ -248,6 +256,14 @@ case 3b: 32 days old commit, hash size 12 characters
     date: * (glob)
     summary: someothercommit4
   #commitcloud hint: if you would like to fetch this commit, please provide the full hash
+  pulling * from 'ssh://user@dummy/server' (glob)
+  pull failed: commit '*' is more than 31 days old (glob)
+  description:
+    changeset: * (glob)
+    author: test
+    date: * (glob)
+    summary: someothercommit4
+  #commitcloud hint: if you would like to fetch this commit, please provide the full hash
   abort: unknown revision '*'! (glob)
   (if * is a remote bookmark or commit, try to 'hg pull' it first) (glob)
   [255]
@@ -255,6 +271,7 @@ case 3b: 32 days old commit, hash size 12 characters
 case 3ba: same test but check that output contains the full hash
   $ (cd ./client2 && hg up $my_new_commit4_hashlen12 2>&1 | grep $my_new_commit4)
   * changeset: * (glob)
+    changeset: * (glob)
 
 case 3b: 32 days old commit, hash size - full hash
   $ (cd ./client2 && hg up $my_new_commit4)
