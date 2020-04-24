@@ -64,7 +64,6 @@ class CachedParsedFileMonitor {
    * failed)
    */
   folly::Expected<T, int> getFileContents() {
-#ifndef _WIN32
     fileChangeMonitor_.invokeIfUpdated(
         [this](folly::File&& f, int errorNum, AbsolutePathPiece filePath) {
           processUpdatedFile(std::move(f), errorNum, filePath);
@@ -73,9 +72,6 @@ class CachedParsedFileMonitor {
       return folly::makeUnexpected<int>((int)lastErrno_);
     }
     return parsedData_;
-#else
-    NOT_IMPLEMENTED();
-#endif // !_WIN32
   }
 
   void processUpdatedFile(
