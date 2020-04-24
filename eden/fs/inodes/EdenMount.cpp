@@ -1445,5 +1445,110 @@ bool EdenMount::MountingUnmountingState::unmountStarted() const noexcept {
 EdenMountCancelled::EdenMountCancelled()
     : std::runtime_error{"EdenMount was unmounted during initialization"} {}
 
+#ifdef _WIN32
+FOLLY_NODISCARD bool EdenMount::fetchFileInfo(
+    const RelativePathPiece path,
+    FileMetadata& metadata) {
+  TreeInodePtr treeInode = getRootInode();
+  auto parent = path.dirname();
+
+  try {
+    auto child = getInode(path).get();
+    if (child->isDir()) {
+      treeInode = child.asTreePtr();
+      metadata.isDirectory = true;
+    } else {
+      auto fileInode = child.asFilePtr();
+      metadata.isDirectory = false;
+      auto optHash = fileInode->getBlobHash();
+      if (optHash.has_value()) {
+        metadata.size =
+            getObjectStore()
+                ->getBlobSize(
+                    optHash.value(), ObjectFetchContext::getNullContext())
+                .get();
+      } else {
+        // This function is designed to handle ProjectedFS requests, and will
+        // return 0 size for materialized files. The ProjectedFS, by it's design
+        // will not request the info for materialized files. And if it does the
+        // size info will be overwritten by ProjectedFs from its cache.
+        metadata.size = 0;
+      }
+    }
+    return true;
+
+  } catch (const std::system_error& ex) {
+    if (ex.code().value() == ENOENT) {
+      return false;
+    }
+    throw;
+  }
+  return false;
+}
+
+std::string EdenMount::readFile(const RelativePathPiece path) {
+  auto inode = getInode(path).get();
+  auto fileInode = inode.asFilePtr();
+  return fileInode->readAll(ObjectFetchContext::getNullContext()).get();
+}
+
+void EdenMount::createFile(const RelativePathPiece path, bool isDirectory) {
+  auto inode = getInode(path.dirname()).get();
+  auto treeInode = inode.asTreePtr();
+
+  if (isDirectory) {
+    treeInode->mkdir(path.basename(), _S_IFDIR);
+  } else {
+    treeInode->mknod(path.basename(), _S_IFREG, 0);
+  }
+}
+
+void EdenMount::materializeFile(const RelativePathPiece path) {
+  auto inode = getInode(path).get();
+
+  auto fileInode = inode.asFilePtr();
+  fileInode->materialize();
+}
+
+void EdenMount::removeFile(const RelativePathPiece path, bool isDirectory) {
+  auto inode = getInode(path.dirname()).get();
+  auto treeInode = inode.asTreePtr();
+
+  if (isDirectory) {
+    treeInode->rmdir(path.basename());
+  } else {
+    treeInode->unlink(path.basename());
+  }
+}
+
+void EdenMount::renameFile(
+    const RelativePathPiece oldpath,
+    const RelativePathPiece newpath) {
+  auto oldInode = getInode(oldpath.dirname()).get();
+  auto oldTreeInode = oldInode.asTreePtr();
+
+  auto newInode = getInode(newpath.dirname()).get();
+  auto newTreeInode = newInode.asTreePtr();
+
+  oldTreeInode->rename(oldpath.basename(), newTreeInode, newpath.basename());
+}
+
+DirList EdenMount::enumerateDirectory(const RelativePathPiece path) {
+  auto inode = getInode(path).get();
+  auto treeInode = inode.asTreePtr();
+
+  return treeInode->readdir();
+}
+
+void EdenMount::enumerateDirectory(
+    const RelativePathPiece path,
+    std::vector<FileMetadata>& list) {
+  auto inode = getInode(path).get();
+  auto treeInode = inode.asTreePtr();
+
+  treeInode->readdir(list);
+}
+#endif
+
 } // namespace eden
 } // namespace facebook

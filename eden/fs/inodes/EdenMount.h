@@ -35,7 +35,9 @@
 #include "eden/fs/inodes/OverlayFileAccess.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #else
+#include "eden/fs/inodes/win/DirList.h" // @manual
 #include "eden/fs/win/mount/FsChannel.h" // @manual
+#include "eden/fs/win/store/WinStore.h" // @manual
 #include "eden/fs/win/utils/Stub.h" // @manual
 #endif
 
@@ -668,6 +670,72 @@ class EdenMount {
    */
   void start();
   void stop();
+
+  /**
+   * The following functions are to fetch and set information in the Inode
+   * Tree. These are used by the ProjectedFS and TestMount for testing.
+   */
+
+  // TODO(puneetk): The following function should be updated to future based, so
+  // that we can executed them asynchronously. This would help to implement
+  // ProjectedFs Asynchronous Callback Handling:
+  // (https://docs.microsoft.com/en-us/windows/win32/projfs/asynchronous-callback-handling).
+
+  /**
+   * fetchFileInfo is mainly used by the ProjectedFS to fetch the file metadata.
+   * The size field contains the size from the backing repo and not the current
+   * file size. If the file is materialized then ProjectedFS will have the
+   * current file size.
+   */
+  FOLLY_NODISCARD bool fetchFileInfo(
+      const RelativePathPiece path,
+      FileMetadata& metadata);
+  /*
+   * readFile returns the file contents of the file. It gets the contents of the
+   * file from the backing store if it's not materialized. If the file is
+   * materialized, It will read the FS interface to fetch the file contents from
+   * ProjectedFs cache.
+   */
+  FOLLY_NODISCARD std::string readFile(const RelativePathPiece path);
+
+  /**
+   * enumerateDirectory will fetch the directory entries for the given path.
+   * Same as fetchFileInfo, the file size here will be the size from backing
+   * repo and not the current file size.
+   */
+
+  FOLLY_NODISCARD DirList enumerateDirectory(const RelativePathPiece path);
+  void enumerateDirectory(
+      const RelativePathPiece path,
+      std::vector<FileMetadata>& list);
+
+  /*
+   * createFile function is to create a the file or directory in the InodeTree.
+   * This gets called in response of a new file or directory getting created by
+   * user on the FS. This will never be called for a file which exists in the
+   * backing repo.
+   */
+  void createFile(const RelativePathPiece path, bool isDirectory);
+
+  /*
+   * materializeFile is called to report that the file contents are modified.
+   * This is called by ProjectedFS when a file is closed after modification.
+   */
+  void materializeFile(const RelativePathPiece path);
+
+  /*
+   * removeFile is to remove a file or directory from the inode tree.
+   */
+  void removeFile(const RelativePathPiece path, bool isDirectory);
+
+  /**
+   * renameFile will rename a file or directory in the inode tree.
+   *
+   * This functions is called by ProjectedFS and TestMount to rename a file.
+   */
+  void renameFile(
+      const RelativePathPiece oldpath,
+      const RelativePathPiece newpath);
 
 #endif
 
