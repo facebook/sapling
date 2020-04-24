@@ -30,6 +30,20 @@ class PrjfsChannel : public FsChannel {
   void start();
   void stop();
 
+  /**
+   * Remove files from the Projected FS cache. removeCachedFile() doesn't care
+   * about the file state and will remove file in any state.
+   */
+  void removeCachedFile(const wchar_t* path) override;
+
+  /**
+   * Remove tombstones from the Projected FS cache. Tombstones are Windows
+   * reparse points created to keep track of deleted files on the file system.
+   * removeDeletedFile() doesn't care about the file state and will remove file
+   * in any state.
+   */
+  void removeDeletedFile(const wchar_t* path) override;
+
  private:
   static HRESULT CALLBACK startEnumeration(
       const PRJ_CALLBACK_DATA* callbackData,
@@ -64,6 +78,8 @@ class PrjfsChannel : public FsChannel {
 
   static void CALLBACK
   cancelOperation(const PRJ_CALLBACK_DATA* callbackData) noexcept;
+
+  void deleteFile(const wchar_t* path, PRJ_UPDATE_TYPES updateFlags);
 
  private:
   /**

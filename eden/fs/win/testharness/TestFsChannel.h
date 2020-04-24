@@ -20,6 +20,9 @@ class TestFsChannel : public FsChannel {
   virtual ~TestFsChannel() = default;
   virtual void start() override {}
   virtual void stop() override {}
+
+  virtual void removeCachedFile(const wchar_t* path) override {}
+  virtual void removeDeletedFile(const wchar_t* path) override {}
 };
 
 } // namespace eden

@@ -196,5 +196,36 @@ HRESULT PrjfsChannel::notification(
   return S_OK;
 }
 
+void PrjfsChannel::deleteFile(
+    const wchar_t* path,
+    PRJ_UPDATE_TYPES updateFlags) {
+  PRJ_UPDATE_FAILURE_CAUSES failureReason;
+  HRESULT hr = PrjDeleteFile(mountChannel_, path, updateFlags, &failureReason);
+  if (hr != S_OK) {
+    XLOGF(
+        DBG6,
+        "Failed to delete disk file {} reason: {} error: {}",
+        winToEdenPath(path),
+        static_cast<uint32_t>(failureReason),
+        hr);
+    // We aren't maintainting the information about which files were created
+    // by the user vs through Eden backing store. The Projected FS will not
+    // create tombstones when the user created files are renamed or deleted.
+    // Until we have that information we cannot throw an exception on failure
+    // here.
+  }
+}
+
+void PrjfsChannel::removeCachedFile(const wchar_t* path) {
+  deleteFile(
+      path,
+      PRJ_UPDATE_ALLOW_DIRTY_METADATA | PRJ_UPDATE_ALLOW_DIRTY_DATA |
+          PRJ_UPDATE_ALLOW_READ_ONLY | PRJ_UPDATE_ALLOW_TOMBSTONE);
+}
+
+void PrjfsChannel::removeDeletedFile(const wchar_t* path) {
+  deleteFile(path, PRJ_UPDATE_ALLOW_TOMBSTONE);
+}
+
 } // namespace eden
 } // namespace facebook
