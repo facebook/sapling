@@ -1492,7 +1492,7 @@ function log() {
 }
 
 # Default setup that many of the test use
-function default_setup_blobimport() {
+function default_setup_pre_blobimport() {
   setup_common_config "$@"
   cd "$TESTTMP" || exit 1
 
@@ -1520,6 +1520,10 @@ EOF
   log -r ":"
 
   cd .. || exit 1
+}
+
+function default_setup_blobimport() {
+  default_setup_pre_blobimport "$@"
   echo "blobimporting"
   blobimport repo-hg/.hg repo
 }

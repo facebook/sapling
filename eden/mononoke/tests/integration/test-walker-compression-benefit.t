@@ -7,7 +7,7 @@
   $ . "${TEST_FIXTURES}/library.sh"
 
 setup configuration
-  $ default_setup_blobimport "blob_files"
+  $ default_setup_pre_blobimport "blob_files"
   hg repo
   o  C [draft;rev=2;26805aba1e60]
   |
@@ -15,7 +15,7 @@ setup configuration
   |
   o  A [draft;rev=0;426bada5c675]
   $
-  blobimporting
+  $ blobimport repo-hg/.hg repo --derived-data-type=fsnodes
 
 compression-benefit, file content only, not expecting any compression from the tiny test files
   $ mononoke_walker --storage-id=blobstore --readonly-storage --cachelib-only-blobstore compression-benefit -q --bookmark master_bookmark --sample-rate 1 --include-sample-node-type FileContent 2>&1 | strip_glog
@@ -32,5 +32,5 @@ compression-benefit, all compressible types
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
-  Raw/s,Compressed/s,Raw,Compressed,%Saving; Delta */s,*/s,2168,2139,1%,0s; Run */s,*/s,2168,2139,1%,*s; Type:Raw,Compressed,%Saving AliasContentMapping:333,333,0% BonsaiChangeset:277,277,0% BonsaiFsnodeMapping:0,0,0% BonsaiHgMapping:281,281,0% Bookmark:0,0,0% FileContent:12,12,0% FileContentMetadata:351,351,0% Fsnode:0,0,0% HgBonsaiMapping:0,0,0% HgChangeset:281,281,0% HgFileEnvelope:189,189,0% HgFileNode:0,0,0% HgManifest:444,415,6%* (glob)
+  Raw/s,Compressed/s,Raw,Compressed,%Saving; Delta */s,*/s,3086,3057,0%,*s; Run */s,*/s,3086,3057,0%,*s; Type:Raw,Compressed,%Saving AliasContentMapping:333,333,0% BonsaiChangeset:277,277,0% BonsaiFsnodeMapping:96,96,0% BonsaiHgMapping:281,281,0% Bookmark:0,0,0% FileContent:12,12,0% FileContentMetadata:351,351,0% Fsnode:822,822,0% HgBonsaiMapping:0,0,0% HgChangeset:281,281,0% HgFileEnvelope:189,189,0% HgFileNode:0,0,0% HgManifest:444,415,6%* (glob)
   Walked/s,* (glob)
