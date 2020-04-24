@@ -8,7 +8,7 @@
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::{BlobRepo, DangerousOverride};
-use blobstore::{Blobstore, Loadable};
+use blobstore::{Blobstore, BlobstoreBytes, Loadable};
 use cacheblob::MemWritesBlobstore;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
@@ -67,6 +67,48 @@ impl FsnodeCleaner {
 
         (s, repo)
     }
+
+    async fn clean_cache(
+        &mut self,
+        entries_to_preserve: Vec<(String, BlobstoreBytes)>,
+    ) -> Result<(), Error> {
+        let ctx = &self.ctx;
+        let repo = &self.repo;
+        {
+            let mut cache = self.memblobstore.get_cache().lock().unwrap();
+            info!(ctx.logger(), "cache entries: {}", cache.len());
+            let mut to_delete = vec![];
+            {
+                for key in cache.keys() {
+                    // That seems to be the best way of detecting if it's fsnode key or not...
+                    if key.contains(&FsnodeId::blobstore_key_prefix()) {
+                        to_delete.push(key.clone());
+                    }
+                }
+            }
+
+            for key in to_delete {
+                cache.remove(&key);
+            }
+            info!(ctx.logger(), "cache entries after cleanup: {}", cache.len());
+        }
+        info!(
+            ctx.logger(),
+            "finished cleanup, preserving {}",
+            entries_to_preserve.len()
+        );
+        stream::iter(entries_to_preserve)
+            .map(|(key, value)| {
+                debug!(ctx.logger(), "preserving: {}", key);
+                // Note - it's important to use repo.get_blobstore() and not
+                // use mem_writes blobstore. This is repo.get_blobstore()
+                // add a few wrapper blobstores (e.g. the one that adds repo prefix)
+                repo.get_blobstore().put(ctx.clone(), key, value).compat()
+            })
+            .map(Result::<_, Error>::Ok)
+            .try_for_each_concurrent(100, |f| async move { f.await })
+            .await
+    }
 }
 
 // Fsnode cleaner for dry-run backfill mode. It's job is to delete all fsnodes entries
@@ -106,90 +148,48 @@ impl Cleaner for FsnodeCleaner {
 
         if self.commits_since_last_clean >= self.clean_period {
             self.commits_since_last_clean = 0;
-            clean_fsnodes(&self.ctx, &self.repo, &self.memblobstore, &self.alive).await?;
+            let entries_to_preserve =
+                find_entries_to_preserve(&self.ctx, &self.repo, &self.alive).await?;
+
+            self.clean_cache(entries_to_preserve).await?;
         }
 
         Ok(())
     }
 }
 
-// The actual fsnode cleaner - it lists all entries reachable from cs_to_preserve, and
-// removes everything else
-async fn clean_fsnodes<B: Blobstore + Clone>(
+// Finds entries that are still reachable from cs_to_preserve and returns
+// corresponding blobs that needs to be saved
+async fn find_entries_to_preserve(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    blobstore: &Arc<MemWritesBlobstore<B>>,
     cs_to_preserve: &HashSet<ChangesetId>,
-) -> Result<(), Error> {
-    let fsnode_entries_to_preserve = cs_to_preserve
+) -> Result<Vec<(String, BlobstoreBytes)>, Error> {
+    cs_to_preserve
         .iter()
         .map(|cs_id| async move {
             let root_fsnode = RootFsnodeId::derive(ctx.clone(), repo.clone(), *cs_id)
                 .compat()
                 .await?;
-            root_fsnode
-                .fsnode_id()
-                .list_tree_entries(ctx.clone(), repo.get_blobstore())
-                .compat()
-                .map_ok(|(_, mf_id)| async move {
-                    let mf = mf_id
-                        .load(ctx.clone(), &repo.get_blobstore())
-                        .compat()
-                        .await?;
-                    Ok((mf_id, mf))
-                })
-                .try_buffer_unordered(100)
-                .try_collect::<Vec<_>>()
-                .await
+            Result::<_, Error>::Ok(
+                root_fsnode
+                    .fsnode_id()
+                    .list_tree_entries(ctx.clone(), repo.get_blobstore())
+                    .compat()
+                    .map_ok(move |(_, mf_id)| async move {
+                        let mf = mf_id
+                            .load(ctx.clone(), &repo.get_blobstore())
+                            .compat()
+                            .await?;
+                        Ok((mf_id.blobstore_key(), mf.into_blob().into()))
+                    })
+                    .try_buffer_unordered(100),
+            )
         })
         .collect::<FuturesUnordered<_>>()
+        .try_flatten()
         .try_collect::<Vec<_>>()
-        .await?;
-
-    {
-        let mut cache = blobstore.get_cache().lock().unwrap();
-        info!(ctx.logger(), "cache entries: {}", cache.len());
-        let mut to_delete = vec![];
-        {
-            for key in cache.keys() {
-                // That seems to be the best way of detecting if it's fsnode key or not...
-                if key.contains(&FsnodeId::blobstore_key_prefix()) {
-                    to_delete.push(key.clone());
-                }
-            }
-        }
-
-        for key in to_delete {
-            cache.remove(&key);
-        }
-        info!(ctx.logger(), "cache entries after cleanup: {}", cache.len());
-    }
-    let fsnode_entries_to_preserve = fsnode_entries_to_preserve
-        .into_iter()
-        .flatten()
-        .collect::<Vec<_>>();
-    info!(
-        ctx.logger(),
-        "finished cleanup, preserving {}",
-        fsnode_entries_to_preserve.len()
-    );
-    stream::iter(fsnode_entries_to_preserve)
-        .map(|(fsnode_id, fsnode)| {
-            let key = fsnode_id.blobstore_key();
-            debug!(ctx.logger(), "preserving: {}", key);
-            let blob = fsnode.into_blob();
-            // Note - it's important to use repo.get_blobstore() and not
-            // use mem_writes blobstore. This is repo.get_blobstore()
-            // add a few wrapper blobstores (e.g. the one that adds repo prefix)
-            repo.get_blobstore()
-                .put(ctx.clone(), key, blob.into())
-                .compat()
-        })
-        .map(Result::<_, Error>::Ok)
-        .try_for_each_concurrent(100, |f| async move { f.await })
-        .await?;
-
-    Ok(())
+        .await
 }
 
 #[cfg(test)]
