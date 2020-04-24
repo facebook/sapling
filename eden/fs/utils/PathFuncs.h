@@ -1822,6 +1822,16 @@ struct formatter<facebook::eden::detail::AbsolutePathBase<Storage>>
     return formatter<string_view>::format({sp.data(), sp.size()}, ctx);
   }
 };
+
+template <typename Storage>
+struct formatter<facebook::eden::detail::RelativePathBase<Storage>>
+    : formatter<string_view> {
+  using Path = facebook::eden::detail::RelativePathBase<Storage>;
+  auto format(const Path& p, format_context& ctx) {
+    auto sp = p.stringPiece();
+    return formatter<string_view>::format({sp.data(), sp.size()}, ctx);
+  }
+};
 } // namespace fmt
 
 namespace folly {

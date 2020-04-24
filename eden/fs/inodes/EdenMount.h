@@ -314,7 +314,15 @@ class EdenMount {
     return &blobAccess_;
   }
 
-#ifndef _WIN32
+#ifdef _WIN32
+  /**
+   * Return the pointer to FsChannel on Windows
+   */
+  FsChannel* getFsChannel() const {
+    return fsChannel_.get();
+  }
+
+#else
   /**
    * Return the EdenDispatcher used for this mount.
    */

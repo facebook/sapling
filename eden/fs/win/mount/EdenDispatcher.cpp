@@ -38,14 +38,6 @@ struct PrjAlignedBufferDeleter {
 constexpr uint32_t kMinChunkSize = 512 * 1024; // 512 KB
 constexpr uint32_t kMaxChunkSize = 5 * 1024 * 1024; // 5 MB
 
-#ifdef NDEBUG
-// Some of the following functions will be called with a high frequency.
-// Creating a way to totally take out the calls in the free builds.
-#define TRACE(fmt, ...)
-#else
-#define TRACE(fmt, ...) XLOG(DBG6) << sformat(fmt, ##__VA_ARGS__)
-#endif
-
 EdenDispatcher::EdenDispatcher(EdenMount& mount)
     : mount_{mount}, winStore_{mount} {
   XLOGF(
@@ -63,17 +55,16 @@ HRESULT EdenDispatcher::startEnumeration(
     std::vector<FileMetadata> list;
     wstring path{callbackData.FilePathName};
 
-    TRACE(
+    XLOGF(
+        DBG6,
         "startEnumeration mount (0x{:x}) root ({}) path ({}) process ({})",
         reinterpret_cast<uintptr_t>(&getMount()),
         getMount().getPath(),
         wideToMultibyteString(path),
         wideToMultibyteString(callbackData.TriggeringProcessImageFileName));
 
-    if (!winStore_.getAllEntries(path, list)) {
-      TRACE("File not found path ({})", wideToMultibyteString(path));
-      return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
-    }
+    auto relPath = wideCharToEdenRelativePath(path);
+    getMount().enumerateDirectory(relPath.piece(), list);
 
     auto [iterator, inserted] = enumSessions_.wlock()->emplace(
         enumerationId,
@@ -141,7 +132,8 @@ HRESULT EdenDispatcher::getEnumerationData(
       fileInfo.IsDirectory = entry->isDirectory;
       fileInfo.FileSize = entry->size;
 
-      TRACE(
+      XLOGF(
+          DBG6,
           "Enum {} {} size= {}",
           wideToMultibyteString(entry->name),
           fileInfo.IsDirectory ? "Dir" : "File",
@@ -164,15 +156,16 @@ HRESULT
 EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
   try {
     PRJ_PLACEHOLDER_INFO placeholderInfo = {};
-    const std::wstring_view path{callbackData.FilePathName};
     FileMetadata metadata = {};
+    auto relPath = wideCharToEdenRelativePath(callbackData.FilePathName);
 
-    if (!winStore_.getFileMetadata(path, metadata)) {
-      TRACE("{} : File not Found", wideToMultibyteString(path));
+    if (!mount_.fetchFileInfo(relPath.piece(), metadata)) {
+      XLOGF(DBG6, "{} : File not Found", relPath);
       return HRESULT_FROM_WIN32(ERROR_FILE_NOT_FOUND);
     }
 
-    TRACE(
+    XLOGF(
+        DBG6,
         "Found {} {} size= {} process {}",
         wideToMultibyteString(metadata.name),
         metadata.isDirectory ? "Dir" : "File",
@@ -197,7 +190,7 @@ EdenDispatcher::getFileInfo(const PRJ_CALLBACK_DATA& callbackData) noexcept {
       XLOGF(
           DBG2,
           "Failed to send the file info. file {} error {} msg {}",
-          wideToMultibyteString(path),
+          relPath,
           result,
           win32ErrorToString(result));
     }
@@ -374,24 +367,50 @@ void EdenDispatcher::notification(
     bool isDirectory,
     PRJ_NOTIFICATION notificationType,
     PCWSTR destinationFileName,
-    PRJ_NOTIFICATION_PARAMETERS& notificationParameters) {
-  switch (notificationType) {
-    case PRJ_NOTIFICATION_NEW_FILE_CREATED:
-      TRACE("CREATED {}", callbackData.FilePathName);
-      break;
+    PRJ_NOTIFICATION_PARAMETERS& notificationParameters) noexcept {
+  try {
+    auto relPath = wideCharToEdenRelativePath(callbackData.FilePathName);
 
-    case PRJ_NOTIFICATION_FILE_OVERWRITTEN:
-    case PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED:
-      TRACE("MODIFIED {}", callbackData.FilePathName);
-      break;
+    switch (notificationType) {
+      case PRJ_NOTIFICATION_NEW_FILE_CREATED:
+        XLOGF(DBG6, "CREATED {}", relPath);
+        getMount().createFile(relPath, isDirectory);
+        break;
 
-    case PRJ_NOTIFICATION_FILE_RENAMED:
-      TRACE("RENAMED {} -> {}", callbackData.FilePathName, destinationFileName);
-      break;
+      case PRJ_NOTIFICATION_FILE_OVERWRITTEN:
+      case PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_MODIFIED:
+        XLOGF(DBG6, "MODIFIED {}", relPath);
+        getMount().materializeFile(relPath);
+        break;
 
-    case PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED:
-      TRACE("DELETED {}", callbackData.FilePathName);
-      break;
+      case PRJ_NOTIFICATION_FILE_RENAMED: {
+        auto destFile = wideCharToEdenRelativePath(destinationFileName);
+        XLOGF(DBG6, "RENAMED {} -> {}", relPath, destFile);
+        getMount().renameFile(relPath, destFile);
+
+        // The Prjfs could create a Tombstones for the original file. If the
+        // Tombstone will be created or not depends on the origin of the file.
+        // We do not have that info here, so we try to remove the Tombstone and
+        // not worry about the failures.
+
+        // TODO(puneetk): We could add the file origin information in the
+        // DirEntry and refer to that before calling removeDeletedFile.
+        getMount().getFsChannel()->removeDeletedFile(callbackData.FilePathName);
+        break;
+      }
+
+      case PRJ_NOTIFICATION_FILE_HANDLE_CLOSED_FILE_DELETED:
+        XLOGF(DBG6, "DELETED {}", relPath);
+        getMount().removeFile(relPath, isDirectory);
+
+        // TODO(puneetk): (same as above) We could add the file origin
+        // information in the DirEntry and refer to that before calling
+        // removeDeletedFile.
+        getMount().getFsChannel()->removeDeletedFile(callbackData.FilePathName);
+        break;
+    }
+  } catch (const std::exception& ex) {
+    (void)exceptionToHResult();
   }
 }
 

@@ -58,7 +58,7 @@ class EdenDispatcher {
       bool isDirectory,
       PRJ_NOTIFICATION notificationType,
       PCWSTR destinationFileName,
-      PRJ_NOTIFICATION_PARAMETERS& notificationParameters);
+      PRJ_NOTIFICATION_PARAMETERS& notificationParameters) noexcept;
 
   //
   // Pointer to the dispatcher will be returned from the underlying file system.
