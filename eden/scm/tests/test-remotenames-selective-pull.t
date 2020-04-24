@@ -365,6 +365,24 @@ Check the repo.pull API
   0238718db2b174d2622ae9c4c75d61745eb12b25 Move master bookmark 
   a81520e7283a6967ec1d82620b75ab92f5478638 push commit default/master
 
+-- For hoisted remote bookmark names:
+
+  $ newrepo
+  $ setconfig paths.default=ssh://user@dummy/remoterepo
+  $ setconfig remotenames.autopullhoistpattern=
+  $ hg log -r thirdbook::master -T '{node} {desc} {remotenames}\n'
+  abort: unknown revision 'thirdbook'!
+  (if thirdbook is a remote bookmark or commit, try to 'hg pull' it first)
+  [255]
+  $ setconfig 'remotenames.autopullhoistpattern=re:.*'
+  $ hg log -r thirdbook::master -T '{node} {desc} {remotenames}\n'
+  pulling bookmark 'thirdbook' from 'ssh://user@dummy/remoterepo'
+  pulling bookmark 'master' from 'ssh://user@dummy/remoterepo'
+  1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 First default/thirdbook
+  0238718db2b174d2622ae9c4c75d61745eb12b25 Move master bookmark 
+  a81520e7283a6967ec1d82620b75ab92f5478638 push commit default/master
+
+
 -- For commit hashes:
 
   $ newrepo

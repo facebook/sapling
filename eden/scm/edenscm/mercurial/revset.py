@@ -258,6 +258,16 @@ def _autopull(repo, x):
         if _trypulls(["infinitepush", "default"], headnames=[x]):
             return True
 
+    # Pull hoist remote names automatically. For example, "foo" -> "remote/foo".
+    hoistpattern = repo.ui.config("remotenames", "autopullhoistpattern")
+    if hoistpattern:
+        hoist = repo.ui.config("remotenames", "hoist")
+        matchfn = util.stringmatcher(hoistpattern)[-1]
+        if matchfn(x) and _trypulls(
+            ["infinitepushbookmark", "infinitepush", hoist], bookmarknames=[x]
+        ):
+            return True
+
     return False
 
 
