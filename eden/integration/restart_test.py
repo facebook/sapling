@@ -6,6 +6,7 @@
 
 import subprocess
 import sys
+import typing
 from typing import Optional
 
 import eden.thrift
@@ -15,7 +16,7 @@ from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.util import HealthStatus
 
 from .lib.find_executables import FindExe
-from .lib.pexpect import PexpectAssertionMixin
+from .lib.pexpect import PexpectAssertionMixin, PexpectSpawnType, pexpect_spawn
 from .lib.service_test_case import (
     ServiceTestCaseBase,
     SystemdServiceTest,
@@ -40,7 +41,7 @@ class RestartTestBase(ServiceTestCaseBase):
 
         self.addCleanup(ensure_stopped)
 
-    def _spawn_restart(self, *args: str) -> "pexpect.spawn[bytes]":
+    def _spawn_restart(self, *args: str) -> PexpectSpawnType:
         restart_cmd = (
             [FindExe.EDEN_CLI, "--config-dir", str(self.eden_dir)]
             + self.get_required_eden_cli_args()
@@ -50,7 +51,7 @@ class RestartTestBase(ServiceTestCaseBase):
         restart_cmd.extend(args)
 
         print("Retarting eden: %r" % (restart_cmd,))
-        return pexpect.spawn(
+        return pexpect_spawn(
             restart_cmd[0], restart_cmd[1:], logfile=sys.stdout.buffer, timeout=5
         )
 
@@ -74,7 +75,6 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
         p.expect_exact("Eden is not currently running.  Starting it...")
         p.expect_exact("Starting fake edenfs daemon")
         p.expect(r"Started edenfs \(pid ([0-9]+)\)")
-        int(p.match.group(1))
         p.wait()
         self.assertEqual(p.exitstatus, 0)
 
@@ -109,7 +109,9 @@ class RestartTest(RestartTestBase, PexpectAssertionMixin):
 
         p = self._spawn_restart("--force")
         p.expect(r"Started edenfs \(pid (?P<pid>\d+)\)")
-        new_pid_from_restart: int = int(p.match.group("pid"))
+        match = typing.cast(Optional[typing.Match], p.match)
+        assert match is not None
+        new_pid_from_restart: int = int(match.group("pid"))
         new_pid_from_health_check: Optional[int] = self._check_edenfs_health().pid
 
         self.assertIsNotNone(new_pid_from_health_check, "EdenFS should be alive")

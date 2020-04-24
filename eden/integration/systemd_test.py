@@ -11,13 +11,14 @@ import subprocess
 import sys
 import typing
 import unittest
+from typing import Optional
 
 import pexpect
 import toml
 from eden.test_support.testcase import EdenTestCaseBase
 
 from .lib.find_executables import FindExe
-from .lib.pexpect import PexpectAssertionMixin
+from .lib.pexpect import PexpectAssertionMixin, PexpectSpawnType, pexpect_spawn
 from .lib.service_test_case import SystemdServiceTest, systemd_test
 
 
@@ -93,10 +94,10 @@ class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
             r"error: Starting the fb-edenfs@.+?\.service systemd service "
             r"failed \(reason: exit-code\)"
         )
+        before = typing.cast(Optional[str], start_process.before)
+        assert before is not None
         self.assertNotIn(
-            "journalctl",
-            start_process.before,
-            "journalctl doesn't work and should not be mentioned",
+            "journalctl", before, "journalctl doesn't work and should not be mentioned"
         )
         remaining_output = start_process.read()
         self.assertNotIn(
@@ -161,9 +162,8 @@ class SystemdTest(SystemdServiceTest, PexpectAssertionMixin):
 
     def spawn_start_with_fake_edenfs(
         self, extra_args: typing.Sequence[str] = ()
-    ) -> "pexpect.spawn[str]":
-        return pexpect.spawn(
-            # pyre-ignore[6]: T38947910
+    ) -> PexpectSpawnType:
+        return pexpect_spawn(
             FindExe.EDEN_CLI,
             self.get_required_eden_cli_args()
             # pyre-ignore[6]: T38947910

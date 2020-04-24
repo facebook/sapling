@@ -15,7 +15,7 @@ from eden.fs.cli.daemon import wait_for_shutdown
 
 from .lib import edenclient, testcase
 from .lib.find_executables import FindExe
-from .lib.pexpect import PexpectAssertionMixin
+from .lib.pexpect import PexpectAssertionMixin, PexpectSpawnType, pexpect_spawn
 from .lib.service_test_case import ServiceTestCaseBase, service_test
 
 
@@ -36,7 +36,7 @@ class HealthTest(testcase.EdenTestCase):
 class HealthOfFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
     def setUp(self) -> None:
         super().setUp()
-        self.temp_dir = pathlib.Path(self.make_temporary_directory())
+        self.temp_dir = self.make_temp_dir()
 
     def test_healthy_daemon_is_healthy(self) -> None:
         with self.spawn_fake_edenfs(self.temp_dir):
@@ -68,9 +68,8 @@ class HealthOfFakeEdenFSTest(ServiceTestCaseBase, PexpectAssertionMixin):
             status_process.expect_exact("eden running normally")
             self.assert_process_succeeds(status_process)
 
-    def spawn_status(self, extra_args: typing.List[str]) -> "pexpect.spawn[str]":
-        return pexpect.spawn(
-            # pyre-ignore[6]: T38947910
+    def spawn_status(self, extra_args: typing.List[str]) -> PexpectSpawnType:
+        return pexpect_spawn(
             FindExe.EDEN_CLI,
             ["--config-dir", str(self.temp_dir)]
             + self.get_required_eden_cli_args()

@@ -18,7 +18,12 @@ from eden.fs.cli.daemon import wait_for_process_exit
 from eden.fs.cli.util import poll_until
 
 from .lib.find_executables import FindExe
-from .lib.pexpect import PexpectAssertionMixin, wait_for_pexpect_process
+from .lib.pexpect import (
+    PexpectAssertionMixin,
+    PexpectSpawnType,
+    pexpect_spawn,
+    wait_for_pexpect_process,
+)
 from .lib.service_test_case import (
     ServiceTestCaseBase,
     SystemdServiceTest,
@@ -42,9 +47,8 @@ class StopTestBase(ServiceTestCaseBase):
         self.eden_dir = self.tmp_dir / "eden"
         self.eden_dir.mkdir()
 
-    def spawn_stop(self, extra_args: List[str]) -> "pexpect.spawn[str]":
-        return pexpect.spawn(
-            # pyre-ignore[6]: T38947910
+    def spawn_stop(self, extra_args: List[str]) -> PexpectSpawnType:
+        return pexpect_spawn(
             FindExe.EDEN_CLI,
             ["--config-dir", str(self.eden_dir)]
             + self.get_required_eden_cli_args()
