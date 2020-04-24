@@ -5,7 +5,9 @@
 
 add_executable(
   eden_inodes_test
+    InodeBaseTest.cpp
     InodeMapTest.cpp
+    TreeInodeTest.cpp
 )
 
 target_link_libraries(

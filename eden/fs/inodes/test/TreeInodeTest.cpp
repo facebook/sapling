@@ -13,7 +13,11 @@
 #include <folly/portability/GTest.h>
 #include <folly/test/TestUtils.h>
 #include <gflags/gflags.h>
+#ifdef _WIN32
+#include "eden/fs/inodes/win/DirList.h" // @manual
+#else
 #include "eden/fs/fuse/DirList.h"
+#endif // _WIN32
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
@@ -76,6 +80,58 @@ TEST(TreeInode, findEntryDifferencesWithOneAddition) {
   EXPECT_EQ((std::vector<std::string>{"+ three"}), *differences);
 }
 
+#ifdef _WIN32
+TEST(TreeInode, readdirTest) {
+  FakeTreeBuilder builder;
+  builder.setFiles({{"file", ""}});
+  TestMount mount{builder};
+
+  auto root = mount.getEdenMount()->getRootInode();
+  auto result = root->readdir().extract();
+
+  ASSERT_EQ(1, result.size());
+  EXPECT_EQ("file", result[0].name);
+}
+
+TEST(TreeInode, updateAndReaddir) {
+  FakeTreeBuilder builder;
+  builder.setFile("somedir/file1", "test\n");
+  builder.setFile("somedir/file2", "test\n");
+  builder.setFile("somedir/file3", "test\n");
+  TestMount mount{builder};
+
+  // Test creating a new file
+  auto somedir = mount.getTreeInode("somedir"_relpath);
+  auto result = somedir->readdir().extract();
+
+  ASSERT_EQ(3, result.size());
+  EXPECT_EQ("file1", result[0].name);
+  EXPECT_EQ("file2", result[1].name);
+  EXPECT_EQ("file3", result[2].name);
+
+  auto resultInode = somedir->mknod("newfile.txt"_pc, S_IFREG, 0);
+  result = somedir->readdir().extract();
+  ASSERT_EQ(4, result.size());
+  EXPECT_EQ("file1", result[0].name);
+  EXPECT_EQ("file2", result[1].name);
+  EXPECT_EQ("file3", result[2].name);
+  EXPECT_EQ("newfile.txt", result[3].name);
+
+  somedir->unlink("file2"_pc).get(0ms);
+  result = somedir->readdir().extract();
+  ASSERT_EQ(3, result.size());
+  EXPECT_EQ("file1", result[0].name);
+  EXPECT_EQ("file3", result[1].name);
+  EXPECT_EQ("newfile.txt", result[2].name);
+
+  somedir->rename("file3"_pc, somedir, "renamedfile.txt"_pc).get(0ms);
+  result = somedir->readdir().extract();
+  ASSERT_EQ(3, result.size());
+  EXPECT_EQ("file1", result[0].name);
+  EXPECT_EQ("newfile.txt", result[1].name);
+  EXPECT_EQ("renamedfile.txt", result[2].name);
+}
+#else
 TEST(TreeInode, readdirReturnsSelfAndParentBeforeEntries) {
   // libfuse's documentation says returning . and .. is optional, but the FUSE
   // kernel module does not synthesize them, so not returning . and .. would be
@@ -266,6 +322,7 @@ TEST(TreeInode, fuzzConcurrentModificationAndReaddir) {
   }
   std::cout << "Ran " << iterations << " iterations" << std::endl;
 }
+#endif
 
 TEST(TreeInode, create) {
   FakeTreeBuilder builder;
@@ -277,7 +334,10 @@ TEST(TreeInode, create) {
   auto resultInode = somedir->mknod("newfile.txt"_pc, S_IFREG | 0740, 0);
 
   EXPECT_EQ(mount.getFileInode("somedir/newfile.txt"_relpath), resultInode);
+
+#ifndef _WIN32 // getPermissions are not a part of Inode on Windows
   EXPECT_FILE_INODE(resultInode, "", 0740);
+#endif
 }
 
 TEST(TreeInode, createExists) {
@@ -289,10 +349,13 @@ TEST(TreeInode, createExists) {
   auto somedir = mount.getTreeInode("somedir"_relpath);
 
   EXPECT_THROW_ERRNO(somedir->mknod("foo.txt"_pc, S_IFREG | 0600, 0), EEXIST);
+#ifndef _WIN32 // getPermissions are not a part of Inode on Windows
   EXPECT_FILE_INODE(
       mount.getFileInode("somedir/foo.txt"_relpath), "test\n", 0644);
+#endif
 }
 
+#ifndef _WIN32
 TEST(TreeInode, createOverlayWriteError) {
   FakeTreeBuilder builder;
   builder.setFile("somedir/foo.txt", "test\n");
@@ -307,3 +370,4 @@ TEST(TreeInode, createOverlayWriteError) {
   EXPECT_THROW_ERRNO(
       somedir->mknod("newfile.txt"_pc, S_IFREG | 0600, 0), ENOSPC);
 }
+#endif
