@@ -8,6 +8,7 @@ anyhow = "1.0.20"
 parking_lot = "0.9"
 pathmatcher = { path = "../pathmatcher"}
 thiserror = "1.0.5"
+treestate = { path = "../treestate"}
 types = { path = "../types" }
 vfs = { path = "../vfs" }
 

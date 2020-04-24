@@ -6,15 +6,24 @@
  */
 
 use std::{
+    collections::HashSet,
     convert::{TryFrom, TryInto},
+    fs::Metadata,
     path::PathBuf,
+    sync::Arc,
     time::SystemTime,
 };
 
 use anyhow::{Error, Result};
+use parking_lot::Mutex;
+
 use pathmatcher::Matcher;
-use types::RepoPathBuf;
-use vfs::VFS;
+use treestate::filestate::StateFlags;
+use treestate::treestate::TreeState;
+use types::{RepoPath, RepoPathBuf};
+use vfs::{is_executable, is_symlink, VFS};
+
+use crate::walker::{WalkEntry, WalkError, Walker};
 
 /// Represents a file modification time in Mercurial, in seconds since the unix epoch.
 #[derive(PartialEq)]
@@ -61,19 +70,38 @@ impl PhysicalFileSystem {
         })
     }
 
-    pub fn pending_changes<M: Matcher + Clone>(&self, matcher: M) -> PendingChanges<M> {
+    pub fn pending_changes<M: Matcher + Clone>(
+        &self,
+        treestate: Arc<Mutex<TreeState>>,
+        matcher: M,
+        include_directories: bool,
+        last_write: HgModifiedTime,
+    ) -> PendingChanges<M> {
+        let walker = Walker::new(self.vfs.root().to_path_buf(), matcher.clone(), false);
         PendingChanges {
             vfs: self.vfs.clone(),
+            walker,
             matcher,
+            treestate,
             stage: PendingChangesStage::Walk,
+            include_directories,
+            seen: HashSet::new(),
+            lookups: vec![],
+            last_write,
         }
     }
 }
 
 pub struct PendingChanges<M: Matcher + Clone> {
     vfs: VFS,
+    walker: Walker<M>,
     matcher: M,
+    treestate: Arc<Mutex<TreeState>>,
     stage: PendingChangesStage,
+    include_directories: bool,
+    seen: HashSet<RepoPathBuf>,
+    lookups: Vec<RepoPathBuf>,
+    last_write: HgModifiedTime,
 }
 
 #[derive(PartialEq)]
@@ -106,8 +134,102 @@ pub enum PendingChangeResult {
 }
 
 impl<M: Matcher + Clone> PendingChanges<M> {
+    fn is_changed(&mut self, path: &RepoPath, metadata: &Metadata) -> Result<bool> {
+        let mut treestate = self.treestate.lock();
+        let state = treestate.get(path)?;
+
+        let state = match state {
+            Some(state) => state,
+            // File exists but is not in the treestate (untracked)
+            None => return Ok(true),
+        };
+
+        // If it's not in P1, (i.e. it's added or untracked) it's considered changed.
+        let flags = state.state;
+        let in_parent = flags.intersects(StateFlags::EXIST_P1); // TODO: Also check against P2?
+        if !in_parent {
+            return Ok(true);
+        }
+
+        // If working copy file size or flags are different from what is in treestate, it has changed.
+        // Note: state.size is i32 since Mercurial uses negative numbers to indicate special files.
+        // A -1 indicates the file is either in a merge state or a lookup state.
+        // A -2 indicates the file comes from the other parent (and may or may not exist in the
+        // current parent).
+        //
+        // Regardless, if the size is negative, we'll do a lookup comparison since we can't
+        // determine if the file has changed relative to p1. This logic is a mess and we should get
+        // rid of all these negative numbers.
+        let valid_size = state.size >= 0;
+        if valid_size {
+            let size_different = metadata.len() != state.size.try_into().unwrap_or(std::u64::MAX);
+            let exec_different =
+                self.vfs.supports_executables() && is_executable(metadata) != state.is_executable();
+            let symlink_different =
+                self.vfs.supports_symlinks() && is_symlink(metadata) != state.is_symlink();
+
+            if size_different || exec_different || symlink_different {
+                return Ok(true);
+            }
+        }
+
+        // If it's marked NEED_CHECK, we always need to do a lookup, regardless of the mtime.
+        let needs_check = flags.intersects(StateFlags::NEED_CHECK) || !valid_size;
+        if needs_check {
+            self.lookups.push(path.to_owned());
+            return Ok(false);
+        }
+
+        // If the mtime has changed or matches the last normal() write time, we need to compare the
+        // file contents in the later Lookups phase.  mtime can be negative as well. A -1 indicates
+        // the file is in a lookup state. Since a -1 will always cause the equality comparison
+        // below to fail and force a lookup, the -1 is handled correctly without special casing. In
+        // theory all -1 files should be marked NEED_CHECK above (I think).
+        if state.mtime < 0 {
+            self.lookups.push(path.to_owned());
+        } else {
+            let state_mtime: Result<HgModifiedTime> = state.mtime.try_into();
+            let state_mtime =
+                state_mtime.map_err(|e| WalkError::InvalidMTime(path.to_owned(), e))?;
+            let mtime: HgModifiedTime = metadata.modified()?.try_into()?;
+
+            if mtime != state_mtime || mtime == self.last_write {
+                self.lookups.push(path.to_owned());
+            }
+        }
+
+        Ok(false)
+    }
+
     fn next_walk(&mut self) -> Option<Result<PendingChangeResult>> {
-        None
+        loop {
+            match self.walker.next() {
+                Some(Ok(WalkEntry::File(file, metadata))) => {
+                    let file = normalize(file);
+                    self.seen.insert(file.to_owned());
+                    let changed = match self.is_changed(&file, &metadata) {
+                        Ok(result) => result,
+                        Err(e) => return Some(Err(e)),
+                    };
+
+                    if changed {
+                        return Some(Ok(PendingChangeResult::File(ChangeType::Changed(file))));
+                    }
+                }
+                Some(Ok(WalkEntry::Directory(dir))) => {
+                    if self.include_directories {
+                        let dir = normalize(dir);
+                        return Some(Ok(PendingChangeResult::SeenDirectory(dir)));
+                    }
+                }
+                Some(Err(e)) => {
+                    return Some(Err(e));
+                }
+                None => {
+                    return None;
+                }
+            };
+        }
     }
 
     fn next_tree(&mut self) -> Option<Result<PendingChangeResult>> {
@@ -142,4 +264,9 @@ impl<M: Matcher + Clone> Iterator for PendingChanges<M> {
             }
         }
     }
+}
+
+fn normalize(path: RepoPathBuf) -> RepoPathBuf {
+    // TODO: Support path normalization on case insensitive file systems
+    path
 }

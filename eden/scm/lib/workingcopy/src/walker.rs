@@ -26,6 +26,8 @@ pub enum WalkError {
     RepoPathError(String, #[source] ParseError),
     #[error("invalid file type at '{0}'")]
     InvalidFileType(RepoPathBuf),
+    #[error("invalid mtime for '{0}': {1}")]
+    InvalidMTime(RepoPathBuf, #[source] anyhow::Error),
 }
 
 impl WalkError {
@@ -35,6 +37,7 @@ impl WalkError {
             WalkError::IOError(path, _) => path.to_string(),
             WalkError::RepoPathError(path, _) => path.to_string(),
             WalkError::InvalidFileType(path) => path.to_string(),
+            WalkError::InvalidMTime(path, _) => path.to_string(),
         }
     }
 
@@ -44,6 +47,7 @@ impl WalkError {
             WalkError::IOError(_, error) => error.to_string(),
             WalkError::RepoPathError(_, error) => error.to_string(),
             WalkError::InvalidFileType(_) => "invalid file type".to_string(),
+            WalkError::InvalidMTime(_, error) => format!("invalid mtime - {}", error.to_string()),
         }
     }
 }

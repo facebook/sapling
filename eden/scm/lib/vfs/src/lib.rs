@@ -9,4 +9,4 @@ mod pathauditor;
 mod vfs;
 
 pub use crate::pathauditor::PathAuditor;
-pub use crate::vfs::{UpdateFlag, VFS};
+pub use crate::vfs::{is_executable, is_symlink, UpdateFlag, VFS};

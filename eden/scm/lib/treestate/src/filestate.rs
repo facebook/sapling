@@ -109,6 +109,16 @@ pub struct FileStateV2 {
     pub copied: Option<Box<[u8]>>,
 }
 
+impl FileStateV2 {
+    pub fn is_executable(&self) -> bool {
+        self.mode & 0o100 == 0o100
+    }
+
+    pub fn is_symlink(&self) -> bool {
+        self.mode & 0o120000 == 0o120000
+    }
+}
+
 #[cfg(test)]
 impl rand::distributions::Distribution<FileStateV2> for rand::distributions::Standard {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> FileStateV2 {

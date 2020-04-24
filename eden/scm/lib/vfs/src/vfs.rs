@@ -11,6 +11,8 @@ use std::{
     path::{Path, PathBuf},
 };
 
+use std::fs::Metadata;
+
 #[cfg(not(windows))]
 use std::{
     fs::{set_permissions, Permissions},
@@ -30,7 +32,8 @@ use crate::pathauditor::PathAuditor;
 pub struct VFS {
     root: PathBuf,
     auditor: PathAuditor,
-    can_symlink: bool,
+    supports_symlinks: bool,
+    supports_executables: bool,
 }
 
 #[derive(Clone, Copy)]
@@ -42,13 +45,16 @@ pub enum UpdateFlag {
 impl VFS {
     pub fn new(root: PathBuf) -> Result<Self> {
         let auditor = PathAuditor::new(&root);
-        let can_symlink = supports_symlinks(&root)
-            .with_context(|| format!("Can't construct a VFS for {:?}", root))?;
+        let fs_type =
+            fstype(&root).with_context(|| format!("Can't construct a VFS for {:?}", root))?;
+        let supports_symlinks = supports_symlinks(&fs_type);
+        let supports_executables = supports_executables(&fs_type);
 
         Ok(Self {
             root,
             auditor,
-            can_symlink,
+            supports_symlinks,
+            supports_executables,
         })
     }
 
@@ -136,7 +142,7 @@ impl VFS {
         let result = Self::plain_symlink_file(link_name, link_dest);
 
         #[cfg(not(windows))]
-        let result = if self.can_symlink {
+        let result = if self.supports_symlinks {
             std::os::unix::fs::symlink(link_dest, link_name).map_err(Into::into)
         } else {
             Self::plain_symlink_file(link_name, link_dest)
@@ -202,6 +208,14 @@ impl VFS {
         }
         Ok(())
     }
+
+    pub fn supports_symlinks(&self) -> bool {
+        self.supports_symlinks
+    }
+
+    pub fn supports_executables(&self) -> bool {
+        self.supports_executables
+    }
 }
 
 /// Since Windows doesn't support symlinks (without Windows' Developer Mode), and NTFS on unices is
@@ -210,6 +224,28 @@ impl VFS {
 ///
 /// Once the need to use NTFS on unices is gone (because this module solves the slowness), this
 /// hack will be removed.
-fn supports_symlinks(path: &Path) -> Result<bool> {
-    Ok(fstype(path)? != FsType::NTFS)
+fn supports_symlinks(fs_type: &FsType) -> bool {
+    *fs_type != FsType::NTFS
+}
+
+/// Since Windows determines if a file is executable based on its extension, it doesn't support
+/// marking files as executable.
+fn supports_executables(fs_type: &FsType) -> bool {
+    *fs_type != FsType::NTFS
+}
+
+pub fn is_executable(metadata: &Metadata) -> bool {
+    #[cfg(unix)]
+    return metadata.permissions().mode() & 0o111 != 0;
+
+    #[cfg(target_os = "windows")]
+    panic!("is_executable is not supported on Windows");
+}
+
+pub fn is_symlink(metadata: &Metadata) -> bool {
+    #[cfg(unix)]
+    return metadata.file_type().is_symlink();
+
+    #[cfg(target_os = "windows")]
+    panic!("is_symlink is not supported on Windows");
 }
