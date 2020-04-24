@@ -31,19 +31,19 @@ Pipe::Pipe(PSECURITY_ATTRIBUTES securityAttr, bool inherit) {
     securityAttr = &sec;
   }
 
-  if (!CreatePipe(&readHandle, &writeHandle, securityAttr, NULL)) {
+  if (!CreatePipe(&readHandle_, &writeHandle_, securityAttr, NULL)) {
     throw makeWin32ErrorExplicit(GetLastError(), "Failed to create a pipe");
   }
-  XLOG(DBG5) << "Handle Created: Read: " << readHandle
-             << " Write: " << writeHandle << std::endl;
+  XLOG(DBG5) << "Handle Created: Read: " << readHandle_
+             << " Write: " << writeHandle_ << std::endl;
 }
 
 Pipe::~Pipe() {
-  if (readHandle) {
-    CloseHandle(readHandle);
+  if (readHandle_) {
+    CloseHandle(readHandle_);
   }
-  if (writeHandle) {
-    CloseHandle(writeHandle);
+  if (writeHandle_) {
+    CloseHandle(writeHandle_);
   }
 }
 
@@ -121,11 +121,11 @@ size_t Pipe::writeiov(HANDLE handle, iovec* iov, int count) {
 }
 
 size_t Pipe::read(void* buffer, DWORD bytesToRead) {
-  return read(readHandle, buffer, bytesToRead);
+  return read(readHandle_, buffer, bytesToRead);
 }
 
 size_t Pipe::write(void* buffer, DWORD bytesToWrite) {
-  return write(writeHandle, buffer, bytesToWrite);
+  return write(writeHandle_, buffer, bytesToWrite);
 }
 
 } // namespace eden

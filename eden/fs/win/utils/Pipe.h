@@ -14,11 +14,29 @@ namespace eden {
 
 class Pipe {
  public:
-  HANDLE readHandle = nullptr;
-  HANDLE writeHandle = nullptr;
-
   Pipe(PSECURITY_ATTRIBUTES securityAttr, bool inherit);
   ~Pipe();
+  HANDLE readHandle() {
+    return readHandle_;
+  }
+
+  HANDLE writeHandle() {
+    return writeHandle_;
+  }
+
+  void closeReadHandle() {
+    if (readHandle_) {
+      CloseHandle(readHandle_);
+      readHandle_ = nullptr;
+    }
+  }
+
+  void closeWriteHandle() {
+    if (writeHandle_) {
+      CloseHandle(writeHandle_);
+      writeHandle_ = nullptr;
+    }
+  }
 
   //
   // Following read/write pipe functions return the number of bytes read or <0
@@ -32,6 +50,10 @@ class Pipe {
 
   static size_t write(HANDLE handle, void* buffer, DWORD BytesToWrite);
   static size_t writeiov(HANDLE handle, iovec* iov, int count);
+
+ private:
+  HANDLE readHandle_ = nullptr;
+  HANDLE writeHandle_ = nullptr;
 };
 } // namespace eden
 } // namespace facebook

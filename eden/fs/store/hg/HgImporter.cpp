@@ -198,25 +198,27 @@ HgImporter::HgImporter(
   auto childInPipe = std::make_unique<Pipe>(nullptr, true);
   auto childOutPipe = std::make_unique<Pipe>(nullptr, true);
 
-  if (!SetHandleInformation(childInPipe->writeHandle, HANDLE_FLAG_INHERIT, 0)) {
+  if (!SetHandleInformation(
+          childInPipe->writeHandle(), HANDLE_FLAG_INHERIT, 0)) {
     throw std::runtime_error("Failed to set the handle attributes");
   }
-  if (!SetHandleInformation(childOutPipe->readHandle, HANDLE_FLAG_INHERIT, 0)) {
+  if (!SetHandleInformation(
+          childOutPipe->readHandle(), HANDLE_FLAG_INHERIT, 0)) {
     throw std::runtime_error("Failed to set the handle attributes");
   }
 
   cmd.push_back("--out-fd");
-  cmd.push_back(folly::to<string>((intptr_t)childOutPipe->writeHandle));
+  cmd.push_back(folly::to<string>((intptr_t)childOutPipe->writeHandle()));
   cmd.push_back("--in-fd");
-  cmd.push_back(folly::to<string>((intptr_t)childInPipe->readHandle));
+  cmd.push_back(folly::to<string>((intptr_t)childInPipe->readHandle()));
 
   helper_.createSubprocess(
       cmd,
       repoPath.value().str().c_str(),
       std::move(childInPipe),
       std::move(childOutPipe));
-  helperIn_ = helper_.childInPipe_->writeHandle;
-  helperOut_ = helper_.childOutPipe_->readHandle;
+  helperIn_ = helper_.childInPipe_->writeHandle();
+  helperOut_ = helper_.childOutPipe_->readHandle();
 
 #endif
   options_ = waitForHelperStart();

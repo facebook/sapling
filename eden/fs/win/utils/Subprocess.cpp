@@ -66,6 +66,12 @@ void Subprocess::createSubprocess(
         GetLastError(), std::system_category(), "CreateProcess failed\n");
 
   } else {
+    // Close the Pipe handles that are inherited in the child and are not needed
+    // in the parent process. This will also make sure the pipe is closed when
+    // the child process ends.
+    childInPipe_->closeReadHandle();
+    childOutPipe_->closeWriteHandle();
+
     CloseHandle(procInfo.hProcess);
     CloseHandle(procInfo.hThread);
   }
