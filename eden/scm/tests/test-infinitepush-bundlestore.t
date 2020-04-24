@@ -1,7 +1,6 @@
 #chg-compatible
 
   $ disable treemanifest
-TODO: Make this test compatibile with obsstore enabled.
   $ setconfig experimental.evolution= experimental.bundle2lazylocking=True
 
 # These are necessary to trigger pushkey handlers which may try to take the lock

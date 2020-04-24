@@ -84,7 +84,10 @@ def extsetup(ui):
     )
 
     extensions.wrapcommand(commands.table, "pull", _pull)
-    extensions.wrapcommand(commands.table, "update", _update)
+    if not ui.configbool("ui", "autopullcommits") or not ui.config(
+        "remotenames", "autopullhoistpattern"
+    ):
+        extensions.wrapcommand(commands.table, "update", _update)
 
     extensions.wrapfunction(bundle2, "_addpartsfromopts", _addpartsfromopts)
 

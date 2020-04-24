@@ -112,15 +112,7 @@ Check that we pull/update from the read path, regardless of the write path prese
   adding file changes
   added 0 changesets with 0 changes to 1 files
   $ hg update -r 6b2f28e02245
-  '6b2f28e02245' does not exist locally - looking for it remotely...
-  pulling from ssh://user@dummy/repo2
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 2 files
-  '6b2f28e02245' found remotely
-  pull finished in * (glob)
+  pulling 6b2f28e02245 from 'ssh://user@dummy/repo2'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 -- check that we can pull from read path, when write path is not present

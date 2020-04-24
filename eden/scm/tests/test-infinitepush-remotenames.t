@@ -3,6 +3,7 @@
   $ configure dummyssh
   $ disable treemanifest
   $ enable infinitepush
+  $ setconfig remotenames.hoist=default 'remotenames.autopullhoistpattern=re:.*'
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
   $ mkcommit() {
   >    echo "$1" > "$1"
@@ -172,15 +173,7 @@ Create new bookmark and try to pull it
   $ hg push -q -r . --to scratch/branchtopull --create
   $ cd ../client
   $ hg up default/scratch/branchtoupdateto1
-  'scratch/branchtoupdateto1' does not exist locally - looking for it remotely...
-  pulling from ssh://user@dummy/repo
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 2 changes to 2 files
-  'scratch/branchtoupdateto1' found remotely
-  pull finished in * sec (glob)
+  pulling bookmark 'scratch/branchtoupdateto1' from 'ssh://user@dummy/repo'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ cat >> $HGRCPATH << EOF
@@ -190,13 +183,5 @@ Create new bookmark and try to pull it
   > EOF
 
   $ hg up remote/scratch/branchtoupdateto2
-  'scratch/branchtoupdateto2' does not exist locally - looking for it remotely...
-  pulling from ssh://user@dummy/repo
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 2 files
-  'scratch/branchtoupdateto2' found remotely
-  pull finished in * sec (glob)
+  pulling bookmark 'scratch/branchtoupdateto2' from 'ssh://user@dummy/repo'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved

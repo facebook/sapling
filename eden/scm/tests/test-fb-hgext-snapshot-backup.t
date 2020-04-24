@@ -136,20 +136,11 @@
 # Restore it on another client
   $ cd ../restored
   $ hg checkout "$OID"
-  '751f5ef10bc73a8f549197b380773d4f680daa8c' does not exist locally - looking for it remotely...
-  pulling from ssh://user@dummy/server
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 2 changes to 2 files
-  adding changesets
-  adding manifests
-  adding file changes
-  added 3 changesets with 4 changes to 2 files
-  '751f5ef10bc73a8f549197b380773d4f680daa8c' found remotely
-  pull finished in * sec (glob)
-  751f5ef10bc7 is a snapshot, set ui.allow-checkout-snapshot config to True to checkout on it directly
-  Executing `hg snapshot checkout 751f5ef10bc7`.
+  pulling 751f5ef10bc73a8f549197b380773d4f680daa8c from 'ssh://user@dummy/server'
+  abort: hidden revision '751f5ef10bc73a8f549197b380773d4f680daa8c'!
+  (use --hidden to access hidden revisions)
+  [255]
+  $ hg snapshot checkout $OID
   will checkout on 751f5ef10bc73a8f549197b380773d4f680daa8c
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved
   checkout complete

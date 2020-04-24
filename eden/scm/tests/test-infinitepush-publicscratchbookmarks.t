@@ -3,6 +3,7 @@
   $ configure dummyssh
   $ disable treemanifest
   $ enable infinitepush remotenames
+  $ setconfig remotenames.hoist=default 'remotenames.autopullhoistpattern=re:.*'
   $ setconfig infinitepush.branchpattern="re:scratch/.+"
   $ newrepo server
   $ echo base > base
@@ -26,11 +27,7 @@ data to push, but the bookmark should be accepted.
 Pull this bookmark in the other client
   $ cd ../client2
   $ hg up scratch/public
-  'scratch/public' does not exist locally - looking for it remotely...
-  pulling from ssh://user@dummy/server
-  no changes found
-  'scratch/public' found remotely
-  pull finished in * (glob)
+  pulling bookmark 'scratch/public' from 'ssh://user@dummy/server'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -r . -T '{node|short} "{desc}" {remotebookmarks}\n'
   e6c779c67aa9 "commit1" default/scratch/public

@@ -134,6 +134,7 @@ Clone fresh repo and try to restore from backup
   @  changeset:   2:948715751816
   :  bookmark:    master
   :  bookmark:    default/master
+  :  hoistedname: master
   :  user:        test
   :  date:        Thu Jan 01 00:00:00 1970 +0000
   :  summary:     add b
@@ -190,6 +191,7 @@ Test createlandedasmarkers option disabled
   @  changeset:   2:948715751816
   :  bookmark:    master
   :  bookmark:    default/master
+  :  hoistedname: master
   :  user:        test
   :  date:        Thu Jan 01 00:00:00 1970 +0000
   :  summary:     add b

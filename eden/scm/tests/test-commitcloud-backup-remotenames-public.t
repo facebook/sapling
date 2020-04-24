@@ -88,9 +88,6 @@ be skipped
   
 Download scratch commit. It also downloads a few public commits
   $ hg up -q ce87a066ebc28045311cd1272f5edc0ed80d5b1c
-  'ce87a066ebc28045311cd1272f5edc0ed80d5b1c' does not exist locally - looking for it remotely...
-  'ce87a066ebc28045311cd1272f5edc0ed80d5b1c' found remotely
-  pull finished in * sec (glob)
   $ hg log --graph -T '{desc}'
   @  scratch
   |

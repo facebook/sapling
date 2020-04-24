@@ -55,15 +55,11 @@ Change the paths: 'default' path should be incorrect, but 'infinitepush' path sh
   default = ssh://user@dummy/broken
   infinitepush = ssh://user@dummy/repo
   $ hg up 7e6a6fd9c7c8c8 -q
-  '7e6a6fd9c7c8c8' does not exist locally - looking for it remotely...
-  '7e6a6fd9c7c8c8' found remotely
-  pull finished in * sec (glob)
 
 Same goes for updating to a bookmark
-  $ hg up scratch/commit -q
-  'scratch/commit' does not exist locally - looking for it remotely...
-  'scratch/commit' found remotely
-  pull finished in * sec (glob)
+  $ hg up scratch/commit
+  pulling bookmark 'scratch/commit' from 'ssh://user@dummy/repo'
+  2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Now try to pull it
   $ hg pull -r 94f1e8b68592 -q
@@ -102,14 +98,5 @@ Update by full hash - infinitepush path should be used
   > infinitepushbookmark=ssh://user@dummy/broken
   > EOF
   $ hg update "$FULLHASH"
-  'd15d0da9f84a9bebe6744eba3ec1dd86e2d46818' does not exist locally - looking for it remotely...
-  pulling from ssh://user@dummy/repo
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 2 files
-  'd15d0da9f84a9bebe6744eba3ec1dd86e2d46818' found remotely
-  pull finished in * sec (glob)
+  pulling d15d0da9f84a9bebe6744eba3ec1dd86e2d46818 from 'ssh://user@dummy/repo'
   2 files updated, 0 files merged, 3 files removed, 0 files unresolved
-  (leaving bookmark scratch/commit)

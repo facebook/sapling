@@ -465,7 +465,7 @@ Run command that creates multiple transactions. Make sure that just one backup i
   $ rm -rf client
   $ hg clone ssh://user@dummy/repo client -q
   $ cd client
-  $ hg debugdrawdag <<'EOS'
+  $ hg debugdrawdag -q <<'EOS'
   > C
   > |
   > B D

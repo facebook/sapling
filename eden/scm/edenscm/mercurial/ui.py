@@ -1675,6 +1675,10 @@ class paths(util.sortdict):
                 result = name
                 break
 
+        # XXX: Remove this normalization if Mononoke is rolled out to all.
+        if result in {"infinitepush", "infinitepushbookmark"}:
+            result = "default"
+
         if result:
             renamed = self._uiconfig.config("remotenames", "rename.%s" % result)
             if renamed:

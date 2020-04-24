@@ -48,17 +48,8 @@ Setup another client
   $ hg clone ssh://user@dummy/repo client2 -q
   $ cd client2
   $ hg update scratch/lfscommit
-  'scratch/lfscommit' does not exist locally - looking for it remotely...
-  pulling from ssh://user@dummy/repo
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
-  'scratch/lfscommit' found remotely
-  pull finished in * sec (glob)
+  pulling bookmark 'scratch/lfscommit' from 'ssh://user@dummy/repo'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
-  (activating bookmark scratch/lfscommit)
 
 Make pushbackup that contains bundle with 2 heads
   $ cd ../client

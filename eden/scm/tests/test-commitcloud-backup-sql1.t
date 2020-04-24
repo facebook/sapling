@@ -41,23 +41,31 @@ Make pull and check that scratch commit is not pulled
   pulling from ssh://user@dummy/server
   no changes found
   $ hg log -r scratch/book
-  abort: unknown revision 'scratch/book'!
-  (if scratch/book is a remote bookmark or commit, try to 'hg pull' it first)
-  [255]
+  pulling bookmark 'scratch/book' from 'ssh://user@dummy/server'
+  changeset:   0:2d9cfa751213
+  bookmark:    default/scratch/book
+  hoistedname: scratch/book
+  user:        test
+  date:        Thu Jan 01 00:00:00 1970 +0000
+  summary:     scratchcommit
+  
 
 Pull scratch commit from the second client
   $ hg pull -B scratch/book
   pulling from ssh://user@dummy/server
+  no changes found
   adding changesets
   adding manifests
   adding file changes
-  added 1 changesets with 1 changes to 1 files
+  added 0 changesets with 0 changes to 1 files
   $ hg up scratch/book
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   (activating bookmark scratch/book)
   $ hg log -G
   @  changeset:   0:2d9cfa751213
      bookmark:    scratch/book
+     bookmark:    default/scratch/book
+     hoistedname: scratch/book
      user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     scratchcommit

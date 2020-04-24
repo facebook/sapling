@@ -190,7 +190,7 @@ def _warnrevnum(ui, x):
         raise error.Abort(_("local revision number is disabled in this repo"))
 
 
-_commithashre = re.compile(r"\A[0-9a-f]{8,40}\Z")
+_commithashre = re.compile(r"\A[0-9a-f]{6,40}\Z")
 
 
 def _autopull(repo, x):
