@@ -277,15 +277,6 @@ def stringset(repo, subset, x, order, autopull=True):
     except error.FilteredRepoLookupError:
         raise
     except error.RepoLookupError:
-        # If we autopull commits, subset might be invalidated and need a
-        # refresh.  For now we only know how to refresh a fullreposet.
-        # So refuse to autopull if subset is not a fullreposet.
-        if isinstance(subset, fullreposet):
-            pulled = _autopull(repo, x)
-            if pulled:
-                subset = fullreposet(repo)
-                return stringset(repo, subset, x, order, autopull=False)
-
         raise
 
     if x.startswith("-") or x == str(i):
@@ -2611,6 +2602,69 @@ def posttreebuilthook(tree, repo):
     pass
 
 
+def scanunknowns(trees, lookup):
+    """Scan the tree and yield unknown names.
+
+    A name is unknown if lookup(name) returns False.
+    Does not evaluate the revset.
+    """
+    for x in trees:
+        if isinstance(x, tuple):
+            headname = x[0]
+            args = []
+            if headname in {"parent"}:
+                # 1st argument is a set.
+                args = x[1:2]
+            elif headname in {
+                "range",
+                "rangepre",
+                "rangepost",
+                "dagrange",
+                "and",
+                "andsmally",
+                "or",
+                "not",
+                "difference",
+                "ancestor",
+                "parentpost",
+                "list",
+            }:
+                # all arguments are sets.
+                args = x[1:]
+            elif headname == "func":
+                # ex. (func (symbol parents) (symbol master))
+                funcname = x[1][1]
+                if funcname in {
+                    "ancestors",
+                    "ancestoraged",
+                    "children",
+                    "descendants",
+                    "first",
+                    "limit",
+                    "heads",
+                    "last",
+                    "max",
+                    "min",
+                    "predecessors",
+                    "reverse",
+                    "successors",
+                }:
+                    # 1st argument is a set.
+                    # the 2nd argument is not a revset, skip it.
+                    args = x[2:3]
+                elif funcname in {"only", "ancestor", "roots", "p1", "p2", "parents"}:
+                    # all arguments are sets.
+                    args = x[2:]
+            elif headname in {"symbol", "string"}:
+                # x[1] is the name to lookup.
+                # SRC is a special name used by rebase.
+                name = x[1]
+                if name != "SRC" and not lookup(name):
+                    yield name
+            for name in scanunknowns(args, lookup):
+                yield name
+
+
 def match(ui, spec, repo=None):
     """Create a matcher for a single revision spec"""
     return matchany(ui, [spec], repo=repo)
@@ -2651,6 +2705,16 @@ def matchany(ui, specs, repo=None, localalias=None):
     tree = revsetlang.foldconcat(tree)
     tree = revsetlang.analyze(tree)
     tree = revsetlang.optimize(tree)
+
+    # Figure out the unknown symbol names statically and attempt to autopull them.
+    if repo is not None:
+        lookup = repo.unfiltered().__contains__
+        unknownnames = list(scanunknowns([tree], lookup))
+        if unknownnames:
+            for name in unknownnames:
+                if not _autopull(repo, name):
+                    break
+
     posttreebuilthook(tree, repo)
     return makematcher(tree)
 
