@@ -62,6 +62,14 @@ impl VFS {
         &self.root
     }
 
+    pub fn join(&self, path: &RepoPath) -> PathBuf {
+        self.root.join(path.as_str())
+    }
+
+    pub fn metadata(&self, path: &RepoPath) -> Result<Metadata> {
+        self.join(path).symlink_metadata().map_err(|e| e.into())
+    }
+
     /// The file `path` can't be written to, attempt to fixup the directories and files so the file can
     /// be created.
     ///

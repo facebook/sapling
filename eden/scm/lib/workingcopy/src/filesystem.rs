@@ -19,6 +19,7 @@ use parking_lot::Mutex;
 
 use pathmatcher::Matcher;
 use treestate::filestate::StateFlags;
+use treestate::tree::VisitorResult;
 use treestate::treestate::TreeState;
 use types::{RepoPath, RepoPathBuf};
 use vfs::{is_executable, is_symlink, VFS};
@@ -87,6 +88,7 @@ impl PhysicalFileSystem {
             include_directories,
             seen: HashSet::new(),
             lookups: vec![],
+            tree_iter: None,
             last_write,
         }
     }
@@ -101,6 +103,7 @@ pub struct PendingChanges<M: Matcher + Clone> {
     include_directories: bool,
     seen: HashSet<RepoPathBuf>,
     lookups: Vec<RepoPathBuf>,
+    tree_iter: Option<Box<dyn Iterator<Item = Result<PendingChangeResult>> + Send>>,
     last_write: HgModifiedTime,
 }
 
@@ -233,7 +236,89 @@ impl<M: Matcher + Clone> PendingChanges<M> {
     }
 
     fn next_tree(&mut self) -> Option<Result<PendingChangeResult>> {
-        None
+        if self.tree_iter.is_none() {
+            self.tree_iter = Some(Box::new(self.get_tree_entries().into_iter()));
+        }
+
+        self.tree_iter.as_mut().unwrap().next()
+    }
+
+    fn get_tree_entries(&mut self) -> Vec<Result<PendingChangeResult>> {
+        let mut results = vec![];
+        let tracked = self.get_tracked_from_p1();
+        if let Err(e) = tracked {
+            results.push(Err(e));
+            return results;
+        }
+        let tracked = tracked.unwrap();
+
+        for path in tracked.into_iter() {
+            if self.seen.contains(&path) || !self.matcher.matches_file(&path) {
+                continue;
+            }
+
+            // If it's behind a symlink consider it deleted.
+            let metadata = self.vfs.metadata(&path);
+
+            // TODO: audit the path for symlinks and weirdness
+            // If it's missing or not readable, consider it deleted.
+            let metadata = match metadata {
+                Ok(metadata) => metadata,
+                Err(_) => {
+                    results.push(Ok(PendingChangeResult::File(ChangeType::Deleted(path))));
+                    continue;
+                }
+            };
+
+            let file_type = metadata.file_type();
+
+            // If the file is not a normal file or a symlink (ex: it could be a directory or a
+            // weird file like a fifo file), consider it deleted.
+            if !file_type.is_file() || file_type.is_symlink() {
+                results.push(Ok(PendingChangeResult::File(ChangeType::Deleted(path))));
+                continue;
+            }
+
+            // In an ideal world we wouldn't see any paths that exist on disk that weren't found by
+            // the walk phase, but there can be ignored files that the walk ignores but that are in
+            // the dirstate. So we compare them here to see if they changed.
+            let changed = match self.is_changed(&path, &metadata) {
+                Ok(result) => result,
+                Err(e) => {
+                    results.push(Err(e));
+                    continue;
+                }
+            };
+
+            if changed {
+                results.push(Ok(PendingChangeResult::File(ChangeType::Changed(path))));
+            }
+        }
+        results
+    }
+
+    /// Returns the files in the treestate that are from p1.
+    /// We only care about files from p1 because pending_changes is relative to p1.
+    fn get_tracked_from_p1(&mut self) -> Result<Vec<RepoPathBuf>> {
+        let mut treestate = self.treestate.lock();
+
+        let mut result = Vec::new();
+        let mask = StateFlags::EXIST_P1;
+
+        treestate.visit(
+            &mut |components, _| {
+                let path = components.concat();
+                let path = RepoPathBuf::from_utf8(path)?;
+                result.push(path);
+                Ok(VisitorResult::NotChanged)
+            },
+            &|_path, dir| match dir.get_aggregated_state() {
+                None => true,
+                Some(state) => state.union.intersects(mask),
+            },
+            &|_path, file| file.state.intersects(mask),
+        )?;
+        Ok(result)
     }
 
     fn next_lookup(&mut self) -> Option<Result<PendingChangeResult>> {
