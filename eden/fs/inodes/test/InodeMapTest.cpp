@@ -24,6 +24,21 @@
 using namespace std::chrono_literals;
 using namespace facebook::eden;
 
+#ifdef _WIN32
+// TODO(puneetk): Defining these flags here to fix the linker issue. These
+// symbols should come from ThriftProtocol.lib. But, for some reason it's not
+// getting imported from the lib on Windows, even though it's linking against
+// the lib.
+DEFINE_int32(
+    thrift_cpp2_protocol_reader_string_limit,
+    0,
+    "Limit on string size when deserializing thrift, 0 is no limit");
+DEFINE_int32(
+    thrift_cpp2_protocol_reader_container_limit,
+    0,
+    "Limit on container size when deserializing thrift, 0 is no limit");
+#endif
+
 TEST(InodeMap, invalidInodeNumber) {
   FakeTreeBuilder builder;
   builder.setFile("Makefile", "all:\necho success\n");
@@ -305,9 +320,13 @@ TEST(InodeMap, unloadedUnlinkedTreesAreRemovedFromOverlay) {
   edenMount->getInodeMap()->decFuseRefcount(dir2ino);
   EXPECT_FALSE(mount.hasOverlayData(dir1ino));
   EXPECT_FALSE(mount.hasOverlayData(dir2ino));
+#ifndef _WIN32
   EXPECT_FALSE(mount.hasMetadata(dir1ino));
   EXPECT_FALSE(mount.hasMetadata(dir2ino));
+#endif // !_WIN32
 }
+
+#ifndef _WIN32
 
 TEST(InodeMap, unloadedFileMetadataIsForgotten) {
   FakeTreeBuilder builder;
@@ -345,6 +364,7 @@ TEST(InodeMap, unloadedFileMetadataIsForgotten) {
   EXPECT_FALSE(mount.hasMetadata(file1ino));
   EXPECT_FALSE(mount.hasMetadata(file2ino));
 }
+#endif
 
 struct InodePersistenceTreeTest : ::testing::Test {
   InodePersistenceTreeTest() {
@@ -379,8 +399,15 @@ struct InodePersistenceTakeoverTest : InodePersistenceTreeTest {
     tree.reset();
     file1.reset();
     file2.reset();
+#ifdef _WIN32
+    // Windows doesn't support graceful restart yet. Here these tests help
+    // test the consistency of the overlay. On Windows we are using Sqlite
+    // Overlay which maintains the same inode number for each inode, after
+    // remounts.
+    testMount.remount();
+#else
     testMount.remountGracefully();
-
+#endif
     edenMount = testMount.getEdenMount();
   }
 
@@ -400,9 +427,11 @@ TEST_F(
   auto file2 = edenMount->getInode("dir/file2.txt"_relpath).get();
   auto file1 = edenMount->getInode("dir/file1.txt"_relpath).get();
 
+#ifndef _WIN32
   EXPECT_EQ(1, tree->debugGetFuseRefcount());
   EXPECT_EQ(1, file1->debugGetFuseRefcount());
   EXPECT_EQ(1, file2->debugGetFuseRefcount());
+#endif // !1
 
   EXPECT_EQ(oldTreeId, tree->getNodeId());
   EXPECT_EQ(oldFile1Id, file1->getNodeId());
@@ -420,6 +449,12 @@ TEST_F(
       edenMount->getInodeMap()->lookupInode(oldFile2Id).get()->getLogPath());
 }
 
+// The following test will not work on Windows, because on Windows we remount
+// instead of remountGracefully and remount doesn't pre-populate the InodeMap.
+// The lookupFirstByName above will work because checking by name will populate
+// the InodeMap for us.
+
+#ifndef _WIN32
 TEST_F(
     InodePersistenceTakeoverTest,
     preservesInodeNumbersForLoadedInodesDuringTakeover_lookupFirstByNumber) {
@@ -439,14 +474,17 @@ TEST_F(
   auto file2 = edenMount->getInode("dir/file2.txt"_relpath).get();
   auto file1 = edenMount->getInode("dir/file1.txt"_relpath).get();
 
+#ifndef _WIN32
   EXPECT_EQ(1, tree->debugGetFuseRefcount());
   EXPECT_EQ(1, file1->debugGetFuseRefcount());
   EXPECT_EQ(1, file2->debugGetFuseRefcount());
+#endif // !_WIN32
 
   EXPECT_EQ(oldTreeId, tree->getNodeId());
   EXPECT_EQ(oldFile1Id, file1->getNodeId());
   EXPECT_EQ(oldFile2Id, file2->getNodeId());
 }
+#endif
 
 /**
  * clang and gcc use the inode number of a header to determine whether it's the
@@ -481,7 +519,15 @@ TEST_F(
   tree.reset();
   file1.reset();
   file2.reset();
+#ifdef _WIN32
+  // Windows doesn't support graceful restart yet. Here these tests help
+  // test the consistency of the overlay. On Windows we are using Sqlite
+  // Overlay which maintains the same inode number for each inode, after
+  // remounts.
+  testMount.remount();
+#else
   testMount.remountGracefully();
+#endif
 
   edenMount = testMount.getEdenMount();
 

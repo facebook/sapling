@@ -62,3 +62,4 @@ else()
 endif()
 
 add_subdirectory(overlay)
+add_subdirectory(test)
