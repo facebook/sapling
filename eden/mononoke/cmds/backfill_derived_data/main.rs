@@ -8,7 +8,7 @@
 #![type_length_limit = "15000000"]
 #![deny(warnings)]
 
-use anyhow::{format_err, Error};
+use anyhow::{anyhow, format_err, Error};
 use blame::BlameRoot;
 use blobrepo::{BlobRepo, DangerousOverride};
 use bookmarks::{BookmarkPrefix, Bookmarks, Freshness};
@@ -45,6 +45,7 @@ use phases::SqlPhases;
 use slog::{info, Logger};
 use stats::prelude::*;
 use std::{
+    collections::HashMap,
     fs,
     path::Path,
     sync::{
@@ -56,22 +57,30 @@ use std::{
 
 mod warmup;
 
+mod dry_run;
+
 define_stats_struct! {
     DerivedDataStats("mononoke.backfill_derived_data.{}.{}", repo_name: String, data_type: &'static str),
     pending_heads: timeseries(Rate, Sum),
 }
 
-const ARG_DERIVED_DATA_TYPE: &'static str = "derived-data-type";
-const ARG_OUT_FILENAME: &'static str = "out-filename";
-const ARG_SKIP: &'static str = "skip-changesets";
-const ARG_REGENERATE: &'static str = "regenerate";
-const ARG_PREFETCHED_COMMITS_PATH: &'static str = "prefetched-commits-path";
-const ARG_CHANGESET: &'static str = "changeset";
+define_stats! {
+    derivation_time_ms:
+        histogram(100, 0, 2000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
+}
 
-const SUBCOMMAND_BACKFILL: &'static str = "backfill";
-const SUBCOMMAND_TAIL: &'static str = "tail";
-const SUBCOMMAND_PREFETCH_COMMITS: &'static str = "prefetch-commits";
-const SUBCOMMAND_SINGLE: &'static str = "single";
+const ARG_DERIVED_DATA_TYPE: &str = "derived-data-type";
+const ARG_DRY_RUN: &str = "dry-run";
+const ARG_OUT_FILENAME: &str = "out-filename";
+const ARG_SKIP: &str = "skip-changesets";
+const ARG_REGENERATE: &str = "regenerate";
+const ARG_PREFETCHED_COMMITS_PATH: &str = "prefetched-commits-path";
+const ARG_CHANGESET: &str = "changeset";
+
+const SUBCOMMAND_BACKFILL: &str = "backfill";
+const SUBCOMMAND_TAIL: &str = "tail";
+const SUBCOMMAND_PREFETCH_COMMITS: &str = "prefetch-commits";
+const SUBCOMMAND_SINGLE: &str = "single";
 
 const CHUNK_SIZE: usize = 4096;
 
@@ -139,6 +148,15 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         .takes_value(true)
                         .required(false)
                         .help("a file with a list of bonsai changesets to backfill"),
+                )
+                .arg(
+                    Arg::with_name(ARG_DRY_RUN)
+                        .long(ARG_DRY_RUN)
+                        .takes_value(false)
+                        .required(false)
+                        .help(
+                            "Derives all data but writes it to memory. Note - requires --readonly",
+                        ),
                 ),
         )
         .subcommand(
@@ -233,20 +251,63 @@ async fn run_subcmd<'a>(
             // any attempt to call BonsaiDerived::derive() fails. However calling
             // BonsaiDerived::derive() might be useful, and so the lines below explicitly
             // enable `derived_data_type` to allow calling BonsaiDerived::derive() if necessary.
-            let repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
+            let mut repo = repo.dangerous_override(|mut derived_data_config: DerivedDataConfig| {
                 derived_data_config
                     .derived_data_types
                     .insert(derived_data_type.clone());
                 derived_data_config
             });
+            info!(
+                ctx.logger(),
+                "reading all changesets for: {:?}",
+                repo.get_repoid()
+            );
+            let mut changesets = parse_serialized_commits(prefetched_commits_path)?;
+            changesets.sort_by_key(|cs_entry| cs_entry.gen);
+
+            let mut cleaner = None;
+
+            if sub_m.is_present(ARG_DRY_RUN) {
+                if !args::parse_readonly_storage(matches).0 {
+                    return Err(anyhow!("--dry-run requires readonly storage!"));
+                }
+
+                if derived_data_type != "fsnodes" {
+                    return Err(anyhow!("unsupported dry run data type"));
+                }
+
+                let mut children_count = HashMap::new();
+                for entry in &changesets {
+                    for p in &entry.parents {
+                        *children_count.entry(*p).or_insert(0) += 1;
+                    }
+                }
+
+                if derived_data_type == "fsnodes" {
+                    let (new_cleaner, wrapped_repo) = dry_run::FsnodeCleaner::new(
+                        ctx.clone(),
+                        repo.clone(),
+                        children_count,
+                        10000,
+                    );
+                    repo = wrapped_repo;
+                    cleaner = Some(new_cleaner);
+                }
+            }
+
+            let changesets: Vec<_> = changesets
+                .into_iter()
+                .skip(skip)
+                .map(|entry| entry.cs_id)
+                .collect();
 
             subcommand_backfill(
                 &ctx,
                 &repo,
                 &derived_data_type,
-                skip,
                 regenerate,
-                prefetched_commits_path,
+                changesets,
+                cleaner,
             )
             .await
         }
@@ -374,29 +435,16 @@ fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntr
     deserialize_cs_entries(&Bytes::from(data))
 }
 
-async fn subcommand_backfill<P: AsRef<Path>>(
+async fn subcommand_backfill(
     ctx: &CoreContext,
     repo: &BlobRepo,
     derived_data_type: &String,
-    skip: usize,
     regenerate: bool,
-    prefetched_commits_path: P,
+    changesets: Vec<ChangesetId>,
+    mut cleaner: Option<impl dry_run::Cleaner>,
 ) -> Result<(), Error> {
     let derived_utils = &derived_data_utils_unsafe(repo.clone(), derived_data_type.clone())?;
 
-    info!(
-        ctx.logger(),
-        "reading all changesets for: {:?}",
-        repo.get_repoid()
-    );
-
-    let mut changesets = parse_serialized_commits(prefetched_commits_path)?;
-    changesets.sort_by_key(|cs_entry| cs_entry.gen);
-    let changesets: Vec<_> = changesets
-        .into_iter()
-        .skip(skip)
-        .map(|entry| entry.cs_id)
-        .collect();
     info!(
         ctx.logger(),
         "starting deriving data for {} changesets",
@@ -451,8 +499,10 @@ async fn subcommand_backfill<P: AsRef<Path>>(
                 generated / elapsed.as_secs() as f32,
             );
         }
+        if let Some(ref mut cleaner) = cleaner {
+            cleaner.clean(chunk.to_vec()).await?;
+        }
     }
-
     Ok(())
 }
 

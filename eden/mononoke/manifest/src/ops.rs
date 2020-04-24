@@ -223,6 +223,25 @@ where
             .boxify()
     }
 
+    fn list_tree_entries(
+        &self,
+        ctx: CoreContext,
+        store: Store,
+    ) -> BoxStream<
+        (
+            Option<MPath>,
+            <<Self as StoreLoadable<Store>>::Value as Manifest>::TreeId,
+        ),
+        Error,
+    > {
+        self.list_all_entries(ctx, store)
+            .filter_map(|(maybe_path, entry)| match entry {
+                Entry::Tree(tree_id) => Some((maybe_path, tree_id)),
+                _ => None,
+            })
+            .boxify()
+    }
+
     /// Returns differences between two manifests.
     ///
     /// `self` is considered the "old" manifest (so entries missing there are "Added")
