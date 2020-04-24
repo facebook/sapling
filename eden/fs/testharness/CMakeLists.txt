@@ -11,6 +11,8 @@ set(
   "FakeTreeBuilder.h"
   "TempFile.cpp"
   "TempFile.h"
+  "TestMount.cpp"
+  "TestMount.h"
   "TestUtil.cpp"
   "TestUtil.h"
 )
