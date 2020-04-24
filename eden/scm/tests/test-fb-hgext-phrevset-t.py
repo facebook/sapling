@@ -21,8 +21,6 @@ sh % "hg up -q 0"
 sh % "hg up D1234" == r"""
     phrevset.callsign is not set - doing a linear search
     This will be slow if the diff was not committed recently
-    phrevset.callsign is not set - doing a linear search
-    This will be slow if the diff was not committed recently
     abort: phrevset.graphqlonly is set and Phabricator cannot resolve D1234
     [255]"""
 

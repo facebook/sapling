@@ -416,7 +416,9 @@ Check the repo.pull API
   date:        Thu Jan 01 00:00:00 1970 +0000
   summary:     First
   
+--- The above pull pulls "master" as a side effect to make sure phases are correct.
+--- Therefore 0238718db becomes available locally.
+
   $ hg update '0238718db^'
-  pulling 0238718db from 'ssh://user@dummy/remoterepo'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 

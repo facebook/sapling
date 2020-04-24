@@ -230,6 +230,12 @@ def _autopull(repo, x):
         else:
             displayname = ", ".join(headnames)
         repo.ui.status_err(_("pulling %s from %r\n") % (displayname, url))
+
+        # When pulling a single commit. Also pull selectivepull bookmarks so
+        # it does not end up with lagged master issues.
+        if not bookmarknames and headnames:
+            bookmarknames = bookmarks.selectivepullbookmarknames(repo, source)
+
         try:
             repo.pull(source, bookmarknames=bookmarknames, headnames=headnames)
         except Exception as ex:
