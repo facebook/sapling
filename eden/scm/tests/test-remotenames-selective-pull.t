@@ -53,6 +53,7 @@ Do not pull new bookmark even if it on the same commit as old bookmark
   $ cd ../remoterepo
   $ hg up -q master
   $ hg book thirdbook
+  $ hg book book-with-dashes
   $ cd ../localrepo
   $ hg pull
   pulling from ssh://user@dummy/remoterepo
@@ -195,6 +196,7 @@ Make another clone with selectivepull disabled
   $ hg clone -q ssh://user@dummy/remoterepo localrepo2
   $ cd localrepo2
   $ hg book --list-subscriptions
+     default/book-with-dashes  0:1449e7934ec1
      default/master            2:0238718db2b1
      default/thirdbook         0:1449e7934ec1
 
@@ -211,6 +213,7 @@ Temporarily disable selectivepull, pull, enable it again and pull again.
 Make sure only master bookmark is present
   $ hg pull --config remotenames.selectivepull=False -q
   $ hg book --list-subscriptions
+     default/book-with-dashes  0:1449e7934ec1
      default/master            2:0238718db2b1
      default/thirdbook         0:1449e7934ec1
   $ hg pull -q
@@ -245,11 +248,16 @@ Set two bookmarks in selectivepulldefault, make sure both of them were pulled
 Check that `--remote` shows real remote bookmarks from default remote
 
   $ hg book --remote
+     default/book-with-dashes          1449e7934ec1c4d0c2eefb1194c1cb70e78ba232
      default/master                    0238718db2b174d2622ae9c4c75d61745eb12b25
      default/thirdbook                 1449e7934ec1c4d0c2eefb1194c1cb70e78ba232
 
   $ hg book --remote -Tjson
   [
+   {
+    "node": "1449e7934ec1c4d0c2eefb1194c1cb70e78ba232",
+    "remotebookmark": "default/book-with-dashes"
+   },
    {
     "node": "0238718db2b174d2622ae9c4c75d61745eb12b25",
     "remotebookmark": "default/master"
@@ -382,6 +390,21 @@ Check the repo.pull API
   0238718db2b174d2622ae9c4c75d61745eb12b25 Move master bookmark 
   a81520e7283a6967ec1d82620b75ab92f5478638 push commit default/master
 
+-- Suboptimal: Names with revset operators cannot be pulled without escaping.
+
+  $ hg log -r book-with-dashes
+  pulling bookmark 'book' from 'ssh://user@dummy/remoterepo'
+  abort: unknown revision 'book'!
+  (if book is a remote bookmark or commit, try to 'hg pull' it first)
+  [255]
+
+-- Quoting works:
+
+  $ newrepo
+  $ setconfig paths.default=ssh://user@dummy/remoterepo
+  $ hg log -r '"default/book-with-dashes"::' -T '{desc}\n'
+  pulling bookmark 'book-with-dashes' from 'ssh://user@dummy/remoterepo'
+  First
 
 -- For commit hashes:
 
