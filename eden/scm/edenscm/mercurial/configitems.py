@@ -592,4 +592,8 @@ coreconfigitem("rebase", "experimental.inmemory", default=False)
 # Remote names.
 coreconfigitem("remotenames", "selectivepulldefault", default=["master"])
 coreconfigitem("remotenames", "autopullhoistpattern", default="")
-coreconfigitem("remotenames", "autopullprefix", default=["remote/", "default/"])
+coreconfigitem(
+    "remotenames",
+    "autopullpattern",
+    default=r"re:^(?:default|remote)/[A-Za-z0-9._/-]+$",
+)

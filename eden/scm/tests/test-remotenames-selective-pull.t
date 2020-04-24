@@ -359,16 +359,14 @@ Check the repo.pull API
 
   $ newrepo
   $ setconfig paths.default=ssh://user@dummy/remoterepo
-  $ setconfig remotenames.autopullprefix=
+  $ setconfig remotenames.autopullpattern=
   $ hg log -r default/thirdbook::default/master -T '{node} {desc} {remotenames}\n'
   abort: unknown revision 'default/thirdbook'!
   (if default/thirdbook is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
 
-  $ setconfig remotenames.autopullprefix=default/
+  $ setconfig 'remotenames.autopullpattern=re:^default/[a-z]+$'
   $ hg log -r default/thirdbook::default/master -T '{node} {desc} {remotenames}\n'
-  pulling bookmark 'thirdbook::default/master' from 'ssh://user@dummy/remoterepo'
-  pull failed: *unknown revision 'thirdbook::default/master'* (glob)
   pulling bookmark 'thirdbook' from 'ssh://user@dummy/remoterepo'
   pulling bookmark 'master' from 'ssh://user@dummy/remoterepo'
   1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 First default/thirdbook

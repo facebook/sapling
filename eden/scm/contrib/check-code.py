@@ -357,7 +357,7 @@ pypats = [
         ),
         (r"\s0[0-7]+\b", 'legacy octal syntax; use "0o" prefix instead of "0"'),
         # XXX only catch mutable arguments on the first line of the definition
-        (r"def.*[( ]\w+=\{\}", "don't use mutable default arguments"),
+        (r"def.*[( ][^_]\w*=\{\}", "don't use mutable default arguments"),
         (r"\butil\.Abort\b", "directly use error.Abort"),
         (r"^@(\w*\.)?cachefunc", "module-level @cachefunc is risky, please avoid"),
         (r"\.next\(\)", "don't use .next(), use next(...)"),

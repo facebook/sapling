@@ -193,6 +193,15 @@ def _warnrevnum(ui, x):
 _commithashre = re.compile(r"\A[0-9a-f]{6,40}\Z")
 
 
+def _cachedstringmatcher(pattern, _cache={}):
+    # _cache is shared across function calls
+    result = _cache.get(pattern)
+    if result is None:
+        result = util.stringmatcher(pattern)[-1]
+        _cache[pattern] = result
+    return result
+
+
 def _autopull(repo, x):
     """Pull the given name x. Return true if pull succeeded. Does not raise."""
     repo._autopulled = getattr(repo, "_autopulled", set())
@@ -248,16 +257,17 @@ def _autopull(repo, x):
         return False
 
     # Pull remote names like "remote/foo" automatically.
-    if "/" in x and any(
-        x.startswith(p) for p in repo.ui.configlist("remotenames", "autopullprefix")
-    ):
-        remotename, name = bookmarks.splitremotename(x)
-        if _trypulls(
-            ["infinitepushbookmark", "infinitepush", remotename],
-            bookmarknames=[name],
-            headnames=[name],
-        ):
-            return True
+    pattern = repo.ui.config("remotenames", "autopullpattern")
+    if pattern and "/" in x:
+        matchfn = _cachedstringmatcher(pattern)
+        if matchfn(x):
+            remotename, name = bookmarks.splitremotename(x)
+            if _trypulls(
+                ["infinitepushbookmark", "infinitepush", remotename],
+                bookmarknames=[name],
+                headnames=[name],
+            ):
+                return True
 
     # Pull commit hashes automatically.
     if repo.ui.configbool("ui", "autopullcommits") and _commithashre.match(x):
@@ -268,7 +278,7 @@ def _autopull(repo, x):
     hoistpattern = repo.ui.config("remotenames", "autopullhoistpattern")
     if hoistpattern:
         hoist = repo.ui.config("remotenames", "hoist")
-        matchfn = util.stringmatcher(hoistpattern)[-1]
+        matchfn = _cachedstringmatcher(hoistpattern)
         if matchfn(x) and _trypulls(
             ["infinitepushbookmark", "infinitepush", hoist], bookmarknames=[x]
         ):
