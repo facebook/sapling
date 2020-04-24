@@ -76,26 +76,6 @@ impl HgManifest for HgEmptyManifest {
     }
 }
 
-impl HgManifest for Box<dyn HgManifest + Sync> {
-    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn HgEntry + Sync>> {
-        (**self).lookup(path)
-    }
-
-    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn HgEntry + Sync>> + Send> {
-        (**self).list()
-    }
-}
-
-impl HgManifest for Box<dyn HgManifest> {
-    fn lookup(&self, path: &MPathElement) -> Option<Box<dyn HgEntry + Sync>> {
-        (**self).lookup(path)
-    }
-
-    fn list(&self) -> Box<dyn Iterator<Item = Box<dyn HgEntry + Sync>> + Send> {
-        (**self).list()
-    }
-}
-
 /// Type of an Entry
 ///
 /// File and Executable are identical - they both represent files containing arbitrary content.
