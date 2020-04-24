@@ -11,11 +11,11 @@
 #include <folly/logging/xlog.h>
 #include <gflags/gflags.h>
 #include <signal.h>
-#include <sysexits.h>
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <algorithm>
 #include <array>
 #include <chrono>
+#include <cstdio>
 #include <fstream>
 #include <iterator>
 #include <optional>
@@ -335,7 +335,7 @@ int main(int argc, char** argv) {
     edenConfig = getEdenConfig(identity);
   } catch (const ArgumentError& ex) {
     fprintf(stderr, "%s\n", ex.what());
-    return EX_SOFTWARE;
+    return 2;
   }
   auto edenDir = edenConfig->edenDir.getValue();
 
@@ -355,7 +355,7 @@ int main(int argc, char** argv) {
   thriftAddress.setFromPath(thriftSocketPath.stringPiece());
 
   // Make sure no socket already exists at this path
-  int rc = unlink(thriftSocketPath.value().c_str());
+  int rc = remove(thriftSocketPath.value().c_str());
   if (rc != 0 && errno != ENOENT) {
     int errnum = errno;
     startupLogger->exitUnsuccessfully(

@@ -68,5 +68,14 @@ UserInfo::UserInfo() : username_(UNLEN, 0) {
   homeDirectory_ = realpath(profile);
 }
 
+UserInfo UserInfo::lookup() {
+  return UserInfo();
+}
+
+void UserInfo::dropPrivileges() {
+  // EdenFS does not run with elevated privileges on Windows,
+  // so there is nothing to do here.
+}
+
 } // namespace eden
 } // namespace facebook

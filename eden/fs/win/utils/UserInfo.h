@@ -17,6 +17,9 @@ class UserInfo {
  public:
   UserInfo();
 
+  static UserInfo lookup();
+  void dropPrivileges();
+
   const std::string& getUsername() const {
     return username_;
   }
