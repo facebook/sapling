@@ -238,6 +238,19 @@ class FindExeClass(object):
             elif buck_path is not None:
                 candidates.append(os.path.join(os.getcwd(), buck_path))
 
+        if sys.platform == "win32":
+            # All of the paths in the candidates list are POSIX-style paths.
+            # Convert path separators to Windows-style.
+            # Also search for both the path as specified, as well as with a ".exe"
+            # suffix, since the CMake build automatically adds a .exe suffix all
+            # binaries.
+            win_candidates = []
+            for path in candidates:
+                win_path = path.replace("/", os.path.sep)
+                win_candidates.append(win_path)
+                win_candidates.append(win_path + ".exe")
+            candidates = win_candidates
+
         for path in candidates:
             if os.access(path, os.X_OK):
                 return path

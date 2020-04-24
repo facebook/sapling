@@ -11,6 +11,7 @@ import pathlib
 import shlex
 import shutil
 import subprocess
+import sys
 import tempfile
 from pathlib import Path
 from types import TracebackType
@@ -572,6 +573,12 @@ def can_run_eden() -> bool:
 
 
 def _compute_can_run_eden() -> bool:
+    # On Windows the only requirement is that ProjectedFS must be installed.
+    # Our CMake build already verifies that during the configure phase of the build,
+    # so we can simply always return True here for now.
+    if sys.platform == "win32":
+        return True
+
     # FUSE must be available
     if not os.path.exists("/dev/fuse"):
         return False
@@ -597,6 +604,9 @@ def can_run_sudo() -> bool:
 
 
 def _compute_can_run_sudo() -> bool:
+    if sys.platform == "win32":
+        return False
+
     cmd = ["/usr/bin/sudo", "-E", "/bin/true"]
     with open("/dev/null", "r") as dev_null:
         # Close stdout, stderr, and stdin, and call setsid() to make
