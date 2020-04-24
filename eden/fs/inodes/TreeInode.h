@@ -13,6 +13,10 @@
 #include "eden/fs/inodes/DirEntry.h"
 #include "eden/fs/inodes/InodeBase.h"
 
+#ifdef _WIN32
+#include "eden/fs/win/store/WinStore.h" // @manual
+#endif
+
 namespace facebook {
 namespace eden {
 
@@ -142,7 +146,24 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
 #ifndef _WIN32
   DirList readdir(DirList&& list, off_t off);
 #else
+  /**
+   * The following readdir() is similar to the one in the POSIX code and is
+   * mainly used in the unit test code. It returns the DirList containing entry
+   * name, inode number and dtype.
+   */
   DirList readdir();
+
+  /**
+   * The following readdir() is for responding to Projected FS's directory
+   * enumeration requests. This API populates the list with the wide char names,
+   * dtype, and size for the non-materialized files. The size field for
+   * materialized files is stored in the ProjectedFS and there is no efficient
+   * way to get it, so in this function as an optimization we don't populate the
+   * size of materialized files.
+   *
+   * The list argument is expected to be an empty list.
+   */
+  void readdir(std::vector<FileMetadata>& list);
 #endif
 
   const folly::Synchronized<TreeInodeState>& getContents() const {

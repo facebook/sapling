@@ -1832,6 +1832,49 @@ DirList TreeInode::readdir() {
   }
   return list;
 }
+
+void TreeInode::readdir(std::vector<FileMetadata>& list) {
+  // We expect an empty list, verify that.
+  CHECK(list.empty());
+  vector<Future<std::pair<uint32_t, uint64_t>>> futures;
+  {
+    uint32_t index = 0;
+    auto dir = contents_.rlock();
+    auto& entries = dir->entries;
+
+    for (auto& entry : entries) {
+      if (entry.second.getDtype() != dtype_t::Dir) {
+        auto hash = entry.second.getOptionalHash();
+        if (hash.has_value()) {
+          // We only populates the file size for non-materialized files. For the
+          // materialized files the file size is overwritten by the ProjectedFs.
+
+          futures.emplace_back(
+              getMount()
+                  ->getObjectStore()
+                  ->getBlobSize(
+                      hash.value(), ObjectFetchContext::getNullContext())
+                  .thenValue([index](auto size) {
+                    return std::make_pair(index, size);
+                  }));
+        }
+      }
+      list.emplace_back(
+          edenToWinName(entry.first.stringPiece()),
+          entry.second.getDtype() == dtype_t::Dir ? true : false,
+          0 /* fileSize is populated in the future loop below*/);
+      index++;
+    }
+
+    // We can release the content lock here.
+  }
+
+  auto results = folly::collectAll(std::move(futures)).get();
+  for (auto& result : results) {
+    // Populate the size in the list for the non-materialized files.
+    list[result->first].size = result->second;
+  }
+}
 #endif // _WIN32
 
 InodeMap* TreeInode::getInodeMap() const {
