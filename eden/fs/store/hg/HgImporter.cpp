@@ -64,10 +64,10 @@ using std::unique_ptr;
 
 DEFINE_string(
     hgPath,
-    "C:\\tools\\scm-telemetry\\hg.exe",
+    "C:\\tools\\hg\\hg.real.exe",
     "The path to the mercurial executable");
 #else
-DEFINE_string(hgPath, "hg", "The path to the mercurial executable");
+DEFINE_string(hgPath, "hg.real", "The path to the mercurial executable");
 #endif
 
 DEFINE_string(
