@@ -993,7 +993,6 @@ void EdenServiceHandler::async_tm_getScmStatusV2(
     unique_ptr<apache::thrift::HandlerCallback<unique_ptr<GetScmStatusResult>>>
         callback,
     unique_ptr<GetScmStatusParams> params) {
-#ifndef _WIN32
   auto* request = callback->getRequest();
   folly::makeFutureWith([&, func = __func__] {
     auto helper = INSTRUMENT_THRIFT_CALL_WITH_FUNCTION_NAME(
@@ -1024,9 +1023,6 @@ void EdenServiceHandler::async_tm_getScmStatusV2(
         apache::thrift::HandlerCallback<std::unique_ptr<GetScmStatusResult>>::
             completeInThread(std::move(cb), std::move(result));
       });
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::async_tm_getScmStatus(
