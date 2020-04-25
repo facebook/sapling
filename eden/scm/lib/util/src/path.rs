@@ -12,6 +12,8 @@ use std::env;
 use std::fs::rename;
 use std::fs::{self, remove_file as fs_remove_file};
 use std::io::{self, ErrorKind};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::{Component, Path, PathBuf};
 
 use anyhow::Result;
@@ -106,18 +108,69 @@ pub fn remove_file<P: AsRef<Path>>(path: P) -> Result<()> {
     Ok(())
 }
 
-/// Create the directory and ignore failures when a directory of the same name already exists.
-pub fn create_dir(path: impl AsRef<Path>) -> io::Result<()> {
-    match fs::create_dir(path.as_ref()) {
+/// Create the directory with specified permission on UNIX systems. We create a temporary
+/// directory at the parent directory of the the directory being created, run chmod to change the
+/// permission then rename the temporary directory to the desired name to prevent leaking directory
+/// with incorrect permissions.
+#[cfg(unix)]
+fn create_dir_with_mode_impl(path: &Path, mode: u32) -> io::Result<()> {
+    let parent = path.parent().ok_or_else(|| {
+        io::Error::new(
+            ErrorKind::NotFound,
+            format!("`{:?}` does not have a parent directory", path),
+        )
+    })?;
+    let temp = tempfile::TempDir::new_in(&parent)?;
+    fs::set_permissions(&temp, fs::Permissions::from_mode(mode))?;
+
+    let temp = temp.into_path();
+    if let Err(e) = fs::rename(&temp, path) {
+        // In the unlikely event where the rename fails, we attempt to clean up the
+        // previously leaked temporary file before returning.
+        let _ = fs::remove_dir(&temp);
+
+        // The rename may fail if the desinated directory already exists and is not empty. In this
+        // case it will return `ENOTEMPTY` instead of `EEXIST`. Rust does not have an
+        // `io::ErrorKind` for such error, and it will be categorized into `ErrorKind::Other`. We
+        // have to use `libc::ENOTEMPTY` because the integer value of `ENOTEMPTY` varies depends on
+        // platform we are on.
+        // Similarly, when the destinated directory is a file, we get `ENOTDIR` instead of `EEXIST`.
+        match e.raw_os_error() {
+            Some(libc::ENOTEMPTY) | Some(libc::ENOTDIR) => Err(ErrorKind::AlreadyExists.into()),
+            _ => Err(e),
+        }
+    } else {
+        Ok(())
+    }
+}
+
+/// Create the directory. The mode argument is ignored on non-UNIX systems.
+#[cfg(not(unix))]
+fn create_dir_with_mode_impl(path: &Path, _mode: u32) -> io::Result<()> {
+    fs::create_dir(path)
+}
+
+fn create_dir_with_mode(path: &Path, mode: u32) -> io::Result<()> {
+    match create_dir_with_mode_impl(path, mode) {
         Ok(()) => Ok(()),
         Err(e) => {
-            if e.kind() == ErrorKind::AlreadyExists && path.as_ref().is_dir() {
+            if e.kind() == ErrorKind::AlreadyExists && path.is_dir() {
                 Ok(())
             } else {
                 Err(e)
             }
         }
     }
+}
+
+/// Create the directory and ignore failures when a directory of the same name already exists.
+pub fn create_dir(path: impl AsRef<Path>) -> io::Result<()> {
+    create_dir_with_mode(path.as_ref(), 0o755)
+}
+
+/// Create the directory with group write permission on UNIX systems.
+pub fn create_shared_dir(path: impl AsRef<Path>) -> io::Result<()> {
+    create_dir_with_mode(path.as_ref(), 0o775)
 }
 
 /// Expand the user's home directory and any environment variables references in
@@ -233,6 +286,34 @@ mod tests {
             );
             assert_eq!(absolute("//").unwrap(), Path::new("/"));
         }
+
+        #[test]
+        fn test_create_dir_mode() -> Result<()> {
+            let tempdir = TempDir::new()?;
+            let mut path = tempdir.path().to_path_buf();
+            path.push("dir");
+            create_dir(&path)?;
+            assert!(path.is_dir());
+            let metadata = path.metadata()?;
+            assert_eq!(metadata.permissions().mode(), 0o40755);
+            // check we don't have temporary directory left
+            assert_eq!(tempdir.path().read_dir()?.count(), 1);
+            Ok(())
+        }
+
+        #[test]
+        fn test_create_shared_dir() -> Result<()> {
+            let tempdir = TempDir::new()?;
+            let mut path = tempdir.path().to_path_buf();
+            path.push("shared");
+            create_shared_dir(&path)?;
+            assert!(path.is_dir());
+            let metadata = path.metadata()?;
+            assert_eq!(metadata.permissions().mode(), 0o40775);
+            // check we don't have temporary directory left
+            assert_eq!(tempdir.path().read_dir()?.count(), 1);
+            Ok(())
+        }
     }
 
     #[test]
@@ -266,6 +347,24 @@ mod tests {
         let err = create_dir(&path).unwrap_err();
         assert_eq!(err.kind(), ErrorKind::AlreadyExists);
         Ok(())
+    }
+
+    #[test]
+    fn test_create_dir_with_nonexistent_parent() -> Result<()> {
+        let tempdir = TempDir::new()?;
+        let mut path = tempdir.path().to_path_buf();
+        path.push("nonexistentparent");
+        path.push("dir");
+        let err = create_dir(&path).unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::NotFound);
+        Ok(())
+    }
+
+    #[test]
+    fn test_create_dir_without_empty_path() {
+        let empty = Path::new("");
+        let err = create_dir(&empty).unwrap_err();
+        assert_eq!(err.kind(), ErrorKind::NotFound);
     }
 
     #[test]
