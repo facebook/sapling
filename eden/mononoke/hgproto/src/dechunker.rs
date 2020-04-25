@@ -55,9 +55,7 @@ where
         }
     }
 
-    #[allow(dead_code)]
     pub fn with_full_content(mut self, full_bundle2_content: Arc<Mutex<Bytes>>) -> Self {
-        // TODO(ikostia): make this used in commands.rs and remove the attribute above
         self.maybe_full_content = Some(full_bundle2_content);
         self
     }
