@@ -11,7 +11,7 @@
 mod contentstore;
 mod dataindex;
 mod edenapi;
-#[cfg(fbcode_build)]
+#[cfg(all(fbcode_build, target_os = "linux"))]
 mod facebook;
 mod fanouttable;
 mod historyindex;

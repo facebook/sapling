@@ -532,7 +532,7 @@ mod tests {
         Ok(())
     }
 
-    #[cfg(fbcode_build)]
+    #[cfg(all(fbcode_build, target_os = "linux"))]
     mod fbcode_tests {
         use super::*;
 

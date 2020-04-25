@@ -45,7 +45,7 @@ pub(crate) struct McHist {
     pub nodeinfo: NodeInfo,
 }
 
-#[cfg(not(fbcode_build))]
+#[cfg(not(all(fbcode_build, target_os = "linux")))]
 mod dummy {
     use super::*;
 
@@ -75,10 +75,10 @@ mod dummy {
     }
 }
 
-#[cfg(fbcode_build)]
+#[cfg(all(fbcode_build, target_os = "linux"))]
 pub use crate::facebook::MemcacheStore;
 
-#[cfg(not(fbcode_build))]
+#[cfg(not(all(fbcode_build, target_os = "linux")))]
 pub use dummy::MemcacheStore;
 
 impl HgIdDataStore for MemcacheStore {
