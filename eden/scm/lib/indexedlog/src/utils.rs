@@ -279,12 +279,6 @@ fn atomic_read_symlink(path: &Path) -> io::Result<Vec<u8>> {
     }
 }
 
-/// `uid` and `gid` to `chown` for `mkdir_p`.
-/// - x (x < 0): do not chown
-/// - x (x >= 0): try to chown to `x`, do nothing if failed
-pub static CHOWN_UID: AtomicI64 = AtomicI64::new(-1);
-pub static CHOWN_GID: AtomicI64 = AtomicI64::new(-1);
-
 /// If set to true, prefer symlinks to normal files for atomic_write.
 pub static SYMLINK_ATOMIC_WRITE: atomic::AtomicBool = atomic::AtomicBool::new(cfg!(test));
 
@@ -296,7 +290,7 @@ pub static CHMOD_DIR: AtomicI64 = AtomicI64::new(0o2775);
 /// Default chmod mode for atomic_write files.
 pub static CHMOD_FILE: AtomicI64 = AtomicI64::new(0o664);
 
-/// Similar to `fs::create_dir_all`, but also attempts to chmod and chown
+/// Similar to `fs::create_dir_all`, but also attempts to chmod
 /// newly created directories on Unix.
 pub(crate) fn mkdir_p(dir: impl AsRef<Path>) -> crate::Result<()> {
     let dir = dir.as_ref();
@@ -340,7 +334,7 @@ pub(crate) fn mkdir_p(dir: impl AsRef<Path>) -> crate::Result<()> {
     })()
 }
 
-/// Attempt to chmod and chown path.
+/// Attempt to chmod a path.
 pub(crate) fn fix_perm_path(path: &Path, is_dir: bool) -> io::Result<()> {
     #[cfg(unix)]
     {
@@ -354,25 +348,10 @@ pub(crate) fn fix_perm_path(path: &Path, is_dir: bool) -> io::Result<()> {
     Ok(())
 }
 
-/// Attempt to chmod and chown a file.
+/// Attempt to chmod a file.
 pub(crate) fn fix_perm_file(file: &File, is_dir: bool) -> io::Result<()> {
     #[cfg(unix)]
     {
-        // chown
-        let mut uid = CHOWN_UID.load(atomic::Ordering::SeqCst);
-        let mut gid = CHOWN_GID.load(atomic::Ordering::SeqCst);
-        if gid >= 0 || uid >= 0 {
-            let fd = std::os::unix::io::AsRawFd::as_raw_fd(file);
-            if let Ok(meta) = file.metadata() {
-                if uid < 0 {
-                    uid = std::os::unix::fs::MetadataExt::uid(&meta) as i64;
-                }
-                if gid < 0 {
-                    gid = std::os::unix::fs::MetadataExt::gid(&meta) as i64;
-                }
-                unsafe { libc::fchown(fd, uid as libc::uid_t, gid as libc::gid_t) };
-            }
-        }
         // chmod
         let mode = if is_dir {
             CHMOD_DIR.load(atomic::Ordering::SeqCst)
@@ -391,7 +370,7 @@ pub(crate) fn fix_perm_file(file: &File, is_dir: bool) -> io::Result<()> {
     Ok(())
 }
 
-/// Attempt to chmod and chown a symlink at the given path.
+/// Attempt to chmod a symlink at the given path.
 pub(crate) fn fix_perm_symlink(path: &Path) -> io::Result<()> {
     #[cfg(unix)]
     {
@@ -399,13 +378,6 @@ pub(crate) fn fix_perm_symlink(path: &Path) -> io::Result<()> {
         use std::os::unix::ffi::OsStrExt;
 
         let path = CString::new(path.as_os_str().as_bytes())?;
-
-        // chown
-        let uid = CHOWN_UID.load(atomic::Ordering::SeqCst);
-        let gid = CHOWN_GID.load(atomic::Ordering::SeqCst);
-        if uid >= 0 || gid >= 0 {
-            unsafe { libc::lchown(path.as_ptr(), uid as libc::uid_t, gid as libc::gid_t) };
-        }
 
         // chmod
         let mode = CHMOD_FILE.load(atomic::Ordering::SeqCst);

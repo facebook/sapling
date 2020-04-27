@@ -122,24 +122,6 @@ fn initialize_blackbox(optional_repo: &OptionalRepo) -> Result<()> {
 
 fn initialize_indexedlog(config: &ConfigSet) -> Result<()> {
     if cfg!(unix) {
-        let chown_group = config.get_or("permissions", "chown-group", || String::new())?;
-        if !chown_group.is_empty() {
-            // Try to find the group from /etc/group
-            if let Ok(groups) = std::fs::read_to_string("/etc/group") {
-                let prefix = format!("{}:", chown_group);
-                for line in groups.lines() {
-                    // group_name:password:GID:user_list
-                    if line.starts_with(&prefix) {
-                        if let Some(gid_str) = line.split(":").nth(2) {
-                            if let Ok(gid) = gid_str.parse::<i64>() {
-                                indexedlog::utils::CHOWN_GID.store(gid, SeqCst);
-                            }
-                        }
-                    }
-                }
-            }
-        }
-
         let chmod_file = config.get_or("permissions", "chmod-file", || -1)?;
         if chmod_file >= 0 {
             indexedlog::utils::CHMOD_FILE.store(chmod_file, SeqCst);
