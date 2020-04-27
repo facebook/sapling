@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Context, Error};
+use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkUpdateReason, Bookmarks, Freshness};
 use clap::{App, Arg, ArgMatches, SubCommand};
@@ -32,6 +32,16 @@ const HG_SYNC_FETCH_BUNDLE: &str = "fetch-bundle";
 const HG_SYNC_LAST_PROCESSED: &str = "last-processed";
 const HG_SYNC_VERIFY: &str = "verify";
 
+const ARG_SET: &str = "set";
+const ARG_SKIP_BLOBIMPORT: &str = "skip-blobimport";
+const ARG_DRY_RUN: &str = "dry-run";
+
+const ARG_QUIET: &str = "quiet";
+const ARG_WITHOUT_BLOBIMPORT: &str = "without-blobimport";
+
+const ARG_ID: &str = "id";
+const ARG_OUTPUT_FILE: &str = "output-file";
+
 pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
     SubCommand::with_name(HG_SYNC_BUNDLE)
         .about("things related to mononoke-hg-sync counters")
@@ -39,66 +49,67 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
             SubCommand::with_name(HG_SYNC_LAST_PROCESSED)
                 .about("inspect/change mononoke-hg sync last processed counter")
                 .arg(
-                    Arg::with_name("set")
-                        .long("set")
+                    Arg::with_name(ARG_SET)
+                        .long(ARG_SET)
                         .required(false)
                         .takes_value(true)
                         .help("set the value of the latest processed mononoke-hg-sync counter"),
                 )
                 .arg(
-                    Arg::with_name("skip-blobimport")
-                        .long("skip-blobimport")
+                    Arg::with_name(ARG_SKIP_BLOBIMPORT)
+                        .long(ARG_SKIP_BLOBIMPORT)
                         .required(false)
                         .help("skip to the next non-blobimport entry in mononoke-hg-sync counter"),
                 )
                 .arg(
-                    Arg::with_name("dry-run")
-                        .long("dry-run")
+                    Arg::with_name(ARG_DRY_RUN)
+                        .long(ARG_DRY_RUN)
                         .required(false)
-                        .help("don't make changes, only show what would have been done (--skip-blobimport only)"),
+                        .help("don't make changes, only show what would have been done"),
                 ),
         )
         .subcommand(
             SubCommand::with_name(HG_SYNC_REMAINS)
                 .about("get the value of the last mononoke-hg-sync counter to be processed")
                 .arg(
-                    Arg::with_name("quiet")
-                        .long("quiet")
+                    Arg::with_name(ARG_QUIET)
+                        .long(ARG_QUIET)
                         .required(false)
                         .takes_value(false)
                         .help("only print the number if present"),
                 )
                 .arg(
-                    Arg::with_name("without-blobimport")
-                        .long("without-blobimport")
+                    Arg::with_name(ARG_WITHOUT_BLOBIMPORT)
+                        .long(ARG_WITHOUT_BLOBIMPORT)
                         .required(false)
                         .takes_value(false)
                         .help("exclude blobimport entries from the count"),
                 ),
         )
         .subcommand(
-            SubCommand::with_name(HG_SYNC_SHOW).about("show hg hashes of yet to be replayed bundles")
+            SubCommand::with_name(HG_SYNC_SHOW)
+                .about("show hg hashes of yet to be replayed bundles")
                 .arg(
                     Arg::with_name("limit")
                         .long("limit")
                         .required(false)
                         .takes_value(true)
                         .help("how many bundles to show"),
-                )
+                ),
         )
         .subcommand(
             SubCommand::with_name(HG_SYNC_FETCH_BUNDLE)
                 .about("fetches a bundle by id")
                 .arg(
-                    Arg::with_name("id")
-                        .long("id")
+                    Arg::with_name(ARG_ID)
+                        .long(ARG_ID)
                         .required(true)
                         .takes_value(true)
                         .help("bookmark log id. If it has associated bundle it will be fetched."),
                 )
                 .arg(
-                    Arg::with_name("output-file")
-                        .long("output-file")
+                    Arg::with_name(ARG_OUTPUT_FILE)
+                        .long(ARG_OUTPUT_FILE)
                         .required(true)
                         .takes_value(true)
                         .help("where a bundle will be saved"),
@@ -118,13 +129,19 @@ async fn last_processed(
     bookmarks: &SqlBookmarks,
 ) -> Result<(), Error> {
     match (
-        sub_m.value_of("set"),
-        sub_m.is_present("skip-blobimport"),
-        sub_m.is_present("dry-run"),
+        sub_m.value_of(ARG_SET),
+        sub_m.is_present(ARG_SKIP_BLOBIMPORT),
+        sub_m.is_present(ARG_DRY_RUN),
     ) {
-        (Some(..), true, ..) => Err(Error::msg("cannot pass both --set and --skip-blobimport")),
-        (.., false, true) => Err(Error::msg(
-            "--dry-run is meaningless without --skip-blobimport",
+        (Some(..), true, ..) => Err(format_err!(
+            "cannot pass both --{} and --{}",
+            ARG_SET,
+            ARG_SKIP_BLOBIMPORT
+        )),
+        (.., false, true) => Err(format_err!(
+            "--{} is meaningless without --{}",
+            ARG_DRY_RUN,
+            ARG_SKIP_BLOBIMPORT
         )),
         (Some(new_value), false, false) => {
             let new_value = i64::from_str_radix(new_value, 10).unwrap();
@@ -232,8 +249,8 @@ async fn remains(
     mutable_counters: &SqlMutableCounters,
     bookmarks: &SqlBookmarks,
 ) -> Result<(), Error> {
-    let quiet = sub_m.is_present("quiet");
-    let without_blobimport = sub_m.is_present("without-blobimport");
+    let quiet = sub_m.is_present(ARG_QUIET);
+    let without_blobimport = sub_m.is_present(ARG_WITHOUT_BLOBIMPORT);
 
     // yes, technically if the sync hasn't started yet
     // and there exists a counter #0, we want return the
@@ -344,14 +361,16 @@ async fn fetch_bundle(
     repo: &BlobRepo,
     bookmarks: &SqlBookmarks,
 ) -> Result<(), Error> {
-    let id = args::get_u64_opt(sub_m, "id").ok_or_else(|| Error::msg("--id is not specified"))?;
+    let id = args::get_u64_opt(&sub_m, ARG_ID)
+        .ok_or_else(|| format_err!("--{} is not specified", ARG_ID))?;
+
     if id == 0 {
-        return Err(Error::msg("--id has to be greater than 0"));
+        return Err(format_err!("--{} has to be greater than 0", ARG_ID));
     }
 
     let output_file = sub_m
-        .value_of("output-file")
-        .ok_or_else(|| Error::msg("--output-file is not specified"))?
+        .value_of(ARG_OUTPUT_FILE)
+        .ok_or_else(|| format_err!("--{} is not specified", ARG_OUTPUT_FILE))?
         .into();
 
     let log_entry = bookmarks
