@@ -658,7 +658,6 @@ TEST(Checkout, modifyConflictForce) {
   runModifyConflictTests(CheckoutMode::FORCE);
 }
 
-#ifndef _WIN32
 TEST(Checkout, modifyThenRevert) {
   // Prepare a "before" tree
   auto srcBuilder = FakeTreeBuilder();
@@ -689,15 +688,17 @@ TEST(Checkout, modifyThenRevert) {
       UnorderedElementsAre(
           makeConflict(ConflictType::MODIFIED_MODIFIED, "a/test.txt")));
 
+#ifndef _WIN32
   // The checkout operation updates files by replacing them, so
   // there should be a new inode at this location now, with the original
-  // contents.
+  // contents. On Windows, files are written directly into the Projected FS
+  // cache, and thus the old data is gone.
   auto postInode = testMount.getFileInode("a/test.txt");
   EXPECT_FILE_INODE(postInode, "test contents\n", 0644);
   EXPECT_NE(preInode->getNodeId(), postInode->getNodeId());
   EXPECT_FILE_INODE(preInode, "temporary edit\n", 0644);
-}
 #endif
+}
 
 TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
   auto builder1 = FakeTreeBuilder();
