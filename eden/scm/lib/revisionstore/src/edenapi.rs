@@ -119,23 +119,26 @@ impl HgIdDataStore for EdenApiRemoteDataStore {
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
-            Ok(()) => self.store.get_delta(key),
+        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
+        match self.prefetch(&missing) {
             Err(_) => Ok(None),
+            Ok(()) => self.store.get_delta(key),
         }
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
-            Ok(()) => self.store.get_delta_chain(key),
+        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
+        match self.prefetch(&missing) {
             Err(_) => Ok(None),
+            Ok(()) => self.store.get_delta_chain(key),
         }
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
-            Ok(()) => self.store.get_meta(key),
+        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
+        match self.prefetch(&missing) {
             Err(_) => Ok(None),
+            Ok(()) => self.store.get_meta(key),
         }
     }
 }

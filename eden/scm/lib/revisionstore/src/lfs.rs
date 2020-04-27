@@ -578,6 +578,10 @@ impl LocalStore for LfsStore {
             })
             .collect())
     }
+
+    fn translate_lfs_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        self.get_missing(keys)
+    }
 }
 
 /// When a file was copied, Mercurial expects the blob that the store returns to contain this copy
@@ -743,6 +747,10 @@ impl HgIdDataStore for LfsMultiplexer {
 impl LocalStore for LfsMultiplexer {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
         self.union.get_missing(keys)
+    }
+
+    fn translate_lfs_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        self.union.translate_lfs_missing(keys)
     }
 }
 
@@ -1304,21 +1312,27 @@ impl HgIdDataStore for LfsRemoteStore {
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        match self.prefetch(&[StoreKey::from(key)]) {
+        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
+        match self.prefetch(&missing) {
             Ok(()) => self.store.get_delta(key),
             Err(_) => Ok(None),
         }
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        match self.prefetch(&[StoreKey::from(key)]) {
+        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
+        match self.prefetch(&missing) {
             Ok(()) => self.store.get_delta_chain(key),
             Err(_) => Ok(None),
         }
     }
 
-    fn get_meta(&self, _key: &Key) -> Result<Option<Metadata>> {
-        unreachable!();
+    fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
+        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
+        match self.prefetch(&missing) {
+            Ok(()) => self.store.get_meta(key),
+            Err(_) => Ok(None),
+        }
     }
 }
 

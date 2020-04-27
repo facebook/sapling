@@ -38,6 +38,15 @@ impl<T: LocalStore> LocalStore for UnionStore<T> {
                 Err(e) => Err(e),
             })
     }
+
+    fn translate_lfs_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
+        let initial_keys = Ok(keys.to_vec());
+        self.into_iter()
+            .fold(initial_keys, |missing_keys, store| match missing_keys {
+                Ok(missing_keys) => store.translate_lfs_missing(&missing_keys),
+                Err(e) => Err(e),
+            })
+    }
 }
 
 impl<T> IntoIterator for UnionStore<T> {

@@ -628,20 +628,22 @@ impl PyHgIdRemoteStore {
             })
             .collect::<Vec<_>>();
 
-        let inner = self.inner.read();
-        inner
-            .py_store
-            .call_method(
-                py,
-                "prefetch",
-                (
-                    inner.datastore.clone_ref(py),
-                    inner.historystore.clone_ref(py),
-                    keys,
-                ),
-                None,
-            )
-            .map_err(|e| PyErr::from(e))?;
+        if !keys.is_empty() {
+            let inner = self.inner.read();
+            inner
+                .py_store
+                .call_method(
+                    py,
+                    "prefetch",
+                    (
+                        inner.datastore.clone_ref(py),
+                        inner.historystore.clone_ref(py),
+                        keys,
+                    ),
+                    None,
+                )
+                .map_err(|e| PyErr::from(e))?;
+        }
         Ok(())
     }
 }
@@ -692,7 +694,8 @@ impl HgIdDataStore for PyRemoteDataStore {
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        match self.prefetch(&[StoreKey::from(key)]) {
+        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
+        match self.prefetch(&missing) {
             Ok(()) => self
                 .0
                 .inner
@@ -706,7 +709,8 @@ impl HgIdDataStore for PyRemoteDataStore {
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        match self.prefetch(&[StoreKey::from(key)]) {
+        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
+        match self.prefetch(&missing) {
             Ok(()) => self
                 .0
                 .inner
@@ -720,7 +724,8 @@ impl HgIdDataStore for PyRemoteDataStore {
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
-        match self.prefetch(&[StoreKey::from(key)]) {
+        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
+        match self.prefetch(&missing) {
             Ok(()) => self
                 .0
                 .inner
@@ -736,7 +741,13 @@ impl HgIdDataStore for PyRemoteDataStore {
 
 impl LocalStore for PyRemoteDataStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        Ok(keys.to_vec())
+        self.0
+            .inner
+            .read()
+            .datastore
+            .as_ref()
+            .unwrap()
+            .get_missing(keys)
     }
 }
 
@@ -748,7 +759,7 @@ impl RemoteHistoryStore for PyRemoteHistoryStore {
 
 impl HgIdHistoryStore for PyRemoteHistoryStore {
     fn get_node_info(&self, key: &Key) -> Result<Option<NodeInfo>> {
-        match self.prefetch(&[StoreKey::from(key)]) {
+        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
             Ok(()) => self
                 .0
                 .inner
@@ -764,7 +775,13 @@ impl HgIdHistoryStore for PyRemoteHistoryStore {
 
 impl LocalStore for PyRemoteHistoryStore {
     fn get_missing(&self, keys: &[StoreKey]) -> Result<Vec<StoreKey>> {
-        Ok(keys.to_vec())
+        self.0
+            .inner
+            .read()
+            .historystore
+            .as_ref()
+            .unwrap()
+            .get_missing(keys)
     }
 }
 
