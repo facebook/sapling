@@ -613,7 +613,6 @@ void EdenServiceHandler::getFilesChangedSince(
     FileDelta& out,
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<JournalPosition> fromPosition) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint);
   auto edenMount = server_->getMount(*mountPoint);
 
@@ -669,9 +668,6 @@ void EdenServiceHandler::getFilesChangedSince(
       out.uncleanPaths.emplace_back(path.stringPiece().str());
     }
   }
-#else
-  NOT_IMPLEMENTED();
-#endif
 }
 
 void EdenServiceHandler::setJournalMemoryLimit(
