@@ -119,11 +119,13 @@ class SqliteStatement {
   }
 
   inline void bind(size_t paramNo, uint64_t id) {
-    checkSqliteResult(db_, sqlite3_bind_int64(stmt_, paramNo, id));
+    checkSqliteResult(
+        db_, sqlite3_bind_int64(stmt_, unsignedNoToInt(paramNo), id));
   }
 
   inline void bind(size_t paramNo, uint32_t id) {
-    checkSqliteResult(db_, sqlite3_bind_int(stmt_, paramNo, id));
+    checkSqliteResult(
+        db_, sqlite3_bind_int(stmt_, unsignedNoToInt(paramNo), id));
   }
   /** Reference a blob column in the current row returned by the statement.
    * This is only valid to call once `step()` has returned true.  The
@@ -138,6 +140,13 @@ class SqliteStatement {
   ~SqliteStatement();
 
  private:
+  /** Small helper to safely narrow size_t to int
+   */
+  static inline int unsignedNoToInt(size_t no) {
+    DCHECK(no < std::numeric_limits<int>::max());
+    return static_cast<int>(no);
+  }
+
   /** Weak reference to the underlying database object */
   sqlite3* db_;
   /** The statement handle */

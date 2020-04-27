@@ -69,7 +69,8 @@ SqliteStatement::SqliteStatement(
     : db_{*db} {
   checkSqliteResult(
       db_,
-      sqlite3_prepare_v2(db_, query.data(), query.size(), &stmt_, nullptr));
+      sqlite3_prepare_v2(
+          db_, query.data(), unsignedNoToInt(query.size()), &stmt_, nullptr));
 }
 
 bool SqliteStatement::step() {
@@ -90,20 +91,22 @@ void SqliteStatement::bind(
     size_t paramNo,
     folly::StringPiece blob,
     void (*bindType)(void*)) {
+  auto param = unsignedNoToInt(paramNo);
   checkSqliteResult(
       db_,
       sqlite3_bind_blob64(
-          stmt_, paramNo, blob.data(), sqlite3_uint64(blob.size()), bindType));
+          stmt_, param, blob.data(), sqlite3_uint64(blob.size()), bindType));
 }
 
 StringPiece SqliteStatement::columnBlob(size_t colNo) const {
+  auto col = unsignedNoToInt(colNo);
   return StringPiece(
-      reinterpret_cast<const char*>(sqlite3_column_blob(stmt_, colNo)),
-      sqlite3_column_bytes(stmt_, colNo));
+      reinterpret_cast<const char*>(sqlite3_column_blob(stmt_, col)),
+      sqlite3_column_bytes(stmt_, col));
 }
 
 uint64_t SqliteStatement::columnUint64(size_t colNo) const {
-  return sqlite3_column_int64(stmt_, colNo);
+  return sqlite3_column_int64(stmt_, unsignedNoToInt(colNo));
 }
 
 SqliteStatement::~SqliteStatement() {
