@@ -652,8 +652,8 @@ Future<Unit> EdenServer::prepareImpl(
   // receive its lock, thrift socket, and mount points now.
   // This will shut down the old process.
   const auto takeoverPath = edenDir_.getTakeoverSocketPath();
-#endif
   TakeoverData takeoverData;
+#endif
   if (doingTakeover) {
 #ifndef _WIN32
     logger->log(
