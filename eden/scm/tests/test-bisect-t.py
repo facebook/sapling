@@ -447,22 +447,20 @@ sh % "hg bisect --command 'exit 127'" == r"""
 
 # test bisecting command
 
-sh % "cat" << r"""
-from __future__ import absolute_import
-import sys
-from edenscm.mercurial import hg, ui as uimod
-repo = hg.repository(uimod.ui.load(), '.')
-if repo['.'].rev() < 6:
-    sys.exit(1)
-""" > "script.py"
 sh % "hg bisect -r"
 sh % "hg up -qr tip"
-sh % "hg bisect --command 'hg debugpython -- script.py and some parameters'" == r"""
+sh % """
+hg bisect --command \
+\"hg debugshell -c \\\"sys.exit(1 if (repo['.'].rev() < 6) else 0)\\\"\"
+""" == r"""
     changeset 31:58c80a7c8a40: good
     abort: cannot bisect (no known bad revisions)
     [255]"""
 sh % "hg up -qr 0"
-sh % "hg bisect --command 'hg debugpython -- script.py and some parameters'" == r"""
+sh % """
+hg bisect --command \
+\"hg debugshell -c \\\"sys.exit(1 if (repo['.'].rev() < 6) else 0)\\\"\"
+""" == r"""
     changeset 0:b99c7b9c8e11: bad
     changeset 15:e7fa0811edb0: good
     changeset 7:03750880c6b5: good
