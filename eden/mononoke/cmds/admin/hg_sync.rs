@@ -23,6 +23,7 @@ use mononoke_hg_sync_job_helper_lib::save_bundle_to_file;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use slog::{info, Logger};
+use std::convert::TryInto;
 
 use crate::common::{
     format_bookmark_log_entry, print_bonsai_changeset, LATEST_REPLAYED_REQUEST_KEY,
@@ -206,7 +207,7 @@ async fn last_processed(
                     let maybe_new_counter = bookmarks
                         .skip_over_bookmark_log_entries_with_reason(
                             ctx.clone(),
-                            counter as u64,
+                            counter.try_into()?,
                             repo_id,
                             BookmarkUpdateReason::Blobimport,
                         )
@@ -270,9 +271,8 @@ async fn remains(
         .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
         .compat()
         .await?
-        .unwrap_or(0);
-
-    let counter = counter as u64;
+        .unwrap_or(0)
+        .try_into()?;
 
     let exclude_reason = match without_blobimport {
         true => Some(BookmarkUpdateReason::Blobimport),
@@ -329,7 +329,7 @@ async fn show(
     let mut entries = bookmarks
         .read_next_bookmark_log_entries(
             ctx.clone(),
-            counter as u64,
+            counter.try_into()?,
             repo.get_repoid(),
             limit,
             Freshness::MostRecent,
@@ -371,7 +371,7 @@ async fn fetch_bundle(
     repo: &BlobRepo,
     bookmarks: &SqlBookmarks,
 ) -> Result<(), Error> {
-    let id = args::get_u64_opt(&sub_m, ARG_ID)
+    let id = args::get_i64_opt(&sub_m, ARG_ID)
         .ok_or_else(|| format_err!("--{} is not specified", ARG_ID))?;
 
     let output_file = sub_m
@@ -409,10 +409,11 @@ async fn verify(
         .get_counter(ctx.clone(), repo_id, LATEST_REPLAYED_REQUEST_KEY)
         .compat()
         .await?
-        .unwrap_or(0); // See rationale in remains()
+        .unwrap_or(0) // See rationale in remains()
+        .try_into()?;
 
     let counts = bookmarks
-        .count_further_bookmark_log_entries_by_reason(ctx.clone(), counter as u64, repo_id)
+        .count_further_bookmark_log_entries_by_reason(ctx.clone(), counter, repo_id)
         .compat()
         .await?;
 
@@ -482,7 +483,7 @@ async fn inspect(
         Ok(maybe_bcs)
     }
 
-    let id = args::get_u64_opt(&sub_m, ARG_ID)
+    let id = args::get_i64_opt(&sub_m, ARG_ID)
         .ok_or_else(|| format_err!("--{} is not specified", ARG_ID))?;
 
     let log_entry = get_entry_by_id(ctx, repo.get_repoid(), bookmarks, id).await?;
@@ -522,16 +523,22 @@ async fn get_entry_by_id(
     ctx: &CoreContext,
     repo_id: RepositoryId,
     bookmarks: &SqlBookmarks,
-    id: u64,
+    id: i64,
 ) -> Result<BookmarkUpdateLogEntry, Error> {
     let log_entry = bookmarks
-        .read_next_bookmark_log_entries(ctx.clone(), id - 1, repo_id, 1, Freshness::MostRecent)
+        .read_next_bookmark_log_entries(
+            ctx.clone(),
+            (id - 1).try_into()?,
+            repo_id,
+            1,
+            Freshness::MostRecent,
+        )
         .compat()
         .next()
         .await
         .ok_or_else(|| Error::msg("no log entries found"))??;
 
-    if log_entry.id != id as i64 {
+    if log_entry.id != id {
         return Err(format_err!("no entry with id {} found", id));
     }
 
