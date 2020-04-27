@@ -609,22 +609,24 @@ fn rebuild_metadata(data: Bytes, entry: &LfsPointersEntry) -> Bytes {
 }
 
 impl HgIdDataStore for LfsStore {
-    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
-        unreachable!()
-    }
-
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         match self.blob_impl(&StoreKey::from(key))? {
             Some((entry, content)) => {
                 let content = rebuild_metadata(content, &entry);
-                Ok(Some(Delta {
-                    data: content,
-                    base: None,
-                    key: key.clone(),
-                }))
+                // PERF: Consider changing HgIdDataStore::get() to return Bytes to avoid copying data.
+                Ok(Some(content.as_ref().to_vec()))
             }
             None => Ok(None),
         }
+    }
+
+    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
+        let content = self.get(key)?;
+        Ok(content.map(|data| Delta {
+            data: data.into(),
+            base: None,
+            key: key.clone(),
+        }))
     }
 
     fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
@@ -1294,8 +1296,11 @@ impl RemoteDataStore for LfsRemoteStore {
 }
 
 impl HgIdDataStore for LfsRemoteStore {
-    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
-        unreachable!();
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
+        match self.prefetch(&[StoreKey::from(key)]) {
+            Ok(()) => self.store.get(key),
+            Err(_) => Ok(None),
+        }
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {

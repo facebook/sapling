@@ -111,8 +111,11 @@ impl RemoteDataStore for EdenApiRemoteDataStore {
 }
 
 impl HgIdDataStore for EdenApiRemoteDataStore {
-    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
-        unreachable!();
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
+        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
+            Ok(()) => self.store.get(key),
+            Err(_) => Ok(None),
+        }
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {

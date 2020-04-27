@@ -89,13 +89,14 @@ use std::{
     sync::Arc,
 };
 
-use anyhow::{format_err, Result};
+use anyhow::{format_err, Error, Result};
 use byteorder::{BigEndian, ReadBytesExt};
 use bytes::Bytes;
 use memmap::{Mmap, MmapOptions};
 use thiserror::Error;
 
 use lz4_pyframe::decompress;
+use mpatch::mpatch::get_full_text;
 use types::{HgId, Key, RepoPath};
 use util::path::remove_file;
 
@@ -317,9 +318,26 @@ impl DataPack {
 }
 
 impl HgIdDataStore for DataPack {
-    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
-        Err(format_err!(
-            "DataPack doesn't support raw get(), only getdeltachain"
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
+        let delta_chain = self.get_delta_chain(key)?;
+        let delta_chain = match delta_chain {
+            Some(chain) => chain,
+            None => return Ok(None),
+        };
+
+        let (basetext, deltas) = match delta_chain.split_last() {
+            Some((base, delta)) => (base, delta),
+            None => return Ok(None),
+        };
+
+        let deltas: Vec<&[u8]> = deltas
+            .iter()
+            .rev()
+            .map(|delta| delta.data.as_ref())
+            .collect();
+
+        Ok(Some(
+            get_full_text(basetext.data.as_ref(), &deltas).map_err(Error::msg)?,
         ))
     }
 

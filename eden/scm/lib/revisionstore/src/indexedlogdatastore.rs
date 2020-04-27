@@ -213,8 +213,14 @@ impl LocalStore for IndexedLogHgIdDataStore {
 }
 
 impl HgIdDataStore for IndexedLogHgIdDataStore {
-    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
-        unreachable!()
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
+        let inner = self.inner.read();
+        let mut entry = match Entry::from_log(&key, &inner.log)? {
+            None => return Ok(None),
+            Some(entry) => entry,
+        };
+        let content = entry.content()?;
+        Ok(Some(content.as_ref().to_vec()))
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {

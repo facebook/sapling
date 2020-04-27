@@ -83,7 +83,7 @@ pub use dummy::MemcacheStore;
 
 impl HgIdDataStore for MemcacheStore {
     fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
-        unreachable!();
+        Ok(None)
     }
 
     fn get_delta(&self, _key: &Key) -> Result<Option<Delta>> {
@@ -161,8 +161,11 @@ impl MemcacheHgIdDataStore {
 }
 
 impl HgIdDataStore for MemcacheHgIdDataStore {
-    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
-        unreachable!();
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
+        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
+            Ok(()) => self.store.get(key),
+            Err(_) => Ok(None),
+        }
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {

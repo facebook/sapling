@@ -115,8 +115,11 @@ impl RemoteDataStore for FakeRemoteDataStore {
 }
 
 impl HgIdDataStore for FakeRemoteDataStore {
-    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
-        unreachable!();
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
+        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
+            Err(_) => Ok(None),
+            Ok(()) => self.store.get(key),
+        }
     }
 
     fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
