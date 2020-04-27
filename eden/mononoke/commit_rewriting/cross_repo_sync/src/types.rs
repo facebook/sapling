@@ -43,6 +43,12 @@ macro_rules! generic_newtype_with_obvious_impls {
             }
         }
 
+        impl<T: Clone> $name<&T> {
+            pub fn cloned(&self) -> $name<T> {
+                $name(self.0.clone())
+            }
+        }
+
         impl<T: Hash> Hash for $name<T> {
             fn hash<H: Hasher>(&self, state: &mut H) {
                 self.0.hash(state)
