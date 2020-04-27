@@ -22,7 +22,7 @@ import edenscm
 import edenscmnative
 from edenscm import hgext, mercurial
 from edenscm.hgext import commitcloud as cc
-from edenscm.mercurial import registrar
+from edenscm.mercurial import pycompat, registrar
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.pycompat import decodeutf8
 
@@ -77,17 +77,25 @@ def _assignobjects(objects, repo):
     [("c", "command", "", _("program passed in as string"), _("CMD"))],
     optionalrepo=True,
 )
-def debugshell(ui, repo, **opts):
+def debugshell(ui, repo, *args, **opts):
     command = opts.get("command")
 
     _assignobjects(locals(), repo)
     globals().update(locals())
+    sys.argv = pycompat.sysargv = args
 
     if command:
         exec(command)
         return 0
-
-    if not ui.interactive():
+    if args:
+        path = args[0]
+        command = open(path).read()
+        globalvars = dict(globals())
+        localvars = dict(locals())
+        globalvars["__file__"] = path
+        exec(command, globalvars, localvars)
+        return 0
+    elif not ui.interactive():
         command = decodeutf8(ui.fin.read())
         exec(command)
         return 0
