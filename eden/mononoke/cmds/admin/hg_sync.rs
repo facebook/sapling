@@ -7,7 +7,8 @@
 
 use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
-use bookmarks::{BookmarkUpdateReason, Bookmarks, Freshness};
+use blobstore::Loadable;
+use bookmarks::{BookmarkUpdateLogEntry, BookmarkUpdateReason, Bookmarks, Freshness};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
@@ -15,14 +16,17 @@ use dbbookmarks::SqlBookmarks;
 use fbinit::FacebookInit;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
+    future,
     stream::StreamExt,
 };
 use mononoke_hg_sync_job_helper_lib::save_bundle_to_file;
-use mononoke_types::RepositoryId;
+use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use mutable_counters::{MutableCounters, SqlMutableCounters};
 use slog::{info, Logger};
 
-use crate::common::{format_bookmark_log_entry, LATEST_REPLAYED_REQUEST_KEY};
+use crate::common::{
+    format_bookmark_log_entry, print_bonsai_changeset, LATEST_REPLAYED_REQUEST_KEY,
+};
 use crate::error::SubcommandError;
 
 pub const HG_SYNC_BUNDLE: &str = "hg-sync-bundle";
@@ -31,6 +35,7 @@ const HG_SYNC_SHOW: &str = "show";
 const HG_SYNC_FETCH_BUNDLE: &str = "fetch-bundle";
 const HG_SYNC_LAST_PROCESSED: &str = "last-processed";
 const HG_SYNC_VERIFY: &str = "verify";
+const HG_SYNC_INSPECT: &str = "inspect";
 
 const ARG_SET: &str = "set";
 const ARG_SKIP_BLOBIMPORT: &str = "skip-blobimport";
@@ -114,6 +119,11 @@ pub fn build_subcommand<'a, 'b>() -> App<'a, 'b> {
                         .takes_value(true)
                         .help("where a bundle will be saved"),
                 ),
+        )
+        .subcommand(
+            SubCommand::with_name(HG_SYNC_INSPECT)
+                .about("print some information about a log entry")
+                .arg(Arg::with_name(ARG_ID).required(true).takes_value(true)),
         )
         .subcommand(
             SubCommand::with_name(HG_SYNC_VERIFY)
@@ -364,31 +374,12 @@ async fn fetch_bundle(
     let id = args::get_u64_opt(&sub_m, ARG_ID)
         .ok_or_else(|| format_err!("--{} is not specified", ARG_ID))?;
 
-    if id == 0 {
-        return Err(format_err!("--{} has to be greater than 0", ARG_ID));
-    }
-
     let output_file = sub_m
         .value_of(ARG_OUTPUT_FILE)
         .ok_or_else(|| format_err!("--{} is not specified", ARG_OUTPUT_FILE))?
         .into();
 
-    let log_entry = bookmarks
-        .read_next_bookmark_log_entries(
-            ctx.clone(),
-            id - 1,
-            repo.get_repoid(),
-            1,
-            Freshness::MostRecent,
-        )
-        .compat()
-        .next()
-        .await
-        .ok_or_else(|| Error::msg("no log entries found"))??;
-
-    if log_entry.id != id as i64 {
-        return Err(Error::msg("no entry with specified id found"));
-    }
+    let log_entry = get_entry_by_id(ctx, repo.get_repoid(), bookmarks, id).await?;
 
     let bundle_handle = &log_entry
         .reason
@@ -469,6 +460,84 @@ async fn verify(
     Ok(())
 }
 
+async fn inspect(
+    sub_m: &ArgMatches<'_>,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bookmarks: &SqlBookmarks,
+) -> Result<(), Error> {
+    async fn load_opt(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        cs_id: &Option<ChangesetId>,
+    ) -> Result<Option<BonsaiChangeset>, Error> {
+        let maybe_bcs = match cs_id {
+            Some(ref cs_id) => {
+                let bcs = cs_id.load(ctx.clone(), repo.blobstore()).compat().await?;
+                Some(bcs)
+            }
+            None => None,
+        };
+
+        Ok(maybe_bcs)
+    }
+
+    let id = args::get_u64_opt(&sub_m, ARG_ID)
+        .ok_or_else(|| format_err!("--{} is not specified", ARG_ID))?;
+
+    let log_entry = get_entry_by_id(ctx, repo.get_repoid(), bookmarks, id).await?;
+
+    println!("Bookmark: {}", log_entry.bookmark_name);
+
+    let (from_bcs, to_bcs) = future::try_join(
+        load_opt(ctx, repo, &log_entry.from_changeset_id),
+        load_opt(ctx, repo, &log_entry.to_changeset_id),
+    )
+    .await?;
+
+    match from_bcs {
+        Some(bcs) => {
+            println!("=== From ===");
+            print_bonsai_changeset(&bcs);
+        }
+        None => {
+            info!(ctx.logger(), "Log entry is a bookmark creation.");
+        }
+    }
+
+    match to_bcs {
+        Some(bcs) => {
+            println!("=== To ===");
+            print_bonsai_changeset(&bcs);
+        }
+        None => {
+            info!(ctx.logger(), "Log entry is a bookmark deletion.");
+        }
+    }
+
+    Ok(())
+}
+
+async fn get_entry_by_id(
+    ctx: &CoreContext,
+    repo_id: RepositoryId,
+    bookmarks: &SqlBookmarks,
+    id: u64,
+) -> Result<BookmarkUpdateLogEntry, Error> {
+    let log_entry = bookmarks
+        .read_next_bookmark_log_entries(ctx.clone(), id - 1, repo_id, 1, Freshness::MostRecent)
+        .compat()
+        .next()
+        .await
+        .ok_or_else(|| Error::msg("no log entries found"))??;
+
+    if log_entry.id != id as i64 {
+        return Err(format_err!("no entry with id {} found", id));
+    }
+
+    Ok(log_entry)
+}
+
 pub async fn subcommand_process_hg_sync<'a>(
     fb: FacebookInit,
     sub_m: &'a ArgMatches<'_>,
@@ -505,6 +574,11 @@ pub async fn subcommand_process_hg_sync<'a>(
             args::init_cachelib(fb, &matches, None);
             let repo = args::open_repo(fb, ctx.logger(), &matches).compat().await?;
             fetch_bundle(sub_m, &ctx, &repo, &bookmarks).await?
+        }
+        (HG_SYNC_INSPECT, Some(sub_m)) => {
+            args::init_cachelib(fb, &matches, None);
+            let repo = args::open_repo(fb, ctx.logger(), &matches).compat().await?;
+            inspect(sub_m, &ctx, &repo, &bookmarks).await?
         }
         (HG_SYNC_VERIFY, Some(..)) => {
             verify(&ctx, repo_id, &mutable_counters, &bookmarks).await?;

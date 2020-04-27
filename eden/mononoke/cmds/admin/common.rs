@@ -37,6 +37,28 @@ pub fn fetch_bonsai_changeset(
     })
 }
 
+pub fn print_bonsai_changeset(bcs: &BonsaiChangeset) {
+    println!(
+        "BonsaiChangesetId: {} \n\
+                     Author: {} \n\
+                     Message: {} \n\
+                     FileChanges:",
+        bcs.get_changeset_id(),
+        bcs.author(),
+        bcs.message().lines().next().unwrap_or("")
+    );
+
+    for (path, file_change) in bcs.file_changes() {
+        match file_change {
+            Some(file_change) => match file_change.copy_from() {
+                Some(_) => println!("\t COPY/MOVE: {} {}", path, file_change.content_id()),
+                None => println!("\t ADDED/MODIFIED: {} {}", path, file_change.content_id()),
+            },
+            None => println!("\t REMOVED: {}", path),
+        }
+    }
+}
+
 pub fn format_bookmark_log_entry(
     json_flag: bool,
     changeset_id: String,

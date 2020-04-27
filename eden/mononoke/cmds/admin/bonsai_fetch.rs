@@ -16,7 +16,7 @@ use serde_derive::Serialize;
 use slog::Logger;
 use std::collections::BTreeMap;
 
-use crate::common::fetch_bonsai_changeset;
+use crate::common::{fetch_bonsai_changeset, print_bonsai_changeset};
 use crate::error::SubcommandError;
 
 pub const BONSAI_FETCH: &str = "bonsai-fetch";
@@ -52,29 +52,7 @@ pub async fn subcommand_bonsai_fetch<'a>(
                     Err(e) => println!("{}", e),
                 }
             } else {
-                println!(
-                    "BonsaiChangesetId: {} \n\
-                     Author: {} \n\
-                     Message: {} \n\
-                     FileChanges:",
-                    bcs.get_changeset_id(),
-                    bcs.author(),
-                    bcs.message().lines().next().unwrap_or("")
-                );
-
-                for (path, file_change) in bcs.file_changes() {
-                    match file_change {
-                        Some(file_change) => match file_change.copy_from() {
-                            Some(_) => {
-                                println!("\t COPY/MOVE: {} {}", path, file_change.content_id())
-                            }
-                            None => {
-                                println!("\t ADDED/MODIFIED: {} {}", path, file_change.content_id())
-                            }
-                        },
-                        None => println!("\t REMOVED: {}", path),
-                    }
-                }
+                print_bonsai_changeset(&bcs);
             }
         })
         .from_err()
