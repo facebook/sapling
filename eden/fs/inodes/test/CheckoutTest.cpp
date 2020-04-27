@@ -70,7 +70,12 @@ inline void PrintTo(
 namespace {
 
 bool isExecutable(int perms) {
+#ifndef _WIN32
   return perms & S_IXUSR;
+#else
+  // Windows doesn't support the notion of executable files.
+  return false;
+#endif
 }
 
 /**
@@ -355,6 +360,7 @@ void testModifyFile(
 
   loadInodes(testMount, path, loadType, contents1, perms1);
 
+#ifndef _WIN32
   optional<struct stat> preStat;
   // If we were supposed to load this inode before the checkout,
   // also store its stat information so we can compare it after the checkout.
@@ -362,6 +368,7 @@ void testModifyFile(
     auto preInode = testMount.getFileInode(path);
     preStat = preInode->getattr().get(10ms).st;
   }
+#endif
 
   testMount.getClock().advance(10min);
   auto checkoutStart = testMount.getClock().getTimePoint();
@@ -376,6 +383,7 @@ void testModifyFile(
   auto postInode = testMount.getFileInode(path);
   EXPECT_FILE_INODE(postInode, contents2, perms2);
 
+#ifndef _WIN32
   // Check the stat() information on the inode.
   // The timestamps should not be earlier than when the checkout started.
   auto postStat = postInode->getattr().get(10ms).st;
@@ -387,6 +395,7 @@ void testModifyFile(
     EXPECT_GE(stMtimepoint(postStat), stMtimepoint(*preStat));
     EXPECT_GE(stCtimepoint(postStat), stCtimepoint(*preStat));
   }
+#endif
 
   // Unmount and remount the mount point, and verify that the file changes
   // persisted across remount correctly.
@@ -649,6 +658,7 @@ TEST(Checkout, modifyConflictForce) {
   runModifyConflictTests(CheckoutMode::FORCE);
 }
 
+#ifndef _WIN32
 TEST(Checkout, modifyThenRevert) {
   // Prepare a "before" tree
   auto srcBuilder = FakeTreeBuilder();
@@ -687,6 +697,7 @@ TEST(Checkout, modifyThenRevert) {
   EXPECT_NE(preInode->getNodeId(), postInode->getNodeId());
   EXPECT_FILE_INODE(preInode, "temporary edit\n", 0644);
 }
+#endif
 
 TEST(Checkout, modifyThenCheckoutRevisionWithoutFile) {
   auto builder1 = FakeTreeBuilder();
@@ -912,6 +923,7 @@ TEST(Checkout, checkoutModifiesDirectoryDuringLoad) {
       1, inode->getContents().rlock()->entries.count("differentfile.txt"_pc));
 }
 
+#ifndef _WIN32
 TEST(Checkout, checkoutRemovingDirectoryDeletesOverlayFile) {
   auto builder1 = FakeTreeBuilder{};
   builder1.setFile("dir/sub/file.txt", "contents");
@@ -1072,6 +1084,7 @@ TEST(Checkout, checkoutRemembersInodeNumbersAfterCheckoutAndTakeover) {
   EXPECT_EQ(dirInodeNumber, subTree->getParentRacy()->getNodeId());
   EXPECT_EQ(subInodeNumber, subTree->getNodeId());
 }
+#endif
 
 namespace {
 template <typename Unloader>
@@ -1082,6 +1095,7 @@ struct CheckoutUnloadTest : ::testing::Test {
 
 TYPED_TEST_CASE(CheckoutUnloadTest, InodeUnloaderTypes);
 
+#ifndef _WIN32
 TYPED_TEST(
     CheckoutUnloadTest,
     unloadAndCheckoutRemembersInodeNumbersForFuseReferencedInodes) {
@@ -1190,6 +1204,7 @@ TYPED_TEST(
                  .asTreePtr();
   EXPECT_FALSE(def->isUnlinked());
 }
+#endif
 
 TEST(Checkout, diffFailsOnInProgressCheckout) {
   auto builder1 = FakeTreeBuilder();
@@ -1237,7 +1252,7 @@ TEST(Checkout, conflict_when_directory_containing_modified_file_is_removed) {
   auto commit2 = testMount.getBackingStore()->putCommit("2", builder2);
   commit2->setReady();
 
-  testMount.getFileInode("d1/sub/one.txt")->write("new contents", 0).get(0ms);
+  testMount.overwriteFile("d1/sub/one.txt", "new contents");
 
   auto executor = testMount.getServerExecutor().get();
   auto checkoutResult = testMount.getEdenMount()

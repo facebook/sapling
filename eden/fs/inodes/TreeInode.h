@@ -325,6 +325,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    */
   size_t unloadChildrenNow();
 
+#ifndef _WIN32
   /**
    * Unload all children, recursively, neither referenced internally by Eden nor
    * by FUSE.
@@ -340,6 +341,7 @@ class TreeInode final : public InodeBaseMetadata<DirContents> {
    * Returns the number of inodes unloaded.
    */
   size_t unloadChildrenLastAccessedBefore(const timespec& cutoff);
+#endif
 
   /*
    * Update a tree entry as part of a checkout operation.

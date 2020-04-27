@@ -5,6 +5,7 @@
 
 add_executable(
   eden_inodes_test
+    CheckoutTest.cpp
     DiffTest.cpp
     InodeBaseTest.cpp
     InodeMapTest.cpp

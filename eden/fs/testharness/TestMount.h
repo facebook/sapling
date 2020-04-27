@@ -217,10 +217,12 @@ class TestMount {
    */
   void remount();
 
+#ifndef _WIN32
   /**
    * Simulate an edenfs daemon takeover for this mount.
    */
   void remountGracefully();
+#endif
 
   /**
    * Add file to the mount; it will be available in the overlay.

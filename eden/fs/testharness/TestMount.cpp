@@ -394,12 +394,13 @@ bool TestMount::hasOverlayData(InodeNumber ino) const {
   return edenMount_->getOverlay()->hasOverlayData(ino);
 }
 
-#ifndef _WIN32
 bool TestMount::hasMetadata(InodeNumber ino) const {
+#ifndef _WIN32
   return edenMount_->getInodeMetadataTable()->getOptional(ino).has_value();
-}
-
+#else
+  NOT_IMPLEMENTED();
 #endif // !_WIN32
+}
 
 size_t TestMount::drainServerExecutor() {
   return serverExecutor_->drain();

@@ -13,6 +13,7 @@
 namespace facebook {
 namespace eden {
 
+#ifndef _WIN32
 struct ConditionalUnloader {
   static size_t unload(TreeInode& unloadFrom) {
     timespec endOfTime;
@@ -21,6 +22,7 @@ struct ConditionalUnloader {
     return unloadFrom.unloadChildrenLastAccessedBefore(endOfTime);
   }
 };
+#endif
 
 struct UnconditionalUnloader {
   static size_t unload(TreeInode& unloadFrom) {
@@ -28,8 +30,12 @@ struct UnconditionalUnloader {
   }
 };
 
+#ifndef _WIN32
 using InodeUnloaderTypes =
     ::testing::Types<ConditionalUnloader, UnconditionalUnloader>;
+#else
+using InodeUnloaderTypes = ::testing::Types<UnconditionalUnloader>;
+#endif
 
 } // namespace eden
 } // namespace facebook

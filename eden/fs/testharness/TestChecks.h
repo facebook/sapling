@@ -17,6 +17,7 @@
 /**
  * Check that a FileInode has the expected contents and permissions.
  */
+#ifndef _WIN32
 #define EXPECT_FILE_INODE(fileInode, expectedData, expectedPerms)              \
   do {                                                                         \
     EXPECT_EQ(                                                                 \
@@ -30,3 +31,14 @@
         folly::sformat("{:#o}", (fileInode)->getPermissions()))                \
         << " for inode path " << (fileInode)->getLogPath();                    \
   } while (0)
+#else
+#define EXPECT_FILE_INODE(fileInode, expectedData, expectedPerms)              \
+  do {                                                                         \
+    EXPECT_EQ(                                                                 \
+        expectedData,                                                          \
+        folly::StringPiece{(fileInode)                                         \
+                               ->readAll(ObjectFetchContext::getNullContext()) \
+                               .get(std::chrono::seconds(20))})                \
+        << " for inode path " << (fileInode)->getLogPath();                    \
+  } while (0)
+#endif
