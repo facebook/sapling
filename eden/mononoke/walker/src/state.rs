@@ -10,7 +10,7 @@ use crate::walk::{expand_checked_nodes, OutgoingEdge, WalkVisitor};
 use chashmap::CHashMap;
 use context::CoreContext;
 use mercurial_types::{HgChangesetId, HgFileNodeId, HgManifestId};
-use mononoke_types::{ChangesetId, ContentId, MPathHash};
+use mononoke_types::{ChangesetId, ContentId, FsnodeId, MPathHash};
 use phases::Phase;
 use std::{cmp, collections::HashSet, hash::Hash, ops::Add};
 
@@ -51,6 +51,7 @@ pub struct WalkStateCHashMap {
     visited_hg_file_envelope: CHashMap<HgFileNodeId, ()>,
     visited_hg_filenode: CHashMap<(Option<MPathHash>, HgFileNodeId), ()>,
     visited_hg_manifest: CHashMap<(Option<MPathHash>, HgManifestId), ()>,
+    visited_fsnode: CHashMap<(Option<MPathHash>, FsnodeId), ()>,
     visit_count: CHashMap<NodeType, usize>,
 }
 
@@ -84,6 +85,7 @@ impl WalkStateCHashMap {
             visited_hg_file_envelope: CHashMap::new(),
             visited_hg_filenode: CHashMap::new(),
             visited_hg_manifest: CHashMap::new(),
+            visited_fsnode: CHashMap::new(),
             visit_count: CHashMap::new(),
         }
     }
@@ -113,6 +115,7 @@ impl WalkStateCHashMap {
             Node::HgFileNode(k) => record_with_path(&self.visited_hg_filenode, k),
             Node::HgFileEnvelope(id) => self.visited_hg_file_envelope.insert(*id, ()).is_none(),
             Node::FileContent(content_id) => self.visited_file.insert(*content_id, ()).is_none(),
+            Node::Fsnode(k) => record_with_path(&self.visited_fsnode, k),
             _ => true,
         }
     }
