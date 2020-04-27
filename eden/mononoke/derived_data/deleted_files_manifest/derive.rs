@@ -20,8 +20,10 @@ use futures_ext::{bounded_traversal::bounded_traversal, BoxFuture, FutureExt};
 use manifest::{Diff, ManifestOps, PathTree};
 use mononoke_types::{blob::BlobstoreValue, deleted_files_manifest::DeletedManifest};
 use mononoke_types::{BonsaiChangeset, ChangesetId, DeletedManifestId, MPathElement, MononokeId};
+use parking_lot::Mutex;
 use repo_blobstore::RepoBlobstore;
-use std::{collections::BTreeMap, iter::FromIterator};
+use std::sync::Arc;
+use std::{collections::BTreeMap, collections::HashSet, iter::FromIterator};
 use unodes::RootUnodeManifestId;
 
 /// Derives deleted files manifest for bonsai changeset `cs_id` given parent deleted files
@@ -71,6 +73,7 @@ pub(crate) fn derive_deleted_files_manifest(
         let (result_sender, result_receiver) = oneshot::channel();
         // Stream is used to batch writes to blobstore
         let (sender, receiver) = mpsc::unbounded();
+        let created = Arc::new(Mutex::new(HashSet::new()));
         let f = bounded_traversal(
             256,
             DeletedManifestUnfoldNode {
@@ -93,7 +96,7 @@ pub(crate) fn derive_deleted_files_manifest(
             },
             // fold
             {
-                cloned!(ctx, repo, sender);
+                cloned!(ctx, repo, sender, created);
                 move |(path, manifest_change), subentries_iter| {
                     let mut subentries = BTreeMap::new();
                     for entry in subentries_iter {
@@ -119,6 +122,7 @@ pub(crate) fn derive_deleted_files_manifest(
                         manifest_change,
                         subentries,
                         sender.clone(),
+                        created.clone(),
                     )
                     .map(move |mf_id_opt| mf_id_opt.map(|mf_id| (path, mf_id)))
                     .boxify()
@@ -137,6 +141,7 @@ pub(crate) fn derive_deleted_files_manifest(
                         None,
                         BTreeMap::new(),
                         sender.clone(),
+                        created.clone(),
                     )
                     .right_future()
                 }
@@ -358,20 +363,26 @@ fn create_manifest(
     linknode: Option<ChangesetId>,
     subentries: BTreeMap<MPathElement, DeletedManifestId>,
     sender: mpsc::UnboundedSender<BoxFuture<(), Error>>,
+    created: Arc<Mutex<HashSet<String>>>,
 ) -> BoxFuture<DeletedManifestId, Error> {
     let manifest = DeletedManifest::new(linknode, subentries);
     let mf_id = manifest.get_manifest_id();
 
     let key = mf_id.blobstore_key();
-    let blob = manifest.into_blob();
-    let f = lazy(move || blobstore.put(ctx, key, blob.into())).boxify();
+    let mut created = created.lock();
+    if created.insert(key.clone()) {
+        let blob = manifest.into_blob();
+        let f = lazy(move || blobstore.put(ctx, key, blob.into())).boxify();
 
-    sender
-        .unbounded_send(f)
-        .into_future()
-        .map(move |()| mf_id)
-        .map_err(|err| anyhow!("failed to send manifest future {}", err))
-        .boxify()
+        sender
+            .unbounded_send(f)
+            .into_future()
+            .map(move |()| mf_id)
+            .map_err(|err| anyhow!("failed to send manifest future {}", err))
+            .boxify()
+    } else {
+        ok(mf_id).boxify()
+    }
 }
 
 fn do_derive_create(
@@ -381,15 +392,21 @@ fn do_derive_create(
     change: DeletedManifestChange,
     subentries: BTreeMap<MPathElement, DeletedManifestId>,
     sender: mpsc::UnboundedSender<BoxFuture<(), Error>>,
+    created: Arc<Mutex<HashSet<String>>>,
 ) -> impl Future<Item = Option<DeletedManifestId>, Error = Error> {
     let blobstore = repo.get_blobstore();
     match change {
         DeletedManifestChange::Reuse(mb_mf_id) => ok(mb_mf_id).boxify(),
-        DeletedManifestChange::AddOrKeepDeleted => {
-            create_manifest(ctx.clone(), blobstore, Some(cs_id), subentries, sender)
-                .map(Some)
-                .boxify()
-        }
+        DeletedManifestChange::AddOrKeepDeleted => create_manifest(
+            ctx.clone(),
+            blobstore,
+            Some(cs_id),
+            subentries,
+            sender,
+            created,
+        )
+        .map(Some)
+        .boxify(),
         DeletedManifestChange::RemoveOrKeepLive => {
             if subentries.is_empty() {
                 // there are no subentries, no need to create a new node
@@ -397,7 +414,7 @@ fn do_derive_create(
             } else {
                 // some of the subentries were deleted, creating a new node but there is no need to
                 // mark it as deleted
-                create_manifest(ctx.clone(), blobstore, None, subentries, sender)
+                create_manifest(ctx.clone(), blobstore, None, subentries, sender, created)
                     .map(Some)
                     .right_future()
             }
