@@ -10,6 +10,7 @@
 //! See [`MetaLog`] for the main structure.
 
 mod errors;
+mod export;
 mod metalog;
 
 pub use crate::metalog::{resolver, CommitOptions, Id20, MetaLog};

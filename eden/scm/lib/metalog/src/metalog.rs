@@ -38,17 +38,17 @@ use zstore::Zstore;
 /// The [`MetaLog`] does not specify actual format of `value`s. It's up to the
 /// upper layer to define them.
 pub struct MetaLog {
-    path: PathBuf,
+    pub(crate) path: PathBuf,
 
     /// An append-only store - each entry contains a plain Id20
     /// to an object that should be a root.
     log: ilog::Log,
 
     /// General purposed blob store, keyed by Id20.
-    blobs: Zstore,
+    pub(crate) blobs: Zstore,
 
     /// The Id20 of root that has been written to disk.
-    orig_root_id: Id20,
+    pub(crate) orig_root_id: Id20,
 
     /// The current (possibly modified) root.
     root: Root,
@@ -316,7 +316,7 @@ fn find_last_root_id(log: &ilog::Log) -> Result<Id20> {
     Ok(EMPTY_ROOT_ID.clone())
 }
 
-fn load_root(blobs: &Zstore, id: Id20) -> Result<Root> {
+pub(crate) fn load_root(blobs: &Zstore, id: Id20) -> Result<Root> {
     if id == EMPTY_ROOT_ID.clone() {
         return Ok(EMPTY_ROOT.clone());
     }
@@ -348,10 +348,10 @@ lazy_static! {
 /// A root is similar to a commit in source control where the key-value pairs
 /// can be seen as file name - file content pairs.
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
-struct Root {
-    map: BTreeMap<String, Id20>,
-    timestamp: u64,
-    message: String,
+pub(crate) struct Root {
+    pub(crate) map: BTreeMap<String, Id20>,
+    pub(crate) timestamp: u64,
+    pub(crate) message: String,
 }
 
 /// Predefined conflict resolutions.

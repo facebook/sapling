@@ -11,6 +11,7 @@ use ::metalog::{CommitOptions, Id20, MetaLog, Repair};
 use cpython::*;
 use cpython_ext::{Bytes, PyNone, ResultPyErrExt, Str};
 use std::cell::RefCell;
+use std::path::Path;
 use std::time::SystemTime;
 
 pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
@@ -91,6 +92,13 @@ py_class!(class metalog |py| {
         opts.message = message;
         let id = self.log(py).borrow_mut().commit(opts).map_pyerr(py)?;
         Ok(Bytes::from(id.as_ref().to_vec()))
+    }
+
+    /// Export to a git respository
+    def exportgit(&self, path: String) -> PyResult<PyNone> {
+        let log = self.log(py).borrow();
+        log.export_git(Path::new(&path)).map_pyerr(py)?;
+        Ok(PyNone)
     }
 
     /// Test if there are uncommitted changes.
