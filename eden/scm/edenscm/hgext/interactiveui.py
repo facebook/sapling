@@ -9,11 +9,14 @@ from __future__ import absolute_import
 
 import os
 import sys
-import termios
-import tty
 
-from edenscm.mercurial import error
+from edenscm.mercurial import error, pycompat
 from edenscm.mercurial.i18n import _
+
+
+if not pycompat.iswindows:
+    import termios
+    import tty
 
 
 def upline(n=1):
@@ -136,6 +139,8 @@ class viewframe(object):
 
 
 def view(viewobj):
+    if pycompat.iswindows:
+        raise error.Abort(_("interactive UI does not support Windows"))
     done = False
     if viewobj.ui.pageractive:
         raise error.Abort(_("interactiveui doesn't work with pager"))
