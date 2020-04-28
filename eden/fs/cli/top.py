@@ -92,6 +92,9 @@ class RequestMetric(Enum):
     MAX_DURATION = "max_duration_us"
 
 
+STATS_NOT_AVAILABLE = -1
+STATS_NOT_IMPLEMENTED = -2
+
 IMPORT_TIME_LOWER_WARN_THRESHOLD = 10  # seconds
 IMPORT_TIME_UPPER_WARN_THRESHOLD = 30  # seconds
 
@@ -189,13 +192,15 @@ class Top:
                 stage_counter_piece = f"{import_stage.value}_import"
                 type_counter_piece = import_type.value
                 counter_prefix = f"store.hg.{stage_counter_piece}.{type_counter_piece}"
-                number_requests = counters.get(f"{counter_prefix}.count", -1)
+                number_requests = counters.get(
+                    f"{counter_prefix}.count", STATS_NOT_AVAILABLE
+                )
                 longest_outstanding_request = counters.get(
-                    f"{counter_prefix}.max_duration_us", -1
+                    f"{counter_prefix}.max_duration_us", STATS_NOT_AVAILABLE
                 )  # us
                 longest_outstanding_request = (
-                    -1
-                    if longest_outstanding_request == -1
+                    STATS_NOT_AVAILABLE
+                    if longest_outstanding_request == STATS_NOT_AVAILABLE
                     else (longest_outstanding_request / 1000000)
                 )  # s
                 import_stats[import_stage][import_type][
@@ -228,7 +233,7 @@ class Top:
             fuse_requests_stats[stage] = {}
             for metric in RequestMetric:
                 if raw_metrics[stage][metric] == []:
-                    fuse_requests_stats[stage][metric] = -1
+                    fuse_requests_stats[stage][metric] = STATS_NOT_AVAILABLE
                     continue
 
                 if metric == RequestMetric.COUNT:
@@ -240,6 +245,9 @@ class Top:
                 else:
                     raise Exception(f"Aggregation not implemented for: {metric.value}")
 
+        fuse_requests_stats[RequestStage.PENDING][
+            RequestMetric.MAX_DURATION
+        ] = STATS_NOT_IMPLEMENTED
         return fuse_requests_stats
 
     # fuse summary counters have the form:
@@ -362,15 +370,21 @@ class Top:
 
         # number of requests
         requests_for_type = metrics[RequestMetric.COUNT]
-        if requests_for_type == -1:
+        if requests_for_type == STATS_NOT_AVAILABLE:
             requests_for_type = "N/A"
+        elif requests_for_type == STATS_NOT_IMPLEMENTED:
+            requests_for_type = ""
         requests_for_type_display = f"{requests_for_type:>{request_count_size-1}} "
 
         # duration of the longest request
         longest_request = metrics[RequestMetric.MAX_DURATION]  # s
         color = self._get_color_for_pending_import_display(longest_request)
-        if longest_request == -1:
+        if longest_request == STATS_NOT_AVAILABLE:
             longest_request_display = "N/A"
+            # wrap time in parens
+            longest_request_display = f"({longest_request_display})"
+        elif longest_request == STATS_NOT_IMPLEMENTED:
+            longest_request_display = ""
         else:
             # 3 places after the decimal
             longest_request_display = f"{longest_request:.3f}"
@@ -379,8 +393,9 @@ class Top:
             longest_request_display = (
                 f"{longest_request_display:.{request_time_size-3}s}s"
             )
-        # wrap time in parens
-        longest_request_display = f"({longest_request_display})"
+            # wrap time in parens
+            longest_request_display = f"({longest_request_display})"
+
         # right align
         longest_request_display = f"{longest_request_display:>{request_time_size}}"
 
