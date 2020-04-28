@@ -13,7 +13,7 @@ import shlex
 import socket
 import time
 from enum import Enum
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 
 from facebook.eden.ttypes import AccessCounts
 
@@ -76,7 +76,7 @@ LOWER_WARN_THRESHOLD_COLOR = 2
 UPPER_WARN_THRESHOLD_COLOR = 3
 
 
-class ImportStage(Enum):
+class RequestStage(Enum):
     PENDING = "pending"
     LIVE = "live"
 
@@ -85,6 +85,11 @@ class ImportObject(Enum):
     BLOB = "blob"
     TREE = "tree"
     PREFETCH = "prefetch"
+
+
+class RequestMetric(Enum):
+    COUNT = "count"
+    MAX_DURATION = "max_duration_us"
 
 
 IMPORT_TIME_LOWER_WARN_THRESHOLD = 10  # seconds
@@ -112,10 +117,8 @@ class Top:
         self.height = 0
         self.width = 0
 
-        self.pending_imports = {
-            import_stage: {import_type: {} for import_type in ImportObject}
-            for import_stage in ImportStage
-        }
+        self.pending_imports = {}
+        self.fuse_requests_summary = {}
 
     def start(self, args: argparse.Namespace) -> int:
         self.running = True
@@ -171,9 +174,18 @@ class Top:
 
     def _update_summary_stats(self, client):
         client.flushStatsNow()
-        counters = client.getCounters()
-        for import_stage in ImportStage:
+        counter_regex = r"((store\.hg.*)|(fuse\.([^\.]*)\..*requests.*))"
+        counters = client.getRegexCounters(counter_regex)
+
+        self.pending_imports = self._update_import_stats(counters)
+        self.fuse_requests_summary = self._update_fuse_request_stats(counters)
+
+    def _update_import_stats(self, counters):
+        import_stats = {}
+        for import_stage in RequestStage:
+            import_stats[import_stage] = {}
             for import_type in ImportObject:
+                import_stats[import_stage][import_type] = {}
                 stage_counter_piece = f"{import_stage.value}_import"
                 type_counter_piece = import_type.value
                 counter_prefix = f"store.hg.{stage_counter_piece}.{type_counter_piece}"
@@ -186,12 +198,70 @@ class Top:
                     if longest_outstanding_request == -1
                     else (longest_outstanding_request / 1000000)
                 )  # s
-                self.pending_imports[import_stage][import_type][
-                    "number_requests"
+                import_stats[import_stage][import_type][
+                    RequestMetric.COUNT
                 ] = number_requests
-                self.pending_imports[import_stage][import_type][
-                    "max_request_duration"
+                import_stats[import_stage][import_type][
+                    RequestMetric.MAX_DURATION
                 ] = longest_outstanding_request
+        return import_stats
+
+    def _update_fuse_request_stats(self, counters):
+        # collect all the counters for each stage and metric -- this is
+        # needed since the mount name is part of the counter name
+        # and this should work no matter what the mount is
+        raw_metrics = {
+            stage: {metric: [] for metric in RequestMetric} for stage in RequestStage
+        }
+        for key in counters:
+            pieces = self.parse_fuse_sumary_counter_name(key)
+            if pieces is None:
+                continue
+            stage = pieces[0]
+            metric = pieces[1]
+
+            raw_metrics[stage][metric].append(counters[key])
+
+        fuse_requests_stats = {}
+        # combine the counters for each stage and metric
+        for stage in RequestStage:
+            fuse_requests_stats[stage] = {}
+            for metric in RequestMetric:
+                if raw_metrics[stage][metric] == []:
+                    fuse_requests_stats[stage][metric] = -1
+                    continue
+
+                if metric == RequestMetric.COUNT:
+                    fuse_requests_stats[stage][metric] = sum(raw_metrics[stage][metric])
+                elif metric == RequestMetric.MAX_DURATION:
+                    fuse_requests_stats[stage][metric] = (
+                        max(raw_metrics[stage][metric]) / 1000000
+                    )  # s
+                else:
+                    raise Exception(f"Aggregation not implemented for: {metric.value}")
+
+        return fuse_requests_stats
+
+    # fuse summary counters have the form:
+    # fuse.mount.stage.metric
+    # returns a tuple of the parsed stage and metric if this counter
+    # fits this form and None otherwise
+    def parse_fuse_sumary_counter_name(
+        self, counter_name: str
+    ) -> Optional[Tuple[RequestStage, RequestMetric]]:
+        pieces = counter_name.split(".")
+        if pieces[0] != "fuse":
+            return None
+
+        raw_stage = pieces[2]
+        raw_stage = raw_stage.split("_")[0]
+
+        try:
+            stage = RequestStage(raw_stage)
+            metric = RequestMetric(pieces[3])
+            return (stage, metric)
+        except KeyError:
+            return None
 
     def render(self, stdscr):
         stdscr.erase()
@@ -221,12 +291,45 @@ class Top:
             self.write_line_right_justified(stdscr, hostname, self.width)
 
     def render_summary_section(self, stdscr):
-        imports_header = "outstanding object imports:"
-        self.write_line(stdscr, imports_header, len(imports_header))
         len_longest_stage = max(
-            len(self.get_display_name_for_import_stage(stage)) for stage in ImportStage
+            len(self.get_display_name_for_import_stage(stage)) for stage in RequestStage
         )
-        for import_stage in ImportStage:
+
+        fuse_request_header = "outstanding fuse requests:"
+        self.write_line(
+            stdscr, fuse_request_header, self.width, self.curses.A_UNDERLINE
+        )
+        self.render_fuse_request_section(stdscr, len_longest_stage)
+
+        imports_header = "outstanding object imports:"
+        self.write_line(stdscr, imports_header, self.width, self.curses.A_UNDERLINE)
+        self.render_import_section(stdscr, len_longest_stage)
+
+    def render_fuse_request_section(self, stdscr, len_longest_stage):
+        section_size = self.width // 2
+        separator = ""
+        for stage in RequestStage:
+            self.write_part_of_line(stdscr, separator, len(separator))
+            self.render_fuse_request_part(
+                stdscr, stage, len_longest_stage, section_size - len(separator)
+            )
+
+            separator = "  |  "
+        self.write_new_line()
+
+    def render_fuse_request_part(
+        self, stdscr, import_stage, len_longest_stage, section_size
+    ):
+        stage_display = self.get_display_name_for_import_stage(import_stage)
+        header = f"{stage_display:<{len_longest_stage}} -- "
+        self.write_part_of_line(stdscr, header, len(header))
+
+        self.render_request_metrics(
+            stdscr, self.fuse_requests_summary[import_stage], section_size - len(header)
+        )
+
+    def render_import_section(self, stdscr, len_longest_stage):
+        for import_stage in RequestStage:
             self.render_import_row(stdscr, import_stage, len_longest_stage)
 
     def render_import_row(self, stdscr, import_stage, len_longest_stage):
@@ -242,48 +345,50 @@ class Top:
             label = f"{separator}{import_type.value}: "
             self.write_part_of_line(stdscr, label, len(label))
 
-            # split the section between the number of imports and
-            # the duration of the longest import
-            import_metric_size = mid_section_size - len(label)
-            import_count_size = import_metric_size // 2
-            import_time_size = import_metric_size - import_count_size
-
-            # number of imports
-            imports_for_type = self.pending_imports[import_stage][import_type][
-                "number_requests"
-            ]
-            if imports_for_type == -1:
-                imports_for_type = "N/A"
-            imports_for_type_display = f"{imports_for_type:>{import_count_size-1}} "
-
-            # duration of the longest import
-            longest_request = self.pending_imports[import_stage][import_type][
-                "max_request_duration"
-            ]  # s
-            color = self._get_color_for_pending_import_display(longest_request)
-            if longest_request == -1:
-                longest_request_display = "N/A"
-            else:
-                # 3 places after the decimal
-                longest_request_display = f"{longest_request:.3f}"
-                # set the maximum number of digits, will remove decimals if
-                # not enough space & adds unit
-                longest_request_display = (
-                    f"{longest_request_display:.{import_time_size-3}s}s"
-                )
-            # wrap time in parens
-            longest_request_display = f"({longest_request_display})"
-            # right align
-            longest_request_display = f"{longest_request_display:>{import_time_size}}"
-
-            import_display = f"{imports_for_type_display}{longest_request_display}"
-            self.write_part_of_line(stdscr, import_display, import_metric_size, color)
+            self.render_request_metrics(
+                stdscr,
+                self.pending_imports[import_stage][import_type],
+                mid_section_size - len(label),
+            )
 
             separator = " | "
         self.write_new_line()
 
+    def render_request_metrics(self, stdscr, metrics, section_size):
+        # split the section between the number of imports and
+        # the duration of the longest import
+        request_count_size = section_size // 2
+        request_time_size = section_size - request_count_size
+
+        # number of requests
+        requests_for_type = metrics[RequestMetric.COUNT]
+        if requests_for_type == -1:
+            requests_for_type = "N/A"
+        requests_for_type_display = f"{requests_for_type:>{request_count_size-1}} "
+
+        # duration of the longest request
+        longest_request = metrics[RequestMetric.MAX_DURATION]  # s
+        color = self._get_color_for_pending_import_display(longest_request)
+        if longest_request == -1:
+            longest_request_display = "N/A"
+        else:
+            # 3 places after the decimal
+            longest_request_display = f"{longest_request:.3f}"
+            # set the maximum number of digits, will remove decimals if
+            # not enough space & adds unit
+            longest_request_display = (
+                f"{longest_request_display:.{request_time_size-3}s}s"
+            )
+        # wrap time in parens
+        longest_request_display = f"({longest_request_display})"
+        # right align
+        longest_request_display = f"{longest_request_display:>{request_time_size}}"
+
+        request_display = f"{requests_for_type_display}{longest_request_display}"
+        self.write_part_of_line(stdscr, request_display, section_size, color)
+
     def get_display_name_for_import_stage(self, import_stage):
-        if import_stage == ImportStage.PENDING:
+        if import_stage == RequestStage.PENDING:
             return "total pending"
         else:
             return import_stage.value
