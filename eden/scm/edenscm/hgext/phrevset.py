@@ -312,6 +312,7 @@ def revsetdiff(repo, diffid):
 
 
 def _lookupname(repo, name):
+    repo = repo.unfiltered()
     cl = repo.changelog
     tonode = cl.node
     if name.startswith("D") and name[1:].isdigit():
