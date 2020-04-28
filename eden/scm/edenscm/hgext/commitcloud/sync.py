@@ -24,6 +24,7 @@ from edenscm.mercurial import (
     visibility,
 )
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import hex
 from edenscm.mercurial.pycompat import encodeutf8
 
 from . import (
@@ -961,6 +962,7 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         newremotebookmarks,
         lastsyncstate.snapshots,
         localsnapshots,
+        logopts={"metalogroot": hex(repo.svfs.metalog.root())},
     )
     if synced:
         logsyncop(

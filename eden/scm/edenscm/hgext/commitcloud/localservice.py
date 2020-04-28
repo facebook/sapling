@@ -109,6 +109,7 @@ class LocalService(baseservice.BaseService):
         newremotebookmarks={},
         oldsnapshots=[],
         newsnapshots=[],
+        logopts={},
     ):
         data = self._load()
         if version != data["version"]:
