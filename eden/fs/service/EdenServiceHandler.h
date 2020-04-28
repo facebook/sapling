@@ -98,6 +98,11 @@ class EdenServiceHandler : virtual public StreamingEdenServiceSvIf,
       DebugGetRawJournalResponse& out,
       std::unique_ptr<DebugGetRawJournalParams> params) override;
 
+  folly::SemiFuture<std::unique_ptr<std::vector<EntryInformationOrError>>>
+  semifuture_getEntryInformation(
+      std::unique_ptr<std::string> mountPoint,
+      std::unique_ptr<std::vector<std::string>> paths) override;
+
   folly::SemiFuture<std::unique_ptr<std::vector<FileInformationOrError>>>
   semifuture_getFileInformation(
       std::unique_ptr<std::string> mountPoint,

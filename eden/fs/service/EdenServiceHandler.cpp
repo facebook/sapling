@@ -30,7 +30,6 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/InodeError.h"
-#include "eden/fs/inodes/InodeLoader.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
@@ -41,6 +40,7 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/GlobNode.h"
+#include "eden/fs/inodes/InodeLoader.h"
 #include "eden/fs/inodes/TreeInode.h"
 
 #include "eden/fs/config/CheckoutConfig.h"
@@ -736,6 +736,36 @@ void EdenServiceHandler::debugGetRawJournal(
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32
+}
+
+folly::SemiFuture<std::unique_ptr<std::vector<EntryInformationOrError>>>
+EdenServiceHandler::semifuture_getEntryInformation(
+    std::unique_ptr<std::string> mountPoint,
+    std::unique_ptr<std::vector<std::string>> paths) {
+  auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*paths));
+  auto edenMount = server_->getMount(*mountPoint);
+  auto rootInode = edenMount->getRootInode();
+
+  return collectAll(applyToInodes(
+                        rootInode,
+                        *paths,
+                        [](InodePtr inode) { return inode->getType(); }))
+      .deferValue([](vector<Try<dtype_t>> done) {
+        auto out = std::make_unique<vector<EntryInformationOrError>>();
+        out->reserve(done.size());
+        for (auto& item : done) {
+          EntryInformationOrError result;
+          if (item.hasException()) {
+            result.set_error(newEdenError(item.exception()));
+          } else {
+            EntryInformation info;
+            info.set_dtype(static_cast<DType>(item.value()));
+            result.set_info(info);
+          }
+          out->emplace_back(std::move(result));
+        }
+        return out;
+      });
 }
 
 folly::SemiFuture<std::unique_ptr<std::vector<FileInformationOrError>>>
