@@ -759,7 +759,7 @@ EdenServiceHandler::semifuture_getEntryInformation(
             result.set_error(newEdenError(item.exception()));
           } else {
             EntryInformation info;
-            info.set_dtype(static_cast<OsDtype>(item.value()));
+            info.set_dtype(static_cast<Dtype>(item.value()));
             result.set_info(info);
           }
           out->emplace_back(std::move(result));
