@@ -18,10 +18,6 @@ pub enum ErrorKind {
     ConnectionNoClientCertificate,
     #[error("Unauthorized access, permission denied")]
     AuthorizationFailed,
-    #[error("Failed to create AclChecker for tier {0}")]
-    AclCheckerCreationFailed(String),
-    #[error("Unexpected identity type {0}")]
-    UnexpectedIdentityType(String),
     #[error("Large repo not found: {0}")]
     LargeRepoNotFound(RepositoryId),
 }

@@ -29,6 +29,16 @@ where
     }
 }
 
+#[async_trait]
+impl<T> MembershipChecker for Arc<T>
+where
+    T: MembershipChecker + ?Sized + Send + Sync,
+{
+    async fn is_member(&self, identities: &MononokeIdentitySet) -> Result<bool> {
+        (*self).is_member(identities).await
+    }
+}
+
 pub struct MembershipCheckerBuilder {}
 impl MembershipCheckerBuilder {
     pub fn always_member() -> BoxMembershipChecker {
@@ -37,6 +47,10 @@ impl MembershipCheckerBuilder {
 
     pub fn never_member() -> BoxMembershipChecker {
         Box::new(NeverMember {})
+    }
+
+    pub fn whitelist_checker(whitelist: MononokeIdentitySet) -> BoxMembershipChecker {
+        Box::new(WhitelistChecker { whitelist })
     }
 }
 
@@ -68,5 +82,16 @@ mod r#impl {
         pub async fn for_reviewers_group(_fb: FacebookInit) -> Result<BoxMembershipChecker> {
             Ok(Self::always_member())
         }
+    }
+}
+
+struct WhitelistChecker {
+    whitelist: MononokeIdentitySet,
+}
+
+#[async_trait]
+impl MembershipChecker for WhitelistChecker {
+    async fn is_member(&self, identities: &MononokeIdentitySet) -> Result<bool> {
+        Ok(!self.whitelist.is_disjoint(identities))
     }
 }

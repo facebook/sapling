@@ -10,8 +10,6 @@
 #![allow(deprecated)]
 #![feature(never_type)]
 
-use infrasec_authorization as acl;
-
 mod connection_acceptor;
 mod errors;
 mod repo_handlers;

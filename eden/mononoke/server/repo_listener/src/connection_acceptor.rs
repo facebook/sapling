@@ -14,14 +14,13 @@ use std::sync::{
 };
 use std::time::Duration;
 
-use crate::acl::VALID_ACL_MEMBER_TYPES;
-use aclchecker::{AclChecker, Identity};
 use anyhow::{bail, format_err, Error, Result};
 use bytes::Bytes;
 use cached_config::{ConfigHandle, ConfigStore};
 use cloned::cloned;
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
+use futures::{FutureExt as NewFutureExt, TryFutureExt};
 use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_old::sync::mpsc;
 use futures_old::{future, stream, Async, Future, IntoFuture, Poll, Sink, Stream};
@@ -29,6 +28,10 @@ use itertools::join;
 use lazy_static::lazy_static;
 use metaconfig_types::{CommonConfig, WhitelistEntry};
 use openssl::ssl::SslAcceptor;
+use permission_checker::{
+    BoxMembershipChecker, BoxPermissionChecker, MembershipCheckerBuilder, MononokeIdentity,
+    MononokeIdentitySet, PermissionCheckerBuilder,
+};
 use repo_client::CONFIGERATOR_PUSHREDIRECT_ENABLE;
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{crit, error, o, Drain, Level, Logger};
@@ -101,43 +104,44 @@ pub fn connection_acceptor(
         None => (None, None),
     };
 
-    let security_checker = try_boxfuture!(ConnectionsSecurityChecker::new(fb, common_config)
-        .map_err(|err| format_err!("error while creating security checker: {}", err)));
+    ConnectionsSecurityChecker::new(fb, common_config)
+        .boxed()
+        .compat()
+        .map(Arc::new)
+        .map_err(|err| format_err!("error while creating security checker: {}", err))
+        .and_then(move |security_checker| {
+            // Now that we are listening and ready to accept connections, report that we are alive.
+            service.set_ready();
 
-    let security_checker = Arc::new(security_checker);
-
-    // Now that we are listening and ready to accept connections, report that we are alive.
-    service.set_ready();
-
-    TakeUntilNotSet::new(listener.boxify(), terminate_process)
-        .for_each(move |sock| {
-            // Accept the request without blocking the listener
-            cloned!(
-                load_limiting_config,
-                pushredirect_config,
-                root_log,
-                repo_handlers,
-                tls_acceptor,
-                security_checker
-            );
-            OPEN_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
-            tokio_old::spawn(future::lazy(move || {
-                accept(
-                    fb,
-                    sock,
+            TakeUntilNotSet::new(listener.boxify(), terminate_process).for_each(move |sock| {
+                // Accept the request without blocking the listener
+                cloned!(
+                    load_limiting_config,
+                    pushredirect_config,
                     root_log,
                     repo_handlers,
                     tls_acceptor,
-                    security_checker.clone(),
-                    load_limiting_config.clone(),
-                    pushredirect_config.clone(),
-                )
-                .then(|res| {
-                    OPEN_CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
-                    res
-                })
-            }));
-            Ok(())
+                    security_checker
+                );
+                OPEN_CONNECTIONS.fetch_add(1, Ordering::Relaxed);
+                tokio_old::spawn(future::lazy(move || {
+                    accept(
+                        fb,
+                        sock,
+                        root_log,
+                        repo_handlers,
+                        tls_acceptor,
+                        security_checker.clone(),
+                        load_limiting_config.clone(),
+                        pushredirect_config.clone(),
+                    )
+                    .then(|res| {
+                        OPEN_CONNECTIONS.fetch_sub(1, Ordering::Relaxed);
+                        res
+                    })
+                }));
+                Ok(())
+            })
         })
         .boxify()
 }
@@ -174,15 +178,22 @@ fn accept(
                     None => Err(ErrorKind::ConnectionNoClientCertificate.into()),
                 };
 
-                let identities = identities.map_err({
-                    cloned!(root_log);
-                    move |err| {
-                        error!(
-                            root_log,
-                            "failed to get identities from certificate"; SlogKVError(err),
-                        )
-                    }
-                });
+                let identities = identities
+                    .and_then(|identities| -> Result<MononokeIdentitySet> {
+                        identities
+                            .into_iter()
+                            .map(|id| MononokeIdentity::try_from_identity(&id))
+                            .collect()
+                    })
+                    .map_err({
+                        cloned!(root_log);
+                        move |err| {
+                            error!(
+                                root_log,
+                                "failed to get identities from certificate"; SlogKVError(err),
+                            )
+                        }
+                    });
 
                 ssh_server_mux(sock)
                     .map_err({
@@ -227,28 +238,46 @@ fn accept(
                         .add("client_ip", addr.to_string())
                         .add("client_identities", join(identities.iter(), ","));
 
-                    if security_checker.check_if_connections_allowed(&identities) {
-                        request_handler(
-                            fb,
-                            handler,
-                            stdio,
-                            load_limiting_config,
-                            pushredirect_config,
-                        )
-                        .left_future()
-                    } else {
-                        let err: Error = ErrorKind::AuthorizationFailed.into();
-                        let tmp_conn_log = create_conn_logger(&stdio);
-                        // Log to scuba
-                        handler
-                            .scuba
-                            .log_with_msg("Authorization failed", format!("{}", err));
-                        // This log goes to the user
-                        error!(tmp_conn_log, "Authorization failed: {}", err);
-                        // This log goes to the server stdout/stderr
-                        error!(root_log, "Authorization failed"; SlogKVError(err));
-                        future::err(()).right_future()
-                    }
+                    (async move {
+                        security_checker
+                            .check_if_connections_allowed(&identities)
+                            .await
+                    })
+                    .boxed()
+                    .compat()
+                    .map_err({
+                        cloned!(root_log);
+                        move |err| {
+                            error!(
+                                root_log,
+                                "failed to check if connection is allowed"; SlogKVError(err),
+                            )
+                        }
+                    })
+                    .and_then(move |is_allowed| {
+                        if is_allowed {
+                            request_handler(
+                                fb,
+                                handler,
+                                stdio,
+                                load_limiting_config,
+                                pushredirect_config,
+                            )
+                            .left_future()
+                        } else {
+                            let err: Error = ErrorKind::AuthorizationFailed.into();
+                            let tmp_conn_log = create_conn_logger(&stdio);
+                            // Log to scuba
+                            handler
+                                .scuba
+                                .log_with_msg("Authorization failed", format!("{}", err));
+                            // This log goes to the user
+                            error!(tmp_conn_log, "Authorization failed: {}", err);
+                            // This log goes to the server stdout/stderr
+                            error!(root_log, "Authorization failed"; SlogKVError(err));
+                            future::err(()).right_future()
+                        }
+                    })
                 })
         })
         .boxify()
@@ -265,61 +294,46 @@ fn create_conn_logger(stdio: &Stdio) -> Logger {
 }
 
 struct ConnectionsSecurityChecker {
-    tier_aclchecker: Option<AclChecker>,
-    whitelisted_identities: Vec<Identity>,
+    tier_permchecker: BoxPermissionChecker,
+    whitelisted_checker: BoxMembershipChecker,
 }
 
 impl ConnectionsSecurityChecker {
-    fn new(fb: FacebookInit, common_config: CommonConfig) -> Result<Self> {
-        let mut whitelisted_identities = vec![];
-        let mut tier_aclchecker = None;
+    async fn new(fb: FacebookInit, common_config: CommonConfig) -> Result<Self> {
+        let mut whitelisted_identities = MononokeIdentitySet::new();
+        let mut tier_permchecker = None;
 
         for whitelist_entry in common_config.security_config {
             match whitelist_entry {
                 WhitelistEntry::HardcodedIdentity { ty, data } => {
-                    if !VALID_ACL_MEMBER_TYPES.contains(&ty) {
-                        return Err(ErrorKind::UnexpectedIdentityType(ty).into());
-                    }
-
-                    whitelisted_identities.push(Identity::new(&ty, &data));
+                    whitelisted_identities.insert(MononokeIdentity::new(&ty, &data)?);
                 }
                 WhitelistEntry::Tier(tier) => {
-                    if tier_aclchecker.is_some() {
-                        bail!("invalid config: only one aclchecker tier is allowed");
+                    if tier_permchecker.is_some() {
+                        bail!("invalid config: only one PermissionChecker for tier is allowed");
                     }
-                    let tier = Identity::with_tier(&tier);
-                    let acl_checker = AclChecker::new(fb, &tier)?;
-                    if !acl_checker.do_wait_updated(180_000) {
-                        return Err(ErrorKind::AclCheckerCreationFailed(tier.to_string()).into());
-                    }
-                    tier_aclchecker = Some(acl_checker);
+                    tier_permchecker =
+                        Some(PermissionCheckerBuilder::acl_for_tier(fb, &tier).await?);
                 }
             }
         }
 
         Ok(Self {
-            tier_aclchecker,
-            whitelisted_identities,
+            tier_permchecker: tier_permchecker
+                .unwrap_or_else(|| PermissionCheckerBuilder::always_reject()),
+            whitelisted_checker: MembershipCheckerBuilder::whitelist_checker(
+                whitelisted_identities,
+            ),
         })
     }
 
-    fn check_if_connections_allowed(&self, identities: &[Identity]) -> bool {
-        if let Some(ref aclchecker) = self.tier_aclchecker {
-            let action = "tupperware";
-            if aclchecker.check(identities.as_ref(), &[action]) {
-                return true;
-            }
-        }
-
-        for identity in identities.iter() {
-            for whitelisted_identity in self.whitelisted_identities.iter() {
-                if identity == whitelisted_identity {
-                    return true;
-                }
-            }
-        }
-
-        false
+    async fn check_if_connections_allowed(&self, identities: &MononokeIdentitySet) -> Result<bool> {
+        let action = "tupperware";
+        Ok(self.whitelisted_checker.is_member(&identities).await?
+            || self
+                .tier_permchecker
+                .check_set(&identities, &[action])
+                .await?)
     }
 }
 

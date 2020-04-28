@@ -7,6 +7,7 @@
 
 use anyhow::Result;
 use std::collections::HashSet;
+use std::fmt;
 
 pub type MononokeIdentitySet = HashSet<MononokeIdentity>;
 
@@ -35,6 +36,12 @@ impl MononokeIdentity {
 
     pub fn id_data(&self) -> &str {
         &self.id_data
+    }
+}
+
+impl fmt::Display for MononokeIdentity {
+    fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(fmt, "{}:{}", self.id_type(), self.id_data())
     }
 }
 
