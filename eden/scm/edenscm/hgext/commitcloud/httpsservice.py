@@ -259,6 +259,18 @@ class HttpsCommitCloudService(baseservice.BaseService):
         newsnapshots=[],
     ):
         self.ui.debug("sending 'update_references' request\n", component="commitcloud")
+        self.ui.log(
+            "commitcloud_updates",
+            version=version,
+            repo=reponame,
+            workspace=workspace,
+            oldheadcount=len(oldheads),
+            newheadcount=len(newheads),
+            oldbookmarkcount=len(oldremotebookmarks),
+            newbookmarkcount=len(newbookmarks),
+            oldremotebookmarkcount=len(oldremotebookmarks),
+            newremotebookmarkcount=len(newremotebookmarks),
+        )
 
         # remove duplicates, must preserve order in the newheads list
         newheadsset = set(newheads)
