@@ -133,19 +133,8 @@ folly::SemiFuture<folly::Unit> HgQueuedBackingStore::prefetchBlobs(
   return std::move(future);
 }
 
-folly::StringPiece HgQueuedBackingStore::stringOfHgImportStage(
-    HgImportStage stage) {
-  switch (stage) {
-    case HgImportStage::PENDING:
-      return "pending_import";
-    case HgImportStage::LIVE:
-      return "live_import";
-  }
-  EDEN_BUG() << "unknown hg import stage " << static_cast<int>(stage);
-}
-
 size_t HgQueuedBackingStore::getImportMetric(
-    HgImportStage stage,
+    RequestMetricsScope::RequestStage stage,
     HgBackingStore::HgImportObject object,
     RequestMetricsScope::RequestMetric metric) const {
   return RequestMetricsScope::getMetricFromWatches(
@@ -154,12 +143,12 @@ size_t HgQueuedBackingStore::getImportMetric(
 
 RequestMetricsScope::LockedRequestWatchList&
 HgQueuedBackingStore::getImportWatches(
-    HgImportStage stage,
+    RequestMetricsScope::RequestStage stage,
     HgBackingStore::HgImportObject object) const {
   switch (stage) {
-    case HgImportStage::PENDING:
+    case RequestMetricsScope::RequestStage::PENDING:
       return getPendingImportWatches(object);
-    case HgImportStage::LIVE:
+    case RequestMetricsScope::RequestStage::LIVE:
       return backingStore_->getLiveImportWatches(object);
   }
   EDEN_BUG() << "unknown hg import stage " << static_cast<int>(stage);

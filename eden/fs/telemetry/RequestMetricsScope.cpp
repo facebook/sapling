@@ -61,6 +61,28 @@ folly::StringPiece RequestMetricsScope::stringOfRequestMetric(
   EDEN_BUG() << "unknown metric " << static_cast<int>(metric);
 }
 
+folly::StringPiece RequestMetricsScope::stringOfHgImportStage(
+    RequestStage stage) {
+  switch (stage) {
+    case RequestStage::PENDING:
+      return "pending_import";
+    case RequestStage::LIVE:
+      return "live_import";
+  }
+  EDEN_BUG() << "unknown hg import stage " << static_cast<int>(stage);
+}
+
+folly::StringPiece RequestMetricsScope::stringOfFuseRequestStage(
+    RequestStage stage) {
+  switch (stage) {
+    case RequestStage::PENDING:
+      return "pending_requests";
+    case RequestStage::LIVE:
+      return "live_requests";
+  }
+  EDEN_BUG() << "unknown hg import stage " << static_cast<int>(stage);
+}
+
 size_t RequestMetricsScope::aggregateMetricCounters(
     RequestMetricsScope::RequestMetric metric,
     std::vector<size_t>& counters) {

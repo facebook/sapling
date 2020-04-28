@@ -60,26 +60,6 @@ class HgQueuedBackingStore : public BackingStore {
   }
 
   /**
-   * stages of hg import that are tracked, these represent where an import is in
-   * the import process (for example an import could be queued, fetching from
-   * hg, or checking cache)
-   */
-  enum HgImportStage {
-    // represents any import that has been requested but not yet completed
-    // (imports in this stage could be in the queue, checking the cache, or
-    // fetching data from hg
-    PENDING,
-    // represents imports that are currently fetching data from hg
-    LIVE,
-  };
-
-  constexpr static std::array<HgImportStage, 2> hgImportStages{
-      HgImportStage::PENDING,
-      HgImportStage::LIVE};
-
-  static folly::StringPiece stringOfHgImportStage(HgImportStage stage);
-
-  /**
    * calculates `metric` for `object` imports that are `stage`.
    *    ex. HgQueuedBackingStore::getImportMetrics(
    *          RequestMetricsScope::HgImportStage::PENDING,
@@ -89,7 +69,7 @@ class HgQueuedBackingStore : public BackingStore {
    *    calculates the number of blob imports that are pending
    */
   size_t getImportMetric(
-      HgImportStage stage,
+      RequestMetricsScope::RequestStage stage,
       HgBackingStore::HgImportObject object,
       RequestMetricsScope::RequestMetric metric) const;
 
@@ -107,18 +87,18 @@ class HgQueuedBackingStore : public BackingStore {
    * gets the watches timing `object` imports that are `stage`
    *    ex. HgQueuedBackingStore::getImportWatches(
    *          RequestMetricsScope::HgImportStage::PENDING,
-   *          RequestMetricsScope::HgImportObject::BLOB,
+   *          HgBackingStore::HgImportObject::BLOB,
    *        )
    *    gets the watches timing blob imports that are pending
    */
   RequestMetricsScope::LockedRequestWatchList& getImportWatches(
-      HgImportStage stage,
+      RequestMetricsScope::RequestStage stage,
       HgBackingStore::HgImportObject object) const;
 
   /**
    * Gets the watches timing pending `object` imports
    *   ex. HgBackingStore::getPendingImportWatches(
-   *          RequestMetricsScope::HgImportObject::BLOB,
+   *          HgBackingStore::HgImportObject::BLOB,
    *        )
    *    gets the watches timing pending blob imports
    */

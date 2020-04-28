@@ -53,6 +53,7 @@ class FUSEStatsTest(testcase.EdenRepoTest):
         counter_names_to_check = [
             f"fuse.{mountName}.live_requests.count",
             f"fuse.{mountName}.live_requests.max_duration_us",
+            f"fuse.{mountName}.pending_requests.count",
         ]
 
         counters = self.get_counters()

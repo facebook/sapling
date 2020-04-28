@@ -9,6 +9,7 @@
 
 #include <cpptoml.h> // @manual=fbsource//third-party/cpptoml:cpptoml
 
+#include <sys/stat.h>
 #include <atomic>
 #include <fstream>
 #include <functional>
@@ -161,7 +162,6 @@ constexpr StringPiece kSqlitePath{"storage/sqlite.db"};
 constexpr StringPiece kConfig{"config.toml"};
 constexpr StringPiece kHgStorePrefix{"store.hg"};
 constexpr StringPiece kFuseRequestPrefix{"fuse"};
-constexpr StringPiece kFuseRequestLiveStage{"live_requests"};
 
 std::optional<std::string> getUnixDomainSocketPath(
     const folly::SocketAddress& address) {
@@ -170,7 +170,7 @@ std::optional<std::string> getUnixDomainSocketPath(
 }
 
 std::string getCounterNameForImportMetric(
-    HgQueuedBackingStore::HgImportStage stage,
+    RequestMetricsScope::RequestStage stage,
     RequestMetricsScope::RequestMetric metric,
     std::optional<HgBackingStore::HgImportObject> object = std::nullopt) {
   if (object.has_value()) {
@@ -178,7 +178,7 @@ std::string getCounterNameForImportMetric(
     return folly::to<std::string>(
         kHgStorePrefix,
         ".",
-        HgQueuedBackingStore::stringOfHgImportStage(stage),
+        RequestMetricsScope::stringOfHgImportStage(stage),
         ".",
         HgBackingStore::stringOfHgImportObject(object.value()),
         ".",
@@ -188,12 +188,13 @@ std::string getCounterNameForImportMetric(
   return folly::to<std::string>(
       kHgStorePrefix,
       ".",
-      HgQueuedBackingStore::stringOfHgImportStage(stage),
+      RequestMetricsScope::stringOfHgImportStage(stage),
       ".",
       RequestMetricsScope::stringOfRequestMetric(metric));
 }
 
 std::string getCounterNameForFuseRequests(
+    RequestMetricsScope::RequestStage stage,
     RequestMetricsScope::RequestMetric metric,
     const EdenMount* mount) {
   auto mountName = basename(mount->getPath().stringPiece());
@@ -203,7 +204,7 @@ std::string getCounterNameForFuseRequests(
       ".",
       mountName,
       ".",
-      kFuseRequestLiveStage,
+      RequestMetricsScope::stringOfFuseRequestStage(stage),
       ".",
       RequestMetricsScope::stringOfRequestMetric(metric));
 }
@@ -223,6 +224,38 @@ std::string normalizeMountPoint(StringPiece mountPath) {
   return mountPath.str();
 #endif
 }
+
+#ifdef __linux__
+// **not safe to call this function from a fuse thread**
+// this gets the kernels view of the number of pending requests, to do this, it
+// stats the fuse mount root in the filesystem which could call into the FUSE
+// daemon which could cause a deadlock.
+size_t getNumberPendingFuseRequests(const EdenMount* mount) {
+  constexpr StringPiece kFuseInfoDir{"/sys/fs/fuse/connections"};
+  constexpr StringPiece kFusePendingRequestFile{"waiting"};
+
+  auto mount_path = mount->getPath().c_str();
+  struct stat file_metadata;
+
+  folly::checkUnixError(
+      lstat(mount_path, &file_metadata),
+      "unable to get FUSE device number for mount ",
+      basename(mount->getPath().stringPiece()));
+
+  auto pending_request_path = folly::to<std::string>(
+      kFuseInfoDir,
+      kDirSeparator,
+      file_metadata.st_dev,
+      kDirSeparator,
+      kFusePendingRequestFile);
+
+  std::string pending_requests;
+  auto read_success =
+      folly::readFile(pending_request_path.c_str(), pending_requests);
+
+  return read_success ? folly::to<size_t>(pending_requests) : 0;
+}
+#endif // __linux__
 
 } // namespace
 
@@ -312,7 +345,7 @@ EdenServer::EdenServer(
     return this->getBlobCache()->getStats().totalSizeInBytes;
   });
 
-  for (auto stage : HgQueuedBackingStore::hgImportStages) {
+  for (auto stage : RequestMetricsScope::requestStages) {
     for (auto metric : RequestMetricsScope::requestMetrics) {
       for (auto object : HgBackingStore::hgImportObjects) {
         auto counterName = getCounterNameForImportMetric(stage, metric, object);
@@ -349,7 +382,7 @@ EdenServer::~EdenServer() {
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
   counters->unregisterCallback(kBlobCacheMemory);
 
-  for (auto stage : HgQueuedBackingStore::hgImportStages) {
+  for (auto stage : RequestMetricsScope::requestStages) {
     for (auto metric : RequestMetricsScope::requestMetrics) {
       for (auto object : HgBackingStore::hgImportObjects) {
         auto counterName = getCounterNameForImportMetric(stage, metric, object);
@@ -1058,11 +1091,26 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
       });
   for (auto metric : RequestMetricsScope::requestMetrics) {
     counters->registerCallback(
-        getCounterNameForFuseRequests(metric, edenMount.get()),
+        getCounterNameForFuseRequests(
+            RequestMetricsScope::RequestStage::LIVE, metric, edenMount.get()),
         [edenMount, metric] {
           return edenMount->getFuseChannel()->getRequestMetric(metric);
         });
   }
+#ifdef __linux__
+  counters->registerCallback(
+      getCounterNameForFuseRequests(
+          RequestMetricsScope::RequestStage::PENDING,
+          RequestMetricsScope::RequestMetric::COUNT,
+          edenMount.get()),
+      [edenMount] {
+        try {
+          return getNumberPendingFuseRequests(edenMount.get());
+        } catch (const std::exception&) {
+          return size_t{0};
+        }
+      });
+#endif // __linux__
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32
@@ -1084,9 +1132,15 @@ void EdenServer::unregisterStats(EdenMount* edenMount) {
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::JOURNAL_MAX_FILES_ACCUMULATED));
   for (auto metric : RequestMetricsScope::requestMetrics) {
-    counters->unregisterCallback(
-        getCounterNameForFuseRequests(metric, edenMount));
+    counters->unregisterCallback(getCounterNameForFuseRequests(
+        RequestMetricsScope::RequestStage::LIVE, metric, edenMount));
   }
+#ifdef __linux__
+  counters->unregisterCallback(getCounterNameForFuseRequests(
+      RequestMetricsScope::RequestStage::PENDING,
+      RequestMetricsScope::RequestMetric::COUNT,
+      edenMount));
+#endif // __linux__
 #else
   NOT_IMPLEMENTED();
 #endif // !_WIN32

@@ -60,6 +60,28 @@ class RequestMetricsScope {
   static folly::StringPiece stringOfRequestMetric(RequestMetric metric);
 
   /**
+   * stages of requests that are tracked, these represent where an request is in
+   * the process (for example an request could be queued or live)
+   */
+  enum RequestStage {
+    // represents any request that has been requested but not yet completed
+    // (request in this stage could be in the queue, live, or in the case of
+    // hg store imports fetching from cache
+    PENDING,
+    // represents request that are currently being executed (in the case of
+    // hg imports, only those fetching data, this does not include those reading
+    // from cache)
+    LIVE,
+  };
+
+  constexpr static std::array<RequestStage, 2> requestStages{
+      RequestStage::PENDING,
+      RequestStage::LIVE};
+
+  static folly::StringPiece stringOfHgImportStage(RequestStage stage);
+  static folly::StringPiece stringOfFuseRequestStage(RequestStage stage);
+
+  /**
    * combine the values of the counters in a way that makes sense
    * for the `metric` being calculated
    */
