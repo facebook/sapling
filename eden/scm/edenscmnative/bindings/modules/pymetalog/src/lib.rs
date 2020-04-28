@@ -22,11 +22,27 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
 
 py_class!(class metalog |py| {
     data log: RefCell<MetaLog>;
+    data path: String;
 
     def __new__(_cls, path: String, root: Option<Bytes> = None) -> PyResult<Self> {
         let root = root.and_then(|s| Id20::from_slice(s.as_ref()).ok());
         let log = MetaLog::open(&path, root).map_pyerr(py)?;
-        Self::create_instance(py, RefCell::new(log))
+        Self::create_instance(py, RefCell::new(log), path)
+    }
+
+    /// List all roots.
+    def roots(&self) -> PyResult<Vec<Bytes>> {
+        let path = self.path(py);
+        let root_ids = MetaLog::list_roots(&path).map_pyerr(py)?;
+        Ok(root_ids.into_iter().map(|id| Bytes::from(id.as_ref().to_vec())).collect())
+    }
+
+    /// Check out a "root".
+    def checkout(&self, root: Bytes) -> PyResult<Self> {
+        let path = self.path(py);
+        let root = Id20::from_slice(root.as_ref()).map_pyerr(py)?;
+        let log = MetaLog::open(&path, Some(root)).map_pyerr(py)?;
+        Self::create_instance(py, RefCell::new(log), path.clone())
     }
 
     @staticmethod
