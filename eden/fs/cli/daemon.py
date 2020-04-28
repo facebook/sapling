@@ -254,6 +254,7 @@ def get_edenfs_environment() -> Dict[str, str]:
         "SSH_AUTH_SOCK",
         "SSH_AGENT_PID",
         "KRB5CCNAME",
+        "SCRATCH_CONFIG_PATH",
     ]
 
     for name, value in os.environ.items():
