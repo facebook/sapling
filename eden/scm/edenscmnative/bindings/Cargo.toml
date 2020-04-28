@@ -17,7 +17,7 @@ incremental = true
 lto = false
 
 [dependencies]
-cpython = { version = "0.4", default-features = false }
+cpython = { version = "0.5", default-features = false }
 cpython-ext = { path = "../../lib/cpython-ext", default-features = false }
 pyblackbox = { path = "modules/pyblackbox" }
 pybookmarkstore = { path = "modules/pybookmarkstore" }

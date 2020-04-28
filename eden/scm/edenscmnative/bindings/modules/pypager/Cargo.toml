@@ -6,7 +6,7 @@ edition = "2018"
 [dependencies]
 clidispatch = { path = "../../../../lib/clidispatch", default-features = false }
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
-cpython = { version = "0.4", default-features = false }
+cpython = { version = "0.5", default-features = false }
 pyconfigparser = { path = "../pyconfigparser" }
 
 [features]

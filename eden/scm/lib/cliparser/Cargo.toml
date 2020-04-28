@@ -9,7 +9,7 @@ anyhow = "1.0.20"
 lazy_static = "1.3.0"
 shlex = "0.1"
 cpython-ext = { path = "../cpython-ext", default-features = false, optional = true }
-cpython = { version = "0.4", default-features = false, optional = true }
+cpython = { version = "0.5", default-features = false, optional = true }
 thiserror = "1.0.5"
 
 [features]

@@ -16,7 +16,7 @@ crossbeam = "0.7"
 fsinfo = { path = "../../../../lib/fsinfo" }
 revisionstore = { path = "../../../../lib/revisionstore" }
 cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
-cpython = { version = "0.4", default-features = false }
+cpython = { version = "0.5", default-features = false }
 types = { path = "../../../../lib/types" }
 tracing = "0.1"
 util = { path = "../../../../lib/util" }
