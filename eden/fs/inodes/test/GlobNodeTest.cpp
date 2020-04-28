@@ -49,8 +49,8 @@ folly::Future<std::vector<GlobResult>> evaluateGlob(
 } // namespace
 
 enum StartReady : bool {
-  DeferReady = false,
-  StartReady = true,
+  Defer = false,
+  Start = true,
 };
 
 enum Prefetch : bool {
@@ -149,7 +149,9 @@ TEST_P(GlobNodeTest, star) {
   auto matches = doGlobIncludeDotFiles("*");
 
   std::vector<GlobResult> expect{
+#ifndef _WIN32
       GlobResult(".eden"_relpath, dtype_t::Dir),
+#endif
       GlobResult(".watchmanconfig"_relpath, dtype_t::Regular),
       GlobResult("dir"_relpath, dtype_t::Dir)};
   EXPECT_EQ(expect, matches);
@@ -167,6 +169,7 @@ TEST_P(GlobNodeTest, starExcludeDot) {
   EXPECT_EQ(expect, matches);
 }
 
+#ifndef _WIN32
 TEST_P(GlobNodeTest, recursiveTxtWithChanges) {
   // Ensure that we enumerate things from the overlay
   mount_.addFile("root.txt", "added\n");
@@ -197,6 +200,7 @@ TEST_P(GlobNodeTest, recursiveTxtWithChanges) {
     EXPECT_EQ(expectHashes, getPrefetchHashes());
   }
 }
+#endif
 
 TEST_P(GlobNodeTest, matchGlobDirectoryAndDirectoryChild) {
   GlobNode globRoot(/*includeDotfiles=*/false);
@@ -255,10 +259,10 @@ TEST_P(GlobNodeTest, matchLiteralDirectoryAndDirectoryRecursiveChildren) {
 }
 
 const std::pair<enum StartReady, enum Prefetch> combinations[] = {
-    {StartReady::StartReady, Prefetch::NoPrefetch},
-    {StartReady::StartReady, Prefetch::PrefetchBlobs},
-    {StartReady::DeferReady, Prefetch::NoPrefetch},
-    {StartReady::DeferReady, Prefetch::PrefetchBlobs},
+    {StartReady::Start, Prefetch::NoPrefetch},
+    {StartReady::Start, Prefetch::PrefetchBlobs},
+    {StartReady::Defer, Prefetch::NoPrefetch},
+    {StartReady::Defer, Prefetch::PrefetchBlobs},
 };
 
 INSTANTIATE_TEST_CASE_P(Glob, GlobNodeTest, ::testing::ValuesIn(combinations));
