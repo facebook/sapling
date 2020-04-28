@@ -4,10 +4,12 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+import ctypes
+import ctypes.util
 import os
 import pathlib
 import subprocess
-import typing
+from typing import Sequence, Type
 
 
 ProcessID = int
@@ -39,14 +41,14 @@ class LinuxCgroup:
         name = cls._parse_proc_file(proc_file_content)
         return cls(name)
 
-    def query_child_cgroups(self) -> typing.Sequence["LinuxCgroup"]:
+    def query_child_cgroups(self) -> Sequence["LinuxCgroup"]:
         return [
             LinuxCgroup.from_sys_fs_cgroup_path(child)
             for child in self.sys_fs_cgroup_path.iterdir()
             if child.is_dir()
         ]
 
-    def query_process_ids(self) -> typing.Sequence[ProcessID]:
+    def query_process_ids(self) -> Sequence[ProcessID]:
         pids_str = self.__cgroup_procs_path.read_text()
         return [int(line) for line in pids_str.splitlines()]
 
@@ -102,14 +104,43 @@ class _StatfsType:
     CGROUP2_SUPER_MAGIC = 0x63677270
 
 
+# https://github.com/python/typeshed/pull/3945
+_libc = ctypes.CDLL(None, use_errno=True)  # type: ignore
+_fsword_t = ctypes.c_int64  # type: Type[ctypes._CData]
+_fsblkcnt_t = ctypes.c_uint64
+_fsfilcnt_t = ctypes.c_uint64
+_fsid_t = ctypes.c_uint64
+
+
+class _Statfs(ctypes.Structure):
+    _fields_ = [
+        ("f_type", _fsword_t),
+        ("f_bsize", _fsword_t),
+        ("f_blocks", _fsblkcnt_t),
+        ("f_bfree", _fsblkcnt_t),
+        ("f_bavail", _fsblkcnt_t),
+        ("f_files", _fsfilcnt_t),
+        ("f_ffree", _fsfilcnt_t),
+        ("f_fsid", _fsid_t),
+        ("f_namelen", _fsword_t),
+        ("f_frsize", _fsword_t),
+        ("f_flags", _fsword_t),
+        ("f_spare", _fsword_t * 8),
+    ]
+
+
+_libc.statfs.argtypes = [ctypes.c_char_p, ctypes.POINTER(_Statfs)]
+_libc.statfs.restype = ctypes.c_int
+
+
 def _get_filesystem_statfs_type(path: pathlib.Path) -> int:
     """Get the type of the filesystem which the named file resides on.
 
     See _StatfsType for values which can be returned.
     """
-    # TODO(strager): Call the statfs C API directly.
-    filesystem_type_hex = subprocess.check_output(
-        ["/bin/stat", "--file-system", "--printf=%t", "--", path],
-        stderr=subprocess.STDOUT,
-    )
-    return int(filesystem_type_hex, 16)
+    s = _Statfs()
+    rc = _libc.statfs(bytes(path), ctypes.byref(s))
+    if rc != 0:
+        errno = ctypes.get_errno()
+        raise Exception(f"failed to check filesystem type: {errno}")
+    return s.f_type

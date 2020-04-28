@@ -13,8 +13,12 @@ from ctypes import c_int, c_size_t, c_ssize_t, c_void_p
 from .lib import testcase
 
 
-# python's mmap does not allow mapping larger than the file's size
-libc = ctypes.CDLL("libc.so.6")
+# python's mmap does not allow mapping larger than the file's size, so call
+# it directly with ctypes.
+#
+# We have to ignore type errors on the next line until we update to a version
+# of typeshed that includes https://github.com/python/typeshed/pull/3945
+libc = ctypes.CDLL(None)  # type: ignore
 c_off_t = c_ssize_t
 
 libc.mmap.argtypes = [c_void_p, c_size_t, c_int, c_int, c_off_t]
