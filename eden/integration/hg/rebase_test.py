@@ -5,6 +5,7 @@
 # GNU General Public License version 2.
 
 import os
+import subprocess
 import threading
 
 from eden.integration.lib import eden_server_inspector, hgrepo
@@ -60,15 +61,40 @@ class RebaseTest(EdenHgTestCase):
         repo.update(self._base_commit)
 
     def test_rebase_commit_with_independent_folder(self) -> None:
-        stdout = self.hg("--debug", "rebase", "-s", self._c11, "-d", self._c25)
-        self.assertIn(f'rebasing {self._c11[:12]} "c11"\n', stdout)
-        self.assertIn(f'rebasing {self._c12[:12]} "c12"\n', stdout)
-        self.assertIn(f'rebasing {self._c13[:12]} "c13"\n', stdout)
-        self.assertIn(f'rebasing {self._c14[:12]} "c14"\n', stdout)
-        self.assertIn(f'rebasing {self._c15[:12]} "c15"\n', stdout)
-        # Note that these are empirical values, not desired values.
-        # We need to figure out why this hits the slow path and fix it!
-        self.assert_update_logic(stdout, num_fast_path=2, num_slow_path=5)
+        #
+        # We explicitly test non-in-memory rebase here, since the in-memory code path
+        # doesn't use the working directory and therefore doesn't interact with EdenFS.
+        #
+        # Currently all of the rebase operations hit the slow, non-EdenFS aware update
+        # code path, because update is called with branchmerge=True.
+        #
+        # With a non-in-memory rebase the code will first do a simple update to the
+        # rebase destination commit (this hits the EdenFS fast path), then do the 5
+        # rebase operations (slow path), followed by a final update back to the original
+        # working directory parent commit (fast path).  Since we have the destination
+        # commit checked out fortunately the slow path normally isn't horribly slow.
+        #
+        # With in-memory rebase enabled the initial and final updates are skipped, and
+        # only the 5 slow-path rebases are performed, but purely in-memory.
+        #
+        proc = self.repo.run_hg(
+            "--debug",
+            "rebase",
+            "--config",
+            "rebase.experimental.inmemory=False",
+            "-s",
+            self._c11,
+            "-d",
+            self._c25,
+            stderr=subprocess.STDOUT,
+        )
+        output = proc.stdout.decode("utf-8", errors="replace")
+        self.assertIn(f'rebasing {self._c11[:12]} "c11"\n', output)
+        self.assertIn(f'rebasing {self._c12[:12]} "c12"\n', output)
+        self.assertIn(f'rebasing {self._c13[:12]} "c13"\n', output)
+        self.assertIn(f'rebasing {self._c14[:12]} "c14"\n', output)
+        self.assertIn(f'rebasing {self._c15[:12]} "c15"\n', output)
+        self.assert_update_logic(output, num_fast_path=2, num_slow_path=5)
 
         # Get the hash of the new head created as a result of the rebase.
         new_head = self.repo.log(revset=f"successors({self._c15})-{self._c15}")[0]
