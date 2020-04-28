@@ -192,7 +192,7 @@ class TemporaryFileBase(Generic[IOType]):
         exc_value: Optional[BaseException],
         tb: Optional[types.TracebackType],
     ) -> None:
-        pass
+        self.file.close()
 
 
 class TemporaryTextFile(TemporaryFileBase[TextIO]):
