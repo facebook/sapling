@@ -216,8 +216,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let matches = app.get_matches();
 
-    let caching = args::init_cachelib(fb, &matches, Some(CACHE_OBJECT_SIZE));
-    let logger = args::init_logging(fb, &matches);
+    let (caching, logger, mut runtime) =
+        args::init_mononoke(fb, &matches, Some(CACHE_OBJECT_SIZE))?;
+
     let mysql_options = args::parse_mysql_options(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
     let readonly_storage = args::parse_readonly_storage(&matches);
@@ -289,8 +290,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 Result::<(String, (BlobRepo, LfsAclChecker)), Error>::Ok((name, (repo, aclchecker)))
             }
         });
-
-    let mut runtime = args::init_runtime(&matches)?;
 
     let repos: HashMap<_, _> = runtime
         .block_on_std(try_join_all(futs))?

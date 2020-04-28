@@ -65,7 +65,8 @@ fn get_config<'a>(fb: FacebookInit, matches: &ArgMatches<'a>) -> Result<RepoConf
 fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches();
     cmdlib::args::maybe_enable_mcrouter(fb, &matches);
-    let root_log = cmdlib::args::init_logging(fb, &matches);
+
+    let (caching, root_log, runtime) = cmdlib::args::init_mononoke(fb, &matches, None)?;
 
     info!(root_log, "Starting up");
 
@@ -113,8 +114,6 @@ fn main(fb: FacebookInit) -> Result<()> {
         )
     };
 
-    let runtime = cmdlib::args::init_runtime(&matches)?;
-
     info!(root_log, "Creating repo listeners");
 
     let service = ReadyFlagService::new();
@@ -125,7 +124,7 @@ fn main(fb: FacebookInit) -> Result<()> {
         config.common,
         config.repos.into_iter(),
         cmdlib::args::parse_mysql_options(&matches),
-        cmdlib::args::init_cachelib(fb, &matches, None),
+        caching,
         cmdlib::args::parse_disabled_hooks_with_repo_prefix(&matches, &root_log)?,
         &root_log,
         matches

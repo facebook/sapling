@@ -94,8 +94,8 @@ fn main(fb: fbinit::FacebookInit) {
         }
     }
 
-    let logger = args::init_logging(fb, &matches);
-    let caching = args::init_cachelib(fb, &matches, None);
+    let (caching, logger, mut runtime) =
+        args::init_mononoke(fb, &matches, None).expect("failed to initialise mononoke");
 
     let storage_config = args::read_storage_configs(fb, &matches)
         .expect("Could not read storage configs")
@@ -107,7 +107,6 @@ fn main(fb: fbinit::FacebookInit) {
         .expect("Storage config not found");
     let mysql_options = args::parse_mysql_options(&matches);
     let blobstore_options = args::parse_blobstore_options(&matches);
-    let mut runtime = args::init_runtime(&matches).expect("Cannot start tokio");
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let blobstore = || async {

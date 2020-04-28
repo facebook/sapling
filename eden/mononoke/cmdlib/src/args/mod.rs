@@ -1072,6 +1072,21 @@ pub fn parse_disabled_hooks_no_repo_prefix(
     disabled_hooks
 }
 
+pub fn init_mononoke<'a>(
+    fb: FacebookInit,
+    matches: &ArgMatches<'a>,
+    expected_item_size_bytes: Option<usize>,
+) -> Result<(Caching, Logger, tokio_compat::runtime::Runtime)> {
+    let logger = init_logging(fb, matches);
+
+    debug!(logger, "Initialising cachelib...");
+    let caching = init_cachelib(fb, matches, expected_item_size_bytes);
+    debug!(logger, "Initialising runtime...");
+    let runtime = init_runtime(matches)?;
+
+    Ok((caching, logger, runtime))
+}
+
 /// Initialize a new `tokio_compat::runtime::Runtime` with thread number parsed from the CLI
 pub fn init_runtime(matches: &ArgMatches) -> io::Result<tokio_compat::runtime::Runtime> {
     let core_threads = get_usize_opt(matches, RUNTIME_THREADS);

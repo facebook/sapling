@@ -82,9 +82,8 @@ pub async fn backfill<P: AsRef<Path>>(
 fn main(fb: FacebookInit) -> Result<(), Error> {
     let matches = setup_app().get_matches();
 
-    args::init_cachelib(fb, &matches, None);
+    let (_, logger, mut runtime) = args::init_mononoke(fb, &matches, None)?;
 
-    let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     let run = async {
@@ -93,7 +92,6 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         backfill(ctx, repo, in_filename).await
     };
 
-    let mut runtime = args::init_runtime(&matches)?;
     runtime.block_on_std(run)?;
     Ok(())
 }

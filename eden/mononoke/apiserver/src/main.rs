@@ -493,7 +493,9 @@ fn main(fb: FacebookInit) -> Result<()> {
     let app = cmdlib::args::add_logger_args(app);
     let matches =
         cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */).get_matches();
-    let with_cachelib = cmdlib::args::init_cachelib(fb, &matches, None);
+
+    let (with_cachelib, root_logger, mut runtime) =
+        cmdlib::args::init_mononoke(fb, &matches, None).expect("failed to initialise mononoke");
 
     let host = matches.value_of("http-host").unwrap_or("127.0.0.1");
     let port = matches.value_of("http-port").unwrap_or("8000");
@@ -507,7 +509,6 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let address = format!("{}:{}", host, port);
 
-    let root_logger = cmdlib::args::init_logging(fb, &matches);
     let actix_logger = root_logger.clone();
     let mononoke_logger = root_logger.clone();
     let thrift_logger = root_logger.clone();
@@ -515,8 +516,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let stats_aggregation =
         schedule_stats_aggregation().expect("failed to create stats aggregation scheduler");
 
-    let mut runtime =
-        cmdlib::args::init_runtime(&matches).expect("tokio runtime for blocking jobs");
     let repo_configs = RepoConfigs::read_configs(fb, config_path)?;
 
     let ssl_acceptor = if let Some(cert) = matches.value_of("ssl-certificate") {

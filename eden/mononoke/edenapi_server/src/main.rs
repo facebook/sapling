@@ -197,7 +197,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let matches = app.get_matches();
 
-    let logger = args::init_logging(fb, &matches);
+    let (caching, logger, mut runtime) = args::init_mononoke(fb, &matches, None)?;
 
     debug!(logger, "Reading args");
     let repo_configs = args::read_configs(fb, &matches)?;
@@ -206,12 +206,6 @@ fn main(fb: FacebookInit) -> Result<()> {
     let blobstore_options = args::parse_blobstore_options(&matches);
     let trusted_proxy_idents = parse_identities(&matches)?;
     let tls_session_data_log = matches.value_of(ARG_TLS_SESSION_DATA_LOG_FILE);
-
-    debug!(logger, "Initializing cachelib");
-    let caching = args::init_cachelib(fb, &matches, None);
-
-    debug!(logger, "Initializing runtime");
-    let mut runtime = args::init_runtime(&matches)?;
 
     debug!(logger, "Initializing Mononoke API");
     let mononoke = runtime.block_on(
