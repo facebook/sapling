@@ -759,7 +759,7 @@ EdenServiceHandler::semifuture_getEntryInformation(
             result.set_error(newEdenError(item.exception()));
           } else {
             EntryInformation info;
-            info.set_dtype(static_cast<DType>(item.value()));
+            info.set_dtype(static_cast<OsDtype>(item.value()));
             result.set_info(info);
           }
           out->emplace_back(std::move(result));
@@ -902,7 +902,7 @@ folly::Future<std::unique_ptr<Glob>> EdenServiceHandler::future_globFiles(
                       entry.name.stringPiece().toString());
 
                   if (wantDtype) {
-                    out->dtypes.emplace_back(static_cast<DType>(entry.dtype));
+                    out->dtypes.emplace_back(static_cast<OsDtype>(entry.dtype));
                   }
                 }
               }
