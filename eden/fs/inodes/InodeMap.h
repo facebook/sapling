@@ -460,7 +460,7 @@ class InodeMap {
      * lookup() calls that have not yet been released with a corresponding
      * forget().
      */
-    int64_t numFuseReferences{0};
+    uint32_t numFuseReferences{0};
   };
 
   struct LoadedInode {

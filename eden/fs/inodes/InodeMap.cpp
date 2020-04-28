@@ -151,7 +151,7 @@ void InodeMap::initializeFromTakeover(
         entry.mode,
         entry.hash.empty() ? std::nullopt
                            : std::optional<Hash>{hashFromThrift(entry.hash)},
-        entry.numFuseReferences);
+        folly::to<uint32_t>(entry.numFuseReferences));
 
     auto result = data->unloadedInodes_.emplace(
         InodeNumber::fromThrift(entry.inodeNumber), std::move(unloadedEntry));
@@ -500,7 +500,7 @@ void InodeMap::decFuseRefcount(InodeNumber number, uint32_t count) {
   auto& unloadedEntry = unloadedIter->second;
   CHECK_GE(unloadedEntry.numFuseReferences, count);
   unloadedEntry.numFuseReferences -= count;
-  if (unloadedEntry.numFuseReferences <= 0) {
+  if (unloadedEntry.numFuseReferences == 0) {
     // We can completely forget about this unloaded inode now.
     XLOG(DBG5) << "forgetting unloaded inode " << number << ": "
                << unloadedEntry.parent << ":" << unloadedEntry.name;
