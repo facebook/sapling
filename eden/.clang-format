@@ -43,12 +43,8 @@ ContinuationIndentWidth: 4
 Cpp11BracedListStyle: true
 DerivePointerAlignment: false
 DisableFormat:   false
-ForEachMacros:   [ FOR_EACH_RANGE, FOR_EACH, ]
+ForEachMacros:   [ FOR_EACH, FOR_EACH_ENUMERATE, FOR_EACH_KV, FOR_EACH_R, FOR_EACH_RANGE, ]
 IncludeCategories:
-  - Regex:           '^"Edenwin.h"'
-    Priority:        -2
-  - Regex:           '^"Eden(|_string).h"'
-    Priority:        -1
   - Regex:           '^<.*\.h(pp)?>'
     Priority:        1
   - Regex:           '^<.*'
