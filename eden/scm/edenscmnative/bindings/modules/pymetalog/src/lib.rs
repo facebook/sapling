@@ -92,6 +92,11 @@ py_class!(class metalog |py| {
         Ok(self.log(py).borrow().timestamp())
     }
 
+    /// The root id.
+    def root(&self) -> PyResult<PyBytes> {
+        Ok(PyBytes::new(py, self.log(py).borrow().root_id().as_ref()))
+    }
+
     def __getitem__(&self, key: String) -> PyResult<Option<Bytes>> {
         self.get(py, &key)
     }

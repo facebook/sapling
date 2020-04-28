@@ -207,6 +207,11 @@ impl MetaLog {
         self.root.timestamp
     }
 
+    /// Get the original root id.
+    pub fn root_id(&self) -> Id20 {
+        self.orig_root_id
+    }
+
     /// Generate an error.
     pub fn error(&self, message: impl fmt::Display) -> Error {
         Error(format!("{:?}: {}", &self.path, message))
@@ -338,6 +343,10 @@ lazy_static! {
     );
 }
 
+/// A root defines a snapshot of key-value pairs.
+///
+/// A root is similar to a commit in source control where the key-value pairs
+/// can be seen as file name - file content pairs.
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 struct Root {
     map: BTreeMap<String, Id20>,
