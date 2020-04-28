@@ -257,11 +257,14 @@ class EdenMount {
    * Check if inode operations can be performed on this EdenMount.
    *
    * This returns false for mounts that are still initializing and do not have
-   * their root inode loaded yet.
+   * their root inode loaded yet. This also returns false for mounts that are
+   * shutting down.
    */
   bool isSafeForInodeAccess() const {
     auto state = getState();
-    return !(state == State::UNINITIALIZED || state == State::INITIALIZING);
+    return !(
+        state == State::UNINITIALIZED || state == State::INITIALIZING ||
+        state == State::SHUTTING_DOWN);
   }
 
   /**

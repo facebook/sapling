@@ -8,11 +8,20 @@ import logging
 import os
 import threading
 import unittest
+from multiprocessing import Process
 from textwrap import dedent
-from typing import Dict, List, Set
+from typing import Dict, List, Optional, Set
 
+from eden.fs.cli import util
 from eden.integration.hg.lib.hg_extension_test_base import EdenHgTestCase, hg_test
 from eden.integration.lib import hgrepo
+from facebook.eden.ttypes import (
+    EdenError,
+    EdenErrorType,
+    FaultDefinition,
+    GetScmStatusParams,
+    UnblockFaultArg,
+)
 
 
 @hg_test
@@ -21,6 +30,7 @@ class UpdateTest(EdenHgTestCase):
     commit1: str
     commit2: str
     commit3: str
+    enable_fault_injection: bool = True
 
     def edenfs_logging_settings(self) -> Dict[str, str]:
         return {
@@ -378,6 +388,73 @@ class UpdateTest(EdenHgTestCase):
         self.assert_status({"foo/bar/b.txt": "?"})
         self.assertFalse(os.path.exists(self.get_path("foo/bar/a.txt")))
         self.assertTrue(os.path.exists(self.get_path("foo/bar/b.txt")))
+
+    def test_mount_state_during_unmount_with_in_progress_checkout(self) -> None:
+        mounts = self.eden.run_cmd("list")
+        self.assertEqual(f"{self.mount}\n", mounts)
+
+        self.backing_repo.write_file("foo/bar.txt", "new contents")
+        new_commit = self.backing_repo.commit("Update foo/bar.txt")
+
+        with self.eden.get_thrift_client() as client:
+            client.injectFault(
+                FaultDefinition(
+                    keyClass="inodeCheckout", keyValueRegex=".*", block=True
+                )
+            )
+
+            # Run a checkout
+            p1 = Process(target=self.repo.update, args=(new_commit,))
+            p1.start()
+
+            hg_parent = self.hg("log", "-r.", "-T{node}")
+
+            # Ensure the checkout has started
+            def checkout_in_progress() -> Optional[bool]:
+                try:
+                    client.getScmStatusV2(
+                        GetScmStatusParams(
+                            mountPoint=bytes(self.mount, encoding="utf-8"),
+                            commit=bytes(hg_parent, encoding="utf-8"),
+                            listIgnored=False,
+                        )
+                    )
+                except EdenError as ex:
+                    if ex.errorType == EdenErrorType.CHECKOUT_IN_PROGRESS:
+                        return True
+                    else:
+                        raise ex
+                return None
+
+            util.poll_until(checkout_in_progress, timeout=30)
+
+            p2 = Process(target=self.eden.unmount, args=(self.mount,))
+            p2.start()
+
+            # Wait for the state to be shutting down
+            def state_shutting_down() -> Optional[bool]:
+                mounts = self.eden.run_cmd("list")
+                print(mounts)
+                if mounts.find("SHUTTING_DOWN") != -1:
+                    return True
+                if mounts.find("(not mounted)") != -1:
+                    self.fail(
+                        "mount should not list status as not mounted while "
+                        "checkout is in progress"
+                    )
+                return None
+
+            util.poll_until(state_shutting_down, timeout=30)
+
+            # Unblock the server shutdown and wait for the checkout to complete.
+            client.unblockFault(
+                UnblockFaultArg(keyClass="inodeCheckout", keyValueRegex=".*")
+            )
+
+            # join the checkout before the unmount because the unmount call
+            # won't finish until the checkout has finished
+            p1.join()
+            p2.join()
 
     @unittest.skipIf(
         "SANDCASTLE" in os.environ,

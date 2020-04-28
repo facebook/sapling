@@ -893,7 +893,6 @@ folly::Future<CheckoutResult> EdenMount::checkout(
         checkoutTimes->didDiff = stopWatch.elapsed();
         // Perform the requested checkout operation after the journal diff
         // completes.
-        auto& [fromTree, toTree] = treeResults;
         ctx->start(this->acquireRenameLock());
 
         checkoutTimes->didAcquireRenameLock = stopWatch.elapsed();
@@ -920,7 +919,16 @@ folly::Future<CheckoutResult> EdenMount::checkout(
 
 #endif // !1
 
-        return this->getRootInode()->checkout(ctx.get(), fromTree, toTree);
+        auto rootInode = getRootInode();
+        return serverState_->getFaultInjector()
+            .checkAsync("inodeCheckout", getPath().stringPiece())
+            .via(serverState_->getThreadPool().get())
+            .thenValue([ctx,
+                        treeResults = std::move(treeResults),
+                        rootInode = std::move(rootInode)](auto&&) mutable {
+              auto& [fromTree, toTree] = treeResults;
+              return rootInode->checkout(ctx.get(), fromTree, toTree);
+            });
       })
       .thenValue([ctx, checkoutTimes, stopWatch, snapshotHash](auto&&) {
         checkoutTimes->didCheckout = stopWatch.elapsed();

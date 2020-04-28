@@ -1291,7 +1291,7 @@ void EdenServer::mountFinished(
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
   unregisterStats(edenMount);
 
-  // Erase the EdenMount from our mountPoints_ map
+  // Save the unmount and takover Promises
   folly::SharedPromise<Unit> unmountPromise;
   std::optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
   {
@@ -1300,7 +1300,6 @@ void EdenServer::mountFinished(
     CHECK(it != mountPoints->end());
     unmountPromise = std::move(it->second.unmountPromise);
     takeoverPromise = std::move(it->second.takeoverPromise);
-    mountPoints->erase(it);
   }
 
   const bool doTakeover = takeoverPromise.has_value();
@@ -1324,6 +1323,14 @@ void EdenServer::mountFinished(
               result.throwIfFailed();
               return Unit{};
             }));
+      })
+      .ensure([this, mountPath] {
+        // Erase the EdenMount from our mountPoints_ map
+        const auto mountPoints = mountPoints_.wlock();
+        const auto it = mountPoints->find(mountPath);
+        if (it != mountPoints->end()) {
+          mountPoints->erase(it);
+        }
       });
 #else
   NOT_IMPLEMENTED();
