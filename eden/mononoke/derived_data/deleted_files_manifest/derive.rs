@@ -12,11 +12,16 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use futures::{
-    future::{err, join_all, lazy, ok, Future, IntoFuture},
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{FutureExt as NewFutureExt, TryFutureExt as NewTryFutureExt},
+    stream::TryStreamExt as NewTryStreamExt,
+};
+use futures_ext::{bounded_traversal::bounded_traversal, BoxFuture, FutureExt};
+use futures_old::{
+    future::{self as old_future, Future, IntoFuture},
     stream::Stream,
     sync::{mpsc, oneshot},
 };
-use futures_ext::{bounded_traversal::bounded_traversal, BoxFuture, FutureExt};
 use manifest::{Diff, ManifestOps, PathTree};
 use mononoke_types::{blob::BlobstoreValue, deleted_files_manifest::DeletedManifest};
 use mononoke_types::{BonsaiChangeset, ChangesetId, DeletedManifestId, MPathElement, MononokeId};
@@ -69,7 +74,7 @@ pub(crate) fn derive_deleted_files_manifest(
     parents: Vec<DeletedManifestId>,
     changes: PathTree<Option<PathChange>>,
 ) -> impl Future<Item = DeletedManifestId, Error = Error> {
-    lazy(move || {
+    old_future::lazy(move || {
         let (result_sender, result_receiver) = oneshot::channel();
         // Stream is used to batch writes to blobstore
         let (sender, receiver) = mpsc::unbounded();
@@ -89,9 +94,12 @@ pub(crate) fn derive_deleted_files_manifest(
                           changes,
                           parents,
                       }| {
-                    do_derive_unfold(ctx.clone(), repo.clone(), changes, parents).map(
-                        move |(mf_change, next_states)| ((path_element, mf_change), next_states),
-                    )
+                    do_derive_unfold(ctx.clone(), repo.clone(), changes, parents)
+                        .boxed()
+                        .compat()
+                        .map(move |(mf_change, next_states)| {
+                            ((path_element, mf_change), next_states)
+                        })
                 }
             },
             // fold
@@ -105,7 +113,7 @@ pub(crate) fn derive_deleted_files_manifest(
                                 subentries.insert(path, mf_id);
                             }
                             Some((None, _)) => {
-                                return err(anyhow!(concat!(
+                                return old_future::err(anyhow!(concat!(
                                     "Failed to create deleted files manifest: ",
                                     "subentry must have a path"
                                 )))
@@ -132,7 +140,7 @@ pub(crate) fn derive_deleted_files_manifest(
         .and_then({
             cloned!(ctx, repo);
             move |manifest_opt| match manifest_opt {
-                Some((_, mf_id)) => ok(mf_id).left_future(),
+                Some((_, mf_id)) => old_future::ok(mf_id).left_future(),
                 None => {
                     // there is no deleted files, need to create an empty root manifest
                     create_manifest(
@@ -169,11 +177,11 @@ pub(crate) enum PathChange {
     FileDirConflict,
 }
 
-pub(crate) fn get_changes(
+pub(crate) async fn get_changes(
     ctx: CoreContext,
     repo: BlobRepo,
-    bonsai: &BonsaiChangeset,
-) -> BoxFuture<PathTree<Option<PathChange>>, Error> {
+    bonsai: BonsaiChangeset,
+) -> Result<PathTree<Option<PathChange>>, Error> {
     let blobstore = repo.get_blobstore();
     // Get file/directory changes between the current changeset and its parents
     //
@@ -190,60 +198,66 @@ pub(crate) fn get_changes(
                 .map(|root_mf_id| root_mf_id.manifest_unode_id().clone())
         }
     });
-    RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id)
-        .from_err()
-        .join(join_all(parent_unodes))
-        // compute diff between changeset's and its parents' manifests
-        .and_then({
-            cloned!(ctx, blobstore);
-            move |(root_unode_mf_id, parent_mf_ids)| {
-                let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
-                match *parent_mf_ids {
-                    [] => {
-                        unode_mf_id
-                            .list_all_entries(ctx.clone(), blobstore)
-                            .filter_map(move |(path, _)| match path {
-                                Some(path) => Some((path, PathChange::Add)),
-                                None => None,
-                            })
-                            .collect()
-                            .boxify()
+
+    let (root_unode_mf_id, parent_mf_ids) =
+        RootUnodeManifestId::derive(ctx.clone(), repo.clone(), bcs_id)
+            .join(old_future::join_all(parent_unodes))
+            .compat()
+            .await?;
+
+    // compute diff between changeset's and its parents' manifests
+    let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
+    let changes = match *parent_mf_ids {
+        [] => {
+            unode_mf_id
+                .list_all_entries(ctx.clone(), blobstore)
+                .compat()
+                .try_filter_map(move |(path, _)| async {
+                    match path {
+                        Some(path) => Ok(Some((path, PathChange::Add))),
+                        None => Ok(None),
                     }
-                    [parent_mf_id] => {
-                        parent_mf_id
-                            .diff(ctx.clone(), blobstore, unode_mf_id)
-                            .collect()
-                            .map(move |diffs| {
-                                let mut changes = BTreeMap::new();
-                                for diff in diffs {
-                                    let change = match diff {
-                                        Diff::Added(Some(path), _) => Some((path, PathChange::Add)),
-                                        Diff::Removed(Some(path), _) => Some((path, PathChange::Remove)),
-                                        _ => None,
-                                    };
-                                    if let Some((path, change)) = change {
-                                        // If the changeset has file/dir conflict the diff between
-                                        // parent manifests and the current will have two entries
-                                        // for the same path: one to remove the file/dir, another
-                                        // to introduce new dir/file node.
-                                        changes.entry(path).and_modify(|e| { *e = PathChange::FileDirConflict }).or_insert(change);
-                                    }
-                                }
-                                changes.into_iter().collect()
-                            })
-                            .boxify()
-                    }
-                    _ => {
-                        return err(anyhow!(
-                            "Deleted files manifest is not implemented for non-linear history"
-                        ))
-                        .boxify();
-                    }
+                })
+                .try_collect::<Vec<_>>()
+                .await
+        }
+        [parent_mf_id] => {
+            let diffs = parent_mf_id
+                .diff(ctx.clone(), blobstore, unode_mf_id)
+                .compat()
+                .try_collect::<Vec<_>>()
+                .await?;
+
+            let mut changes = BTreeMap::new();
+            for diff in diffs {
+                let change = match diff {
+                    Diff::Added(Some(path), _) => Some((path, PathChange::Add)),
+                    Diff::Removed(Some(path), _) => Some((path, PathChange::Remove)),
+                    _ => None,
+                };
+                if let Some((path, change)) = change {
+                    // If the changeset has file/dir conflict the diff between
+                    // parent manifests and the current will have two entries
+                    // for the same path: one to remove the file/dir, another
+                    // to introduce new dir/file node.
+                    changes
+                        .entry(path)
+                        .and_modify(|e| *e = PathChange::FileDirConflict)
+                        .or_insert(change);
                 }
             }
-        })
-        .map(move |changes| PathTree::from_iter(changes.into_iter().map(|(path, change)| (path, Some(change)))))
-        .boxify()
+            Ok(changes.into_iter().collect())
+        }
+        _ => Err(anyhow!(
+            "Deleted files manifest is not implemented for non-linear history"
+        )),
+    }?;
+
+    Ok(PathTree::from_iter(
+        changes
+            .into_iter()
+            .map(|(path, change)| (path, Some(change))),
+    ))
 }
 
 enum DeletedManifestChange {
@@ -258,22 +272,21 @@ struct DeletedManifestUnfoldNode {
     parents: Vec<DeletedManifestId>,
 }
 
-fn do_derive_unfold(
+async fn do_derive_unfold(
     ctx: CoreContext,
     repo: BlobRepo,
     changes: PathTree<Option<PathChange>>,
     parents: Vec<DeletedManifestId>,
-) -> impl Future<Item = (DeletedManifestChange, Vec<DeletedManifestUnfoldNode>), Error = Error> {
+) -> Result<(DeletedManifestChange, Vec<DeletedManifestUnfoldNode>), Error> {
     let PathTree {
         value: change,
         subentries,
     } = changes;
 
     if parents.len() > 1 {
-        return err(anyhow!(
+        return Err(anyhow!(
             "Deleted files manifest is not implemented for non-linear history"
-        ))
-        .right_future();
+        ));
     }
 
     let parent = parents.first().copied();
@@ -281,7 +294,7 @@ fn do_derive_unfold(
         None => {
             if subentries.is_empty() {
                 // nothing changed in the current node and in the subentries
-                return ok((DeletedManifestChange::Reuse(parent), vec![])).right_future();
+                return Ok((DeletedManifestChange::Reuse(parent), vec![]));
             } else {
                 // some paths might be added/deleted
                 DeletedManifestChange::RemoveOrKeepLive
@@ -317,44 +330,27 @@ fn do_derive_unfold(
         );
     }
 
-    let parent_entries = if let Some(parent) = parents.first() {
-        parent
-            .load(ctx.clone(), repo.blobstore())
-            .from_err()
-            .map(move |parent_mf| {
-                parent_mf
-                    .list()
-                    .map(|(path, mf_id)| (path.clone(), mf_id.clone()))
-                    .collect::<Vec<_>>()
-            })
-            .left_future()
-    } else {
-        ok(vec![]).right_future()
-    };
+    if let Some(parent) = parents.first() {
+        let parent_mf = parent.load(ctx.clone(), repo.blobstore()).compat().await?;
+        for (path, mf_id) in parent_mf.list() {
+            let entry = recurse_entries
+                .entry(path.clone())
+                .or_insert(DeletedManifestUnfoldNode {
+                    path_element: Some(path.clone()),
+                    changes: Default::default(),
+                    parents: vec![],
+                });
+            entry.parents.push(*mf_id);
+        }
+    }
 
-    parent_entries
-        .map(move |entries| {
-            for (path, mf_id) in entries {
-                let entry =
-                    recurse_entries
-                        .entry(path.clone())
-                        .or_insert(DeletedManifestUnfoldNode {
-                            path_element: Some(path.clone()),
-                            changes: Default::default(),
-                            parents: vec![],
-                        });
-                entry.parents.push(mf_id);
-            }
-
-            (
-                fold_node,
-                recurse_entries
-                    .into_iter()
-                    .map(|(_, node)| node)
-                    .collect::<Vec<_>>(),
-            )
-        })
-        .left_future()
+    Ok((
+        fold_node,
+        recurse_entries
+            .into_iter()
+            .map(|(_, node)| node)
+            .collect::<Vec<_>>(),
+    ))
 }
 
 fn create_manifest(
@@ -372,7 +368,7 @@ fn create_manifest(
     let mut created = created.lock();
     if created.insert(key.clone()) {
         let blob = manifest.into_blob();
-        let f = lazy(move || blobstore.put(ctx, key, blob.into())).boxify();
+        let f = old_future::lazy(move || blobstore.put(ctx, key, blob.into())).boxify();
 
         sender
             .unbounded_send(f)
@@ -381,7 +377,7 @@ fn create_manifest(
             .map_err(|err| anyhow!("failed to send manifest future {}", err))
             .boxify()
     } else {
-        ok(mf_id).boxify()
+        old_future::ok(mf_id).boxify()
     }
 }
 
@@ -396,7 +392,7 @@ fn do_derive_create(
 ) -> impl Future<Item = Option<DeletedManifestId>, Error = Error> {
     let blobstore = repo.get_blobstore();
     match change {
-        DeletedManifestChange::Reuse(mb_mf_id) => ok(mb_mf_id).boxify(),
+        DeletedManifestChange::Reuse(mb_mf_id) => old_future::ok(mb_mf_id).boxify(),
         DeletedManifestChange::AddOrKeepDeleted => create_manifest(
             ctx.clone(),
             blobstore,
@@ -410,7 +406,7 @@ fn do_derive_create(
         DeletedManifestChange::RemoveOrKeepLive => {
             if subentries.is_empty() {
                 // there are no subentries, no need to create a new node
-                ok(None).left_future()
+                old_future::ok(None).left_future()
             } else {
                 // some of the subentries were deleted, creating a new node but there is no need to
                 // mark it as deleted
@@ -430,8 +426,8 @@ mod tests {
     use blobrepo_factory::new_memblob_empty;
     use fbinit::FacebookInit;
     use fixtures::{many_files_dirs, store_files};
-    use futures::stream::iter_ok;
     use futures_ext::bounded_traversal::bounded_traversal_stream;
+    use futures_old::stream::iter_ok;
     use maplit::btreemap;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, MPath};
     use test_utils::get_bonsai_changeset;
@@ -725,7 +721,7 @@ mod tests {
         let bcs_id = bcs.get_changeset_id();
 
         let changes = runtime
-            .block_on(get_changes(ctx.clone(), repo.clone(), &bcs))
+            .block_on_std(get_changes(ctx.clone(), repo.clone(), bcs))
             .unwrap();
         let f = derive_deleted_files_manifest(
             ctx.clone(),

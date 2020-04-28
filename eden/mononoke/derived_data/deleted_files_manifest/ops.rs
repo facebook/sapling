@@ -8,11 +8,11 @@
 use anyhow::Error;
 use blobstore::{Blobstore, Loadable};
 use context::CoreContext;
-use futures::{
+use futures_ext::bounded_traversal::bounded_traversal_stream;
+use futures_old::{
     stream::{iter_ok, Stream},
     Future,
 };
-use futures_ext::bounded_traversal::bounded_traversal_stream;
 use manifest::{PathOrPrefix, PathTree};
 use mononoke_types::{DeletedManifestId, MPath};
 use std::iter::FromIterator;
@@ -379,7 +379,7 @@ mod tests {
         let bcs_id = bcs.get_changeset_id();
 
         let changes = runtime
-            .block_on(get_changes(ctx.clone(), repo.clone(), &bcs))
+            .block_on_std(get_changes(ctx.clone(), repo.clone(), bcs))
             .unwrap();
         let f = derive_deleted_files_manifest(
             ctx.clone(),

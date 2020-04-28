@@ -12,11 +12,12 @@ use blobstore::Blobstore;
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
-use futures::{
+use futures::future::{FutureExt as NewFutureExt, TryFutureExt};
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
+use futures_old::{
     stream::{self, FuturesUnordered},
     Future, Stream,
 };
-use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use mononoke_types::{BlobstoreBytes, BonsaiChangeset, ChangesetId, DeletedManifestId};
 use repo_blobstore::RepoBlobstore;
 use std::{
@@ -62,7 +63,9 @@ impl BonsaiDerived for RootDeletedManifestId {
         parents: Vec<Self>,
     ) -> BoxFuture<Self, Error> {
         let bcs_id = bonsai.get_changeset_id();
-        get_changes(ctx.clone(), repo.clone(), &bonsai)
+        get_changes(ctx.clone(), repo.clone(), bonsai)
+            .boxed()
+            .compat()
             .and_then(move |changes| {
                 derive_deleted_files_manifest(
                     ctx,
