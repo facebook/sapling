@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{anyhow, Error};
+use anyhow::{anyhow, format_err, Error};
 use blobrepo::BlobRepo;
 use blobstore::{Blobstore, Loadable};
 use cloned::cloned;
@@ -13,7 +13,7 @@ use context::CoreContext;
 use derived_data::BonsaiDerived;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{FutureExt as NewFutureExt, TryFutureExt as NewTryFutureExt},
+    future::{self, FutureExt as NewFutureExt, TryFutureExt as NewTryFutureExt},
     stream::TryStreamExt as NewTryStreamExt,
 };
 use futures_ext::{bounded_traversal::bounded_traversal, BoxFuture, FutureExt};
@@ -24,7 +24,10 @@ use futures_old::{
 };
 use manifest::{Diff, ManifestOps, PathTree};
 use mononoke_types::{blob::BlobstoreValue, deleted_files_manifest::DeletedManifest};
-use mononoke_types::{BonsaiChangeset, ChangesetId, DeletedManifestId, MPathElement, MononokeId};
+use mononoke_types::{
+    BonsaiChangeset, ChangesetId, DeletedManifestId, MPath, MPathElement, ManifestUnodeId,
+    MononokeId,
+};
 use parking_lot::Mutex;
 use repo_blobstore::RepoBlobstore;
 use std::sync::Arc;
@@ -171,6 +174,7 @@ pub(crate) fn derive_deleted_files_manifest(
     })
 }
 
+#[derive(Debug, Eq, PartialEq)]
 pub(crate) enum PathChange {
     Add,
     Remove,
@@ -207,50 +211,20 @@ pub(crate) async fn get_changes(
 
     // compute diff between changeset's and its parents' manifests
     let unode_mf_id = root_unode_mf_id.manifest_unode_id().clone();
-    let changes = match *parent_mf_ids {
-        [] => {
-            unode_mf_id
-                .list_all_entries(ctx.clone(), blobstore)
-                .compat()
-                .try_filter_map(move |(path, _)| async {
-                    match path {
-                        Some(path) => Ok(Some((path, PathChange::Add))),
-                        None => Ok(None),
-                    }
-                })
-                .try_collect::<Vec<_>>()
-                .await
-        }
-        [parent_mf_id] => {
-            let diffs = parent_mf_id
-                .diff(ctx.clone(), blobstore, unode_mf_id)
-                .compat()
-                .try_collect::<Vec<_>>()
-                .await?;
-
-            let mut changes = BTreeMap::new();
-            for diff in diffs {
-                let change = match diff {
-                    Diff::Added(Some(path), _) => Some((path, PathChange::Add)),
-                    Diff::Removed(Some(path), _) => Some((path, PathChange::Remove)),
-                    _ => None,
-                };
-                if let Some((path, change)) = change {
-                    // If the changeset has file/dir conflict the diff between
-                    // parent manifests and the current will have two entries
-                    // for the same path: one to remove the file/dir, another
-                    // to introduce new dir/file node.
-                    changes
-                        .entry(path)
-                        .and_modify(|e| *e = PathChange::FileDirConflict)
-                        .or_insert(change);
+    let changes = if parent_mf_ids.is_empty() {
+        unode_mf_id
+            .list_all_entries(ctx.clone(), blobstore)
+            .compat()
+            .try_filter_map(move |(path, _)| async {
+                match path {
+                    Some(path) => Ok(Some((path, PathChange::Add))),
+                    None => Ok(None),
                 }
-            }
-            Ok(changes.into_iter().collect())
-        }
-        _ => Err(anyhow!(
-            "Deleted files manifest is not implemented for non-linear history"
-        )),
+            })
+            .try_collect::<Vec<_>>()
+            .await
+    } else {
+        diff_against_parents(&ctx, &repo, unode_mf_id, parent_mf_ids).await
     }?;
 
     Ok(PathTree::from_iter(
@@ -260,8 +234,52 @@ pub(crate) async fn get_changes(
     ))
 }
 
+async fn diff_against_parents(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    unode: ManifestUnodeId,
+    parents: Vec<ManifestUnodeId>,
+) -> Result<Vec<(MPath, PathChange)>, Error> {
+    let parent_diffs_fut = parents.into_iter().map({
+        cloned!(ctx, repo, unode);
+        move |parent| {
+            parent
+                .diff(ctx.clone(), repo.get_blobstore(), unode.clone())
+                .compat()
+                .try_collect::<Vec<_>>()
+        }
+    });
+    let parent_diffs = future::try_join_all(parent_diffs_fut).await?;
+    let diffs = parent_diffs
+        .into_iter()
+        .flatten()
+        .filter_map(|diff| match diff {
+            Diff::Added(Some(path), _) => Some((path, PathChange::Add)),
+            Diff::Removed(Some(path), _) => Some((path, PathChange::Remove)),
+            _ => None,
+        });
+
+    let mut changes = BTreeMap::new();
+    for (path, change) in diffs {
+        // If the changeset has file/dir conflict the diff between
+        // parent manifests and the current will have two entries
+        // for the same path: one to remove the file/dir, another
+        // to introduce new dir/file node.
+        changes
+            .entry(path)
+            .and_modify(|e| {
+                if *e != change {
+                    *e = PathChange::FileDirConflict
+                }
+            })
+            .or_insert(change);
+    }
+    let res: Vec<_> = changes.into_iter().collect();
+    Ok(res)
+}
+
 enum DeletedManifestChange {
-    AddOrKeepDeleted,
+    CreateDeleted,
     RemoveOrKeepLive,
     Reuse(Option<DeletedManifestId>),
 }
@@ -283,18 +301,47 @@ async fn do_derive_unfold(
         subentries,
     } = changes;
 
-    if parents.len() > 1 {
-        return Err(anyhow!(
-            "Deleted files manifest is not implemented for non-linear history"
-        ));
-    }
+    let parent_manifests = future::try_join_all(
+        parents
+            .iter()
+            .map(move |mf_id| mf_id.load(ctx.clone(), repo.blobstore()).compat()),
+    )
+    .await?;
 
-    let parent = parents.first().copied();
+    let check_consistency = |manifests: &Vec<DeletedManifest>| {
+        let mut it = manifests.iter().map(|mf| mf.is_deleted());
+        if let Some(status) = it.next() {
+            if it.all(|st| st == status) {
+                return Ok(status);
+            }
+            return Err(format_err!(
+                "parent deleted manifests have different node status, but no changes were provided"
+            ));
+        }
+        Ok(false)
+    };
+
     let fold_node = match change {
         None => {
             if subentries.is_empty() {
                 // nothing changed in the current node and in the subentries
-                return Ok((DeletedManifestChange::Reuse(parent), vec![]));
+                // if parent manifests are equal, we can reuse them
+                let mut it = parents.into_iter();
+                if let Some(id) = it.next() {
+                    if it.all(|mf| mf == id) {
+                        return Ok((DeletedManifestChange::Reuse(Some(id)), vec![]));
+                    }
+                    // parent manifests are different, we need to merge them
+                    // let's check that the node status is consistent across parents
+                    let is_deleted = check_consistency(&parent_manifests)?;
+                    if is_deleted {
+                        DeletedManifestChange::CreateDeleted
+                    } else {
+                        DeletedManifestChange::RemoveOrKeepLive
+                    }
+                } else {
+                    return Ok((DeletedManifestChange::Reuse(None), vec![]));
+                }
             } else {
                 // some paths might be added/deleted
                 DeletedManifestChange::RemoveOrKeepLive
@@ -306,7 +353,7 @@ async fn do_derive_unfold(
         }
         Some(PathChange::Remove) => {
             // the path was removed
-            DeletedManifestChange::AddOrKeepDeleted
+            DeletedManifestChange::CreateDeleted
         }
         Some(PathChange::FileDirConflict) => {
             // This is a file/dir conflict: either a file was replaced by directory or other way
@@ -330,9 +377,8 @@ async fn do_derive_unfold(
         );
     }
 
-    if let Some(parent) = parents.first() {
-        let parent_mf = parent.load(ctx.clone(), repo.blobstore()).compat().await?;
-        for (path, mf_id) in parent_mf.list() {
+    for parent in parent_manifests {
+        for (path, mf_id) in parent.list() {
             let entry = recurse_entries
                 .entry(path.clone())
                 .or_insert(DeletedManifestUnfoldNode {
@@ -393,7 +439,7 @@ fn do_derive_create(
     let blobstore = repo.get_blobstore();
     match change {
         DeletedManifestChange::Reuse(mb_mf_id) => old_future::ok(mb_mf_id).boxify(),
-        DeletedManifestChange::AddOrKeepDeleted => create_manifest(
+        DeletedManifestChange::CreateDeleted => create_manifest(
             ctx.clone(),
             blobstore,
             Some(cs_id),
@@ -422,6 +468,7 @@ fn do_derive_create(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::mapping::RootDeletedManifestId;
     use blobrepo::save_bonsai_changesets;
     use blobrepo_factory::new_memblob_empty;
     use fbinit::FacebookInit;
@@ -431,6 +478,7 @@ mod tests {
     use maplit::btreemap;
     use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, MPath};
     use test_utils::get_bonsai_changeset;
+    use tests_utils::CreateCommitContext;
     use tokio_compat::runtime::Runtime;
 
     #[fbinit::test]
@@ -688,6 +736,251 @@ mod tests {
             assert_eq!(deleted_nodes, expected_nodes);
             mf_id
         };
+    }
+
+    #[fbinit::compat_test]
+    async fn merged_history_test(fb: FacebookInit) -> Result<(), Error> {
+        //
+        //  N
+        //  | \
+        //  K  M
+        //  |  |
+        //  J  L
+        //  | /
+        //  I
+        //  | \
+        //  |  H
+        //  |  |
+        //  |  G
+        //  |  | \
+        //  |  D  F
+        //  |  |  |
+        //  B  C  E
+        //  | /
+        //  A
+        //
+        let repo = new_memblob_empty(None).unwrap();
+        let ctx = CoreContext::test_mock(fb);
+
+        let a = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("file", "1")
+            .add_file("dir/file", "2")
+            .add_file("dir_2/file", "3")
+            .add_file("dir_3/file_1", "1")
+            .add_file("dir_3/file_2", "2")
+            .commit()
+            .await?;
+
+        let b = CreateCommitContext::new(&ctx, &repo, vec![a.clone()])
+            .delete_file("file")
+            .delete_file("dir/file")
+            .delete_file("dir_3/file_1")
+            .add_file("dir/file_2", "file->file_2")
+            .commit()
+            .await?;
+        let deleted_nodes = gen_deleted_manifest_nodes(&ctx, &repo, b.clone()).await?;
+        let expected_nodes = vec![
+            (None, Status::Live),
+            (Some(path("dir")), Status::Live),
+            (Some(path("dir/file")), Status::Deleted(b)),
+            (Some(path("dir_3")), Status::Live),
+            (Some(path("dir_3/file_1")), Status::Deleted(b)),
+            (Some(path("file")), Status::Deleted(b)),
+        ];
+        assert_eq!(deleted_nodes, expected_nodes);
+
+        let c = CreateCommitContext::new(&ctx, &repo, vec![a.clone()])
+            .add_file("file", "1->2")
+            .commit()
+            .await?;
+
+        let d = CreateCommitContext::new(&ctx, &repo, vec![c.clone()])
+            .delete_file("dir/file")
+            .delete_file("dir_2/file")
+            .commit()
+            .await?;
+
+        let deleted_nodes = gen_deleted_manifest_nodes(&ctx, &repo, d.clone()).await?;
+        let expected_nodes = vec![
+            (None, Status::Live),
+            (Some(path("dir")), Status::Deleted(d)),
+            (Some(path("dir/file")), Status::Deleted(d)),
+            (Some(path("dir_2")), Status::Deleted(d)),
+            (Some(path("dir_2/file")), Status::Deleted(d)),
+        ];
+        assert_eq!(deleted_nodes, expected_nodes);
+
+        let e = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("file", "3")
+            .add_file("dir_2/file", "4")
+            .commit()
+            .await?;
+
+        let f = CreateCommitContext::new(&ctx, &repo, vec![e.clone()])
+            .delete_file("file")
+            .add_file("dir_2/file", "4->5")
+            .commit()
+            .await?;
+
+        // first merge commit:
+        // * dir_2/file - was deleted in branch D and modified in F, merge commit
+        //   accepts modification. It means the file must be restored.
+        // * file - was changed in branch D and deleted in F, merge commit accepts
+        //   deletion. It means new deleted manifet node must be created and must
+        //   point to the merge commit.
+        // * dir/file - existed and was deleted in the one branch and never
+        //   existed in the other, but still must be discoverable.
+        let g = CreateCommitContext::new(&ctx, &repo, vec![d.clone(), f.clone()])
+            .delete_file("file")
+            .add_file("dir_2/file", "4->5")
+            .add_file("dir_2/file_2", "5")
+            .commit()
+            .await?;
+
+        let deleted_nodes = gen_deleted_manifest_nodes(&ctx, &repo, g.clone()).await?;
+        let expected_nodes = vec![
+            (None, Status::Live),
+            (Some(path("dir")), Status::Deleted(d)),
+            (Some(path("dir/file")), Status::Deleted(d)),
+            (Some(path("file")), Status::Deleted(g)),
+        ];
+        assert_eq!(deleted_nodes, expected_nodes);
+
+        let h = CreateCommitContext::new(&ctx, &repo, vec![g.clone()])
+            .delete_file("dir_3/file_2")
+            .add_file("dir_2/file", "4->5")
+            .add_file("dir_2/file_2", "5")
+            .commit()
+            .await?;
+
+        let deleted_nodes = gen_deleted_manifest_nodes(&ctx, &repo, h.clone()).await?;
+        let expected_nodes = vec![
+            (None, Status::Live),
+            (Some(path("dir")), Status::Deleted(d)),
+            (Some(path("dir/file")), Status::Deleted(d)),
+            (Some(path("dir_3")), Status::Live),
+            (Some(path("dir_3/file_2")), Status::Deleted(h)),
+            (Some(path("file")), Status::Deleted(g)),
+        ];
+        assert_eq!(deleted_nodes, expected_nodes);
+
+        // second merge commit
+        // * dir/file - is deleted in both branches, new manifest node must
+        //   have linknode pointed to the merge commit
+        // * file - same as for dir/file
+        // * dir - still exists because of dir/file_2
+        let i = CreateCommitContext::new(&ctx, &repo, vec![b.clone(), h.clone()])
+            .delete_file("dir_3/file_1")
+            .delete_file("dir_3/file_2")
+            .add_file("dir_2/file", "4->5")
+            .add_file("dir_5/file_1", "5.1")
+            .add_file("dir_5/file_2", "5.2")
+            .commit()
+            .await?;
+        let deleted_nodes = gen_deleted_manifest_nodes(&ctx, &repo, i.clone()).await?;
+        let expected_nodes = vec![
+            (None, Status::Live),
+            (Some(path("dir")), Status::Live),
+            (Some(path("dir/file")), Status::Deleted(i)),
+            (Some(path("dir_3")), Status::Deleted(i)),
+            (Some(path("dir_3/file_1")), Status::Deleted(i)),
+            (Some(path("dir_3/file_2")), Status::Deleted(i)),
+            (Some(path("file")), Status::Deleted(i)),
+        ];
+        assert_eq!(deleted_nodes, expected_nodes);
+
+        // this commit creates a file in a new dir
+        // and deletes one of the dir_5 files
+        let j = CreateCommitContext::new(&ctx, &repo, vec![i.clone()])
+            .delete_file("dir_5/file_1")
+            .add_file("dir_4/file_1", "new")
+            .commit()
+            .await?;
+
+        // this commit deletes the file created in its parent j
+        // and adds a new file and dir
+        let k = CreateCommitContext::new(&ctx, &repo, vec![j.clone()])
+            .delete_file("dir_4/file_1")
+            .add_file("dir_to_file/file", "will be replaced")
+            .commit()
+            .await?;
+
+        // this commit creates a file in the same dir as the other branch
+        // and deletes one of the dir_5 files
+        let l = CreateCommitContext::new(&ctx, &repo, vec![i.clone()])
+            .delete_file("dir_5/file_2")
+            .add_file("dir_4/file_2", "new")
+            .commit()
+            .await?;
+
+        // this commit deletes the file created in its parent l
+        let m = CreateCommitContext::new(&ctx, &repo, vec![l.clone()])
+            .delete_file("dir_4/file_2")
+            .commit()
+            .await?;
+
+        // third merge commit
+        // * dir_4/file_1 - is created and then deleted in the branch K,
+        //   linknode for the merge commit N must point to the commit K
+        // * dir_4/file_2 - is created and then deleted in the branch M,
+        //   linknode for the merge commit N must point to the commit M
+        // * dir_4 - existed in both branches, linknode should point to
+        //   the merge commit itself
+        // * dir_5/file_1 - existed in both branches, but deleted in J,
+        //   linknode for the merge commit N must point to the N itself
+        // * dir_5/file_2 - existed in both branches, but deleted in L,
+        //   linknode for the merge commit N must point to the N itself
+        // * dir_5 - existed in both branches, but as a result of merge
+        //   must be deleted, linknode should point to N
+        // * dir_to_file/file is replaced here with dir_to_file, this
+        //   should result in dir_to_file node live and dir_to_file/file
+        //   deleted
+        let n = CreateCommitContext::new(&ctx, &repo, vec![k.clone(), m.clone()])
+            .delete_file("dir_5/file_1")
+            .delete_file("dir_5/file_2")
+            .add_file("dir_to_file", "replaced!")
+            .commit()
+            .await?;
+
+        let deleted_nodes = gen_deleted_manifest_nodes(&ctx, &repo, n.clone()).await?;
+        let expected_nodes = vec![
+            (None, Status::Live),
+            (Some(path("dir")), Status::Live),
+            (Some(path("dir/file")), Status::Deleted(i)),
+            (Some(path("dir_3")), Status::Deleted(i)),
+            (Some(path("dir_3/file_1")), Status::Deleted(i)),
+            (Some(path("dir_3/file_2")), Status::Deleted(i)),
+            (Some(path("dir_4")), Status::Deleted(n)),
+            (Some(path("dir_4/file_1")), Status::Deleted(k)),
+            (Some(path("dir_4/file_2")), Status::Deleted(m)),
+            (Some(path("dir_5")), Status::Deleted(n)),
+            (Some(path("dir_5/file_1")), Status::Deleted(n)),
+            (Some(path("dir_5/file_2")), Status::Deleted(n)),
+            (Some(path("dir_to_file")), Status::Live),
+            (Some(path("dir_to_file/file")), Status::Deleted(n)),
+            (Some(path("file")), Status::Deleted(i)),
+        ];
+        assert_eq!(deleted_nodes, expected_nodes);
+
+        Ok(())
+    }
+
+    async fn gen_deleted_manifest_nodes(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        bonsai: ChangesetId,
+    ) -> Result<Vec<(Option<MPath>, Status)>, Error> {
+        let manifest = RootDeletedManifestId::derive(ctx.clone(), repo.clone(), bonsai)
+            .compat()
+            .await?;
+        let mut deleted_nodes =
+            iterate_all_entries(ctx.clone(), repo.clone(), *manifest.deleted_manifest_id())
+                .compat()
+                .map_ok(|(path, st, ..)| (path, st))
+                .try_collect::<Vec<_>>()
+                .await?;
+        deleted_nodes.sort_by_key(|(path, ..)| path.clone());
+        Ok(deleted_nodes)
     }
 
     fn create_cs_and_derive_manifest(

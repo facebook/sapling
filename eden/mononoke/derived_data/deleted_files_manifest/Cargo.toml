@@ -41,3 +41,4 @@ tokio-compat = "0.1"
 blobrepo_factory = { path = "../../blobrepo/factory" }
 fixtures = { path = "../../tests/fixtures" }
 test_utils = { path = "../../manifest/test_utils" }
+tests_utils = { path = "../../tests/utils" }
