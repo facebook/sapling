@@ -8,6 +8,7 @@
 use std::env::var;
 use std::io as std_io;
 use std::net::{IpAddr, SocketAddr};
+use std::time::Duration;
 
 use anyhow::{bail, format_err, Error, Result};
 use bytes::Bytes;
@@ -26,6 +27,7 @@ use tokio_openssl::{SslConnectorExt, SslStream};
 use users::get_current_username;
 
 use tokio::net::TcpStream;
+use tokio::util::FutureExt as TokioFutureExt;
 
 use clap::ArgMatches;
 
@@ -255,7 +257,9 @@ impl<'a> StdioRelay<'a> {
         TcpStream::connect(&addr)
             .map_err(|err| format_err!("connecting to Mononoke {} socket '{}' failed", path, err))
             .and_then(move |socket| {
-                let async_connector = connector.connect_async(&ssl_common_name, socket);
+                let async_connector = connector
+                    .connect_async(&ssl_common_name, socket)
+                    .timeout(Duration::from_secs(15));
                 async_connector.map_err(|err| format_err!("async connect error {}", err))
             })
             .compat()
