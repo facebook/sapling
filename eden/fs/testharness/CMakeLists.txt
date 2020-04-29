@@ -7,6 +7,7 @@ if(WIN32)
 set(
   TESTHARNESS_SRCS
   "FakeBackingStore.cpp"
+  "FakeBackingStore.h"
   "FakeTreeBuilder.cpp"
   "FakeTreeBuilder.h"
   "TempFile.cpp"

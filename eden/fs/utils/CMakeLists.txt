@@ -34,6 +34,4 @@ target_link_libraries(
     Folly::folly
 )
 
-if (NOT WIN32)
-  add_subdirectory(test)
-endif()
+add_subdirectory(test)

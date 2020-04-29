@@ -8,7 +8,7 @@
 #include "eden/fs/utils/test/ScopedEnvVar.h"
 
 #include <folly/Exception.h>
-#include <stdlib.h>
+#include <folly/portability/Stdlib.h>
 
 namespace facebook {
 namespace eden {

@@ -8,15 +8,15 @@
 #include "eden/fs/utils/PathFuncs.h"
 
 #include <boost/functional/hash.hpp>
-#include <fcntl.h>
 #include <folly/Exception.h>
 #include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
+#include <folly/portability/Fcntl.h>
+#include <folly/portability/SysStat.h>
+#include <folly/portability/Unistd.h>
 #include <folly/test/TestUtils.h>
 #include <gmock/gmock.h>
 #include <gtest/gtest.h>
-#include <sys/stat.h>
-#include <unistd.h>
 #include <sstream>
 
 #include "eden/fs/testharness/TempFile.h"
@@ -395,9 +395,13 @@ TEST(PathFuncs, RelativePath) {
 }
 
 TEST(PathFuncs, AbsolutePath) {
+  // TODO(T66260288): These tests currently do not pass on Windows, as
+  // AbsolutePath does not actually verify that the path is absolute on Windows.
+#ifndef _WIN32
   EXPECT_THROW_RE(
       AbsolutePath("invalid"), std::domain_error, "non-absolute string");
   EXPECT_THROW_RE(AbsolutePath(""), std::domain_error, "non-absolute string");
+#endif // _WIN32
   EXPECT_THROW_RE(
       AbsolutePath("/trailing/slash/"),
       std::domain_error,
@@ -598,12 +602,17 @@ TEST(PathFuncs, canonicalPath) {
       "/base/dir/path/ foo bar ", canonicalPath(" foo bar ", base).value());
   EXPECT_EQ("/base/dir/path/.../test", canonicalPath(".../test", base).value());
 
+  // TODO(T66260288): These tests currently do not pass on Windows, as
+  // canonicalPath() incorrectly tries to put a leading slash on the paths.
+  // e.g., "C:/foo" ends up being converted to "/C:/foo"
+#ifndef _WIN32
   TmpWorkingDir tmpDir;
   EXPECT_EQ(tmpDir.pathStr, canonicalPath(".").value());
   EXPECT_EQ(tmpDir.pathStr + "/foo", canonicalPath("foo").value());
   EXPECT_EQ(
       tmpDir.pathStr + "/a/b/c.txt",
       canonicalPath("foo/../a//d/../b/./c.txt").value());
+#endif // _WIN32
 }
 
 TEST(PathFuncs, joinAndNormalize) {
@@ -630,6 +639,9 @@ TEST(PathFuncs, joinAndNormalize) {
   EXPECT_EQ(bad("a", "b/../../.."), EXDEV);
 }
 
+// Disable the realpath tests on Windows, since we normally don't have
+// permissions to create symlinks.
+#ifndef _WIN32
 TEST(PathFuncs, realpath) {
   TmpWorkingDir tmpDir;
 
@@ -713,6 +725,7 @@ TEST(PathFuncs, realpath) {
       "/foo/bar/abc.txt", normalizeBestEffort("/..//foo/bar//abc.txt").value());
   EXPECT_EQ(tmpDir.pathStr, normalizeBestEffort(tmpDir.pathStr));
 }
+#endif // !_WIN32
 
 TEST(PathFuncs, expandUser) {
   EXPECT_EQ("/foo/bar"_abspath, expandUser("/foo/bar"));

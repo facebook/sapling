@@ -6,6 +6,7 @@
  */
 
 #include "eden/fs/utils/PathMap.h"
+#include <folly/portability/Unistd.h>
 #include <gtest/gtest.h>
 
 using facebook::eden::PathComponent;

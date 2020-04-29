@@ -4,10 +4,20 @@
 # GNU General Public License version 2.
 
 file(GLOB UTILS_TEST_SRCS "*Test.cpp")
-add_executable(
-  eden_utils_test
-  ${UTILS_TEST_SRCS}
-)
+if (WIN32)
+  list(
+    REMOVE_ITEM UTILS_TEST_SRCS
+    ${CMAKE_CURRENT_SOURCE_DIR}/CoverageSetTest.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/IoFutureTest.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/MappedDiskVectorTest.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ProcessAccessLogTest.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ProcessNameCacheTest.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ProcUtilTest.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/UnixSocketTest.cpp
+  )
+endif()
+
+add_executable(eden_utils_test ${UTILS_TEST_SRCS})
 target_link_libraries(
   eden_utils_test
   PUBLIC
