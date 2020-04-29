@@ -32,6 +32,7 @@ impl From<LfsServerContextErrorKind> for HttpError {
         match e {
             Forbidden => HttpError::e403(e),
             RepositoryDoesNotExist(_) => HttpError::e400(e),
+            PermissionCheckFailed(_) => HttpError::e500(e),
         }
     }
 }

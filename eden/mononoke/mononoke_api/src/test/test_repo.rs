@@ -44,7 +44,7 @@ async fn commit_info_by_hash(fb: FacebookInit) -> Result<(), Error> {
         vec![("test".to_string(), linear::getrepo(fb).await)],
     )
     .await?;
-    let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+    let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
     let hash = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
     let cs_id = ChangesetId::from_str(hash)?;
     let cs = repo
@@ -71,7 +71,7 @@ async fn commit_info_by_hg_hash(fb: FacebookInit) -> Result<(), Error> {
         vec![("test".to_string(), linear::getrepo(fb).await)],
     )
     .await?;
-    let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+    let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
     let hg_hash = "607314ef579bd2407752361ba1b0c1729d08b281";
     let hg_cs_id = HgChangesetId::from_str(hg_hash)?;
     let cs = repo
@@ -100,7 +100,7 @@ async fn commit_info_by_bookmark(fb: FacebookInit) -> Result<(), Error> {
         vec![("test".to_string(), linear::getrepo(fb).await)],
     )
     .await?;
-    let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+    let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
     let cs = repo
         .resolve_bookmark("master")
         .await?
@@ -128,7 +128,7 @@ async fn commit_hg_changeset_ids(fb: FacebookInit) -> Result<(), Error> {
         vec![("test".to_string(), linear::getrepo(fb).await)],
     )
     .await?;
-    let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+    let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
     let hash1 = "2cb6d2d3052bfbdd6a95a61f2816d81130033b5f5a99e8d8fc24d9238d85bb48";
     let hash2 = "7785606eb1f26ff5722c831de402350cf97052dc44bc175da6ac0d715a3dbbf6";
     let hg_hash1 = "607314ef579bd2407752361ba1b0c1729d08b281";
@@ -161,7 +161,7 @@ async fn commit_is_ancestor_of(fb: FacebookInit) -> Result<(), Error> {
         vec![("test".to_string(), branch_uneven::getrepo(fb).await)],
     )
     .await?;
-    let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+    let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
     let mut changesets = Vec::new();
     for hg_hash in [
         "5d43888a3c972fe68c224f93d41b30e9f888df7c", // 0: branch 1 near top
@@ -221,7 +221,7 @@ async fn commit_find_files(fb: FacebookInit) -> Result<(), Error> {
         vec![("test".to_string(), many_files_dirs::getrepo(fb).await)],
     )
     .await?;
-    let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+    let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
     let hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
     let cs_id = ChangesetId::from_str(hash)?;
     let cs = repo
@@ -308,7 +308,7 @@ async fn commit_path_exists_and_type(fb: FacebookInit) -> Result<(), Error> {
         vec![("test".to_string(), many_files_dirs::getrepo(fb).await)],
     )
     .await?;
-    let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+    let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
     let hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
     let cs_id = ChangesetId::from_str(hash)?;
     let cs = repo
@@ -346,7 +346,7 @@ async fn tree_list(fb: FacebookInit) -> Result<(), Error> {
         vec![("test".to_string(), many_files_dirs::getrepo(fb).await)],
     )
     .await?;
-    let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+    let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
     let hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
     let cs_id = ChangesetId::from_str(hash)?;
     let cs = repo
@@ -471,7 +471,7 @@ async fn file_metadata(fb: FacebookInit) -> Result<(), Error> {
         vec![("test".to_string(), many_files_dirs::getrepo(fb).await)],
     )
     .await?;
-    let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+    let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
 
     let expected_metadata = FileMetadata {
         content_id: FileId::from_str(
@@ -541,7 +541,7 @@ async fn file_contents(fb: FacebookInit) -> Result<(), Error> {
         vec![("test".to_string(), many_files_dirs::getrepo(fb).await)],
     )
     .await?;
-    let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+    let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
 
     let hash = "b0d1bf77898839595ee0f0cba673dd6e3be9dadaaa78bc6dd2dea97ca6bee77e";
     let cs_id = ChangesetId::from_str(hash)?;
@@ -567,10 +567,12 @@ async fn xrepo_commit_lookup_simple(fb: FacebookInit) -> Result<(), Error> {
     let mononoke = init_x_repo(&ctx).await?;
 
     let smallrepo = mononoke
-        .repo(ctx.clone(), "smallrepo")?
+        .repo(ctx.clone(), "smallrepo")
+        .await?
         .expect("repo exists");
     let largerepo = mononoke
-        .repo(ctx.clone(), "largerepo")?
+        .repo(ctx.clone(), "largerepo")
+        .await?
         .expect("repo exists");
 
     let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.blob_repo(), "master").await?;
@@ -605,11 +607,13 @@ async fn xrepo_commit_lookup_draft(fb: FacebookInit) -> Result<(), Error> {
     let mononoke = init_x_repo(&ctx).await?;
 
     let smallrepo = mononoke
-        .repo(ctx.clone(), "smallrepo")?
+        .repo(ctx.clone(), "smallrepo")
+        .await?
         .expect("repo exists");
     let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.blob_repo(), "master").await?;
     let largerepo = mononoke
-        .repo(ctx.clone(), "largerepo")?
+        .repo(ctx.clone(), "largerepo")
+        .await?
         .expect("repo exists");
     let large_master_cs_id = resolve_cs_id(&ctx, largerepo.blob_repo(), "master").await?;
 
@@ -663,11 +667,13 @@ async fn xrepo_commit_lookup_public(fb: FacebookInit) -> Result<(), Error> {
     let mononoke = init_x_repo(&ctx).await?;
 
     let smallrepo = mononoke
-        .repo(ctx.clone(), "smallrepo")?
+        .repo(ctx.clone(), "smallrepo")
+        .await?
         .expect("repo exists");
     let small_master_cs_id = resolve_cs_id(&ctx, smallrepo.blob_repo(), "master").await?;
     let largerepo = mononoke
-        .repo(ctx.clone(), "largerepo")?
+        .repo(ctx.clone(), "largerepo")
+        .await?
         .expect("repo exists");
     let large_master_cs_id = resolve_cs_id(&ctx, largerepo.blob_repo(), "master").await?;
 
@@ -747,7 +753,7 @@ async fn resolve_changeset_id_prefix(fb: FacebookInit) -> Result<(), Error> {
     )
     .await?;
 
-    let repo = mononoke.repo(ctx, "test")?.expect("repo exists");
+    let repo = mononoke.repo(ctx, "test").await?.expect("repo exists");
 
     let hg_cs_id = ChangesetSpecifier::Hg(HgChangesetId::from_str(
         "607314ef579bd2407752361ba1b0c1729d08b281",
@@ -824,7 +830,10 @@ async fn test_diff_with_moves(fb: FacebookInit) -> Result<(), Error> {
     let mononoke =
         Mononoke::new_test(ctx.clone(), vec![("test".to_string(), blobrepo.clone())]).await?;
 
-    let repo = mononoke.repo(ctx.clone(), "test")?.expect("repo exists");
+    let repo = mononoke
+        .repo(ctx.clone(), "test")
+        .await?
+        .expect("repo exists");
     let commit_with_move_ctx = repo
         .changeset(ChangesetSpecifier::Bonsai(commit_with_move))
         .await?

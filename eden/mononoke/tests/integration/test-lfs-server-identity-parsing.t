@@ -25,12 +25,12 @@
   $ wait_for_json_record_count "$SCUBA" 2
   $ jq -S .normvector.client_identities < "$SCUBA"
   [
-    "USER:myusername0",
     "MACHINE:devvm000.lla0.facebook.com",
-    "MACHINE_TIER:devvm"
+    "MACHINE_TIER:devvm",
+    "USER:myusername0"
   ]
   [
-    "USER:myusername0",
     "MACHINE:devvm000.lla0.facebook.com",
-    "MACHINE_TIER:devvm"
+    "MACHINE_TIER:devvm",
+    "USER:myusername0"
   ]

@@ -5,13 +5,14 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
-use std::collections::HashSet;
+use anyhow::{bail, Error, Result};
+use std::collections::BTreeSet;
 use std::fmt;
+use std::str::FromStr;
 
-pub type MononokeIdentitySet = HashSet<MononokeIdentity>;
+pub type MononokeIdentitySet = BTreeSet<MononokeIdentity>;
 
-#[derive(Clone, Eq, PartialEq, Debug, Hash)]
+#[derive(Clone, Eq, PartialEq, Debug, Hash, Ord, PartialOrd)]
 pub struct MononokeIdentity {
     id_type: String,
     id_data: String,
@@ -42,6 +43,22 @@ impl MononokeIdentity {
 impl fmt::Display for MononokeIdentity {
     fn fmt(&self, fmt: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(fmt, "{}:{}", self.id_type(), self.id_data())
+    }
+}
+
+impl FromStr for MononokeIdentity {
+    type Err = Error;
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
+        let mut parts = value.split(':');
+
+        match (parts.next(), parts.next(), parts.next()) {
+            (Some(ty), Some(data), None) => Self::new(ty, data),
+            _ => bail!(
+                "MononokeIdentity parse error, expected TYPE:data, got {:?}",
+                value
+            ),
+        }
     }
 }
 

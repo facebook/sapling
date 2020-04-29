@@ -27,7 +27,6 @@ use openssl::ssl::SslAcceptor;
 use slog::{debug, info, warn, Logger};
 use tokio::net::TcpListener;
 
-use aclchecker::Identity;
 use cmdlib::{
     args,
     helpers::serve_forever,
@@ -40,6 +39,7 @@ use gotham_ext::{
     socket_data::TlsSocketData,
 };
 use mononoke_api::Mononoke;
+use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use secure_utils::SslConfig;
 
 mod context;
@@ -125,10 +125,10 @@ fn build_tls_acceptor(
 }
 
 /// Parse AclChecker identities passed in as arguments.
-fn parse_identities(matches: &ArgMatches) -> Result<Vec<Identity>> {
+fn parse_identities(matches: &ArgMatches) -> Result<MononokeIdentitySet> {
     match matches.values_of(ARG_TRUSTED_PROXY_IDENTITY) {
-        Some(values) => values.map(FromStr::from_str).collect(),
-        None => Ok(Vec::new()),
+        Some(values) => values.map(MononokeIdentity::from_str).collect(),
+        None => Ok(MononokeIdentitySet::new()),
     }
 }
 

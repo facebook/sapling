@@ -6,6 +6,7 @@
  */
 
 use fbinit::FacebookInit;
+use permission_checker::MononokeIdentitySet;
 use scuba_ext::ScubaSampleBuilder;
 use session_id::SessionId;
 use slog::{o, Drain, Level, Logger};
@@ -114,5 +115,9 @@ impl CoreContext {
 
     pub fn session(&self) -> &SessionContainer {
         &self.session
+    }
+
+    pub fn identities(&self) -> Option<&MononokeIdentitySet> {
+        self.session().identities()
     }
 }

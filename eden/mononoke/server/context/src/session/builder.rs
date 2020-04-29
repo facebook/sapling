@@ -6,6 +6,7 @@
  */
 
 use fbinit::FacebookInit;
+use permission_checker::MononokeIdentitySet;
 use rand::{self, distributions::Alphanumeric, thread_rng, Rng};
 use session_id::SessionId;
 use sshrelay::SshEnvVars;
@@ -45,6 +46,7 @@ impl SessionContainerBuilder {
                 source_hostname: None,
                 ssh_env_vars: SshEnvVars::default(),
                 blobstore_semaphore: None,
+                identities: None,
                 #[cfg(fbcode_build)]
                 facebook_data: SessionFacebookData::default(),
             },
@@ -78,6 +80,11 @@ impl SessionContainerBuilder {
 
     pub fn blobstore_concurrency(mut self, concurrency: usize) -> Self {
         self.inner.blobstore_semaphore = Some(Semaphore::new(concurrency));
+        self
+    }
+
+    pub fn identities(mut self, value: impl Into<Option<MononokeIdentitySet>>) -> Self {
+        self.inner.identities = value.into();
         self
     }
 

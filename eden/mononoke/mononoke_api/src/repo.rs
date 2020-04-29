@@ -11,8 +11,7 @@ use std::{
     time::{SystemTime, UNIX_EPOCH},
 };
 
-use aclchecker::AclChecker;
-use anyhow::{bail, format_err, Error};
+use anyhow::{format_err, Error};
 use blobrepo::BlobRepo;
 use blobrepo_factory::{BlobrepoBuilder, BlobstoreOptions, Caching, ReadOnlyStorage};
 use blobstore::Loadable;
@@ -25,11 +24,10 @@ use derived_data::BonsaiDerived;
 use fbinit::FacebookInit;
 use filestore::{Alias, FetchKey};
 use futures::compat::{Future01CompatExt, Stream01CompatExt};
-use futures::future::{self, try_join, try_join_all, TryFutureExt};
+use futures::future::{try_join, try_join_all};
 use futures::StreamExt as NewStreamExt;
 use futures_ext::StreamExt;
 use futures_old::stream::{self, Stream};
-use identity::Identity;
 use itertools::Itertools;
 use mercurial_types::Globalrev;
 use metaconfig_types::{
@@ -40,6 +38,7 @@ use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
     Generation,
 };
+use permission_checker::{ArcPermissionChecker, PermissionCheckerBuilder};
 use revset::AncestorsNodeStream;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, Logger};
@@ -66,7 +65,6 @@ const COMMON_COUNTER_PREFIX: &'static str = "mononoke.api";
 const STALENESS_INFIX: &'static str = "staleness.secs";
 const MISSING_FROM_CACHE_INFIX: &'static str = "missing_from_cache";
 const MISSING_FROM_REPO_INFIX: &'static str = "missing_from_repo";
-const ACL_CHECKER_TIMEOUT_MS: u32 = 10_000;
 
 pub(crate) struct Repo {
     pub(crate) name: String,
@@ -78,7 +76,7 @@ pub(crate) struct Repo {
     pub(crate) service_config: SourceControlServiceParams,
     // Needed to report stats
     pub(crate) monitoring_config: Option<SourceControlServiceMonitoring>,
-    pub(crate) acl_checker: Option<Arc<AclChecker>>,
+    pub(crate) perm_checker: ArcPermissionChecker,
     pub(crate) commit_sync_config: Option<CommitSyncConfig>,
 }
 
@@ -159,23 +157,12 @@ impl Repo {
 
         let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
-        let acl_checker = tokio::task::spawn_blocking({
-            let acl = config.hipster_acl;
-            move || match &acl {
-                Some(acl) => {
-                    let id = Identity::new("REPO", &acl);
-                    let acl_checker = Arc::new(AclChecker::new(fb, &id)?);
-                    if acl_checker.do_wait_updated(ACL_CHECKER_TIMEOUT_MS) {
-                        Ok(Some(acl_checker))
-                    } else {
-                        bail!("Failed to update AclChecker")
-                    }
-                }
-                None => Ok(None),
+        let perm_checker = async {
+            match &config.hipster_acl {
+                Some(acl) => PermissionCheckerBuilder::acl_for_repo(fb, acl).await,
+                None => Ok(PermissionCheckerBuilder::always_allow()),
             }
-        })
-        .map_err(|e| anyhow::Error::new(e))
-        .and_then(|r| future::ready(r));
+        };
 
         let skiplist_index = fetch_skiplist_index(
             ctx.clone(),
@@ -190,7 +177,7 @@ impl Repo {
                 .await?,
         );
 
-        let (acl_checker, skiplist_index) = try_join(acl_checker, skiplist_index).await?;
+        let (perm_checker, skiplist_index) = try_join(perm_checker, skiplist_index).await?;
 
         Ok(Self {
             name,
@@ -200,7 +187,7 @@ impl Repo {
             synced_commit_mapping,
             service_config,
             monitoring_config,
-            acl_checker,
+            perm_checker: ArcPermissionChecker::from(perm_checker),
             commit_sync_config: config.commit_sync_config,
         })
     }
@@ -225,7 +212,7 @@ impl Repo {
                 permit_writes: false,
             },
             monitoring_config,
-            acl_checker: None,
+            perm_checker: ArcPermissionChecker::from(PermissionCheckerBuilder::always_allow()),
             commit_sync_config,
         }
     }
@@ -282,7 +269,7 @@ impl Repo {
                 permit_writes: true,
             },
             monitoring_config: None,
-            acl_checker: None,
+            perm_checker: ArcPermissionChecker::from(PermissionCheckerBuilder::always_allow()),
             commit_sync_config,
         })
     }
@@ -499,31 +486,46 @@ impl Repo {
         maybe_gen_num.ok_or(format_err!("gen num for {} not found", cs_id))
     }
 
-    fn check_acl(&self, ctx: &CoreContext, mode: &'static str) -> Result<(), MononokeError> {
-        if let Some(acl_checker) = self.acl_checker.as_ref() {
-            let identities = ctx.identities();
-            let permitted = identities
-                .as_ref()
-                .map(|identities| acl_checker.check_set(&identities, &[mode]))
-                .unwrap_or(false);
-            if !permitted {
-                debug!(
-                    ctx.logger(),
-                    "Permission denied: {} access to {}", mode, self.name
-                );
-                let identities = identities
-                    .as_ref()
-                    .map(|identities| identities.to_string())
-                    .unwrap_or_else(|| "<none>".to_string());
-                return Err(MononokeError::PermissionDenied {
-                    mode,
-                    identities,
-                    reponame: self.name.clone(),
-                });
-            }
+    // The mode attribue is of type PermMode rather than &static str because the latter gives
+    // compilation error described in here: https://github.com/rust-lang/rust/issues/63033
+    async fn check_permissions(
+        &self,
+        ctx: &CoreContext,
+        mode: PermMode,
+    ) -> Result<(), MononokeError> {
+        let identities = ctx.identities();
+        let mode = match mode {
+            PermMode::Read => "read",
+            PermMode::Write => "write",
+        };
+
+        let permitted = match identities {
+            None => false,
+            Some(identities) => self.perm_checker.check_set(&identities, &[mode]).await?,
+        };
+
+        if !permitted {
+            debug!(
+                ctx.logger(),
+                "Permission denied: {} access to {}", mode, self.name
+            );
+            let identities = match identities {
+                Some(identities) if !identities.is_empty() => identities.iter().join(","),
+                _ => "<none>".to_string(),
+            };
+            return Err(MononokeError::PermissionDenied {
+                mode,
+                identities,
+                reponame: self.name.clone(),
+            });
         }
         Ok(())
     }
+}
+
+enum PermMode {
+    Read,
+    Write,
 }
 
 #[derive(Default)]
@@ -534,9 +536,9 @@ pub struct Stack {
 
 /// A context object representing a query to a particular repo.
 impl RepoContext {
-    pub(crate) fn new(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
+    pub(crate) async fn new(ctx: CoreContext, repo: Arc<Repo>) -> Result<Self, MononokeError> {
         // Check the user is permitted to access this repo.
-        repo.check_acl(&ctx, "read")?;
+        repo.check_permissions(&ctx, PermMode::Read).await?;
         Ok(Self { repo, ctx })
     }
 
@@ -945,7 +947,9 @@ impl RepoContext {
         }
 
         // Check the user is permitted to write to this repo.
-        self.repo.check_acl(&self.ctx, "write")?;
+        self.repo
+            .check_permissions(&self.ctx, PermMode::Write)
+            .await?;
 
         Ok(RepoWriteContext::new(self))
     }

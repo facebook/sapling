@@ -40,7 +40,7 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         params: thrift::RepoResolveBookmarkParams,
     ) -> Result<thrift::RepoResolveBookmarkResponse, errors::ServiceError> {
-        let repo = self.repo(ctx, &repo)?;
+        let repo = self.repo(ctx, &repo).await?;
         match repo.resolve_bookmark(params.bookmark_name).await? {
             Some(cs) => {
                 let ids = map_commit_identity(&cs, &params.identity_schemes).await?;
@@ -74,7 +74,7 @@ impl SourceControlServiceImpl {
             && params.identity_schemes.contains(&params.prefix_scheme);
 
         let prefix = ChangesetPrefixSpecifier::from_request(&params)?;
-        let repo = self.repo(ctx, &repo)?;
+        let repo = self.repo(ctx, &repo).await?;
 
         // If the response requires exactly the same identity scheme as in the request,
         // the general case works but we don't need to pay extra overhead to resolve
@@ -138,7 +138,7 @@ impl SourceControlServiceImpl {
         } else {
             None
         };
-        let repo = self.repo(ctx, &repo)?;
+        let repo = self.repo(ctx, &repo).await?;
         let bookmarks = repo
             .list_bookmarks(params.include_scratch, prefix, limit)
             .collect()
@@ -163,7 +163,7 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         params: thrift::RepoCreateCommitParams,
     ) -> Result<thrift::RepoCreateCommitResponse, errors::ServiceError> {
-        let repo = self.repo(ctx, &repo)?.write().await?;
+        let repo = self.repo(ctx, &repo).await?.write().await?;
 
         let parents: Vec<_> = params
             .parents
@@ -320,7 +320,7 @@ impl SourceControlServiceImpl {
         repo: thrift::RepoSpecifier,
         params: thrift::RepoStackInfoParams,
     ) -> Result<thrift::RepoStackInfoResponse, errors::ServiceError> {
-        let repo = self.repo(ctx, &repo)?;
+        let repo = self.repo(ctx, &repo).await?;
 
         // parse changeset specifiers from params
         let head_specifiers = params

@@ -223,15 +223,15 @@ impl Mononoke {
     }
 
     /// Start a request on a repository.
-    pub fn repo(
+    pub async fn repo(
         &self,
         ctx: CoreContext,
         name: impl AsRef<str>,
     ) -> Result<Option<RepoContext>, MononokeError> {
-        self.repos
-            .get(name.as_ref())
-            .map(move |repo| RepoContext::new(ctx, repo.clone()))
-            .transpose()
+        match self.repos.get(name.as_ref()) {
+            None => Ok(None),
+            Some(repo) => Ok(Some(RepoContext::new(ctx, repo.clone()).await?)),
+        }
     }
 
     /// Returns an `Iterator` over all repo names.

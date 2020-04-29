@@ -41,7 +41,7 @@
   $ wait_for_json_record_count "$SCUBA" 1
   $ jq -S .normvector.client_identities < "$SCUBA"
   [
-    "USER:test",
     "MACHINE:",
-    "MACHINE_TIER:"
+    "MACHINE_TIER:",
+    "USER:test"
   ]

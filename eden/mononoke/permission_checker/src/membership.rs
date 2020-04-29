@@ -7,36 +7,17 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use std::panic::RefUnwindSafe;
 use std::sync::Arc;
 
 use crate::MononokeIdentitySet;
 
-pub type ArcMembershipChecker = Arc<dyn MembershipChecker + Send + Sync + 'static>;
-pub type BoxMembershipChecker = Box<dyn MembershipChecker + Send + Sync + 'static>;
+pub type ArcMembershipChecker = Arc<dyn MembershipChecker + Send + Sync + RefUnwindSafe + 'static>;
+pub type BoxMembershipChecker = Box<dyn MembershipChecker + Send + Sync + RefUnwindSafe + 'static>;
 
 #[async_trait]
 pub trait MembershipChecker {
     async fn is_member(&self, identities: &MononokeIdentitySet) -> Result<bool>;
-}
-
-#[async_trait]
-impl<T> MembershipChecker for Box<T>
-where
-    T: MembershipChecker + ?Sized + Send + Sync,
-{
-    async fn is_member(&self, identities: &MononokeIdentitySet) -> Result<bool> {
-        (*self).is_member(identities).await
-    }
-}
-
-#[async_trait]
-impl<T> MembershipChecker for Arc<T>
-where
-    T: MembershipChecker + ?Sized + Send + Sync,
-{
-    async fn is_member(&self, identities: &MononokeIdentitySet) -> Result<bool> {
-        (*self).is_member(identities).await
-    }
 }
 
 pub struct MembershipCheckerBuilder {}

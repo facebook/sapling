@@ -13,7 +13,7 @@ use slog::{o, Logger};
 use context::{CoreContext, SessionContainer};
 use fbinit::FacebookInit;
 use gotham_ext::middleware::{ClientIdentity, Middleware};
-use identity::{Identity, IdentitySet};
+use permission_checker::MononokeIdentitySet;
 use scuba::ScubaSampleBuilder;
 
 #[derive(StateData)]
@@ -61,9 +61,6 @@ impl Middleware for RequestContextMiddleware {
     }
 }
 
-fn extract_identities(state: &State) -> Option<IdentitySet> {
-    ClientIdentity::borrow_from(state)
-        .identities()
-        .clone()
-        .map(|ids: Vec<Identity>| ids.into_iter().collect())
+fn extract_identities(state: &State) -> Option<MononokeIdentitySet> {
+    ClientIdentity::borrow_from(state).identities().clone()
 }

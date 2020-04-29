@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use aclchecker::Identity;
 use bytes::Bytes;
 use gotham::{socket_data::SocketData, state::State};
 use gotham_derive::StateData;
 use openssl::ssl::SslRef;
+use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use x509::identity;
 
 pub struct TlsSocketData {
@@ -80,13 +80,17 @@ impl TlsSessionData {
 
 #[derive(Clone, StateData)]
 pub struct TlsCertificateIdentities {
-    pub identities: Vec<Identity>,
+    pub identities: MononokeIdentitySet,
 }
 
 impl TlsCertificateIdentities {
     pub fn from_ssl(ssl: &SslRef) -> Option<Self> {
         let peer_certificate = ssl.peer_certificate()?;
-        let identities = identity::get_identities(&peer_certificate).ok()?;
+        let identities = identity::get_identities(&peer_certificate)
+            .ok()?
+            .into_iter()
+            .filter_map(|id| MononokeIdentity::try_from_identity(&id).ok())
+            .collect();
         Some(Self { identities })
     }
 }

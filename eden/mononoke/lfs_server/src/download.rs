@@ -98,8 +98,8 @@ pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpErr
 
     let key = FetchKey::Canonical(content_id);
 
-    let ctx =
-        RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Download)?;
+    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Download)
+        .await?;
 
     fetch_by_key(ctx, key).await
 }
@@ -113,11 +113,9 @@ pub async fn download_sha256(state: &mut State) -> Result<impl TryIntoResponse, 
 
     let key = FetchKey::Aliased(Alias::Sha256(oid));
 
-    let ctx = RepositoryRequestContext::instantiate(
-        state,
-        repository.clone(),
-        LfsMethod::DownloadSha256,
-    )?;
+    let ctx =
+        RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::DownloadSha256)
+            .await?;
 
     fetch_by_key(ctx, key).await
 }

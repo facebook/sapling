@@ -29,7 +29,8 @@ async fn create_commit(fb: FacebookInit) -> Result<(), Error> {
     )
     .await?;
     let repo = mononoke
-        .repo(ctx, "test")?
+        .repo(ctx, "test")
+        .await?
         .expect("repo exists")
         .write()
         .await?;
@@ -85,7 +86,8 @@ async fn create_commit_bad_changes(fb: FacebookInit) -> Result<(), Error> {
     )
     .await?;
     let repo = mononoke
-        .repo(ctx, "test")?
+        .repo(ctx, "test")
+        .await?
         .expect("repo exists")
         .write()
         .await?;

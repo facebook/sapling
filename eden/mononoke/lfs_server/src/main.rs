@@ -9,7 +9,6 @@
 #![feature(never_type)]
 #![deny(warnings)]
 
-use aclchecker::Identity;
 use anyhow::{anyhow, bail, Error};
 use clap::{Arg, Values};
 use cloned::cloned;
@@ -23,6 +22,7 @@ use futures_util::try_join;
 use gotham::{bind_server, bind_server_with_socket_data};
 use gotham_ext::{handler::MononokeHttpHandler, socket_data::TlsSocketData};
 use hyper::header::HeaderValue;
+use permission_checker::{ArcPermissionChecker, MononokeIdentitySet, PermissionCheckerBuilder};
 use slog::{info, warn};
 use std::collections::HashMap;
 use std::net::ToSocketAddrs;
@@ -40,7 +40,6 @@ use cmdlib::{
 use failure_ext::chain::ChainExt;
 use metaconfig_parser::RepoConfigs;
 
-use crate::acl::LfsAclChecker;
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
 use crate::middleware::{
     ClientIdentityMiddleware, LoadMiddleware, LogMiddleware, OdsMiddleware,
@@ -49,7 +48,6 @@ use crate::middleware::{
 };
 use crate::service::build_router;
 
-mod acl;
 mod batch;
 mod config;
 mod download;
@@ -243,7 +241,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     let disable_acl_checker = matches.is_present(ARG_DISABLE_ACL_CHECKER);
 
     let test_acl_checker = if !test_idents.is_empty() {
-        Some(LfsAclChecker::TestAclChecker(test_idents))
+        Some(ArcPermissionChecker::from(
+            PermissionCheckerBuilder::whitelist_checker(test_idents),
+        ))
     } else {
         None
     };
@@ -277,17 +277,31 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 let hipster_acl = config.hipster_acl;
                 let aclchecker = async {
                     if let Some(test_checker) = test_acl_checker {
-                        Ok(test_checker)
-                    } else if disable_acl_checker {
-                        Ok(LfsAclChecker::disabled())
+                        Ok(test_checker.clone())
                     } else {
-                        LfsAclChecker::new_acl_checker(fb, &name, &logger, hipster_acl).await
+                        Ok(ArcPermissionChecker::from(
+                            match (disable_acl_checker, hipster_acl) {
+                                (true, _) | (false, None) => {
+                                    PermissionCheckerBuilder::always_allow()
+                                }
+                                (_, Some(acl)) => {
+                                    info!(
+                                        logger,
+                                        "{}: Actions will be checked against {} ACL", name, acl
+                                    );
+                                    PermissionCheckerBuilder::acl_for_repo(fb, &acl).await?
+                                }
+                            },
+                        ))
                     }
                 };
 
                 let (repo, aclchecker) = try_join!(builder.build(), aclchecker)?;
 
-                Result::<(String, (BlobRepo, LfsAclChecker)), Error>::Ok((name, (repo, aclchecker)))
+                Result::<(String, (BlobRepo, ArcPermissionChecker)), Error>::Ok((
+                    name,
+                    (repo, aclchecker),
+                ))
             }
         });
 
@@ -442,9 +456,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
-fn idents_from_values<'a>(matches: Option<Values<'a>>) -> Result<Vec<Identity>, Error> {
+fn idents_from_values(matches: Option<Values>) -> Result<MononokeIdentitySet, Error> {
     match matches {
         Some(matches) => matches.map(FromStr::from_str).collect(),
-        None => Ok(vec![]),
+        None => Ok(MononokeIdentitySet::new()),
     }
 }

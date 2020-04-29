@@ -17,6 +17,7 @@ use mononoke_api::{
     SessionContainer, TreeContext, TreeId,
 };
 use mononoke_types::hash::{Sha1, Sha256};
+use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt, ScubaValue};
 use slog::Logger;
 use source_control as thrift;
@@ -111,15 +112,19 @@ impl SourceControlServiceImpl {
         }
 
         let identities = req_ctxt.identities().map_err(errors::internal_error)?;
+        let identities = identities.entries();
         scuba.add(
             "identities",
             identities
-                .entries()
-                .into_iter()
+                .iter()
                 .map(|id| id.to_string())
                 .collect::<ScubaValue>(),
         );
 
+        let identities: MononokeIdentitySet = identities
+            .into_iter()
+            .filter_map(|id| MononokeIdentity::try_from_identity_ref(id).ok())
+            .collect();
         let session = SessionContainer::builder(self.fb)
             .session_id(session_id)
             .identities(identities)
@@ -131,14 +136,15 @@ impl SourceControlServiceImpl {
     }
 
     /// Get the repo specified by a `thrift::RepoSpecifier`.
-    pub(crate) fn repo(
+    pub(crate) async fn repo(
         &self,
         ctx: CoreContext,
         repo: &thrift::RepoSpecifier,
     ) -> Result<RepoContext, errors::ServiceError> {
         let repo = self
             .mononoke
-            .repo(ctx, &repo.name)?
+            .repo(ctx, &repo.name)
+            .await?
             .ok_or_else(|| errors::repo_not_found(repo.description()))?;
         Ok(repo)
     }
@@ -149,7 +155,7 @@ impl SourceControlServiceImpl {
         ctx: CoreContext,
         commit: &thrift::CommitSpecifier,
     ) -> Result<(RepoContext, ChangesetContext), errors::ServiceError> {
-        let repo = self.repo(ctx, &commit.repo)?;
+        let repo = self.repo(ctx, &commit.repo).await?;
         let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
         let changeset = repo
             .changeset(changeset_specifier)
@@ -174,7 +180,7 @@ impl SourceControlServiceImpl {
                 (repo, path.tree().await?)
             }
             thrift::TreeSpecifier::by_id(tree_id) => {
-                let repo = self.repo(ctx, &tree_id.repo)?;
+                let repo = self.repo(ctx, &tree_id.repo).await?;
                 let tree_id = TreeId::from_request(&tree_id.id)?;
                 let tree = repo
                     .tree(tree_id)
@@ -209,7 +215,7 @@ impl SourceControlServiceImpl {
                 (repo, path.file().await?)
             }
             thrift::FileSpecifier::by_id(file_id) => {
-                let repo = self.repo(ctx, &file_id.repo)?;
+                let repo = self.repo(ctx, &file_id.repo).await?;
                 let file_id = FileId::from_request(&file_id.id)?;
                 let file = repo
                     .file(file_id)
@@ -218,7 +224,7 @@ impl SourceControlServiceImpl {
                 (repo, Some(file))
             }
             thrift::FileSpecifier::by_sha1_content_hash(hash) => {
-                let repo = self.repo(ctx, &hash.repo)?;
+                let repo = self.repo(ctx, &hash.repo).await?;
                 let file_sha1 = Sha1::from_request(&hash.content_hash)?;
                 let file = repo
                     .file_by_content_sha1(file_sha1)
@@ -227,7 +233,7 @@ impl SourceControlServiceImpl {
                 (repo, Some(file))
             }
             thrift::FileSpecifier::by_sha256_content_hash(hash) => {
-                let repo = self.repo(ctx, &hash.repo)?;
+                let repo = self.repo(ctx, &hash.repo).await?;
                 let file_sha256 = Sha256::from_request(&hash.content_hash)?;
                 let file = repo
                     .file_by_content_sha256(file_sha256)

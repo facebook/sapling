@@ -75,6 +75,8 @@ pub enum ErrorKind {
 pub enum LfsServerContextErrorKind {
     #[error("Operated not permitted")]
     Forbidden,
+    #[error("Permission check failed: {0}")]
+    PermissionCheckFailed(anyhow::Error),
     #[error("Repository does not exist: {0}")]
     RepositoryDoesNotExist(String),
 }

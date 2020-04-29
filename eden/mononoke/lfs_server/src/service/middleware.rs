@@ -5,13 +5,13 @@
  * GNU General Public License version 2.
  */
 
-use aclchecker::Identity;
 use cached_config::ConfigHandle;
 use fbinit::FacebookInit;
 use futures::future::{self, FutureExt};
 use gotham::{handler::HandlerFuture, middleware::Middleware, state::State};
 use gotham_derive::NewMiddleware;
 use gotham_ext::error::HttpError;
+use permission_checker::MononokeIdentitySet;
 use rand::Rng;
 use stats_facebook::service_data::{get_service_data_singleton, ServiceData, ServiceDataWrapper};
 use std::convert::TryInto;
@@ -94,7 +94,7 @@ fn is_limit_exceeded(
     }
 }
 
-fn limit_applies_to_client(limit: &Limit, client_identity: &Option<&Vec<Identity>>) -> bool {
+fn limit_applies_to_client(limit: &Limit, client_identity: &Option<&MononokeIdentitySet>) -> bool {
     let configured_identities = match limit.client_identities().is_empty() {
         true => return true,
         false => limit.client_identities(),

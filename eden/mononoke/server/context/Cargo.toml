@@ -15,6 +15,7 @@ path = "benchmark/main.rs"
 doc = false
 
 [dependencies]
+permission_checker = { path = "../../permission_checker" }
 scuba_ext = { path = "../../common/scuba_ext" }
 session_id = { path = "../session_id" }
 sshrelay = { path = "../../sshrelay" }

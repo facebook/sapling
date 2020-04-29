@@ -31,7 +31,7 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitLookupParams,
     ) -> Result<thrift::CommitLookupResponse, errors::ServiceError> {
-        let repo = self.repo(ctx, &commit.repo)?;
+        let repo = self.repo(ctx, &commit.repo).await?;
         match repo
             .changeset(ChangesetSpecifier::from_request(&commit.id)?)
             .await?
@@ -159,7 +159,7 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitIsAncestorOfParams,
     ) -> Result<bool, errors::ServiceError> {
-        let repo = self.repo(ctx, &commit.repo)?;
+        let repo = self.repo(ctx, &commit.repo).await?;
         let changeset_specifier = ChangesetSpecifier::from_request(&commit.id)?;
         let other_changeset_specifier = ChangesetSpecifier::from_request(&params.other_commit_id)?;
         let (changeset, other_changeset_id) = try_join!(
@@ -334,8 +334,8 @@ impl SourceControlServiceImpl {
         commit: thrift::CommitSpecifier,
         params: thrift::CommitLookupXRepoParams,
     ) -> Result<thrift::CommitLookupResponse, errors::ServiceError> {
-        let repo = self.repo(ctx.clone(), &commit.repo)?;
-        let other_repo = self.repo(ctx, &params.other_repo)?;
+        let repo = self.repo(ctx.clone(), &commit.repo).await?;
+        let other_repo = self.repo(ctx, &params.other_repo).await?;
         match repo
             .xrepo_commit_lookup(&other_repo, ChangesetSpecifier::from_request(&commit.id)?)
             .await?

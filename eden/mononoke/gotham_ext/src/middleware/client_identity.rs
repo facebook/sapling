@@ -5,7 +5,6 @@
  * GNU General Public License version 2.
  */
 
-use aclchecker::Identity;
 use gotham::state::{client_addr, FromState, State};
 use gotham_derive::StateData;
 use hyper::header::HeaderMap;
@@ -13,6 +12,7 @@ use hyper::{Body, Response};
 use json_encoded::get_identities;
 use lazy_static::lazy_static;
 use percent_encoding::percent_decode;
+use permission_checker::{MononokeIdentity, MononokeIdentitySet};
 use std::net::{IpAddr, SocketAddr};
 use std::sync::Arc;
 
@@ -25,14 +25,15 @@ const CLIENT_IP: &str = "tfb-orig-client-ip";
 const CLIENT_CORRELATOR: &str = "x-client-correlator";
 
 lazy_static! {
-    static ref PROXYGEN_ORIGIN_IDENTITY: Identity =
-        Identity::new("SERVICE_IDENTITY", "proxygen-origin");
+    static ref PROXYGEN_ORIGIN_IDENTITY: MononokeIdentity =
+        MononokeIdentity::new("SERVICE_IDENTITY", "proxygen-origin")
+            .expect("SERVICE_IDENTITY is not a valid identity type");
 }
 
 #[derive(StateData, Default)]
 pub struct ClientIdentity {
     address: Option<IpAddr>,
-    identities: Option<Vec<Identity>>,
+    identities: Option<MononokeIdentitySet>,
     client_correlator: Option<String>,
 }
 
@@ -41,7 +42,7 @@ impl ClientIdentity {
         &self.address
     }
 
-    pub fn identities(&self) -> &Option<Vec<Identity>> {
+    pub fn identities(&self) -> &Option<MononokeIdentitySet> {
         &self.identities
     }
 
@@ -60,13 +61,26 @@ impl ClientIdentity {
 
 #[derive(Clone)]
 pub struct ClientIdentityMiddleware {
-    trusted_proxy_idents: Arc<Vec<Identity>>,
+    trusted_proxy_whitelist: Arc<MononokeIdentitySet>,
 }
 
 impl ClientIdentityMiddleware {
-    pub fn new(trusted_proxy_idents: Vec<Identity>) -> Self {
+    pub fn new(trusted_proxy_idents: MononokeIdentitySet) -> Self {
         Self {
-            trusted_proxy_idents: Arc::new(trusted_proxy_idents),
+            trusted_proxy_whitelist: Arc::new(trusted_proxy_idents),
+        }
+    }
+
+    fn extract_client_identities(
+        &self,
+        cert_idents: MononokeIdentitySet,
+        headers: &HeaderMap,
+    ) -> Option<MononokeIdentitySet> {
+        let is_trusted_proxy = !self.trusted_proxy_whitelist.is_disjoint(&cert_idents);
+        if is_trusted_proxy {
+            request_identities_from_headers(&headers)
+        } else {
+            Some(cert_idents)
         }
     }
 }
@@ -78,33 +92,17 @@ fn request_ip_from_headers(headers: &HeaderMap) -> Option<IpAddr> {
     Some(ip)
 }
 
-fn request_identities_from_headers(headers: &HeaderMap) -> Option<Vec<Identity>> {
+fn request_identities_from_headers(headers: &HeaderMap) -> Option<MononokeIdentitySet> {
     let encoded_identities = headers.get(ENCODED_CLIENT_IDENTITY)?;
     let json_identities = percent_decode(encoded_identities.as_bytes())
         .decode_utf8()
         .ok()?;
-    let identities = get_identities(&json_identities).ok()?;
+    let identities = get_identities(&json_identities)
+        .ok()?
+        .into_iter()
+        .filter_map(|id| MononokeIdentity::try_from_identity(&id).ok())
+        .collect();
     Some(identities)
-}
-
-fn is_trusted_proxy(cert_idents: &[Identity], trusted_proxy_idents: &[Identity]) -> bool {
-    cert_idents.iter().any(|ident| {
-        trusted_proxy_idents
-            .iter()
-            .any(|trusted_ident| trusted_ident == ident)
-    })
-}
-
-fn extract_client_identities(
-    cert_idents: Vec<Identity>,
-    trusted_proxy_idents: &Vec<Identity>,
-    headers: &HeaderMap,
-) -> Option<Vec<Identity>> {
-    if is_trusted_proxy(&cert_idents, trusted_proxy_idents) {
-        request_identities_from_headers(&headers)
-    } else {
-        Some(cert_idents)
-    }
 }
 
 fn request_client_correlator_from_headers(headers: &HeaderMap) -> Option<String> {
@@ -124,11 +122,8 @@ impl Middleware for ClientIdentityMiddleware {
             client_identity.client_correlator = request_client_correlator_from_headers(&headers);
 
             if let Some(cert_idents) = cert_idents {
-                client_identity.identities = extract_client_identities(
-                    cert_idents.identities,
-                    &self.trusted_proxy_idents,
-                    &headers,
-                );
+                client_identity.identities =
+                    self.extract_client_identities(cert_idents.identities, &headers);
             }
         }
 

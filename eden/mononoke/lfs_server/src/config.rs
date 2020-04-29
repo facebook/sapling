@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
-use aclchecker::Identity;
 use anyhow;
+use permission_checker::MononokeIdentity;
 use serde::de::{Deserializer, Error};
 use serde::ser::Serializer;
 use serde::{Deserialize, Serialize};
@@ -37,7 +37,7 @@ pub struct RawServerConfig {
 #[derive(Debug, Clone)]
 pub struct Limit {
     raw_limit: RawLimit,
-    client_identities: Vec<Identity>,
+    client_identities: Vec<MononokeIdentity>,
 }
 
 impl TryFrom<&RawLimit> for Limit {
@@ -151,7 +151,7 @@ impl Limit {
     pub fn max_jitter_ms(&self) -> i64 {
         self.raw_limit.max_jitter_ms
     }
-    pub fn client_identities(&self) -> Vec<Identity> {
+    pub fn client_identities(&self) -> Vec<MononokeIdentity> {
         self.client_identities.clone()
     }
 }

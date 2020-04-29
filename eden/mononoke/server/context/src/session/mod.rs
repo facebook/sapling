@@ -6,6 +6,7 @@
  */
 
 use fbinit::FacebookInit;
+use permission_checker::MononokeIdentitySet;
 use scuba_ext::ScubaSampleBuilder;
 use session_id::SessionId;
 use slog::Logger;
@@ -36,6 +37,7 @@ struct SessionContainerInner {
     source_hostname: Option<String>,
     ssh_env_vars: SshEnvVars,
     blobstore_semaphore: Option<Semaphore>,
+    identities: Option<MononokeIdentitySet>,
     #[cfg(fbcode_build)]
     facebook_data: SessionFacebookData,
 }
@@ -81,6 +83,10 @@ impl SessionContainer {
 
     pub fn blobstore_semaphore(&self) -> Option<&Semaphore> {
         self.inner.blobstore_semaphore.as_ref()
+    }
+
+    pub fn identities(&self) -> Option<&MononokeIdentitySet> {
+        self.inner.identities.as_ref()
     }
 
     #[cfg(fbcode_build)]

@@ -7,36 +7,17 @@
 
 use anyhow::Result;
 use async_trait::async_trait;
+use std::panic::RefUnwindSafe;
 use std::sync::Arc;
 
 use crate::MononokeIdentitySet;
 
-pub type ArcPermissionChecker = Arc<dyn PermissionChecker + Send + Sync + 'static>;
-pub type BoxPermissionChecker = Box<dyn PermissionChecker + Send + Sync + 'static>;
+pub type ArcPermissionChecker = Arc<dyn PermissionChecker + Send + Sync + RefUnwindSafe + 'static>;
+pub type BoxPermissionChecker = Box<dyn PermissionChecker + Send + Sync + RefUnwindSafe + 'static>;
 
 #[async_trait]
 pub trait PermissionChecker {
     async fn check_set(&self, accessors: &MononokeIdentitySet, actions: &[&str]) -> Result<bool>;
-}
-
-#[async_trait]
-impl<T> PermissionChecker for Box<T>
-where
-    T: PermissionChecker + ?Sized + Send + Sync,
-{
-    async fn check_set(&self, accessors: &MononokeIdentitySet, actions: &[&str]) -> Result<bool> {
-        (*self).check_set(accessors, actions).await
-    }
-}
-
-#[async_trait]
-impl<T> PermissionChecker for Arc<T>
-where
-    T: PermissionChecker + ?Sized + Send + Sync,
-{
-    async fn check_set(&self, accessors: &MononokeIdentitySet, actions: &[&str]) -> Result<bool> {
-        (*self).check_set(accessors, actions).await
-    }
 }
 
 pub struct PermissionCheckerBuilder {}
@@ -47,6 +28,10 @@ impl PermissionCheckerBuilder {
 
     pub fn always_reject() -> BoxPermissionChecker {
         Box::new(AlwaysReject {})
+    }
+
+    pub fn whitelist_checker(whitelist: MononokeIdentitySet) -> BoxPermissionChecker {
+        Box::new(WhitelistChecker { whitelist })
     }
 }
 
@@ -65,5 +50,16 @@ struct AlwaysReject {}
 impl PermissionChecker for AlwaysReject {
     async fn check_set(&self, _accessors: &MononokeIdentitySet, _actions: &[&str]) -> Result<bool> {
         Ok(false)
+    }
+}
+
+struct WhitelistChecker {
+    whitelist: MononokeIdentitySet,
+}
+
+#[async_trait]
+impl PermissionChecker for WhitelistChecker {
+    async fn check_set(&self, accessors: &MononokeIdentitySet, _actions: &[&str]) -> Result<bool> {
+        Ok(!self.whitelist.is_disjoint(accessors))
     }
 }

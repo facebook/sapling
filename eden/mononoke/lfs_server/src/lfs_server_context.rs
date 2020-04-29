@@ -12,7 +12,6 @@ use std::sync::{
     Arc, Mutex,
 };
 
-use aclchecker::Identity;
 use anyhow::Error;
 use bytes::Bytes;
 use cached_config::ConfigHandle;
@@ -25,6 +24,7 @@ use gotham_derive::StateData;
 use gotham_ext::body_ext::BodyExt;
 use http::uri::{Authority, Parts, PathAndQuery, Scheme, Uri};
 use hyper::{Body, Request};
+use permission_checker::{ArcPermissionChecker, MononokeIdentitySet};
 use slog::Logger;
 
 use blobrepo::BlobRepo;
@@ -36,7 +36,6 @@ use lfs_protocol::{RequestBatch, RequestObject, ResponseBatch};
 use mononoke_types::hash::Sha256;
 use mononoke_types::ContentId;
 
-use crate::acl::LfsAclChecker;
 use crate::config::ServerConfig;
 use crate::errors::{ErrorKind, LfsServerContextErrorKind};
 use crate::middleware::{ClientIdentity, LfsMethod, RequestContext};
@@ -47,7 +46,7 @@ pub type HttpsHyperClient = Client<HttpsConnector<HttpConnector>>;
 const ACL_CHECK_ACTION: &str = "read";
 
 struct LfsServerContextInner {
-    repositories: HashMap<String, (BlobRepo, LfsAclChecker)>,
+    repositories: HashMap<String, (BlobRepo, ArcPermissionChecker)>,
     client: Arc<HttpsHyperClient>,
     server: Arc<ServerUris>,
     always_wait_for_upstream: bool,
@@ -63,7 +62,7 @@ pub struct LfsServerContext {
 
 impl LfsServerContext {
     pub fn new(
-        repositories: HashMap<String, (BlobRepo, LfsAclChecker)>,
+        repositories: HashMap<String, (BlobRepo, ArcPermissionChecker)>,
         server: ServerUris,
         always_wait_for_upstream: bool,
         max_upload_size: Option<u64>,
@@ -90,37 +89,46 @@ impl LfsServerContext {
         })
     }
 
-    pub fn request(
+    pub async fn request(
         &self,
         ctx: CoreContext,
         repository: String,
-        identities: Option<&Vec<Identity>>,
+        identities: Option<&MononokeIdentitySet>,
     ) -> Result<RepositoryRequestContext, LfsServerContextErrorKind> {
-        let inner = self.inner.lock().expect("poisoned lock");
+        let (repo, aclchecker, client, server, always_wait_for_upstream, max_upload_size, config) = {
+            let inner = self.inner.lock().expect("poisoned lock");
 
-        match inner.repositories.get(&repository) {
-            Some((repo, aclchecker)) => {
-                let config = inner.config_handle.get();
-
-                if config.acl_check() {
-                    acl_check(aclchecker, identities, config.enforce_acl_check())?;
-                }
-
-                Ok(RepositoryRequestContext {
-                    ctx,
-                    repo: repo.clone(),
-                    uri_builder: UriBuilder {
+            match inner.repositories.get(&repository) {
+                Some((repo, aclchecker)) => (
+                    repo.clone(),
+                    aclchecker.clone(),
+                    inner.client.clone(),
+                    inner.server.clone(),
+                    inner.always_wait_for_upstream,
+                    inner.max_upload_size,
+                    inner.config_handle.get(),
+                ),
+                None => {
+                    return Err(LfsServerContextErrorKind::RepositoryDoesNotExist(
                         repository,
-                        server: inner.server.clone(),
-                    },
-                    client: HttpClient::Enabled(inner.client.clone()),
-                    config,
-                    always_wait_for_upstream: inner.always_wait_for_upstream,
-                    max_upload_size: inner.max_upload_size,
-                })
+                    ))
+                }
             }
-            None => Err(LfsServerContextErrorKind::RepositoryDoesNotExist(repository).into()),
+        };
+
+        if config.acl_check() {
+            acl_check(aclchecker, identities, config.enforce_acl_check()).await?;
         }
+
+        Ok(RepositoryRequestContext {
+            ctx,
+            repo,
+            uri_builder: UriBuilder { repository, server },
+            client: HttpClient::Enabled(client),
+            config,
+            always_wait_for_upstream,
+            max_upload_size,
+        })
     }
 
     pub fn get_config_handle(&self) -> ConfigHandle<ServerConfig> {
@@ -141,13 +149,19 @@ impl LfsServerContext {
     }
 }
 
-fn acl_check(
-    aclchecker: &LfsAclChecker,
-    identities: Option<&Vec<Identity>>,
+async fn acl_check(
+    aclchecker: ArcPermissionChecker,
+    identities: Option<&MononokeIdentitySet>,
     enforce_acl_check: bool,
 ) -> Result<(), LfsServerContextErrorKind> {
     if let Some(identities) = identities {
-        if !aclchecker.is_allowed(identities, &[ACL_CHECK_ACTION]) && enforce_acl_check {
+        // Always make the request for permission even if enforce_acl_check is
+        // false, so that we get the even logged in our system
+        let acl_check = aclchecker
+            .check_set(identities, &[ACL_CHECK_ACTION])
+            .await
+            .map_err(LfsServerContextErrorKind::PermissionCheckFailed)?;
+        if !acl_check && enforce_acl_check {
             return Err(LfsServerContextErrorKind::Forbidden.into());
         } else {
             return Ok(());
@@ -178,7 +192,7 @@ pub struct RepositoryRequestContext {
 }
 
 impl RepositoryRequestContext {
-    pub fn instantiate(
+    pub async fn instantiate(
         state: &mut State,
         repository: String,
         method: LfsMethod,
@@ -195,7 +209,7 @@ impl RepositoryRequestContext {
         };
 
         let lfs_ctx = LfsServerContext::borrow_from(&state);
-        lfs_ctx.request(ctx, repository, identities)
+        lfs_ctx.request(ctx, repository, identities).await
     }
 
     pub fn logger(&self) -> &Logger {

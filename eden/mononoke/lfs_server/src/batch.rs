@@ -491,7 +491,8 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     let BatchParams { repository } = state.take();
     let start_time = state.borrow::<RequestContext>().start_time();
 
-    let ctx = RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Batch)?;
+    let ctx =
+        RepositoryRequestContext::instantiate(state, repository.clone(), LfsMethod::Batch).await?;
 
     add_to_sample(
         &mut state.try_borrow_mut::<ScubaMiddlewareState>(),
