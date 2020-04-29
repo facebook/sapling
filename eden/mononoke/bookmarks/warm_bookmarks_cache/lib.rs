@@ -225,7 +225,9 @@ async fn move_bookmark_back_in_history_until_derived(
         find_all_underived_and_latest_derived(ctx, repo, book, warmers).await?;
 
     match latest_derived_entry {
-        LatestDerivedBookmarkEntry::Found(maybe_cs_id) => Ok(maybe_cs_id),
+        LatestDerivedBookmarkEntry::Found(maybe_cs_id_and_ts) => {
+            Ok(maybe_cs_id_and_ts.map(|(cs_id, _)| cs_id))
+        }
         LatestDerivedBookmarkEntry::NotFound => {
             let cur_bookmark_value = repo.get_bonsai_bookmark(ctx.clone(), book).compat().await?;
             warn!(
@@ -240,7 +242,7 @@ async fn move_bookmark_back_in_history_until_derived(
 }
 
 enum LatestDerivedBookmarkEntry {
-    Found(Option<ChangesetId>),
+    Found(Option<(ChangesetId, Timestamp)>),
     /// Latest derived bookmark entry is too far away
     NotFound,
 }
@@ -297,8 +299,7 @@ async fn find_all_underived_and_latest_derived(
 
         while let Some((maybe_cs_and_ts, is_derived)) = maybe_derived.next().await {
             if is_derived {
-                let maybe_cs = maybe_cs_and_ts.map(|(cs, _)| cs);
-                return Ok((LatestDerivedBookmarkEntry::Found(maybe_cs), res));
+                return Ok((LatestDerivedBookmarkEntry::Found(maybe_cs_and_ts), res));
             } else {
                 if let Some(cs_and_ts) = maybe_cs_and_ts {
                     res.push_front(cs_and_ts);
@@ -539,11 +540,26 @@ async fn single_bookmark_updater(
     let (latest_derived, underived_history) =
         find_all_underived_and_latest_derived(&ctx, &repo, &bookmark, &warmers).await?;
 
+    // TODO(stash): make configurable (T66277310)
+    let delay_secs = 0;
+    let update_bookmark = |ts: Timestamp, cs_id: ChangesetId| async move {
+        let cur_delay = ts.since_seconds();
+        if cur_delay < delay_secs {
+            let to_sleep = (delay_secs - cur_delay) as u64;
+            info!(
+                ctx.logger(),
+                "sleeping for {} before updating a bookmark", to_sleep
+            );
+            tokio::time::delay_for(Duration::from_secs(to_sleep)).await;
+        }
+        bookmarks.with_write(|bookmarks| bookmarks.insert(bookmark.clone(), cs_id));
+    };
+
     match latest_derived {
         // Move bookmark to the latest derived commit or delete the bookmark completely
-        LatestDerivedBookmarkEntry::Found(maybe_cs_id) => match maybe_cs_id {
-            Some(cs_id) => {
-                bookmarks.with_write(|bookmarks| bookmarks.insert(bookmark.clone(), cs_id));
+        LatestDerivedBookmarkEntry::Found(maybe_cs_id_and_ts) => match maybe_cs_id_and_ts {
+            Some((cs_id, ts)) => {
+                update_bookmark(ts, cs_id).await;
             }
             None => {
                 bookmarks.with_write(|bookmarks| bookmarks.remove(&bookmark));
@@ -559,11 +575,11 @@ async fn single_bookmark_updater(
 
     for (underived_cs_id, ts) in underived_history {
         staleness_reporter(ts);
+
         let res = derive_all(&ctx, &repo, &underived_cs_id, &warmers).await;
         match res {
             Ok(()) => {
-                bookmarks
-                    .with_write(|bookmarks| bookmarks.insert(bookmark.clone(), underived_cs_id));
+                update_bookmark(ts, underived_cs_id).await;
             }
             Err(err) => {
                 warn!(
