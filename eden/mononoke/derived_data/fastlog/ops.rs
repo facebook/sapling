@@ -15,16 +15,17 @@ use deleted_files_manifest::{self as deleted_manifest, RootDeletedManifestId};
 use derived_data::{BonsaiDerived, DeriveError};
 use futures::{
     compat::Future01CompatExt,
-    future::{FutureExt as NewFutureExt, TryFutureExt},
+    future::{self, FutureExt as NewFutureExt, TryFutureExt},
     stream::{self, Stream as NewStream},
 };
 use futures_old::Future;
 use futures_util::{StreamExt, TryStreamExt};
 use manifest::{Entry, ManifestOps};
-use maplit::{hashmap, hashset};
+use maplit::hashset;
 use mononoke_types::{ChangesetId, FileUnodeId, MPath, ManifestUnodeId};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::future::Future as NewFuture;
+use std::iter::FromIterator;
 use std::sync::Arc;
 use thiserror::Error;
 use unodes::RootUnodeManifestId;
@@ -104,41 +105,68 @@ where
 {
     let mut top_history = vec![];
     // get unode entry
+    let not_found_err = || {
+        if let Some(p) = path.clone() {
+            FastlogError::NoSuchPath(p)
+        } else {
+            FastlogError::InternalError("cannot find unode for the repo root".to_string())
+        }
+    };
     let resolved = resolve_path_state(&ctx, &repo, changeset_id, &path).await?;
-    let unode_entry = match resolved {
-        Some(PathState::Deleted(deleted_linknode, last_unode_entry)) => {
+    // there might be more than one unode entry: if the given path was
+    // deleted in several different branches, we have to gather history
+    // from all of them
+    let unode_entries = match resolved {
+        Some(PathState::Deleted(deletion_nodes)) => {
             // we want to show commit, where path was deleted
-            top_history.push(Ok(deleted_linknode));
-            last_unode_entry
+            let mut entries = vec![];
+            let mut visited = HashSet::new();
+            for (deleted_linknode, last_unode_entry) in deletion_nodes {
+                if visited.insert(deleted_linknode.clone()) {
+                    // there might be one linknode for the several entries
+                    // for example, if the path was deleted in merge commit
+                    top_history.push(Ok(deleted_linknode));
+                }
+                entries.push(last_unode_entry);
+            }
+            entries
         }
-        Some(PathState::Exists(unode_entry)) => unode_entry,
+        Some(PathState::Exists(unode_entry)) => vec![unode_entry],
         None => {
-            return Err(if let Some(p) = path {
-                FastlogError::NoSuchPath(p)
-            } else {
-                FastlogError::InternalError("cannot find unode for the repo root".to_string())
-            });
+            return Err(not_found_err());
         }
     };
 
-    let unode = unode_entry
-        .load(ctx.clone(), &repo.get_blobstore())
-        .compat()
-        .await?;
+    let last_changesets = unode_entries.into_iter().map({
+        cloned!(ctx, repo);
+        move |entry| {
+            cloned!(ctx, repo);
+            async move {
+                let unode = entry
+                    .load(ctx.clone(), &repo.get_blobstore())
+                    .compat()
+                    .await?;
+                Ok::<_, FastlogError>(match unode {
+                    Entry::Tree(mf_unode) => mf_unode.linknode().clone(),
+                    Entry::Leaf(file_unode) => file_unode.linknode().clone(),
+                })
+            }
+        }
+    });
+    let last_changesets = future::try_join_all(last_changesets).await?;
 
-    let changeset_id = match unode {
-        Entry::Tree(mf_unode) => mf_unode.linknode().clone(),
-        Entry::Leaf(file_unode) => file_unode.linknode().clone(),
-    };
-    top_history.push(Ok(changeset_id.clone()));
+    let history_graph =
+        HashMap::from_iter(last_changesets.clone().into_iter().map(|cs| (cs, None)));
+    let visited = HashSet::from_iter(last_changesets.clone().into_iter());
+
+    let mut last_changesets = last_changesets.into_iter();
+    let the_last_change = last_changesets.next().ok_or_else(not_found_err)?;
+    top_history.push(Ok(the_last_change.clone()));
+    let bfs = VecDeque::from_iter(last_changesets);
 
     // generate file history
     Ok(stream::iter(top_history)
         .chain({
-            let history_graph = hashmap! { changeset_id.clone() => None };
-            let visited = hashset! { changeset_id.clone() };
-            let bfs = VecDeque::new();
-
             bounded_traversal_stream(
                 256,
                 // starting point
@@ -146,7 +174,7 @@ where
                     history_graph,
                     visited,
                     bfs,
-                    prefetch: changeset_id,
+                    prefetch: the_last_change,
                 }),
                 // unfold
                 move |state| {
@@ -200,7 +228,7 @@ type UnodeEntry = Entry<ManifestUnodeId, FileUnodeId>;
 
 enum PathState {
     // changeset where the path was deleted and unode where the path was last changed
-    Deleted(ChangesetId, UnodeEntry),
+    Deleted(Vec<(ChangesetId, UnodeEntry)>),
     // unode if the path exists
     Exists(UnodeEntry),
 }
@@ -243,57 +271,135 @@ async fn resolve_path_state(
 
     // if there is no unode for the commit:path, check deleted manifest
     // the path might be deleted
-    let root_dfm_id = RootDeletedManifestId::derive(ctx.clone(), repo.clone(), cs_id)
-        .compat()
-        .await?;
-    let dfm_id = root_dfm_id.deleted_manifest_id();
-    let deleted_entry =
-        deleted_manifest::find_entry(ctx.clone(), repo.get_blobstore(), *dfm_id, path.clone())
-            .compat()
-            .await?;
+    stream::try_unfold(
+        // starting state
+        (VecDeque::from(vec![cs_id.clone()]), hashset! { cs_id }),
+        // unfold
+        {
+            cloned!(ctx, repo, path);
+            move |(queue, visited)| {
+                resolve_path_state_unfold(ctx.clone(), repo.clone(), path.clone(), queue, visited)
+            }
+        },
+    )
+    .map_ok(|deleted_nodes| stream::iter(deleted_nodes).map(Ok::<_, FastlogError>))
+    .try_flatten()
+    .try_collect::<Vec<_>>()
+    .map_ok(move |deleted_nodes| {
+        if deleted_nodes.is_empty() {
+            None
+        } else {
+            Some(PathState::Deleted(deleted_nodes))
+        }
+    })
+    .boxed()
+    .await
+}
 
-    let internal_err = |p: &Option<MPath>| {
-        let message = format!(
-            "couldn't find '{}' last change before deletion",
-            MPath::display_opt(p.as_ref())
-        );
-        Err(FastlogError::InternalError(message))
-    };
-    if let Some(deleted_entry) = deleted_entry {
-        let deleted_node = deleted_entry
-            .load(ctx.clone(), repo.blobstore())
+async fn resolve_path_state_unfold(
+    ctx: CoreContext,
+    repo: BlobRepo,
+    path: Option<MPath>,
+    mut queue: VecDeque<ChangesetId>,
+    mut visited: HashSet<ChangesetId>,
+) -> Result<
+    Option<(
+        Vec<(ChangesetId, UnodeEntry)>,
+        (VecDeque<ChangesetId>, HashSet<ChangesetId>),
+    )>,
+    FastlogError,
+> {
+    // let's get deleted manifests for each changeset id
+    // and try to find the given path
+    if let Some(cs_id) = queue.pop_front() {
+        let root_dfm_id = RootDeletedManifestId::derive(ctx.clone(), repo.clone(), cs_id.clone())
             .compat()
             .await?;
-        if let Some(linknode) = deleted_node.linknode() {
-            // the path was deleted, let's find the last unode
+        let dfm_id = root_dfm_id.deleted_manifest_id();
+        let entry =
+            deleted_manifest::find_entry(ctx.clone(), repo.get_blobstore(), *dfm_id, path.clone())
+                .compat()
+                .await?;
+
+        if let Some(mf_id) = entry {
+            // we need to get the linknode, so let's load the deleted manifest
+            // if the linknodes is None it means that file should exist
+            // but it doesn't, let's throw an error
+            let mf = mf_id.load(ctx.clone(), repo.blobstore()).compat().await?;
+            let linknode = mf.linknode().ok_or_else(|| {
+                let message = format!(
+                    "there is no unode for the path '{}' and changeset {:?}, but it exists as a live entry in deleted manifest",
+                    MPath::display_opt(path.as_ref()),
+                    cs_id,
+                );
+                FastlogError::InternalError(message)
+            })?;
+
+            // to get last change before deletion we have to look at the liknode
+            // parents for the deleted path
             let parents = repo
                 .get_changeset_parents_by_bonsai(ctx.clone(), linknode.clone())
                 .compat()
                 .await?;
-            match *parents {
+
+            // checking parent unodes
+            let parent_unodes = parents.into_iter().map({
+                cloned!(ctx, repo, path);
+                move |parent| {
+                    cloned!(ctx, repo, path);
+                    async move {
+                        let unode_entry =
+                            derive_unode_entry(&ctx, &repo, parent.clone(), &path).await?;
+                        Ok::<_, FastlogError>((parent, unode_entry))
+                    }
+                }
+            });
+            let parent_unodes = future::try_join_all(parent_unodes).await?;
+            return match *parent_unodes {
                 [] => {
                     // the linknode must have a parent, otherwise the path couldn't be deleted
-                    return internal_err(path);
+                    let message = format!(
+                        "the path '{}' was deleted in {:?}, but the changeset doesn't have parents",
+                        MPath::display_opt(path.as_ref()),
+                        linknode,
+                    );
+                    Err(FastlogError::InternalError(message))
                 }
-                [parent] => {
-                    let unode_entry = derive_unode_entry(ctx, repo, parent, path).await?;
+                [(_parent, unode_entry)] => {
                     if let Some(unode_entry) = unode_entry {
                         // we've found the last path change before deletion
-                        return Ok(Some(PathState::Deleted(*linknode, unode_entry)));
+                        Ok(Some((vec![(linknode, unode_entry)], (queue, visited))))
+                    } else {
+                        // the unode entry must exist
+                        let message = format!(
+                            "the path '{}' was deleted in {:?}, but the parent changeset doesn't have a unode",
+                            MPath::display_opt(path.as_ref()),
+                            linknode,
+                        );
+                        Err(FastlogError::InternalError(message))
                     }
-
-                    // the unode entry must exist
-                    return internal_err(path);
                 }
-                [..] => {
-                    // merged repos are not supported yet
-                    return Ok(None);
+                _ => {
+                    let mut last_changes = vec![];
+                    for (parent, unode_entry) in parent_unodes.into_iter() {
+                        if let Some(unode_entry) = unode_entry {
+                            // this is one of the last changes
+                            last_changes.push((linknode, unode_entry));
+                        } else {
+                            // the path could have been already deleted here
+                            // need to add this node into the queue
+                            if visited.insert(parent.clone()) {
+                                queue.push_back(parent);
+                            }
+                        }
+                    }
+                    Ok(Some((last_changes, (queue, visited))))
                 }
-            }
-        } else {
-            // there is an entry in the deleted manifest but the path hasn't been deleted
-            return Ok(None);
+            };
         }
+
+        // the path was not deleted here, but could be deleted in other branches
+        return Ok(Some((vec![], (queue, visited))));
     }
 
     Ok(None)
@@ -788,6 +894,139 @@ mod test {
             .commit()
             .await?;
         assert_eq!(history(bcs_id.clone(), path("dir")).await?, vec![bcs_id]);
+
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_list_history_merged_deleted(fb: FacebookInit) -> Result<(), Error> {
+        //
+        //     L
+        //     |
+        //     K
+        //     | \
+        //     J  H
+        //     |  |
+        //     I  G
+        //     |  | \
+        //     C  D  F
+        //     | /   |
+        //     B     E
+        //     |
+        //     A
+        //
+        let repo = new_memblob_empty(None).unwrap();
+        let ctx = CoreContext::test_mock(fb);
+
+        let a = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("file", "1")
+            .commit()
+            .await?;
+
+        let b = CreateCommitContext::new(&ctx, &repo, vec![a.clone()])
+            .add_file("file", "1->2")
+            .add_file("dir_1/file_1", "sub file 1")
+            .add_file("dir_1/file_2", "sub file 2")
+            .commit()
+            .await?;
+
+        let c = CreateCommitContext::new(&ctx, &repo, vec![b.clone()])
+            .add_file("file", "1->2->3")
+            .add_file("dir/file", "a")
+            .add_file("dir_1/file_1", "sub file 1 amend")
+            .commit()
+            .await?;
+
+        let d = CreateCommitContext::new(&ctx, &repo, vec![b.clone()])
+            .delete_file("file")
+            .add_file("dir/file", "b")
+            .add_file("dir_1/file_2", "sub file 2 amend")
+            .commit()
+            .await?;
+
+        let e = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("file", "another 1")
+            .commit()
+            .await?;
+
+        let f = CreateCommitContext::new(&ctx, &repo, vec![e.clone()])
+            .add_file("file", "another 1 -> 2")
+            .commit()
+            .await?;
+
+        let g = CreateCommitContext::new(&ctx, &repo, vec![d.clone(), f.clone()])
+            .delete_file("file")
+            .delete_file("dir/file")
+            .delete_file("dir_1/file_2")
+            .commit()
+            .await?;
+
+        let h = CreateCommitContext::new(&ctx, &repo, vec![g.clone()])
+            .add_file("file-2", "smth")
+            .commit()
+            .await?;
+
+        let i = CreateCommitContext::new(&ctx, &repo, vec![c.clone()])
+            .delete_file("file")
+            .delete_file("dir/file")
+            .delete_file("dir_1/file_1")
+            .commit()
+            .await?;
+
+        let j = CreateCommitContext::new(&ctx, &repo, vec![i.clone()])
+            .add_file("file-3", "smth-2")
+            .commit()
+            .await?;
+
+        let k = CreateCommitContext::new(&ctx, &repo, vec![j.clone(), h.clone()])
+            .delete_file("file")
+            .delete_file("dir_1/file_1")
+            .delete_file("dir_1/file_2")
+            .commit()
+            .await?;
+
+        let l = CreateCommitContext::new(&ctx, &repo, vec![k.clone()])
+            .add_file("file-4", "smth-3")
+            .commit()
+            .await?;
+
+        let history = |cs_id, path| {
+            cloned!(ctx, repo);
+            async move {
+                let terminator = Some(|_cs_id| future::ready(Ok(false)));
+                let history_stream =
+                    list_file_history(ctx.clone(), repo.clone(), path, cs_id, terminator).await?;
+                history_stream.try_collect::<Vec<_>>().await
+            }
+        };
+
+        let expected = vec![
+            i.clone(),
+            g.clone(),
+            d.clone(),
+            c.clone(),
+            f.clone(),
+            b.clone(),
+            e.clone(),
+            a.clone(),
+        ];
+        assert_eq!(history(l.clone(), path("file")).await?, expected);
+
+        let expected = vec![i.clone(), g.clone(), c.clone(), d.clone()];
+        assert_eq!(history(l.clone(), path("dir/file")).await?, expected);
+
+        let expected = vec![k.clone(), i.clone(), b.clone(), c.clone()];
+        assert_eq!(history(l.clone(), path("dir_1/file_1")).await?, expected);
+
+        let expected = vec![
+            k.clone(),
+            i.clone(),
+            g.clone(),
+            c.clone(),
+            d.clone(),
+            b.clone(),
+        ];
+        assert_eq!(history(l.clone(), path("dir_1")).await?, expected);
 
         Ok(())
     }
