@@ -8,6 +8,7 @@
 #include "eden/fs/inodes/InodeTimestamps.h"
 
 #include <folly/Portability.h>
+#include <folly/Utility.h>
 #include <gtest/gtest.h>
 
 using namespace facebook::eden;
@@ -153,9 +154,10 @@ TEST(EdenTimestamp, throws_on_overflow_if_desired) {
       std::overflow_error);
 }
 
-template <int By>
+template <int64_t By>
 inline uint64_t shl(uint64_t u) {
-  return (By < 0) ? u >> -By : u << By;
+  return (By < 0) ? (u >> folly::to_unsigned(-By))
+                  : (u << folly::to_unsigned(By));
 }
 
 TEST(EdenTimestamp, semi_exhaustive_round_trip) {
