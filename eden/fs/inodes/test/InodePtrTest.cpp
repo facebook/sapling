@@ -40,11 +40,15 @@ class InodePtrTestHelper {
 #define EXPECT_REFCOUNT(expected, inodePtr) \
   EXPECT_EQ(expected, InodePtrTestHelper::getRefcount(inodePtr))
 
-// The refcount for the root should be 3:
+// The refcount for the root should be 3 (2 for Windows):
 // - The InodeMap keeps 1 reference to the root inode
-// - The .eden inode holds another
+// - The .eden inode holds another, except on Windows
 // - We hold a third reference during the tests below
+#ifndef _WIN32
 static constexpr size_t kRootRefCount = 3;
+#else
+static constexpr size_t kRootRefCount = 2;
+#endif
 
 TEST(InodePtr, constructionAndAssignment) {
   TestMount testMount{FakeTreeBuilder{}};

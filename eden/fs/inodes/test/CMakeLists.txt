@@ -11,6 +11,7 @@ add_executable(
     InodeBaseTest.cpp
     InodeLoaderTest.cpp
     InodeMapTest.cpp
+    InodePtrTest.cpp
     TreeInodeTest.cpp
 )
 
