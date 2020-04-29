@@ -176,11 +176,28 @@ TreeInode::TreeInode(
 
 TreeInode::~TreeInode() {}
 
+folly::Future<struct stat> TreeInode::stat() {
+  auto st = getMount()->initStatData();
+  st.st_ino = folly::to_narrow(getNodeId().get());
+  auto contents = contents_.rlock();
+
 #ifndef _WIN32
-folly::Future<Dispatcher::Attr> TreeInode::getattr() {
-  return getAttrLocked(contents_.rlock()->entries);
+  getMetadataLocked(contents->entries).applyToStat(st);
+#endif
+
+  // For directories, nlink is the number of entries including the
+  // "." and ".." links.
+#ifndef _WIN32
+  st.st_nlink = contents->entries.size() + 2;
+#else
+  st.st_nlink =
+      folly::to_narrow(folly::to_signed(contents->entries.size() + 2));
+#endif
+
+  return st;
 }
 
+#ifndef _WIN32
 Dispatcher::Attr TreeInode::getAttrLocked(const DirContents& contents) {
   Dispatcher::Attr attr(getMount()->initStatData());
 
@@ -3536,7 +3553,7 @@ void TreeInode::prefetch() {
                         entry,
                         pendingLoads,
                         ObjectFetchContext::getNullContext())
-                    .thenValue([](InodePtr inode) { return inode->getattr(); })
+                    .thenValue([](InodePtr inode) { return inode->stat(); })
                     .unit());
           }
         }

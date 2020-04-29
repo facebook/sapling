@@ -599,9 +599,9 @@ TEST(EdenMount, setOwnerChangesTakeEffect) {
   edenMount->setOwner(uid, gid);
 
   auto fileInode = testMount.getFileInode("dir/file.txt");
-  auto attr = fileInode->getattr().get(0ms);
-  EXPECT_EQ(attr.st.st_uid, uid);
-  EXPECT_EQ(attr.st.st_gid, gid);
+  auto st = fileInode->stat().get(0ms);
+  EXPECT_EQ(st.st_uid, uid);
+  EXPECT_EQ(st.st_gid, gid);
 }
 
 class ChownTest : public ::testing::Test {
@@ -626,9 +626,9 @@ class ChownTest : public ::testing::Test {
   }
 
   void expectChownSucceeded() {
-    auto attr = testMount_->getFileInode("file.txt")->getattr().get(0ms);
-    EXPECT_EQ(attr.st.st_uid, uid);
-    EXPECT_EQ(attr.st.st_gid, gid);
+    auto st = testMount_->getFileInode("file.txt")->stat().get(0ms);
+    EXPECT_EQ(st.st_uid, uid);
+    EXPECT_EQ(st.st_gid, gid);
   }
 
   bool invalidatedFileInode(InodeNumber fileIno) {

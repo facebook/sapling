@@ -73,12 +73,15 @@ InodeBase::~InodeBase() {
              << ") destroyed: " << getLogPath();
 }
 
+folly::Future<struct stat> InodeBase::stat() {
 #ifndef _WIN32
-// See Dispatcher::getattr
-folly::Future<Dispatcher::Attr> InodeBase::getattr() {
   FUSELL_NOT_IMPL();
+#else
+  NOT_IMPLEMENTED();
+#endif
 }
 
+#ifndef _WIN32
 folly::Future<folly::Unit> InodeBase::setxattr(
     folly::StringPiece /*name*/,
     folly::StringPiece /*value*/,

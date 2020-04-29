@@ -102,10 +102,10 @@ class InodeBase {
     return mount_;
   }
 
-#ifndef _WIN32
-  // See Dispatcher::getattr
-  virtual folly::Future<Dispatcher::Attr> getattr();
+  // See EdenDispatcher::getattr
+  virtual folly::Future<struct stat> stat() = 0;
 
+#ifndef _WIN32
   // See Dispatcher::setattr
   virtual folly::Future<Dispatcher::Attr> setattr(
       const fuse_setattr_in& attr) = 0;

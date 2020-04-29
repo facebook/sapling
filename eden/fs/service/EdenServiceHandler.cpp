@@ -772,7 +772,6 @@ folly::SemiFuture<std::unique_ptr<std::vector<FileInformationOrError>>>
 EdenServiceHandler::semifuture_getFileInformation(
     std::unique_ptr<std::string> mountPoint,
     std::unique_ptr<std::vector<std::string>> paths) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*paths));
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
@@ -781,20 +780,19 @@ EdenServiceHandler::semifuture_getFileInformation(
                         rootInode,
                         *paths,
                         [](InodePtr inode) {
-                          return inode->getattr().thenValue(
-                              [](Dispatcher::Attr attr) {
-                                FileInformation info;
-                                info.size = attr.st.st_size;
-                                auto ts = stMtime(attr.st);
-                                info.mtime.seconds = ts.tv_sec;
-                                info.mtime.nanoSeconds = ts.tv_nsec;
-                                info.mode = attr.st.st_mode;
+                          return inode->stat().thenValue([](struct stat st) {
+                            FileInformation info;
+                            info.size = st.st_size;
+                            auto ts = stMtime(st);
+                            info.mtime.seconds = ts.tv_sec;
+                            info.mtime.nanoSeconds = ts.tv_nsec;
+                            info.mode = st.st_mode;
 
-                                FileInformationOrError result;
-                                result.set_info(info);
+                            FileInformationOrError result;
+                            result.set_info(info);
 
-                                return result;
-                              });
+                            return result;
+                          });
                         }))
       .deferValue([](vector<Try<FileInformationOrError>>&& done) {
         auto out = std::make_unique<vector<FileInformationOrError>>();
@@ -810,9 +808,6 @@ EdenServiceHandler::semifuture_getFileInformation(
         }
         return out;
       });
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::glob(

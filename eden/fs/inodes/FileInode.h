@@ -148,7 +148,6 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       const InodeTimestamps& initialTimestamps);
 
 #ifndef _WIN32
-  folly::Future<Dispatcher::Attr> getattr() override;
   folly::Future<Dispatcher::Attr> setattr(const fuse_setattr_in& attr) override;
 
   /// Throws InodeError EINVAL if inode is not a symbolic node.
@@ -247,9 +246,9 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
 
   void fsync(bool datasync);
 
-  folly::Future<struct stat> stat();
-
 #endif // !_WIN32
+
+  folly::Future<struct stat> stat() override;
 
  private:
   using State = FileInodeState;
@@ -405,19 +404,20 @@ class FileInode final : public InodeBaseMetadata<FileInodeState> {
       const struct iovec* iov,
       size_t numIovecs,
       off_t off);
+#endif // !_WIN32
 
   /**
    * Update the st_blocks field in a stat structure based on the st_size value.
    */
   static void updateBlockCount(struct stat& st);
-#else
 
+#ifdef _WIN32
   /**
    * The getMaterializedFilePath() will return the Absolute path to the file in
    * the ProjectedFS cache.
    */
   AbsolutePath getMaterializedFilePath();
-#endif // !_WIN32
+#endif // _WIN32
 
   folly::Synchronized<State> state_;
 

@@ -433,15 +433,6 @@ FileInode::FileInode(
       state_(folly::in_place) {}
 
 #ifndef _WIN32
-folly::Future<Dispatcher::Attr> FileInode::getattr() {
-  // Future optimization opportunity: right now, if we have not already
-  // materialized the data from the entry, we have to materialize it
-  // from the store.  If we augmented our metadata we could avoid this,
-  // and this would speed up operations like `ls`.
-  return stat().thenValue(
-      [](const struct stat& st) { return Dispatcher::Attr{st}; });
-}
-
 folly::Future<Dispatcher::Attr> FileInode::setattr(
     const fuse_setattr_in& attr) {
   // If this file is inside of .eden it cannot be reparented, so getParentRacy()
@@ -665,7 +656,6 @@ Future<Hash> FileInode::getSha1(ObjectFetchContext& fetchContext) {
   XLOG(FATAL) << "FileInode in illegal state: " << state->tag;
 }
 
-#ifndef _WIN32
 folly::Future<struct stat> FileInode::stat() {
   auto st = getMount()->initStatData();
   st.st_nlink = 1; // Eden does not support hard links yet.
@@ -675,7 +665,9 @@ folly::Future<struct stat> FileInode::stat() {
 
   auto state = LockedState{this};
 
+#ifndef _WIN32
   getMetadataLocked(*state).applyToStat(st);
+#endif
 
   switch (state->tag) {
     case State::BLOB_NOT_LOADING:
@@ -694,7 +686,19 @@ folly::Future<struct stat> FileInode::stat() {
           });
 
     case State::MATERIALIZED_IN_OVERLAY:
+#ifdef _WIN32
+      auto filePath = getPath();
+      if (!filePath.has_value()) {
+        throw InodeError(ENOENT, inodePtrFromThis(), "not a symlink");
+      }
+      AbsolutePath pathToFile = getMount()->getPath() + filePath.value();
+      struct stat targetStat;
+      if (::stat(pathToFile.c_str(), &targetStat) == 0) {
+        st.st_size = targetStat.st_size;
+      }
+#else
       st.st_size = getOverlayFileAccess(state)->getFileSize(*this);
+#endif
       updateBlockCount(st);
       return st;
   }
@@ -704,13 +708,17 @@ folly::Future<struct stat> FileInode::stat() {
 }
 
 void FileInode::updateBlockCount(struct stat& st) {
+  // win32 does not have stat::st_blocks
+#ifndef _WIN32
   // Compute a value to store in st_blocks based on st_size.
   // Note that st_blocks always refers to 512 byte blocks, regardless of the
   // value we report in st.st_blksize.
   static constexpr off_t kBlockSize = 512;
   st.st_blocks = ((st.st_size + kBlockSize - 1) / kBlockSize);
+#endif
 }
 
+#ifndef _WIN32
 void FileInode::fsync(bool datasync) {
   auto state = LockedState{this};
   if (state->isMaterialized()) {

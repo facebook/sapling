@@ -1360,25 +1360,27 @@ void EdenMount::fuseInitSuccessful(
       });
 }
 
-struct stat EdenMount::initStatData() const {
-  struct stat st = {};
-
-  auto owner = getOwner();
-  st.st_uid = owner.uid;
-  st.st_gid = owner.gid;
-  // We don't really use the block size for anything.
-  // 4096 is fairly standard for many file systems.
-  st.st_blksize = 4096;
-
-  return st;
-}
-
 InodeMetadata EdenMount::getInitialInodeMetadata(mode_t mode) const {
   auto owner = getOwner();
   return InodeMetadata{
       mode, owner.uid, owner.gid, InodeTimestamps{getLastCheckoutTime()}};
 }
 #endif
+
+struct stat EdenMount::initStatData() const {
+  struct stat st = {};
+
+  auto owner = getOwner();
+  st.st_uid = owner.uid;
+  st.st_gid = owner.gid;
+#ifndef _WIN32
+  // We don't really use the block size for anything.
+  // 4096 is fairly standard for many file systems.
+  st.st_blksize = 4096;
+#endif
+
+  return st;
+}
 
 namespace {
 Future<Unit> ensureDirectoryExistsHelper(

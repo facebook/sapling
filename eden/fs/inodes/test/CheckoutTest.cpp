@@ -360,15 +360,15 @@ void testModifyFile(
 
   loadInodes(testMount, path, loadType, contents1, perms1);
 
-#ifndef _WIN32
   optional<struct stat> preStat;
   // If we were supposed to load this inode before the checkout,
   // also store its stat information so we can compare it after the checkout.
   if (loadType == LoadBehavior::INODE || loadType == LoadBehavior::ALL) {
     auto preInode = testMount.getFileInode(path);
-    preStat = preInode->getattr().get(10ms).st;
+    auto st = preInode->stat().get(10ms);
+    EXPECT_EQ(st.st_size, contents1.size());
+    preStat = st;
   }
-#endif
 
   testMount.getClock().advance(10min);
   auto checkoutStart = testMount.getClock().getTimePoint();
@@ -383,10 +383,12 @@ void testModifyFile(
   auto postInode = testMount.getFileInode(path);
   EXPECT_FILE_INODE(postInode, contents2, perms2);
 
-#ifndef _WIN32
   // Check the stat() information on the inode.
+  auto postStat = postInode->stat().get(10ms);
+  EXPECT_EQ(postStat.st_size, contents2.size());
   // The timestamps should not be earlier than when the checkout started.
-  auto postStat = postInode->getattr().get(10ms).st;
+  // We don't populate timestamps in the FileInode yet on win32
+#ifndef _WIN32
   EXPECT_GE(stAtimepoint(postStat), checkoutStart);
   EXPECT_GE(stMtimepoint(postStat), checkoutStart);
   EXPECT_GE(stCtimepoint(postStat), checkoutStart);

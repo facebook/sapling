@@ -70,7 +70,8 @@ bool operator==(const timespec& ts, std::chrono::system_clock::time_point tp) {
 namespace {
 
 Dispatcher::Attr getFileAttr(const FileInodePtr& inode) {
-  auto attrFuture = inode->getattr();
+  auto attrFuture = inode->stat().thenValue(
+      [](struct stat st) { return Dispatcher::Attr{st}; });
   // We unfortunately can't use an ASSERT_* check here, since it tries
   // to return from the function normally, rather than throwing.
   if (!attrFuture.isReady()) {
