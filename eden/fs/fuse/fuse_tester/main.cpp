@@ -21,6 +21,7 @@
 #include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
 #include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/telemetry/EdenStats.h"
+#include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 
@@ -131,8 +132,7 @@ int main(int argc, char** argv) {
   XLOG(INFO) << "FUSE started";
 
   auto stopData = std::move(completionFuture).get();
-  XLOG(INFO) << "FUSE channel done; stop_reason="
-             << static_cast<int>(stopData.reason);
+  XLOG(INFO) << "FUSE channel done; stop_reason=" << enumValue(stopData.reason);
 
   return EX_OK;
 }

@@ -9,6 +9,7 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/EnumValue.h"
 
 namespace {
 /// Throttle change checks to a maximum of one per
@@ -45,7 +46,7 @@ std::shared_ptr<const EdenConfig> ReloadableConfig::getEdenConfig(
       break;
     }
     default:
-      EDEN_BUG() << "Unexpected reload flag: " << static_cast<int>(reload);
+      EDEN_BUG() << "Unexpected reload flag: " << enumValue(reload);
   }
 
   if (!shouldReload) {

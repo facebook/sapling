@@ -19,6 +19,7 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/config/FileChangeMonitor.h"
+#include "eden/fs/utils/EnumValue.h"
 
 #ifdef _WIN32
 #include "eden/fs/win/utils/Stub.h" // @manual
@@ -87,7 +88,7 @@ std::string EdenConfig::toString(facebook::eden::ConfigSource cs) const {
       return systemConfigPath_.c_str();
   }
   throw std::invalid_argument(
-      folly::to<string>("invalid config source value: ", static_cast<int>(cs)));
+      folly::to<string>("invalid config source value: ", enumValue(cs)));
 }
 
 std::string EdenConfig::toString() const {

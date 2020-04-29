@@ -13,6 +13,7 @@
 #include <folly/String.h>
 
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/EnumValue.h"
 
 namespace facebook {
 namespace eden {
@@ -58,7 +59,7 @@ folly::StringPiece RequestMetricsScope::stringOfRequestMetric(
     case RequestMetric::MAX_DURATION_US:
       return "max_duration_us";
   }
-  EDEN_BUG() << "unknown metric " << static_cast<int>(metric);
+  EDEN_BUG() << "unknown metric " << enumValue(metric);
 }
 
 folly::StringPiece RequestMetricsScope::stringOfHgImportStage(
@@ -108,7 +109,7 @@ size_t RequestMetricsScope::getMetricFromWatches(
               getMaxDuration(watches))
               .count());
   }
-  EDEN_BUG() << "unknown metric " << static_cast<int>(metric);
+  EDEN_BUG() << "unknown metric " << enumValue(metric);
 }
 
 RequestMetricsScope::DefaultRequestDuration RequestMetricsScope::getMaxDuration(

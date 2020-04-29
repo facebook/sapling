@@ -7,9 +7,8 @@
 
 #include "eden/fs/model/TreeEntry.h"
 
-#ifdef _WIN32
 #include "eden/fs/utils/DirType.h"
-#endif
+#include "eden/fs/utils/EnumValue.h"
 
 #include <folly/Conv.h>
 #include <folly/Range.h>
@@ -38,7 +37,7 @@ mode_t modeFromTreeEntryType(TreeEntryType ft) {
       return S_IFLNK | 0755;
 #endif
   }
-  XLOG(FATAL) << "illegal file type " << static_cast<int>(ft);
+  XLOG(FATAL) << "illegal file type " << enumValue(ft);
 }
 
 std::optional<TreeEntryType> treeEntryTypeFromMode(mode_t mode) {

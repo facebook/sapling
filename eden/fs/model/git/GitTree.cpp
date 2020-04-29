@@ -15,6 +15,7 @@
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
+#include "eden/fs/utils/EnumValue.h"
 
 using folly::IOBuf;
 using std::invalid_argument;
@@ -85,13 +86,11 @@ std::unique_ptr<Tree> deserializeGitTree(
     } else if (mode == GitModeMask::GIT_LINK) {
       throw std::domain_error(folly::sformat(
           "Gitlinks are not currently supported: {:o} in object {}",
-          static_cast<int>(mode),
+          mode,
           hash.toString()));
     } else {
       throw invalid_argument(folly::sformat(
-          "Unrecognized mode: {:o} in object {}",
-          static_cast<int>(mode),
-          hash.toString()));
+          "Unrecognized mode: {:o} in object {}", mode, hash.toString()));
     }
 
     entries.emplace_back(Hash(hashBytes), std::move(name), fileType);
@@ -171,7 +170,7 @@ void GitTreeSerializer::addEntry(const TreeEntry& entry) {
   if (!mode) {
     throw std::runtime_error(folly::to<string>(
         "unsupported entry type ",
-        static_cast<int>(entry.getType()),
+        enumValue(entry.getType()),
         " for ",
         entry.getName().stringPiece()));
   }

@@ -35,6 +35,7 @@
 #include "eden/fs/store/hg/HgProxyHash.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/LazyInitialize.h"
 #include "eden/fs/utils/SSLContext.h"
 #include "eden/fs/utils/ServiceAddress.h"
@@ -827,7 +828,7 @@ folly::StringPiece HgBackingStore::stringOfHgImportObject(
     case HgImportObject::PREFETCH:
       return "prefetch";
   }
-  EDEN_BUG() << "unknown hg import object " << static_cast<int>(object);
+  EDEN_BUG() << "unknown hg import object " << enumValue(object);
 }
 
 RequestMetricsScope::LockedRequestWatchList&
@@ -840,7 +841,7 @@ HgBackingStore::getLiveImportWatches(HgImportObject object) const {
     case HgImportObject::PREFETCH:
       return liveImportPrefetchWatches_;
   }
-  EDEN_BUG() << "unknown hg import object " << static_cast<int>(object);
+  EDEN_BUG() << "unknown hg import object " << enumValue(object);
 }
 
 void HgBackingStore::periodicManagementTask() {

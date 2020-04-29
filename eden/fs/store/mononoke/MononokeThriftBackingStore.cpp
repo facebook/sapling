@@ -7,15 +7,14 @@
 
 #include "eden/fs/store/mononoke/MononokeThriftBackingStore.h"
 #include <folly/executors/GlobalExecutor.h>
-
-#include <eden/mononoke/apiserver/gen-cpp2/MononokeAPIServiceAsyncClient.h>
-#include <eden/mononoke/apiserver/gen-cpp2/apiserver_types.h>
 #include <folly/logging/xlog.h>
 #include <servicerouter/client/cpp2/ServiceRouter.h>
-
 #include "eden/fs/model/Blob.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
+#include "eden/fs/utils/EnumValue.h"
+#include "eden/mononoke/apiserver/gen-cpp2/MononokeAPIServiceAsyncClient.h"
+#include "eden/mononoke/apiserver/gen-cpp2/apiserver_types.h"
 
 using eden::mononoke::apiserver::thrift::MononokeAPIServiceAsyncClient;
 using eden::mononoke::apiserver::thrift::MononokeBlob;
@@ -44,7 +43,7 @@ TreeEntryType treeEntryTypeFromMononoke(MononokeFileType type) {
       return TreeEntryType::SYMLINK;
   }
 
-  XLOG(WARNING) << "Unexpected Mononoke file type: " << static_cast<int>(type);
+  XLOG(WARNING) << "Unexpected Mononoke file type: " << enumValue(type);
   return TreeEntryType::REGULAR_FILE;
 }
 } // namespace

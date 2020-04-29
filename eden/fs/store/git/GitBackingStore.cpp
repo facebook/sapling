@@ -18,6 +18,7 @@
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/model/git/GitTree.h"
 #include "eden/fs/store/LocalStore.h"
+#include "eden/fs/utils/EnumValue.h"
 
 using folly::ByteRange;
 using folly::IOBuf;
@@ -110,7 +111,7 @@ unique_ptr<Tree> GitBackingStore::getTreeImpl(const Hash& id) {
       // TODO: We currently don't handle GIT_FILEMODE_COMMIT
       throw std::runtime_error(folly::to<string>(
           "unknown file mode ",
-          static_cast<int>(entryMode),
+          enumValue(entryMode),
           " on file ",
           entryName,
           " in git tree ",

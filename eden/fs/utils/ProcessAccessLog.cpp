@@ -127,7 +127,9 @@ void ProcessAccessLog::Bucket::add(
 
 void ProcessAccessLog::Bucket::merge(const Bucket& other) {
   for (auto [pid, otherAccessCounts] : other.accessCountsByPid) {
-    for (int type = 0; type != static_cast<int>(AccessType::Last); type++) {
+    for (std::underlying_type_t<AccessType> type = 0;
+         type != folly::to_underlying(AccessType::Last);
+         type++) {
       accessCountsByPid[pid].counts[type] += otherAccessCounts.counts[type];
     }
     accessCountsByPid[pid].duration += otherAccessCounts.duration;

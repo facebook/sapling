@@ -9,9 +9,11 @@
 
 #include <folly/Synchronized.h>
 #include <unistd.h>
+#include <type_traits>
 
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/utils/BucketedLog.h"
+#include "eden/fs/utils/EnumValue.h"
 
 namespace facebook {
 namespace eden {
@@ -64,12 +66,13 @@ class ProcessAccessLog {
 
  private:
   struct PerBucketAccessCounts {
-    size_t counts[static_cast<int>(AccessType::Last)];
+    size_t counts[enumValue(AccessType::Last)];
     std::chrono::nanoseconds duration;
 
     size_t& operator[](AccessType type) {
-      int idx = static_cast<int>(type);
-      CHECK_LT(idx, static_cast<int>(AccessType::Last));
+      static_assert(std::is_unsigned_v<std::underlying_type_t<AccessType>>);
+      auto idx = enumValue(type);
+      CHECK_LT(idx, enumValue(AccessType::Last));
       return counts[idx];
     }
   };

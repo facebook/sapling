@@ -50,6 +50,7 @@
 #include "eden/fs/telemetry/StructuredLogger.h"
 #include "eden/fs/telemetry/StructuredLoggerFactory.h"
 #include "eden/fs/utils/Clock.h"
+#include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcUtil.h"
 
@@ -1586,7 +1587,7 @@ folly::Future<TakeoverData> EdenServer::startTakeoverShutdown() {
       return makeFuture<TakeoverData>(std::runtime_error(folly::to<string>(
           "can only perform graceful restart when running normally; "
           "current state is ",
-          static_cast<int>(state->state))));
+          enumValue(state->state))));
     }
 
     // Make a copy of the thrift server socket so we can transfer it to the

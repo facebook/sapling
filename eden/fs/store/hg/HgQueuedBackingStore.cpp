@@ -19,6 +19,7 @@
 #include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/EnumValue.h"
 
 namespace facebook {
 namespace eden {
@@ -151,7 +152,7 @@ HgQueuedBackingStore::getImportWatches(
     case RequestMetricsScope::RequestStage::LIVE:
       return backingStore_->getLiveImportWatches(object);
   }
-  EDEN_BUG() << "unknown hg import stage " << static_cast<int>(stage);
+  EDEN_BUG() << "unknown hg import stage " << enumValue(stage);
 }
 
 RequestMetricsScope::LockedRequestWatchList&

@@ -19,6 +19,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TestUtil.h"
+#include "eden/fs/utils/EnumValue.h"
 
 using folly::ByteRange;
 using folly::Future;
@@ -164,7 +165,7 @@ static TreeEntryType treeEntryTypeFromBlobType(FakeBlobType type) {
     case FakeBlobType::SYMLINK:
       return TreeEntryType::SYMLINK;
   }
-  XLOG(FATAL) << "Unknown fake blob type " << static_cast<int>(type);
+  XLOG(FATAL) << "Unknown fake blob type " << enumValue(type);
 }
 
 FakeBackingStore::TreeEntryData::TreeEntryData(

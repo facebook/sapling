@@ -22,6 +22,7 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/DirType.h"
+#include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #ifdef _WIN32
@@ -699,7 +700,7 @@ folly::Future<struct stat> FileInode::stat() {
   }
 
   return EDEN_BUG_FUTURE(struct stat)
-      << "unexpected FileInode state tag " << static_cast<int>(state->tag);
+      << "unexpected FileInode state tag " << enumValue(state->tag);
 }
 
 void FileInode::updateBlockCount(struct stat& st) {

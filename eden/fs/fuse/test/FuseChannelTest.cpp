@@ -17,6 +17,7 @@
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/testharness/FakeFuse.h"
 #include "eden/fs/testharness/TestDispatcher.h"
+#include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 
 using namespace facebook::eden;
@@ -195,7 +196,7 @@ TEST_F(FuseChannelTest, testInitUnmountRace) {
     EXPECT_TRUE(stopData.fuseDevice);
   } else {
     FAIL() << "unexpected FuseChannel stop reason: "
-           << static_cast<int>(stopData.reason);
+           << enumValue(stopData.reason);
   }
 }
 

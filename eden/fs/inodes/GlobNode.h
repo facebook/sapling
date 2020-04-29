@@ -14,6 +14,7 @@
 #include "eden/fs/model/git/GlobMatcher.h"
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/utils/DirType.h"
+#include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 namespace facebook {
@@ -164,7 +165,7 @@ inline std::ostream& operator<<(
     std::ostream& stream,
     const GlobNode::GlobResult& a) {
   stream << "GlobResult{\"" << a.name.stringPiece()
-         << "\", dtype=" << static_cast<int>(a.dtype) << "}";
+         << "\", dtype=" << enumValue(a.dtype) << "}";
   return stream;
 }
 

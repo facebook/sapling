@@ -21,6 +21,7 @@
 #include <thrift/lib/cpp2/protocol/Serializer.h>
 
 #include "eden/fs/inodes/overlay/FsOverlay.h"
+#include "eden/fs/utils/EnumValue.h"
 
 using apache::thrift::CompactSerializer;
 using folly::ByteRange;
@@ -409,7 +410,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
       }
     }
 
-    XLOG(DFATAL) << "unexpected inode type " << static_cast<int>(type_)
+    XLOG(DFATAL) << "unexpected inode type " << enumValue(type_)
                  << " when processing orphan inode " << number_;
     return false;
   }
@@ -482,7 +483,7 @@ class OverlayChecker::OrphanInode : public OverlayChecker::Error {
         return;
     }
 
-    XLOG(DFATAL) << "unexpected inode type " << static_cast<int>(info->type)
+    XLOG(DFATAL) << "unexpected inode type " << enumValue(info->type)
                  << " when processing orphan inode " << info->number;
     throw std::runtime_error("unexpected inode type");
   }
