@@ -114,6 +114,9 @@ pub fn remove_file<P: AsRef<Path>>(path: P) -> Result<()> {
 /// with incorrect permissions.
 #[cfg(unix)]
 fn create_dir_with_mode_impl(path: &Path, mode: u32) -> io::Result<()> {
+    if path.exists() {
+        return Err(io::ErrorKind::AlreadyExists.into());
+    }
     let parent = path.parent().ok_or_else(|| {
         io::Error::new(
             ErrorKind::NotFound,
