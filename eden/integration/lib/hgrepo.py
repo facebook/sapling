@@ -9,8 +9,10 @@ import datetime
 import json
 import os
 import subprocess
+import sys
 import textwrap
 import typing
+from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from eden.test_support.temporary_directory import TempFileManager
@@ -61,35 +63,60 @@ class HgRepository(repobase.Repository):
 
     @classmethod
     def get_system_hgrc_contents(cls) -> str:
-        if FindExe.is_buck_build():
-            hgrc_path = os.path.join(
-                FindExe.EDEN_SRC_ROOT, "eden/scm/fb/staticfiles/etc/mercurial"
-            )
-            platform_rc = "posix.rc"
-        else:
-            # TODO: We should ideally build fb-mercurial as a dependency with getdeps,
-            # and use the current version of hg from master as well as its configs.
-            #
-            # Currently this uses the system configs, which may be slightly out-of-date
-            # with the EdenFS code.
-            # TODO: Use the right system path here on Windows
-            hgrc_path = "/etc/mercurial"
-            # TODO: Use the right platform-sepecific config file on Windows
-            platform_rc = "posix.rc"
-
-        contents = textwrap.dedent(
+        common_suffix = textwrap.dedent(
             f"""
-            %include {hgrc_path}/facebook.rc
-            %include {hgrc_path}/tier-specific/{platform_rc}
-            %include {hgrc_path}/tier-specific/client.rc
-
             # Override ui.merge to make sure it does not get set
             # to something that tries to prompt for user input.
             [ui]
             merge = :merge
             """
         )
-        return contents
+
+        hgrc_dir = cls.find_hgrc_dir_from_repo()
+        if hgrc_dir is not None:
+            if sys.platform == "win32":
+                platform_rc = "windows.rc"
+            else:
+                platform_rc = "posix.rc"
+            return (
+                textwrap.dedent(
+                    f"""
+                %include {hgrc_dir}/facebook.rc
+                %include {hgrc_dir}/tier-specific/{platform_rc}
+                %include {hgrc_dir}/tier-specific/client.rc
+                """
+                )
+                + common_suffix
+            )
+
+        # If we could not find configs in the repository, just use the default
+        # configuration installed on the system.  This is somewhat less than ideal,
+        # since it means the test behavior will depend on the currently installed
+        # Mercurial version, but it's the best we can do.
+        if sys.platform == "win32":
+            system_hgrc = os.path.join(
+                os.environ["PROGRAMDATA"], "Facebook", "Mercurial", "system.rc"
+            )
+        else:
+            system_hgrc = "/etc/mercurial/system.rc"
+        if not os.path.exists(system_hgrc):
+            raise Exception("unable to find the Mercurial system config file")
+
+        return "%include {system_hgrc}\n" + common_suffix
+
+    @classmethod
+    def find_hgrc_dir_from_repo(cls) -> Optional[Path]:
+        hgrc_dir = Path(FindExe.EDEN_SRC_ROOT) / "eden/scm/fb/staticfiles/etc/mercurial"
+        facebook_rc = hgrc_dir / "facebook.rc"
+        if os.path.exists(facebook_rc):
+            return hgrc_dir
+
+        if FindExe.is_buck_build():
+            # Buck-based builds should always find the hgrc files above.
+            # Only external CMake-based builds won't find the above config files.
+            raise Exception("unable to find Mercurial config files in the repository")
+
+        return None
 
     def run_hg(
         self,
