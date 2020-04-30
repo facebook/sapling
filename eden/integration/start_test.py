@@ -138,28 +138,18 @@ class DirectInvokeTest(unittest.TestCase):
         blacklist.skip_test_if_blacklisted(self, self._testMethodName)
         super().setUp()
 
-    def test_no_args(self) -> None:
-        """Directly invoking edenfs with no arguments should fail."""
-        self._check_error([])
-
     def test_eden_cmd_arg(self) -> None:
-        """Directly invoking edenfs with an eden command should fail."""
-        self._check_error(["restart"])
-
-    def _check_error(self, args: List[str], err: Optional[str] = None) -> None:
-        cmd: List[str] = [FindExe.EDEN_DAEMON]  # pyre-ignore[9]: T38947910
-        cmd.extend(args)
+        """Directly invoking edenfs with an edenfsctl subcommand should fail."""
+        cmd: List[str] = [FindExe.EDEN_DAEMON, "restart"]  # pyre-ignore[9]: T38947910
         out = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         self.assertEqual(os.EX_USAGE, out.returncode)
         self.assertEqual(b"", out.stdout)
 
-        if err is None:
-            err = """\
-error: the edenfs daemon should not normally be invoked manually
-Did you mean to run "eden" instead of "edenfs"?
-"""
+        expected_err = "error: unexpected trailing command line arguments\n"
         self.maxDiff = 5000
-        self.assertMultiLineEqual(err, out.stderr.decode("utf-8", errors="replace"))
+        self.assertMultiLineEqual(
+            expected_err, out.stderr.decode("utf-8", errors="replace")
+        )
 
 
 class StartFakeEdenFSTestBase(ServiceTestCaseBase):
