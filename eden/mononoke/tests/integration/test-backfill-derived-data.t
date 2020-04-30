@@ -22,19 +22,14 @@ setup configuration
 
 backfill derived data
   $ DERIVED_DATA_TYPE="fsnodes"
-  $ "$MONONOKE_BACKFILL_DERIVED_DATA" "${COMMON_ARGS[@]}" --mononoke-config-path "${TESTTMP}/mononoke-config" \
-  > --repo-id 0 prefetch-commits \
-  > --out-filename $TESTTMP/prefetched_commits
+  $ backfill_derived_data prefetch-commits --out-filename "$TESTTMP/prefetched_commits"
   * using repo "repo" repoid RepositoryId(0) (glob)
 
-  $ "$MONONOKE_BACKFILL_DERIVED_DATA" "${COMMON_ARGS[@]}" --mononoke-config-path "${TESTTMP}/mononoke-config" \
-  > --repo-id 0 backfill \
-  > --prefetched-commits-path $TESTTMP/prefetched_commits "$DERIVED_DATA_TYPE"
+  $ backfill_derived_data backfill --prefetched-commits-path "$TESTTMP/prefetched_commits" "$DERIVED_DATA_TYPE"
   * using repo "repo" repoid RepositoryId(0) (glob)
   * reading all changesets for: RepositoryId(0) (glob)
   * starting deriving data for 3 changesets (glob)
   * 3/3 estimate:* speed:* mean_speed:* (glob)
 
-  $ "$MONONOKE_ADMIN" "${COMMON_ARGS[@]}" --log-level ERROR --mononoke-config-path "$TESTTMP"/mononoke-config \
-  > --repo-id="0" derived-data exists "$DERIVED_DATA_TYPE" master_bookmark
+  $ mononoke_admin --log-level ERROR derived-data exists "$DERIVED_DATA_TYPE" master_bookmark
   Derived: c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd

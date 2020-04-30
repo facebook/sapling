@@ -785,7 +785,7 @@ CONFIG
 else
   cat >> "repos/$reponame/server.toml" <<CONFIG
 [derived_data_config]
-derived_data_types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes"]
+derived_data_types=["blame", "changeset_info", "deleted_manifest", "fastlog", "filenodes", "fsnodes", "unodes", "hgchangesets"]
 CONFIG
 fi
 }
@@ -1609,6 +1609,14 @@ function microwave_builder() {
 
 function unbundle_replay() {
   "$MONONOKE_UNBUNDLE_REPLAY" \
+    "${COMMON_ARGS[@]}" \
+    --repo-id "$REPOID" \
+    --mononoke-config-path "${TESTTMP}/mononoke-config" \
+    "$@"
+}
+
+function backfill_derived_data() {
+  "$MONONOKE_BACKFILL_DERIVED_DATA" \
     "${COMMON_ARGS[@]}" \
     --repo-id "$REPOID" \
     --mononoke-config-path "${TESTTMP}/mononoke-config" \

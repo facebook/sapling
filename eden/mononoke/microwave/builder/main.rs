@@ -11,19 +11,28 @@ mod filenodes;
 use ::changesets::Changesets;
 use ::filenodes::Filenodes;
 use anyhow::{format_err, Error};
+use blobrepo::BlobRepo;
 use blobrepo::DangerousOverride;
 use blobrepo_factory::BlobrepoBuilder;
+use bookmarks::BookmarkName;
+use cache_warmup::{CacheWarmupRequest, CacheWarmupTarget};
 use clap::{Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, monitoring::AliveService};
-use context::SessionContainer;
+use context::{CoreContext, SessionContainer};
+use derived_data_filenodes::FilenodesOnlyPublic;
 use fbinit::FacebookInit;
 use futures::{channel::mpsc, future};
+use mercurial_derived_data::MappedHgChangesetId;
 use metaconfig_parser::RepoConfigs;
+use metaconfig_types::CacheWarmupParams;
 use microwave::{Snapshot, SnapshotLocation};
 use slog::{info, o, Logger};
 use std::path::Path;
 use std::sync::Arc;
+use warm_bookmarks_cache::{
+    create_warmer, find_all_underived_and_latest_derived, LatestDerivedBookmarkEntry,
+};
 
 use crate::changesets::MicrowaveChangesets;
 use crate::filenodes::MicrowaveFilenodes;
@@ -32,6 +41,33 @@ const SUBCOMMAND_LOCAL_PATH: &str = "local-path";
 const ARG_LOCAL_PATH: &str = "local-path";
 
 const SUBCOMMAND_BLOBSTORE: &str = "blobstore";
+
+async fn cache_warmup_target(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bookmark: &BookmarkName,
+) -> Result<CacheWarmupTarget, Error> {
+    let warmers = vec![
+        create_warmer::<MappedHgChangesetId>(&ctx),
+        create_warmer::<FilenodesOnlyPublic>(&ctx),
+    ];
+
+    match find_all_underived_and_latest_derived(ctx, repo, bookmark, &warmers)
+        .await?
+        .0
+    {
+        LatestDerivedBookmarkEntry::Found(Some((cs_id, _))) => {
+            Ok(CacheWarmupTarget::Changeset(cs_id))
+        }
+        LatestDerivedBookmarkEntry::Found(None) => {
+            Err(format_err!("Bookmark {} has no derived data", bookmark))
+        }
+        LatestDerivedBookmarkEntry::NotFound => Err(format_err!(
+            "Bookmark {} has too many underived commits",
+            bookmark
+        )),
+    }
+}
 
 async fn do_main<'a>(
     fb: FacebookInit,
@@ -91,6 +127,27 @@ async fn do_main<'a>(
                     );
                     let repo = builder.build().await?;
 
+                    // Rewind bookmarks to the point where we have derived data. Cache
+                    // warmup requires filenodes and hg changesets to be present.
+                    let req = match config.cache_warmup {
+                        Some(params) => {
+                            let CacheWarmupParams {
+                                bookmark,
+                                commit_limit,
+                                microwave_preload,
+                            } = params;
+
+                            let target = cache_warmup_target(&warmup_ctx, &repo, &bookmark).await?;
+
+                            Some(CacheWarmupRequest {
+                                target,
+                                commit_limit,
+                                microwave_preload,
+                            })
+                        }
+                        None => None,
+                    };
+
                     let repoid = config.repoid;
                     let warmup_repo = repo
                         .dangerous_override(|inner| -> Arc<dyn Filenodes> {
@@ -100,8 +157,7 @@ async fn do_main<'a>(
                             Arc::new(MicrowaveChangesets::new(repoid, changesets_sender, inner))
                         });
 
-                    cache_warmup::cache_warmup(&warmup_ctx, &warmup_repo, config.cache_warmup)
-                        .await?;
+                    cache_warmup::cache_warmup(&warmup_ctx, &warmup_repo, req).await?;
 
                     Result::<_, Error>::Ok(repo)
                 };

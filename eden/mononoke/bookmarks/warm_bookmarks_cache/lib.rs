@@ -55,12 +55,12 @@ pub type WarmerFn =
 pub type IsDerivedFn =
     dyn Fn(&CoreContext, &BlobRepo, &ChangesetId) -> BoxFuture<bool, Error> + Send + Sync + 'static;
 
-struct Warmer {
+pub struct Warmer {
     warmer: Box<WarmerFn>,
     is_derived: Box<IsDerivedFn>,
 }
 
-fn create_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer {
+pub fn create_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer {
     info!(ctx.logger(), "Warming {}", D::NAME);
     let warmer: Box<WarmerFn> = Box::new(|ctx: CoreContext, repo: BlobRepo, cs_id: ChangesetId| {
         D::derive(ctx, repo, cs_id)
@@ -184,7 +184,7 @@ async fn is_derived(
     ctx: &CoreContext,
     repo: &BlobRepo,
     cs_id: &ChangesetId,
-    warmers: &Arc<Vec<Warmer>>,
+    warmers: &[Warmer],
 ) -> bool {
     let is_derived = warmers
         .iter()
@@ -241,7 +241,7 @@ async fn move_bookmark_back_in_history_until_derived(
     }
 }
 
-enum LatestDerivedBookmarkEntry {
+pub enum LatestDerivedBookmarkEntry {
     Found(Option<(ChangesetId, Timestamp)>),
     /// Latest derived bookmark entry is too far away
     NotFound,
@@ -250,11 +250,11 @@ enum LatestDerivedBookmarkEntry {
 /// Searches bookmark log for latest entry for which everything is derived. Note that we consider log entry that
 /// deletes a bookmark to be derived. Returns this entry if it was found and changesets for all underived entries after that
 /// OLDEST ENTRIES FIRST.
-async fn find_all_underived_and_latest_derived(
+pub async fn find_all_underived_and_latest_derived(
     ctx: &CoreContext,
     repo: &BlobRepo,
     book: &BookmarkName,
-    warmers: &Arc<Vec<Warmer>>,
+    warmers: &[Warmer],
 ) -> Result<
     (
         LatestDerivedBookmarkEntry,
@@ -538,7 +538,7 @@ async fn single_bookmark_updater(
     mut staleness_reporter: impl FnMut(Timestamp),
 ) -> Result<(), Error> {
     let (latest_derived, underived_history) =
-        find_all_underived_and_latest_derived(&ctx, &repo, &bookmark, &warmers).await?;
+        find_all_underived_and_latest_derived(&ctx, &repo, &bookmark, warmers.as_ref()).await?;
 
     // TODO(stash): make configurable (T66277310)
     let delay_secs = 0;

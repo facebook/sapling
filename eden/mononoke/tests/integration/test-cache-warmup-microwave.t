@@ -23,9 +23,22 @@ Kill Mononoke
   $ kill "$MONONOKE_PID"
   $ truncate -s 0 "$TESTTMP/mononoke.out"
 
-Regenerate microwave snapshot
+Delete filenodes
 
-  $ quiet microwave_builder blobstore
+  $ sqlite3 "$TESTTMP/monsql/sqlite_dbs" "DELETE FROM filenodes;";
+
+Regenerate microwave snapshot. This will fail because we have no derived data:
+
+  $ microwave_builder --log-level ERROR blobstore
+  * Execution error: Bookmark master_bookmark has no derived data (glob)
+  Error: Execution failed
+  [1]
+
+Derive data, then regenerate microwave snapshot:
+
+  $ quiet backfill_derived_data prefetch-commits --out-filename "$TESTTMP/prefetched_commits"
+  $ quiet backfill_derived_data backfill --prefetched-commits-path "$TESTTMP/prefetched_commits" filenodes
+  $ quiet microwave_builder --debug blobstore
 
 Start Mononoke again, check that the microwave snapshot was used
 

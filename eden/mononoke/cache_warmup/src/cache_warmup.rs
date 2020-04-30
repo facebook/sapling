@@ -42,6 +42,35 @@ mod errors {
     }
 }
 
+#[derive(Debug)]
+pub enum CacheWarmupTarget {
+    Bookmark(BookmarkName),
+    Changeset(ChangesetId),
+}
+
+#[derive(Debug)]
+pub struct CacheWarmupRequest {
+    pub target: CacheWarmupTarget,
+    pub commit_limit: usize,
+    pub microwave_preload: bool,
+}
+
+impl From<CacheWarmupParams> for CacheWarmupRequest {
+    fn from(other: CacheWarmupParams) -> Self {
+        let CacheWarmupParams {
+            bookmark,
+            commit_limit,
+            microwave_preload,
+        } = other;
+
+        Self {
+            target: CacheWarmupTarget::Bookmark(bookmark),
+            commit_limit,
+            microwave_preload,
+        }
+    }
+}
+
 // Fetches all the manifest entries and their linknodes. Do not fetching files because
 // there can be too many of them.
 async fn blobstore_and_filenodes_warmup(
@@ -139,16 +168,19 @@ async fn changesets_warmup(
 async fn do_cache_warmup(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    bookmark: BookmarkName,
+    target: CacheWarmupTarget,
     commit_limit: usize,
 ) -> Result<(), Error> {
     let ctx = ctx.clone_and_reset();
 
-    let bcs_id = repo
-        .get_bonsai_bookmark(ctx.clone(), &bookmark)
-        .compat()
-        .await?
-        .ok_or_else(|| errors::ErrorKind::BookmarkNotFound(bookmark))?;
+    let bcs_id = match target {
+        CacheWarmupTarget::Bookmark(bookmark) => repo
+            .get_bonsai_bookmark(ctx.clone(), &bookmark)
+            .compat()
+            .await?
+            .ok_or_else(|| errors::ErrorKind::BookmarkNotFound(bookmark))?,
+        CacheWarmupTarget::Changeset(bcs_id) => bcs_id,
+    };
 
     let hg_cs_id = repo
         .get_hg_from_bonsai_changeset(ctx.clone(), bcs_id)
@@ -179,8 +211,8 @@ async fn do_cache_warmup(
     Ok(())
 }
 
-async fn microwave_preload(ctx: &CoreContext, repo: &BlobRepo, params: &CacheWarmupParams) {
-    if params.microwave_preload {
+async fn microwave_preload(ctx: &CoreContext, repo: &BlobRepo, req: &CacheWarmupRequest) {
+    if req.microwave_preload {
         match microwave::prime_cache(&ctx, &repo, SnapshotLocation::Blobstore).await {
             Ok(_) => {
                 warn!(ctx.logger(), "microwave: successfully primed cached");
@@ -194,15 +226,17 @@ async fn microwave_preload(ctx: &CoreContext, repo: &BlobRepo, params: &CacheWar
 
 /// Fetch all manifest entries for a bookmark, and fetches up to `commit_warmup_limit`
 /// ancestors of the bookmark.
-pub async fn cache_warmup(
+pub async fn cache_warmup<T: Into<CacheWarmupRequest>>(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    cache_warmup: Option<CacheWarmupParams>,
+    cache_warmup: Option<T>,
 ) -> Result<(), Error> {
-    if let Some(params) = cache_warmup {
-        microwave_preload(ctx, repo, &params).await;
+    if let Some(req) = cache_warmup {
+        let req = req.into();
 
-        do_cache_warmup(ctx, repo, params.bookmark, params.commit_limit)
+        microwave_preload(ctx, repo, &req).await;
+
+        do_cache_warmup(ctx, repo, req.target, req.commit_limit)
             .await
             .with_context(|| format!("while warming up repo {}", repo.get_repoid()))?;
     }
