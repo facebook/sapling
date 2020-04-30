@@ -553,6 +553,7 @@ class EdenCommandError(subprocess.CalledProcessError):
 
 
 _can_run_eden: Optional[bool] = None
+_can_run_fake_edenfs: Optional[bool] = None
 _can_run_sudo: Optional[bool] = None
 
 
@@ -572,7 +573,22 @@ def can_run_eden() -> bool:
     return can_run
 
 
-def _compute_can_run_eden() -> bool:
+def can_run_fake_edenfs() -> bool:
+    """
+    Determine if we can run the fake_edenfs helper program.
+
+    This is similar to can_run_eden(), but does not require FUSE.
+    """
+    global _can_run_fake_edenfs
+    can_run = _can_run_fake_edenfs
+    if can_run is None:
+        can_run = _compute_can_run_eden(require_fuse=False)
+        _can_run_fake_edenfs = can_run
+
+    return can_run
+
+
+def _compute_can_run_eden(require_fuse: bool = True) -> bool:
     # On Windows the only requirement is that ProjectedFS must be installed.
     # Our CMake build already verifies that during the configure phase of the build,
     # so we can simply always return True here for now.
@@ -580,7 +596,7 @@ def _compute_can_run_eden() -> bool:
         return True
 
     # FUSE must be available
-    if not os.path.exists("/dev/fuse"):
+    if require_fuse and not os.path.exists("/dev/fuse"):
         return False
 
     # We must be able to start eden as root.

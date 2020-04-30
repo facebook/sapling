@@ -16,7 +16,7 @@ from eden.fs.cli.config import EdenInstance
 from eden.fs.cli.util import HealthStatus
 from fb303_core.ttypes import fb303_status
 
-from .lib import testcase
+from .lib import blacklist, testcase
 from .lib.fake_edenfs import get_fake_edenfs_argv
 from .lib.find_executables import FindExe
 from .lib.service_test_case import (
@@ -134,6 +134,10 @@ class StartWithRepoTest(testcase.EdenRepoTest):
 
 
 class DirectInvokeTest(unittest.TestCase):
+    def setUp(self) -> None:
+        blacklist.skip_test_if_blacklisted(self, self._testMethodName)
+        super().setUp()
+
     def test_no_args(self) -> None:
         """Directly invoking edenfs with no arguments should fail."""
         self._check_error([])

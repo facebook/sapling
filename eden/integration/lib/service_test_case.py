@@ -14,6 +14,7 @@ from typing import Optional, Type
 from eden.test_support.temporary_directory import TemporaryDirectoryMixin
 from eden.test_support.testcase import EdenTestCaseBase
 
+from . import blacklist, edenclient
 from .fake_edenfs import FakeEdenFS
 from .find_executables import FindExe
 from .testcase import test_replicator
@@ -41,6 +42,7 @@ else:
         pass
 
 
+@unittest.skipIf(not edenclient.can_run_fake_edenfs(), "unable to run fake_edenfs")
 class ServiceTestCaseBase(
     EdenTestCaseBase, TemporaryDirectoryMixin, metaclass=abc.ABCMeta
 ):
@@ -52,6 +54,10 @@ class ServiceTestCaseBase(
     __etc_eden_dir: typing.Optional[pathlib.Path] = None
     __home_dir: typing.Optional[pathlib.Path] = None
     __tmp_dir: typing.Optional[pathlib.Path] = None
+
+    def setUp(self) -> None:
+        blacklist.skip_test_if_blacklisted(self, self._testMethodName)
+        super().setUp()
 
     @abc.abstractmethod
     def spawn_fake_edenfs(
