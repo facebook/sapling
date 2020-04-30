@@ -44,7 +44,7 @@ EPHEMERAL_DB_WHITELIST = {
 
 # At this time, all tests support the network blackhole (except when ephemeral
 # MySQL is used)
-NETWORK_BLACKHOLE_BLACKLIST: Set[str] = set()
+NETWORK_BLACKHOLE_BLACKLIST: Set[str] = {"test-commitcloud-forwardfiller.t"}
 
 
 def is_mode_opt_buck_binary():
