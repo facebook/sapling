@@ -139,6 +139,51 @@ StringPiece fuseOpcodeName(FuseOpcode opcode) {
   return "<unknown>";
 }
 
+ProcessAccessLog::AccessType getAccessType(FuseOpcode opcode) {
+  switch (opcode) {
+    case FUSE_GETATTR:
+    case FUSE_GETXATTR:
+    case FUSE_LOOKUP:
+    case FUSE_READ:
+    case FUSE_READDIR:
+    case FUSE_READLINK:
+    case FUSE_STATFS:
+    case FUSE_OPENDIR:
+    case FUSE_RELEASEDIR:
+    case FUSE_LISTXATTR:
+#ifdef __linux__
+    case FUSE_READDIRPLUS:
+#endif
+#ifdef __APPLE__
+    case FUSE_GETXTIMES:
+#endif
+      return ProcessAccessLog::AccessType::FuseRead;
+
+    case FUSE_CREATE:
+    case FUSE_MKDIR:
+    case FUSE_RENAME:
+    case FUSE_RMDIR:
+    case FUSE_SETATTR:
+    case FUSE_SETXATTR:
+    case FUSE_UNLINK:
+    case FUSE_WRITE:
+    case FUSE_FSYNCDIR:
+    case FUSE_FSYNC:
+    case FUSE_SYMLINK:
+    case FUSE_MKNOD:
+    case FUSE_LINK:
+    case FUSE_REMOVEXATTR:
+    case FUSE_FALLOCATE:
+#ifdef __linux__
+    case FUSE_RENAME2:
+#endif
+      return ProcessAccessLog::AccessType::FuseWrite;
+
+    default:
+      return ProcessAccessLog::AccessType::FuseOther;
+  }
+}
+
 using Handler = folly::Future<folly::Unit> (
     FuseChannel::*)(const fuse_in_header* header, const uint8_t* arg);
 
@@ -1169,15 +1214,7 @@ void FuseChannel::processSession() {
       continue;
     }
 
-    ProcessAccessLog::AccessType type;
-    if (isReadOperation(header->opcode)) {
-      type = ProcessAccessLog::AccessType::FuseRead;
-    } else if (isWriteOperation(header->opcode)) {
-      type = ProcessAccessLog::AccessType::FuseWrite;
-    } else {
-      type = ProcessAccessLog::AccessType::FuseOther;
-    }
-    processAccessLog_.recordAccess(header->pid, type);
+    processAccessLog_.recordAccess(header->pid, getAccessType(header->opcode));
 
     switch (header->opcode) {
       case FUSE_INIT:
@@ -1325,56 +1362,6 @@ void FuseChannel::processSession() {
       }
     }
   }
-}
-
-bool FuseChannel::isReadOperation(FuseOpcode op) {
-  static constexpr FuseOpcode READ_OPS[] = {
-      FUSE_GETATTR,
-      FUSE_GETXATTR,
-      FUSE_LOOKUP,
-      FUSE_READ,
-      FUSE_READDIR,
-      FUSE_READLINK,
-      FUSE_STATFS,
-      FUSE_OPENDIR,
-      FUSE_RELEASEDIR,
-      FUSE_LISTXATTR,
-#ifdef __linux__
-      FUSE_READDIRPLUS,
-#endif
-#ifdef __APPLE__
-      FUSE_GETXTIMES,
-#endif
-  };
-
-  auto it = std::find(std::begin(READ_OPS), std::end(READ_OPS), op);
-  return it != std::end(READ_OPS);
-}
-
-bool FuseChannel::isWriteOperation(FuseOpcode op) {
-  static constexpr FuseOpcode WRITE_OPS[] = {
-      FUSE_CREATE,
-      FUSE_MKDIR,
-      FUSE_RENAME,
-      FUSE_RMDIR,
-      FUSE_SETATTR,
-      FUSE_SETXATTR,
-      FUSE_UNLINK,
-      FUSE_WRITE,
-      FUSE_FSYNCDIR,
-      FUSE_FSYNC,
-      FUSE_SYMLINK,
-      FUSE_MKNOD,
-      FUSE_LINK,
-      FUSE_REMOVEXATTR,
-      FUSE_FALLOCATE,
-#ifdef __linux__
-      FUSE_RENAME2,
-#endif
-  };
-
-  auto it = std::find(std::begin(WRITE_OPS), std::end(WRITE_OPS), op);
-  return it != std::end(WRITE_OPS);
 }
 
 void FuseChannel::sessionComplete(folly::Synchronized<State>::LockedPtr state) {
