@@ -14,7 +14,7 @@ fi
 
 REPOID=0
 REPONAME=repo
-COMMON_ARGS=(--skip-caching --mysql-master-only)
+COMMON_ARGS=(--skip-caching --mysql-master-only --disable-tunables)
 TEST_CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
 
 function get_free_socket {

@@ -98,6 +98,7 @@ fn get_start_points<'a>(matches: &ArgMatches<'a>) -> Vec<HgChangesetId> {
 fn main(fb: FacebookInit) -> Result<()> {
     let matches = setup_app().get_matches();
     let logger = args::init_logging(fb, &matches);
+    args::init_tunables(fb, &matches, logger.clone())?;
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
 
     match matches.subcommand() {

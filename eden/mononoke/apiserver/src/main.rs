@@ -491,6 +491,7 @@ fn main(fb: FacebookInit) -> Result<()> {
 
     let app = cmdlib::args::add_mysql_options_args(app);
     let app = cmdlib::args::add_logger_args(app);
+    let app = cmdlib::args::add_tunables_args(app);
     let matches =
         cmdlib::args::add_cachelib_args(app, false /* hide_advanced_args */).get_matches();
 

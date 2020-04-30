@@ -85,6 +85,8 @@ fn main(fb: FacebookInit) -> ExitCode {
     let logger = args::init_logging(fb, &matches);
     let error_logger = logger.clone();
 
+    args::init_tunables(fb, &matches, logger.clone()).expect("failed to initialise tunables");
+
     let debug = matches.is_present("debug");
 
     let mut runtime = args::init_runtime(&matches).expect("failed to initialize Tokio runtime");

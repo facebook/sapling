@@ -362,6 +362,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         .subcommand(xdb_subcommand);
 
     let app = args::add_logger_args(app);
+    let app = args::add_tunables_args(app);
     let matches = app.get_matches();
 
     let logger = args::init_logging(fb, &matches);

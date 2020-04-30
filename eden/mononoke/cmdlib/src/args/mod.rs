@@ -27,6 +27,7 @@ use fbinit::FacebookInit;
 use futures::{FutureExt, TryFutureExt};
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt as OldFutureExt};
 use futures_old::Future;
+use maplit::hashmap;
 use panichandler::{self, Fate};
 use scuba::ScubaSampleBuilder;
 use slog::{debug, info, o, warn, Drain, Level, Logger, Never, SendSyncRefUnwindSafeDrain};
@@ -44,6 +45,7 @@ use metaconfig_types::{
 use mononoke_types::RepositoryId;
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
 use sql_ext::facebook::MysqlOptions;
+use tunables::init_tunables_worker;
 
 use crate::helpers::{
     create_runtime, open_sql_with_config_and_mysql_options, setup_repo_dir, CreateStorage,
@@ -65,12 +67,18 @@ const MYSQL_MYROUTER_PORT: &str = "myrouter-port";
 const MYSQL_MASTER_ONLY: &str = "mysql-master-only";
 const RUNTIME_THREADS: &str = "runtime-threads";
 const CONFIG_PATH: &str = "mononoke-config-path";
+const TUNABLES_CONFIG: &str = "tunables-config";
+const DISABLE_TUNABLES: &str = "disable-tunables";
+
+const DEFAULT_TUNABLES_PATH: &str = "signed-configerator:scm/mononoke/tunables/default";
 
 const READ_QPS_ARG: &str = "blobstore-read-qps";
 const WRITE_QPS_ARG: &str = "blobstore-write-qps";
 const READ_CHAOS_ARG: &str = "blobstore-read-chaos-rate";
 const WRITE_CHAOS_ARG: &str = "blobstore-write-chaos-rate";
 const MANIFOLD_API_KEY_ARG: &str = "manifold-api-key";
+
+const CRYPTO_PROJECT: &str = "SCM";
 
 pub struct MononokeApp {
     /// The app name.
@@ -274,6 +282,7 @@ impl MononokeApp {
         app = add_blobstore_args(app);
         app = add_cachelib_args(app, self.hide_advanced_args);
         app = add_runtime_args(app);
+        app = add_tunables_args(app);
 
         if self.shutdown_timeout {
             app = add_shutdown_timeout_args(app);
@@ -291,6 +300,19 @@ impl MononokeApp {
     }
 }
 
+pub fn add_tunables_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name(TUNABLES_CONFIG)
+            .long(TUNABLES_CONFIG)
+            .takes_value(true)
+            .help("The location of a tunables config"),
+    )
+    .arg(
+        Arg::with_name(DISABLE_TUNABLES)
+            .long(DISABLE_TUNABLES)
+            .help("Use the default values for all tunables (useful for tests)"),
+    )
+}
 pub fn add_runtime_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
     app.arg(
         Arg::with_name(RUNTIME_THREADS)
@@ -1083,10 +1105,25 @@ pub fn init_mononoke<'a>(
     let caching = init_cachelib(fb, matches, expected_item_size_bytes);
     debug!(logger, "Initialising runtime...");
     let runtime = init_runtime(matches)?;
+    init_tunables(fb, matches, logger.clone())?;
 
     Ok((caching, logger, runtime))
 }
 
+pub fn init_tunables<'a>(fb: FacebookInit, matches: &ArgMatches<'a>, logger: Logger) -> Result<()> {
+    if matches.is_present(DISABLE_TUNABLES) {
+        debug!(logger, "Tunables are disabled");
+        return Ok(());
+    }
+
+    let tunables_spec = matches
+        .value_of(TUNABLES_CONFIG)
+        .unwrap_or(DEFAULT_TUNABLES_PATH);
+
+    let config_handle = get_config_handle(fb, logger.clone(), Some(tunables_spec), 1)?;
+
+    init_tunables_worker(logger, config_handle)
+}
 /// Initialize a new `tokio_compat::runtime::Runtime` with thread number parsed from the CLI
 pub fn init_runtime(matches: &ArgMatches) -> io::Result<tokio_compat::runtime::Runtime> {
     let core_threads = get_usize_opt(matches, RUNTIME_THREADS);
@@ -1095,6 +1132,7 @@ pub fn init_runtime(matches: &ArgMatches) -> io::Result<tokio_compat::runtime::R
 
 /// Extract a ConfigHandle<T> from a source_spec str that has one ofthe folowing formats:
 /// - configerator:PATH
+/// - signed-configerator:PATH
 /// - file:PATH
 /// - default
 pub fn get_config_handle<T>(
@@ -1122,6 +1160,16 @@ where
             match (iter.next(), iter.next(), iter.next()) {
                 (Some("configerator"), Some(source), None) => Ok(Some((
                     ConfigStore::configerator(fb, logger, poll_interval, timeout)?,
+                    source.to_string(),
+                ))),
+                (Some("signed-configerator"), Some(source), None) => Ok(Some((
+                    ConfigStore::signed_configerator(
+                        fb,
+                        logger,
+                        hashmap! {source.to_string() => CRYPTO_PROJECT.to_string()},
+                        poll_interval,
+                        timeout,
+                    )?,
                     source.to_string(),
                 ))),
                 (Some("file"), Some(file), None) => Ok(Some((
