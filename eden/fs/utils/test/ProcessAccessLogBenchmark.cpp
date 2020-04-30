@@ -7,53 +7,29 @@
 
 #include "eden/fs/utils/ProcessAccessLog.h"
 
-#include <folly/Benchmark.h>
-#include <folly/synchronization/test/Barrier.h>
+#include <benchmark/benchmark.h>
 #include "eden/fs/benchharness/Bench.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 
 using namespace facebook::eden;
+
+struct ProcessAccessLogFixture : benchmark::Fixture {
+  std::shared_ptr<ProcessNameCache> processNameCache{
+      std::make_shared<ProcessNameCache>()};
+  ProcessAccessLog processAccessLog{processNameCache};
+};
 
 /**
  * A high but realistic amount of contention.
  */
 constexpr size_t kThreadCount = 4;
 
-BENCHMARK(ProcessAccessLog_repeatedly_add_self, iters) {
-  folly::BenchmarkSuspender suspender;
-
-  auto processNameCache = std::make_shared<ProcessNameCache>();
-  ProcessAccessLog processAccessLog{processNameCache};
-
-  std::vector<std::thread> threads;
-  folly::test::Barrier gate{kThreadCount + 1};
-
-  size_t remainingIterations = iters;
-  size_t totalIterations = 0;
-  for (size_t i = 0; i < kThreadCount; ++i) {
-    size_t remainingThreads = kThreadCount - i;
-    size_t assignedIterations = remainingIterations / remainingThreads;
-    remainingIterations -= assignedIterations;
-    totalIterations += assignedIterations;
-    threads.emplace_back(
-        [&processAccessLog, &gate, assignedIterations, myPid = getpid()] {
-          gate.wait();
-          for (size_t j = 0; j < assignedIterations; ++j) {
-            processAccessLog.recordAccess(
-                myPid, ProcessAccessLog::AccessType::FuseOther);
-          }
-        });
-  }
-
-  CHECK_EQ(totalIterations, iters);
-
-  // Now wake the threads.
-  gate.wait();
-
-  suspender.dismiss();
-
-  // Wait until they're done.
-  for (auto& thread : threads) {
-    thread.join();
+BENCHMARK_DEFINE_F(ProcessAccessLogFixture, add_self)(benchmark::State& state) {
+  auto myPid = getpid();
+  for (auto _ : state) {
+    processAccessLog.recordAccess(
+        myPid, ProcessAccessLog::AccessType::FuseOther);
   }
 }
+
+BENCHMARK_REGISTER_F(ProcessAccessLogFixture, add_self)->Threads(kThreadCount);

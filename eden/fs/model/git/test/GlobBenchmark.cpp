@@ -5,8 +5,7 @@
  * GNU General Public License version 2.
  */
 
-#include <folly/Benchmark.h>
-#include <folly/init/Init.h>
+#include <benchmark/benchmark.h>
 #include <re2/re2.h>
 
 #include "eden/fs/model/git/GlobMatcher.h"
@@ -141,16 +140,17 @@ class EndsWithImpl {
 };
 
 template <typename Impl, typename Corpus>
-void runBenchmark(size_t numIters, const char* pattern, const Corpus& corpus) {
+void runBenchmark(
+    benchmark::State& state,
+    const char* pattern,
+    const Corpus& corpus) {
   Impl impl;
-  BENCHMARK_SUSPEND {
-    impl.init(pattern);
-  }
+  impl.init(pattern);
 
   size_t idx = 0;
-  for (size_t n = 0; n < numIters; ++n) {
+  for (auto _ : state) {
     auto ret = impl.match(corpus[idx]);
-    folly::doNotOptimizeAway(ret);
+    benchmark::DoNotOptimize(ret);
     idx += 1;
     if (idx >= corpus.size()) {
       idx = 0;
@@ -158,91 +158,93 @@ void runBenchmark(size_t numIters, const char* pattern, const Corpus& corpus) {
   }
 }
 
-BENCHMARK(shortFixedPath_globmatch, numIters) {
-  runBenchmark<GlobMatcherImpl>(numIters, "README", basenameCorpus);
+#define GBENCHMARK(name)                 \
+  static void name(::benchmark::State&); \
+  BENCHMARK(name);                       \
+  void name
+
+GBENCHMARK(shortFixedPath_globmatch)(benchmark::State& state) {
+  runBenchmark<GlobMatcherImpl>(state, "README", basenameCorpus);
 }
 
-BENCHMARK_RELATIVE(shortFixedPath_wildmatch, numIters) {
-  runBenchmark<WildmatchImpl>(numIters, "README", basenameCorpus);
+GBENCHMARK(shortFixedPath_wildmatch)(benchmark::State& state) {
+  runBenchmark<WildmatchImpl>(state, "README", basenameCorpus);
 }
 
-BENCHMARK_RELATIVE(shortFixedPath_re2, numIters) {
-  runBenchmark<RE2Impl>(numIters, "README", basenameCorpus);
+GBENCHMARK(shortFixedPath_re2)(benchmark::State& state) {
+  runBenchmark<RE2Impl>(state, "README", basenameCorpus);
 }
 
-BENCHMARK_RELATIVE(shortFixedPath_fixed, numIters) {
-  runBenchmark<FixedStringImpl>(numIters, "README", basenameCorpus);
+GBENCHMARK(shortFixedPath_fixed)(benchmark::State& state) {
+  runBenchmark<FixedStringImpl>(state, "README", basenameCorpus);
 }
 
-BENCHMARK(fullFixedPath_globmatch, numIters) {
-  runBenchmark<GlobMatcherImpl>(numIters, "README", fullnameCorpus);
+GBENCHMARK(fullFixedPath_globmatch)(benchmark::State& state) {
+  runBenchmark<GlobMatcherImpl>(state, "README", fullnameCorpus);
 }
 
-BENCHMARK_RELATIVE(fullFixedPath_wildmatch, numIters) {
-  runBenchmark<WildmatchImpl>(numIters, "README", fullnameCorpus);
+GBENCHMARK(fullFixedPath_wildmatch)(benchmark::State& state) {
+  runBenchmark<WildmatchImpl>(state, "README", fullnameCorpus);
 }
 
-BENCHMARK_RELATIVE(fullFixedPath_re2, numIters) {
-  runBenchmark<RE2Impl>(numIters, "README", fullnameCorpus);
+GBENCHMARK(fullFixedPath_re2)(benchmark::State& state) {
+  runBenchmark<RE2Impl>(state, "README", fullnameCorpus);
 }
 
-BENCHMARK_RELATIVE(fullFixedPath_fixed, numIters) {
-  runBenchmark<FixedStringImpl>(numIters, "README", fullnameCorpus);
+GBENCHMARK(fullFixedPath_fixed)(benchmark::State& state) {
+  runBenchmark<FixedStringImpl>(state, "README", fullnameCorpus);
 }
 
-BENCHMARK(endswith_globmatch, numIters) {
-  runBenchmark<GlobMatcherImpl>(numIters, "*.txt", basenameCorpus);
+GBENCHMARK(endswith_globmatch)(benchmark::State& state) {
+  runBenchmark<GlobMatcherImpl>(state, "*.txt", basenameCorpus);
 }
 
-BENCHMARK_RELATIVE(endswith_wildmatch, numIters) {
-  runBenchmark<WildmatchImpl>(numIters, "*.txt", basenameCorpus);
+GBENCHMARK(endswith_wildmatch)(benchmark::State& state) {
+  runBenchmark<WildmatchImpl>(state, "*.txt", basenameCorpus);
 }
 
-BENCHMARK_RELATIVE(endswith_re2, numIters) {
-  runBenchmark<RE2Impl>(numIters, "[^/]*\\.txt", basenameCorpus);
+GBENCHMARK(endswith_re2)(benchmark::State& state) {
+  runBenchmark<RE2Impl>(state, "[^/]*\\.txt", basenameCorpus);
 }
 
-BENCHMARK_RELATIVE(endswith_fixed, numIters) {
-  runBenchmark<EndsWithImpl>(numIters, ".txt", basenameCorpus);
+GBENCHMARK(endswith_fixed)(benchmark::State& state) {
+  runBenchmark<EndsWithImpl>(state, ".txt", basenameCorpus);
 }
 
-BENCHMARK(basenameGlob_globmatch, numIters) {
-  runBenchmark<GlobMatcherImpl>(numIters, ".*.swp", basenameCorpus);
+GBENCHMARK(basenameGlob_globmatch)(benchmark::State& state) {
+  runBenchmark<GlobMatcherImpl>(state, ".*.swp", basenameCorpus);
 }
 
-BENCHMARK_RELATIVE(basenameGlob_wildmatch, numIters) {
-  runBenchmark<WildmatchImpl>(numIters, ".*.swp", basenameCorpus);
+GBENCHMARK(basenameGlob_wildmatch)(benchmark::State& state) {
+  runBenchmark<WildmatchImpl>(state, ".*.swp", basenameCorpus);
 }
 
-BENCHMARK_RELATIVE(basenameGlob_re2, numIters) {
-  runBenchmark<RE2Impl>(numIters, "\\.[^/]*\\.swp", basenameCorpus);
+GBENCHMARK(basenameGlob_re2)(benchmark::State& state) {
+  runBenchmark<RE2Impl>(state, "\\.[^/]*\\.swp", basenameCorpus);
 }
 
-BENCHMARK(basenameGlob2_globmatch, numIters) {
-  runBenchmark<GlobMatcherImpl>(numIters, ".*.sw?", basenameCorpus);
+GBENCHMARK(basenameGlob2_globmatch)(benchmark::State& state) {
+  runBenchmark<GlobMatcherImpl>(state, ".*.sw?", basenameCorpus);
 }
 
-BENCHMARK_RELATIVE(basenameGlob2_wildmatch, numIters) {
-  runBenchmark<WildmatchImpl>(numIters, ".*.sw?", basenameCorpus);
+GBENCHMARK(basenameGlob2_wildmatch)(benchmark::State& state) {
+  runBenchmark<WildmatchImpl>(state, ".*.sw?", basenameCorpus);
 }
 
-BENCHMARK_RELATIVE(basenameGlob2_re2, numIters) {
-  runBenchmark<RE2Impl>(numIters, "\\.[^/]*\\.sw[^/]", basenameCorpus);
+GBENCHMARK(basenameGlob2_re2)(benchmark::State& state) {
+  runBenchmark<RE2Impl>(state, "\\.[^/]*\\.sw[^/]", basenameCorpus);
 }
 
-BENCHMARK(fullpath_globmatch, numIters) {
-  runBenchmark<GlobMatcherImpl>(numIters, "**/*io*o*", fullnameCorpus);
+GBENCHMARK(fullpath_globmatch)(benchmark::State& state) {
+  runBenchmark<GlobMatcherImpl>(state, "**/*io*o*", fullnameCorpus);
 }
 
-BENCHMARK_RELATIVE(fullpath_wildmatch, numIters) {
-  runBenchmark<WildmatchImpl>(numIters, "**/*io*o*", fullnameCorpus);
+GBENCHMARK(fullpath_wildmatch)(benchmark::State& state) {
+  runBenchmark<WildmatchImpl>(state, "**/*io*o*", fullnameCorpus);
 }
 
-BENCHMARK_RELATIVE(fullpath_re2, numIters) {
-  runBenchmark<RE2Impl>(numIters, ".*/[^/]io[^/]*o[^/]*", fullnameCorpus);
+GBENCHMARK(fullpath_re2)(benchmark::State& state) {
+  runBenchmark<RE2Impl>(state, ".*/[^/]io[^/]*o[^/]*", fullnameCorpus);
 }
 
-int main(int argc, char* argv[]) {
-  folly::init(&argc, &argv);
-  folly::runBenchmarks();
-}
+BENCHMARK_MAIN();

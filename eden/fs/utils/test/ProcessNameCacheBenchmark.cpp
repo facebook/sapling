@@ -7,49 +7,25 @@
 
 #include "eden/fs/utils/ProcessNameCache.h"
 
-#include <folly/Benchmark.h>
-#include <folly/synchronization/test/Barrier.h>
+#include <benchmark/benchmark.h>
 #include "eden/fs/benchharness/Bench.h"
 
 using namespace facebook::eden;
+
+struct ProcessNameCacheFixture : benchmark::Fixture {
+  ProcessNameCache processNameCache;
+};
 
 /**
  * A high but realistic amount of contention.
  */
 constexpr size_t kThreadCount = 4;
 
-BENCHMARK(ProcessNameCache_repeatedly_add_self, iters) {
-  folly::BenchmarkSuspender suspender;
-
-  ProcessNameCache processNameCache;
-  std::vector<std::thread> threads;
-  folly::test::Barrier gate{1 + kThreadCount};
-
-  size_t remainingIterations = iters;
-  size_t totalIterations = 0;
-  for (size_t i = 0; i < kThreadCount; ++i) {
-    size_t remainingThreads = kThreadCount - i;
-    size_t assignedIterations = remainingIterations / remainingThreads;
-    remainingIterations -= assignedIterations;
-    totalIterations += assignedIterations;
-    threads.emplace_back(
-        [&processNameCache, &gate, assignedIterations, myPid = getpid()] {
-          gate.wait();
-          for (size_t j = 0; j < assignedIterations; ++j) {
-            processNameCache.add(myPid);
-          }
-        });
-  }
-
-  CHECK_EQ(totalIterations, iters);
-
-  // Now wake the threads.
-  gate.wait();
-
-  suspender.dismiss();
-
-  // Wait until they're done.
-  for (auto& thread : threads) {
-    thread.join();
+BENCHMARK_DEFINE_F(ProcessNameCacheFixture, add_self)(benchmark::State& state) {
+  auto myPid = getpid();
+  for (auto _ : state) {
+    processNameCache.add(myPid);
   }
 }
+
+BENCHMARK_REGISTER_F(ProcessNameCacheFixture, add_self)->Threads(kThreadCount);

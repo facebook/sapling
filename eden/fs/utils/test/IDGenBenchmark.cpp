@@ -7,12 +7,13 @@
 
 #include "eden/fs/utils/IDGen.h"
 
-#include <folly/Benchmark.h>
+#include <benchmark/benchmark.h>
 
 using namespace facebook::eden;
 
-BENCHMARK(generateUniqueID, iters) {
-  for (unsigned i = 0; i < iters; ++i) {
-    folly::doNotOptimizeAway(generateUniqueID());
+static void BM_generateUniqueID(benchmark::State& state) {
+  for (auto _ : state) {
+    benchmark::DoNotOptimize(generateUniqueID());
   }
 }
+BENCHMARK(BM_generateUniqueID);

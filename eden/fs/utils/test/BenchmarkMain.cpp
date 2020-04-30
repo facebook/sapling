@@ -5,10 +5,6 @@
  * GNU General Public License version 2.
  */
 
-#include <folly/Benchmark.h>
-#include <folly/init/Init.h>
+#include <benchmark/benchmark.h>
 
-int main(int argc, char** argv) {
-  folly::init(&argc, &argv);
-  folly::runBenchmarks();
-}
+BENCHMARK_MAIN();

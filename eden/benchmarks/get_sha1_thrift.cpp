@@ -5,8 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#include <benchmark/benchmark.h>
 #include <boost/filesystem.hpp>
-#include <folly/Benchmark.h>
 #include <folly/File.h>
 #include <folly/container/Array.h>
 #include <folly/init/Init.h>
@@ -100,9 +100,9 @@ int main(int argc, char** argv) {
           for (auto j = 0; j < samples_per_thread; ++j) {
             std::vector<SHA1Result> res;
             auto start = getTime();
-            folly::doNotOptimizeAway(files[i]);
+            benchmark::DoNotOptimize(files[i]);
             client->sync_getSHA1(res, repo_path.native(), {files[i]});
-            folly::doNotOptimizeAway(res);
+            benchmark::DoNotOptimize(res);
             auto duration = std::chrono::nanoseconds(getTime() - start);
             samples[i * samples_per_thread + j] =
                 std::chrono::duration_cast<std::chrono::microseconds>(duration)
