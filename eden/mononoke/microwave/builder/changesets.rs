@@ -43,8 +43,10 @@ impl MicrowaveChangesets {
 }
 
 impl Changesets for MicrowaveChangesets {
-    fn add(&self, _ctx: CoreContext, _cs: ChangesetInsert) -> BoxFuture<bool, Error> {
-        unimplemented!()
+    fn add(&self, _ctx: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
+        // See rationale in filenodes.rs for why we error out on unexpected calls under
+        // MicrowaveFilenodes.
+        unimplemented!("MicrowaveChangesets: unexpected add in repo {}", cs.repo_id)
     }
 
     fn get(
@@ -76,20 +78,28 @@ impl Changesets for MicrowaveChangesets {
     fn get_many(
         &self,
         _ctx: CoreContext,
-        _repo_id: RepositoryId,
+        repo_id: RepositoryId,
         _cs_ids: Vec<ChangesetId>,
     ) -> BoxFuture<Vec<ChangesetEntry>, Error> {
-        unimplemented!()
+        // Same as above
+        unimplemented!(
+            "MicrowaveChangesets: unexpected get_many in repo {}",
+            repo_id
+        )
     }
 
     fn get_many_by_prefix(
         &self,
         _ctx: CoreContext,
-        _repo_id: RepositoryId,
+        repo_id: RepositoryId,
         _cs_prefix: ChangesetIdPrefix,
         _limit: usize,
     ) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error> {
-        unimplemented!()
+        // Same as above
+        unimplemented!(
+            "MicrowaveChangesets: unexpected get_many_by_prefix in repo {}",
+            repo_id
+        )
     }
 
     fn prime_cache(&self, ctx: &CoreContext, changesets: &[ChangesetEntry]) {
