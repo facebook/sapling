@@ -261,3 +261,19 @@ class SetAttrTest(testcase.EdenRepoTest):
         self.assertEqual(new_st.st_mtime, st.st_mtime)
         self.assertGreater(new_st.st_atime, st.st_atime)
         self.assertEqual(new_st.st_ctime, st.st_ctime)
+
+    def test_setuid_setgid_and_sticky_bits_fail_with_eperm(self) -> None:
+        filename = os.path.join(self.mount, "hello")
+        st = os.lstat(filename)
+
+        with self.assertRaises(OSError) as context:
+            os.chmod(filename, st.st_mode | stat.S_ISUID)
+        self.assertEqual(errno.EPERM, context.exception.errno)
+
+        with self.assertRaises(OSError) as context:
+            os.chmod(filename, st.st_mode | stat.S_ISGID)
+        self.assertEqual(errno.EPERM, context.exception.errno)
+
+        with self.assertRaises(OSError) as context:
+            os.chmod(filename, st.st_mode | stat.S_ISVTX)
+        self.assertEqual(errno.EPERM, context.exception.errno)

@@ -154,6 +154,16 @@ folly::Future<Dispatcher::Attr> EdenDispatcher::setattr(
     InodeNumber ino,
     const fuse_setattr_in& attr) {
   FB_LOGF(mount_->getStraceLogger(), DBG7, "setattr({})", ino);
+
+  // Even though mounts are created with the nosuid flag, explicitly disallow
+  // setting suid, sgid, and sticky bits on any inodes. This lets us avoid
+  // explicitly clearing these bits on writes() which is required for correct
+  // behavior under FUSE_HANDLE_KILLPRIV.
+  if ((attr.valid & FATTR_MODE) &&
+      (attr.mode & (S_ISUID | S_ISGID | S_ISVTX))) {
+    folly::throwSystemErrorExplicit(EPERM, "Extra mode bits are disallowed");
+  }
+
   return inodeMap_->lookupInode(ino).thenValue(
       [attr](const InodePtr& inode) { return inode->setattr(attr); });
 }
