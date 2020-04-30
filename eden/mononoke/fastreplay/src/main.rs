@@ -316,14 +316,13 @@ async fn bootstrap_repositories<'a>(
             let warmup = if no_cache_warmup {
                 None
             } else {
-                let handle = tokio::task::spawn(
-                    cache_warmup::cache_warmup(
-                        bootstrap_ctx.clone(),
-                        repo.blobrepo().clone(),
-                        warmup_params,
-                    )
-                    .compat(),
-                );
+                let handle = tokio::task::spawn({
+                    let blobrepo = repo.blobrepo();
+                    cloned!(bootstrap_ctx, blobrepo);
+                    async move {
+                        cache_warmup::cache_warmup(&bootstrap_ctx, &blobrepo, warmup_params).await
+                    }
+                });
                 Some(handle)
             };
 

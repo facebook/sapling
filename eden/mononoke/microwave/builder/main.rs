@@ -18,7 +18,7 @@ use cloned::cloned;
 use cmdlib::{args, monitoring::AliveService};
 use context::SessionContainer;
 use fbinit::FacebookInit;
-use futures::{channel::mpsc, compat::Future01CompatExt, future};
+use futures::{channel::mpsc, future};
 use metaconfig_parser::RepoConfigs;
 use microwave::{Snapshot, SnapshotLocation};
 use slog::{info, o, Logger};
@@ -100,8 +100,7 @@ async fn do_main<'a>(
                             Arc::new(MicrowaveChangesets::new(repoid, changesets_sender, inner))
                         });
 
-                    cache_warmup::cache_warmup(warmup_ctx, warmup_repo, config.cache_warmup)
-                        .compat()
+                    cache_warmup::cache_warmup(&warmup_ctx, &warmup_repo, config.cache_warmup)
                         .await?;
 
                     Result::<_, Error>::Ok(repo)

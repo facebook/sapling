@@ -8,9 +8,8 @@
 use std::collections::{HashMap, HashSet};
 use std::sync::Arc;
 
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 use cloned::cloned;
-use failure_ext::chain::ChainExt;
 use futures::{
     compat::Future01CompatExt,
     future::{FutureExt as _, TryFutureExt},
@@ -263,13 +262,16 @@ pub fn repo_handlers(
                 let blobrepo = builder.blobrepo().clone();
 
                 info!(logger, "Warming up cache");
-                let initial_warmup = tokio::task::spawn(
-                    cache_warmup(ctx.clone(), blobrepo.clone(), cache_warmup_params)
-                        .chain_err(format!("while warming up cache for repo: {}", reponame))
-                        .map_err(Error::from)
-                        .compat()
-                        .boxed(),
-                );
+                let initial_warmup = tokio::task::spawn({
+                    cloned!(ctx, blobrepo, reponame);
+                    async move {
+                        cache_warmup(&ctx, &blobrepo, cache_warmup_params)
+                            .await
+                            .with_context(|| {
+                                format!("while warming up cache for repo: {}", reponame)
+                            })
+                    }
+                });
 
                 let mut scuba_logger = ScubaSampleBuilder::with_opt_table(fb, scuba_table);
                 scuba_logger.add_common_server_data();
