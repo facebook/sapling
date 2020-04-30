@@ -746,6 +746,11 @@ EdenServiceHandler::semifuture_getEntryInformation(
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
 
+  // TODO: applyToInodes currently forces allocation of inodes for all specified
+  // paths. It's possible to resolve this request directly from source control
+  // data. In the future, this should be changed to avoid allocating inodes when
+  // possible.
+
   return collectAll(applyToInodes(
                         rootInode,
                         *paths,
@@ -775,6 +780,11 @@ EdenServiceHandler::semifuture_getFileInformation(
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*paths));
   auto edenMount = server_->getMount(*mountPoint);
   auto rootInode = edenMount->getRootInode();
+
+  // TODO: applyToInodes currently forces allocation of inodes for all specified
+  // paths. It's possible to resolve this request directly from source control
+  // data. In the future, this should be changed to avoid allocating inodes when
+  // possible.
 
   return collectAll(applyToInodes(
                         rootInode,
