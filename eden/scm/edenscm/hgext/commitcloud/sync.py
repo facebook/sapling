@@ -12,6 +12,7 @@ import time
 
 from edenscm.mercurial import (
     blackbox,
+    bookmarks,
     exchange,
     extensions,
     hg,
@@ -20,6 +21,7 @@ from edenscm.mercurial import (
     obsolete,
     perftrace,
     progress,
+    pycompat,
     util,
     visibility,
 )
@@ -398,18 +400,12 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
             }
             newvisibleheads = [head for head in newvisibleheads if head not in toremove]
 
-    remotebookmarknodes = []
-    newremotebookmarks = {}
+    remotebookmarknewnodes = set()
+    remotebookmarkupdates = {}
     if _isremotebookmarkssyncenabled(repo.ui):
-        newremotebookmarks = _processremotebookmarks(
+        (remotebookmarkupdates, remotebookmarknewnodes) = _processremotebookmarks(
             repo, cloudrefs.remotebookmarks, lastsyncstate
         )
-
-        # Pull public commits, which remote bookmarks point to, if they are not
-        # present locally.
-        for node in newremotebookmarks.values():
-            if node not in unfi:
-                remotebookmarknodes.append(node)
 
     try:
         snapshot = extensions.find("snapshot")
@@ -428,19 +424,20 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
         newsnapshots = cloudrefs.snapshots
         newheads += addedsnapshots
 
-    if remotebookmarknodes or newheads:
+    if remotebookmarknewnodes or newheads:
         # Partition the heads into groups we can pull together.
-        headgroups = (
-            [remotebookmarknodes] if remotebookmarknodes else []
-        ) + _partitionheads(newheads, cloudrefs.headdates)
+        headgroups = _partitionheads(
+            list(remotebookmarknewnodes) + newheads, cloudrefs.headdates
+        )
         _pullheadgroups(repo, remotepath, headgroups)
 
     omittedbookmarks.extend(
         _mergebookmarks(repo, tr, cloudrefs.bookmarks, lastsyncstate)
     )
 
+    newremotebookmarks = {}
     if _isremotebookmarkssyncenabled(repo.ui):
-        _updateremotebookmarks(repo, tr, newremotebookmarks)
+        newremotebookmarks = _updateremotebookmarks(repo, tr, remotebookmarkupdates)
 
     if snapshot:
         with repo.lock(), repo.transaction("sync-snapshots") as tr:
@@ -547,7 +544,7 @@ def _pullheadgroups(repo, remotepath, headgroups):
             repo.connectionpool.close()
 
 
-def _partitionheads(heads, headdates, sizelimit=4, spanlimit=86400):
+def _partitionheads(heads, headdates=None, sizelimit=4, spanlimit=86400):
     """partition a list of heads into groups limited by size and timespan
 
     Partitions the list of heads into a list of head groups.  Each head group
@@ -570,6 +567,7 @@ def _partitionheads(heads, headdates, sizelimit=4, spanlimit=86400):
     >>> _partitionheads([1, 2, 3, 9, 4], {1: 10, 2: 20, 3: 30, 4: 40, 9: 90}, sizelimit=8, spanlimit=30)
     [[1, 2, 3], [9], [4]]
     """
+    headdates = headdates or {}
     headgroups = []
     headsbydate = [(headdates.get(head, 0), head) for head in heads]
     headgroup = None
@@ -602,7 +600,11 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
     Performs a 3-way diff between the last sync remote bookmark state, new cloud
     state and local remote bookmarks.
 
-    Returns a dict <remotebookmark: newnode> - new state of remote bookmarks"""
+    Returns (updates, newnodes) where:
+    - updates is a dict {remotebookmark: newnode} representing the updates
+      to the remote bookmarks
+    - newnodes is a set of nodes that are not in the repository and must be pulled
+    """
 
     def usecloudnode(cloudnode, localnode):
         """returns True if cloudnode should be a new state for the remote bookmark
@@ -633,7 +635,7 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
     allremotenames = set(localremotebooks.keys())
     allremotenames.update(cloudremotebooks.keys())
 
-    newremotebooks = {}
+    updates = {}
     for remotename in allremotenames:
         cloudnode = cloudremotebooks.get(remotename, None)
         localnode = localremotebooks.get(remotename, None)
@@ -643,46 +645,74 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
             # Both cloud and local remote bookmark have changed.
             if cloudnode == localnode:
                 # They have changed to the same thing
-                newremotebooks[remotename] = localnode
+                updates[remotename] = localnode
             elif cloudnode and localnode:
                 # They have changed to different things - break the tie by
                 # seeing which is more up-to-date.
                 if usecloudnode(cloudnode, localnode):
-                    newremotebooks[remotename] = cloudnode
+                    updates[remotename] = cloudnode
                 else:
-                    newremotebooks[remotename] = localnode
+                    updates[remotename] = localnode
+            elif oldcloudnode and not cloudnode:
+                # The cloud remotebookmark was removed
+                updates[remotename] = nodemod.nullhex
             elif localnode:
-                # The remote bookmark was deleted in the cloud or locally. Keep
-                # the local remote bookmark for now.  For normal remote
-                # bookmarks, if they are deleted on the server the state will be
-                # updated with the next pull.  For scratch remote bookmarks the
-                # unsubscription mechanism is not implemented yet.
-                newremotebooks[remotename] = localnode
+                # Use the local node
+                updates[remotename] = localnode
         elif cloudnode and cloudnode != oldcloudnode:
             # The cloud node has updated, use the new version
-            newremotebooks[remotename] = cloudnode
+            updates[remotename] = cloudnode
+        elif oldcloudnode and not cloudnode:
+            # The cloud remotebookmark was removed
+            updates[remotename] = nodemod.nullhex
         elif localnode:
-            # Stick with the local node
-            newremotebooks[remotename] = localnode
+            # Use the local node
+            updates[remotename] = localnode
 
-    return newremotebooks
+    unfi = repo.unfiltered()
+    newnodes = set(
+        node
+        for node in updates.values()
+        if node != nodemod.nullhex and node not in unfi
+    )
+    return (updates, newnodes)
 
 
-def _updateremotebookmarks(repo, tr, remotebookmarks):
+def _updateremotebookmarks(repo, tr, updates):
     """updates the remote bookmarks to point their new nodes"""
-    repo._remotenames.applychanges({"bookmarks": remotebookmarks})
+    oldremotebookmarks = _getremotebookmarks(repo)
+    protectednames = set(repo.ui.configlist("remotenames", "selectivepulldefault"))
+    newremotebookmarks = {}
+
+    # Filter out any deletions of default names.  These are protected and shouldn't
+    # be deleted.
+    for remotename, node in pycompat.iteritems(updates):
+        remote, name = bookmarks.splitremotename(remotename)
+        if node == nodemod.nullhex and name in protectednames:
+            newremotebookmarks[remotename] = oldremotebookmarks.get(
+                remotename, nodemod.nullhex
+            )
+        else:
+            newremotebookmarks[remotename] = node
+    repo._remotenames.applychanges({"bookmarks": newremotebookmarks})
+
+    # Still remove these from the cloud state.  We will add them back in when
+    # uploading changes to the cloud.
+    return {
+        name: node
+        for name, node in pycompat.iteritems(updates)
+        if node != nodemod.nullhex
+    }
 
 
 def _forcesyncremotebookmarks(repo, cloudrefs, lastsyncstate, remotepath, tr):
     cloudremotebookmarks = cloudrefs.remotebookmarks or {}
-    newremotebookmarks = _processremotebookmarks(
+    (updates, newnodes) = _processremotebookmarks(
         repo, cloudremotebookmarks, lastsyncstate
     )
-    unfi = repo.unfiltered()
-    topull = list(set(rb for rb in newremotebookmarks.values() if rb not in unfi))
-    if topull:
-        _pullheadgroups(repo, remotepath, [topull])
-    _updateremotebookmarks(repo, tr, newremotebookmarks)
+    if newnodes:
+        _pullheadgroups(repo, remotepath, _partitionheads(newnodes))
+    newremotebookmarks = _updateremotebookmarks(repo, tr, updates)
     # We have now synced the repo to the cloud version.  Store this.
     lastsyncstate.update(
         tr,

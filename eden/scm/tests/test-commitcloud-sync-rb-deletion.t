@@ -240,20 +240,13 @@ Sync in the first repo
   $ cd $TESTTMP/client1
   $ hg cloud sync -q
   $ hg book --list-subs
-     remote/created            3:ec1dff19c429
      remote/master             1:9da34b1aa207
-     remote/other              2:4c8ee072cf16
      remote/scratch/draft1     4:d860d2fc26c5
   $ showgraph
-  o  3 public3: public  remote/created
+  o  1 public1: public  remote/master
   |
-  | o  2 public2: public  remote/other
-  |/
-  | o  1 public1: public  remote/master
-  |/
   @  0 base: public
   
-BUG! created and other are still there
 
 Make an unrelated change to the cloud workspace and sync again
   $ hg book local
@@ -263,21 +256,13 @@ Sync in the third repo again
   $ cd $TESTTMP/client3
   $ hg cloud sync -q
   $ hg book --list-subs
-     remote/created            3:ec1dff19c429
      remote/master             1:9da34b1aa207
-     remote/other              2:4c8ee072cf16
      remote/scratch/draft1     4:d860d2fc26c5
   $ showgraph
-  o  3 public3: public  remote/created
+  @  1 public1: public  remote/master
   |
-  | o  2 public2: public  remote/other
-  |/
-  | @  1 public1: public  remote/master
-  |/
   o  0 base: public local
   
-BUG! created and other are back
-
   $ hg pull
   pulling from ssh://user@dummy/server
   no changes found
@@ -289,13 +274,12 @@ BUG! created and other are back
   |
   o  0 base: public local
   
-BUG! now they vanished again!
 
 Sync in the fourth repo
   $ cd $TESTTMP/client4
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling * from ssh://user@dummy/server (glob)
+  pulling d860d2fc26c5 from ssh://user@dummy/server
   searching for changes
   adding changesets
   adding manifests
@@ -309,23 +293,15 @@ Sync in the fourth repo
   finished in * sec (glob)
 
 BUG! We pulled the draft commit, even though it's hidden
-BUG! We pulled created, even though it should have been excluded
 
   $ hg book --list-subs
-     remote/created            3:ec1dff19c429
      remote/master             1:9da34b1aa207
-     remote/other              2:4c8ee072cf16
      remote/scratch/draft1     4:d860d2fc26c5
   $ showgraph
-  o  3 public3: public  remote/created
+  @  1 public1: public  remote/master
   |
-  | o  2 public2: public  remote/other
-  |/
-  | @  1 public1: public  remote/master
-  |/
   o  0 base: public local
   
-BUG! created and other are still in the repo
 
 Sync in the second repo with one of the deleted bookmarks protected
   $ cd $TESTTMP/client2
@@ -335,26 +311,20 @@ Sync in the second repo with one of the deleted bookmarks protected
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ showgraph
-  o  3 public3: public  remote/created
+  o  2 public2: public  remote/other
   |
-  | o  2 public2: public  remote/other
-  |/
   | @  1 public1: public  remote/master
   |/
   o  0 base: public local
   
-BUG! created is still in the repo
 
 The other bookmark is now revived in the other repos
   $ cd $TESTTMP/client4
   $ hg cloud sync -q
   $ showgraph
-  o  3 public3: public  remote/created
+  o  2 public2: public  remote/other
   |
-  | o  2 public2: public  remote/other
-  |/
   | @  1 public1: public  remote/master
   |/
   o  0 base: public local
   
-BUG! created is still in the repo
