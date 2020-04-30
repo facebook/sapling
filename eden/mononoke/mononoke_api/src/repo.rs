@@ -7,6 +7,7 @@
 
 use std::fmt;
 use std::{
+    borrow::Cow,
     sync::Arc,
     time::{SystemTime, UNIX_EPOCH},
 };
@@ -38,7 +39,7 @@ use mononoke_types::{
     hash::{GitSha1, Sha1, Sha256},
     Generation,
 };
-use permission_checker::{ArcPermissionChecker, PermissionCheckerBuilder};
+use permission_checker::{ArcPermissionChecker, MononokeIdentitySet, PermissionCheckerBuilder};
 use revset::AncestorsNodeStream;
 use skiplist::{fetch_skiplist_index, SkiplistIndex};
 use slog::{debug, error, Logger};
@@ -493,25 +494,24 @@ impl Repo {
         ctx: &CoreContext,
         mode: PermMode,
     ) -> Result<(), MononokeError> {
-        let identities = ctx.identities();
         let mode = match mode {
             PermMode::Read => "read",
             PermMode::Write => "write",
         };
 
-        let permitted = match identities {
-            None => false,
-            Some(identities) => self.perm_checker.check_set(&identities, &[mode]).await?,
-        };
+        let identities = ctx.identities();
+        let identities =
+            identities.map_or_else(|| Cow::Owned(MononokeIdentitySet::new()), Cow::Borrowed);
 
-        if !permitted {
+        if !self.perm_checker.check_set(&*identities, &[mode]).await? {
             debug!(
                 ctx.logger(),
                 "Permission denied: {} access to {}", mode, self.name
             );
-            let identities = match identities {
-                Some(identities) if !identities.is_empty() => identities.iter().join(","),
-                _ => "<none>".to_string(),
+            let identities = if identities.is_empty() {
+                "<none>".to_string()
+            } else {
+                identities.iter().join(",")
             };
             return Err(MononokeError::PermissionDenied {
                 mode,
