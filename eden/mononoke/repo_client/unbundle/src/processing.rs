@@ -281,6 +281,7 @@ async fn run_pushrebase(
     log_commits_to_scribe(
         ctx,
         repo,
+        &bookmark,
         new_commits,
         pushrebase_params.commit_scribe_category.clone(),
     )
@@ -638,6 +639,7 @@ async fn check_is_ancestor_opt(
 async fn log_commits_to_scribe(
     ctx: &CoreContext,
     repo: &BlobRepo,
+    bookmark: &BookmarkName,
     changesets: Vec<ChangesetId>,
     commit_scribe_category: Option<String>,
 ) -> Result<(), Error> {
@@ -649,6 +651,7 @@ async fn log_commits_to_scribe(
     };
 
     let repo_id = repo.get_repoid();
+    let bookmark = bookmark.as_str();
 
     let futs: FuturesUnordered<_> = changesets
         .into_iter()
@@ -671,6 +674,7 @@ async fn log_commits_to_scribe(
 
                 let ci = scribe_commit_queue::CommitInfo::new(
                     repo_id,
+                    bookmark,
                     generation,
                     changeset_id,
                     parents,

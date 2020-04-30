@@ -17,22 +17,25 @@ use serde_derive::Serialize;
 use mononoke_types::{ChangesetId, Generation, RepositoryId};
 
 #[derive(Serialize)]
-pub struct CommitInfo {
+pub struct CommitInfo<'a> {
     repo_id: RepositoryId,
+    bookmark: &'a str,
     generation: Generation,
     changeset_id: ChangesetId,
     parents: Vec<ChangesetId>,
 }
 
-impl CommitInfo {
+impl<'a> CommitInfo<'a> {
     pub fn new(
         repo_id: RepositoryId,
+        bookmark: &'a str,
         generation: Generation,
         changeset_id: ChangesetId,
         parents: Vec<ChangesetId>,
     ) -> Self {
         Self {
             repo_id,
+            bookmark,
             generation,
             changeset_id,
             parents,
@@ -42,7 +45,7 @@ impl CommitInfo {
 
 #[async_trait]
 pub trait ScribeCommitQueue: Send + Sync {
-    async fn queue_commit(&self, commit: &CommitInfo) -> Result<(), Error>;
+    async fn queue_commit(&self, commit: &CommitInfo<'_>) -> Result<(), Error>;
 }
 
 pub struct LogToScribe<C>
@@ -86,7 +89,7 @@ impl<C> ScribeCommitQueue for LogToScribe<C>
 where
     C: ScribeClient + Sync + Send + 'static,
 {
-    async fn queue_commit(&self, commit: &CommitInfo) -> Result<(), Error> {
+    async fn queue_commit(&self, commit: &CommitInfo<'_>) -> Result<(), Error> {
         match &self.client {
             Some(client) => {
                 let commit = serde_json::to_string(commit)?;
