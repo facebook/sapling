@@ -21,6 +21,7 @@ add_executable(eden_utils_test ${UTILS_TEST_SRCS})
 target_link_libraries(
   eden_utils_test
   PUBLIC
+    eden_utils_test_lib
     eden_testharness
     Folly::folly_test_util
     ${LIBGMOCK_LIBRARIES}

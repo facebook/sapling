@@ -27,7 +27,6 @@
 #include "eden/fs/eden-config.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
-#include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/EdenServiceHandler.h" // for kServiceName
@@ -35,6 +34,7 @@
 #include "eden/fs/service/Systemd.h"
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/telemetry/StructuredLogger.h"
+#include "eden/fs/utils/UserInfo.h"
 
 // This has to be placed after eden-config.h
 #ifdef EDEN_HAVE_CURL

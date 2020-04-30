@@ -18,10 +18,10 @@
 #include <folly/logging/xlog.h>
 
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/monitor/EdenMonitor.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/UserInfo.h"
 
 using std::string;
 using namespace facebook::eden;

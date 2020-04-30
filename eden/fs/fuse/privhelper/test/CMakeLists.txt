@@ -7,7 +7,6 @@ add_executable(
   eden_fuse_privhelper_test
     PrivHelperTest.cpp
     PrivHelperTestServer.cpp
-    UserInfoTest.cpp
 )
 target_link_libraries(
   eden_fuse_privhelper_test

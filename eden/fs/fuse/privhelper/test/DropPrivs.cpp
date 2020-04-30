@@ -14,7 +14,7 @@
 #include <folly/logging/Init.h>
 #include <folly/logging/xlog.h>
 
-#include "eden/fs/fuse/privhelper/UserInfo.h"
+#include "eden/fs/utils/UserInfo.h"
 
 using namespace facebook::eden;
 

@@ -23,8 +23,8 @@
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 #include "eden/fs/fuse/privhelper/PrivHelperServer.h"
-#include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/UserInfo.h"
 
 using folly::checkUnixError;
 using folly::EventBase;

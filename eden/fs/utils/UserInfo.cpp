@@ -5,27 +5,37 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/fuse/privhelper/UserInfo.h"
+#include "eden/fs/utils/UserInfo.h"
 
-#include <folly/Exception.h>
-#include <folly/logging/xlog.h>
+#ifndef _WIN32
 #include <grp.h>
 #include <pwd.h>
 #ifdef __linux__
 #include <sys/prctl.h>
-#endif
-#include <vector>
-
+#endif // __linux__
 #ifdef EDEN_HAVE_SELINUX
 #include <selinux/selinux.h> // @manual
 #endif // EDEN_HAVE_SELINUX
+#else // !_WIN32
+#include <Lmcons.h> // @manual
+#include <userenv.h> // @manual
+#include "eden/fs/win/utils/Handle.h" // @manual
+#include "eden/fs/win/utils/WinError.h" // @manual
+#endif // _WIN32
+
+#include <vector>
+
+#include <folly/Exception.h>
+#include <folly/logging/xlog.h>
 
 using folly::checkUnixError;
 using folly::throwSystemError;
+using std::string;
 
 namespace facebook {
 namespace eden {
 
+#ifndef _WIN32
 struct UserInfo::PasswdEntry {
   struct passwd pwd;
   std::vector<char> buf;
@@ -41,9 +51,9 @@ static void dropToBasicSELinuxPrivileges() {
       SCOPE_SUCCESS {
         freecon(con);
       };
-      return " prior context was: " + std::string(con);
+      return " prior context was: " + string(con);
     }
-    return std::string();
+    return string();
   }();
 
   // Drop to basic user SELinux privileges.
@@ -186,14 +196,12 @@ bool UserInfo::initFromSudo() {
   try {
     uid_ = folly::to<uid_t>(sudoUid);
   } catch (const std::range_error&) {
-    throw std::runtime_error(
-        std::string{"invalid value for SUDO_UID: "} + sudoUid);
+    throw std::runtime_error(string{"invalid value for SUDO_UID: "} + sudoUid);
   }
   try {
     gid_ = folly::to<gid_t>(sudoGid);
   } catch (const std::range_error&) {
-    throw std::runtime_error(
-        std::string{"invalid value for SUDO_GID: "} + sudoGid);
+    throw std::runtime_error(string{"invalid value for SUDO_GID: "} + sudoGid);
   }
 
   username_ = sudoUser;
@@ -271,5 +279,58 @@ UserInfo UserInfo::lookup() {
   info.initHomedir(&pwd);
   return info;
 }
+#else // _WIN32
+UserInfo UserInfo::lookup() {
+  UserInfo info;
+
+  info.username_.resize(UNLEN);
+  DWORD size = folly::to_narrow(info.username_.size() + 1);
+  if (!GetUserNameA(info.username_.data(), &size)) {
+    throw makeWin32ErrorExplicit(GetLastError(), "Failed to get the user name");
+  }
+  info.username_.resize(size - 1);
+
+  TokenHandle tokenHandle;
+  if (!OpenProcessToken(GetCurrentProcess(), TOKEN_QUERY, tokenHandle.set())) {
+    throw makeWin32ErrorExplicit(
+        GetLastError(), "Failed to get the process token");
+  }
+
+  // The profile path could be of any arbitrary length, so if we failed to get
+  // with error ERROR_INSUFFICIENT_BUFFER then we retry with the right size
+  // buffer.
+
+  size = MAX_PATH;
+  string profile(size - 1, 0);
+  bool retry = false;
+
+  if (!GetUserProfileDirectoryA(tokenHandle.get(), profile.data(), &size)) {
+    if (GetLastError() == ERROR_INSUFFICIENT_BUFFER) {
+      retry = true;
+    } else {
+      throw makeWin32ErrorExplicit(
+          GetLastError(), "Failed to get user profile directory");
+    }
+  }
+
+  profile.resize(size - 1);
+  if (retry) {
+    if (!GetUserProfileDirectoryA(tokenHandle.get(), profile.data(), &size)) {
+      throw makeWin32ErrorExplicit(
+          GetLastError(), "Failed to get user profile directory");
+    }
+    profile.resize(size - 1);
+  }
+
+  info.homeDirectory_ = realpath(profile);
+
+  return info;
+}
+
+void UserInfo::dropPrivileges() {
+  // EdenFS does not run with elevated privileges on Windows,
+  // so there is nothing to do here.
+}
+#endif // _WIN32
 } // namespace eden
 } // namespace facebook

@@ -20,13 +20,13 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/config/ReloadableConfig.h"
-#include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/EdenStateDir.h"
 #include "eden/fs/store/KeySpace.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/utils/FaultInjector.h"
+#include "eden/fs/utils/UserInfo.h"
 
 using namespace facebook::eden;
 using folly::make_array;

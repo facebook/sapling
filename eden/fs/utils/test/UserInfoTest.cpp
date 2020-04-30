@@ -5,8 +5,9 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/fuse/privhelper/UserInfo.h"
+#include "eden/fs/utils/UserInfo.h"
 
+#include <folly/portability/Stdlib.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
@@ -15,6 +16,7 @@
 namespace facebook {
 namespace eden {
 
+#ifndef _WIN32
 TEST(UserInfo, initFromSudo) {
   ScopedEnvVar homeVar{"HOME"};
   ScopedEnvVar sudoUidVar{"SUDO_UID"};
@@ -119,5 +121,18 @@ TEST(UserInfo, lookup) {
     // but we can't confirm their correctness.
   }
 }
+#else
+
+TEST(UserInfoTest, testUserName) {
+  auto user = UserInfo::lookup();
+  EXPECT_EQ(getenv("USERNAME"), user.getUsername());
+}
+
+TEST(UserInfoTest, testHomeDirectory) {
+  auto user = UserInfo::lookup();
+  EXPECT_EQ(realpath(getenv("USERPROFILE")), user.getHomeDirectory());
+}
+#endif
+
 } // namespace eden
 } // namespace facebook

@@ -53,6 +53,7 @@
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcUtil.h"
+#include "eden/fs/utils/UserInfo.h"
 
 #ifdef _WIN32
 #include "eden/fs/win/mount/PrjfsChannel.h" // @manual

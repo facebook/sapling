@@ -38,7 +38,6 @@
 
 #ifdef _WIN32
 #include "eden/fs/win/utils/Stub.h" // @manual
-#include "eden/fs/win/utils/UserInfo.h" // @manual
 #else
 #include "eden/fs/fuse/FuseTypes.h"
 #include "eden/fs/takeover/TakeoverData.h"
@@ -69,14 +68,16 @@ class HgQueuedBackingStore;
 class BlobCache;
 class Dirstate;
 class EdenServiceHandler;
-struct SessionInfo;
 class LocalStore;
 class MountInfo;
+class Notifications;
+struct SessionInfo;
 class StartupLogger;
+class UserInfo;
+
 #ifndef _WIN32
 class TakeoverServer;
 #endif
-class Notifications;
 
 /*
  * EdenServer contains logic for running the Eden main loop.

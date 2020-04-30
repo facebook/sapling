@@ -19,11 +19,11 @@
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
-#include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/utils/EnumValue.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcessNameCache.h"
+#include "eden/fs/utils/UserInfo.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;

@@ -17,10 +17,10 @@
 #ifdef _WIN32
 #include "eden/fs/win/utils/Stub.h" // @manual
 #endif
-#include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
 #include "eden/fs/notifications/Notifications.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/UserInfo.h"
 
 namespace facebook {
 namespace eden {

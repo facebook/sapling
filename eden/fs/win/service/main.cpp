@@ -109,7 +109,7 @@ int __cdecl main(int argc, char** argv) {
   // Make sure to run this before any flag values are read.
   folly::init(&argc, &argv);
 
-  UserInfo identity;
+  auto identity = UserInfo::lookup();
   auto privHelper = make_unique<PrivHelper>();
 
   std::unique_ptr<EdenConfig> edenConfig;

@@ -6,13 +6,13 @@
  */
 
 #pragma once
-#ifdef _WIN32
-#include "eden/fs/win/utils/UserInfo.h" // @manual
-#else
+#include <folly/portability/SysTypes.h>
 #include <gtest/gtest_prod.h>
-#include <sys/types.h>
 
 #include "eden/fs/utils/PathFuncs.h"
+#ifdef _WIN32
+#include "eden/fs/win/utils/Stub.h" // @manual
+#endif // _WIN32
 
 namespace facebook {
 namespace eden {
@@ -80,6 +80,7 @@ class UserInfo {
 
   UserInfo() {}
 
+#ifndef _WIN32
   struct PasswdEntry;
 
   /**
@@ -111,6 +112,7 @@ class UserInfo {
   void initHomedir(PasswdEntry* pwd = nullptr);
 
   void restoreEnvironmentAfterSudo();
+#endif // !_WIN32
 
   // 65534 is commonly used for the "nobody" UID/GID.
   // This isn't universal, however, it still seems like a safer default
@@ -121,6 +123,7 @@ class UserInfo {
   AbsolutePath homeDirectory_;
 };
 
+#ifndef _WIN32
 /**
  * While EffectiveUserScope exists, the effective user ID and
  * effective group IDs are set to the invoking non-root user.  (But
@@ -148,6 +151,6 @@ struct EffectiveUserScope {
   gid_t rgid_;
   gid_t egid_;
 };
+#endif // !_WIN32
 } // namespace eden
 } // namespace facebook
-#endif

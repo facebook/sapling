@@ -10,12 +10,12 @@
 #include <folly/portability/GFlags.h>
 
 #include "eden/fs/config/EdenConfig.h"
-#include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/service/EdenServer.h"
 #include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/telemetry/SessionInfo.h"
 #include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/TempFile.h"
+#include "eden/fs/utils/UserInfo.h"
 
 using std::make_shared;
 using std::make_unique;

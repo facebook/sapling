@@ -22,8 +22,8 @@
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 #include "eden/fs/fuse/privhelper/PrivHelperImpl.h"
-#include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/fuse/privhelper/test/PrivHelperTestServer.h"
+#include "eden/fs/utils/UserInfo.h"
 
 using namespace facebook::eden;
 using namespace std::chrono_literals;

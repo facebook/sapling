@@ -37,6 +37,7 @@
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/testharness/TestUtil.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
+#include "eden/fs/utils/UserInfo.h"
 
 #ifdef _WIN32
 #include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h" // @manual
@@ -45,9 +46,7 @@
 #include "eden/fs/win/utils/FileUtils.h" // @manual
 #include "eden/fs/win/utils/Guid.h" // @manual
 #include "eden/fs/win/utils/Stub.h" // @manual
-#include "eden/fs/win/utils/UserInfo.h" // @manual
 #else
-#include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/testharness/FakeFuse.h"
@@ -96,12 +95,7 @@ TestMount::TestMount()
   // This sets both testDir_, config_, localStore_, and backingStore_
   initTestDirectory();
 
-#ifdef _WIN32
-  UserInfo userInfo;
-#else
   auto userInfo = UserInfo::lookup();
-#endif
-
   serverState_ = {make_shared<ServerState>(
       userInfo,
       privHelper_,

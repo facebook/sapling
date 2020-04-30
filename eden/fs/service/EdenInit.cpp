@@ -11,8 +11,8 @@
 
 #include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
-#include "eden/fs/fuse/privhelper/UserInfo.h"
 #include "eden/fs/utils/PathFuncs.h"
+#include "eden/fs/utils/UserInfo.h"
 
 using folly::StringPiece;
 
