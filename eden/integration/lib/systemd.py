@@ -413,7 +413,8 @@ def _transient_managed_systemd_user_service_manager(
     """Create an isolated systemd instance using 'systemd-run systemd'."""
 
     child_systemd_service = parent_systemd.systemd_run(
-        command=["/usr/lib/systemd/systemd", "--user", "--unit=basic.target"],
+        # pyre-ignore[6]: T38947910
+        command=[FindExe.SYSTEMD, "--user", "--unit=basic.target"],
         properties={
             "Description": f"Eden test systemd user service manager "
             f"({xdg_runtime_dir})",
@@ -486,10 +487,11 @@ class _TransientUnmanagedSystemdUserServiceManager:
             pathlib.Path(FindExe.FORCE_SD_BOOTED).resolve(strict=True)
         )
         process = subprocess.Popen(
+            # pyre-ignore[6]: T38947910
             [
                 "timeout",
                 f"{self.__lifetime_duration}s",
-                "/usr/lib/systemd/systemd",
+                FindExe.SYSTEMD,
                 "--user",
                 "--unit=basic.target",
                 "--log-target=console",

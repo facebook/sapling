@@ -117,6 +117,17 @@ class FindExeClass(object):
         return os.path.join(self.EDEN_SRC_ROOT, "eden/fs/service/fb-edenfs@.service")
 
     @cached_property
+    def SYSTEMD(self) -> str:
+        # systemd is installed at /usr/lib/systemd/systemd on RedHat-like distributions,
+        # and /bin/systemd on Debian-like distributions.
+        candidates = ["/usr/lib/systemd/systemd", "/bin/systemd"]
+        for path in candidates:
+            if os.access(path, os.X_OK):
+                return path
+
+        raise Exception(f"unable to find systemd: candidates checked={candidates}")
+
+    @cached_property
     def TAKEOVER_TOOL(self) -> str:
         return self._find_exe(
             "takeover_tool",
