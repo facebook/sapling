@@ -99,17 +99,17 @@ Push to a new public branch
   remote: added 1 changesets with 1 changes to 1 files
   $ hg book --list-subs
      remote/master             1:9da34b1aa207
+     remote/other              2:4c8ee072cf16
   $ showgraph
   @  3 public3: draft
   |
-  | o  2 public2: draft
+  | o  2 public2: public  remote/other
   |/
   | o  1 public1: public  remote/master
   |/
   o  0 base: public
   
 
-BUG! public2 is draft again and our subscription was lost
 BUG! public3 is draft and 'created' is not subscribed to
 
 Workaround this bug by pulling created
@@ -140,21 +140,14 @@ Create a draft commit and push it to a scratch branch
   $ showgraph
   o  4 draft1: draft  remote/scratch/draft1
   |
-  o  3 public3: draft
+  o  3 public3: public  remote/created
   |
-  | o  2 public2: draft
+  | o  2 public2: public  remote/other
   |/
   | o  1 public1: public  remote/master
   |/
   @  0 base: public
   
-
-BUG! Pushing to the scratch branch wiped out our subscriptions
-
-Workaround this by pulling them again
-  $ hg pull -B other -B created
-  pulling from ssh://user@dummy/server
-  no changes found
   $ hg cloud sync -q
 
   $ cd $TESTTMP/client2

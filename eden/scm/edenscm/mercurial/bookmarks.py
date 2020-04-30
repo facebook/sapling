@@ -1321,11 +1321,11 @@ def _readremotenamesfrom(vfs, filename):
             yield node, nametype, remote, rname
 
 
-def selectivepullbookmarknames(repo, remote, includeaccessed=True):
+def selectivepullbookmarknames(repo, remote=None, includeaccessed=True):
     """Returns the bookmark names that should be pulled during a pull."""
     initbooks = set(repo.ui.configlist("remotenames", "selectivepulldefault"))
 
-    if includeaccessed:
+    if remote is not None and includeaccessed:
         vfs = repo.sharedvfs
         try:
             accessedbooks = _readremotenamesfrom(vfs, _selectivepullaccessedbookmarks)

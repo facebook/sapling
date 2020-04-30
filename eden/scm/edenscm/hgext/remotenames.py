@@ -137,7 +137,8 @@ def expush(orig, repo, remote, *args, **kwargs):
         res = orig(repo, remote, *args, **kwargs)
 
         if _isselectivepull(repo.ui):
-            remotebookmarkskeys = selectivepullbookmarknames(repo, remote)
+            remotename = repo.ui.paths.getname(remote.url())
+            remotebookmarkskeys = selectivepullbookmarknames(repo, remotename)
             remotebookmarks = _listremotebookmarks(remote, remotebookmarkskeys)
         else:
             remotebookmarks = remote.listkeys("bookmarks")
@@ -447,7 +448,7 @@ def exclone(orig, ui, *args, **opts):
     repo = dstpeer.local()
     with repo.wlock(), repo.lock(), repo.transaction("exclone") as tr:
         if _isselectivepull(ui):
-            remotebookmarkskeys = selectivepullbookmarknames(repo, srcpeer)
+            remotebookmarkskeys = selectivepullbookmarknames(repo)
             remotebookmarks = _listremotebookmarks(srcpeer, remotebookmarkskeys)
         else:
             remotebookmarks = srcpeer.listkeys("bookmarks")
