@@ -10,17 +10,16 @@ use crate::{
     PostResolveAction, PostResolveBookmarkOnlyPushRebase, PostResolveInfinitePush, PostResolvePush,
     PostResolvePushRebase, PushrebaseBookmarkSpec,
 };
-use anyhow::{format_err, Error, Result};
+use anyhow::{format_err, Context, Error, Result};
 use blobrepo::BlobRepo;
 use bookmarks::{BookmarkName, BookmarkUpdateReason, BundleReplayData, Transaction};
-use cloned::cloned;
 use context::CoreContext;
-use failure_ext::FutureFailureErrorExt;
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt as Futures01FutureExt};
-use futures_old::future::{err, ok};
-use futures_old::{future, Future, IntoFuture};
-use futures_stats::Timed;
-use futures_util::future::{FutureExt, TryFutureExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::try_join,
+    stream::{FuturesUnordered, TryStreamExt},
+};
+use futures_stats::TimedFutureExt;
 use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
@@ -31,7 +30,7 @@ use scribe_commit_queue::{self, ScribeCommitQueue};
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, o, warn};
 use stats::prelude::*;
-use std::{collections::HashSet, sync::Arc};
+use std::collections::HashSet;
 
 use crate::rate_limits::enforce_commit_rate_limits;
 use crate::response::{
@@ -52,64 +51,61 @@ define_stats! {
     infinitepush: dynamic_timeseries("{}.infinitepush", (reponame: String); Rate, Sum),
 }
 
-pub fn run_post_resolve_action(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    bookmark_attrs: BookmarkAttrs,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    infinitepush_params: InfinitepushParams,
-    pushrebase_params: PushrebaseParams,
+pub async fn run_post_resolve_action(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bookmark_attrs: &BookmarkAttrs,
+    lca_hint: &dyn LeastCommonAncestorsHint,
+    infinitepush_params: &InfinitepushParams,
+    pushrebase_params: &PushrebaseParams,
     action: PostResolveAction,
-) -> BoxFuture<UnbundleResponse, BundleResolverError> {
+) -> Result<UnbundleResponse, BundleResolverError> {
     enforce_commit_rate_limits(ctx.clone(), &action)
-        .and_then({
-            cloned!(repo);
-            move |()| match action {
-                PostResolveAction::Push(action) => run_push(
-                    ctx,
-                    repo,
-                    bookmark_attrs,
-                    lca_hint,
-                    infinitepush_params,
-                    action,
-                )
-                .map(UnbundleResponse::Push)
-                .boxify(),
-                PostResolveAction::InfinitePush(action) => {
-                    run_infinitepush(ctx, repo, lca_hint, infinitepush_params, action)
-                        .map(UnbundleResponse::InfinitePush)
-                        .boxify()
-                }
-                PostResolveAction::PushRebase(action) => run_pushrebase(
-                    ctx,
-                    repo,
-                    bookmark_attrs,
-                    lca_hint,
-                    infinitepush_params,
-                    pushrebase_params,
-                    action,
-                )
-                .map(UnbundleResponse::PushRebase)
-                .boxify(),
-                PostResolveAction::BookmarkOnlyPushRebase(action) => run_bookmark_only_pushrebase(
-                    ctx,
-                    repo,
-                    bookmark_attrs,
-                    lca_hint,
-                    infinitepush_params,
-                    action,
-                )
-                .map(UnbundleResponse::BookmarkOnlyPushRebase)
-                .boxify(),
-            }
-        })
-        .inspect({
-            cloned!(repo);
-            move |unbundle_response| {
-                report_unbundle_type(&repo, unbundle_response);
-            }
-        })
-        .boxify()
+        .compat()
+        .await?;
+    let unbundle_response = match action {
+        PostResolveAction::Push(action) => run_push(
+            ctx,
+            repo,
+            bookmark_attrs,
+            lca_hint,
+            infinitepush_params,
+            action,
+        )
+        .await
+        .context("While doing a push")
+        .map(UnbundleResponse::Push)?,
+        PostResolveAction::InfinitePush(action) => {
+            run_infinitepush(ctx, repo, lca_hint, infinitepush_params, action)
+                .await
+                .context("While doing an infinitepush")
+                .map(UnbundleResponse::InfinitePush)?
+        }
+        PostResolveAction::PushRebase(action) => run_pushrebase(
+            ctx,
+            repo,
+            bookmark_attrs,
+            lca_hint,
+            infinitepush_params,
+            pushrebase_params,
+            action,
+        )
+        .await
+        .map(UnbundleResponse::PushRebase)?,
+        PostResolveAction::BookmarkOnlyPushRebase(action) => run_bookmark_only_pushrebase(
+            ctx,
+            repo,
+            bookmark_attrs,
+            lca_hint,
+            infinitepush_params,
+            action,
+        )
+        .await
+        .context("While doing a bookmark-only pushrebase")
+        .map(UnbundleResponse::BookmarkOnlyPushRebase)?,
+    };
+    report_unbundle_type(&repo, &unbundle_response);
+    Ok(unbundle_response)
 }
 
 fn report_unbundle_type(repo: &BlobRepo, unbundle_response: &UnbundleResponse) {
@@ -124,14 +120,14 @@ fn report_unbundle_type(repo: &BlobRepo, unbundle_response: &UnbundleResponse) {
     }
 }
 
-fn run_push(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    bookmark_attrs: BookmarkAttrs,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    infinitepush_params: InfinitepushParams,
+async fn run_push(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bookmark_attrs: &BookmarkAttrs,
+    lca_hint: &dyn LeastCommonAncestorsHint,
+    infinitepush_params: &InfinitepushParams,
     action: PostResolvePush,
-) -> BoxFuture<UnbundlePushResponse, BundleResolverError> {
+) -> Result<UnbundlePushResponse, Error> {
     debug!(ctx.logger(), "unbundle processing: running push.");
     let PostResolvePush {
         changegroup_id,
@@ -146,47 +142,41 @@ fn run_push(
         bundle_replay_data: maybe_raw_bundle2_id.map(BundleReplayData::new),
     };
 
-    let bookmark_pushes_futures = bookmark_pushes.into_iter().map({
-        cloned!(ctx, repo, lca_hint, bookmark_attrs, infinitepush_params);
-        move |bookmark_push| {
-            check_plain_bookmark_push_allowed(
-                ctx.clone(),
-                repo.clone(),
-                bookmark_attrs.clone(),
-                non_fast_forward_policy,
-                infinitepush_params.clone(),
-                bookmark_push,
-                lca_hint.clone(),
-            )
-            .map(|bp| Some(BookmarkPush::PlainPush(bp)))
-        }
-    });
-
-    future::join_all(bookmark_pushes_futures)
-        .and_then({
-            cloned!(ctx, repo);
-            move |maybe_bookmark_pushes| {
-                save_bookmark_pushes_to_db(ctx, repo, reason, maybe_bookmark_pushes)
+    let bookmark_pushes_futures: FuturesUnordered<_> = bookmark_pushes
+        .into_iter()
+        .map({
+            |bookmark_push| async {
+                check_plain_bookmark_push_allowed(
+                    &ctx,
+                    &repo,
+                    &bookmark_attrs,
+                    non_fast_forward_policy,
+                    &infinitepush_params,
+                    bookmark_push,
+                    lca_hint,
+                )
+                .await
+                .map(|bp| Some(BookmarkPush::PlainPush(bp)))
             }
         })
-        .map(move |()| (changegroup_id, bookmark_ids))
-        .boxify()
-        .context("While doing a push")
-        .from_err()
-        .map(move |(changegroup_id, bookmark_ids)| UnbundlePushResponse {
-            changegroup_id,
-            bookmark_ids,
-        })
-        .boxify()
+        .collect();
+
+    let bookmark_pushes = bookmark_pushes_futures.try_collect().await?;
+    save_bookmark_pushes_to_db(ctx, repo, reason, bookmark_pushes).await?;
+
+    Ok(UnbundlePushResponse {
+        changegroup_id,
+        bookmark_ids,
+    })
 }
 
-fn run_infinitepush(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    infinitepush_params: InfinitepushParams,
+async fn run_infinitepush(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    lca_hint: &dyn LeastCommonAncestorsHint,
+    infinitepush_params: &InfinitepushParams,
     action: PostResolveInfinitePush,
-) -> BoxFuture<UnbundleInfinitePushResponse, BundleResolverError> {
+) -> Result<UnbundleInfinitePushResponse, Error> {
     debug!(ctx.logger(), "unbundle processing: running infinitepush.");
     let PostResolveInfinitePush {
         changegroup_id,
@@ -200,7 +190,7 @@ fn run_infinitepush(
         None => {
             // Changegroup was saved during bundle2 resolution
             // there's nothing we need to do here.
-            return ok(UnbundleInfinitePushResponse { changegroup_id }).boxify();
+            return Ok(UnbundleInfinitePushResponse { changegroup_id });
         }
     };
 
@@ -208,37 +198,29 @@ fn run_infinitepush(
         bundle_replay_data: maybe_raw_bundle2_id.map(BundleReplayData::new),
     };
 
-    filter_or_check_infinitepush_allowed(
-        ctx.clone(),
-        repo.clone(),
+    let maybe_bonsai_bookmark_push = filter_or_check_infinitepush_allowed(
+        ctx,
+        repo,
         lca_hint,
         infinitepush_params,
         bookmark_push,
     )
-    .map(|maybe_bp| maybe_bp.map(BookmarkPush::Infinitepush))
-    .and_then({
-        cloned!(ctx, repo);
-        move |maybe_bonsai_bookmark_push| {
-            save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bonsai_bookmark_push])
-        }
-    })
-    .map(move |()| changegroup_id)
-    .boxify()
-    .context("While doing an infinitepush")
-    .from_err()
-    .map(move |changegroup_id| UnbundleInfinitePushResponse { changegroup_id })
-    .boxify()
+    .await
+    .context("While verifying Infinite Push bookmark push")
+    .map(|maybe_bp| maybe_bp.map(BookmarkPush::Infinitepush))?;
+    save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bonsai_bookmark_push]).await?;
+    Ok(UnbundleInfinitePushResponse { changegroup_id })
 }
 
-fn run_pushrebase(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    bookmark_attrs: BookmarkAttrs,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    infinitepush_params: InfinitepushParams,
-    pushrebase_params: PushrebaseParams,
+async fn run_pushrebase(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bookmark_attrs: &BookmarkAttrs,
+    lca_hint: &dyn LeastCommonAncestorsHint,
+    infinitepush_params: &InfinitepushParams,
+    pushrebase_params: &PushrebaseParams,
     action: PostResolvePushRebase,
-) -> BoxFuture<UnbundlePushRebaseResponse, BundleResolverError> {
+) -> Result<UnbundlePushRebaseResponse, BundleResolverError> {
     debug!(ctx.logger(), "unbundle processing: running pushrebase.");
     let PostResolvePushRebase {
         any_merges,
@@ -253,88 +235,74 @@ fn run_pushrebase(
     // FIXME: stop cloning when this fn is async
     let bookmark = bookmark_spec.get_bookmark_name().clone();
 
-    match bookmark_spec {
+    let (pushrebased_rev, pushrebased_changesets) = match bookmark_spec {
         // There's no `.context()` after `normal_pushrebase`, as it has
         // `Error=BundleResolverError` and doing `.context("bla").from_err()`
         // would turn some useful variant of `BundleResolverError` into generic
         // `BundleResolverError::Error`, which in turn would render incorrectly
         // (see definition of `BundleResolverError`).
-        PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => normal_pushrebase(
-            ctx.clone(),
-            repo.clone(),
-            &pushrebase_params,
-            uploaded_bonsais,
-            any_merges,
-            &onto_params,
-            maybe_hg_replay_data,
-            bookmark_attrs,
-            infinitepush_params,
-        )
-        .left_future(),
+        PushrebaseBookmarkSpec::NormalPushrebase(onto_params) => {
+            normal_pushrebase(
+                ctx,
+                repo,
+                &pushrebase_params,
+                &uploaded_bonsais,
+                any_merges,
+                &onto_params,
+                &maybe_hg_replay_data,
+                bookmark_attrs,
+                infinitepush_params,
+            )
+            .await?
+        }
         PushrebaseBookmarkSpec::ForcePushrebase(plain_push) => force_pushrebase(
-            ctx.clone(),
-            repo.clone(),
+            ctx,
+            repo,
             &pushrebase_params,
             lca_hint,
             plain_push,
-            maybe_hg_replay_data,
+            &maybe_hg_replay_data,
             bookmark_attrs,
             infinitepush_params,
         )
-        .context("While doing a force pushrebase")
-        .from_err()
-        .right_future(),
-    }
-    .and_then({
-        cloned!(ctx, repo);
-        move |(pushrebased_rev, pushrebased_changesets)| {
-            repo.get_phases()
-                .add_reachable_as_public(ctx, vec![pushrebased_rev.clone()])
-                .map(move |_| {
-                    (
-                        pushrebased_rev,
-                        pushrebased_changesets,
-                        bookmark,
-                        bookmark_push_part_id,
-                    )
-                })
-                .context("While marking pushrebased changeset as public")
-                .from_err()
-        }
-    })
-    .and_then({
-        cloned!(ctx, repo);
-        move |(pushrebased_rev, pushrebased_changesets, bookmark, bookmark_push_part_id)| {
-            // TODO: (dbudischek) T41565649 log pushed changesets as well, not only pushrebased
-            let new_commits = pushrebased_changesets.iter().map(|p| p.id_new).collect();
+        .await
+        .context("While doing a force pushrebase")?,
+    };
 
-            log_commits_to_scribe(
-                ctx.clone(),
-                repo.clone(),
-                new_commits,
-                pushrebase_params.commit_scribe_category.clone(),
-            )
-            .map(move |_| UnbundlePushRebaseResponse {
-                commonheads,
-                pushrebased_rev,
-                pushrebased_changesets,
-                onto: bookmark,
-                bookmark_push_part_id,
-            })
-            .from_err()
-        }
+    repo.get_phases()
+        .add_reachable_as_public(ctx.clone(), vec![pushrebased_rev.clone()])
+        .compat()
+        .await
+        .context("While marking pushrebased changeset as public")?;
+
+    // TODO: (dbudischek) T41565649 log pushed changesets as well, not only pushrebased
+    let new_commits = pushrebased_changesets.iter().map(|p| p.id_new).collect();
+
+    log_commits_to_scribe(
+        ctx,
+        repo,
+        new_commits,
+        pushrebase_params.commit_scribe_category.clone(),
+    )
+    .await?;
+
+    Ok(UnbundlePushRebaseResponse {
+        commonheads,
+        pushrebased_rev,
+        pushrebased_changesets,
+        onto: bookmark,
+        bookmark_push_part_id,
     })
-    .boxify()
 }
 
-fn run_bookmark_only_pushrebase(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    bookmark_attrs: BookmarkAttrs,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    infinitepush_params: InfinitepushParams,
+async fn run_bookmark_only_pushrebase(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bookmark_attrs: &BookmarkAttrs,
+    lca_hint: &dyn LeastCommonAncestorsHint,
+    infinitepush_params: &InfinitepushParams,
     action: PostResolveBookmarkOnlyPushRebase,
-) -> BoxFuture<UnbundleBookmarkOnlyPushRebaseResponse, BundleResolverError> {
+) -> Result<UnbundleBookmarkOnlyPushRebaseResponse, Error> {
     debug!(
         ctx.logger(),
         "unbundle processing: running bookmark-only pushrebase."
@@ -350,68 +318,53 @@ fn run_bookmark_only_pushrebase(
         // Since this a bookmark-only pushrebase, there are no changeset timestamps
         bundle_replay_data: maybe_raw_bundle2_id.map(|id| BundleReplayData::new(id)),
     };
-    check_plain_bookmark_push_allowed(
-        ctx.clone(),
-        repo.clone(),
+
+    let maybe_bookmark_push = check_plain_bookmark_push_allowed(
+        ctx,
+        repo,
         bookmark_attrs,
         non_fast_forward_policy,
         infinitepush_params,
         bookmark_push,
         lca_hint,
     )
-    .map(|bp| Some(BookmarkPush::PlainPush(bp)))
-    .and_then({
-        cloned!(ctx, repo);
-        move |maybe_bookmark_push| {
-            save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bookmark_push])
-        }
+    .await
+    .map(|bp| Some(BookmarkPush::PlainPush(bp)))?;
+    save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bookmark_push]).await?;
+    Ok(UnbundleBookmarkOnlyPushRebaseResponse {
+        bookmark_push_part_id: part_id,
     })
-    .and_then(move |_| ok(part_id).boxify())
-    .map({
-        move |bookmark_push_part_id| UnbundleBookmarkOnlyPushRebaseResponse {
-            bookmark_push_part_id,
-        }
-    })
-    .context("While doing a bookmark-only pushrebase")
-    .from_err()
-    .boxify()
 }
 
-fn normal_pushrebase(
-    ctx: CoreContext,
-    repo: BlobRepo,
+async fn normal_pushrebase(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     pushrebase_params: &PushrebaseParams,
-    changesets: HashSet<BonsaiChangeset>,
+    changesets: &HashSet<BonsaiChangeset>,
     any_merges: bool,
     onto_bookmark: &pushrebase::OntoBookmarkParams,
-    maybe_hg_replay_data: Option<pushrebase::HgReplayData>,
-    bookmark_attrs: BookmarkAttrs,
-    infinitepush_params: InfinitepushParams,
-) -> impl Future<
-    Item = (ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>),
-    Error = BundleResolverError,
-> {
+    maybe_hg_replay_data: &Option<pushrebase::HgReplayData>,
+    bookmark_attrs: &BookmarkAttrs,
+    infinitepush_params: &InfinitepushParams,
+) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), BundleResolverError> {
     let bookmark = &onto_bookmark.bookmark;
 
-    if let Err(error) = check_plain_bookmark_move_preconditions(
+    check_plain_bookmark_move_preconditions(
         &ctx,
         &bookmark,
         "pushrebase",
         &bookmark_attrs,
         &infinitepush_params,
-    ) {
-        return err(error).from_err().boxify();
-    }
+    )?;
 
     let block_merges = pushrebase_params.block_merges.clone();
     if block_merges && any_merges {
-        return err(format_err!(
+        return Err(format_err!(
             "Pushrebase blocked because it contains a merge commit.\n\
              If you need this for a specific use case please contact\n\
              the Source Control team at https://fburl.com/27qnuyl2"
-        ))
-        .from_err()
-        .boxify();
+        )
+        .into());
     }
 
     let hooks = get_pushrebase_hooks(&repo, &pushrebase_params);
@@ -422,155 +375,132 @@ fn normal_pushrebase(
         flags.rewritedates = rewritedates;
     }
 
-    futures_old::lazy({
-        cloned!(repo, onto_bookmark, ctx);
-        move || {
-            ctx.scuba().clone().log_with_msg("pushrebase started", None);
-            async move {
-                pushrebase::do_pushrebase_bonsai(
-                    &ctx,
-                    &repo,
-                    &flags,
-                    &onto_bookmark,
-                    &changesets,
-                    &maybe_hg_replay_data,
-                    &hooks[..],
-                )
-                .await
+    ctx.scuba().clone().log_with_msg("pushrebase started", None);
+    let (stats, result) = pushrebase::do_pushrebase_bonsai(
+        &ctx,
+        &repo,
+        &flags,
+        &onto_bookmark,
+        &changesets,
+        maybe_hg_replay_data,
+        &hooks[..],
+    )
+    .timed()
+    .await;
+
+    let mut scuba_logger = ctx.scuba().clone();
+    if let Ok(ref res) = result {
+        scuba_logger
+            .add_future_stats(&stats)
+            .add("pushrebase_retry_num", res.retry_num)
+            .log_with_msg("Pushrebase finished", None);
+    }
+
+    result
+        .map_err(|err| match err {
+            pushrebase::PushrebaseError::Conflicts(conflicts) => {
+                BundleResolverError::PushrebaseConflicts(conflicts)
             }
-            .boxed()
-            .compat()
-        }
-    })
-    .map_err(|err| match err {
-        pushrebase::PushrebaseError::Conflicts(conflicts) => {
-            BundleResolverError::PushrebaseConflicts(conflicts)
-        }
-        _ => BundleResolverError::Error(format_err!("pushrebase failed {:?}", err)),
-    })
-    .timed({
-        let mut scuba_logger = ctx.scuba().clone();
-        move |stats, result| {
-            if let Ok(res) = result {
-                scuba_logger
-                    .add_future_stats(&stats)
-                    .add("pushrebase_retry_num", res.retry_num)
-                    .log_with_msg("Pushrebase finished", None);
-            }
-            Ok(())
-        }
-    })
-    .map(|res| (res.head, res.rebased_changesets))
-    .boxify()
+            _ => BundleResolverError::Error(format_err!("pushrebase failed {:?}", err)),
+        })
+        .map(|res| (res.head, res.rebased_changesets))
 }
 
-fn force_pushrebase(
-    ctx: CoreContext,
-    repo: BlobRepo,
+async fn force_pushrebase(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     pushrebase_params: &PushrebaseParams,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+    lca_hint: &dyn LeastCommonAncestorsHint,
     bookmark_push: PlainBookmarkPush<ChangesetId>,
-    maybe_hg_replay_data: Option<pushrebase::HgReplayData>,
-    bookmark_attrs: BookmarkAttrs,
-    infinitepush_params: InfinitepushParams,
-) -> impl Future<Item = (ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), Error = Error> {
+    maybe_hg_replay_data: &Option<pushrebase::HgReplayData>,
+    bookmark_attrs: &BookmarkAttrs,
+    infinitepush_params: &InfinitepushParams,
+) -> Result<(ChangesetId, Vec<pushrebase::PushrebaseChangesetPair>), Error> {
     if pushrebase_params.assign_globalrevs {
         return Err(Error::msg(
             "force_pushrebase is not allowed when assigning Globalrevs",
-        ))
-        .into_future()
-        .boxify();
+        ));
     }
     if pushrebase_params.populate_git_mapping {
         return Err(Error::msg(
             "force_pushrebase is not allowed as it would skip populating Git mappings",
-        ))
-        .into_future()
-        .boxify();
+        ));
     }
 
     let maybe_target_bcs = bookmark_push.new.clone();
-    let target_bcs = try_boxfuture!(
-        maybe_target_bcs.ok_or(Error::msg("new changeset is required for force pushrebase"))
-    );
+    let target_bcs = maybe_target_bcs
+        .ok_or_else(|| Error::msg("new changeset is required for force pushrebase"))?;
     let reason = BookmarkUpdateReason::Pushrebase {
         bundle_replay_data: maybe_hg_replay_data
+            .as_ref()
             .map(|hg_replay_data| hg_replay_data.get_raw_bundle2_id())
             .map(BundleReplayData::new),
     };
-    // Note that this push did not do any actual rebases, so we do not
-    // need to provide any actual mapping, an empty Vec will do
-    let ret = (target_bcs, Vec::new());
-    check_plain_bookmark_push_allowed(
-        ctx.clone(),
-        repo.clone(),
+
+    let maybe_bookmark_push = check_plain_bookmark_push_allowed(
+        ctx,
+        repo,
         bookmark_attrs,
         NonFastForwardPolicy::Allowed,
         infinitepush_params,
         bookmark_push,
         lca_hint,
     )
-    .map(|bp| Some(BookmarkPush::PlainPush(bp)))
-    .and_then({
-        cloned!(ctx, repo);
-        move |maybe_bookmark_push| {
-            save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bookmark_push])
-        }
-    })
-    .map(move |_| ret)
-    .boxify()
+    .await
+    .map(|bp| Some(BookmarkPush::PlainPush(bp)))?;
+
+    save_bookmark_pushes_to_db(ctx, repo, reason, vec![maybe_bookmark_push]).await?;
+
+    // Note that this push did not do any actual rebases, so we do not
+    // need to provide any actual mapping, an empty Vec will do
+    Ok((target_bcs, Vec::new()))
 }
 
 /// Save several bookmark pushes to the database
-fn save_bookmark_pushes_to_db(
-    ctx: CoreContext,
-    repo: BlobRepo,
+async fn save_bookmark_pushes_to_db(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     reason: BookmarkUpdateReason,
     bonsai_bookmark_pushes: Vec<Option<BookmarkPush<ChangesetId>>>,
-) -> impl Future<Item = (), Error = Error> {
+) -> Result<(), Error> {
     if bonsai_bookmark_pushes.is_empty() {
         // If we have no bookmarks, then don't create an empty transaction. This is a
         // temporary workaround for the fact that we committing an empty transaction
         // evicts the cache.
-        return ok(()).boxify();
+        return Ok(());
     }
 
     let mut txn = repo.update_bookmark_transaction(ctx.clone());
 
     for bp in bonsai_bookmark_pushes.into_iter().flatten() {
-        try_boxfuture!(add_bookmark_to_transaction(&mut txn, bp, reason.clone()));
+        add_bookmark_to_transaction(&mut txn, bp, reason.clone())?;
     }
 
-    txn.commit()
-        .and_then(|ok| {
-            if ok {
-                Ok(())
-            } else {
-                Err(format_err!("Bookmark transaction failed"))
-            }
-        })
-        .boxify()
+    let ok = txn.commit().compat().await?;
+    if ok {
+        Ok(())
+    } else {
+        Err(format_err!("Boookmark transaction failed"))
+    }
 }
 
 /// Run sanity checks for plain (non-infinitepush) bookmark pushes
-fn check_plain_bookmark_push_allowed(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    bookmark_attrs: BookmarkAttrs,
+async fn check_plain_bookmark_push_allowed(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    bookmark_attrs: &BookmarkAttrs,
     non_fast_forward_policy: NonFastForwardPolicy,
-    infinitepush_params: InfinitepushParams,
+    infinitepush_params: &InfinitepushParams,
     bp: PlainBookmarkPush<ChangesetId>,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-) -> impl Future<Item = PlainBookmarkPush<ChangesetId>, Error = Error> {
-    if let Err(error) = check_plain_bookmark_move_preconditions(
+    lca_hint: &dyn LeastCommonAncestorsHint,
+) -> Result<PlainBookmarkPush<ChangesetId>, Error> {
+    check_plain_bookmark_move_preconditions(
         &ctx,
         &bp.name,
         "push",
         &bookmark_attrs,
         &infinitepush_params,
-    ) {
-        return err(error).right_future();
-    }
+    )?;
 
     let fastforward_only_bookmark = bookmark_attrs.is_fast_forward_only(&bp.name);
     // only allow non fast forward moves if the pushvar is set and the bookmark does not
@@ -581,66 +511,53 @@ fn check_plain_bookmark_push_allowed(
     match (bp.old, bp.new) {
         (old, Some(new)) if block_non_fast_forward => {
             check_is_ancestor_opt(ctx, repo, lca_hint, old, new)
+                .await
                 .map(|_| bp)
-                .left_future()
         }
         (Some(_old), None) if fastforward_only_bookmark => Err(format_err!(
             "Deletion of bookmark {} is forbidden.",
             bp.name
-        ))
-        .into_future()
-        .right_future(),
-        _ => Ok(bp).into_future().right_future(),
+        )),
+        _ => Ok(bp),
     }
 }
 
 /// Run sanity checks for infinitepush bookmark moves
-fn filter_or_check_infinitepush_allowed(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
-    infinitepush_params: InfinitepushParams,
+async fn filter_or_check_infinitepush_allowed(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    lca_hint: &dyn LeastCommonAncestorsHint,
+    infinitepush_params: &InfinitepushParams,
     bp: InfiniteBookmarkPush<ChangesetId>,
-) -> impl Future<Item = Option<InfiniteBookmarkPush<ChangesetId>>, Error = Error> {
-    match infinitepush_params.namespace {
-        Some(namespace) => ok(bp)
+) -> Result<Option<InfiniteBookmarkPush<ChangesetId>>, Error> {
+    match &infinitepush_params.namespace {
+        Some(namespace) => {
             // First, check that we match the namespace.
-            .and_then(move |bp| match namespace.matches_bookmark(&bp.name) {
-                true => ok(bp),
-                false => err(format_err!(
+            if !namespace.matches_bookmark(&bp.name) {
+                return Err(format_err!(
                     "Invalid Infinitepush bookmark: {} (Infinitepush bookmarks must match pattern {})",
                     &bp.name,
                     namespace.as_str()
-                ))
-            })
+                ));
+            }
             // Now, check that the bookmark we want to update either exists or is being created.
-            .and_then(|bp| {
-                if bp.old.is_some() || bp.create {
-                    Ok(bp)
-                } else {
-                    let e = format_err!(
-                        "Unknown bookmark: {}. Use --create to create one.",
-                        bp.name
-                    );
-                    Err(e)
-                }
-            })
+            if !(bp.old.is_some() || bp.create) {
+                let e = format_err!("Unknown bookmark: {}. Use --create to create one.", bp.name);
+                return Err(e);
+            }
             // Finally, check that the push is a fast-forward, or --force is set.
-            .and_then(|bp| match bp.force {
-                true => ok(()).left_future(),
-                false => check_is_ancestor_opt(ctx, repo, lca_hint, bp.old, bp.new)
-                    .map_err(|e| format_err!("{} (try --force?)", e))
-                    .right_future(),
-            }.map(|_| bp))
-            .map(Some)
-            .left_future(),
+            if !bp.force {
+                check_is_ancestor_opt(ctx, repo, lca_hint, bp.old, bp.new)
+                    .await
+                    .map_err(|e| format_err!("{} (try --force?)", e))?
+            }
+            Ok(Some(bp))
+        }
         None => {
             warn!(ctx.logger(), "Infinitepush bookmark push to {} was ignored", bp.name; o!("remote" => "true"));
-            ok(None)
-        }.right_future()
+            Ok(None)
+        }
     }
-    .context("While verifying Infinite Push bookmark push")
-    .from_err()
 }
 
 fn check_plain_bookmark_move_preconditions(
@@ -693,70 +610,76 @@ fn add_bookmark_to_transaction(
     }
 }
 
-fn check_is_ancestor_opt(
-    ctx: CoreContext,
-    repo: BlobRepo,
-    lca_hint: Arc<dyn LeastCommonAncestorsHint>,
+async fn check_is_ancestor_opt(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
+    lca_hint: &dyn LeastCommonAncestorsHint,
     old: Option<ChangesetId>,
     new: ChangesetId,
-) -> impl Future<Item = (), Error = Error> {
-    match old {
-        None => ok(()).left_future(),
-        Some(old) => {
-            if old == new {
-                ok(()).left_future()
-            } else {
-                lca_hint
-                    .is_ancestor(ctx, repo.get_changeset_fetcher(), old, new)
-                    .and_then(move |is_ancestor| match is_ancestor {
-                        true => Ok(()),
-                        false => Err(format_err!(
-                            "Non fastforward bookmark move from {} to {}",
-                            old,
-                            new
-                        )),
-                    })
-                    .right_future()
+) -> Result<(), Error> {
+    if let Some(old) = old {
+        if old != new {
+            let is_ancestor = lca_hint
+                .is_ancestor(ctx.clone(), repo.get_changeset_fetcher(), old, new)
+                .compat()
+                .await?;
+            if !is_ancestor {
+                return Err(format_err!(
+                    "Non fastforward bookmark move from {} to {}",
+                    old,
+                    new
+                ));
             }
         }
-        .right_future(),
     }
+    Ok(())
 }
 
-fn log_commits_to_scribe(
-    ctx: CoreContext,
-    repo: BlobRepo,
+async fn log_commits_to_scribe(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     changesets: Vec<ChangesetId>,
     commit_scribe_category: Option<String>,
-) -> BoxFuture<(), Error> {
+) -> Result<(), Error> {
     let queue = match commit_scribe_category {
-        Some(category) => Arc::new(scribe_commit_queue::LogToScribe::new_with_default_scribe(
-            ctx.fb, category,
-        )),
-        None => Arc::new(scribe_commit_queue::LogToScribe::new_with_discard()),
+        Some(category) => {
+            scribe_commit_queue::LogToScribe::new_with_default_scribe(ctx.fb, category)
+        }
+        None => scribe_commit_queue::LogToScribe::new_with_discard(),
     };
-    let futs = changesets.into_iter().map(move |changeset_id| {
-        cloned!(ctx, repo, queue, changeset_id);
-        let generation = repo
-            .get_generation_number(ctx.clone(), changeset_id)
-            .and_then(|maybe_gen| maybe_gen.ok_or(Error::msg("No generation number found")));
-        let parents = repo.get_changeset_parents_by_bonsai(ctx, changeset_id);
-        let repo_id = repo.get_repoid();
-        let queue = queue;
 
-        generation
-            .join(parents)
-            .and_then(move |(generation, parents)| {
+    let repo_id = repo.get_repoid();
+
+    let futs: FuturesUnordered<_> = changesets
+        .into_iter()
+        .map(|changeset_id| {
+            let queue = &queue;
+            async move {
+                let get_generation = async {
+                    repo.get_generation_number(ctx.clone(), changeset_id)
+                        .compat()
+                        .await?
+                        .ok_or_else(|| Error::msg("No generation number found"))
+                };
+                let get_parents = async {
+                    repo.get_changeset_parents_by_bonsai(ctx.clone(), changeset_id)
+                        .compat()
+                        .await
+                };
+
+                let (generation, parents) = try_join(get_generation, get_parents).await?;
+
                 let ci = scribe_commit_queue::CommitInfo::new(
                     repo_id,
                     generation,
                     changeset_id,
                     parents,
                 );
-                queue.queue_commit(ci)
-            })
-    });
-    future::join_all(futs).map(|_| ()).boxify()
+                queue.queue_commit(&ci).await
+            }
+        })
+        .collect();
+    futs.try_for_each(|()| async { Ok(()) }).await
 }
 
 /// Get a Vec of the relevant pushrebase hooks for PushrebaseParams, using this BlobRepo when

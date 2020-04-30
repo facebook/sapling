@@ -102,16 +102,14 @@ impl PushRedirector {
             .await
             .map_err(BundleResolverError::from)?;
         let large_repo_response = run_post_resolve_action(
-            ctx.clone(),
-            large_repo,
-            bookmark_attrs,
-            lca_hint,
-            infinitepush_params,
-            puhsrebase_params,
+            &ctx,
+            &large_repo,
+            &bookmark_attrs,
+            &*lca_hint,
+            &infinitepush_params,
+            &puhsrebase_params,
             large_repo_action,
         )
-        .compat()
-        .map_err(BundleResolverError::from)
         .await?;
         self.convert_unbundle_response(ctx.clone(), large_repo_response)
             .await

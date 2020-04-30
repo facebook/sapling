@@ -8,9 +8,8 @@
 use std::sync::Arc;
 
 use anyhow::Error;
+use async_trait::async_trait;
 use fbinit::FacebookInit;
-use futures::{Future, IntoFuture};
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use scribe::ScribeClient;
 use scribe_cxx::ScribeCxxClient;
 use serde_derive::Serialize;
@@ -41,8 +40,9 @@ impl CommitInfo {
     }
 }
 
+#[async_trait]
 pub trait ScribeCommitQueue: Send + Sync {
-    fn queue_commit(&self, commit: CommitInfo) -> BoxFuture<(), Error>;
+    async fn queue_commit(&self, commit: &CommitInfo) -> Result<(), Error>;
 }
 
 pub struct LogToScribe<C>
@@ -81,21 +81,18 @@ where
     }
 }
 
+#[async_trait]
 impl<C> ScribeCommitQueue for LogToScribe<C>
 where
     C: ScribeClient + Sync + Send + 'static,
 {
-    fn queue_commit(&self, commit: CommitInfo) -> BoxFuture<(), Error> {
+    async fn queue_commit(&self, commit: &CommitInfo) -> Result<(), Error> {
         match &self.client {
             Some(client) => {
-                let commit = try_boxfuture!(serde_json::to_string(&commit));
-                client
-                    .offer(&self.category, &commit)
-                    .into_future()
-                    .from_err()
-                    .boxify()
+                let commit = serde_json::to_string(commit)?;
+                client.offer(&self.category, &commit)
             }
-            None => Ok(()).into_future().boxify(),
+            None => Ok(()),
         }
     }
 }

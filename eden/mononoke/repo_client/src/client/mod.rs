@@ -1452,15 +1452,22 @@ impl HgCommands for RepoClient {
                                     .run_redirected_post_resolve_action_compat(ctx, action)
                                     .boxify()
                             }
-                            None => run_post_resolve_action(
-                                ctx,
-                                blobrepo,
-                                bookmark_attrs,
-                                lca_hint,
-                                infinitepush_params,
-                                pushrebase_params,
+                            None => {
+                                async move {
+                                run_post_resolve_action(
+                                &ctx,
+                                &blobrepo,
+                                &bookmark_attrs,
+                                &*lca_hint,
+                                &infinitepush_params,
+                                &pushrebase_params,
                                 action,
-                            )
+                                )
+                                .await
+                            }
+                            .boxed()
+                            .compat()
+                            .boxify()}
                         }
                     }
                 }).and_then({
