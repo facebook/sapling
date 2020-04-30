@@ -708,18 +708,20 @@ def storebundle(op, params, bundlefile):
         )
         key = None
         if newheadscount:
-            with open(bundlefile, "rb") as f:
-                bundledata = f.read()
-                with logservicecall(log, "bundlestore", bundlesize=len(bundledata)):
-                    bundlesizelimitmb = op.repo.ui.configint(
-                        "infinitepush", "maxbundlesize", 100
+            bundlesize = os.stat(bundlefile).st_size
+            with logservicecall(log, "bundlestore", bundlesize=bundlesize):
+                bundlesizelimitmb = op.repo.ui.configint(
+                    "infinitepush", "maxbundlesize", 100
+                )
+                if bundlesize > bundlesizelimitmb * 1024 * 1024:
+                    error_msg = (
+                        "bundle is too big: %d bytes. "
+                        + "max allowed size is %s MB" % bundlesizelimitmb
                     )
-                    if len(bundledata) > bundlesizelimitmb * 1024 * 1024:
-                        error_msg = (
-                            "bundle is too big: %d bytes. "
-                            + "max allowed size is %s MB" % bundlesizelimitmb
-                        )
-                        raise error.Abort(error_msg % (len(bundledata),))
+                    raise error.Abort(error_msg % (bundlesize,))
+
+                with open(bundlefile, "rb") as f:
+                    bundledata = f.read()
                     key = store.write(bundledata)
 
         with logservicecall(log, "index", newheadscount=newheadscount), index:
