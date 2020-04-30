@@ -55,6 +55,7 @@ from edenscm.mercurial import (
     url,
     util,
     vfs as vfsmod,
+    visibility,
 )
 from edenscm.mercurial.bookmarks import (
     _readremotenamesfrom,
@@ -450,6 +451,9 @@ def exclone(orig, ui, *args, **opts):
         if _isselectivepull(ui):
             remotebookmarkskeys = selectivepullbookmarknames(repo)
             remotebookmarks = _listremotebookmarks(srcpeer, remotebookmarkskeys)
+            # Clone pulled with selectivepull disabled.  Hide all the commits
+            # so we only get the ones we want.
+            visibility.setvisibleheads(repo, [])
         else:
             remotebookmarks = srcpeer.listkeys("bookmarks")
         pullremotenames(repo, srcpeer, remotebookmarks)

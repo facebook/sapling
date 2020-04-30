@@ -25,56 +25,40 @@
   $ cd client1
   $ hg cloud sync -q
   $ showgraph
-  o  2 public2: draft
+  @  1 public1: public  remote/master
   |
-  | @  1 public1: public  remote/master
-  |/
   o  0 base: public
   
-
-BUG! public2 has been included in the clone and is draft
 
   $ cd $TESTTMP
   $ clone server client2
   $ cd client2
   $ hg cloud sync -q
   $ showgraph
-  o  2 public2: draft
+  @  1 public1: public  remote/master
   |
-  | @  1 public1: public  remote/master
-  |/
   o  0 base: public
   
-
-BUG! public2 has been included in the clone and is draft
 
   $ cd $TESTTMP
   $ clone server client3
   $ cd client3
   $ hg cloud sync -q
   $ showgraph
-  o  2 public2: draft
+  @  1 public1: public  remote/master
   |
-  | @  1 public1: public  remote/master
-  |/
   o  0 base: public
   
-
-BUG! public2 has been included in the clone and is draft
 
   $ cd $TESTTMP
   $ clone server client4
   $ cd client4
   $ hg cloud sync -q
   $ showgraph
-  o  2 public2: draft
+  @  1 public1: public  remote/master
   |
-  | @  1 public1: public  remote/master
-  |/
   o  0 base: public
   
-
-BUG! public2 has been included in the clone and is draft
 
 Pull the other bookmark so we have a subscription.
   $ cd $TESTTMP/client1
@@ -178,8 +162,6 @@ Pull in this repo
   |
   o  3 public3: draft
   |
-  | o  2 public2: draft
-  |/
   | @  1 public1: public  remote/master
   |/
   o  0 base: public
