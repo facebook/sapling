@@ -1,5 +1,11 @@
-TESTDIR=${TESTDIR:-.}
-GETDB_PATH="$TESTDIR/${HGTEST_GETDB_PATH:-getdb.sh}"
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+HGSQL_TESTDIR="${RUN_TESTS_LIBRARY:-"${TESTDIR:-.}"}"
+
+GETDB_PATH="$HGSQL_TESTDIR/${HGTEST_GETDB_PATH:-getdb.sh}"
 export DUMMYSSH_STABLE_ORDER=1
 
 if [[ ! -f "$GETDB_PATH" ]]; then
@@ -40,7 +46,7 @@ USE $DBNAME;
 DROP TABLE IF EXISTS revisions;
 DROP TABLE IF EXISTS revision_references;
 DROP TABLE IF EXISTS repo_lock;
-$(cat $TESTDIR/hgsql/schema.$DBENGINE.sql)
+$(cat $HGSQL_TESTDIR/hgsql/schema.$DBENGINE.sql)
 EOF
 
 if [[ $? != 0 ]]; then
@@ -81,7 +87,7 @@ preferuncompressed=True
 uncompressed=True
 
 [ui]
-ssh=python "$TESTDIR/dummyssh"
+ssh=python "$HGSQL_TESTDIR/dummyssh"
 EOF
 }
 
@@ -93,6 +99,6 @@ function initclient() {
 configureclient() {
   cat >> $1/.hg/hgrc <<EOF
 [ui]
-ssh=python "$TESTDIR/dummyssh"
+ssh=python "$HGSQL_TESTDIR/dummyssh"
 EOF
 }

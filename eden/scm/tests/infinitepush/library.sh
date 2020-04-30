@@ -1,4 +1,10 @@
 #!/bin/bash
+# Copyright (c) Facebook, Inc. and its affiliates.
+#
+# This software may be used and distributed according to the terms of the
+# GNU General Public License version 2.
+
+INFINITEPUSH_TESTDIR="${RUN_TESTS_LIBRARY:-"$TESTDIR"}"
 
 scratchnodes() {
   for node in `find ../repo/.hg/scratchbranches/index/nodemap/* | sort`; do
@@ -19,10 +25,10 @@ commitcloud=
 infinitepush=
 pullcreatemarkers=
 [ui]
-ssh = python "$TESTDIR/dummyssh"
+ssh=python "$INFINITEPUSH_TESTDIR/dummyssh"
 [infinitepush]
 branchpattern=re:scratch/.*
-bgssh = python "$TESTDIR/dummyssh" -bgssh
+bgssh = python "$INFINITEPUSH_TESTDIR/dummyssh" -bgssh
 [remotenames]
 autopullhoistpattern=re:^[a-z0-9A-Z/]*$
 hoist=default
@@ -40,9 +46,9 @@ EOF
 }
 
 setupsqlclienthgrc() {
-cat << EOF > .hg/hgrc
+cat << EOF >> .hg/hgrc
 [ui]
-ssh=python "$TESTDIR/dummyssh"
+ssh=python "$INFINITEPUSH_TESTDIR/dummyssh"
 [extensions]
 infinitepush=
 [infinitepush]
@@ -54,9 +60,9 @@ EOF
 }
 
 setupsqlserverhgrc() {
-cat << EOF > .hg/hgrc
+cat << EOF >> .hg/hgrc
 [ui]
-ssh=python "$TESTDIR/dummyssh"
+ssh=python "$INFINITEPUSH_TESTDIR/dummyssh"
 [extensions]
 infinitepush=
 [infinitepush]
@@ -82,17 +88,21 @@ replaybookmarks=True
 EOF
 }
 
-createdb() {
-mysql -h $DBHOST -P $DBPORT -u $DBUSER $DBPASSOPT -e "CREATE DATABASE IF NOT EXISTS $DBNAME;" 2>/dev/null
-mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT <<EOF
+createinfinitepushtablessql() {
+  cat <<EOF
 DROP TABLE IF EXISTS nodestobundle;
 DROP TABLE IF EXISTS bookmarkstonode;
 DROP TABLE IF EXISTS bundles;
 DROP TABLE IF EXISTS nodesmetadata;
 DROP TABLE IF EXISTS forwardfillerqueue;
 DROP TABLE IF EXISTS replaybookmarksqueue;
-$(cat $TESTDIR/infinitepush/schema.sql)
+$(cat $INFINITEPUSH_TESTDIR/infinitepush/schema.sql)
 EOF
+}
+
+createdb() {
+  mysql -h $DBHOST -P $DBPORT -u $DBUSER $DBPASSOPT -e "CREATE DATABASE IF NOT EXISTS $DBNAME;" 2>/dev/null
+  createinfinitepushtablessql | mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT
 }
 
 querysqlindex() {
@@ -100,10 +110,10 @@ querysqlindex() {
 }
 
 setupdb() {
-source "$TESTDIR/hgsql/library.sh"
-echo "sqlhost=$DBHOST:$DBPORT:$DBNAME:$DBUSER:$DBPASS" >> .hg/hgrc
+  source "$INFINITEPUSH_TESTDIR/hgsql/library.sh"
+  echo "sqlhost=$DBHOST:$DBPORT:$DBNAME:$DBUSER:$DBPASS" >> .hg/hgrc
 
-createdb
+  createdb
 }
 
 waitbgbackup() {
