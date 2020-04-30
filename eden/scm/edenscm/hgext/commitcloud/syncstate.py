@@ -15,6 +15,9 @@ from edenscm.mercurial.pycompat import encodeutf8, ensurestr
 from . import error as ccerror
 
 
+NOTSET = object()
+
+
 class SyncState(object):
     """
     Stores the local record of what state was stored in the cloud at the
@@ -61,46 +64,66 @@ class SyncState(object):
                     ensurestr(n): ensurestr(v)
                     for n, v in data.get("remotebookmarks", {}).items()
                 }
+                self.snapshots = [ensurestr(s) for s in data.get("snapshots", [])]
+                self.maxage = data.get("maxage", None)
                 self.omittedheads = [ensurestr(h) for h in data.get("omittedheads", ())]
                 self.omittedbookmarks = [
                     ensurestr(n) for n in data.get("omittedbookmarks", ())
                 ]
-                self.snapshots = [ensurestr(s) for s in data.get("snapshots", [])]
-                self.maxage = data.get("maxage", None)
+                self.omittedremotebookmarks = [
+                    ensurestr(n) for n in data.get("omittedremotebookmarks", ())
+                ]
                 self.lastupdatetime = data.get("lastupdatetime", None)
         else:
             self.version = 0
             self.heads = []
             self.bookmarks = {}
             self.remotebookmarks = {}
-            self.omittedheads = []
-            self.omittedbookmarks = []
             self.snapshots = []
             self.maxage = None
+            self.omittedheads = []
+            self.omittedbookmarks = []
+            self.omittedremotebookmarks = []
             self.lastupdatetime = None
 
     def update(
         self,
         tr,
-        newversion,
-        newheads,
-        newbookmarks,
-        newomittedheads,
-        newomittedbookmarks,
-        newmaxage,
-        newremotebookmarks={},
-        newsnapshots=[],
+        newversion=NOTSET,
+        newheads=NOTSET,
+        newbookmarks=NOTSET,
+        newremotebookmarks=NOTSET,
+        newsnapshots=NOTSET,
+        newmaxage=NOTSET,
+        newomittedheads=NOTSET,
+        newomittedbookmarks=NOTSET,
+        newomittedremotebookmarks=NOTSET,
     ):
+        def update(value, orig):
+            return orig if value is NOTSET else value
+
+        version = update(newversion, self.version)
+        heads = update(newheads, self.heads)
+        bookmarks = update(newbookmarks, self.bookmarks)
+        remotebookmarks = update(newremotebookmarks, self.remotebookmarks)
+        snapshots = update(newsnapshots, self.snapshots)
+        maxage = update(newmaxage, self.maxage)
+        omittedheads = update(newomittedheads, self.omittedheads)
+        omittedbookmarks = update(newomittedbookmarks, self.omittedbookmarks)
+        omittedremotebookmarks = update(
+            newomittedremotebookmarks, self.omittedremotebookmarks
+        )
         data = {
-            "version": newversion,
-            "heads": newheads,
-            "bookmarks": newbookmarks,
-            "omittedheads": newomittedheads,
-            "omittedbookmarks": newomittedbookmarks,
-            "snapshots": newsnapshots,
-            "maxage": newmaxage,
+            "version": version,
+            "heads": heads,
+            "bookmarks": bookmarks,
+            "remotebookmarks": remotebookmarks,
+            "snapshots": snapshots,
+            "maxage": maxage,
+            "omittedheads": omittedheads,
+            "omittedbookmarks": omittedbookmarks,
+            "omittedremotebookmarks": omittedremotebookmarks,
             "lastupdatetime": time.time(),
-            "remotebookmarks": newremotebookmarks,
         }
         tr.addfilegenerator(
             self.filename,
@@ -108,25 +131,27 @@ class SyncState(object):
             lambda f: f.write(encodeutf8(json.dumps(data))),
         )
         self.prevstate = (self.version, self.heads, self.bookmarks, self.snapshots)
-        self.version = newversion
-        self.heads = newheads
-        self.bookmarks = newbookmarks
-        self.remotebookmarks = newremotebookmarks
-        self.omittedheads = newomittedheads
-        self.omittedbookmarks = newomittedbookmarks
-        self.snapshots = newsnapshots
-        self.maxage = newmaxage
+        self.version = version
+        self.heads = heads
+        self.bookmarks = bookmarks
+        self.remotebookmarks = remotebookmarks
+        self.snapshots = snapshots
+        self.omittedheads = omittedheads
+        self.omittedbookmarks = omittedbookmarks
+        self.omittedremotebookmarks = omittedremotebookmarks
+        self.maxage = maxage
         self.repo.ui.log(
             "commitcloud_sync",
-            "synced to workspace %s version %s: %d heads (%d omitted), %d bookmarks (%d omitted), %d remote bookmarks, %d snapshots\n",
+            "synced to workspace %s version %s: %d heads (%d omitted), %d bookmarks (%d omitted), %d remote bookmarks (%d omitted), %d snapshots\n",
             self.workspacename,
-            newversion,
-            len(newheads),
-            len(newomittedheads),
-            len(newbookmarks),
-            len(newomittedbookmarks),
-            len(newremotebookmarks),
-            len(newsnapshots),
+            version,
+            len(heads),
+            len(omittedheads),
+            len(bookmarks),
+            len(omittedbookmarks),
+            len(remotebookmarks),
+            len(omittedremotebookmarks),
+            len(snapshots),
         )
 
     def oscillating(self, newheads, newbookmarks, newsnapshots):

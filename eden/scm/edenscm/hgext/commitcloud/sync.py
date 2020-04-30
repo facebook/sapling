@@ -377,6 +377,7 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
     else:
         omittedheads = []
     omittedbookmarks = []
+    omittedremotebookmarks = []
 
     newvisibleheads = None
     if visibility.tracking(repo):
@@ -437,7 +438,9 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
 
     newremotebookmarks = {}
     if _isremotebookmarkssyncenabled(repo.ui):
-        newremotebookmarks = _updateremotebookmarks(repo, tr, remotebookmarkupdates)
+        newremotebookmarks, omittedremotebookmarks = _updateremotebookmarks(
+            repo, tr, remotebookmarkupdates
+        )
 
     if snapshot:
         with repo.lock(), repo.transaction("sync-snapshots") as tr:
@@ -509,14 +512,15 @@ def _applycloudchanges(repo, remotepath, lastsyncstate, cloudrefs, maxage, state
     )
     lastsyncstate.update(
         tr,
-        cloudrefs.version,
-        cloudrefs.heads,
-        cloudrefs.bookmarks,
-        omittedheads,
-        omittedbookmarks,
-        maxage,
-        newremotebookmarks,
-        newsnapshots,
+        newversion=cloudrefs.version,
+        newheads=cloudrefs.heads,
+        newbookmarks=cloudrefs.bookmarks,
+        newremotebookmarks=newremotebookmarks,
+        newmaxage=maxage,
+        newomittedheads=omittedheads,
+        newomittedbookmarks=omittedbookmarks,
+        newomittedremotebookmarks=omittedremotebookmarks,
+        newsnapshots=newsnapshots,
     )
 
     # Also update backup state.  These new heads are already backed up,
@@ -632,14 +636,18 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
 
     localremotebooks = _getremotebookmarks(repo)
     oldcloudremotebooks = lastsyncstate.remotebookmarks
+    omittedremotebookmarks = set(lastsyncstate.omittedremotebookmarks)
     allremotenames = set(localremotebooks.keys())
     allremotenames.update(cloudremotebooks.keys())
+    allremotenames.update(omittedremotebookmarks)
 
     updates = {}
     for remotename in allremotenames:
         cloudnode = cloudremotebooks.get(remotename, None)
         localnode = localremotebooks.get(remotename, None)
         oldcloudnode = oldcloudremotebooks.get(remotename, None)
+        if localnode is None and remotename in omittedremotebookmarks:
+            localnode = oldcloudnode
 
         if cloudnode != oldcloudnode and localnode != oldcloudnode:
             # Both cloud and local remote bookmark have changed.
@@ -669,11 +677,15 @@ def _processremotebookmarks(repo, cloudremotebooks, lastsyncstate):
             # Use the local node
             updates[remotename] = localnode
 
+    def ispublic(name):
+        remote, name = bookmarks.splitremotename(name)
+        return not repo._scratchbranchmatcher.match(name)
+
     unfi = repo.unfiltered()
     newnodes = set(
         node
-        for node in updates.values()
-        if node != nodemod.nullhex and node not in unfi
+        for name, node in pycompat.iteritems(updates)
+        if node != nodemod.nullhex and node not in unfi and ispublic(name)
     )
     return (updates, newnodes)
 
@@ -683,6 +695,8 @@ def _updateremotebookmarks(repo, tr, updates):
     oldremotebookmarks = _getremotebookmarks(repo)
     protectednames = set(repo.ui.configlist("remotenames", "selectivepulldefault"))
     newremotebookmarks = {}
+    omittedremotebookmarks = []
+    unfi = repo.unfiltered()
 
     # Filter out any deletions of default names.  These are protected and shouldn't
     # be deleted.
@@ -692,17 +706,22 @@ def _updateremotebookmarks(repo, tr, updates):
             newremotebookmarks[remotename] = oldremotebookmarks.get(
                 remotename, nodemod.nullhex
             )
+        elif node != nodemod.nullhex and node not in unfi:
+            omittedremotebookmarks.append(name)
+            newremotebookmarks[remotename] = nodemod.nullhex
         else:
             newremotebookmarks[remotename] = node
     repo._remotenames.applychanges({"bookmarks": newremotebookmarks})
 
     # Still remove these from the cloud state.  We will add them back in when
     # uploading changes to the cloud.
-    return {
+    newcloudremotebookmarks = {
         name: node
         for name, node in pycompat.iteritems(updates)
         if node != nodemod.nullhex
     }
+
+    return newcloudremotebookmarks, omittedremotebookmarks
 
 
 def _forcesyncremotebookmarks(repo, cloudrefs, lastsyncstate, remotepath, tr):
@@ -712,17 +731,15 @@ def _forcesyncremotebookmarks(repo, cloudrefs, lastsyncstate, remotepath, tr):
     )
     if newnodes:
         _pullheadgroups(repo, remotepath, _partitionheads(newnodes))
-    newremotebookmarks = _updateremotebookmarks(repo, tr, updates)
+    newremotebookmarks, omittedremotebookmarks = _updateremotebookmarks(
+        repo, tr, updates
+    )
+
     # We have now synced the repo to the cloud version.  Store this.
     lastsyncstate.update(
         tr,
-        lastsyncstate.version,
-        lastsyncstate.heads,
-        lastsyncstate.bookmarks,
-        lastsyncstate.omittedheads,
-        lastsyncstate.omittedbookmarks,
-        lastsyncstate.maxage,
-        newremotebookmarks,
+        newremotebookmarks=newremotebookmarks,
+        newomittedremotebookmarks=omittedremotebookmarks,
     )
 
 
@@ -846,9 +863,12 @@ def _checkomissions(repo, remotepath, lastsyncstate, tr):
     unfi = repo.unfiltered()
     lastomittedheads = set(lastsyncstate.omittedheads)
     lastomittedbookmarks = set(lastsyncstate.omittedbookmarks)
+    lastomittedremotebookmarks = set(lastsyncstate.omittedremotebookmarks)
     omittedheads = set()
     omittedbookmarks = set()
+    omittedremotebookmarks = set()
     changes = []
+    remotechanges = {}
     for head in lastomittedheads:
         if head not in repo:
             omittedheads.add(head)
@@ -861,20 +881,33 @@ def _checkomissions(repo, remotepath, lastsyncstate, tr):
             changes.append((name, nodemod.bin(node)))
         else:
             omittedbookmarks.add(name)
-    if omittedheads != lastomittedheads or omittedbookmarks != lastomittedbookmarks:
+    for name in lastomittedremotebookmarks:
+        if name not in lastsyncstate.remotebookmarks:
+            continue
+        node = lastsyncstate.remotebookmarks[name]
+        if node in unfi:
+            remotechanges[name] = node
+        else:
+            omittedremotebookmarks.add(name)
+    if (
+        omittedheads != lastomittedheads
+        or omittedbookmarks != lastomittedbookmarks
+        or omittedremotebookmarks != lastomittedremotebookmarks
+    ):
         lastsyncstate.update(
             tr,
-            lastsyncstate.version,
-            lastsyncstate.heads,
-            lastsyncstate.bookmarks,
-            list(omittedheads),
-            list(omittedbookmarks),
-            lastsyncstate.maxage,
-            lastsyncstate.remotebookmarks,
+            newomittedheads=list(omittedheads),
+            newomittedbookmarks=list(omittedbookmarks),
+            newomittedremotebookmarks=list(omittedremotebookmarks),
         )
-    if changes:
+    if changes or remotechanges:
         with repo.wlock(), repo.lock(), repo.transaction("cloudsync") as tr:
-            repo._bookmarks.applychanges(repo, tr, changes)
+            if changes:
+                repo._bookmarks.applychanges(repo, tr, changes)
+            if remotechanges:
+                remotebookmarks = _getremotebookmarks(repo)
+                remotebookmarks.update(remotechanges)
+                repo._remotenames.applychanges({"bookmarks": remotebookmarks})
 
 
 @perftrace.tracefunc("Submit Local Changes")
@@ -904,6 +937,7 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
     # omitted)
     omittedheads = set(lastsyncstate.omittedheads)
     omittedbookmarks = set(lastsyncstate.omittedbookmarks)
+    omittedremotebookmarks = set(lastsyncstate.omittedremotebookmarks)
     localsyncedheads = [
         head for head in lastsyncstate.heads if head not in omittedheads
     ]
@@ -912,10 +946,15 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         for name, node in lastsyncstate.bookmarks.items()
         if name not in omittedbookmarks
     }
+    localsyncedremotebookmarks = {
+        name: node
+        for name, node in lastsyncstate.remotebookmarks.items()
+        if name not in omittedremotebookmarks
+    }
 
     remotebookmarkschanged = (
         _isremotebookmarkssyncenabled(repo.ui)
-        and localremotebookmarks != lastsyncstate.remotebookmarks
+        and localremotebookmarks != localsyncedremotebookmarks
     )
 
     localsnapshotsset = set(localsnapshots)
@@ -973,10 +1012,21 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
 
     oldremotebookmarks = []
     newremotebookmarks = {}
+    newomittedremotebookmarks = []
     if _isremotebookmarkssyncenabled(repo.ui):
         # do not need to submit local remote bookmarks if the feature is not enabled
         oldremotebookmarks = lastsyncstate.remotebookmarks.keys()
-        newremotebookmarks = localremotebookmarks
+        newremotebookmarks = {
+            name: localremotebookmarks.get(
+                name, lastsyncstate.remotebookmarks.get(name)
+            )
+            for name in set(localremotebookmarks.keys()).union(
+                lastsyncstate.omittedremotebookmarks
+            )
+        }
+        newomittedremotebookmarks = list(
+            set(newremotebookmarks.keys()).difference(localremotebookmarks.keys())
+        )
 
     backuplock.progress(repo, "finishing synchronizing with '%s'" % workspacename)
     synced, cloudrefs = serv.updatereferences(
@@ -1010,14 +1060,14 @@ def _submitlocalchanges(repo, reponame, workspacename, lastsyncstate, failed, se
         )
         lastsyncstate.update(
             tr,
-            cloudrefs.version,
-            newcloudheads,
-            newcloudbookmarks,
-            newomittedheads,
-            newomittedbookmarks,
-            lastsyncstate.maxage,
-            newremotebookmarks,
-            localsnapshots,
+            newversion=cloudrefs.version,
+            newheads=newcloudheads,
+            newbookmarks=newcloudbookmarks,
+            newremotebookmarks=newremotebookmarks,
+            newomittedheads=newomittedheads,
+            newomittedbookmarks=newomittedbookmarks,
+            newomittedremotebookmarks=newomittedremotebookmarks,
+            newsnapshots=localsnapshots,
         )
         obsmarkersmod.clearsyncingobsmarkers(repo)
 

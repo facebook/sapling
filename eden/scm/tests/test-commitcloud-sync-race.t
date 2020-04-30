@@ -35,7 +35,7 @@
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
   visibility: read 1 heads: df4f53cec30a
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
-  commitcloud_sync: synced to workspace user/test/default version 1: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks, 0 snapshots
+  commitcloud_sync: synced to workspace user/test/default version 1: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted), 0 snapshots
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ cd ..
@@ -55,7 +55,7 @@
   commitcloud: this repository is now connected to the 'user/test/default' workspace for the 'testrepo' repo
   visibility: read 1 heads: df4f53cec30a
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
-  commitcloud_sync: synced to workspace user/test/default version 1: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks, 0 snapshots
+  commitcloud_sync: synced to workspace user/test/default version 1: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted), 0 snapshots
   commitcloud: commits synchronized
   finished in 0.00 sec
   $ cd ..
@@ -70,7 +70,7 @@
   visibility: read 1 heads: 79089e97b9e7
   commitcloud: synchronizing 'testrepo' with 'user/test/default'
   backing up stack rooted at 79089e97b9e7
-  commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks, 0 snapshots
+  commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted), 0 snapshots
   commitcloud: commits synchronized
   finished in 0.00 sec
   remote: pushing 1 commit:
@@ -116,8 +116,8 @@ Let the background sync we started earlier continue, and start a concurrent clou
   visibility: removed 0 heads []; added 1 heads [79089e97b9e7]
   remote: pushing 1 commit:
   remote:     1292cc1f1c17  commit2
-  commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks, 0 snapshots
-  commitcloud_sync: synced to workspace user/test/default version 3: 2 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks, 0 snapshots
+  commitcloud_sync: synced to workspace user/test/default version 2: 1 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted), 0 snapshots
+  commitcloud_sync: synced to workspace user/test/default version 3: 2 heads (0 omitted), 0 bookmarks (0 omitted), 0 remote bookmarks (0 omitted), 0 snapshots
   visibility: wrote 2 heads: 79089e97b9e7, 1292cc1f1c17
   commitcloud: commits synchronized
   finished in 0.00 sec

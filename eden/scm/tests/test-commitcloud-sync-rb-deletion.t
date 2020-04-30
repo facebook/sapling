@@ -279,24 +279,11 @@ Sync in the fourth repo
   $ cd $TESTTMP/client4
   $ hg cloud sync
   commitcloud: synchronizing 'server' with 'user/test/default'
-  pulling d860d2fc26c5 from ssh://user@dummy/server
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 0 files
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
   commitcloud: commits synchronized
   finished in * sec (glob)
 
-BUG! We pulled the draft commit, even though it's hidden
-
   $ hg book --list-subs
      remote/master             1:9da34b1aa207
-     remote/scratch/draft1     4:d860d2fc26c5
   $ showgraph
   @  1 public1: public  remote/master
   |
