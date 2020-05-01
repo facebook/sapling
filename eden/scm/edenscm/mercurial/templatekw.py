@@ -914,9 +914,9 @@ def showp2node(repo, ctx, templ, **args):
 
 @templatekeyword("parents")
 def showparents(**args):
-    """List of strings. The parents of the changeset in "rev:node"
-    format. If the changeset has only one "natural" parent (the predecessor
-    revision) nothing is shown."""
+    """List of strings. The parents of the changeset in "rev:node" format.
+    If the changeset's only parent has the previous revision number, it is
+    omitted."""
     args = args
     repo = args["repo"]
     ctx = args["ctx"]

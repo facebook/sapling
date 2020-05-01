@@ -604,13 +604,13 @@ def meaningfulparents(repo, ctx):
     is not the preceding revision.
     """
     parents = ctx.parents()
-    if len(parents) > 1:
+    if len(parents) > 1 and parents[1].rev() != -1:
         return parents
     if repo.ui.debugflag:
         return [parents[0], repo["null"]]
     if parents[0].rev() >= intrev(ctx) - 1:
         return []
-    return parents
+    return parents[:1]
 
 
 def expandpats(pats):
