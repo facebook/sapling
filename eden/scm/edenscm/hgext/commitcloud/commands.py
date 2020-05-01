@@ -61,7 +61,7 @@ pullopts = [
 remoteopts = [("", "dest", "", _("remote that is used for backups"))]
 
 
-@command("cloud", [], "SUBCOMMAND ...", subonly=True)
+@command("cloud", [], "SUBCOMMAND ...")
 def cloud(ui, repo, **opts):
     """synchronise commits via commit cloud
 
@@ -78,7 +78,9 @@ def cloud(ui, repo, **opts):
 
     Use 'hg cloud leave' to disconnect your repository from commit cloud.
     """
-    pass
+    raise error.Abort(
+        "you need to specify a subcommand (run with --help to see a list of subcommands)"
+    )
 
 
 subcmd = cloud.subcommand(
