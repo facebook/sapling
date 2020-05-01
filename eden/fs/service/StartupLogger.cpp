@@ -13,15 +13,15 @@
 #include <folly/FileUtil.h>
 #include <folly/String.h>
 #include <folly/logging/xlog.h>
+#include <folly/portability/Unistd.h>
 #include <gflags/gflags.h>
 #include <sys/types.h>
 
 #ifdef _WIN32
-#include <folly/portability/Unistd.h>
+#include "eden/fs/win/utils/WinError.h" // @manual
 #else
 #include <sys/wait.h>
 #include <sysexits.h>
-#include <unistd.h>
 #endif
 
 #include "eden/fs/eden-config.h"
@@ -42,18 +42,16 @@ DEFINE_string(
 
 namespace {
 void writeMessageToFile(folly::File&, folly::StringPiece);
-}
+#ifdef _WIN32
+void redirectOutput(folly::StringPiece);
+#endif // _WIN32
+} // namespace
 
-std::unique_ptr<StartupLogger> daemonizeIfRequested(
+std::shared_ptr<StartupLogger> daemonizeIfRequested(
     folly::StringPiece logPath) {
-  if (FLAGS_foreground) {
-    if (!FLAGS_startupLogPath.empty()) {
-      return std::make_unique<FileStartupLogger>(FLAGS_startupLogPath);
-    }
-    auto startupLogger = std::make_unique<ForegroundStartupLogger>();
-    return startupLogger;
-  } else {
-    auto startupLogger = std::make_unique<DaemonStartupLogger>();
+#ifndef _WIN32
+  if (!FLAGS_foreground) {
+    auto startupLogger = std::make_shared<DaemonStartupLogger>();
     if (!FLAGS_startupLogPath.empty()) {
       startupLogger->warn(
           "Ignoring --startupLogPath because --foreground was not specified");
@@ -61,6 +59,20 @@ std::unique_ptr<StartupLogger> daemonizeIfRequested(
     startupLogger->daemonize(logPath);
     return startupLogger;
   }
+#else
+  // On Windows we always run as a foreground process, regardless of the value
+  // of FLAGS_foreground.  The main difference is that FLAGS_foreground will
+  // force logPath to be empty, which causes us to log to stderr.  Without
+  // FLAGS_foreground set we redirect our output to the specified log file.
+  if (!logPath.empty()) {
+    redirectOutput(logPath);
+  }
+#endif // _WIN32
+
+  if (!FLAGS_startupLogPath.empty()) {
+    return std::make_shared<FileStartupLogger>(FLAGS_startupLogPath);
+  }
+  return std::make_shared<ForegroundStartupLogger>();
 }
 
 StartupLogger::~StartupLogger() = default;
@@ -85,6 +97,7 @@ void StartupLogger::writeMessage(folly::LogLevel level, StringPiece message) {
   writeMessageImpl(level, message);
 }
 
+#ifndef _WIN32
 void DaemonStartupLogger::successImpl() {
   if (!logPath_.empty()) {
     writeMessage(
@@ -341,6 +354,7 @@ DaemonStartupLogger::ParentResult DaemonStartupLogger::handleChildCrash(
     return ParentResult(EX_SOFTWARE, msg);
   }
 }
+#endif // !_WIN32
 
 void ForegroundStartupLogger::writeMessageImpl(folly::LogLevel, StringPiece) {}
 
@@ -368,6 +382,7 @@ void FileStartupLogger::successImpl() {}
 }
 
 namespace {
+
 void writeMessageToFile(folly::File& file, folly::StringPiece message) {
   std::array<iovec, 2> iov;
   iov[0].iov_base = const_cast<char*>(message.data());
@@ -380,6 +395,52 @@ void writeMessageToFile(folly::File& file, folly::StringPiece message) {
   // There is not much we can do if it fails.
   (void)folly::writevFull(file.fd(), iov.data(), iov.size());
 }
+
+#ifdef _WIN32
+void redirectOutput(folly::StringPiece logPath) {
+  auto logPathStr = logPath.str();
+  HANDLE newHandle = CreateFileA(
+      logPathStr.c_str(),
+      FILE_APPEND_DATA,
+      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
+      nullptr,
+      OPEN_ALWAYS,
+      FILE_ATTRIBUTE_NORMAL,
+      nullptr);
+
+  if (newHandle == INVALID_HANDLE_VALUE) {
+    throw makeWin32ErrorExplicit(
+        GetLastError(),
+        folly::sformat("Unable to open the log file {}\n", logPath));
+  }
+
+  // Don't close the previous handles here, it will be closed as part of _dup2
+  // call.
+
+  SetStdHandle(STD_OUTPUT_HANDLE, newHandle);
+  SetStdHandle(STD_ERROR_HANDLE, newHandle);
+
+  int fd = _open_osfhandle(reinterpret_cast<intptr_t>(newHandle), _O_APPEND);
+  if (fd == -1) {
+    throw std::runtime_error(
+        "_open_osfhandle() returned -1 while opening logfile");
+  }
+  SCOPE_EXIT {
+    _close(fd);
+  };
+
+  if (_dup2(fd, _fileno(stderr)) == -1) {
+    throw std::runtime_error(
+        folly::format("Dup failed to update stderr. errno: {}", errno).str());
+  }
+
+  if (_dup2(fd, _fileno(stdout)) == -1) {
+    throw std::runtime_error(
+        folly::format("Dup failed to update stdout. errno: {}", errno).str());
+  }
+}
+#endif // _WIN32
+
 } // namespace
 
 } // namespace eden

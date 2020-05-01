@@ -35,6 +35,7 @@
 #include "eden/fs/service/EdenCPUThreadPool.h"
 #include "eden/fs/service/EdenError.h"
 #include "eden/fs/service/EdenServiceHandler.h"
+#include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/service/gen-cpp2/eden_types.h"
 #include "eden/fs/store/BlobCache.h"
 #include "eden/fs/store/EmptyBackingStore.h"
@@ -57,7 +58,6 @@
 
 #ifdef _WIN32
 #include "eden/fs/win/mount/PrjfsChannel.h" // @manual
-#include "eden/fs/win/service/StartupLogger.h" // @manual
 #include "eden/fs/win/utils/FileUtils.h" // @manual
 #include "eden/fs/win/utils/Stub.h" // @manual
 #else
@@ -67,7 +67,6 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
-#include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/takeover/TakeoverClient.h"
 #include "eden/fs/takeover/TakeoverData.h"

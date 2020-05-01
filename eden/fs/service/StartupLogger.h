@@ -23,7 +23,7 @@ namespace eden {
 
 class StartupLogger;
 
-std::unique_ptr<StartupLogger> daemonizeIfRequested(folly::StringPiece logPath);
+std::shared_ptr<StartupLogger> daemonizeIfRequested(folly::StringPiece logPath);
 
 /**
  * StartupLogger provides an API for logging messages that should be displayed
@@ -93,6 +93,8 @@ class StartupLogger {
   virtual void successImpl() = 0;
   [[noreturn]] virtual void failAndExitImpl(uint8_t exitCode) = 0;
 };
+
+#ifndef _WIN32
 
 class DaemonStartupLogger : public StartupLogger {
  public:
@@ -177,6 +179,7 @@ class DaemonStartupLogger : public StartupLogger {
   // completed daemon startup.
   folly::File pipe_;
 };
+#endif // !_WIN32
 
 class ForegroundStartupLogger : public StartupLogger {
  public:

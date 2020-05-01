@@ -52,8 +52,6 @@ if (WIN32)
   list(
     REMOVE_ITEM SERVICE_SRCS
     ${CMAKE_CURRENT_SOURCE_DIR}/EdenMain.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/StartupLogger.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/Systemd.cpp
   )
 endif()
 

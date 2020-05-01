@@ -18,8 +18,8 @@
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/service/EdenInit.h"
 #include "eden/fs/service/EdenServer.h"
+#include "eden/fs/service/StartupLogger.h"
 #include "eden/fs/telemetry/SessionInfo.h"
-#include "eden/fs/win/service/StartupLogger.h"
 #include "eden/fs/win/utils/StringConv.h"
 #include "folly/io/IOBuf.h"
 #include "folly/portability/Windows.h"
@@ -56,50 +56,6 @@ namespace {
 
 constexpr StringPiece kEdenVersion = "edenwin";
 
-void redirectLogOutput(const char* logPath) {
-  HANDLE newHandle = CreateFileA(
-      logPath,
-      FILE_APPEND_DATA,
-      FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-      nullptr,
-      OPEN_ALWAYS,
-      FILE_ATTRIBUTE_NORMAL,
-      nullptr);
-
-  if (newHandle == INVALID_HANDLE_VALUE) {
-    throw makeWin32ErrorExplicit(
-        GetLastError(),
-        folly::sformat("Unable to open the log file {}\n", logPath));
-  }
-
-  // Don't close the previous handles here, it will be closed as part of _dup2
-  // call.
-
-  SetStdHandle(STD_OUTPUT_HANDLE, newHandle);
-  SetStdHandle(STD_ERROR_HANDLE, newHandle);
-
-  int fd = _open_osfhandle(reinterpret_cast<intptr_t>(newHandle), _O_APPEND);
-
-  if (fd == -1) {
-    throw std::runtime_error(
-        "_open_osfhandle() returned -1 while opening logfile");
-  }
-
-  if (_dup2(fd, _fileno(stderr)) == -1) {
-    throw std::runtime_error(
-        folly::format("Dup failed to update stderr. errno: {}", errno).str());
-  }
-
-  if (_dup2(fd, _fileno(stdout)) == -1) {
-    throw std::runtime_error(
-        folly::format("Dup failed to update stdout. errno: {}", errno).str());
-  }
-
-  SCOPE_EXIT {
-    _close(fd);
-  };
-}
-
 } // namespace
 
 int __cdecl main(int argc, char** argv) {
@@ -120,19 +76,6 @@ int __cdecl main(int argc, char** argv) {
     return -1;
   }
 
-  try {
-    auto logPath = getLogPath(edenConfig->edenDir.getValue());
-    if (!logPath.empty()) {
-      redirectLogOutput(logPath.c_str());
-    }
-  } catch (std::exception& ex) {
-    // If the log redirection fails this error will show up on stderr. When Eden
-    // is running in the background, this error will be lost. If the log file is
-    // empty we should run the edenfs.exe on the console to get the error.
-    fprintf(stderr, "%s\n", ex.what());
-    return -1;
-  }
-
   // Set some default glog settings, to be applied unless overridden on the
   // command line
   gflags::SetCommandLineOptionWithMode(
@@ -141,7 +84,17 @@ int __cdecl main(int argc, char** argv) {
       "minloglevel", "0", gflags::SET_FLAGS_DEFAULT);
 
   auto prepareFuture = folly::Future<folly::Unit>::makeEmpty();
-  auto startupLogger = std::make_shared<StartupLogger>();
+  std::shared_ptr<StartupLogger> startupLogger;
+  try {
+    auto logPath = getLogPath(edenConfig->edenDir.getValue());
+    startupLogger = daemonizeIfRequested(logPath);
+  } catch (std::exception& ex) {
+    // If the log redirection fails this error will show up on stderr. When Eden
+    // is running in the background, this error will be lost. If the log file is
+    // empty we should run the edenfs.exe on the console to get the error.
+    fprintf(stderr, "%s\n", ex.what());
+    return -1;
+  }
 
   SessionInfo sessionInfo;
   sessionInfo.username = identity.getUsername();
