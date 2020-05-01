@@ -5,6 +5,7 @@ edition = "2018"
 
 [features]
 default = ["python2"]
+fb = ["dynamicconfig/fb"]
 python2 = ["bindings/python2", "pytracing/python2", "python27-sys", "cpython-ext/python2", "cpython/python27-sys"]
 python3 = ["bindings/python3", "pytracing/python3", "python3-sys", "cpython-ext/python3", "cpython/python3-sys"]
 

@@ -1883,6 +1883,7 @@ hgmainfeatures = (
                 "python2",
                 "buildinfo" if needbuildinfo else None,
                 "with_chg" if not iswindows else None,
+                "fb" if havefb else None,
             ],
         )
     ).strip()

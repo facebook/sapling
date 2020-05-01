@@ -6,6 +6,7 @@ build = "build.rs"
 
 [features]
 default = []
+fb = ["hgcommands/fb"]
 python2 = ["hgcommands/python2"]
 python3 = ["hgcommands/python3"]
 buildinfo = []

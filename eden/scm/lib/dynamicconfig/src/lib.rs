@@ -18,16 +18,11 @@ use hostname;
 use configparser::config::ConfigSet;
 use hgtime::HgTime;
 
-mod fbrules;
-
-pub fn generate_configs(repo_name: Option<impl AsRef<str>>) -> Result<String> {
-    let repo_name = repo_name.map_or_else(|| "".to_string(), |s| s.as_ref().to_string());
-    let config = Generator::new(repo_name)?.execute(fbrules::fb_rules)?;
-    Ok(config.to_string())
-}
+#[cfg(feature = "fb")]
+mod fb;
 
 #[derive(Clone, Copy, Debug)]
-enum HgGroup {
+pub(crate) enum HgGroup {
     Dev = 1,
     Alpha,
     Beta,
@@ -35,7 +30,7 @@ enum HgGroup {
 }
 
 impl HgGroup {
-    fn to_str(&self) -> &'static str {
+    pub(crate) fn to_str(&self) -> &'static str {
         match self {
             HgGroup::Dev => "hg_dev",
             HgGroup::Alpha => "alpha",
@@ -45,8 +40,7 @@ impl HgGroup {
     }
 }
 
-#[allow(dead_code)]
-struct Generator {
+pub struct Generator {
     tiers: HashSet<String>,
     repo_name: String,
     group: HgGroup,
@@ -79,7 +73,7 @@ impl Generator {
         })
     }
 
-    pub fn group(&self) -> HgGroup {
+    pub(crate) fn group(&self) -> HgGroup {
         self.group
     }
 
@@ -91,7 +85,7 @@ impl Generator {
     }
 
     #[allow(dead_code)]
-    pub fn in_repos(&self, repos: impl IntoIterator<Item = &'static str>) -> bool {
+    pub(crate) fn in_repos(&self, repos: impl IntoIterator<Item = &'static str>) -> bool {
         for repo in repos.into_iter() {
             if repo == self.repo_name {
                 return true;
@@ -101,7 +95,7 @@ impl Generator {
     }
 
     #[allow(dead_code)]
-    pub fn in_tiers<T: AsRef<str>>(&self, tiers: impl IntoIterator<Item = T>) -> bool {
+    pub(crate) fn in_tiers<T: AsRef<str>>(&self, tiers: impl IntoIterator<Item = T>) -> bool {
         for tier in tiers.into_iter() {
             if self.tiers.contains(tier.as_ref()) {
                 return true;
@@ -111,17 +105,17 @@ impl Generator {
     }
 
     #[allow(dead_code)]
-    pub fn in_group(&self, group: HgGroup) -> bool {
+    pub(crate) fn in_group(&self, group: HgGroup) -> bool {
         self.group as u32 <= group as u32
     }
 
     #[allow(dead_code)]
-    pub fn in_shard(&self, shard: u8) -> bool {
+    pub(crate) fn in_shard(&self, shard: u8) -> bool {
         self.shard < shard
     }
 
     #[allow(dead_code)]
-    pub fn in_timeshard(&self, start: HgTime, end: HgTime) -> Result<bool> {
+    pub(crate) fn in_timeshard(&self, start: HgTime, end: HgTime) -> Result<bool> {
         let now = HgTime::now()
             .ok_or_else(|| anyhow!("invalid HgTime::now()"))?
             .to_utc();
@@ -135,7 +129,7 @@ impl Generator {
         Ok(now >= (rollout * shard_ratio))
     }
 
-    pub fn set_config(
+    pub(crate) fn set_config(
         &mut self,
         section: impl AsRef<str>,
         name: impl AsRef<str>,
@@ -146,7 +140,7 @@ impl Generator {
     }
 
     #[allow(dead_code)]
-    pub fn load_hgrc(&mut self, value: &'static str) -> Result<()> {
+    pub(crate) fn load_hgrc(&mut self, value: &'static str) -> Result<()> {
         let errors = self.config.parse(value, &"dynamicconfigs".into());
         if !errors.is_empty() {
             bail!(
@@ -158,9 +152,14 @@ impl Generator {
         Ok(())
     }
 
-    fn execute(mut self, mut rules: impl FnMut(&mut Generator) -> Result<()>) -> Result<ConfigSet> {
-        (rules)(&mut self)?;
+    pub fn execute(mut self) -> Result<ConfigSet> {
+        #[cfg(feature = "fb")]
+        self._execute(fb::fb_rules)?;
         Ok(self.config)
+    }
+
+    fn _execute(&mut self, mut rules: impl FnMut(&mut Generator) -> Result<()>) -> Result<()> {
+        (rules)(self)
     }
 }
 
@@ -241,8 +240,8 @@ key=value",
             Ok(())
         }
 
-        let config = generator.execute(test_rules).unwrap();
-        let config_str = config.to_string();
+        generator._execute(test_rules).unwrap();
+        let config_str = generator.config.to_string();
 
         assert_eq!(
             config_str,

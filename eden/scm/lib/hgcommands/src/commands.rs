@@ -15,7 +15,7 @@ use clidispatch::{
 use cliparser::define_flags;
 
 use blackbox::{event::Event, json, SessionId};
-use dynamicconfig;
+use dynamicconfig::Generator;
 use edenapi::{Config as EdenApiConfig, EdenApi, EdenApiCurlClient};
 use revisionstore::{
     CorruptionPolicy, DataPackStore, HgIdDataStore, IndexedLogHgIdDataStore, UnionHgIdDataStore,
@@ -275,7 +275,12 @@ pub fn debughttp(_opts: DebugHttpOpts, io: &mut IO, repo: Repo) -> Result<u8> {
 }
 
 pub fn debugdynamicconfig(_opts: DebugDynamicConfigOpts, _io: &mut IO, repo: Repo) -> Result<u8> {
-    let config_str = dynamicconfig::generate_configs(repo.repo_name())?;
+    let repo_name: String = repo
+        .repo_name()
+        .map_or_else(|| "".to_string(), |s| s.to_string());
+    let config = Generator::new(repo_name)?.execute()?;
+    let config_str = config.to_string();
+
     let repo_path = repo.dot_hg_path();
     fs::write(repo_path.join("hgrc.dynamic"), config_str)?;
     Ok(0)
