@@ -6,7 +6,9 @@ edition = "2018"
 [dependencies]
 indexedlog = { path = "../indexedlog" }
 lazy_static = "1"
+lru-cache = "0.1"
 mincode = { path = "../mincode" }
+minibytes = { path = "../minibytes" }
 serde_bytes = "0.11"
 serde = { version = "1", features = ["derive"] }
 sha-1 = "0.8"

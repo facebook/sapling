@@ -29,22 +29,22 @@ py_class!(class zstore |py| {
     }
 
     /// Lookup a blob by id. Return None if the id is unknown.
-    def get(&self, id: Bytes) -> PyResult<Option<Bytes>> {
+    def get(&self, id: Bytes) -> PyResult<Option<PyBytes>> {
         let id = Id20::from_slice(id.as_ref()).map_pyerr(py)?;
         let store = self.store(py).borrow();
         let data = store.get(id).map_pyerr(py)?;
-        Ok(data.map(Bytes::from))
+        Ok(data.map(|data| PyBytes::new(py, &data)))
     }
 
     /// Insert a blob. Return its Id.
-    def insert(&self, data: Bytes, delta_bases: Vec<Bytes> = Vec::new()) -> PyResult<Bytes> {
+    def insert(&self, data: Bytes, delta_bases: Vec<Bytes> = Vec::new()) -> PyResult<PyBytes> {
         let mut store = self.store(py).borrow_mut();
         let delta_bases = delta_bases.into_iter()
             .map(|id| Id20::from_slice(id.as_ref()))
             .collect::<Result<Vec<_>, _>>()
             .map_pyerr(py)?;
         let id = store.insert(data.as_ref(), &delta_bases).map_pyerr(py)?;
-        Ok(Bytes::from(id.as_ref().to_vec()))
+        Ok(PyBytes::new(py, id.as_ref()))
     }
 
     /// Test if the store contains an id.
@@ -59,7 +59,7 @@ py_class!(class zstore |py| {
         self.store(py).borrow_mut().flush().map_pyerr(py)
     }
 
-    def __getitem__(&self, id: Bytes) -> PyResult<Option<Bytes>> {
+    def __getitem__(&self, id: Bytes) -> PyResult<Option<PyBytes>> {
         self.get(py, id)
     }
 

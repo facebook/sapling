@@ -11,9 +11,12 @@
 
 use indexedlog::{log as ilog, DefaultOpenOptions};
 use lazy_static::lazy_static;
+use lru_cache::LruCache;
+use minibytes::Bytes;
 use serde::{Deserialize, Serialize};
 use sha1::{Digest, Sha1};
 use std::borrow::Cow;
+use std::cell::RefCell;
 use std::fmt;
 use std::path::{Path, PathBuf};
 use tracing::{debug_span, info_span, trace_span};
@@ -32,6 +35,7 @@ pub struct Zstore {
     dir: PathBuf,
     log: ilog::Log,
     pub delta_opts: DeltaOptions,
+    cache: RefCell<LruCache<Id20, Bytes>>,
 }
 
 impl DefaultOpenOptions<ilog::OpenOptions> for Zstore {
@@ -59,18 +63,49 @@ impl DefaultOpenOptions<ilog::OpenOptions> for Zstore {
     }
 }
 
-impl Zstore {
-    const ID20_INDEX: usize = 0;
+/// Options for opening a [`Zstore`].
+pub struct OpenOptions {
+    cache_size: usize,
+}
 
-    /// Load or create [Zstore] at the given directory.
-    pub fn open(dir: impl AsRef<Path>) -> crate::Result<Zstore> {
-        let dir = dir.as_ref();
-        let log = Self::default_open_options().open(dir)?;
-        Ok(Self {
+impl Default for OpenOptions {
+    fn default() -> Self {
+        Self { cache_size: 1 }
+    }
+}
+
+impl OpenOptions {
+    /// Constructs [`OpenOptions`] with default settings.
+    pub fn new() -> Self {
+        Self::default()
+    }
+
+    /// Set the LRU cache size.
+    pub fn cache_size(mut self, size: usize) -> Self {
+        self.cache_size = size;
+        self
+    }
+
+    /// Load or create [`Zstore`] at the given directory.
+    pub fn open(&self, dir: &Path) -> crate::Result<Zstore> {
+        let log = Zstore::default_open_options().open(dir)?;
+        // The cache_size should be greater than len(metalog.keys()))
+        Ok(Zstore {
             dir: dir.to_path_buf(),
             log,
             delta_opts: Default::default(),
+            cache: RefCell::new(LruCache::new(self.cache_size)),
         })
+    }
+}
+
+impl Zstore {
+    const ID20_INDEX: usize = 0;
+
+    /// Load or create [`Zstore`] at the given directory.
+    /// Use the default [`OpenOptions`].
+    pub fn open(dir: impl AsRef<Path>) -> crate::Result<Zstore> {
+        OpenOptions::default().open(dir.as_ref())
     }
 
     /// Insert a new blob to the store. Return its identity (SHA1).
@@ -133,7 +168,7 @@ impl Zstore {
     }
 
     /// Get the content of the specified blob.
-    pub fn get(&self, id: Id20) -> crate::Result<Option<Vec<u8>>> {
+    pub fn get(&self, id: Id20) -> crate::Result<Option<Bytes>> {
         debug_span!("Zstore::get", id = &AsRef::<str>::as_ref(&id.to_hex())).in_scope(|| match self
             .get_delta(id)?
         {
@@ -257,9 +292,15 @@ impl Zstore {
     }
 
     /// Apply delta chains recursively to reconstruct full text.
-    fn resolve<'a>(&'a self, delta: Delta<'a>) -> crate::Result<Vec<u8>> {
+    fn resolve<'a>(&'a self, delta: Delta<'a>) -> crate::Result<Bytes> {
         if delta.id == *EMPTY_ID20 {
-            return Ok(Vec::new());
+            return Ok(Bytes::from_static(b""));
+        }
+        {
+            let mut cache = self.cache.borrow_mut();
+            if let Some(content) = cache.get_mut(&delta.id) {
+                return Ok(content.clone());
+            }
         }
 
         trace_span!(
@@ -276,7 +317,12 @@ impl Zstore {
                 Some(base_delta) => {
                     // PERF: some caching would avoid N^2 chain application.
                     let base_bytes = self.resolve(base_delta)?;
-                    Ok(zstdelta::apply(&base_bytes, &delta.data)?)
+                    let bytes = Bytes::from(zstdelta::apply(&base_bytes, &delta.data)?);
+                    {
+                        let mut cache = self.cache.borrow_mut();
+                        cache.insert(delta.id, bytes.clone());
+                    }
+                    Ok(bytes)
                 }
                 None => Err(self.error(format!(
                     "incomplete delta chain: {} -> {} chain is broken",

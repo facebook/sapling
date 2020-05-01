@@ -10,6 +10,7 @@ use indexedlog::lock::ScopedDirLock;
 use indexedlog::log as ilog;
 use indexedlog::Repair;
 use lazy_static::lazy_static;
+use minibytes::Bytes;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fmt;
@@ -89,7 +90,11 @@ impl MetaLog {
             Some(id) => id,
             None => find_last_root_id(&log)?,
         };
-        let blobs = Zstore::open(path.join("blobs"))?;
+        // 'cache_size' is not defined scientifically. Adjust if needed.
+        let cache_size = 100;
+        let blobs = zstore::OpenOptions::default()
+            .cache_size(cache_size)
+            .open(&path.join("blobs"))?;
         let root = load_root(&blobs, orig_root_id)?;
         let metalog = MetaLog {
             path: path.to_path_buf(),
@@ -119,7 +124,7 @@ impl MetaLog {
     }
 
     /// Lookup a blob by key.
-    pub fn get(&self, name: &str) -> Result<Option<Vec<u8>>> {
+    pub fn get(&self, name: &str) -> Result<Option<Bytes>> {
         match self.root.map.get(name) {
             Some(&id) => Ok(self.blobs.get(id)?),
             None => Ok(None),
@@ -492,8 +497,8 @@ mod tests {
         opts.resolver = Some(Box::new(
             |this: &mut MetaLog, other: &MetaLog, _ancestor: &MetaLog| -> Result<()> {
                 // Concatenate both sides.
-                let mut v1 = this.get("a").unwrap().unwrap();
-                let mut v2 = other.get("a").unwrap().unwrap();
+                let mut v1 = this.get("a").unwrap().unwrap().as_ref().to_vec();
+                let mut v2 = other.get("a").unwrap().unwrap().as_ref().to_vec();
                 v1.append(&mut v2);
                 this.set("a", &v1).unwrap();
                 // Also try to write an extra key.
@@ -523,9 +528,9 @@ mod tests {
 
         for (k, (v1, v2)) in map.iter() {
             metalog.set(k, v1).unwrap();
-            assert_eq!(metalog.get(k).unwrap(), Some(v1.clone()));
+            assert_eq!(metalog.get(k).unwrap(), Some(Bytes::from(v1.clone())));
             metalog.set(k, v2).unwrap();
-            assert_eq!(metalog.get(k).unwrap(), Some(v2.clone()));
+            assert_eq!(metalog.get(k).unwrap(), Some(Bytes::from(v2.clone())));
         }
         let root_id1 = metalog.commit(commit_opt("", 0)).unwrap();
 
@@ -533,7 +538,7 @@ mod tests {
             metalog.remove(k).unwrap();
             assert_eq!(metalog.get(k).unwrap(), None);
             metalog.set(k, v2).unwrap();
-            assert_eq!(metalog.get(k).unwrap(), Some(v2.clone()));
+            assert_eq!(metalog.get(k).unwrap(), Some(Bytes::from(v2.clone())));
         }
         let root_id2 = metalog.commit(commit_opt("", 0)).unwrap();
         assert_eq!(root_id1, root_id2);
@@ -541,7 +546,7 @@ mod tests {
         metalog.commit(commit_opt("", 0)).unwrap();
         let metalog = MetaLog::open(&dir, None).unwrap();
         for (k, (_v1, v2)) in map.iter() {
-            assert_eq!(metalog.get(k).unwrap(), Some(v2.clone()));
+            assert_eq!(metalog.get(k).unwrap(), Some(Bytes::from(v2.clone())));
         }
         assert_eq!(metalog.keys(), map.keys().collect::<Vec<_>>());
     }

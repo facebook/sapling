@@ -53,10 +53,10 @@ py_class!(class metalog |py| {
     }
 
     /// Lookup an item by key. Return None if the key does not exist.
-    def get(&self, key: &str) -> PyResult<Option<Bytes>> {
+    def get(&self, key: &str) -> PyResult<Option<PyBytes>> {
         let log = self.log(py).borrow();
         let data = log.get(key).map_pyerr(py)?;
-        Ok(data.map(Bytes::from))
+        Ok(data.map(|data| PyBytes::new(py, data.as_ref())))
     }
 
     /// Set an item. Return the Id of value.
@@ -121,7 +121,7 @@ py_class!(class metalog |py| {
         Ok(PyBytes::new(py, self.log(py).borrow().root_id().as_ref()))
     }
 
-    def __getitem__(&self, key: String) -> PyResult<Option<Bytes>> {
+    def __getitem__(&self, key: String) -> PyResult<Option<PyBytes>> {
         self.get(py, &key)
     }
 
