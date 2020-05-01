@@ -1061,6 +1061,8 @@ void FuseChannel::readInitPacket() {
   want |= FUSE_BIG_WRITES;
 
 #ifdef __linux__
+  // We don't support setuid and setgid mode bits anyway.
+  want |= FUSE_HANDLE_KILLPRIV;
   // We're happy to let the kernel cache readlink responses.
   want |= FUSE_CACHE_SYMLINKS;
   // We can handle almost any request in parallel.
