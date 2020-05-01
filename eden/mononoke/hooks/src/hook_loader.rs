@@ -37,43 +37,37 @@ pub fn load_hooks(
     let mut hook_set = HashSet::new();
     for hook in config.hooks {
         use LoadedRustHook::*;
-        let name = hook.name;
 
-        if disabled_hooks.contains(&name) {
-            hooks_not_disabled.remove(&name);
+        if disabled_hooks.contains(&hook.name) {
+            hooks_not_disabled.remove(&hook.name);
             continue;
         }
-
-        // Backwards compatibility only
-        let hook_name = if name.starts_with("rust:") {
-            name[5..].to_string()
-        } else {
-            name.clone()
-        };
 
         let rust_hook = {
             if let Some(hook) = hook_name_to_changeset_hook(
                 fb,
-                &hook_name,
+                &hook.name,
                 &hook.config,
                 hook_manager.get_reviewers_perm_checker(),
             )? {
                 ChangesetHook(hook)
-            } else if let Some(hook) = hook_name_to_file_hook(&hook_name, &hook.config)? {
+            } else if let Some(hook) = hook_name_to_file_hook(&hook.name, &hook.config)? {
                 FileHook(hook)
             } else {
-                return Err(ErrorKind::InvalidRustHook(name).into());
+                return Err(ErrorKind::InvalidRustHook(hook.name.clone()).into());
             }
         };
 
         match rust_hook {
-            FileHook(rust_hook) => hook_manager.register_file_hook(&name, rust_hook, hook.config),
+            FileHook(rust_hook) => {
+                hook_manager.register_file_hook(&hook.name, rust_hook, hook.config)
+            }
             ChangesetHook(rust_hook) => {
-                hook_manager.register_changeset_hook(&name, rust_hook, hook.config)
+                hook_manager.register_changeset_hook(&hook.name, rust_hook, hook.config)
             }
         }
 
-        hook_set.insert(name);
+        hook_set.insert(hook.name.clone());
     }
 
     if hooks_not_disabled.len() > 0 {

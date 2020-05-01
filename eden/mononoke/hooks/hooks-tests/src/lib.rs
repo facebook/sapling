@@ -27,7 +27,7 @@ use hooks_content_stores::{
     BlobRepoFileContentFetcher, FileContentFetcher, InMemoryFileContentFetcher,
 };
 use maplit::{btreemap, hashmap, hashset};
-use metaconfig_types::{BookmarkParams, HookConfig, HookParams, HookType, RepoConfig};
+use metaconfig_types::{BookmarkParams, HookConfig, HookParams, RepoConfig};
 use mononoke_types::{BonsaiChangeset, BonsaiChangesetMut, DateTime, FileChange, FileType, MPath};
 use mononoke_types_mocks::contentid::{ONES_CTID, THREES_CTID, TWOS_CTID};
 use regex::Regex;
@@ -1153,14 +1153,13 @@ fn test_verify_integrity_fast_failure(fb: FacebookInit) {
         let mut config = RepoConfig::default();
         config.bookmarks = vec![BookmarkParams {
             bookmark: Regex::new("bm2").unwrap().into(),
-            hooks: vec!["rust:verify_integrity".into()],
+            hooks: vec!["verify_integrity".into()],
             only_fast_forward: false,
             allowed_users: None,
             rewrite_dates: None,
         }];
         config.hooks = vec![HookParams {
-            name: "rust:verify_integrity".into(),
-            hook_type: HookType::PerChangeset,
+            name: "verify_integrity".into(),
             config: HookConfig {
                 strings: hashmap! {String::from("verify_integrity_path") => String::from("bad_nonexisting_filename")},
                 ..Default::default()
@@ -1179,15 +1178,14 @@ fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
         let mut config = RepoConfig::default();
         config.bookmarks = vec![BookmarkParams {
             bookmark: BookmarkName::new("bm1").unwrap().into(),
-            hooks: vec!["rust:hook1".into()],
+            hooks: vec!["hook1".into()],
             only_fast_forward: false,
             allowed_users: None,
             rewrite_dates: None,
         }];
 
         config.hooks = vec![HookParams {
-            name: "rust:hook1".into(),
-            hook_type: HookType::PerChangeset,
+            name: "hook1".into(),
             config: Default::default(),
         }];
 
@@ -1198,7 +1196,7 @@ fn test_load_hooks_bad_rust_hook(fb: FacebookInit) {
             .downcast::<ErrorKind>()
         {
             Ok(ErrorKind::InvalidRustHook(hook_name)) => {
-                assert_eq!(hook_name, "rust:hook1".to_string());
+                assert_eq!(hook_name, "hook1".to_string());
             }
             _ => assert!(false, "Unexpected err type"),
         };
@@ -1214,7 +1212,6 @@ fn test_load_disabled_hooks(fb: FacebookInit) {
 
         config.hooks = vec![HookParams {
             name: "hook1".into(),
-            hook_type: HookType::PerChangeset,
             config: Default::default(),
         }];
 
@@ -1240,7 +1237,6 @@ fn test_load_disabled_hooks_referenced_by_bookmark(fb: FacebookInit) {
 
         config.hooks = vec![HookParams {
             name: "hook1".into(),
-            hook_type: HookType::PerChangeset,
             config: Default::default(),
         }];
 

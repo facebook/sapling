@@ -30,7 +30,7 @@ use metaconfig_types::{
     BookmarkOrRegex, BookmarkParams, Bundle2ReplayParams, CacheWarmupParams, CommitSyncConfig,
     CommitSyncDirection, CommonConfig, DefaultSmallToLargeCommitSyncPathAction, DerivedDataConfig,
     HgsqlGlobalrevsName, HgsqlName, HookBypass, HookConfig, HookManagerParams, HookParams,
-    HookType, InfinitepushNamespace, InfinitepushParams, LfsParams, PushParams, PushrebaseFlags,
+    InfinitepushNamespace, InfinitepushParams, LfsParams, PushParams, PushrebaseFlags,
     PushrebaseParams, Redaction, RepoConfig, RepoReadOnly, SmallRepoCommitSyncConfig,
     SourceControlServiceParams, StorageConfig, UnodeVersion, WhitelistEntry,
     WireprotoLoggingConfig,
@@ -393,7 +393,6 @@ impl RepoConfigs {
 
             let hook_params = HookParams {
                 name: raw_hook_config.name,
-                hook_type: HookType::from_str(&raw_hook_config.hook_type)?,
                 config,
             };
 
@@ -1566,7 +1565,6 @@ mod test {
                 hooks: vec![
                     HookParams {
                         name: "hook1".to_string(),
-                        hook_type: HookType::PerAddedOrModifiedFile,
                         config: HookConfig {
                             bypass: Some(HookBypass::CommitMessage("@allow_hook1".into())),
                             strings: hashmap! {},
@@ -1575,7 +1573,6 @@ mod test {
                     },
                     HookParams {
                         name: "rust:rusthook".to_string(),
-                        hook_type: HookType::PerChangeset,
                         config: HookConfig {
                             bypass: None,
                             strings: hashmap! {},
