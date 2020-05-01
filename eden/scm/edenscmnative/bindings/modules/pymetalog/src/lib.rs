@@ -56,7 +56,7 @@ py_class!(class metalog |py| {
     def get(&self, key: &str) -> PyResult<Option<PyBytes>> {
         let log = self.log(py).borrow();
         let data = log.get(key).map_pyerr(py)?;
-        Ok(data.map(|data| PyBytes::new(py, data.as_ref())))
+        Ok(data.map(|data| PyBytes::new(py, &data)))
     }
 
     /// Set an item. Return the Id of value.
