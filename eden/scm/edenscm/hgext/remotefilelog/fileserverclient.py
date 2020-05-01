@@ -545,6 +545,10 @@ class fileserverclient(object):
         fileids = [(filename, bin(node)) for filename, node in fileids]
         chunksize = self.ui.configint("remotefilelog", "prefetchchunksize", 200000)
         for start_id in range(0, len(fileids), chunksize):
+            if start_id != 0:
+                self.ui.status(
+                    _("downloaded %d files, %d left"), start_id, chunksize - start_id
+                )
             ids = fileids[start_id : start_id + chunksize]
             self.getpackclient.prefetch(dpack, hpack, ids)
 
