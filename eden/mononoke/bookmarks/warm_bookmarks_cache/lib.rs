@@ -35,6 +35,7 @@ use mercurial_derived_data::MappedHgChangesetId;
 use mononoke_types::{ChangesetId, Timestamp};
 use slog::{debug, info, warn};
 use stats::prelude::*;
+use tunables::tunables;
 use unodes::RootUnodeManifestId;
 
 define_stats! {
@@ -540,8 +541,13 @@ async fn single_bookmark_updater(
     let (latest_derived, underived_history) =
         find_all_underived_and_latest_derived(&ctx, &repo, &bookmark, warmers.as_ref()).await?;
 
-    // TODO(stash): make configurable (T66277310)
-    let delay_secs = 0;
+    let delay_secs = tunables().get_warm_bookmark_cache_delay();
+    if delay_secs < 0 {
+        warn!(
+            ctx.logger(),
+            "invalid warm bookmark cache delay value: {}", delay_secs
+        );
+    }
     let update_bookmark = |ts: Timestamp, cs_id: ChangesetId| async move {
         let cur_delay = ts.since_seconds();
         if cur_delay < delay_secs {

@@ -13,6 +13,7 @@ use anyhow::Result;
 use cached_config::ConfigHandle;
 use once_cell::sync::OnceCell;
 use slog::{debug, warn, Logger};
+use std::sync::atomic::AtomicI64;
 
 use tunables_derive::Tunables;
 use tunables_structs::Tunables as TunablesStruct;
@@ -25,7 +26,9 @@ pub fn tunables() -> &'static MononokeTunables {
 }
 
 #[derive(Tunables, Default, Debug)]
-pub struct MononokeTunables {}
+pub struct MononokeTunables {
+    warm_bookmark_cache_delay: AtomicI64,
+}
 
 pub fn init_tunables_worker(
     logger: Logger,
@@ -66,7 +69,7 @@ fn update_tunables(new_tunables: Arc<TunablesStruct>) -> Result<()> {
 mod test {
     use super::*;
     use std::collections::HashMap;
-    use std::sync::atomic::{AtomicBool, AtomicI64};
+    use std::sync::atomic::AtomicBool;
 
     #[derive(Tunables, Default)]
     struct TestTunables {

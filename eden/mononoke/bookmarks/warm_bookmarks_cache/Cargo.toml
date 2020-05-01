@@ -20,6 +20,7 @@ derived_data = { path = "../../derived_data" }
 fsnodes = { path = "../../derived_data/fsnodes" }
 mercurial_derived_data = { path = "../../derived_data/mercurial_derived_data" }
 mononoke_types = { path = "../../mononoke_types" }
+tunables = { path = "../../tunables" }
 unodes = { path = "../../derived_data/unodes" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
