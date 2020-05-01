@@ -38,7 +38,7 @@ hinttable = {
     )
     % root,
     "graph-renderer": lambda: _(
-        "The new graph renderer is in use.  See fburl.com/wiki/8zhodl1g for customization and troubleshooting."
+        "The new graph renderer is in use.  See https://fburl.com/wiki/8zhodl1g for customization and troubleshooting."
     ),
     "old-version": lambda: _(
         "WARNING! You are running an old version of Mercurial. Please upgrade your installation."
