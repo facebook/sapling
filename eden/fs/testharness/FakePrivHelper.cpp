@@ -11,7 +11,10 @@
 #include <folly/File.h>
 #include <folly/futures/Future.h>
 #include <utility>
+
+#ifndef _WIN32
 #include "eden/fs/testharness/FakeFuse.h"
+#endif // _WIN32
 
 using folly::File;
 using folly::Future;
@@ -22,6 +25,8 @@ using std::string;
 
 namespace facebook {
 namespace eden {
+
+#ifndef _WIN32
 
 FakeFuseMountDelegate::FakeFuseMountDelegate(
     AbsolutePath mountPath,
@@ -56,8 +61,6 @@ bool FakeFuseMountDelegate::wasFuseUnmountEverCalled() const noexcept {
 }
 
 FakePrivHelper::MountDelegate::~MountDelegate() = default;
-
-FakePrivHelper::FakePrivHelper() {}
 
 void FakePrivHelper::registerMount(
     AbsolutePathPiece mountPath,
@@ -144,6 +147,7 @@ folly::Future<folly::Unit> FakePrivHelper::setDaemonTimeout(
     std::chrono::nanoseconds /* duration */) {
   return folly::Unit{};
 }
+#endif // !_WIN32
 
 } // namespace eden
 } // namespace facebook

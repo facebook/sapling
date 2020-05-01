@@ -31,6 +31,7 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/service/EdenCPUThreadPool.h"
 #include "eden/fs/service/EdenError.h"
@@ -63,7 +64,6 @@
 #include "eden/fs/win/utils/Stub.h" // @manual
 #else
 #include "eden/fs/fuse/FuseChannel.h"
-#include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"

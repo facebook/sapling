@@ -14,6 +14,7 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 #include <iostream>
 #include <memory>
+#include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/model/Hash.h"
 #include "eden/fs/model/Tree.h"
 #include "eden/fs/service/EdenInit.h"

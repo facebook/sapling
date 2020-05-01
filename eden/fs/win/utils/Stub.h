@@ -32,18 +32,6 @@ struct SerializedFileHandleMap {
   int stub;
 };
 
-class PrivHelper {
- public:
-  int stub;
-  int stub1;
-};
-
-class FakePrivHelper : public PrivHelper {
- public:
-  int stub;
-  int stub1;
-};
-
 using uid_t = int;
 using gid_t = int;
 

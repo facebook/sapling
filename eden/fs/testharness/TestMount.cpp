@@ -33,6 +33,7 @@
 #include "eden/fs/telemetry/NullStructuredLogger.h"
 #include "eden/fs/testharness/FakeBackingStore.h"
 #include "eden/fs/testharness/FakeClock.h"
+#include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/testharness/TestUtil.h"
@@ -50,7 +51,6 @@
 #include "eden/fs/inodes/EdenDispatcher.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/testharness/FakeFuse.h"
-#include "eden/fs/testharness/FakePrivHelper.h"
 #include "eden/fs/utils/ProcessNameCache.h"
 #endif
 

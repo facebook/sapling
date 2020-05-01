@@ -24,7 +24,7 @@ struct Unit;
 namespace facebook {
 namespace eden {
 
-class UserInfo;
+#ifndef _WIN32
 
 /**
  * A helper class for performing operations that require elevated privileges.
@@ -151,6 +151,23 @@ class PrivHelper {
    */
   virtual int stop() = 0;
 };
+
+#else // _WIN32
+
+/**
+ * A stub PrivHelper class for Windows.
+ *
+ * We do not actually use a separate privhelper process on Windows.  However,
+ * for ease of sharing server initialization code across platforms we still
+ * define a PrivHelper object, but it does nothing.
+ */
+class PrivHelper {
+ public:
+  void setLogFileBlocking(folly::File logFile);
+  void setDaemonTimeoutBlocking(std::chrono::nanoseconds duration);
+};
+
+#endif // _WIN32
 
 } // namespace eden
 } // namespace facebook

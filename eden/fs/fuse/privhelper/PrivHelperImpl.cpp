@@ -16,15 +16,20 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/async/EventBase.h>
 #include <folly/logging/xlog.h>
-#include <sys/types.h>
+#include <folly/portability/SysTypes.h>
+#include <folly/portability/Unistd.h>
+#ifndef _WIN32
 #include <sys/wait.h>
-#include <unistd.h>
+#endif // !_WIN32
 
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
+
+#ifndef _WIN32
 #include "eden/fs/fuse/privhelper/PrivHelperConn.h"
 #include "eden/fs/fuse/privhelper/PrivHelperServer.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/UserInfo.h"
+#endif // _WIN32
 
 using folly::checkUnixError;
 using folly::EventBase;
@@ -40,6 +45,8 @@ using std::vector;
 
 namespace facebook {
 namespace eden {
+
+#ifndef _WIN32
 
 namespace {
 
@@ -498,6 +505,14 @@ unique_ptr<PrivHelper> startPrivHelper(
 unique_ptr<PrivHelper> createTestPrivHelper(File&& conn) {
   return make_unique<PrivHelperClientImpl>(std::move(conn), 0);
 }
+
+#else // _WIN32
+
+unique_ptr<PrivHelper> startPrivHelper(const UserInfo&) {
+  return make_unique<PrivHelper>();
+}
+
+#endif // _WIN32
 
 } // namespace eden
 } // namespace facebook

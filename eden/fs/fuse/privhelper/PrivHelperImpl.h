@@ -29,6 +29,8 @@ class PrivHelper;
  */
 std::unique_ptr<PrivHelper> startPrivHelper(const UserInfo& userInfo);
 
+#ifndef _WIN32
+
 /**
  * Start a privhelper process using a custom PrivHelperServer class.
  *
@@ -45,6 +47,8 @@ std::unique_ptr<PrivHelper> startPrivHelper(
  * This is primarily intended for use in unit tests.
  */
 std::unique_ptr<PrivHelper> createTestPrivHelper(folly::File&& conn);
+
+#endif // !_WIN32
 
 } // namespace eden
 } // namespace facebook

@@ -29,6 +29,9 @@ class FakeFuse;
  */
 class FakePrivHelper : public PrivHelper {
  public:
+  FakePrivHelper() {}
+
+#ifndef _WIN32
   class MountDelegate {
    public:
     virtual ~MountDelegate();
@@ -36,8 +39,6 @@ class FakePrivHelper : public PrivHelper {
     virtual folly::Future<folly::File> fuseMount() = 0;
     virtual folly::Future<folly::Unit> fuseUnmount() = 0;
   };
-
-  FakePrivHelper();
 
   void registerMount(
       AbsolutePathPiece mountPath,
@@ -76,8 +77,10 @@ class FakePrivHelper : public PrivHelper {
 
   std::unordered_map<std::string, std::shared_ptr<MountDelegate>>
       mountDelegates_;
+#endif // !_WIN32
 };
 
+#ifndef _WIN32
 class FakeFuseMountDelegate : public FakePrivHelper::MountDelegate {
  public:
   explicit FakeFuseMountDelegate(
@@ -94,5 +97,7 @@ class FakeFuseMountDelegate : public FakePrivHelper::MountDelegate {
   std::shared_ptr<FakeFuse> fuse_;
   bool wasFuseUnmountEverCalled_{false};
 };
+#endif // !_WIN32
+
 } // namespace eden
 } // namespace facebook

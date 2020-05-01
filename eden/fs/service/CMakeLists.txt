@@ -71,6 +71,7 @@ target_link_libraries(
     streamingeden_thrift_cpp
     eden_build_config
     eden_config
+    eden_fuse_privhelper
     eden_inodes
     eden_model
     eden_store

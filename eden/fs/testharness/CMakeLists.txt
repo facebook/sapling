@@ -8,6 +8,8 @@ set(
   TESTHARNESS_SRCS
   "FakeBackingStore.cpp"
   "FakeBackingStore.h"
+  "FakePrivHelper.cpp"
+  "FakePrivHelper.h"
   "FakeTreeBuilder.cpp"
   "FakeTreeBuilder.h"
   "TempFile.cpp"

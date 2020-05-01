@@ -11,9 +11,7 @@
 #include <gflags/gflags.h>
 
 #include "eden/fs/config/EdenConfig.h"
-#ifndef _WIN32
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
-#endif
 #include "eden/fs/model/git/TopLevelIgnores.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"

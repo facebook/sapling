@@ -3,7 +3,16 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
-file(GLOB PRIVHELPER_SRCS "*.cpp")
+if(NOT WIN32)
+  file(GLOB PRIVHELPER_SRCS "*.cpp")
+else()
+  list(
+    APPEND PRIVHELPER_SRCS
+    "PrivHelper.cpp"
+    "PrivHelperImpl.cpp"
+  )
+endif()
+
 add_library(
   eden_fuse_privhelper STATIC
     ${PRIVHELPER_SRCS}
@@ -38,4 +47,6 @@ if (SELINUX_INCLUDE_DIR)
   )
 endif()
 
-add_subdirectory(test)
+if(NOT WIN32)
+  add_subdirectory(test)
+endif()
