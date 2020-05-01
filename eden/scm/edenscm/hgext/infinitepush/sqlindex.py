@@ -134,7 +134,7 @@ class sqlindex(object):
         else:
             self.sqlconn.rollback()
 
-    def addbundle(self, bundleid, nodesctx):
+    def addbundle(self, bundleid, nodesctx, iscrossbackendsync=False):
         """Record a bundleid containing the given nodes."""
         if not self._connected:
             self.sqlconnect()
@@ -146,7 +146,7 @@ class sqlindex(object):
             params=(bundleid, self.reponame),
         )
 
-        if self.forwardfill and bundleid is not None:
+        if self.forwardfill and bundleid is not None and not iscrossbackendsync:
             self.sqlcursor.execute(
                 "INSERT INTO forwardfillerqueue(bundle, reponame) VALUES (%s, %s)",
                 params=(bundleid, self.reponame),

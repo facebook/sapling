@@ -61,7 +61,7 @@ class fileindex(object):
         if self._lock:
             self._lock.__exit__(exc_type, exc_val, exc_tb)
 
-    def addbundle(self, bundleid, nodesctx):
+    def addbundle(self, bundleid, nodesctx, iscrossbackendsync=False):
         """Record a bundleid containing the given nodes."""
 
         for node in nodesctx:

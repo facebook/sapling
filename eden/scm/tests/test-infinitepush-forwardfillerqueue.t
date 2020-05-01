@@ -55,4 +55,36 @@ Proper metadata should have been recorded
   $ querysqlindex "SELECT id, reponame, bundle FROM forwardfillerqueue;"
   id	reponame	bundle
   1	repo123	8347a06785e3bdd572ebeb7df3aac1356acb4ce5
+
+Check that crossbackendsync bundle param prevents us from recording into forwardfillerqueue
+-- set up param-adding extension to test crossbackendsync
+  $ cat >> "$TESTTMP/param_adder.py" <<EOF
+  > from __future__ import absolute_import
+  > from edenscm.mercurial import exchange, extensions
+  > from edenscm.hgext.infinitepush import bundleparts, constants
+  > 
+  > def extsetup(ui):
+  >     orig = exchange.b2partsgenmapping[constants.scratchbranchparttype]
+  >     def wrapped(pushop, bundler):
+  >         bundler.addparam("crossbackendsync", value="True")
+  >         return orig(pushop, bundler)
+  >     exchange.b2partsgenmapping[constants.scratchbranchparttype] = wrapped
+  > EOF
+
+-- try pushing to Mercurial backend with this new extension
+  $ cd "$TESTTMP/client2"
+  $ mkcommit commit3
+  $ hg push -r . --to scratch/book3 --create \
+  >   --debug --config devel.bundle2.debug=on \
+  >   --config extensions.param_adder="$TESTTMP/param_adder.py" \
+  >   2>&1 | egrep '(commit3|crossbackendsync)'
+  bundle2-output: bundle parameter: crossbackendsync=True infinitepush=True
+  remote:     8e0c8ddac9fb  commit3
+
+-- note that this new push has *not* been recorded in the forwardfillerqueue
+because of the crossbackendsync param
+  $ querysqlindex "SELECT id, reponame, bundle FROM forwardfillerqueue;"
+  id	reponame	bundle
+  1	repo123	8347a06785e3bdd572ebeb7df3aac1356acb4ce5
+
 #endif

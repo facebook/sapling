@@ -464,6 +464,13 @@ def processparts(orig, repo, op, unbundler):
     if unbundler.params.get("infinitepush") != "True":
         return orig(repo, op, unbundler)
 
+    # Cross-Backend sync bundles are sent forward between hg and Mononoke
+    # and don't need to be preserved in queues to further sync, to
+    # avoid infinite sync loops
+    iscrossbackendsync = False
+    if unbundler.params.get("crossbackendsync") == "True":
+        iscrossbackendsync = True
+
     handleallparts = repo.ui.configbool("infinitepush", "storeallparts")
 
     partforwardingwhitelist = [constants.scratchmutationparttype]
@@ -553,7 +560,7 @@ def processparts(orig, repo, op, unbundler):
                 fp.write(buf.read())
             finally:
                 fp.close()
-            storebundle(op, cgparams, bundlefile)
+            storebundle(op, cgparams, bundlefile, iscrossbackendsync=iscrossbackendsync)
         finally:
             try:
                 os.unlink(bundlefile)
@@ -645,7 +652,7 @@ def logservicecall(logger, service, **kwargs):
         raise
 
 
-def storebundle(op, params, bundlefile):
+def storebundle(op, params, bundlefile, iscrossbackendsync=False):
     log = _getorcreateinfinitepushlogger(op)
     parthandlerstart = time.time()
     log(constants.scratchbranchparttype, eventtype="start")
@@ -726,7 +733,7 @@ def storebundle(op, params, bundlefile):
 
         with logservicecall(log, "index", newheadscount=newheadscount), index:
             if key:
-                index.addbundle(key, nodesctx)
+                index.addbundle(key, nodesctx, iscrossbackendsync=iscrossbackendsync)
             if bookmark and bookmarknode:
                 index.addbookmark(bookmark, bookmarknode, False)
         log(
