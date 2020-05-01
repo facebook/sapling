@@ -42,6 +42,7 @@
 #include "eden/fs/store/LocalStore.h"
 #include "eden/fs/store/MemoryLocalStore.h"
 #include "eden/fs/store/ObjectStore.h"
+#include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/store/SqliteLocalStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
@@ -67,7 +68,6 @@
 #include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/inodes/TreeInode.h"
-#include "eden/fs/store/RocksDbLocalStore.h"
 #include "eden/fs/takeover/TakeoverClient.h"
 #include "eden/fs/takeover/TakeoverData.h"
 #include "eden/fs/takeover/TakeoverServer.h"
@@ -94,11 +94,10 @@ DEFINE_bool(
 
 #ifndef _WIN32
 #define DEFAULT_STORAGE_ENGINE "rocksdb"
-#define SUPPORTED_STORAGE_ENGINES "rocksdb|sqlite|memory"
 #else
 #define DEFAULT_STORAGE_ENGINE "sqlite"
-#define SUPPORTED_STORAGE_ENGINES "sqlite|memory"
 #endif
+#define SUPPORTED_STORAGE_ENGINES "rocksdb|sqlite|memory"
 
 DEFINE_string(
     local_storage_engine_unsafe,
@@ -810,7 +809,6 @@ void EdenServer::openStorageEngine(
         "Opened SQLite store in ",
         watch.elapsed().count() / 1000.0,
         " seconds.");
-#ifndef _WIN32
   } else if (storageEngine == "rocksdb") {
     logger->log("Opening local RocksDB store...");
     folly::stop_watch<std::chrono::milliseconds> watch;
@@ -827,8 +825,6 @@ void EdenServer::openStorageEngine(
         "Opened RocksDB store in ",
         watch.elapsed().count() / 1000.0,
         " seconds.");
-
-#endif // !_WIN32
   } else {
     throw std::runtime_error(folly::to<string>(
         "invalid storage engine: ", FLAGS_local_storage_engine_unsafe));

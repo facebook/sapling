@@ -68,6 +68,30 @@ find_package(LZ4 MODULE REQUIRED)
 find_package(cpptoml CONFIG REQUIRED)
 find_package(gflags CONFIG REQUIRED)
 
+# This is rather gross.  Eden doesn't directly depend upon Snappy but does so
+# indirectly from both folly and rocksdb.
+# Rocksdb has some custom logic to find snappy but unfortunately exports a synthesized
+# target named `snappy::snappy` instead of using the CONFIG provided by snappy itself,
+# and also does not export a way to resolve its own custom definition.
+# We use the `Snappy::snappy` (note that the first `S` is uppercase!) exported by
+# snappy and synthesize our own `snappy::snappy` to satisfy the linkage.
+# Even though we tend to build RelWithDebInfo we need to allow this to work for the
+# other common cmake build modes.
+# This section of logic can be removed once we've fixed up the behavior in RocksDB.
+find_package(Snappy CONFIG REQUIRED)
+get_target_property(SNAPPY_LIBS_RELWITHDEBINFO Snappy::snappy IMPORTED_LOCATION_RELWITHDEBINFO)
+get_target_property(SNAPPY_LIBS_RELEASE Snappy::snappy IMPORTED_LOCATION_RELEASE)
+get_target_property(SNAPPY_LIBS_DEBUG Snappy::snappy IMPORTED_LOCATION_DEBUG)
+get_target_property(SNAPPY_INCLUDES Snappy::snappy INTERFACE_INCLUDE_DIRECTORIES)
+add_library(snappy::snappy UNKNOWN IMPORTED)
+set_target_properties(snappy::snappy PROPERTIES
+  IMPORTED_LINK_INTERFACE_LANGUAGES "C"
+  IMPORTED_LOCATION_RELWITHDEBINFO "${SNAPPY_LIBS_RELWITHDEBINFO}"
+  IMPORTED_LOCATION_RELEASE "${SNAPPY_LIBS_RELEASE}"
+  IMPORTED_LOCATION_DEBUG "${SNAPPY_LIBS_DEBUG}"
+  INTERFACE_INCLUDE_DIRECTORIES "${SNAPPY_INCLUDES}"
+)
+
 # TODO: It shouldn't be too hard to turn RocksDB and sqlite3 into optional
 # dependencies, since we have alternate LocalStore implementations.
 find_package(RocksDB CONFIG REQUIRED)

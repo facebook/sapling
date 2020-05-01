@@ -9,13 +9,6 @@ list(
   "${CMAKE_CURRENT_SOURCE_DIR}/eden_store_util.cpp"
 )
 
-if (WIN32)
-  list(
-    REMOVE_ITEM STORE_SRCS
-      ${CMAKE_CURRENT_SOURCE_DIR}/RocksDbLocalStore.cpp
-  )
-endif()
-
 add_library(
   eden_store STATIC
     ${STORE_SRCS}
@@ -31,13 +24,11 @@ target_link_libraries(
     fb303::fb303
 )
 
-if (NOT WIN32)
-  target_link_libraries(
-    eden_store
-    PUBLIC
-      eden_rocksdb
-  )
-endif()
+target_link_libraries(
+  eden_store
+  PUBLIC
+    eden_rocksdb
+)
 
 add_subdirectory(hg)
 
