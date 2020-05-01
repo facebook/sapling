@@ -411,6 +411,9 @@ def supportedcolors(ui):
             pass
 
     # Guess the real number of colors supported.
+    # ConEmu normalizes 256 colors incorrectly. Limit it to 16 colors.
+    if "ConEmuPID" in env:
+        realcolors = 16
     # Emacs has issues with 16 or 256 colors.
     if env.get("INSIDE_EMACS"):
         realcolors = 8
