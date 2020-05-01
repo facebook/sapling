@@ -621,7 +621,7 @@ fn test_fsencode_from_core_hg() {
     let expected = "dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxx4cb852a314c6da240a83eec94761cdd71c6ec22e.i";
     check_fsencode_with_dotencode(&toencode[..], expected);
 
-    let toencode = b"data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.3456789-12345-ABCDEFGHIJKLMNOPRSTUVWXYZ-abcdefghjiklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPRSTUVWXYZ-1234567890-xxxxxxxxx-xxxxxxxxx-xxxxxxxx-xxxxxxxxx-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww.i";
-    let expected = "dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxx93352aa50377751d9e5ebdf52da1e6e69a6887a6.i";
+    let toencode = b"data/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxxxxxx-xxxxxxxxx-xxxxxxxxx-123456789-12.3456789-12345-ABCDEFGHIJKLMNOPRSTUVWXYZ-abcdefghjiklmnopqrstuvwxyz-ABCDEFGHIJKLMNOPRSTUVWXYZ-1234567890-xxxxxxxxx-xxxxxxxxx-xxxxxxxx-xxxxxxxxx-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww-wwwwwwwww.i";
+    let expected = "dh/12345678/12345678/12345678/12345678/12345678/12345678/12345678/12345/-xxxxx0c9ce54a93e391e5768b1b4762ec3cb3ca2777d0.i";
     check_fsencode_with_dotencode(&toencode[..], expected);
 }

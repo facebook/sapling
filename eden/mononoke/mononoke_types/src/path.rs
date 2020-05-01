@@ -29,6 +29,10 @@ use crate::errors::ErrorKind;
 use crate::hash::{Blake2, Context};
 use crate::thrift;
 
+// Filesystems on Linux commonly limit path *elements* to 255 bytes. Enforce this on MPaths as well
+// as a repository that cannot be checked out isn't very useful.
+const MPATH_ELEMENT_MAX_LENGTH: usize = 255;
+
 /// A path or filename within Mononoke, with information about whether
 /// it's the root of the repo, a directory or a file.
 #[derive(Clone, Debug, PartialEq, Eq, Hash, HeapSizeOf, Serialize, Deserialize)]
@@ -239,6 +243,21 @@ impl MPathElement {
                 "path elements cannot contain '\\n'".into(),
             ));
         }
+        Self::check_len(p)?;
+        Ok(())
+    }
+
+    fn check_len(p: &[u8]) -> Result<()> {
+        if p.len() > MPATH_ELEMENT_MAX_LENGTH {
+            bail!(ErrorKind::InvalidPath(
+                String::from_utf8_lossy(p).into_owned(),
+                format!(
+                    "path elements cannot exceed {} bytes",
+                    MPATH_ELEMENT_MAX_LENGTH
+                )
+            ));
+        }
+
         Ok(())
     }
 
@@ -315,11 +334,12 @@ impl MPath {
             .filter(|e| !e.is_empty())
             .map(|e| {
                 // These instances have already been checked to contain null bytes and also
-                // are split on '/' bytes and non-empty, so they're valid by construction. Skip the
-                // verification in MPathElement::new.
-                MPathElement(Bytes::copy_from_slice(e))
+                // are split on '/' bytes and non-empty, so they're valid by construction. We do
+                // however need to check the length of the individual components:
+                MPathElement::check_len(e)?;
+                Result::<_, Error>::Ok(MPathElement(Bytes::copy_from_slice(e)))
             })
-            .collect();
+            .collect::<Result<_, _>>()?;
         if elements.is_empty() {
             bail!(ErrorKind::InvalidPath(
                 String::from_utf8_lossy(p).into_owned(),
@@ -591,6 +611,12 @@ impl MPath {
     }
 }
 
+impl AsRef<[MPathElement]> for MPath {
+    fn as_ref(&self) -> &[MPathElement] {
+        &self.elements
+    }
+}
+
 /// Iterator over parent directories of a given `MPath`
 pub struct ParentDirIterator {
     current: Option<MPath>,
@@ -773,6 +799,7 @@ lazy_static! {
 impl Arbitrary for MPathElement {
     fn arbitrary<G: Gen>(g: &mut G) -> Self {
         let size = cmp::max(g.size(), 1);
+        let size = cmp::min(size, MPATH_ELEMENT_MAX_LENGTH);
         let mut element = Vec::with_capacity(size);
         for _ in 0..size {
             let c = COMPONENT_CHARS[..].choose(g).unwrap();
@@ -807,7 +834,8 @@ impl Arbitrary for MPath {
                 path.push(b'/');
             }
             path.extend(
-                (0..g.gen_range(1, 2 * size_sqrt)).map(|_| *COMPONENT_CHARS[..].choose(g).unwrap()),
+                (0..g.gen_range(1, cmp::min(MPATH_ELEMENT_MAX_LENGTH, 2 * size_sqrt)))
+                    .map(|_| *COMPONENT_CHARS[..].choose(g).unwrap()),
             );
         }
 
@@ -1161,6 +1189,23 @@ mod test {
     #[test]
     fn bad_path3() {
         assert!(MPath::new(b"ab\0cde").is_err());
+    }
+    #[test]
+    fn bad_path4() {
+        let p = vec![97; 255];
+        assert!(MPath::new(&p).is_ok());
+
+        let p = vec![97; 256];
+        assert!(MPath::new(&p).is_err());
+    }
+
+    #[test]
+    fn bad_path_element() {
+        let p = vec![97; 255];
+        assert!(MPathElement::new(p).is_ok());
+
+        let p = vec![97; 256];
+        assert!(MPathElement::new(p).is_err());
     }
 
     #[test]
