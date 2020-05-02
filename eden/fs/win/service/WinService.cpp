@@ -125,15 +125,24 @@ void WinService::create(int argc, char** argv) {
       logFile = userHome + "\\edenstartup.log";
     }
   }
-  redirectLogOutput(logFile.c_str());
-  XLOG(INFO) << "Starting Eden Service";
 
-  // This call returns when the service has stopped.
-  // The process should simply terminate when the call returns.
-  if (!StartServiceCtrlDispatcher(dispatchTable)) {
-    XLOG(ERR) << "Failed :" << GetLastError();
+  // Eden Windows can either run as a service with SCM or can run as a console
+  // application when run with the --foreground flag .
+  if (FLAGS_foreground) {
+    XLOG(INFO) << "Starting Eden in foreground";
+    service.setup(argc, argv);
+    service.run();
+  } else {
+    redirectLogOutput(logFile.c_str());
+    XLOG(INFO) << "Starting Eden Service";
+
+    // This call returns when the service has stopped.
+    // The process should simply terminate when the call returns.
+    if (!StartServiceCtrlDispatcher(dispatchTable)) {
+      XLOG(ERR) << "Failed :" << GetLastError();
+    }
+    XLOG(INFO) << "Service Exited" << GetLastError();
   }
-  XLOG(INFO) << "Service Exited" << GetLastError();
 }
 
 int WinService::serviceMain(int argc, char** argv) {
