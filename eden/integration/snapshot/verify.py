@@ -273,7 +273,7 @@ def _enumerate_directory_helper(
     for entry in os.scandir(root_path / rel_path):
         # Current versions of typeshed don't know about the follow_symlinks argument,
         # so ignore type errors on the next line.
-        stat_info: os.stat_result = entry.stat(follow_symlinks=False)  # type: ignore
+        stat_info: os.stat_result = entry.stat(follow_symlinks=False)
         entry_path: Path = rel_path / entry.name
         results[entry_path] = stat_info
         if stat_mod.S_ISDIR(stat_info.st_mode):

@@ -226,7 +226,7 @@ class SystemdServiceTest(ServiceTestCaseBase):
 
 
 def _replicate_service_test(
-    test_class: typing.Type[ServiceTestCaseBase]
+    test_class: typing.Type[ServiceTestCaseBase],
 ) -> typing.Iterable[typing.Tuple[str, typing.Type[ServiceTestCaseBase]]]:
     tests = []
 
@@ -276,7 +276,7 @@ service_test = test_replicator(_replicate_service_test)
 if _systemd_supported:
 
     def systemd_test(
-        test_class: Type[SystemdServiceTest]
+        test_class: Type[SystemdServiceTest],
     ) -> Optional[Type[SystemdServiceTest]]:
         return test_class
 
@@ -284,7 +284,7 @@ if _systemd_supported:
 else:
 
     def systemd_test(
-        test_class: Type[SystemdServiceTest]
+        test_class: Type[SystemdServiceTest],
     ) -> Optional[Type[SystemdServiceTest]]:
         # Replace the test classes with None so they won't even show up in the test
         # case listing when systemd is not supported.

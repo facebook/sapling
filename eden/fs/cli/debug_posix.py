@@ -116,7 +116,9 @@ class OverlayCmd(subcmd_mod.Subcmd):
                 )
 
     def _print_file(self, f: BinaryIO) -> None:
-        shutil.copyfileobj(f, sys.stdout.buffer)  # type: ignore
+        # pyre-fixme[6]: Expected `_Reader[Variable[typing.AnyStr <: [str, bytes]]]`
+        #  for 1st param but got `BinaryIO`.
+        shutil.copyfileobj(f, sys.stdout.buffer)
 
     def _process_overlay(self, inode_number: int, path: Path, level: int = 0) -> None:
         data = self.overlay.read_dir_inode(inode_number)

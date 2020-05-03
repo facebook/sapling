@@ -259,13 +259,13 @@ class server(object):
         copiedui = self.ui.copy()
         uis = [copiedui]
         if self.repo:
-            self.repo.baseui = copiedui  # type: ignore
+            self.repo.baseui = copiedui
             # clone ui without using ui.copy because this is protected
-            repoui = self.repoui.__class__(self.repoui)  # type: ignore
+            repoui = self.repoui.__class__(self.repoui)
             repoui.copy = copiedui.copy  # type: ignore , redo copy protection
             uis.append(repoui)
-            self.repo.ui = self.repo.dirstate._ui = repoui  # type: ignore
-            self.repo.invalidateall()  # type: ignore
+            self.repo.ui = self.repo.dirstate._ui = repoui
+            self.repo.invalidateall()
 
         for ui in uis:
             ui.resetstate()
@@ -290,7 +290,7 @@ class server(object):
     def getencoding(self):
         # type: () -> None
         """ writes the current encoding to the result channel """
-        self.cresult.write(pycompat.encodeutf8(encoding.encoding))  # type: ignore
+        self.cresult.write(pycompat.encodeutf8(encoding.encoding))
 
     def serveone(self):
         # type: () -> bool
@@ -313,13 +313,14 @@ class server(object):
         # type: () -> int
         hellomsg = "capabilities: " + " ".join(sorted(self.capabilities))
         hellomsg += "\n"
-        hellomsg += "encoding: " + encoding.encoding  # type: ignore
+        hellomsg += "encoding: " + encoding.encoding
         hellomsg += "\n"
         hellomsg += "pid: %d" % util.getpid()
         versionmod = sys.modules.get("edenscm.mercurial.__version__")
         if versionmod:
             hellomsg += "\n"
-            hellomsg += "versionhash: %s" % versionmod.versionhash  # type: ignore
+            # pyre-fixme[16]: `ModuleType` has no attribute `versionhash`.
+            hellomsg += "versionhash: %s" % versionmod.versionhash
         if util.safehasattr(os, "getpgid"):
             hellomsg += "\n"
             hellomsg += "pgid: %d" % os.getpgid(0)
@@ -381,7 +382,7 @@ class pipeservice(object):
             sv = server(ui, self.repo, fin, fout)
             return sv.serve()
         finally:
-            sv.cleanup()  # type: ignore
+            sv.cleanup()
             _restoreio(ui, fin, fout)
 
 

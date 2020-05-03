@@ -537,8 +537,8 @@ def _import_snapshot_modules() -> None:
 
     # Find and import all modules in our "types" sub-package.
     # Each module will register its snapshot types when imported.
-    package_prefix = f"{__package__}.types."  # type: ignore
-    for module in __manifest__.modules:  # type: ignore
+    package_prefix = f"{__package__}.types."
+    for module in __manifest__.modules:
         if module.startswith(package_prefix):
             __import__(module)
 

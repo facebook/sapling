@@ -878,9 +878,8 @@ https://fb.facebook.com/groups/eden.users/
         self.assertEqual(1, exit_code)
 
     def test_remount_checkouts(self) -> None:
-        exit_code, out, mounts = self._test_remount_checkouts(  # type: ignore
-            dry_run=False
-        )
+        # pyre-ignore[20]: T31414181
+        exit_code, out, mounts = self._test_remount_checkouts(dry_run=False)
         self.assertEqual(
             f"""\
 Checking {mounts[0]}
@@ -896,7 +895,8 @@ Remounting {mounts[1]}...<green>fixed<reset>
         self.assertEqual(exit_code, 0)
 
     def test_remount_checkouts_old_edenfs(self) -> None:
-        exit_code, out, mounts = self._test_remount_checkouts(  # type: ignore
+        # pyre-ignore[20]: T31414181
+        exit_code, out, mounts = self._test_remount_checkouts(
             dry_run=False, old_edenfs=True
         )
         self.assertEqual(
@@ -914,7 +914,8 @@ Remounting {mounts[1]}...<green>fixed<reset>
         self.assertEqual(exit_code, 0)
 
     def test_remount_checkouts_dry_run(self) -> None:
-        exit_code, out, mounts = self._test_remount_checkouts(  # type: ignore
+        # pyre-ignore[20]: T31414181
+        exit_code, out, mounts = self._test_remount_checkouts(
             dry_run=True, old_edenfs=True
         )
         self.assertEqual(

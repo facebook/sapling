@@ -137,10 +137,10 @@ class channeledsystem(object):
         self._send_request(b"s", args)
 
         length = self.in_.read(4)
-        length, = struct.unpack(">I", length)
+        (length,) = struct.unpack(">I", length)
         if length != 4:
             raise error.Abort(_("invalid response"))
-        rc, = struct.unpack(">i", self.in_.read(4))
+        (rc,) = struct.unpack(">i", self.in_.read(4))
         return rc
 
     def runpager(self, pagercmd, environ, redirectstderr, cmdtable):
@@ -319,15 +319,17 @@ class chgcmdserver(commandserver.server):
         l = self._readlist()
         try:
             newenv = dict(  # ignore below bc pyre doesn't like list to kv conversion
-                pycompat.decodeutf8(s).split("=", 1)  # type: ignore
+                # pyre-fixme[6]: Expected `Mapping[Variable[_KT], Variable[_VT]]`
+                #  for 1st param but got `Generator[List[str], None, None]`.
+                pycompat.decodeutf8(s).split("=", 1)
                 for s in l
                 if b"=" in s
             )
         except ValueError:
             raise ValueError("unexpected value in setenv request")
         _log("setenv: %r\n" % sorted(newenv.keys()))
-        encoding.environ.clear()  # type: ignore
-        encoding.environ.update(newenv)  # type: ignore
+        encoding.environ.clear()
+        encoding.environ.update(newenv)
         # Apply $TZ changes.
         hgtime.tzset()
 

@@ -186,7 +186,7 @@ class EdenConfigParser:
 
     @property
     def _parser(
-        self
+        self,
     ) -> MutableMapping[ConfigSectionName, Mapping[ConfigOptionName, str]]:
         return {}
 

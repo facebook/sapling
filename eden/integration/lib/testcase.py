@@ -413,7 +413,7 @@ def test_replicator(
 
 
 def _replicate_eden_repo_test(
-    test_class: Type[EdenRepoTest]
+    test_class: Type[EdenRepoTest],
 ) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
     class HgRepoTest(HgRepoTestMixin, test_class):  # type: ignore
         pass

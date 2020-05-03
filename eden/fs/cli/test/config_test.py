@@ -239,7 +239,7 @@ experimental_systemd = true
         self.assertFalse(self.get_config().should_use_experimental_systemd_mode())
 
     def test_empty_experimental_systemd_environment_variable_does_not_override_config(
-        self
+        self,
     ) -> None:
         if not sys.platform.startswith("linux"):
             return
@@ -279,7 +279,7 @@ testoption = "My user ID is ${USER_ID}."
         )
 
     def test_configured_fallback_systemd_xdg_runtime_dir_expands_user_and_user_id(
-        self
+        self,
     ) -> None:
         self.write_user_config(
             """
@@ -408,7 +408,7 @@ class EdenConfigParserTest(unittest.TestCase):
         self.assertEqual(section["b"], "b value")
 
     def test_querying_section_str_to_any_fails_if_option_has_unsupported_type(
-        self
+        self,
     ) -> None:
         parser = EdenConfigParser()
         parser.read_dict({"test_section": {"unsupported": self.unsupported_value}})

@@ -66,7 +66,7 @@ class Subcmd(abc.ABC):
     def add_subcommands(
         self, parser: argparse.ArgumentParser, cmds: List[Type["Subcmd"]]
     ) -> argparse._SubParsersAction:
-        return add_subcommands(parser, cmds)  # type: ignore
+        return add_subcommands(parser, cmds)
 
     @abc.abstractmethod
     def run(self, args: argparse.Namespace) -> int:
@@ -152,7 +152,7 @@ def add_subcommands(
 
 
 def _get_subparsers(
-    parser: argparse.ArgumentParser
+    parser: argparse.ArgumentParser,
 ) -> Optional[argparse._SubParsersAction]:
     subparsers = cast(Any, parser)
     if subparsers is None:

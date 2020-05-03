@@ -321,7 +321,9 @@ class Overlay:
                 os.symlink(contents, bytes(output_path))
             elif file_type == stat.S_IFREG:
                 with output_path.open("wb") as outf:
-                    shutil.copyfileobj(inf, outf)  # type: ignore
+                    # pyre-fixme[6]: Expected `_Reader[Variable[typing.AnyStr <:
+                    #  [str, bytes]]]` for 1st param but got `BinaryIO`.
+                    shutil.copyfileobj(inf, outf)
                     # Note: the file permissions bits are now stored in the inode table
                     # rather than the overlay.  The mode bits in the overlay will
                     # reflect the correct file type only.  Always extract orphan inodes
