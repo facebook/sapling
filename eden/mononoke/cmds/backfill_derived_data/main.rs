@@ -168,7 +168,8 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                         .multiple(true)
                         .index(1)
                         .possible_values(POSSIBLE_DERIVED_TYPES)
-                        .help("comma separated list of derived data types"),
+                        // TODO(stash): T66492899 remove unused value
+                        .help("Unused, will be deleted soon"),
                 ),
         )
         .subcommand(
@@ -311,13 +312,7 @@ async fn run_subcmd<'a>(
             )
             .await
         }
-        (SUBCOMMAND_TAIL, Some(sub_m)) => {
-            let derived_data_types: Vec<_> = sub_m
-                .values_of_lossy(ARG_DERIVED_DATA_TYPE)
-                .ok_or_else(|| {
-                    format_err!("missing required argument: {}", ARG_DERIVED_DATA_TYPE)
-                })?;
-
+        (SUBCOMMAND_TAIL, Some(_sub_m)) => {
             let stats = {
                 let repo_name = format!(
                     "{}_{}",
@@ -333,15 +328,7 @@ async fn run_subcmd<'a>(
                 args::open_sql::<SqlBookmarks>(fb, &matches).compat(),
             )
             .await?;
-            subcommand_tail(
-                &ctx,
-                &stats,
-                &repo,
-                &unredacted_repo,
-                &bookmarks,
-                &derived_data_types,
-            )
-            .await
+            subcommand_tail(&ctx, &stats, &repo, &unredacted_repo, &bookmarks).await
         }
         (SUBCOMMAND_PREFETCH_COMMITS, Some(sub_m)) => {
             let out_filename = sub_m
@@ -512,22 +499,23 @@ async fn subcommand_tail(
     repo: &BlobRepo,
     unredacted_repo: &BlobRepo,
     bookmarks: &SqlBookmarks,
-    derived_data_types: &Vec<String>,
 ) -> Result<(), Error> {
-    let derive_utils: Vec<(Arc<dyn DerivedUtils>, BlobRepo, Arc<DerivedDataStats>)> =
-        derived_data_types
-            .into_iter()
-            .map(|name| {
-                let maybe_unredacted_repo = if UNREDACTED_TYPES.contains(&name.as_ref()) {
-                    unredacted_repo.clone()
-                } else {
-                    repo.clone()
-                };
-                let derive = derived_data_utils(repo.clone(), name)?;
-                let stats = stats_constructor(derive.name());
-                Ok((derive, maybe_unredacted_repo, Arc::new(stats)))
-            })
-            .collect::<Result<_, Error>>()?;
+    let derive_utils: Vec<(Arc<dyn DerivedUtils>, BlobRepo, Arc<DerivedDataStats>)> = repo
+        .get_derived_data_config()
+        .derived_data_types
+        .clone()
+        .into_iter()
+        .map(|name| {
+            let maybe_unredacted_repo = if UNREDACTED_TYPES.contains(&name.as_ref()) {
+                unredacted_repo.clone()
+            } else {
+                repo.clone()
+            };
+            let derive = derived_data_utils(repo.clone(), name)?;
+            let stats = stats_constructor(derive.name());
+            Ok((derive, maybe_unredacted_repo, Arc::new(stats)))
+        })
+        .collect::<Result<_, Error>>()?;
 
     loop {
         tail_one_iteration(ctx, repo, bookmarks, &derive_utils).await?;
