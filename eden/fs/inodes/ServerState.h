@@ -13,6 +13,7 @@
 
 #include "eden/fs/config/CachedParsedFileMonitor.h"
 #include "eden/fs/config/ReloadableConfig.h"
+#include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/model/git/GitIgnoreFileParser.h"
 #include "eden/fs/notifications/Notifications.h"
 #include "eden/fs/telemetry/EdenStats.h"
@@ -25,7 +26,6 @@ namespace eden {
 class Clock;
 class EdenConfig;
 class FaultInjector;
-class PrivHelper;
 class ProcessNameCache;
 class StructuredLogger;
 class TopLevelIgnores;
