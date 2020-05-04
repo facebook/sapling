@@ -17,7 +17,7 @@ class UserInfoTest(unittest.TestCase):
     def test_drop_privs(self):
         expected_user = os.environ["USER"]
 
-        cmd = ["/usr/bin/sudo", FindExe.DROP_PRIVS, "/bin/env"]
+        cmd = ["/usr/bin/sudo", FindExe.DROP_PRIVS, "/usr/bin/env"]
         out = subprocess.check_output(cmd)
         lines = out.splitlines()
         self.assertIn(f"USER={expected_user}".encode("utf-8"), lines)
