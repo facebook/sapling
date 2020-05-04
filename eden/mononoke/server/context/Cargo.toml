@@ -15,12 +15,12 @@ path = "benchmark/main.rs"
 doc = false
 
 [dependencies]
+load_limiter = { path = "../../load_limiter" }
 permission_checker = { path = "../../permission_checker" }
 scuba_ext = { path = "../../common/scuba_ext" }
 session_id = { path = "../session_id" }
 sshrelay = { path = "../../sshrelay" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
-futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 anyhow = "1.0"

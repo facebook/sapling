@@ -75,6 +75,7 @@ members = [
     "hooks",
     "hooks/content-stores",
     "lfs_protocol",
+    "load_limiter",
     "manifest",
     "manifest/test_utils",
     "megarepolib",

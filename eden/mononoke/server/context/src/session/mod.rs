@@ -6,19 +6,19 @@
  */
 
 use fbinit::FacebookInit;
+use load_limiter::{BoxLoadLimiter, LoadCost, LoadLimiter, Metric};
 use permission_checker::MononokeIdentitySet;
 use scuba_ext::ScubaSampleBuilder;
 use session_id::SessionId;
 use slog::Logger;
 use sshrelay::SshEnvVars;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::Semaphore;
 use tracing::TraceContext;
 
 pub use self::builder::{generate_session_id, SessionContainerBuilder};
 use crate::core::CoreContext;
-#[cfg(fbcode_build)]
-use crate::facebook::SessionFacebookData;
 use crate::logging::LoggingContainer;
 
 mod builder;
@@ -38,8 +38,7 @@ struct SessionContainerInner {
     ssh_env_vars: SshEnvVars,
     blobstore_semaphore: Option<Semaphore>,
     identities: Option<MononokeIdentitySet>,
-    #[cfg(fbcode_build)]
-    facebook_data: SessionFacebookData,
+    load_limiter: Option<BoxLoadLimiter>,
 }
 
 impl SessionContainer {
@@ -89,8 +88,26 @@ impl SessionContainer {
         self.inner.identities.as_ref()
     }
 
-    #[cfg(fbcode_build)]
-    pub(crate) fn facebook_data(&self) -> &SessionFacebookData {
-        &self.inner.facebook_data
+    pub fn load_limiter(&self) -> Option<&dyn LoadLimiter> {
+        match self.inner.load_limiter {
+            Some(ref load_limiter) => Some(&**load_limiter),
+            None => None,
+        }
+    }
+
+    pub fn bump_load(&self, metric: Metric, load: LoadCost) {
+        if let Some(limiter) = self.load_limiter() {
+            limiter.bump_load(metric, load)
+        }
+    }
+
+    pub async fn should_throttle(&self, metric: Metric, duration: Duration) -> Result<bool, !> {
+        match &self.inner.load_limiter {
+            Some(limiter) => match limiter.should_throttle(metric, duration).await {
+                Ok(res) => Ok(res),
+                Err(_) => Ok(false),
+            },
+            None => Ok(false),
+        }
     }
 }

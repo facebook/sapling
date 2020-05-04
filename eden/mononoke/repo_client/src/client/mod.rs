@@ -812,8 +812,10 @@ where
     F: FnOnce() -> S + Send + 'static,
     S: Stream<Item = V, Error = Error> + Send + 'static,
 {
-    session
-        .should_throttle(metric, *LOAD_LIMIT_TIMEFRAME)
+    let session = session.clone();
+    async move { session.should_throttle(metric, *LOAD_LIMIT_TIMEFRAME).await }
+        .boxed()
+        .compat()
         .then(move |throttle| match throttle {
             Ok(throttle) => {
                 if throttle {

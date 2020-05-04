@@ -36,7 +36,7 @@ use sshrelay::{Priority, SenderBytesWrite, SshEnvVars, Stdio};
 use crate::repo_handlers::RepoHandler;
 
 use context::{is_quicksand, LoggingContainer, SessionContainer};
-use load_limiter::{LoadLimiter, Metric};
+use load_limiter::{LoadLimiterBuilder, Metric};
 
 lazy_static! {
     static ref DATACENTER_REGION_PREFIX: String = {
@@ -158,7 +158,7 @@ pub fn request_handler(
     let load_limiter = load_limiting_config.map(|(config, category)| {
         let (throttle_limits, rate_limits) =
             loadlimiting_configs(config, &client_hostname, &ssh_env_vars);
-        LoadLimiter::new(fb, throttle_limits, rate_limits, category)
+        LoadLimiterBuilder::build(fb, throttle_limits, rate_limits, category)
     });
 
     let mut session_builder = SessionContainer::builder(fb)

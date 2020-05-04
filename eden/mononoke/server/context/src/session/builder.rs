@@ -6,6 +6,7 @@
  */
 
 use fbinit::FacebookInit;
+use load_limiter::BoxLoadLimiter;
 use permission_checker::MononokeIdentitySet;
 use rand::{self, distributions::Alphanumeric, thread_rng, Rng};
 use session_id::SessionId;
@@ -15,8 +16,6 @@ use tokio::sync::Semaphore;
 use tracing::TraceContext;
 
 use super::{SessionContainer, SessionContainerInner};
-#[cfg(fbcode_build)]
-use crate::facebook::SessionFacebookData;
 
 pub fn generate_session_id() -> SessionId {
     let s: String = thread_rng().sample_iter(&Alphanumeric).take(16).collect();
@@ -47,8 +46,7 @@ impl SessionContainerBuilder {
                 ssh_env_vars: SshEnvVars::default(),
                 blobstore_semaphore: None,
                 identities: None,
-                #[cfg(fbcode_build)]
-                facebook_data: SessionFacebookData::default(),
+                load_limiter: None,
             },
         }
     }
@@ -88,8 +86,8 @@ impl SessionContainerBuilder {
         self
     }
 
-    #[cfg(fbcode_build)]
-    pub(crate) fn facebook_data(&mut self) -> &mut SessionFacebookData {
-        &mut self.inner.facebook_data
+    pub fn load_limiter(mut self, value: impl Into<Option<BoxLoadLimiter>>) -> Self {
+        self.inner.load_limiter = value.into();
+        self
     }
 }
