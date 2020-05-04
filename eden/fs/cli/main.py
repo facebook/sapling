@@ -1402,13 +1402,13 @@ class RestartCmd(Subcmd):
             f"(pid {edenfs_pid}) after a failed graceful restart"
         )
         try:
-            # We will give ourselves a fairly long period (1 hr)
+            # We will give ourselves a fairly long period (10 m)
             # to recover from a failed graceful restart before
             # forcing a restart. We could hit this case if we are
             # waiting for in process thrift calls to finish, so we
             # want to wait for a reasonable time before we force
             # kill the process (if it is stuck somewhere)
-            wait_for_instance_healthy(instance, 3600)
+            wait_for_instance_healthy(instance, 600)
             telemetry_sample.fail(
                 "Graceful restart failed, and old EdenFS process resumed"
             )
