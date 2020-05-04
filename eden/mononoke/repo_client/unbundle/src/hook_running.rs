@@ -8,6 +8,7 @@
 #![deny(warnings)]
 
 use crate::{resolver::HookFailure, BundleResolverError, PostResolveAction, PostResolvePushRebase};
+use anyhow::Context;
 use blobrepo::BlobRepo;
 use bookmarks::BookmarkName;
 use bytes::Bytes;
@@ -15,8 +16,10 @@ use context::CoreContext;
 use futures::{compat::Future01CompatExt, stream::TryStreamExt, FutureExt, TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt as _};
 use futures_old::future::ok;
-use hooks::{HookExecution, HookManager, HookOutcome};
+use futures_stats::TimedFutureExt;
+use hooks::{HookManager, HookOutcome};
 use mononoke_types::BonsaiChangeset;
+use scuba_ext::ScubaSampleBuilderExt;
 use std::{collections::HashMap, sync::Arc};
 
 pub fn run_hooks(
@@ -73,40 +76,44 @@ async fn run_hooks_on_changesets(
     bookmark: BookmarkName,
     maybe_pushvars: Option<HashMap<String, Bytes>>,
 ) -> Result<(), BundleResolverError> {
-    let hook_outcomes = hook_manager
+    let (stats, hook_outcomes) = hook_manager
         .run_hooks_for_bookmark(&ctx, changesets, &bookmark, maybe_pushvars.as_ref())
-        .await?;
-    if hook_outcomes.iter().all(HookOutcome::is_accept) {
-        Ok(())
-    } else {
-        let hook_failures = hook_outcomes
-            .into_iter()
-            .filter_map(|outcome| {
-                let hook_name = outcome.get_hook_name().to_string();
+        .timed()
+        .await;
+    let hook_outcomes = hook_outcomes.context("While running hooks")?;
 
-                let cs_id = outcome.get_changeset_id();
+    let rejections = hook_outcomes
+        .into_iter()
+        .filter_map(HookOutcome::into_rejection)
+        .collect::<Vec<_>>();
 
-                let info = match outcome.into() {
-                    HookExecution::Accepted => None,
-                    HookExecution::Rejected(info) => Some(info),
-                }?;
+    ctx.scuba()
+        .clone()
+        .add_future_stats(&stats)
+        .add("hook_rejections", rejections.len())
+        .log_with_msg("Executed hooks", None);
 
-                Some(async move {
-                    let cs_id = repo
-                        .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
-                        .compat()
-                        .await?;
-
-                    Result::<_, anyhow::Error>::Ok(HookFailure {
-                        hook_name,
-                        cs_id,
-                        info,
-                    })
-                })
-            })
-            .collect::<futures::stream::FuturesUnordered<_>>()
-            .try_collect()
-            .await?;
-        Err(BundleResolverError::HookError(hook_failures))
+    if rejections.is_empty() {
+        return Ok(());
     }
+
+    let rejections = rejections
+        .into_iter()
+        .map(|(hook_name, cs_id, info)| async move {
+            let cs_id = repo
+                .get_hg_from_bonsai_changeset(ctx.clone(), cs_id)
+                .compat()
+                .await?;
+
+            Result::<_, anyhow::Error>::Ok(HookFailure {
+                hook_name,
+                cs_id,
+                info,
+            })
+        })
+        .collect::<futures::stream::FuturesUnordered<_>>()
+        .try_collect()
+        .await?;
+
+    Err(BundleResolverError::HookError(rejections))
 }

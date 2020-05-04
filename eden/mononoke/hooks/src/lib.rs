@@ -424,6 +424,25 @@ impl HookOutcome {
             HookOutcome::FileHook(_, exec) => exec,
         }
     }
+
+    pub fn into_rejection(self) -> Option<(String, ChangesetId, HookRejectionInfo)> {
+        match self {
+            HookOutcome::ChangesetHook(_, HookExecution::Accepted)
+            | HookOutcome::FileHook(_, HookExecution::Accepted) => None,
+            HookOutcome::ChangesetHook(
+                ChangesetHookExecutionID { cs_id, hook_name },
+                HookExecution::Rejected(reason),
+            )
+            | HookOutcome::FileHook(
+                FileHookExecutionID {
+                    cs_id,
+                    hook_name,
+                    path: _,
+                },
+                HookExecution::Rejected(reason),
+            ) => Some((hook_name, cs_id, reason)),
+        }
+    }
 }
 
 #[derive(Clone, Debug, PartialEq)]
