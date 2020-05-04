@@ -376,7 +376,7 @@ async fn normal_pushrebase(
         flags.rewritedates = rewritedates;
     }
 
-    ctx.scuba().clone().log_with_msg("pushrebase started", None);
+    ctx.scuba().clone().log_with_msg("Pushrebase started", None);
     let (stats, result) = pushrebase::do_pushrebase_bonsai(
         &ctx,
         &repo,
@@ -390,11 +390,17 @@ async fn normal_pushrebase(
     .await;
 
     let mut scuba_logger = ctx.scuba().clone();
-    if let Ok(ref res) = result {
-        scuba_logger
-            .add_future_stats(&stats)
-            .add("pushrebase_retry_num", res.retry_num)
-            .log_with_msg("Pushrebase finished", None);
+    scuba_logger.add_future_stats(&stats);
+
+    match result {
+        Ok(ref res) => {
+            scuba_logger
+                .add("pushrebase_retry_num", res.retry_num)
+                .log_with_msg("Pushrebase finished", None);
+        }
+        Err(ref err) => {
+            scuba_logger.log_with_msg("Pushrebase failed", Some(format!("{:#?}", err)));
+        }
     }
 
     result
