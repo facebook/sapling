@@ -47,7 +47,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" --derive-trees
+  $ gitimport "$GIT_REPO" --derive-trees full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
   Created d53a2ef2bbadbe26f8c28598b408e03c0b01027c => ChangesetId(Blake2(6527b56ce8ba165584a33318aa71b7442750e39466bf2691160a6158825f2193))
   Created 161a8cb720352af550786d4e73eeb36d5b958ddd => ChangesetId(Blake2(e0bd5a3d151b8b0cbcc0b07f131275a89237643ea14662b9a18a789619674ae5))

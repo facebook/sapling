@@ -19,7 +19,7 @@ use futures_old::{
     future::IntoFuture,
     stream::{self, Stream},
 };
-use git2::{ObjectType, Oid, Repository, Sort};
+use git2::{ObjectType, Oid, Repository, Revwalk, Sort};
 use std::collections::HashSet;
 use std::collections::{BTreeMap, HashMap};
 use std::convert::TryInto;
@@ -28,7 +28,7 @@ use std::sync::{Arc, Mutex};
 
 use blobrepo::save_bonsai_changesets;
 use blobstore::{Blobstore, LoadableError};
-use clap::Arg;
+use clap::{Arg, SubCommand};
 use cmdlib::args;
 use context::CoreContext;
 use fbinit::FacebookInit;
@@ -40,10 +40,16 @@ use mononoke_types::{
     FileType, MPath, MPathElement,
 };
 
+const SUBCOMMAND_FULL_REPO: &str = "full-repo";
+const SUBCOMMAND_GIT_RANGE: &str = "git-range";
+
 const ARG_GIT_REPOSITORY_PATH: &str = "git-repository-path";
 const ARG_DERIVE_TREES: &str = "derive-trees";
 const ARG_DERIVE_HG: &str = "derive-hg";
 const ARG_HGGIT_COMPATIBILITY: &str = "hggit-compatibility";
+
+const ARG_GIT_FROM: &str = "git-from";
+const ARG_GIT_TO: &str = "git-to";
 
 const HGGIT_COMMIT_ID_EXTRA: &str = "convert_revision";
 
@@ -65,6 +71,33 @@ impl GitimportPreferences {
 
     fn enable_hggit_compatibility(&mut self) {
         self.hggit_compatibility = true
+    }
+}
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+enum GitimportTarget {
+    FullRepo,
+    GitRange(Oid, Oid),
+}
+
+impl GitimportTarget {
+    fn populate_walk(&self, repo: &Repository, walk: &mut Revwalk) -> Result<(), Error> {
+        match self {
+            Self::FullRepo => {
+                for reference in repo.references()? {
+                    let reference = reference?;
+                    if let Some(oid) = reference.target() {
+                        walk.push(oid)?;
+                    }
+                }
+            }
+            Self::GitRange(from, to) => {
+                walk.hide(*from)?;
+                walk.push(*to)?;
+            }
+        };
+
+        Ok(())
     }
 }
 
@@ -201,6 +234,7 @@ async fn gitimport(
     ctx: CoreContext,
     repo: BlobRepo,
     path: &Path,
+    target: GitimportTarget,
     prefs: GitimportPreferences,
 ) -> Result<(), Error> {
     let walk_repo = Repository::open(&path)?;
@@ -208,13 +242,7 @@ async fn gitimport(
 
     let mut walk = walk_repo.revwalk()?;
     walk.set_sorting(Sort::TOPOLOGICAL | Sort::REVERSE);
-
-    for reference in walk_repo.references()? {
-        let reference = reference?;
-        if let Some(oid) = reference.target() {
-            walk.push(oid)?;
-        }
-    }
+    target.populate_walk(&walk_repo, &mut walk)?;
 
     // TODO: Don't import everything in one go. Instead, hide things we already imported from the
     // traversal.
@@ -368,7 +396,17 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .required(false)
                 .takes_value(false),
         )
-        .arg(Arg::with_name(ARG_GIT_REPOSITORY_PATH).help("Path to a git repository to import"));
+        .arg(Arg::with_name(ARG_GIT_REPOSITORY_PATH).help("Path to a git repository to import"))
+        .subcommand(SubCommand::with_name(SUBCOMMAND_FULL_REPO))
+        .subcommand(
+            SubCommand::with_name(SUBCOMMAND_GIT_RANGE)
+                .arg(
+                    Arg::with_name(ARG_GIT_FROM)
+                        .required(true)
+                        .takes_value(true),
+                )
+                .arg(Arg::with_name(ARG_GIT_TO).required(true).takes_value(true)),
+        );
 
     let mut prefs = GitimportPreferences::default();
 
@@ -386,6 +424,16 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         prefs.enable_hggit_compatibility();
     }
 
+    let target = match matches.subcommand() {
+        (SUBCOMMAND_FULL_REPO, Some(..)) => GitimportTarget::FullRepo,
+        (SUBCOMMAND_GIT_RANGE, Some(range_matches)) => {
+            let from = range_matches.value_of(ARG_GIT_FROM).unwrap().parse()?;
+            let to = range_matches.value_of(ARG_GIT_TO).unwrap().parse()?;
+            GitimportTarget::GitRange(from, to)
+        }
+        _ => unreachable!("Undefined subcommand"),
+    };
+
     let path = Path::new(matches.value_of(ARG_GIT_REPOSITORY_PATH).unwrap());
 
     args::init_cachelib(fb, &matches, None);
@@ -397,7 +445,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     block_execute(
         async {
             let repo = repo.compat().await?;
-            gitimport(ctx, repo, &path, prefs).await
+            gitimport(ctx, repo, &path, target, prefs).await
         },
         fb,
         "gitimport",

@@ -23,7 +23,7 @@
 
 # Import it into Mononoke
   $ cd "$TESTTMP"
-  $ gitimport "$GIT_REPO" --derive-trees --derive-hg --hggit-compatibility
+  $ gitimport "$GIT_REPO" --derive-trees --derive-hg --hggit-compatibility full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
   Created 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e => ChangesetId(Blake2(967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0))
   Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0)))
