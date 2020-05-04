@@ -6,10 +6,10 @@
 
 import unittest
 
-from .lib import edenclient
+from .lib import edenclient, testcase
 
 
-class HelpTest(unittest.TestCase):
+class HelpTest(testcase.IntegrationTestCase):
     """
     This test verifies the Eden CLI can at least load its Python code.
     It can be removed when the remaining integration tests are enabled

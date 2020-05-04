@@ -8,11 +8,11 @@ import os
 import subprocess
 import unittest
 
-from .lib import edenclient
+from .lib import edenclient, testcase
 from .lib.find_executables import FindExe
 
 
-class UserInfoTest(unittest.TestCase):
+class UserInfoTest(testcase.IntegrationTestCase):
     @unittest.skipIf(not edenclient.can_run_sudo(), "unable to run sudo")
     def test_drop_privs(self):
         expected_user = os.environ["USER"]

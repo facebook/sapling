@@ -144,18 +144,18 @@ if sys.platform == "win32":
     }
 
 
-def skip_test_if_blacklisted(test_class: unittest.TestCase, method_name: str) -> None:
-    if _is_blacklisted(test_class, method_name):
+def skip_test_if_blacklisted(test_case: unittest.TestCase) -> None:
+    if _is_blacklisted(test_case):
         raise unittest.SkipTest(f"this test is currently unsupported on this platform")
 
 
-def _is_blacklisted(test_class: unittest.TestCase, method_name: str) -> bool:
+def _is_blacklisted(test_case: unittest.TestCase) -> bool:
     if not TEST_BLACKLIST:
         return False
     if os.environ.get("EDEN_RUN_BLACKLISTED_TESTS", "") == "1":
         return False
 
-    class_name = f"{type(test_class).__module__}.{type(test_class).__name__}"
+    class_name = f"{type(test_case).__module__}.{type(test_case).__name__}"
     # Strip off the leading "eden.integration." prefix from the module name just
     # to make our blacklisted names shorter and easier to read/maintain.
     strip_prefix = "eden.integration."
@@ -171,4 +171,4 @@ def _is_blacklisted(test_class: unittest.TestCase, method_name: str) -> bool:
         return True
     else:
         # pyre-fixme[16]: Optional type has no attribute `__getitem__`.
-        return method_name in class_blacklist
+        return test_case._testMethodName in class_blacklist

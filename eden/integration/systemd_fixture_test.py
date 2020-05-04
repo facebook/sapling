@@ -14,7 +14,6 @@ import typing
 import unittest
 
 from eden.fs.cli import proc_utils as proc_utils_mod
-from eden.test_support.testcase import EdenTestCaseBase
 
 from .lib.linux import ProcessID, is_cgroup_v2_mounted
 from .lib.systemd import (
@@ -23,9 +22,10 @@ from .lib.systemd import (
     SystemdUserServiceManager,
     temp_systemd,
 )
+from .lib.testcase import IntegrationTestCase
 
 
-class SystemdTestCaseBase(EdenTestCaseBase):
+class SystemdTestCaseBase(IntegrationTestCase):
     def make_temporary_systemd_user_service_manager(self) -> SystemdUserServiceManager:
         return self.exit_stack.enter_context(temp_systemd(self.temp_mgr))
 

@@ -10,9 +10,10 @@ import pathlib
 import unittest
 
 from .lib.linux import LinuxCgroup, is_cgroup_v2_mounted
+from .lib.testcase import IntegrationTestCase
 
 
-class LinuxCgroupTest(unittest.TestCase):
+class LinuxCgroupTest(IntegrationTestCase):
     def test_parse_proc_file(self) -> None:
         proc_file_content = (
             b"0::/user.slice/user-6986.slice/session-33.scope/init.scope\n"

@@ -41,6 +41,12 @@ else:
     _build_flavor = "facebook"
 
 
+class IntegrationTestCase(EdenTestCaseBase):
+    def setUp(self) -> None:
+        blacklist.skip_test_if_blacklisted(self)
+        super().setUp()
+
+
 @unittest.skipIf(not edenclient.can_run_eden(), "unable to run edenfs")
 class EdenTestCase(EdenTestCaseBase):
     """
@@ -76,7 +82,7 @@ class EdenTestCase(EdenTestCaseBase):
         self.last_event = now
 
     def setUp(self) -> None:
-        blacklist.skip_test_if_blacklisted(self, self._testMethodName)
+        blacklist.skip_test_if_blacklisted(self)
 
         self.start = time.time()
         self.last_event = self.start
