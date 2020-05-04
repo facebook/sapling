@@ -554,7 +554,7 @@ async fn single_bookmark_updater(
             let to_sleep = (delay_secs - cur_delay) as u64;
             info!(
                 ctx.logger(),
-                "sleeping for {} before updating a bookmark", to_sleep
+                "sleeping for {} secs before updating a bookmark", to_sleep
             );
             tokio::time::delay_for(Duration::from_secs(to_sleep)).await;
         }
