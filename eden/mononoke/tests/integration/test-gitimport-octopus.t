@@ -49,16 +49,17 @@
   $ cd "$TESTTMP"
   $ gitimport "$GIT_REPO" --derive-trees full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
-  Created d53a2ef2bbadbe26f8c28598b408e03c0b01027c => ChangesetId(Blake2(6527b56ce8ba165584a33318aa71b7442750e39466bf2691160a6158825f2193))
-  Created 161a8cb720352af550786d4e73eeb36d5b958ddd => ChangesetId(Blake2(e0bd5a3d151b8b0cbcc0b07f131275a89237643ea14662b9a18a789619674ae5))
-  Created bf946c828dea5fe0a0228dc7d556aa4a524df2d1 => ChangesetId(Blake2(dd8e619f36b5c91a908e9eade9c8407ca3bd06f637cef84282f04921675e9ebd))
-  Created 933c6d8556a071c2105b8b2fd1dabff709d87929 => ChangesetId(Blake2(8d189eed3e25c42d197f50d11b92831cc43cd32002e9c5f9ab2c1b1a1af61c94))
-  Created 6283891fdea5a1a4560451f09366220a585e07b2 => ChangesetId(Blake2(2c1b9f21f25524196376709ca6b4850e17170cbee48714802601e4706cfc1f28))
-  Ref: Some("refs/heads/branch1"): Some(ChangesetId(Blake2(dd8e619f36b5c91a908e9eade9c8407ca3bd06f637cef84282f04921675e9ebd)))
-  Ref: Some("refs/heads/branch2"): Some(ChangesetId(Blake2(8d189eed3e25c42d197f50d11b92831cc43cd32002e9c5f9ab2c1b1a1af61c94)))
-  Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(2c1b9f21f25524196376709ca6b4850e17170cbee48714802601e4706cfc1f28)))
-  Ref: Some("refs/heads/root"): Some(ChangesetId(Blake2(6527b56ce8ba165584a33318aa71b7442750e39466bf2691160a6158825f2193)))
-  5 tree(s) are valid!
+  * Created d53a2ef2bbadbe26f8c28598b408e03c0b01027c => ChangesetId(Blake2(6527b56ce8ba165584a33318aa71b7442750e39466bf2691160a6158825f2193)) (glob)
+  * Created 161a8cb720352af550786d4e73eeb36d5b958ddd => ChangesetId(Blake2(e0bd5a3d151b8b0cbcc0b07f131275a89237643ea14662b9a18a789619674ae5)) (glob)
+  * Created bf946c828dea5fe0a0228dc7d556aa4a524df2d1 => ChangesetId(Blake2(dd8e619f36b5c91a908e9eade9c8407ca3bd06f637cef84282f04921675e9ebd)) (glob)
+  * Created 933c6d8556a071c2105b8b2fd1dabff709d87929 => ChangesetId(Blake2(8d189eed3e25c42d197f50d11b92831cc43cd32002e9c5f9ab2c1b1a1af61c94)) (glob)
+  * Created 6283891fdea5a1a4560451f09366220a585e07b2 => ChangesetId(Blake2(2c1b9f21f25524196376709ca6b4850e17170cbee48714802601e4706cfc1f28)) (glob)
+  * 5 bonsai changesets have been committed (glob)
+  * Ref: Some("refs/heads/branch1"): Some(ChangesetId(Blake2(dd8e619f36b5c91a908e9eade9c8407ca3bd06f637cef84282f04921675e9ebd))) (glob)
+  * Ref: Some("refs/heads/branch2"): Some(ChangesetId(Blake2(8d189eed3e25c42d197f50d11b92831cc43cd32002e9c5f9ab2c1b1a1af61c94))) (glob)
+  * Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(2c1b9f21f25524196376709ca6b4850e17170cbee48714802601e4706cfc1f28))) (glob)
+  * Ref: Some("refs/heads/root"): Some(ChangesetId(Blake2(6527b56ce8ba165584a33318aa71b7442750e39466bf2691160a6158825f2193))) (glob)
+  * 5 tree(s) are valid! (glob)
 
 # Set master (gitimport does not do this yet)
   $ mononoke_admin bookmarks set master 2c1b9f21f25524196376709ca6b4850e17170cbee48714802601e4706cfc1f28

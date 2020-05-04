@@ -25,10 +25,11 @@
   $ cd "$TESTTMP"
   $ gitimport "$GIT_REPO" --derive-trees --derive-hg --hggit-compatibility full-repo
   * using repo "repo" repoid RepositoryId(0) (glob)
-  Created 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e => ChangesetId(Blake2(967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0))
-  Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0)))
-  1 tree(s) are valid!
-  1 hg commits generated
+  * Created 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e => ChangesetId(Blake2(967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0)) (glob)
+  * 1 bonsai changesets have been committed (glob)
+  * Ref: Some("refs/heads/master"): Some(ChangesetId(Blake2(967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0))) (glob)
+  * 1 tree(s) are valid! (glob)
+  * Hg: 8ce3eae44760b500bf3f2c3922a95dcd3c908e9e: HgManifestId(HgNodeHash(Sha1(009adbc8d457927d2e1883c08b0692bc45089839))) (glob)
 
 # Set master (gitimport does not do this yet)
   $ mononoke_admin bookmarks set master 967b83a1a809dbd715163d6cbd5197b4733a09068c57251481c0bc76e6297ca0

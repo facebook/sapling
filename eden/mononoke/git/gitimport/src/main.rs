@@ -7,38 +7,54 @@
 
 #![deny(warnings)]
 
-use anyhow::{format_err, Error};
+mod git_pool;
+
+use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
+use blobstore::{Blobstore, LoadableError};
 use bytes::Bytes;
+use changesets::{ChangesetInsert, Changesets};
+use clap::{Arg, SubCommand};
+use cmdlib::args;
 use cmdlib::helpers::block_execute;
+use context::CoreContext;
 use derived_data::BonsaiDerived;
-use futures::compat::Future01CompatExt;
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt, StreamExt};
+use fbinit::FacebookInit;
+use filestore::{self, FilestoreConfig, StoreRequest};
+use futures::{
+    compat::Future01CompatExt,
+    future::{self, FutureExt as _, TryFutureExt},
+    stream::{self, StreamExt as _, TryStreamExt},
+};
+use futures_ext::{BoxFuture, FutureExt, StreamExt};
 use futures_old::Future;
 use futures_old::{
     future::IntoFuture,
-    stream::{self, Stream},
+    stream::{self as stream_old, Stream},
 };
 use git2::{ObjectType, Oid, Repository, Revwalk, Sort};
-use std::collections::HashSet;
-use std::collections::{BTreeMap, HashMap};
-use std::convert::TryInto;
-use std::path::Path;
-use std::sync::{Arc, Mutex};
-
-use blobrepo::save_bonsai_changesets;
-use blobstore::{Blobstore, LoadableError};
-use clap::{Arg, SubCommand};
-use cmdlib::args;
-use context::CoreContext;
-use fbinit::FacebookInit;
-use filestore::{self, FilestoreConfig, StoreRequest};
 use git_types::{mode, TreeHandle};
+use linked_hash_map::LinkedHashMap;
 use manifest::{bonsai_diff, BonsaiDiffFileChange, Entry, Manifest, StoreLoadable};
+use mercurial_types::HgManifestId;
 use mononoke_types::{
-    hash::RichGitSha1, BonsaiChangesetMut, ChangesetId, ContentMetadata, DateTime, FileChange,
+    blob::BlobstoreValue,
+    hash::{GitSha1, RichGitSha1},
+    typed_hash::MononokeId,
+    BonsaiChangeset, BonsaiChangesetMut, ChangesetId, ContentMetadata, DateTime, FileChange,
     FileType, MPath, MPathElement,
 };
+use slog::info;
+use std::collections::{BTreeMap, HashMap, HashSet};
+use std::convert::TryInto;
+use std::path::Path;
+use std::sync::Arc;
+use tokio::task;
+
+use crate::git_pool::GitPool;
+
+// Refactor this a bit. Use a thread pool for git operations. Pass that wherever we use store repo.
+// Transform the walk into a stream of commit + file changes.
 
 const SUBCOMMAND_FULL_REPO: &str = "full-repo";
 const SUBCOMMAND_GIT_RANGE: &str = "git-range";
@@ -99,6 +115,35 @@ impl GitimportTarget {
 
         Ok(())
     }
+
+    async fn populate_roots(
+        &self,
+        _ctx: &CoreContext,
+        repo: &BlobRepo,
+        roots: &mut HashMap<Oid, ChangesetId>,
+    ) -> Result<(), Error> {
+        match self {
+            Self::FullRepo => {
+                // Noop
+            }
+            Self::GitRange(from, _to) => {
+                let root = repo
+                    .bonsai_git_mapping()
+                    .get_bonsai_from_git_sha1(GitSha1::from_bytes(from)?)
+                    .await?
+                    .ok_or_else(|| {
+                        format_err!(
+                            "Cannot start import from {}: commit does not exist in Blobrepo",
+                            from
+                        )
+                    })?;
+
+                roots.insert(*from, root);
+            }
+        };
+
+        Ok(())
+    }
 }
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
@@ -122,80 +167,89 @@ impl Manifest for GitManifest {
     }
 }
 
-fn load_git_tree(oid: Oid, repo: &Repository) -> Result<GitManifest, Error> {
-    let tree = repo.find_tree(oid)?;
+async fn load_git_tree(oid: Oid, pool: &GitPool) -> Result<GitManifest, Error> {
+    pool.with(move |repo| {
+        let tree = repo.find_tree(oid)?;
 
-    let elements: Result<HashMap<_, _>, Error> = tree
-        .iter()
-        .map(|entry| {
-            let oid = entry.id();
-            let filemode = entry.filemode();
-            let name = MPathElement::new(entry.name_bytes().into())?;
+        let elements = tree
+            .iter()
+            .map(|entry| {
+                let oid = entry.id();
+                let filemode = entry.filemode();
+                let name = MPathElement::new(entry.name_bytes().into())?;
 
-            let r = match entry.kind() {
-                Some(ObjectType::Blob) => {
-                    let ft = match filemode {
-                        mode::GIT_FILEMODE_BLOB => FileType::Regular,
-                        mode::GIT_FILEMODE_BLOB_EXECUTABLE => FileType::Executable,
-                        mode::GIT_FILEMODE_LINK => FileType::Symlink,
-                        _ => Err(format_err!("Invalid filemode: {:?}", filemode))?,
-                    };
+                let r = match entry.kind() {
+                    Some(ObjectType::Blob) => {
+                        let ft = match filemode {
+                            mode::GIT_FILEMODE_BLOB => FileType::Regular,
+                            mode::GIT_FILEMODE_BLOB_EXECUTABLE => FileType::Executable,
+                            mode::GIT_FILEMODE_LINK => FileType::Symlink,
+                            _ => {
+                                return Err(format_err!("Invalid filemode: {:?}", filemode));
+                            }
+                        };
 
-                    (name, Entry::Leaf((ft, GitLeaf(oid))))
-                }
-                Some(ObjectType::Tree) => (name, Entry::Tree(GitTree(oid))),
-                k => Err(format_err!("Invalid kind: {:?}", k))?,
-            };
+                        (name, Entry::Leaf((ft, GitLeaf(oid))))
+                    }
+                    Some(ObjectType::Tree) => (name, Entry::Tree(GitTree(oid))),
+                    k => {
+                        return Err(format_err!("Invalid kind: {:?}", k));
+                    }
+                };
 
-            Ok(r)
-        })
-        .collect();
+                Ok(r)
+            })
+            .collect::<Result<HashMap<_, _>, Error>>()?;
 
-    Ok(GitManifest(elements?))
+        Result::<_, Error>::Ok(GitManifest(elements))
+    })
+    .await
 }
 
-impl StoreLoadable<Arc<Mutex<Repository>>> for GitTree {
+impl StoreLoadable<GitPool> for GitTree {
     type Value = GitManifest;
 
-    fn load(
-        &self,
-        _ctx: CoreContext,
-        store: &Arc<Mutex<Repository>>,
-    ) -> BoxFuture<Self::Value, LoadableError> {
-        let repo = store.lock().expect("Poisoned lock");
-        // XXX - maybe return LoadableError::Missing if not found
-        load_git_tree(self.0, &repo)
+    fn load(&self, _ctx: CoreContext, pool: &GitPool) -> BoxFuture<Self::Value, LoadableError> {
+        let oid = self.0;
+        let pool = pool.clone();
+        async move { load_git_tree(oid, &pool).await }
+            .boxed()
+            .compat()
             .map_err(LoadableError::Error)
-            .into_future()
             .boxify()
     }
 }
 
-fn do_upload(
+async fn do_upload(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
-    repo: Arc<Mutex<Repository>>,
+    pool: GitPool,
     oid: Oid,
-) -> BoxFuture<ContentMetadata, Error> {
-    let repo = repo.lock().expect("Poisoned lock");
-    let blob = try_boxfuture!(repo.find_blob(oid));
-    let bytes = Bytes::copy_from_slice(blob.content());
-    let size = bytes.len().try_into().unwrap();
+) -> Result<ContentMetadata, Error> {
+    let (id, bytes) = pool
+        .with(move |repo| {
+            let blob = repo.find_blob(oid)?;
+            let bytes = Bytes::copy_from_slice(blob.content());
+            let id = blob.id();
+            Result::<_, Error>::Ok((id, bytes))
+        })
+        .await?;
 
-    let git_sha1 = try_boxfuture!(RichGitSha1::from_bytes(
-        Bytes::copy_from_slice(blob.id().as_bytes()),
-        "blob",
-        size
-    ));
+    let size = bytes.len().try_into()?;
+    let git_sha1 = RichGitSha1::from_bytes(Bytes::copy_from_slice(id.as_bytes()), "blob", size)?;
     let req = StoreRequest::with_git_sha1(size, git_sha1);
-    filestore::store(
+
+    let meta = filestore::store(
         blobstore,
         FilestoreConfig::default(),
         ctx,
         &req,
-        stream::once(Ok(bytes)),
+        stream_old::once(Ok(bytes)),
     )
-    .boxify()
+    .compat()
+    .await?;
+
+    Ok(meta)
 }
 
 // TODO: Try to produce copy-info?
@@ -204,7 +258,7 @@ fn do_upload(
 fn find_file_changes<S>(
     ctx: CoreContext,
     blobstore: Arc<dyn Blobstore>,
-    repo: Arc<Mutex<Repository>>,
+    pool: GitPool,
     changes: S,
 ) -> impl Future<Item = BTreeMap<MPath, Option<FileChange>>, Error = Error>
 where
@@ -214,7 +268,9 @@ where
         .map(move |change| match change {
             BonsaiDiffFileChange::Changed(path, ty, GitLeaf(oid))
             | BonsaiDiffFileChange::ChangedReusedId(path, ty, GitLeaf(oid)) => {
-                do_upload(ctx.clone(), blobstore.clone(), repo.clone(), oid)
+                do_upload(ctx.clone(), blobstore.clone(), pool.clone(), oid)
+                    .boxed()
+                    .compat()
                     .map(move |meta| {
                         (
                             path,
@@ -230,15 +286,74 @@ where
         .from_err()
 }
 
+struct CommitMetadata {
+    oid: Oid,
+    parents: Vec<Oid>,
+    author: String,
+    message: String,
+    author_date: DateTime,
+}
+
+struct ExtractedCommit {
+    metadata: CommitMetadata,
+    tree: GitTree,
+    parent_trees: HashSet<GitTree>,
+}
+
+impl ExtractedCommit {
+    async fn new(oid: Oid, pool: &GitPool) -> Result<Self, Error> {
+        pool.with(move |repo| {
+            let commit = repo.find_commit(oid)?;
+
+            let tree = GitTree(commit.tree()?.id());
+
+            let parent_trees = commit
+                .parents()
+                .map(|p| {
+                    let tree = p.tree()?;
+                    Ok(GitTree(tree.id()))
+                })
+                .collect::<Result<_, Error>>()?;
+
+            // TODO: Include email in the author
+            let author = commit
+                .author()
+                .name()
+                .ok_or_else(|| format_err!("Commit has no author: {:?}", commit.id()))?
+                .to_owned();
+
+            let message = commit.message().unwrap_or_default().to_owned();
+
+            let parents = commit.parents().map(|p| p.id()).collect();
+
+            let time = commit.time();
+            let author_date = DateTime::from_timestamp(time.seconds(), time.offset_minutes() * 60)?;
+
+            Result::<_, Error>::Ok(ExtractedCommit {
+                metadata: CommitMetadata {
+                    oid: commit.id(),
+                    parents,
+                    message,
+                    author,
+                    author_date,
+                },
+                tree,
+                parent_trees,
+            })
+        })
+        .await
+    }
+}
+
 async fn gitimport(
-    ctx: CoreContext,
-    repo: BlobRepo,
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     path: &Path,
     target: GitimportTarget,
     prefs: GitimportPreferences,
 ) -> Result<(), Error> {
     let walk_repo = Repository::open(&path)?;
-    let store_repo = Arc::new(Mutex::new(Repository::open(&path)?));
+    let pool = &GitPool::new(path.to_path_buf())?;
 
     let mut walk = walk_repo.revwalk()?;
     walk.set_sorting(Sort::TOPOLOGICAL | Sort::REVERSE);
@@ -247,94 +362,135 @@ async fn gitimport(
     // TODO: Don't import everything in one go. Instead, hide things we already imported from the
     // traversal.
 
-    let mut import_map: HashMap<Oid, ChangesetId> = HashMap::new();
-    let mut changesets = Vec::new();
+    let roots = &{
+        let mut roots = HashMap::new();
+        target.populate_roots(&ctx, &repo, &mut roots).await?;
+        roots
+    };
 
-    for commit in walk {
-        let commit = walk_repo.find_commit(commit?)?;
-        let root = GitTree(commit.tree()?.id());
+    // Kick off a stream that consumes the walk and prepared commits. Then, produce the Bonsais.
 
-        let parents: Result<HashSet<_>, Error> = commit
-            .parents()
-            .map(|p| {
-                let tree = p.tree()?;
-                Ok(GitTree(tree.id()))
-            })
-            .collect();
+    // TODO: Make concurrency configurable below.
 
-        let diff = bonsai_diff(ctx.clone(), store_repo.clone(), root, parents?);
+    let import_map: LinkedHashMap<Oid, (ChangesetId, BonsaiChangeset)> = stream::iter(walk)
+        .map(|oid| async move {
+            let oid = oid.with_context(|| "While walking commits")?;
 
-        // TODO: Include email in the author
-        let author = commit
-            .author()
-            .name()
-            .ok_or(format_err!("Commit has no author: {:?}", commit.id()))?
-            .to_owned();
-        let message = commit.message().unwrap_or_default().to_owned();
+            let ExtractedCommit {
+                metadata,
+                tree,
+                parent_trees,
+            } = ExtractedCommit::new(oid, pool)
+                .await
+                .with_context(|| format!("While extracting {}", oid))?;
 
-        // TODO: Use a Git <-> Bonsai mapping
-        let parents = commit
-            .parents()
-            .map(|p| {
-                let e = format_err!("Commit was not imported: {}", p.id());
-                import_map.get(&p.id()).cloned().ok_or(e)
-            })
-            .collect::<Result<Vec<_>, _>>()?;
+            let file_changes = task::spawn(
+                find_file_changes(
+                    ctx.clone(),
+                    repo.get_blobstore().boxed(),
+                    pool.clone(),
+                    bonsai_diff(ctx.clone(), pool.clone(), tree, parent_trees),
+                )
+                .compat(),
+            )
+            .await??;
 
-        let file_changes = find_file_changes(
-            ctx.clone(),
-            repo.get_blobstore().boxed(),
-            store_repo.clone(),
-            diff,
+            Ok((metadata, file_changes))
+        })
+        .buffered(20)
+        .try_fold(
+            LinkedHashMap::<Oid, (ChangesetId, BonsaiChangeset)>::new(),
+            {
+                move |mut import_map, (metadata, file_changes)| async move {
+                    let CommitMetadata {
+                        oid,
+                        parents,
+                        author,
+                        message,
+                        author_date,
+                    } = metadata;
+
+                    let mut extra = BTreeMap::new();
+                    if prefs.hggit_compatibility {
+                        extra.insert(
+                            HGGIT_COMMIT_ID_EXTRA.to_string(),
+                            oid.to_string().into_bytes(),
+                        );
+                    }
+
+                    let parents = parents
+                        .into_iter()
+                        .map(|p| {
+                            roots
+                                .get(&p)
+                                .copied()
+                                .or_else(|| import_map.get(&p).map(|p| p.0))
+                                .ok_or_else(|| format_err!("Commit was not imported: {}", p))
+                        })
+                        .collect::<Result<Vec<_>, _>>()
+                        .with_context(|| format_err!("While looking for parents of {}", oid))?;
+
+                    // TODO: Should we have further extras?
+                    let bcs = BonsaiChangesetMut {
+                        parents,
+                        author,
+                        author_date,
+                        committer: None,
+                        committer_date: None,
+                        message,
+                        extra,
+                        file_changes,
+                    }
+                    .freeze()?;
+
+                    // We now that the commits are in order (this is guaranteed by the Walk), so we
+                    // can insert them as-is, one by one, without extra dependency / ordering checks.
+
+                    let blob = bcs.clone().into_blob();
+                    let bcs_id = *blob.id();
+
+                    repo.blobstore()
+                        .put(ctx.clone(), bcs_id.blobstore_key(), blob.into())
+                        .compat()
+                        .await?;
+
+                    repo.get_changesets_object()
+                        .add(
+                            ctx.clone(),
+                            ChangesetInsert {
+                                repo_id: repo.get_repoid(),
+                                cs_id: bcs_id,
+                                parents: bcs.parents().collect(),
+                            },
+                        )
+                        .compat()
+                        .await?;
+
+                    info!(ctx.logger(), "Created {:?} => {:?}", oid, bcs_id);
+
+                    import_map.insert(oid, (bcs_id, bcs));
+                    Result::<_, Error>::Ok(import_map)
+                }
+            },
         )
-        .compat()
         .await?;
 
-        let time = commit.time();
-
-        let mut extra = BTreeMap::new();
-        if prefs.hggit_compatibility {
-            extra.insert(
-                HGGIT_COMMIT_ID_EXTRA.to_string(),
-                commit.id().to_string().into_bytes(),
-            );
-        }
-
-        // TODO: Should we have furhter extras?
-        let bonsai_cs = BonsaiChangesetMut {
-            parents: parents.clone(),
-            author,
-            author_date: DateTime::from_timestamp(time.seconds(), time.offset_minutes() * 60)?,
-            committer: None,
-            committer_date: None,
-            message,
-            extra,
-            file_changes,
-        }
-        .freeze()?;
-
-        let bcs_id = bonsai_cs.get_changeset_id();
-        changesets.push(bonsai_cs);
-
-        import_map.insert(commit.id(), bcs_id);
-
-        println!("Created {:?} => {:?}", commit.id(), bcs_id);
-    }
-
-    save_bonsai_changesets(changesets, ctx.clone(), repo.clone())
-        .compat()
-        .await?;
+    info!(
+        ctx.logger(),
+        "{} bonsai changesets have been committed",
+        import_map.len()
+    );
 
     for reference in walk_repo.references()? {
         let reference = reference?;
 
         let commit = reference.peel_to_commit()?;
-        let bcs_id = import_map.get(&commit.id());
-        println!("Ref: {:?}: {:?}", reference.name(), bcs_id);
+        let bcs_id = import_map.get(&commit.id()).map(|e| e.0);
+        info!(ctx.logger(), "Ref: {:?}: {:?}", reference.name(), bcs_id);
     }
 
     if prefs.derive_trees {
-        for (id, bcs_id) in import_map.iter() {
+        for (id, (bcs_id, _bcs)) in import_map.iter() {
             let commit = walk_repo.find_commit(*id)?;
             let tree_id = commit.tree()?.id();
 
@@ -355,18 +511,41 @@ async fn gitimport(
             }
         }
 
-        println!("{} tree(s) are valid!", import_map.len());
+        info!(ctx.logger(), "{} tree(s) are valid!", import_map.len());
     }
 
     if prefs.derive_hg {
-        repo.get_hg_bonsai_mapping(
-            ctx.clone(),
-            import_map.values().copied().collect::<Vec<_>>(),
-        )
-        .compat()
-        .await?;
+        let mut hg_manifests: HashMap<ChangesetId, HgManifestId> = HashMap::new();
 
-        println!("{} hg commits generated", import_map.len());
+        for (id, (bcs_id, bcs)) in import_map.iter() {
+            let parent_manifests = future::try_join_all(bcs.parents().map({
+                let hg_manifests = &hg_manifests;
+                move |p| async move {
+                    let manifest = if let Some(manifest) = hg_manifests.get(&p) {
+                        *manifest
+                    } else {
+                        repo.get_hg_from_bonsai_changeset(ctx.clone(), p)
+                            .compat()
+                            .await?
+                            .load(ctx.clone(), repo.blobstore())
+                            .compat()
+                            .await?
+                            .manifestid()
+                    };
+                    Result::<_, Error>::Ok(manifest)
+                }
+            }))
+            .await?;
+
+            let manifest = repo
+                .get_manifest_from_bonsai(ctx.clone(), bcs.clone(), parent_manifests)
+                .compat()
+                .await?;
+
+            hg_manifests.insert(*bcs_id, manifest);
+
+            info!(ctx.logger(), "Hg: {:?}: {:?}", id, manifest);
+        }
     }
 
     Ok(())
@@ -431,7 +610,9 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
             let to = range_matches.value_of(ARG_GIT_TO).unwrap().parse()?;
             GitimportTarget::GitRange(from, to)
         }
-        _ => unreachable!("Undefined subcommand"),
+        _ => {
+            return Err(Error::msg("A valid subcommand is required"));
+        }
     };
 
     let path = Path::new(matches.value_of(ARG_GIT_REPOSITORY_PATH).unwrap());
@@ -445,7 +626,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     block_execute(
         async {
             let repo = repo.compat().await?;
-            gitimport(ctx, repo, &path, target, prefs).await
+            gitimport(&ctx, &repo, &path, target, prefs).await
         },
         fb,
         "gitimport",
