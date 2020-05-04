@@ -2098,6 +2098,19 @@ impl DangerousOverride<Arc<dyn Changesets>> for BlobRepo {
     }
 }
 
+impl DangerousOverride<Arc<dyn BonsaiHgMapping>> for BlobRepo {
+    fn dangerous_override<F>(&self, modify: F) -> Self
+    where
+        F: FnOnce(Arc<dyn BonsaiHgMapping>) -> Arc<dyn BonsaiHgMapping>,
+    {
+        let bonsai_hg_mapping = modify(self.bonsai_hg_mapping.clone());
+        BlobRepo {
+            bonsai_hg_mapping,
+            ..self.clone()
+        }
+    }
+}
+
 impl DangerousOverride<DerivedDataConfig> for BlobRepo {
     fn dangerous_override<F>(&self, modify: F) -> Self
     where

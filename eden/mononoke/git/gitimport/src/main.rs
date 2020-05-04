@@ -8,11 +8,15 @@
 #![deny(warnings)]
 
 mod git_pool;
+mod mem_writes_bonsai_hg_mapping;
+mod mem_writes_changesets;
 
 use anyhow::{format_err, Context, Error};
-use blobrepo::BlobRepo;
+use blobrepo::{BlobRepo, DangerousOverride};
 use blobstore::{Blobstore, LoadableError};
+use bonsai_hg_mapping::BonsaiHgMapping;
 use bytes::Bytes;
+use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
 use changesets::{ChangesetInsert, Changesets};
 use clap::{Arg, SubCommand};
 use cmdlib::args;
@@ -52,6 +56,8 @@ use std::sync::Arc;
 use tokio::task;
 
 use crate::git_pool::GitPool;
+use crate::mem_writes_bonsai_hg_mapping::MemWritesBonsaiHgMapping;
+use crate::mem_writes_changesets::MemWritesChangesets;
 
 // Refactor this a bit. Use a thread pool for git operations. Pass that wherever we use store repo.
 // Transform the walk into a stream of commit + file changes.
@@ -71,12 +77,17 @@ const HGGIT_COMMIT_ID_EXTRA: &str = "convert_revision";
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
 struct GitimportPreferences {
+    dry_run: bool,
     derive_trees: bool,
     derive_hg: bool,
     hggit_compatibility: bool,
 }
 
 impl GitimportPreferences {
+    fn enable_dry_run(&mut self) {
+        self.dry_run = true
+    }
+
     fn enable_derive_trees(&mut self) {
         self.derive_trees = true
     }
@@ -591,6 +602,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let matches = app.get_matches();
 
+    // if we are readonly, then we'll set up some overrides to still be able to do meaningful
+    // things below.
+    if args::parse_readonly_storage(&matches).0 {
+        prefs.enable_dry_run();
+    }
+
     if matches.is_present(ARG_DERIVE_TREES) {
         prefs.enable_derive_trees();
     }
@@ -626,6 +643,22 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
     block_execute(
         async {
             let repo = repo.compat().await?;
+
+            let repo = if prefs.dry_run {
+                repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
+                    Arc::new(MemWritesBlobstore::new(blobstore))
+                })
+                .dangerous_override(|changesets| -> Arc<dyn Changesets> {
+                    Arc::new(MemWritesChangesets::new(changesets))
+                })
+                .dangerous_override(|bonsai_hg_mapping| -> Arc<dyn BonsaiHgMapping> {
+                    Arc::new(MemWritesBonsaiHgMapping::new(bonsai_hg_mapping))
+                })
+                .dangerous_override(|_| Arc::new(DummyLease {}) as Arc<dyn LeaseOps>)
+            } else {
+                repo
+            };
+
             gitimport(&ctx, &repo, &path, target, prefs).await
         },
         fb,
