@@ -40,6 +40,7 @@ class cached_property(object):
 class FindExeClass(object):
     _BUCK_OUT: Optional[str] = None
     _EDEN_SRC_ROOT: Optional[str] = None
+    _TEST_ROOT: str = os.getcwd()
 
     def __init__(self) -> None:
         self._cache: Dict[str, str] = {}
@@ -246,9 +247,9 @@ class FindExeClass(object):
             # If an explicit CMake output was specified use it,
             # otherwise use the same path as for Buck.
             if cmake_path is not None:
-                candidates.append(os.path.join(os.getcwd(), cmake_path))
+                candidates.append(os.path.join(self._TEST_ROOT, cmake_path))
             elif buck_path is not None:
-                candidates.append(os.path.join(os.getcwd(), buck_path))
+                candidates.append(os.path.join(self._TEST_ROOT, buck_path))
 
         if sys.platform == "win32":
             # All of the paths in the candidates list are POSIX-style paths.

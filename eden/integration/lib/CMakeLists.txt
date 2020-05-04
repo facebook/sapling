@@ -4,6 +4,12 @@
 # GNU General Public License version 2.
 
 file(GLOB INTEGRATION_LIB_SRCS "*.py")
+if(pexpect_FOUND)
+  list(APPEND INTEGRATION_LIB_DEPENDENCIES pexpect::pexpect)
+else()
+  list(REMOVE_ITEM INTEGRATION_LIB_SRCS pexpect.py)
+endif()
+
 add_fb_python_library(
   eden_integration_lib
   SOURCES ${INTEGRATION_LIB_SRCS}
@@ -12,4 +18,5 @@ add_fb_python_library(
     eden_py
     eden_service_thrift_py
     eden_test_support
+    ${INTEGRATION_LIB_DEPENDENCIES}
 )
