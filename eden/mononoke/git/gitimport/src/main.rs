@@ -42,9 +42,31 @@ use mononoke_types::{
 
 const ARG_GIT_REPOSITORY_PATH: &str = "git-repository-path";
 const ARG_DERIVE_TREES: &str = "derive-trees";
+const ARG_DERIVE_HG: &str = "derive-hg";
 const ARG_HGGIT_COMPATIBILITY: &str = "hggit-compatibility";
 
 const HGGIT_COMMIT_ID_EXTRA: &str = "convert_revision";
+
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug, Default)]
+struct GitimportPreferences {
+    derive_trees: bool,
+    derive_hg: bool,
+    hggit_compatibility: bool,
+}
+
+impl GitimportPreferences {
+    fn enable_derive_trees(&mut self) {
+        self.derive_trees = true
+    }
+
+    fn enable_derive_hg(&mut self) {
+        self.derive_hg = true
+    }
+
+    fn enable_hggit_compatibility(&mut self) {
+        self.hggit_compatibility = true
+    }
+}
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 struct GitTree(Oid);
@@ -179,8 +201,7 @@ async fn gitimport(
     ctx: CoreContext,
     repo: BlobRepo,
     path: &Path,
-    derive_trees: bool,
-    hggit_compatibility: bool,
+    prefs: GitimportPreferences,
 ) -> Result<(), Error> {
     let walk_repo = Repository::open(&path)?;
     let store_repo = Arc::new(Mutex::new(Repository::open(&path)?));
@@ -244,7 +265,7 @@ async fn gitimport(
         let time = commit.time();
 
         let mut extra = BTreeMap::new();
-        if hggit_compatibility {
+        if prefs.hggit_compatibility {
             extra.insert(
                 HGGIT_COMMIT_ID_EXTRA.to_string(),
                 commit.id().to_string().into_bytes(),
@@ -284,7 +305,7 @@ async fn gitimport(
         println!("Ref: {:?}: {:?}", reference.name(), bcs_id);
     }
 
-    if derive_trees {
+    if prefs.derive_trees {
         for (id, bcs_id) in import_map.iter() {
             let commit = walk_repo.find_commit(*id)?;
             let tree_id = commit.tree()?.id();
@@ -308,6 +329,18 @@ async fn gitimport(
 
         println!("{} tree(s) are valid!", import_map.len());
     }
+
+    if prefs.derive_hg {
+        repo.get_hg_bonsai_mapping(
+            ctx.clone(),
+            import_map.values().copied().collect::<Vec<_>>(),
+        )
+        .compat()
+        .await?;
+
+        println!("{} hg commits generated", import_map.len());
+    }
+
     Ok(())
 }
 
@@ -323,6 +356,12 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
                 .takes_value(false),
         )
         .arg(
+            Arg::with_name(ARG_DERIVE_HG)
+                .long(ARG_DERIVE_HG)
+                .required(false)
+                .takes_value(false),
+        )
+        .arg(
             Arg::with_name(ARG_HGGIT_COMPATIBILITY)
                 .long(ARG_HGGIT_COMPATIBILITY)
                 .help("Set commit extras for hggit compatibility")
@@ -331,20 +370,34 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         )
         .arg(Arg::with_name(ARG_GIT_REPOSITORY_PATH).help("Path to a git repository to import"));
 
+    let mut prefs = GitimportPreferences::default();
+
     let matches = app.get_matches();
-    let derive_trees = matches.is_present(ARG_DERIVE_TREES);
-    let hggit_compatibility = matches.is_present(ARG_HGGIT_COMPATIBILITY);
+
+    if matches.is_present(ARG_DERIVE_TREES) {
+        prefs.enable_derive_trees();
+    }
+
+    if matches.is_present(ARG_DERIVE_HG) {
+        prefs.enable_derive_hg();
+    }
+
+    if matches.is_present(ARG_HGGIT_COMPATIBILITY) {
+        prefs.enable_hggit_compatibility();
+    }
+
     let path = Path::new(matches.value_of(ARG_GIT_REPOSITORY_PATH).unwrap());
 
     args::init_cachelib(fb, &matches, None);
     let logger = args::init_logging(fb, &matches);
     let ctx = CoreContext::new_with_logger(fb, logger.clone());
+
     let repo = args::create_repo(fb, &logger, &matches);
 
     block_execute(
-        async move {
+        async {
             let repo = repo.compat().await?;
-            gitimport(ctx, repo, &path, derive_trees, hggit_compatibility).await
+            gitimport(ctx, repo, &path, prefs).await
         },
         fb,
         "gitimport",
