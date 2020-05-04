@@ -1068,6 +1068,9 @@ pub struct InfinitepushParams {
 
     /// Whether to put trees/files in the getbundle response for infinitepush commits
     pub hydrate_getbundle_response: bool,
+
+    /// Whether to write saved infinitepush bundles into the reverse filler queue
+    pub populate_reverse_filler_queue: bool,
 }
 
 impl Default for InfinitepushParams {
@@ -1076,6 +1079,7 @@ impl Default for InfinitepushParams {
             allow_writes: false,
             namespace: None,
             hydrate_getbundle_response: false,
+            populate_reverse_filler_queue: false,
         }
     }
 }
