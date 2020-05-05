@@ -97,7 +97,7 @@ class VersionCmd(Subcmd):
 class InfoCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
-            "client", default=None, nargs="?", help="Name of the checkout"
+            "client", default=None, nargs="?", help="Path to the checkout"
         )
 
     def run(self, args: argparse.Namespace) -> int:
