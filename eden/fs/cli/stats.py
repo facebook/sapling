@@ -116,8 +116,8 @@ def do_stats_general(
         )
 
 
-@stats_cmd("io", "Show information about the number of I/O calls")
-class IoCmd(Subcmd):
+@stats_cmd("fuse", "Show information about the number of FUSE requests", aliases=["io"])
+class FuseCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
             "-A",
@@ -211,7 +211,11 @@ def insert_latency_record(
     table[operation][pct_index][period_index] = with_microsecond_units(value)
 
 
-@stats_cmd("latency", "Show information about the latency of I/O calls")
+@stats_cmd(
+    "fuse-latency",
+    "Show information about the latency of FUSE requests",
+    aliases=["latency"],
+)
 class LatencyCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
         parser.add_argument(
