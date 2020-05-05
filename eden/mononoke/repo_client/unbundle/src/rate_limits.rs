@@ -6,19 +6,20 @@
  */
 
 use crate::{BundleResolverError, PostResolveAction, PostResolvePush, PostResolvePushRebase};
-use anyhow::format_err;
+use anyhow::{format_err, Result};
 use cloned::cloned;
 use context::CoreContext;
+use futures::future::{FutureExt as NewFutureExt, TryFutureExt};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future::join_all, Future, IntoFuture};
 use limits::types::{RateLimit, RateLimitStatus};
 use mononoke_types::BonsaiChangeset;
-use ratelim::time_window_counter::TimeWindowCounter;
 use scuba_ext::ScubaSampleBuilderExt;
 use sha2::{Digest, Sha256};
 use slog::debug;
 use std::collections::HashMap;
 use std::time::Duration;
+use time_window_counter::{BoxGlobalTimeWindowCounter, GlobalTimeWindowCounterBuilder};
 use tokio::util::FutureExt as TokioFutureExt;
 
 const TIME_WINDOW_MIN: u32 = 10;
@@ -108,7 +109,7 @@ fn build_counters(
     category: &str,
     limit: &RateLimit,
     groups: HashMap<&str, u64>,
-) -> Vec<(TimeWindowCounter, String, u64)> {
+) -> Vec<(BoxGlobalTimeWindowCounter, String, u64)> {
     groups
         .into_iter()
         .map(|(author, count)| {
@@ -118,8 +119,13 @@ fn build_counters(
                 "Associating key {:?} with author {:?}", key, author
             );
 
-            let counter =
-                TimeWindowCounter::new(ctx.fb, category, key, TIME_WINDOW_MIN, TIME_WINDOW_MAX);
+            let counter = GlobalTimeWindowCounterBuilder::build(
+                ctx.fb,
+                category,
+                key,
+                TIME_WINDOW_MIN,
+                TIME_WINDOW_MAX,
+            );
             (counter, author.to_owned(), count)
         })
         .collect()
@@ -128,7 +134,7 @@ fn build_counters(
 fn dispatch_counter_checks_and_bumps(
     ctx: CoreContext,
     limit: &RateLimit,
-    counters: Vec<(TimeWindowCounter, String, u64)>,
+    counters: Vec<(BoxGlobalTimeWindowCounter, String, u64)>,
     enforced: bool,
 ) -> Vec<BoxFuture<(), (String, f64)>> {
     let max_value = limit.max_value as f64;
@@ -138,16 +144,17 @@ fn dispatch_counter_checks_and_bumps(
         .into_iter()
         .map(move |(counter, author, bump)| {
             cloned!(ctx);
-            counter
-                .get(interval)
-                .then(move |res| {
+            async move { Ok((counter.get(interval).await?, counter)) }
+                .boxed()
+                .compat()
+                .then(move |res: Result<_>| {
                     // NOTE: We only bump after we've allowed a response. This is reasonable for
                     // this kind of limit.
                     let mut scuba = ctx.scuba().clone();
                     scuba.add("author", author.clone());
 
                     match res {
-                        Ok(count) => {
+                        Ok((count, counter)) => {
                             scuba.add("rate_limit_status", count);
 
                             if count <= max_value {

@@ -107,6 +107,7 @@ members = [
     "sshrelay",
     "tests/fixtures",
     "tests/utils",
+    "time_window_counter",
     "tunables",
     "tunables/tunables-derive",
 ]
