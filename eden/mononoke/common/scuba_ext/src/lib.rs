@@ -12,8 +12,10 @@ use futures_ext::BoxFuture;
 use futures_stats::{FutureStats, StreamStats};
 pub use scuba::{ScubaSampleBuilder, ScubaValue};
 use sshrelay::Preamble;
+use std::convert::TryInto;
 use time_ext::DurationExt;
 use tracing::TraceContext;
+use tunables::tunables;
 
 #[cfg(fbcode_build)]
 mod facebook;
@@ -47,7 +49,15 @@ impl ScubaSampleBuilderExt for ScubaSampleBuilder {
 
     fn log_with_msg<S: Into<Option<String>>>(&mut self, log_tag: &'static str, msg: S) {
         self.add("log_tag", log_tag);
-        if let Some(msg) = msg.into() {
+        if let Some(mut msg) = msg.into() {
+            match tunables().get_max_scuba_msg_length().try_into() {
+                Ok(size) if size > 0 && msg.len() > size => {
+                    msg.truncate(size);
+                    msg.push_str(" (...)");
+                }
+                _ => {}
+            };
+
             self.add("msg", msg);
         }
         self.log();

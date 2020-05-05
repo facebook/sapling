@@ -28,6 +28,7 @@ pub fn tunables() -> &'static MononokeTunables {
 #[derive(Tunables, Default, Debug)]
 pub struct MononokeTunables {
     warm_bookmark_cache_delay: AtomicI64,
+    max_scuba_msg_length: AtomicI64,
 }
 
 pub fn init_tunables_worker(

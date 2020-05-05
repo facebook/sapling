@@ -8,6 +8,7 @@ include = ["src/**/*.rs"]
 
 [dependencies]
 sshrelay = { path = "../../sshrelay" }
+tunables = { path = "../../tunables" }
 fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
