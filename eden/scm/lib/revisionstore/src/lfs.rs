@@ -40,7 +40,7 @@ use lfs_protocol::{
 };
 use mincode::{deserialize, serialize};
 use types::{HgId, Key, RepoPath, Sha256};
-use util::path::create_dir;
+use util::path::{create_dir, create_shared_dir};
 
 use crate::{
     datastore::{
@@ -451,7 +451,13 @@ impl LfsBlobsStore {
         match self {
             LfsBlobsStore::Loose(path, is_local) => {
                 let path = LfsBlobsStore::path(&path, hash);
-                create_dir(path.parent().unwrap())?;
+                let parent_path = path.parent().unwrap();
+
+                if *is_local {
+                    create_dir(parent_path)?;
+                } else {
+                    create_shared_dir(parent_path)?;
+                }
 
                 let mut file = File::create(path)?;
                 file.write_all(&blob)?;
