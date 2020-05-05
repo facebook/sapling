@@ -114,16 +114,10 @@ pub trait Blobstore: fmt::Debug + Send + Sync + 'static {
 
 #[derive(Debug, Error)]
 pub enum LoadableError {
-    #[error("Internal error: {0}")]
-    Error(Error),
+    #[error("Blobstore error")]
+    Error(#[from] Error),
     #[error("Blob is missing: {0}")]
     Missing(String),
-}
-
-impl From<Error> for LoadableError {
-    fn from(error: Error) -> Self {
-        LoadableError::Error(error)
-    }
 }
 
 pub trait Loadable: Sized + 'static {

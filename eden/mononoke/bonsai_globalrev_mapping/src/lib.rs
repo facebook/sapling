@@ -394,13 +394,7 @@ pub enum AddGlobalrevsErrorKind {
     Conflict,
 
     #[error("Internal error occurred while inserting Globalrevs")]
-    InternalError(#[source] Error),
-}
-
-impl From<Error> for AddGlobalrevsErrorKind {
-    fn from(e: Error) -> Self {
-        AddGlobalrevsErrorKind::InternalError(e)
-    }
+    InternalError(#[from] Error),
 }
 
 // NOTE: For now, this is a top-level function since it doesn't use the connections in the

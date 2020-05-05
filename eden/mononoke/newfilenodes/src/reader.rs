@@ -59,8 +59,8 @@ pub enum ErrorKind {
     #[error("Internal error: fixedcopyinfo is missing for filenode: {0:?}")]
     FixedCopyInfoMissing(HgFileNodeId),
 
-    #[error("Internal error: SQL error: {0:?}")]
-    SqlError(Error),
+    #[error("Internal error: SQL error")]
+    SqlError(#[source] Error),
 
     #[error("Internal error: SQL timeout")]
     SqlTimeout,

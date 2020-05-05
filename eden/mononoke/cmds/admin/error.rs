@@ -6,14 +6,12 @@
  */
 
 use anyhow::Error;
+use thiserror::Error;
 
+#[derive(Debug, Error)]
 pub enum SubcommandError {
+    #[error("SubcommandError::InvalidArgs")]
     InvalidArgs,
-    Error(Error),
-}
-
-impl From<Error> for SubcommandError {
-    fn from(err: Error) -> SubcommandError {
-        SubcommandError::Error(err)
-    }
+    #[error("SubcommandError::Error")]
+    Error(#[from] Error),
 }

@@ -247,8 +247,7 @@ impl RevlogChangeset {
                         "Error while deserializing changeset retrieved from key '{}'",
                         key
                     )
-                })
-                .from_err();
+                });
             Either::B(fut)
         }
     }

@@ -21,6 +21,7 @@ use mononoke_types::{
     BonsaiChangeset, ChangesetId, FileUnodeId, MPath,
 };
 use std::{collections::HashMap, iter::FromIterator, sync::Arc};
+use thiserror::Error;
 use unodes::{find_unode_renames, RootUnodeManifestId};
 
 pub const BLAME_FILESIZE_LIMIT: u64 = 10 * 1024 * 1024;
@@ -193,9 +194,12 @@ pub fn fetch_file_full_content(
     blobstore: Arc<dyn Blobstore>,
     file_unode_id: FileUnodeId,
 ) -> impl Future<Item = Result<Bytes, BlameRejected>, Error = Error> {
+    #[derive(Error, Debug)]
     enum FetchError {
-        Rejected(BlameRejected),
-        Error(Error),
+        #[error("FetchError::Rejected")]
+        Rejected(#[source] BlameRejected),
+        #[error("FetchError::Error")]
+        Error(#[source] Error),
     }
 
     fn check_binary(content: &[u8]) -> Result<&[u8], FetchError> {

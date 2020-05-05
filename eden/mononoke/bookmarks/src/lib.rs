@@ -21,6 +21,7 @@ use sql::Transaction as SqlTransaction;
 use std::collections::HashMap;
 use std::fmt;
 use std::sync::Arc;
+use thiserror::Error;
 
 mod cache;
 pub use bookmarks_types::{
@@ -49,23 +50,20 @@ pub struct BookmarkUpdateLogEntry {
     pub timestamp: Timestamp,
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum BookmarkTransactionError {
     // The transaction modifying bookmarks tables should be retried
-    RetryableError(Error),
+    #[error("BookmarkTransactionError::RetryableError")]
+    RetryableError(#[source] Error),
     // Transacton was rolled back, we consider this a logic error,
     // which may prompt retry higher in the stack. This can happen
     // for example if some other bookmark update won the race and
     // the entire pushrebase needs to be retried
+    #[error("BookmarkTransactionError::LogicError")]
     LogicError,
     // Something unexpected went wrong
-    Other(Error),
-}
-
-impl From<Error> for BookmarkTransactionError {
-    fn from(e: Error) -> Self {
-        Self::Other(e)
-    }
+    #[error("BookmarkTransactionError::Other")]
+    Other(#[from] Error),
 }
 
 pub trait Bookmarks: Send + Sync + 'static {
