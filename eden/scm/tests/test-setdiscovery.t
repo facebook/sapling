@@ -559,5 +559,5 @@ fixed in 86c35b7ae300:
   searching for changes
   101 102 103 104 105 106 107 108 109 110  (no-eol)
   $ hg -R r1 blackbox --no-timestamp --no-sid --pattern '{"legacy_log":{"service":"discovery"}}'
-  [legacy][discovery] found 101 common and 1 unknown server heads, 2 roundtrips in 0.0000s
+  [legacy][discovery] found 101 common and 1 unknown server heads, 1 roundtrips in 0.0000s
   $ cd ..

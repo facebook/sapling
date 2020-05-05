@@ -129,7 +129,12 @@ def _takefullsample(dag, nodes, size):
 def _limitsample(sample, desiredlen):
     """return a random subset of sample of at most desiredlen item"""
     if len(sample) > desiredlen:
-        sample = set(random.sample(sample, desiredlen))
+        # Pick the latest N samples since they are fastest to test against the
+        # changelog and provide the most information about the contents of the
+        # graph. An argument against picking the latest samples is that the
+        # latest samples are more likely to be local commits, but generally the
+        # desiredlen (~100) is significantly greater than the number of local heads.
+        sample = set(sorted(sample, reverse=True)[:desiredlen])
     return sample
 
 
