@@ -48,5 +48,6 @@ check that sql writes are blocked by --readonly-storage
   * While executing InsertBookmarks query (glob)
   
   Caused by:
-      attempt to write a readonly database
+      0: attempt to write a readonly database
+      1: Error code 8: Attempt to write a readonly database
   [1]
