@@ -666,7 +666,13 @@ SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
 
 #ifdef EDEN_HAVE_RUST_DATAPACK
   if (edenConfig->useHgCache.getValue() && datapackStore_) {
-    if (auto content = datapackStore_->getBlob(id, hgInfo)) {
+    if (auto content = datapackStore_->getBlobLocal(id, hgInfo)) {
+      XLOG(DBG5) << "importing file contents of '" << hgInfo.path() << "', "
+                 << hgInfo.revHash().toString() << " from datapack store";
+      return makeFuture(std::move(content));
+    }
+
+    if (auto content = datapackStore_->getBlobRemote(id, hgInfo)) {
       XLOG(DBG5) << "importing file contents of '" << hgInfo.path() << "', "
                  << hgInfo.revHash().toString() << " from datapack store";
       return makeFuture(std::move(content));

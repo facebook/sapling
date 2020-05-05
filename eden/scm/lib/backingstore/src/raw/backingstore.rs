@@ -56,6 +56,7 @@ fn backingstore_get_blob(
     name_len: usize,
     node: *const u8,
     node_len: usize,
+    local: bool,
 ) -> Result<*mut CBytes> {
     assert!(!store.is_null());
     let store = unsafe { &*store };
@@ -63,7 +64,7 @@ fn backingstore_get_blob(
     let node = stringpiece_to_slice(node, node_len)?;
 
     store
-        .get_blob(path, node)
+        .get_blob(path, node, local)
         .and_then(|opt| opt.ok_or_else(|| Error::msg("no blob found")))
         .map(CBytes::from_vec)
         .map(|result| Box::into_raw(Box::new(result)))
@@ -76,8 +77,9 @@ pub extern "C" fn rust_backingstore_get_blob(
     name_len: usize,
     node: *const u8,
     node_len: usize,
+    local: bool,
 ) -> CFallible<CBytes> {
-    backingstore_get_blob(store, name, name_len, node, node_len).into()
+    backingstore_get_blob(store, name, name_len, node, node_len, local).into()
 }
 
 fn backingstore_get_tree(

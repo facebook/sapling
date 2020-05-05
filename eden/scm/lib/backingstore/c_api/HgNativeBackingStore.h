@@ -22,9 +22,8 @@ class HgNativeBackingStore {
  public:
   HgNativeBackingStore(folly::StringPiece repository, bool useEdenApi);
 
-  std::unique_ptr<folly::IOBuf> getBlob(
-      folly::ByteRange name,
-      folly::ByteRange node);
+  std::unique_ptr<folly::IOBuf>
+  getBlob(folly::ByteRange name, folly::ByteRange node, bool local);
 
   std::shared_ptr<RustTree> getTree(folly::ByteRange node);
 

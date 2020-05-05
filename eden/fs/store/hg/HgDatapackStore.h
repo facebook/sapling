@@ -25,7 +25,14 @@ class HgDatapackStore {
   HgDatapackStore(AbsolutePathPiece repository, bool useEdenApi)
       : store_{repository.stringPiece(), useEdenApi} {}
 
-  std::unique_ptr<Blob> getBlob(const Hash& id, const HgProxyHash& hgInfo);
+  // Imports a blob for given hash from local store
+  std::unique_ptr<Blob> getBlobLocal(const Hash& id, const HgProxyHash& hgInfo);
+
+  // Imports a blob for given hash from remote store when it does not exist
+  // locally.
+  std::unique_ptr<Blob> getBlobRemote(
+      const Hash& id,
+      const HgProxyHash& hgInfo);
 
   std::unique_ptr<Tree> getTree(
       const RelativePath& path,

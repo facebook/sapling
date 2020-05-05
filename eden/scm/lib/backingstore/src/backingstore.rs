@@ -15,7 +15,7 @@ use manifest::{List, Manifest};
 use manifest_tree::TreeManifest;
 use revisionstore::{
     ContentStore, ContentStoreBuilder, EdenApiHgIdRemoteStore, HgIdDataStore, LocalStore,
-    MemcacheStore,
+    MemcacheStore, StoreKey,
 };
 use std::path::Path;
 use std::sync::Arc;
@@ -69,10 +69,17 @@ impl BackingStore {
         })
     }
 
-    pub fn get_blob(&self, path: &[u8], node: &[u8]) -> Result<Option<Vec<u8>>> {
+    /// Reads file from blobstores. When `local_only` is true, this function will only read blobs
+    /// from on disk stores.
+    pub fn get_blob(&self, path: &[u8], node: &[u8], local_only: bool) -> Result<Option<Vec<u8>>> {
         let path = RepoPath::from_utf8(path)?.to_owned();
         let node = Node::from_slice(node)?;
         let key = Key::new(path, node);
+
+        // check if the blob present on disk
+        if local_only && self.blobstore.contains(&StoreKey::from(&key))? {
+            return Ok(None);
+        }
 
         // Return None for LFS blobs
         // TODO: LFS support

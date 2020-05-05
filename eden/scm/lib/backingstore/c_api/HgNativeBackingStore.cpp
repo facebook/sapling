@@ -48,12 +48,18 @@ HgNativeBackingStore::HgNativeBackingStore(
 
 std::unique_ptr<folly::IOBuf> HgNativeBackingStore::getBlob(
     folly::ByteRange name,
-    folly::ByteRange node) {
+    folly::ByteRange node,
+    bool local) {
   XLOG(DBG7) << "Importing blob name=" << name.data()
              << " node=" << folly::hexlify(node) << " from hgcache";
   RustCFallible<RustCBytes> result(
       rust_backingstore_get_blob(
-          store_.get(), name.data(), name.size(), node.data(), node.size()),
+          store_.get(),
+          name.data(),
+          name.size(),
+          node.data(),
+          node.size(),
+          local),
       rust_cbytes_free);
 
   if (result.isError()) {

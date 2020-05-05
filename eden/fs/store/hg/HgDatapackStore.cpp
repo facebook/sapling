@@ -85,11 +85,23 @@ FOLLY_MAYBE_UNUSED std::unique_ptr<Tree> fromRawTree(
 }
 } // namespace
 
-std::unique_ptr<Blob> HgDatapackStore::getBlob(
+std::unique_ptr<Blob> HgDatapackStore::getBlobLocal(
     const Hash& id,
     const HgProxyHash& hgInfo) {
-  auto content =
-      store_.getBlob(hgInfo.path().stringPiece(), hgInfo.revHash().getBytes());
+  auto content = store_.getBlob(
+      hgInfo.path().stringPiece(), hgInfo.revHash().getBytes(), true);
+  if (content) {
+    return std::make_unique<Blob>(id, *content);
+  }
+
+  return nullptr;
+}
+
+std::unique_ptr<Blob> HgDatapackStore::getBlobRemote(
+    const Hash& id,
+    const HgProxyHash& hgInfo) {
+  auto content = store_.getBlob(
+      hgInfo.path().stringPiece(), hgInfo.revHash().getBytes(), false);
   if (content) {
     return std::make_unique<Blob>(id, *content);
   }
