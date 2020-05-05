@@ -442,23 +442,20 @@ class EdenServer : private TakeoverHandler {
 #endif // !_WIN32
 
   /**
-   * Create config file if this the first time running the server, otherwise
-   * parse existing config file.
-   *
+   * Load and parse existing eden config.
    */
   std::shared_ptr<cpptoml::table> parseConfig();
 
   /**
-   * Create default config toml table
+   * Replace the config file with the given table.
    */
-  std::shared_ptr<cpptoml::table> getDefaultConfig();
+  void saveConfig(const cpptoml::table& root);
 
   /**
    * Open local storage engine for caching source control data.
+   * Returns whether the config was modified.
    */
-  void openStorageEngine(
-      std::shared_ptr<cpptoml::table>,
-      std::shared_ptr<StartupLogger> logger);
+  bool openStorageEngine(cpptoml::table& config, StartupLogger& logger);
 
   // Called when a mount has been unmounted and has stopped.
   void mountFinished(

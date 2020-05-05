@@ -31,6 +31,7 @@
 #include <thrift/lib/cpp2/server/ThriftServer.h>
 
 #include "eden/fs/config/CheckoutConfig.h"
+#include "eden/fs/config/TomlConfig.h"
 #include "eden/fs/fuse/privhelper/PrivHelper.h"
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/service/EdenCPUThreadPool.h"
@@ -159,9 +160,9 @@ using namespace facebook::eden;
 
 constexpr StringPiece kRocksDBPath{"storage/rocks-db"};
 constexpr StringPiece kSqlitePath{"storage/sqlite.db"};
-constexpr StringPiece kConfig{"config.toml"};
 constexpr StringPiece kHgStorePrefix{"store.hg"};
 constexpr StringPiece kFuseRequestPrefix{"fuse"};
+constexpr StringPiece kStateConfig{"config.toml"};
 
 std::optional<std::string> getUnixDomainSocketPath(
     const folly::SocketAddress& address) {
@@ -709,8 +710,14 @@ Future<Unit> EdenServer::prepareImpl(
     prepareThriftAddress();
   }
 
+  // TODO: The "state config" only has one configuration knob now. When another
+  // is required, introduce an EdenStateConfig class to manage defaults and save
+  // on update.
   auto config = parseConfig();
-  openStorageEngine(config, logger);
+  bool shouldSaveConfig = openStorageEngine(*config, *logger);
+  if (shouldSaveConfig) {
+    saveConfig(*config);
+  }
 
 #ifndef _WIN32
   // Start listening for graceful takeover requests
@@ -747,45 +754,42 @@ Future<Unit> EdenServer::prepareImpl(
 }
 
 std::shared_ptr<cpptoml::table> EdenServer::parseConfig() {
-  auto configPath = edenDir_.getPath() + RelativePathPiece{kConfig};
+  auto configPath = edenDir_.getPath() + RelativePathPiece{kStateConfig};
+
   std::ifstream inputFile(configPath.c_str());
   if (!inputFile.is_open()) {
     if (errno != ENOENT) {
       folly::throwSystemErrorExplicit(
           errno, "unable to open EdenFS config ", configPath);
     }
-    // config file does not yet exist, create file
-    auto configRoot = getDefaultConfig();
-    std::stringstream stream;
-    stream << (*configRoot);
-
-#ifdef _WIN32
-    writeFileAtomic(configPath.c_str(), stream.str());
-#else
-    folly::writeFileAtomic(string(configPath.c_str()), stream.str());
-#endif
-
-    return configRoot;
+    // No config file, assume an empty table.
+    return cpptoml::make_table();
   }
   return cpptoml::parser(inputFile).parse();
 }
 
-std::shared_ptr<cpptoml::table> EdenServer::getDefaultConfig() {
-  auto configTable = cpptoml::make_table();
-  auto storageEngine = FLAGS_local_storage_engine_unsafe.empty()
-      ? DEFAULT_STORAGE_ENGINE
-      : FLAGS_local_storage_engine_unsafe;
-  std::shared_ptr<cpptoml::table> rootTable = cpptoml::make_table();
-  configTable->insert("engine", storageEngine);
-  rootTable->insert("local-store", configTable);
-  return rootTable;
+void EdenServer::saveConfig(const cpptoml::table& root) {
+  auto configPath = edenDir_.getPath() + RelativePathPiece{kStateConfig};
+
+  std::ostringstream stream;
+  stream << root;
+
+#ifdef _WIN32
+  writeFileAtomic(configPath.c_str(), stream.str());
+#else
+  folly::writeFileAtomic(string(configPath.c_str()), stream.str());
+#endif
 }
 
-void EdenServer::openStorageEngine(
-    std::shared_ptr<cpptoml::table> config,
-    std::shared_ptr<StartupLogger> logger) {
-  std::string storageEngine =
-      config->get_qualified_as<std::string>("local-store.engine").value_or("");
+bool EdenServer::openStorageEngine(
+    cpptoml::table& config,
+    StartupLogger& logger) {
+  std::string defaultStorageEngine = FLAGS_local_storage_engine_unsafe.empty()
+      ? DEFAULT_STORAGE_ENGINE
+      : FLAGS_local_storage_engine_unsafe;
+  auto [storageEngine, configUpdated] =
+      setDefault(config, {"local-store", "engine"}, defaultStorageEngine);
+
   if (!FLAGS_local_storage_engine_unsafe.empty() &&
       FLAGS_local_storage_engine_unsafe != storageEngine) {
     throw std::runtime_error(folly::to<string>(
@@ -796,21 +800,21 @@ void EdenServer::openStorageEngine(
   }
 
   if (storageEngine == "memory") {
-    logger->log("Creating new memory store.");
+    logger.log("Creating new memory store.");
     localStore_ = make_shared<MemoryLocalStore>();
   } else if (storageEngine == "sqlite") {
     const auto path = edenDir_.getPath() + RelativePathPiece{kSqlitePath};
     const auto parentDir = path.dirname();
     ensureDirectoryExists(parentDir);
-    logger->log("Opening local SQLite store ", path, "...");
+    logger.log("Opening local SQLite store ", path, "...");
     folly::stop_watch<std::chrono::milliseconds> watch;
     localStore_ = make_shared<SqliteLocalStore>(path);
-    logger->log(
+    logger.log(
         "Opened SQLite store in ",
         watch.elapsed().count() / 1000.0,
         " seconds.");
   } else if (storageEngine == "rocksdb") {
-    logger->log("Opening local RocksDB store...");
+    logger.log("Opening local RocksDB store...");
     folly::stop_watch<std::chrono::milliseconds> watch;
     const auto rocksPath = edenDir_.getPath() + RelativePathPiece{kRocksDBPath};
     ensureDirectoryExists(rocksPath);
@@ -821,14 +825,16 @@ void EdenServer::openStorageEngine(
     localStore_->enableBlobCaching.store(
         serverState_->getEdenConfig()->enableBlobCaching.getValue(),
         std::memory_order_relaxed);
-    logger->log(
+    logger.log(
         "Opened RocksDB store in ",
         watch.elapsed().count() / 1000.0,
         " seconds.");
   } else {
-    throw std::runtime_error(folly::to<string>(
-        "invalid storage engine: ", FLAGS_local_storage_engine_unsafe));
+    throw std::runtime_error(
+        folly::to<string>("invalid storage engine: ", storageEngine));
   }
+
+  return configUpdated;
 }
 
 std::vector<Future<Unit>> EdenServer::prepareMountsTakeover(
