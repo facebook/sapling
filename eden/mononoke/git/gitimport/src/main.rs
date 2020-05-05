@@ -367,7 +367,7 @@ async fn gitimport(
     let pool = &GitPool::new(path.to_path_buf())?;
 
     let mut walk = walk_repo.revwalk()?;
-    walk.set_sorting(Sort::TOPOLOGICAL | Sort::REVERSE);
+    walk.set_sorting(Sort::TOPOLOGICAL | Sort::REVERSE)?;
     target.populate_walk(&walk_repo, &mut walk)?;
 
     // TODO: Don't import everything in one go. Instead, hide things we already imported from the
