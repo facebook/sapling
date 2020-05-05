@@ -189,12 +189,20 @@ async fn do_cache_warmup(
 
     let blobstore_warmup = task::spawn({
         cloned!(ctx, repo);
-        async move { blobstore_and_filenodes_warmup(&ctx, &repo, bcs_id, hg_cs_id).await }
+        async move {
+            blobstore_and_filenodes_warmup(&ctx, &repo, bcs_id, hg_cs_id)
+                .await
+                .context("While warming up blobstore and filenodes")
+        }
     });
 
     let cs_warmup = task::spawn({
         cloned!(ctx, repo);
-        async move { changesets_warmup(&ctx, &repo, bcs_id, commit_limit).await }
+        async move {
+            changesets_warmup(&ctx, &repo, bcs_id, commit_limit)
+                .await
+                .context("While warming up changesets")
+        }
     });
 
     let (stats, res) = future::try_join(blobstore_warmup, cs_warmup).timed().await;

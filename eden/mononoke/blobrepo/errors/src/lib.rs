@@ -47,8 +47,6 @@ impl fmt::Display for StateOpenError {
 pub enum ErrorKind {
     #[error("Error while opening state for {0}")]
     StateOpen(StateOpenError),
-    #[error("Error while deserializing changeset retrieved from key '{0}'")]
-    ChangesetDeserializeFailed(String),
     #[error("Node id {0} is missing")]
     NodeMissing(HgNodeHash),
     #[error("Content missing nodeid {0}")]
