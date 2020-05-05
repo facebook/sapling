@@ -103,6 +103,8 @@ function(rust_static_library TARGET)
   add_custom_target(
     ${cargo_target}
     COMMAND
+      "${CMAKE_COMMAND}" -E remove -f "${CMAKE_CURRENT_SOURCE_DIR}/Cargo.lock"
+    COMMAND
       "${CMAKE_COMMAND}" -E env
       "CARGO_TARGET_DIR=${CMAKE_CURRENT_BINARY_DIR}"
       ${extra_cargo_env}
@@ -157,6 +159,8 @@ function(rust_executable TARGET)
   add_custom_target(
     ${cargo_target}
     ALL
+    COMMAND
+      "${CMAKE_COMMAND}" -E remove -f "${CMAKE_CURRENT_SOURCE_DIR}/Cargo.lock"
     COMMAND
       "${CMAKE_COMMAND}" -E env
       "CARGO_TARGET_DIR=${CMAKE_CURRENT_BINARY_DIR}"
