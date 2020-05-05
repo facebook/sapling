@@ -211,12 +211,6 @@ def statslatency(ui, **opts):
     return _calledenfsctl(ui, "stats latency", opts=opts)
 
 
-@statscmd("memory", [], norepo=True)
-def statsmemory(ui, **opts):
-    """show memory statistics for the edenfs daemon"""
-    return _calledenfsctl(ui, "stats memory")
-
-
 @statscmd("thrift", [], norepo=True)
 def statsthrift(ui, **opts):
     """show the number of received thrift calls"""

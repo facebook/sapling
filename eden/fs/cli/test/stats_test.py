@@ -39,23 +39,6 @@ access        |      p90               9               10          11         12
         stats_print.write_latency_record("access", matrix, out)
         self.assertEqual(out.getvalue(), expected_output)
 
-    def test_print_mem_status(self):
-        dictionary = {
-            "memory_free": 1234567,
-            "memory_free_percent": 50,
-            "memory_usage": 45678912,
-            "memory_usage_percent": 70,
-        }
-        expected_output = """\
-                             memory free : 1.234567(GB)
-                     memory free percent : 50%
-                            memory usage : 45.678912(GB)
-                    memory usage percent : 70%
-"""
-        out = StringIO()
-        stats_print.write_mem_status_table(dictionary, out)
-        self.assertEqual(expected_output, out.getvalue())
-
     def test_print_table(self):
         table = {
             "key1": [1, 2, 3, 4],

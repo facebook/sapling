@@ -16,23 +16,6 @@ def write_heading(heading: str, out: TextIO) -> None:
     out.write(_center_strip_right(border, 80) + "\n")
 
 
-def write_mem_status_table(fuse_counters, out: TextIO) -> None:
-    format_str = "{:>40} {:^1} {:<20}"
-    keys = [
-        "memory_free",
-        "memory_free_percent",
-        "memory_usage",
-        "memory_usage_percent",
-    ]
-    for key in keys:
-        if key.endswith("_percent"):
-            value = "%d%s" % (fuse_counters[key], "%")
-        else:
-            value = "%f(GB)" % (fuse_counters[key] / (10 ** 6))
-        centered_text = format_str.format(key.replace("_", " "), ":", value)
-        out.write(centered_text.rstrip() + "\n")
-
-
 LATENCY_FORMAT_STR = "{:<12} {:^4} {:^10}  {:>10}  {:>15}  {:>10} {:>10}\n"
 
 

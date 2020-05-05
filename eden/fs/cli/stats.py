@@ -116,44 +116,6 @@ def do_stats_general(
         )
 
 
-@stats_cmd("memory", "Show memory statistics for Eden")
-class MemoryCmd(Subcmd):
-    def run(self, args: argparse.Namespace) -> int:
-        out = sys.stdout
-        stats_print.write_heading("Memory Stats for EdenFS", out)
-        instance = cmd_util.get_eden_instance(args)
-
-        with instance.get_thrift_client() as client:
-            counters = client.getCounters()
-            stats_print.write_mem_status_table(counters, out)
-
-            # print memory counters
-            heading = "Average values of Memory usage and availability"
-            out.write("\n\n %s \n\n" % heading.center(80, " "))
-
-            table = get_memory_counters(counters)
-            stats_print.write_table(table, "", out)
-
-        return 0
-
-
-# Returns all the memory counters in ServiceData in a table format.
-def get_memory_counters(counters: DiagInfoCounters) -> Table:
-    table: Table = {}
-    index = {"60": 0, "600": 1, "3600": 2}
-    for key in counters:
-        if key.startswith("memory") and key.find(".") != -1:
-            tokens = key.split(".")
-            memKey = tokens[0].replace("_", " ")
-            if memKey not in table.keys():
-                table[memKey] = [0, 0, 0, 0]
-            if len(tokens) == 2:
-                table[memKey][3] = counters[key]
-            else:
-                table[memKey][index[tokens[2]]] = counters[key]
-    return table
-
-
 @stats_cmd("io", "Show information about the number of I/O calls")
 class IoCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
