@@ -455,7 +455,7 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
                 stats->getHgBackingStoreStatsForCurrentThread();
             currentThreadStats.hgBackingStoreGetTree.addValue(
                 watch.elapsed().count());
-            return std::move(result);
+            return std::forward<decltype(result)>(result);
           }));
 
   return folly::collectAnyWithoutException(futures)
