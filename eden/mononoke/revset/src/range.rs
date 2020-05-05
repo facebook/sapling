@@ -13,7 +13,6 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use cloned::cloned;
-use failure_ext::chain::ChainExt;
 use futures_ext::{BoxStream, StreamExt};
 use futures_old::future::Future;
 use futures_old::stream::{self, iter_ok, Stream};
@@ -58,7 +57,7 @@ fn make_pending(
     changeset_fetcher
         .get_parents(ctx.clone(), child.hash)
         .map(move |parents| (child, parents))
-        .map_err(|err| err.chain_err(ErrorKind::ParentsFetchFailed).into())
+        .map_err(|err| err.context(ErrorKind::ParentsFetchFailed))
         .map(|(child, parents)| iter_ok::<_, Error>(iter::repeat(child).zip(parents.into_iter())))
         .flatten_stream()
         .and_then(move |(child, parent_hash)| {
@@ -71,7 +70,7 @@ fn make_pending(
                         generation: gen_id,
                     },
                 })
-                .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
+                .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
         })
         .boxify()
 }
@@ -89,7 +88,7 @@ impl RangeNodeStream {
             changeset_fetcher
                 .clone()
                 .get_generation_number(ctx.clone(), start_node)
-                .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
+                .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
                 .map(stream::repeat)
                 .flatten_stream(),
         );
@@ -98,7 +97,7 @@ impl RangeNodeStream {
             cloned!(ctx, changeset_fetcher);
             changeset_fetcher
                 .get_generation_number(ctx.clone(), end_node)
-                .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
+                .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
                 .map(move |generation| {
                     make_pending(
                         ctx.clone(),

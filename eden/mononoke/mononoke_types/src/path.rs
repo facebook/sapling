@@ -14,9 +14,8 @@ use std::io::{self, Write};
 use std::iter::{once, FromIterator, Once};
 use std::slice::Iter;
 
-use anyhow::{bail, Error, Result};
+use anyhow::{bail, Context as _, Error, Result};
 use bytes::Bytes;
-use failure_ext::chain::ChainExt;
 use heapsize::HeapSizeOf;
 use heapsize_derive::HeapSizeOf;
 use lazy_static::lazy_static;
@@ -202,10 +201,9 @@ impl MPathElement {
 
     #[inline]
     pub fn from_thrift(element: thrift::MPathElement) -> Result<MPathElement> {
-        Self::verify(&element.0).chain_err(ErrorKind::InvalidThrift(
-            "MPathElement".into(),
-            "invalid path element".into(),
-        ))?;
+        Self::verify(&element.0).with_context(|| {
+            ErrorKind::InvalidThrift("MPathElement".into(), "invalid path element".into())
+        })?;
         Ok(MPathElement(Bytes::from(element.0)))
     }
 

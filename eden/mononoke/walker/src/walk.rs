@@ -8,7 +8,7 @@
 use crate::graph::{EdgeType, FileContentData, Node, NodeData, NodeType, WrappedPath};
 use crate::validate::{add_node_to_scuba, CHECK_FAIL, CHECK_TYPE, EDGE_TYPE};
 
-use anyhow::{format_err, Error};
+use anyhow::{format_err, Context, Error};
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use bookmarks::{BookmarkName, BookmarkPrefix, Freshness};
@@ -17,7 +17,6 @@ use cloned::cloned;
 use context::CoreContext;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
-use failure_ext::chain::ChainExt;
 use filestore::{self, Alias};
 use fsnodes::RootFsnodeId;
 use futures::{
@@ -860,7 +859,7 @@ where
             }
         }
     }
-    .map_err(|e| Error::from(e.chain_err(ErrorKind::NotTraversable(walk_item.clone()))))?;
+    .with_context(|| ErrorKind::NotTraversable(walk_item.clone()))?;
 
     match step_output {
         StepOutput(node_data, children) => {

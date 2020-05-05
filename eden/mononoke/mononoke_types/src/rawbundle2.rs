@@ -7,9 +7,8 @@
 
 use std::fmt::{self, Debug};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use bytes::Bytes;
-use failure_ext::chain::ChainExt;
 use fbthrift::compact_protocol;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 
@@ -74,7 +73,7 @@ impl RawBundle2 {
 
     pub fn from_encoded_bytes(encoded_bytes: Bytes) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(encoded_bytes.as_ref())
-            .chain_err(ErrorKind::BlobDeserializeError("RawBundle2".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("RawBundle2".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }
@@ -93,7 +92,7 @@ impl BlobstoreValue for RawBundle2 {
 
     fn from_blob(blob: RawBundle2Blob) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
-            .chain_err(ErrorKind::BlobDeserializeError("RawBundle2".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("RawBundle2".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

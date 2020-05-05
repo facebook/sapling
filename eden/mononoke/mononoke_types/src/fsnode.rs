@@ -5,8 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Result};
-use failure_ext::chain::ChainExt;
+use anyhow::{bail, Context, Result};
 
 use crate::blob::{Blob, BlobstoreValue, FsnodeBlob};
 use crate::errors::ErrorKind;
@@ -119,7 +118,7 @@ impl Fsnode {
 
     pub(crate) fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(bytes)
-            .chain_err(ErrorKind::BlobDeserializeError("Fsnode".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("Fsnode".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

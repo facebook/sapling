@@ -9,7 +9,7 @@
 #![feature(never_type)]
 #![deny(warnings)]
 
-use anyhow::{anyhow, bail, Error};
+use anyhow::{anyhow, bail, Context, Error};
 use clap::{Arg, Values};
 use cloned::cloned;
 use fbinit::FacebookInit;
@@ -37,7 +37,6 @@ use cmdlib::{
     helpers::serve_forever,
     monitoring::{start_fb303_server, AliveService},
 };
-use failure_ext::chain::ChainExt;
 use metaconfig_parser::RepoConfigs;
 
 use crate::lfs_server_context::{LfsServerContext, ServerUris};
@@ -323,7 +322,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
         matches.value_of(ARG_LIVE_CONFIG),
         config_interval,
     )
-    .chain_err(Error::msg("Failed to load configuration"))?;
+    .context(Error::msg("Failed to load configuration"))?;
 
     let max_upload_size: Option<u64> = matches
         .value_of(ARG_MAX_UPLOAD_SIZE)
@@ -368,7 +367,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let addr = addr
         .to_socket_addrs()
-        .chain_err(Error::msg("Invalid Listener Address"))?
+        .context(Error::msg("Invalid Listener Address"))?
         .next()
         .ok_or(Error::msg("Invalid Socket Address"))?;
 
@@ -376,7 +375,7 @@ fn main(fb: FacebookInit) -> Result<(), Error> {
 
     let listener = runtime
         .block_on_std(TcpListener::bind(&addr))
-        .chain_err(Error::msg("Could not start TCP listener"))?;
+        .context(Error::msg("Could not start TCP listener"))?;
 
     let server = match (tls_certificate, tls_private_key, tls_ca, tls_ticket_seeds) {
         (Some(tls_certificate), Some(tls_private_key), Some(tls_ca), tls_ticket_seeds) => {

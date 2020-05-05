@@ -8,9 +8,8 @@
 use std::convert::TryInto;
 use std::fmt::{self, Debug};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use bytes::Bytes;
-use failure_ext::chain::ChainExt;
 use fbthrift::compact_protocol;
 use quickcheck::{empty_shrinker, single_shrinker, Arbitrary, Gen};
 
@@ -59,7 +58,7 @@ impl FileContents {
 
     pub fn from_encoded_bytes(encoded_bytes: Bytes) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(encoded_bytes.as_ref())
-            .chain_err(ErrorKind::BlobDeserializeError("FileContents".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("FileContents".into()))?;
         Self::from_thrift(thrift_tc)
     }
 
@@ -103,7 +102,7 @@ impl BlobstoreValue for FileContents {
 
     fn from_blob(blob: ContentBlob) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
-            .chain_err(ErrorKind::BlobDeserializeError("FileContents".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("FileContents".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }
@@ -161,9 +160,8 @@ impl ChunkedFileContents {
     }
 
     pub fn from_bytes(blob: Bytes) -> Result<Self> {
-        let thrift_chunked = compact_protocol::deserialize(blob.as_ref()).chain_err(
-            ErrorKind::BlobDeserializeError("ChunkedFileContents".into()),
-        )?;
+        let thrift_chunked = compact_protocol::deserialize(blob.as_ref())
+            .with_context(|| ErrorKind::BlobDeserializeError("ChunkedFileContents".into()))?;
         Self::from_thrift(thrift_chunked)
     }
 
@@ -227,9 +225,8 @@ impl ContentChunkPointer {
     }
 
     pub fn from_bytes(blob: Bytes) -> Result<Self> {
-        let thrift_chunk = compact_protocol::deserialize(blob.as_ref()).chain_err(
-            ErrorKind::BlobDeserializeError("ContentChunkPointer".into()),
-        )?;
+        let thrift_chunk = compact_protocol::deserialize(blob.as_ref())
+            .with_context(|| ErrorKind::BlobDeserializeError("ContentChunkPointer".into()))?;
         Self::from_thrift(thrift_chunk)
     }
 

@@ -11,12 +11,11 @@ use crate::{
     thrift,
     typed_hash::{ChangesetId, FastlogBatchId, FastlogBatchIdContext},
 };
-use anyhow::{Error, Result};
+use anyhow::{Context, Error, Result};
 use blobstore::{Blobstore, Loadable, Storable};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::chain::ChainExt;
 use fbthrift::compact_protocol;
 use futures::{future, Future};
 use futures_ext::{BoxFuture, FutureExt};
@@ -232,7 +231,7 @@ impl BlobstoreValue for FastlogBatch {
 
     fn from_blob(blob: FastlogBatchBlob) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
-            .chain_err(ErrorKind::BlobDeserializeError("FastlogBatch".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("FastlogBatch".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

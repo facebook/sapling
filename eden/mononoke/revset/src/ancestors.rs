@@ -15,7 +15,6 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use cloned::cloned;
-use failure_ext::chain::ChainExt;
 use futures_ext::StreamExt;
 use futures_old::future::Future;
 use futures_old::stream::{iter_ok, Stream};
@@ -57,7 +56,7 @@ fn make_pending(
                     changeset_fetcher
                         .get_parents(ctx.clone(), hash)
                         .map(|parents| parents.into_iter())
-                        .map_err(|err| err.chain_err(ErrorKind::ParentsFetchFailed).into())
+                        .map_err(|err| err.context(ErrorKind::ParentsFetchFailed))
                 }
             })
             .buffered(size)
@@ -67,7 +66,7 @@ fn make_pending(
                 changeset_fetcher
                     .get_generation_number(ctx.clone(), node_cs)
                     .map(move |gen_id| (node_cs, gen_id))
-                    .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
+                    .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
             }),
     )
 }

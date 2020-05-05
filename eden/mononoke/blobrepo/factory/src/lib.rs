@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{Error, Result};
+use anyhow::{Context, Error, Result};
 use blame::BlameRoot;
 use blobrepo::BlobRepo;
 use blobrepo_errors::*;
@@ -25,7 +25,7 @@ use dbbookmarks::SqlBookmarks;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
-use failure_ext::chain::ChainExt;
+use failure_ext::FutureFailureErrorExt;
 use fastlog::RootFastlog;
 use fbinit::FacebookInit;
 use filenodes::Filenodes;
@@ -337,25 +337,25 @@ impl TestRepoBuilder {
             repo_blobstore_args,
             Arc::new(
                 NewFilenodesBuilder::with_sqlite_in_memory()
-                    .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?
+                    .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?
                     .build(),
             ),
             Arc::new(
                 SqlChangesets::with_sqlite_in_memory()
-                    .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))?,
+                    .context(ErrorKind::StateOpen(StateOpenError::Changesets))?,
             ),
             Arc::new(
                 SqlBonsaiGitMappingConnection::with_sqlite_in_memory()
-                    .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))?
+                    .context(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))?
                     .with_repo_id(repo_id),
             ),
             Arc::new(
                 SqlBonsaiGlobalrevMapping::with_sqlite_in_memory()
-                    .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGlobalrevMapping))?,
+                    .context(ErrorKind::StateOpen(StateOpenError::BonsaiGlobalrevMapping))?,
             ),
             Arc::new(
                 SqlBonsaiHgMapping::with_sqlite_in_memory()
-                    .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?,
+                    .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?,
             ),
             Arc::new(InProcessLease::new()),
             FilestoreConfig::default(),
@@ -437,7 +437,7 @@ pub fn new_memblob_with_connection_with_id(
             // Filenodes are intentionally created on another connection
             Arc::new(
                 NewFilenodesBuilder::with_sqlite_in_memory()
-                    .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))?
+                    .context(ErrorKind::StateOpen(StateOpenError::Filenodes))?
                     .build(),
             ),
             Arc::new(SqlChangesets::from_sql_connections(sql_connections.clone())),
@@ -473,7 +473,7 @@ fn new_development(
 ) -> BoxFuture<BlobRepo, Error> {
     let bookmarks = sql_factory
         .open::<SqlBookmarks>()
-        .chain_err(ErrorKind::StateOpen(StateOpenError::Bookmarks))
+        .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))
         .from_err()
         .map(move |bookmarks| {
             let bookmarks: Arc<dyn Bookmarks> = if let Some(ttl) = bookmarks_cache_ttl {
@@ -487,12 +487,12 @@ fn new_development(
 
     let filenodes_builder = sql_factory
         .open_shardable::<NewFilenodesBuilder>()
-        .chain_err(ErrorKind::StateOpen(StateOpenError::Filenodes))
+        .context(ErrorKind::StateOpen(StateOpenError::Filenodes))
         .from_err();
 
     let changesets = sql_factory
         .open::<SqlChangesets>()
-        .chain_err(ErrorKind::StateOpen(StateOpenError::Changesets))
+        .context(ErrorKind::StateOpen(StateOpenError::Changesets))
         .from_err()
         .map(Arc::new);
 
@@ -500,26 +500,26 @@ fn new_development(
         cloned!(repoid);
         sql_factory
             .open::<SqlBonsaiGitMappingConnection>()
-            .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))
+            .context(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))
             .from_err()
             .map(move |conn| Arc::new(conn.with_repo_id(repoid)))
     };
 
     let bonsai_globalrev_mapping = sql_factory
         .open::<SqlBonsaiGlobalrevMapping>()
-        .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiGlobalrevMapping))
+        .context(ErrorKind::StateOpen(StateOpenError::BonsaiGlobalrevMapping))
         .from_err()
         .map(Arc::new);
 
     let bonsai_hg_mapping = sql_factory
         .open::<SqlBonsaiHgMapping>()
-        .chain_err(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))
+        .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))
         .from_err()
         .map(Arc::new);
 
     let phases_factory = sql_factory
         .open::<SqlPhasesFactory>()
-        .chain_err(ErrorKind::StateOpen(StateOpenError::Phases))
+        .context(ErrorKind::StateOpen(StateOpenError::Phases))
         .from_err();
 
     bookmarks

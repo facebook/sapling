@@ -12,7 +12,7 @@ use std::sync::{
     Arc, Mutex,
 };
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use bytes::Bytes;
 use cached_config::ConfigHandle;
 use futures::{
@@ -29,7 +29,6 @@ use slog::Logger;
 
 use blobrepo::BlobRepo;
 use context::CoreContext;
-use failure_ext::chain::ChainExt;
 use hyper::{client::HttpConnector, Client};
 use hyper_openssl::HttpsConnector;
 use lfs_protocol::{RequestBatch, RequestObject, ResponseBatch};
@@ -71,7 +70,7 @@ impl LfsServerContext {
     ) -> Result<Self, Error> {
         let connector = HttpsConnector::new()
             .map_err(Error::from)
-            .chain_err(ErrorKind::HttpClientInitializationFailed)?;
+            .context(ErrorKind::HttpClientInitializationFailed)?;
         let client = Client::builder().build(connector);
 
         let inner = LfsServerContextInner {
@@ -250,7 +249,7 @@ impl RepositoryRequestContext {
             let res = receiver
                 .await
                 .expect("spawned future cannot be dropped")
-                .chain_err(ErrorKind::UpstreamDidNotRespond)?;
+                .context(ErrorKind::UpstreamDidNotRespond)?;
 
             let (head, body) = res.into_parts();
             let body = body.try_concat_body(&head.headers)?.await?;
@@ -282,7 +281,7 @@ impl RepositoryRequestContext {
         };
 
         let body: Bytes = serde_json::to_vec(&batch)
-            .chain_err(ErrorKind::SerializationFailed)?
+            .context(ErrorKind::SerializationFailed)?
             .into();
 
         let req = Request::post(uri).body(body.into())?;
@@ -290,10 +289,10 @@ impl RepositoryRequestContext {
         let res = self
             .dispatch(req)
             .await
-            .chain_err(ErrorKind::UpstreamBatchNoResponse)?;
+            .context(ErrorKind::UpstreamBatchNoResponse)?;
 
         let batch = serde_json::from_slice::<ResponseBatch>(&res)
-            .chain_err(ErrorKind::UpstreamBatchInvalid)?;
+            .context(ErrorKind::UpstreamBatchInvalid)?;
 
         Ok(Some(batch))
     }
@@ -313,7 +312,7 @@ impl UriBuilder {
                 "{}/upload/{}/{}",
                 &self.repository, object.oid, object.size
             ))
-            .chain_err(ErrorKind::UriBuilderFailed("upload_uri"))
+            .context(ErrorKind::UriBuilderFailed("upload_uri"))
             .map_err(Error::from)
     }
 
@@ -321,7 +320,7 @@ impl UriBuilder {
         self.server
             .self_uri
             .build(format_args!("{}/download/{}", &self.repository, content_id))
-            .chain_err(ErrorKind::UriBuilderFailed("download_uri"))
+            .context(ErrorKind::UriBuilderFailed("download_uri"))
             .map_err(Error::from)
     }
 
@@ -336,7 +335,7 @@ impl UriBuilder {
                 "{}/download/{}?routing={}",
                 &self.repository, content_id, oid
             ))
-            .chain_err(ErrorKind::UriBuilderFailed("consistent_download_uri"))
+            .context(ErrorKind::UriBuilderFailed("consistent_download_uri"))
             .map_err(Error::from)
     }
 
@@ -346,7 +345,7 @@ impl UriBuilder {
             .as_ref()
             .map(|uri| {
                 uri.build(format_args!("objects/batch"))
-                    .chain_err(ErrorKind::UriBuilderFailed("upstream_batch_uri"))
+                    .context(ErrorKind::UriBuilderFailed("upstream_batch_uri"))
                     .map_err(Error::from)
             })
             .transpose()
@@ -356,7 +355,7 @@ impl UriBuilder {
 fn parse_and_check_uri(src: &str) -> Result<BaseUri, Error> {
     let uri = src
         .parse::<Uri>()
-        .chain_err(ErrorKind::InvalidUri(src.to_string(), "invalid uri"))?;
+        .with_context(|| ErrorKind::InvalidUri(src.to_string(), "invalid uri"))?;
 
     let Parts {
         scheme,

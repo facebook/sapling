@@ -8,9 +8,8 @@
 use std::convert::TryInto;
 use std::fmt::{self, Debug};
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use bytes::Bytes;
-use failure_ext::chain::ChainExt;
 use fbthrift::compact_protocol;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 
@@ -47,7 +46,7 @@ impl ContentChunk {
 
     pub fn from_encoded_bytes(encoded_bytes: Bytes) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(encoded_bytes.as_ref())
-            .chain_err(ErrorKind::BlobDeserializeError("ContentChunk".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("ContentChunk".into()))?;
         Self::from_thrift(thrift_tc)
     }
 
@@ -78,7 +77,7 @@ impl BlobstoreValue for ContentChunk {
 
     fn from_blob(blob: ContentChunkBlob) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
-            .chain_err(ErrorKind::BlobDeserializeError("ContentChunk".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("ContentChunk".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use futures::{compat::Future01CompatExt, future::TryFutureExt};
 use futures_util::{future::try_join_all, pin_mut, select, try_join, FutureExt};
 use gotham::state::{FromState, State};
@@ -26,7 +26,6 @@ use std::collections::HashMap;
 use time_ext::DurationExt;
 
 use blobstore::{Blobstore, Loadable, LoadableError};
-use failure_ext::chain::ChainExt;
 use filestore::Alias;
 use gotham_ext::error::HttpError;
 use lfs_protocol::{
@@ -101,7 +100,7 @@ async fn upstream_objects(
     let res = ctx
         .upstream_batch(&batch)
         .await
-        .chain_err(ErrorKind::UpstreamBatchError)?;
+        .context(ErrorKind::UpstreamBatchError)?;
 
     let ResponseBatch { transfer, objects } = match res {
         Some(res) => res,
@@ -153,7 +152,7 @@ async fn resolve_internal_object(
     let content_id = match content_id {
         Ok(content_id) => content_id,
         Err(LoadableError::Missing(_)) => return Ok(None),
-        Err(e) => return Err(e.chain_err(ErrorKind::LocalAliasLoadError).into()),
+        Err(e) => return Err(Error::from(e).context(ErrorKind::LocalAliasLoadError)),
     };
 
     // The filestore may allow aliases to be created before the contents are created (the creation
@@ -221,7 +220,7 @@ async fn internal_objects(
         })
         .collect();
 
-    Ok(ret.chain_err(ErrorKind::GenerateDownloadUrisError)?)
+    Ok(ret.context(ErrorKind::GenerateDownloadUrisError)?)
 }
 
 fn batch_upload_response_objects(
@@ -282,7 +281,7 @@ fn batch_upload_response_objects(
         })
         .collect();
 
-    let objects = objects.chain_err(ErrorKind::GenerateUploadUrisError)?;
+    let objects = objects.context(ErrorKind::GenerateUploadUrisError)?;
 
     Ok(objects)
 }
@@ -507,7 +506,7 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
         .try_concat_body_opt(headers)
         .map_err(HttpError::e400)?
         .await
-        .chain_err(ErrorKind::ClientCancelled)
+        .context(ErrorKind::ClientCancelled)
         .map_err(HttpError::e400)?;
 
     let mut scuba = state.try_borrow_mut::<ScubaMiddlewareState>();
@@ -519,7 +518,7 @@ pub async fn batch(state: &mut State) -> Result<impl TryIntoResponse, HttpError>
     );
 
     let request_batch = serde_json::from_slice::<RequestBatch>(&body)
-        .chain_err(ErrorKind::InvalidBatch)
+        .context(ErrorKind::InvalidBatch)
         .map_err(HttpError::e400)?;
 
     add_to_sample(

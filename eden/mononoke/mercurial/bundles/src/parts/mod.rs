@@ -20,7 +20,6 @@ use byteorder::{BigEndian, WriteBytesExt};
 use bytes::Bytes as BytesNew;
 use bytes_old::Bytes;
 use context::CoreContext;
-use failure_ext::chain::ChainExt;
 use futures::stream::{iter_ok, once};
 use futures::{Future, Stream};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
@@ -55,7 +54,7 @@ where
             payload.push(b'\n');
             Ok::<_, Error>(payload)
         })
-        .map_err(|err| Error::from(err.chain_err(ErrorKind::ListkeyGeneration)));
+        .map_err(|err| err.context(ErrorKind::ListkeyGeneration));
 
     builder.set_data_future(fut);
 
@@ -75,7 +74,7 @@ where
             payload.write(value.as_ref())?;
             Ok::<_, Error>(payload)
         })
-        .map_err(|err| Error::from(err.chain_err(ErrorKind::PhaseHeadsGeneration)))
+        .map_err(|err| err.context(ErrorKind::PhaseHeadsGeneration))
         .timed(move |stats, result| {
             if result.is_ok() {
                 scuba_logger

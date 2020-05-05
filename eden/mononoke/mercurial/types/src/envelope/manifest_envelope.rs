@@ -11,7 +11,6 @@ use std::fmt;
 
 use anyhow::{Context, Error, Result};
 use bytes::Bytes;
-use failure_ext::chain::ChainExt;
 use fbthrift::compact_protocol;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
@@ -80,7 +79,7 @@ impl HgManifestEnvelope {
 
     pub fn from_blob(blob: HgEnvelopeBlob) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.0.as_ref())
-            .chain_err(ErrorKind::BlobDeserializeError("HgManifestEnvelope".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("HgManifestEnvelope".into()))?;
         Self::from_thrift(thrift_tc)
     }
 

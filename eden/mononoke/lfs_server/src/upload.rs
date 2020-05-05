@@ -8,7 +8,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use bytes::Bytes;
 use futures::{
     channel::mpsc::channel, compat::Future01CompatExt, future::ready, SinkExt, Stream, StreamExt,
@@ -21,7 +21,6 @@ use hyper::{Body, Request};
 use serde::Deserialize;
 use stats::prelude::*;
 
-use failure_ext::chain::ChainExt;
 use filestore::StoreRequest;
 use gotham_ext::{
     error::HttpError,
@@ -89,7 +88,7 @@ where
     let res = ctx
         .upstream_batch(&batch)
         .await
-        .chain_err(ErrorKind::UpstreamBatchError)?;
+        .context(ErrorKind::UpstreamBatchError)?;
 
     let ResponseBatch { transfer, objects } = match res {
         Some(res) => res,
@@ -130,7 +129,7 @@ where
         let _ = ctx
             .dispatch(req)
             .await
-            .chain_err(ErrorKind::UpstreamUploadError)?;
+            .context(ErrorKind::UpstreamUploadError)?;
 
         STATS::upstream_success.add_value(1);
         return Ok(());
@@ -189,7 +188,7 @@ pub async fn upload(state: &mut State) -> Result<impl TryIntoResponse, HttpError
         )
         .compat()
         .await
-        .chain_err(ErrorKind::FilestoreWriteFailure)
+        .context(ErrorKind::FilestoreWriteFailure)
         .map_err(Error::from);
 
         if !res.is_err() {

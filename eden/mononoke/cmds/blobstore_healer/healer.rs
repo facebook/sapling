@@ -10,7 +10,7 @@ use blobstore::Blobstore;
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey};
 use cloned::cloned;
 use context::CoreContext;
-use failure_ext::chain::ChainExt;
+use failure_ext::FutureFailureErrorExt;
 use futures_ext::FutureExt;
 use futures_old::{self, future::join_all, prelude::*};
 use itertools::{Either, Itertools};
@@ -439,7 +439,7 @@ fn fetch_blob(
                 }),
             }
         })
-        .chain_err(err_context)
+        .context(err_context)
         .from_err()
 }
 

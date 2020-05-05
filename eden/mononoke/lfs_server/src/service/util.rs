@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use anyhow::Context;
 use gotham::{
     handler::{HandlerError, IntoHandlerError},
     helpers::http::response::create_response,
@@ -15,7 +16,6 @@ use hyper::{Body, Response};
 use itertools::Itertools;
 use std::iter;
 
-use failure_ext::chain::ChainExt;
 use lfs_protocol::{git_lfs_mime, ResponseError};
 
 use crate::errors::ErrorKind;
@@ -30,7 +30,7 @@ where
 {
     let res = res.and_then(|c| {
         c.try_into_response(&mut state)
-            .chain_err(ErrorKind::ResponseCreationFailure)
+            .context(ErrorKind::ResponseCreationFailure)
             .map_err(HttpError::e500)
     });
 

@@ -7,7 +7,7 @@
 
 use std::str::FromStr;
 
-use failure_ext::chain::ChainExt;
+use anyhow::Context;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     stream::{StreamExt, TryStreamExt},
@@ -60,7 +60,7 @@ async fn fetch_by_key(
             if has_redaction_root_cause(&e) {
                 HttpError::e410(e)
             } else {
-                HttpError::e500(e.chain_err(ErrorKind::FilestoreReadFailure))
+                HttpError::e500(e.context(ErrorKind::FilestoreReadFailure))
             }
         })?;
 
@@ -93,7 +93,7 @@ pub async fn download(state: &mut State) -> Result<impl TryIntoResponse, HttpErr
     } = state.take();
 
     let content_id = ContentId::from_str(&content_id)
-        .chain_err(ErrorKind::InvalidContentId)
+        .context(ErrorKind::InvalidContentId)
         .map_err(HttpError::e400)?;
 
     let key = FetchKey::Canonical(content_id);
@@ -108,7 +108,7 @@ pub async fn download_sha256(state: &mut State) -> Result<impl TryIntoResponse, 
     let DownloadParamsSha256 { repository, oid } = state.take();
 
     let oid = Sha256::from_str(&oid)
-        .chain_err(ErrorKind::InvalidOid)
+        .context(ErrorKind::InvalidOid)
         .map_err(HttpError::e400)?;
 
     let key = FetchKey::Aliased(Alias::Sha256(oid));

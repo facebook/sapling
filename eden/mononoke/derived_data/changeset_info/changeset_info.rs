@@ -6,7 +6,6 @@
  */
 
 use anyhow::{format_err, Context, Result};
-use failure_ext::chain::ChainExt;
 use fbthrift::compact_protocol;
 use std::collections::BTreeMap;
 use unicode_segmentation::UnicodeSegmentation;
@@ -212,7 +211,7 @@ impl ChangesetInfo {
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(bytes)
-            .chain_err(ErrorKind::BlobDeserializeError("ChangesetInfo".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("ChangesetInfo".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

@@ -30,7 +30,6 @@ use std::sync::Arc;
 
 use anyhow::Error;
 use cloned::cloned;
-use failure_ext::chain::ChainExt;
 use futures_ext::{BoxFuture, BoxStream, FutureExt, SelectAll, StreamExt};
 use futures_old::future::{ok, Future};
 use futures_old::stream::{self, iter_ok, Stream};
@@ -142,7 +141,7 @@ fn make_pending(
             new_repo_gennums
                 .get_generation_number(ctx.clone(), node_hash)
                 .map(move |gen_id| (node_hash, gen_id))
-                .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed).into())
+                .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
         })
         .boxify()
 }
@@ -224,7 +223,7 @@ impl DifferenceOfUnionsOfAncestorsNodeStream {
                 .boxify()
             }
         })
-        .map_err(|err| err.chain_err(ErrorKind::GenerationFetchFailed))
+        .map_err(|err| err.context(ErrorKind::GenerationFetchFailed))
         .from_err()
         .flatten_stream()
         .boxify()

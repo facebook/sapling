@@ -13,7 +13,6 @@ use std::vec::IntoIter;
 use anyhow::{bail, Context, Error, Result};
 use byteorder::ByteOrder;
 use bytes_old::{BigEndian, Buf, BufMut, Bytes, IntoBuf};
-use failure_ext::chain::ChainExt;
 use futures::stream::Forward;
 use futures::{try_ready, Async, AsyncSink, Future, Poll, Sink, StartSend, Stream};
 use futures_ext::io::Either::{self, A as UncompressedRead, B as CompressedRead};
@@ -346,11 +345,9 @@ where
                     (Ok(Async::NotReady), EncodeState::Finish(compressor))
                 } else {
                     (
-                        Err(Error::from(err)
-                            .chain_err(ErrorKind::Bundle2Encode(
-                                "error while completing write".into(),
-                            ))
-                            .into()),
+                        Err(Error::from(err).context(ErrorKind::Bundle2Encode(
+                            "error while completing write".into(),
+                        ))),
                         EncodeState::Invalid,
                     )
                 }

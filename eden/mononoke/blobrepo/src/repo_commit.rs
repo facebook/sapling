@@ -11,7 +11,7 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::{format_err, Error, Result};
 use cloned::cloned;
-use failure_ext::{chain::ChainExt, Compat, FutureFailureErrorExt, StreamFailureErrorExt};
+use failure_ext::{Compat, FutureFailureErrorExt, StreamFailureErrorExt};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_old::future::{self, Future, Shared, SharedError, SharedItem};
 use futures_old::stream::{self, Stream};
@@ -249,7 +249,7 @@ impl UploadEntries {
             )
         };
 
-        fut.chain_err(err_context).from_err().boxify()
+        fut.context(err_context).from_err().boxify()
     }
 
     // Check the blobstore to see whether a particular node is present.

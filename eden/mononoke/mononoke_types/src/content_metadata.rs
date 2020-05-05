@@ -7,10 +7,9 @@
 
 use std::convert::TryInto;
 
-use anyhow::{bail, Result};
+use anyhow::{bail, Context, Result};
 use blobstore::BlobstoreBytes;
 use bytes::Bytes;
-use failure_ext::chain::ChainExt;
 use fbthrift::compact_protocol;
 use quickcheck::{Arbitrary, Gen};
 
@@ -31,7 +30,7 @@ impl ContentAlias {
 
     pub fn from_bytes(blob: Bytes) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.as_ref())
-            .chain_err(ErrorKind::BlobDeserializeError("ContentAlias".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("ContentAlias".into()))?;
         Self::from_thrift(thrift_tc)
     }
 
@@ -124,7 +123,7 @@ impl BlobstoreValue for ContentMetadata {
 
     fn from_blob(blob: ContentMetadataBlob) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
-            .chain_err(ErrorKind::BlobDeserializeError("ContentMetadata".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("ContentMetadata".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

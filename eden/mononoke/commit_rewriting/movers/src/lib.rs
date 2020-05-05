@@ -7,8 +7,7 @@
 
 #![deny(warnings)]
 
-use anyhow::{Error, Result};
-use failure_ext::chain::ChainExt;
+use anyhow::{Context, Error, Result};
 use itertools::Itertools;
 use mercurial_types::{MPath, MPathElement};
 use metaconfig_types::{
@@ -208,10 +207,9 @@ fn mover_factory(
                     PathAction::Change(path) => Some(path.clone()),
                     PathAction::DoNotSync => None,
                 })
-                .chain_err(ErrorKind::PrefixActionFailure(
-                    orig_prefix_action.clone(),
-                    source_path.clone(),
-                ))
+                .with_context(|| {
+                    ErrorKind::PrefixActionFailure(orig_prefix_action.clone(), source_path.clone())
+                })
                 .map_err(Error::from),
         }
     }))

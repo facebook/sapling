@@ -5,8 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::{bail, Result};
-use failure_ext::chain::ChainExt;
+use anyhow::{bail, Context, Result};
 
 use crate::blob::{Blob, BlobstoreValue, FileUnodeBlob, ManifestUnodeBlob};
 use crate::errors::ErrorKind;
@@ -161,7 +160,7 @@ impl FileUnode {
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(bytes)
-            .chain_err(ErrorKind::BlobDeserializeError("FileUnode".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("FileUnode".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }
@@ -180,7 +179,7 @@ impl BlobstoreValue for FileUnode {
 
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
-            .chain_err(ErrorKind::BlobDeserializeError("FileUnode".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("FileUnode".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }
@@ -275,7 +274,7 @@ impl ManifestUnode {
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(bytes)
-            .chain_err(ErrorKind::BlobDeserializeError("ManifestUnode".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("ManifestUnode".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

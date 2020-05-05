@@ -5,8 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Result;
-use failure_ext::chain::ChainExt;
+use anyhow::{Context, Result};
 
 use crate::blob::{Blob, BlobstoreValue, DeletedManifestBlob};
 use crate::errors::ErrorKind;
@@ -158,7 +157,7 @@ impl DeletedManifest {
 
     pub fn from_bytes(bytes: &[u8]) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(bytes)
-            .chain_err(ErrorKind::BlobDeserializeError("DeletedManifest".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("DeletedManifest".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }

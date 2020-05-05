@@ -5,12 +5,11 @@
  * GNU General Public License version 2.
  */
 
-use anyhow::Error;
+use anyhow::{Context, Error};
 use blobstore::{Blobstore, DisabledBlob, ErrorKind};
 use blobstore_sync_queue::SqlBlobstoreSyncQueue;
 use chaosblob::{ChaosBlobstore, ChaosOptions};
 use cloned::cloned;
-use failure_ext::chain::ChainExt;
 use fbinit::FacebookInit;
 use fileblob::Fileblob;
 use futures::{FutureExt, TryFutureExt};
@@ -89,14 +88,14 @@ pub fn make_blobstore(
         }
 
         Files { path } => Fileblob::create(path.join("blobs"))
-            .chain_err(ErrorKind::StateOpen)
+            .context(ErrorKind::StateOpen)
             .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
             .map_err(Error::from)
             .into_future()
             .boxify(),
 
         Sqlite { path } => Sqlblob::with_sqlite_path(path.join("blobs"), readonly_storage.0)
-            .chain_err(ErrorKind::StateOpen)
+            .context(ErrorKind::StateOpen)
             .map_err(Error::from)
             .map(|store| Arc::new(store) as Arc<dyn Blobstore>)
             .into_future()

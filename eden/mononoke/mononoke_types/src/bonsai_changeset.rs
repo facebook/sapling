@@ -8,7 +8,6 @@
 use std::collections::BTreeMap;
 
 use anyhow::{bail, Context, Error, Result};
-use failure_ext::chain::ChainExt;
 use fbthrift::compact_protocol;
 use quickcheck::{Arbitrary, Gen};
 use rand::Rng;
@@ -231,7 +230,7 @@ impl BlobstoreValue for BonsaiChangeset {
 
     fn from_blob(blob: Blob<Self::Key>) -> Result<Self> {
         let thrift_tc = compact_protocol::deserialize(blob.data().as_ref())
-            .chain_err(ErrorKind::BlobDeserializeError("BonsaiChangeset".into()))?;
+            .with_context(|| ErrorKind::BlobDeserializeError("BonsaiChangeset".into()))?;
         Self::from_thrift(thrift_tc)
     }
 }
