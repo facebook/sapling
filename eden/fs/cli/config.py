@@ -142,11 +142,7 @@ class EdenInstance:
         home_dir: Union[Path, str, None],
         interpolate_dict: Optional[Dict[str, str]] = None,
     ) -> None:
-        # pyre-fixme[6]: Expected `Union[_PathLike[str], str]` for 1st param but got
-        #  `Union[None, Path, str]`.
         self._etc_eden_dir = Path(etc_eden_dir or DEFAULT_ETC_EDEN_DIR)
-        # pyre-fixme[6]: Expected `Union[_PathLike[str], str]` for 1st param but got
-        #  `Union[None, Path, str]`.
         self._home_dir = Path(home_dir) if home_dir is not None else util.get_home_dir()
         self._user_config_path = self._home_dir / USER_CONFIG
         self._system_config_path = self._etc_eden_dir / SYSTEM_CONFIG
@@ -162,8 +158,6 @@ class EdenInstance:
         # original user but not as root: this can happen if the user has a home
         # directory on NFS, which may not be readable as root.
         if config_dir:
-            # pyre-fixme[6]: Expected `Union[_PathLike[str], str]` for 1st param but
-            #  got `Union[None, Path, str]`.
             self._config_dir = Path(config_dir)
         elif sys.platform == "win32":
             self._config_dir = self._home_dir / ".eden"

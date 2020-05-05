@@ -25,8 +25,6 @@ def find_checkout(
     if path is None:
         path = os.getcwd()
     return config_mod.find_eden(
-        # pyre-fixme[6]: Expected `Union[Path, str]` for 1st param but got
-        #  `Union[None, Path, str]`.
         path,
         etc_eden_dir=args.etc_eden_dir,
         home_dir=args.home_dir,

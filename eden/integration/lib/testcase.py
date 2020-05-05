@@ -348,9 +348,7 @@ class EdenRepoTest(EdenTestCase):
         This automatically expects to find a ".hg" directory in the root of hg
         checkouts.
         """
-        # pyre-fixme[6]: Expected `Union[_PathLike[str], str]` for 1st param but got
-        #  `Union[None, pathlib.Path, str]`.
-        checkout_root = pathlib.Path(path if path is not None else self.mount)
+        checkout_root = pathlib.Path(path if path is not None else self.mount)  # type: ignore
         real_scm_type = scm_type if scm_type is not None else self.repo.get_type()
         if real_scm_type == "hg":
             expected_entries = expected_entries | {".hg"}

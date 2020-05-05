@@ -192,7 +192,6 @@ class FakeProcUtils(LinuxProcUtils):
             raise FileNotFoundError(errno.ENOENT, str(path))
         if isinstance(contents, Exception):
             raise contents
-        # pyre-fixme[7]: Expected `bytes` but got `Optional[bytes]`.
         return contents
 
     def make_edenfs_process(
