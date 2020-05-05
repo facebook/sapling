@@ -34,6 +34,7 @@ define a remotefilelog cache process that just logs when things are added
   >             count = int(sys.stdin.readline())
   >             for _ in range(count):
   >                 key = sys.stdin.readline()[:-1]
+  >                 log('cacheprocess: get %s\n' % key)
   >                 sys.stdout.write(key + '\n')
   >             sys.stdout.write('0\n')
   >             sys.stdout.flush()
@@ -118,6 +119,8 @@ pull the infinitepush commit
 
 the blob didn't get uploaded to the cache
   $ cat $TESTTMP/cachelog.log
+  cacheprocess: get file\x00b4aa7b980f00bcd3ea58510798c1425dcdc511f3 (esc)
+  cacheprocess: get file\x00b4aa7b980f00bcd3ea58510798c1425dcdc511f3 (esc)
   cacheprocess: set $TESTTMP/cachepath/repo-pull1/packs/07bbbe5abb17b910e6011232ceba22b0c6b29b9a
   cacheprocess: set $TESTTMP/cachepath/repo-pull1/packs/f361a1ed16f4b87bbe47e638d8c2cc9f1de8e06f
 
@@ -192,6 +195,8 @@ pull only the master branch into another repo
 
 the blob was uploaded to the cache
   $ cat $TESTTMP/cachelog.log
+  cacheprocess: get file\x00b4aa7b980f00bcd3ea58510798c1425dcdc511f3 (esc)
+  cacheprocess: get file\x00b4aa7b980f00bcd3ea58510798c1425dcdc511f3 (esc)
   cacheprocess: set $TESTTMP/cachepath/repo-pull2/packs/07bbbe5abb17b910e6011232ceba22b0c6b29b9a
   cacheprocess: set $TESTTMP/cachepath/repo-pull2/packs/e5e1a8b81e9d2360fe54412f8370812c06c6cadb
 
