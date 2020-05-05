@@ -6,6 +6,7 @@
 from __future__ import absolute_import, division, print_function, unicode_literals
 
 import ctypes
+import os
 import socket
 import sys
 
@@ -194,6 +195,27 @@ class WindowsSocketHandle(object):
 
     def connect(self, address):
         # type: (str) -> None
+
+        # On Windows connect() for AF_UNIX sockets is unfortunately slightly broken:
+        # if no socket exists at this path Windows will actually create a new socket at
+        # this path before failing, instead of just failing.
+        #
+        # This is problematic as it now prevents the server from binding to this path:
+        # servers can only bind to a socket if nothing exists at that path.  EdenFS will
+        # try to remove any existing file at this location when it starts, but clients
+        # attempting to connect to the socket can race with the server, and can
+        # re-create the socket before the server can bind to it.
+        #
+        # Therefore, perform our own check to verify that the path exists before we try
+        # to connect.  This is still racy, because an EdenFS process that is starting
+        # might be just about to remove it, but it at least makes us less likely for us
+        # to lose this race.
+        if not os.path.exists(address):
+            raise TTransportException(
+                type=TTransportException.NOT_OPEN,
+                message="EdenFS thrift socket does not exist",
+            )
+
         addr = SOCKADDR_UN(sun_family=self.AF_UNIX, sun_path=address.encode("utf-8"))
         self._checkReturnCode(
             connect(self.fd, ctypes.pointer(addr), ctypes.sizeof(addr))
