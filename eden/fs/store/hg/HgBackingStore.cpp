@@ -457,58 +457,67 @@ folly::Future<std::unique_ptr<Tree>> HgBackingStore::importTreeManifest(
       });
 }
 
-SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
+unique_ptr<Blob> HgBackingStore::getBlobFromHgCache(
     const Hash& id,
-    ImportPriority /* priority */) {
+    const HgProxyHash& hgInfo) {
   auto edenConfig = config_->getEdenConfig();
-
-  // Look up the mercurial path and file revision hash,
-  // which we need to import the data from mercurial
-  HgProxyHash hgInfo(localStore_, id, "importFileContents");
 
 #ifdef EDEN_HAVE_RUST_DATAPACK
   if (edenConfig->useHgCache.getValue() && datapackStore_) {
     if (auto content = datapackStore_->getBlobLocal(id, hgInfo)) {
       XLOG(DBG5) << "importing file contents of '" << hgInfo.path() << "', "
                  << hgInfo.revHash().toString() << " from datapack store";
-      return makeFuture(std::move(content));
+      return content;
     }
 
     if (auto content = datapackStore_->getBlobRemote(id, hgInfo)) {
       XLOG(DBG5) << "importing file contents of '" << hgInfo.path() << "', "
                  << hgInfo.revHash().toString() << " from datapack store";
-      return makeFuture(std::move(content));
+      return content;
     }
   }
 #endif
 
-  folly::stop_watch<std::chrono::milliseconds> watch;
-
-  return getBlobFromHgImporter(hgInfo.path(), hgInfo.revHash())
-      .deferValue(
-          [stats = stats_, watch](SemiFuture<std::unique_ptr<Blob>>&& blob) {
-            stats->getHgBackingStoreStatsForCurrentThread()
-                .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
-            return std::move(blob);
-          });
+  return nullptr;
 }
 
 SemiFuture<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(
-    const RelativePathPiece& path,
-    const Hash& id) {
+    HgProxyHash hgInfo) {
   return folly::via(
       importThreadPool_.get(),
-      [path = path.copy(),
-       stats = stats_,
-       id,
+      [stats = stats_,
+       hgInfo = std::move(hgInfo),
        &liveImportBlobWatches = liveImportBlobWatches_] {
         Importer& importer = getThreadLocalImporter();
         folly::stop_watch<std::chrono::milliseconds> watch;
         RequestMetricsScope queueTracker{&liveImportBlobWatches};
-        auto blob = importer.importFileContents(path, id);
+        auto blob =
+            importer.importFileContents(hgInfo.path(), hgInfo.revHash());
         stats->getHgBackingStoreStatsForCurrentThread()
             .hgBackingStoreImportBlob.addValue(watch.elapsed().count());
         return blob;
+      });
+}
+
+SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
+    const Hash& id,
+    ImportPriority /* priority */) {
+  folly::stop_watch<std::chrono::milliseconds> watch;
+  // Look up the mercurial path and file revision hash,
+  // which we need to import the data from mercurial
+  HgProxyHash hgInfo(localStore_, id, "importFileContents");
+
+  if (auto result = getBlobFromHgCache(id, hgInfo)) {
+    stats_->getHgBackingStoreStatsForCurrentThread()
+        .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
+    return folly::makeSemiFuture(std::move(result));
+  }
+
+  return getBlobFromHgImporter(std::move(hgInfo))
+      .deferValue([stats = stats_, watch](auto&& blob) {
+        stats->getHgBackingStoreStatsForCurrentThread()
+            .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
+        return std::forward<decltype(blob)>(blob);
       });
 }
 

@@ -15,7 +15,6 @@
 #include <folly/String.h>
 #include <folly/Synchronized.h>
 
-#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
@@ -41,6 +40,7 @@ class LocalStore;
 class UnboundedQueueExecutor;
 class ReloadableConfig;
 class ServiceAddress;
+class HgProxyHash;
 
 /**
  * A BackingStore implementation that loads data out of a mercurial repository.
@@ -130,9 +130,15 @@ class HgBackingStore : public BackingStore {
       const ImporterOptions& options,
       AbsolutePathPiece repoPath);
 
+  /**
+   * Retrieve a blob from hgcache. This function may return `nullptr` when it
+   * couldn't fetch the blob.
+   */
+  std::unique_ptr<Blob> getBlobFromHgCache(
+      const Hash& id,
+      const HgProxyHash& hgInfo);
   folly::SemiFuture<std::unique_ptr<Blob>> getBlobFromHgImporter(
-      const RelativePathPiece& path,
-      const Hash& id);
+      HgProxyHash hgInfo);
 
   folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(Hash commitID);
 
