@@ -29,6 +29,7 @@ import threading
 
 from edenscm.mercurial import error, hg, json, namespaces, pycompat, registrar, util
 from edenscm.mercurial.i18n import _
+from edenscm.mercurial.node import bin, hex, nullhex
 
 from .extlib.phabricator import graphql
 
@@ -104,7 +105,7 @@ def localgetdiff(repo, diffid):
         match = DIFFERENTIAL_REGEX.search(desc)
 
         if match and match.group("id") == diffid:
-            return changectx.rev()
+            return changectx.node()
         else:
             return None
 
@@ -138,8 +139,8 @@ def localgetdiff(repo, diffid):
 def search(repo, diffid):
     """Perform a GraphQL query first. If it fails, fallback to local search.
 
-    Returns a (revisions, graphql_response) tuple, where one of the items will be
-    None."""
+    Returns (node, None) or (None, graphql_response) tuple.
+    """
 
     repo.ui.debug("[diffrev] Starting graphql call\n")
     if repo.ui.configbool("phrevset", "graphqlonly"):
@@ -151,12 +152,12 @@ def search(repo, diffid):
         repo.ui.warn(_("cannot resolve D%s via GraphQL: %s\n") % (diffid, ex))
         repo.ui.warn(_("falling back to search commits locally\n"))
         repo.ui.debug("[diffrev] Starting log walk\n")
-        rev = localgetdiff(repo, diffid)
-        repo.ui.debug("[diffrev] Parallel log walk completed with %s\n" % rev)
-        if rev is None:
+        node = localgetdiff(repo, diffid)
+        repo.ui.debug("[diffrev] Parallel log walk completed with %s\n" % hex(node))
+        if node is None:
             # walked the entire repo and couldn't find the diff
             raise error.Abort("Could not find diff D%s in changelog" % diffid)
-        return ([rev], None)
+        return (node, None)
 
 
 def parsedesc(repo, resp, ignoreparsefailure):
@@ -188,8 +189,12 @@ def parsedesc(repo, resp, ignoreparsefailure):
 
 
 @util.lrucachefunc
-def revsetdiff(repo, diffid):
-    """Return a set of revisions corresponding to a given Differential ID """
+def diffidtonode(repo, diffid):
+    """Return node that matches a given Differential ID or None.
+
+    The node might exist or not exist in the repo.
+    This function does not raise.
+    """
 
     repo_callsign = repo.ui.config("phrevset", "callsign")
     if repo_callsign is None:
@@ -197,21 +202,20 @@ def revsetdiff(repo, diffid):
         hint = _("This will be slow if the diff was not committed recently\n")
         repo.ui.warn(msg)
         repo.ui.warn(hint)
-        rev = localgetdiff(repo, diffid)
-        if rev is None:
-            raise error.Abort("Could not find diff D%s in changelog" % diffid)
-        else:
-            return [rev]
+        node = localgetdiff(repo, diffid)
+        if node is None:
+            repo.ui.warn(_("Could not find diff D%s in changelog\n") % diffid)
+        return node
 
-    revs, resp = search(repo, diffid)
+    node, resp = search(repo, diffid)
 
-    if revs is not None:
+    if node is not None:
         # The log walk found the diff, nothing more to do
-        return revs
+        return node
 
     if resp is None:
         # The graphql query finished but didn't return anything
-        return []
+        return None
 
     vcs = resp["source_control_system"]
 
@@ -228,22 +232,21 @@ def revsetdiff(repo, diffid):
         repo.ui.debug("[diffrev] HG rev is %s\n" % remoterev.encode("hex"))
         if not remoterev:
             repo.ui.debug("[diffrev] Falling back to linear search\n")
-            linear_search_result = localgetdiff(repo, diffid)
-            if linear_search_result is None:
-                # walked the entire repo and couldn't find the diff
-                raise error.Abort("Could not find diff D%s in changelog" % diffid)
+            node = localgetdiff(repo, diffid)
+            if node is None:
+                repo.ui.warn(_("Could not find diff D%s in changelog\n") % diffid)
 
-            return [linear_search_result]
+            return node
 
-        return [repo[remoterev].rev()]
+        return remoterev
 
     elif vcs == "hg":
         rev = parsedesc(repo, resp, ignoreparsefailure=True)
         if rev:
             # The response from phabricator contains a changeset ID.
-            # Convert it back to a rev number.
+            # Convert it back to a node.
             try:
-                return [repo[rev].rev()]
+                return repo[rev].node()
             except error.RepoLookupError:
                 # TODO: 's/svnrev/globalrev' after turning off Subversion
                 # servers. We will know about this when we remove the `svnrev`
@@ -252,15 +255,14 @@ def revsetdiff(repo, diffid):
                 # Unfortunately the rev can also be a svnrev/globalrev :(.
                 if rev.isdigit():
                     try:
-                        return [r for r in repo.revs("svnrev(%s)" % rev)]
-                    except error.RepoLookupError:
+                        return list(repo.nodes("svnrev(%s)" % rev))[0]
+                    except (IndexError, error.RepoLookupError):
                         pass
 
-                raise error.Abort(
-                    "Landed commit for diff D%s not available "
-                    'in current repository: run "hg pull" '
-                    "to retrieve it" % diffid
-                )
+                if len(rev) == len(nullhex):
+                    return bin(rev)
+                else:
+                    return None
 
         # commit is still local, get its hash
 
@@ -270,33 +272,27 @@ def revsetdiff(repo, diffid):
             if prop["node"]["property_name"] == "local:commits":
                 commits = json.loads(prop["node"]["property_value"])
 
-        revs = [c["commit"] for c in commits.values()]
+        hexnodes = [c["commit"] for c in commits.values()]
 
-        # verify all revisions exist in the current repo; if not, try to
-        # find their counterpart by parsing the log
-        results = set()
-        for rev in revs:
-            try:
-                unfiltered = repo.unfiltered()
-                ctx = unfiltered[rev]
-            except error.RepoLookupError:
-                raise error.Abort(
-                    _("cannot find the latest version of D%s (%s) locally")
-                    % (diffid, rev),
-                    hint=_("try 'hg pull -r %s'") % rev,
+        # find a better alternative of the commit hash specified in
+        # graphql response by looking up successors.
+        for hexnode in hexnodes:
+            if len(hexnode) != len(nullhex):
+                continue
+
+            node = bin(hexnode)
+            unfi = repo.unfiltered()
+            if node in unfi:
+                # Find a successor.
+                successors = list(
+                    unfi.nodes("last(successors(%n)-%n-obsolete())", node, node)
                 )
-            successors = list(
-                repo.revs("last(successors(%n)-%n-obsolete())", ctx.node(), ctx.node())
-            )
-            if len(successors) != 1:
-                results.add(ctx.rev())
-            else:
-                results.add(successors[0])
+                if successors:
+                    return successors[0]
+            return node
 
-        if not results:
-            raise error.Abort("Could not find local commit for D%s" % diffid)
-
-        return set(results)
+        # local:commits is empty
+        return None
 
     else:
         if not vcs:
@@ -306,19 +302,29 @@ def revsetdiff(repo, diffid):
             )
             repo.ui.warn(msg % (diffid, diffid))
 
-            return []
+            return None
         else:
-            raise error.Abort(
-                "Conduit returned unknown " 'sourceControlSystem "%s"' % vcs
+            repo.ui.warn(
+                _("Conduit returned unknown sourceControlSystem: '%s'\n") % vcs
             )
+
+            return None
 
 
 def _lookupname(repo, name):
     repo = repo.unfiltered()
-    cl = repo.changelog
-    tonode = cl.node
     if name.startswith("D") and name[1:].isdigit():
-        return [tonode(r) for r in revsetdiff(repo, name[1:])]
+        diffid = name[1:]
+        node = diffidtonode(repo, diffid)
+        if node is None:
+            repo.warn(_("cannot resolve D%s into a commit hash\n") % diffid)
+            return []
+        if node in repo:
+            return [node]
+        repo.warn(
+            _("cannot find the latest version of D%s (%s) locally\n")
+            % (diffid, hex(node)),
+        )
     else:
         return []
 
