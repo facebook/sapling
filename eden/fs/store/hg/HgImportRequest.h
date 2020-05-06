@@ -46,12 +46,6 @@ class HgImportRequest {
     std::vector<Hash> hashes;
   };
 
-  HgImportRequest(HgImportRequest&&) = default;
-  HgImportRequest& operator=(HgImportRequest&&) = default;
-
-  HgImportRequest(const HgImportRequest&) = delete;
-  HgImportRequest& operator=(const HgImportRequest&) = delete;
-
   static std::pair<HgImportRequest, folly::SemiFuture<std::unique_ptr<Blob>>>
   makeBlobImportRequest(
       Hash hash,
@@ -79,6 +73,11 @@ class HgImportRequest {
         priority_(priority),
         promise_(std::move(promise)) {}
 
+  ~HgImportRequest() = default;
+
+  HgImportRequest(HgImportRequest&&) = default;
+  HgImportRequest& operator=(HgImportRequest&&) = default;
+
   template <typename T>
   const T* getRequest() noexcept {
     return std::get_if<T>(&request_);
@@ -93,21 +92,20 @@ class HgImportRequest {
     return request_.index();
   }
 
-  /**
-   * Set the inner Promise with the result of the function.
-   */
-  template <typename T, typename Func>
-  void setWith(Func func) {
-    auto promise = std::get_if<folly::Promise<typename T::Response>>(&promise_);
+  template <typename T>
+  folly::Promise<T>* getPromise() {
+    auto promise = std::get_if<folly::Promise<T>>(&promise_); // Promise<T>
 
     if (!promise) {
       EDEN_BUG() << "invalid promise type";
     }
-
-    promise->setWith([func = std::move(func)]() { return func(); });
+    return promise;
   }
 
  private:
+  HgImportRequest(const HgImportRequest&) = delete;
+  HgImportRequest& operator=(const HgImportRequest&) = delete;
+
   using Request = std::variant<BlobImport, TreeImport, Prefetch>;
   using Response = std::variant<
       folly::Promise<std::unique_ptr<Blob>>,

@@ -7,13 +7,13 @@
 
 #pragma once
 
-#include <folly/String.h>
-#include <folly/executors/CPUThreadPoolExecutor.h>
+#include <folly/Range.h>
 #include <memory>
+#include <vector>
 
+#include "eden/fs/model/Hash.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/hg/HgBackingStore.h"
-#include "eden/fs/store/hg/HgImportRequest.h"
 #include "eden/fs/store/hg/HgImportRequestQueue.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 
@@ -22,6 +22,9 @@ namespace eden {
 
 class ReloadableConfig;
 class HgBackingStore;
+class LocalStore;
+class EdenStats;
+class HgImportRequest;
 
 constexpr uint8_t kNumberHgQueueWorker = 8;
 
@@ -34,6 +37,8 @@ constexpr uint8_t kNumberHgQueueWorker = 8;
 class HgQueuedBackingStore : public BackingStore {
  public:
   HgQueuedBackingStore(
+      std::shared_ptr<LocalStore> localStore,
+      std::shared_ptr<EdenStats> stats,
       std::unique_ptr<HgBackingStore> backingStore,
       uint8_t numberThreads = kNumberHgQueueWorker);
 
@@ -108,6 +113,9 @@ class HgQueuedBackingStore : public BackingStore {
    */
   RequestMetricsScope::LockedRequestWatchList& getPendingImportWatches(
       HgBackingStore::HgImportObject object) const;
+
+  std::shared_ptr<LocalStore> localStore_;
+  std::shared_ptr<EdenStats> stats_;
 
   std::unique_ptr<HgBackingStore> backingStore_;
 

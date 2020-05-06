@@ -481,7 +481,7 @@ unique_ptr<Blob> HgBackingStore::getBlobFromHgCache(
   return nullptr;
 }
 
-SemiFuture<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(
+SemiFuture<std::unique_ptr<Blob>> HgBackingStore::fetchBlobFromHgImporter(
     HgProxyHash hgInfo) {
   return folly::via(
       importThreadPool_.get(),
@@ -513,7 +513,7 @@ SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
     return folly::makeSemiFuture(std::move(result));
   }
 
-  return getBlobFromHgImporter(std::move(hgInfo))
+  return fetchBlobFromHgImporter(std::move(hgInfo))
       .deferValue([stats = stats_, watch](auto&& blob) {
         stats->getHgBackingStoreStatsForCurrentThread()
             .hgBackingStoreGetBlob.addValue(watch.elapsed().count());

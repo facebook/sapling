@@ -62,7 +62,8 @@ struct HgQueuedBackingStoreTest : TestRepo, ::testing::Test {
       stats)};
 
   std::unique_ptr<HgQueuedBackingStore> makeQueuedStore() {
-    return std::make_unique<HgQueuedBackingStore>(std::move(backingStore), 1);
+    return std::make_unique<HgQueuedBackingStore>(
+        localStore, stats, std::move(backingStore), 1);
   }
 };
 

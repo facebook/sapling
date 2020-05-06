@@ -1503,7 +1503,8 @@ shared_ptr<BackingStore> EdenServer::createBackingStore(
         shared_ptr<ReloadableConfig>(
             serverState_, &serverState_->getReloadableConfig()),
         getSharedStats());
-    return make_shared<HgQueuedBackingStore>(std::move(store));
+    return make_shared<HgQueuedBackingStore>(
+        localStore_, getSharedStats(), std::move(store));
   } else if (type == "git") {
 #ifdef EDEN_HAVE_GIT
     const auto repoPath = realpath(name);

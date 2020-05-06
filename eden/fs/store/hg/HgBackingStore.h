@@ -118,6 +118,18 @@ class HgBackingStore : public BackingStore {
   RequestMetricsScope::LockedRequestWatchList& getLiveImportWatches(
       HgImportObject object) const;
 
+  // Get blob step functions
+
+  /**
+   * Retrieve a blob from hgcache. This function may return `nullptr` when it
+   * couldn't fetch the blob.
+   */
+  std::unique_ptr<Blob> getBlobFromHgCache(
+      const Hash& id,
+      const HgProxyHash& hgInfo);
+  folly::SemiFuture<std::unique_ptr<Blob>> fetchBlobFromHgImporter(
+      HgProxyHash hgInfo);
+
  private:
   // Forbidden copy constructor and assignment operator
   HgBackingStore(HgBackingStore const&) = delete;
@@ -129,16 +141,6 @@ class HgBackingStore : public BackingStore {
   void initializeTreeManifestImport(
       const ImporterOptions& options,
       AbsolutePathPiece repoPath);
-
-  /**
-   * Retrieve a blob from hgcache. This function may return `nullptr` when it
-   * couldn't fetch the blob.
-   */
-  std::unique_ptr<Blob> getBlobFromHgCache(
-      const Hash& id,
-      const HgProxyHash& hgInfo);
-  folly::SemiFuture<std::unique_ptr<Blob>> getBlobFromHgImporter(
-      HgProxyHash hgInfo);
 
   folly::Future<std::unique_ptr<Tree>> getTreeForCommitImpl(Hash commitID);
 
