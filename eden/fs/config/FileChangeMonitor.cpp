@@ -19,14 +19,13 @@ namespace facebook {
 namespace eden {
 
 bool equalStats(const struct stat& stat1, const struct stat& stat2) noexcept {
+#ifdef _WIN32
+  return stat1.st_size == stat2.st_size && stat1.st_mtime == stat2.st_mtime;
+#else
   return stat1.st_dev == stat2.st_dev && stat1.st_size == stat2.st_size &&
       stat1.st_ino == stat2.st_ino && stat1.st_mode == stat2.st_mode &&
-#ifdef _WIN32
-      stat1.st_ctime == stat2.st_ctime && stat1.st_mtime == stat2.st_mtime
-#else
-      stCtime(stat1) == stCtime(stat2) && stMtime(stat1) == stMtime(stat2)
+      stCtime(stat1) == stCtime(stat2) && stMtime(stat1) == stMtime(stat2);
 #endif
-      ;
 }
 AbsolutePath FileChangeMonitor::getFilePath() {
   return filePath_;
