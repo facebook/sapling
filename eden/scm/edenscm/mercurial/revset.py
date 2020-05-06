@@ -2727,12 +2727,13 @@ def matchany(ui, specs, repo=None, localalias=None):
         tree = revsetlang.expandaliases(tree, aliases, warn=warn)
     tree = revsetlang.foldconcat(tree)
     tree = revsetlang.analyze(tree)
+    if repo is not None:
+        lookup = repo.unfiltered().__contains__
+        unknownnames = list(scanunknowns([tree], lookup))
     tree = revsetlang.optimize(tree)
 
     # Figure out the unknown symbol names statically and attempt to autopull them.
     if repo is not None:
-        lookup = repo.unfiltered().__contains__
-        unknownnames = list(scanunknowns([tree], lookup))
         # If there appears to be unknown names, attempt to auto pull the full
         # revset name first. For example, for "releases/foo-bar-2010.1.1",
         # unknown names are "releases/foo", "bar", and "2010.1.1". Attempt to

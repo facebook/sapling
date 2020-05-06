@@ -422,3 +422,18 @@ Check the repo.pull API
   $ hg update '0238718db^'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
+--- For "+" in revset expressions:
+
+  $ newrepo
+  $ setconfig paths.default=ssh://user@dummy/remoterepo
+  $ hg log -r '023871+1449e793' -T "{node}\n"
+  pulling 023871 from 'ssh://user@dummy/remoterepo'
+  pulling 1449e793 from 'ssh://user@dummy/remoterepo'
+  0238718db2b174d2622ae9c4c75d61745eb12b25
+  1449e7934ec1c4d0c2eefb1194c1cb70e78ba232
+
+--- x will not be auto-pulled inside "present(x)":
+
+  $ newrepo
+  $ setconfig paths.default=ssh://user@dummy/remoterepo
+  $ hg log -r 'present(023871)' -T "{node}\n"
