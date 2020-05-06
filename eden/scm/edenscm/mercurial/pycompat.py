@@ -139,6 +139,10 @@ if sys.version_info[0] >= 3:
             s = s.decode("utf-8")
         return s
 
+    def toutf8lossy(value):
+        # type: (str) -> str
+        return value
+
     ABC = abc.ABC
     import collections.abc
 
@@ -212,6 +216,10 @@ else:
         if isinstance(s, unicode):
             s = s.encode("utf-8")
         return s
+
+    def toutf8lossy(value):
+        # type: (str) -> str
+        return value.decode("utf-8", "replace").encode("utf-8")
 
     class ABC(object):
         __metaclass__ = abc.ABCMeta

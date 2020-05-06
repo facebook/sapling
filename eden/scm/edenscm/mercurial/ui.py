@@ -38,6 +38,7 @@ from . import (
     encoding,
     error,
     formatter,
+    json,
     metrics,
     perftrace,
     progress,
@@ -1464,6 +1465,7 @@ class ui(object):
 
         This method is being slowly deprecated. Use 'blackbox.log' instead.
         """
+        origmsg = msg
         if not msg:
             msg = ""
         elif len(msg) > 1:
@@ -1480,6 +1482,119 @@ class ui(object):
             blackbox.log({"legacy_log": {"service": service, "msg": msg, "opts": opts}})
         except UnicodeDecodeError:
             pass
+
+        self._logsample(service, *origmsg, **opts)
+
+    def _computesamplingfilters(self):
+        filtermap = {}
+        for k in self.configitems("sampling"):
+            if not k[0].startswith("key."):
+                continue  # not a key
+            filtermap[k[0][len("key.") :]] = k[1]
+        return filtermap
+
+    def _getcandidatelocation(self):
+        def _parentfolderexists(f):
+            return f is not None and os.path.exists(
+                os.path.dirname(os.path.normpath(f))
+            )
+
+        for candidatelocation in (
+            encoding.environ.get("SCM_SAMPLING_FILEPATH", None),
+            self.config("sampling", "filepath"),
+        ):
+            if _parentfolderexists(candidatelocation):
+                return candidatelocation
+        return None
+
+    def _logsample(self, event, *msg, **opts):
+        """Redirect filtered log event to a sampling file
+        The configuration looks like:
+        [sampling]
+        filepath = path/to/file
+        key.eventname = value
+        key.eventname2 = value2
+
+        If an event name appears in the config, it is logged to the
+        samplingfile augmented with value stored as ref.
+
+        Example:
+        [sampling]
+        filepath = path/to/file
+        key.perfstatus = perf_status
+
+        Assuming that we call:
+        ui.log('perfstatus', t=3)
+        ui.log('perfcommit', t=3)
+        ui.log('perfstatus', t=42)
+
+        Then we will log in path/to/file, two JSON strings separated by \0
+        one for each perfstatus, like:
+        {"event":"perfstatus",
+         "ref":"perf_status",
+         "msg":"",
+         "opts":{"t":3}}\0
+        {"event":"perfstatus",
+         "ref":"perf_status",
+         "msg":"",
+         "opts":{"t":42}}\0
+
+        We will also log any given environmental vars to the env_vars log,
+        if configured::
+
+          [sampling]
+          env_vars = PATH,SHELL
+        """
+        if not util.safehasattr(self, "samplingfilters"):
+            self.samplingfilters = self._computesamplingfilters()
+        if event not in self.samplingfilters:
+            return
+
+        # special case: remove less interesting blocked fields starting
+        # with "unknown_" or "alias_".
+        if event == "measuredtimes":
+            opts = {
+                k: v
+                for k, v in opts.items()
+                if (not k.startswith("alias_") and not k.startswith("unknown_"))
+            }
+
+        ref = self.samplingfilters[event]
+        script = self._getcandidatelocation()
+        if script:
+            debug = self.configbool("sampling", "debug")
+            try:
+                opts["metrics_type"] = event
+                if msg and event != "metrics":
+                    # do not keep message for "metrics", which only wants
+                    # to log key/value dict.
+                    if len(msg) == 1:
+                        # don't try to format if there is only one item.
+                        opts["msg"] = msg[0]
+                    else:
+                        # ui.log treats msg as a format string + format args.
+                        try:
+                            opts["msg"] = msg[0] % msg[1:]
+                        except TypeError:
+                            # formatting failed - just log each item of the
+                            # message separately.
+                            opts["msg"] = " ".join(msg)
+                with open(script, "a") as outfile:
+                    outfile.write(
+                        pycompat.toutf8lossy(
+                            json.dumps({"data": opts, "category": ref})
+                        )
+                    )
+                    outfile.write("\0")
+                if debug:
+                    ui.write_err(
+                        "%s\n"
+                        % pycompat.toutf8lossy(
+                            json.dumps({"data": opts, "category": ref})
+                        )
+                    )
+            except EnvironmentError:
+                pass
 
     def label(self, msg, label, usebytes=False):
         """style msg based on supplied label
