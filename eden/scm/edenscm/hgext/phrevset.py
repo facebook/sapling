@@ -21,13 +21,24 @@ Example for www::
     callsign = E
     # Only ask GraphQL. Do not scan the local commits (which do not scale).
     graphqlonly = True
+    # Automatically pull Dxxx.
+    autopull = True
 
 """
 
 import re
 import threading
 
-from edenscm.mercurial import error, hg, json, namespaces, pycompat, registrar, util
+from edenscm.mercurial import (
+    autopull,
+    error,
+    hg,
+    json,
+    namespaces,
+    pycompat,
+    registrar,
+    util,
+)
 from edenscm.mercurial.i18n import _
 from edenscm.mercurial.node import bin, hex, nullhex
 
@@ -37,10 +48,12 @@ from .extlib.phabricator import graphql
 configtable = {}
 configitem = registrar.configitem(configtable)
 
+configitem("phrevset", "autopull", default=True)
 configitem("phrevset", "callsign", default=None)
 configitem("phrevset", "graphqlonly", default=True)
 
 namespacepredicate = registrar.namespacepredicate()
+autopullpredicate = registrar.autopullpredicate()
 
 DIFFERENTIAL_REGEX = re.compile(
     "Differential Revision: http.+?/"  # Line start, URL
@@ -316,17 +329,9 @@ def _lookupname(repo, name):
     if name.startswith("D") and name[1:].isdigit():
         diffid = name[1:]
         node = diffidtonode(repo, diffid)
-        if node is None:
-            repo.warn(_("cannot resolve D%s into a commit hash\n") % diffid)
-            return []
         if node in repo:
             return [node]
-        repo.warn(
-            _("cannot find the latest version of D%s (%s) locally\n")
-            % (diffid, hex(node)),
-        )
-    else:
-        return []
+    return []
 
 
 @namespacepredicate("phrevset", priority=70)
@@ -334,3 +339,24 @@ def _getnamespace(_repo):
     return namespaces.namespace(
         listnames=lambda repo: [], namemap=_lookupname, nodemap=lambda repo, node: []
     )
+
+
+@autopullpredicate("phrevset", priority=70)
+def _autopullphabdiff(repo, name):
+    # Automation should use explicit commit hashes and do not depend on the
+    # Dxxx autopull behavior.
+    if repo.ui.plain():
+        return
+
+    # Phrevset autopull is disabled.
+    if not repo.ui.configbool("phrevset", "autopull"):
+        return
+
+    repo = repo.unfiltered()
+    if name.startswith("D") and name[1:].isdigit() and name not in repo:
+        diffid = name[1:]
+        node = diffidtonode(repo, diffid)
+        if node and node not in repo:
+            # Attempt to pull it.
+            friendlyname = "D%s (%s)" % (diffid, hex(node))
+            return autopull.pullattempt(headnodes=[node], friendlyname=friendlyname)

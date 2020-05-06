@@ -11,6 +11,9 @@ from testutil.dott import feature, sh, testtmp  # noqa: F401
 sh % "cat" << r"""
 [extensions]
 phrevset=
+
+[paths]
+default=dummy://dummy
 """ >> "$HGRCPATH"
 sh % "hg init repo"
 sh % "cd repo"
@@ -31,6 +34,8 @@ sh % "hg log -r D1234 -T '{desc}\n'" == "A"
 # Phabricator provides an unknown commit hash.
 sh % "setconfig phrevset.mock-D1234=6008bb23d775556ff6c3528541ca5a2177b4bb92"
 sh % "hg log -r D1234 -T '{desc}\n'" == r"""
-    abort: cannot find the latest version of D1234 (6008bb23d775556ff6c3528541ca5a2177b4bb92) locally
-    (try 'hg pull -r 6008bb23d775556ff6c3528541ca5a2177b4bb92')
+    pulling D1234 (6008bb23d775556ff6c3528541ca5a2177b4bb92) from 'dummy://dummy/'
+    pull failed: repository dummy://dummy/ not found
+    abort: unknown revision 'D1234'!
+    (if D1234 is a remote bookmark or commit, try to 'hg pull' it first)
     [255]"""
