@@ -261,7 +261,7 @@ class autopullpredicate(_funcregistrarbase):
 
         @autopullpredicate('myname', priority=50)
         def myname(repo, name):
-            return True  # if pulled
+            return autopull.pullattempt(...)  # if autopull is needed
 
     Argument 'priority' will be used to decide the order. Smaller priority will
     be processed first.
