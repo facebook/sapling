@@ -8,6 +8,7 @@ anyhow = "1.0.19"
 configparser = { path = "../configparser" }
 hgtime = { path = "../hgtime" }
 hostname = "0.3"
+os_info = "2.0.1"
 
 [dev-dependencies]
 tempdir = "0.3.7"

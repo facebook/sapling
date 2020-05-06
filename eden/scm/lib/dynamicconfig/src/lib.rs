@@ -21,7 +21,7 @@ use hgtime::HgTime;
 #[cfg(feature = "fb")]
 mod fb;
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub(crate) enum HgGroup {
     Dev = 1,
     Alpha,
@@ -40,12 +40,30 @@ impl HgGroup {
     }
 }
 
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Platform {
+    Centos,
+    Fedora,
+    OSX,
+    Ubuntu,
+    Unknown,
+    Windows,
+}
+
+#[derive(Clone, Copy, Debug, PartialEq)]
+pub enum Domain {
+    Corp,
+    Prod,
+}
+
 pub struct Generator {
     tiers: HashSet<String>,
     repo_name: String,
     group: HgGroup,
     shard: u8,
     config: ConfigSet,
+    platform: Platform,
+    domain: Domain,
 }
 
 impl Generator {
@@ -64,17 +82,40 @@ impl Generator {
 
         let group = get_hg_group(&tiers, shard);
 
+        let os_info = os_info::get();
+        use os_info::Type;
+        let platform = match os_info.os_type() {
+            Type::Fedora => Platform::Fedora,
+            Type::Macos => Platform::OSX,
+            Type::Centos => Platform::Centos,
+            Type::Ubuntu => Platform::Ubuntu,
+            Type::Windows => Platform::Windows,
+            _ => Platform::Unknown,
+        };
+
+        let domain = if Path::new("/etc/fbwhoami").exists() {
+            Domain::Prod
+        } else {
+            Domain::Corp
+        };
+
         Ok(Generator {
             tiers,
             repo_name,
             group,
             shard,
             config: ConfigSet::new(),
+            platform,
+            domain,
         })
     }
 
     pub(crate) fn group(&self) -> HgGroup {
         self.group
+    }
+
+    pub fn repo_name(&self) -> &str {
+        &self.repo_name
     }
 
     #[cfg(test)]
@@ -85,13 +126,18 @@ impl Generator {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn in_repos(&self, repos: impl IntoIterator<Item = &'static str>) -> bool {
-        for repo in repos.into_iter() {
-            if repo == self.repo_name {
-                return true;
-            }
-        }
-        false
+    pub(crate) fn in_repo(&self, repo: impl AsRef<str>) -> bool {
+        self.in_repos(&[repo])
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn in_repos<T: AsRef<str>>(&self, repos: impl IntoIterator<Item = T>) -> bool {
+        repos.into_iter().any(|r| r.as_ref() == self.repo_name)
+    }
+
+    #[allow(dead_code)]
+    pub fn in_tier(&self, tier: impl AsRef<str>) -> bool {
+        self.in_tiers(&[tier])
     }
 
     #[allow(dead_code)]
@@ -127,6 +173,16 @@ impl Generator {
         let shard_ratio = self.shard as f64 / 100.0;
 
         Ok(now >= (rollout * shard_ratio))
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn platform(&self) -> Platform {
+        self.platform
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn domain(&self) -> Domain {
+        self.domain
     }
 
     pub(crate) fn set_config(
@@ -177,7 +233,10 @@ fn get_hg_group(tiers: &HashSet<String>, shard: u8) -> HgGroup {
         || tiers.contains("sandcastle.vm.linux");
 
     // TODO: Support Windows and corp linux alpha
-    let alpha_file_exists = Path::new("/opt/facebook/.mercurial_alpha").exists();
+    let mut alpha_file_exists = Path::new("/opt/facebook/.mercurial_alpha").exists();
+    if !alpha_file_exists && sandcastle {
+        alpha_file_exists = Path::new("/data/sandcastle/staging.marker").exists();
+    }
 
     if tiers.contains("hg_release") {
         HgGroup::Stable
