@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use futures::future;
 use futures_ext::{BoxFuture, FutureExt};
@@ -28,7 +28,7 @@ impl<T: Blobstore + Clone> ReadOnlyBlobstore<T> {
 
 impl<T: Blobstore + Clone> Blobstore for ReadOnlyBlobstore<T> {
     #[inline]
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         self.blobstore.get(ctx, key)
     }
 

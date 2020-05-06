@@ -17,7 +17,7 @@ use futures_util::future::TryFutureExt;
 use rand::Rng;
 use rand_distr::Distribution;
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
@@ -41,7 +41,7 @@ impl<B> DelayedBlobstore<B> {
 }
 
 impl<B: Blobstore> Blobstore for DelayedBlobstore<B> {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         delay(self.get_dist, self.inner.get(ctx, key)).boxify()
     }
 

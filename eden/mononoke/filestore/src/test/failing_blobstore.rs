@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::future::IntoFuture;
@@ -39,7 +39,7 @@ impl<B> Blobstore for FailingBlobstore<B>
 where
     B: Blobstore,
 {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         let mut rng = thread_rng();
         if rng.gen_bool(self.read_success_probability) {
             self.inner.get(ctx, key)

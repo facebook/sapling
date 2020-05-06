@@ -627,7 +627,7 @@ async fn subcommand_single(
 #[cfg(test)]
 mod tests {
     use super::*;
-    use blobstore::{Blobstore, BlobstoreBytes};
+    use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData};
     use fixtures::linear;
     use futures::future::FutureExt;
     use futures_ext::BoxFuture;
@@ -754,7 +754,7 @@ mod tests {
             }
         }
 
-        fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
             self.inner.get(ctx, key)
         }
     }

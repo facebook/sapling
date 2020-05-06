@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use cloned::cloned;
 use context::CoreContext;
 use futures::{compat::Future01CompatExt, FutureExt as _, TryFutureExt};
@@ -37,7 +37,7 @@ impl<T: Blobstore + Clone> ContextConcurrencyBlobstore<T> {
 }
 
 impl<T: Blobstore + Clone> Blobstore for ContextConcurrencyBlobstore<T> {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         cloned!(self.blobstore);
         async move {
             // NOTE: We need to clone() here because the context cannot be borrowed when we pass it
@@ -128,7 +128,11 @@ mod test {
     }
 
     impl Blobstore for NonConcurentBlobstore {
-        fn get(&self, _ctx: CoreContext, _key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        fn get(
+            &self,
+            _ctx: CoreContext,
+            _key: String,
+        ) -> BoxFuture<Option<BlobstoreGetData>, Error> {
             let ctr = self.0.clone();
             if ctr.fetch_add(1, Ordering::Relaxed) > 0 {
                 panic!("No!");

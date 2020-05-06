@@ -10,7 +10,7 @@ use context::CoreContext;
 use futures::future::IntoFuture;
 use futures_ext::{BoxFuture, FutureExt};
 
-use super::{Blobstore, BlobstoreBytes};
+use super::{Blobstore, BlobstoreBytes, BlobstoreGetData};
 
 /// Disabled blobstore which fails all operations with a reason. Primarily used as a
 /// placeholder for administratively disabled blobstores.
@@ -28,7 +28,7 @@ impl DisabledBlob {
 }
 
 impl Blobstore for DisabledBlob {
-    fn get(&self, _ctx: CoreContext, _key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, _ctx: CoreContext, _key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         Err(format_err!("Blobstore disabled: {}", self.reason))
             .into_future()
             .boxify()

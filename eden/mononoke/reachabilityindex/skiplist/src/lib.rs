@@ -137,7 +137,7 @@ pub fn fetch_skiplist_index(
                 .and_then(move |maybebytes| {
                     let slg = match maybebytes {
                         Some(bytes) => {
-                            let bytes = bytes.into_bytes();
+                            let bytes = bytes.into_raw_bytes();
                             let skiplist = try_boxfuture!(deserialize_skiplist_index(
                                 ctx.logger().clone(),
                                 bytes

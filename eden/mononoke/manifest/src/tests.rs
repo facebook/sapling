@@ -49,7 +49,7 @@ impl Loadable for TestLeafId {
             .from_err()
             .and_then(move |bytes| {
                 let bytes = bytes.ok_or(LoadableError::Missing(key))?;
-                let bytes = std::str::from_utf8(bytes.as_bytes())
+                let bytes = std::str::from_utf8(bytes.as_raw_bytes())
                     .map_err(|err| LoadableError::Error(Error::from(err)))?;
                 Ok(TestLeaf(bytes.to_owned()))
             })
@@ -95,7 +95,7 @@ impl Loadable for TestManifestIdU64 {
             .from_err()
             .and_then(move |data| data.ok_or(LoadableError::Missing(key)))
             .and_then(|bytes| {
-                let mf = serde_cbor::from_slice(bytes.as_bytes().as_ref())
+                let mf = serde_cbor::from_slice(bytes.as_raw_bytes().as_ref())
                     .map_err(|err| LoadableError::Error(Error::from(err)))?;
                 Ok(mf)
             })

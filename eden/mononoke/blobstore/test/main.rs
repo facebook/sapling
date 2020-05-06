@@ -19,13 +19,13 @@ use futures::Future;
 use tempdir::TempDir;
 use tokio::{prelude::*, runtime::Runtime};
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use fileblob::Fileblob;
 use memblob::EagerMemblob;
 use mononoke_types::BlobstoreBytes;
 
-fn simple<B>(fb: FacebookInit, blobstore: B)
+fn simple<B>(fb: FacebookInit, blobstore: B, has_ctime: bool)
 where
     B: IntoFuture,
     B::Item: Blobstore,
@@ -55,7 +55,8 @@ where
         .expect("pub/get failed")
         .expect("missing");
 
-    assert_eq!(out.into_bytes(), Bytes::from_static(b"bar"));
+    assert_eq!(out.clone().into_raw_bytes(), Bytes::from_static(b"bar"));
+    assert_eq!(out.as_meta().as_ctime().is_some(), has_ctime);
 }
 
 fn missing<B>(fb: FacebookInit, blobstore: B)
@@ -103,12 +104,12 @@ where
     });
     let mut runtime = Runtime::new().expect("runtime creation failed");
 
-    let out: BlobstoreBytes = runtime
+    let out: BlobstoreGetData = runtime
         .block_on(fut)
         .expect("pub/get failed")
         .expect("missing");
 
-    assert_eq!(out.into_bytes(), Bytes::from_static(b"bar"));
+    assert_eq!(out.into_raw_bytes(), Bytes::from_static(b"bar"));
 }
 
 macro_rules! blobstore_test_impl {
@@ -116,6 +117,7 @@ macro_rules! blobstore_test_impl {
         state: $state: expr,
         new: $new_cb: expr,
         persistent: $persistent: expr,
+        has_ctime: $has_ctime: expr,
     }) => {
         mod $mod_name {
             use super::*;
@@ -123,7 +125,8 @@ macro_rules! blobstore_test_impl {
             #[fbinit::test]
             fn test_simple(fb: FacebookInit) {
                 let state = $state;
-                simple(fb, $new_cb(state.clone()));
+                let has_ctime = $has_ctime;
+                simple(fb, $new_cb(state.clone()), has_ctime);
             }
 
             #[fbinit::test]
@@ -146,6 +149,7 @@ blobstore_test_impl! {
         state: (),
         new: move |_| Ok::<_,!>(EagerMemblob::new()),
         persistent: false,
+        has_ctime: false,
     }
 }
 
@@ -154,5 +158,6 @@ blobstore_test_impl! {
         state: Arc::new(TempDir::new("fileblob_test").unwrap()),
         new: move |dir: Arc<TempDir>| Fileblob::open(&*dir),
         persistent: true,
+        has_ctime: true,
     }
 }

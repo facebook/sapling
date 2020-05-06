@@ -274,7 +274,7 @@ async fn get_resume_state(manifold: &ThriftManifoldBlob, config: &Config) -> Res
                 .get(config.ctx.clone(), state_key.clone())
                 .map(|data| {
                     data.and_then(|data| {
-                        serde_json::from_slice::<StateSerde>(&*data.into_bytes()).ok()
+                        serde_json::from_slice::<StateSerde>(&*data.into_raw_bytes()).ok()
                     })
                     .map(State::from)
                 })

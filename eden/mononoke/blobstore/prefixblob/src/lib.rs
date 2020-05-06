@@ -12,7 +12,7 @@ use futures_ext::BoxFuture;
 
 use context::CoreContext;
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use mononoke_types::BlobstoreBytes;
 
 /// A layer over an existing blobstore that prepends a fixed string to each get and put.
@@ -47,7 +47,7 @@ impl<T: Blobstore + Clone> PrefixBlobstore<T> {
 
 impl<T: Blobstore + Clone> Blobstore for PrefixBlobstore<T> {
     #[inline]
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         self.blobstore.get(ctx, self.prepend(key))
     }
 
@@ -97,7 +97,7 @@ mod test {
                 .wait()
                 .expect("get should succeed")
                 .expect("value should be present")
-                .into_bytes(),
+                .into_raw_bytes(),
             Bytes::from("test foobar"),
         );
         assert_eq!(
@@ -105,7 +105,7 @@ mod test {
                 .wait()
                 .expect("get should succeed")
                 .expect("value should be present")
-                .into_bytes(),
+                .into_raw_bytes(),
             Bytes::from("test foobar"),
         );
 

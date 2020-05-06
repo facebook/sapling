@@ -159,7 +159,7 @@ async fn load_snapshot(
                 .compat()
                 .await?
                 .ok_or(Error::msg("Snapshot is missing"))?
-                .into_bytes();
+                .into_raw_bytes();
             Ok(compact_protocol::deserialize(&bytes)?)
         }
     }

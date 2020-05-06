@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use cloned::cloned;
 use context::CoreContext;
 use futures::future::Future;
@@ -36,14 +36,16 @@ impl<T: Blobstore + Clone> SamplingBlobstore<T> {
 
 impl<T: Blobstore + Clone> Blobstore for SamplingBlobstore<T> {
     #[inline]
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         self.inner
             .get(ctx.clone(), key.clone())
             .map({
                 cloned!(self.handler);
-                move |opt_bytes| {
-                    handler.sample_get(ctx, key, opt_bytes.as_ref());
-                    opt_bytes
+                move |opt_blob| {
+                    opt_blob.map(|blob| {
+                        handler.sample_get(ctx, key, Some(blob.as_bytes()));
+                        blob
+                    })
                 }
             })
             .boxify()

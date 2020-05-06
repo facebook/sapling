@@ -13,8 +13,8 @@ use cloned::cloned;
 use fbthrift::compact_protocol;
 use futures::prelude::*;
 
+use blobstore::BlobstoreGetData;
 use cacheblob::{CacheOps, CacheOpsUtil};
-use mononoke_types::BlobstoreBytes;
 use sqlblob_thrift::{DataCacheEntry, InChunk};
 
 use crate::{i32_to_non_zero_usize, DataEntry};
@@ -23,9 +23,9 @@ pub(crate) trait CacheTranslator {
     type Key;
     type Value;
 
-    fn to_cache(&self, value: &Self::Value) -> BlobstoreBytes;
+    fn to_cache(&self, value: &Self::Value) -> BlobstoreGetData;
 
-    fn from_cache(&self, bytes: BlobstoreBytes) -> Result<Self::Value>;
+    fn from_cache(&self, bytes: BlobstoreGetData) -> Result<Self::Value>;
 
     fn cache_key(&self, key: &Self::Key) -> String;
 }
@@ -88,10 +88,10 @@ impl CacheTranslator for DataCacheTranslator {
     type Key = String;
     type Value = DataEntry;
 
-    fn to_cache(&self, value: &Self::Value) -> BlobstoreBytes {
+    fn to_cache(&self, value: &Self::Value) -> BlobstoreGetData {
         let thrift_val = match value {
             DataEntry::Data(data) => DataCacheEntry::data(
-                data.as_bytes()
+                data.as_raw_bytes()
                     .iter()
                     .map(|b| unsafe { transmute::<u8, i8>(*b) })
                     .collect(),
@@ -101,18 +101,18 @@ impl CacheTranslator for DataCacheTranslator {
             }
         };
 
-        BlobstoreBytes::from_bytes(compact_protocol::serialize(&thrift_val))
+        BlobstoreGetData::from_bytes(compact_protocol::serialize(&thrift_val))
     }
 
-    fn from_cache(&self, bytes: BlobstoreBytes) -> Result<Self::Value> {
-        match compact_protocol::deserialize(bytes.into_bytes()) {
+    fn from_cache(&self, bytes: BlobstoreGetData) -> Result<Self::Value> {
+        match compact_protocol::deserialize(bytes.into_raw_bytes()) {
             Ok(DataCacheEntry::in_chunk(InChunk::num_of_chunks(num_of_chunks))) => {
                 match i32_to_non_zero_usize(num_of_chunks) {
                     None => bail!("DataCacheEntry::in_chunk contains an invalid num of chunks"),
                     Some(num_of_chunks) => Ok(DataEntry::InChunk(num_of_chunks)),
                 }
             }
-            Ok(DataCacheEntry::data(data)) => Ok(DataEntry::Data(BlobstoreBytes::from_bytes(
+            Ok(DataCacheEntry::data(data)) => Ok(DataEntry::Data(BlobstoreGetData::from_bytes(
                 data.into_iter()
                     .map(|b| unsafe { transmute::<i8, u8>(b) })
                     .collect::<Vec<_>>(),
@@ -141,13 +141,13 @@ impl ChunkCacheTranslator {
 
 impl CacheTranslator for ChunkCacheTranslator {
     type Key = (String, u32);
-    type Value = BlobstoreBytes;
+    type Value = BlobstoreGetData;
 
-    fn to_cache(&self, value: &Self::Value) -> BlobstoreBytes {
+    fn to_cache(&self, value: &Self::Value) -> BlobstoreGetData {
         value.clone()
     }
 
-    fn from_cache(&self, bytes: BlobstoreBytes) -> Result<Self::Value> {
+    fn from_cache(&self, bytes: BlobstoreGetData) -> Result<Self::Value> {
         Ok(bytes)
     }
 

@@ -8,9 +8,10 @@
 #![deny(warnings)]
 
 use auto_impl::auto_impl;
-use bytes::Bytes;
+use bytes::{Buf, Bytes};
 use std::fmt;
 
+use abomonation_derive::Abomonation;
 use anyhow::Error;
 use futures::future::{self, Future};
 use futures_ext::{BoxFuture, FutureExt};
@@ -26,6 +27,127 @@ pub use crate::errors::ErrorKind;
 
 mod disabled;
 pub use crate::disabled::DisabledBlob;
+
+#[derive(Clone, Debug, PartialEq, Eq)]
+pub struct BlobstoreGetData {
+    meta: BlobstoreMetadata,
+    bytes: BlobstoreBytes,
+}
+
+impl BlobstoreGetData {
+    #[inline]
+    pub fn new(meta: BlobstoreMetadata, bytes: BlobstoreBytes) -> Self {
+        BlobstoreGetData { meta, bytes }
+    }
+
+    #[inline]
+    pub fn as_meta(&self) -> &BlobstoreMetadata {
+        &self.meta
+    }
+
+    #[inline]
+    pub fn into_bytes(self) -> BlobstoreBytes {
+        self.bytes
+    }
+
+    #[inline]
+    pub fn as_bytes(&self) -> &BlobstoreBytes {
+        &self.bytes
+    }
+
+    #[inline]
+    pub fn into_raw_bytes(self) -> Bytes {
+        self.into_bytes().into_bytes()
+    }
+
+    #[inline]
+    pub fn as_raw_bytes(&self) -> &Bytes {
+        self.as_bytes().as_bytes()
+    }
+
+    #[inline]
+    pub fn from_bytes<B: Into<Bytes>>(bytes: B) -> Self {
+        BlobstoreGetData {
+            meta: BlobstoreMetadata { ctime: None },
+            bytes: BlobstoreBytes::from_bytes(bytes.into()),
+        }
+    }
+
+    #[inline]
+    pub fn remove_ctime(&mut self) {
+        self.meta.ctime = None;
+    }
+
+    pub fn encode(self) -> Result<Bytes, ()> {
+        let mut bytes = Vec::new();
+        let get_data = BlobstoreGetDataSerialisable::from(self);
+        unsafe { abomonation::encode(&get_data, &mut bytes).map_err(|_| ())? };
+
+        Ok(Bytes::from(bytes))
+    }
+
+    pub fn decode(bytes: Bytes) -> Result<Self, ()> {
+        let mut bytes: Vec<u8> = bytes.bytes().into();
+        let get_data_serialisable =
+            unsafe { abomonation::decode::<BlobstoreGetDataSerialisable>(&mut bytes) };
+
+        let result = get_data_serialisable.and_then(|(get_data_serialisable, tail)| {
+            if tail.is_empty() {
+                Some(get_data_serialisable.clone().into())
+            } else {
+                None
+            }
+        });
+
+        match result {
+            Some(val) => Ok(val),
+            None => Err(()),
+        }
+    }
+}
+
+impl From<BlobstoreBytes> for BlobstoreGetData {
+    fn from(blob_bytes: BlobstoreBytes) -> Self {
+        BlobstoreGetData {
+            meta: BlobstoreMetadata { ctime: None },
+            bytes: blob_bytes,
+        }
+    }
+}
+
+impl From<BlobstoreGetData> for BlobstoreMetadata {
+    fn from(blob: BlobstoreGetData) -> Self {
+        blob.meta
+    }
+}
+
+impl From<BlobstoreGetData> for BlobstoreBytes {
+    fn from(blob: BlobstoreGetData) -> Self {
+        blob.into_bytes()
+    }
+}
+
+#[derive(Abomonation, Clone, Debug, PartialEq, Eq)]
+pub struct BlobstoreMetadata {
+    ctime: Option<i64>,
+}
+
+impl BlobstoreMetadata {
+    #[inline]
+    pub fn new(ctime: Option<i64>) -> BlobstoreMetadata {
+        BlobstoreMetadata { ctime }
+    }
+
+    #[inline]
+    pub fn as_ctime(&self) -> &Option<i64> {
+        &self.ctime
+    }
+
+    #[inline]
+    pub fn into_ctime(self) -> Option<i64> {
+        self.ctime
+    }
+}
 
 /// A type representing bytes written to or read from a blobstore. The goal here is to ensure
 /// that only types that implement `From<BlobstoreBytes>` and `Into<BlobstoreBytes>` can be
@@ -58,6 +180,49 @@ impl BlobstoreBytes {
     }
 }
 
+/// Serialisable counterpart of BlobstoreGetDataSerialisable fields mimic exactly
+/// its original struct except in types that cannot be serialised
+#[derive(Abomonation, Clone)]
+struct BlobstoreGetDataSerialisable {
+    meta: BlobstoreMetadata,
+    bytes: BlobstoreBytesSerialisable,
+}
+
+/// Serialisable counterpart of BlobstoreBytes fields mimic exactly its original
+/// struct except in types that cannot be serialised
+#[derive(Abomonation, Clone)]
+struct BlobstoreBytesSerialisable(Vec<u8>);
+
+impl From<BlobstoreGetData> for BlobstoreGetDataSerialisable {
+    fn from(blob: BlobstoreGetData) -> Self {
+        BlobstoreGetDataSerialisable {
+            meta: blob.meta,
+            bytes: blob.bytes.into(),
+        }
+    }
+}
+
+impl From<BlobstoreGetDataSerialisable> for BlobstoreGetData {
+    fn from(blob: BlobstoreGetDataSerialisable) -> Self {
+        BlobstoreGetData {
+            meta: blob.meta,
+            bytes: blob.bytes.into(),
+        }
+    }
+}
+
+impl From<BlobstoreBytes> for BlobstoreBytesSerialisable {
+    fn from(blob_bytes: BlobstoreBytes) -> Self {
+        BlobstoreBytesSerialisable(blob_bytes.into_bytes().bytes().into())
+    }
+}
+
+impl From<BlobstoreBytesSerialisable> for BlobstoreBytes {
+    fn from(blob_bytes: BlobstoreBytesSerialisable) -> Self {
+        BlobstoreBytes(blob_bytes.0.into())
+    }
+}
+
 /// The blobstore interface, shared across all blobstores.
 /// A blobstore must provide the following guarantees:
 /// 1. `get` and `put` are atomic with respect to each other; a put will either put the entire
@@ -85,7 +250,7 @@ impl BlobstoreBytes {
 #[auto_impl(Arc, Box)]
 pub trait Blobstore: fmt::Debug + Send + Sync + 'static {
     /// Fetch the value associated with `key`, or None if no value is present
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error>;
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error>;
     /// Associate `value` with `key` for future gets; if `put` is called with different `value`s
     /// for the same key, the implementation may return any `value` it's been given in response
     /// to a `get` for that `key`.

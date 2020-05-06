@@ -8,7 +8,7 @@
 #![deny(warnings)]
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use futures::future::{Future, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
@@ -158,7 +158,7 @@ impl<T: Blobstore + Clone> RedactedBlobstoreInner<T> {
 }
 
 impl<T: Blobstore + Clone> Blobstore for RedactedBlobstoreInner<T> {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         self.access_blobstore(&key)
             .map_err({
                 cloned!(ctx, key);
@@ -210,7 +210,7 @@ impl<B> Blobstore for RedactedBlobstore<B>
 where
     B: Blobstore + Clone,
 {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         self.inner.get(ctx, key)
     }
     fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {

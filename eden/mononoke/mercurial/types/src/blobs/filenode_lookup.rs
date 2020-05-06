@@ -93,6 +93,6 @@ pub fn lookup_filenode_id<B: Blobstore>(
     key: FileNodeIdPointer,
 ) -> impl Future<Item = Option<HgFileNodeId>, Error = Error> {
     blobstore.get(ctx.clone(), key.0).map(|maybe_blob| {
-        maybe_blob.and_then(|blob| HgFileNodeId::from_bytes(blob.as_bytes()).ok())
+        maybe_blob.and_then(|blob| HgFileNodeId::from_bytes(blob.as_raw_bytes()).ok())
     })
 }

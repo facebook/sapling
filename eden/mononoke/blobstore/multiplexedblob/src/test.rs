@@ -13,7 +13,7 @@ use crate::base::{MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use crate::queue::MultiplexedBlobstore;
 use crate::scrub::{LoggingScrubHandler, ScrubBlobstore, ScrubHandler};
 use anyhow::{bail, Error};
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_sync_queue::{BlobstoreSyncQueue, OperationKey, SqlBlobstoreSyncQueue};
 use bytes::Bytes;
 use cloned::cloned;
@@ -81,10 +81,10 @@ impl<T> Tickable<T> {
 }
 
 impl Blobstore for Tickable<BlobstoreBytes> {
-    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         let storage = self.storage.clone();
         self.on_tick()
-            .map(move |_| storage.with(|s| s.get(&key).cloned()))
+            .map(move |_| storage.with(|s| s.get(&key).cloned().map(Into::into)))
             .boxify()
     }
 
@@ -199,7 +199,7 @@ fn base(fb: FacebookInit) {
             assert_eq!(get_fut.poll_unpin(&mut task_ctx), Poll::Pending);
             bs0.tick(None);
             bs1.tick(None);
-            assert_eq!(get_fut.await.unwrap(), Some(v0));
+            assert_eq!(get_fut.await.unwrap(), Some(v0.into()));
             assert!(bs1.storage.with(|s| s.is_empty()));
 
             log.clear();
@@ -235,7 +235,7 @@ fn base(fb: FacebookInit) {
             bs0.tick(None);
             assert_eq!(get_fut.poll_unpin(&mut task_ctx), Poll::Pending);
             bs1.tick(None);
-            assert_eq!(get_fut.await.unwrap(), Some(v1));
+            assert_eq!(get_fut.await.unwrap(), Some(v1.into()));
             assert!(bs0.storage.with(|s| s.get(&k1).is_none()));
 
             log.clear();
@@ -636,7 +636,7 @@ fn scrubbed(fb: FacebookInit) {
             bs1.tick(None);
 
             // Succeeds
-            assert_eq!(get_fut.await.unwrap(), Some(v1.clone()));
+            assert_eq!(get_fut.await.unwrap(), Some(v1.clone().into()));
             // Now both populated.
             assert_eq!(bs0.storage.with(|s| s.get(&k1).cloned()), Some(v1.clone()));
             assert_eq!(bs1.storage.with(|s| s.get(&k1).cloned()), Some(v1.clone()));

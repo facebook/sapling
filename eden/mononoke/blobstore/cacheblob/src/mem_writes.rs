@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future, stream, Future, Stream};
@@ -62,10 +62,14 @@ impl<T: Blobstore + Clone> Blobstore for MemWritesBlobstore<T> {
         future::ok(()).boxify()
     }
 
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         match self.cache.with(|cache| cache.get(&key).cloned()) {
-            Some(value) => future::ok(Some(value)).boxify(),
-            None => self.inner.get(ctx, key).boxify(),
+            Some(value) => future::ok(Some(value.into())).boxify(),
+            None => self
+                .inner
+                .get(ctx, key)
+                .map(|opt_blob| opt_blob.map(Into::into))
+                .boxify(),
         }
     }
 
@@ -107,7 +111,7 @@ mod test {
                 .wait()
                 .expect("get to inner should work")
                 .expect("value should be present")
-                .into_bytes(),
+                .into_raw_bytes(),
             Bytes::from("foobar"),
         );
     }
@@ -150,7 +154,7 @@ mod test {
                 .wait()
                 .expect("get to outer should work")
                 .expect("value should be present")
-                .into_bytes(),
+                .into_raw_bytes(),
             Bytes::from("foobar"),
         );
     }
@@ -172,7 +176,7 @@ mod test {
 
         rt.block_on(outer.persist(ctx.clone()))?;
 
-        assert_eq!(rt.block_on(inner.get(ctx.clone(), key))?, Some(value));
+        assert_eq!(rt.block_on(inner.get(ctx, key))?, Some(value.into()));
 
         Ok(())
     }

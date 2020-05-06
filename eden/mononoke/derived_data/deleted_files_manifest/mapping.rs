@@ -8,7 +8,7 @@
 use crate::derive::{derive_deleted_files_manifest, get_changes};
 use anyhow::{Error, Result};
 use blobrepo::BlobRepo;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
@@ -39,6 +39,13 @@ impl TryFrom<BlobstoreBytes> for RootDeletedManifestId {
     type Error = Error;
     fn try_from(blob_bytes: BlobstoreBytes) -> Result<Self> {
         DeletedManifestId::from_bytes(&blob_bytes.into_bytes()).map(RootDeletedManifestId)
+    }
+}
+
+impl TryFrom<BlobstoreGetData> for RootDeletedManifestId {
+    type Error = Error;
+    fn try_from(blob_val: BlobstoreGetData) -> Result<Self> {
+        blob_val.into_bytes().try_into()
     }
 }
 

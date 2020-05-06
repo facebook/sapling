@@ -238,8 +238,12 @@ fn read_skiplist_index<S: ToString>(
         .get(ctx, key.to_string())
         .and_then(move |maybebytes| match maybebytes {
             Some(bytes) => {
-                debug!(logger, "received {} bytes from blobstore", bytes.len());
-                let bytes = bytes.into_bytes();
+                debug!(
+                    logger,
+                    "received {} bytes from blobstore",
+                    bytes.as_bytes().len()
+                );
+                let bytes = bytes.into_raw_bytes();
                 deserialize_skiplist_index(logger.clone(), bytes)
                     .into_future()
                     .map(Some)

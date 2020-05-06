@@ -13,7 +13,7 @@ mod store;
 use crate::cache::{ChunkCacheTranslator, DataCacheTranslator, SqlblobCacheOps};
 use crate::store::{ChunkSqlStore, DataSqlStore};
 use anyhow::{format_err, Error, Result};
-use blobstore::{Blobstore, CountedBlobstore};
+use blobstore::{Blobstore, BlobstoreGetData, CountedBlobstore};
 use cacheblob::{dummy::DummyCache, CacheOps, MemcacheOps};
 use cloned::cloned;
 use context::CoreContext;
@@ -53,7 +53,7 @@ define_stats! {
 }
 
 enum DataEntry {
-    Data(BlobstoreBytes),
+    Data(BlobstoreGetData),
     InChunk(NonZeroUsize),
 }
 
@@ -298,7 +298,7 @@ impl<C: CacheOps> fmt::Debug for Sqlblob<C> {
 }
 
 impl<C: CacheOps> Blobstore for Sqlblob<C> {
-    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         cloned!(
             self.data_store,
             self.chunk_store,
@@ -355,10 +355,10 @@ impl<C: CacheOps> Blobstore for Sqlblob<C> {
 
                     join_all(chunk_fut)
                         .map(|chunks| {
-                            Some(BlobstoreBytes::from_bytes(
+                            Some(BlobstoreGetData::from_bytes(
                                 chunks
                                     .into_iter()
-                                    .map(BlobstoreBytes::into_bytes)
+                                    .map(BlobstoreGetData::into_raw_bytes)
                                     .flatten()
                                     .collect::<Vec<u8>>(),
                             ))
@@ -382,7 +382,9 @@ impl<C: CacheOps> Blobstore for Sqlblob<C> {
 
         // Store blobs that can be stored in Memcache as well
         if value.len() < CHUNK_SIZE {
-            self.data_store.put(&key, &DataEntry::Data(value)).boxify()
+            self.data_store
+                .put(&key, &DataEntry::Data(value.into()))
+                .boxify()
         } else {
             cloned!(self.data_store, self.chunk_store);
             data_store
@@ -448,7 +450,7 @@ mod tests {
                 // Read it back and verify it.
                 .and_then({cloned!(ctx, bs, key); move |()| bs.get(ctx, key)})
                 .map(move |bytes_out| {
-                    assert_eq!(&bytes_in.to_vec(), bytes_out.unwrap().as_bytes());
+                    assert_eq!(&bytes_in.to_vec(), bytes_out.unwrap().as_raw_bytes());
                 })
                 .and_then({cloned!(ctx); move |()| bs.is_present(ctx, key)})
                 .map(|is_present| assert!(is_present, "Blob should exist now"))

@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use blobstore::{Blobstore, BlobstoreBytes, Loadable, LoadableError, Storable};
+use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use fbthrift::compact_protocol;
 use futures_ext::{BoxFuture, FutureExt};
@@ -32,6 +32,20 @@ macro_rules! impl_blobstore_conversions {
                 let thrift: thrift::$ty = self.into();
                 let data = compact_protocol::serialize(&thrift);
                 BlobstoreBytes::from_bytes(data)
+            }
+        }
+
+        impl TryFrom<BlobstoreGetData> for $ty {
+            type Error = Error;
+
+            fn try_from(blob: BlobstoreGetData) -> Result<Self, Error> {
+                blob.into_bytes().try_into()
+            }
+        }
+
+        impl Into<BlobstoreGetData> for $ty {
+            fn into(self) -> BlobstoreGetData {
+                Into::<BlobstoreBytes>::into(self).into()
             }
         }
     };

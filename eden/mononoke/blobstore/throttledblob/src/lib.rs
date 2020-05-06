@@ -17,7 +17,7 @@ use futures_ext::{try_boxfuture, BoxFuture, FutureExt as Futures01FutureExt};
 use futures_util::future::{FutureExt, TryFutureExt};
 use ratelimit_meter::{algorithms::LeakyBucket, example_algorithms::Allower, DirectRateLimiter};
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
@@ -74,7 +74,7 @@ impl<T: Blobstore + Clone> ThrottledBlob<T> {
 // NOTE: All the methods below make a clone of the Blobstore first then dispach the get after the
 // limiter has allowed access, which ensures even eager work is delayed.
 impl<T: Blobstore + Clone> Blobstore for ThrottledBlob<T> {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         let access = try_boxfuture!(self.read_limiter.access());
         let blobstore = self.blobstore.clone();
         access

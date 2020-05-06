@@ -9,7 +9,7 @@ use crate::base::{inner_put, ErrorKind};
 use crate::queue::MultiplexedBlobstore;
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata};
 use blobstore_sync_queue::BlobstoreSyncQueue;
 use cloned::cloned;
 use context::CoreContext;
@@ -26,7 +26,14 @@ use std::sync::{atomic::AtomicUsize, Arc};
 
 pub trait ScrubHandler: Send + Sync {
     /// Called when one of the inner stores required repair.
-    fn on_repair(&self, ctx: &CoreContext, blobstore_id: BlobstoreId, key: &str, is_repaired: bool);
+    fn on_repair(
+        &self,
+        ctx: &CoreContext,
+        blobstore_id: BlobstoreId,
+        key: &str,
+        is_repaired: bool,
+        meta: &BlobstoreMetadata,
+    );
 }
 
 pub struct LoggingScrubHandler {
@@ -46,6 +53,7 @@ impl ScrubHandler for LoggingScrubHandler {
         blobstore_id: BlobstoreId,
         key: &str,
         is_repaired: bool,
+        _meta: &BlobstoreMetadata,
     ) {
         if !self.quiet {
             if is_repaired {
@@ -114,7 +122,7 @@ impl fmt::Debug for ScrubBlobstore {
 }
 
 impl Blobstore for ScrubBlobstore {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         self.inner
             .blobstore
             .scrub_get(ctx.clone(), key.clone())
@@ -186,7 +194,13 @@ impl Blobstore for ScrubBlobstore {
                         .and_then(move |(needs_repair, value)| {
                             if scrub_action == ScrubAction::ReportOnly {
                                 for id in needs_repair.keys() {
-                                    scrub_handler.on_repair(&ctx, *id, &key, false);
+                                    scrub_handler.on_repair(
+                                        &ctx,
+                                        *id,
+                                        &key,
+                                        false,
+                                        value.as_meta(),
+                                    );
                                 }
                                 future::ok(Some(value)).left_future()
                             } else {
@@ -202,12 +216,18 @@ impl Blobstore for ScrubBlobstore {
                                         id,
                                         store,
                                         key.clone(),
-                                        value,
+                                        value.as_bytes().clone(),
                                     )
                                     .then({
                                         cloned!(ctx, scrub_handler, key);
                                         move |res| {
-                                            scrub_handler.on_repair(&ctx, id, &key, res.is_ok());
+                                            scrub_handler.on_repair(
+                                                &ctx,
+                                                id,
+                                                &key,
+                                                res.is_ok(),
+                                                value.as_meta(),
+                                            );
                                             res
                                         }
                                     });

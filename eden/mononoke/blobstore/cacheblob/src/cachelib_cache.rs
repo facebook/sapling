@@ -15,9 +15,8 @@ use cachelib::LruCachePool;
 use context::PerfCounterType;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::IntoFuture;
-use mononoke_types::BlobstoreBytes;
 
-use blobstore::{Blobstore, CountedBlobstore};
+use blobstore::{Blobstore, BlobstoreGetData, CountedBlobstore};
 
 use crate::dummy::DummyLease;
 use crate::in_process_lease::InProcessLease;
@@ -73,22 +72,22 @@ impl CacheOps for CachelibOps {
     const HIT_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::CachelibHits);
     const MISS_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::CachelibMisses);
 
-    fn get(&self, key: &str) -> BoxFuture<Option<BlobstoreBytes>, ()> {
+    fn get(&self, key: &str) -> BoxFuture<Option<BlobstoreGetData>, ()> {
         self.blob_pool
             .get(key)
             .map_err(|_| ())
-            .map(|opt| opt.map(BlobstoreBytes::from_bytes))
+            .and_then(|opt| opt.map(BlobstoreGetData::decode).transpose())
             .into_future()
             .boxify()
     }
 
-    fn put(&self, key: &str, value: BlobstoreBytes) -> BoxFuture<(), ()> {
+    fn put(&self, key: &str, value: BlobstoreGetData) -> BoxFuture<(), ()> {
         // A failure to set presence is considered fine, here.
         let _ = self.presence_pool.set(key, Bytes::from(b"P".as_ref()));
-        self.blob_pool
-            .set(key, value.into_bytes())
-            .map(|_| ())
-            .map_err(|_| ())
+
+        value
+            .encode()
+            .and_then(|bytes| self.blob_pool.set(key, bytes).map(|_| ()).map_err(|_| ()))
             .into_future()
             .boxify()
     }

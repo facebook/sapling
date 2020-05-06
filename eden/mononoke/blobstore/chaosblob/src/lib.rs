@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use futures::future;
 use futures_ext::{BoxFuture, FutureExt};
@@ -81,7 +81,7 @@ impl<T: Blobstore + Clone> ChaosBlobstore<T> {
 
 impl<T: Blobstore + Clone> Blobstore for ChaosBlobstore<T> {
     #[inline]
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         let should_error = thread_rng().gen::<f32>() > self.sample_threshold_read;
         if should_error {
             future::err(ErrorKind::InjectedChaosGet(key).into()).boxify()

@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use context_concurrency_blobstore::ContextConcurrencyBlobstore;
 use futures_ext::BoxFuture;
@@ -57,7 +57,7 @@ impl<B> Blobstore for AbstractRepoBlobstore<B>
 where
     B: Blobstore + Clone,
 {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         self.0.get(ctx, key)
     }
     fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {

@@ -16,6 +16,7 @@ use futures_ext::FutureExt;
 use sql::{queries, Connection};
 use twox_hash::XxHash32;
 
+use blobstore::BlobstoreGetData;
 use mononoke_types::BlobstoreBytes;
 use sqlblob_thrift::InChunk;
 
@@ -148,7 +149,7 @@ impl DataSqlStore {
             .and_then(move |rows| match rows.into_iter().next() {
                 None => Ok(None),
                 Some((DataType::Data, value)) => {
-                    Ok(Some(DataEntry::Data(BlobstoreBytes::from_bytes(value))))
+                    Ok(Some(DataEntry::Data(BlobstoreGetData::from_bytes(value))))
                 }
                 Some((DataType::InChunk, value)) => match compact_protocol::deserialize(value) {
                     Ok(InChunk::num_of_chunks(num_of_chunks)) => {
@@ -172,7 +173,7 @@ impl DataSqlStore {
         let shard_id = self.shard(key);
 
         let (dtype, value) = match entry {
-            DataEntry::Data(ref value) => (DataType::Data, value.clone()),
+            DataEntry::Data(ref value) => (DataType::Data, BlobstoreBytes::from(value.clone())),
             DataEntry::InChunk(num_of_chunks) => {
                 let in_chunk_meta = InChunk::num_of_chunks(num_of_chunks.get() as i32);
                 let in_chunk_meta = compact_protocol::serialize(&in_chunk_meta);
@@ -239,19 +240,19 @@ impl ChunkSqlStore {
         &self,
         key: &str,
         chunk_id: u32,
-    ) -> impl Future<Item = BlobstoreBytes, Error = Error> {
+    ) -> impl Future<Item = BlobstoreGetData, Error = Error> {
         let key = key.to_owned();
         let shard_id = self.shard(&key, chunk_id);
         let read_master_connection = self.read_master_connection[shard_id - 1].clone();
 
         SelectChunk::query(&self.read_connection[shard_id - 1], &key, &chunk_id).and_then(
             move |rows| match rows.into_iter().next() {
-                Some((value,)) => Ok(BlobstoreBytes::from_bytes(value))
+                Some((value,)) => Ok(BlobstoreGetData::from_bytes(value))
                     .into_future()
                     .left_future(),
                 None => SelectChunk::query(&read_master_connection, &key, &chunk_id)
                     .and_then(move |rows| match rows.into_iter().next() {
-                        Some((value,)) => Ok(BlobstoreBytes::from_bytes(value)),
+                        Some((value,)) => Ok(BlobstoreGetData::from_bytes(value)),
                         None => Err(format_err!(
                             "Missing chunk with id {} shard {}",
                             chunk_id,

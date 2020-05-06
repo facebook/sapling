@@ -10,7 +10,7 @@ use crate::derive::derive_fsnode;
 use anyhow::{Error, Result};
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use bytes::Bytes;
 use context::CoreContext;
 use derived_data::{BonsaiDerived, BonsaiDerivedMapping};
@@ -49,6 +49,14 @@ impl TryFrom<BlobstoreBytes> for RootFsnodeId {
 
     fn try_from(blob_bytes: BlobstoreBytes) -> Result<Self> {
         FsnodeId::from_bytes(&blob_bytes.into_bytes()).map(RootFsnodeId)
+    }
+}
+
+impl TryFrom<BlobstoreGetData> for RootFsnodeId {
+    type Error = Error;
+
+    fn try_from(blob_get_data: BlobstoreGetData) -> Result<Self> {
+        blob_get_data.into_bytes().try_into()
     }
 }
 
@@ -139,7 +147,7 @@ impl RootFsnodeMapping {
     ) -> impl Future<Item = Option<(ChangesetId, RootFsnodeId)>, Error = Error> {
         self.blobstore
             .get(ctx.clone(), self.format_key(cs_id))
-            .and_then(|maybe_bytes| maybe_bytes.map(|bytes| bytes.try_into()).transpose())
+            .and_then(|opt_blob| opt_blob.map(TryInto::try_into).transpose())
             .map(move |maybe_root_fsnode_id| {
                 maybe_root_fsnode_id.map(|root_fsnode_id| (cs_id, root_fsnode_id))
             })

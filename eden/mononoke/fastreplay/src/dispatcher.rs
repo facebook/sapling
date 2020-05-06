@@ -76,6 +76,6 @@ impl FastReplayDispatcher {
 
         let e = Error::msg(format!("Key not found: {}", &key));
         let bytes = blobstore.get(ctx, key).compat().await?.ok_or(e)?;
-        Ok(String::from_utf8(bytes.into_bytes().to_vec())?)
+        Ok(String::from_utf8(bytes.into_raw_bytes().to_vec())?)
     }
 }

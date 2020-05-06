@@ -7,7 +7,7 @@
 
 use crate::base::{ErrorKind, MultiplexedBlobstoreBase, MultiplexedBlobstorePutHandler};
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_sync_queue::{BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey};
 use cloned::cloned;
 use context::CoreContext;
@@ -88,7 +88,7 @@ impl MultiplexedBlobstorePutHandler for QueueBlobstorePutHandler {
 }
 
 impl Blobstore for MultiplexedBlobstore {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         self.blobstore
             .get(ctx.clone(), key.clone())
             .then({

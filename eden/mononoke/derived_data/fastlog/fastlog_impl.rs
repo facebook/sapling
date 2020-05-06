@@ -175,7 +175,7 @@ pub(crate) async fn fetch_fastlog_batch_by_unode_id(
         .await?;
 
     match maybe_bytes {
-        Some(serialized) => FastlogBatch::from_bytes(serialized.as_bytes()).map(Some),
+        Some(serialized) => FastlogBatch::from_bytes(serialized.as_raw_bytes()).map(Some),
         None => Ok(None),
     }
 }

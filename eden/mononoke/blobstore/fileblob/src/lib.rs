@@ -7,9 +7,11 @@
 
 #![deny(warnings)]
 
+use std::convert::TryFrom;
 use std::fs::{create_dir_all, File};
 use std::io::{self, Read, Write};
 use std::path::{Path, PathBuf};
+use std::time::SystemTime;
 
 use anyhow::{bail, Error, Result};
 use futures::future::{poll_fn, Future};
@@ -17,7 +19,7 @@ use futures::Async;
 use futures_ext::{BoxFuture, FutureExt};
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData, BlobstoreMetadata};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 use tempfile::NamedTempFile;
@@ -58,8 +60,15 @@ impl Fileblob {
     }
 }
 
+fn ctime(file: &File) -> Option<i64> {
+    let meta = file.metadata().ok()?;
+    let ctime = meta.modified().ok()?;
+    let ctime_dur = ctime.duration_since(SystemTime::UNIX_EPOCH).ok()?;
+    i64::try_from(ctime_dur.as_secs()).ok()
+}
+
 impl Blobstore for Fileblob {
-    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         let p = self.path(&key);
 
         poll_fn(move || {
@@ -69,7 +78,11 @@ impl Blobstore for Fileblob {
                 Err(e) => return Err(e),
                 Ok(mut f) => {
                     f.read_to_end(&mut v)?;
-                    Some(BlobstoreBytes::from_bytes(v))
+
+                    Some(BlobstoreGetData::new(
+                        BlobstoreMetadata::new(ctime(&f)),
+                        BlobstoreBytes::from_bytes(v),
+                    ))
                 }
             };
             Ok(Async::Ready(ret))

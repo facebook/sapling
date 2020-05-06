@@ -96,7 +96,7 @@ impl Loadable for Alias {
             .and_then(move |maybe_alias| {
                 let blob = maybe_alias.ok_or(LoadableError::Missing(key))?;
 
-                ContentAlias::from_bytes(blob.into_bytes().into())
+                ContentAlias::from_bytes(blob.into_raw_bytes())
                     .map(|alias| alias.content_id())
                     .map_err(LoadableError::Error)
             })

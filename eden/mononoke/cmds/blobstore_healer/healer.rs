@@ -433,7 +433,7 @@ fn fetch_blob(
                     "None of the blobstores to fetch responded",
                 )),
                 Some(blob_data) => futures_old::future::ok(FetchData {
-                    blob: blob_data,
+                    blob: blob_data.into(),
                     good_sources,
                     missing_sources,
                 }),
@@ -492,6 +492,7 @@ mod tests {
     use super::*;
     use anyhow::format_err;
     use assert_matches::assert_matches;
+    use blobstore::BlobstoreGetData;
     use blobstore_sync_queue::SqlBlobstoreSyncQueue;
     use bytes::Bytes;
     use fbinit::FacebookInit;
@@ -549,9 +550,15 @@ mod tests {
             res.into_future().boxify()
         }
 
-        fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+        fn get(
+            &self,
+            _ctx: CoreContext,
+            key: String,
+        ) -> BoxFuture<Option<BlobstoreGetData>, Error> {
             let inner = self.hash.lock().expect("lock poison");
-            Ok(inner.get(&key).map(Clone::clone)).into_future().boxify()
+            Ok(inner.get(&key).map(|bytes| bytes.clone().into()))
+                .into_future()
+                .boxify()
         }
     }
 
@@ -1200,7 +1207,7 @@ mod tests {
                 .get(ctx.clone(), "specialk".to_string())
                 .compat()
                 .await?,
-            Some(BlobstoreBytes::from_bytes(Bytes::from("specialv"))),
+            Some(BlobstoreGetData::from_bytes(Bytes::from("specialv"))),
         );
 
         Ok(())

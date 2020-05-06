@@ -8,7 +8,7 @@
 use crate::validate::{CHECK_FAIL, CHECK_TYPE, NODE_KEY, REPO};
 
 use anyhow::{format_err, Error};
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreMetadata};
 use blobstore_factory::{
     make_blobstore, make_blobstore_multiplexed, BlobstoreOptions, ReadOnlyStorage,
 };
@@ -20,6 +20,7 @@ use metaconfig_types::{BlobConfig, BlobstoreId, ScrubAction};
 use multiplexedblob::{LoggingScrubHandler, ScrubHandler};
 use prefixblob::PrefixBlobstore;
 use samplingblob::{SamplingBlobstore, SamplingHandler};
+use scuba::value::{NullScubaValue, ScubaValue};
 use scuba_ext::ScubaSampleBuilder;
 use slog::Logger;
 use sql_ext::facebook::MysqlOptions;
@@ -64,8 +65,16 @@ impl ScrubHandler for StatsScrubHandler {
         blobstore_id: BlobstoreId,
         key: &str,
         is_repaired: bool,
+        meta: &BlobstoreMetadata,
     ) {
-        self.inner.on_repair(ctx, blobstore_id, key, is_repaired);
+        self.inner
+            .on_repair(ctx, blobstore_id, key, is_repaired, meta);
+
+        let ctime = match meta.as_ctime() {
+            Some(ctime) => ScubaValue::from(ctime.clone()),
+            None => ScubaValue::Null(NullScubaValue::Int),
+        };
+
         self.scuba.clone()
             // If we start to run in multi-repo mode this will need to be prefix aware instead
             .add(REPO, self.repo_stats_key.clone())
@@ -82,6 +91,7 @@ impl ScrubHandler for StatsScrubHandler {
                 },
             )
             .add("session", ctx.session().session_id().to_string())
+            .add("ctime", ctime)
             .log();
         if is_repaired {
             STATS::scrub_repaired.add_value(

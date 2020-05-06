@@ -87,9 +87,12 @@ fn fetch_blob<B: Blobstore>(
         .get(ctx.clone(), key.clone())
         .and_then(move |data| match data {
             None => Err(ErrorKind::MissingStreamingBlob(key).into()),
-            Some(data) if data.len() == expected_size => Ok(data.into_bytes()),
+            Some(data) if data.as_bytes().len() == expected_size => Ok(data.into_raw_bytes()),
             Some(data) => {
-                Err(ErrorKind::CorruptStreamingBlob(key, data.len(), expected_size).into())
+                Err(
+                    ErrorKind::CorruptStreamingBlob(key, data.as_bytes().len(), expected_size)
+                        .into(),
+                )
             }
         })
         .boxify()

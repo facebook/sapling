@@ -15,7 +15,7 @@ use stats::prelude::*;
 
 use context::CoreContext;
 
-use crate::{Blobstore, BlobstoreBytes};
+use crate::{Blobstore, BlobstoreBytes, BlobstoreGetData};
 
 define_stats_struct! {
     CountedBlobstoreStats("mononoke.blobstore.{}", prefix: String),
@@ -59,7 +59,7 @@ impl<T: Blobstore> CountedBlobstore<T> {
 }
 
 impl<T: Blobstore> Blobstore for CountedBlobstore<T> {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         let stats = self.stats.clone();
         stats.get.add_value(1);
         self.blobstore

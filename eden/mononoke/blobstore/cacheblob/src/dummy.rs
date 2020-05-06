@@ -9,7 +9,7 @@ use context::CoreContext;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::IntoFuture;
 
-use mononoke_types::BlobstoreBytes;
+use blobstore::BlobstoreGetData;
 
 use crate::{CacheOps, LeaseOps};
 
@@ -38,11 +38,11 @@ impl LeaseOps for DummyLease {
 pub struct DummyCache {}
 
 impl CacheOps for DummyCache {
-    fn get(&self, _key: &str) -> BoxFuture<Option<BlobstoreBytes>, ()> {
+    fn get(&self, _key: &str) -> BoxFuture<Option<BlobstoreGetData>, ()> {
         Ok(None).into_future().boxify()
     }
 
-    fn put(&self, _key: &str, _value: BlobstoreBytes) -> BoxFuture<(), ()> {
+    fn put(&self, _key: &str, _value: BlobstoreGetData) -> BoxFuture<(), ()> {
         Ok(()).into_future().boxify()
     }
 

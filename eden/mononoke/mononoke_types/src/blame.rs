@@ -55,7 +55,7 @@ impl Loadable for BlameId {
             .from_err()
             .and_then(move |bytes| {
                 let bytes = bytes.ok_or(LoadableError::Missing(blobstore_key))?;
-                let blame_t = compact_protocol::deserialize(bytes.as_bytes().as_ref())?;
+                let blame_t = compact_protocol::deserialize(bytes.as_raw_bytes().as_ref())?;
                 let blame = BlameMaybeRejected::from_thrift(blame_t)?;
                 Ok(blame)
             })

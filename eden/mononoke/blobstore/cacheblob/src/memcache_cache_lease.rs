@@ -18,10 +18,9 @@ use futures_old::{
 };
 use memcache::{KeyGen, MemcacheClient};
 
-use blobstore::{Blobstore, CountedBlobstore};
+use blobstore::{Blobstore, BlobstoreGetData, CountedBlobstore};
 use context::{CoreContext, PerfCounterType};
 use hostname::get_hostname;
-use mononoke_types::BlobstoreBytes;
 use stats::prelude::*;
 
 use crate::dummy::DummyLease;
@@ -89,7 +88,7 @@ fn mc_raw_put(
     memcache: MemcacheClient,
     orig_key: String,
     key: String,
-    value: BlobstoreBytes,
+    value: BlobstoreGetData,
     presence_key: String,
 ) -> impl Future<Item = (), Error = ()> {
     let uploaded = compact_protocol::serialize(&LockState::uploaded_key(orig_key));
@@ -104,9 +103,9 @@ fn mc_raw_put(
             if let Err(_) = res {
                 STATS::presence_put_err.add_value(1);
             }
-            if value.len() < MEMCACHE_MAX_SIZE {
+            if value.as_bytes().len() < MEMCACHE_MAX_SIZE {
                 STATS::blob_put.add_value(1);
-                Either::A(memcache.set(key, value.into_bytes()).or_else(|_| {
+                Either::A(memcache.set(key, value.into_raw_bytes()).or_else(|_| {
                     STATS::blob_put_err.add_value(1);
                     Ok(()).into_future()
                 }))
@@ -213,15 +212,15 @@ impl CacheOps for MemcacheOps {
     const MISS_COUNTER: Option<PerfCounterType> = Some(PerfCounterType::MemcacheMisses);
 
     // Turns errors to Ok(None)
-    fn get(&self, key: &str) -> BoxFuture<Option<BlobstoreBytes>, ()> {
+    fn get(&self, key: &str) -> BoxFuture<Option<BlobstoreGetData>, ()> {
         let mc_key = self.keygen.key(key);
         self.memcache
             .get(mc_key)
-            .map(|buf| buf.map(|buf| BlobstoreBytes::from_bytes(buf)))
+            .map(|buf| buf.map(BlobstoreGetData::from_bytes))
             .boxify()
     }
 
-    fn put(&self, key: &str, value: BlobstoreBytes) -> BoxFuture<(), ()> {
+    fn put(&self, key: &str, value: BlobstoreGetData) -> BoxFuture<(), ()> {
         let mc_key = self.keygen.key(key);
         let presence_key = self.presence_keygen.key(key);
         let orig_key = key.to_string();

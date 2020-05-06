@@ -13,7 +13,7 @@ use anyhow::Error;
 use futures::future::{lazy, IntoFuture};
 use futures_ext::{BoxFuture, FutureExt};
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use mononoke_types::BlobstoreBytes;
 
@@ -65,10 +65,12 @@ impl Blobstore for EagerMemblob {
         Ok(()).into_future().boxify()
     }
 
-    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         let inner = self.hash.lock().expect("lock poison");
 
-        Ok(inner.get(&key).map(Clone::clone)).into_future().boxify()
+        Ok(inner.get(&key).map(|blob_ref| blob_ref.clone().into()))
+            .into_future()
+            .boxify()
     }
 }
 
@@ -85,12 +87,12 @@ impl Blobstore for LazyMemblob {
         .boxify()
     }
 
-    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, _ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         let hash = self.hash.clone();
 
         lazy(move || {
             let inner = hash.lock().expect("lock poison");
-            Ok(inner.get(&key).map(Clone::clone)).into_future()
+            Ok(inner.get(&key).map(|bytes| bytes.clone().into())).into_future()
         })
         .boxify()
     }

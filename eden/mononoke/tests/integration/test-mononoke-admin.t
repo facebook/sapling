@@ -43,7 +43,7 @@ Check bookmarks
 Check blobstore-fetch, normal
   $ mononoke_admin blobstore-fetch changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd 2>&1 | strip_glog
   using blobstore: *MultiplexedBlobstore* (glob)
-  Some(BlobstoreBytes(* (glob)
+  Some(BlobstoreGetData* (glob)
 
 Check blobstore-fetch, with scrub actions
   $ ls blobstore/1/blobs | wc -l
@@ -55,14 +55,14 @@ Check blobstore-fetch, with scrub actions
   $ mononoke_admin blobstore-fetch --scrub-blobstore-action=ReportOnly changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd 2>&1 | strip_glog
   using blobstore: *ScrubBlobstore* (glob)
   scrub: blobstore_id BlobstoreId(1) not repaired for repo0000.changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
-  Some(BlobstoreBytes(* (glob)
+  Some(BlobstoreGetData* (glob)
   $ ls blobstore/1/blobs | wc -l
   29
 
   $ mononoke_admin blobstore-fetch --scrub-blobstore-action=Repair changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd 2>&1 | strip_glog
   using blobstore: *ScrubBlobstore* (glob)
   scrub: blobstore_id BlobstoreId(1) repaired for repo0000.changeset.blake2.c3384961b16276f2db77df9d7c874bbe981cf0525bd6f84a502f919044f2dabd
-  Some(BlobstoreBytes(* (glob)
+  Some(BlobstoreGetData* (glob)
   $ ls blobstore/1/blobs | wc -l
   30
 

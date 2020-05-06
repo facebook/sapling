@@ -16,7 +16,7 @@ use futures::compat::Future01CompatExt;
 use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
 use futures_old::prelude::*;
 
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_factory::{make_blobstore, BlobstoreOptions, ReadOnlyStorage};
 use cacheblob::{new_memcache_blobstore, CacheBlobstoreExt};
 use cloned::cloned;
@@ -26,7 +26,7 @@ use futures_old::future;
 use git_types::Tree as GitTree;
 use mercurial_types::{HgChangesetEnvelope, HgFileEnvelope, HgManifestEnvelope};
 use metaconfig_types::{BlobConfig, BlobstoreId, Redaction, ScrubAction, StorageConfig};
-use mononoke_types::{BlobstoreBytes, FileContents, RepositoryId};
+use mononoke_types::{FileContents, RepositoryId};
 use prefixblob::PrefixBlobstore;
 use redactedblobstore::{RedactedBlobstore, RedactedBlobstoreConfig, SqlRedactedContentStore};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
@@ -238,9 +238,10 @@ pub async fn subcommand_blobstore_fetch<'a>(
                         Some("manifest") => display(&HgManifestEnvelope::from_blob(value.into())),
                         Some("file") => display(&HgFileEnvelope::from_blob(value.into())),
                         // TODO: (rain1) T30974137 add a better way to print out file contents
-                        Some("contents") => {
-                            println!("{:?}", FileContents::from_encoded_bytes(value.into_bytes()))
-                        }
+                        Some("contents") => println!(
+                            "{:?}",
+                            FileContents::from_encoded_bytes(value.into_raw_bytes())
+                        ),
                         Some("git-tree") => display::<GitTree>(&value.try_into()),
                         _ => (),
                     }
@@ -262,7 +263,7 @@ fn get_from_sources<T: Blobstore + Clone>(
     redacted_blobs: Option<HashMap<String, String>>,
     scuba_redaction_builder: ScubaSampleBuilder,
     repo_id: RepositoryId,
-) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+) -> BoxFuture<Option<BlobstoreGetData>, Error> {
     let empty_prefix = "".to_string();
 
     match use_memcache {
@@ -277,6 +278,8 @@ fn get_from_sources<T: Blobstore + Clone>(
                 RedactedBlobstoreConfig::new(redacted_blobs, scuba_redaction_builder),
             );
             get_cache(ctx.clone(), &blobstore, key.clone(), mode)
+                .map(|opt_blob| opt_blob.map(Into::into))
+                .boxify()
         }
         None => {
             let blobstore = match no_prefix {
@@ -334,7 +337,7 @@ fn get_cache<B: CacheBlobstoreExt>(
     blobstore: &B,
     key: String,
     mode: String,
-) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+) -> BoxFuture<Option<BlobstoreGetData>, Error> {
     if mode == "cache-only" {
         blobstore.get_cache_only(ctx, key)
     } else if mode == "no-fill" {

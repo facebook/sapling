@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use blobstore_sync_queue::OperationKey;
 use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
@@ -51,7 +51,7 @@ pub enum ErrorKind {
     )]
     ValueMismatch(Arc<BlobstoresWithEntry>, Arc<BlobstoresReturnedNone>),
     #[error("Some blobstores missing this item: {0:?}")]
-    SomeMissingItem(Arc<BlobstoresReturnedNone>, Option<BlobstoreBytes>),
+    SomeMissingItem(Arc<BlobstoresReturnedNone>, Option<BlobstoreGetData>),
 }
 
 /// This handler is called on each successful put to underlying blobstore,
@@ -99,7 +99,7 @@ impl MultiplexedBlobstoreBase {
         &self,
         ctx: CoreContext,
         key: String,
-    ) -> BoxFuture<Option<BlobstoreBytes>, ErrorKind> {
+    ) -> BoxFuture<Option<BlobstoreGetData>, ErrorKind> {
         let mut scuba = self.scuba.clone();
         scuba.sampled(self.scuba_sample_rate);
 
@@ -130,7 +130,9 @@ impl MultiplexedBlobstoreBase {
                             answered.insert(blobstore_id);
                             if best_value.is_none() {
                                 best_value = value;
-                            } else if value != best_value {
+                            } else if value.as_ref().map(BlobstoreGetData::as_bytes)
+                                != best_value.as_ref().map(BlobstoreGetData::as_bytes)
+                            {
                                 all_same = false;
                             }
                         }
@@ -208,7 +210,7 @@ pub fn inner_put(
 }
 
 impl Blobstore for MultiplexedBlobstoreBase {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         ctx.perf_counters()
             .increment_counter(PerfCounterType::BlobGets);
 
@@ -227,7 +229,7 @@ impl Blobstore for MultiplexedBlobstoreBase {
             future::select_all(requests).then({
                 move |result| {
                     let requests = match result {
-                        Ok(((_, value @ Some(_)), _, requests)) => {
+                        Ok(((_, Some(mut value)), _, requests)) => {
                             if is_logged {
                                 // Allow the other requests to complete so that we can record some
                                 // metrics for the blobstore.
@@ -237,7 +239,8 @@ impl Blobstore for MultiplexedBlobstoreBase {
                                 .map(|_| ());
                                 spawn(requests_fut);
                             }
-                            return future::ok(Loop::Break(value));
+                            value.remove_ctime();
+                            return future::ok(Loop::Break(Some(value)));
                         }
                         Ok(((_, None), _, requests)) => requests,
                         Err(((blobstore_id, error), _, requests)) => {
@@ -388,7 +391,7 @@ fn multiplexed_get(
     key: &String,
     operation: &'static str,
     scuba: ScubaSampleBuilder,
-) -> Vec<BoxFuture<(BlobstoreId, Option<BlobstoreBytes>), (BlobstoreId, Error)>> {
+) -> Vec<BoxFuture<(BlobstoreId, Option<BlobstoreGetData>), (BlobstoreId, Error)>> {
     blobstores
         .iter()
         .map(|&(blobstore_id, ref blobstore)| {
@@ -423,7 +426,7 @@ fn multiplexed_get(
 
                         match result {
                             Ok((_, Some(data))) => {
-                                scuba.add("size", data.len());
+                                scuba.add("size", data.as_bytes().len());
                             }
                             Err((_, error)) => {
                                 // Always log errors

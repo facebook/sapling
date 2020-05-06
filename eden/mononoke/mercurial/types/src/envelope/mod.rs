@@ -15,6 +15,7 @@ pub use self::changeset_envelope::{HgChangesetEnvelope, HgChangesetEnvelopeMut};
 pub use self::file_envelope::{HgFileEnvelope, HgFileEnvelopeMut};
 pub use self::manifest_envelope::{HgManifestEnvelope, HgManifestEnvelopeMut};
 
+use blobstore::BlobstoreGetData;
 use mononoke_types::BlobstoreBytes;
 
 use bytes::Bytes;
@@ -33,5 +34,19 @@ impl From<HgEnvelopeBlob> for BlobstoreBytes {
     #[inline]
     fn from(blob: HgEnvelopeBlob) -> BlobstoreBytes {
         BlobstoreBytes::from_bytes(blob.0)
+    }
+}
+
+impl From<BlobstoreGetData> for HgEnvelopeBlob {
+    #[inline]
+    fn from(blob_val: BlobstoreGetData) -> HgEnvelopeBlob {
+        HgEnvelopeBlob(blob_val.into_raw_bytes())
+    }
+}
+
+impl From<HgEnvelopeBlob> for BlobstoreGetData {
+    #[inline]
+    fn from(blob: HgEnvelopeBlob) -> BlobstoreGetData {
+        BlobstoreBytes::from(blob).into()
     }
 }

@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use blobstore::Blobstore;
+use blobstore::{Blobstore, BlobstoreGetData};
 use context::CoreContext;
 use futures_ext::BoxFuture;
 use mononoke_types::BlobstoreBytes;
@@ -36,7 +36,7 @@ impl<T> Blobstore for TracingBlobstore<T>
 where
     T: Blobstore,
 {
-    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreBytes>, Error> {
+    fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         let mut gets = self.gets.lock().expect("poisoned lock");
         gets.push(key.clone());
 

@@ -66,7 +66,7 @@ impl BonsaiDerivedMapping for ChangesetInfoMapping {
                 .get(ctx.clone(), self.format_key(&csid))
                 .map(move |value| {
                     value.map(|bytes| {
-                        let info = ChangesetInfo::from_bytes(bytes.as_bytes())?;
+                        let info = ChangesetInfo::from_bytes(bytes.as_raw_bytes())?;
                         Ok((csid, info))
                     })
                 })

@@ -29,7 +29,7 @@ pub fn copy_blob(
     src_blobstore
         .get(ctx.clone(), key.clone())
         .and_then(move |maybe_blobstore_bytes| match maybe_blobstore_bytes {
-            Some(blobstore_bytes) => dst_blobstore.put(ctx, key, blobstore_bytes).left_future(),
+            Some(srcdata) => dst_blobstore.put(ctx, key, srcdata.into()).left_future(),
             None => err(format_err!("Key {} is missing in the original store", key)).right_future(),
         })
 }
@@ -173,7 +173,7 @@ mod test {
         );
         let res = rt.block_on(bs2.get(ctx.clone(), key.clone()));
         assert!(
-            res.unwrap() == Some(blob),
+            res.unwrap() == Some(blob.into()),
             "failed to get a copied blob from the second blobstore"
         );
 
