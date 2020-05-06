@@ -36,8 +36,4 @@ if("${EDEN_HAVE_GIT}")
   add_subdirectory(git)
 endif()
 
-if (NOT WIN32)
-  add_subdirectory(mononoke)
-endif()
-
 add_subdirectory(test)

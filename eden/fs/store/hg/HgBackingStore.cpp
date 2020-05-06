@@ -7,9 +7,7 @@
 
 #include "HgBackingStore.h"
 
-#include <list>
-
-#include <folly/String.h>
+#include <folly/Range.h>
 #include <folly/Synchronized.h>
 #include <folly/ThreadLocal.h>
 #include <folly/Try.h>
@@ -19,7 +17,6 @@
 #include <folly/executors/thread_factory/NamedThreadFactory.h>
 #include <folly/futures/Future.h>
 #include <folly/logging/xlog.h>
-#include <folly/small_vector.h>
 #include <folly/stop_watch.h>
 
 #include "eden/fs/config/ReloadableConfig.h"
@@ -33,12 +30,10 @@
 #include "eden/fs/store/hg/HgImportPyError.h"
 #include "eden/fs/store/hg/HgImporter.h"
 #include "eden/fs/store/hg/HgProxyHash.h"
+#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/EnumValue.h"
-#include "eden/fs/utils/LazyInitialize.h"
-#include "eden/fs/utils/SSLContext.h"
-#include "eden/fs/utils/ServiceAddress.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
 #include "edenscm/hgext/extlib/cstore/uniondatapackstore.h" // @manual=//eden/scm:datapack
@@ -46,15 +41,6 @@
 
 #ifdef EDEN_HAVE_RUST_DATAPACK
 #include "eden/fs/store/hg/HgDatapackStore.h" // @manual
-#endif
-
-#if EDEN_HAVE_MONONOKE
-#include "eden/fs/store/mononoke/MononokeHttpBackingStore.h" // @manual
-#include "eden/fs/store/mononoke/MononokeThriftBackingStore.h" // @manual
-#endif
-
-#ifdef EDEN_HAVE_CURL
-#include "eden/fs/store/mononoke/MononokeCurlBackingStore.h" // @manual
 #endif
 
 using folly::Future;
@@ -80,10 +66,6 @@ DEFINE_bool(
     "Set this parameter to \"no\" to disable fetching missing treemanifest "
     "trees from the remote mercurial server.  This is generally only useful "
     "for testing/debugging purposes");
-DEFINE_int32(
-    mononoke_timeout,
-    120000, // msec
-    "[unit: ms] Timeout for Mononoke requests");
 
 namespace facebook {
 namespace eden {
@@ -261,104 +243,6 @@ void HgBackingStore::initializeTreeManifestImport(
   XLOG(DBG2) << "treemanifest import enabled in repository " << repoPath;
 }
 
-std::unique_ptr<ServiceAddress> HgBackingStore::getMononokeServiceAddress() {
-  auto edenConfig = config_->getEdenConfig();
-  auto hostname = edenConfig->getMononokeHostName();
-
-  if (hostname) {
-    auto port = edenConfig->mononokePort.getValue();
-    XLOG(DBG2) << "Using " << *hostname << ":" << port << " for Mononoke";
-    return std::make_unique<ServiceAddress>(*hostname, port);
-  }
-
-  const auto& tier = edenConfig->mononokeTierName.getValue();
-  XLOG(DBG2) << "Using SMC tier " << tier << " for Mononoke";
-  return std::make_unique<ServiceAddress>(tier);
-}
-
-#if EDEN_HAVE_MONONOKE
-std::unique_ptr<MononokeHttpBackingStore>
-HgBackingStore::initializeHttpMononokeBackingStore() {
-  auto edenConfig = config_->getEdenConfig();
-  std::shared_ptr<folly::SSLContext> sslContext;
-
-  try {
-    auto clientCertificate = edenConfig->getClientCertificate();
-    sslContext = buildSSLContext(clientCertificate);
-  } catch (const std::runtime_error& ex) {
-    XLOG(WARN) << "mononoke is disabled because of build failure when "
-                  "creating SSLContext: "
-               << ex.what();
-    return nullptr;
-  }
-
-  return std::make_unique<MononokeHttpBackingStore>(
-      getMononokeServiceAddress(),
-      repoName_,
-      std::chrono::milliseconds(FLAGS_mononoke_timeout),
-      folly::getIOExecutor().get(),
-      sslContext);
-}
-
-std::unique_ptr<MononokeThriftBackingStore>
-HgBackingStore::initializeThriftMononokeBackingStore() {
-  auto edenConfig = config_->getEdenConfig();
-  auto tierName = edenConfig->mononokeTierName.getValue();
-
-  XLOG(DBG2) << "Initializing thrift Mononoke backing store for repository "
-             << repoName_ << ", using tier " << tierName;
-  return std::make_unique<MononokeThriftBackingStore>(
-      tierName, repoName_, serverThreadPool_);
-}
-#endif
-
-#if defined(EDEN_HAVE_CURL)
-std::unique_ptr<MononokeCurlBackingStore>
-HgBackingStore::initializeCurlMononokeBackingStore() {
-  auto edenConfig = config_->getEdenConfig();
-  auto clientCertificate = edenConfig->getClientCertificate();
-
-  if (!clientCertificate) {
-    XLOG(WARN)
-        << "Mononoke is disabled because no client certificate is provided";
-    return nullptr;
-  }
-
-  return std::make_unique<MononokeCurlBackingStore>(
-      getMononokeServiceAddress(),
-      AbsolutePath(folly::to<std::string>(*clientCertificate)),
-      repoName_,
-      std::chrono::milliseconds(FLAGS_mononoke_timeout),
-      folly::getCPUExecutor());
-}
-#endif
-
-std::unique_ptr<BackingStore> HgBackingStore::initializeMononoke() {
-#if EDEN_HAVE_MONONOKE
-  const auto& connectionType =
-      config_->getEdenConfig()->mononokeConnectionType.getValue();
-  if (connectionType == "http") {
-    return initializeHttpMononokeBackingStore();
-  } else if (connectionType == "thrift") {
-    return initializeThriftMononokeBackingStore();
-  } else if (connectionType == "curl") {
-#ifdef EDEN_HAVE_CURL
-    return initializeCurlMononokeBackingStore();
-#else
-    XLOG(WARN)
-        << "User specified Mononoke connection type as cURL, but eden is built "
-           "without cURL";
-#endif
-  } else {
-    XLOG(WARN) << "got unexpected value for `mononoke:connection-type`: "
-               << connectionType;
-  }
-#elif defined(EDEN_HAVE_CURL)
-  return initializeCurlMononokeBackingStore();
-#endif
-  return nullptr;
-}
-
 SemiFuture<unique_ptr<Tree>> HgBackingStore::getTree(
     const Hash& id,
     ImportPriority /* priority */) {
@@ -384,84 +268,15 @@ Future<unique_ptr<Tree>> HgBackingStore::importTreeImpl(
     return makeFuture(std::move(tree));
   }
 
-  folly::small_vector<Future<unique_ptr<Tree>>, 2> futures;
-
   folly::stop_watch<std::chrono::milliseconds> watch;
-  auto mononoke = getMononoke();
-  if (mononoke) {
-    // ask Mononoke API Server first because it has more metadata available
-    // than we'd get from a local treepack.  Getting that data from mononoke
-    // can save us from materializing so many file contents later to compute
-    // size and hash information.
-    XLOG(DBG4) << "importing tree \"" << manifestNode << "\" from mononoke";
 
-    RelativePath ownedPath(path);
-    futures.push_back(
-        mononoke->getTree(manifestNode)
-            .via(serverThreadPool_)
-            .thenValue([stats = stats_,
-                        watch,
-                        edenTreeID,
-                        ownedPath,
-                        writeBatch = localStore_->beginWrite()](
-                           auto mononokeTree) mutable {
-              std::vector<TreeEntry> entries;
-
-              for (const auto& entry : mononokeTree->getTreeEntries()) {
-                auto blobHash = entry.getHash();
-                auto entryName = entry.getName();
-                auto proxyHash = HgProxyHash::store(
-                    ownedPath + entryName, blobHash, writeBatch.get());
-
-                entries.emplace_back(
-                    proxyHash, entryName.stringPiece(), entry.getType());
-
-                if (entry.getContentSha1() && entry.getSize()) {
-                  BlobMetadata metadata{*entry.getContentSha1(),
-                                        *entry.getSize()};
-
-                  SerializedBlobMetadata metadataBytes(metadata);
-                  auto hashSlice = proxyHash.getBytes();
-                  writeBatch->put(
-                      KeySpace::BlobMetaDataFamily,
-                      hashSlice,
-                      metadataBytes.slice());
-                }
-              }
-
-              writeBatch->flush();
-
-              auto& currentThreadStats =
-                  stats->getHgBackingStoreStatsForCurrentThread();
-              currentThreadStats.mononokeBackingStoreGetTree.addValue(
-                  watch.elapsed().count());
-
-              auto tree = make_unique<Tree>(std::move(entries), edenTreeID);
-              return makeFuture(std::move(tree));
-            })
-            .thenError(
-                [manifestNode](const folly::exception_wrapper& ex) mutable {
-                  XLOG(WARN)
-                      << "got exception from Mononoke backing store: "
-                      << ex.what() << " while importing tree " << manifestNode;
-                  return folly::makeFuture<unique_ptr<Tree>>(ex);
-                }));
-  }
-
-  futures.push_back(
-      fetchTreeFromHgCacheOrImporter(manifestNode, edenTreeID, path.copy())
-          .thenValue([stats = stats_, watch](auto&& result) {
-            auto& currentThreadStats =
-                stats->getHgBackingStoreStatsForCurrentThread();
-            currentThreadStats.hgBackingStoreGetTree.addValue(
-                watch.elapsed().count());
-            return std::forward<decltype(result)>(result);
-          }));
-
-  return folly::collectAnyWithoutException(futures)
-      .via(serverThreadPool_)
-      .thenValue([](std::pair<size_t, unique_ptr<Tree>>&& result) {
-        return std::move(result.second);
+  return fetchTreeFromHgCacheOrImporter(manifestNode, edenTreeID, path.copy())
+      .thenValue([stats = stats_, watch](auto&& result) {
+        auto& currentThreadStats =
+            stats->getHgBackingStoreStatsForCurrentThread();
+        currentThreadStats.hgBackingStoreGetTree.addValue(
+            watch.elapsed().count());
+        return std::move(result);
       });
 }
 
@@ -499,19 +314,6 @@ HgBackingStore::fetchTreeFromHgCacheOrImporter(
     return fetchTreeFromImporter(
         manifestNode, edenTreeID, std::move(path), std::move(writeBatch));
   }
-}
-
-std::shared_ptr<BackingStore> HgBackingStore::getMononoke() {
-  // config_ might be uninitialized (e.g. testing).
-  if (!config_ || repoName_.empty()) {
-    return nullptr;
-  }
-
-  // Check to see if the user has disabled mononoke since starting the server.
-  auto useMononoke = config_->getEdenConfig()->useMononoke.getValue();
-
-  return lazyInitialize<BackingStore>(
-      useMononoke, mononoke_, [this]() { return initializeMononoke(); });
 }
 
 folly::Future<std::unique_ptr<Tree>> HgBackingStore::fetchTreeFromImporter(
@@ -680,44 +482,15 @@ SemiFuture<unique_ptr<Blob>> HgBackingStore::getBlob(
   }
 #endif
 
-  folly::small_vector<SemiFuture<unique_ptr<Blob>>, 2> futures;
   folly::stop_watch<std::chrono::milliseconds> watch;
 
-  auto mononoke = getMononoke();
-  if (mononoke) {
-    XLOG(DBG5) << "requesting file contents of '" << hgInfo.path() << "', "
-               << hgInfo.revHash().toString() << " from mononoke";
-    auto revHashCopy = hgInfo.revHash();
-    futures.push_back(
-        mononoke->getBlob(revHashCopy)
-            .deferValue([stats = stats_, watch](auto&& blob) {
-              stats->getHgBackingStoreStatsForCurrentThread()
-                  .mononokeBackingStoreGetBlob.addValue(
-                      watch.elapsed().count());
-              return std::move(blob);
-            })
-            .deferError([path = hgInfo.path().copy(), revHash = revHashCopy](
-                            const folly::exception_wrapper& ex) {
-              XLOG(WARN) << "Error while fetching file contents of '" << path
-                         << "', " << revHash.toString()
-                         << " from mononoke: " << ex.what();
-              return folly::makeFuture<unique_ptr<Blob>>(ex);
-            }));
-  }
-
-  futures.push_back(
-      getBlobFromHgImporter(hgInfo.path(), hgInfo.revHash())
-          .deferValue([stats = stats_,
-                       watch](SemiFuture<std::unique_ptr<Blob>>&& blob) {
+  return getBlobFromHgImporter(hgInfo.path(), hgInfo.revHash())
+      .deferValue(
+          [stats = stats_, watch](SemiFuture<std::unique_ptr<Blob>>&& blob) {
             stats->getHgBackingStoreStatsForCurrentThread()
                 .hgBackingStoreGetBlob.addValue(watch.elapsed().count());
             return std::move(blob);
-          }));
-
-  return folly::collectAnyWithoutException(futures).deferValue(
-      [](std::pair<size_t, unique_ptr<Blob>>&& result) {
-        return std::move(result.second);
-      });
+          });
 }
 
 SemiFuture<std::unique_ptr<Blob>> HgBackingStore::getBlobFromHgImporter(

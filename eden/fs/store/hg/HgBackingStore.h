@@ -7,7 +7,6 @@
 
 #pragma once
 
-#include <list>
 #include <memory>
 #include <optional>
 
@@ -20,7 +19,6 @@
 #include "eden/fs/eden-config.h"
 #include "eden/fs/store/BackingStore.h"
 #include "eden/fs/store/LocalStore.h"
-#include "eden/fs/telemetry/EdenStats.h"
 #include "eden/fs/telemetry/RequestMetricsScope.h"
 #include "eden/fs/utils/PathFuncs.h"
 
@@ -38,10 +36,8 @@ namespace eden {
 
 class HgImporter;
 struct ImporterOptions;
+class EdenStats;
 class LocalStore;
-class MononokeHttpBackingStore;
-class MononokeThriftBackingStore;
-class MononokeCurlBackingStore;
 class UnboundedQueueExecutor;
 class ReloadableConfig;
 class ServiceAddress;
@@ -134,59 +130,6 @@ class HgBackingStore : public BackingStore {
       const ImporterOptions& options,
       AbsolutePathPiece repoPath);
 
-  /**
-   * Create a Mononoke backing store based on config_.
-   *
-   * Return nullptr if something is wrong (e.g. missing configs).
-   */
-  std::unique_ptr<BackingStore> initializeMononoke();
-
-  /**
-   * Get an instace of Mononoke backing store as specified in config_. This will
-   * call `initializeMononoke` if no active Mononoke instance is stored.
-   *
-   * Return nullptr if Mononoke is disabled.
-   */
-  std::shared_ptr<BackingStore> getMononoke();
-
-  /**
-   * Get an instance of `ServiceAddress` that points to Mononoke API Server
-   * based on user's configuration. It could be a pair of host and port or a smc
-   * tier name.
-   */
-  std::unique_ptr<ServiceAddress> getMononokeServiceAddress();
-
-#if EDEN_HAVE_MONONOKE
-  /**
-   * Create an instance of MononokeHttpBackingStore with values from config_
-   * (Proxygen based Mononoke client)
-   *
-   * Return null if SSLContext cannot be constructed.
-   */
-  std::unique_ptr<MononokeHttpBackingStore>
-  initializeHttpMononokeBackingStore();
-
-  /**
-   * Create an instance of MononokeThriftBackingStore with values from config_
-   * (Thrift based Mononoke client)
-   *
-   * Return nullptr if required config is missing.
-   */
-  std::unique_ptr<MononokeThriftBackingStore>
-  initializeThriftMononokeBackingStore();
-#endif
-
-#if defined(EDEN_HAVE_CURL)
-  /**
-   * Create an instance of MononokeCurlBackingStore with values from config_
-   * (Curl based Mononoke client)
-   *
-   * Return nullptr if required config is missing.
-   */
-  std::unique_ptr<MononokeCurlBackingStore>
-  initializeCurlMononokeBackingStore();
-#endif
-
   folly::SemiFuture<std::unique_ptr<Blob>> getBlobFromHgImporter(
       const RelativePathPiece& path,
       const Hash& id);
@@ -240,7 +183,6 @@ class HgBackingStore : public BackingStore {
   std::unique_ptr<folly::Synchronized<UnionDatapackStore>> unionStore_;
 
   std::string repoName_;
-  folly::Synchronized<std::shared_ptr<BackingStore>> mononoke_;
 #ifdef EDEN_HAVE_RUST_DATAPACK
   std::optional<HgDatapackStore> datapackStore_;
 #endif

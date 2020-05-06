@@ -10,10 +10,6 @@ add_library(
     ${STORE_HG_SRCS}
 )
 
-if (NOT WIN32)
-  list(APPEND EDEN_STORE_HG_OPTIONAL_DEPS eden_store_mononoke)
-endif()
-
 target_link_libraries(
   eden_store_hg
   PUBLIC
@@ -23,7 +19,6 @@ target_link_libraries(
     eden_model
     eden_store
     eden_utils
-    ${EDEN_STORE_HG_OPTIONAL_DEPS}
 )
 
 if (NOT WIN32)
