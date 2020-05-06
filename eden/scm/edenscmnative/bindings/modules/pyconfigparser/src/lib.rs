@@ -137,6 +137,32 @@ py_class!(pub class config |py| {
         let errors = errors_to_str_vec(errors);
         config::create_instance(py, RefCell::new(cfg)).map(|cfg| (cfg, errors))
     }
+
+    def ensure_location_supersets(
+        &self,
+        superset_source: String,
+        subset_sources: Vec<String>
+    ) -> PyResult<Vec<(String, String, Option<String>, Option<String>)>> {
+        let results = self.cfg(py).borrow_mut().ensure_location_supersets(superset_source, subset_sources);
+        if results.is_empty() {
+            return Ok(vec![]);
+        }
+
+        let mut output: Vec<(String, String, Option<String>, Option<String>)> = vec![];
+        for ((section, key), value) in results.missing.iter() {
+            output.push((section.to_string(), key.to_string(), None, Some(value.to_string())));
+        }
+
+        for ((section, key), value) in results.extra.iter() {
+            output.push((section.to_string(), key.to_string(), Some(value.to_string()), None));
+        }
+
+        for ((section, key), super_value, sub_value) in results.mismatched.iter() {
+            output.push((section.to_string(), key.to_string(), Some(super_value.to_string()), Some(sub_value.to_string())));
+        }
+
+        Ok(output)
+    }
 });
 
 impl config {

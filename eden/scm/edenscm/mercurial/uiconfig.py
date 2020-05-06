@@ -573,3 +573,38 @@ def loaddynamicconfig(ui, path):
                 # the file is read-only or if the previous kick offs failed.
                 ui.debug("background generating dynamic config\n")
                 runbgcommand(["hg", "debugdynamicconfig"], os.environ.copy())
+
+
+def validatedynamicconfig(ui):
+    if not (
+        ui.configbool("configs", "loaddynamicconfig", False)
+        and ui.configbool("configs", "validatedynamicconfig", False)
+    ):
+        return
+
+    # As we migrate rc files into the dynamic configs, we want to verify that
+    # the dynamic config produces the exact same settings as each rc file.
+    # 'ensuresourcesupersets' will ensures that 1) the configs set by a given rc
+    # file match exactly what the dynamic config produces, and 2) dynamic
+    # configs do not produce any values that do not come from an rc file.
+    #
+    # The combination of these two checks ensures the dynamic configs match the
+    # rc files eactly. If any config does not match, the dynamic config value is
+    # removed, leaving us with the correct config value from the rc file.  The
+    # mismatch is returned here for logging.
+    #
+    # Once all configs are migrated, we can delete the rc files and remove this
+    # validation.
+    originalrcs = []
+    testrcs = ui.configlist("configs", "testdynamicconfigsubset")
+    if testrcs:
+        originalrcs.extend(testrcs)
+    issues = ui._uiconfig._rcfg.ensure_location_supersets("hgrc.dynamic", originalrcs)
+
+    for section, key, dynamic_value, file_value in issues:
+        if ui.configbool("configs", "mismatchwarn", False):
+            ui.warn(
+                _("Config mismatch: %s.%s has '%s' (dynamic) vs '%s' (file)\n")
+                % (section, key, dynamic_value, file_value)
+            )
+    # TODO: report mismatches to scuba somewhere

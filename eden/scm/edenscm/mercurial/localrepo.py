@@ -443,6 +443,7 @@ class localrepository(object):
             uiconfig.loaddynamicconfig(self.ui, self.root)
             # Load the primary config after the dynamic one, so it overwrites it
             self.ui.readconfig(self.localvfs.join("hgrc"), self.root)
+            uiconfig.validatedynamicconfig(self.ui)
             self._loadextensions()
         except IOError:
             pass

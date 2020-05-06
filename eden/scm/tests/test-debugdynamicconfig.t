@@ -55,3 +55,14 @@ Verify it can be automatically asynchronously regenerated
   [section2]
   key2=value2
   
+Validate dynamic config
+  $ cat > $TESTTMP/input_hgrc <<EOF
+  > [section]
+  > key=valueX
+  > EOF
+  $ echo "%include $TESTTMP/input_hgrc" >> .hg/hgrc
+  $ hg status --config configs.validatedynamicconfig=True --config configs.mismatchwarn=True --config configs.testdynamicconfigsubset=input_hgrc
+  Config mismatch: section2.key2 has 'value2' (dynamic) vs 'None' (file)
+  Config mismatch: section.key has 'value' (dynamic) vs 'valueX' (file)
+  Config mismatch: section2.key2 has 'value2' (dynamic) vs 'None' (file)
+  Config mismatch: section.key has 'value' (dynamic) vs 'valueX' (file)
