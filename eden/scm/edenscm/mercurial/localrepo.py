@@ -440,7 +440,7 @@ class localrepository(object):
         # This list it to be filled by extension during repo setup
         self._phasedefaults = []
         try:
-            uiconfig.loaddynamicconfig(self.ui, self.root)
+            uiconfig.loaddynamicconfig(self.ui, self.path)
             # Load the primary config after the dynamic one, so it overwrites it
             self.ui.readconfig(self.localvfs.join("hgrc"), self.root)
             uiconfig.validatedynamicconfig(self.ui)

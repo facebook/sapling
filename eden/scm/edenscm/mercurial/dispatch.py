@@ -976,7 +976,7 @@ def _getlocal(ui, rpath):
             lui = ui.copy()
 
     if path:
-        uiconfig.loaddynamicconfig(lui, path)
+        uiconfig.loaddynamicconfig(lui, os.path.join(path, ".hg"))
 
         # Load the primary config after the dynamic one, so it overwrites it
         lui.readconfig(os.path.join(path, ".hg", "hgrc"), path)

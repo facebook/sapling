@@ -18,6 +18,7 @@ pub struct Repo {
     bundle_path: Option<PathBuf>,
     shared_path: PathBuf,
     dot_hg_path: PathBuf,
+    shared_dot_hg_path: PathBuf,
     repo_name: Option<String>,
 }
 
@@ -103,6 +104,7 @@ impl Repo {
         } else {
             let shared_path = read_sharedpath(&path)?;
             let dot_hg_path = path.join(".hg");
+            let shared_dot_hg_path = shared_path.join(".hg");
             let repo_name = config
                 .get("remotefilelog", "reponame")
                 .map(|v| v.to_string());
@@ -112,6 +114,7 @@ impl Repo {
                 bundle_path: None,
                 shared_path,
                 dot_hg_path,
+                shared_dot_hg_path,
                 repo_name,
             })
         }
@@ -131,6 +134,11 @@ impl Repo {
     /// Repo root path, with `.hg`. Equivalent to self.path().join(".hg")
     pub fn dot_hg_path(&self) -> &Path {
         &self.dot_hg_path
+    }
+
+    /// Repo shared root path, with `.hg`. Equivalent to self.shared_path().join(".hg")
+    pub fn shared_dot_hg_path(&self) -> &Path {
+        &self.shared_dot_hg_path
     }
 
     pub fn config(&self) -> &ConfigSet {
