@@ -278,16 +278,18 @@ def revsetdiff(repo, diffid):
         for rev in revs:
             try:
                 unfiltered = repo.unfiltered()
-                node = unfiltered[rev]
+                ctx = unfiltered[rev]
             except error.RepoLookupError:
                 raise error.Abort(
                     _("cannot find the latest version of D%s (%s) locally")
                     % (diffid, rev),
                     hint=_("try 'hg pull -r %s'") % rev,
                 )
-            successors = list(repo.revs("last(successors(%n))", node.node()))
+            successors = list(
+                repo.revs("last(successors(%n)-%n-obsolete())", ctx.node(), ctx.node())
+            )
             if len(successors) != 1:
-                results.add(node.rev())
+                results.add(ctx.rev())
             else:
                 results.add(successors[0])
 
