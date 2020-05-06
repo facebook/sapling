@@ -21,8 +21,8 @@ use derived_data::{
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use fastlog::{RootFastlog, RootFastlogMapping};
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};
-use futures::{future, stream, Future, Stream};
 use futures_ext::{BoxFuture, FutureExt};
+use futures_old::{future, stream, Future, Stream};
 use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
 use mononoke_types::ChangesetId;
 use std::{
