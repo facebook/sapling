@@ -295,12 +295,12 @@ fn file_content_metadata_step(
         .compat()
 }
 
-fn bonsai_to_hg_mapping_step(
-    ctx: CoreContext,
-    repo: &BlobRepo,
+fn bonsai_to_hg_mapping_step<'a>(
+    ctx: &'a CoreContext,
+    repo: &'a BlobRepo,
     bcs_id: ChangesetId,
     enable_derive: bool,
-) -> impl Future<Output = Result<StepOutput, Error>> {
+) -> impl Future<Output = Result<StepOutput, Error>> + 'a {
     let hg_cs_id = if enable_derive {
         let filenodes_derive = repo
             .get_phases()
@@ -319,7 +319,7 @@ fn bonsai_to_hg_mapping_step(
                 }
             });
 
-        let hg_cs_derive = repo.get_hg_from_bonsai_changeset(ctx, bcs_id);
+        let hg_cs_derive = repo.get_hg_from_bonsai_changeset(ctx.clone(), bcs_id);
 
         filenodes_derive
             .join(hg_cs_derive)
@@ -327,20 +327,28 @@ fn bonsai_to_hg_mapping_step(
             .left_future()
     } else {
         // Check that both filenodes and hg changesets are derived
-        FilenodesOnlyPublic::is_derived(&ctx, &repo, &bcs_id)
-            .from_err()
-            .join(
-                repo.get_bonsai_hg_mapping()
-                    .get_hg_from_bonsai(ctx, repo.get_repoid(), bcs_id),
-            )
-            .map(|(filenodes_derived, maybe_hg_cs_id)| {
-                if filenodes_derived {
-                    maybe_hg_cs_id
-                } else {
-                    None
-                }
-            })
-            .right_future()
+        {
+            async move {
+                FilenodesOnlyPublic::is_derived(&ctx, &repo, &bcs_id)
+                    .map_err(Error::from)
+                    .await
+            }
+        }
+        .boxed()
+        .compat()
+        .join(repo.get_bonsai_hg_mapping().get_hg_from_bonsai(
+            ctx.clone(),
+            repo.get_repoid(),
+            bcs_id,
+        ))
+        .map(|(filenodes_derived, maybe_hg_cs_id)| {
+            if filenodes_derived {
+                maybe_hg_cs_id
+            } else {
+                None
+            }
+        })
+        .right_future()
     };
 
     hg_cs_id
@@ -571,10 +579,7 @@ async fn bonsai_to_fsnode_mapping_step(
     bcs_id: &ChangesetId,
     enable_derive: bool,
 ) -> Result<StepOutput, Error> {
-    let is_derived = RootFsnodeId::is_derived(&ctx, &repo, &bcs_id)
-        .map_err(Error::from)
-        .compat()
-        .await?;
+    let is_derived = RootFsnodeId::is_derived(&ctx, &repo, &bcs_id).await?;
 
     if is_derived || enable_derive {
         let root_fsnode_id = RootFsnodeId::derive(ctx.clone(), repo.clone(), *bcs_id)
@@ -777,7 +782,7 @@ where
             bonsai_changeset_step(&ctx, &repo, &bcs_id, keep_edge_paths).await
         }
         Node::BonsaiHgMapping(bcs_id) => {
-            bonsai_to_hg_mapping_step(ctx.clone(), &repo, bcs_id, enable_derive).await
+            bonsai_to_hg_mapping_step(&ctx, &repo, bcs_id, enable_derive).await
         }
         Node::BonsaiPhaseMapping(bcs_id) => {
             let phases_store = repo.get_phases_factory().get_phases(

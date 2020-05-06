@@ -24,10 +24,10 @@ use fsnodes::RootFsnodeId;
 use futures::{
     channel::oneshot,
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, select, FutureExt as NewFutureExt, TryFutureExt},
+    future::{self, select, BoxFuture, FutureExt as NewFutureExt, TryFutureExt},
     stream::{self, FuturesUnordered, StreamExt, TryStreamExt},
 };
-use futures_ext::{BoxFuture, FutureExt};
+use futures_ext::{BoxFuture as OldBoxFuture, FutureExt};
 use futures_old::Future;
 use itertools::Itertools;
 use lock_ext::RwLockExt;
@@ -51,10 +51,11 @@ pub struct WarmBookmarksCache {
 }
 
 pub type WarmerFn =
-    dyn Fn(CoreContext, BlobRepo, ChangesetId) -> BoxFuture<(), Error> + Send + Sync + 'static;
+    dyn Fn(CoreContext, BlobRepo, ChangesetId) -> OldBoxFuture<(), Error> + Send + Sync + 'static;
 
-pub type IsDerivedFn =
-    dyn Fn(&CoreContext, &BlobRepo, &ChangesetId) -> BoxFuture<bool, Error> + Send + Sync + 'static;
+pub type IsDerivedFn = dyn for<'a> Fn(&'a CoreContext, &'a BlobRepo, &'a ChangesetId) -> BoxFuture<'a, Result<bool, Error>>
+    + Send
+    + Sync;
 
 pub struct Warmer {
     warmer: Box<WarmerFn>,
@@ -72,9 +73,9 @@ pub fn create_warmer<D: BonsaiDerived>(ctx: &CoreContext) -> Warmer {
 
     let is_derived: Box<IsDerivedFn> =
         Box::new(|ctx: &CoreContext, repo: &BlobRepo, cs_id: &ChangesetId| {
-            D::is_derived(ctx, repo, cs_id)
+            D::is_derived(&ctx, &repo, &cs_id)
                 .map_err(Error::from)
-                .boxify()
+                .boxed()
         });
     Warmer { warmer, is_derived }
 }
@@ -189,11 +190,7 @@ async fn is_derived(
 ) -> bool {
     let is_derived = warmers
         .iter()
-        .map(|warmer| {
-            (*warmer.is_derived)(ctx, repo, cs_id)
-                .compat()
-                .map(|res| res.unwrap_or(false))
-        })
+        .map(|warmer| (*warmer.is_derived)(ctx, repo, cs_id).map(|res| res.unwrap_or(false)))
         .collect::<FuturesUnordered<_>>();
 
     is_derived
@@ -929,9 +926,11 @@ mod tests {
                 }
             }),
             is_derived: Box::new(|ctx, repo, cs_id| {
-                RootUnodeManifestId::is_derived(ctx, repo, cs_id)
-                    .from_err()
-                    .boxify()
+                async move {
+                    let res = RootUnodeManifestId::is_derived(&ctx, &repo, &cs_id).await?;
+                    Ok(res)
+                }
+                .boxed()
             }),
         };
         let mut warmers: Vec<Warmer> = Vec::new();
@@ -1018,9 +1017,11 @@ mod tests {
                 }
             }),
             is_derived: Box::new(|ctx, repo, cs_id| {
-                RootUnodeManifestId::is_derived(ctx, repo, cs_id)
-                    .from_err()
-                    .boxify()
+                async move {
+                    let res = RootUnodeManifestId::is_derived(&ctx, &repo, &cs_id).await?;
+                    Ok(res)
+                }
+                .boxed()
             }),
         };
         let mut warmers: Vec<Warmer> = Vec::new();

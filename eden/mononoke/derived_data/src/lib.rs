@@ -10,11 +10,8 @@
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
-use cloned::cloned;
 use context::CoreContext;
-use futures::{
-    compat::Future01CompatExt, stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
-};
+use futures::{compat::Future01CompatExt, stream, StreamExt, TryStreamExt};
 use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
 use lock_ext::LockExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
@@ -124,20 +121,13 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         Ok(underived.len() as u64)
     }
 
-    fn is_derived(
+    async fn is_derived(
         ctx: &CoreContext,
         repo: &BlobRepo,
         csid: &ChangesetId,
-    ) -> BoxFuture<bool, DeriveError> {
-        // TODO(stash): asyncify to avoid clone()
-        cloned!(ctx, repo, csid);
-        async move {
-            let count = Self::count_underived(&ctx, &repo, &csid, 1).await?;
-            Ok(count == 0)
-        }
-        .boxed()
-        .compat()
-        .boxify()
+    ) -> Result<bool, DeriveError> {
+        let count = Self::count_underived(&ctx, &repo, &csid, 1).await?;
+        Ok(count == 0)
     }
 
     /// This method might be overridden by BonsaiDerived implementors if there's a more efficienta
