@@ -433,6 +433,7 @@ TEST_F(RenameTest, renameOverEmptyDirWithPositiveFuseRefcount) {
   EXPECT_EQ(yino, newParent->getChildInodeNumber("emptydir"_pc));
 }
 
+#ifndef _WIN32
 TEST_F(RenameTest, renameUpdatesMtime) {
   auto bInode = mount_->getTreeInode("a/b");
   auto cInode = mount_->getTreeInode("a/b/c");
@@ -453,6 +454,7 @@ TEST_F(RenameTest, renameUpdatesMtime) {
   EXPECT_EQ(
       mount_->getClock().getRealtime(), cInode->getMetadata().timestamps.mtime);
 }
+#endif
 
 /*
  * Rename tests where the source and destination inode objects

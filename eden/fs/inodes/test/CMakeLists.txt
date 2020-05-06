@@ -14,6 +14,7 @@ add_executable(
     InodePtrTest.cpp
     InodeTimestampsTest.cpp
     RemoveTest.cpp
+    RenameTest.cpp
     TreeInodeTest.cpp
 )
 
