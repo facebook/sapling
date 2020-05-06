@@ -13,6 +13,7 @@ add_executable(
     InodeMapTest.cpp
     InodePtrTest.cpp
     InodeTimestampsTest.cpp
+    RemoveTest.cpp
     TreeInodeTest.cpp
 )
 

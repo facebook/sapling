@@ -412,7 +412,9 @@ void TestMount::setInitialCommit(Hash commitHash, Hash rootTreeHash) {
 }
 
 #ifdef _WIN32
-void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
+void TestMount::overwriteFile(
+    folly::StringPiece path,
+    folly::StringPiece contents) {
   auto relPath = RelativePathPiece{path};
   auto absolutePath = edenMount_->getConfig()->getMountPath() + relPath;
 
@@ -422,7 +424,13 @@ void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
   // Write the file in the File System and also update the EdenMount. In the
   // real system with Projected FS, the closing of a modified file with send the
   // notification which will update the EdenMount.
-  writeFile(contents, absolutePath.c_str());
+  facebook::eden::writeFile(contents, absolutePath.c_str());
+
+  // Verify that what we wrote can be read back.
+  std::string newContents;
+  facebook::eden::readFile(absolutePath.c_str(), newContents);
+  EXPECT_EQ(newContents, contents);
+
   getEdenMount()->materializeFile(relPath);
 }
 
@@ -503,7 +511,9 @@ void TestMount::addSymlink(
   (void)parent->symlink(relativePath.basename(), pointsTo).get();
 }
 
-void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
+void TestMount::overwriteFile(
+    folly::StringPiece path,
+    folly::StringPiece contents) {
   auto file = getFileInode(path);
 
   fuse_setattr_in attr;

@@ -95,8 +95,7 @@ TEST_F(UnlinkTest, modified) {
       "testing testing\n"
       "123\n"
       "testing testing\n"};
-  auto writeResult = file->write(newContents, 0).get();
-  EXPECT_EQ(newContents.size(), writeResult);
+  mount_.overwriteFile("dir/a.txt", newContents);
 
   // Now remove the child
   auto unlinkFuture = dir->unlink(childPath);
@@ -104,8 +103,10 @@ TEST_F(UnlinkTest, modified) {
   std::move(unlinkFuture).get();
 
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber(childPath), ENOENT);
+#ifndef _WIN32
   // We should still be able to read from the FileInode
   EXPECT_FILE_INODE(file, newContents, 0644);
+#endif
 }
 
 TEST_F(UnlinkTest, created) {
@@ -122,8 +123,10 @@ TEST_F(UnlinkTest, created) {
   std::move(unlinkFuture).get();
 
   EXPECT_THROW_ERRNO(dir->getChildInodeNumber(childPath), ENOENT);
+#ifndef _WIN32
   // We should still be able to read from the FileInode
   EXPECT_FILE_INODE(file, contents, 0644);
+#endif
 }
 
 // TODO: It would be nice to adds some tests for concurrent load+unlink
