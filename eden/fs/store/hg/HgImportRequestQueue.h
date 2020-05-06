@@ -27,11 +27,14 @@ class HgImportRequestQueue {
   void enqueue(HgImportRequest request);
 
   /*
-   * Returns an item from the queue. This function only returns `std::nullopt`
-   * while the queue is being destructed. This fucntion will block when there is
-   * no item available in the queue.
+   * Returns a list of requests from the queue. It returns an empty list while
+   * the queue is being destructed. This function will block when there is no
+   * item available in the queue.
+   *
+   * The returned vector may have fewer requests than it requested, and all
+   * requests in the vector are guaranteed to be the same type.
    */
-  std::optional<HgImportRequest> dequeue();
+  std::vector<HgImportRequest> dequeue(size_t count);
 
   void stop();
 

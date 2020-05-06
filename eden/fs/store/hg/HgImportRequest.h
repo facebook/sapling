@@ -84,6 +84,10 @@ class HgImportRequest {
     return std::get_if<T>(&request_);
   }
 
+  size_t getType() const noexcept {
+    return request_.index();
+  }
+
   /**
    * Set the inner Promise with the result of the function.
    */

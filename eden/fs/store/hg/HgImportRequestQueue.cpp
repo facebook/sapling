@@ -37,7 +37,7 @@ void HgImportRequestQueue::enqueue(HgImportRequest request) {
   queueCV_.notify_one();
 }
 
-std::optional<HgImportRequest> HgImportRequestQueue::dequeue() {
+std::vector<HgImportRequest> HgImportRequestQueue::dequeue(size_t count) {
   auto state = state_.lock();
 
   while (state->running && state->queue.empty()) {
@@ -46,15 +46,43 @@ std::optional<HgImportRequest> HgImportRequestQueue::dequeue() {
 
   if (!state->running) {
     state->queue.clear();
-    return std::nullopt;
+    return std::vector<HgImportRequest>();
   }
 
-  std::pop_heap(state->queue.begin(), state->queue.end());
+  auto& queue = state->queue;
 
-  auto request = std::move(state->queue.back());
-  state->queue.pop_back();
+  std::vector<HgImportRequest> result;
+  std::vector<HgImportRequest> putback;
+  std::optional<size_t> type;
 
-  return std::move(request);
+  for (size_t i = 0; i < count * 3; i++) {
+    if (queue.empty() || result.size() == count) {
+      break;
+    }
+
+    std::pop_heap(queue.begin(), queue.end());
+
+    auto request = std::move(queue.back());
+    queue.pop_back();
+
+    if (!type) {
+      type = request.getType();
+      result.emplace_back(std::move(request));
+    } else {
+      if (*type == request.getType()) {
+        result.emplace_back(std::move(request));
+      } else {
+        putback.emplace_back(std::move(request));
+      }
+    }
+  }
+
+  for (auto& item : putback) {
+    queue.emplace_back(std::move(item));
+    std::push_heap(queue.begin(), queue.end());
+  }
+
+  return result;
 }
 } // namespace eden
 } // namespace facebook

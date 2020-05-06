@@ -7,6 +7,7 @@
 
 #include "eden/fs/store/hg/HgQueuedBackingStore.h"
 
+#include <gflags/gflags.h>
 #include <utility>
 #include <variant>
 
@@ -23,6 +24,8 @@
 
 namespace facebook {
 namespace eden {
+
+DEFINE_uint64(hg_queue_batch_size, 5, "Number of requests per Hg import batch");
 
 HgQueuedBackingStore::HgQueuedBackingStore(
     std::unique_ptr<HgBackingStore> backingStore,
@@ -43,28 +46,31 @@ HgQueuedBackingStore::~HgQueuedBackingStore() {
 
 void HgQueuedBackingStore::processRequest() {
   for (;;) {
-    auto request = queue_.dequeue();
+    auto requests = queue_.dequeue(FLAGS_hg_queue_batch_size);
 
-    if (!request) {
+    if (requests.empty()) {
       break;
     }
-    if (auto parameter = request->getRequest<HgImportRequest::BlobImport>()) {
-      request->setWith<HgImportRequest::BlobImport>(
-          [store = backingStore_.get(), hash = parameter->hash]() {
-            return store->getBlob(hash).getTry();
-          });
-    } else if (
-        auto parameter = request->getRequest<HgImportRequest::TreeImport>()) {
-      request->setWith<HgImportRequest::TreeImport>(
-          [store = backingStore_.get(), hash = parameter->hash]() {
-            return store->getTree(hash).getTry();
-          });
-    } else if (
-        auto parameter = request->getRequest<HgImportRequest::Prefetch>()) {
-      request->setWith<HgImportRequest::Prefetch>(
-          [store = backingStore_.get(), hashes = parameter->hashes]() {
-            return store->prefetchBlobs(hashes).getTry();
-          });
+
+    for (auto& request : requests) {
+      if (auto parameter = request.getRequest<HgImportRequest::BlobImport>()) {
+        request.setWith<HgImportRequest::BlobImport>(
+            [store = backingStore_.get(), hash = parameter->hash]() {
+              return store->getBlob(hash).getTry();
+            });
+      } else if (
+          auto parameter = request.getRequest<HgImportRequest::TreeImport>()) {
+        request.setWith<HgImportRequest::TreeImport>(
+            [store = backingStore_.get(), hash = parameter->hash]() {
+              return store->getTree(hash).getTry();
+            });
+      } else if (
+          auto parameter = request.getRequest<HgImportRequest::Prefetch>()) {
+        request.setWith<HgImportRequest::Prefetch>(
+            [store = backingStore_.get(), hashes = parameter->hashes]() {
+              return store->prefetchBlobs(hashes).getTry();
+            });
+      }
     }
   }
 }
