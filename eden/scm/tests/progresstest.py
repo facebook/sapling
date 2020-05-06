@@ -59,7 +59,7 @@ def progresstest(ui, loops, total, **opts):
                 prog.value = (i, unicodeloopitems[i % len(unicodeloopitems)])
             else:
                 prog.value = (i, "loop %s" % i)
-            progress._engine.pump(_faketime.increment())
+            progress.getengine().pump(_faketime.increment())
             if nested:
                 nestedtotal = 5 if i % 6 == 5 else 2
                 with progress.bar(
@@ -67,7 +67,7 @@ def progresstest(ui, loops, total, **opts):
                 ) as nestedprog:
                     for j in range(nestedtotal + 1):
                         nestedprog.value = (j, "nest %s" % j)
-                        progress._engine.pump(_faketime.increment())
+                        progress.getengine().pump(_faketime.increment())
 
 
 @command("bytesprogresstest", norepo=True)
@@ -92,11 +92,11 @@ def bytesprogresstest(ui):
     ) as prog:
         for value in values:
             prog.value = (value, "%s bytes" % value)
-            progress._engine.pump(_faketime.increment())
+            progress.getengine().pump(_faketime.increment())
 
 
 def uisetup(ui):
-    class syncengine(progress._engine.__class__):
+    class syncengine(progress.getengine().__class__):
         def _activate(self, ui):
             pass
 
@@ -108,4 +108,4 @@ def uisetup(ui):
             self._updateestimation(now)
             self._show(now)
 
-    progress._engine.__class__ = syncengine
+    progress.getengine().__class__ = syncengine

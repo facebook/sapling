@@ -42,6 +42,7 @@ from __future__ import absolute_import
 import json
 
 from edenscm.mercurial import progress, registrar, util
+from edenscm.mercurial.extensions import wrapfunction
 
 
 testedwith = "ships-with-fb-hgext"
@@ -103,13 +104,24 @@ def uisetup(ui):
         global _pid
         _pid = ui.configint("progress", "fakedpid") or util.getpid()
 
-        class fileengine(progress._engine.__class__):
-            def _show(self, now):
-                super(fileengine, self)._show(now)
-                writeprogress(self, progressfile, filemode, self._bars)
+        def wrapengine(orig):
+            origengine = progress._engine
+            currentengine = orig()
+            if origengine != currentengine or not getattr(
+                currentengine, "_filewrapped", False
+            ):
 
-            def _complete(self):
-                super(fileengine, self)._complete()
-                writeprogress(self, progressfile, filemode, [])
+                class fileengine(currentengine.__class__):
+                    def _show(self, now):
+                        super(fileengine, self)._show(now)
+                        writeprogress(self, progressfile, filemode, self._bars)
 
-        progress._engine.__class__ = fileengine
+                    def _complete(self):
+                        super(fileengine, self)._complete()
+                        writeprogress(self, progressfile, filemode, [])
+
+                currentengine.__class__ = fileengine
+                currentengine._filewrapped = True
+            return currentengine
+
+        wrapfunction(progress, "getengine", wrapengine)

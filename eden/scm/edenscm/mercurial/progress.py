@@ -14,6 +14,7 @@ from __future__ import absolute_import
 
 import contextlib
 import errno
+import os
 import threading
 import time
 
@@ -581,7 +582,18 @@ class engine(object):
                 bar._updateestimation(now)
 
 
-_engine = engine()
+_engine_pid = None
+_engine = None
+
+
+def getengine():
+    global _engine
+    global _engine_pid
+    pid = os.getpid()
+    if pid != _engine_pid:
+        _engine = engine()
+        _engine_pid = pid
+    return _engine
 
 
 suspend = util.nullcontextmanager
@@ -642,7 +654,7 @@ class normalbar(tracedbar):
         self._estimatering = util.ring(self._estimatecount)
 
     def reset(self, topic, unit="", total=None):
-        with _engine.lock():
+        with getengine().lock():
             self._topic = topic
             self._unit = unit
             self._total = total
@@ -663,11 +675,11 @@ class normalbar(tracedbar):
 
     def enter(self):
         self.value = self._start
-        _engine.register(self)
+        getengine().register(self)
         return self
 
     def exit(self, type, value, traceback):
-        _engine.unregister(self)
+        getengine().unregister(self)
 
 
 class debugbar(tracedbar):
@@ -759,4 +771,4 @@ def spinner(ui, topic):
 
 
 def resetstate():
-    _engine.resetstate()
+    getengine().resetstate()
