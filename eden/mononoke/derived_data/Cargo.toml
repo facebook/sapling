@@ -10,6 +10,7 @@ include = ["src/**/*.rs"]
 blobrepo = { path = "../blobrepo" }
 blobstore = { path = "../blobstore" }
 bookmarks = { path = "../bookmarks" }
+bounded_traversal = { path = "../common/bounded_traversal" }
 cacheblob = { path = "../blobstore/cacheblob" }
 changeset_fetcher = { path = "../blobrepo/changeset_fetcher" }
 context = { path = "../server/context" }

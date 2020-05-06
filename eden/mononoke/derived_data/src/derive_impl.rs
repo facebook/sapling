@@ -10,13 +10,13 @@ use anyhow::Error;
 use blobrepo::BlobRepo;
 use blobstore::Loadable;
 use cacheblob::LeaseOps;
-use cloned::cloned;
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
     future::{try_join, try_join_all, FutureExt as NewFutureExt, TryFutureExt},
+    TryStreamExt,
 };
-use futures_ext::{bounded_traversal, try_boxfuture, BoxFuture, FutureExt, StreamExt};
+use futures_ext::{BoxFuture, FutureExt};
 use futures_old::sync::oneshot;
 use futures_old::{future, stream, Future, Stream};
 use futures_stats::{futures03::TimedFutureExt, FutureStats};
@@ -85,9 +85,7 @@ pub fn derive_impl<
     async move {
         let derivation = async {
             let commits_not_derived_to_parents =
-                find_underived(&ctx, &repo, &derived_mapping, &start_csid, None, mode)
-                    .compat()
-                    .await?;
+                find_underived(&ctx, &repo, &derived_mapping, &start_csid, None, mode).await?;
 
             let topo_sorted_commit_graph = sort_topological(&commits_not_derived_to_parents)
                 .expect("commit graph has cycles!");
@@ -189,7 +187,7 @@ fn fail_if_disabled<Derived: BonsaiDerived>(repo: &BlobRepo) -> Result<(), Deriv
     Ok(())
 }
 
-pub(crate) fn find_underived<
+pub(crate) async fn find_underived<
     Derived: BonsaiDerived,
     Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
 >(
@@ -199,62 +197,57 @@ pub(crate) fn find_underived<
     start_csid: &ChangesetId,
     limit: Option<u64>,
     mode: Mode,
-) -> impl Future<Item = HashMap<ChangesetId, Vec<ChangesetId>>, Error = DeriveError> {
+) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, Error> {
     if mode == Mode::OnlyIfEnabled {
-        try_boxfuture!(fail_if_disabled::<Derived>(repo));
+        fail_if_disabled::<Derived>(repo)?;
     }
 
     let changeset_fetcher = repo.get_changeset_fetcher();
     // This is necessary to avoid visiting the same commit a lot of times in mergy repos
     let visited: Arc<Mutex<HashSet<ChangesetId>>> = Arc::new(Mutex::new(HashSet::new()));
-    bounded_traversal::bounded_traversal_stream(100, Some(*start_csid), {
-        cloned!(ctx, derived_mapping);
+
+    let changeset_fetcher = &changeset_fetcher;
+    let visited = &visited;
+    let res = bounded_traversal::bounded_traversal_stream(100, Some(*start_csid), {
         move |cs_id| {
-            {
-                cloned!(ctx, derived_mapping, cs_id);
-                async move { DeriveNode::from_bonsai(&ctx, &derived_mapping, &cs_id).await }
-            }
-            .boxed()
-            .compat()
-            .and_then({
-                cloned!(ctx, changeset_fetcher, visited);
-                move |derive_node| {
-                    if let Some(limit) = limit {
-                        let visited = visited.lock().unwrap();
-                        if visited.len() as u64 > limit {
-                            return future::ok((None, vec![])).left_future();
-                        }
-                    }
-                    match derive_node {
-                        DeriveNode::Derived(_) => future::ok((None, vec![])).left_future(),
-                        DeriveNode::Bonsai(bcs_id) => changeset_fetcher
-                            .get_parents(ctx.clone(), bcs_id)
-                            .map({
-                                cloned!(visited);
-                                move |parents| {
-                                    let parents_to_visit: Vec<_> = {
-                                        let mut visited = visited.lock().unwrap();
-                                        parents
-                                            .iter()
-                                            .cloned()
-                                            .filter(|p| visited.insert(*p))
-                                            .collect()
-                                    };
-                                    // Topological sort needs parents, so return them here
-                                    (Some((bcs_id, parents)), parents_to_visit)
-                                }
-                            })
-                            .right_future(),
+            async move {
+                if let Some(limit) = limit {
+                    let visited = visited.lock().unwrap();
+                    if visited.len() as u64 > limit {
+                        return Result::<_, Error>::Ok((None, vec![]));
                     }
                 }
-            })
+
+                let derive_node = DeriveNode::from_bonsai(&ctx, derived_mapping, &cs_id).await?;
+
+                match derive_node {
+                    DeriveNode::Derived(_) => Ok((None, vec![])),
+                    DeriveNode::Bonsai(bcs_id) => {
+                        let parents = changeset_fetcher
+                            .get_parents(ctx.clone(), bcs_id)
+                            .compat()
+                            .await?;
+
+                        let parents_to_visit: Vec<_> = {
+                            let mut visited = visited.lock().unwrap();
+                            parents
+                                .iter()
+                                .cloned()
+                                .filter(|p| visited.insert(*p))
+                                .collect()
+                        };
+                        // Topological sort needs parents, so return them here
+                        Ok((Some((bcs_id, parents)), parents_to_visit))
+                    }
+                }
+            }
         }
     })
-    .traced(&ctx.trace(), "derive::find_dependencies", None)
-    .filter_map(|x| x)
-    .collect_to()
-    .map_err(DeriveError::from)
-    .boxify()
+    .try_filter_map(|x| async { Ok(x) })
+    .try_collect()
+    .await?;
+
+    Ok(res)
 }
 
 // Panics if any of the parents is not derived yet
@@ -603,6 +596,7 @@ mod test {
     use blobrepo::DangerousOverride;
     use bookmarks::BookmarkName;
     use cacheblob::LeaseOps;
+    use cloned::cloned;
     use context::SessionId;
     use fbinit::FacebookInit;
     use fixtures::{
@@ -828,25 +822,18 @@ mod test {
             let root_cs_id =
                 resolve_cs_id(&ctx, &repo, "2d7d4ba9ce0a6ffd222de7785b249ead9c51c536").await?;
 
-            let underived = TestGenNum::count_underived(&ctx, &repo, &after_root_cs_id, 100)
-                .compat()
-                .await?;
+            let underived =
+                TestGenNum::count_underived(&ctx, &repo, &after_root_cs_id, 100).await?;
             assert_eq!(underived, 2);
 
-            let underived = TestGenNum::count_underived(&ctx, &repo, &root_cs_id, 100)
-                .compat()
-                .await?;
+            let underived = TestGenNum::count_underived(&ctx, &repo, &root_cs_id, 100).await?;
             assert_eq!(underived, 1);
 
-            let underived = TestGenNum::count_underived(&ctx, &repo, &after_root_cs_id, 1)
-                .compat()
-                .await?;
+            let underived = TestGenNum::count_underived(&ctx, &repo, &after_root_cs_id, 1).await?;
             assert_eq!(underived, 2);
 
             let master_cs_id = resolve_cs_id(&ctx, &repo, "master").await?;
-            let underived = TestGenNum::count_underived(&ctx, &repo, &master_cs_id, 100)
-                .compat()
-                .await?;
+            let underived = TestGenNum::count_underived(&ctx, &repo, &master_cs_id, 100).await?;
             assert_eq!(underived, 11);
 
             Ok(())

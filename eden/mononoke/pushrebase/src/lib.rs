@@ -278,9 +278,7 @@ async fn check_filenodes_backfilled<'a>(
     head: &ChangesetId,
     limit: u64,
 ) -> Result<(), Error> {
-    let underived = FilenodesOnlyPublic::count_underived(&ctx, &repo, &head, limit)
-        .compat()
-        .await?;
+    let underived = FilenodesOnlyPublic::count_underived(&ctx, &repo, &head, limit).await?;
     if underived >= limit {
         Err(format_err!(
             "Too many commits do not have filenodes derived. This usually happens when \

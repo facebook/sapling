@@ -10,10 +10,12 @@
 use anyhow::Error;
 use async_trait::async_trait;
 use blobrepo::BlobRepo;
+use cloned::cloned;
 use context::CoreContext;
-use futures::{compat::Future01CompatExt, stream, StreamExt, TryStreamExt};
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::Future;
+use futures::{
+    compat::Future01CompatExt, stream, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
+};
+use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
 use lock_ext::LockExt;
 use mononoke_types::{BonsaiChangeset, ChangesetId, RepositoryId};
 use std::{
@@ -103,14 +105,14 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
     /// Returns min(number of ancestors of `csid` to be derived, `limit`)
     ///
     /// This function fails immediately if derived data is not enabled for this repo.
-    fn count_underived(
+    async fn count_underived(
         ctx: &CoreContext,
         repo: &BlobRepo,
         csid: &ChangesetId,
         limit: u64,
-    ) -> BoxFuture<u64, DeriveError> {
+    ) -> Result<u64, DeriveError> {
         let mapping = Self::mapping(&ctx, &repo);
-        derive_impl::find_underived::<Self, Self::Mapping>(
+        let underived = derive_impl::find_underived::<Self, Self::Mapping>(
             ctx,
             repo,
             &mapping,
@@ -118,8 +120,8 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
             Some(limit),
             Mode::OnlyIfEnabled,
         )
-        .map(|underived| underived.len() as u64)
-        .boxify()
+        .await?;
+        Ok(underived.len() as u64)
     }
 
     fn is_derived(
@@ -127,9 +129,15 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         repo: &BlobRepo,
         csid: &ChangesetId,
     ) -> BoxFuture<bool, DeriveError> {
-        Self::count_underived(ctx, repo, csid, 1)
-            .map(|count| count == 0)
-            .boxify()
+        // TODO(stash): asyncify to avoid clone()
+        cloned!(ctx, repo, csid);
+        async move {
+            let count = Self::count_underived(&ctx, &repo, &csid, 1).await?;
+            Ok(count == 0)
+        }
+        .boxed()
+        .compat()
+        .boxify()
     }
 
     /// This method might be overridden by BonsaiDerived implementors if there's a more efficienta
