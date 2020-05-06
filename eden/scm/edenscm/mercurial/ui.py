@@ -278,6 +278,9 @@ class ui(object):
     def setconfig(self, section, name, value, source=""):
         return self._uiconfig.setconfig(section, name, value, source)
 
+    def configtostring(self):
+        return self._uiconfig.configtostring()
+
     def configsource(self, section, name, untrusted=False):
         return self._uiconfig.configsource(section, name, untrusted)
 
@@ -657,7 +660,7 @@ class ui(object):
                 # Assuming the only way to be blocked on stdout is the pager.
                 seconds = util.timer() - starttime
                 blackbox.logblocked("pager", seconds, ignorefast=True)
-                self._measuredtimes["stdio_blocked"] += (seconds) * 1000
+                self._measuredtimes["stdio_blocked"] += seconds * 1000
 
     def writebytes(self, *args, **opts):
         """Like `write` but taking bytes instead of str as arguments.
@@ -689,7 +692,7 @@ class ui(object):
                 # Assuming the only way to be blocked on stdout is the pager.
                 seconds = util.timer() - starttime
                 blackbox.logblocked("pager", seconds, ignorefast=True)
-                self._measuredtimes["stdio_blocked"] += (seconds) * 1000
+                self._measuredtimes["stdio_blocked"] += seconds * 1000
 
     def write_err(self, *args, **opts):
         with progress.suspend():
@@ -720,7 +723,7 @@ class ui(object):
             # Assuming the only way to be blocked on stdout is the pager.
             seconds = util.timer() - starttime
             blackbox.logblocked("pager", seconds, ignorefast=True)
-            self._measuredtimes["stdio_blocked"] += (seconds) * 1000
+            self._measuredtimes["stdio_blocked"] += seconds * 1000
 
     def flush(self):
         # opencode timeblockedsection because this is a critical path

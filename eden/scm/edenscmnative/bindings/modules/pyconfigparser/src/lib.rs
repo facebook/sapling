@@ -124,6 +124,11 @@ py_class!(pub class config |py| {
         Ok(cfg.keys(section).iter().map(|s| PyUnicode::new(py, &s)).collect())
     }
 
+    def tostring(&self) -> PyResult<Str> {
+        let cfg = self.cfg(py).borrow();
+        Ok(cfg.to_string().into())
+    }
+
     @staticmethod
     def load() -> PyResult<(config, Vec<Str>)> {
         let mut cfg = ConfigSet::new();

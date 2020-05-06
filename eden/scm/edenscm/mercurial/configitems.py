@@ -375,6 +375,7 @@ coreconfigitem(
     "merge-tools", r".*\.premerge$", default=dynamicdefault, generic=True, priority=-1
 )
 coreconfigitem("merge-tools", r".*\.symlink$", default=False, generic=True, priority=-1)
+coreconfigitem("metalog", "track-config", default=True)
 coreconfigitem("mutation", "date", default=None)
 coreconfigitem("mutation", "enabled", default=False)
 coreconfigitem("mutation", "record", default=True)

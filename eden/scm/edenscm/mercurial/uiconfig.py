@@ -215,6 +215,9 @@ class uiconfig(object):
         self._rcfg.set(section, name, value, source or "ui.setconfig")
         self.fixconfig(section=section)
 
+    def configtostring(self):
+        return self._rcfg.tostring()
+
     def configsource(self, section, name, untrusted=False):
         sources = self._rcfg.sources(section, name)
         if sources:

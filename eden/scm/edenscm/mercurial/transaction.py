@@ -127,6 +127,7 @@ class transaction(util.transactional):
         validator=None,
         releasefn=None,
         checkambigfiles=None,
+        uiconfig=None,
     ):
         """Begin a new transaction
 
@@ -170,6 +171,8 @@ class transaction(util.transactional):
         self.checkambigfiles = set()
         if checkambigfiles:
             self.checkambigfiles.update(checkambigfiles)
+
+        self.uiconfig = uiconfig
 
         # A dict dedicated to precisely tracking the changes introduced in the
         # transaction.
@@ -349,9 +352,7 @@ class transaction(util.transactional):
 
             # for generation at closing, check if it's before or after finalize
             postfinalize = group == gengrouppostfinalize
-            if group != gengroupall and (id in postfinalizegenerators) != (
-                postfinalize
-            ):
+            if group != gengroupall and (id in postfinalizegenerators) != postfinalize:
                 continue
 
             vfs = self._vfsmap[location]
@@ -583,6 +584,12 @@ class transaction(util.transactional):
         svfs = self._vfsmap[""]
         metalog = getattr(svfs, "metalog", None)
         if metalog:
+            # write down configs used by the repo for debugging purpose
+            if self.uiconfig and self.uiconfig.configbool("metalog", "track-config"):
+                metalog.set(
+                    "config", pycompat.encodeutf8(self.uiconfig.configtostring())
+                )
+
             metalog.commit(
                 encoding.unifromlocal(
                     " ".join(map(util.shellquote, pycompat.sysargv[1:]))

@@ -14,6 +14,8 @@ sh.setconfig(
     "experimental.narrow-heads=1",
     "remotenames.selectivepull=1",
     "mutation.date=0 0",
+    # Do not track config changes to stabilize the test a bit.
+    "metalog.track-config=0",
     "hint.ack-graph-renderer=true",
 )
 sh.newrepo()
@@ -74,32 +76,30 @@ sh % "hg debugmetalog" == r"""
        1970-01-01 00:00:00 +0000: . (removed by debugdrawdag)"""
 
 sh % "hg debugmetalogroots" == r"""
-    14 1970-01-01 00:00:00 +0000 167b807aecfe61c2ba7c1a6a3c439014b8e3db2e metaedit -mE1
-    13 1970-01-01 00:00:00 +0000 6ef2a93528c9d568c5a605cc1bde7fb1506e6e2a debugdrawdag
-    12 1970-01-01 00:00:00 +0000 fcc38e5bd982b80c710a2d5a9882356f68fdb3c1 debugdrawdag
-    11 1970-01-01 00:00:00 +0000 f876231478a8f881cae704d9cce99883d39b7952 debugdrawdag
-    10 1970-01-01 00:00:00 +0000 48cf11751e653d681bb08568fbe1b3f4369d71a1 debugdrawdag
-     9 1970-01-01 00:00:00 +0000 8b153fa88c1ec6dba7153e71c11cd8f85ca659cb bookmark foo
-     8 1970-01-01 00:00:00 +0000 3be0a703faa858cb462b268d33db8a19ff20400e bookmark foo
-     7 1970-01-01 00:00:00 +0000 dcc2c00fe5550d688fc176f50ebec67f80064825 debugdrawdag
-     6 1970-01-01 00:00:00 +0000 ac768096fcdf054eb19806ab5ad24676fbc63bf8 debugdrawdag
-     5 1970-01-01 00:00:00 +0000 33c9042f16898f581307bace0e664cc982b93ceb debugdrawdag
-     4 1970-01-01 00:00:00 +0000 cf07fd7a4a303ed5c2e59a96941f26107921683e debugdrawdag
-     3 1970-01-01 00:00:00 +0000 69f5aee46a0c432dd128626f018960c673121f62 debugdrawdag
-     2 1970-01-01 00:00:00 +0000 4a37b9ad6ab30c699a0271bb1a9e6fc67bd3acef debugdrawdag
-     1 1970-01-01 00:00:00 +0000 b996330fd2940eb3710fcce9f286564498f7e1d0 migrate from vfs
+    14 1970-01-01 00:00:00 +0000 8eaa516e2e077236f414a272b250e9d527529b45 metaedit -mE1
+    13 1970-01-01 00:00:00 +0000 d9c406034b810eeef8f7b3eb2c6c1e92ef028d8a debugdrawdag
+    12 1970-01-01 00:00:00 +0000 2a95f482a3eb521b34affdd0a5765de4f9f72359 debugdrawdag
+    11 1970-01-01 00:00:00 +0000 ef519daf316aa6c1466032ddcbb501382e8f021c debugdrawdag
+    10 1970-01-01 00:00:00 +0000 ef3b2a4c7cc16141ae522c3921119e8158b5adce debugdrawdag
+     9 1970-01-01 00:00:00 +0000 e0e927b9d3cea88f8672be61119c38a6ef89ff98 bookmark foo
+     8 1970-01-01 00:00:00 +0000 b493e330e05151c2415defbd36bc66eb2f4ea8d9 bookmark foo
+     7 1970-01-01 00:00:00 +0000 879d633e11615f2d0430582b715586d065262109 debugdrawdag
+     6 1970-01-01 00:00:00 +0000 1af3b43fced1c71f0b44b8215d892f6daae95bf4 debugdrawdag
+     5 1970-01-01 00:00:00 +0000 e9dab1312189f80b652c9f48d4389783335170ad debugdrawdag
+     4 1970-01-01 00:00:00 +0000 91f0faa0107e6b1642959fd9b5817631f74e9e32 debugdrawdag
+     3 1970-01-01 00:00:00 +0000 909095f108333e6e91fd408eb36cddc43e1a151f debugdrawdag
+     2 1970-01-01 00:00:00 +0000 228087ca5bdee658224713cccd1c46d0ac353fc7 debugdrawdag
+     1 1970-01-01 00:00:00 +0000 8d1691b6882cdeb697a631e964012e936d7c693a migrate from vfs
      0 1970-01-01 00:00:00 +0000 29e2dcfbb16f63bb0254df7585a15bb6fb5e927d"""
 
 sh % "hg up -q null"
 
-sh % "HGFORCEMETALOGROOT=b996330fd2940eb3710fcce9f286564498f7e1d0 hg log -G -r 'all()' -T '{desc} {bookmarks}'" == r"""
-    hint[metalog-root-override]: MetaLog root was overridden to b996330fd2940eb3710fcce9f286564498f7e1d0 by an environment variable. This should only be used for debugging.
-    hint[hint-ack]: use 'hg hint --ack metalog-root-override' to silence these hints"""
-
-sh.setconfig("hint.ack=*")
-sh % "HGFORCEMETALOGROOT=dcc2c00fe5550d688fc176f50ebec67f80064825 hg log -G -r 'all()' -T '{desc} {bookmarks}'" == r"""
+sh % "HGFORCEMETALOGROOT=b493e330e05151c2415defbd36bc66eb2f4ea8d9 hg log -G -r 'all()' -T '{desc} {bookmarks}'" == r"""
     o  C C
     |
     o  B B
     |
-    o  A A"""
+    o  A A foo
+
+    hint[metalog-root-override]: MetaLog root was overridden to b493e330e05151c2415defbd36bc66eb2f4ea8d9 by an environment variable. This should only be used for debugging.
+    hint[hint-ack]: use 'hg hint --ack metalog-root-override' to silence these hints"""
