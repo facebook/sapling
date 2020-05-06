@@ -12,6 +12,7 @@ from __future__ import absolute_import
 
 import contextlib
 import os
+import random
 import subprocess
 import time
 from typing import List, Optional, Tuple
@@ -602,9 +603,21 @@ def validatedynamicconfig(ui):
     issues = ui._uiconfig._rcfg.ensure_location_supersets("hgrc.dynamic", originalrcs)
 
     for section, key, dynamic_value, file_value in issues:
+        msg = _("Config mismatch: %s.%s has '%s' (dynamic) vs '%s' (file)\n") % (
+            section,
+            key,
+            dynamic_value,
+            file_value,
+        )
         if ui.configbool("configs", "mismatchwarn", False):
-            ui.warn(
-                _("Config mismatch: %s.%s has '%s' (dynamic) vs '%s' (file)\n")
-                % (section, key, dynamic_value, file_value)
+            ui.warn(msg)
+
+        samplerate = ui.configint("configs", "mismatchsampling", 10000)
+        if random.randint(1, samplerate) == 1:
+            ui.log(
+                "config_mismatch",
+                msg,
+                config="%s.%s" % (section, key),
+                expected=file_value,
+                actual=dynamic_value,
             )
-    # TODO: report mismatches to scuba somewhere
