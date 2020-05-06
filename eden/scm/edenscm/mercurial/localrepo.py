@@ -911,6 +911,14 @@ class localrepository(object):
         as it issues a second wireproto command to fetch remote bookmarks,
         which can be racy.
         """
+        # All nodes are known locally. No need to pull.
+        if (
+            not bookmarknames
+            and all(n in self for n in headnodes)
+            and all(n in self for n in headnames)
+        ):
+            return
+
         configoverride = {}
         if quiet:
             configoverride[("ui", "quiet")] = True

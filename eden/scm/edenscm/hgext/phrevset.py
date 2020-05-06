@@ -341,8 +341,8 @@ def _getnamespace(_repo):
     )
 
 
-@autopullpredicate("phrevset", priority=70)
-def _autopullphabdiff(repo, name):
+@autopullpredicate("phrevset", priority=70, rewritepullrev=True)
+def _autopullphabdiff(repo, name, rewritepullrev=False):
     # Automation should use explicit commit hashes and do not depend on the
     # Dxxx autopull behavior.
     if repo.ui.plain():
@@ -353,10 +353,15 @@ def _autopullphabdiff(repo, name):
         return
 
     repo = repo.unfiltered()
-    if name.startswith("D") and name[1:].isdigit() and name not in repo:
+    if (
+        name.startswith("D")
+        and name[1:].isdigit()
+        and (rewritepullrev or name not in repo)
+    ):
         diffid = name[1:]
         node = diffidtonode(repo, diffid)
-        if node and node not in repo:
-            # Attempt to pull it.
+        if node and (rewritepullrev or node not in repo):
+            # Attempt to pull it. This also rewrites "pull -r Dxxx" to "pull -r
+            # HASH".
             friendlyname = "D%s (%s)" % (diffid, hex(node))
             return autopull.pullattempt(headnodes=[node], friendlyname=friendlyname)

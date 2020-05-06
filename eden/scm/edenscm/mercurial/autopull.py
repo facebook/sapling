@@ -146,6 +146,39 @@ def trypull(repo, xs):
     return False
 
 
+def rewritepullrevs(repo, revs):
+    """Rewrite names used by 'pull -r REVS' by applying autopull functions that
+    have rewritepullrev set. For example, this can be used to rewrite ["D123"] to
+    ["COMMIT_HASH"].
+    """
+    funcs = [
+        func
+        for _name, func in sorted(_table.items(), key=lambda t: (t[1]._priority, t[0]))
+        if func._rewritepullrev
+    ]
+    newrevs = []
+    for rev in revs:
+        rewritten = None
+        for func in funcs:
+            if not rewritten:
+                attempt = func(repo, rev, rewritepullrev=True)
+                if attempt:
+                    if attempt.bookmarknames:
+                        raise error.ProgrammingError(
+                            "rewriting 'pull -r REV' into bookmark pulls is unsupported"
+                        )
+                    rewritten = [hex(n) for n in attempt.headnodes] + attempt.headnames
+        if rewritten:
+            repo.ui.status_err(
+                _("rewriting pull rev %r into %s\n")
+                % (rev, ", ".join(repr(r) for r in rewritten))
+            )
+            newrevs += rewritten
+        else:
+            newrevs.append(rev)
+    return newrevs
+
+
 @builtinautopullpredicate("remotenames", priority=10)
 def _pullremotebookmarks(repo, x):
     # Pull remote names like "remote/foo" automatically.

@@ -266,16 +266,22 @@ class autopullpredicate(_funcregistrarbase):
     Argument 'priority' will be used to decide the order. Smaller priority will
     be processed first.
 
+    If 'rewritepullrev' is True, the autopull function is also used to rewrite
+    arguments of 'pull -r'. This is useful to translate 'pull -r D123' to
+    'pull -r COMMIT_HASH'. The function must take an extra boolean
+    'rewritepullrev' argument, which will be set to True during 'pull -r'
+    resolution.
+
     The function should return True if it pulled something. Otherwise it should
     return None or False.
     """
 
     _docformat = "``%s``\n    %s"
 
-    def _extrasetup(self, name, func, priority):
+    def _extrasetup(self, name, func, priority, rewritepullrev=False):
         if priority is None:
             raise error.ProgrammingError("autopull priority must be specified")
-
+        func._rewritepullrev = rewritepullrev
         func._priority = priority
 
 

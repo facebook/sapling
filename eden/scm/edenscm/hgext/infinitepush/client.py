@@ -9,6 +9,7 @@ import sys
 import time
 
 from edenscm.mercurial import (
+    autopull,
     bundle2,
     cmdutil,
     commands,
@@ -430,6 +431,9 @@ def _dopull(orig, ui, repo, source="default", **opts):
     unfi = repo.unfiltered()
     unknownnodes = []
     pullbookmarks = opts.get("bookmark") or []
+    if opts.get("rev", None):
+        opts["rev"] = autopull.rewritepullrevs(repo, opts["rev"])
+
     for rev in opts.get("rev", []):
         if repo._scratchbranchmatcher.match(rev):
             # rev is a scratch bookmark, treat it as a bookmark

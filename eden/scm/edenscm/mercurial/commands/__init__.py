@@ -26,6 +26,7 @@ import bindings
 from ... import hgdemandimport
 from .. import (
     archival,
+    autopull,
     bookmarks,
     bundle2,
     changegroup,
@@ -4719,6 +4720,8 @@ def pull(ui, repo, source="default", **opts):
         with repo.wlock(), repo.lock(), repo.transaction("pull"):
             other = conn.peer
             revs, checkout = hg.addbranchrevs(repo, other, branches, opts.get("rev"))
+            if revs:
+                revs = autopull.rewritepullrevs(repo, revs)
 
             implicitbookmarks = set()
             # If any revision is given, ex. pull -r HASH, include selectivepull
