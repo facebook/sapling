@@ -1,0 +1,38 @@
+[package]
+name = "hook_tailer"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["**/*.rs"]
+
+[[bin]]
+name = "hook_tailer"
+path = "main.rs"
+
+[dependencies]
+blobrepo = { path = "../blobrepo" }
+blobrepo_factory = { path = "../blobrepo/factory" }
+blobstore = { path = "../blobstore" }
+bookmarks = { path = "../bookmarks" }
+cmdlib = { path = "../cmdlib" }
+context = { path = "../server/context" }
+hooks = { path = "../hooks" }
+hooks_content_stores = { path = "../hooks/content-stores" }
+mercurial_types = { path = "../mercurial/types" }
+metaconfig_types = { path = "../metaconfig/types" }
+mononoke_types = { path = "../mononoke_types" }
+revset = { path = "../revset" }
+scuba_ext = { path = "../common/scuba_ext" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+clap = "2.33"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+slog = { version="2.5", features=["max_level_debug"] }
+slog-term = "2.4.2"
+thiserror = "1.0"
+tokio = { version = "=0.2.13", features = ["full"] }
+tokio-timer = "0.2"

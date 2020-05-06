@@ -1,0 +1,38 @@
+[package]
+name = "fastreplay"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.json", "src/**/*.rs"]
+
+[dependencies]
+blobstore = { path = "../blobstore" }
+blobstore_factory = { path = "../blobstore/factory" }
+cache_warmup = { path = "../cache_warmup" }
+cmdlib = { path = "../cmdlib" }
+context = { path = "../server/context" }
+fastreplay_structs = { path = "../config_structs/fastreplay" }
+hgproto = { path = "../hgproto" }
+hooks = { path = "../hooks" }
+hooks_content_stores = { path = "../hooks/content-stores" }
+mercurial_types = { path = "../mercurial/types" }
+metaconfig_types = { path = "../metaconfig/types" }
+mononoke_types = { path = "../mononoke_types" }
+repo_client = { path = "../repo_client" }
+scuba_ext = { path = "../common/scuba_ext" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+clap = "2.33"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+nonzero_ext = "0.2"
+rand = { version = "0.7", features = ["small_rng"] }
+scopeguard = "1.0.0"
+serde = { version = "1.0", features = ["derive", "rc"] }
+serde_json = "1.0"
+slog = { version="2.5", features=["max_level_debug"] }
+tokio = { version = "=0.2.13", features = ["full"] }
