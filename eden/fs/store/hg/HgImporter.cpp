@@ -176,6 +176,21 @@ HgImporter::HgImporter(
     env->erase("PYTHONPATH");
     env->emplace("PYTHONPATH", FLAGS_hgPythonPath);
   }
+
+  // Eden does not control the backing repo's configuration, if it has
+  // fsmonitor enabled, it might try to run Watchman, which might
+  // cause Watchman to spawn a daemon instance, which might attempt to
+  // access the FUSE mount, which might be in the process of starting
+  // up. This causes a cross-process deadlock. Thus, in a heavy-handed
+  // way, prevent Watchman from ever attempting to spawn an instance.
+  (*env)["WATCHMAN_NO_SPAWN"] = "1";
+  cmd.insert(
+      cmd.end(),
+      {"--config",
+       "extensions.fsmonitor=!",
+       "--config",
+       "extensions.hgevents=!"});
+
   // HACK(T33686765): Work around LSAN reports for hg_importer_helper.
   (*env)["LSAN_OPTIONS"] = "detect_leaks=0";
   // If we're using `hg debugedenimporthelper`, don't allow the user
