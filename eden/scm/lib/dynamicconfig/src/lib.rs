@@ -11,8 +11,9 @@ use std::convert::TryInto;
 use std::fs;
 use std::hash::{Hash, Hasher};
 use std::path::Path;
+use std::str::FromStr;
 
-use anyhow::{anyhow, bail, Result};
+use anyhow::{anyhow, bail, Error, Result};
 use hostname;
 use minibytes::Text;
 
@@ -57,9 +58,51 @@ pub enum Domain {
     Prod,
 }
 
+#[derive(Clone, Debug, PartialEq)]
+pub enum Repo {
+    Configerator,
+    InstagramServer,
+    Www,
+    WwwMerge,
+    Unknown(String),
+}
+
+impl AsRef<str> for Repo {
+    fn as_ref(&self) -> &str {
+        use Repo::*;
+        match self {
+            Configerator => "configerator",
+            InstagramServer => "instagram-server",
+            Www => "www",
+            WwwMerge => "www-merge",
+            Unknown(name) => &name,
+        }
+    }
+}
+
+impl FromStr for Repo {
+    type Err = Error;
+    fn from_str(name: &str) -> Result<Repo> {
+        use Repo::*;
+        Ok(match name {
+            "configerator" => Configerator,
+            "instagram-server" => InstagramServer,
+            "www" => Www,
+            "www-merge" => WwwMerge,
+            _ => Unknown(name.to_string()),
+        })
+    }
+}
+
+impl<'a> PartialEq<Repo> for &'a Repo {
+    fn eq(&self, other: &Repo) -> bool {
+        *self == other
+    }
+}
+
 pub struct Generator {
     tiers: HashSet<String>,
-    repo_name: String,
+    repo: Repo,
     group: HgGroup,
     shard: u8,
     config: ConfigSet,
@@ -69,6 +112,8 @@ pub struct Generator {
 
 impl Generator {
     pub fn new(repo_name: String) -> Result<Self> {
+        let repo = Repo::from_str(&repo_name)?;
+
         let tiers: HashSet<String> = if Path::new("/etc/smc.tiers").exists() {
             fs::read_to_string("/etc/smc.tiers")?
                 .split_whitespace()
@@ -102,7 +147,7 @@ impl Generator {
 
         Ok(Generator {
             tiers,
-            repo_name,
+            repo,
             group,
             shard,
             config: ConfigSet::new(),
@@ -115,8 +160,12 @@ impl Generator {
         self.group
     }
 
-    pub fn repo_name(&self) -> &str {
-        &self.repo_name
+    pub fn repo(&self) -> &Repo {
+        &self.repo
+    }
+
+    pub fn in_repos(&self, repos: &[Repo]) -> bool {
+        repos.iter().any(|r| r == self.repo)
     }
 
     #[cfg(test)]
@@ -124,16 +173,6 @@ impl Generator {
         self.tiers = tiers;
         self.group = group;
         self.shard = shard;
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn in_repo(&self, repo: impl AsRef<str>) -> bool {
-        self.in_repos(&[repo])
-    }
-
-    #[allow(dead_code)]
-    pub(crate) fn in_repos<T: AsRef<str>>(&self, repos: impl IntoIterator<Item = T>) -> bool {
-        repos.into_iter().any(|r| r.as_ref() == self.repo_name)
     }
 
     #[allow(dead_code)]
