@@ -84,6 +84,11 @@ class HgImportRequest {
     return std::get_if<T>(&request_);
   }
 
+  template <typename T>
+  bool isType() const noexcept {
+    return std::holds_alternative<T>(request_);
+  }
+
   size_t getType() const noexcept {
     return request_.index();
   }

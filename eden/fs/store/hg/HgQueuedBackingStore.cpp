@@ -44,6 +44,39 @@ HgQueuedBackingStore::~HgQueuedBackingStore() {
   }
 }
 
+void HgQueuedBackingStore::processBlobImportRequests(
+    std::vector<HgImportRequest>&& requests) {
+  for (auto& request : requests) {
+    auto parameter = request.getRequest<HgImportRequest::BlobImport>();
+    request.setWith<HgImportRequest::BlobImport>(
+        [store = backingStore_.get(), hash = parameter->hash]() {
+          return store->getBlob(hash).getTry();
+        });
+  }
+}
+
+void HgQueuedBackingStore::processTreeImportRequests(
+    std::vector<HgImportRequest>&& requests) {
+  for (auto& request : requests) {
+    auto parameter = request.getRequest<HgImportRequest::TreeImport>();
+    request.setWith<HgImportRequest::TreeImport>(
+        [store = backingStore_.get(), hash = parameter->hash]() {
+          return store->getTree(hash).getTry();
+        });
+  }
+}
+
+void HgQueuedBackingStore::processPrefetchRequests(
+    std::vector<HgImportRequest>&& requests) {
+  for (auto& request : requests) {
+    auto parameter = request.getRequest<HgImportRequest::Prefetch>();
+    request.setWith<HgImportRequest::Prefetch>(
+        [store = backingStore_.get(), hashes = parameter->hashes]() {
+          return store->prefetchBlobs(hashes).getTry();
+        });
+  }
+}
+
 void HgQueuedBackingStore::processRequest() {
   for (;;) {
     auto requests = queue_.dequeue(FLAGS_hg_queue_batch_size);
@@ -52,25 +85,14 @@ void HgQueuedBackingStore::processRequest() {
       break;
     }
 
-    for (auto& request : requests) {
-      if (auto parameter = request.getRequest<HgImportRequest::BlobImport>()) {
-        request.setWith<HgImportRequest::BlobImport>(
-            [store = backingStore_.get(), hash = parameter->hash]() {
-              return store->getBlob(hash).getTry();
-            });
-      } else if (
-          auto parameter = request.getRequest<HgImportRequest::TreeImport>()) {
-        request.setWith<HgImportRequest::TreeImport>(
-            [store = backingStore_.get(), hash = parameter->hash]() {
-              return store->getTree(hash).getTry();
-            });
-      } else if (
-          auto parameter = request.getRequest<HgImportRequest::Prefetch>()) {
-        request.setWith<HgImportRequest::Prefetch>(
-            [store = backingStore_.get(), hashes = parameter->hashes]() {
-              return store->prefetchBlobs(hashes).getTry();
-            });
-      }
+    const auto& first = requests.at(0);
+
+    if (first.isType<HgImportRequest::BlobImport>()) {
+      processBlobImportRequests(std::move(requests));
+    } else if (first.isType<HgImportRequest::TreeImport>()) {
+      processTreeImportRequests(std::move(requests));
+    } else if (first.isType<HgImportRequest::Prefetch>()) {
+      processPrefetchRequests(std::move(requests));
     }
   }
 }
