@@ -43,7 +43,6 @@ use metaconfig_types::DerivedDataConfig;
 use mononoke_types::{ChangesetId, RepositoryId};
 use phases::SqlPhases;
 use slog::{info, Logger};
-use stats::prelude::*;
 use std::{
     collections::HashMap,
     fs,
@@ -58,16 +57,6 @@ use std::{
 mod warmup;
 
 mod dry_run;
-
-define_stats_struct! {
-    DerivedDataStats("mononoke.backfill_derived_data.{}.{}", repo_name: String, data_type: &'static str),
-    pending_heads: timeseries(Rate, Sum),
-}
-
-define_stats! {
-    derivation_time_ms:
-        histogram(100, 0, 2000, Average, Sum, Count; P 5; P 25; P 50; P 75; P 95; P 97; P 99),
-}
 
 const ARG_DERIVED_DATA_TYPE: &str = "derived-data-type";
 const ARG_DRY_RUN: &str = "dry-run";
@@ -313,22 +302,13 @@ async fn run_subcmd<'a>(
             .await
         }
         (SUBCOMMAND_TAIL, Some(_sub_m)) => {
-            let stats = {
-                let repo_name = format!(
-                    "{}_{}",
-                    args::get_repo_name(fb, &matches)?,
-                    args::get_repo_id(fb, &matches)?
-                );
-                move |data_type| DerivedDataStats::new(repo_name.clone(), data_type)
-            };
-
             let (repo, unredacted_repo, bookmarks) = try_join3(
                 args::open_repo(fb, &logger, &matches).compat(),
                 args::open_repo_unredacted(fb, &logger, &matches).compat(),
                 args::open_sql::<SqlBookmarks>(fb, &matches).compat(),
             )
             .await?;
-            subcommand_tail(&ctx, &stats, &repo, &unredacted_repo, &bookmarks).await
+            subcommand_tail(&ctx, &repo, &unredacted_repo, &bookmarks).await
         }
         (SUBCOMMAND_PREFETCH_COMMITS, Some(sub_m)) => {
             let out_filename = sub_m
@@ -495,12 +475,11 @@ async fn subcommand_backfill(
 
 async fn subcommand_tail(
     ctx: &CoreContext,
-    stats_constructor: &impl Fn(&'static str) -> DerivedDataStats,
     repo: &BlobRepo,
     unredacted_repo: &BlobRepo,
     bookmarks: &SqlBookmarks,
 ) -> Result<(), Error> {
-    let derive_utils: Vec<(Arc<dyn DerivedUtils>, BlobRepo, Arc<DerivedDataStats>)> = repo
+    let derive_utils: Vec<(Arc<dyn DerivedUtils>, BlobRepo)> = repo
         .get_derived_data_config()
         .derived_data_types
         .clone()
@@ -512,8 +491,7 @@ async fn subcommand_tail(
                 repo.clone()
             };
             let derive = derived_data_utils(repo.clone(), name)?;
-            let stats = stats_constructor(derive.name());
-            Ok((derive, maybe_unredacted_repo, Arc::new(stats)))
+            Ok((derive, maybe_unredacted_repo))
         })
         .collect::<Result<_, Error>>()?;
 
@@ -526,7 +504,7 @@ async fn tail_one_iteration(
     ctx: &CoreContext,
     repo: &BlobRepo,
     bookmarks: &SqlBookmarks,
-    derive_utils: &[(Arc<dyn DerivedUtils>, BlobRepo, Arc<DerivedDataStats>)],
+    derive_utils: &[(Arc<dyn DerivedUtils>, BlobRepo)],
 ) -> Result<(), Error> {
     let heads = bookmarks
         .list_publishing_by_prefix(
@@ -543,7 +521,7 @@ async fn tail_one_iteration(
     let pending_nested_futs: Vec<_> = derive_utils
         .iter()
         .map({
-            |(derive, maybe_unredacted_repo, stats)| {
+            |(derive, maybe_unredacted_repo)| {
                 let heads = heads.clone();
                 async move {
                     // create new context so each derivation would have its own trace
@@ -553,7 +531,6 @@ async fn tail_one_iteration(
                         .compat()
                         .await?;
 
-                    stats.pending_heads.add_value(pending.len() as i64);
                     let derived = pending
                         .into_iter()
                         .map(|csid| {
