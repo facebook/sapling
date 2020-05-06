@@ -600,7 +600,11 @@ def validatedynamicconfig(ui):
     #
     # Once all configs are migrated, we can delete the rc files and remove this
     # validation.
-    originalrcs = ["configerator_overrides.rc", "devserver_no_sandcastle_overrides.rc"]
+    originalrcs = [
+        "configerator_overrides.rc",
+        "devserver_no_sandcastle_overrides.rc",
+        "instagram-server_overrides.rc",
+    ]
     testrcs = ui.configlist("configs", "testdynamicconfigsubset")
     if testrcs:
         originalrcs.extend(testrcs)
