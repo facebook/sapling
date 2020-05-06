@@ -48,7 +48,7 @@ Setup another client
   $ hg clone ssh://user@dummy/repo client2 -q
   $ cd client2
   $ hg update scratch/lfscommit
-  pulling bookmark 'scratch/lfscommit' from 'ssh://user@dummy/repo'
+  pulling 'scratch/lfscommit' from 'ssh://user@dummy/repo'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Make pushbackup that contains bundle with 2 heads

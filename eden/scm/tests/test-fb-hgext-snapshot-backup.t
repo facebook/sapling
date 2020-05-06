@@ -136,7 +136,7 @@
 # Restore it on another client
   $ cd ../restored
   $ hg checkout "$OID"
-  pulling 751f5ef10bc73a8f549197b380773d4f680daa8c from 'ssh://user@dummy/server'
+  pulling '751f5ef10bc73a8f549197b380773d4f680daa8c' from 'ssh://user@dummy/server'
   abort: hidden revision '751f5ef10bc73a8f549197b380773d4f680daa8c'!
   (use --hidden to access hidden revisions)
   [255]

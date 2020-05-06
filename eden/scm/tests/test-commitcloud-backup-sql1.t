@@ -41,7 +41,7 @@ Make pull and check that scratch commit is not pulled
   pulling from ssh://user@dummy/server
   no changes found
   $ hg log -r scratch/book
-  pulling bookmark 'scratch/book' from 'ssh://user@dummy/server'
+  pulling 'scratch/book' from 'ssh://user@dummy/server'
   changeset:   0:2d9cfa751213
   bookmark:    default/scratch/book
   hoistedname: scratch/book

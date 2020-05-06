@@ -58,7 +58,7 @@ Change the paths: 'default' path should be incorrect, but 'infinitepush' path sh
 
 Same goes for updating to a bookmark
   $ hg up scratch/commit
-  pulling bookmark 'scratch/commit' from 'ssh://user@dummy/repo'
+  pulling 'scratch/commit' from 'ssh://user@dummy/repo'
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Now try to pull it
@@ -90,13 +90,12 @@ Now try infinitepushbookmark path
   adding file changes
   added 1 changesets with 1 changes to 1 files
 
-Update by full hash - infinitepush path should be used
+Update by full hash - infinitepush path should be used (if infinitepushbookmark path is missing)
   $ cat << EOF >> .hg/hgrc
   > [paths]
   > default=ssh://user@dummy/broken
   > infinitepush=ssh://user@dummy/repo
-  > infinitepushbookmark=ssh://user@dummy/broken
   > EOF
   $ hg update "$FULLHASH"
-  pulling d15d0da9f84a9bebe6744eba3ec1dd86e2d46818 from 'ssh://user@dummy/repo'
+  pulling 'd15d0da9f84a9bebe6744eba3ec1dd86e2d46818' from 'ssh://user@dummy/repo'
   2 files updated, 0 files merged, 3 files removed, 0 files unresolved

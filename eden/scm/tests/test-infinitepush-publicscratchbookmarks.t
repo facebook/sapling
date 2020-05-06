@@ -27,7 +27,7 @@ data to push, but the bookmark should be accepted.
 Pull this bookmark in the other client
   $ cd ../client2
   $ hg up scratch/public
-  pulling bookmark 'scratch/public' from 'ssh://user@dummy/server'
+  pulling 'scratch/public' from 'ssh://user@dummy/server'
   0 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hg log -r . -T '{node|short} "{desc}" {remotebookmarks}\n'
   e6c779c67aa9 "commit1" default/scratch/public

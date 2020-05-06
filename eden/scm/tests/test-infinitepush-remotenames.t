@@ -173,7 +173,7 @@ Create new bookmark and try to pull it
   $ hg push -q -r . --to scratch/branchtopull --create
   $ cd ../client
   $ hg up default/scratch/branchtoupdateto1
-  pulling bookmark 'scratch/branchtoupdateto1' from 'ssh://user@dummy/repo'
+  pulling 'default/scratch/branchtoupdateto1', 'scratch/branchtoupdateto1' from 'ssh://user@dummy/repo'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
 
   $ cat >> $HGRCPATH << EOF
@@ -183,5 +183,5 @@ Create new bookmark and try to pull it
   > EOF
 
   $ hg up remote/scratch/branchtoupdateto2
-  pulling bookmark 'scratch/branchtoupdateto2' from 'ssh://user@dummy/repo'
+  pulling 'remote/scratch/branchtoupdateto2', 'scratch/branchtoupdateto2' from 'ssh://user@dummy/repo'
   1 files updated, 0 files merged, 1 files removed, 0 files unresolved

@@ -112,7 +112,7 @@ Check that we pull/update from the read path, regardless of the write path prese
   adding file changes
   added 0 changesets with 0 changes to 1 files
   $ hg update -r 6b2f28e02245
-  pulling 6b2f28e02245 from 'ssh://user@dummy/repo2'
+  pulling '6b2f28e02245' from 'ssh://user@dummy/repo2'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 -- check that we can pull from read path, when write path is not present

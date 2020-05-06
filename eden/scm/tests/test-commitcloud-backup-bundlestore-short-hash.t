@@ -23,7 +23,7 @@ We are making commit in repo (server) and will recover it in client 1 via short 
   summary:     somecommit
   
   $ (cd ./client2 &&  hg up f8b49b)
-  pulling f8b49b from 'ssh://user@dummy/repo'
+  pulling 'f8b49b' from 'ssh://user@dummy/repo'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
 Test `hg up` command for the commit that doesn't exist locally
@@ -81,7 +81,7 @@ Test that updating to new head after hiding current head works as expected.
 Check hg up on another client.
 Commit should be pulled from backup storage.
   $ (cd ../client2 && hg up c1b6fe)
-  pulling c1b6fe from 'ssh://user@dummy/repo'
+  pulling 'c1b6fe' from 'ssh://user@dummy/repo'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
 
   $ cd ..
@@ -90,10 +90,9 @@ Test pulling a commit with the same prefix by creating fake files
   $ echo ' ' > ./repo/.hg/scratchbranches/index/nodemap/b1b6fe8fce73221de4162469dac9a6f8d01744a1
   $ echo ' ' > ./repo/.hg/scratchbranches/index/nodemap/b1b6fe8fce73221de4162469dac9a6f8d01744a2
   $ (cd ./client2 && hg up b1b6fe)
-  pulling b1b6fe from 'ssh://user@dummy/repo'
+  pulling 'b1b6fe' from 'ssh://user@dummy/repo'
   pull failed: ambiguous identifier 'b1b6fe'
   suggestion: provide longer commithash prefix
-  pulling bookmark 'b1b6fe' from 'ssh://user@dummy/repo'
   abort: unknown revision 'b1b6fe'!
   (if b1b6fe is a remote bookmark or commit, try to 'hg pull' it first)
   [255]
@@ -186,7 +185,7 @@ case 1: recent commit, length of prefix = 6 characters
 
 case 2: recent commit, length of prefix < 6 characters
   $ (cd ./client2 && hg up $my_new_commit2_hashlen5)
-  pulling bookmark '*' from 'ssh://user@dummy/server' (glob)
+  pulling '*' from 'ssh://user@dummy/server' (glob)
   abort: unknown revision '*'! (glob)
   (if * is a remote bookmark or commit, try to 'hg pull' it first) (glob)
   [255]
@@ -204,7 +203,6 @@ case 3a: very old commit, hash size 9 characters
     date: 01 Jan 1970 00:00
     summary: someothercommit3
   #commitcloud hint: if you would like to fetch this commit, please provide the full hash
-  pulling bookmark '*' from 'ssh://user@dummy/server' (glob)
   abort: unknown revision '*'! (glob)
   (if * is a remote bookmark or commit, try to 'hg pull' it first) (glob)
   [255]
@@ -219,7 +217,6 @@ case 3b: 32 days old commit, hash size 12 characters
     date: * (glob)
     summary: someothercommit4
   #commitcloud hint: if you would like to fetch this commit, please provide the full hash
-  pulling bookmark '*' from 'ssh://user@dummy/server' (glob)
   abort: unknown revision '*'! (glob)
   (if * is a remote bookmark or commit, try to 'hg pull' it first) (glob)
   [255]
@@ -246,9 +243,8 @@ so, it is just local switch
 case 3d: commit doesn't exists in the DB
 Test when the commit is not found
   $ (cd ./client2 && hg up aaaaaa)
-  pulling aaaaaa from 'ssh://user@dummy/server'
+  pulling 'aaaaaa' from 'ssh://user@dummy/server'
   pull failed: unknown revision 'aaaaaa'
-  pulling bookmark 'aaaaaa' from 'ssh://user@dummy/server'
   abort: unknown revision 'aaaaaa'!
   (if aaaaaa is a remote bookmark or commit, try to 'hg pull' it first)
   [255]

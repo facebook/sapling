@@ -48,14 +48,16 @@ class pullattempt(object):
 
         # Print the "pulling ..." message.
         if self.friendlyname is None:
-            names = []
-            if self.bookmarknames:
-                names.append(_("bookmark %r") % (", ".join(self.bookmarknames)))
-            elif self.headnames:
-                names.append(_("%s") % (", ".join(self.headnames)))
-            elif self.headnodes:
-                names.append(_("%s") % (", ".join(hex(n) for n in self.headnodes)))
-            name = ", ".join(names)
+            name = ", ".join(
+                repr(s)
+                for s in sorted(
+                    set(
+                        self.bookmarknames
+                        + self.headnames
+                        + [hex(n) for n in self.headnodes]
+                    )
+                )
+            )
         else:
             name = self.friendlyname
         url = str(repo.ui.paths.get(source).url)
@@ -78,6 +80,13 @@ class pullattempt(object):
         except Exception as ex:
             repo.ui.status_err(_("pull failed: %s\n") % ex)
 
+    def merge(self, other):
+        """Merge this pullattempt with another pullattempt"""
+        self.bookmarknames += other.bookmarknames
+        self.headnodes += other.headnodes
+        self.headnames += other.headnames
+        self.friendlyname = None
+
 
 def _cachedstringmatcher(pattern, _cache={}):
     # _cache is shared across function calls
@@ -88,13 +97,17 @@ def _cachedstringmatcher(pattern, _cache={}):
     return result
 
 
-def trypull(repo, x):
-    """Pull the given name x. Return true if pull succeeded. Does not raise."""
+def trypull(repo, xs):
+    """Pull the list of given names xs.
+
+    Return true if pull succeeded for all names. Does not raise.
+    """
+    # Do not attempt to pull the same name twice.
     repo._autopulled = getattr(repo, "_autopulled", set())
-    if x in repo._autopulled:
-        # Do not attempt to pull the same name twice.
+    xs = [x for x in xs if x not in repo._autopulled]
+    if not xs:
         return False
-    repo._autopulled.add(x)
+    repo._autopulled.update(xs)
 
     # If paths.default is not set. Do not attempt to pull.
     if repo.ui.paths.get("default") is None:
@@ -105,13 +118,31 @@ def trypull(repo, x):
         return (func._priority, name)
 
     # Try autopull functions.
-    for _name, func in sorted(_table.items(), key=lambda t: (t[1]._priority, t[0])):
-        req = func(repo, x)
-        if req:
-            assert isinstance(req, pullattempt)
-            req.execute(repo)
-            if x in repo.unfiltered():
-                return True
+    funcs = [
+        func
+        for _name, func in sorted(_table.items(), key=lambda t: (t[1]._priority, t[0]))
+    ]
+    if not funcs:
+        return
+
+    # Collect all attempts.
+    attempts = []
+    for x in xs:
+        for func in funcs:
+            attempt = func(repo, x)
+            if attempt:
+                assert isinstance(attempt, pullattempt)
+                attempts.append(attempt)
+
+    # Merge all pullattempts and execute it.
+    if attempts:
+        attempt = attempts[0]
+        for other in attempts[1:]:
+            attempt.merge(other)
+        attempt.execute(repo)
+        unfi = repo.unfiltered()
+        return all(x in unfi for x in xs)
+
     return False
 
 

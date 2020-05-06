@@ -2644,17 +2644,14 @@ def matchany(ui, specs, repo=None, localalias=None):
         # - Auto-pull individual names in the parsed revset.
         if unknownnames:
             # Auto-pull the whole name.
-            resolved = False
-            for spec in specs:
-                if not lookup(spec):
-                    resolved = resolved or autopull.trypull(repo, spec)
+            resolved = autopull.trypull(
+                repo, [spec for spec in specs if not lookup(spec)]
+            )
             if resolved:
                 # Re-parse the revset specs.
                 return matchany(ui, specs, repo, localalias)
             # Auto-pull individual names in the parsed revset.
-            for name in unknownnames:
-                if not autopull.trypull(repo, name):
-                    break
+            autopull.trypull(repo, unknownnames)
 
     posttreebuilthook(tree, repo)
     return makematcher(tree)

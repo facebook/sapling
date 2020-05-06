@@ -228,7 +228,7 @@ Check that log shows the hint about selective pull
 
 By using "default/" the commit gets automatically pulled
   $ hg log -r default/thirdbook
-  pulling bookmark 'thirdbook' from 'ssh://user@dummy/remoterepo'
+  pulling 'thirdbook' from 'ssh://user@dummy/remoterepo'
   changeset:   0:1449e7934ec1
   bookmark:    default/thirdbook
   hoistedname: thirdbook
@@ -367,8 +367,7 @@ Check the repo.pull API
 
   $ setconfig 'remotenames.autopullpattern=re:^default/[a-z]+$'
   $ hg log -r default/thirdbook::default/master -T '{node} {desc} {remotenames}\n'
-  pulling bookmark 'thirdbook' from 'ssh://user@dummy/remoterepo'
-  pulling bookmark 'master' from 'ssh://user@dummy/remoterepo'
+  pulling 'master', 'thirdbook' from 'ssh://user@dummy/remoterepo'
   1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 First default/thirdbook
   0238718db2b174d2622ae9c4c75d61745eb12b25 Move master bookmark 
   a81520e7283a6967ec1d82620b75ab92f5478638 push commit default/master
@@ -384,9 +383,8 @@ Check the repo.pull API
   [255]
   $ setconfig 'remotenames.autopullhoistpattern=re:.*'
   $ hg log -r thirdbook::master -T '{node} {desc} {remotenames}\n'
-  pulling bookmark 'thirdbook::master' from 'ssh://user@dummy/remoterepo'
-  pulling bookmark 'thirdbook' from 'ssh://user@dummy/remoterepo'
-  pulling bookmark 'master' from 'ssh://user@dummy/remoterepo'
+  pulling 'thirdbook::master' from 'ssh://user@dummy/remoterepo'
+  pulling 'master', 'thirdbook' from 'ssh://user@dummy/remoterepo'
   1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 First default/thirdbook
   0238718db2b174d2622ae9c4c75d61745eb12b25 Move master bookmark 
   a81520e7283a6967ec1d82620b75ab92f5478638 push commit default/master
@@ -394,15 +392,15 @@ Check the repo.pull API
 -- Names with revset operators can also be auto pulled.
 
   $ hg log -r book-with-dashes -T '{desc}\n'
-  pulling bookmark 'book-with-dashes' from 'ssh://user@dummy/remoterepo'
+  pulling 'book-with-dashes' from 'ssh://user@dummy/remoterepo'
   First
 
 -- Quoting works:
 
   $ newrepo
   $ setconfig paths.default=ssh://user@dummy/remoterepo
-  $ hg log -r '"default/book-with-dashes"::' -T '{desc}\n'
-  pulling bookmark 'book-with-dashes' from 'ssh://user@dummy/remoterepo'
+  $ hg log -r '::"default/book-with-dashes"' -T '{desc}\n'
+  pulling 'book-with-dashes' from 'ssh://user@dummy/remoterepo'
   First
 
 -- For commit hashes:
@@ -410,7 +408,7 @@ Check the repo.pull API
   $ newrepo
   $ setconfig paths.default=ssh://user@dummy/remoterepo
   $ hg log -r '::1449e7934ec1c4d0c2eefb1194c1cb70e78ba232'
-  pulling 1449e7934ec1c4d0c2eefb1194c1cb70e78ba232 from 'ssh://user@dummy/remoterepo'
+  pulling '1449e7934ec1c4d0c2eefb1194c1cb70e78ba232' from 'ssh://user@dummy/remoterepo'
   changeset:   0:1449e7934ec1
   user:        test
   date:        Thu Jan 01 00:00:00 1970 +0000
@@ -427,8 +425,7 @@ Check the repo.pull API
   $ newrepo
   $ setconfig paths.default=ssh://user@dummy/remoterepo
   $ hg log -r '023871+1449e793' -T "{node}\n"
-  pulling 023871 from 'ssh://user@dummy/remoterepo'
-  pulling 1449e793 from 'ssh://user@dummy/remoterepo'
+  pulling '023871', '1449e793' from 'ssh://user@dummy/remoterepo'
   0238718db2b174d2622ae9c4c75d61745eb12b25
   1449e7934ec1c4d0c2eefb1194c1cb70e78ba232
 
