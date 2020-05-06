@@ -9,12 +9,15 @@ from __future__ import absolute_import
 
 import re
 
-from . import bookmarks, error, util
+from . import bookmarks, error, pycompat, registrar, util
 from .i18n import _
 from .node import hex
 
 
 _commithashre = re.compile(r"\A[0-9a-f]{6,40}\Z")
+_table = {}  # {name: (repo, name) -> bool}
+
+builtinautopullpredicate = registrar.autopullpredicate(_table)
 
 
 def _cachedstringmatcher(pattern, _cache={}):
@@ -38,6 +41,20 @@ def trypull(repo, x):
     if repo.ui.paths.get("default") is None:
         return False
 
+    def sortkey(tup):
+        name, func = tup
+        return (func._priority, name)
+
+    # Try autopull functions.
+    for _name, func in sorted(_table.items(), key=lambda t: (t[1]._priority, t[0])):
+        if func(repo, x):
+            if x in repo.unfiltered():
+                return True
+    return False
+
+
+@builtinautopullpredicate("builtin", priority=10)
+def _builtinautopull(repo, x):
     def _trypull(source, bookmarknames=(), headnames=()):
         """Attempt to pull from source. Writes to ui.ferr. Returns True on success."""
         try:
@@ -115,3 +132,10 @@ def trypull(repo, x):
             return True
 
     return False
+
+
+def loadpredicate(ui, extname, registrarobj):
+    for name, func in pycompat.iteritems(registrarobj._table):
+        if name in _table:
+            raise error.ProgrammingError("namespace '%s' is already registered", name)
+        _table[name] = func

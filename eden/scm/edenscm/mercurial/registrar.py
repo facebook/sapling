@@ -252,6 +252,33 @@ class namespacepredicate(_funcregistrarbase):
         func._priority = priority
 
 
+class autopullpredicate(_funcregistrarbase):
+    """Decorator to register autopull predicate
+
+    Usage::
+
+        autopullpredicate = registrar.autopullpredicate()
+
+        @autopullpredicate('myname', priority=50)
+        def myname(repo, name):
+            return True  # if pulled
+
+    Argument 'priority' will be used to decide the order. Smaller priority will
+    be processed first.
+
+    The function should return True if it pulled something. Otherwise it should
+    return None or False.
+    """
+
+    _docformat = "``%s``\n    %s"
+
+    def _extrasetup(self, name, func, priority):
+        if priority is None:
+            raise error.ProgrammingError("autopull priority must be specified")
+
+        func._priority = priority
+
+
 class revsetpredicate(_funcregistrarbase):
     """Decorator to register revset predicate
 

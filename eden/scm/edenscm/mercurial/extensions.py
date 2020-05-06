@@ -476,6 +476,7 @@ def loadall(ui, whitelist=None):
 
     # delay importing avoids cyclic dependency (especially commands)
     from . import (
+        autopull,
         color,
         commands,
         filemerge,
@@ -495,16 +496,17 @@ def loadall(ui, whitelist=None):
     # - loadername is the name of the function,
     #   which takes (ui, extensionname, extraobj) arguments
     extraloaders = [
+        ("autopullpredicate", autopull, "loadpredicate"),
         ("cmdtable", commands, "loadcmdtable"),
         ("colortable", color, "loadcolortable"),
         ("filesetpredicate", fileset, "loadpredicate"),
+        ("hint", hintutil, "loadhint"),
         ("internalmerge", filemerge, "loadinternalmerge"),
         ("namespacepredicate", namespaces, "loadpredicate"),
         ("revsetpredicate", revset, "loadpredicate"),
         ("templatefilter", templatefilters, "loadfilter"),
         ("templatefunc", templater, "loadfunction"),
         ("templatekeyword", templatekw, "loadkeyword"),
-        ("hint", hintutil, "loadhint"),
     ]
     _loadextra(ui, newindex, extraloaders)
 
