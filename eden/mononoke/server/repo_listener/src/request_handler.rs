@@ -14,7 +14,6 @@ use cached_config::ConfigHandle;
 use context::{generate_session_id, SessionId};
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
-use fbwhoami::FbWhoAmI;
 use futures_old::{Future, Sink, Stream};
 use futures_stats::Timed;
 use lazy_static::lazy_static;
@@ -40,11 +39,18 @@ use load_limiter::{LoadLimiterBuilder, Metric};
 
 lazy_static! {
     static ref DATACENTER_REGION_PREFIX: String = {
-        FbWhoAmI::get()
-            .expect("failed to init fbwhoami")
-            .region_datacenter_prefix
-            .clone()
-            .expect("failed to get region from fbwhoami")
+        #[cfg(fbcode_build)]
+        {
+            ::fbwhoami::FbWhoAmI::get()
+                .expect("failed to init fbwhoami")
+                .region_datacenter_prefix
+                .clone()
+                .expect("failed to get region from fbwhoami")
+        }
+        #[cfg(not(fbcode_build))]
+        {
+            "global".to_owned()
+        }
     };
 }
 

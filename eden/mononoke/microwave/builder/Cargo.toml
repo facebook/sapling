@@ -1,0 +1,38 @@
+[package]
+name = "builder"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["**/*.rs"]
+
+[[bin]]
+name = "builder"
+path = "main.rs"
+
+[dependencies]
+blobrepo = { path = "../../blobrepo" }
+blobrepo_factory = { path = "../../blobrepo/factory" }
+bookmarks = { path = "../../bookmarks" }
+cache_warmup = { path = "../../cache_warmup" }
+changesets = { path = "../../changesets" }
+cmdlib = { path = "../../cmdlib" }
+context = { path = "../../server/context" }
+derived_data_filenodes = { path = "../../derived_data/filenodes" }
+filenodes = { path = "../../filenodes" }
+mercurial_derived_data = { path = "../../derived_data/mercurial_derived_data" }
+mercurial_types = { path = "../../mercurial/types" }
+metaconfig_parser = { path = "../../metaconfig/parser" }
+metaconfig_types = { path = "../../metaconfig/types" }
+microwave = { path = ".." }
+mononoke_types = { path = "../../mononoke_types" }
+scuba_ext = { path = "../../common/scuba_ext" }
+warm_bookmarks_cache = { path = "../../bookmarks/warm_bookmarks_cache" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+clap = "2.33"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+slog = { version="2.5", features=["max_level_debug"] }
+tokio = { version = "=0.2.13", features = ["full"] }

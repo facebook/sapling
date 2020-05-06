@@ -1,0 +1,34 @@
+[package]
+name = "mononoke"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blobrepo = { path = "../blobrepo" }
+bookmarks = { path = "../bookmarks" }
+cmdlib = { path = "../cmdlib" }
+context = { path = "context" }
+mercurial_types = { path = "../mercurial/types" }
+metaconfig_parser = { path = "../metaconfig/parser" }
+metaconfig_types = { path = "../metaconfig/types" }
+monitoring = { path = "monitoring" }
+repo_listener = { path = "repo_listener" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cachelib = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+panichandler = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+slog_glog_fmt = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+slog_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+clap = "2.33"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+openssl = "0.10"
+slog = { version="2.5", features=["max_level_debug"] }
+slog-term = "2.4.2"

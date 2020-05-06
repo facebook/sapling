@@ -23,3 +23,8 @@ mod facebook;
 mod logging;
 mod perf_counters;
 mod session;
+
+#[cfg(not(fbcode_build))]
+pub fn is_quicksand(_ssh_env_vars: &::sshrelay::SshEnvVars) -> bool {
+    false
+}

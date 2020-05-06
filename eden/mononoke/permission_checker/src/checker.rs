@@ -63,3 +63,20 @@ impl PermissionChecker for WhitelistChecker {
         Ok(!self.whitelist.is_disjoint(accessors))
     }
 }
+
+#[cfg(not(fbcode_build))]
+mod r#impl {
+    use super::*;
+
+    use fbinit::FacebookInit;
+
+    impl PermissionCheckerBuilder {
+        pub async fn acl_for_repo(_fb: FacebookInit, _name: &str) -> Result<BoxPermissionChecker> {
+            Ok(Self::always_allow())
+        }
+
+        pub async fn acl_for_tier(_fb: FacebookInit, _name: &str) -> Result<BoxPermissionChecker> {
+            Ok(Self::always_allow())
+        }
+    }
+}

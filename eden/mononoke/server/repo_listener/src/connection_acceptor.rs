@@ -40,7 +40,6 @@ use tokio_codec::{FramedRead, FramedWrite};
 use tokio_io::{AsyncRead, AsyncWrite, IoStream};
 use tokio_old::net::{TcpListener, TcpStream};
 use tokio_openssl::SslAcceptorExt;
-use x509::identity;
 
 use cmdlib::monitoring::ReadyFlagService;
 use limits::types::MononokeThrottleLimits;
@@ -174,26 +173,36 @@ fn accept(
             cloned!(root_log);
             move |sock| {
                 let identities = match sock.get_ref().ssl().peer_certificate() {
-                    Some(cert) => identity::get_identities(&cert),
+                    Some(cert) => {
+                        #[cfg(fbcode_build)]
+                        {
+                            ::x509::identity::get_identities(&cert).and_then(
+                                |identities| -> Result<MononokeIdentitySet> {
+                                    identities
+                                        .into_iter()
+                                        .map(|id| MononokeIdentity::try_from_identity(&id))
+                                        .collect()
+                                },
+                            )
+                        }
+                        #[cfg(not(fbcode_build))]
+                        {
+                            let _ = cert;
+                            Ok(MononokeIdentitySet::new())
+                        }
+                    }
                     None => Err(ErrorKind::ConnectionNoClientCertificate.into()),
                 };
 
-                let identities = identities
-                    .and_then(|identities| -> Result<MononokeIdentitySet> {
-                        identities
-                            .into_iter()
-                            .map(|id| MononokeIdentity::try_from_identity(&id))
-                            .collect()
-                    })
-                    .map_err({
-                        cloned!(root_log);
-                        move |err| {
-                            error!(
-                                root_log,
-                                "failed to get identities from certificate"; SlogKVError(err),
-                            )
-                        }
-                    });
+                let identities = identities.map_err({
+                    cloned!(root_log);
+                    move |err| {
+                        error!(
+                            root_log,
+                            "failed to get identities from certificate"; SlogKVError(err),
+                        )
+                    }
+                });
 
                 ssh_server_mux(sock)
                     .map_err({

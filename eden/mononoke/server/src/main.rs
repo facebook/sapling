@@ -72,25 +72,36 @@ fn main(fb: FacebookInit) -> Result<()> {
     info!(root_log, "Starting up");
 
     let config = get_config(fb, &matches)?;
-    let cert = matches.value_of("cert").unwrap().to_string();
-    let private_key = matches.value_of("private_key").unwrap().to_string();
-    let ca_pem = matches.value_of("ca_pem").unwrap().to_string();
-    let ticket_seed = matches
-        .value_of("ssl-ticket-seeds")
-        .unwrap_or(secure_utils::fb_tls::SEED_PATH)
-        .to_string();
+    let acceptor = {
+        #[cfg(fbcode_build)]
+        {
+            let cert = matches.value_of("cert").unwrap().to_string();
+            let private_key = matches.value_of("private_key").unwrap().to_string();
+            let ca_pem = matches.value_of("ca_pem").unwrap().to_string();
 
-    let ssl = secure_utils::SslConfig {
-        cert,
-        private_key,
-        ca_pem,
+            let ticket_seed = matches
+                .value_of("ssl-ticket-seeds")
+                .unwrap_or(secure_utils::fb_tls::SEED_PATH)
+                .to_string();
+
+            let ssl = secure_utils::SslConfig {
+                cert,
+                private_key,
+                ca_pem,
+            };
+
+            let acceptor = secure_utils::build_tls_acceptor_builder(ssl.clone())
+                .expect("failed to build tls acceptor");
+            secure_utils::fb_tls::tls_acceptor_builder(root_log.clone(), ssl, acceptor, ticket_seed)
+                .expect("failed to build fb_tls acceptor")
+        }
+        #[cfg(not(fbcode_build))]
+        {
+            use openssl::ssl::{SslAcceptor, SslMethod};
+            SslAcceptor::mozilla_intermediate(SslMethod::tls())
+                .expect("failed to build tls acceptor")
+        }
     };
-
-    let mut acceptor = secure_utils::build_tls_acceptor_builder(ssl.clone())
-        .expect("failed to build tls acceptor");
-    acceptor =
-        secure_utils::fb_tls::tls_acceptor_builder(root_log.clone(), ssl, acceptor, ticket_seed)
-            .expect("failed to build fb_tls acceptor");
 
     let test_instance = matches.is_present("test-instance");
     let config_source = if test_instance {
@@ -139,7 +150,10 @@ fn main(fb: FacebookInit) -> Result<()> {
         cmdlib::args::parse_blobstore_options(&matches),
     );
 
-    tracing_fb303::register(fb);
+    #[cfg(fbcode_build)]
+    {
+        tracing_fb303::register(fb);
+    }
 
     // Thread with a thrift service is now detached
     monitoring::start_thrift_service(fb, &root_log, &matches, service);

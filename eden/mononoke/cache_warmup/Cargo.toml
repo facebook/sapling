@@ -1,0 +1,34 @@
+[package]
+name = "cache_warmup"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[lib]
+path = "src/cache_warmup.rs"
+
+[dependencies]
+blobrepo = { path = "../blobrepo" }
+blobstore = { path = "../blobstore" }
+bookmarks = { path = "../bookmarks" }
+context = { path = "../server/context" }
+derived_data = { path = "../derived_data" }
+derived_data_filenodes = { path = "../derived_data/filenodes" }
+manifest = { path = "../manifest" }
+mercurial_types = { path = "../mercurial/types" }
+metaconfig_types = { path = "../metaconfig/types" }
+microwave = { path = "../microwave" }
+mononoke_types = { path = "../mononoke_types" }
+revset = { path = "../revset" }
+scuba_ext = { path = "../common/scuba_ext" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+slog = { version="2.5", features=["max_level_debug"] }
+thiserror = "1.0"
+tokio = { version = "=0.2.13", features = ["full"] }
