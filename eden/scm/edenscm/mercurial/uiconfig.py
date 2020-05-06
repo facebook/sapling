@@ -604,6 +604,8 @@ def validatedynamicconfig(ui):
         "configerator_overrides.rc",
         "devserver_no_sandcastle_overrides.rc",
         "instagram-server_overrides.rc",
+        "www_overrides.rc",
+        "www-merge_overrides.rc",
     ]
     testrcs = ui.configlist("configs", "testdynamicconfigsubset")
     if testrcs:
