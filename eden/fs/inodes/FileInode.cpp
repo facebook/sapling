@@ -7,7 +7,6 @@
 
 #include "eden/fs/inodes/FileInode.h"
 
-#include <folly/FileUtil.h>
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/io/async/EventBase.h>
@@ -23,11 +22,10 @@
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/DirType.h"
 #include "eden/fs/utils/EnumValue.h"
+#include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 
-#ifdef _WIN32
-#include "eden/fs/win/utils/FileUtils.h" // @manual
-#else
+#ifndef _WIN32
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/store/BlobAccess.h"

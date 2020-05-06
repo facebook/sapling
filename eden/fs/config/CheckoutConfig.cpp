@@ -14,13 +14,7 @@
 #include <folly/io/Cursor.h>
 #include <folly/io/IOBuf.h>
 #include <folly/json.h>
-
-#ifdef _WIN32
-#include "eden/fs/win/utils/FileUtils.h" // @manual
-#else
-#include <folly/File.h>
-#include <folly/FileUtil.h>
-#endif
+#include "eden/fs/utils/FileUtils.h"
 
 using folly::ByteRange;
 using folly::IOBuf;

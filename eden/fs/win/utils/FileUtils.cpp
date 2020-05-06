@@ -11,8 +11,8 @@
 #include <folly/portability/IOVec.h>
 #include <filesystem>
 #include <iostream>
-#include "FileUtils.h"
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/win/utils/StringConv.h"
 #include "eden/fs/win/utils/WinError.h"
@@ -23,12 +23,13 @@ using folly::MutableByteRange;
 namespace facebook {
 namespace eden {
 
-DWORD readFile(HANDLE handle, void* buffer, DWORD bytesToRead) {
+DWORD readFile(HANDLE handle, void* buffer, size_t bytesToRead) {
   DWORD bytesRead = 0;
   // According to MSDN, ReadFile for FS will not return until it has read all
   // the requested bytes or reached EOF. So we don't need to read it in a loop.
 
-  if (!ReadFile(handle, buffer, bytesToRead, &bytesRead, nullptr)) {
+  if (!ReadFile(
+          handle, buffer, folly::to_narrow(bytesToRead), &bytesRead, nullptr)) {
     DWORD error = GetLastError();
     XLOGF(
         ERR,
@@ -42,12 +43,18 @@ DWORD readFile(HANDLE handle, void* buffer, DWORD bytesToRead) {
   return bytesRead;
 }
 
-DWORD writeFile(HANDLE handle, const void* buffer, DWORD bytesToWrite) {
+static size_t
+writeFile(HANDLE handle, const void* buffer, size_t bytesToWrite) {
   DWORD bytesWritten = 0;
   // According to MSDN, WriteFile for FS will not return until it has written
   // all the requested bytes. So we don't need to write it in a loop.
 
-  if (!WriteFile(handle, buffer, bytesToWrite, &bytesWritten, nullptr)) {
+  if (!WriteFile(
+          handle,
+          buffer,
+          folly::to_narrow(bytesToWrite),
+          &bytesWritten,
+          nullptr)) {
     DWORD error = GetLastError();
     XLOGF(
         ERR,
@@ -62,23 +69,10 @@ DWORD writeFile(HANDLE handle, const void* buffer, DWORD bytesToWrite) {
   return bytesWritten;
 }
 
-DWORD writeFileIov(HANDLE handle, const iovec* iov, int count) {
-  DWORD bytesWritten = 0;
-  DWORD written = 0;
-
-  for (int i = 0; i < count; i++) {
-    written =
-        writeFile(handle, iov[i].iov_base, folly::to_narrow(iov[i].iov_len));
-    bytesWritten += written;
+void writeFile(const void* buffer, size_t size, const wchar_t* filePath) {
+  if (size == 0) {
+    return;
   }
-
-  return bytesWritten;
-}
-
-void writeFile(const wchar_t* filePath, const folly::ByteRange data) {
-  static_assert(
-      sizeof(data[0]) == 1,
-      "writeFile: only containers with byte-sized elements accepted");
 
   FileHandle fileHandle{CreateFile(
       filePath,
@@ -96,15 +90,10 @@ void writeFile(const wchar_t* filePath, const folly::ByteRange data) {
             "Unable to create the file {}", wideToMultibyteString(filePath)));
   }
 
-  if (!data.empty()) {
-    DWORD bytesWritten =
-        writeFile(fileHandle.get(), data.data(), folly::to_narrow(data.size()));
-    if (bytesWritten != data.size()) {
-      throw std::logic_error(folly::sformat(
-          "Partial data written, size {}, written {}",
-          data.size(),
-          bytesWritten));
-    }
+  size_t bytesWritten = writeFile(fileHandle.get(), buffer, size);
+  if (bytesWritten != size) {
+    throw std::logic_error(folly::sformat(
+        "Partial data written, size {}, written {}", size, bytesWritten));
   }
 }
 
@@ -123,7 +112,7 @@ void writeFileAtomic(const wchar_t* filePath, const folly::ByteRange data) {
             wideToMultibyteString(filePath)));
   }
 
-  writeFile(tmpFile.c_str(), data);
+  writeFile(data, tmpFile.c_str());
 
   if (!MoveFileEx(tmpFile.c_str(), filePath, MOVEFILE_REPLACE_EXISTING)) {
     auto error = GetLastError();

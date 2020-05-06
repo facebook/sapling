@@ -12,7 +12,7 @@
 #include <memory>
 #include <sstream>
 #include "eden/fs/inodes/win/RepoConfig.h"
-#include "eden/fs/win/utils/FileUtils.h"
+#include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/win/utils/Guid.h"
 #include "eden/fs/win/utils/WinError.h"
 
@@ -52,7 +52,7 @@ void createRepoConfig(
     std::stringstream stream;
     stream << (*rootTable);
     std::string contents = stream.str();
-    writeFile(configFile.c_str(), contents);
+    writeFile(contents, configFile.c_str());
   }
 }
 

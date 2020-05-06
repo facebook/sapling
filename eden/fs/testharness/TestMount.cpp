@@ -37,6 +37,7 @@
 #include "eden/fs/testharness/FakeTreeBuilder.h"
 #include "eden/fs/testharness/TempFile.h"
 #include "eden/fs/testharness/TestUtil.h"
+#include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/UnboundedQueueExecutor.h"
 #include "eden/fs/utils/UserInfo.h"
 
@@ -44,7 +45,6 @@
 #include "eden/fs/inodes/sqliteoverlay/SqliteOverlay.h" // @manual
 #include "eden/fs/win/store/WinStore.h" // @manual
 #include "eden/fs/win/testharness/TestFsChannel.h" // @manual
-#include "eden/fs/win/utils/FileUtils.h" // @manual
 #include "eden/fs/win/utils/Guid.h" // @manual
 #include "eden/fs/win/utils/Stub.h" // @manual
 #else
@@ -62,10 +62,6 @@ using std::make_shared;
 using std::make_unique;
 using std::shared_ptr;
 using std::string;
-
-#ifndef _WIN32
-using folly::writeFileAtomic;
-#endif
 
 DEFINE_int32(
     num_eden_test_threads,
@@ -426,7 +422,7 @@ void TestMount::overwriteFile(folly::StringPiece path, std::string contents) {
   // Write the file in the File System and also update the EdenMount. In the
   // real system with Projected FS, the closing of a modified file with send the
   // notification which will update the EdenMount.
-  writeFile(absolutePath.c_str(), folly::Range{contents.c_str()});
+  writeFile(contents, absolutePath.c_str());
   getEdenMount()->materializeFile(relPath);
 }
 
@@ -440,7 +436,7 @@ void TestMount::addFile(folly::StringPiece path, folly::StringPiece contents) {
   // Create the file in the File System and also update the EdenMount. In the
   // real system with Projected FS, the creation of a file with send the
   // notification which will update the EdenMount.
-  writeFile(absolutePath.c_str(), contents);
+  facebook::eden::writeFile(contents, absolutePath.c_str());
   getEdenMount()->createFile(relPath, /*isDirectory=*/false);
 }
 
@@ -463,7 +459,7 @@ std::string TestMount::readFile(folly::StringPiece path) {
   ensureDirectoryExists(absolutePath.dirname());
 
   // Reading of a file will also end up creating the file on the mount point.
-  writeFile(absolutePath.c_str(), contents);
+  writeFile(contents, absolutePath.c_str());
   return contents;
 }
 

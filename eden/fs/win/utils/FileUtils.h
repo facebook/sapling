@@ -51,14 +51,14 @@ struct DirectoryEntryW {
  * This readFile will read the bytesToRead number of bytes or the entire file,
  * which ever is shorter. The buffer should be atleast bytesToRead long.
  */
-FOLLY_NODISCARD DWORD readFile(HANDLE handle, void* buffer, DWORD bytesToRead);
+FOLLY_NODISCARD DWORD readFile(HANDLE handle, void* buffer, size_t bytesToRead);
 
 /*
  * This writeFile will write the buffer to the file pointed by the handle.
  * The buffer should be atleast bytesToWrite long.
  */
-FOLLY_NODISCARD DWORD
-writeFile(HANDLE handle, const void* buffer, DWORD bytesToWrite);
+
+void writeFile(const void* buffer, size_t size, const wchar_t* filePath);
 
 /*
  * readFile() will read the entire file when the bytesToRead is not passed or
@@ -126,26 +126,18 @@ inline void readFile(
  * create the file. If it exists it will overwrite the file.
  */
 
-void writeFile(const wchar_t* filePath, const folly::ByteRange data);
-
-inline void writeFile(const char* filePath, const folly::ByteRange data) {
-  writeFile(multibyteToWideString(filePath).c_str(), data);
+template <typename Container>
+inline void writeFile(const Container& data, const wchar_t* filePath) {
+  static_assert(
+      sizeof(data[0]) == 1,
+      "writeFile: only containers with byte-sized elements accepted");
+  writeFile(&data[0], data.size(), filePath);
 }
 
-/*
- * The following overloads are wrapper functions which except std::string for
- * data.
- */
-
-inline void writeFile(const char* filePath, const std::string& data) {
-  writeFile(multibyteToWideString(filePath).c_str(), folly::StringPiece(data));
+template <typename Container>
+inline void writeFile(const Container& data, const char* filePath) {
+  writeFile(data, multibyteToWideString(filePath).c_str());
 }
-
-inline void writeFile(const wchar_t* filePath, const std::string& data) {
-  writeFile(filePath, folly::StringPiece(data));
-}
-
-FOLLY_NODISCARD DWORD writeFileIov(HANDLE handle, const iovec* iov, int count);
 
 /*
  * writeFileAtomic only works with POSIX path for now.

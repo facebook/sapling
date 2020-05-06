@@ -39,7 +39,7 @@ TEST_F(FileUtilsTest, testWriteReadFile) {
 
   std::string writtenContents = "This is the test file.";
 
-  writeFile(fileString.c_str(), writtenContents);
+  writeFile(writtenContents, fileString.c_str());
   std::string readContents;
   readFile(fileString.c_str(), readContents);
   EXPECT_TRUE(DeleteFileA(fileString.c_str()));
@@ -50,7 +50,7 @@ TEST_F(FileUtilsTest, testWriteReadFileWide) {
   auto filePath = getTestPath() / L"testfile.txt";
   std::string writtenContents = "This is the test file.";
 
-  writeFile(filePath.c_str(), writtenContents);
+  writeFile(writtenContents, filePath.c_str());
   std::string readContents;
   readFile(filePath.c_str(), readContents);
   EXPECT_TRUE(DeleteFile(filePath.c_str()));
@@ -63,7 +63,7 @@ TEST_F(FileUtilsTest, testReadPartialFile) {
   std::string writtenContents =
       "This is the test file. We plan to read the partial contents out of it";
 
-  writeFile(fileString.c_str(), writtenContents);
+  writeFile(writtenContents, fileString.c_str());
   std::string readContents;
   readFile(fileString.c_str(), readContents, 10);
   EXPECT_TRUE(DeleteFileA(fileString.c_str()));
@@ -75,7 +75,7 @@ TEST_F(FileUtilsTest, testReadPartialFileWide) {
   std::string writtenContents =
       "This is the test file. We plan to read the partial contents out of it";
 
-  writeFile(filePath.c_str(), writtenContents);
+  writeFile(writtenContents, filePath.c_str());
   std::string readContents;
   readFile(filePath.c_str(), readContents, 10);
   EXPECT_TRUE(DeleteFile(filePath.c_str()));
@@ -114,7 +114,7 @@ TEST_F(FileUtilsTest, testWriteFileAtomicWithTarget) {
   std::string writtenContents1 = "This is the test file.";
   std::string writtenContents2 = "This is new contents.";
 
-  writeFile(fileString.c_str(), writtenContents1);
+  writeFile(writtenContents1, fileString.c_str());
 
   writeFileAtomic(fileString.c_str(), writtenContents2);
   std::string readContents;
@@ -129,7 +129,7 @@ TEST_F(FileUtilsTest, testWriteFileAtomicWithTargetWide) {
   std::string writtenContents1 = "This is the test file.";
   std::string writtenContents2 = "This is new contents.";
 
-  writeFile(filePath.c_str(), writtenContents1);
+  writeFile(writtenContents1, filePath.c_str());
 
   writeFileAtomic(filePath.c_str(), writtenContents2);
   std::string readContents;
@@ -143,8 +143,8 @@ TEST_F(FileUtilsTest, testWriteFileTruncate) {
   auto fileString = filePath.generic_string();
   std::string writtenContents = "This is the test file.";
 
-  writeFile(fileString.c_str(), std::string("Hello"));
-  writeFile(fileString.c_str(), std::string("hi"));
+  writeFile(std::string("Hello"), fileString.c_str());
+  writeFile(std::string("hi"), fileString.c_str());
   std::string readContents;
   readFile(fileString.c_str(), readContents);
   EXPECT_TRUE(DeleteFileA(fileString.c_str()));
@@ -155,8 +155,8 @@ TEST_F(FileUtilsTest, testWriteFileTruncateWide) {
   auto filePath = getTestPath() / L"testfile.txt";
   std::string writtenContents = "This is the test file.";
 
-  writeFile(filePath.c_str(), std::string("Hello"));
-  writeFile(filePath.c_str(), std::string("hi"));
+  writeFile(std::string("Hello"), filePath.c_str());
+  writeFile(std::string("hi"), filePath.c_str());
   std::string readContents;
   readFile(filePath.c_str(), readContents);
   EXPECT_TRUE(DeleteFile(filePath.c_str()));
@@ -169,7 +169,7 @@ TEST_F(FileUtilsTest, testReadFileFull) {
 
   std::string writtenContents = "This is the test file.";
 
-  writeFile(fileString.c_str(), writtenContents);
+  writeFile(writtenContents, fileString.c_str());
   FileHandle fileHandle{CreateFileA(
       fileString.c_str(),
       GENERIC_READ,
@@ -191,7 +191,7 @@ TEST_F(FileUtilsTest, testReadFileFullWide) {
 
   std::string writtenContents = "This is the test file.";
 
-  writeFile(filePath.c_str(), writtenContents);
+  writeFile(writtenContents, filePath.c_str());
   FileHandle fileHandle{CreateFile(
       filePath.c_str(),
       GENERIC_READ,
@@ -211,11 +211,11 @@ TEST_F(FileUtilsTest, testReadFileFullWide) {
 TEST_F(FileUtilsTest, testGetEnumerationEntries) {
   std::string writtenContents = "This is the test file.";
 
-  writeFile(path{getTestPath() / L"testfile1.txt"}.c_str(), writtenContents);
-  writeFile(path{getTestPath() / L"testfile2.txt"}.c_str(), writtenContents);
-  writeFile(path{getTestPath() / L"testfile3.txt"}.c_str(), writtenContents);
-  writeFile(path{getTestPath() / L"testfile4.txt"}.c_str(), writtenContents);
-  writeFile(path{getTestPath() / L"testfile5.txt"}.c_str(), writtenContents);
+  writeFile(writtenContents, path{getTestPath() / L"testfile1.txt"}.c_str());
+  writeFile(writtenContents, path{getTestPath() / L"testfile2.txt"}.c_str());
+  writeFile(writtenContents, path{getTestPath() / L"testfile3.txt"}.c_str());
+  writeFile(writtenContents, path{getTestPath() / L"testfile4.txt"}.c_str());
+  writeFile(writtenContents, path{getTestPath() / L"testfile5.txt"}.c_str());
 
   create_directory(path{getTestPath() / L"testdir1"});
   create_directory(path{getTestPath() / L"testdir2"});

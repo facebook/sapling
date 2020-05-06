@@ -55,6 +55,7 @@
 #include "eden/fs/telemetry/StructuredLoggerFactory.h"
 #include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/EnumValue.h"
+#include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/UserInfo.h"
@@ -774,11 +775,7 @@ void EdenServer::saveConfig(const cpptoml::table& root) {
   std::ostringstream stream;
   stream << root;
 
-#ifdef _WIN32
   writeFileAtomic(configPath.c_str(), stream.str());
-#else
-  folly::writeFileAtomic(string(configPath.c_str()), stream.str());
-#endif
 }
 
 bool EdenServer::openStorageEngine(
