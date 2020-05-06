@@ -595,7 +595,7 @@ def validatedynamicconfig(ui):
     #
     # Once all configs are migrated, we can delete the rc files and remove this
     # validation.
-    originalrcs = []
+    originalrcs = ["devserver_no_sandcastle_overrides.rc"]
     testrcs = ui.configlist("configs", "testdynamicconfigsubset")
     if testrcs:
         originalrcs.extend(testrcs)
