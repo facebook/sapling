@@ -22,6 +22,9 @@ mod facebook;
 #[cfg(fbcode_build)]
 pub use facebook::*;
 
+#[cfg(not(fbcode_build))]
+pub use r#impl::ScribeClientImplementation;
+
 pub trait ScubaSampleBuilderExt {
     fn with_opt_table(fb: FacebookInit, scuba_table: Option<String>) -> Self;
     fn add_preamble(&mut self, preamble: &Preamble) -> &mut Self;
@@ -92,6 +95,25 @@ impl ScubaSampleBuilderExt for ScubaSampleBuilder {
         #[cfg(fbcode_build)]
         {
             facebook::log_with_trace(self, fb, trace)
+        }
+    }
+}
+
+#[cfg(not(fbcode_build))]
+mod r#impl {
+    use super::*;
+
+    use anyhow::Result;
+
+    pub struct ScribeClientImplementation {}
+
+    impl ScribeClientImplementation {
+        pub fn new(_fb: FacebookInit) -> Self {
+            Self {}
+        }
+
+        pub fn offer(&self, _category: &str, _sample: &str) -> Result<()> {
+            Ok(())
         }
     }
 }

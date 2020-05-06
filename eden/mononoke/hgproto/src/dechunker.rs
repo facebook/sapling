@@ -80,7 +80,7 @@ where
     /// If the self.state is ParsingInt then we try to parse the following content of the buffer
     /// as:
     ///
-    /// ```
+    /// ```text
     /// <integer> '\n'
     /// integer := [digit]*
     /// digit := '0' | '1' | ... | '9'

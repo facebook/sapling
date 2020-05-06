@@ -1,0 +1,66 @@
+[package]
+name = "unbundle"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+backsyncer = { path = "../../backsyncer" }
+blobrepo = { path = "../../blobrepo" }
+blobstore = { path = "../../blobstore" }
+bookmarks = { path = "../../bookmarks" }
+context = { path = "../../server/context" }
+cross_repo_sync = { path = "../../commit_rewriting/cross_repo_sync" }
+filestore = { path = "../../filestore" }
+getbundle_response = { path = "../getbundle_response" }
+git_mapping_pushrebase_hook = { path = "../../bonsai_git_mapping/git_mapping_pushrebase_hook" }
+globalrev_pushrebase_hook = { path = "../../bonsai_globalrev_mapping/globalrev_pushrebase_hook" }
+hooks = { path = "../../hooks" }
+limits = { path = "../../config_structs/loadshedding" }
+mercurial_bundles = { path = "../../mercurial/bundles" }
+mercurial_revlog = { path = "../../mercurial/revlog" }
+mercurial_types = { path = "../../mercurial/types" }
+metaconfig_types = { path = "../../metaconfig/types" }
+mononoke_repo = { path = "../mononoke_repo" }
+mononoke_types = { path = "../../mononoke_types" }
+obsolete = { path = "../obsolete" }
+pushrebase = { path = "../../pushrebase" }
+reachabilityindex = { path = "../../reachabilityindex" }
+remotefilelog = { path = "../remotefilelog" }
+scribe_commit_queue = { path = "../scribe_commit_queue" }
+scuba_ext = { path = "../../common/scuba_ext" }
+synced_commit_mapping = { path = "../../commit_rewriting/synced_commit_mapping" }
+time_window_counter = { path = "../../time_window_counter" }
+topo_sort = { path = "../../common/topo_sort" }
+wirepack = { path = "../wirepack" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+ascii = "1.0"
+bytes = { version = "0.5", features = ["serde"] }
+bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
+futures = { version = "0.3", features = ["async-await", "compat"] }
+futures-old = { package = "futures", version = "0.1" }
+futures-util = "0.3"
+heapsize = "0.4"
+hex = "0.4"
+itertools = "0.8"
+lazy_static = "1.0"
+quickcheck = "0.9"
+sha2 = "0.8"
+slog = { version="2.5", features=["max_level_debug"] }
+thiserror = "1.0"
+tokio = "0.1"
+
+[dev-dependencies]
+blobrepo_factory = { path = "../../blobrepo/factory" }
+fixtures = { path = "../../tests/fixtures" }
+mercurial_types-mocks = { path = "../../mercurial/types/mocks" }
+tests_utils = { path = "../../tests/utils" }
+async_unit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

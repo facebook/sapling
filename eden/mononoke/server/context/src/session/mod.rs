@@ -111,3 +111,14 @@ impl SessionContainer {
         }
     }
 }
+
+#[cfg(not(fbcode_build))]
+mod r#impl {
+    use super::*;
+
+    impl SessionContainer {
+        pub fn is_quicksand(&self) -> bool {
+            false
+        }
+    }
+}

@@ -1,0 +1,20 @@
+[package]
+name = "wirepack"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+mercurial_bundles = { path = "../../mercurial/bundles" }
+mercurial_revlog = { path = "../../mercurial/revlog" }
+mercurial_types = { path = "../../mercurial/types" }
+anyhow = "1.0"
+bytes = { version = "0.5", features = ["serde"] }
+futures = "0.1"
+thiserror = "1.0"
+
+[dev-dependencies]
+mercurial_types-mocks = { path = "../../mercurial/types/mocks" }
+maplit = "1.0"

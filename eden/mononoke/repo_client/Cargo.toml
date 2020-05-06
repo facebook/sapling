@@ -1,0 +1,64 @@
+[package]
+name = "repo_client"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blobrepo = { path = "../blobrepo" }
+blobstore = { path = "../blobstore" }
+bookmarks = { path = "../bookmarks" }
+context = { path = "../server/context" }
+getbundle_response = { path = "getbundle_response" }
+hgproto = { path = "../hgproto" }
+load_limiter = { path = "../load_limiter" }
+manifest = { path = "../manifest" }
+mercurial_bundles = { path = "../mercurial/bundles" }
+mercurial_revlog = { path = "../mercurial/revlog" }
+mercurial_types = { path = "../mercurial/types" }
+metaconfig_types = { path = "../metaconfig/types" }
+mononoke_repo = { path = "mononoke_repo" }
+mononoke_types = { path = "../mononoke_types" }
+pushredirect_enable = { path = "../config_structs/pushredirect" }
+remotefilelog = { path = "remotefilelog" }
+repo_read_write_status = { path = "repo_read_write_status" }
+revisionstore_types = { path = "../../scm/lib/revisionstore/types" }
+scuba_ext = { path = "../common/scuba_ext" }
+streaming_clone = { path = "streaming_clone" }
+unbundle = { path = "unbundle" }
+bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+hostname = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+time_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+tracing = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+bytes = { version = "0.5", features = ["serde"] }
+bytes-old = { package = "bytes", version = "0.4", features = ["serde"] }
+chrono = { version="0.4", features=["serde"] }
+futures-old = { package = "futures", version = "0.1" }
+futures-util = "0.3"
+itertools = "0.8"
+lazy_static = "1.0"
+maplit = "1.0"
+percent-encoding = "2.1"
+rand = { version = "0.7", features = ["small_rng"] }
+serde_json = "1.0"
+slog = { version="2.5", features=["max_level_debug"] }
+thiserror = "1.0"
+tokio-old = { package = "tokio", version = "0.1" }
+
+[dev-dependencies]
+blobrepo_factory = { path = "../blobrepo/factory" }
+fixtures = { path = "../tests/fixtures" }
+hooks_content_stores = { path = "../hooks/content-stores" }
+mononoke_types-mocks = { path = "../mononoke_types/mocks" }
+skiplist = { path = "../reachabilityindex/skiplist" }
+tests_utils = { path = "../tests/utils" }
+tokio = { version = "=0.2.13", features = ["full"] }

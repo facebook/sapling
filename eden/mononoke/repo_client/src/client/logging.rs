@@ -14,6 +14,7 @@ use futures_ext::FutureExt;
 use futures_old::{future, Future};
 use futures_stats::{FutureStats, StreamStats};
 use rand::{distributions::Alphanumeric, thread_rng, Rng};
+#[cfg(fbcode_build)]
 use scribe::ScribeClient;
 use scuba_ext::{
     ScribeClientImplementation, ScubaSampleBuilder, ScubaSampleBuilderExt, ScubaValue,

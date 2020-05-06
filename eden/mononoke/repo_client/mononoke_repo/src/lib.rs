@@ -8,7 +8,6 @@
 #[deny(warnings)]
 use anyhow::Error;
 use blobrepo::BlobRepo;
-use cloned::cloned;
 use fbinit::FacebookInit;
 use futures::TryFutureExt;
 use futures_ext::{BoxFuture, FutureExt};
@@ -24,23 +23,22 @@ use rand::Rng;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use repo_read_write_status::RepoReadWriteFetcher;
-use slog::{error, Logger};
-use smc::get_available_services;
+use slog::Logger;
 use sql_construct::facebook::FbSqlConstruct;
 use sql_ext::facebook::MysqlOptions;
 use std::fmt::{self, Debug};
 use std::sync::{Arc, RwLock};
-use std::time::Duration;
 use std::{
     collections::{hash_map::DefaultHasher, HashSet},
     hash::{Hash, Hasher},
 };
 use streaming_clone::SqlStreamingChunksFetcher;
-use tokio::task::spawn_blocking;
 
 pub use builder::MononokeRepoBuilder;
 
 mod builder;
+#[cfg(fbcode_build)]
+mod facebook;
 
 #[derive(Clone)]
 pub struct SqlStreamingCloneConfig {
@@ -85,13 +83,20 @@ impl MononokeRepo {
     ) -> Result<Self, Error> {
         let lfs_rolled_out_hostnames = Arc::new(RwLock::new(HashSet::new()));
         if let Some(rollout_smc_tier) = &lfs_params.rollout_smc_tier {
-            spawn_smc_tier_fetcher(
-                fb,
-                &logger,
-                lfs_rolled_out_hostnames.clone(),
-                rollout_smc_tier.clone(),
-            )
-            .await;
+            #[cfg(fbcode_build)]
+            {
+                crate::facebook::spawn_smc_tier_fetcher(
+                    fb,
+                    &logger,
+                    lfs_rolled_out_hostnames.clone(),
+                    rollout_smc_tier.clone(),
+                )
+                .await;
+            }
+            #[cfg(not(fbcode_build))]
+            {
+                let _ = (fb, logger, rollout_smc_tier);
+            }
         }
 
         Ok(MononokeRepo {
@@ -184,58 +189,6 @@ impl MononokeRepo {
     pub fn lca_hint(&self) -> Arc<dyn LeastCommonAncestorsHint> {
         self.lca_hint.clone()
     }
-}
-
-async fn spawn_smc_tier_fetcher(
-    fb: FacebookInit,
-    logger: &Logger,
-    lfs_rolled_out_hostnames: Arc<RwLock<HashSet<String>>>,
-    rollout_smc_tier: String,
-) {
-    let update_rolled_out_hostnames = {
-        move || {
-            cloned!(lfs_rolled_out_hostnames, rollout_smc_tier);
-            spawn_blocking(move || {
-                let with_propagated = true;
-                let services = get_available_services(fb, &rollout_smc_tier, with_propagated);
-                if let Ok(services) = services {
-                    let new_hostnames = services
-                        .iter()
-                        .filter(|service| service.is_enabled())
-                        .map(|service| service.hostname.into_owned())
-                        .collect();
-                    {
-                        let mut lfs_rolled_out_hostnames =
-                            lfs_rolled_out_hostnames.write().unwrap();
-                        *lfs_rolled_out_hostnames = new_hostnames;
-                    }
-                }
-            })
-        }
-    };
-
-    // Make sure initial update doesn't block service startup
-    match tokio::time::timeout(Duration::from_secs(10), update_rolled_out_hostnames()).await {
-        Ok(Ok(())) => {}
-        Err(_elapsed) => {
-            error!(
-                logger,
-                "timeout while waiting for initial fetch of smc tier"
-            );
-        }
-        Ok(Err(err)) => {
-            error!(logger, "failed to do initial fetch of smc tier, {:?}", err);
-        }
-    }
-
-    tokio::spawn(async move {
-        loop {
-            let _ = update_rolled_out_hostnames().await;
-            let delay = 30;
-            let splay = rand::random::<u64>() % delay;
-            tokio::time::delay_for(Duration::from_secs(delay + splay)).await;
-        }
-    });
 }
 
 pub fn streaming_clone(

@@ -1,0 +1,17 @@
+[package]
+name = "obsolete"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blobrepo = { path = "../../blobrepo" }
+context = { path = "../../server/context" }
+mercurial_bundles = { path = "../../mercurial/bundles" }
+mercurial_types = { path = "../../mercurial/types" }
+mononoke_types = { path = "../../mononoke_types" }
+pushrebase = { path = "../../pushrebase" }
+anyhow = "1.0"
+futures = "0.1"

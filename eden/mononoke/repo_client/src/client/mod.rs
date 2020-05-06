@@ -53,7 +53,7 @@ use remotefilelog::{
     create_getfiles_blob, create_getpack_v1_blob, create_getpack_v2_blob,
     get_unordered_file_history_for_multiple_nodes,
 };
-use revisionstore::Metadata;
+use revisionstore_types::Metadata;
 use scuba_ext::ScubaSampleBuilderExt;
 use serde_json::{self, json};
 use slog::{debug, info, o};

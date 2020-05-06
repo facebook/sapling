@@ -5,16 +5,18 @@
  * GNU General Public License version 2.
  */
 
-use std::sync::Arc;
+#[cfg(fbcode_build)]
+mod facebook;
+
+#[cfg(fbcode_build)]
+pub use crate::facebook::LogToScribe;
+#[cfg(not(fbcode_build))]
+pub use crate::r#impl::LogToScribe;
 
 use anyhow::Error;
 use async_trait::async_trait;
-use fbinit::FacebookInit;
-use scribe::ScribeClient;
-use scribe_cxx::ScribeCxxClient;
-use serde_derive::Serialize;
-
 use mononoke_types::{ChangesetId, Generation, RepositoryId};
+use serde_derive::Serialize;
 
 #[derive(Serialize)]
 pub struct CommitInfo<'a> {
@@ -48,54 +50,28 @@ pub trait ScribeCommitQueue: Send + Sync {
     async fn queue_commit(&self, commit: &CommitInfo<'_>) -> Result<(), Error>;
 }
 
-pub struct LogToScribe<C>
-where
-    C: ScribeClient + Sync + Send + 'static,
-{
-    client: Option<Arc<C>>,
-    category: String,
-}
+#[cfg(not(fbcode_build))]
+mod r#impl {
+    use super::*;
 
-impl LogToScribe<ScribeCxxClient> {
-    pub fn new_with_default_scribe(fb: FacebookInit, category: String) -> Self {
-        Self {
-            client: Some(Arc::new(ScribeCxxClient::new(fb))),
-            category,
+    use fbinit::FacebookInit;
+
+    pub struct LogToScribe {}
+
+    impl LogToScribe {
+        pub fn new_with_default_scribe(_fb: FacebookInit, _category: String) -> Self {
+            Self {}
+        }
+
+        pub fn new_with_discard() -> Self {
+            Self {}
         }
     }
 
-    pub fn new_with_discard() -> Self {
-        Self {
-            client: None,
-            category: String::new(),
-        }
-    }
-}
-
-impl<C> LogToScribe<C>
-where
-    C: ScribeClient + Sync + Send + 'static,
-{
-    pub fn new(client: C, category: String) -> Self {
-        Self {
-            client: Some(Arc::new(client)),
-            category,
-        }
-    }
-}
-
-#[async_trait]
-impl<C> ScribeCommitQueue for LogToScribe<C>
-where
-    C: ScribeClient + Sync + Send + 'static,
-{
-    async fn queue_commit(&self, commit: &CommitInfo<'_>) -> Result<(), Error> {
-        match &self.client {
-            Some(client) => {
-                let commit = serde_json::to_string(commit)?;
-                client.offer(&self.category, &commit)
-            }
-            None => Ok(()),
+    #[async_trait]
+    impl ScribeCommitQueue for LogToScribe {
+        async fn queue_commit(&self, _commit: &CommitInfo<'_>) -> Result<(), Error> {
+            Ok(())
         }
     }
 }

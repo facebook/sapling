@@ -29,7 +29,7 @@ use mercurial_types::{
     blobs::File, calculate_hg_node_id, FileBytes, HgFileEnvelopeMut, HgFileHistoryEntry,
     HgFileNodeId, HgParents, MPath, RevFlags,
 };
-use revisionstore::Metadata;
+use revisionstore_types::Metadata;
 use thiserror::Error;
 
 use redaction::RedactionFutureExt;

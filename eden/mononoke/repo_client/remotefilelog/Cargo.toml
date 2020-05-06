@@ -1,0 +1,34 @@
+[package]
+name = "remotefilelog"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+blobrepo = { path = "../../blobrepo" }
+blobstore = { path = "../../blobstore" }
+context = { path = "../../server/context" }
+filestore = { path = "../../filestore" }
+getbundle_response = { path = "../getbundle_response" }
+lz4-pyframe = { path = "../../../scm/lib/lz4-pyframe" }
+mercurial_types = { path = "../../mercurial/types" }
+redactedblobstore = { path = "../../blobstore/redactedblobstore" }
+revisionstore_types = { path = "../../../scm/lib/revisionstore/types" }
+cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+anyhow = "1.0"
+bytes = { version = "0.5", features = ["serde"] }
+futures-old = { package = "futures", version = "0.1" }
+thiserror = "1.0"
+
+[dev-dependencies]
+blobrepo_factory = { path = "../../blobrepo/factory" }
+manifest = { path = "../../manifest" }
+mononoke_types = { path = "../../mononoke_types" }
+tests_utils = { path = "../../tests/utils" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+assert_matches = "1.3"
+futures = { version = "0.3", features = ["async-await", "compat"] }
+tokio-compat = "0.1"
