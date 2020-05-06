@@ -14,7 +14,9 @@ use crate::queue::MultiplexedBlobstore;
 use crate::scrub::{LoggingScrubHandler, ScrubBlobstore, ScrubHandler};
 use anyhow::{bail, Error};
 use blobstore::{Blobstore, BlobstoreGetData};
-use blobstore_sync_queue::{BlobstoreSyncQueue, OperationKey, SqlBlobstoreSyncQueue};
+use blobstore_sync_queue::{
+    BlobstoreSyncQueue, BlobstoreSyncQueueEntry, OperationKey, SqlBlobstoreSyncQueue,
+};
 use bytes::Bytes;
 use cloned::cloned;
 use context::CoreContext;
@@ -30,7 +32,7 @@ use futures_old::sync::oneshot;
 use lock_ext::LockExt;
 use memblob::LazyMemblob;
 use metaconfig_types::{BlobstoreId, MultiplexId, ScrubAction};
-use mononoke_types::BlobstoreBytes;
+use mononoke_types::{BlobstoreBytes, DateTime};
 use nonzero_ext::nonzero;
 use readonlyblob::ReadOnlyBlobstore;
 use scuba::ScubaSampleBuilder;
@@ -151,6 +153,49 @@ impl MultiplexedBlobstorePutHandler for LogHandler {
 
 fn make_value(value: &str) -> BlobstoreBytes {
     BlobstoreBytes::from_bytes(Bytes::copy_from_slice(value.as_bytes()))
+}
+
+#[fbinit::compat_test]
+async fn scrub_blobstore_fetch_none(fb: FacebookInit) -> Result<(), Error> {
+    let bid0 = BlobstoreId::new(0);
+    let bs0 = Arc::new(Tickable::new());
+    let bid1 = BlobstoreId::new(1);
+    let bs1 = Arc::new(Tickable::new());
+
+    let queue = Arc::new(SqlBlobstoreSyncQueue::with_sqlite_in_memory().unwrap());
+    let scrub_handler = Arc::new(LoggingScrubHandler::new(false)) as Arc<dyn ScrubHandler>;
+
+    let ctx = CoreContext::test_mock(fb);
+    let bs = ScrubBlobstore::new(
+        MultiplexId::new(1),
+        vec![(bid0, bs0.clone()), (bid1, bs1.clone())],
+        queue.clone(),
+        ScubaSampleBuilder::with_discard(),
+        nonzero!(1u64),
+        scrub_handler.clone(),
+        ScrubAction::ReportOnly,
+    );
+
+    let fut = bs.get(ctx.clone(), "key".to_string()).compat();
+
+    // No entry for "key" - blobstores return None...
+    bs0.tick(None);
+    bs1.tick(None);
+
+    // but then somebody writes it
+    let entry = BlobstoreSyncQueueEntry {
+        blobstore_key: "key".to_string(),
+        blobstore_id: bid0,
+        multiplex_id: MultiplexId::new(1),
+        timestamp: DateTime::now(),
+        id: None,
+        operation_key: OperationKey::gen(),
+    };
+    queue.add(ctx.clone(), entry).compat().await?;
+
+    fut.await?;
+
+    Ok(())
 }
 
 #[fbinit::test]

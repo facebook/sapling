@@ -144,7 +144,11 @@ impl MultiplexedBlobstoreBase {
                             Arc::new(missing),
                         )),
                         (true, false, _) => {
-                            future::err(ErrorKind::SomeFailedOthersNone(errors.into()))
+                            if errors.is_empty() {
+                                future::ok(None)
+                            } else {
+                                future::err(ErrorKind::SomeFailedOthersNone(errors.into()))
+                            }
                         }
                         (true, true, false) => {
                             future::err(ErrorKind::SomeMissingItem(Arc::new(missing), best_value))

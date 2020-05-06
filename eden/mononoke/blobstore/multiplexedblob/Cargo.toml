@@ -9,6 +9,7 @@ include = ["src/*.rs"]
 [dependencies]
 blobstore = { path = ".." }
 blobstore_sync_queue = { path = "../../blobstore_sync_queue" }
+cacheblob = { path = "../cacheblob" }
 context = { path = "../../server/context" }
 metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
