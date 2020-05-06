@@ -26,11 +26,12 @@ makeRequest(
   auto [promise, future] =
       folly::makePromiseContract<typename Request::Response>();
   return std::make_pair(
-      HgImportRequest{Request{std::forward<Input>(input)},
-                      priority,
-                      std::move(promise),
-                      std::move(metricsScope)},
-      std::move(future));
+      HgImportRequest{
+          Request{std::forward<Input>(input)}, priority, std::move(promise)},
+      std::move(future).defer(
+          [metrics = std::move(metricsScope)](auto&& result) {
+            return std::forward<decltype(result)>(result);
+          }));
 }
 } // namespace
 
@@ -57,11 +58,5 @@ HgImportRequest::makePrefetchRequest(
     std::unique_ptr<RequestMetricsScope> metricsScope) {
   return makeRequest<Prefetch>(hashes, priority, std::move(metricsScope));
 }
-
-std::unique_ptr<RequestMetricsScope>
-HgImportRequest::getOwnershipOfImportTracker() {
-  return std::move(metrics_);
-}
-
 } // namespace eden
 } // namespace facebook

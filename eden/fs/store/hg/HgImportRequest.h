@@ -74,12 +74,10 @@ class HgImportRequest {
   HgImportRequest(
       RequestType request,
       ImportPriority priority,
-      folly::Promise<typename RequestType::Response>&& promise,
-      std::unique_ptr<RequestMetricsScope> metricsScope)
+      folly::Promise<typename RequestType::Response>&& promise)
       : request_(std::move(request)),
         priority_(priority),
-        promise_(std::move(promise)),
-        metrics_(std::move(metricsScope)) {}
+        promise_(std::move(promise)) {}
 
   template <typename T>
   const T* getRequest() noexcept {
@@ -87,35 +85,18 @@ class HgImportRequest {
   }
 
   /**
-   * Set Try with the Future for the inner promise.
-   *
-   * We need this method instead of letting the caller directly call
-   * `promise.setTry()` because of the use of `std::variant`,
-   * `promise.setTry` won't be able to convert the incoming response to the
-   * correct `std::variant` automatically.
+   * Set the inner Promise with the result of the function.
    */
-  template <typename T>
-  void setTry(folly::Try<T> result) {
-    auto promise = std::get_if<folly::Promise<T>>(&promise_); // Promise<T>
+  template <typename T, typename Func>
+  void setWith(Func func) {
+    auto promise = std::get_if<folly::Promise<typename T::Response>>(&promise_);
 
     if (!promise) {
       EDEN_BUG() << "invalid promise type";
     }
 
-    if (result.hasValue()) {
-      promise->setValue(std::move(result.value()));
-    } else {
-      promise->setException(std::move(result.exception()));
-    }
+    promise->setWith([func = std::move(func)]() { return func(); });
   }
-
-  /**
-   * Returns pointer for the RequestMetricsScope that is
-   * tracking this request, this should be used to transfer
-   * ownership of this scope when the request is removed from
-   * the queue, and the import is processed.
-   */
-  std::unique_ptr<RequestMetricsScope> getOwnershipOfImportTracker();
 
  private:
   using Request = std::variant<BlobImport, TreeImport, Prefetch>;
@@ -127,7 +108,6 @@ class HgImportRequest {
   Request request_;
   ImportPriority priority_;
   Response promise_;
-  std::unique_ptr<RequestMetricsScope> metrics_;
 
   friend bool operator<(
       const HgImportRequest& lhs,

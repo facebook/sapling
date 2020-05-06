@@ -48,43 +48,23 @@ void HgQueuedBackingStore::processRequest() {
     if (!request) {
       break;
     }
-    auto requestTracker = request->getOwnershipOfImportTracker();
-
     if (auto parameter = request->getRequest<HgImportRequest::BlobImport>()) {
-      auto future =
-          folly::makeSemiFutureWith([store = backingStore_.get(),
-                                     hash = std::move(parameter->hash)]() {
-            return store->getBlob(hash);
-          })
-              .defer([tracker = std::move(requestTracker)](auto&& result) {
-                return folly::makeSemiFuture(std::move(result));
-              });
-      request->setTry<HgImportRequest::BlobImport::Response>(
-          std::move(future).getTry());
+      request->setWith<HgImportRequest::BlobImport>(
+          [store = backingStore_.get(), hash = parameter->hash]() {
+            return store->getBlob(hash).getTry();
+          });
     } else if (
         auto parameter = request->getRequest<HgImportRequest::TreeImport>()) {
-      auto future =
-          folly::makeSemiFutureWith([store = backingStore_.get(),
-                                     hash = std::move(parameter->hash)]() {
-            return store->getTree(hash);
-          })
-              .defer([tracker = std::move(requestTracker)](auto&& result) {
-                return folly::makeSemiFuture(std::move(result));
-              });
-      request->setTry<HgImportRequest::TreeImport::Response>(
-          std::move(future).getTry());
+      request->setWith<HgImportRequest::TreeImport>(
+          [store = backingStore_.get(), hash = parameter->hash]() {
+            return store->getTree(hash).getTry();
+          });
     } else if (
         auto parameter = request->getRequest<HgImportRequest::Prefetch>()) {
-      auto future =
-          folly::makeSemiFutureWith([store = backingStore_.get(),
-                                     hashes = std::move(parameter->hashes)]() {
-            return store->prefetchBlobs(std::move(hashes));
-          })
-              .defer([tracker = std::move(requestTracker)](auto&& result) {
-                return folly::makeSemiFuture(std::move(result));
-              });
-      request->setTry<HgImportRequest::Prefetch::Response>(
-          std::move(future).getTry());
+      request->setWith<HgImportRequest::Prefetch>(
+          [store = backingStore_.get(), hashes = parameter->hashes]() {
+            return store->prefetchBlobs(hashes).getTry();
+          });
     }
   }
 }
