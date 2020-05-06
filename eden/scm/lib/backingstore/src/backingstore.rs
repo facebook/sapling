@@ -77,7 +77,7 @@ impl BackingStore {
         let key = Key::new(path, node);
 
         // check if the blob present on disk
-        if local_only && self.blobstore.contains(&StoreKey::from(&key))? {
+        if local_only && !self.blobstore.contains(&StoreKey::from(&key))? {
             return Ok(None);
         }
 
