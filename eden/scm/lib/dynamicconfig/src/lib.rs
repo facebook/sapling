@@ -14,6 +14,7 @@ use std::path::Path;
 
 use anyhow::{anyhow, bail, Result};
 use hostname;
+use minibytes::Text;
 
 use configparser::config::ConfigSet;
 use hgtime::HgTime;
@@ -196,12 +197,16 @@ impl Generator {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn load_hgrc(&mut self, value: &'static str) -> Result<()> {
+    pub(crate) fn load_hgrc(
+        &mut self,
+        value: impl Into<Text> + Clone + std::fmt::Display,
+    ) -> Result<()> {
+        let value_copy = value.clone();
         let errors = self.config.parse(value, &"dynamicconfigs".into());
         if !errors.is_empty() {
             bail!(
                 "invalid dynamic config blob: '{}'\nerrors: '{:?}'",
-                value,
+                value_copy,
                 errors
             );
         }
@@ -209,8 +214,12 @@ impl Generator {
     }
 
     pub fn execute(mut self) -> Result<ConfigSet> {
-        #[cfg(feature = "fb")]
-        self._execute(fb::fb_rules)?;
+        if std::env::var("HG_TEST_DYNAMICCONFIG").is_ok() {
+            self._execute(test_rules)?;
+        } else {
+            #[cfg(feature = "fb")]
+            self._execute(fb::fb_rules)?;
+        }
         Ok(self.config)
     }
 
@@ -252,6 +261,16 @@ fn get_hg_group(tiers: &HashSet<String>, shard: u8) -> HgGroup {
     } else {
         HgGroup::Stable
     }
+}
+
+/// Rules used in our integration test environment
+fn test_rules(gen: &mut Generator) -> Result<()> {
+    if let Ok(path) = std::env::var("HG_TEST_DYNAMICCONFIG") {
+        let hgrc = std::fs::read_to_string(path).unwrap();
+        gen.load_hgrc(hgrc).unwrap();
+    }
+
+    Ok(())
 }
 
 #[cfg(test)]

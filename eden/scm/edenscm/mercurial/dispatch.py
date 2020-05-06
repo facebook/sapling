@@ -46,6 +46,7 @@ from . import (
     registrar,
     scmutil,
     ui as uimod,
+    uiconfig,
     util,
 )
 from .i18n import _
@@ -943,12 +944,15 @@ def _log_exception(lui, e):
         pass
 
 
-def _getlocal(ui, rpath, wd=None):
+def _getlocal(ui, rpath):
     """Return (path, local ui object) for the given target path.
 
     Takes paths in [cwd]/.hg/hgrc into account."
     """
-    if wd is None:
+    if rpath:
+        path = ui.expandpath(rpath)
+        lui = ui.copy()
+    else:
         try:
             wd = pycompat.getcwd()
         except OSError as e:
@@ -964,16 +968,17 @@ def _getlocal(ui, rpath, wd=None):
                 _("error getting current working directory: %s")
                 % encoding.strtolocal(e.strerror)
             )
-    path = cmdutil.findrepo(wd) or ""
-    if not path:
-        lui = ui
-    else:
-        lui = ui.copy()
-        lui.readconfig(os.path.join(path, ".hg", "hgrc"), path)
+        path = cmdutil.findrepo(wd) or ""
 
-    if rpath:
-        path = lui.expandpath(rpath)
-        lui = ui.copy()
+        if not path:
+            lui = ui
+        else:
+            lui = ui.copy()
+
+    if path:
+        uiconfig.loaddynamicconfig(lui, path)
+
+        # Load the primary config after the dynamic one, so it overwrites it
         lui.readconfig(os.path.join(path, ".hg", "hgrc"), path)
 
     return path, lui

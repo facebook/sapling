@@ -66,6 +66,7 @@ from . import (
     transaction,
     treestate,
     txnutil,
+    uiconfig,
     util,
     vfs as vfsmod,
     visibility,
@@ -439,6 +440,8 @@ class localrepository(object):
         # This list it to be filled by extension during repo setup
         self._phasedefaults = []
         try:
+            uiconfig.loaddynamicconfig(self.ui, self.root)
+            # Load the primary config after the dynamic one, so it overwrites it
             self.ui.readconfig(self.localvfs.join("hgrc"), self.root)
             self._loadextensions()
         except IOError:
