@@ -176,6 +176,7 @@ colortable = {
     "sparse.profile.inactive": "brightblack:black",
     "sparse.include": "brightgreen:green",
     "sparse.exclude": "brightred:red",
+    "sparse.profile.notfound": "brightcyan:cyan",
 }
 
 cwdrealtivepatkinds = ("glob", "relpath")
@@ -1647,11 +1648,18 @@ def show(ui, repo, **opts):
     raw = repo.localvfs.read("sparse")
     include, exclude, profiles = list(map(set, repo.readsparseconfig(raw)))
 
+    LOOKUP_SUCCESS, LOOKUP_NOT_FOUND = range(0, 2)
+
     def getprofileinfo(profile, depth):
         """Returns a list of (depth, profilename, title) for this profile
         and all its children."""
-        sc = repo.readsparseconfig(repo.getrawprofile(profile, "."))
-        profileinfo = [(depth, profile, sc.metadata.get("title"))]
+        try:
+            raw = repo.getrawprofile(profile, ".")
+        except KeyError:
+            return [(depth, profile, LOOKUP_NOT_FOUND, "")]
+        sc = repo.readsparseconfig(raw)
+
+        profileinfo = [(depth, profile, LOOKUP_SUCCESS, sc.metadata.get("title"))]
         for profile in sorted(sc.profiles):
             profileinfo.extend(getprofileinfo(profile, depth + 1))
         return profileinfo
@@ -1662,18 +1670,24 @@ def show(ui, repo, **opts):
             profileinfo = []
             fm.plain(_("Enabled Profiles:\n\n"))
             profileinfo = sum((getprofileinfo(p, 0) for p in sorted(profiles)), [])
-            maxwidth = max(len(name) for depth, name, title in profileinfo)
-            maxdepth = max(depth for depth, name, title in profileinfo)
+            maxwidth = max(len(name) for depth, name, lookup, title in profileinfo)
+            maxdepth = max(depth for depth, name, lookup, title in profileinfo)
 
-            for depth, name, title in profileinfo:
+            for depth, name, lookup, title in profileinfo:
+                if lookup == LOOKUP_SUCCESS:
+                    if depth > 0:
+                        label = "sparse.profile.included"
+                        status = "~"
+                    else:
+                        label = "sparse.profile.active"
+                        status = "*"
+                else:
+                    label = "sparse.profile.notfound"
+                    status = "!"
+
                 fm.startitem()
                 fm.data(type="profile", depth=depth)
-                if depth > 0:
-                    label = "sparse.profile.included"
-                    fm.plain("  " * depth + "  ~ ", label=label)
-                else:
-                    label = "sparse.profile.active"
-                    fm.plain("  * ", label=label)
+                fm.plain("  " * depth + "  " + status + " ", label=label)
                 fm.write(
                     "name",
                     "%%-%ds" % (maxwidth + (maxdepth - depth) * 2),
@@ -1685,6 +1699,7 @@ def show(ui, repo, **opts):
                 fm.plain("\n")
             if include or exclude:
                 fm.plain("\n")
+
         if include:
             fm.plain(_("Additional Included Paths:\n\n"))
             for fname in sorted(include):
@@ -1693,6 +1708,7 @@ def show(ui, repo, **opts):
                 fm.write("name", "  %s\n", fname, label="sparse.include")
             if exclude:
                 fm.plain("\n")
+
         if exclude:
             fm.plain(_("Additional Excluded Paths:\n\n"))
             for fname in sorted(exclude):

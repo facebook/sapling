@@ -833,3 +833,45 @@ File count and size data for hg explain is cached in the simplecache extension:
   sparseprofilestats:sparseprofiles:profiles__bar__eggs:ab56132ffe9320163b73f769a0a32d84c6869949:0:07b307002dae98240fe64a42df9598263f69d925:False:v2
   sparseprofilestats:sparseprofiles:profiles__bar__ham:07b4880e6fcb1f6b13998b0c6bc47f256a0f6d33:0:07b307002dae98240fe64a42df9598263f69d925:False:v2
   sparseprofilestats:sparseprofiles:unfiltered:07b307002dae98240fe64a42df9598263f69d925:v2
+
+
+Test non-existing profiles are properly reported
+  $ newrepo sparsenoprofile
+  $ cat > .hg/hgrc <<EOF
+  > [extensions]
+  > sparse=
+  > EOF
+  $ cat > profile-ok <<EOF
+  > [metadata]
+  > title: This is a regular profile
+  > EOF
+  $ cat > profile-includes-existing <<EOF
+  > %include profile-existing
+  > [metadata]
+  > title: This profile includes an existing profile
+  > EOF
+  $ cat > profile-existing <<EOF
+  > [metadata]
+  > title: A regular included profile
+  > EOF
+  $ cat > profile-includes-non-existing <<EOF
+  > %include profile-non-existing
+  > [metadata]
+  > title: This profile includes a non-existing profile
+  > EOF
+  $ hg commit -Aqm 'initial'
+  $ hg sparse enableprofile profile-ok
+  $ hg sparse enableprofile profile-wrong
+  the profile 'profile-wrong' does not exist in the current commit, it will only take effect when you check out a commit containing a profile with that name
+  (if the path is a typo, use 'hg sparse disableprofile' to remove it)
+  $ hg sparse enableprofile profile-includes-existing
+  $ hg sparse enableprofile profile-includes-non-existing
+  $ hg sparse show
+  Enabled Profiles:
+  
+    * profile-includes-existing        This profile includes an existing profile
+      ~ profile-existing               A regular included profile
+    * profile-includes-non-existing    This profile includes a non-existing profile
+      ! profile-non-existing         
+    * profile-ok                       This is a regular profile
+    ! profile-wrong                  
