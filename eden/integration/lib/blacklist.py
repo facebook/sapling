@@ -136,8 +136,13 @@ if sys.platform == "win32":
         "hg.sparse_test.SparseTestTreeOnly": True,
         "hg.split_test.SplitTestTreeOnly": True,
         "hg.status_deadlock_test.StatusDeadlockTestTreeOnly": True,
-        "hg.status_test.StatusRevertTestTreeOnly": True,
-        "hg.status_test.StatusTestTreeOnly": True,
+        "hg.status_test.StatusTestTreeOnly": [
+            # TODO: Opening a file with O_TRUNC inside an EdenFS mount fails on Windows
+            "test_partial_truncation_after_open_modifies_file",
+            # TODO: These tests do not report the file as modified after truncation
+            "test_truncation_after_open_modifies_file",
+            "test_truncation_upon_open_modifies_file",
+        ],
         "hg.storage_engine_test.HisteditMemoryStorageEngineTestTreeOnly": True,
         "hg.storage_engine_test.HisteditRocksDBStorageEngineTestTreeOnly": True,
         "hg.storage_engine_test.HisteditSQLiteStorageEngineTestTreeOnly": True,
