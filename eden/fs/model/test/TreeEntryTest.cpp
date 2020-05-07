@@ -5,10 +5,10 @@
  * GNU General Public License version 2.
  */
 
+#include <gtest/gtest.h>
+
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/testharness/TestUtil.h"
-
-#include <gtest/gtest.h>
 
 using namespace facebook::eden;
 
@@ -23,16 +23,20 @@ TEST(TreeEntry, modeAndLogString) {
 
   TreeEntry rwxFile(
       makeTestHash("789"), "file.exe", TreeEntryType::EXECUTABLE_FILE);
+#ifndef _WIN32
   EXPECT_EQ(S_IFREG | 0755, modeFromTreeEntryType(rwxFile.getType()));
   EXPECT_EQ(
       TreeEntryType::EXECUTABLE_FILE, treeEntryTypeFromMode(S_IFREG | 0755));
+#endif
   EXPECT_EQ(
       "(file.exe, 0000000000000000000000000000000000000789, x)",
       rwxFile.toLogString());
 
   TreeEntry rwxLink(makeTestHash("b"), "to-file.exe", TreeEntryType::SYMLINK);
+#ifndef _WIN32
   EXPECT_EQ(S_IFLNK | 0755, modeFromTreeEntryType(rwxLink.getType()));
   EXPECT_EQ(TreeEntryType::SYMLINK, treeEntryTypeFromMode(S_IFLNK | 0755));
+#endif
   EXPECT_EQ(
       "(to-file.exe, 000000000000000000000000000000000000000b, l)",
       rwxLink.toLogString());
@@ -44,5 +48,7 @@ TEST(TreeEntry, modeAndLogString) {
       "(src, 0000000000000000000000000000000000000abc, d)",
       directory.toLogString());
 
+#ifndef _WIN32
   EXPECT_EQ(std::nullopt, treeEntryTypeFromMode(S_IFSOCK | 0700));
+#endif
 }

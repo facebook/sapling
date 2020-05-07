@@ -5,11 +5,11 @@
  * GNU General Public License version 2.
  */
 
-#include "eden/fs/model/Tree.h"
-
 #include <folly/String.h>
 #include <gtest/gtest.h>
+
 #include "eden/fs/model/Hash.h"
+#include "eden/fs/model/Tree.h"
 #include "eden/fs/model/TreeEntry.h"
 #include "eden/fs/utils/PathFuncs.h"
 
