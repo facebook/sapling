@@ -1099,7 +1099,7 @@ def _undoto(ui, repo, reverseindex, keep=False, branch=None):
         oldcommithash = _readnode(repo, "workingparent.i", nodedict["workingparent"])
         shorthash = short(bin(oldcommithash))
         hintutil.trigger("undo-uncommit-unamend", command, shorthash)
-    repo.ui.status((uimessage))
+    repo.ui.status(uimessage)
 
 
 def _restoreheads(repo, reverseindex):
@@ -1395,7 +1395,7 @@ def _preview(ui, repo, reverseindex):
         commandlist = commandstr.split("\0")[1:]
         commandstr = " ".join(commandlist)
         uimessage = _("undo to %s, before %s\n") % (time, commandstr)
-        repo.ui.status((uimessage))
+        repo.ui.status(uimessage)
     except IndexError:
         repo.ui.status(_("most recent state: undoing here won't change" " anything\n"))
     return 0

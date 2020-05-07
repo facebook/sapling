@@ -73,7 +73,7 @@ def githelp(ui, repo, *args, **kwargs):
 
     cmd = args[0]
     if not cmd in gitcommands:
-        raise GitUnknownError(ui, "error: unknown git command %s" % (cmd))
+        raise GitUnknownError(ui, "error: unknown git command %s" % cmd)
 
     args = args[1:]
     return gitcommands[cmd](ui, repo, *args, **kwargs)
@@ -1069,7 +1069,7 @@ def status(ui, repo, *args, **kwargs):
 def svn(ui, repo, *args, **kwargs):
     svncmd = args[0]
     if not svncmd in gitsvncommands:
-        ui.warn(_("error: unknown git svn command %s\n") % (svncmd))
+        ui.warn(_("error: unknown git svn command %s\n") % svncmd)
 
     args = args[1:]
     return gitsvncommands[svncmd](ui, repo, *args, **kwargs)

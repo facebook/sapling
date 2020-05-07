@@ -264,7 +264,7 @@ def updateoptionlists(blocks):
 
             opt = "%s%s" % (
                 shortoption and "-%s " % shortoption or "",
-                ("%s--%s %s") % (noshortop, longoption, longoptionarg),
+                "%s--%s %s" % (noshortop, longoption, longoptionarg),
             )
             opt = opt.rstrip()
             blocks[j]["optstr"] = opt

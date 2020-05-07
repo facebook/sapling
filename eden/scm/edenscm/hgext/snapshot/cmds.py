@@ -99,7 +99,7 @@ def snapshotcreate(ui, repo, *args, **opts):
         node = nodemod.hex(node)
         with repo.transaction("update-snapshot-list") as tr:
             repo.snapshotlist.update(tr, addnodes=[node])
-        ui.status(_("snapshot %s created\n") % (node))
+        ui.status(_("snapshot %s created\n") % node)
         if opts.get("clean"):
             try:
                 # We want to bring the working copy to the p1 state

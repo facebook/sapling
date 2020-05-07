@@ -64,7 +64,7 @@ else:
                 if os.WIFEXITED(status):
                     returncode = os.WEXITSTATUS(status)
                 else:
-                    returncode = -os.WTERMSIG(status)
+                    returncode = -(os.WTERMSIG(status))
                 if returncode != 0:
                     # The child process's return code is 0 on success, an errno
                     # value on failure, or 255 if we don't have a valid errno

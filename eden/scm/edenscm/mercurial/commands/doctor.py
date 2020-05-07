@@ -306,7 +306,7 @@ def repairtreestate(ui, vfs, root, cl):
         ui.write_err(_("treestate: repaired\n"))
 
     # Find a recent treestate (name, root) pair.
-    for filename in sorted(vfs.listdir("treestate"), key=lambda n: -stat(n).st_mtime):
+    for filename in sorted(vfs.listdir("treestate"), key=lambda n: -(stat(n).st_mtime)):
         data = vfs.read("treestate/%s" % filename)
         path = vfs.join("treestate/%s" % filename)
 

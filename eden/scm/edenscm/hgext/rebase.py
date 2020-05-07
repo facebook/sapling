@@ -342,9 +342,10 @@ class rebaseruntime(object):
         if not self.ui.configbool("experimental", "rebaseskipobsolete"):
             return
         obsoleteset = set(obsoleterevs)
-        self.obsoletenotrebased, self.obsoletewithoutsuccessorindestination = _computeobsoletenotrebased(
-            self.repo, obsoleteset, destmap
-        )
+        (
+            self.obsoletenotrebased,
+            self.obsoletewithoutsuccessorindestination,
+        ) = _computeobsoletenotrebased(self.repo, obsoleteset, destmap)
         skippedset = set(self.obsoletenotrebased)
         skippedset.update(self.obsoletewithoutsuccessorindestination)
         if not mutation.enabled(self.repo):

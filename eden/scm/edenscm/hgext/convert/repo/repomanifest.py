@@ -226,7 +226,7 @@ class repomanifest(object):
         )
         if revision is None:
             raise ValueError(
-                _('No revision specified anywhere for \"%s\"')
+                _('No revision specified anywhere for "%s"')
                 % projectelement.getAttribute(self.DOM_ATTRIBUTE_NAME)
             )
 

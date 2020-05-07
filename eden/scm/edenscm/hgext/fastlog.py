@@ -93,7 +93,7 @@ def lazyparents(rev, public, parentfunc):
     heap = [-rev]
 
     while heap:
-        cur = -heapq.heappop(heap)
+        cur = -(heapq.heappop(heap))
         if cur not in seen:
             seen.add(cur)
             yield cur

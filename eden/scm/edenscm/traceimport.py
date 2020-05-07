@@ -140,7 +140,7 @@ _tracedclasses = {object, type, types.ModuleType, dict}
 _wrapfunc = bindings.tracing.wrapfunc
 
 
-def traceclass(cls,):
+def traceclass(cls):
     """Annotate functions in a class so they get traced."""
     bases = getattr(cls, "__mro__", [])
     for obj in bases:
@@ -164,7 +164,7 @@ def traceclass(cls,):
                 setattr(obj, k, _wrapfunc(v, classname=name))
 
 
-def tracemodule(mod,):
+def tracemodule(mod):
     """Annotate functions and classes in a module so they get traced."""
     modname = mod.__name__
     container = mod.__dict__

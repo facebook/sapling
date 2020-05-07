@@ -210,10 +210,11 @@ def metaedit(ui, repo, templ, *revs, **opts):
                         _commitopts["message"] = msg
                         _commitopts["edit"] = False
                     if _commitopts.get("edit", False):
-                        _commitopts["message"] = (
-                            "HG: Commit message of changeset %s\n%s"
-                            % (str(c), c.description())
+                        msg = "HG: Commit message of changeset %s\n%s" % (
+                            str(c),
+                            c.description(),
                         )
+                        _commitopts["message"] = msg
                     bases = [
                         replacemap.get(c.p1().node(), c.p1().node()),
                         replacemap.get(c.p2().node(), c.p2().node()),

@@ -102,7 +102,7 @@ def filectxancestors(fctxs, followfirst=False):
     for c in fctxs:
         addvisit(c)
     while visit:
-        currev = -heapq.heappop(visitheap)
+        currev = -(heapq.heappop(visitheap))
         curfctxs = visit.pop(currev)
         yield currev, curfctxs
         for c in curfctxs:

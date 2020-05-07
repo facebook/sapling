@@ -49,7 +49,12 @@ def showhistory(ui, repo, reponame, workspacename, **opts):
                 ui.status(_("Current Smartlog:\n\n"))
             else:
                 with progress.spinner(ui, _("fetching")):
-                    firstpublic, revdag, slversion, sltimestamp = serv.getsmartlogbyversion(
+                    (
+                        firstpublic,
+                        revdag,
+                        slversion,
+                        sltimestamp,
+                    ) = serv.getsmartlogbyversion(
                         reponame,
                         workspacename,
                         repo,

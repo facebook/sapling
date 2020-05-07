@@ -228,7 +228,7 @@ def _posixexitstatus(code):
     if os.WIFEXITED(code):
         return os.WEXITSTATUS(code)
     elif os.WIFSIGNALED(code):
-        return -os.WTERMSIG(code)
+        return -(os.WTERMSIG(code))
 
 
 def _windowsworker(ui, func, staticargs, args):

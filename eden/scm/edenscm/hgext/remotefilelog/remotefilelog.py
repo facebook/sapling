@@ -301,7 +301,7 @@ class remotefilelog(object):
             if flag & flags:
                 vhash = True
                 if flag not in revlog._flagprocessors:
-                    message = _("missing processor for flag '%#x'") % (flag)
+                    message = _("missing processor for flag '%#x'") % flag
                     raise revlog.RevlogError(message)
                 readfunc, writefunc, rawfunc = revlog._flagprocessors[flag]
                 if raw:

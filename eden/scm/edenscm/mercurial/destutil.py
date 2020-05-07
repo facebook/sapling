@@ -421,7 +421,7 @@ def _statusotherbranchheads(ui, repo):
                     'no open descendant heads on branch "%s", '
                     "updating to a closed head\n"
                 )
-                % (currentbranch)
+                % currentbranch
             )
             if otherheads:
                 ui.warn(
@@ -432,7 +432,7 @@ def _statusotherbranchheads(ui, repo):
                     % (len(otherheads))
                 )
             else:
-                ui.warn(_('(committing will reopen branch "%s")\n') % (currentbranch))
+                ui.warn(_('(committing will reopen branch "%s")\n') % currentbranch)
         elif otherheads:
             curhead = repo["."]
             ui.status(

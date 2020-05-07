@@ -46,11 +46,10 @@ def check(repo):
     if not vfs.exists(filename):
         with vfs.open(filename, "wb") as configfile:
             configfile.write(
-                encodeutf8("[commitcloud]\nworkspace=%s\nrepo_name=%s\nrepo_root=%s\n"
-                % (workspacename,
-                   reponame,
-                   repo.path,
-                ))
+                encodeutf8(
+                    "[commitcloud]\nworkspace=%s\nrepo_name=%s\nrepo_root=%s\n"
+                    % (workspacename, reponame, repo.path)
+                )
             )
             _restart_service_subscriptions(repo.ui)
     else:

@@ -1359,7 +1359,7 @@ def displayremotebookmarks(ui, repo, opts, fm):
 
 def _getremotepeer(ui, repo, opts):
     remotepath = opts.get("remote_path")
-    path = ui.paths.getpath(remotepath or None, default=("default"))
+    path = ui.paths.getpath(remotepath or None, default="default")
 
     destpath = path.pushloc or path.loc
     other = hg.peer(repo, opts, destpath)

@@ -3,6 +3,8 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+# isort:skip_file
+
 # pyre-fixme[21]: Could not find `edenscmnative`.
 from edenscmnative.traceprof import *  # noqa: F403, F401
 

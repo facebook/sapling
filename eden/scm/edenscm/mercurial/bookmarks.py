@@ -650,7 +650,7 @@ def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
     changed = []
     for b, scid, dcid in addsrc:
         if scid in repo:  # add remote bookmarks for changes we already have
-            changed.append((b, scid, status, _("adding remote bookmark %s\n") % (b)))
+            changed.append((b, scid, status, _("adding remote bookmark %s\n") % b))
         elif b in explicit:
             explicit.remove(b)
             ui.warn(
@@ -659,14 +659,14 @@ def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
             )
 
     for b, scid, dcid in advsrc:
-        changed.append((b, scid, status, _("updating bookmark %s\n") % (b)))
+        changed.append((b, scid, status, _("updating bookmark %s\n") % b))
     # remove normal movement from explicit set
     explicit.difference_update(d[0] for d in changed)
 
     for b, scid, dcid in diverge:
         if b in explicit:
             explicit.discard(b)
-            changed.append((b, scid, status, _("importing bookmark %s\n") % (b)))
+            changed.append((b, scid, status, _("importing bookmark %s\n") % b))
         else:
             db = _diverge(ui, b, path, localmarks, scid)
             if db:
@@ -684,12 +684,12 @@ def updatefromremote(ui, repo, remotemarks, path, trfunc, explicit=()):
                         "warning: failed to assign numbered name "
                         "to divergent bookmark %s\n"
                     )
-                    % (b)
+                    % b
                 )
     for b, scid, dcid in adddst + advdst:
         if b in explicit:
             explicit.discard(b)
-            changed.append((b, scid, status, _("importing bookmark %s\n") % (b)))
+            changed.append((b, scid, status, _("importing bookmark %s\n") % b))
     for b, scid, dcid in differ:
         if b in explicit:
             explicit.remove(b)

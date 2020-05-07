@@ -1478,11 +1478,11 @@ def getpushmessage(revs, getmessage):
     )
     maxoutput = 10
     for i in range(0, min(len(revs), maxoutput)):
-        io.write(("    %s\n") % (getmessage(revs[i])))
+        io.write("    %s\n" % (getmessage(revs[i])))
 
     if len(revs) > maxoutput + 1:
-        io.write(("    ...\n"))
-        io.write(("    %s\n") % (getmessage(revs[-1])))
+        io.write("    ...\n")
+        io.write("    %s\n" % (getmessage(revs[-1])))
     return io.getvalue()
 
 

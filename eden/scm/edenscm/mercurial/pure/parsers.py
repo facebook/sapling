@@ -115,7 +115,7 @@ class InlinedIndexObject(BaseIndexObject):
             self._offsets = [0] * lgt
         count = 0
         while off <= len(self._data) - indexsize:
-            s, = struct.unpack(
+            (s,) = struct.unpack(
                 ">i", self._data[off + indexfirst : off + sizeint + indexfirst]
             )
             if lgt is not None:

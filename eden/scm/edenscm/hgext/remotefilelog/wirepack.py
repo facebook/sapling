@@ -139,7 +139,7 @@ def readdeltas(fh, version=1):
         if version == 1:
             yield (node, deltabase, delta, None)
         elif version == 2:
-            metalen, = readunpack(fh, "!I")
+            (metalen,) = readunpack(fh, "!I")
             meta = readexactly(fh, metalen)
             metadata = parsepackmeta(meta)
             yield (node, deltabase, delta, metadata)

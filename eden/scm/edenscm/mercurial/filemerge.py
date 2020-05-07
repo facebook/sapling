@@ -326,7 +326,7 @@ def _iprompt(repo, mynode, orig, fcd, fco, fca, toolconf, labels=None):
                         proc.communicate(fd.encode("utf-8").strip())[0]
                     ).strip()
                 except Exception as ex:
-                    ui.status(_(" failed: %s\n") % (ex))
+                    ui.status(_(" failed: %s\n") % ex)
                 else:
                     destctx = fcd.changectx()
                     if destpath in destctx:

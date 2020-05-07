@@ -328,7 +328,7 @@ def memoize(func, key, serializer, ui):
     if result is not sentinel:
         return result
 
-    _debug(ui, "falling back for value %s\n" % (key))
+    _debug(ui, "falling back for value %s\n" % key)
     value = func()
     cacheset(key, value, serializer, ui, _adjusted=True)
     return value

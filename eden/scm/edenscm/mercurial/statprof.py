@@ -576,7 +576,7 @@ def display_by_method(data, fp):
                     source,
                 )
 
-                print("%33.0f%% %6.2f   line %s: %s" % (stattuple), file=fp)
+                print("%33.0f%% %6.2f   line %s: %s" % stattuple, file=fp)
 
 
 def display_about_method(data, fp, function=None, **kwargs):

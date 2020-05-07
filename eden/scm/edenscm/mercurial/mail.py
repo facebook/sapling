@@ -121,7 +121,7 @@ def _smtp(ui):
     if username and not password:
         password = ui.getpass()
     if username and password:
-        ui.note(_("(authenticating to mail server as %s)\n") % (username))
+        ui.note(_("(authenticating to mail server as %s)\n") % username)
         try:
             s.login(username, password)
         except smtplib.SMTPException as inst:

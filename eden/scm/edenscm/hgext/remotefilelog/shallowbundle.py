@@ -97,9 +97,8 @@ class shallowcg1packer(changegroup.cg1packer):
             if mfnode not in revlog.nodemap:
                 return False
 
-        allowflat = (
-            "allowflatmanifest" in self._bundlecaps
-            or "True" in self._b2caps.get("allowflatmanifest", [])
+        allowflat = "allowflatmanifest" in self._bundlecaps or "True" in self._b2caps.get(
+            "allowflatmanifest", []
         )
         if repo.ui.configbool("treemanifest", "blocksendflat") and not allowflat:
             raise error.Abort(

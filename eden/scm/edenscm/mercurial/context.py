@@ -1368,9 +1368,12 @@ class filectx(basefilectx):
         self._repo = repo
         self._path = path
 
-        assert changeid is not None or fileid is not None or changectx is not None, (
-            "bad args: changeid=%r, fileid=%r, changectx=%r"
-            % (changeid, fileid, changectx)
+        assert (
+            changeid is not None or fileid is not None or changectx is not None
+        ), "bad args: changeid=%r, fileid=%r, changectx=%r" % (
+            changeid,
+            fileid,
+            changectx,
         )
 
         if filelog is not None:

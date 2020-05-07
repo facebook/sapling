@@ -78,6 +78,7 @@ def load(fp):
     else:
         return _sysjson.load(fp)
 
+
 def loads(string):
     """Like stdlib json.loads, but results are bytes instead of unicode
 

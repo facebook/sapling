@@ -902,7 +902,7 @@ def _checkunknownfiles(repo, wctx, mctx, force, actions, mergeforce):
                 or f in pathconflicts
                 or any(p in pathconflicts for p in util.finddirs(f))
             )
-            flags, = args
+            (flags,) = args
             actions[f] = ("g", (flags, backup), msg)
 
 
@@ -1744,7 +1744,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
         # resolve path conflicts (must come before getting)
         for f, args, msg in actions["pr"]:
             repo.ui.debug(" %s: %s -> pr\n" % (f, msg))
-            f0, = args
+            (f0,) = args
             if wctx[f0].lexists():
                 repo.ui.note(_("moving %s to %s\n") % (f0, f))
                 wctx[f].audit()
@@ -1840,7 +1840,7 @@ def applyupdates(repo, actions, wctx, mctx, overwrite, labels=None, ancestors=No
             repo.ui.debug(" %s: %s -> e\n" % (f, msg))
             z += 1
             prog.value = (z, f)
-            flags, = args
+            (flags,) = args
             wctx[f].audit()
             wctx[f].setflags("l" in flags, "x" in flags)
             updated += 1
@@ -2011,7 +2011,7 @@ def recordupdates(repo, actions, branchmerge):
         # resolve path conflicts
         copied = repo.dirstate.copies()
         for f, args, msg in actions.get("pr", []):
-            f0, = args
+            (f0,) = args
             origf0 = copied.get(f0, f0)
             repo.dirstate.add(f)
             repo.dirstate.copy(origf0, f)

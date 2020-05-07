@@ -99,13 +99,13 @@ def addflagprocessor(flag, processor):
       contents can be used for hash integrity checks.
     """
     if not flag & REVIDX_KNOWN_FLAGS:
-        msg = _("cannot register processor on unknown flag '%#x'.") % (flag)
+        msg = _("cannot register processor on unknown flag '%#x'.") % flag
         raise ProgrammingError(msg)
     if flag not in REVIDX_FLAGS_ORDER:
-        msg = _("flag '%#x' undefined in REVIDX_FLAGS_ORDER.") % (flag)
+        msg = _("flag '%#x' undefined in REVIDX_FLAGS_ORDER.") % flag
         raise ProgrammingError(msg)
     if flag in _flagprocessors:
-        msg = _("cannot register multiple processors on flag '%#x'.") % (flag)
+        msg = _("cannot register multiple processors on flag '%#x'.") % flag
         raise error.Abort(msg)
     _flagprocessors[flag] = processor
 
@@ -1580,7 +1580,7 @@ class revlog(object):
         if flags == 0:
             return text, True
         if not operation in ("read", "write"):
-            raise ProgrammingError(_("invalid '%s' operation ") % (operation))
+            raise ProgrammingError(_("invalid '%s' operation ") % operation)
         # Check all flags are known.
         if flags & ~REVIDX_KNOWN_FLAGS:
             raise RevlogError(
@@ -1600,7 +1600,7 @@ class revlog(object):
                 vhash = True
 
                 if flag not in _flagprocessors:
-                    message = _("missing processor for flag '%#x'") % (flag)
+                    message = _("missing processor for flag '%#x'") % flag
                     raise RevlogError(message)
 
                 processor = _flagprocessors[flag]

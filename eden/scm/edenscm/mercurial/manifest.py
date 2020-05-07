@@ -609,8 +609,7 @@ class manifestlog(object):
 
         if dir:
             raise error.Abort(
-                _("cannot ask for manifest directory '%s' in a flat " "manifest")
-                % dir
+                _("cannot ask for manifest directory '%s' in a flat manifest") % dir
             )
         else:
             if verify:

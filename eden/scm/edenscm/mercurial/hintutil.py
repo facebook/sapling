@@ -87,7 +87,7 @@ def show(ui):
     names = []
     for name, msg in messages:
         if not isacked(name):
-            ui.write_err(("%s\n") % msg.rstrip(), notice=_("hint[%s]") % name)
+            ui.write_err("%s\n" % msg.rstrip(), notice=_("hint[%s]") % name)
             names.append(name)
     if names and not isacked("hint-ack"):
         msg = _("use 'hg hint --ack %s' to silence these hints\n") % " ".join(names)

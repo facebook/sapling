@@ -1536,7 +1536,7 @@ def wraprepo(repo):
                 maxlinkrev = int(tipresults[0][0])
             else:
                 raise CorruptionException(
-                    ("multiple tips for %s in the database") % reponame
+                    "multiple tips for %s in the database" % reponame
                 )
 
             if (not ignoreduplicates) and (
@@ -1621,7 +1621,7 @@ def wraprepo(repo):
                     localnode = hex(rl.node(rev))
                     if localnode != node:
                         raise CorruptionException(
-                            ("expected node %s at rev %d of %s but found %s")
+                            "expected node %s at rev %d of %s but found %s"
                             % (node, rev, path, localnode)
                         )
 
@@ -2130,7 +2130,7 @@ def sqlrecover(ui, *args, **opts):
 
         striprev = max(0, len(repo) - stripsize)
         nodelist = [repo[striprev].node()]
-        ui.status("stripping back to %s commits" % (striprev))
+        ui.status("stripping back to %s commits" % striprev)
 
         backup = not opts.get("no_backup")
         repair.strip(ui, repo, nodelist, backup=backup, topic="sqlrecover")
@@ -2686,7 +2686,7 @@ def _sqlverify(repo, minrev, maxrev, revlogcache):
             revlogentry = rl.index[rev]
             if revlogentry != sqlentry:
                 raise CorruptionException(
-                    ("'%s:%s' with linkrev %s, disk does not match mysql")
+                    "'%s:%s' with linkrev %s, disk does not match mysql"
                     % (path, hex(node), str(linkrev))
                 )
     finally:

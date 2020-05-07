@@ -85,7 +85,7 @@ def fixcorrupt(ui, repo, *args, **opts):
                 _("%s: unsupported revlog version %d") % (name, log.version & 0xFFFF)
             )
         if log._inline:
-            raise error.Abort(_("%s: inline index is not supported") % (name))
+            raise error.Abort(_("%s: inline index is not supported") % name)
         if repo.svfs.stat(log.indexfile).st_size // 64 != len(log):
             raise error.Abort(_("unexpected index size for %s") % name)
 

@@ -321,7 +321,9 @@ class state_update(object):
                 # ignoreerrors=True prevents the client from invalidating it's
                 # watchman client in the event of an error. It will still throw
                 # an exception though.
-                cmd, {"name": self.name, "metadata": metadata}, ignoreerrors=True
+                cmd,
+                {"name": self.name, "metadata": metadata},
+                ignoreerrors=True,
             )
             return True
         except Exception as ex:

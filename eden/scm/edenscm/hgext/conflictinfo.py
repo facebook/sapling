@@ -125,7 +125,7 @@ def _resolve(orig, ui, repo, *pats, **opts):
     if not (all or pats or show or mark or unmark):
         raise error.Abort(
             _("no files or directories specified"),
-            hint=("use --all to re-merge all unresolved files"),
+            hint="use --all to re-merge all unresolved files",
         )
     # </duplication>
 
