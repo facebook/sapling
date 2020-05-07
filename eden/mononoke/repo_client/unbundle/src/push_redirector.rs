@@ -266,6 +266,7 @@ impl PushRedirector {
             maybe_bookmark_push,
             maybe_raw_bundle2_id,
             uploaded_bonsais,
+            is_cross_backend_sync,
         } = orig;
         let uploaded_bonsais = self
             .sync_uploaded_changesets(ctx.clone(), uploaded_bonsais)
@@ -283,6 +284,7 @@ impl PushRedirector {
             maybe_bookmark_push,
             maybe_raw_bundle2_id,
             uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
+            is_cross_backend_sync,
         })
     }
 

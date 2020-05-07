@@ -28,16 +28,16 @@ use futures_ext::{
     BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, FutureExt as OldFutureExt,
     StreamExt as OldStreamExt,
 };
-use futures_old::future::{err, Shared};
+use futures_old::future::Shared;
 use futures_old::stream as old_stream;
 use futures_old::{Future as OldFuture, Stream as OldStream};
-use futures_util::{
-    compat::Future01CompatExt, try_join, FutureExt, StreamExt, TryFutureExt, TryStreamExt,
-};
+use futures_util::{compat::Future01CompatExt, try_join, StreamExt, TryStreamExt};
 use hooks::HookRejectionInfo;
 use lazy_static::lazy_static;
 use limits::types::RateLimit;
-use mercurial_bundles::{Bundle2Item, PartHeader, PartHeaderInner, PartHeaderType, PartId};
+use mercurial_bundles::{
+    Bundle2Item, PartHeader, PartHeaderInner, PartHeaderType, PartId, StreamHeader,
+};
 use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_types::{
     blobs::{ContentBlobInfo, HgBlobEntry},
@@ -83,6 +83,8 @@ lazy_static! {
     static ref DONOTREBASEBOOKMARK: BookmarkName =
         BookmarkName::new("__pushrebase_donotrebase__").unwrap();
 }
+
+const CROSSBACKENDSYNC: &str = "crossbackendsync";
 
 #[derive(Clone, Copy, PartialEq, Eq)]
 pub enum NonFastForwardPolicy {
@@ -184,6 +186,7 @@ pub struct PostResolveInfinitePush {
     pub maybe_bookmark_push: Option<InfiniteBookmarkPush<ChangesetId>>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
     pub uploaded_bonsais: UploadedBonsais,
+    pub is_cross_backend_sync: bool,
 }
 
 /// Data, needed to perform post-resolve `PushRebase` action
@@ -229,7 +232,10 @@ pub async fn resolve<'a>(
     pushrebase_flags: PushrebaseFlags,
 ) -> Result<PostResolveAction, BundleResolverError> {
     let resolver = Bundle2Resolver::new(ctx, repo, infinitepush_writes_allowed, pushrebase_flags);
-    let bundle2 = resolver.resolve_start_and_replycaps(bundle2);
+    let (stream_header, bundle2) = resolver.resolve_stream_params(bundle2).await?;
+    let bundle2 = resolver.resolve_replycaps(bundle2).await?;
+
+    let is_cross_backend_sync = is_cross_backend_sync_stream(&stream_header);
 
     let (maybe_commonheads, bundle2) = resolver.maybe_resolve_commonheads(bundle2).await?;
     let (maybe_pushvars, bundle2) = resolver
@@ -301,6 +307,7 @@ pub async fn resolve<'a>(
             non_fast_forward_policy,
             maybe_full_content,
             move || pure_push_allowed,
+            is_cross_backend_sync,
         )
         .await
         .context("bundle2_resolver error")
@@ -355,6 +362,7 @@ async fn resolve_push<'r>(
     non_fast_forward_policy: NonFastForwardPolicy,
     maybe_full_content: Option<Arc<Mutex<BytesOld>>>,
     changegroup_acceptable: impl FnOnce() -> bool + Send + Sync + 'static,
+    is_cross_backend_sync: bool,
 ) -> Result<PostResolveAction, Error> {
     let (cg_push, bundle2) = resolver
         .maybe_resolve_changegroup(bundle2, changegroup_acceptable)
@@ -417,6 +425,7 @@ async fn resolve_push<'r>(
             maybe_bonsai_bookmark_push,
             maybe_raw_bundle2_id,
             uploaded_bonsais,
+            is_cross_backend_sync,
         )
         .map(PostResolveAction::InfinitePush)
     } else {
@@ -436,6 +445,7 @@ fn get_post_resolve_infinitepush(
     maybe_bonsai_bookmark_push: Option<AllBookmarkPushes<ChangesetId>>,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
     uploaded_bonsais: UploadedBonsais,
+    is_cross_backend_sync: bool,
 ) -> Result<PostResolveInfinitePush, Error> {
     let maybe_bookmark_push = match maybe_bonsai_bookmark_push {
         Some(AllBookmarkPushes::PlainPushes(_)) => {
@@ -452,6 +462,7 @@ fn get_post_resolve_infinitepush(
         maybe_bookmark_push,
         maybe_raw_bundle2_id,
         uploaded_bonsais,
+        is_cross_backend_sync,
     })
 }
 
@@ -792,24 +803,32 @@ impl<'r> Bundle2Resolver<'r> {
         }
     }
 
-    /// Parse Start and Replycaps and ignore their content
-    fn resolve_start_and_replycaps(
+    /// Parse the stream header and extract stream params from it
+    /// Return the rest of the stream along with params
+    async fn resolve_stream_params(
         &self,
         bundle2: OldBoxStream<Bundle2Item, Error>,
-    ) -> OldBoxStream<Bundle2Item, Error> {
-        next_item(bundle2)
-            .boxed()
-            .compat()
-            .and_then(|(start, bundle2)| match start {
-                Some(Bundle2Item::Start(_)) => next_item(bundle2).boxed().compat().left_future(),
-                _ => err(format_err!("Expected Bundle2 Start")).right_future(),
-            })
-            .and_then(|(replycaps, bundle2)| match replycaps {
-                Some(Bundle2Item::Replycaps(_, part)) => part.map(|_| bundle2).left_future(),
-                _ => err(format_err!("Expected Bundle2 Replycaps")).right_future(),
-            })
-            .flatten_stream()
-            .boxify()
+    ) -> Result<(StreamHeader, OldBoxStream<Bundle2Item, Error>), Error> {
+        let (maybe_start, rest_of_bundle2) = next_item(bundle2).await?;
+        match maybe_start {
+            Some(Bundle2Item::Start(stream_header)) => Ok((stream_header, rest_of_bundle2)),
+            _ => Err(format_err!("Expected Bundle2 Start")),
+        }
+    }
+
+    /// Parse replycaps and ignore its content
+    /// Return the rest of the bundle
+    async fn resolve_replycaps(
+        &self,
+        bundle2: OldBoxStream<Bundle2Item, Error>,
+    ) -> Result<OldBoxStream<Bundle2Item, Error>, Error> {
+        let (maybe_replycaps, rest_of_bundle2) = next_item(bundle2).await?;
+        match maybe_replycaps {
+            Some(Bundle2Item::Replycaps(_, part)) => {
+                part.map(|_| rest_of_bundle2).boxify().compat().await
+            }
+            _ => Err(format_err!("Expected Bundle2 Replycaps")),
+        }
     }
 
     // Parse b2x:commonheads
@@ -1458,4 +1477,12 @@ async fn hg_all_bookmark_pushes_to_bonsai(
         }
     };
     Ok(abp)
+}
+
+fn is_cross_backend_sync_stream(header: &StreamHeader) -> bool {
+    header
+        .a_stream_params
+        .get(CROSSBACKENDSYNC)
+        .map(|p| p == "True")
+        .unwrap_or(false)
 }

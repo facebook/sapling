@@ -23,7 +23,7 @@ use futures_stats::TimedFutureExt;
 use git_mapping_pushrebase_hook::GitMappingPushrebaseHook;
 use globalrev_pushrebase_hook::GlobalrevPushrebaseHook;
 use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
-use mononoke_types::{BonsaiChangeset, ChangesetId};
+use mononoke_types::{BonsaiChangeset, ChangesetId, RawBundle2Id};
 use pushrebase::{self, PushrebaseHook};
 use reachabilityindex::LeastCommonAncestorsHint;
 use reverse_filler_queue::ReverseFillerQueue;
@@ -177,6 +177,35 @@ async fn run_push(
     })
 }
 
+async fn save_to_reverse_filler_queue(
+    ctx: &CoreContext,
+    reponame: &String,
+    maybe_reverse_filler_queue: Option<&dyn ReverseFillerQueue>,
+    maybe_raw_bundle2_id: Option<RawBundle2Id>,
+) -> Result<(), Error> {
+    if let Some(reverse_filler_queue) = maybe_reverse_filler_queue {
+        if let Some(ref raw_bundle2_id) = maybe_raw_bundle2_id {
+            debug!(
+                ctx.logger(),
+                "saving infinitepush bundle {:?} into the reverse filler queue", raw_bundle2_id
+            );
+            reverse_filler_queue
+                .insert_bundle(reponame, raw_bundle2_id)
+                .await?;
+            ctx.scuba()
+                .clone()
+                .log_with_msg("Saved into ReverseFillerQueue", None);
+        } else {
+            warn!(
+                ctx.logger(),
+                "reverse filler queue enabled, but bundle preservation is not!"
+            );
+        }
+    }
+
+    Ok(())
+}
+
 async fn run_infinitepush(
     ctx: &CoreContext,
     repo: &BlobRepo,
@@ -191,26 +220,17 @@ async fn run_infinitepush(
         maybe_bookmark_push,
         maybe_raw_bundle2_id,
         uploaded_bonsais: _,
+        is_cross_backend_sync,
     } = action;
 
-    if let Some(reverse_filler_queue) = maybe_reverse_filler_queue {
-        if let Some(ref raw_bundle2_id) = maybe_raw_bundle2_id {
-            debug!(
-                ctx.logger(),
-                "saving infinitepush bundle {:?} into the reverse filler queue", raw_bundle2_id
-            );
-            reverse_filler_queue
-                .insert_bundle(repo.name(), raw_bundle2_id)
-                .await?;
-            ctx.scuba()
-                .clone()
-                .log_with_msg("Saved into ReverseFillerQueue", None);
-        } else {
-            warn!(
-                ctx.logger(),
-                "reverse filler queue enabled, but bundle preservation is not!"
-            );
-        }
+    if !is_cross_backend_sync {
+        save_to_reverse_filler_queue(
+            ctx,
+            repo.name(),
+            maybe_reverse_filler_queue,
+            maybe_raw_bundle2_id,
+        )
+        .await?;
     }
 
     let bookmark_push = match maybe_bookmark_push {
