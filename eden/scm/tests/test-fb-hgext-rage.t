@@ -9,10 +9,14 @@
   $ echo "[rage]" >> .hg/hgrc
   $ echo "rpmbin = /""bin/rpm" >> .hg/hgrc
 #endif
-  $ hg rage --preview | grep -o '^hg blackbox'
+  $ hg rage --preview > out.txt
+  $ cat out.txt | grep -o '^hg blackbox'
   hg blackbox
-  $ hg rage --preview | grep -o '^hg cloud status'
+  $ cat out.txt | grep -o '^hg cloud status'
   hg cloud status
+  $ cat out.txt | grep -o '^hg sparse:'
+  hg sparse:
+  $ rm out.txt
 
 Test with shared repo
   $ setglobalconfig extensions.share=

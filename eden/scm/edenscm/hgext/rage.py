@@ -329,7 +329,7 @@ def _makerage(ui, repo, **opts):
         ("hg cloud status", lambda: hgcmd("cloud status")),
         ("hg debugprocesstree", lambda: hgcmd("debugprocesstree")),
         ("hg config (local)", lambda: "\n".join(localconfig(ui))),
-        ("hg sparse show", lambda: hgcmd("sparse show")),
+        ("hg sparse", lambda: hgcmd("sparse")),
         ("hg debuginstall", lambda: hgcmd("debuginstall")),
         ("usechg", usechginfo),
         (
