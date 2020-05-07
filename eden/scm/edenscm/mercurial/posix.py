@@ -461,7 +461,9 @@ def _checkexec(path):
                     except OSError as e:
                         if e.errno != errno.ENOENT:
                             raise
-                        open(checknoexec, "w").close()  # might fail
+                        with open(checknoexec, "w"):
+                            # might fail
+                            pass
                         m = os.stat(checknoexec).st_mode
                     if m & EXECFLAGS == 0:
                         # check-exec is exec and check-no-exec is not exec
@@ -528,7 +530,8 @@ def _checklink(path):
                 # already exists.
                 target = "checklink-target"
                 try:
-                    open(os.path.join(cachedir, target), "w").close()
+                    with open(os.path.join(cachedir, target), "w"):
+                        pass
                 except EnvironmentError as inst:
                     if inst.errno == errno.EACCES:
                         # If we can't write to cachedir, just pretend

@@ -73,15 +73,15 @@ pub(crate) struct ConfigParser;
 
 def write_generated_parser():
     spec_pest_path = os.path.join(crate_root, "src", "spec.pest")
-    spec = open(spec_pest_path, "rb").read()
+    with open(spec_pest_path, "rb") as f:
+        spec = f.read()
 
     checksum = hashlib.sha1(spec).hexdigest()
     output_path = os.path.join(crate_root, "src", "parser.rs")
 
     try:
-        old_checksum = re.search(
-            "pest-checksum: (.*)\.", open(output_path).read()
-        ).group(1)
+        with open(output_path) as f:
+            old_checksum = re.search(r"pest-checksum: (.*)\.", f.read()).group(1)
         if old_checksum == checksum:
             print(
                 "No need to update %s because %s is not changed."

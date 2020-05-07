@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Portions Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -41,7 +41,8 @@ def fixcargotoml(path):
     """
 
     versionre = re.compile(r'^((\w+)\s*=.*)"\*"(.*)', re.DOTALL)
-    content = open(path).read()
+    with open(path) as f:
+        content = f.read()
     newcontent = ""
 
     # Replace version = "*" to the version specified in Cargo.lock.
@@ -110,19 +111,20 @@ def crateversion(crate):
 
         for path in paths:
             currentcrate = None
-            for line in open(path).read().splitlines():
-                name, value = (line.split(" = ", 1) + [None])[:2]
-                if value is not None:
-                    if name == "name":
-                        currentcrate = value.replace('"', "")
-                    elif name == "version":
-                        value = value.lstrip('"').rstrip('"')
-                        # Pick the latest version
-                        oldversion = _crateversions.get(currentcrate, None)
-                        if not oldversion or LooseVersion(oldversion) < LooseVersion(
-                            value
-                        ):
-                            _crateversions[currentcrate] = value
+            with open(path) as f:
+                for line in f.read().splitlines():
+                    name, value = (line.split(" = ", 1) + [None])[:2]
+                    if value is not None:
+                        if name == "name":
+                            currentcrate = value.replace('"', "")
+                        elif name == "version":
+                            value = value.lstrip('"').rstrip('"')
+                            # Pick the latest version
+                            oldversion = _crateversions.get(currentcrate, None)
+                            if not oldversion or LooseVersion(
+                                oldversion
+                            ) < LooseVersion(value):
+                                _crateversions[currentcrate] = value
     return _crateversions.get(crate, "*")
 
 

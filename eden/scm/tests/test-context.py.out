@@ -1,7 +1,7 @@
 workingfilectx.date = (1000, 0)
-ASCII   : Gr?ezi!
-Latin-1 : Grüezi!
-UTF-8   : GrÃ¼ezi!
+ASCII   : hex 47723f657a6921
+Latin-1 : hex 4772fc657a6921
+UTF-8   : hex 4772c3bc657a6921
 <status modified=['foo'], added=[], removed=[], deleted=[], unknown=[], ignored=[], clean=[]>
 diff --git a/foo b/foo
 --- a/foo

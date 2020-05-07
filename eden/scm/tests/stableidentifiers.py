@@ -10,7 +10,8 @@ def makestableidentifier(orig, length=16):
     stableidentifierfile = os.path.join(os.environ["TESTTMP"], "stableidentifier")
     with extutil.flock(stableidentifierfile, "stableidentifier"):
         try:
-            coid = int(open(stableidentifierfile).read().strip())
+            with open(stableidentifierfile) as f:
+                coid = int(f.read().strip())
         except Exception:
             coid = 0
         with open(stableidentifierfile, "w") as f:

@@ -89,7 +89,8 @@ def debugshell(ui, repo, *args, **opts):
         return 0
     if args:
         path = args[0]
-        command = open(path).read()
+        with open(path) as f:
+            command = f.read()
         globalvars = dict(globals())
         localvars = dict(locals())
         globalvars["__file__"] = path

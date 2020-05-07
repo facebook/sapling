@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Portions Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -38,7 +38,7 @@ if sys.version_info[0] < 3:
 else:
 
     def opentext(f):
-        return open(f, encoding="ascii")
+        return open(f, encoding="utf-8")
 
 
 try:
@@ -168,7 +168,7 @@ testpats = [
         ),
         (r"^diff *-\w*[uU].*$\n(^  \$ |^$)", "prefix diff -u/-U with cmp"),
         (r"^\s+(if)? diff *-\w*[uU]", "prefix diff -u/-U with cmp"),
-        (r'[\s="`\']python\s(?!bindings)', "don't use 'python', use '$PYTHON'"),
+        (r'[ \t="`\']python\s(?!bindings)', "don't use 'python', use '$PYTHON'"),
         (r"seq ", "don't use 'seq', use $TESTDIR/seq.py"),
         (r"\butil\.Abort\b", "directly use error.Abort"),
         (r"\|&", "don't use |&, use 2>&1"),
@@ -331,14 +331,14 @@ pypats = [
         ),
         (r"opener\([^)]*\).read\(", "use opener.read() instead"),
         (r"opener\([^)]*\).write\(", "use opener.write() instead"),
-        (r"[\s\(](open|file)\([^)]*\)\.read\(", "use util.readfile() instead"),
-        (r"[\s\(](open|file)\([^)]*\)\.write\(", "use util.writefile() instead"),
+        (r"[ \t\(](open|file)\([^)]*\)\.read\(", "use util.readfile() instead"),
+        (r"[ \t\(](open|file)\([^)]*\)\.write\(", "use util.writefile() instead"),
         (
-            r"^[\s\(]*(open(er)?|file)\([^)]*\)",
+            r"^[ \t\(]*(open(er)?|file)\([^)]*\)",
             "always assign an opened file to a variable, and close it afterwards",
         ),
         (
-            r"[\s\(](open|file)\([^)]*\)\.",
+            r"[ \t\(](open|file)\([^)]*\)\.",
             "always assign an opened file to a variable, and close it afterwards",
         ),
         (r"(?i)descend[e]nt", "the proper spelling is descendAnt"),

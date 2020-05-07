@@ -27,4 +27,5 @@ if __name__ == "__main__":
     u = uimod.ui()
     u.setconfig("traceprof", "timethreshold", 0)
     with traceprof.profile(u, sys.stderr):
-        exec(open(sys.argv[0]).read())
+        with open(sys.argv[0]) as f:
+            exec(f.read())

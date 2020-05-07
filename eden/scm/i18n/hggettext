@@ -105,7 +105,8 @@ def docstrings(path):
     """
     mod = importpath(path)
     if not path.startswith("mercurial/") and mod.__doc__:
-        src = open(path).read()
+        with open(path) as f:
+            src = f.read()
         lineno = 1 + offset(src, mod.__doc__, path, 7)
         print(poentry(path, lineno, mod.__doc__))
 
@@ -144,7 +145,8 @@ def docstrings(path):
 
 
 def rawtext(path):
-    src = open(path).read()
+    with open(path) as f:
+        src = f.read()
     print(poentry(path, 1, src))
 
 

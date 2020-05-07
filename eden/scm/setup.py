@@ -669,7 +669,8 @@ class asset(object):
 
     def _isready(self):
         try:
-            return int(open(self._readypath).read()) == hash(self)
+            with open(self._readypath) as f:
+                return int(f.read()) == hash(self)
         except Exception:
             return False
 

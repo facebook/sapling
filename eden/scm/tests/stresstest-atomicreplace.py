@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # Copyright (c) Facebook, Inc. and its affiliates.
 #
 # This software may be used and distributed according to the terms of the
@@ -38,10 +38,11 @@ def run_stress_test(n, binary, kill_median, kill_half_width):
     print("Will check the existense of %s after each run\n" % filename)
     try:
         # let's create a file upfront
-        open(filename, "w").close()
-        for p in xrange(n):
+        with open(filename, "w"):
+            pass
+        for p in range(n):
             content += "!"
-            proc = subprocess.Popen(CMD % (binary, py_filename, content))
+            proc = subprocess.Popen(CMD % (binary, py_filename, content), shell=True)
             tosleep = random.uniform(min_sleep, max_sleep)
             time.sleep(tosleep)
             proc.kill()
@@ -58,7 +59,7 @@ if __name__ == "__main__":
     if os.name == "nt":
         default_binary = os.path.realpath("../hg.exe")
     else:
-        default_binary = os.path.realpath("../hg.rust")
+        default_binary = os.path.realpath("../hg")
 
     desc = (
         "Stress-test the atomic replace logic in Mercurial.\n\n "

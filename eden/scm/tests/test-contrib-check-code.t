@@ -1,5 +1,9 @@
 #chg-compatible
 
+  $ run_check_code() {
+  >   PYTHONPATH= "$TESTDIR"/../contrib/check-code.py "$@"
+  > }
+
   $ cat > correct.py <<EOF
   > def toto(arg1, arg2):
   >     del arg2
@@ -32,8 +36,8 @@
   > no_class = 1:
   >     pass
   > EOF
-  $ check_code="$TESTDIR"/../contrib/check-code.py
-  $ "$check_code" ./wrong.py ./correct.py ./quote.py ./classstyle.py
+
+  $ run_check_code ./wrong.py ./correct.py ./quote.py ./classstyle.py
   ./wrong.py:2: Python keyword is not a function --> del(arg2)
   ./classstyle.py:4: old-style class, use class foo(object) --> class oldstyle_class:
   ./classstyle.py:7: class foo() creates old style object, use class foo(object) --> class empty():
@@ -43,7 +47,7 @@
   > reduce(lambda a, b: a + b, [1, 2, 3, 4])
   > dict(key=value)
   > EOF
-  $ "$check_code" python3-compat.py
+  $ run_check_code python3-compat.py
   python3-compat.py:1: <> operator is not available in Python 3+, use != --> foo <> bar
   python3-compat.py:2: reduce is not available in Python 3+ --> reduce(lambda a, b: a + b, [1, 2, 3, 4])
   python3-compat.py:3: dict constructor is different in Py2 and 3 and is slower than {} --> dict(key=value)
@@ -62,7 +66,7 @@
   > y = x is not -6
   > EOF
 
-  $ "$check_code" ./is-op.py
+  $ run_check_code ./is-op.py
   ./is-op.py:3: object comparison with literal --> y = x is 'foo'
   ./is-op.py:4: object comparison with literal --> y = x is "foo"
   ./is-op.py:5: object comparison with literal --> y = x is 5346
@@ -76,7 +80,7 @@
   $ cat > for-nolineno.py <<EOF
   > except:
   > EOF
-  $ "$check_code" for-nolineno.py --nolineno
+  $ run_check_code for-nolineno.py --nolineno
   for-nolineno.py:0: naked except clause --> except:
   [1]
 
@@ -86,8 +90,8 @@
   >   $ diff -N aaa
   >   $ function onwarn {}
   > EOF
-  $ "$check_code" warning.t
-  $ "$check_code" --warn warning.t
+  $ run_check_code warning.t
+  $ run_check_code --warn warning.t
   warning.t:1: warning: don't use 'function', use old style --> $ function warnonly {
   warning.t:3: warning: don't use 'diff -N' --> $ diff -N aaa
   warning.t:4: warning: don't use 'function', use old style --> $ function onwarn {}
@@ -95,7 +99,7 @@
   $ cat > error.t <<EOF
   >   $ [ foo == bar ]
   > EOF
-  $ "$check_code" error.t
+  $ run_check_code error.t
   error.t:1: [ foo == bar ] is a bashism, use [ foo = bar ] instead --> $ [ foo == bar ]
   [1]
   $ rm error.t
@@ -104,7 +108,7 @@
   > # this next line is okay
   > raise SomeException(arg1, arg2)
   > EOF
-  $ "$check_code" not-existing.py raise-format.py
+  $ run_check_code not-existing.py raise-format.py
   Skipping*not-existing.py* (glob)
   raise-format.py:1: don't use old-style two-argument raise, use Exception(message) --> raise SomeException, message
   [1]
@@ -113,7 +117,7 @@
   > 	indent
   >   > 	heredoc
   > EOF
-  $ "$check_code" tab.t
+  $ run_check_code tab.t
   tab.t:1: don't use tabs to indent --> indent
   [1]
   $ rm tab.t
@@ -130,7 +134,7 @@
   > print(_(
   >         "leading spaces inside of '(' %s" % v))
   > EOF
-  $ "$check_code" ./map-inside-gettext.py
+  $ run_check_code ./map-inside-gettext.py
   ./map-inside-gettext.py:1: don't use % inside _() --> print(_("map inside gettext %s" % v))
   ./map-inside-gettext.py:3: don't use % inside _() --> print(_("concatenating " " by " " space %s" % v))
   ./map-inside-gettext.py:4: don't use % inside _() --> print(_("concatenating " + " by " + " '+' %s" % v))
@@ -148,6 +152,6 @@ web templates
   > {desc|websub}
   > EOF
 
-  $ "$check_code" --warnings mercurial/templates/example.tmpl
+  $ run_check_code --warnings mercurial/templates/example.tmpl
   mercurial/templates/example.tmpl:2: warning: follow desc keyword with either firstline or websub --> {desc|escape}
   [1]

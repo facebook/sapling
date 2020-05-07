@@ -90,7 +90,8 @@ def _tail(userlogdir, userlogfiles, nlines=100):
     # traverse the files
     linelimit = nlines
     for logfile in logfiles:
-        loglines = open(logfile).readlines()
+        with open(logfile) as f:
+            loglines = f.readlines()
         linecount = len(loglines)
         if linecount > linelimit:
             logcontent = "  ".join(loglines[-linelimit:])

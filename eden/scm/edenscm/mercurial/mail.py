@@ -174,7 +174,8 @@ def connect(ui, mbox=None):
     """make a mail connection. return a function to send mail.
     call as sendmail(sender, list-of-recipients, msg)."""
     if mbox:
-        open(mbox, "wb").close()
+        with open(mbox, "wb"):
+            pass
         return lambda s, r, m: _mbox(mbox, s, r, m)
     if ui.config("email", "method") == "smtp":
         return _smtp(ui)

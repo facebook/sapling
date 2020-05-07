@@ -557,7 +557,8 @@ def loaddynamicconfig(ui, path):
     if ui.configbool("configs", "loaddynamicconfig", False):
         sharedpathfile = os.path.join(path, "sharedpath")
         if os.path.exists(sharedpathfile):
-            path = open(sharedpathfile, "r").read()
+            with open(sharedpathfile, "r") as f:
+                path = f.read()
 
         hgrcdyn = os.path.join(path, "hgrc.dynamic")
 

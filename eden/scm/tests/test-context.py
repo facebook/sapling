@@ -44,7 +44,8 @@ ctx = context.memctx(
 ctx.commit()
 for enc in "ASCII", "Latin-1", "UTF-8":
     encoding.encoding = enc
-    print("%-8s: %s" % (enc, repo["tip"].description()))
+    text = repo["tip"].description()
+    print("%-8s: hex %s" % (enc, hex(text)))
 
 # test performing a status
 

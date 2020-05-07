@@ -392,7 +392,7 @@ def getparser():
     harness.add_argument(
         "--bisect-repo",
         metavar="bisect_repo",
-        help=("Path of a repo to bisect. Use together with --known-good-rev"),
+        help="Path of a repo to bisect. Use together with --known-good-rev",
     )
     harness.add_argument(
         "-d",
@@ -1678,7 +1678,8 @@ class PythonTest(Test):
 
     def _processoutput(self, output):
         if os.path.exists(self.refpath):
-            expected = open(self.refpath, "rb").readlines()
+            with open(self.refpath, "rb") as f:
+                expected = f.readlines()
         else:
             return output
 
@@ -1737,7 +1738,8 @@ class PythonTest(Test):
             return True
         else:
             try:
-                content = open(self.name).read()
+                with open(self.name) as f:
+                    content = f.read()
                 return " testutil.dott" in content or "sh %" in content
             except Exception:
                 return False

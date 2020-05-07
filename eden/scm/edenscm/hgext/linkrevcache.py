@@ -347,7 +347,8 @@ def _getrsspagecount():
     """Get RSS memory usage in pages. Only works on Linux"""
     try:
         # The second column is VmRSS. See "man procfs".
-        return sum(map(int, open("/proc/self/statm").read().split()[1]))
+        with open("/proc/self/statm") as f:
+            return sum(map(int, f.read().split()[1]))
     except Exception:
         return 0
 
