@@ -18,6 +18,7 @@ mutable_counters = { path = "../../mutable_counters" }
 reachabilityindex = { path = "../../reachabilityindex" }
 repo_blobstore = { path = "../../blobrepo/repo_blobstore" }
 repo_read_write_status = { path = "../repo_read_write_status" }
+reverse_filler_queue = { path = "../reverse_filler_queue" }
 skiplist = { path = "../../reachabilityindex/skiplist" }
 sql_construct = { path = "../../common/sql_construct" }
 sql_ext = { path = "../../common/rust/sql_ext" }

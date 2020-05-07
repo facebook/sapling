@@ -1456,20 +1456,23 @@ impl HgCommands for RepoClient {
                             }
                             None => {
                                 async move {
-                                run_post_resolve_action(
-                                &ctx,
-                                &blobrepo,
-                                &bookmark_attrs,
-                                &*lca_hint,
-                                &infinitepush_params,
-                                &pushrebase_params,
-                                action,
-                                )
-                                .await
+                                    let maybe_reverse_filler_queue = client.repo.maybe_reverse_filler_queue();
+                                    run_post_resolve_action(
+                                        &ctx,
+                                        &blobrepo,
+                                        &bookmark_attrs,
+                                        &*lca_hint,
+                                        &infinitepush_params,
+                                        &pushrebase_params,
+                                        maybe_reverse_filler_queue,
+                                        action,
+                                    )
+                                    .await
+                                }
+                                .boxed()
+                                .compat()
+                                .boxify()
                             }
-                            .boxed()
-                            .compat()
-                            .boxify()}
                         }
                     }
                 }).and_then({

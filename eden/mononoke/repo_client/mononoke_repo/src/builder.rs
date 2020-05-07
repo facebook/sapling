@@ -15,6 +15,7 @@ use metaconfig_types::RepoConfig;
 use mutable_counters::SqlMutableCounters;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_read_write_status::{RepoReadWriteFetcher, SqlRepoReadWriteStatus};
+use reverse_filler_queue::{ReverseFillerQueue, SqlReverseFillerQueue};
 use skiplist::fetch_skiplist_index;
 use sql_construct::{facebook::FbSqlConstruct, SqlConstructFromMetadataDatabaseConfig};
 use sql_ext::facebook::MysqlOptions;
@@ -28,6 +29,7 @@ pub struct MononokeRepoBuilder {
     config: RepoConfig,
     mysql_options: MysqlOptions,
     readonly_storage: ReadOnlyStorage,
+    record_infinitepush_writes: bool,
 }
 
 impl MononokeRepoBuilder {
@@ -40,6 +42,7 @@ impl MononokeRepoBuilder {
         scuba_censored_table: Option<String>,
         readonly_storage: ReadOnlyStorage,
         blobstore_options: BlobstoreOptions,
+        record_infinitepush_writes: bool,
     ) -> Result<MononokeRepoBuilder, Error> {
         let builder = BlobrepoBuilder::new(
             ctx.fb,
@@ -60,6 +63,7 @@ impl MononokeRepoBuilder {
             config,
             mysql_options,
             readonly_storage,
+            record_infinitepush_writes,
         })
     }
 
@@ -70,7 +74,7 @@ impl MononokeRepoBuilder {
             config,
             mysql_options,
             readonly_storage,
-            ..
+            record_infinitepush_writes,
         } = self;
 
         let RepoConfig {
@@ -106,6 +110,24 @@ impl MononokeRepoBuilder {
             }
         };
 
+        let maybe_reverse_filler_queue = async {
+            if record_infinitepush_writes {
+                let reverse_filler_queue = SqlReverseFillerQueue::with_metadata_database_config(
+                    ctx.fb,
+                    &storage_config.metadata,
+                    mysql_options,
+                    readonly_storage.0,
+                )
+                .await?;
+
+                let reverse_filler_queue: Arc<dyn ReverseFillerQueue> =
+                    Arc::new(reverse_filler_queue);
+                Ok(Some(reverse_filler_queue))
+            } else {
+                Ok(None)
+            }
+        };
+
         let sql_read_write_status = async {
             if let Some(addr) = write_lock_db_address {
                 let r = SqlRepoReadWriteStatus::with_xdb(
@@ -136,14 +158,20 @@ impl MononokeRepoBuilder {
         .compat()
         .map(|res| res.with_context(|| format!("while fetching skiplist for {}", repo.name())));
 
-        let (streaming_clone, sql_read_write_status, mutable_counters, skiplist) =
-            future::try_join4(
-                streaming_clone,
-                sql_read_write_status,
-                mutable_counters,
-                skiplist,
-            )
-            .await?;
+        let (
+            streaming_clone,
+            sql_read_write_status,
+            mutable_counters,
+            skiplist,
+            maybe_reverse_filler_queue,
+        ) = future::try_join5(
+            streaming_clone,
+            sql_read_write_status,
+            mutable_counters,
+            skiplist,
+            maybe_reverse_filler_queue,
+        )
+        .await?;
 
         let read_write_fetcher =
             RepoReadWriteFetcher::new(sql_read_write_status, readonly, hgsql_name);
@@ -164,6 +192,7 @@ impl MononokeRepoBuilder {
             list_keys_patterns_max,
             lca_hint,
             Arc::new(mutable_counters),
+            maybe_reverse_filler_queue,
         );
 
         repo.await

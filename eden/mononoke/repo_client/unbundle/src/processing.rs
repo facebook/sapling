@@ -26,6 +26,7 @@ use metaconfig_types::{BookmarkAttrs, InfinitepushParams, PushrebaseParams};
 use mononoke_types::{BonsaiChangeset, ChangesetId};
 use pushrebase::{self, PushrebaseHook};
 use reachabilityindex::LeastCommonAncestorsHint;
+use reverse_filler_queue::ReverseFillerQueue;
 use scribe_commit_queue::{self, ScribeCommitQueue};
 use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, o, warn};
@@ -58,6 +59,7 @@ pub async fn run_post_resolve_action(
     lca_hint: &dyn LeastCommonAncestorsHint,
     infinitepush_params: &InfinitepushParams,
     pushrebase_params: &PushrebaseParams,
+    maybe_reverse_filler_queue: Option<&dyn ReverseFillerQueue>,
     action: PostResolveAction,
 ) -> Result<UnbundleResponse, BundleResolverError> {
     enforce_commit_rate_limits(ctx.clone(), &action)
@@ -75,12 +77,17 @@ pub async fn run_post_resolve_action(
         .await
         .context("While doing a push")
         .map(UnbundleResponse::Push)?,
-        PostResolveAction::InfinitePush(action) => {
-            run_infinitepush(ctx, repo, lca_hint, infinitepush_params, action)
-                .await
-                .context("While doing an infinitepush")
-                .map(UnbundleResponse::InfinitePush)?
-        }
+        PostResolveAction::InfinitePush(action) => run_infinitepush(
+            ctx,
+            repo,
+            lca_hint,
+            infinitepush_params,
+            maybe_reverse_filler_queue,
+            action,
+        )
+        .await
+        .context("While doing an infinitepush")
+        .map(UnbundleResponse::InfinitePush)?,
         PostResolveAction::PushRebase(action) => run_pushrebase(
             ctx,
             repo,
@@ -175,15 +182,36 @@ async fn run_infinitepush(
     repo: &BlobRepo,
     lca_hint: &dyn LeastCommonAncestorsHint,
     infinitepush_params: &InfinitepushParams,
+    maybe_reverse_filler_queue: Option<&dyn ReverseFillerQueue>,
     action: PostResolveInfinitePush,
 ) -> Result<UnbundleInfinitePushResponse, Error> {
-    debug!(ctx.logger(), "unbundle processing: running infinitepush.");
+    debug!(ctx.logger(), "unbundle processing: running infinitepush");
     let PostResolveInfinitePush {
         changegroup_id,
         maybe_bookmark_push,
         maybe_raw_bundle2_id,
         uploaded_bonsais: _,
     } = action;
+
+    if let Some(reverse_filler_queue) = maybe_reverse_filler_queue {
+        if let Some(ref raw_bundle2_id) = maybe_raw_bundle2_id {
+            debug!(
+                ctx.logger(),
+                "saving infinitepush bundle {:?} into the reverse filler queue", raw_bundle2_id
+            );
+            reverse_filler_queue
+                .insert_bundle(repo.name(), raw_bundle2_id)
+                .await?;
+            ctx.scuba()
+                .clone()
+                .log_with_msg("Saved into ReverseFillerQueue", None);
+        } else {
+            warn!(
+                ctx.logger(),
+                "reverse filler queue enabled, but bundle preservation is not!"
+            );
+        }
+    }
 
     let bookmark_push = match maybe_bookmark_push {
         Some(bookmark_push) => bookmark_push,

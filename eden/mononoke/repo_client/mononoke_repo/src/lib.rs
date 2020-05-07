@@ -23,6 +23,7 @@ use rand::Rng;
 use reachabilityindex::LeastCommonAncestorsHint;
 use repo_blobstore::RepoBlobstore;
 use repo_read_write_status::RepoReadWriteFetcher;
+use reverse_filler_queue::ReverseFillerQueue;
 use slog::Logger;
 use sql_construct::facebook::FbSqlConstruct;
 use sql_ext::facebook::MysqlOptions;
@@ -62,6 +63,9 @@ pub struct MononokeRepo {
     mutable_counters: Arc<dyn MutableCounters>,
     // Hostnames that always get lfs pointers.
     lfs_rolled_out_hostnames: Arc<RwLock<HashSet<String>>>,
+    // Reverse filler queue for recording accepted infinitepush bundles
+    // This field is `None` if we don't want recording to happen
+    maybe_reverse_filler_queue: Option<Arc<dyn ReverseFillerQueue>>,
 }
 
 impl MononokeRepo {
@@ -80,6 +84,7 @@ impl MononokeRepo {
         list_keys_patterns_max: u64,
         lca_hint: Arc<dyn LeastCommonAncestorsHint>,
         mutable_counters: Arc<dyn MutableCounters>,
+        maybe_reverse_filler_queue: Option<Arc<dyn ReverseFillerQueue>>,
     ) -> Result<Self, Error> {
         let lfs_rolled_out_hostnames = Arc::new(RwLock::new(HashSet::new()));
         if let Some(rollout_smc_tier) = &lfs_params.rollout_smc_tier {
@@ -112,6 +117,7 @@ impl MononokeRepo {
             lca_hint,
             mutable_counters,
             lfs_rolled_out_hostnames,
+            maybe_reverse_filler_queue,
         })
     }
 
@@ -134,6 +140,10 @@ impl MononokeRepo {
 
     pub fn streaming_clone(&self) -> &Option<SqlStreamingCloneConfig> {
         &self.streaming_clone
+    }
+
+    pub fn maybe_reverse_filler_queue(&self) -> Option<&dyn ReverseFillerQueue> {
+        self.maybe_reverse_filler_queue.as_deref()
     }
 
     pub fn lfs_params(&self, client_hostname: Option<&str>) -> SessionLfsParams {

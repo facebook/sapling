@@ -308,6 +308,7 @@ async fn bootstrap_repositories<'a>(
                 None, // Don't report censored blob access
                 readonly_storage,
                 blobstore_options.clone(),
+                false, // Don't record infinitepush writes
             )
             .await?
             .finalize(noop_hook_manager.clone())

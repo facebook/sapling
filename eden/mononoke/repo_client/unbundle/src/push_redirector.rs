@@ -108,6 +108,7 @@ impl PushRedirector {
             &*lca_hint,
             &infinitepush_params,
             &puhsrebase_params,
+            self.repo.maybe_reverse_filler_queue(),
             large_repo_action,
         )
         .await?;

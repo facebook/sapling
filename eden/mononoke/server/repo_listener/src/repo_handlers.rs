@@ -235,6 +235,9 @@ pub fn repo_handlers(
             let wireproto_logging = config.wireproto_logging.clone();
             let commit_sync_config = config.commit_sync_config.clone();
             let hook_manager_params = config.hook_manager_params.clone();
+            let record_infinitepush_writes: bool =
+                config.infinitepush.populate_reverse_filler_queue
+                    && config.infinitepush.allow_writes;
 
             // TODO: Don't require full config in load_hooks so we can avoid cloning the entire
             // config here.
@@ -256,6 +259,7 @@ pub fn repo_handlers(
                     scuba_censored_table.clone(),
                     readonly_storage,
                     blobstore_options,
+                    record_infinitepush_writes,
                 )
                 .await?;
 
