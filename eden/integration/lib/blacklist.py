@@ -26,7 +26,15 @@ if sys.platform == "win32":
         #
         # Test classes from the main integration test binary
         #
-        "basic_test.BasicTestHg": True,
+        "basic_test.BasicTestHg": [
+            # "edenfsctl remove" does not yet work on Windows,
+            # so blacklist related tests
+            "test_remove_checkout",
+            "test_remove_invalid_paths",
+            # The Windows-specific main.cpp file does not yet properly set up
+            # fb303 exports and options.
+            "test_version",
+        ],
         "chown_test.ChownTest": True,
         "clone_test.CloneFakeEdenFSTestAdHoc": True,
         "clone_test.CloneFakeEdenFSTestManaged": True,

@@ -8,14 +8,45 @@ import errno
 import os
 import stat
 import subprocess
+import sys
+import unittest
 from typing import Set
 
 from .lib import testcase
 
 
-@testcase.eden_repo_test
 # pyre-ignore[13]: T62487924
-class BasicTest(testcase.EdenRepoTest):
+class BasicTestBase(testcase.EdenRepoTest):
+    expected_mount_entries: Set[str]
+    created_symlink: bool
+
+    def populate_repo(self) -> None:
+        self.repo.write_file("hello", "hola\n")
+        self.repo.write_file("adir/file", "foo!\n")
+        self.repo.write_file("bdir/test.sh", "#!/bin/bash\necho test\n", mode=0o755)
+        self.repo.write_file("bdir/noexec.sh", "#!/bin/bash\necho test\n")
+
+        try:
+            self.repo.symlink("slink", "hello")
+            self.created_symlink = True
+        except OSError:
+            # On Windows symlinks can only be created if we have administrator
+            # privileges.
+            if sys.platform != "win32":
+                raise
+            self.created_symlink = False
+
+        self.repo.commit("Initial commit.")
+
+        self.expected_mount_entries = {".eden", "adir", "bdir", "hello"}
+        if self.created_symlink:
+            self.expected_mount_entries.add("slink")
+        if self.repo.get_type() == "hg":
+            self.expected_mount_entries.add(".hg")
+
+
+@testcase.eden_repo_test
+class BasicTest(BasicTestBase):
     """Exercise some fundamental properties of the filesystem.
 
     Listing directories, checking stat information, asserting
@@ -23,20 +54,6 @@ class BasicTest(testcase.EdenRepoTest):
     about the sample git repo and that it is correct are all
     things that are appropriate to include in this test case.
     """
-
-    expected_mount_entries: Set[str]
-
-    def populate_repo(self) -> None:
-        self.repo.write_file("hello", "hola\n")
-        self.repo.write_file("adir/file", "foo!\n")
-        self.repo.write_file("bdir/test.sh", "#!/bin/bash\necho test\n", mode=0o755)
-        self.repo.write_file("bdir/noexec.sh", "#!/bin/bash\necho test\n")
-        self.repo.symlink("slink", "hello")
-        self.repo.commit("Initial commit.")
-
-        self.expected_mount_entries = {".eden", "adir", "bdir", "hello", "slink"}
-        if self.repo.get_type() == "hg":
-            self.expected_mount_entries.add(".hg")
 
     def test_version(self) -> None:
         output = self.eden.run_cmd("version", cwd=self.mount)
@@ -71,18 +88,24 @@ class BasicTest(testcase.EdenRepoTest):
         adir = os.path.join(self.mount, "adir")
         st = os.lstat(adir)
         self.assertTrue(stat.S_ISDIR(st.st_mode))
-        self.assertEqual(st.st_uid, os.getuid())
-        self.assertEqual(st.st_gid, os.getgid())
+        if sys.platform != "win32":
+            # No os.getuid() and os.getgid() functions on Windows
+            self.assertEqual(st.st_uid, os.getuid())
+            self.assertEqual(st.st_gid, os.getgid())
 
         hello = os.path.join(self.mount, "hello")
         st = os.lstat(hello)
         self.assertTrue(stat.S_ISREG(st.st_mode))
 
-        slink = os.path.join(self.mount, "slink")
-        st = os.lstat(slink)
-        self.assertTrue(stat.S_ISLNK(st.st_mode))
+        if self.created_symlink:
+            slink = os.path.join(self.mount, "slink")
+            st = os.lstat(slink)
+            self.assertTrue(stat.S_ISLNK(st.st_mode))
 
     def test_symlinks(self) -> None:
+        if not self.created_symlink:
+            raise unittest.SkipTest("failed to create symlink on Windows")
+
         slink = os.path.join(self.mount, "slink")
         self.assertEqual(os.readlink(slink), "hello")
 
@@ -100,66 +123,64 @@ class BasicTest(testcase.EdenRepoTest):
             self.assertEqual("foo!\n", f.read())
 
     def test_create(self) -> None:
-        filename = os.path.join(self.mount, "notinrepo")
-        with open(filename, "w") as f:
-            f.write("created\n")
+        filename = self.mount_path / "notinrepo"
+        contents = b"created\n"
+        filename.write_bytes(contents)
 
         self.assert_checkout_root_entries(self.expected_mount_entries | {"notinrepo"})
 
-        with open(filename, "r") as f:
-            self.assertEqual(f.read(), "created\n")
+        self.assertEqual(filename.read_bytes(), contents)
 
         st = os.lstat(filename)
-        self.assertEqual(st.st_size, 8)
+        self.assertEqual(st.st_size, len(contents))
         self.assertTrue(stat.S_ISREG(st.st_mode))
-
-    def test_create_using_mknod(self) -> None:
-        filename = os.path.join(self.mount, "notinrepo")
-        os.mknod(filename, stat.S_IFREG | 0o600)
-        self.assert_checkout_root_entries(self.expected_mount_entries | {"notinrepo"})
-
-        st = os.lstat(filename)
-        self.assertEqual(st.st_size, 0)
-        self.assertTrue(stat.S_ISREG(st.st_mode))
-        self.assertEqual(st.st_uid, os.getuid())
-        self.assertEqual(st.st_gid, os.getgid())
-        self.assertEqual(st.st_mode & 0o600, 0o600)
 
     def test_overwrite(self) -> None:
-        hello = os.path.join(self.mount, "hello")
-        with open(hello, "w") as f:
-            f.write("replaced\n")
+        hello = self.mount_path / "hello"
+        new_contents = b"replaced\n"
+        hello.write_bytes(new_contents)
 
         st = os.lstat(hello)
-        self.assertEqual(st.st_size, len("replaced\n"))
+        self.assertEqual(st.st_size, len(new_contents))
 
     def test_append(self) -> None:
-        hello = os.path.join(self.mount, "bdir/test.sh")
-        with open(hello, "a") as f:
+        hello = self.mount_path / "bdir/test.sh"
+        with hello.open("a") as f:
             f.write("echo more commands\n")
 
         expected_data = "#!/bin/bash\necho test\necho more commands\n"
         st = os.lstat(hello)
-        with open(hello, "r") as f:
+        with hello.open("r") as f:
             read_back = f.read()
         self.assertEqual(expected_data, read_back)
-        self.assertEqual(len(expected_data), st.st_size)
+
+        if sys.platform == "win32":
+            # On Windows each newline actually gets written out as \r\n
+            num_newlines = expected_data.count("\n")
+            expected_len = len(expected_data) + num_newlines
+        else:
+            expected_len = len(expected_data)
+        self.assertEqual(expected_len, st.st_size)
 
     def test_materialize(self) -> None:
-        hello = os.path.join(self.mount, "hello")
+        hello = self.mount_path / "hello"
         # Opening for write should materialize the file with the same
         # contents that we expect
-        with open(hello, "r+") as f:
+        with hello.open("r+") as f:
             self.assertEqual("hola\n", f.read())
 
         st = os.lstat(hello)
-        self.assertEqual(st.st_size, len("hola\n"))
+        self.assertIn(st.st_size, (len(b"hola\n"), len(b"hola\r\n")))
 
     def test_mkdir(self) -> None:
         # Can't create a directory inside a file that is in the store
         with self.assertRaises(OSError) as context:
             os.mkdir(os.path.join(self.mount, "hello", "world"))
-        self.assertEqual(context.exception.errno, errno.ENOTDIR)
+
+        # Trying to use a file as a directory results in an ENOTDIR error on POSIX
+        # systems, but ENOENT on Windows.
+        expected_error = errno.ENOTDIR if sys.platform != "win32" else errno.ENOENT
+        self.assertEqual(context.exception.errno, expected_error)
 
         # Can't create a directory when a file of that name already exists
         with self.assertRaises(OSError) as context:
@@ -190,6 +211,33 @@ class BasicTest(testcase.EdenRepoTest):
             f.write("w00t")
         st = os.lstat(deep_file)
         self.assertTrue(stat.S_ISREG(st.st_mode))
+
+    def test_remove_invalid_paths(self) -> None:
+        self.eden.run_unchecked("remove", "/tmp")
+        self.eden.run_unchecked("remove", "/root")
+
+    def test_remove_checkout(self) -> None:
+        self.assert_checkout_root_entries(self.expected_mount_entries)
+        self.assertTrue(self.eden.in_proc_mounts(self.mount))
+
+        self.eden.remove(self.mount)
+
+        self.assertFalse(self.eden.in_proc_mounts(self.mount))
+        self.assertFalse(os.path.exists(self.mount))
+
+        self.eden.clone(self.repo.path, self.mount)
+
+        self.assert_checkout_root_entries(self.expected_mount_entries)
+        self.assertTrue(self.eden.in_proc_mounts(self.mount))
+
+
+@testcase.eden_repo_test
+class PosixTest(BasicTestBase):
+    """This class contains tests that do not run on Windows.
+
+    This includes things like examining the executable bit in file permissions,
+    and Unix-specific calls like mknod() and statvfs()
+    """
 
     def test_mkdir_umask(self):
         original_umask = os.umask(0o177)
@@ -233,23 +281,17 @@ class BasicTest(testcase.EdenRepoTest):
             msg="attempting to run noexec.sh should fail with " "EACCES",
         )
 
-    def test_remove_invalid_paths(self) -> None:
-        self.eden.run_unchecked("remove", "/tmp")
-        self.eden.run_unchecked("remove", "/root")
+    def test_create_using_mknod(self) -> None:
+        filename = os.path.join(self.mount, "notinrepo")
+        os.mknod(filename, stat.S_IFREG | 0o600)
+        self.assert_checkout_root_entries(self.expected_mount_entries | {"notinrepo"})
 
-    def test_remove_checkout(self) -> None:
-        self.assert_checkout_root_entries(self.expected_mount_entries)
-        self.assertTrue(self.eden.in_proc_mounts(self.mount))
-
-        self.eden.remove(self.mount)
-
-        self.assertFalse(self.eden.in_proc_mounts(self.mount))
-        self.assertFalse(os.path.exists(self.mount))
-
-        self.eden.clone(self.repo.path, self.mount)
-
-        self.assert_checkout_root_entries(self.expected_mount_entries)
-        self.assertTrue(self.eden.in_proc_mounts(self.mount))
+        st = os.lstat(filename)
+        self.assertEqual(st.st_size, 0)
+        self.assertTrue(stat.S_ISREG(st.st_mode))
+        self.assertEqual(st.st_uid, os.getuid())
+        self.assertEqual(st.st_gid, os.getgid())
+        self.assertEqual(st.st_mode & 0o600, 0o600)
 
     def test_statvfs(self) -> None:
         hello_path = os.path.join(self.mount, "hello")
@@ -263,3 +305,12 @@ class BasicTest(testcase.EdenRepoTest):
         self.assertGreaterEqual(os.pathconf(hello_path, "PC_REC_XFER_ALIGN"), 4096)
         self.assertGreaterEqual(os.pathconf(hello_path, "PC_ALLOC_SIZE_MIN"), 4096)
         self.assertGreaterEqual(os.pathconf(hello_path, "PC_REC_MIN_XFER_SIZE"), 4096)
+
+
+if sys.platform == "win32":
+    # Disable all of the tests in PosixTest on Windows by simply replacing
+    # the test classes so that test discovery will not find them.
+    # The @testcase.eden_repo_test decorator will have created two classes for testing
+    # with Git and with Hg, so disable both.
+    PosixTestHg = None
+    PosixTestGit = None
