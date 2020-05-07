@@ -25,6 +25,7 @@ use source_control::server::SourceControlService;
 use source_control::services::source_control_service as service;
 use srserver::RequestContext;
 use stats::prelude::*;
+use time_ext::DurationExt;
 
 use crate::errors;
 use crate::from_request::FromRequest;
@@ -41,6 +42,9 @@ define_stats! {
     // permille is used in canaries, because canaries do not allow for tracking formulas
     total_request_internal_failure_permille: timeseries(Average),
     total_request_invalid_permille: timeseries(Average),
+
+    // Duration per method
+    method_completion_time_ms: dynamic_histogram("method.{}.completion_time_ms", (method: String); 10, 0, 1_000, Average, Sum, Count; P 5; P 50 ; P 90),
 }
 
 #[derive(Clone)]
@@ -333,6 +337,8 @@ macro_rules! impl_thrift_methods {
                         .timed()
                         .await;
                     log_result(ctx, &stats, &res);
+                    let method = stringify!($method_name).to_string();
+                    STATS::method_completion_time_ms.add_value(stats.completion_time.as_millis_unchecked() as i64, (method,));
                     Ok(res?)
                 };
                 Box::pin(handler)
