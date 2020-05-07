@@ -420,12 +420,14 @@ Test profile discovery
    {
     "depth": 0,
     "name": "profiles/foo/spam",
+    "status": "*",
     "title": "Profile that only includes another",
     "type": "profile"
    },
    {
     "depth": 1,
     "name": "profiles/bar/eggs",
+    "status": "~",
     "title": "Profile including the profiles directory",
     "type": "profile"
    }
@@ -875,3 +877,46 @@ Test non-existing profiles are properly reported
       ! profile-non-existing         
     * profile-ok                       This is a regular profile
     ! profile-wrong                  
+  $ hg sparse show -Tjson
+  [
+   {
+    "depth": 0,
+    "name": "profile-includes-existing",
+    "status": "*",
+    "title": "This profile includes an existing profile",
+    "type": "profile"
+   },
+   {
+    "depth": 1,
+    "name": "profile-existing",
+    "status": "~",
+    "title": "A regular included profile",
+    "type": "profile"
+   },
+   {
+    "depth": 0,
+    "name": "profile-includes-non-existing",
+    "status": "*",
+    "title": "This profile includes a non-existing profile",
+    "type": "profile"
+   },
+   {
+    "depth": 1,
+    "name": "profile-non-existing",
+    "status": "!",
+    "type": "profile"
+   },
+   {
+    "depth": 0,
+    "name": "profile-ok",
+    "status": "*",
+    "title": "This is a regular profile",
+    "type": "profile"
+   },
+   {
+    "depth": 0,
+    "name": "profile-wrong",
+    "status": "!",
+    "type": "profile"
+   }
+  ]

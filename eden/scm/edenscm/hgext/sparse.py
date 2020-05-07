@@ -1686,7 +1686,7 @@ def show(ui, repo, **opts):
                     status = "!"
 
                 fm.startitem()
-                fm.data(type="profile", depth=depth)
+                fm.data(type="profile", depth=depth, status=status)
                 fm.plain("  " * depth + "  " + status + " ", label=label)
                 fm.write(
                     "name",
