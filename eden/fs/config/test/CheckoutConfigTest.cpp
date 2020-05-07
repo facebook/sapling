@@ -7,16 +7,17 @@
 
 #include "eden/fs/config/CheckoutConfig.h"
 
-#include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
+#include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 using facebook::eden::AbsolutePath;
 using facebook::eden::CheckoutConfig;
 using facebook::eden::Hash;
+using facebook::eden::writeFile;
 using folly::StringPiece;
 
 namespace {
@@ -42,14 +43,14 @@ class CheckoutConfigTest : public ::testing::Test {
         "\x12\x34\x56\x78\x12\x34\x56\x78\x12\x34"
         "\x56\x78\x12\x34\x56\x78\x12\x34\x56\x78",
         28};
-    folly::writeFile(snapshotContents, snapshotPath.c_str());
+    writeFile(snapshotContents, snapshotPath.c_str());
 
     configDotToml_ = clientDir_ / "config.toml";
     auto localData =
         "[repository]\n"
         "path = \"/data/users/carenthomas/fbsource\"\n"
         "type = \"git\"\n";
-    folly::writeFile(folly::StringPiece{localData}, configDotToml_.c_str());
+    writeFile(folly::StringPiece{localData}, configDotToml_.c_str());
   }
 
   void TearDown() override {
@@ -81,7 +82,7 @@ TEST_F(CheckoutConfigTest, testLoadWithIgnoredSettings) {
       "color = \"blue\"\n"
       "[bind-mounts]\n"
       "my-path = \"path/to-my-path\"\n";
-  folly::writeFile(folly::StringPiece{data}, configDotToml_.c_str());
+  writeFile(folly::StringPiece{data}, configDotToml_.c_str());
 
   auto config = CheckoutConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
@@ -106,7 +107,7 @@ TEST_F(CheckoutConfigTest, testMultipleParents) {
       "\x45\x67\x89\xab\xcd\xef\x00\x11\x22\x33",
       48};
   auto snapshotPath = clientDir_ / "SNAPSHOT";
-  folly::writeFile(snapshotContents, snapshotPath.c_str());
+  writeFile(snapshotContents, snapshotPath.c_str());
 
   auto parents = config->getParentCommits();
   EXPECT_EQ(
@@ -161,7 +162,7 @@ void CheckoutConfigTest::testBadSnapshot(
     const char* errorRegex) {
   SCOPED_TRACE(
       folly::to<std::string>("SNAPSHOT contents: ", folly::hexlify(contents)));
-  folly::writeFile(contents, (clientDir_ / "SNAPSHOT").c_str());
+  writeFile(contents, (clientDir_ / "SNAPSHOT").c_str());
 
   auto config = CheckoutConfig::loadFromClientDirectory(
       AbsolutePath{mountPoint_.string()}, AbsolutePath{clientDir_.string()});
