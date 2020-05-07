@@ -14,7 +14,6 @@ if (WIN32)
     ${CMAKE_CURRENT_SOURCE_DIR}/IoFuture.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ProcessAccessLog.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ProcessNameCache.cpp
-    ${CMAKE_CURRENT_SOURCE_DIR}/ProcUtil.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SSLContext.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/UnixSocket.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/XAttr.cpp

@@ -29,8 +29,6 @@
 #else
 #include "eden/fs/fuse/FuseChannel.h"
 #include "eden/fs/inodes/EdenDispatcher.h"
-#include "eden/fs/inodes/InodeError.h"
-#include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/InodeTable.h"
 #include "eden/fs/inodes/Overlay.h"
 #include "eden/fs/store/ScmStatusDiffCallback.h"
@@ -40,7 +38,9 @@
 #include "eden/fs/inodes/EdenMount.h"
 #include "eden/fs/inodes/FileInode.h"
 #include "eden/fs/inodes/GlobNode.h"
+#include "eden/fs/inodes/InodeError.h"
 #include "eden/fs/inodes/InodeLoader.h"
+#include "eden/fs/inodes/InodeMap.h"
 #include "eden/fs/inodes/TreeInode.h"
 
 #include "eden/fs/config/CheckoutConfig.h"
@@ -207,7 +207,6 @@ class ThriftLogHelper {
 
 #undef EDEN_MICRO
 
-#ifndef _WIN32
 facebook::eden::InodePtr inodeFromUserPath(
     facebook::eden::EdenMount& mount,
     StringPiece rootRelativePath) {
@@ -218,7 +217,6 @@ facebook::eden::InodePtr inodeFromUserPath(
         .get();
   }
 }
-#endif
 } // namespace
 
 // INSTRUMENT_THRIFT_CALL returns a unique pointer to
@@ -345,7 +343,6 @@ void EdenServiceHandler::mount(std::unique_ptr<MountArgument> argument) {
 }
 
 void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(INFO, *mountPoint);
   try {
     server_->unmount(*mountPoint).get();
@@ -354,9 +351,6 @@ void EdenServiceHandler::unmount(std::unique_ptr<std::string> mountPoint) {
   } catch (const std::exception& ex) {
     throw newEdenError(ex);
   }
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::listMounts(std::vector<MountInfo>& results) {
@@ -406,7 +400,6 @@ void EdenServiceHandler::getSHA1(
     vector<SHA1Result>& out,
     unique_ptr<string> mountPoint,
     unique_ptr<vector<string>> paths) {
-#ifndef _WIN32
   TraceBlock block("getSHA1");
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, toLogArg(*paths));
 
@@ -425,26 +418,18 @@ void EdenServiceHandler::getSHA1(
       sha1Result.set_error(newEdenError(result.exception()));
     }
   }
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 Future<Hash> EdenServiceHandler::getSHA1ForPathDefensively(
     StringPiece mountPoint,
     StringPiece path) noexcept {
-#ifndef _WIN32
   return folly::makeFutureWith(
       [&] { return getSHA1ForPath(mountPoint, path); });
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 Future<Hash> EdenServiceHandler::getSHA1ForPath(
     StringPiece mountPoint,
     StringPiece path) {
-#ifndef _WIN32
   if (path.empty()) {
     return makeFuture<Hash>(newEdenError(
         EINVAL,
@@ -463,9 +448,6 @@ Future<Hash> EdenServiceHandler::getSHA1ForPath(
     }
     return fileInode->getSha1(ObjectFetchContext::getNullContext());
   });
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::getBindMounts(
@@ -673,7 +655,6 @@ void EdenServiceHandler::getFilesChangedSince(
 void EdenServiceHandler::setJournalMemoryLimit(
     std::unique_ptr<PathString> mountPoint,
     int64_t limit) {
-#ifndef _WIN32
   if (!mountPoint) {
     throw newEdenError(
         EINVAL, EdenErrorType::ARGUMENT_ERROR, "mount point must not be null");
@@ -686,42 +667,30 @@ void EdenServiceHandler::setJournalMemoryLimit(
         "memory limit must be non-negative");
   }
   edenMount->getJournal().setMemoryLimit(static_cast<size_t>(limit));
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 int64_t EdenServiceHandler::getJournalMemoryLimit(
     std::unique_ptr<PathString> mountPoint) {
-#ifndef _WIN32
   if (!mountPoint) {
     throw newEdenError(
         EINVAL, EdenErrorType::ARGUMENT_ERROR, "mount point must not be null");
   }
   auto edenMount = server_->getMount(*mountPoint);
   return static_cast<int64_t>(edenMount->getJournal().getMemoryLimit());
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::flushJournal(std::unique_ptr<PathString> mountPoint) {
-#ifndef _WIN32
   if (!mountPoint) {
     throw newEdenError(
         EINVAL, EdenErrorType::ARGUMENT_ERROR, "mount point must not be null");
   }
   auto edenMount = server_->getMount(*mountPoint);
   edenMount->getJournal().flush();
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::debugGetRawJournal(
     DebugGetRawJournalResponse& out,
     std::unique_ptr<DebugGetRawJournalParams> params) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, params->mountPoint);
   auto edenMount = server_->getMount(params->mountPoint);
   auto mountGeneration = static_cast<ssize_t>(edenMount->getMountGeneration());
@@ -733,9 +702,6 @@ void EdenServiceHandler::debugGetRawJournal(
 
   out.allDeltas = edenMount->getJournal().getDebugRawJournalInfo(
       params->fromSequenceNumber, limitopt, mountGeneration);
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 folly::SemiFuture<std::unique_ptr<std::vector<EntryInformationOrError>>>
@@ -1091,7 +1057,6 @@ void EdenServiceHandler::debugGetScmTree(
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
     bool localStoreOnly) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
@@ -1117,9 +1082,6 @@ void EdenServiceHandler::debugGetScmTree(
     out.mode = modeFromTreeEntryType(entry.getType());
     out.id = thriftHash(entry.getHash());
   }
-#else
-  NOT_IMPLEMENTED();
-#endif
 }
 
 void EdenServiceHandler::debugGetScmBlob(
@@ -1127,7 +1089,6 @@ void EdenServiceHandler::debugGetScmBlob(
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
     bool localStoreOnly) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
@@ -1147,9 +1108,6 @@ void EdenServiceHandler::debugGetScmBlob(
   }
   auto dataBuf = blob->getContents().cloneCoalescedAsValue();
   data.assign(reinterpret_cast<const char*>(dataBuf.data()), dataBuf.length());
-#else
-  NOT_IMPLEMENTED();
-#endif
 }
 
 void EdenServiceHandler::debugGetScmBlobMetadata(
@@ -1157,7 +1115,6 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
     unique_ptr<string> mountPoint,
     unique_ptr<string> idStr,
     bool localStoreOnly) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3, *mountPoint, logHash(*idStr));
   auto edenMount = server_->getMount(*mountPoint);
   auto id = hashFromThrift(*idStr);
@@ -1184,24 +1141,17 @@ void EdenServiceHandler::debugGetScmBlobMetadata(
   }
   result.size = metadata->size;
   result.contentsSha1 = thriftHash(metadata->sha1);
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::debugInodeStatus(
     vector<TreeInodeDebugInfo>& inodeInfo,
     unique_ptr<string> mountPoint,
     std::unique_ptr<std::string> path) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   auto edenMount = server_->getMount(*mountPoint);
 
   auto inode = inodeFromUserPath(*edenMount, *path).asTreePtr();
   inode->getDebugStatus(inodeInfo);
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::debugOutstandingFuseCalls(
@@ -1240,7 +1190,6 @@ void EdenServiceHandler::debugGetInodePath(
     InodePathDebugInfo& info,
     std::unique_ptr<std::string> mountPoint,
     int64_t inodeNumber) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   auto inodeNum = static_cast<InodeNumber>(inodeNumber);
   auto inodeMap = server_->getMount(*mountPoint)->getInodeMap();
@@ -1251,9 +1200,6 @@ void EdenServiceHandler::debugGetInodePath(
   // If getPathForInode returned none then the inode is unlinked
   info.linked = relativePath != std::nullopt;
   info.path = relativePath ? relativePath->stringPiece().str() : "";
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::getAccessCounts(
@@ -1316,7 +1262,6 @@ int64_t EdenServiceHandler::unloadInodeForPath(
 }
 
 void EdenServiceHandler::getStatInfo(InternalStats& result) {
-#ifndef _WIN32
   auto helper = INSTRUMENT_THRIFT_CALL(DBG3);
   auto mountList = server_->getMountPoints();
   for (auto& mount : mountList) {
@@ -1372,9 +1317,6 @@ void EdenServiceHandler::getStatInfo(InternalStats& result) {
   result.blobCacheStats.missCount = blobCacheStats.missCount;
   result.blobCacheStats.evictionCount = blobCacheStats.evictionCount;
   result.blobCacheStats.dropCount = blobCacheStats.dropCount;
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServiceHandler::flushStatsNow() {

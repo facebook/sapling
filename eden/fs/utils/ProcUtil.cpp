@@ -23,6 +23,10 @@
 #include <mach/task_info.h> // @manual
 #endif
 
+#ifdef _WIN32
+#include "eden/fs/win/utils/stub.h" // @manual
+#endif
+
 using folly::StringPiece;
 using std::optional;
 
@@ -56,11 +60,14 @@ namespace proc_util {
 optional<MemoryStats> readMemoryStats() {
 #ifdef __APPLE__
   return readMemoryStatsApple();
+#elif _WIN32
+  NOT_IMPLEMENTED();
 #else
   return readStatmFile("/proc/self/statm");
 #endif
 }
 
+#ifndef _WIN32
 optional<MemoryStats> readStatmFile(const char* filename) {
   std::string contents;
   if (!folly::readFile(filename, contents)) {
@@ -94,6 +101,7 @@ optional<MemoryStats> parseStatmFile(StringPiece data, size_t pageSize) {
 
   return stats;
 }
+#endif
 
 std::string& trim(std::string& str, const std::string& delim) {
   str.erase(0, str.find_first_not_of(delim));
@@ -114,6 +122,7 @@ std::pair<std::string, std::string> getKeyValuePair(
   return result;
 }
 
+#ifndef _WIN32
 std::vector<std::unordered_map<std::string, std::string>> parseProcSmaps(
     std::istream& input) {
   std::vector<std::unordered_map<std::string, std::string>> entryList;
@@ -190,8 +199,12 @@ std::optional<uint64_t> calculatePrivateBytes(
   }
   return count;
 }
+#endif
 
 std::optional<uint64_t> calculatePrivateBytes() {
+#ifdef _WIN32
+  NOT_IMPLEMENTED();
+#else
   try {
     std::ifstream input(kLinuxProcSmapsPath.data());
     return calculatePrivateBytes(parseProcSmaps(input));
@@ -199,6 +212,7 @@ std::optional<uint64_t> calculatePrivateBytes() {
     XLOG(WARN) << "Failed to parse file " << kLinuxProcSmapsPath << ex.what();
     return std::nullopt;
   }
+#endif
 }
 } // namespace proc_util
 } // namespace eden

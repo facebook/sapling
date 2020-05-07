@@ -3390,6 +3390,7 @@ size_t TreeInode::unloadChildrenLastAccessedBefore(const timespec& cutoff) {
         return toUnload.count(child->getNodeId()) != 0;
       });
 }
+#endif
 
 void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
   TreeInodeDebugInfo info;
@@ -3491,6 +3492,7 @@ void TreeInode::getDebugStatus(vector<TreeInodeDebugInfo>& results) const {
   }
 }
 
+#ifndef _WIN32
 InodeMetadata TreeInode::getMetadata() const {
   auto lock = contents_.rlock();
   return getMetadataLocked(lock->entries);
