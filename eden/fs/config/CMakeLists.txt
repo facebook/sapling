@@ -23,3 +23,5 @@ target_link_libraries(
     eden_utils
     cpptoml
 )
+
+add_subdirectory(test)
