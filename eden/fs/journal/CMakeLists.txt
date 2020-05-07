@@ -16,3 +16,5 @@ target_link_libraries(
     eden_utils
     streamingeden_thrift_cpp
 )
+
+add_subdirectory(test)
