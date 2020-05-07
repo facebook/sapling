@@ -589,11 +589,13 @@ def can_run_fake_edenfs() -> bool:
 
 
 def _compute_can_run_eden(require_fuse: bool = True) -> bool:
-    # On Windows the only requirement is that ProjectedFS must be installed.
-    # Our CMake build already verifies that during the configure phase of the build,
-    # so we can simply always return True here for now.
     if sys.platform == "win32":
-        return True
+        # On Windows ProjectedFS must be installed.
+        # Our CMake configure step checks for the availability of ProjectedFSLib.lib
+        # so that we can link against ProjectedFS at build time, but this doesn't
+        # guarantee that ProjectedFS.dll is available.
+        projfs_dll = r"C:\Windows\system32\ProjectedFSLib.dll"
+        return os.path.exists(projfs_dll)
 
     # FUSE must be available
     if require_fuse and not os.path.exists("/dev/fuse"):
