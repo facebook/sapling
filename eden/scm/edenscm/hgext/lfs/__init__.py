@@ -63,7 +63,7 @@ from edenscm.mercurial import (
     util,
     vfs as vfsmod,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.mercurial.i18n import _, _x
 
 from . import blobstore, pointer, wrapper
 
@@ -236,7 +236,7 @@ def debuglfssend(ui, url=None):
 
     local.write(oid, data)
     remote.writebatch(pointers, local)
-    ui.write(("%s %s\n") % (oid, size))
+    ui.write(_x("%s %s\n") % (oid, size))
 
 
 @command(

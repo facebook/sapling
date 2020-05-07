@@ -21,7 +21,7 @@ import time
 from bindings import threading as rustthreading, tracing
 
 from . import encoding, util
-from .i18n import _
+from .i18n import _, _x
 
 
 _tracer = util.tracer
@@ -46,7 +46,7 @@ def fmtremaining(seconds):
 
     if seconds < 60:
         # i18n: format XX seconds as "XXs"
-        return _("%02ds") % (seconds)
+        return _("%02ds") % seconds
     minutes = seconds // 60
     if minutes < 60:
         seconds -= minutes * 60
@@ -694,7 +694,7 @@ class debugbar(tracedbar):
 
     def reset(self, topic, unit="", total=None):
         if self._started:
-            self._ui.write(("progress: %s (reset)\n") % self._topic)
+            self._ui.write(_x("progress: %s (reset)\n") % self._topic)
         self._topic = topic
         self._unit = unit
         self._total = total
@@ -707,7 +707,7 @@ class debugbar(tracedbar):
 
     def exit(self, type, value, traceback):
         if self._started:
-            self._ui.write(("progress: %s (end)\n") % self._topic)
+            self._ui.write(_x("progress: %s (end)\n") % self._topic)
 
     def __setattr__(self, name, value):
         if name == "value":
@@ -718,12 +718,12 @@ class debugbar(tracedbar):
             if self._total:
                 pct = 100.0 * pos / self._total
                 self._ui.write(
-                    ("progress: %s:%s %d/%d%s (%4.2f%%)\n")
+                    _x("progress: %s:%s %d/%d%s (%4.2f%%)\n")
                     % (self._topic, item, pos, self._total, unit, pct)
                 )
             else:
                 self._ui.write(
-                    ("progress: %s:%s %d%s\n") % (self._topic, item, pos, unit)
+                    _x("progress: %s:%s %d%s\n") % (self._topic, item, pos, unit)
                 )
         super(debugbar, self).__setattr__(name, value)
 

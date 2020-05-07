@@ -54,7 +54,7 @@ from . import (
     util,
     vfs as vfsmod,
 )
-from .i18n import _
+from .i18n import _, _x
 from .node import hex, nullid, nullrev, short
 from .pycompat import ensurestr, range
 
@@ -2104,25 +2104,25 @@ class jsonchangeset(changeset_printer):
             self.ui.write(",\n {")
 
         if self.ui.quiet:
-            self.ui.write(('\n  "rev": %s') % jrev)
-            self.ui.write((',\n  "node": %s') % jnode)
+            self.ui.write(_x('\n  "rev": %s') % jrev)
+            self.ui.write(_x(',\n  "node": %s') % jnode)
             self.ui.write("\n }")
             return
 
-        self.ui.write(('\n  "rev": %s') % jrev)
-        self.ui.write((',\n  "node": %s') % jnode)
-        self.ui.write((',\n  "branch": "%s"') % j(ctx.branch()))
-        self.ui.write((',\n  "phase": "%s"') % ctx.phasestr())
-        self.ui.write((',\n  "user": "%s"') % j(ctx.user()))
-        self.ui.write((',\n  "date": [%d, %d]') % ctx.date())
-        self.ui.write((',\n  "desc": "%s"') % j(ctx.description()))
+        self.ui.write(_x('\n  "rev": %s') % jrev)
+        self.ui.write(_x(',\n  "node": %s') % jnode)
+        self.ui.write(_x(',\n  "branch": "%s"') % j(ctx.branch()))
+        self.ui.write(_x(',\n  "phase": "%s"') % ctx.phasestr())
+        self.ui.write(_x(',\n  "user": "%s"') % j(ctx.user()))
+        self.ui.write(_x(',\n  "date": [%d, %d]') % ctx.date())
+        self.ui.write(_x(',\n  "desc": "%s"') % j(ctx.description()))
 
         self.ui.write(
-            (',\n  "bookmarks": [%s]')
+            _x(',\n  "bookmarks": [%s]')
             % ", ".join('"%s"' % j(b) for b in ctx.bookmarks())
         )
         self.ui.write(
-            (',\n  "parents": [%s]')
+            _x(',\n  "parents": [%s]')
             % ", ".join('"%s"' % c.hex() for c in ctx.parents())
         )
 
@@ -2131,32 +2131,32 @@ class jsonchangeset(changeset_printer):
                 jmanifestnode = "null"
             else:
                 jmanifestnode = '"%s"' % hex(ctx.manifestnode())
-            self.ui.write((',\n  "manifest": %s') % jmanifestnode)
+            self.ui.write(_x(',\n  "manifest": %s') % jmanifestnode)
 
             self.ui.write(
-                (',\n  "extra": {%s}')
+                _x(',\n  "extra": {%s}')
                 % ", ".join('"%s": "%s"' % (j(k), j(v)) for k, v in ctx.extra().items())
             )
 
             files = ctx.p1().status(ctx)
             self.ui.write(
-                (',\n  "modified": [%s]') % ", ".join('"%s"' % j(f) for f in files[0])
+                _x(',\n  "modified": [%s]') % ", ".join('"%s"' % j(f) for f in files[0])
             )
             self.ui.write(
-                (',\n  "added": [%s]') % ", ".join('"%s"' % j(f) for f in files[1])
+                _x(',\n  "added": [%s]') % ", ".join('"%s"' % j(f) for f in files[1])
             )
             self.ui.write(
-                (',\n  "removed": [%s]') % ", ".join('"%s"' % j(f) for f in files[2])
+                _x(',\n  "removed": [%s]') % ", ".join('"%s"' % j(f) for f in files[2])
             )
 
         elif self.ui.verbose:
             self.ui.write(
-                (',\n  "files": [%s]') % ", ".join('"%s"' % j(f) for f in ctx.files())
+                _x(',\n  "files": [%s]') % ", ".join('"%s"' % j(f) for f in ctx.files())
             )
 
             if copies:
                 self.ui.write(
-                    (',\n  "copies": {%s}')
+                    _x(',\n  "copies": {%s}')
                     % ", ".join('"%s": "%s"' % (j(k), j(v)) for k, v in copies)
                 )
 
@@ -2171,13 +2171,13 @@ class jsonchangeset(changeset_printer):
                 diffordiffstat(
                     self.ui, self.repo, diffopts, prev, node, match=matchfn, stat=True
                 )
-                self.ui.write((',\n  "diffstat": "%s"') % j(self.ui.popbuffer()))
+                self.ui.write(_x(',\n  "diffstat": "%s"') % j(self.ui.popbuffer()))
             if diff:
                 self.ui.pushbuffer()
                 diffordiffstat(
                     self.ui, self.repo, diffopts, prev, node, match=matchfn, stat=False
                 )
-                self.ui.write((',\n  "diff": "%s"') % j(self.ui.popbuffer()))
+                self.ui.write(_x(',\n  "diff": "%s"') % j(self.ui.popbuffer()))
 
         self.ui.write("\n }")
 

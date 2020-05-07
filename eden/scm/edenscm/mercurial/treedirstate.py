@@ -19,7 +19,7 @@ import time
 from bindings import treestate as rusttreestate
 
 from . import error, node, pycompat, treestate, txnutil, util
-from .i18n import _
+from .i18n import _, _x
 
 
 dirstateheader = b"########################treedirstate####"
@@ -508,7 +508,7 @@ class treedirstatemap(object):
                 pos = f.tell()
                 data = f.read(32)
                 while data:
-                    self._ui.warn(("%08x: %s\n") % (pos, binascii.hexlify(data)))
+                    self._ui.warn(_x("%08x: %s\n") % (pos, binascii.hexlify(data)))
                     pos = f.tell()
                     data = f.read(32)
             raise error.Abort(_("error verifying treedirstate"))

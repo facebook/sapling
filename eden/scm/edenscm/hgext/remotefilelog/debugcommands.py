@@ -13,7 +13,7 @@ import sys
 from bindings import revisionstore
 from edenscm.hgext import extutil
 from edenscm.mercurial import error, filelog, progress, pycompat, revlog, util
-from edenscm.mercurial.i18n import _
+from edenscm.mercurial.i18n import _, _x
 from edenscm.mercurial.node import bin, hex, nullid, short
 
 from . import (
@@ -39,8 +39,8 @@ def debugremotefilelog(ui, path, **opts):
         with open(filenamepath, "rb") as f:
             filename = f.read()
 
-    ui.status(_("size: %s bytes\n") % (size))
-    ui.status(_("path: %s \n") % (path))
+    ui.status(_("size: %s bytes\n") % size)
+    ui.status(_("path: %s \n") % path)
     ui.status(_("key: %s \n") % (short(firstnode)))
     if filename is not None:
         ui.status(_("filename: %s \n") % filename)
@@ -193,7 +193,7 @@ def debugindexdot(orig, ui, repo, file_):
 
     r = buildtemprevlog(repo, os.path.basename(file_)[:-2])
 
-    ui.write(("digraph G {\n"))
+    ui.write(_x("digraph G {\n"))
     for i in r:
         node = r.node(i)
         pp = r.parents(node)
@@ -266,7 +266,7 @@ def debugdatastore(ui, store, verifynoduplicate=True, **opts):
         try:
             content = unionstore.get("", bin(node))
         except KeyError:
-            ui.write(("(not found)\n"))
+            ui.write(_x("(not found)\n"))
             return
         else:
             ui.writebytes(b"%s" % content)
@@ -295,7 +295,7 @@ def debugdatastore(ui, store, verifynoduplicate=True, **opts):
         )
 
         ui.write(
-            ("Total:%s%s  %s (%s)\n")
+            _x("Total:%s%s  %s (%s)\n")
             % (
                 "".ljust(2 * hashlen - len("Total:")),
                 str(totaldeltasize).ljust(12),
@@ -310,7 +310,7 @@ def debugdatastore(ui, store, verifynoduplicate=True, **opts):
     for filename, node, deltabase, deltalen in store.iterentries():
         bases[node] = deltabase
         if verifynoduplicate and node in nodes:
-            ui.write(("Bad entry: %s appears twice\n" % short(node)))
+            ui.write(_x("Bad entry: %s appears twice\n" % short(node)))
             failures += 1
         nodes.add(node)
         if filename != lastfilename:
@@ -353,7 +353,7 @@ def debugdatastore(ui, store, verifynoduplicate=True, **opts):
 
     failures += _sanitycheck(ui, set(nodes), bases)
     if failures > 1:
-        ui.warn(("%d failures\n" % failures))
+        ui.warn(_x("%d failures\n" % failures))
         return 1
 
 

@@ -608,10 +608,14 @@ def wraprepo(repo):
                     n = len(keys)
                     (firstpath, firstnode) = keys[0]
                     firstnode = hex(firstnode)
-                    singular = "fetching tree for ('%s', %s)" % (firstpath, firstnode)
-                    plural = "fetching %d trees" % n
-                    msg = _n(singular, plural, n)
-                    self.ui.write_err(("%s\n") % msg)
+                    self.ui.write_err(
+                        _n(
+                            "fetching tree for ('%(path)s', %(node)s)\n",
+                            "fetching %(num)s trees\n",
+                            n,
+                        )
+                        % {"path": firstpath, "node": firstnode, "num": n}
+                    )
 
                 mfnodes = [node for path, node in keys]
                 directories = [path for path, node in keys]
@@ -700,10 +704,10 @@ def wraprepo(repo):
             keys = [(name, hex(node)) for (name, node) in keys]
 
             if self.ui.interactive() and edenapi.debug(self.ui):
-                singular = "fetching tree for %s" % str(keys[0])
-                plural = "fetching %d trees" % n
-                msg = _n(singular, plural, n)
-                self.ui.warn(("%s\n") % msg)
+                self.ui.warn(
+                    _n("fetching tree for %(key)s\n", "fetching %(num)s trees\n", n)
+                    % {"key": str(keys[0]), "num": n}
+                )
 
             dpack, _hpack = self.manifestlog.getmutablesharedpacks()
 

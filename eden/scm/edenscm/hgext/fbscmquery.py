@@ -19,7 +19,7 @@ from edenscm.mercurial import (
     smartset,
     templater,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.mercurial.i18n import _, _x
 from edenscm.mercurial.node import bin
 from edenscm.mercurial.pycompat import range
 from edenscm.mercurial.util import httplib
@@ -80,7 +80,7 @@ def mirrornode(ctx, mapping, args):
         mapping["repo"].ui.warn(_("couldn't read .arcconfig or .arcrc"))
         return ""
     except graphql.ClientError as e:
-        mapping["repo"].ui.warn((str(e.msg) + "\n"))
+        mapping["repo"].ui.warn(_x(str(e.msg) + "\n"))
         return ""
 
 
@@ -158,7 +158,7 @@ def gitnode(repo, subset, x):
                 ("Could not translate revision {0}: {1}\n".format(n, lasterror))
             )
         else:
-            repo.ui.warn(("Could not translate revision {0}\n".format(n)))
+            repo.ui.warn(_x("Could not translate revision {0}\n".format(n)))
         return subset.filter(lambda r: False)
 
     rn = repo[node.bin(hghash)].rev()

@@ -174,7 +174,7 @@ from . import (
     urllibcompat,
     util,
 )
-from .i18n import _
+from .i18n import _, _x
 from .vfs import abstractvfs
 
 
@@ -2220,7 +2220,7 @@ def handleobsmarker(op, inpart):
     tr = op.gettransaction()
     markerdata = inpart.read()
     if op.ui.config("experimental", "obsmarkers-exchange-debug"):
-        op.ui.write(("obsmarker-exchange: %i bytes received\n") % len(markerdata))
+        op.ui.write(_x("obsmarker-exchange: %i bytes received\n") % len(markerdata))
     # The mergemarkers call will crash if marker creation is not enabled.
     # we want to avoid this if the part is advisory.
     if not inpart.mandatory and op.repo.obsstore.readonly:

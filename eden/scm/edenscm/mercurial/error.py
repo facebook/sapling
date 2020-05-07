@@ -77,7 +77,7 @@ class Context(object):
                     pass
             else:
                 message = messageorfunc
-            ui.warn(("%s\n") % message)
+            ui.warn(message, "\n")
 
 
 class Component(object):

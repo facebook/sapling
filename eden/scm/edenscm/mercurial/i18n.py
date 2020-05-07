@@ -171,6 +171,11 @@ def _n(singular, plural, count):
         return ngettext(singular, plural, count)
 
 
+def _x(message):
+    # type: (str) -> str
+    return message
+
+
 def limititems(items, maxitems=5):
     if len(items) > maxitems > 0:
         return items[0:maxitems] + ["...and %d more" % (len(items) - maxitems)]

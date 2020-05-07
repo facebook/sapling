@@ -49,7 +49,7 @@ from . import (
     uiconfig,
     util,
 )
-from .i18n import _
+from .i18n import _, _x
 
 
 cliparser = bindings.cliparser
@@ -123,7 +123,7 @@ class request(object):
                 except:  # re-raises below
                     if exc is None:
                         exc = sys.exc_info()[1]
-                    self.ui.warn(("error in exit handlers:\n"))
+                    self.ui.warn(_x("error in exit handlers:\n"))
                     self.ui.traceback(force=True)
         finally:
             if exc is not None:
@@ -1263,7 +1263,7 @@ def handlecommandexception(ui):
 
 
 def rejectpush(ui, **kwargs):
-    ui.warn(("Permission denied - blocked by readonlyrejectpush hook\n"))
+    ui.warn(_x("Permission denied - blocked by readonlyrejectpush hook\n"))
     # mercurial hooks use unix process conventions for hook return values
     # so a truthy return means failure
     return True

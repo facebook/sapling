@@ -29,7 +29,7 @@ from edenscm.mercurial import (
     util,
     wireproto,
 )
-from edenscm.mercurial.i18n import _, _n
+from edenscm.mercurial.i18n import _, _n, _x
 
 from . import constants
 
@@ -692,12 +692,12 @@ def storebundle(op, params, bundlefile, iscrossbackendsync=False):
         maxoutput = 10
         for i in range(0, min(len(revs), maxoutput)):
             firstline = bundle[revs[i]].description().split("\n")[0][:50]
-            op.repo.ui.warn(("    %s  %s\n") % (revs[i], firstline))
+            op.repo.ui.warn(_x("    %s  %s\n") % (revs[i], firstline))
 
         if len(revs) > maxoutput + 1:
-            op.repo.ui.warn(("    ...\n"))
+            op.repo.ui.warn(_x("    ...\n"))
             firstline = bundle[revs[-1]].description().split("\n")[0][:50]
-            op.repo.ui.warn(("    %s  %s\n") % (revs[-1], firstline))
+            op.repo.ui.warn(_x("    %s  %s\n") % (revs[-1], firstline))
 
         nodesctx = [bundle[rev] for rev in revs]
         inindex = lambda rev: bool(index.getbundle(bundle[rev].hex()))

@@ -8,7 +8,7 @@
 from __future__ import absolute_import
 
 from .. import mutation, node as nodemod, pycompat, scmutil, util, visibility
-from ..i18n import _
+from ..i18n import _, _x
 from .cmdtable import command
 
 
@@ -49,7 +49,7 @@ def debugmutation(ui, repo, **opts):
                 extra += " (folded with: %s)" % ", ".join(
                     [nodemod.hex(n) for n in foldwith]
                 )
-        return ("%s by %s at %s%s") % (mutop, mutuser, mutdate, extra)
+        return "%s by %s at %s%s" % (mutop, mutuser, mutdate, extra)
 
     def expandhistory(node):
         entry = mutation.lookup(unfi, node)
@@ -87,32 +87,32 @@ def debugmutation(ui, repo, **opts):
         while nextnode:
             node = nextnode
             nextnode = None
-            ui.status(("%s%s") % (firstprefix, nodemod.hex(node)))
+            ui.status(_x("%s%s") % (firstprefix, nodemod.hex(node)))
             firstprefix = prefix
             edges = expand(node)
             if len(edges) == 0:
-                ui.status(("\n"))
+                ui.status(_x("\n"))
             elif len(edges) == 1:
                 desc, nextnodes = edges[0]
-                ui.status((" %s\n") % desc)
+                ui.status(_x(" %s\n") % desc)
                 if len(nextnodes) == 1:
                     # Simple case, don't use recursion
                     nextnode = nextnodes[0]
                 else:
                     rendernodes(prefix, nextnodes)
             elif len(edges) > 1:
-                ui.status((" diverges\n"))
+                ui.status(_x(" diverges\n"))
                 for edge in edges[:-1]:
                     desc, nextnodes = edge
-                    ui.status(("%s:=  %s\n") % (prefix, desc))
+                    ui.status(_x("%s:=  %s\n") % (prefix, desc))
                     rendernodes(prefix + ":   ", nextnodes)
                 desc, nextnodes = edges[-1]
-                ui.status(("%s'=  %s\n") % (prefix, desc))
+                ui.status(_x("%s'=  %s\n") % (prefix, desc))
                 rendernodes(prefix + "    ", nextnodes)
 
     for rev in scmutil.revrange(repo, opts.get("rev") or ["."]):
         render(" *  ", "    ", repo[rev].node())
-        ui.status(("\n"))
+        ui.status(_x("\n"))
 
     return 0
 

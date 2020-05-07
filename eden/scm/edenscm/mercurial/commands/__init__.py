@@ -2999,16 +2999,16 @@ def heads(ui, repo, *branchrevs, **opts):
         haveheads = set(h.branch() for h in heads)
         if branches - haveheads:
             headless = ", ".join(b for b in branches - haveheads)
-            msg = _("no open branch heads found on branches %s")
+            msg = _("no open branch heads found on branches %s") % headless
             if opts.get("rev"):
                 msg += _(" (started at %s)") % opts["rev"]
-            ui.warn((msg + "\n") % headless)
+            ui.warn(msg, "\n")
 
     if not heads:
         return 1
 
     ui.pager("heads")
-    heads = sorted(heads, key=lambda x: -x.rev())
+    heads = sorted(heads, key=lambda x: -(x.rev()))
     displayer = cmdutil.show_changeset(ui, repo, opts)
     for ctx in heads:
         displayer.show(ctx)
@@ -5208,7 +5208,7 @@ def resolve(ui, repo, *pats, **opts):
     if not (all or pats or show or mark or unmark):
         raise error.Abort(
             _("no files or directories specified"),
-            hint=("use --all to re-merge all unresolved files"),
+            hint=_("use --all to re-merge all unresolved files"),
         )
 
     if show:
@@ -5534,7 +5534,7 @@ def rollback(ui, repo, **opts):
     if not ui.configbool("ui", "rollback"):
         raise error.Abort(
             _("rollback is disabled because it is unsafe"),
-            hint=("see `hg help -v rollback` for information"),
+            hint=_("see `hg help -v rollback` for information"),
         )
     return repo.rollback(dryrun=opts.get(r"dry_run"), force=opts.get(r"force"))
 

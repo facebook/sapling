@@ -4394,7 +4394,7 @@ def mergelists(a, b):
 def makerandomidentifier(length=16):
     """Generate a random identifier"""
     alphabet = string.ascii_letters + string.digits
-    return "".join(random.choice(alphabet) for _x in range(length))
+    return "".join(random.choice(alphabet) for _char in range(length))
 
 
 def log(service, *msg, **opts):

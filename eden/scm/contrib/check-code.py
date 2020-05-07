@@ -385,7 +385,7 @@ corepypats = [
         # rules depending on implementation of repquote()
         (r' x+[xpqo%APM][\'"]\n\s+[\'"]x', "string join across lines with no space"),
         (
-            r'''(?x)ui\.(status|progress|write|note|warn)\(
+            r'''(?x)ui\.(status|write|note|warn)\(
          [ \t\n#]*
          (?# any strings/comments might precede a string, which
            # contains translatable message)
@@ -399,7 +399,7 @@ corepypats = [
          (?# this regexp can't use [^...] style,
            # because _preparepats forcibly adds "\n" into [^...],
            # even though this regexp wants match it against "\n")''',
-            "missing _() in ui message (use () to hide false-positives)",
+            "missing _() in ui message (use _x() to hide false-positives)",
         ),
     ],
     # warnings

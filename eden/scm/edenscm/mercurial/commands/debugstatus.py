@@ -4,7 +4,7 @@
 # GNU General Public License version 2.
 
 from .. import error
-from ..i18n import _
+from ..i18n import _, _x
 from .cmdtable import command
 
 
@@ -18,10 +18,10 @@ def debugstatus(ui, repo, **opts):
 
     dirstate = repo.dirstate
     dmap = dirstate._map
-    ui.write(("len(dirstate) = %d\n") % len(dmap))
+    ui.write(_x("len(dirstate) = %d\n") % len(dmap))
 
     nonnormalset = dmap.nonnormalset
-    ui.write(("len(nonnormal) = %d\n") % len(nonnormalset))
+    ui.write(_x("len(nonnormal) = %d\n") % len(nonnormalset))
 
     visitdir = dirstate._ignore.visitdir
 
@@ -29,11 +29,11 @@ def debugstatus(ui, repo, **opts):
         return visitdir(path) == "all"
 
     nonnormalfiltered = dmap.nonnormalsetfiltered(dirfilter)
-    ui.write(("len(filtered nonnormal) = %d\n") % len(nonnormalfiltered))
+    ui.write(_x("len(filtered nonnormal) = %d\n") % len(nonnormalfiltered))
 
     toprint = int(opts.get("nonnormal", 0))
     if toprint:
         for path in sorted(nonnormalfiltered)[:toprint]:
-            ui.write(("  %s\n") % path)
+            ui.write(_x("  %s\n") % path)
 
-    ui.write(("clock = %s\n") % dirstate.getclock())
+    ui.write(_x("clock = %s\n") % dirstate.getclock())

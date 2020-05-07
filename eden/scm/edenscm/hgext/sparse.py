@@ -1575,7 +1575,8 @@ def sparse(ui, repo, *pats, **opts):
             temporaryincludes = repo.gettemporaryincludes()
             if temporaryincludes:
                 ui.status(_("Temporarily Included Files (for merge/rebase):\n"))
-                ui.status(("\n".join(temporaryincludes) + "\n"))
+                msg = "\n".join(temporaryincludes) + "\n"
+                ui.status(msg)
         else:
             ui.status(_("repo is not sparse\n"))
         return

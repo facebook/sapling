@@ -576,7 +576,7 @@ class fileserverclient(object):
         )
 
         if self.ui.interactive() and edenapi.debug(self.ui):
-            self.ui.warn(("%s\n") % msg)
+            self.ui.warn(msg, "\n")
 
         self.ui.metrics.gauge("http_getfiles_revs", n)
         self.ui.metrics.gauge("http_getfiles_calls", 1)
@@ -614,7 +614,7 @@ class fileserverclient(object):
         )
 
         if self.ui.interactive() and edenapi.debug(self.ui):
-            self.ui.warn(("%s\n") % msg)
+            self.ui.warn(msg, "\n")
 
         self.ui.metrics.gauge("http_gethistory_revs", n)
         self.ui.metrics.gauge("http_gethistory_calls", 1)

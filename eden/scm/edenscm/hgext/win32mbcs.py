@@ -55,7 +55,7 @@ import os
 import sys
 
 from edenscm.mercurial import encoding, error, pycompat, registrar
-from edenscm.mercurial.i18n import _
+from edenscm.mercurial.i18n import _, _x
 
 
 # Note for extension authors: ONLY specify testedwith = 'ships-with-hg-core' for
@@ -127,7 +127,7 @@ def basewrapper(func, argtype, enc, dec, args, kwds):
     except UnicodeError:
         raise error.Abort(
             _("[win32mbcs] filename conversion failed with" " %s encoding\n")
-            % (_encoding)
+            % _encoding
         )
 
 
@@ -210,4 +210,4 @@ def extsetup(ui):
         # command line options is not yet applied when
         # extensions.loadall() is called.
         if "--debug" in sys.argv:
-            ui.write(("[win32mbcs] activated with encoding: %s\n") % _encoding)
+            ui.write(_x("[win32mbcs] activated with encoding: %s\n") % _encoding)

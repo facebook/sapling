@@ -78,7 +78,7 @@ from .. import (
     util,
     vfs as vfsmod,
 )
-from ..i18n import _
+from ..i18n import _, _x
 from ..node import bin, hex, nullhex, nullid, nullrev, short
 from ..pycompat import decodeutf8, range
 from .cmdtable import command
@@ -214,7 +214,7 @@ def debugbuilddag(
         with progress.bar(ui, _("building"), _("revisions"), total) as prog:
             for type, data in dagparser.parsedag(text):
                 if type == "n":
-                    ui.note(("node %s\n" % str(data)))
+                    ui.note(_x("node %s\n" % str(data)))
                     id, ps = data
 
                     files = []
@@ -289,7 +289,7 @@ def debugbuilddag(
                     at = id
                 elif type == "l":
                     id, name = data
-                    ui.note(("bookmark %s\n" % name))
+                    ui.note(_x("bookmark %s\n" % name))
                     bookmarks.addbookmarks(
                         repo,
                         tr,
@@ -299,7 +299,7 @@ def debugbuilddag(
                         inactive=True,
                     )
                 elif type == "a":
-                    ui.note(("branch %s\n" % data))
+                    ui.note(_x("branch %s\n" % data))
                     atbranch = data
                 prog.value = id
         tr.close()
@@ -311,7 +311,7 @@ def _debugchangegroup(ui, gen, all=None, indent=0, **opts):
     indent_string = " " * indent
     if all:
         ui.write(
-            ("%sformat: id, p1, p2, cset, delta base, len(delta)\n") % indent_string
+            _x("%sformat: id, p1, p2, cset, delta base, len(delta)\n") % indent_string
         )
 
         def showchunks(named):
@@ -390,7 +390,7 @@ def _debugbundle2(ui, gen, all=None, **opts):
     """lists the contents of a bundle2"""
     if not isinstance(gen, bundle2.unbundle20):
         raise error.Abort(_("not a bundle2 file"))
-    ui.write(("Stream params: %s\n" % _quasirepr(gen.params)))
+    ui.write(_x("Stream params: %s\n" % _quasirepr(gen.params)))
     parttypes = opts.get(r"part_type", [])
     for part in gen.iterparts():
         if parttypes and part.type not in parttypes:
@@ -440,16 +440,16 @@ def debugcapabilities(ui, path, **opts):
     """lists the capabilities of a remote peer"""
     peer = hg.peer(ui, opts, path)
     caps = peer.capabilities()
-    ui.write(("Main capabilities:\n"))
+    ui.write(_x("Main capabilities:\n"))
     for c in sorted(caps):
-        ui.write(("  %s\n") % c)
+        ui.write(_x("  %s\n") % c)
     b2caps = bundle2.bundle2caps(peer)
     if b2caps:
-        ui.write(("Bundle2 capabilities:\n"))
+        ui.write(_x("Bundle2 capabilities:\n"))
         for key, values in sorted(pycompat.iteritems(b2caps)):
-            ui.write(("  %s\n") % key)
+            ui.write(_x("  %s\n") % key)
             for v in values:
-                ui.write(("    %s\n") % v)
+                ui.write(_x("    %s\n") % v)
 
 
 @command("debugcheckstate", [], "")
@@ -488,7 +488,7 @@ def debugcheckstate(ui, repo):
 )
 def debugcolor(ui, **opts):
     """show available color, effects or style"""
-    ui.write(("color mode: %s\n") % ui._colormode)
+    ui.write(_x("color mode: %s\n") % ui._colormode)
     if opts.get(r"style"):
         return _debugdisplaystyle(ui)
     else:
@@ -504,7 +504,7 @@ def _debugdisplaycolor(ui):
     # sort label with a '_' after the other to group '_background' entry.
     items = sorted(ui._styles.items(), key=lambda i: ("_" in i[0], i[0], i[1]))
     for colorname, label in items:
-        ui.write(("%s\n") % colorname, label=label)
+        ui.write(_x("%s\n") % colorname, label=label)
 
 
 def _debugdisplaystyle(ui):
@@ -981,7 +981,7 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
             common = set(common)
             if not opts.get("nonheads"):
                 ui.write(
-                    ("unpruned common: %s\n")
+                    _x("unpruned common: %s\n")
                     % " ".join(sorted(short(n) for n in common))
                 )
                 dag = dagutil.revlogdag(repo.changelogwithrepoheads)
@@ -998,11 +998,11 @@ def debugdiscovery(ui, repo, remoteurl="default", **opts):
         common = set(common)
         rheads = set(hds)
         lheads = set(repo.heads())
-        ui.write(("common heads: %s\n") % " ".join(sorted(short(n) for n in common)))
+        ui.write(_x("common heads: %s\n") % " ".join(sorted(short(n) for n in common)))
         if lheads <= common:
-            ui.write(("local is subset\n"))
+            ui.write(_x("local is subset\n"))
         elif rheads <= common:
-            ui.write(("remote is subset\n"))
+            ui.write(_x("remote is subset\n"))
 
     remoterevs, _checkout = hg.addbranchrevs(repo, remote, branches, revs=None)
     localrevs = opts["rev"]
@@ -1105,7 +1105,7 @@ def debugfilerevision(ui, repo, *pats, **opts):
 
     for rev in scmutil.revrange(repo, opts.get("rev") or ["."]):
         ctx = repo[rev]
-        ui.write(("%s: %s\n") % (short(ctx.node()), ctx.description().split("\n")[0]))
+        ui.write(_x("%s: %s\n") % (short(ctx.node()), ctx.description().split("\n")[0]))
         if pats:
             m = scmutil.match(ctx, pats, opts)
             paths = ctx.walk(m)
@@ -1125,13 +1125,13 @@ def debugfilerevision(ui, repo, *pats, **opts):
             msg = " %s:" % fctx.path()
             for name, func in fields:
                 msg += " %s=%s" % (name, func())
-            ui.write(("%s\n") % msg)
+            ui.write(_x("%s\n") % msg)
             if ui.verbose:
                 # Technically the raw data can contain non-utf8 bytes, but this
                 # function is mainly used for tests, so let's just replace those
                 # bytes so the tests are consistent between py2 and py3.
                 ui.write(
-                    ("  rawdata: %r\n")
+                    _x("  rawdata: %r\n")
                     % pycompat.decodeutf8(fctx.rawdata(), errors="replace")
                 )
 
@@ -1222,17 +1222,17 @@ def debugformat(ui, repo, **opts):
 @command("debugfsinfo|debugfs", [], _("[PATH]"), norepo=True)
 def debugfsinfo(ui, path="."):
     """show information detected about current filesystem"""
-    ui.write(("exec: %s\n") % (util.checkexec(path) and "yes" or "no"))
-    ui.write(("fstype: %s\n") % (util.getfstype(path) or "(unknown)"))
-    ui.write(("symlink: %s\n") % (util.checklink(path) and "yes" or "no"))
-    ui.write(("hardlink: %s\n") % (util.checknlink(path) and "yes" or "no"))
+    ui.write(_x("exec: %s\n") % (util.checkexec(path) and "yes" or "no"))
+    ui.write(_x("fstype: %s\n") % (util.getfstype(path) or "(unknown)"))
+    ui.write(_x("symlink: %s\n") % (util.checklink(path) and "yes" or "no"))
+    ui.write(_x("hardlink: %s\n") % (util.checknlink(path) and "yes" or "no"))
     casesensitive = "(unknown)"
     try:
         with tempfile.NamedTemporaryFile(prefix=".debugfsinfo", dir=path) as f:
             casesensitive = util.fscasesensitive(f.name) and "yes" or "no"
     except OSError:
         pass
-    ui.write(("case-sensitive: %s\n") % casesensitive)
+    ui.write(_x("case-sensitive: %s\n") % casesensitive)
 
 
 @command(
@@ -1293,7 +1293,7 @@ def debugignore(ui, repo, *files, **opts):
         for f in m.files():
             # The matcher supports "explain", use it.
             if explain:
-                ui.write(("%s\n") % explain(f))
+                ui.write(_x("%s\n") % explain(f))
                 continue
 
             nf = util.normpath(f)
@@ -1410,7 +1410,7 @@ def debugindex(ui, repo, file_=None, **opts):
 def debugindexdot(ui, repo, file_=None, **opts):
     """dump an index DAG as a graphviz dot file"""
     r = cmdutil.openrevlog(repo, "debugindexdot", file_, opts)
-    ui.write(("digraph G {\n"))
+    ui.write(_x("digraph G {\n"))
     for i in r:
         node = r.node(i)
         pp = r.parents(node)
@@ -1776,13 +1776,13 @@ def debuglocks(ui, repo, **opts):
                         locker = "user %s, process %s" % (user, pid)
                     else:
                         locker = "user %s, process %s, host %s" % (user, pid, host)
-                ui.write(("%-14s %s (%ds)\n") % (name + ":", locker, age))
+                ui.write(_x("%-14s %s (%ds)\n") % (name + ":", locker, age))
                 return 1
             except OSError as e:
                 if e.errno != errno.ENOENT:
                     raise
 
-        ui.write(("%-14s free\n") % (name + ":"))
+        ui.write(_x("%-14s free\n") % (name + ":"))
         return 0
 
     held = sum(
@@ -1836,7 +1836,7 @@ def debugmergestate(ui, repo, *args):
             return h
 
     def printrecords(version):
-        ui.write(("* version %s records\n") % version)
+        ui.write(_x("* version %s records\n") % version)
         if version == 1:
             records = v1records
         else:
@@ -1845,12 +1845,12 @@ def debugmergestate(ui, repo, *args):
         for rtype, record in records:
             # pretty print some record types
             if rtype == "L":
-                ui.write(("local: %s\n") % record)
+                ui.write(_x("local: %s\n") % record)
             elif rtype == "O":
-                ui.write(("other: %s\n") % record)
+                ui.write(_x("other: %s\n") % record)
             elif rtype == "m":
                 driver, mdstate = record.split("\0", 1)
-                ui.write(('merge driver: %s (state "%s")\n') % (driver, mdstate))
+                ui.write(_x('merge driver: %s (state "%s")\n') % (driver, mdstate))
             elif rtype in "FDC":
                 r = record.split("\0")
                 f, state, hash, lfile, afile, anode, ofile = r[0:7]
@@ -1860,37 +1860,39 @@ def debugmergestate(ui, repo, *args):
                 else:
                     onode, flags = r[7:9]
                 ui.write(
-                    ('file: %s (record type "%s", state "%s", hash %s)\n')
+                    _x('file: %s (record type "%s", state "%s", hash %s)\n')
                     % (f, rtype, state, _hashornull(hash))
                 )
-                ui.write(('  local path: %s (flags "%s")\n') % (lfile, flags))
+                ui.write(_x('  local path: %s (flags "%s")\n') % (lfile, flags))
                 ui.write(
-                    ("  ancestor path: %s (node %s)\n") % (afile, _hashornull(anode))
+                    _x("  ancestor path: %s (node %s)\n") % (afile, _hashornull(anode))
                 )
-                ui.write(("  other path: %s (node %s)\n") % (ofile, _hashornull(onode)))
+                ui.write(
+                    _x("  other path: %s (node %s)\n") % (ofile, _hashornull(onode))
+                )
             elif rtype == "f":
                 filename, rawextras = record.split("\0", 1)
                 extras = rawextras.split("\0")
                 i = 0
                 extrastrings = []
                 while i < len(extras):
-                    extrastrings.append("%s = %s" % (extras[i], extras[i + 1]))
+                    extrastrings.append(_x("%s = %s") % (extras[i], extras[i + 1]))
                     i += 2
 
                 ui.write(
-                    ("file extras: %s (%s)\n") % (filename, ", ".join(extrastrings))
+                    _x("file extras: %s (%s)\n") % (filename, ", ".join(extrastrings))
                 )
             elif rtype == "l":
                 labels = record.split("\0", 2)
                 labels = [l for l in labels if len(l) > 0]
-                ui.write(("labels:\n"))
-                ui.write(("  local: %s\n" % labels[0]))
-                ui.write(("  other: %s\n" % labels[1]))
+                ui.write(_x("labels:\n"))
+                ui.write(_x("  local: %s\n" % labels[0]))
+                ui.write(_x("  other: %s\n" % labels[1]))
                 if len(labels) > 2:
-                    ui.write(("  base:  %s\n" % labels[2]))
+                    ui.write(_x("  base:  %s\n" % labels[2]))
             else:
                 ui.write(
-                    ("unrecognized entry: %s\t%s\n")
+                    _x("unrecognized entry: %s\t%s\n")
                     % (rtype, record.replace("\0", "\t"))
                 )
 
@@ -1915,15 +1917,15 @@ def debugmergestate(ui, repo, *args):
     v2records.sort(key=key)
 
     if not v1records and not v2records:
-        ui.write(("no merge state found\n"))
+        ui.write(_x("no merge state found\n"))
     elif not v2records:
-        ui.note(("no version 2 merge state\n"))
+        ui.note(_x("no version 2 merge state\n"))
         printrecords(1)
     elif ms._v1v2match(v1records, v2records):
-        ui.note(("v1 and v2 states match: using v2\n"))
+        ui.note(_x("v1 and v2 states match: using v2\n"))
         printrecords(2)
     else:
-        ui.note(("v1 and v2 states mismatch: using v1\n"))
+        ui.note(_x("v1 and v2 states mismatch: using v1\n"))
         printrecords(1)
         if ui.verbose:
             printrecords(2)
@@ -2270,15 +2272,15 @@ def debugpickmergetool(ui, repo, *pats, **opts):
     overrides = {}
     if opts["tool"]:
         overrides[("ui", "forcemerge")] = opts["tool"]
-        ui.note(("with --tool %r\n") % (opts["tool"]))
+        ui.note(_x("with --tool %r\n") % (opts["tool"]))
 
     with ui.configoverride(overrides, "debugmergepatterns"):
         hgmerge = encoding.environ.get("HGMERGE")
         if hgmerge is not None:
-            ui.note(("with HGMERGE=%r\n") % (hgmerge))
+            ui.note(_x("with HGMERGE=%r\n") % hgmerge)
         uimerge = ui.config("ui", "merge")
         if uimerge:
-            ui.note(("with ui.merge=%r\n") % (uimerge))
+            ui.note(_x("with ui.merge=%r\n") % uimerge)
 
         ctx = scmutil.revsingle(repo, opts.get("rev"))
         m = scmutil.match(ctx, pats, opts)
@@ -2294,7 +2296,7 @@ def debugpickmergetool(ui, repo, *pats, **opts):
             finally:
                 if not ui.debugflag:
                     ui.popbuffer()
-            ui.write(("%s = %s\n") % (path, tool))
+            ui.write(_x("%s = %s\n") % (path, tool))
 
 
 @command("debugprocesstree|debugproc", [], _("[PID] [PID] ..."), norepo=True)
@@ -2738,21 +2740,21 @@ def debugrevlog(ui, repo, file_=None, **opts):
         else:
             return value, 100.0
 
-    ui.write(("format : %d\n") % format)
-    ui.write(("flags  : %s\n") % ", ".join(flags))
+    ui.write(_x("format : %d\n") % format)
+    ui.write(_x("flags  : %s\n") % ", ".join(flags))
 
     ui.write("\n")
     fmt = pcfmtstr(totalsize)
     fmt2 = dfmtstr(totalsize)
-    ui.write(("revisions     : ") + fmt2 % numrevs)
-    ui.write(("    merges    : ") + fmt % pcfmt(nummerges, numrevs))
-    ui.write(("    normal    : ") + fmt % pcfmt(numrevs - nummerges, numrevs))
-    ui.write(("revisions     : ") + fmt2 % numrevs)
-    ui.write(("    full      : ") + fmt % pcfmt(numfull, numrevs))
-    ui.write(("    deltas    : ") + fmt % pcfmt(numdeltas, numrevs))
-    ui.write(("revision size : ") + fmt2 % totalsize)
-    ui.write(("    full      : ") + fmt % pcfmt(fulltotal, totalsize))
-    ui.write(("    deltas    : ") + fmt % pcfmt(deltatotal, totalsize))
+    ui.write(_x("revisions     : ") + fmt2 % numrevs)
+    ui.write(_x("    merges    : ") + fmt % pcfmt(nummerges, numrevs))
+    ui.write(_x("    normal    : ") + fmt % pcfmt(numrevs - nummerges, numrevs))
+    ui.write(_x("revisions     : ") + fmt2 % numrevs)
+    ui.write(_x("    full      : ") + fmt % pcfmt(numfull, numrevs))
+    ui.write(_x("    deltas    : ") + fmt % pcfmt(numdeltas, numrevs))
+    ui.write(_x("revision size : ") + fmt2 % totalsize)
+    ui.write(_x("    full      : ") + fmt % pcfmt(fulltotal, totalsize))
+    ui.write(_x("    deltas    : ") + fmt % pcfmt(deltatotal, totalsize))
 
     def fmtchunktype(chunktype):
         if chunktype == "empty":
@@ -2763,47 +2765,48 @@ def debugrevlog(ui, repo, file_=None, **opts):
             return "    0x%s      : " % hex(chunktype)
 
     ui.write("\n")
-    ui.write(("chunks        : ") + fmt2 % numrevs)
+    ui.write(_x("chunks        : ") + fmt2 % numrevs)
     for chunktype in sorted(chunktypecounts):
         ui.write(fmtchunktype(chunktype))
         ui.write(fmt % pcfmt(chunktypecounts[chunktype], numrevs))
-    ui.write(("chunks size   : ") + fmt2 % totalsize)
+    ui.write(_x("chunks size   : ") + fmt2 % totalsize)
     for chunktype in sorted(chunktypecounts):
         ui.write(fmtchunktype(chunktype))
         ui.write(fmt % pcfmt(chunktypesizes[chunktype], totalsize))
 
     ui.write("\n")
     fmt = dfmtstr(max(avgchainlen, maxchainlen, maxchainspan, compratio))
-    ui.write(("avg chain length  : ") + fmt % avgchainlen)
-    ui.write(("max chain length  : ") + fmt % maxchainlen)
-    ui.write(("max chain reach   : ") + fmt % maxchainspan)
-    ui.write(("compression ratio : ") + fmt % compratio)
+    ui.write(_x("avg chain length  : ") + fmt % avgchainlen)
+    ui.write(_x("max chain length  : ") + fmt % maxchainlen)
+    ui.write(_x("max chain reach   : ") + fmt % maxchainspan)
+    ui.write(_x("compression ratio : ") + fmt % compratio)
 
     if format > 0:
         ui.write("\n")
         ui.write(
-            ("uncompressed data size (min/max/avg) : %d / %d / %d\n") % tuple(datasize)
+            _x("uncompressed data size (min/max/avg) : %d / %d / %d\n")
+            % tuple(datasize)
         )
     ui.write(
-        ("full revision size (min/max/avg)     : %d / %d / %d\n") % tuple(fullsize)
+        _x("full revision size (min/max/avg)     : %d / %d / %d\n") % tuple(fullsize)
     )
     ui.write(
-        ("delta size (min/max/avg)             : %d / %d / %d\n") % tuple(deltasize)
+        _x("delta size (min/max/avg)             : %d / %d / %d\n") % tuple(deltasize)
     )
 
     if numdeltas > 0:
         ui.write("\n")
         fmt = pcfmtstr(numdeltas)
         fmt2 = pcfmtstr(numdeltas, 4)
-        ui.write(("deltas against prev  : ") + fmt % pcfmt(numprev, numdeltas))
+        ui.write(_x("deltas against prev  : ") + fmt % pcfmt(numprev, numdeltas))
         if numprev > 0:
-            ui.write(("    where prev = p1  : ") + fmt2 % pcfmt(nump1prev, numprev))
-            ui.write(("    where prev = p2  : ") + fmt2 % pcfmt(nump2prev, numprev))
-            ui.write(("    other            : ") + fmt2 % pcfmt(numoprev, numprev))
+            ui.write(_x("    where prev = p1  : ") + fmt2 % pcfmt(nump1prev, numprev))
+            ui.write(_x("    where prev = p2  : ") + fmt2 % pcfmt(nump2prev, numprev))
+            ui.write(_x("    other            : ") + fmt2 % pcfmt(numoprev, numprev))
         if gdelta:
-            ui.write(("deltas against p1    : ") + fmt % pcfmt(nump1, numdeltas))
-            ui.write(("deltas against p2    : ") + fmt % pcfmt(nump2, numdeltas))
-            ui.write(("deltas against other : ") + fmt % pcfmt(numother, numdeltas))
+            ui.write(_x("deltas against p1    : ") + fmt % pcfmt(nump1, numdeltas))
+            ui.write(_x("deltas against p2    : ") + fmt % pcfmt(nump2, numdeltas))
+            ui.write(_x("deltas against other : ") + fmt % pcfmt(numother, numdeltas))
 
 
 @command(
@@ -2816,7 +2819,7 @@ def debugrevlog(ui, repo, file_=None, **opts):
         ("", "no-optimized", False, _("evaluate tree without optimization")),
         ("", "verify-optimized", False, _("verify optimized result")),
     ],
-    ("REVSPEC"),
+    "REVSPEC",
 )
 def debugrevspec(ui, repo, expr, **opts):
     """parse and apply a revision specification
@@ -2869,7 +2872,7 @@ def debugrevspec(ui, repo, expr, **opts):
         treebystage[n] = tree = f(tree)
         if n in showalways or (n in showchanged and tree != printedtree):
             if opts["show_stage"] or n != "parsed":
-                ui.write(("* %s:\n") % n)
+                ui.write(_x("* %s:\n") % n)
             ui.write(revsetlang.prettyformat(tree), "\n")
             printedtree = tree
 
@@ -2877,14 +2880,14 @@ def debugrevspec(ui, repo, expr, **opts):
         arevs = revset.makematcher(treebystage["analyzed"])(repo)
         brevs = revset.makematcher(treebystage["optimized"])(repo)
         if opts["show_set"] or (opts["show_set"] is None and ui.verbose):
-            ui.write(("* analyzed set:\n"), smartset.prettyformat(arevs), "\n")
-            ui.write(("* optimized set:\n"), smartset.prettyformat(brevs), "\n")
+            ui.write(_x("* analyzed set:\n"), smartset.prettyformat(arevs), "\n")
+            ui.write(_x("* optimized set:\n"), smartset.prettyformat(brevs), "\n")
         arevs = list(arevs)
         brevs = list(brevs)
         if arevs == brevs:
             return 0
-        ui.write(("--- analyzed\n"), label="diff.file_a")
-        ui.write(("+++ optimized\n"), label="diff.file_b")
+        ui.write(_x("--- analyzed\n"), label="diff.file_a")
+        ui.write(_x("+++ optimized\n"), label="diff.file_b")
         sm = difflib.SequenceMatcher(None, arevs, brevs)
         for tag, alo, ahi, blo, bhi in sm.get_opcodes():
             if tag in ("delete", "replace"):
@@ -2901,7 +2904,7 @@ def debugrevspec(ui, repo, expr, **opts):
     func = revset.makematcher(tree)
     revs = func(repo)
     if opts["show_set"] or (opts["show_set"] is None and ui.verbose):
-        ui.write(("* set:\n"), smartset.prettyformat(revs), "\n")
+        ui.write(_x("* set:\n"), smartset.prettyformat(revs), "\n")
     if not opts["show_revs"]:
         return
     for c in revs:
@@ -3104,7 +3107,7 @@ def debugtemplate(ui, repo, tmpl, **opts):
         ui.note(templater.prettyformat(tree), "\n")
         newtree = templater.expandaliases(tree, aliases)
         if newtree != tree:
-            ui.note(("* expanded:\n"), templater.prettyformat(newtree), "\n")
+            ui.note(_x("* expanded:\n"), templater.prettyformat(newtree), "\n")
 
     if revs is None:
         t = formatter.maketemplater(ui, tmpl)
@@ -3168,7 +3171,7 @@ def debugvisibleheads(ui, repo, **opts):
 def debugwalk(ui, repo, *pats, **opts):
     """show how files match on given patterns"""
     m = scmutil.match(repo[None], pats, opts)
-    ui.write(("matcher: %r\n" % m))
+    ui.write(_x("matcher: %r\n" % m))
     items = list(repo[None].walk(m))
     if not items:
         return
@@ -3283,7 +3286,7 @@ def debugprogress(
                 if sleep:
                     time.sleep(sleep)
                 if outputfreq and i % outputfreq == 0:
-                    ui.write(("processed %d items") % i)
+                    ui.write(_x("processed %d items") % i)
     elif nototal:
         with progress.bar(ui, _spinning, formatfunc=formatfunc) as p:
             for i in range(num):
@@ -3294,7 +3297,7 @@ def debugprogress(
                     time.sleep(sleep)
                 p.value = (i, "item %s" % i)
                 if outputfreq and i % outputfreq == 0:
-                    ui.write(("processed %d items") % i)
+                    ui.write(_x("processed %d items") % i)
     else:
         with progress.bar(ui, _spinning, total=num, formatfunc=formatfunc) as p:
             for i in range(num):
@@ -3308,7 +3311,7 @@ def debugprogress(
                     time.sleep(sleep)
                 p.value = (i, "item %s" % i)
                 if outputfreq and i % outputfreq == 0:
-                    ui.write(("processed %d items\n") % i)
+                    ui.write(_x("processed %d items\n") % i)
 
 
 def _findtreemanifest(ctx):
@@ -3483,8 +3486,7 @@ def debugtreestate(ui, repo, cmd="status", **opts):
                 if mtime >= 1:
                     mtime = "+"
             ui.write(
-                ("%s: 0%o %d %s %s %s\n")
-                % (path, mode, size, mtime, flags, copied or "")
+                "%s: 0%o %d %s %s %s\n" % (path, mode, size, mtime, flags, copied or "")
             )
     else:
         raise error.Abort("unrecognised command: %s" % cmd)
@@ -3500,6 +3502,6 @@ def debugreadauthforuri(ui, _repo, uri, user=None):
     if auth is not None:
         auth, items = auth
         for k, v in sorted(pycompat.iteritems(items)):
-            ui.write(("auth.%s.%s=%s\n") % (auth, k, v))
+            ui.write(_x("auth.%s.%s=%s\n") % (auth, k, v))
     else:
         ui.warn(_("no match found\n"))

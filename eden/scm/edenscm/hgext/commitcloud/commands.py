@@ -593,10 +593,10 @@ def clouddeletebackup(ui, repo, dest=None, **opts):
     ui.write(_("%s on %s:\n") % (sourcereporoot, sourcehostname))
     ui.write(_("    heads:\n"))
     for head in deletestate.get("heads", []):
-        ui.write(("        %s\n") % head)
+        ui.write("        %s\n" % head)
     ui.write(_("    bookmarks:\n"))
     for bookname, booknode in sorted(deletestate.get("bookmarks", {}).items()):
-        ui.write(("        %-20s %s\n") % (bookname + ":", booknode))
+        ui.write("        %-20s %s\n" % (bookname + ":", booknode))
     if ui.promptchoice(_("delete this backup (yn)? $$ &Yes $$ &No"), 1) == 0:
         ui.status(
             _("deleting backup for %s on %s\n") % (sourcereporoot, sourcehostname)
@@ -736,7 +736,7 @@ def cloudcheck(ui, repo, dest=None, **opts):
         isbackedup = {node: unfi[node].rev() in backeduprevs for node in nodestocheck}
 
     for n in nodestocheck:
-        ui.write((n + " "))
+        ui.write(n, " ")
         ui.write(_("backed up") if isbackedup[n] else _("not backed up"))
         ui.write(_("\n"))
 

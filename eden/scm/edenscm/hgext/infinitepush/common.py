@@ -19,6 +19,7 @@ from edenscm.mercurial import (
     wireproto,
 )
 from edenscm.mercurial.commands import debug as debugcommands
+from edenscm.mercurial.i18n import _x
 
 from . import constants
 
@@ -55,7 +56,7 @@ def wireprotoknownnodes(repo, proto, nodes, others):
 def debugbundle2part(orig, ui, part, all, **opts):
     if part.type == constants.scratchmutationparttype:
         entries = mutation.mutationstore.unbundle(part.read())
-        ui.write(("    %s entries\n") % len(entries))
+        ui.write(_x("    %s entries\n") % len(entries))
         for entry in entries:
             pred = ",".join([nodemod.hex(p) for p in entry.preds()])
             succ = nodemod.hex(entry.succ())
@@ -63,7 +64,7 @@ def debugbundle2part(orig, ui, part, all, **opts):
             if split:
                 succ = ",".join([nodemod.hex(s) for s in split] + [succ])
             ui.write(
-                ("      %s -> %s (%s by %s at %s)\n")
+                _x("      %s -> %s (%s by %s at %s)\n")
                 % (pred, succ, entry.op(), entry.user(), entry.time())
             )
 
