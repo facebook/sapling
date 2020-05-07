@@ -315,49 +315,8 @@ impl DataPack {
     pub fn index_path(&self) -> &Path {
         &self.index_path
     }
-}
 
-impl HgIdDataStore for DataPack {
-    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        let delta_chain = self.get_delta_chain(key)?;
-        let delta_chain = match delta_chain {
-            Some(chain) => chain,
-            None => return Ok(None),
-        };
-
-        let (basetext, deltas) = match delta_chain.split_last() {
-            Some((base, delta)) => (base, delta),
-            None => return Ok(None),
-        };
-
-        let deltas: Vec<&[u8]> = deltas
-            .iter()
-            .rev()
-            .map(|delta| delta.data.as_ref())
-            .collect();
-
-        Ok(Some(
-            get_full_text(basetext.data.as_ref(), &deltas).map_err(Error::msg)?,
-        ))
-    }
-
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        let entry = match self.index.get_entry(&key.hgid)? {
-            None => return Ok(None),
-            Some(entry) => entry,
-        };
-        let data_entry = self.read_entry(entry.pack_entry_offset())?;
-
-        Ok(Some(Delta {
-            data: data_entry.delta()?,
-            base: data_entry
-                .delta_base()
-                .map(|delta_base| Key::new(key.path.clone(), delta_base.clone())),
-            key: Key::new(key.path.clone(), data_entry.hgid().clone()),
-        }))
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
+    pub(crate) fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
         let mut chain: Vec<Delta> = Default::default();
         let mut next_entry = match self.index.get_entry(&key.hgid)? {
             None => return Ok(None),
@@ -388,6 +347,31 @@ impl HgIdDataStore for DataPack {
         }
 
         Ok(Some(chain))
+    }
+}
+
+impl HgIdDataStore for DataPack {
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
+        let delta_chain = self.get_delta_chain(key)?;
+        let delta_chain = match delta_chain {
+            Some(chain) => chain,
+            None => return Ok(None),
+        };
+
+        let (basetext, deltas) = match delta_chain.split_last() {
+            Some((base, delta)) => (base, delta),
+            None => return Ok(None),
+        };
+
+        let deltas: Vec<&[u8]> = deltas
+            .iter()
+            .rev()
+            .map(|delta| delta.data.as_ref())
+            .collect();
+
+        Ok(Some(
+            get_full_text(basetext.data.as_ref(), &deltas).map_err(Error::msg)?,
+        ))
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
@@ -594,36 +578,6 @@ pub mod tests {
     }
 
     #[test]
-    fn test_get_delta() {
-        let tempdir = TempDir::new().unwrap();
-
-        let revisions = vec![
-            (
-                Delta {
-                    data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(key("a", "1")),
-                    key: key("a", "2"),
-                },
-                Default::default(),
-            ),
-            (
-                Delta {
-                    data: Bytes::from(&[1, 2, 3, 4][..]),
-                    base: Some(key("a", "3")),
-                    key: key("a", "4"),
-                },
-                Default::default(),
-            ),
-        ];
-
-        let pack = make_datapack(&tempdir, &revisions);
-        for &(ref expected_delta, _) in revisions.iter() {
-            let delta = pack.get_delta(&expected_delta.key).unwrap().unwrap();
-            assert_eq!(expected_delta, &delta);
-        }
-    }
-
-    #[test]
     fn test_get_delta_chain_multiple() {
         let tempdir = TempDir::new().unwrap();
 
@@ -767,8 +721,8 @@ pub mod tests {
         )];
 
         let pack = Rc::new(make_datapack(&tempdir, &revisions));
-        let delta = pack.get_delta(&revisions[0].0.key).unwrap().unwrap();
-        assert_eq!(delta.data, revisions[0].0.data);
+        let data = pack.get(&revisions[0].0.key).unwrap();
+        assert_eq!(data.as_deref(), Some(revisions[0].0.data.as_ref()));
     }
 
     quickcheck! {

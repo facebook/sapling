@@ -171,7 +171,7 @@
   $ hg debugdatapack $TESTTMP/hgcache/master/packs/*.datapack --node-delta d4a3ed9310e5bd9887e3bf779da5077efab28216
   $TESTTMP/hgcache/master/packs/d16759ce28060a639a43d64b9a243e4f86b26a46:
   
-  x
+  
   Node                                      Delta Base                                Delta SHA1                                Delta Length
   d4a3ed9310e5bd9887e3bf779da5077efab28216  0000000000000000000000000000000000000000  86e1b96c0167d9d28fe9bd21ea208d21033c869c  6
   $ hg debughistorypack $TESTTMP/hgcache/master/packs/*.histidx

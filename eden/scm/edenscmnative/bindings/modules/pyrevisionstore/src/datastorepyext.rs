@@ -15,8 +15,8 @@ use cpython::{
 
 use cpython_ext::{PyPath, PyPathBuf, ResultPyErrExt};
 use revisionstore::{
-    ContentDataStore, ContentHash, HgIdDataStore, HgIdMutableDeltaStore, RemoteDataStore, StoreKey,
-    ToKeys,
+    datastore::Delta, ContentDataStore, ContentHash, HgIdDataStore, HgIdMutableDeltaStore,
+    RemoteDataStore, StoreKey, ToKeys,
 };
 use types::Node;
 
@@ -73,19 +73,20 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
 
     fn get_delta_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyObject> {
         let key = to_key(py, name, node)?;
-        let delta = self
-            .get_delta(&key)
+
+        let data = self
+            .get(&key)
             .map_pyerr(py)?
             .ok_or_else(|| key_error(py, &key))?;
 
-        let (base_name, base_node) = if let Some(key) = delta.base {
-            from_key(py, &key)
-        } else {
-            (
-                PyPathBuf::from(key.path.as_repo_path()),
-                PyBytes::new(py, Node::null_id().as_ref()),
-            )
+        let delta = Delta {
+            data: data.into(),
+            base: None,
+            key: key.clone(),
         };
+
+        let base_name = PyPathBuf::from(key.path.as_repo_path());
+        let base_node = PyBytes::new(py, Node::null_id().as_ref());
 
         let bytes = PyBytes::new(py, &delta.data);
         let meta = self.get_meta_py(py.clone(), &name, &node)?;
@@ -101,10 +102,19 @@ impl<T: HgIdDataStore + ?Sized> HgIdDataStorePyExt for T {
 
     fn get_delta_chain_py(&self, py: Python, name: &PyPath, node: &PyBytes) -> PyResult<PyList> {
         let key = to_key(py, name, node)?;
-        let deltachain = self
-            .get_delta_chain(&key)
+
+        let data = self
+            .get(&key)
             .map_pyerr(py)?
             .ok_or_else(|| key_error(py, &key))?;
+
+        let delta = Delta {
+            data: data.into(),
+            base: None,
+            key,
+        };
+
+        let deltachain = vec![delta];
 
         let pychain = deltachain
             .iter()
@@ -193,7 +203,12 @@ impl<T: ToKeys + HgIdDataStore + ?Sized> IterableHgIdDataStorePyExt for T {
     fn iter_py(&self, py: Python) -> PyResult<Vec<PyTuple>> {
         let iter = self.to_keys().into_iter().map(|res| {
             let key = res?;
-            let delta = self.get_delta(&key)?.unwrap();
+            let data = self.get(&key)?.unwrap();
+            let delta = Delta {
+                data: data.into(),
+                base: None,
+                key: key.clone(),
+            };
             let (name, node) = from_key(py, &key);
             let (_, base_node) = from_base(py, &delta);
             let tuple = (

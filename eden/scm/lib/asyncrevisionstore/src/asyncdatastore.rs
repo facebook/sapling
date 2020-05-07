@@ -10,7 +10,7 @@ use futures::{future::ok, stream::iter_ok};
 use tokio::prelude::*;
 
 use cloned::cloned;
-use revisionstore::{Delta, HgIdDataStore, Metadata, ToKeys};
+use revisionstore::{HgIdDataStore, Metadata, ToKeys};
 use types::Key;
 
 use crate::util::AsyncWrapper;
@@ -31,21 +31,6 @@ impl<T: HgIdDataStore + Send + Sync> AsyncHgIdDataStore<T> {
     pub fn get(&self, key: &Key) -> impl Future<Item = Option<Vec<u8>>, Error = Error> + Send {
         cloned!(key);
         self.data.block(move |store| store.get(&key))
-    }
-
-    /// Asynchronously call the HgIdDataStore::get_delta method.
-    pub fn get_delta(&self, key: &Key) -> impl Future<Item = Option<Delta>, Error = Error> + Send {
-        cloned!(key);
-        self.data.block(move |store| store.get_delta(&key))
-    }
-
-    /// Asynchronously call the HgIdDataStore::get_delta_chain method.
-    pub fn get_delta_chain(
-        &self,
-        key: &Key,
-    ) -> impl Future<Item = Option<Vec<Delta>>, Error = Error> + Send {
-        cloned!(key);
-        self.data.block(move |store| store.get_delta_chain(&key))
     }
 
     /// Asynchronously call the HgIdDataStore::get_meta method.

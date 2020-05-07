@@ -118,22 +118,6 @@ impl HgIdDataStore for EdenApiRemoteDataStore {
         }
     }
 
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
-            Err(_) => Ok(None),
-            Ok(()) => self.store.get_delta(key),
-        }
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
-            Err(_) => Ok(None),
-            Ok(()) => self.store.get_delta_chain(key),
-        }
-    }
-
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
         match self.prefetch(&missing) {
@@ -162,7 +146,7 @@ mod tests {
     use crate::{indexedlogdatastore::IndexedLogHgIdDataStore, testutil::*};
 
     #[test]
-    fn test_get_delta() -> Result<()> {
+    fn test_get() -> Result<()> {
         let tmp = TempDir::new()?;
         let store = Arc::new(IndexedLogHgIdDataStore::new(&tmp)?);
 
@@ -175,8 +159,12 @@ mod tests {
         let edenapi = Arc::new(EdenApiHgIdRemoteStore::filestore(fake_edenapi(map)));
 
         let remotestore = edenapi.datastore(store.clone());
-        assert_eq!(remotestore.get_delta(&k)?.unwrap(), d);
-        assert_eq!(store.get_delta(&k)?.unwrap(), d);
+
+        let get_data = remotestore.get(&k)?;
+        assert_eq!(get_data.as_deref(), Some(d.data.as_ref()));
+
+        let get_data = store.get(&k)?;
+        assert_eq!(get_data.as_deref(), Some(d.data.as_ref()));
 
         Ok(())
     }
@@ -192,7 +180,7 @@ mod tests {
         let remotestore = edenapi.datastore(store);
 
         let k = key("a", "1");
-        assert_eq!(remotestore.get_delta(&k)?, None);
+        assert_eq!(remotestore.get(&k)?, None);
         Ok(())
     }
 }

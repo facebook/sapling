@@ -75,23 +75,9 @@ impl<T: HgIdMutableDeltaStore> HgIdMutableDeltaStore for MultiplexDeltaStore<T> 
 }
 
 impl<T: HgIdMutableDeltaStore> HgIdDataStore for MultiplexDeltaStore<T> {
-    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
-        Err(format_err!("MultiplexDeltaStore doesn't support raw get()"))
-    }
-
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         for store in self.stores.iter() {
-            if let Some(result) = store.get_delta(key)? {
-                return Ok(Some(result));
-            }
-        }
-
-        Ok(None)
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        for store in self.stores.iter() {
-            if let Some(result) = store.get_delta_chain(key)? {
+            if let Some(result) = store.get(key)? {
                 return Ok(Some(result));
             }
         }
@@ -212,8 +198,8 @@ mod tests {
 
         multiplex.add(&delta, &metadata)?;
         drop(multiplex);
-        let read_delta = log.get_delta(&delta.key)?;
-        assert_eq!(Some(delta), read_delta);
+        let read_data = log.get(&delta.key)?;
+        assert_eq!(Some(delta.data.as_ref()), read_data.as_deref());
         log.flush()?;
         Ok(())
     }
@@ -238,11 +224,11 @@ mod tests {
         multiplex.add(&delta, &metadata)?;
         drop(multiplex);
 
-        let read_delta = log.get_delta(&delta.key)?;
-        assert_eq!(Some(delta.clone()), read_delta);
+        let read_data = log.get(&delta.key)?;
+        assert_eq!(Some(delta.data.as_ref()), read_data.as_deref());
 
-        let read_delta = pack.get_delta(&delta.key)?;
-        assert_eq!(Some(delta), read_delta);
+        let read_data = pack.get(&delta.key)?;
+        assert_eq!(Some(delta.data.as_ref()), read_data.as_deref());
 
         log.flush()?;
         pack.flush()?;

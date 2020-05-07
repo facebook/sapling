@@ -58,23 +58,23 @@ mod tests {
     fn test_one_delta() {
         let tempdir = TempDir::new().unwrap();
 
-        let my_delta = delta("1234", Some(key("a", "1")), key("a", "2"));
+        let my_delta = delta("1234", None, key("a", "2"));
         let revisions = vec![(my_delta.clone(), Default::default())];
 
         let work = make_datapack(&tempdir, &revisions)
-            .and_then(move |datapack| datapack.get_delta(&key("a", "2")));
+            .and_then(move |datapack| datapack.get(&key("a", "2")));
 
         let mut runtime = Runtime::new().unwrap();
-        let ret_delta = runtime.block_on(work).unwrap().unwrap();
-        assert_eq!(my_delta, ret_delta);
+        let ret_data = runtime.block_on(work).unwrap();
+        assert_eq!(Some(my_delta.data.as_ref()), ret_data.as_deref());
     }
 
     #[test]
     fn test_multiple_delta() {
         let tempdir = TempDir::new().unwrap();
 
-        let delta1 = delta("1234", Some(key("a", "1")), key("a", "2"));
-        let delta2 = delta("1234", Some(key("a", "3")), key("a", "4"));
+        let delta1 = delta("1234", None, key("a", "2"));
+        let delta2 = delta("1234", None, key("a", "4"));
         let revisions = vec![
             (delta1.clone(), Default::default()),
             (delta2.clone(), Default::default()),
@@ -82,15 +82,15 @@ mod tests {
 
         let work = make_datapack(&tempdir, &revisions);
         let work = work.and_then(move |datapack| {
-            let delta = datapack.get_delta(&key("a", "2"));
-            delta.and_then(move |delta| {
-                assert_eq!(delta.unwrap(), delta1);
-                datapack.get_delta(&key("a", "4"))
+            let data = datapack.get(&key("a", "2"));
+            data.and_then(move |data| {
+                assert_eq!(data.as_deref(), Some(delta1.data.as_ref()));
+                datapack.get(&key("a", "4"))
             })
         });
 
         let mut runtime = Runtime::new().unwrap();
-        let ret_delta = runtime.block_on(work).unwrap().unwrap();
-        assert_eq!(delta2, ret_delta);
+        let ret_data = runtime.block_on(work).unwrap();
+        assert_eq!(Some(delta2.data.as_ref()), ret_data.as_deref());
     }
 }

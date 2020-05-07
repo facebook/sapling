@@ -86,14 +86,6 @@ impl HgIdDataStore for MemcacheStore {
         Ok(None)
     }
 
-    fn get_delta(&self, _key: &Key) -> Result<Option<Delta>> {
-        Ok(None)
-    }
-
-    fn get_delta_chain(&self, _key: &Key) -> Result<Option<Vec<Delta>>> {
-        Ok(None)
-    }
-
     fn get_meta(&self, _key: &Key) -> Result<Option<Metadata>> {
         Ok(None)
     }
@@ -164,22 +156,6 @@ impl HgIdDataStore for MemcacheHgIdDataStore {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         match self.prefetch(&[StoreKey::hgid(key.clone())]) {
             Ok(()) => self.store.get(key),
-            Err(_) => Ok(None),
-        }
-    }
-
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
-            Ok(()) => self.store.get_delta(key),
-            Err(_) => Ok(None),
-        }
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
-            Ok(()) => self.store.get_delta_chain(key),
             Err(_) => Ok(None),
         }
     }

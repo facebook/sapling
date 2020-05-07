@@ -480,20 +480,6 @@ impl HgIdDataStore for mutabledeltastore {
         self.store(py).get(key)
     }
 
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        self.store(py).get_delta(key)
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        let gil = Python::acquire_gil();
-        let py = gil.python();
-
-        self.store(py).get_delta_chain(key)
-    }
-
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         let gil = Python::acquire_gil();
         let py = gil.python();
@@ -691,36 +677,6 @@ impl RemoteDataStore for PyRemoteDataStore {
 impl HgIdDataStore for PyRemoteDataStore {
     fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
         unreachable!();
-    }
-
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
-            Ok(()) => self
-                .0
-                .inner
-                .read()
-                .datastore
-                .as_ref()
-                .unwrap()
-                .get_delta(key),
-            Err(_) => Ok(None),
-        }
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
-            Ok(()) => self
-                .0
-                .inner
-                .read()
-                .datastore
-                .as_ref()
-                .unwrap()
-                .get_delta_chain(key),
-            Err(_) => Ok(None),
-        }
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {

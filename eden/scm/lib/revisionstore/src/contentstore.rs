@@ -111,14 +111,6 @@ impl HgIdDataStore for ContentStore {
         self.datastore.get(key)
     }
 
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        self.datastore.get_delta(key)
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        self.datastore.get_delta_chain(key)
-    }
-
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         self.datastore.get_meta(key)
     }
@@ -458,11 +450,12 @@ mod tests {
         let k1 = key("a", "2");
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: Some(key("a", "1")),
+            base: None,
             key: k1.clone(),
         };
         store.add(&delta, &Default::default())?;
-        assert_eq!(store.get_delta(&k1)?, Some(delta));
+        let stored = store.get(&k1)?;
+        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
         Ok(())
     }
 
@@ -484,7 +477,7 @@ mod tests {
         drop(store);
 
         let store = ContentStore::new(&localdir, &config)?;
-        assert!(store.get_delta(&k1)?.is_none());
+        assert!(store.get(&k1)?.is_none());
         Ok(())
     }
 
@@ -499,12 +492,13 @@ mod tests {
         let k1 = key("a", "2");
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: Some(key("a", "1")),
+            base: None,
             key: k1.clone(),
         };
         store.add(&delta, &Default::default())?;
         store.flush()?;
-        assert_eq!(store.get_delta(&k1)?, Some(delta));
+        let stored = store.get(&k1)?;
+        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
         Ok(())
     }
 
@@ -519,7 +513,7 @@ mod tests {
         let k1 = key("a", "2");
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: Some(key("a", "1")),
+            base: None,
             key: k1.clone(),
         };
         store.add(&delta, &Default::default())?;
@@ -527,7 +521,8 @@ mod tests {
         drop(store);
 
         let store = ContentStore::new(&localdir, &config)?;
-        assert_eq!(store.get_delta(&k1)?, Some(delta));
+        let stored = store.get(&k1)?;
+        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
         Ok(())
     }
 
@@ -781,8 +776,8 @@ mod tests {
         store.flush()?;
 
         let lfs_store = LfsStore::local(&localdir, &config)?;
-        assert_eq!(lfs_store.get_delta(&k1)?, Some(delta));
-
+        let stored = lfs_store.get(&k1)?;
+        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
         Ok(())
     }
 
@@ -814,8 +809,8 @@ mod tests {
         )?;
 
         let store = Arc::new(ContentStore::new(&localdir, &config)?);
-        assert_eq!(store.get_delta(&k1)?, Some(delta));
-
+        let stored = store.get(&k1)?;
+        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
         Ok(())
     }
 

@@ -32,8 +32,6 @@ pub struct Delta {
 
 pub trait HgIdDataStore: LocalStore + Send + Sync {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>>;
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>>;
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>>;
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>>;
 }
 
@@ -86,12 +84,7 @@ impl<T: HgIdDataStore + ?Sized, U: Deref<Target = T> + Send + Sync> HgIdDataStor
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         T::get(self, key)
     }
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        T::get_delta(self, key)
-    }
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        T::get_delta_chain(self, key)
-    }
+
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         T::get_meta(self, key)
     }

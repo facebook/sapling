@@ -630,19 +630,6 @@ impl HgIdDataStore for LfsStore {
         }
     }
 
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        let content = self.get(key)?;
-        Ok(content.map(|data| Delta {
-            data: data.into(),
-            base: None,
-            key: key.clone(),
-        }))
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        Ok(self.get_delta(key)?.map(|delta| vec![delta]))
-    }
-
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         let entry = self.pointers.read().get(key)?;
         if let Some(entry) = entry {
@@ -735,14 +722,6 @@ impl LfsMultiplexer {
 impl HgIdDataStore for LfsMultiplexer {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         self.union.get(key)
-    }
-
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        self.union.get_delta(key)
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        self.union.get_delta_chain(key)
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
@@ -1317,22 +1296,6 @@ impl HgIdDataStore for LfsRemoteStore {
         }
     }
 
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
-            Ok(()) => self.store.get_delta(key),
-            Err(_) => Ok(None),
-        }
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
-            Ok(()) => self.store.get_delta_chain(key),
-            Err(_) => Ok(None),
-        }
-    }
-
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
         match self.prefetch(&missing) {
@@ -1469,8 +1432,8 @@ mod tests {
         };
 
         store.add(&delta, &Default::default())?;
-        let get_delta = store.get_delta(&k1)?;
-        assert_eq!(Some(delta), get_delta);
+        let stored = store.get(&k1)?;
+        assert_eq!(Some(delta.data.as_ref()), stored.as_deref());
 
         Ok(())
     }
@@ -1491,13 +1454,13 @@ mod tests {
         };
 
         store.add(&delta, &Default::default())?;
-        let get_delta = store.get_delta(&k1)?;
-        assert_eq!(Some(delta.clone()), get_delta);
+        let stored = store.get(&k1)?;
+        assert_eq!(Some(delta.data.as_ref()), stored.as_deref());
 
         store.flush()?;
 
-        let get_delta = store.get_delta(&k1)?;
-        assert_eq!(Some(delta), get_delta);
+        let stored = store.get(&k1)?;
+        assert_eq!(Some(delta.data.as_ref()), stored.as_deref());
 
         Ok(())
     }
@@ -1653,8 +1616,8 @@ mod tests {
         };
 
         store.add(&delta, &Default::default())?;
-        let get_delta = store.get_delta(&k1)?;
-        assert_eq!(Some(delta), get_delta);
+        let stored = store.get(&k1)?;
+        assert_eq!(Some(delta.data.as_ref()), stored.as_deref());
 
         Ok(())
     }
@@ -1678,7 +1641,8 @@ mod tests {
         };
 
         multiplexer.add(&delta, &Default::default())?;
-        assert_eq!(multiplexer.get_delta(&k1)?, Some(delta));
+        let stored = multiplexer.get(&k1)?;
+        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
         assert_eq!(indexedlog.get_missing(&[k1.into()])?, vec![]);
 
         Ok(())
@@ -1703,7 +1667,8 @@ mod tests {
         };
 
         multiplexer.add(&delta, &Default::default())?;
-        assert_eq!(multiplexer.get_delta(&k1)?, Some(delta));
+        let stored = multiplexer.get(&k1)?;
+        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
         assert_eq!(
             indexedlog.get_missing(&[StoreKey::from(&k1)])?,
             vec![StoreKey::from(&k1)]
@@ -1997,7 +1962,8 @@ mod tests {
                 key: key.clone(),
             };
 
-            assert_eq!(remotedatastore.get_delta(&key)?, Some(expected_delta));
+            let stored = remotedatastore.get(&key)?;
+            assert_eq!(stored.as_deref(), Some(expected_delta.data.as_ref()));
 
             Ok(())
         }

@@ -165,6 +165,35 @@ impl MutableDataPack {
             inner: Mutex::new(MutableDataPackInner::new(dir, version)?),
         })
     }
+
+    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
+        let mut chain: Vec<Delta> = Default::default();
+        let mut next_key = Some(key.clone());
+        let inner = self.inner.lock();
+        while let Some(key) = next_key {
+            let (delta, _metadata) = match inner.read_entry(&key) {
+                Ok(Some(entry)) => entry,
+                Ok(None) => {
+                    if chain.is_empty() {
+                        return Ok(None);
+                    } else {
+                        return Ok(Some(chain));
+                    }
+                }
+                Err(e) => {
+                    if chain.is_empty() {
+                        return Err(e);
+                    } else {
+                        return Ok(Some(chain));
+                    }
+                }
+            };
+            next_key = delta.base.clone();
+            chain.push(delta);
+        }
+
+        Ok(Some(chain))
+    }
 }
 
 impl HgIdMutableDeltaStore for MutableDataPack {
@@ -239,43 +268,6 @@ impl HgIdDataStore for MutableDataPack {
         Ok(Some(
             get_full_text(basetext.data.as_ref(), &deltas).map_err(Error::msg)?,
         ))
-    }
-
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        let (delta, _metadata) = match self.inner.lock().read_entry(&key)? {
-            None => return Ok(None),
-            Some(entry) => entry,
-        };
-        Ok(Some(delta))
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        let mut chain: Vec<Delta> = Default::default();
-        let mut next_key = Some(key.clone());
-        let inner = self.inner.lock();
-        while let Some(key) = next_key {
-            let (delta, _metadata) = match inner.read_entry(&key) {
-                Ok(Some(entry)) => entry,
-                Ok(None) => {
-                    if chain.is_empty() {
-                        return Ok(None);
-                    } else {
-                        return Ok(Some(chain));
-                    }
-                }
-                Err(e) => {
-                    if chain.is_empty() {
-                        return Err(e);
-                    } else {
-                        return Ok(Some(chain));
-                    }
-                }
-            };
-            next_key = delta.base.clone();
-            chain.push(delta);
-        }
-
-        Ok(Some(chain))
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {

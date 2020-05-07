@@ -64,8 +64,8 @@ mod tests {
         let path = datapackbase.with_extension("datapack");
 
         let pack = DataPack::new(&path).unwrap();
-        let stored_delta = pack.get_delta(&cloned_delta.key).unwrap().unwrap();
-        assert_eq!(stored_delta, cloned_delta);
+        let stored = pack.get(&cloned_delta.key).unwrap();
+        assert_eq!(stored.as_deref(), Some(cloned_delta.data.as_ref()));
     }
 
     #[test]

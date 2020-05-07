@@ -122,22 +122,6 @@ impl HgIdDataStore for FakeRemoteDataStore {
         }
     }
 
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
-            Err(_) => Ok(None),
-            Ok(()) => self.store.get_delta(key),
-        }
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
-        match self.prefetch(&missing) {
-            Err(_) => Ok(None),
-            Ok(()) => self.store.get_delta_chain(key),
-        }
-    }
-
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
         match self.prefetch(&missing) {

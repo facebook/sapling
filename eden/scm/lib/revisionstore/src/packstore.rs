@@ -350,14 +350,6 @@ impl HgIdDataStore for DataPackStore {
         self.inner.lock().run(|store| store.get(key))
     }
 
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        self.inner.lock().run(|store| store.get_delta(key))
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        self.inner.lock().run(|store| store.get_delta_chain(key))
-    }
-
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         self.inner.lock().run(|store| store.get_meta(key))
     }
@@ -401,14 +393,6 @@ impl MutableDataPackStore {
 impl HgIdDataStore for MutableDataPackStore {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
         self.inner.union_store.get(key)
-    }
-
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        self.inner.union_store.get_delta(key)
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        self.inner.union_store.get_delta_chain(key)
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
@@ -522,7 +506,7 @@ mod tests {
         let revision = (
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
-                base: Some(key("a", "1")),
+                base: None,
                 key: k.clone(),
             },
             Default::default(),
@@ -530,8 +514,8 @@ mod tests {
         make_datapack(&tempdir, &vec![revision.clone()]);
 
         let store = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
-        let delta = store.get_delta(&k)?.unwrap();
-        assert_eq!(delta, revision.0);
+        let stored = store.get(&k)?;
+        assert_eq!(stored.as_deref(), Some(revision.0.data.as_ref()));
         Ok(())
     }
 
@@ -565,15 +549,15 @@ mod tests {
         let revision = (
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
-                base: Some(key("a", "1")),
+                base: None,
                 key: k.clone(),
             },
             Default::default(),
         );
         make_datapack(&tempdir, &vec![revision.clone()]);
 
-        let delta = store.get_delta(&k)?.unwrap();
-        assert_eq!(delta, revision.0);
+        let stored = store.get(&k)?;
+        assert_eq!(stored.as_deref(), Some(revision.0.data.as_ref()));
         Ok(())
     }
 
@@ -590,27 +574,27 @@ mod tests {
         let revision = (
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
-                base: Some(key("a", "1")),
+                base: None,
                 key: k.clone(),
             },
             Default::default(),
         );
         make_datapack(&tempdir, &vec![revision.clone()]);
 
-        store.get_delta(&k).unwrap();
+        store.get(&k).unwrap();
 
         let k = key("a", "3");
         let revision = (
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
-                base: Some(key("a", "1")),
+                base: None,
                 key: k.clone(),
             },
             Default::default(),
         );
         make_datapack(&tempdir, &vec![revision.clone()]);
 
-        assert_eq!(store.get_delta(&k).unwrap(), None);
+        assert_eq!(store.get(&k).unwrap(), None);
     }
 
     #[test]
@@ -626,20 +610,20 @@ mod tests {
         let revision = (
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
-                base: Some(key("a", "1")),
+                base: None,
                 key: k.clone(),
             },
             Default::default(),
         );
         make_datapack(&tempdir, &vec![revision.clone()]);
 
-        store.get_delta(&k)?;
+        store.get(&k)?;
 
         let k = key("a", "3");
         let revision = (
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
-                base: Some(key("a", "1")),
+                base: None,
                 key: k.clone(),
             },
             Default::default(),
@@ -647,7 +631,7 @@ mod tests {
         make_datapack(&tempdir, &vec![revision.clone()]);
 
         store.force_rescan();
-        assert!(store.get_delta(&k)?.is_some());
+        assert!(store.get(&k)?.is_some());
         Ok(())
     }
 
@@ -675,7 +659,7 @@ mod tests {
         let revision1 = (
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
-                base: Some(key("a", "1")),
+                base: None,
                 key: k1.clone(),
             },
             Default::default(),
@@ -686,7 +670,7 @@ mod tests {
         let revision2 = (
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
-                base: Some(key("a", "1")),
+                base: None,
                 key: k2.clone(),
             },
             Default::default(),
@@ -695,14 +679,14 @@ mod tests {
 
         let packstore = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
 
-        let _ = packstore.get_delta(&k2)?;
+        let _ = packstore.get(&k2)?;
         assert!(packstore.inner.lock().packs.borrow().stores[0]
-            .get_delta(&k2)
+            .get(&k2)
             .is_ok());
 
-        let _ = packstore.get_delta(&k1)?;
+        let _ = packstore.get(&k1)?;
         assert!(packstore.inner.lock().packs.borrow().stores[0]
-            .get_delta(&k1)
+            .get(&k1)
             .is_ok());
 
         Ok(())
@@ -727,7 +711,7 @@ mod tests {
         let revision1 = (
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
-                base: Some(key("a", "1")),
+                base: None,
                 key: k1.clone(),
             },
             Default::default(),
@@ -747,7 +731,7 @@ mod tests {
             .unwrap();
 
         let packstore = DataPackStore::new(&tempdir, CorruptionPolicy::REMOVE);
-        assert_eq!(packstore.get_delta(&k1).unwrap(), None);
+        assert_eq!(packstore.get(&k1).unwrap(), None);
     }
 
     #[test]
@@ -758,7 +742,7 @@ mod tests {
         let revision1 = (
             Delta {
                 data: Bytes::from(&[1, 2, 3, 4][..]),
-                base: Some(key("a", "1")),
+                base: None,
                 key: k1.clone(),
             },
             Default::default(),
@@ -778,7 +762,7 @@ mod tests {
         assert_eq!(read_dir(&tempdir)?.count(), 2);
 
         let packstore = DataPackStore::new(&tempdir, CorruptionPolicy::IGNORE);
-        assert!(packstore.get_delta(&k1)?.is_none());
+        assert!(packstore.get(&k1)?.is_none());
 
         assert_eq!(read_dir(&tempdir)?.count(), 2);
         Ok(())
@@ -809,12 +793,13 @@ mod tests {
         let k1 = key("a", "2");
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: Some(key("a", "1")),
+            base: None,
             key: k1.clone(),
         };
 
         packstore.add(&delta, &Default::default())?;
-        assert_eq!(packstore.get_delta(&k1)?.unwrap(), delta);
+        let stored = packstore.get(&k1)?;
+        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
         Ok(())
     }
 
@@ -826,13 +811,14 @@ mod tests {
         let k1 = key("a", "2");
         let delta = Delta {
             data: Bytes::from(&[1, 2, 3, 4][..]),
-            base: Some(key("a", "1")),
+            base: None,
             key: k1.clone(),
         };
 
         packstore.add(&delta, &Default::default())?;
         packstore.flush()?;
-        assert_eq!(packstore.get_delta(&k1)?.unwrap(), delta);
+        let stored = packstore.get(&k1)?;
+        assert_eq!(stored.as_deref(), Some(delta.data.as_ref()));
         Ok(())
     }
 

@@ -223,24 +223,6 @@ impl HgIdDataStore for IndexedLogHgIdDataStore {
         Ok(Some(content.as_ref().to_vec()))
     }
 
-    fn get_delta(&self, key: &Key) -> Result<Option<Delta>> {
-        let inner = self.inner.read();
-        let mut entry = match Entry::from_log(&key, &inner.log)? {
-            None => return Ok(None),
-            Some(entry) => entry,
-        };
-        let content = entry.content()?;
-        Ok(Some(Delta {
-            data: content,
-            base: None,
-            key: key.clone(),
-        }))
-    }
-
-    fn get_delta_chain(&self, key: &Key) -> Result<Option<Vec<Delta>>> {
-        Ok(self.get_delta(key)?.map(|delta| vec![delta]))
-    }
-
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {
         let inner = self.inner.read();
         Ok(Entry::from_log(&key, &inner.log)?.map(|entry| entry.metadata().clone()))
@@ -309,8 +291,8 @@ mod tests {
         log.flush().unwrap();
 
         let log = IndexedLogHgIdDataStore::new(&tempdir).unwrap();
-        let read_delta = log.get_delta(&delta.key).unwrap();
-        assert_eq!(Some(delta), read_delta);
+        let read_data = log.get(&delta.key).unwrap();
+        assert_eq!(Some(delta.data.as_ref()), read_data.as_deref());
     }
 
     #[test]
@@ -319,7 +301,7 @@ mod tests {
         let log = IndexedLogHgIdDataStore::new(&tempdir).unwrap();
 
         let key = key("a", "1");
-        assert!(log.get_delta(&key).unwrap().is_none());
+        assert!(log.get(&key).unwrap().is_none());
     }
 
     #[test]

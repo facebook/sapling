@@ -101,7 +101,7 @@ class datapacktestsbase(object):
             filename = "foo%s" % i
             content = "abcdef%s" % i
             node = self.getHash(content)
-            revisions.append((filename, node, self.getFakeHash(), content))
+            revisions.append((filename, node, nullid, content))
 
         pack = self.createPack(revisions)
 
@@ -111,59 +111,6 @@ class datapacktestsbase(object):
 
             chain = pack.getdeltachain(filename, node)
             self.assertEqual(content, chain[0][4])
-
-    def testAddDeltas(self):
-        """Test putting multiple delta blobs into a pack and read the chain.
-        """
-        revisions = []
-        filename = "foo"
-        lastnode = nullid
-        for i in range(10):
-            content = "abcdef%s" % i
-            node = self.getHash(content)
-            revisions.append((filename, node, lastnode, content))
-            lastnode = node
-
-        pack = self.createPack(revisions)
-
-        entry = pack.getdelta(filename, revisions[0][1])
-        realvalue = (revisions[0][3], filename, revisions[0][2], {})
-        self.assertEqual(entry, realvalue)
-
-        # Test that the chain for the final entry has all the others
-        chain = pack.getdeltachain(filename, node)
-        for i in range(10):
-            content = "abcdef%s" % i
-            self.assertEqual(content, chain[-i - 1][4])
-
-    def testPackMany(self):
-        """Pack many related and unrelated objects.
-        """
-        # Build a random pack file
-        revisions = []
-        blobs = {}
-        random.seed(0)
-        for i in range(100):
-            filename = "filename-%s" % i
-            filerevs = []
-            for j in range(random.randint(1, 100)):
-                content = "content-%s-%s" % (i, j)
-                node = self.getHash(content)
-                lastnode = nullid
-                if len(filerevs) > 0:
-                    lastnode = filerevs[random.randint(0, len(filerevs) - 1)]
-                filerevs.append(node)
-                blobs[(filename, node, lastnode)] = content
-                revisions.append((filename, node, lastnode, content))
-
-        pack = self.createPack(revisions)
-
-        # Verify the pack contents
-        for (filename, node, lastnode), content in sorted(pycompat.iteritems(blobs)):
-            chain = pack.getdeltachain(filename, node)
-            for entry in chain:
-                expectedcontent = blobs[(entry[0], entry[1], entry[3])]
-                self.assertEqual(entry[4], expectedcontent)
 
     def testPackMetadata(self):
         revisions = []
@@ -255,45 +202,6 @@ class datapacktestsbase(object):
         for (filename, node), content in pycompat.iteritems(blobs):
             actualcontent = pack.getdeltachain(filename, node)[0][4]
             self.assertEqual(actualcontent, content)
-
-    def testPacksCache(self):
-        """Test that we remember the most recent packs while fetching the delta
-        chain."""
-
-        packdir = self.makeTempDir()
-        deltachains = []
-
-        numpacks = 200
-        revisionsperpack = 100
-
-        for i in range(numpacks):
-            chain = []
-            revision = (str(i), self.getFakeHash(), nullid, "content")
-
-            for _ in range(revisionsperpack):
-                chain.append(revision)
-                revision = (str(i), self.getFakeHash(), revision[1], self.getFakeHash())
-
-            self.createPack(chain, packdir)
-            deltachains.append(chain)
-
-        class testdatapackstore(datapackstore):
-            # Ensures that we are not keeping everything in the cache.
-            DEFAULTCACHESIZE = numpacks / 2
-
-        store = testdatapackstore(uimod.ui(), packdir, True)
-
-        random.shuffle(deltachains)
-        for randomchain in deltachains:
-            revision = random.choice(randomchain)
-            chain = store.getdeltachain(revision[0], revision[1])
-
-            mostrecentpack = next(iter(store.packs), None)
-            self.assertEqual(
-                mostrecentpack.getdeltachain(revision[0], revision[1]), chain
-            )
-
-            self.assertEqual(randomchain.index(revision) + 1, len(chain))
 
     def testInlineRepack(self):
         """Verify that when fetchpacks is enabled, and the number of packfiles
@@ -432,17 +340,17 @@ class datapacktestsbase(object):
         packer = revisionstore.mutabledeltastore(packfilepath=packdir)
 
         # Add some unused first revision for noise
-        packer.add("qwert", self.getFakeHash(), self.getFakeHash(), "qwertcontent")
+        packer.add("qwert", self.getFakeHash(), nullid, "qwertcontent")
 
         filename = "filename1"
         node = self.getFakeHash()
-        base = self.getFakeHash()
+        base = nullid
         content = "asdf"
         meta = {constants.METAKEYFLAG: 1, constants.METAKEYSIZE: len(content)}
         packer.add(filename, node, base, content, metadata=meta)
 
         # Add some unused third revision for noise
-        packer.add("zxcv", self.getFakeHash(), self.getFakeHash(), "zcxvcontent")
+        packer.add("zxcv", self.getFakeHash(), nullid, "zcxvcontent")
 
         # Test getmissing
         missing = ("", self.getFakeHash())
