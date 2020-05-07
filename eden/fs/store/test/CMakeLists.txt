@@ -5,16 +5,13 @@
 
 file(GLOB STORE_TEST_SRCS "*.cpp")
 if (WIN32)
-# Few of these tests are complaining while linking to Boost. The link libs
-# we have link them against both static and dynamic Boost lib. Right now we
-# have only enabled the DiffTest.
+  # TODO: T66530055
+  # Adding the RocksDb test causes the test binary to not load properly.
+  # The LocalStore test fails to compile on Windows.
   list(
     REMOVE_ITEM STORE_TEST_SRCS
-      ${CMAKE_CURRENT_SOURCE_DIR}/BlobAccessTest.cpp
-      ${CMAKE_CURRENT_SOURCE_DIR}/BlobCacheTest.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/RocksDbLocalStoreTest.cpp
       ${CMAKE_CURRENT_SOURCE_DIR}/LocalStoreTest.cpp
-      ${CMAKE_CURRENT_SOURCE_DIR}/ObjectStoreTest.cpp
   )
 endif()
 
