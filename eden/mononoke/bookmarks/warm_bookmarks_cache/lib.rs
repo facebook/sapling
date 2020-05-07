@@ -349,7 +349,7 @@ fn spawn_bookmarks_coordinator(
                     Ok(bookmarks) => bookmarks,
                     Err(err) => {
                         STATS::bookmarks_fetch_failures.add_value(1);
-                        warn!(ctx.logger(), "failed to fetch bookmarks {}", err);
+                        warn!(ctx.logger(), "failed to fetch bookmarks {:?}", err);
                         continue;
                     }
                 };
@@ -406,7 +406,7 @@ fn spawn_bookmarks_coordinator(
                             .await;
                             if let Err(ref err) = res {
                                 STATS::bookmark_update_failures.add_value(1);
-                                warn!(ctx.logger(), "update of {} failed: {}", book, err);
+                                warn!(ctx.logger(), "update of {} failed: {:?}", book, err);
                             };
 
                             live_updaters.with_write(|live_updaters| {
