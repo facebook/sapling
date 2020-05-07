@@ -13,3 +13,5 @@ target_link_libraries(
   PUBLIC
     eden_model
 )
+
+add_subdirectory(test)
