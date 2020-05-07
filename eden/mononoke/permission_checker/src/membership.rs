@@ -53,19 +53,6 @@ impl MembershipChecker for NeverMember {
     }
 }
 
-#[cfg(not(fbcode_build))]
-mod r#impl {
-    use super::*;
-
-    use fbinit::FacebookInit;
-
-    impl MembershipCheckerBuilder {
-        pub async fn for_reviewers_group(_fb: FacebookInit) -> Result<BoxMembershipChecker> {
-            Ok(Self::always_member())
-        }
-    }
-}
-
 struct WhitelistChecker {
     whitelist: MononokeIdentitySet,
 }

@@ -10,6 +10,8 @@ mod checker;
 mod facebook;
 mod identity;
 mod membership;
+#[cfg(not(fbcode_build))]
+mod oss;
 
 pub use checker::{
     ArcPermissionChecker, BoxPermissionChecker, PermissionChecker, PermissionCheckerBuilder,

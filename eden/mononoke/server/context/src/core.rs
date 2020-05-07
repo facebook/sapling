@@ -108,11 +108,6 @@ impl CoreContext {
         &self.session.ssh_env_vars()
     }
 
-    #[cfg(not(fbcode_build))]
-    pub fn trace_upload(&self) -> impl ::futures::Future<Item = (), Error = ::anyhow::Error> {
-        ::futures::future::ok(())
-    }
-
     pub fn session(&self) -> &SessionContainer {
         &self.session
     }

@@ -61,14 +61,3 @@ impl FromStr for MononokeIdentity {
         }
     }
 }
-
-#[cfg(not(fbcode_build))]
-mod r#impl {
-    use super::*;
-
-    impl MononokeIdentity {
-        pub fn reviewer_identities(_username: &str) -> MononokeIdentitySet {
-            MononokeIdentitySet::new()
-        }
-    }
-}

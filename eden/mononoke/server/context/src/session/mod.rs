@@ -19,6 +19,7 @@ use tracing::TraceContext;
 
 pub use self::builder::{generate_session_id, SessionContainerBuilder};
 use crate::core::CoreContext;
+use crate::is_quicksand;
 use crate::logging::LoggingContainer;
 
 mod builder;
@@ -110,15 +111,8 @@ impl SessionContainer {
             None => Ok(false),
         }
     }
-}
 
-#[cfg(not(fbcode_build))]
-mod r#impl {
-    use super::*;
-
-    impl SessionContainer {
-        pub fn is_quicksand(&self) -> bool {
-            false
-        }
+    pub fn is_quicksand(&self) -> bool {
+        is_quicksand(self.ssh_env_vars())
     }
 }

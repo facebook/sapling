@@ -12,8 +12,10 @@ pub use session_id::SessionId;
 
 pub use crate::core::CoreContext;
 #[cfg(fbcode_build)]
-pub use crate::facebook::prelude::*;
+pub use crate::facebook::is_quicksand;
 pub use crate::logging::{LoggingContainer, SamplingKey};
+#[cfg(not(fbcode_build))]
+pub use crate::oss::is_quicksand;
 pub use crate::perf_counters::{PerfCounterType, PerfCounters};
 pub use crate::session::{generate_session_id, SessionContainer};
 
@@ -21,10 +23,7 @@ mod core;
 #[cfg(fbcode_build)]
 mod facebook;
 mod logging;
+#[cfg(not(fbcode_build))]
+mod oss;
 mod perf_counters;
 mod session;
-
-#[cfg(not(fbcode_build))]
-pub fn is_quicksand(_ssh_env_vars: &::sshrelay::SshEnvVars) -> bool {
-    false
-}

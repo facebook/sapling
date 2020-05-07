@@ -7,11 +7,13 @@
 
 #[cfg(fbcode_build)]
 mod facebook;
+#[cfg(not(fbcode_build))]
+mod oss;
 
 #[cfg(fbcode_build)]
 pub use crate::facebook::LogToScribe;
 #[cfg(not(fbcode_build))]
-pub use crate::r#impl::LogToScribe;
+pub use crate::oss::LogToScribe;
 
 use anyhow::Error;
 use async_trait::async_trait;
@@ -48,30 +50,4 @@ impl<'a> CommitInfo<'a> {
 #[async_trait]
 pub trait ScribeCommitQueue: Send + Sync {
     async fn queue_commit(&self, commit: &CommitInfo<'_>) -> Result<(), Error>;
-}
-
-#[cfg(not(fbcode_build))]
-mod r#impl {
-    use super::*;
-
-    use fbinit::FacebookInit;
-
-    pub struct LogToScribe {}
-
-    impl LogToScribe {
-        pub fn new_with_default_scribe(_fb: FacebookInit, _category: String) -> Self {
-            Self {}
-        }
-
-        pub fn new_with_discard() -> Self {
-            Self {}
-        }
-    }
-
-    #[async_trait]
-    impl ScribeCommitQueue for LogToScribe {
-        async fn queue_commit(&self, _commit: &CommitInfo<'_>) -> Result<(), Error> {
-            Ok(())
-        }
-    }
 }
