@@ -249,6 +249,9 @@ void Overlay::saveOverlayDir(InodeNumber inodeNumber, const DirContents& dir) {
     const auto& entName = entIter.first;
     const auto& ent = entIter.second;
 
+    CHECK_NE(entName, "")
+        << "saveOverlayDir called with entry with an empty path for directory with inodeNumber="
+        << inodeNumber;
     CHECK_LT(ent.getInodeNumber().get(), nextInodeNumber)
         << "saveOverlayDir called with entry using unallocated inode number";
 
