@@ -15,9 +15,11 @@
 #include <folly/logging/xlog.h>
 #include <thrift/lib/cpp2/async/HeaderClientChannel.h>
 
+#include "eden/fs/config/EdenConfig.h"
 #include "eden/fs/eden-config.h"
 #include "eden/fs/monitor/EdenInstance.h"
 #include "eden/fs/monitor/LogFile.h"
+#include "eden/fs/monitor/LogRotation.h"
 #include "eden/fs/service/gen-cpp2/EdenServiceAsyncClient.h"
 
 #if EDEN_HAVE_SYSTEMD
@@ -30,7 +32,9 @@ using folly::Future;
 using folly::SocketAddress;
 using folly::Try;
 using folly::Unit;
+using std::make_unique;
 using std::string;
+using std::unique_ptr;
 
 DEFINE_bool(
     restart,
@@ -71,11 +75,13 @@ class EdenMonitor::SignalHandler : public folly::AsyncSignalHandler {
 };
 
 EdenMonitor::EdenMonitor(
-    AbsolutePathPiece edenDir,
+    unique_ptr<EdenConfig> config,
     folly::StringPiece selfExe,
     const std::vector<std::string>& selfArgv)
-    : edenDir_{edenDir}, selfExe_(selfExe), selfArgv_(selfArgv) {
-  signalHandler_ = std::make_unique<SignalHandler>(this);
+    : edenDir_{config->edenDir.getValue()},
+      selfExe_(selfExe),
+      selfArgv_(selfArgv) {
+  signalHandler_ = make_unique<SignalHandler>(this);
   signalHandler_->registerSignalHandler(SIGCHLD);
   signalHandler_->registerSignalHandler(SIGHUP);
   signalHandler_->registerSignalHandler(SIGINT);
@@ -85,9 +91,17 @@ EdenMonitor::EdenMonitor(
   // - SIGUSR1: request a graceful restart when the system looks idle
   // - SIGUSR2: request a hard restart (exit) when the system looks idle
 
-  auto logDir = edenDir + "logs"_relpath;
+  auto logDir = edenDir_ + "logs"_relpath;
   ensureDirectoryExists(logDir);
-  log_ = std::make_shared<LogFile>(logDir + "edenfs.log"_relpath);
+
+  auto maxLogSize = config->maxLogFileSize.getValue();
+  unique_ptr<LogRotationStrategy> rotationStrategy;
+  if (maxLogSize > 0) {
+    rotationStrategy = make_unique<TimestampLogRotation>(
+        config->maxRotatedLogFiles.getValue());
+  }
+  log_ = std::make_shared<LogFile>(
+      logDir + "edenfs.log"_relpath, maxLogSize, std::move(rotationStrategy));
 }
 
 EdenMonitor::~EdenMonitor() {}

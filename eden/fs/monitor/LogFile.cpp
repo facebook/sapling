@@ -52,8 +52,6 @@ LogFile::LogFile(
   }
 }
 
-LogFile::LogFile(const AbsolutePath& path) : LogFile(path, 0, nullptr) {}
-
 LogFile::~LogFile() {
   triggerBackgroundRotation(std::nullopt);
   rotationThread_.join();

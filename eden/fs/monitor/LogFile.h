@@ -25,7 +25,6 @@ class LogRotationStrategy;
 
 class LogFile {
  public:
-  explicit LogFile(const AbsolutePath& path);
   LogFile(
       const AbsolutePath& path,
       size_t maxSize,

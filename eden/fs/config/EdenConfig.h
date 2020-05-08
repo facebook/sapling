@@ -366,6 +366,9 @@ class EdenConfig : private ConfigSettingManager {
       "notifications:interval",
       std::chrono::minutes(1),
       this};
+
+  ConfigSetting<uint64_t> maxLogFileSize{"log:max-file-size", 50000000, this};
+  ConfigSetting<uint64_t> maxRotatedLogFiles{"log:num-rotated-logs", 3, this};
 };
 } // namespace eden
 } // namespace facebook

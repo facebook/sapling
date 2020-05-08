@@ -22,6 +22,7 @@ class Future;
 namespace facebook {
 namespace eden {
 
+class EdenConfig;
 class EdenInstance;
 class EdenServiceAsyncClient;
 class LogFile;
@@ -42,7 +43,7 @@ class LogFile;
 class EdenMonitor {
  public:
   explicit EdenMonitor(
-      AbsolutePathPiece edenDir,
+      std::unique_ptr<EdenConfig> config,
       folly::StringPiece selfExe,
       const std::vector<std::string>& selfArgv);
   ~EdenMonitor();

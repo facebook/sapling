@@ -173,7 +173,7 @@ int main(int argc, char* argv[]) {
   }
 
   XLOG(INFO) << "Starting EdenFS monitor: pid " << getpid();
-  EdenMonitor monitor(edenDir, selfExe, initialArgv);
+  EdenMonitor monitor(std::move(config), selfExe, initialArgv);
   monitor.run();
   return EX_OK;
 }
