@@ -1143,7 +1143,7 @@ void FuseChannel::processSession() {
     // TODO: FUSE_SPLICE_READ allows using splice(2) here if we enable it.
     // We can look at turning this on once the main plumbing is complete.
     auto res = read(fuseDevice_.fd(), buf.data(), buf.size());
-    if (res < 0) {
+    if (UNLIKELY(res < 0)) {
       int error = errno;
       if (stop_.load(std::memory_order_relaxed)) {
         break;
@@ -1199,6 +1199,20 @@ void FuseChannel::processSession() {
                << " len=" << header->len << " nodeid=" << header->nodeid
                << " uid=" << header->uid << " gid=" << header->gid
                << " pid=" << header->pid;
+
+    // On Linux, if security caps are enabled and the FUSE filesystem implements
+    // xattr support, every FUSE_WRITE opcode is preceded by FUSE_GETXATTR for
+    // "security.capability". Until we discover a way to tell the kernel that
+    // they will always return nothing in an Eden mount, short-circuit that path
+    // as efficiently and as early as possible.
+    if (header->opcode == FUSE_GETXATTR) {
+      const auto getxattr = reinterpret_cast<const fuse_getxattr_in*>(arg);
+      const auto nameStr = reinterpret_cast<const char*>(getxattr + 1);
+      if (strcmp("security.capability", nameStr) == 0) {
+        replyError(*header, ENODATA);
+        continue;
+      }
+    }
 
     // Sanity check to ensure that the request wasn't from ourself.
     //
