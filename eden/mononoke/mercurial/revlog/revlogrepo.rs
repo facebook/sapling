@@ -358,6 +358,7 @@ impl RevlogRepo {
         // Code below matches core Mercurial logic from the commit
         // 75013952d8d9608f73cd45f68405fbd6ec112bf2 from file mercurial/store.py from the function
         // store(). The only caveat is that basicstore is not yet implemented
+        let elements = elements.iter().map(|e| e.as_ref()).collect::<Vec<_>>();
         if self.requirements.contains(&Required::Store) {
             if self.requirements.contains(&Required::Fncache) {
                 let dotencode = self.requirements.contains(&Required::Dotencode);

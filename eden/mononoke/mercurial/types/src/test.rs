@@ -17,6 +17,7 @@ fn check_fsencode_with_dotencode(path: &[u8], expected: &str) {
     let path = &MPath::new(path).unwrap();
     elements.extend(path.into_iter().cloned());
 
+    let elements = elements.iter().map(|e| e.as_ref()).collect::<Vec<_>>();
     assert_eq!(fncache_fsencode(&elements, true), PathBuf::from(expected));
 }
 

@@ -5,15 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use bytes::Bytes;
 use std::cmp;
 use std::ffi::OsStr;
 use std::os::unix::ffi::OsStrExt;
 use std::path::PathBuf;
 
 use crate::hash::Sha1;
-
-use mononoke_types::MPathElement;
 
 fn fsencode_filter<P: AsRef<[u8]>>(p: P, dotencode: bool) -> String {
     let p = p.as_ref();
@@ -24,7 +21,7 @@ fn fsencode_filter<P: AsRef<[u8]>>(p: P, dotencode: bool) -> String {
 
 fn fsencode_dir_impl<'a, Iter>(dotencode: bool, iter: Iter) -> PathBuf
 where
-    Iter: Iterator<Item = &'a MPathElement>,
+    Iter: Iterator<Item = &'a &'a [u8]>,
 {
     iter.map(|p| fsencode_filter(direncode(p.as_ref()), dotencode))
         .collect()
@@ -35,7 +32,7 @@ const MAXSTOREPATHLEN: usize = 120;
 /// Perform the mapping to a filesystem path used in a .hg directory
 /// Assumes that this path is a file.
 /// This encoding is used when both 'store' and 'fncache' requirements are in the repo.
-pub fn fncache_fsencode(elements: &[MPathElement], dotencode: bool) -> PathBuf {
+pub fn fncache_fsencode(elements: &[&[u8]], dotencode: bool) -> PathBuf {
     let mut path = elements.iter().rev();
     let file = path.next();
     let path = path.rev();
@@ -45,11 +42,7 @@ pub fn fncache_fsencode(elements: &[MPathElement], dotencode: bool) -> PathBuf {
         ret.push(fsencode_filter(basename.as_ref(), dotencode));
         let os_str: &OsStr = ret.as_ref();
         if os_str.as_bytes().len() > MAXSTOREPATHLEN {
-            hashencode(
-                path.map(|elem| elem.to_bytes()).collect(),
-                basename.as_ref(),
-                dotencode,
-            )
+            hashencode(path.copied().collect(), basename.as_ref(), dotencode)
         } else {
             ret.clone()
         }
@@ -62,7 +55,7 @@ pub fn fncache_fsencode(elements: &[MPathElement], dotencode: bool) -> PathBuf {
 /// Assumes that this path is a file.
 /// This encoding is used when 'store' requirement is present in the repo, but 'fncache'
 /// requirement is not present.
-pub fn simple_fsencode(elements: &[MPathElement]) -> PathBuf {
+pub fn simple_fsencode(elements: &[&[u8]]) -> PathBuf {
     let mut path = elements.iter().rev();
     let file = path.next();
     let directory_elements = path.rev();
@@ -271,7 +264,7 @@ fn get_extension(basename: &[u8]) -> &[u8] {
 /// assert_eq!(hashed_file(&dirs, Some(file)), Sha1::from(&b"asdf/asdf/file.txt"[..]));
 ///
 /// ```
-fn hashed_file(dirs: &Vec<Bytes>, file: &[u8]) -> Sha1 {
+fn hashed_file(dirs: &[&[u8]], file: &[u8]) -> Sha1 {
     let mut elements: Vec<_> = dirs.iter().map(|elem| direncode(&elem)).collect();
     elements.push(Vec::from(file));
 
@@ -284,7 +277,7 @@ fn hashed_file(dirs: &Vec<Bytes>, file: &[u8]) -> Sha1 {
 /// also contains sha-1 hash of the initial file.
 /// Each path element is encoded to avoid file name collisions, and they are combined
 /// in such way that resulting path is shorter than MAXSTOREPATHLEN.
-fn hashencode(dirs: Vec<Bytes>, file: &[u8], dotencode: bool) -> PathBuf {
+fn hashencode(dirs: Vec<&[u8]>, file: &[u8], dotencode: bool) -> PathBuf {
     let sha1 = hashed_file(&dirs, file);
 
     let mut parts = dirs
@@ -363,7 +356,7 @@ fn hashencode(dirs: Vec<Bytes>, file: &[u8], dotencode: bool) -> PathBuf {
 
 #[cfg(test)]
 mod test {
-    use mononoke_types::MPath;
+    use mononoke_types::{MPath, MPathElement};
 
     use super::*;
 
@@ -372,6 +365,7 @@ mod test {
         let path = &MPath::new(path).unwrap();
         elements.extend(path.into_iter().cloned());
 
+        let elements = elements.iter().map(|e| e.as_ref()).collect::<Vec<_>>();
         assert_eq!(fncache_fsencode(&elements, false), PathBuf::from(expected));
     }
 
@@ -380,6 +374,7 @@ mod test {
         let path = &MPath::new(path).unwrap();
         elements.extend(path.into_iter().cloned());
 
+        let elements = elements.iter().map(|e| e.as_ref()).collect::<Vec<_>>();
         assert_eq!(simple_fsencode(&elements), PathBuf::from(expected));
     }
 
@@ -449,6 +444,7 @@ mod test {
         let mut elements = vec![];
         let joined = MPath::join_opt(prefix.as_ref(), MPath::iter_opt(suffix.as_ref()));
         elements.extend(MPath::into_iter_opt(joined));
+        let elements = elements.iter().map(|e| e.as_ref()).collect::<Vec<_>>();
         assert_eq!(fncache_fsencode(&elements, false), PathBuf::from(expected));
     }
 
@@ -481,7 +477,7 @@ mod test {
 
     #[test]
     fn test_hashed_file() {
-        let dirs = vec![Bytes::from(&b"asdf"[..]), Bytes::from("asdf")];
+        let dirs = vec![&b"asdf"[..], b"asdf"];
         let file = b"file.txt";
         assert_eq!(
             hashed_file(&dirs, file),
