@@ -348,7 +348,7 @@ class EdenRepoTest(EdenTestCase):
         This automatically expects to find a ".hg" directory in the root of hg
         checkouts.
         """
-        checkout_root = pathlib.Path(path if path is not None else self.mount)  # type: ignore
+        checkout_root = pathlib.Path(path if path is not None else self.mount)
         real_scm_type = scm_type if scm_type is not None else self.repo.get_type()
         if real_scm_type == "hg":
             expected_entries = expected_entries | {".hg"}
@@ -419,10 +419,10 @@ def test_replicator(
 def _replicate_eden_repo_test(
     test_class: Type[EdenRepoTest],
 ) -> Iterable[Tuple[str, Type[EdenRepoTest]]]:
-    class HgRepoTest(HgRepoTestMixin, test_class):  # type: ignore
+    class HgRepoTest(HgRepoTestMixin, test_class):
         pass
 
-    class GitRepoTest(GitRepoTestMixin, test_class):  # type: ignore
+    class GitRepoTest(GitRepoTestMixin, test_class):
         pass
 
     variants = [("Hg", typing.cast(Type[EdenRepoTest], HgRepoTest))]
@@ -449,9 +449,11 @@ class HgRepoTestMixin:
         # add an abstract create_hg_repo() method to this class since the MRO would find
         # it before the real create_hg_repo() name.  We can't change the MRO without
         # breaking resolution of create_repo().
-        return self.create_hg_repo(name)  # type: ignore
+        # pyre-fixme[16]: `HgRepoTestMixin` has no attribute `create_hg_repo`.
+        return self.create_hg_repo(name)
 
 
 class GitRepoTestMixin:
     def create_repo(self, name: str) -> repobase.Repository:
-        return self.create_git_repo(name)  # type: ignore
+        # pyre-fixme[16]: `GitRepoTestMixin` has no attribute `create_git_repo`.
+        return self.create_git_repo(name)

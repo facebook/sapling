@@ -159,7 +159,7 @@ class EdenConfigParser:
         # TODO(T39124448): Remove Pyre workaround; use isinstance directly.
         is_instance = isinstance
         if not is_instance(value, expected_type):
-            expected_type_temp: Type[ConfigValue] = expected_type  # type: ignore
+            expected_type_temp: Type[ConfigValue] = expected_type
             raise UnexpectedType(
                 section=section,
                 option=option,
@@ -289,6 +289,7 @@ def _toml_type_name(type: Type) -> str:
 
 
 def _toml_value(value: Union[bool, str]) -> str:
-    TomlEncoder: Type = toml.TomlEncoder  # type: ignore
+    # pyre-fixme[16]: Module `toml` has no attribute `TomlEncoder`.
+    TomlEncoder: Type = toml.TomlEncoder
     value_toml: str = TomlEncoder().dump_inline_table(value)
     return value_toml.rstrip()

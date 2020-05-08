@@ -136,7 +136,7 @@ class SystemdServiceTest(ServiceTestCaseBase):
     systemd: Optional[SystemdUserServiceManager] = None
 
     def setUp(self) -> None:
-        super().setUp()  # type: ignore
+        super().setUp()
         # TODO(T33122320): Don't set EDEN_EXPERIMENTAL_SYSTEMD when using
         # systemd is the default option.
         self.setenv("EDEN_EXPERIMENTAL_SYSTEMD", "1")
@@ -225,12 +225,12 @@ def _replicate_service_test(
 ) -> typing.Iterable[typing.Tuple[str, typing.Type[ServiceTestCaseBase]]]:
     tests = []
 
-    class AdHocTest(AdHocFakeEdenFSMixin, test_class):  # type: ignore
+    class AdHocTest(AdHocFakeEdenFSMixin, test_class):
         pass
 
     tests.append(("AdHoc", typing.cast(typing.Type[ServiceTestCaseBase], AdHocTest)))
 
-    class ManagedTest(ManagedFakeEdenFSMixin, test_class):  # type: ignore
+    class ManagedTest(ManagedFakeEdenFSMixin, test_class):
         pass
 
     tests.append(
@@ -239,10 +239,7 @@ def _replicate_service_test(
 
     if _systemd_supported:
 
-        class SystemdEdenCLITest(
-            test_class,  # type: ignore
-            SystemdServiceTest,
-        ):
+        class SystemdEdenCLITest(test_class, SystemdServiceTest):
             pass
 
         tests.append(

@@ -105,7 +105,8 @@ class _StatfsType:
 
 
 # https://github.com/python/typeshed/pull/3945
-_libc = ctypes.CDLL(None, use_errno=True)  # type: ignore
+# pyre-fixme[6]: Expected `str` for 1st param but got `None`.
+_libc = ctypes.CDLL(None, use_errno=True)
 _fsword_t = ctypes.c_int64  # type: Type[ctypes._CData]
 _fsblkcnt_t = ctypes.c_uint64
 _fsfilcnt_t = ctypes.c_uint64
