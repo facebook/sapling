@@ -334,6 +334,19 @@ directory to reclaim the disk space.
         self.usage_for_redirections(checkout, clean)
 
 
+@subcmd("pid", "Print the daemon's process ID if running")
+class PidCmd(Subcmd):
+    def run(self, args: argparse.Namespace) -> int:
+        instance = get_eden_instance(args)
+        health_info = instance.check_health()
+        if health_info.is_healthy():
+            print(health_info.pid)
+            return 0
+
+        print("edenfs not healthy: {}".format(health_info.detail), file=sys.stderr)
+        return 1
+
+
 @subcmd("status", "Check the health of the Eden service", aliases=["health"])
 class StatusCmd(Subcmd):
     def setup_parser(self, parser: argparse.ArgumentParser) -> None:
