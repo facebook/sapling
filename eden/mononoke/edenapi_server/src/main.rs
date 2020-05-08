@@ -46,7 +46,7 @@ mod context;
 mod handlers;
 mod middleware;
 
-use crate::context::EdenApiServerContext;
+use crate::context::ServerContext;
 use crate::handlers::build_router;
 use crate::middleware::RequestContextMiddleware;
 
@@ -227,7 +227,7 @@ fn main(fb: FacebookInit) -> Result<()> {
     let will_exit = Arc::new(AtomicBool::new(false));
 
     // Set up context to hold the server's global state.
-    let ctx = EdenApiServerContext::new(mononoke, will_exit.clone());
+    let ctx = ServerContext::new(mononoke, will_exit.clone());
 
     // Set up the router and handler for serving HTTP requests, along with custom middleware.
     // The middleware added here does not implement Gotham's usual Middleware trait; instead,

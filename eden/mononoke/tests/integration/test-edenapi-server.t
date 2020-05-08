@@ -13,3 +13,7 @@ Start up EdenAPI server.
 Hit health check endpoint.
   $ sslcurl -s "$EDENAPI_URI/health_check"
   I_AM_ALIVE (no-eol)
+
+List repos.
+  $ sslcurl -s "$EDENAPI_URI/repos"
+  {"repos":["repo"]} (no-eol)

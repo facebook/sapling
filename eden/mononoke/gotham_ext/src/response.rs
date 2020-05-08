@@ -9,7 +9,7 @@ use std::convert::TryInto;
 
 use anyhow::Error;
 use bytes::Bytes;
-use gotham::state::State;
+use gotham::{handler::HandlerError, state::State};
 use gotham_derive::StateData;
 use hyper::{
     header::{HeaderValue, CONTENT_LENGTH, CONTENT_TYPE},
@@ -17,8 +17,21 @@ use hyper::{
 };
 use mime::Mime;
 
+use crate::error::HttpError;
+
 pub trait TryIntoResponse {
     fn try_into_response(self, state: &mut State) -> Result<Response<Body>, Error>;
+}
+
+pub fn build_response<IR: TryIntoResponse>(
+    res: Result<IR, HttpError>,
+    mut state: State,
+) -> Result<(State, Response<Body>), (State, HandlerError)> {
+    let res = res.and_then(|c| c.try_into_response(&mut state).map_err(HttpError::e500));
+    match res {
+        Ok(res) => Ok((state, res)),
+        Err(e) => e.into_handler_response(state),
+    }
 }
 
 #[derive(StateData)]

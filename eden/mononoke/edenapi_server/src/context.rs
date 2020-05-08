@@ -10,9 +10,9 @@ use std::sync::{
     Arc, Mutex,
 };
 
-use mononoke_api::Mononoke;
-
 use gotham_derive::StateData;
+
+use mononoke_api::Mononoke;
 
 /// Struct containing the EdenAPI server's global shared state.
 /// Intended to be exposed throughout the server by being inserted into
@@ -20,14 +20,14 @@ use gotham_derive::StateData;
 /// this type is designed to be cheaply clonable, with all cloned sharing
 /// the same underlying data.
 #[derive(Clone, StateData)]
-pub struct EdenApiServerContext {
-    inner: Arc<Mutex<EdenApiServerContextInner>>,
+pub struct ServerContext {
+    inner: Arc<Mutex<ServerContextInner>>,
     will_exit: Arc<AtomicBool>,
 }
 
-impl EdenApiServerContext {
+impl ServerContext {
     pub fn new(mononoke: Mononoke, will_exit: Arc<AtomicBool>) -> Self {
-        let inner = EdenApiServerContextInner::new(mononoke);
+        let inner = ServerContextInner::new(mononoke);
         Self {
             inner: Arc::new(Mutex::new(inner)),
             will_exit,
@@ -37,18 +37,25 @@ impl EdenApiServerContext {
     pub fn will_exit(&self) -> bool {
         self.will_exit.load(Ordering::Relaxed)
     }
+
+    /// Get a reference to the Mononoke API. This is the main way that
+    /// the EdenAPI server should interact with the Mononoke backend.
+    pub fn mononoke_api(&self) -> Arc<Mononoke> {
+        self.inner.lock().expect("lock poisoned").mononoke.clone()
+    }
 }
 
-/// Underlying global state for an EdenApiContext. Any data that needs to
+/// Underlying global state for a ServerContext. Any data that needs to
 /// be broadly available throughout the server's request handlers should
 /// be placed here.
-struct EdenApiServerContextInner {
-    #[allow(unused)]
-    mononoke: Mononoke,
+struct ServerContextInner {
+    mononoke: Arc<Mononoke>,
 }
 
-impl EdenApiServerContextInner {
+impl ServerContextInner {
     fn new(mononoke: Mononoke) -> Self {
-        Self { mononoke }
+        Self {
+            mononoke: Arc::new(mononoke),
+        }
     }
 }

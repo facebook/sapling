@@ -5,26 +5,51 @@
  * GNU General Public License version 2.
  */
 
+use std::pin::Pin;
+
+use futures::FutureExt;
 use gotham::{
+    handler::HandlerFuture,
     middleware::state::StateMiddleware,
     pipeline::{new_pipeline, single::single_pipeline},
     router::{
         builder::{build_router as gotham_build_router, DefineSingleRoute, DrawRoutes},
         Router,
     },
+    state::{FromState, State},
 };
 
-use crate::context::EdenApiServerContext;
+use gotham_ext::response::build_response;
 
-mod health;
+use crate::context::ServerContext;
 
-use self::health::health_handler;
+mod repos;
 
-pub fn build_router(ctx: EdenApiServerContext) -> Router {
+pub fn build_router(ctx: ServerContext) -> Router {
     let pipeline = new_pipeline().add(StateMiddleware::new(ctx)).build();
     let (chain, pipelines) = single_pipeline(pipeline);
 
     gotham_build_router(chain, pipelines, |route| {
         route.get("/health_check").to(health_handler);
+        route
+            .get("/repos")
+            .with_query_string_extractor::<repos::ReposParams>()
+            .to(repos_handler);
     })
+}
+
+pub fn health_handler(state: State) -> (State, &'static str) {
+    if ServerContext::borrow_from(&state).will_exit() {
+        (state, "EXITING")
+    } else {
+        (state, "I_AM_ALIVE")
+    }
+}
+
+pub fn repos_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
+    async move {
+        let res = repos::repos(&mut state);
+        build_response(res, state)
+    }
+    .boxed()
 }
