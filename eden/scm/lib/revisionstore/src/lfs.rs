@@ -1276,13 +1276,15 @@ impl RemoteDataStore for LfsRemoteStore {
             .filter_map(|res| res.transpose())
             .collect::<Result<Vec<_>>>()?;
 
-        self.remote.batch_upload(&objs, {
-            let local_store = local_store.clone();
-            move |sha256| {
-                let key = StoreKey::from(ContentHash::Sha256(sha256));
-                local_store.blob(&key)
-            }
-        })?;
+        if !objs.is_empty() {
+            self.remote.batch_upload(&objs, {
+                let local_store = local_store.clone();
+                move |sha256| {
+                    let key = StoreKey::from(ContentHash::Sha256(sha256));
+                    local_store.blob(&key)
+                }
+            })?;
+        }
 
         Ok(not_uploaded)
     }
