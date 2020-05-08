@@ -826,6 +826,14 @@ def onetimeclientsetup(ui):
     # when writing a bundle via "hg bundle" command, upload related LFS blobs
     wrapfunction(bundle2, "writenewbundle", writenewbundle)
 
+    if ui.configbool("remotefilelog", "lfs"):
+        # Make bundle choose changegroup3 instead of changegroup2. This affects
+        # "hg bundle" command. Note: it does not cover all bundle formats like
+        # "packed1". Using "packed1" with lfs will likely cause trouble.
+        names = [k for k, v in exchange._bundlespeccgversions.items() if v == "02"]
+        for k in names:
+            exchange._bundlespeccgversions[k] = "03"
+
 
 def getrenamedfn(repo, endrev=None):
     rcache = {}
