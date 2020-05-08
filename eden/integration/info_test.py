@@ -29,7 +29,7 @@ class InfoTest(testcase.EdenRepoTest):
         )
         self.assertEqual(
             {
-                "client-dir": client_dir,
+                "state_dir": client_dir,
                 "scm_type": self.repo.get_type(),
                 "mount": self.mount,
                 "snapshot": self.repo.get_head_hash(),

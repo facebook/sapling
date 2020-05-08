@@ -102,7 +102,7 @@ class InfoCmd(Subcmd):
 
     def run(self, args: argparse.Namespace) -> int:
         instance, checkout, _rel_path = require_checkout(args, args.client)
-        info = instance.get_client_info_from_checkout(checkout)
+        info = instance.get_checkout_info_from_checkout(checkout)
         json.dump(info, sys.stdout, indent=2)
         sys.stdout.write("\n")
         return 0
@@ -271,9 +271,8 @@ Legacy bind mount dirs listed above are unused and can be removed!
         self.underlined(f"Mount: {mount}")
 
         instance, checkout, _rel_path = require_checkout(args, mount)
-        info = instance.get_client_info_from_checkout(checkout)
 
-        client_dir = info["client-dir"]
+        client_dir = checkout.state_dir
         overlay_dir = os.path.join(client_dir, "local")
 
         self.usage_for_dir("Materialized files", overlay_dir)
@@ -281,7 +280,7 @@ Legacy bind mount dirs listed above are unused and can be removed!
             if self.isatty:
                 print(f"Computing usage of ignored files...", end="", flush=True)
             scm_status = client.getScmStatus(
-                bytes(checkout.path), True, info["snapshot"]
+                bytes(checkout.path), True, checkout.get_snapshot().encode()
             )
             ignored_usage = 0
             buckd_usage = 0

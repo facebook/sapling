@@ -344,23 +344,20 @@ class EdenInstance:
         """Return the paths of the set mount points stored in config.json"""
         return [str(path) for path in self._get_directory_map().keys()]
 
-    def get_all_client_config_info(self) -> Dict[str, collections.OrderedDict]:
-        info = {}
-        for path in self.get_mount_paths():
-            info[path] = self.get_client_info(path)
-
-        return info
-
     def get_thrift_client(self) -> eden.thrift.EdenClient:
         return eden.thrift.create_thrift_client(str(self._config_dir))
 
-    def get_client_info(self, path: Union[Path, str]) -> collections.OrderedDict:
+    def get_checkout_info(self, path: Union[Path, str]) -> collections.OrderedDict:
+        """
+        Given a path to a checkout, return a dictionary containing diagnostic
+        information about it.
+        """
         path = Path(path).resolve(strict=False)
         client_dir = self._get_client_dir_for_mount_point(path)
         checkout = EdenCheckout(self, path, client_dir)
-        return self.get_client_info_from_checkout(checkout)
+        return self.get_checkout_info_from_checkout(checkout)
 
-    def get_client_info_from_checkout(
+    def get_checkout_info_from_checkout(
         self, checkout: "EdenCheckout"
     ) -> collections.OrderedDict:
         checkout_config = checkout.get_config()
@@ -370,7 +367,7 @@ class EdenInstance:
                 ("mount", str(checkout.path)),
                 ("scm_type", checkout_config.scm_type),
                 ("snapshot", snapshot),
-                ("client-dir", str(checkout.state_dir)),
+                ("state_dir", str(checkout.state_dir)),
             ]
         )
 

@@ -209,17 +209,6 @@ class FakeEdenInstance:
     def check_health(self) -> HealthStatus:
         return HealthStatus(self._status, pid=None, detail="")
 
-    def get_client_info(self, mount_path: str) -> collections.OrderedDict:
-        checkout = self._checkouts_by_path[mount_path]
-        return collections.OrderedDict(
-            [
-                ("mount", mount_path),
-                ("scm_type", checkout.config.scm_type),
-                ("snapshot", checkout.snapshot),
-                ("client-dir", checkout.state_dir),
-            ]
-        )
-
     def get_server_build_info(self) -> Dict[str, str]:
         return dict(self._build_info)
 

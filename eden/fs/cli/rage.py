@@ -60,12 +60,11 @@ def print_diagnostic_info(instance: EdenInstance, out: IO[bytes]) -> None:
     out.write(b"\nList of mount points:\n")
     mountpoint_paths = []
     for key in sorted(instance.get_mount_paths()):
-        key_bytes = key.encode()
-        out.write(key_bytes)
-        mountpoint_paths.append(key_bytes)
-    for key, val in instance.get_all_client_config_info().items():
-        out.write(b"\nMount point info for path %s:\n" % key.encode())
-        for k, v in val.items():
+        out.write(key.encode() + b"\n")
+        mountpoint_paths.append(key)
+    for checkout_path in mountpoint_paths:
+        out.write(b"\nMount point info for path %s:\n" % checkout_path.encode())
+        for k, v in instance.get_checkout_info(checkout_path).items():
             out.write("{:>10} : {}\n".format(k, v).encode())
     if health_status.is_healthy():
         with io.StringIO() as stats_stream:
