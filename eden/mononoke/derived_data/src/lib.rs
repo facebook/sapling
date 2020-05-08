@@ -121,6 +121,24 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         Ok(underived.len() as u64)
     }
 
+    async fn find_all_underived_ancestors(
+        ctx: &CoreContext,
+        repo: &BlobRepo,
+        csid: &ChangesetId,
+    ) -> Result<Vec<ChangesetId>, DeriveError> {
+        let mapping = Self::mapping(&ctx, &repo);
+        let underived = derive_impl::find_topo_sorted_underived::<Self, Self::Mapping>(
+            ctx,
+            repo,
+            &mapping,
+            csid,
+            None,
+            Mode::OnlyIfEnabled,
+        )
+        .await?;
+        Ok(underived)
+    }
+
     async fn is_derived(
         ctx: &CoreContext,
         repo: &BlobRepo,

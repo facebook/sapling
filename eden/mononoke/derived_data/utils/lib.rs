@@ -6,25 +6,27 @@
  */
 
 use anyhow::{format_err, Error};
+use async_trait::async_trait;
 use blame::{BlameRoot, BlameRootMapping};
 use blobrepo::{BlobRepo, DangerousOverride};
-use blobstore::Blobstore;
+use blobstore::{Blobstore, Loadable};
 use cacheblob::{dummy::DummyLease, LeaseOps, MemWritesBlobstore};
 use changeset_info::{ChangesetInfo, ChangesetInfoMapping};
 use cloned::cloned;
 use context::CoreContext;
 use deleted_files_manifest::{RootDeletedManifestId, RootDeletedManifestMapping};
 use derived_data::{
-    derive_impl::derive_impl, BonsaiDerived, BonsaiDerivedMapping, Mode as DeriveMode,
+    derive_impl::derive_impl, BonsaiDerived, BonsaiDerivedMapping, DeriveError, Mode as DeriveMode,
     RegenerateMapping,
 };
 use derived_data_filenodes::{FilenodesOnlyPublic, FilenodesOnlyPublicMapping};
 use fastlog::{RootFastlog, RootFastlogMapping};
 use fsnodes::{RootFsnodeId, RootFsnodeMapping};
-use futures_ext::{BoxFuture, FutureExt};
-use futures_old::{future, stream, Future, Stream};
+use futures::{compat::Future01CompatExt, stream, StreamExt, TryStreamExt};
+use futures_ext::{BoxFuture, FutureExt as OldFutureExt};
+use futures_old::{future, stream as stream_old, Future, Stream};
 use mercurial_derived_data::{HgChangesetIdMapping, MappedHgChangesetId};
-use mononoke_types::ChangesetId;
+use mononoke_types::{BonsaiChangeset, ChangesetId};
 use std::{
     collections::HashMap,
     sync::{Arc, Mutex},
@@ -42,6 +44,7 @@ pub const POSSIBLE_DERIVED_TYPES: &[&str] = &[
     FilenodesOnlyPublic::NAME,
 ];
 
+#[async_trait]
 pub trait DerivedUtils: Send + Sync + 'static {
     /// Derive data for changeset
     fn derive(
@@ -71,6 +74,13 @@ pub trait DerivedUtils: Send + Sync + 'static {
 
     /// Get a name for this type of derived data
     fn name(&self) -> &'static str;
+
+    async fn find_oldest_underived<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        repo: &'a BlobRepo,
+        csids: &'a Vec<ChangesetId>,
+    ) -> Result<Option<BonsaiChangeset>, Error>;
 }
 
 #[derive(Clone)]
@@ -86,6 +96,7 @@ impl<M> DerivedUtilsFromMapping<M> {
     }
 }
 
+#[async_trait]
 impl<M> DerivedUtils for DerivedUtilsFromMapping<M>
 where
     M: BonsaiDerivedMapping + Clone + 'static,
@@ -126,7 +137,7 @@ where
             });
         let memblobstore = memblobstore.expect("memblobstore should have been updated");
 
-        stream::iter_ok(csids)
+        stream_old::iter_ok(csids)
             .for_each({
                 cloned!(ctx, in_memory_mapping, repo);
                 move |csid| {
@@ -154,7 +165,7 @@ where
                 for (cs_id, value) in buffer.iter() {
                     futs.push(orig_mapping.put(ctx.clone(), *cs_id, value.clone()));
                 }
-                stream::futures_unordered(futs).for_each(|_| Ok(()))
+                stream_old::futures_unordered(futs).for_each(|_| Ok(()))
             })
             .boxify()
     }
@@ -172,6 +183,48 @@ where
                 csids
             })
             .boxify()
+    }
+
+    async fn find_oldest_underived<'a>(
+        &'a self,
+        ctx: &'a CoreContext,
+        repo: &'a BlobRepo,
+        csids: &'a Vec<ChangesetId>,
+    ) -> Result<Option<BonsaiChangeset>, Error> {
+        let mut underived_ancestors = vec![];
+        for cs_id in csids {
+            underived_ancestors.push(M::Value::find_all_underived_ancestors(&ctx, &repo, cs_id));
+        }
+
+        let boxed_stream = stream::iter(underived_ancestors)
+            .map(Result::<_, DeriveError>::Ok)
+            .try_buffer_unordered(100)
+            // boxed() is necessary to avoid "one type is more general than the other" error
+            .boxed();
+
+        let res = boxed_stream.try_collect::<Vec<_>>().await?;
+        let oldest_changesets = stream::iter(
+            res.into_iter()
+                // The first element is the first underived ancestor in toposorted order.
+                // Let's use it as a proxy for the oldest underived commit
+                .map(|all_underived| all_underived.get(0).cloned())
+                .flatten()
+                .map(|cs_id| async move {
+                    cs_id
+                        .load(ctx.clone(), repo.blobstore())
+                        .compat()
+                        .await
+                }),
+        )
+        .map(Ok)
+        .try_buffer_unordered(100)
+        // boxed() is necessary to avoid "one type is more general than the other" error
+        .boxed();
+
+        let oldest_changesets = oldest_changesets.try_collect::<Vec<_>>().await?;
+        Ok(oldest_changesets
+            .into_iter()
+            .min_by_key(|bcs| *bcs.author_date()))
     }
 
     fn regenerate(&self, csids: &Vec<ChangesetId>) {

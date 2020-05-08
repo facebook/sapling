@@ -39,9 +39,10 @@ use futures_stats::Timed;
 use futures_stats::TimedFutureExt;
 use lock_ext::LockExt;
 use metaconfig_types::DerivedDataConfig;
-use mononoke_types::{ChangesetId, RepositoryId};
+use mononoke_types::{ChangesetId, DateTime, RepositoryId};
 use phases::SqlPhases;
 use slog::{info, Logger};
+use stats::prelude::*;
 use std::{
     collections::HashMap,
     fs,
@@ -52,10 +53,17 @@ use std::{
     },
     time::Duration,
 };
+use time_ext::DurationExt;
 
 mod warmup;
 
 mod dry_run;
+
+define_stats! {
+    prefix = "mononoke.derived_data";
+    oldest_underived_secs: dynamic_singleton_counter("{}.oldest_underived_secs", (reponame: String)),
+    derivation_time_ms: dynamic_timeseries("{}.derivation_time_ms", (reponame: String); Average, Sum),
+}
 
 const ARG_DERIVED_DATA_TYPE: &str = "derived-data-type";
 const ARG_DRY_RUN: &str = "dry-run";
@@ -502,7 +510,8 @@ async fn tail_one_iteration(
         .compat()
         .await?;
 
-    let pending_nested_futs: Vec<_> = derive_utils
+    // Find heads that needs derivation and find their oldest underived ancestor
+    let find_pending_futs: Vec<_> = derive_utils
         .iter()
         .map({
             |derive| {
@@ -515,23 +524,36 @@ async fn tail_one_iteration(
                         .compat()
                         .await?;
 
-                    let derived = pending
-                        .into_iter()
-                        .map(|csid| derive.derive(ctx.clone(), repo.clone(), csid).compat())
-                        .collect::<Vec<_>>();
+                    let oldest_underived =
+                        derive.find_oldest_underived(&ctx, &repo, &pending).await?;
+                    let now = DateTime::now();
+                    let oldest_underived_age = oldest_underived.map_or(0, |oldest_underived| {
+                        now.timestamp_secs() - oldest_underived.author_date().timestamp_secs()
+                    });
 
-                    let res: Result<_, Error> = Ok(derived);
-                    res
+                    Result::<_, Error>::Ok((derive, pending, oldest_underived_age))
                 }
             }
         })
         .collect();
 
-    let pending_futs: Vec<_> = future::try_join_all(pending_nested_futs)
-        .await?
-        .into_iter()
-        .flatten()
-        .collect();
+    let pending = future::try_join_all(find_pending_futs).await?;
+
+    // Log oldest underived ancestor to ods
+    let mut oldest_underived_age = 0;
+    for (_, _, cur_oldest_underived_age) in &pending {
+        oldest_underived_age = ::std::cmp::max(oldest_underived_age, *cur_oldest_underived_age);
+    }
+    STATS::oldest_underived_secs.set_value(ctx.fb, oldest_underived_age, (repo.name().clone(),));
+
+    let pending_futs = pending.into_iter().map(|(derive, pending, _)| {
+        pending
+            .into_iter()
+            .map(|csid| derive.derive(ctx.clone(), repo.clone(), csid).compat())
+            .collect::<Vec<_>>()
+    });
+
+    let pending_futs: Vec<_> = pending_futs.flatten().collect();
 
     if pending_futs.is_empty() {
         tokio::time::delay_for(Duration::from_millis(250)).await;
@@ -550,6 +572,10 @@ async fn tail_one_iteration(
         info!(
             ctx.logger(),
             "derived data for {} heads in {:?}", count, stats.completion_time
+        );
+        STATS::derivation_time_ms.add_value(
+            stats.completion_time.as_millis_unchecked() as i64,
+            (repo.name().to_string(),),
         );
         Ok(())
     }
