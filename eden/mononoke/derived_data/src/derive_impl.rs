@@ -84,25 +84,10 @@ pub fn derive_impl<
 ) -> impl Future<Item = Derived, Error = DeriveError> {
     async move {
         let derivation = async {
-            let commits_not_derived_to_parents =
-                find_underived(&ctx, &repo, &derived_mapping, &start_csid, None, mode).await?;
+            let all_csids =
+                find_topo_sorted_underived(&ctx, &repo, &derived_mapping, &start_csid, None, mode)
+                    .await?;
 
-            let topo_sorted_commit_graph = sort_topological(&commits_not_derived_to_parents)
-                .expect("commit graph has cycles!");
-            let sz = topo_sorted_commit_graph.len();
-            if sz > 100 {
-                warn!(
-                    ctx.logger(),
-                    "derive_impl is called on a graph of size {}", sz
-                );
-            }
-            let all_csids: Vec<_> = topo_sorted_commit_graph
-                .into_iter()
-                // Note - sort_topological returns all nodes including commits which were already
-                // derived i.e. sort_topological({"a" -> ["b"]}) return ("a", "b").
-                // The '.filter()' below removes ["b"]
-                .filter(move |cs_id| commits_not_derived_to_parents.contains_key(cs_id))
-                .collect();
             let mut acc = 0;
             for csids in all_csids.chunks(100) {
                 let mapping = DeferredDerivedMapping::new(derived_mapping.clone());
@@ -187,7 +172,7 @@ fn fail_if_disabled<Derived: BonsaiDerived>(repo: &BlobRepo) -> Result<(), Deriv
     Ok(())
 }
 
-pub(crate) async fn find_underived<
+pub(crate) async fn find_topo_sorted_underived<
     Derived: BonsaiDerived,
     Mapping: BonsaiDerivedMapping<Value = Derived> + Send + Sync + Clone + 'static,
 >(
@@ -197,7 +182,7 @@ pub(crate) async fn find_underived<
     start_csid: &ChangesetId,
     limit: Option<u64>,
     mode: Mode,
-) -> Result<HashMap<ChangesetId, Vec<ChangesetId>>, Error> {
+) -> Result<Vec<ChangesetId>, Error> {
     if mode == Mode::OnlyIfEnabled {
         fail_if_disabled::<Derived>(repo)?;
     }
@@ -208,46 +193,65 @@ pub(crate) async fn find_underived<
 
     let changeset_fetcher = &changeset_fetcher;
     let visited = &visited;
-    let res = bounded_traversal::bounded_traversal_stream(100, Some(*start_csid), {
-        move |cs_id| {
-            async move {
-                if let Some(limit) = limit {
-                    let visited = visited.lock().unwrap();
-                    if visited.len() as u64 > limit {
-                        return Result::<_, Error>::Ok((None, vec![]));
+    let commits_not_derived_to_parents =
+        bounded_traversal::bounded_traversal_stream(100, Some(*start_csid), {
+            move |cs_id| {
+                async move {
+                    if let Some(limit) = limit {
+                        let visited = visited.lock().unwrap();
+                        if visited.len() as u64 > limit {
+                            return Result::<_, Error>::Ok((None, vec![]));
+                        }
                     }
-                }
 
-                let derive_node = DeriveNode::from_bonsai(&ctx, derived_mapping, &cs_id).await?;
+                    let derive_node =
+                        DeriveNode::from_bonsai(&ctx, derived_mapping, &cs_id).await?;
 
-                match derive_node {
-                    DeriveNode::Derived(_) => Ok((None, vec![])),
-                    DeriveNode::Bonsai(bcs_id) => {
-                        let parents = changeset_fetcher
-                            .get_parents(ctx.clone(), bcs_id)
-                            .compat()
-                            .await?;
+                    match derive_node {
+                        DeriveNode::Derived(_) => Ok((None, vec![])),
+                        DeriveNode::Bonsai(bcs_id) => {
+                            let parents = changeset_fetcher
+                                .get_parents(ctx.clone(), bcs_id)
+                                .compat()
+                                .await?;
 
-                        let parents_to_visit: Vec<_> = {
-                            let mut visited = visited.lock().unwrap();
-                            parents
-                                .iter()
-                                .cloned()
-                                .filter(|p| visited.insert(*p))
-                                .collect()
-                        };
-                        // Topological sort needs parents, so return them here
-                        Ok((Some((bcs_id, parents)), parents_to_visit))
+                            let parents_to_visit: Vec<_> = {
+                                let mut visited = visited.lock().unwrap();
+                                parents
+                                    .iter()
+                                    .cloned()
+                                    .filter(|p| visited.insert(*p))
+                                    .collect()
+                            };
+                            // Topological sort needs parents, so return them here
+                            Ok((Some((bcs_id, parents)), parents_to_visit))
+                        }
                     }
                 }
             }
-        }
-    })
-    .try_filter_map(|x| async { Ok(x) })
-    .try_collect()
-    .await?;
+        })
+        .try_filter_map(|x| async { Ok(x) })
+        .try_collect()
+        .await?;
 
-    Ok(res)
+    let topo_sorted_commit_graph =
+        sort_topological(&commits_not_derived_to_parents).expect("commit graph has cycles!");
+    let sz = topo_sorted_commit_graph.len();
+    if sz > 100 {
+        warn!(
+            ctx.logger(),
+            "derive_impl is called on a graph of size {}", sz
+        );
+    }
+    let all_csids: Vec<_> = topo_sorted_commit_graph
+        .into_iter()
+        // Note - sort_topological returns all nodes including commits which were already
+        // derived i.e. sort_topological({"a" -> ["b"]}) return ("a", "b").
+        // The '.filter()' below removes ["b"]
+        .filter(move |cs_id| commits_not_derived_to_parents.contains_key(cs_id))
+        .collect();
+
+    Ok(all_csids)
 }
 
 // Panics if any of the parents is not derived yet

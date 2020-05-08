@@ -109,7 +109,7 @@ pub trait BonsaiDerived: Sized + 'static + Send + Sync + Clone {
         limit: u64,
     ) -> Result<u64, DeriveError> {
         let mapping = Self::mapping(&ctx, &repo);
-        let underived = derive_impl::find_underived::<Self, Self::Mapping>(
+        let underived = derive_impl::find_topo_sorted_underived::<Self, Self::Mapping>(
             ctx,
             repo,
             &mapping,
