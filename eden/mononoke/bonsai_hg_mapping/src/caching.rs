@@ -20,7 +20,6 @@ use fbinit::FacebookInit;
 use fbthrift::compact_protocol;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::Future;
-use heapsize_derive::HeapSizeOf;
 use memcache::{KeyGen, MemcacheClient};
 use mercurial_types::{HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix};
 use mononoke_types::{ChangesetId, RepositoryId};
@@ -37,7 +36,7 @@ define_stats! {
 }
 
 /// Used for cache key generation
-#[derive(Debug, Clone, Eq, PartialEq, Hash, HeapSizeOf)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 enum BonsaiOrHgChangesetId {
     Bonsai(ChangesetId),
     Hg(HgChangesetId),

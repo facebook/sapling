@@ -7,7 +7,6 @@
 
 use anyhow::Result;
 use bytes::{Bytes, BytesMut};
-use heapsize_derive::HeapSizeOf;
 use std::cmp;
 
 use crate::delta::{Delta, Fragment};
@@ -39,7 +38,7 @@ pub fn wrap_deltas<I: IntoIterator<Item = Delta>>(
 }
 
 // Fragment Wrapper, it does not have actual data, only references to real data
-#[derive(Clone, Eq, Debug, PartialEq, Ord, PartialOrd, HeapSizeOf)]
+#[derive(Clone, Eq, Debug, PartialEq, Ord, PartialOrd)]
 pub struct FragmentWrapper {
     pub start: i64,
     pub end: i64,
@@ -47,7 +46,7 @@ pub struct FragmentWrapper {
     pub content_start: i64,
 }
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, HeapSizeOf, Default)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Default)]
 pub struct FragmentWrapperIterator {
     // Struct for holding Fragments and updating current head
     frags: Vec<FragmentWrapper>,

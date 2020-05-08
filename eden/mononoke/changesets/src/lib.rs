@@ -15,7 +15,6 @@ use context::{CoreContext, PerfCounterType};
 use fbthrift::compact_protocol;
 use futures::{future::ok, stream, Future, IntoFuture};
 use futures_ext::{try_boxfuture, BoxFuture, BoxStream, FutureExt, StreamExt};
-use heapsize_derive::HeapSizeOf;
 use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
 };
@@ -45,7 +44,7 @@ define_stats! {
     adds: timeseries(Rate, Sum),
 }
 
-#[derive(Abomonation, Clone, Debug, Eq, Hash, HeapSizeOf, PartialEq)]
+#[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct ChangesetEntry {
     pub repo_id: RepositoryId,
     pub cs_id: ChangesetId,

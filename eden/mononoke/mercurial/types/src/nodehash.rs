@@ -10,7 +10,6 @@
 use abomonation_derive::Abomonation;
 use anyhow::Result;
 use ascii::{AsciiStr, AsciiString};
-use heapsize_derive::HeapSizeOf;
 use manifest::Entry;
 use mononoke_types::FileType;
 use quickcheck::{Arbitrary, Gen};
@@ -37,7 +36,7 @@ pub const NULL_CSID: HgChangesetId = HgChangesetId(NULL_HASH);
 /// This is why the main constructors to create this structure are from_bytes and from_ascii_str
 /// which parses raw bytes or hex string to create HgNodeHash.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf, Abomonation)]
+#[derive(Abomonation)]
 pub struct HgNodeHash(pub(crate) Sha1);
 
 impl HgNodeHash {
@@ -218,7 +217,7 @@ impl Arbitrary for HgNodeHash {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf, Abomonation)]
+#[derive(Abomonation)]
 pub struct HgChangesetId(HgNodeHash);
 
 impl HgChangesetId {
@@ -332,7 +331,7 @@ impl Arbitrary for HgChangesetId {
 
 /// An identifier for a changeset hash prefix in Nercurial.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf, Abomonation)]
+#[derive(Abomonation)]
 pub struct HgChangesetIdPrefix(Sha1Prefix);
 
 impl HgChangesetIdPrefix {
@@ -373,7 +372,7 @@ impl Display for HgChangesetIdPrefix {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, HeapSizeOf)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 /// The type for resolving changesets by prefix of the hash
 pub enum HgChangesetIdsResolvedFromPrefix {
     /// Found single changeset
@@ -387,7 +386,6 @@ pub enum HgChangesetIdsResolvedFromPrefix {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(HeapSizeOf)]
 pub struct HgManifestId(HgNodeHash);
 
 impl HgManifestId {
@@ -437,7 +435,7 @@ impl Arbitrary for HgManifestId {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(Abomonation, HeapSizeOf)]
+#[derive(Abomonation)]
 pub struct HgFileNodeId(HgNodeHash);
 
 impl HgFileNodeId {
@@ -494,7 +492,7 @@ impl Arbitrary for HgFileNodeId {
     }
 }
 
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub enum HgEntryId {
     File(FileType, HgFileNodeId),
     Manifest(HgManifestId),

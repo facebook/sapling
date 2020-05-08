@@ -5,18 +5,15 @@
  * GNU General Public License version 2.
  */
 
-use std::{u64, usize};
+use std::u64;
 
-use heapsize_derive::HeapSizeOf;
 use serde_derive::Serialize;
 
 /// Generation number
 ///
 /// The generation number for a changeset is defined as the max of the changeset's parents'
 /// generation number plus 1; if there are no parents then it's 1.
-#[derive(
-    Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, HeapSizeOf, Serialize
-)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Serialize)]
 pub struct Generation(u64);
 
 impl Generation {

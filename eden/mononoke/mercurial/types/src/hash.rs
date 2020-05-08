@@ -12,7 +12,6 @@ use abomonation_derive::Abomonation;
 use anyhow::{bail, Error, Result};
 use ascii::{AsciiStr, AsciiString};
 use faster_hex::{hex_decode, hex_encode};
-use heapsize_derive::HeapSizeOf;
 use quickcheck::{single_shrinker, Arbitrary, Gen};
 use rand::Rng;
 use serde_derive::{Deserialize, Serialize};
@@ -31,7 +30,7 @@ pub const NULL: Sha1 = Sha1([0; SHA1_HASH_LENGTH_BYTES]);
 /// Mercurial bases all its hashing on SHA-1, but this type is only used to build
 /// more specific typed hashes.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[derive(Serialize, Deserialize, HeapSizeOf, Abomonation)]
+#[derive(Serialize, Deserialize, Abomonation)]
 pub struct Sha1([u8; SHA1_HASH_LENGTH_BYTES]);
 
 impl Sha1 {
@@ -174,7 +173,7 @@ impl Arbitrary for Sha1 {
 }
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[derive(Serialize, Deserialize, HeapSizeOf, Abomonation)]
+#[derive(Serialize, Deserialize, Abomonation)]
 /// Raw SHA-1 hash prefix.
 /// Internal implementation is the inclusive range of Sha1 objects.
 /// If can be build from a from a hex-encoded string (len <= SHA1_HASH_LENGTH_HEX (40))

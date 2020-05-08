@@ -8,7 +8,6 @@
 use std::fmt;
 
 use anyhow::{bail, Context, Result};
-use heapsize_derive::HeapSizeOf;
 use quickcheck::{empty_shrinker, single_shrinker, Arbitrary, Gen};
 use rand::{seq::SliceRandom, Rng};
 use serde_derive::Serialize;
@@ -171,9 +170,7 @@ impl Arbitrary for FileChange {
 ///
 /// Symlink is also the same as Regular, but the content of the file is interpolated into a path
 /// being traversed during lookup.
-#[derive(
-    Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize, HeapSizeOf
-)]
+#[derive(Debug, Clone, Copy, Eq, PartialEq, Hash, Ord, PartialOrd, Serialize)]
 pub enum FileType {
     Regular,
     Executable,

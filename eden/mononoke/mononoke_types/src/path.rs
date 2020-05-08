@@ -16,8 +16,6 @@ use std::slice::Iter;
 
 use anyhow::{bail, Context as _, Error, Result};
 use bytes::Bytes;
-use heapsize::HeapSizeOf;
-use heapsize_derive::HeapSizeOf;
 use lazy_static::lazy_static;
 use quickcheck::{Arbitrary, Gen};
 use rand::{seq::SliceRandom, Rng};
@@ -34,7 +32,7 @@ const MPATH_ELEMENT_MAX_LENGTH: usize = 255;
 
 /// A path or filename within Mononoke, with information about whether
 /// it's the root of the repo, a directory or a file.
-#[derive(Clone, Debug, PartialEq, Eq, Hash, HeapSizeOf, Serialize, Deserialize)]
+#[derive(Clone, Debug, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum RepoPath {
     // It is now *completely OK* to create a RepoPath directly. All MPaths are valid once
     // constructed.
@@ -275,12 +273,6 @@ impl MPathElement {
     }
 }
 
-impl HeapSizeOf for MPathElement {
-    fn heap_size_of_children(&self) -> usize {
-        self.len()
-    }
-}
-
 impl AsRef<[u8]> for MPathElement {
     #[inline]
     fn as_ref(&self) -> &[u8] {
@@ -299,7 +291,7 @@ impl From<MPathElement> for MPath {
 /// A path or filename within Mononoke (typically within manifests or changegroups).
 ///
 /// This is called `MPath` so that it can be differentiated from `std::path::Path`.
-#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash, HeapSizeOf)]
+#[derive(Clone, Ord, PartialOrd, Eq, PartialEq, Hash)]
 #[derive(Serialize, Deserialize)]
 pub struct MPath {
     elements: Vec<MPathElement>,
@@ -637,7 +629,7 @@ impl Iterator for ParentDirIterator {
 }
 
 /// Hash of the file path (used in unode)
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct MPathHash(Blake2);
 
 impl MPathHash {

@@ -16,7 +16,6 @@ use failure_ext::{Compat, FutureFailureErrorExt};
 use futures_ext::{BoxFuture, BoxStream, FutureExt, StreamExt};
 use futures_old::future::Shared;
 use futures_old::{Future, IntoFuture, Stream};
-use heapsize::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 
 use blobrepo::BlobRepo;
@@ -217,10 +216,6 @@ impl DeltaCache {
         let bytes = match self.bytes_cache.get(&node).cloned() {
             Some(bytes) => bytes,
             None => {
-                let dsize = delta.heap_size_of_children() as i64;
-                STATS::deltacache_dsize.add_value(dsize);
-                STATS::deltacache_dsize_large.add_value(dsize);
-
                 let vec = match base {
                     None => delta::apply(b"", &delta)
                         .with_context(|| format!("File content empty, delta: {:?}", delta))

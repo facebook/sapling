@@ -35,8 +35,6 @@ abomonation_derive = "0.5"
 anyhow = "1.0"
 bytes = { version = "0.5", features = ["serde"] }
 futures-old = { package = "futures", version = "0.1" }
-heapsize = "0.4"
-heapsize_derive = "0.1"
 thiserror = "1.0"
 tokio = "0.1"
 tokio-compat = "0.1"

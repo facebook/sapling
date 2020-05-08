@@ -28,8 +28,6 @@ bytes = { version = "0.5", features = ["serde"] }
 chrono = { version="0.4", features=["serde"] }
 faster-hex = "0.4"
 futures = "0.1"
-heapsize = "0.4"
-heapsize_derive = "0.1"
 itertools = "0.8"
 lazy_static = "1.0"
 quickcheck = "0.9"

@@ -17,7 +17,6 @@ use blake2::{
     VarBlake2b,
 };
 use faster_hex::{hex_decode, hex_encode};
-use heapsize_derive::HeapSizeOf;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
 
@@ -50,8 +49,7 @@ pub const BLAKE2_HASH_LENGTH_HEX: usize = BLAKE2_HASH_LENGTH_BYTES * 2;
     PartialOrd,
     Hash,
     Serialize,
-    Deserialize,
-    HeapSizeOf
+    Deserialize
 )]
 pub struct Blake2([u8; BLAKE2_HASH_LENGTH_BYTES]);
 
@@ -222,8 +220,7 @@ impl Arbitrary for Blake2 {
     PartialOrd,
     Hash,
     Serialize,
-    Deserialize,
-    HeapSizeOf
+    Deserialize
 )]
 pub struct Blake2Prefix(Blake2, Blake2);
 
@@ -327,7 +324,7 @@ impl Debug for Blake2Prefix {
 macro_rules! impl_hash {
     ($type:ident, $size:literal, $error:ident) => {
         #[derive(Abomonation, Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-        #[derive(Serialize, Deserialize, HeapSizeOf)]
+        #[derive(Serialize, Deserialize)]
         pub struct $type([u8; $size]);
 
         impl $type {
@@ -438,7 +435,7 @@ impl_hash!(GitSha1, 20, InvalidGitSha1Input);
 /// string. Given that we know what the prefix is, we never explicitly store it so the objects
 /// can be shared with non-Git uses.
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Hash)]
-#[derive(Serialize, Deserialize, HeapSizeOf)]
+#[derive(Serialize, Deserialize)]
 pub struct RichGitSha1 {
     sha1: GitSha1,
     ty: &'static str,

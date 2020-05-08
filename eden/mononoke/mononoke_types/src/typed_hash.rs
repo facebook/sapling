@@ -15,7 +15,6 @@ use blobstore::{Blobstore, Loadable, LoadableError, Storable};
 use context::CoreContext;
 use futures::Future;
 use futures_ext::{BoxFuture, FutureExt};
-use heapsize_derive::HeapSizeOf;
 use quickcheck::{empty_shrinker, Arbitrary, Gen};
 
 use crate::{
@@ -53,37 +52,15 @@ pub trait MononokeId: Copy + Sync + Send + 'static {
 }
 
 /// An identifier for a changeset in Mononoke.
-#[derive(
-    Clone,
-    Copy,
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Debug,
-    Hash,
-    HeapSizeOf,
-    Abomonation
-)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, Abomonation)]
 pub struct ChangesetId(Blake2);
 
 /// An identifier for a changeset hash prefix in Mononoke.
-#[derive(
-    Clone,
-    Copy,
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Debug,
-    Hash,
-    HeapSizeOf,
-    Abomonation
-)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, Abomonation)]
 pub struct ChangesetIdPrefix(Blake2Prefix);
 
 /// The type for resolving changesets by prefix of the hash
-#[derive(Debug, Clone, Eq, PartialEq, Hash, HeapSizeOf)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum ChangesetIdsResolvedFromPrefix {
     /// Found single changeset
     Single(ChangesetId),
@@ -96,35 +73,35 @@ pub enum ChangesetIdsResolvedFromPrefix {
 }
 
 /// An identifier for file contents in Mononoke.
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct ContentId(Blake2);
 
 /// An identifier for a chunk of a file's contents.
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct ContentChunkId(Blake2);
 
 /// An identifier for mapping from a ContentId to various aliases for that content
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct ContentMetadataId(Blake2);
 
 /// An identifier for raw bundle2 contents in Mononoke
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct RawBundle2Id(Blake2);
 
 /// An identifier for a file unode
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct FileUnodeId(Blake2);
 
 /// An identifier for a manifest unode
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct ManifestUnodeId(Blake2);
 
 /// An identifier for a deleted files manifest
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct DeletedManifestId(Blake2);
 
 /// An identifier for an fsnode
-#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash, HeapSizeOf)]
+#[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
 pub struct FsnodeId(Blake2);
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]

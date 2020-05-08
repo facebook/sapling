@@ -7,7 +7,6 @@
 
 use bytes::Bytes;
 use futures::{Future, Stream};
-use heapsize_derive::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 use serde_derive::{Deserialize, Serialize};
 
@@ -19,7 +18,7 @@ use crate::nodehash::HgNodeHash;
 use types::Parents as HgTypesParents;
 
 #[derive(Clone, Copy, Eq, PartialEq, Ord, PartialOrd, Debug, Hash)]
-#[derive(Serialize, Deserialize, HeapSizeOf)]
+#[derive(Serialize, Deserialize)]
 pub enum HgParents {
     None,
     One(HgNodeHash),

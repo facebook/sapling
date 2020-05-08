@@ -20,7 +20,6 @@ use cloned::cloned;
 use context::{CoreContext, PerfCounterType};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future, Future, IntoFuture};
-use heapsize_derive::HeapSizeOf;
 use mercurial_types::{
     HgChangesetId, HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgNodeHash,
 };
@@ -42,7 +41,7 @@ define_stats! {
     get_many_hg_by_prefix: timeseries(Rate, Sum),
 }
 
-#[derive(Abomonation, Clone, Debug, Eq, Hash, HeapSizeOf, PartialEq)]
+#[derive(Abomonation, Clone, Debug, Eq, Hash, PartialEq)]
 pub struct BonsaiHgMappingEntry {
     pub repo_id: RepositoryId,
     pub hg_cs_id: HgChangesetId,
@@ -75,7 +74,7 @@ impl BonsaiHgMappingEntry {
     }
 }
 
-#[derive(Debug, Clone, Eq, PartialEq, Hash, HeapSizeOf)]
+#[derive(Debug, Clone, Eq, PartialEq, Hash)]
 pub enum BonsaiOrHgChangesetIds {
     Bonsai(Vec<ChangesetId>),
     Hg(Vec<HgChangesetId>),

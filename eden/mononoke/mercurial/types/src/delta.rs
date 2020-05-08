@@ -6,7 +6,6 @@
  */
 
 use anyhow::{bail, ensure, format_err, Context, Result};
-use heapsize_derive::HeapSizeOf;
 use quickcheck::{Arbitrary, Gen};
 use rand::Rng;
 use rand_distr::{Distribution, LogNormal};
@@ -15,7 +14,7 @@ use crate::errors::ErrorKind;
 
 use super::delta_apply::{mpatch_fold, wrap_deltas};
 
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, HeapSizeOf)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Delta {
     // Fragments should be in sorted order by start offset and should not overlap.
     frags: Vec<Fragment>,
@@ -124,7 +123,7 @@ impl Arbitrary for Delta {
 }
 
 /// Represents a single contiguous modified region of text.
-#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd, HeapSizeOf)]
+#[derive(Clone, Debug, Eq, PartialEq, Ord, PartialOrd)]
 pub struct Fragment {
     pub start: usize,
     pub end: usize,

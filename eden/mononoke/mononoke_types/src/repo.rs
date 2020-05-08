@@ -7,7 +7,6 @@
 
 use abomonation_derive::Abomonation;
 use anyhow::Error;
-use heapsize_derive::HeapSizeOf;
 use serde_derive::Serialize;
 use std::default::Default;
 use std::fmt;
@@ -25,7 +24,6 @@ use crate::errors::ErrorKind;
     PartialOrd,
     Debug,
     Hash,
-    HeapSizeOf,
     Abomonation,
     Serialize
 )]
