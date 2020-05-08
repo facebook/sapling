@@ -11,7 +11,7 @@
 use anyhow::{anyhow, format_err, Error};
 use blame::BlameRoot;
 use blobrepo::{BlobRepo, DangerousOverride};
-use bookmarks::{BookmarkPrefix, Bookmarks, Freshness};
+use bookmarks::{BookmarkPrefix, Freshness};
 use bytes::Bytes;
 use cacheblob::{dummy::DummyLease, LeaseOps};
 use changesets::{
@@ -21,7 +21,6 @@ use clap::{Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, helpers};
 use context::CoreContext;
-use dbbookmarks::SqlBookmarks;
 use derived_data::BonsaiDerived;
 use derived_data_utils::{
     derived_data_utils, derived_data_utils_unsafe, DerivedUtils, POSSIBLE_DERIVED_TYPES,
@@ -30,7 +29,7 @@ use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, try_join, try_join3, TryFutureExt},
+    future::{self, try_join, TryFutureExt},
     stream::{self, StreamExt, TryStreamExt},
     Stream,
 };
@@ -302,13 +301,11 @@ async fn run_subcmd<'a>(
             .await
         }
         (SUBCOMMAND_TAIL, Some(_sub_m)) => {
-            let (repo, unredacted_repo, bookmarks) = try_join3(
-                args::open_repo(fb, &logger, &matches).compat(),
-                args::open_repo_unredacted(fb, &logger, &matches).compat(),
-                args::open_sql::<SqlBookmarks>(fb, &matches).compat(),
-            )
-            .await?;
-            subcommand_tail(&ctx, &repo, &unredacted_repo, &bookmarks).await
+            let unredacted_repo = args::open_repo_unredacted(fb, &logger, &matches)
+                .compat()
+                .await?;
+
+            subcommand_tail(&ctx, &unredacted_repo).await
         }
         (SUBCOMMAND_PREFETCH_COMMITS, Some(sub_m)) => {
             let out_filename = sub_m
@@ -473,40 +470,27 @@ async fn subcommand_backfill(
     Ok(())
 }
 
-async fn subcommand_tail(
-    ctx: &CoreContext,
-    repo: &BlobRepo,
-    unredacted_repo: &BlobRepo,
-    bookmarks: &SqlBookmarks,
-) -> Result<(), Error> {
-    let derive_utils: Vec<(Arc<dyn DerivedUtils>, BlobRepo)> = repo
+async fn subcommand_tail(ctx: &CoreContext, unredacted_repo: &BlobRepo) -> Result<(), Error> {
+    let derive_utils: Vec<Arc<dyn DerivedUtils>> = unredacted_repo
         .get_derived_data_config()
         .derived_data_types
         .clone()
         .into_iter()
-        .map(|name| {
-            let maybe_unredacted_repo = if UNREDACTED_TYPES.contains(&name.as_ref()) {
-                unredacted_repo.clone()
-            } else {
-                repo.clone()
-            };
-            let derive = derived_data_utils(repo.clone(), name)?;
-            Ok((derive, maybe_unredacted_repo))
-        })
+        .map(|name| derived_data_utils(unredacted_repo.clone(), name))
         .collect::<Result<_, Error>>()?;
 
     loop {
-        tail_one_iteration(ctx, repo, bookmarks, &derive_utils).await?;
+        tail_one_iteration(ctx, unredacted_repo, &derive_utils).await?;
     }
 }
 
 async fn tail_one_iteration(
     ctx: &CoreContext,
     repo: &BlobRepo,
-    bookmarks: &SqlBookmarks,
-    derive_utils: &[(Arc<dyn DerivedUtils>, BlobRepo)],
+    derive_utils: &[Arc<dyn DerivedUtils>],
 ) -> Result<(), Error> {
-    let heads = bookmarks
+    let heads = repo
+        .get_bookmarks_object()
         .list_publishing_by_prefix(
             ctx.clone(),
             &BookmarkPrefix::empty(),
@@ -521,23 +505,19 @@ async fn tail_one_iteration(
     let pending_nested_futs: Vec<_> = derive_utils
         .iter()
         .map({
-            |(derive, maybe_unredacted_repo)| {
+            |derive| {
                 let heads = heads.clone();
                 async move {
                     // create new context so each derivation would have its own trace
                     let ctx = CoreContext::new_with_logger(ctx.fb, ctx.logger().clone());
                     let pending = derive
-                        .pending(ctx.clone(), maybe_unredacted_repo.clone(), heads)
+                        .pending(ctx.clone(), repo.clone(), heads)
                         .compat()
                         .await?;
 
                     let derived = pending
                         .into_iter()
-                        .map(|csid| {
-                            derive
-                                .derive(ctx.clone(), maybe_unredacted_repo.clone(), csid)
-                                .compat()
-                        })
+                        .map(|csid| derive.derive(ctx.clone(), repo.clone(), csid).compat())
                         .collect::<Vec<_>>();
 
                     let res: Result<_, Error> = Ok(derived);
@@ -610,8 +590,22 @@ mod tests {
     use futures_ext::BoxFuture;
     use mercurial_types::HgChangesetId;
     use std::str::FromStr;
+    use tests_utils::resolve_cs_id;
     use tokio_compat::runtime::Runtime;
     use unodes::RootUnodeManifestId;
+
+    #[fbinit::compat_test]
+    async fn test_tail_one_iteration(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb).await;
+        let derived_utils = derived_data_utils(repo.clone(), RootUnodeManifestId::NAME)?;
+        let master = resolve_cs_id(&ctx, &repo, "master").await?;
+        assert!(!RootUnodeManifestId::is_derived(&ctx, &repo, &master).await?);
+        tail_one_iteration(&ctx, &repo, &[derived_utils]).await?;
+        assert!(RootUnodeManifestId::is_derived(&ctx, &repo, &master).await?);
+
+        Ok(())
+    }
 
     #[fbinit::test]
     fn test_backfill_data_latest(fb: FacebookInit) -> Result<(), Error> {
