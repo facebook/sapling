@@ -21,10 +21,10 @@ impl<'a> Parents<'a> {
     pub fn new(ctx: &'a CoreContext, blob_repo: &'a BlobRepo) -> Parents<'a> {
         Parents { ctx, blob_repo }
     }
-    pub async fn get(&self, changeset_id: ChangesetId) -> Result<Vec<ChangesetId>> {
+    pub async fn get(&self, cs_id: ChangesetId) -> Result<Vec<ChangesetId>> {
         let parents = self
             .blob_repo
-            .get_changeset_parents_by_bonsai(self.ctx.clone(), changeset_id)
+            .get_changeset_parents_by_bonsai(self.ctx.clone(), cs_id)
             .compat()
             .await?;
         Ok(parents)
