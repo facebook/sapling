@@ -13,11 +13,24 @@ import shlex
 import socket
 import time
 from enum import Enum
+from textwrap import wrap
 from typing import Any, Dict, List, Optional, Tuple
 
 from facebook.eden.ttypes import AccessCounts
 
 from . import cmd_util
+
+
+class State(Enum):
+    INIT = "init"  # setting up
+    MAIN = "main"  # normal operation
+    HELP = "help"  # help window
+    DONE = "done"  # should quit
+
+
+HELP_SECTION_WHAT = "what "
+HELP_SECTION_WHY = "why "
+HELP_SECTION_CONCERN = "concern? "
 
 
 Row = collections.namedtuple(
@@ -122,6 +135,13 @@ COLUMN_FORMATTING = Row(
     fuse_last_access=format_last_access,
     command=lambda x: x,
 )
+
+ESC_KEY = 27
+# by default curses will wait 1000 ms before it delivers the
+# escape key press, this is to allow escape key sequences, we are
+# reducing this waiting time here to make leaving the help page more
+# snappy
+ESC_DELAY_MS = 300
 
 DEFAULT_COLOR_PAIR = 0  # white text, black background
 COLOR_SELECTED = 1
@@ -261,6 +281,26 @@ class Window:
         self._write(self.current_line, x, line, max_width, attr)
         self.write_new_line()
 
+    def write_labeled_rows(self, rows):
+        longest_row_name = max(len(row_name) for row_name in rows)
+        for row_name in rows:
+            self.write_part_of_line(f"{row_name:<{longest_row_name}}", longest_row_name)
+            self.write_lines(rows[row_name])
+
+    # splits the string lines into lines of length at most max_width without
+    # spreading words accross lines
+    # each line will be indented at the `current_x_offset`
+    def write_lines(
+        self, lines: str, max_width: int = -1, attr: Optional[int] = None
+    ) -> None:
+        if max_width == -1:
+            max_width = self.width - self.current_x_offset
+        split_lines = wrap(lines, max_width)
+        indent = self.current_x_offset
+        for line in split_lines:
+            self.current_x_offset = indent
+            self.write_line(line, max_width, attr)
+
     def _write(
         self, y: int, x: int, text: str, max_width: int, attr: Optional[int] = None
     ):
@@ -367,7 +407,9 @@ class Top:
 
         self.curses = curses
 
-        self.running = False
+        os.environ.setdefault("ESCDELAY", str(ESC_DELAY_MS))
+
+        self.state = State.INIT
         self.ephemeral = False
         self.refresh_rate = 1
 
@@ -380,7 +422,7 @@ class Top:
         self.fuse_requests_summary = {}
 
     def start(self, args: argparse.Namespace) -> int:
-        self.running = True
+        self.state = State.MAIN
         self.ephemeral = args.ephemeral
         self.refresh_rate = args.refresh_rate
 
@@ -405,12 +447,18 @@ class Top:
             )
             self.curses.init_pair(UPPER_WARN_THRESHOLD_COLOR, self.curses.COLOR_RED, -1)
 
-            while self.running:
-                self.update(client)
-                self.render(window)
+            while self.running():
+                if self.state == State.MAIN:
+                    self.update(client)
+                    self.render(window)
+                elif self.state == State.HELP:
+                    self.render_help(window)
                 self.get_keypress(window)
 
         return mainloop
+
+    def running(self):
+        return self.state == State.MAIN or self.state == State.HELP
 
     def update(self, client):
         if self.ephemeral:
@@ -725,22 +773,150 @@ class Top:
             window.write_part_of_line(text, space + 1, color | style)
         window.write_new_line()
 
-    def get_keypress(self, window: Window) -> None:
+    def render_help(self, window):
+        window.reset()
+
+        self.render_top_bar(window)
+        window.write_new_line()
+
+        window.start_scrollable_section(window.get_remaining_rows() - 1)
+        self.render_fuse_help(window)
+        window.write_new_line()
+        self.render_import_help(window)
+        window.write_new_line()
+        self.render_process_table_help(window)
+        window.end_scrollable_section()
+
+        instruction_line = (
+            "use up and down arrow keys to scoll, press ESC to return to the "
+            "main page"
+        )
+        window.write_line(instruction_line)
+
+        window.refresh()
+
+    def render_fuse_help(self, window):
+        fuse_req_header = "Outstanding FUSE request:"
+        fuse_what = (
+            "This section contains the total number and duration "
+            "of all the current fuse requests. 'total pending' refers to "
+            "all the current FUSE requests that are queued or live from the "
+            "kernels view. 'live' only refers to FUSE requests that are "
+            "currently being processed by eden."
+        )
+        fuse_why = (
+            "This indicates of for the health of the communication with FUSE, "
+            "processing of FUSE requests, as well as the overall health of "
+            "EdenFS, as all direct user interaction with the filesystem goes "
+            "through here."
+        )
+        fuse_concern = (
+            "When the duration of the longest request starts to get large or "
+            "the number of fuse requests is stuck this is concerning. The "
+            "metrics will turn yellow when they are abnormal and red if they are "
+            "concerning."
+        )
+        window.write_line(
+            fuse_req_header, len(fuse_req_header), self.curses.A_UNDERLINE
+        )
+        window.write_labeled_rows(
+            {
+                HELP_SECTION_WHAT: fuse_what,
+                HELP_SECTION_WHY: fuse_why,
+                HELP_SECTION_CONCERN: fuse_concern,
+            }
+        )
+
+    def render_import_help(self, window):
+        object_imports_header = "Outstanding object imports:"
+        import_what = (
+            "This section contains the total number and duration "
+            "of all the current object imports from the backing store. "
+            "'total pending' refers to all the imports which queued, checking "
+            "cache, or live. 'live' only refers to requests that are importing "
+            "from the backing store. "
+        )
+        import_why = (
+            "This is useful as an indicator of for the health of the imports "
+            "process. Live imports indicate if there are issues importing from "
+            "hg, pending indicate if there is a problem with importing in "
+            "general. If the pending imports metrics are concerning but the live "
+            "metrics are not, this indicates an issue with queueing, possibly "
+            "that a request is being starved :("
+        )
+        import_concern = (
+            "When the duration of the longest import starts to get large or "
+            "the number of fuse requests is stuck this is concerning. The "
+            "metrics will turn yellow when they are abnormal and red if they are "
+            "concerning."
+        )
+        window.write_line(
+            object_imports_header, len(object_imports_header), self.curses.A_UNDERLINE
+        )
+        window.write_labeled_rows(
+            {
+                HELP_SECTION_WHAT: import_what,
+                HELP_SECTION_WHY: import_why,
+                HELP_SECTION_CONCERN: import_concern,
+            }
+        )
+
+    def render_process_table_help(self, window):
+        process_table_header = "Process table:"
+        process_what = (
+            "This section contains a list of all the process that have accessed "
+            "eden through FUSE since eden top started. The columns in order are  "
+            "the process id of the accessing process, the name of the eden  "
+            "checkout accessed, number of FUSE reads, FUSE writes, total FUSE  "
+            "requests, number of imports from the backing store, sum of the "
+            "duration of all the FUSE requests, how long ago the last FUSE "
+            "request was, and the command that was run. Use left and right "
+            "arrow keys  to change the column the processes are sorted by "
+            "(highlighted in green). Use up and down arrow keys to move through "
+            "the list."
+        )
+        process_why = (
+            "This can be used to see what work loads eden is processing, to see "
+            "that it is making progress, and give more details on what might have "
+            "caused eden issues when summary metrics are concerning."
+        )
+        process_concern = (
+            "If the summary stats show something concerning this can tell you "
+            "what processes may be causing the issue."
+        )
+        window.write_line(
+            process_table_header, len(process_table_header), self.curses.A_UNDERLINE
+        )
+        window.write_labeled_rows(
+            {
+                HELP_SECTION_WHAT: process_what,
+                HELP_SECTION_WHY: process_why,
+                HELP_SECTION_CONCERN: process_concern,
+            }
+        )
+
+    def get_keypress(self, window):
         key = window.get_keypress()
         if key == self.curses.KEY_RESIZE:
             self.curses.update_lines_cols()
             window.screen_resize()
-        elif key == ord("q"):
-            self.running = False
-        elif key == self.curses.KEY_LEFT:
+        elif key == ord("q") and self.state == State.MAIN:  # quit
+            self.state = State.DONE
+        elif key == ord("h"):  # help page
+            self.state = State.HELP
+            window.reset_offset()
+        elif key == ESC_KEY and self.state == State.HELP:  # leave help page
+            self.state = State.MAIN
+            window.reset_offset()
+        elif self.state == State.MAIN and key == self.curses.KEY_LEFT:
             self.move_selector(-1)
             window.reset_offset()
-        elif key == self.curses.KEY_RIGHT:
+        elif self.state == State.MAIN and key == self.curses.KEY_RIGHT:
             self.move_selector(1)
             window.reset_offset()
-        elif key == self.curses.KEY_UP:
+        elif key == self.curses.KEY_UP:  # scroll up
             window.move_scrollable_up()
-        elif key == self.curses.KEY_DOWN:
+        elif key == self.curses.KEY_DOWN:  # scroll down
             window.move_scrollable_down()
 
     def move_selector(self, dx: int) -> None:
