@@ -70,6 +70,59 @@ COLUMN_REVERSE_SORT = Row(
     command=False,
 )
 
+
+def format_mount(mount):
+    return os.fsdecode(os.path.basename(mount))
+
+
+def format_duration(duration):
+    modulos = (1000, 1000, 1000, 60, 60, 24)
+    suffixes = ("ns", "us", "ms", "s", "m", "h", "d")
+    return format_time(duration, modulos, suffixes)
+
+
+def format_last_access(last_access):
+    elapsed = int(time.monotonic() - last_access)
+
+    modulos = (60, 60, 24)
+    suffixes = ("s", "m", "h", "d")
+    return format_time(elapsed, modulos, suffixes)
+
+
+def format_time(elapsed, modulos, suffixes):
+    for modulo, suffix in zip(modulos, suffixes):
+        if elapsed < modulo:
+            return f"{elapsed}{suffix}"
+        elapsed //= modulo
+
+    last_suffix = suffixes[-1]
+    return f"{elapsed}{last_suffix}"
+
+
+def format_cmd(cmd):
+    args = os.fsdecode(cmd).split("\x00")
+
+    # Focus on just the basename as the paths can be quite long
+    cmd = args[0]
+    if os.path.isabs(cmd):
+        cmd = os.path.basename(cmd)
+
+    # Show cmdline args too, if they exist
+    return " ".join(shlex.quote(p) for p in [cmd] + args[1:])
+
+
+COLUMN_FORMATTING = Row(
+    top_pid=lambda x: x,
+    mount=lambda x: x,
+    fuse_reads=lambda x: x,
+    fuse_writes=lambda x: x,
+    fuse_total=lambda x: x,
+    fuse_backing_store_imports=lambda x: x,
+    fuse_duration=format_duration,
+    fuse_last_access=format_last_access,
+    command=lambda x: x,
+)
+
 DEFAULT_COLOR_PAIR = 0  # white text, black background
 COLOR_SELECTED = 1
 LOWER_WARN_THRESHOLD_COLOR = 2
@@ -99,6 +152,119 @@ IMPORT_TIME_LOWER_WARN_THRESHOLD = 10  # seconds
 IMPORT_TIME_UPPER_WARN_THRESHOLD = 30  # seconds
 
 
+class Window:
+    """
+    Class to manage writing to the screen.
+    To write to the screen: reset, write lines from top down, and refresh
+
+      ```
+      window.reset()
+
+      window.write_line(...)
+      ...
+      window.write_line(...)
+
+      window.refresh()
+      ```
+    """
+
+    def __init__(self, stdscr, refresh_rate: int) -> None:
+        self.stdscr = stdscr
+        self.refresh_rate = refresh_rate
+        self.stdscr.timeout(self.refresh_rate * 1000)
+
+        self.height = 0
+        self.width = 0
+        self._update_screen_size()
+
+        self.current_line = 0  # current line printed
+        self.current_x_offset = 0  # horizontal position up to which
+        # has been printed on the current line
+
+    def _update_screen_size(self) -> None:
+        self.height, self.width = self.stdscr.getmaxyx()
+
+    def screen_resize(self) -> None:
+        self._update_screen_size()
+        self.stdscr.redrawwin()
+
+    def reset(self) -> None:
+        self.stdscr.erase()
+        self.current_line = 0
+        self.current_x_offset = 0
+
+    def refresh(self) -> None:
+        self.stdscr.refresh()
+
+    def get_height(self) -> int:
+        return self.height
+
+    def get_width(self) -> int:
+        return self.width
+
+    def get_remaining_rows(self) -> int:
+        return self.height - self.current_line
+
+    def get_remaining_columns(self) -> int:
+        return self.width - self.current_x_offset
+
+    def write_new_line(self, scollable_ended: bool = False) -> None:
+        self.current_line += 1
+        self.current_x_offset = 0
+
+    # note: this will start writing at what ever the `current_x_offset` is, it
+    # will not start writing on a new line, adds a new line to the end of the
+    # line printed
+    def write_line(
+        self, line: str, max_width: int = -1, attr: Optional[int] = None
+    ) -> None:
+        if max_width == -1:
+            max_width = self.width - self.current_x_offset
+        self._write(self.current_line, self.current_x_offset, line, max_width, attr)
+        self.write_new_line()
+
+    # prints starting from the `current_x_offset`, does NOT add a newline
+    def write_part_of_line(
+        self, part, max_width: int, attr: Optional[int] = None
+    ) -> None:
+        self._write(self.current_line, self.current_x_offset, part, max_width, attr)
+        self.current_x_offset += min(max_width, len(part))
+
+    # prints a line with the line right justified, adds a new line after printing
+    # the line
+    def write_line_right_justified(
+        self, line, max_width: int, attr: Optional[int] = None
+    ) -> None:
+        max_width = min(max_width, self.width - self.current_x_offset)
+        width = min(max_width, len(line))
+        x = self.width - width
+        self._write(self.current_line, x, line, max_width, attr)
+        self.write_new_line()
+
+    def _write(
+        self, y: int, x: int, text: str, max_width: int, attr: Optional[int] = None
+    ) -> None:
+        try:
+            if attr is None:
+                attr = DEFAULT_COLOR_PAIR
+            self.stdscr.addnstr(y, x, text, max_width, attr)
+        except Exception as ex:
+            # When attempting to write to the very last terminal cell curses will
+            # successfully display the data but will return an error since the logical
+            # cursor cannot be advanced to the next cell.
+            #
+            # We just ignore the error to handle this case.
+            # If you do want to look at errors during development you can enable the
+            # following code, but note that the error messages from the curses module
+            # usually are not very informative.
+            if False:
+                with open("/tmp/eden_top.log", "a") as f:
+                    f.write(f"error at ({y}, {x}): {ex}\n")
+
+    def get_keypress(self) -> int:
+        return int(self.stdscr.getch())
+
+
 class Top:
     def __init__(self):
         import curses
@@ -108,17 +274,11 @@ class Top:
         self.running = False
         self.ephemeral = False
         self.refresh_rate = 1
-        self.current_line = 0  # current line printed
-        self.current_x_offset = 0  # horizontal position up to which
-        # has been printed on the current line
 
         # Processes are stored by PID
         self.processes: Dict[int, Process] = {}
         self.rows: List = []
         self.selected_column = COLUMN_TITLES.index("FUSE LAST")
-
-        self.height = 0
-        self.width = 0
 
         self.pending_imports = {}
         self.fuse_requests_summary = {}
@@ -138,8 +298,8 @@ class Top:
 
     def run(self, client):
         def mainloop(stdscr):
-            self.height, self.width = stdscr.getmaxyx()
-            stdscr.timeout(self.refresh_rate * 1000)
+            window = Window(stdscr, self.refresh_rate)
+
             self.curses.curs_set(0)
 
             self.curses.use_default_colors()
@@ -151,8 +311,8 @@ class Top:
 
             while self.running:
                 self.update(client)
-                self.render(stdscr)
-                self.get_keypress(stdscr)
+                self.render(window)
+                self.get_keypress(window)
 
         return mainloop
 
@@ -271,98 +431,102 @@ class Top:
         except KeyError:
             return None
 
-    def render(self, stdscr):
-        stdscr.erase()
-        self.reset()
+    def render(self, window: Window) -> None:
+        window.reset()
 
-        self.render_top_bar(stdscr)
-        self.write_new_line()
-        self.render_summary_section(stdscr)
+        self.render_top_bar(window)
+        window.write_new_line()
+        self.render_summary_section(window)
         # TODO: daemon memory/inode stats on line 2
-        self.render_column_titles(stdscr)
-        self.render_rows(stdscr)
+        self.render_column_titles(window)
 
-        stdscr.refresh()
+        self.render_rows(window)
 
-    def render_top_bar(self, stdscr):
+        window.refresh()
+
+    def render_top_bar(self, window: Window) -> None:
+        width = window.get_width()
         TITLE = "eden top"
-        hostname = socket.gethostname()[: self.width]
-        date = datetime.datetime.now().strftime("%x %X")[: self.width]
-        extra_space = self.width - len(TITLE + hostname + date)
+        hostname = socket.gethostname()[:width]
+        date = datetime.datetime.now().strftime("%x %X")[:width]
+        extra_space = width - len(TITLE + hostname + date)
 
         # left: title
-        self.write_part_of_line(stdscr, TITLE + " " * (extra_space // 2), self.width)
+        window.write_part_of_line(TITLE + " " * (extra_space // 2), width)
         if extra_space >= 0:
             # center: date
-            self.write_part_of_line(stdscr, date, self.width)
+            window.write_part_of_line(date, width)
             # right: hostname
-            self.write_line_right_justified(stdscr, hostname, self.width)
+            window.write_line_right_justified(hostname, width)
 
-    def render_summary_section(self, stdscr):
+    def render_summary_section(self, window: Window) -> None:
         len_longest_stage = max(
             len(self.get_display_name_for_import_stage(stage)) for stage in RequestStage
         )
 
         fuse_request_header = "outstanding fuse requests:"
-        self.write_line(
-            stdscr, fuse_request_header, self.width, self.curses.A_UNDERLINE
+        window.write_line(
+            fuse_request_header, window.get_width(), self.curses.A_UNDERLINE
         )
-        self.render_fuse_request_section(stdscr, len_longest_stage)
+        self.render_fuse_request_section(window, len_longest_stage)
 
         imports_header = "outstanding object imports:"
-        self.write_line(stdscr, imports_header, self.width, self.curses.A_UNDERLINE)
-        self.render_import_section(stdscr, len_longest_stage)
+        window.write_line(imports_header, window.get_width(), self.curses.A_UNDERLINE)
+        self.render_import_section(window, len_longest_stage)
 
-    def render_fuse_request_section(self, stdscr, len_longest_stage):
-        section_size = self.width // 2
+    def render_fuse_request_section(self, window, len_longest_stage):
+        section_size = window.get_width() // 2
         separator = ""
         for stage in RequestStage:
-            self.write_part_of_line(stdscr, separator, len(separator))
+            window.write_part_of_line(separator, len(separator))
             self.render_fuse_request_part(
-                stdscr, stage, len_longest_stage, section_size - len(separator)
+                window, stage, len_longest_stage, section_size - len(separator)
             )
 
             separator = "  |  "
-        self.write_new_line()
+        window.write_new_line()
 
     def render_fuse_request_part(
-        self, stdscr, import_stage, len_longest_stage, section_size
+        self, window, import_stage, len_longest_stage, section_size
     ):
         stage_display = self.get_display_name_for_import_stage(import_stage)
         header = f"{stage_display:<{len_longest_stage}} -- "
-        self.write_part_of_line(stdscr, header, len(header))
+        window.write_part_of_line(header, len(header))
 
         self.render_request_metrics(
-            stdscr, self.fuse_requests_summary[import_stage], section_size - len(header)
+            window, self.fuse_requests_summary[import_stage], section_size - len(header)
         )
 
-    def render_import_section(self, stdscr, len_longest_stage):
+    def render_import_section(self, window, len_longest_stage):
         for import_stage in RequestStage:
-            self.render_import_row(stdscr, import_stage, len_longest_stage)
+            self.render_import_row(window, import_stage, len_longest_stage)
 
-    def render_import_row(self, stdscr, import_stage, len_longest_stage):
+    def render_import_row(
+        self, window: Window, import_stage: RequestStage, len_longest_stage: int
+    ) -> None:
+        width = window.get_width()
         stage_display = self.get_display_name_for_import_stage(import_stage)
         header = f"{stage_display:<{len_longest_stage}} -- "
-        self.write_part_of_line(stdscr, header, len(header))
+        window.write_part_of_line(header, len(header))
 
-        whole_mid_section_size = self.width - len(header)
+        whole_mid_section_size = width - len(header)
         mid_section_size = whole_mid_section_size // 3
 
         separator = ""
         for import_type in ImportObject:
             label = f"{separator}{import_type.value}: "
-            self.write_part_of_line(stdscr, label, len(label))
+            window.write_part_of_line(label, len(label))
 
             self.render_request_metrics(
-                stdscr,
+                window,
                 self.pending_imports[import_stage][import_type],
                 mid_section_size - len(label),
             )
 
             separator = " | "
-        self.write_new_line()
+        window.write_new_line()
 
-    def render_request_metrics(self, stdscr, metrics, section_size):
+    def render_request_metrics(self, window, metrics, section_size):
         # split the section between the number of imports and
         # the duration of the longest import
         request_count_size = section_size // 2
@@ -400,27 +564,29 @@ class Top:
         longest_request_display = f"{longest_request_display:>{request_time_size}}"
 
         request_display = f"{requests_for_type_display}{longest_request_display}"
-        self.write_part_of_line(stdscr, request_display, section_size, color)
+        window.write_part_of_line(request_display, section_size, color)
 
-    def get_display_name_for_import_stage(self, import_stage):
+    def get_display_name_for_import_stage(self, import_stage: RequestStage) -> str:
         if import_stage == RequestStage.PENDING:
             return "total pending"
         else:
-            return import_stage.value
+            return str(import_stage.value)
 
-    def _get_color_for_pending_import_display(self, longest_request) -> Optional[int]:
+    def _get_color_for_pending_import_display(
+        self, longest_request: float
+    ) -> Optional[int]:
         if longest_request == 0 or longest_request < IMPORT_TIME_LOWER_WARN_THRESHOLD:
             return None
         elif longest_request < IMPORT_TIME_UPPER_WARN_THRESHOLD:
-            return self.curses.color_pair(LOWER_WARN_THRESHOLD_COLOR)
+            return int(self.curses.color_pair(LOWER_WARN_THRESHOLD_COLOR))
         else:
-            return self.curses.color_pair(UPPER_WARN_THRESHOLD_COLOR)
+            return int(self.curses.color_pair(UPPER_WARN_THRESHOLD_COLOR))
 
-    def render_column_titles(self, stdscr):
-        self.render_row(stdscr, COLUMN_TITLES, self.curses.A_REVERSE)
+    def render_column_titles(self, window: Window) -> None:
+        self.render_row(window, COLUMN_TITLES, self.curses.A_REVERSE)
 
-    def render_rows(self, stdscr):
-        aggregated_processes = {}
+    def render_rows(self, window: Window) -> None:
+        aggregated_processes: Dict[int, Process] = {}
         for process in self.processes.values():
             key = process.get_key()
             if key in aggregated_processes:
@@ -434,18 +600,18 @@ class Top:
             reverse=COLUMN_REVERSE_SORT[self.selected_column],
         )
 
-        for process in sorted_processes[: self.height]:
+        for process in sorted_processes:
             row = process.get_row()
             row = (fmt(data) for fmt, data in zip(COLUMN_FORMATTING, row))
 
             style = self.curses.A_BOLD if process.is_running else self.curses.A_NORMAL
-            self.render_row(stdscr, row, style)
+            self.render_row(window, row, style)
 
-    def render_row(self, stdscr, row, style):
+    def render_row(self, window: Window, row: Row, style) -> None:
 
         row_data = zip(row, COLUMN_ALIGNMENT, COLUMN_SPACING)
         for i, (raw_text, align, space) in enumerate(row_data):
-            remaining_space = self.width - self.current_x_offset
+            remaining_space = window.get_remaining_columns()
             if remaining_space <= 0:
                 break
 
@@ -458,80 +624,14 @@ class Top:
             color = DEFAULT_COLOR_PAIR
             if i == self.selected_column:
                 color = self.curses.color_pair(COLOR_SELECTED)
-            self.write_part_of_line(stdscr, text, space + 1, color | style)
-        self.write_new_line()
+            window.write_part_of_line(text, space + 1, color | style)
+        window.write_new_line()
 
-    def reset(self) -> None:
-        self.current_line = 0
-        self.current_x_offset = 0
-
-    def write_new_line(self) -> None:
-        self.current_line += 1
-        self.current_x_offset = 0
-
-    # note: this will start writing at what ever the `current_x_offset` is, it
-    # will not start writing on a new line, adds a new line to the end of the
-    # line printed
-    def write_line(
-        self, window, line: str, max_width: int, attr: Optional[int] = None
-    ) -> None:
-        self._write(
-            window, self.current_line, self.current_x_offset, line, max_width, attr
-        )
-        self.write_new_line()
-
-    # prints starting from the `current_x_offset`, does NOT add a newline
-    def write_part_of_line(
-        self, window, part, max_width: int, attr: Optional[int] = None
-    ) -> None:
-        self._write(
-            window, self.current_line, self.current_x_offset, part, max_width, attr
-        )
-        self.current_x_offset += min(max_width, len(part))
-
-    # prints a line with the line right justified, adds a new line after printing
-    # the line
-    def write_line_right_justified(
-        self, window, line, max_width: int, attr: Optional[int] = None
-    ) -> None:
-        max_width = min(max_width, self.width - self.current_x_offset)
-        width = min(max_width, len(line))
-        x = self.width - width
-        self._write(window, self.current_line, x, line, max_width, attr)
-        self.write_new_line()
-
-    def _write(
-        self,
-        window: Any,
-        y: int,
-        x: int,
-        text: str,
-        max_width: int,
-        attr: Optional[int] = None,
-    ) -> None:
-        try:
-            if attr is None:
-                attr = DEFAULT_COLOR_PAIR
-            window.addnstr(y, x, text, max_width, attr)
-        except Exception as ex:
-            # When attempting to write to the very last terminal cell curses will
-            # successfully display the data but will return an error since the logical
-            # cursor cannot be advanced to the next cell.
-            #
-            # We just ignore the error to handle this case.
-            # If you do want to look at errors during development you can enable the
-            # following code, but note that the error messages from the curses module
-            # usually are not very informative.
-            if False:
-                with open("/tmp/eden_top.log", "a") as f:
-                    f.write(f"error at ({y}, {x}): {ex}\n")
-
-    def get_keypress(self, stdscr):
-        key = stdscr.getch()
+    def get_keypress(self, window: Window) -> None:
+        key = window.get_keypress()
         if key == self.curses.KEY_RESIZE:
             self.curses.update_lines_cols()
-            stdscr.redrawwin()
-            self.height, self.width = stdscr.getmaxyx()
+            window.screen_resize()
         elif key == ord("q"):
             self.running = False
         elif key == self.curses.KEY_LEFT:
@@ -539,7 +639,7 @@ class Top:
         elif key == self.curses.KEY_RIGHT:
             self.move_selector(1)
 
-    def move_selector(self, dx):
+    def move_selector(self, dx: int) -> None:
         self.selected_column = (self.selected_column + dx) % len(COLUMN_TITLES)
 
 
@@ -585,56 +685,3 @@ class Process:
             fuse_last_access=self.last_access,
             command=self.cmd,
         )
-
-
-def format_mount(mount):
-    return os.fsdecode(os.path.basename(mount))
-
-
-def format_duration(duration):
-    modulos = (1000, 1000, 1000, 60, 60, 24)
-    suffixes = ("ns", "us", "ms", "s", "m", "h", "d")
-    return format_time(duration, modulos, suffixes)
-
-
-def format_last_access(last_access):
-    elapsed = int(time.monotonic() - last_access)
-
-    modulos = (60, 60, 24)
-    suffixes = ("s", "m", "h", "d")
-    return format_time(elapsed, modulos, suffixes)
-
-
-def format_time(elapsed, modulos, suffixes):
-    for modulo, suffix in zip(modulos, suffixes):
-        if elapsed < modulo:
-            return f"{elapsed}{suffix}"
-        elapsed //= modulo
-
-    last_suffix = suffixes[-1]
-    return f"{elapsed}{last_suffix}"
-
-
-def format_cmd(cmd):
-    args = os.fsdecode(cmd).split("\x00")
-
-    # Focus on just the basename as the paths can be quite long
-    cmd = args[0]
-    if os.path.isabs(cmd):
-        cmd = os.path.basename(cmd)
-
-    # Show cmdline args too, if they exist
-    return " ".join(shlex.quote(p) for p in [cmd] + args[1:])
-
-
-COLUMN_FORMATTING = Row(
-    top_pid=lambda x: x,
-    mount=lambda x: x,
-    fuse_reads=lambda x: x,
-    fuse_writes=lambda x: x,
-    fuse_total=lambda x: x,
-    fuse_backing_store_imports=lambda x: x,
-    fuse_duration=format_duration,
-    fuse_last_access=format_last_access,
-    command=lambda x: x,
-)
