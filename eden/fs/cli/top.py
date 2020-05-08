@@ -181,6 +181,18 @@ class Window:
         self.current_x_offset = 0  # horizontal position up to which
         # has been printed on the current line
 
+        # where on the screen does the scrollable section start
+        self.scrollable_section_window_start = 0
+        # how many lines will show up on the screen max
+        self.scrollable_section_window_size = 0
+        # internal state, is the current section being written to the
+        # scrollable section
+        self.scrollable = False
+        # how many lines down has the scrollable section been scrolled
+        self.scrollable_offset = 0
+        # how many total lines have been written to the scrollable section
+        self.number_scrollable_lines = 0
+
     def _update_screen_size(self) -> None:
         self.height, self.width = self.stdscr.getmaxyx()
 
@@ -192,6 +204,7 @@ class Window:
         self.stdscr.erase()
         self.current_line = 0
         self.current_x_offset = 0
+        self.number_scrollable_lines = 0
 
     def refresh(self) -> None:
         self.stdscr.refresh()
@@ -202,15 +215,22 @@ class Window:
     def get_width(self) -> int:
         return self.width
 
-    def get_remaining_rows(self) -> int:
+    # the number of remaining rows left in the window, if in the scrollable
+    # section, there is no limit, so this returns None
+    def get_remaining_rows(self) -> Optional[int]:
+        if self.scrollable:
+            return None
         return self.height - self.current_line
 
+    # how much horizontal space remains in the window
     def get_remaining_columns(self) -> int:
         return self.width - self.current_x_offset
 
     def write_new_line(self, scollable_ended: bool = False) -> None:
         self.current_line += 1
         self.current_x_offset = 0
+        if self.scrollable:
+            self.number_scrollable_lines += 1
 
     # note: this will start writing at what ever the `current_x_offset` is, it
     # will not start writing on a new line, adds a new line to the end of the
@@ -243,6 +263,16 @@ class Window:
 
     def _write(
         self, y: int, x: int, text: str, max_width: int, attr: Optional[int] = None
+    ):
+        if self.scrollable:
+            if self.in_scrollable_section(y):
+                y = y - self.scrollable_offset
+                self._write_to_scr(y, x, text, max_width, attr)
+        else:
+            self._write_to_scr(y, x, text, max_width, attr)
+
+    def _write_to_scr(
+        self, y: int, x: int, text: str, max_width: int, attr: Optional[int] = None
     ) -> None:
         try:
             if attr is None:
@@ -263,6 +293,72 @@ class Window:
 
     def get_keypress(self) -> int:
         return int(self.stdscr.getch())
+
+    # Anything written after this before end_scrollable_section will be included
+    # in the scrollable section.
+    # By default the scrollable section will take up the rest of the vertical
+    # space on the screen. Set scrollable_section_height to change this.
+    #
+    # note: scollable sections must be started on new lines, if the current
+    # cursor is not on a new line, then will move to a new line
+    def start_scrollable_section(self, scrollable_section_height: int = -1) -> None:
+        if self.scrollable:
+            return None
+        if self.current_x_offset != 0:
+            self.write_new_line()
+
+        self.scrollable_section_window_start = self.current_line
+        if scrollable_section_height == -1:
+            rows = self.get_remaining_rows()
+            if rows is None:
+                return None
+            self.scrollable_section_window_size = rows
+        else:
+            self.scrollable_section_window_size = scrollable_section_height
+        self.scrollable = True
+
+    # The rest of the writes are not included in the scrollable section
+    #
+    # note: scollable sections must be ended on new lines, if the current
+    # cursor is not on a new line, then will move to a new line
+    def end_scrollable_section(self) -> None:
+        if self.current_x_offset != 0:
+            self.write_new_line()
+        self.current_line = (
+            self.scrollable_section_window_start + self.scrollable_section_window_size
+        )
+        self.scrollable = False
+
+    # first line number to be written in the scollable section
+    def get_scrollable_top_line(self) -> int:
+        return self.scrollable_section_window_start + self.scrollable_offset
+
+    # last line to be writen in the scollable section
+    def get_scrollable_bottom_line(self) -> int:
+        return self.get_scrollable_top_line() + self.scrollable_section_window_size - 1
+
+    # does the yth line fall with in the part of the scrollable section that is
+    # visable on the screen
+    def in_scrollable_section(self, y: int) -> bool:
+        return (
+            y >= self.get_scrollable_top_line()
+            and y <= self.get_scrollable_bottom_line()
+        )
+
+    # moves one line down in the scrollable section
+    def move_scrollable_up(self) -> None:
+        self.scrollable_offset = max(0, self.scrollable_offset - 1)
+
+    # moves one line up in the scrllable section
+    def move_scrollable_down(self) -> None:
+        farthest_scroll = max(
+            0, (self.number_scrollable_lines - self.scrollable_section_window_size)
+        )
+        self.scrollable_offset = min(farthest_scroll, self.scrollable_offset + 1)
+
+    # resets to the top of the scrollable section
+    def reset_offset(self) -> None:
+        self.scrollable_offset = 0
 
 
 class Top:
@@ -440,7 +536,9 @@ class Top:
         # TODO: daemon memory/inode stats on line 2
         self.render_column_titles(window)
 
+        window.start_scrollable_section()
         self.render_rows(window)
+        window.end_scrollable_section()
 
         window.refresh()
 
@@ -636,8 +734,14 @@ class Top:
             self.running = False
         elif key == self.curses.KEY_LEFT:
             self.move_selector(-1)
+            window.reset_offset()
         elif key == self.curses.KEY_RIGHT:
             self.move_selector(1)
+            window.reset_offset()
+        elif key == self.curses.KEY_UP:
+            window.move_scrollable_up()
+        elif key == self.curses.KEY_DOWN:
+            window.move_scrollable_down()
 
     def move_selector(self, dx: int) -> None:
         self.selected_column = (self.selected_column + dx) % len(COLUMN_TITLES)
