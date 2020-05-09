@@ -9,6 +9,7 @@ add_executable(
     CheckoutConfigTest.cpp
     ConfigSettingTest.cpp
     EdenConfigTest.cpp
+    FileChangeMonitorTest.cpp
 )
 
 target_link_libraries(
