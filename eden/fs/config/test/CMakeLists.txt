@@ -3,13 +3,10 @@
 # This software may be used and distributed according to the terms of the
 # GNU General Public License version 2.
 
+file(GLOB CONFIG_TEST_SRCS "*Test.cpp")
 add_executable(
   eden_config_test
-    CachedParsedFileMonitorTest.cpp
-    CheckoutConfigTest.cpp
-    ConfigSettingTest.cpp
-    EdenConfigTest.cpp
-    FileChangeMonitorTest.cpp
+    ${CONFIG_TEST_SRCS}
 )
 
 target_link_libraries(
