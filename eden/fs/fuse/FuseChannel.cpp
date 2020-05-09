@@ -20,6 +20,7 @@
 #include "eden/fs/utils/Bug.h"
 #include "eden/fs/utils/Synchronized.h"
 #include "eden/fs/utils/SystemError.h"
+#include "eden/fs/utils/Thread.h"
 
 using namespace folly;
 using std::string;
@@ -872,6 +873,7 @@ void FuseChannel::initWorkerThread() noexcept {
 }
 
 void FuseChannel::fuseWorkerThread() noexcept {
+  disablePthreadCancellation();
   setThreadName(to<std::string>("fuse", mountPath_.basename()));
   setThreadSigmask();
   *(liveRequestWatches_.get()) =
