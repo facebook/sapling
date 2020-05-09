@@ -7,6 +7,7 @@ add_executable(
   eden_config_test
     CachedParsedFileMonitorTest.cpp
     CheckoutConfigTest.cpp
+    ConfigSettingTest.cpp
 )
 
 target_link_libraries(

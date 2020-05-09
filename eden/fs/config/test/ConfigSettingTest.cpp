@@ -19,66 +19,79 @@ using namespace facebook::eden;
 using namespace folly::string_piece_literals;
 using namespace std::chrono_literals;
 
-TEST(ConfigSettingTest, initStateCheck) {
-  AbsolutePath defaultDir{"/DEFAULT_DIR"};
+class ConfigSettingTest : public ::testing::Test {
+ protected:
+  static constexpr folly::StringPiece defaultDirSp_{"/DEFAULT_DIR"};
+  static constexpr folly::StringPiece systemConfigDirSp_{
+      "/SYSTEM_CONFIG_SETTING"};
+  static constexpr folly::StringPiece userConfigDirSp_{"/USER_CONFIG_SETTING"};
+  static constexpr folly::StringPiece otherDirSp_{"/OTHER_DIR"};
+  AbsolutePath defaultDir_;
+  AbsolutePath systemConfigDir_;
+  AbsolutePath userConfigDir_;
+  AbsolutePath otherDir_;
+
+  void SetUp() override {
+    defaultDir_ = normalizeBestEffort(defaultDirSp_);
+    systemConfigDir_ = normalizeBestEffort(systemConfigDirSp_);
+    userConfigDir_ = normalizeBestEffort(userConfigDirSp_);
+    otherDir_ = normalizeBestEffort(otherDirSp_);
+  }
+};
+
+TEST_F(ConfigSettingTest, initStateCheck) {
   auto dirKey = "dirKey"_sp;
-  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir, nullptr};
+  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir_, nullptr};
 
   // Initial should be default
-  EXPECT_EQ(testDir.getValue(), defaultDir);
+  EXPECT_EQ(testDir.getValue(), defaultDir_);
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);
   EXPECT_EQ(testDir.getConfigKey(), dirKey);
 }
 
-TEST(ConfigSettingTest, configSetStringValue) {
-  AbsolutePath defaultDir{"/DEFAULT_DIR"};
+TEST_F(ConfigSettingTest, configSetStringValue) {
   auto dirKey = "dirKey"_sp;
-  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir, nullptr};
+  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir_, nullptr};
 
-  folly::StringPiece systemConfigDir{"/SYSTEM_CONFIG_SETTING"};
   std::map<std::string, std::string> attrMap;
   auto rslt = testDir.setStringValue(
-      systemConfigDir, attrMap, ConfigSource::UserConfig);
+      systemConfigDirSp_, attrMap, ConfigSource::UserConfig);
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
-  EXPECT_EQ(testDir.getValue(), systemConfigDir);
-  EXPECT_EQ("/SYSTEM_CONFIG_SETTING", testDir.getStringValue());
+  EXPECT_EQ(testDir.getValue(), systemConfigDir_);
+  EXPECT_EQ(systemConfigDir_, testDir.getStringValue());
 
-  folly::StringPiece userConfigDir{"/USER_CONFIG_SETTING"};
-  rslt =
-      testDir.setStringValue(userConfigDir, attrMap, ConfigSource::UserConfig);
+  rslt = testDir.setStringValue(
+      userConfigDirSp_, attrMap, ConfigSource::UserConfig);
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
-  EXPECT_EQ(testDir.getValue(), userConfigDir);
-  EXPECT_EQ("/USER_CONFIG_SETTING", testDir.getStringValue());
+  EXPECT_EQ(testDir.getValue(), userConfigDir_);
+  EXPECT_EQ(userConfigDir_, testDir.getStringValue());
 }
 
-TEST(ConfigSettingTest, configSetAssign) {
+TEST_F(ConfigSettingTest, configSetAssign) {
   // Setup our target copy
-  AbsolutePath otherDir{"/OTHER_DIR"};
   auto otherKey = "otherKey"_sp;
-  ConfigSetting<AbsolutePath> copyOfTestDir{otherKey, otherDir, nullptr};
-  folly::StringPiece systemConfigDir{"/SYSTEM_CONFIG_SETTING"};
+  ConfigSetting<AbsolutePath> copyOfTestDir{otherKey, otherDir_, nullptr};
 
   // Check the copy states first, so we know where starting point is.
   EXPECT_EQ(copyOfTestDir.getConfigKey(), otherKey);
   EXPECT_EQ(copyOfTestDir.getSource(), ConfigSource::Default);
-  EXPECT_EQ(copyOfTestDir.getValue(), otherDir);
+  EXPECT_EQ(copyOfTestDir.getValue(), otherDir_);
 
   auto dirKey = "dirKey"_sp;
   {
     // Setup the copy source - sufficiently different
-    AbsolutePath defaultDir{"/DEFAULT_DIR"};
-    ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir, nullptr};
+    ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir_, nullptr};
 
     std::map<std::string, std::string> attrMap;
     auto rslt = testDir.setStringValue(
-        systemConfigDir, attrMap, ConfigSource::UserConfig);
+        systemConfigDirSp_, attrMap, ConfigSource::UserConfig);
     EXPECT_EQ(rslt.hasError(), false);
 
     EXPECT_EQ(testDir.getConfigKey(), dirKey);
     EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
-    EXPECT_EQ(testDir.getValue(), systemConfigDir);
+    EXPECT_EQ(testDir.getValue(), systemConfigDir_);
 
     copyOfTestDir.copyFrom(testDir);
   }
@@ -86,24 +99,22 @@ TEST(ConfigSettingTest, configSetAssign) {
   // Check all attributes copied.
   EXPECT_EQ(copyOfTestDir.getConfigKey(), dirKey);
   EXPECT_EQ(copyOfTestDir.getSource(), ConfigSource::UserConfig);
-  EXPECT_EQ(copyOfTestDir.getValue(), systemConfigDir);
+  EXPECT_EQ(copyOfTestDir.getValue(), systemConfigDir_);
 
   // Check references still valid
   copyOfTestDir.clearValue(ConfigSource::Default);
 }
 
-TEST(ConfigSettingTest, configSetInvalidStringValue) {
-  AbsolutePath defaultDir{"/DEFAULT_DIR"};
+TEST_F(ConfigSettingTest, configSetInvalidStringValue) {
   auto dirKey = "dirKey"_sp;
-  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir, nullptr};
+  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir_, nullptr};
 
-  folly::StringPiece systemConfigDir{"/SYSTEM_CONFIG_SETTING"};
   std::map<std::string, std::string> attrMap;
   auto rslt = testDir.setStringValue(
-      systemConfigDir, attrMap, ConfigSource::SystemConfig);
+      systemConfigDirSp_, attrMap, ConfigSource::SystemConfig);
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::SystemConfig);
-  EXPECT_EQ(testDir.getValue(), systemConfigDir);
+  EXPECT_EQ(testDir.getValue(), systemConfigDir_);
 
   folly::StringPiece userConfigDir{"INVALID USER_CONFIG_SETTING"};
   rslt =
@@ -113,10 +124,10 @@ TEST(ConfigSettingTest, configSetInvalidStringValue) {
       rslt.error(),
       "Cannot convert value 'INVALID USER_CONFIG_SETTING' to an absolute path");
   EXPECT_EQ(testDir.getSource(), ConfigSource::SystemConfig);
-  EXPECT_EQ(testDir.getValue(), systemConfigDir);
+  EXPECT_EQ(testDir.getValue(), systemConfigDir_);
 }
 
-TEST(ConfigSettingTest, configSetEnvSubTest) {
+TEST_F(ConfigSettingTest, configSetEnvSubTest) {
   AbsolutePath defaultDir{"/home/bob"};
   auto dirKey = "dirKey"_sp;
   ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir, nullptr};
@@ -129,42 +140,41 @@ TEST(ConfigSettingTest, configSetEnvSubTest) {
       testDir.setStringValue(userConfigDir, attrMap, ConfigSource::UserConfig);
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
-  EXPECT_EQ(testDir.getValue(), "/home/bob/test_dir");
-  EXPECT_EQ("/home/bob/test_dir", testDir.getStringValue());
+  AbsolutePath bobTestDir = normalizeBestEffort("/home/bob/test_dir");
+  EXPECT_EQ(testDir.getValue(), bobTestDir);
+  EXPECT_EQ(bobTestDir, testDir.getStringValue());
 
   folly::StringPiece homeUserConfigDir{"/home/${USER}/test_dir"};
   rslt = testDir.setStringValue(
       homeUserConfigDir, attrMap, ConfigSource::UserConfig);
   EXPECT_EQ(rslt.hasError(), false);
   EXPECT_EQ(testDir.getSource(), ConfigSource::UserConfig);
-  EXPECT_EQ(testDir.getValue(), "/home/bob/test_dir");
-  EXPECT_EQ("/home/bob/test_dir", testDir.getStringValue());
+  EXPECT_EQ(testDir.getValue(), bobTestDir);
+  EXPECT_EQ(bobTestDir, testDir.getStringValue());
 }
 
-TEST(ConfigSettingTest, configSettingIgnoreDefault) {
-  AbsolutePath defaultDir{"/DEFAULT_DIR"};
+TEST_F(ConfigSettingTest, configSettingIgnoreDefault) {
   auto dirKey = "dirKey"_sp;
-  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir, nullptr};
+  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir_, nullptr};
   // Initial should be default
-  EXPECT_EQ(testDir.getValue(), defaultDir);
+  EXPECT_EQ(testDir.getValue(), defaultDir_);
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);
 
   // Setting default value should be ignored
   AbsolutePath notDefaultDir{"/NOT_THE_DEFAULT_DIR"};
   testDir.setValue(notDefaultDir, ConfigSource::Default);
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);
-  EXPECT_EQ(testDir.getValue(), defaultDir);
+  EXPECT_EQ(testDir.getValue(), defaultDir_);
 
   // Clearing the default value should be ignored
   testDir.clearValue(ConfigSource::Default);
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);
-  EXPECT_EQ(testDir.getValue(), defaultDir);
+  EXPECT_EQ(testDir.getValue(), defaultDir_);
 }
 
-TEST(ConfigSettingTest, configSettingClearNonExistingSource) {
-  AbsolutePath defaultDir{"/DEFAULT_DIR"};
+TEST_F(ConfigSettingTest, configSettingClearNonExistingSource) {
   auto dirKey = "dirKey"_sp;
-  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir, nullptr};
+  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir_, nullptr};
 
   // Initially, it should be default value
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);
@@ -176,19 +186,18 @@ TEST(ConfigSettingTest, configSettingClearNonExistingSource) {
   testDir.clearValue(ConfigSource::Default);
 
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);
-  EXPECT_EQ(testDir.getValue(), defaultDir);
+  EXPECT_EQ(testDir.getValue(), defaultDir_);
 }
 
-TEST(ConfigSettingTest, configSettingSetAndClearTest) {
-  AbsolutePath defaultDir{"/DEFAULT_DIR"};
+TEST_F(ConfigSettingTest, configSettingSetAndClearTest) {
   auto dirKey = "dirKey"_sp;
-  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir, nullptr};
+  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir_, nullptr};
 
   AbsolutePath systemEdenDir{"/SYSTEM_DIR"};
 
   // Initially, it should be default value
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);
-  EXPECT_EQ(testDir.getValue(), defaultDir);
+  EXPECT_EQ(testDir.getValue(), defaultDir_);
 
   // Over-ride default
   testDir.setValue(systemEdenDir, ConfigSource::SystemConfig);
@@ -198,13 +207,12 @@ TEST(ConfigSettingTest, configSettingSetAndClearTest) {
   // Clear the over-ride
   testDir.clearValue(ConfigSource::SystemConfig);
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);
-  EXPECT_EQ(testDir.getValue(), defaultDir);
+  EXPECT_EQ(testDir.getValue(), defaultDir_);
 }
 
-TEST(ConfigSettingTest, configSetOverRiddenSource) {
-  AbsolutePath defaultDir{"/DEFAULT_DIR"};
+TEST_F(ConfigSettingTest, configSetOverRiddenSource) {
   auto dirKey = "dirKey"_sp;
-  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir, nullptr};
+  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir_, nullptr};
 
   AbsolutePath cliEdenDir{"/CLI_DIR"};
   AbsolutePath systemEdenDir{"/SYSTEM_DIR"};
@@ -228,10 +236,9 @@ TEST(ConfigSettingTest, configSetOverRiddenSource) {
   EXPECT_EQ(testDir.getValue(), systemEdenDir);
 }
 
-TEST(ConfigSettingTest, configClearOverRiddenSource) {
-  AbsolutePath defaultDir{"/DEFAULT_DIR"};
+TEST_F(ConfigSettingTest, configClearOverRiddenSource) {
   auto dirKey = "dirKey"_sp;
-  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir, nullptr};
+  ConfigSetting<AbsolutePath> testDir{dirKey, defaultDir_, nullptr};
 
   AbsolutePath cliEdenDir{"/CLI_DIR"};
   AbsolutePath userEdenDir{"/USER_DIR"};
@@ -239,7 +246,7 @@ TEST(ConfigSettingTest, configClearOverRiddenSource) {
 
   // Initially, it should be default value
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);
-  EXPECT_EQ(testDir.getValue(), defaultDir);
+  EXPECT_EQ(testDir.getValue(), defaultDir_);
 
   // Set next higher over-ride priority
   testDir.setValue(systemEdenDir, ConfigSource::SystemConfig);
@@ -269,7 +276,7 @@ TEST(ConfigSettingTest, configClearOverRiddenSource) {
   // Clear highest priority - back to default
   testDir.clearValue(ConfigSource::CommandLine);
   EXPECT_EQ(testDir.getSource(), ConfigSource::Default);
-  EXPECT_EQ(testDir.getValue(), defaultDir);
+  EXPECT_EQ(testDir.getValue(), defaultDir_);
 }
 
 namespace {
@@ -306,7 +313,7 @@ void checkSetError(
 
 } // namespace
 
-TEST(ConfigSettingTest, setBool) {
+TEST_F(ConfigSettingTest, setBool) {
   ConfigSetting<bool> defaultTrue{"test:value2", true, nullptr};
   EXPECT_EQ(true, defaultTrue.getValue());
 
@@ -334,7 +341,7 @@ TEST(ConfigSettingTest, setBool) {
       "yes_and");
 }
 
-TEST(ConfigSettingTest, setArithmetic) {
+TEST_F(ConfigSettingTest, setArithmetic) {
   ConfigSetting<int> intSetting{"test:value", 1, nullptr};
   EXPECT_EQ(1, intSetting.getValue());
   checkSet(intSetting, 9, "9");
@@ -353,15 +360,15 @@ TEST(ConfigSettingTest, setArithmetic) {
   checkSetError(u8Setting, "Non-digit character found: \"-10\"", "-10");
 
   ConfigSetting<float> floatSetting{"test:value", 0, nullptr};
-  checkSet(floatSetting, 123.0, "123");
-  checkSet(floatSetting, 0.001, "0.001");
+  checkSet(floatSetting, 123.0f, "123");
+  checkSet(floatSetting, 0.001f, "0.001");
   checkSetError(
       floatSetting,
       "Non-whitespace character found after end of conversion: \"0.001.9\"",
       "0.001.9");
 }
 
-TEST(ConfigSettingTest, setDuration) {
+TEST_F(ConfigSettingTest, setDuration) {
   ConfigSetting<std::chrono::nanoseconds> setting{"test:value", 5ms, nullptr};
   EXPECT_EQ(5ms, setting.getValue());
   checkSet(setting, 90s, "1m30s");
