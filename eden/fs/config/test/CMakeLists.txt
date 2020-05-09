@@ -8,6 +8,7 @@ add_executable(
     CachedParsedFileMonitorTest.cpp
     CheckoutConfigTest.cpp
     ConfigSettingTest.cpp
+    EdenConfigTest.cpp
 )
 
 target_link_libraries(

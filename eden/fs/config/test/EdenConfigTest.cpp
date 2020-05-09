@@ -7,11 +7,11 @@
 
 #include "eden/fs/config/EdenConfig.h"
 
-#include <folly/FileUtil.h>
 #include <folly/experimental/TestUtil.h>
 #include <folly/test/TestUtils.h>
 #include <gtest/gtest.h>
 
+#include "eden/fs/utils/FileUtils.h"
 #include "eden/fs/utils/PathFuncs.h"
 
 using folly::test::TemporaryDirectory;
@@ -67,7 +67,7 @@ class EdenConfigTest : public ::testing::Test {
         "ignoreFile=\"${HOME}/${USER}/userCustomIgnore\"\n"
         "[mononoke]\n"
         "use-mononoke=\"false\""};
-    folly::writeFile(userConfigFileData, userConfigPath.c_str());
+    writeFile(userConfigFileData, userConfigPath.c_str());
 
     auto systemConfigDir = testCaseDir / "etc-eden";
     folly::fs::create_directory(systemConfigDir);
@@ -81,7 +81,7 @@ class EdenConfigTest : public ::testing::Test {
         "use-mononoke=true\n"
         "[ssl]\n"
         "client-certificate=\"/system_config_cert/${USER}/foo/${USER}\"\n"};
-    folly::writeFile(systemConfigFileData, systemConfigPath.c_str());
+    writeFile(systemConfigFileData, systemConfigPath.c_str());
 
     testPathMap_[simpleOverRideTest_] = std::pair<AbsolutePath, AbsolutePath>(
         AbsolutePath{systemConfigPath.string()},
@@ -336,25 +336,30 @@ TEST_F(EdenConfigTest, loadSystemUserConfigTest) {
 
   edenConfig->loadSystemConfig();
 
-  EXPECT_EQ(edenConfig->userIgnoreFile.getValue(), "/should_be_over_ridden");
-  EXPECT_EQ(
-      edenConfig->systemIgnoreFile.getValue(), "/etc/eden/systemCustomIgnore");
   EXPECT_EQ(edenConfig->edenDir.getValue(), defaultEdenDirPath_);
   EXPECT_EQ(
+      edenConfig->userIgnoreFile.getValue(),
+      normalizeBestEffort("/should_be_over_ridden"));
+  EXPECT_EQ(
+      edenConfig->systemIgnoreFile.getValue(),
+      normalizeBestEffort("/etc/eden/systemCustomIgnore"));
+  EXPECT_EQ(
       edenConfig->getClientCertificate()->stringPiece(),
-      "/system_config_cert/bob/foo/bob");
+      normalizeBestEffort("/system_config_cert/bob/foo/bob"));
   EXPECT_EQ(edenConfig->useMononoke.getValue(), true);
 
   edenConfig->loadUserConfig();
 
-  EXPECT_EQ(
-      edenConfig->userIgnoreFile.getValue(), "/home/bob/bob/userCustomIgnore");
-  EXPECT_EQ(
-      edenConfig->systemIgnoreFile.getValue(), "/etc/eden/systemCustomIgnore");
   EXPECT_EQ(edenConfig->edenDir.getValue(), defaultEdenDirPath_);
   EXPECT_EQ(
+      edenConfig->userIgnoreFile.getValue(),
+      normalizeBestEffort("/home/bob/bob/userCustomIgnore"));
+  EXPECT_EQ(
+      edenConfig->systemIgnoreFile.getValue(),
+      normalizeBestEffort("/etc/eden/systemCustomIgnore"));
+  EXPECT_EQ(
       edenConfig->getClientCertificate()->stringPiece(),
-      "/system_config_cert/bob/foo/bob");
+      normalizeBestEffort("/system_config_cert/bob/foo/bob"));
   EXPECT_EQ(edenConfig->useMononoke.getValue(), false);
 }
 
@@ -400,22 +405,27 @@ TEST_F(EdenConfigTest, variablesExpandInPathOptions) {
     return EdenConfig{config};
   };
 
-  folly::writeFile(
+  writeFile(
       "[core]\n"
       "ignoreFile=\"${HOME}/myignore\"\n"_sp,
       userConfigPath.c_str());
-  EXPECT_EQ(getConfig().userIgnoreFile.getValue(), "/testhomedir/myignore");
+  EXPECT_EQ(
+      getConfig().userIgnoreFile.getValue(),
+      normalizeBestEffort("/testhomedir/myignore"));
 
-  folly::writeFile(
+  writeFile(
       "[core]\n"
       "ignoreFile=\"/home/${USER}/myignore\"\n"_sp,
       userConfigPath.c_str());
   EXPECT_EQ(
-      getConfig().userIgnoreFile.getValue(), "/home/testusername/myignore");
+      getConfig().userIgnoreFile.getValue(),
+      normalizeBestEffort("/home/testusername/myignore"));
 
-  folly::writeFile(
+  writeFile(
       "[core]\n"
       "ignoreFile=\"/var/user/${USER_ID}/myignore\"\n"_sp,
       userConfigPath.c_str());
-  EXPECT_EQ(getConfig().userIgnoreFile.getValue(), "/var/user/42/myignore");
+  EXPECT_EQ(
+      getConfig().userIgnoreFile.getValue(),
+      normalizeBestEffort("/var/user/42/myignore"));
 }
