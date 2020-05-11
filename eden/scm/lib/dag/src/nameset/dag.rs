@@ -6,7 +6,6 @@
  */
 
 use super::{NameIter, NameSetQuery};
-use crate::idmap::IdMap;
 use crate::idmap::IdMapLike;
 use crate::spanset::{SpanSet, SpanSetIter};
 use crate::VertexName;
@@ -19,13 +18,13 @@ use std::sync::Arc;
 /// Efficient for DAG calculation.
 pub struct DagSet {
     pub(crate) spans: SpanSet,
-    pub(crate) map: Arc<IdMap>,
+    pub(crate) map: Arc<dyn IdMapLike + Send + Sync>,
     pub(crate) is_all: bool,
 }
 
 struct Iter {
     iter: SpanSetIter<SpanSet>,
-    map: Arc<IdMap>,
+    map: Arc<dyn IdMapLike + Send + Sync>,
     reversed: bool,
 }
 
@@ -53,7 +52,7 @@ impl fmt::Debug for DagSet {
 }
 
 impl DagSet {
-    pub(crate) fn from_spans_idmap(spans: SpanSet, map: Arc<IdMap>) -> Self {
+    pub(crate) fn from_spans_idmap(spans: SpanSet, map: Arc<dyn IdMapLike + Send + Sync>) -> Self {
         let is_all = false;
         Self { spans, map, is_all }
     }
@@ -116,11 +115,7 @@ impl NameSetQuery for DagSet {
     }
 
     fn contains(&self, name: &VertexName) -> Result<bool> {
-        let map = &self.map;
-        match map.find_id_by_name(name.as_ref())? {
-            Some(id) => Ok(self.spans.contains(id)),
-            None => Ok(false),
-        }
+        self.map.contains_vertex_name(name)
     }
 
     fn is_topo_sorted(&self) -> bool {

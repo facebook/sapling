@@ -46,7 +46,7 @@ pub struct NameDag {
     /// `Arc::ptr_eq` equivalent by using some sort of internal version number
     /// that gets bumped when `map` gets changed. However that might be more
     /// expensive.
-    pub(crate) snapshot_map: Arc<IdMap>,
+    pub(crate) snapshot_map: Arc<dyn IdMapLike + Send + Sync>,
 
     mlog: multi::MultiLog,
 
@@ -561,33 +561,35 @@ fn is_ok_some<T>(value: Result<Option<T>>) -> bool {
 /// Storage requirement for NameDagAlgorithm.
 pub trait NameDagStorage {
     type IdDagStore: IdDagStore;
+    type IdMap: IdMapLike;
 
     /// The IdDag storage.
     fn dag(&self) -> &IdDag<Self::IdDagStore>;
 
     /// The IdMap storage.
-    fn map(&self) -> &IdMap;
+    fn map(&self) -> &Self::IdMap;
 
     /// (Cheaply) clone the map.
-    fn clone_map(&self) -> Arc<IdMap>;
+    fn clone_map(&self) -> Arc<dyn IdMapLike + Send + Sync>;
 
     /// (Cheaply) test if the map is compatible (same).
-    fn is_map_compatible(&self, other: &Arc<IdMap>) -> bool;
+    fn is_map_compatible(&self, other: &Arc<dyn IdMapLike + Send + Sync>) -> bool;
 }
 
 impl NameDagStorage for NameDag {
     type IdDagStore = IndexedLogStore;
+    type IdMap = IdMap;
 
     fn dag(&self) -> &IdDag<Self::IdDagStore> {
         &self.dag
     }
-    fn map(&self) -> &IdMap {
+    fn map(&self) -> &Self::IdMap {
         &self.map
     }
-    fn clone_map(&self) -> Arc<IdMap> {
+    fn clone_map(&self) -> Arc<dyn IdMapLike + Send + Sync> {
         self.snapshot_map.clone()
     }
-    fn is_map_compatible(&self, other: &Arc<IdMap>) -> bool {
+    fn is_map_compatible(&self, other: &Arc<dyn IdMapLike + Send + Sync>) -> bool {
         Arc::ptr_eq(other, &self.snapshot_map)
     }
 }

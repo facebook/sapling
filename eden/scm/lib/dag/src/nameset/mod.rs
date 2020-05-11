@@ -9,7 +9,7 @@
 //!
 //! See [`NameSet`] for the main structure.
 
-use crate::idmap::IdMap;
+use crate::idmap::IdMapLike;
 use crate::spanset::SpanSet;
 use crate::VertexName;
 use anyhow::Result;
@@ -57,7 +57,10 @@ impl NameSet {
     }
 
     /// Creates from [`SpanSet`] and [`IdMap`]. Used by [`NameDag`].
-    pub(crate) fn from_spans_idmap(spans: SpanSet, map: Arc<IdMap>) -> NameSet {
+    pub(crate) fn from_spans_idmap(
+        spans: SpanSet,
+        map: Arc<dyn IdMapLike + Send + Sync>,
+    ) -> NameSet {
         Self::from_query(dag::DagSet::from_spans_idmap(spans, map))
     }
 
