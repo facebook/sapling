@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [dependencies]
+drawdag = { path = "../drawdag" }
 indexedlog = { path = "../indexedlog" }
 minibytes = { path = "../minibytes" }
 vlqencoding = { path = "../vlqencoding" }
@@ -18,7 +19,6 @@ tempfile = "3.0.7"
 
 [dev-dependencies]
 bindag = { path = "bindag" }
-drawdag = { path = "../drawdag" }
 minibench = { path = "../minibench" }
 once_cell = "1"
 quickcheck = "0.9"

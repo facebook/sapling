@@ -52,7 +52,7 @@ static ASCII_DAG5: &str = r#"
 
 #[test]
 fn test_mem_namedag() -> Result<()> {
-    let dag = build_mem_dag(ASCII_DAG1, "L");
+    let dag = MemNameDag::from_ascii(ASCII_DAG1)?;
     assert_eq!(expand(dag.all()?), "L K J I H G F E D C B A");
     assert_eq!(expand(dag.ancestors(nameset("H I"))?), "I H G F E D C B A");
     assert_eq!(expand(dag.parents(nameset("H I E"))?), "G D B");
@@ -916,17 +916,4 @@ pub(crate) fn build_segments(text: &str, heads: &str, segment_size: usize) -> Bu
         name_dag,
         dir,
     }
-}
-
-/// Take an ASCII DAG, assign segments from given heads.
-/// Return the ASCII DAG and the built MemNameDag.
-pub(crate) fn build_mem_dag(text: &str, heads: &str) -> MemNameDag {
-    let mut dag = MemNameDag::new();
-    let parents_by_name = get_parents_func_from_ascii(text);
-    let heads: Vec<_> = heads
-        .split(' ')
-        .map(|h| VertexName::copy_from(h.as_bytes()))
-        .collect();
-    dag.add_heads(&parents_by_name, &heads).unwrap();
-    dag
 }

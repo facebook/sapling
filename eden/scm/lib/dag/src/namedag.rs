@@ -278,6 +278,44 @@ impl MemNameDag {
         }
     }
 
+    /// Construct the DAG from an ASCII graph.
+    /// Useful for testing.
+    ///
+    /// Panic if the input is invalid.
+    pub fn from_ascii_with_heads(text: &str, heads: Option<&[impl AsRef<str>]>) -> Result<Self> {
+        let parents = drawdag::parse(&text);
+        let heads: Vec<_> = match heads {
+            Some(heads) => heads
+                .iter()
+                .map(|s| VertexName::copy_from(s.as_ref().as_bytes()))
+                .collect(),
+            None => {
+                let mut heads: Vec<_> = parents
+                    .keys()
+                    .map(|s| VertexName::copy_from(s.as_bytes()))
+                    .collect();
+                heads.sort();
+                heads
+            }
+        };
+
+        let parents_func = move |name: VertexName| -> Result<Vec<VertexName>> {
+            Ok(parents[&String::from_utf8(name.as_ref().to_vec()).unwrap()]
+                .iter()
+                .map(|p| VertexName::copy_from(p.as_bytes()))
+                .collect())
+        };
+        let mut dag = Self::new();
+        dag.add_heads(&parents_func, &heads[..])?;
+        Ok(dag)
+    }
+
+    /// Construct the DAG from an ASCII graph with all heads included.
+    pub fn from_ascii(text: &str) -> Result<Self> {
+        let heads: Option<&[&str]> = None;
+        Self::from_ascii_with_heads(text, heads)
+    }
+
     /// Add vertexes and their ancestors to the in-memory DAG.
     pub fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
     where
