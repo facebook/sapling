@@ -5,12 +5,12 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{FileContentData, Node, NodeData, NodeType};
+use crate::graph::{FileContentData, Node, NodeData, NodeType, WrappedPath};
 use crate::progress::{
     progress_stream, report_state, ProgressReporter, ProgressReporterUnprotected,
     ProgressStateCountByType, ProgressStateMutex,
 };
-use crate::sampling::{NodeSamplingHandler, PathTrackingRoute, SamplingWalkVisitor};
+use crate::sampling::{PathTrackingRoute, SamplingWalkVisitor, WalkSampleMapping};
 use crate::setup::{
     parse_node_types, setup_common, COMPRESSION_BENEFIT, COMPRESSION_LEVEL_ARG,
     DEFAULT_INCLUDE_NODE_TYPES, EXCLUDE_SAMPLE_NODE_TYPE_ARG, INCLUDE_SAMPLE_NODE_TYPE_ARG,
@@ -88,74 +88,86 @@ fn size_sampling_stream<InStream, InStats>(
     scheduled_max: usize,
     s: InStream,
     compressor_type: CompressorType,
-    sampler: Arc<NodeSamplingHandler<SizingSample>>,
+    sampler: Arc<WalkSampleMapping<Node, SizingSample>>,
 ) -> impl Stream<Item = Result<(Node, Option<NodeData>, Option<SizingStats>), Error>>
 where
-    InStream:
-        Stream<Item = Result<(Node, Option<NodeData>, Option<InStats>), Error>> + 'static + Send,
+    InStream: Stream<
+            Item = Result<
+                (
+                    (Node, Option<WrappedPath>),
+                    Option<NodeData>,
+                    Option<InStats>,
+                ),
+                Error,
+            >,
+        >
+        + 'static
+        + Send,
     InStats: 'static + Send,
 {
-    s.map_ok(move |(n, data_opt, _stats_opt)| match (&n, data_opt) {
-        (Node::FileContent(_content_id), Some(NodeData::FileContent(fc)))
-            if sampler.is_sampling(&n) =>
-        {
-            match fc {
-                FileContentData::Consumed(_num_loaded_bytes) => {
-                    future::ok(_num_loaded_bytes).left_future()
+    s.map_ok(
+        move |((n, _path), data_opt, _stats_opt)| match (&n, data_opt) {
+            (Node::FileContent(_content_id), Some(NodeData::FileContent(fc)))
+                if sampler.is_sampling(&n) =>
+            {
+                match fc {
+                    FileContentData::Consumed(_num_loaded_bytes) => {
+                        future::ok(_num_loaded_bytes).left_future()
+                    }
+                    // Consume the stream to make sure we loaded all blobs
+                    FileContentData::ContentStream(file_bytes_stream) => file_bytes_stream
+                        .try_fold(0, |acc, file_bytes| future::ok(acc + file_bytes.size()))
+                        .right_future(),
                 }
-                // Consume the stream to make sure we loaded all blobs
-                FileContentData::ContentStream(file_bytes_stream) => file_bytes_stream
-                    .try_fold(0, |acc, file_bytes| future::ok(acc + file_bytes.size()))
-                    .right_future(),
-            }
-            .and_then({
-                cloned!(sampler);
-                move |fs_stream_size| {
-                    // Report the blobstore sizes in sizing stats, more accurate than stream sizes, as headers included
-                    let sizes = sampler
-                        .complete_node(&n)
-                        .map(|sizing_sample| {
-                            sizing_sample.data.values().try_fold(
-                                SizingStats::default(),
-                                |acc, v| {
-                                    try_compress(v.as_bytes(), compressor_type)
-                                        .map(|sizes| acc + sizes)
-                                },
+                .and_then({
+                    cloned!(sampler);
+                    move |fs_stream_size| {
+                        // Report the blobstore sizes in sizing stats, more accurate than stream sizes, as headers included
+                        let sizes = sampler
+                            .complete_step(&n)
+                            .map(|sizing_sample| {
+                                sizing_sample.data.values().try_fold(
+                                    SizingStats::default(),
+                                    |acc, v| {
+                                        try_compress(v.as_bytes(), compressor_type)
+                                            .map(|sizes| acc + sizes)
+                                    },
+                                )
+                            })
+                            .transpose();
+
+                        future::ready(sizes.map(|sizes| {
+                            // Report the filestore stream's bytes size in the Consumed node
+                            (
+                                n,
+                                Some(NodeData::FileContent(FileContentData::Consumed(
+                                    fs_stream_size,
+                                ))),
+                                sizes,
                             )
-                        })
-                        .transpose();
-
-                    future::ready(sizes.map(|sizes| {
-                        // Report the filestore stream's bytes size in the Consumed node
-                        (
-                            n,
-                            Some(NodeData::FileContent(FileContentData::Consumed(
-                                fs_stream_size,
-                            ))),
-                            sizes,
-                        )
-                    }))
-                }
-            })
-            .left_future()
-        }
-        (_, data_opt) => {
-            // Report the blobstore sizes in sizing stats, more accurate than stream sizes, as headers included
-            let sizes = sampler
-                .complete_node(&n)
-                .map(|sizing_sample| {
-                    sizing_sample
-                        .data
-                        .values()
-                        .try_fold(SizingStats::default(), |acc, v| {
-                            try_compress(v.as_bytes(), compressor_type).map(|sizes| acc + sizes)
-                        })
+                        }))
+                    }
                 })
-                .transpose();
+                .left_future()
+            }
+            (_, data_opt) => {
+                // Report the blobstore sizes in sizing stats, more accurate than stream sizes, as headers included
+                let sizes = sampler
+                    .complete_step(&n)
+                    .map(|sizing_sample| {
+                        sizing_sample
+                            .data
+                            .values()
+                            .try_fold(SizingStats::default(), |acc, v| {
+                                try_compress(v.as_bytes(), compressor_type).map(|sizes| acc + sizes)
+                            })
+                    })
+                    .transpose();
 
-            future::ready(sizes.map(|sizes| (n, data_opt, sizes))).right_future()
-        }
-    })
+                future::ready(sizes.map(|sizes| (n, data_opt, sizes))).right_future()
+            }
+        },
+    )
     .try_buffer_unordered(scheduled_max)
 }
 
@@ -247,7 +259,7 @@ impl Default for SizingSample {
     }
 }
 
-impl SamplingHandler for NodeSamplingHandler<SizingSample> {
+impl SamplingHandler for WalkSampleMapping<Node, SizingSample> {
     fn sample_get(
         &self,
         ctx: CoreContext,
@@ -270,7 +282,7 @@ pub async fn compression_benefit<'a>(
     matches: &'a ArgMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let sizing_sampler = Arc::new(NodeSamplingHandler::<SizingSample>::new());
+    let sizing_sampler = Arc::new(WalkSampleMapping::<Node, SizingSample>::new());
 
     let (datasources, walk_params) = setup_common(
         COMPRESSION_BENEFIT,

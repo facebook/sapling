@@ -387,25 +387,32 @@ impl<Inner> Clone for ProgressStateMutex<Inner> {
     }
 }
 
-// Print some status update, passing on all data unchanged
-pub fn progress_stream<InStream, PS, ND, SS>(
+// Log some status update, passing on all data unchanged
+pub fn progress_stream<InStream, PS, ND, SS, K>(
     quiet: bool,
     progress_state: &PS,
     s: InStream,
-) -> impl Stream<Item = Result<(Node, Option<ND>, Option<SS>), Error>>
+) -> impl Stream<Item = Result<(K, Option<ND>, Option<SS>), Error>>
 where
-    InStream: Stream<Item = Result<(Node, Option<ND>, Option<SS>), Error>> + 'static + Send,
+    InStream: Stream<Item = Result<(K, Option<ND>, Option<SS>), Error>> + 'static + Send,
     PS: 'static + Send + Clone + ProgressRecorder<SS> + ProgressReporter,
+    K: 'static,
+    // Make sure we can convert from K reference to Node reference
+    for<'b> &'b Node: From<&'b K>,
 {
     s.map({
         let progress_state = progress_state.clone();
         move |r| {
-            r.and_then(|(n, data_opt, stats_opt)| {
-                progress_state.record_step(&n, stats_opt.as_ref());
-                if !quiet {
-                    progress_state.report_throttled();
+            r.and_then(|(key, data_opt, stats_opt)| {
+                {
+                    let k: &K = &key;
+                    let n: &Node = k.into();
+                    progress_state.record_step(n, stats_opt.as_ref());
+                    if !quiet {
+                        progress_state.report_throttled();
+                    }
                 }
-                Ok((n, data_opt, stats_opt))
+                Ok((key, data_opt, stats_opt))
             })
         }
     })

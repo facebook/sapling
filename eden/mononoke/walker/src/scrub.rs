@@ -11,7 +11,7 @@ use crate::progress::{
     progress_stream, report_state, ProgressReporter, ProgressReporterUnprotected,
     ProgressStateCountByType, ProgressStateMutex,
 };
-use crate::sampling::{NodeSamplingHandler, SamplingWalkVisitor};
+use crate::sampling::{SamplingWalkVisitor, WalkSampleMapping};
 use crate::setup::{
     parse_node_types, setup_common, DEFAULT_INCLUDE_NODE_TYPES, EXCLUDE_SAMPLE_NODE_TYPE_ARG,
     INCLUDE_SAMPLE_NODE_TYPE_ARG, LIMIT_DATA_FETCH_ARG, PROGRESS_INTERVAL_ARG,
@@ -53,8 +53,8 @@ struct ScrubStats {
     blobstore_keys: u64,
 }
 
-impl ScrubStats {
-    fn new(sample: Option<ScrubSample>) -> Self {
+impl From<Option<&ScrubSample>> for ScrubStats {
+    fn from(sample: Option<&ScrubSample>) -> Self {
         sample
             .map(|sample| ScrubStats {
                 blobstore_keys: sample.data.values().len() as u64,
@@ -75,7 +75,7 @@ fn loading_stream<InStream, SS>(
     limit_data_fetch: bool,
     scheduled_max: usize,
     s: InStream,
-    sampler: Arc<NodeSamplingHandler<ScrubSample>>,
+    sampler: Arc<WalkSampleMapping<Node, ScrubSample>>,
 ) -> impl Stream<Item = Result<(Node, Option<NodeData>, Option<ScrubStats>), Error>>
 where
     InStream: Stream<Item = Result<(Node, Option<NodeData>, Option<SS>), Error>> + 'static + Send,
@@ -88,7 +88,7 @@ where
             file_bytes_stream
                 .try_fold(0, |acc, file_bytes| future::ok(acc + file_bytes.size()))
                 .map_ok(move |num_bytes| {
-                    let size = ScrubStats::new(sampler.complete_node(&n));
+                    let size = ScrubStats::from(sampler.complete_step(&n).as_ref());
                     (
                         n,
                         Some(NodeData::FileContent(FileContentData::Consumed(num_bytes))),
@@ -100,7 +100,7 @@ where
         data_opt => {
             let size = data_opt
                 .as_ref()
-                .map(|_d| ScrubStats::new(sampler.complete_node(&n)));
+                .map(|_d| ScrubStats::from(sampler.complete_step(&n).as_ref()));
             future::ok((n, data_opt, size)).right_future()
         }
     })
@@ -120,7 +120,7 @@ impl Default for ScrubSample {
     }
 }
 
-impl SamplingHandler for NodeSamplingHandler<ScrubSample> {
+impl SamplingHandler for WalkSampleMapping<Node, ScrubSample> {
     fn sample_get(
         &self,
         ctx: CoreContext,
@@ -291,7 +291,7 @@ pub async fn scrub_objects<'a>(
     matches: &'a ArgMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let scrub_sampler = Arc::new(NodeSamplingHandler::<ScrubSample>::new());
+    let scrub_sampler = Arc::new(WalkSampleMapping::<Node, ScrubSample>::new());
 
     let (datasources, walk_params) = setup_common(
         SCRUB,

@@ -11,13 +11,17 @@ use crate::walk::{OutgoingEdge, WalkVisitor};
 
 use context::{CoreContext, SamplingKey};
 use dashmap::DashMap;
-use std::{collections::HashSet, sync::Arc};
+use std::{collections::HashSet, fmt, hash, sync::Arc};
+
+pub trait SampleTrigger<K> {
+    fn map_keys(&self, key: SamplingKey, walk_key: K);
+}
 
 #[derive(Debug)]
 pub struct SamplingWalkVisitor<T> {
     inner: WalkStateCHashMap,
     sample_node_types: HashSet<NodeType>,
-    sampler: Arc<NodeSamplingHandler<T>>,
+    sampler: Arc<T>,
     sample_rate: u64,
     sample_offset: u64,
 }
@@ -27,7 +31,7 @@ impl<T> SamplingWalkVisitor<T> {
         include_node_types: HashSet<NodeType>,
         include_edge_types: HashSet<EdgeType>,
         sample_node_types: HashSet<NodeType>,
-        sampler: Arc<NodeSamplingHandler<T>>,
+        sampler: Arc<T>,
         sample_rate: u64,
         sample_offset: u64,
     ) -> Self {
@@ -108,10 +112,24 @@ impl PathTrackingRoute {
     }
 }
 
-impl<T> WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), PathTrackingRoute>
-    for SamplingWalkVisitor<T>
+// Map the key type so progress reporting works
+impl<'a> From<&'a (Node, Option<WrappedPath>)> for &'a Node {
+    fn from((n, _p): &'a (Node, Option<WrappedPath>)) -> &'a Node {
+        n
+    }
+}
+
+impl<T>
+    WalkVisitor<
+        (
+            (Node, Option<WrappedPath>),
+            Option<NodeData>,
+            Option<StepStats>,
+        ),
+        PathTrackingRoute,
+    > for SamplingWalkVisitor<T>
 where
-    T: Default,
+    T: SampleTrigger<(Node, Option<WrappedPath>)>,
 {
     fn start_step(
         &self,
@@ -120,16 +138,16 @@ where
         step: &OutgoingEdge,
     ) -> CoreContext {
         if self.sample_node_types.contains(&step.target.get_type()) {
+            let repo_path = PathTrackingRoute::evolve_path(
+                route.and_then(|r| r.path.as_ref()),
+                step.path.as_ref(),
+                &step.target,
+            );
             let should_sample = match self.sample_rate {
                 0 => false,
                 1 => true,
                 sample_rate => {
-                    let sampling_fingerprint = PathTrackingRoute::evolve_path(
-                        route.and_then(|r| r.path.as_ref()),
-                        step.path.as_ref(),
-                        &step.target,
-                    )
-                    .map_or_else(
+                    let sampling_fingerprint = repo_path.map_or_else(
                         || step.target.sampling_fingerprint(),
                         |r| r.sampling_fingerprint(),
                     );
@@ -140,9 +158,10 @@ where
             };
 
             if should_sample {
-                ctx = ctx.clone_and_sample(SamplingKey::new());
-                ctx.sampling_key()
-                    .map(|k| self.sampler.start_node(*k, step.target.clone()));
+                let sampling_key = SamplingKey::new();
+                ctx = ctx.clone_and_sample(sampling_key);
+                self.sampler
+                    .map_keys(sampling_key, (step.target.clone(), repo_path.cloned()));
             }
         }
         self.inner.start_step(ctx, route.map(|_| &()), step)
@@ -156,23 +175,28 @@ where
         route: Option<PathTrackingRoute>,
         outgoing: Vec<OutgoingEdge>,
     ) -> (
-        (Node, Option<NodeData>, Option<StepStats>),
+        (
+            (Node, Option<WrappedPath>),
+            Option<NodeData>,
+            Option<StepStats>,
+        ),
         PathTrackingRoute,
         Vec<OutgoingEdge>,
     ) {
         let inner_route = route.as_ref().map(|_| ());
         let route = PathTrackingRoute::evolve(route, resolved.path.as_ref(), &resolved.target);
-        let (vout, _inner_route, outgoing) =
+        let ((n, nd, stats), _inner_route, outgoing) =
             self.inner
                 .visit(ctx, resolved, node_data, inner_route, outgoing);
-        (vout, route, outgoing)
+
+        (((n, route.path.clone()), nd, stats), route, outgoing)
     }
 }
 
 // Super simple sampling visitor impl for scrubbing
 impl<T> WalkVisitor<(Node, Option<NodeData>, Option<StepStats>), ()> for SamplingWalkVisitor<T>
 where
-    T: Default,
+    T: SampleTrigger<Node>,
 {
     fn start_step(
         &self,
@@ -193,10 +217,9 @@ where
             };
 
             if should_sample {
-                ctx = ctx.clone_and_sample(SamplingKey::new());
-                if let Some(k) = ctx.sampling_key() {
-                    self.sampler.start_node(*k, step.target.clone())
-                }
+                let sampling_key = SamplingKey::new();
+                ctx = ctx.clone_and_sample(sampling_key);
+                self.sampler.map_keys(sampling_key, step.target.clone());
             }
         }
         self.inner.start_step(ctx, route.map(|_| &()), step)
@@ -218,18 +241,54 @@ where
     }
 }
 
+// Map from a Sampling Key the sample type T
+// And from a graph level step S to the sampling key
 #[derive(Debug)]
-pub struct NodeSamplingHandler<T> {
+pub struct WalkSampleMapping<S, T>
+where
+    S: Eq + fmt::Debug + hash::Hash,
+{
     // T can keep a one to many mapping, e.g. some nodes like
     // chunked files have multiple blobstore keys
     inflight: DashMap<SamplingKey, T>,
-    // 1:1 relationship, each node has one SamplingKey
-    inflight_reverse: DashMap<Node, SamplingKey>,
+    // 1:1 relationship, each step has one SamplingKey
+    inflight_reverse: DashMap<S, SamplingKey>,
 }
 
-impl<T> NodeSamplingHandler<T>
+impl<T> SampleTrigger<Node> for WalkSampleMapping<Node, T>
 where
     T: Default,
+{
+    fn map_keys(&self, sample_key: SamplingKey, walk_key: Node) {
+        self.inflight.insert(sample_key, T::default());
+        self.inflight_reverse.insert(walk_key, sample_key);
+    }
+}
+
+impl<T> SampleTrigger<(Node, Option<WrappedPath>)> for WalkSampleMapping<Node, T>
+where
+    T: Default,
+{
+    fn map_keys(&self, sample_key: SamplingKey, walk_key: (Node, Option<WrappedPath>)) {
+        self.inflight.insert(sample_key, T::default());
+        self.inflight_reverse.insert(walk_key.0, sample_key);
+    }
+}
+
+impl<T> SampleTrigger<(Node, Option<WrappedPath>)>
+    for WalkSampleMapping<(Node, Option<WrappedPath>), T>
+where
+    T: Default,
+{
+    fn map_keys(&self, sample_key: SamplingKey, walk_key: (Node, Option<WrappedPath>)) {
+        self.inflight.insert(sample_key, T::default());
+        self.inflight_reverse.insert(walk_key, sample_key);
+    }
+}
+
+impl<S, T> WalkSampleMapping<S, T>
+where
+    S: Eq + fmt::Debug + hash::Hash,
 {
     pub fn new() -> Self {
         Self {
@@ -243,24 +302,18 @@ where
         &self.inflight
     }
 
-    // Called from the visitor start_step
-    pub fn start_node(&self, key: SamplingKey, node: Node) {
-        self.inflight.insert(key, T::default());
-        self.inflight_reverse.insert(node, key);
-    }
-
-    pub fn is_sampling(&self, node: &Node) -> bool {
-        self.inflight_reverse.contains_key(node)
-    }
-
     // Needs to be called to stop tracking the node and thus free memory.
     // Can be called from the vistor visit, or in the stream processing
     // walk output.
-    pub fn complete_node(&self, node: &Node) -> Option<T> {
-        let reverse_mapping = self.inflight_reverse.remove(node);
+    pub fn complete_step(&self, s: &S) -> Option<T> {
+        let reverse_mapping = self.inflight_reverse.remove(s);
         reverse_mapping
             .as_ref()
             .and_then(|(_k, sample_key)| self.inflight.remove(sample_key))
             .map(|(_k, v)| v)
+    }
+
+    pub fn is_sampling(&self, s: &S) -> bool {
+        self.inflight_reverse.contains_key(s)
     }
 }
