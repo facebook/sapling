@@ -342,7 +342,7 @@ def _watchmanpid(clock):
         return None
 
 
-def _walk(self, match, event):
+def _walk(self, match, event, span):
     """Replacement for filesystem._walk, hooking into Watchman.
 
     Whenever listignored is False and the Watchman client is available, use
@@ -391,6 +391,7 @@ def _walk(self, match, event):
 
     event["old_clock"] = clock
     event["old_files"] = blackbox.shortlist(nonnormalset)
+    span.record(oldclock=clock, oldfileslen=len(nonnormalset))
 
     copymap = self.dirstate._map.copymap
     getkind = stat.S_IFMT
@@ -434,6 +435,7 @@ def _walk(self, match, event):
         )
     except Exception as ex:
         event["is_error"] = True
+        span.record(error=ex)
         _handleunavailable(self._ui, state, ex)
         self._watchmanclient.clearconnection()
         # XXX: Legacy scuba logging. Remove this once the source of truth
@@ -448,6 +450,7 @@ def _walk(self, match, event):
         # can use it for our next query
         event["new_clock"] = result["clock"]
         event["is_fresh"] = result["is_fresh_instance"]
+        span.record(newclock=result["clock"], isfresh=result["is_fresh_instance"])
         state.setlastclock(result["clock"])
         state.setlastisfresh(result["is_fresh_instance"])
         if result["is_fresh_instance"]:
@@ -489,6 +492,7 @@ def _walk(self, match, event):
             event["new_files"] = blackbox.shortlist(
                 (e["name"] for e in result["files"]), count
             )
+            span.record(newfileslen=len(result["files"]))
         # XXX: Legacy scuba logging. Remove this once the source of truth
         # is moved to the Rust Event.
         if event["is_fresh"]:
@@ -1068,7 +1072,8 @@ class fsmonitorfilesystem(filesystem.physicalfilesystem):
     def _fsmonitorwalk(self, match):
         fsmonitorevent = {}
         try:
-            return _walk(self, match, fsmonitorevent)
+            with util.traced("fsmonitor::walk") as span:
+                return _walk(self, match, fsmonitorevent, span)
         finally:
             try:
                 blackbox.log({"fsmonitor": fsmonitorevent})

@@ -4260,9 +4260,11 @@ class traced(object):
 
     def record(self, **kwargs):
         """Record extra metadata"""
+        meta = []
         for k, v in sorted(kwargs.items()):
             if v is not None:
                 meta.append((k, str(v)))
+        tracer.edit(self.spanid, meta)
 
     def __enter__(self):
         tracer.enter(self.spanid)
