@@ -6,6 +6,7 @@
  */
 
 use anyhow::{format_err, Error};
+use arc_interner::ArcIntern;
 use bookmarks::BookmarkName;
 use filenodes::FilenodeInfo;
 use filestore::Alias;
@@ -17,7 +18,7 @@ use mercurial_types::{
 use mononoke_types::{fsnode::Fsnode, FsnodeId};
 use mononoke_types::{BonsaiChangeset, ChangesetId, ContentId, ContentMetadata, MPath, MononokeId};
 use phases::Phase;
-use std::{fmt, str::FromStr, sync::Arc};
+use std::{fmt, str::FromStr};
 
 // Helper to save repetition for the type enums
 macro_rules! define_type_enum {
@@ -115,7 +116,7 @@ impl NodeType {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum WrappedPath {
     Root,
-    NonRoot(Arc<MPath>),
+    NonRoot(ArcIntern<MPath>),
 }
 
 impl WrappedPath {
@@ -135,7 +136,7 @@ impl WrappedPath {
 impl From<Option<MPath>> for WrappedPath {
     fn from(mpath: Option<MPath>) -> Self {
         match mpath {
-            Some(mpath) => WrappedPath::NonRoot(Arc::new(mpath)),
+            Some(mpath) => WrappedPath::NonRoot(ArcIntern::new(mpath)),
             None => WrappedPath::Root,
         }
     }
