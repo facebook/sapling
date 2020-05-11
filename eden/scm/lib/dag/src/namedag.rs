@@ -36,6 +36,14 @@ pub struct NameDag {
     pub(crate) map: IdMap,
 
     /// A read-only snapshot of the `IdMap` that will be shared in `NameSet`s.
+    ///
+    /// This also serves as a way to test whether two `NameSet`s are using a
+    /// compatible (same) `IdMap` by testing `Arc::ptr_eq`.
+    ///
+    /// In theory we can also just clone `self.map` every time and get an
+    /// `Arc::ptr_eq` equivalent by using some sort of internal version number
+    /// that gets bumped when `map` gets changed. However that might be more
+    /// expensive.
     pub(crate) snapshot_map: Arc<IdMap>,
 
     mlog: multi::MultiLog,
@@ -168,6 +176,9 @@ impl NameDag {
         if id > group.min_id() {
             self.dag.build_segments_volatile(id - 1, &parent_ids_func)?;
         }
+
+        // Update snapshot_map so the changes become visible to queries.
+        self.snapshot_map = Arc::new(self.map.try_clone()?);
 
         Ok(())
     }
