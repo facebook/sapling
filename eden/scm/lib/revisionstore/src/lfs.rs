@@ -7,8 +7,9 @@
 
 use std::{
     cmp::min,
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     convert::TryInto,
+    env::var_os,
     fs::File,
     io::{ErrorKind, Read, Write},
     iter,
@@ -20,12 +21,12 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{bail, ensure, Result};
+use anyhow::{bail, ensure, format_err, Result};
 use bytes::{Bytes, BytesMut};
 use futures::stream::{iter, StreamExt};
 use parking_lot::{Mutex, RwLock};
 use rand::{thread_rng, Rng};
-use reqwest::{Client, Method, RequestBuilder, Url};
+use reqwest::{Client, Method, Proxy, RequestBuilder, Url};
 use serde_derive::{Deserialize, Serialize};
 use tokio::{runtime::Runtime, task::spawn_blocking};
 
@@ -1131,6 +1132,76 @@ impl LfsRemoteInner {
 }
 
 impl LfsRemote {
+    fn make_client(config: &ConfigSet) -> Result<Client> {
+        let proxy_url = if let Some(proxy_env) = var_os("https_proxy") {
+            Some(proxy_env.into_string().map_err(|_| {
+                format_err!("https_proxy environment variable is not a valid UTF-8 value")
+            })?)
+        } else if let Some(proxy_config) = config.get_opt::<String>("http_proxy", "host")? {
+            Some(proxy_config)
+        } else {
+            None
+        };
+
+        // The proxy can be specified without the http scheme at the beginning, for instance:
+        // `http_proxy=fwdproxy:8082` is valid but isn't an http url, ie the proxy code below would
+        // simply not send http traffic towards the proxy.
+        //
+        // To solve this, let's parse the url twice, and manually add the http scheme if needed.
+        let proxy_url = if let Some(proxy_url) = proxy_url {
+            let url = Url::parse(&proxy_url)?;
+            if !["http", "https"].contains(&url.scheme()) {
+                Some(Url::parse(&format!("http://{}", proxy_url))?)
+            } else {
+                Some(url)
+            }
+        } else {
+            None
+        };
+
+        let no_proxy = config.get_or("http_proxy", "no", || "".to_string())?;
+        let no_proxy = no_proxy.split(',').map(Into::into);
+        let mut no_proxy = no_proxy.collect::<HashSet<String>>();
+
+        if let Some(env_no_proxy) = var_os("no_proxy") {
+            let env_no_proxy = env_no_proxy.into_string().map_err(|_| {
+                format_err!("no_proxy environment variable is not a valid UTF-8 value")
+            })?;
+            let env_no_proxy = env_no_proxy.split(',').map(Into::into);
+
+            no_proxy.extend(env_no_proxy);
+        }
+
+        let client = if let Some(proxy_url) = proxy_url {
+            Client::builder()
+                .proxy(Proxy::custom(move |url| {
+                    let host = url.host_str();
+                    if let Some(host) = host {
+                        // The no_proxy list is expected to be fairly small, iterating over it
+                        // should be OK.
+                        for no_proxy_url in &no_proxy {
+                            if no_proxy_url == host {
+                                return None;
+                            }
+
+                            if no_proxy_url.starts_with('.') && host.ends_with(no_proxy_url) {
+                                return None;
+                            }
+                        }
+
+                        Some(proxy_url.clone())
+                    } else {
+                        None
+                    }
+                }))
+                .build()?
+        } else {
+            Client::new()
+        };
+
+        Ok(client)
+    }
+
     pub fn new(
         shared: Arc<LfsStore>,
         local: Option<Arc<LfsStore>>,
@@ -1166,7 +1237,8 @@ impl LfsRemote {
             let backoff_times = config.get_or("lfs", "backofftimes", || vec![1f32, 4f32, 8f32])?;
 
             let rt = Arc::new(Mutex::new(Runtime::new()?));
-            let client = Client::new();
+            let client = Self::make_client(config)?;
+
             Ok(Self {
                 shared,
                 local,
@@ -1866,6 +1938,143 @@ mod tests {
             let cachedir = TempDir::new()?;
             let lfsdir = TempDir::new()?;
             let config = make_lfs_config(&cachedir);
+
+            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let remote = LfsRemote::new(lfs, None, &config)?;
+
+            let blob = (
+                Sha256::from_str(
+                    "0000000000000000000000000000000000000000000000000000000000000000",
+                )?,
+                1,
+                Bytes::from(&b"nothing"[..]),
+            );
+
+            let resp = remote.batch_fetch(&[(blob.0, blob.1)], |_, _| unreachable!());
+            let err = resp.err().unwrap();
+            assert_eq!(err.to_string(), "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }");
+
+            Ok(())
+        }
+
+        #[test]
+        fn test_lfs_proxy_no_http() -> Result<()> {
+            let cachedir = TempDir::new()?;
+            let lfsdir = TempDir::new()?;
+            let mut config = make_lfs_config(&cachedir);
+
+            config.set(
+                "http_proxy",
+                "host",
+                Some("fwdproxy:8082"),
+                &Default::default(),
+            );
+
+            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let remote = LfsRemote::new(lfs, None, &config)?;
+
+            let blob = (
+                Sha256::from_str(
+                    "0000000000000000000000000000000000000000000000000000000000000000",
+                )?,
+                1,
+                Bytes::from(&b"nothing"[..]),
+            );
+
+            let resp = remote.batch_fetch(&[(blob.0, blob.1)], |_, _| unreachable!());
+            let err = resp.err().unwrap();
+            assert_eq!(&err.to_string()[..120], "error sending request for url (https://mononoke-lfs.internal.tfbnw.net/ovrsource/objects/batch): error trying to connect");
+
+            Ok(())
+        }
+
+        #[test]
+        fn test_lfs_proxy_http() -> Result<()> {
+            let cachedir = TempDir::new()?;
+            let lfsdir = TempDir::new()?;
+            let mut config = make_lfs_config(&cachedir);
+
+            config.set(
+                "http_proxy",
+                "host",
+                Some("http://fwdproxy:8082"),
+                &Default::default(),
+            );
+
+            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let remote = LfsRemote::new(lfs, None, &config)?;
+
+            let blob = (
+                Sha256::from_str(
+                    "0000000000000000000000000000000000000000000000000000000000000000",
+                )?,
+                1,
+                Bytes::from(&b"nothing"[..]),
+            );
+
+            let resp = remote.batch_fetch(&[(blob.0, blob.1)], |_, _| unreachable!());
+            let err = resp.err().unwrap();
+            assert_eq!(&err.to_string()[..120], "error sending request for url (https://mononoke-lfs.internal.tfbnw.net/ovrsource/objects/batch): error trying to connect");
+
+            Ok(())
+        }
+
+        #[test]
+        fn test_lfs_no_proxy() -> Result<()> {
+            let cachedir = TempDir::new()?;
+            let lfsdir = TempDir::new()?;
+            let mut config = make_lfs_config(&cachedir);
+
+            config.set(
+                "http_proxy",
+                "host",
+                Some("http://fwdproxy:8082"),
+                &Default::default(),
+            );
+            config.set(
+                "http_proxy",
+                "no",
+                Some("dewey-lfs.vip.facebook.com,mononoke-lfs.internal.tfbnw.net"),
+                &Default::default(),
+            );
+
+            let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+            let remote = LfsRemote::new(lfs, None, &config)?;
+
+            let blob = (
+                Sha256::from_str(
+                    "0000000000000000000000000000000000000000000000000000000000000000",
+                )?,
+                1,
+                Bytes::from(&b"nothing"[..]),
+            );
+
+            let resp = remote.batch_fetch(&[(blob.0, blob.1)], |_, _| unreachable!());
+            let err = resp.err().unwrap();
+            assert_eq!(err.to_string(), "Couldn't fetch oid 0000000000000000000000000000000000000000000000000000000000000000: ObjectError { code: 404, message: \"Object does not exist\" }");
+
+            Ok(())
+        }
+
+        #[test]
+        fn test_lfs_no_proxy_suffix() -> Result<()> {
+            let cachedir = TempDir::new()?;
+            let lfsdir = TempDir::new()?;
+            let mut config = make_lfs_config(&cachedir);
+
+            config.set(
+                "http_proxy",
+                "host",
+                Some("http://fwdproxy:8082"),
+                &Default::default(),
+            );
+
+            config.set(
+                "http_proxy",
+                "no",
+                Some(".facebook.com,.tfbnw.net"),
+                &Default::default(),
+            );
 
             let lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
             let remote = LfsRemote::new(lfs, None, &config)?;
