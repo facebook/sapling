@@ -47,6 +47,32 @@ pub struct PathTrackingRoute {
     pub path: Option<WrappedPath>,
 }
 
+// Only certain node types can have repo paths associated
+fn filter_repo_path(node_type: NodeType, path: Option<&'_ WrappedPath>) -> Option<&'_ WrappedPath> {
+    match node_type {
+        NodeType::Root => None,
+        // Bonsai
+        NodeType::Bookmark => None,
+        NodeType::BonsaiChangeset => None,
+        NodeType::BonsaiHgMapping => None,
+        NodeType::BonsaiPhaseMapping => None,
+        NodeType::PublishedBookmarks => None,
+        NodeType::BonsaiFsnodeMapping => None,
+        // Hg
+        NodeType::HgBonsaiMapping => None,
+        NodeType::HgChangeset => None,
+        NodeType::HgManifest => path,
+        NodeType::HgFileEnvelope => path,
+        NodeType::HgFileNode => path,
+        // Content
+        NodeType::FileContent => path,
+        NodeType::FileContentMetadata => path,
+        NodeType::AliasContentMapping => path,
+        // Derived Data
+        NodeType::Fsnode => path,
+    }
+}
+
 impl PathTrackingRoute {
     fn evolve_path<'a>(
         from_route: Option<&'a WrappedPath>,
@@ -59,8 +85,8 @@ impl PathTrackingRoute {
             None => match target.stats_path() {
                 // Path is part of node identity
                 Some(from_node) => Some(from_node),
-                // No per-node path, so use the path from route
-                None => from_route,
+                // No per-node path, so use the route, filtering out nodes that can't have repo paths
+                None => filter_repo_path(target.get_type(), from_route),
             },
         }
     }

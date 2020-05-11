@@ -62,23 +62,23 @@ Three separate cycles allowing all edges, total bytes should be the same as full
   * Run */s,*/s,579,579,0%,*s; * (glob)
   Walked/s,* (glob)
 
-Reduced edge three separate cycles moving offset each time, total in each cycle should be the same as above. Its not.
+Reduced edge three separate cycles moving offset each time, total in each cycle should be the same as above.
   $ for i in {0..2}; do mononoke_walker --storage-id=blobstore --readonly-storage compression-benefit -q --bookmark master_bookmark -I deep -x BonsaiFsnodeMapping -x Fsnode -X BonsaiChangesetToBonsaiParent -X HgFileEnvelopeToFileContent -X HgChangesetToHgParent --sample-rate=3 --sample-offset=$i 2>&1; done | strip_glog
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
-  * Run */s,*/s,1045,1016,2%,*s; * (glob)
+  * Run */s,*/s,1146,1117,2%,*s; * (glob)
   Walked/s,* (glob)
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
-  * Run */s,*/s,522,522,0%,*s;* (glob)
+  * Run */s,*/s,443,443,0%,*s;* (glob)
   Walked/s,* (glob)
   Walking roots * (glob)
   Walking edge types * (glob)
   Walking node types * (glob)
   Final count: * (glob)
-  * Run */s,*/s,601,601,0%,*s; * (glob)
+  * Run */s,*/s,579,579,0%,*s; * (glob)
   Walked/s,* (glob)
