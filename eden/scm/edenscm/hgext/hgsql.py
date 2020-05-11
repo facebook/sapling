@@ -68,7 +68,7 @@ from edenscm.mercurial import (
     util,
     wireproto,
 )
-from edenscm.mercurial.i18n import _
+from edenscm.mercurial.i18n import _, _x
 from edenscm.mercurial.node import bin, hex, nullid, nullrev
 from edenscm.mercurial.pycompat import decodeutf8, encodeutf8, queue, range
 
@@ -423,7 +423,14 @@ def backfilltree(orig, ui, repo, *args, **kwargs):
 def _memcommit(orig, *args, **kwargs):
     repo = args[0]
     if issqlrepo(repo):
-        return executewithsql(repo, orig, True, *args, **kwargs)
+
+        def _memcommitchecklock(*args, **kwargs):
+            readonly, _reason = repo.sqlreporeadonlystate()
+            if readonly:
+                raise error.Abort(_x("repo is locked"))
+            return orig(*args, **kwargs)
+
+        return executewithsql(repo, _memcommitchecklock, True, *args, **kwargs)
     else:
         return orig(*args, **kwargs)
 

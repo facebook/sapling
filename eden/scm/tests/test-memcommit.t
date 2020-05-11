@@ -266,3 +266,18 @@ descendent of destination bookmark.
   $ copycommit . ../mirroredrepo
   {"error": "merge commits are not supported"} (no-eol)
   [255]
+
+#if hgsql.true
+  $ cd ../mirroredrepo
+  $ mysql -h $DBHOST -P $DBPORT -D $DBNAME -u $DBUSER $DBPASSOPT -e 'REPLACE INTO repo_lock(repo, state) VALUES ("mirroredrepo", 0)'
+  $ hg debugshell -c "ui.write('%s\n' % str(repo.sqlreporeadonlystate()))"
+  (True, 'no reason was provided')
+
+  $ cd ../originalrepo
+  $ hg up -q ".^"
+  $ echo "1" >> test
+  $ hg commit -Aqm "commit to fail"
+  $ copycommit . ../mirroredrepo
+  {"error": "repo is locked"} (no-eol)
+  [255]
+#endif
