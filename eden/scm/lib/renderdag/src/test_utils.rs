@@ -8,6 +8,8 @@
 use std::collections::{HashMap, HashSet};
 
 use anyhow::Result;
+use dag::idmap::IdMapAssignHead;
+use dag::idmap::IdMapBuildParents;
 use dag::{Group, Id, IdMap, VertexName};
 use tempfile::tempdir;
 use unicode_width::UnicodeWidthStr;

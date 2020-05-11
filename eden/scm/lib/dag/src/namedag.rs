@@ -16,6 +16,8 @@ use crate::iddag::SyncableIdDag;
 use crate::iddagstore::IdDagStore;
 use crate::iddagstore::IndexedLogStore;
 use crate::idmap::IdMap;
+use crate::idmap::IdMapAssignHead;
+use crate::idmap::IdMapBuildParents;
 use crate::idmap::IdMapLike;
 use crate::idmap::SyncableIdMap;
 use crate::nameset::dag::DagSet;

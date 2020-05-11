@@ -6,6 +6,8 @@
  */
 
 use anyhow::Result;
+use dag::idmap::IdMapAssignHead;
+use dag::idmap::IdMapBuildParents;
 use dag::{idmap::IdMap, Group, Id, IdDag, VertexName};
 use minibench::{
     bench, elapsed,

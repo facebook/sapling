@@ -10,7 +10,7 @@
 //! See [`IdMap`] for the main structure.
 
 use crate::id::{Group, Id, VertexName};
-use anyhow::{bail, ensure, format_err, Result};
+use anyhow::{bail, ensure, format_err, Context, Result};
 use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
@@ -39,7 +39,6 @@ pub struct SyncableIdMap<'a> {
     map: &'a mut IdMap,
     lock_file: File,
 }
-
 impl IdMap {
     const INDEX_ID_TO_NAME: usize = 0;
     const INDEX_NAME_TO_ID: usize = 1;
@@ -319,8 +318,8 @@ impl IdMap {
     }
 }
 
-// Interaction with a DAG.
-impl IdMap {
+/// DAG-aware write operations.
+pub trait IdMapAssignHead: IdMapLike + IdMapWrite {
     /// Assign an id for a head in a DAG. This implies ancestors of the
     /// head will also have ids assigned.
     ///
@@ -335,12 +334,7 @@ impl IdMap {
     /// New `id`s inserted by this function will have the specified `group`.
     /// Existing `id`s that are ancestors of `head` will get re-assigned
     /// if they have a higher `group`.
-    pub fn assign_head<F>(
-        &mut self,
-        head: VertexName,
-        parents_by_name: F,
-        group: Group,
-    ) -> Result<Id>
+    fn assign_head<F>(&mut self, head: VertexName, parents_by_name: F, group: Group) -> Result<Id>
     where
         F: Fn(VertexName) -> Result<Vec<VertexName>>,
     {
@@ -396,13 +390,13 @@ impl IdMap {
                 Visit(head) => {
                     // If the id was not assigned, or was assigned to a higher group,
                     // (re-)assign it to this group.
-                    if let None = self.find_id_by_name_with_max_group(head.as_ref(), group)? {
+                    if let None = self.vertex_id_with_max_group(&head, group)? {
                         todo_stack.push(Todo::Assign(head.clone()));
                         // If the parent was not assigned, or was assigned to a higher group,
                         // (re-)assign the parent to this group.
                         for unassigned_parent in parents_by_name(head)?
                             .into_iter()
-                            .filter(|p| match self.find_id_by_name_with_max_group(p.as_ref(), group) {
+                            .filter(|p| match self.vertex_id_with_max_group(&p, group) {
                                 Ok(Some(_)) => false,
                                 _ => true,
                             })
@@ -414,7 +408,7 @@ impl IdMap {
                     }
                 }
                 Assign(head) => {
-                    if let None = self.find_id_by_name_with_max_group(head.as_ref(), group)? {
+                    if let None = self.vertex_id_with_max_group(&head, group)? {
                         let id = self.next_free_id(group)?;
                         self.insert(id, head.as_ref())?;
                     }
@@ -422,48 +416,43 @@ impl IdMap {
             }
         }
 
-        self.find_id_by_name(head.as_ref())
-            .map(|v| v.expect("head should be assigned now"))
+        self.vertex_id(head)
     }
+}
 
+impl<T> IdMapAssignHead for T where T: IdMapLike + IdMapWrite {}
+
+pub trait IdMapBuildParents: IdMapLike {
     /// Translate `get_parents` from taking names to taking `Id`s.
-    pub fn build_get_parents_by_id<'a>(
+    fn build_get_parents_by_id<'a>(
         &'a self,
         get_parents_by_name: &'a dyn Fn(VertexName) -> Result<Vec<VertexName>>,
-    ) -> impl Fn(Id) -> Result<Vec<Id>> + 'a {
+    ) -> Box<dyn Fn(Id) -> Result<Vec<Id>> + 'a> {
         let func = move |id: Id| -> Result<Vec<Id>> {
-            let name = match self.find_vertex_name_by_id(id)? {
-                Some(name) => name,
-                None => {
-                    let name = match self.find_name_by_id(id) {
-                        Ok(Some(name)) => format!("{} ({:?})", id, name),
-                        _ => format!("{}", id),
-                    };
-                    bail!("logic error: {} is referred but not assigned", name)
-                }
-            };
+            let name = self
+                .vertex_name(id)
+                .context("logic error: vertex referred but is not assigned")?;
             let parent_names: Vec<VertexName> = get_parents_by_name(name.clone())?;
             let mut result = Vec::with_capacity(parent_names.len());
             for parent_name in parent_names {
-                if let Some(parent_id) = self.find_id_by_name(parent_name.as_ref())? {
-                    ensure!(
-                        parent_id < id,
-                        "parent {} {:?} should <= {} {:?}",
-                        parent_id,
-                        &parent_name,
-                        id,
-                        &name
-                    );
-                    result.push(parent_id);
-                } else {
-                    bail!("logic error: ancestor ids must be available");
-                }
+                let parent_id = self.vertex_id(parent_name)?;
+                ensure!(
+                    parent_id < id,
+                    "parent {} {:?} should <= {} {:?}",
+                    parent_id,
+                    self.vertex_name(parent_id)?,
+                    id,
+                    &name
+                );
+                result.push(parent_id);
             }
             Ok(result)
         };
-        func
+        Box::new(func)
     }
 }
+
+impl<T> IdMapBuildParents for T where T: IdMapLike {}
 
 // Remove data.
 impl IdMap {
@@ -532,7 +521,15 @@ impl<'a> DerefMut for SyncableIdMap<'a> {
 /// Minimal APIs for converting between Id and name.
 pub trait IdMapLike {
     fn vertex_id(&self, name: VertexName) -> Result<Id>;
+    fn vertex_id_with_max_group(&self, name: &VertexName, max_group: Group) -> Result<Option<Id>>;
     fn vertex_name(&self, id: Id) -> Result<VertexName>;
+    fn contains_vertex_name(&self, name: &VertexName) -> Result<bool>;
+}
+
+/// Minimal write operations for IdMap.
+pub trait IdMapWrite {
+    fn insert(&mut self, id: Id, name: &[u8]) -> Result<()>;
+    fn next_free_id(&self, group: Group) -> Result<Id>;
 }
 
 impl IdMapLike for IdMap {
@@ -540,9 +537,24 @@ impl IdMapLike for IdMap {
         self.find_id_by_name(name.as_ref())?
             .ok_or_else(|| format_err!("{:?} not found", name))
     }
+    fn vertex_id_with_max_group(&self, name: &VertexName, max_group: Group) -> Result<Option<Id>> {
+        self.find_id_by_name_with_max_group(name.as_ref(), max_group)
+    }
     fn vertex_name(&self, id: Id) -> Result<VertexName> {
         self.find_vertex_name_by_id(id)?
             .ok_or_else(|| format_err!("{} not found", id))
+    }
+    fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
+        Ok(self.find_id_by_name(name.as_ref())?.is_some())
+    }
+}
+
+impl IdMapWrite for IdMap {
+    fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
+        IdMap::insert(self, id, name)
+    }
+    fn next_free_id(&self, group: Group) -> Result<Id> {
+        IdMap::next_free_id(self, group)
     }
 }
 
