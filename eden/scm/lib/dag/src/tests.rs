@@ -7,6 +7,8 @@
 
 use crate::id::{Group, Id, VertexName};
 use crate::iddag::FirstAncestorConstraint;
+#[cfg(test)]
+use crate::namedag::NameDagAlgorithm;
 use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
 use crate::IdMap;
 use crate::NameDag;

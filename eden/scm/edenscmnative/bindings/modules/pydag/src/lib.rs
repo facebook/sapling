@@ -13,6 +13,7 @@ use cpython_ext::{AnyhowResultExt, PyNone, PyPath, ResultPyErrExt};
 use dag::{
     id::{Id, VertexName},
     namedag::LowLevelAccess,
+    namedag::NameDagAlgorithm,
     nameset::dag::DagSet,
     nameset::legacy::LegacyCodeNeedIdAccess,
     spanset::{SpanSet, SpanSetIter},

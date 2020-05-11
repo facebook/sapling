@@ -141,6 +141,7 @@ impl NameSetQuery for DagSet {
 pub(crate) mod tests {
     use super::super::tests::*;
     use super::*;
+    use crate::namedag::NameDagAlgorithm;
     use crate::tests::build_segments;
     use crate::NameDag;
     use std::ops::Deref;

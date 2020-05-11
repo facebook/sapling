@@ -25,6 +25,7 @@ pub use id::{Group, Id, VertexName};
 pub use iddag::IdDag;
 pub use idmap::IdMap;
 pub use namedag::NameDag;
+pub use namedag::NameDagAlgorithm;
 pub use nameset::NameSet;
 pub use spanset::SpanSet;
 
