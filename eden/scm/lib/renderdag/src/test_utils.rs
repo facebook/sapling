@@ -7,11 +7,9 @@
 
 use std::collections::{HashMap, HashSet};
 
-use anyhow::Result;
-use dag::idmap::IdMapAssignHead;
-use dag::idmap::IdMapBuildParents;
-use dag::{Group, Id, IdMap, VertexName};
-use tempfile::tempdir;
+use dag::namedag::MemNameDag;
+use dag::namedag::NameDagAlgorithm;
+use dag::VertexName;
 use unicode_width::UnicodeWidthStr;
 
 use crate::render::{Ancestor, Renderer};
@@ -19,14 +17,14 @@ use crate::test_fixtures::TestFixture;
 
 pub(crate) fn render_string(
     fixture: &TestFixture,
-    renderer: &mut dyn Renderer<Id, Output = String>,
+    renderer: &mut dyn Renderer<VertexName, Output = String>,
 ) -> String {
     render_string_with_order(fixture, renderer, None)
 }
 
 pub(crate) fn render_string_with_order(
     fixture: &TestFixture,
-    renderer: &mut dyn Renderer<Id, Output = String>,
+    renderer: &mut dyn Renderer<VertexName, Output = String>,
     order: Option<&[&str]>,
 ) -> String {
     let TestFixture {
@@ -37,83 +35,55 @@ pub(crate) fn render_string_with_order(
         ancestors,
         missing,
     } = fixture;
-    let dir = tempdir().unwrap();
-    let mut id_map = IdMap::open(dir.path().join("id")).unwrap();
-    let parents = drawdag::parse(dag);
-    let parents_by_name = move |name: VertexName| -> Result<Vec<VertexName>> {
-        Ok({
-            let name = String::from_utf8(name.as_ref().to_vec()).unwrap();
-            parents[&name]
-                .iter()
-                .map(|p| VertexName::copy_from(p.as_bytes()))
-                .collect()
-        })
-    };
-
-    let mut last_head = 0;
-    for head in heads.iter() {
-        id_map
-            .assign_head(
-                head.as_bytes().to_vec().into(),
-                &parents_by_name,
-                Group::MASTER,
-            )
-            .expect("can assign head");
-        let Id(head_id) = id_map.find_id_by_name(head.as_bytes()).unwrap().unwrap();
-        last_head = head_id;
-    }
+    let dag = MemNameDag::from_ascii_with_heads(dag, Some(heads)).unwrap();
+    // str -> VertexName
+    let v = |s: &str| VertexName::copy_from(s.as_bytes());
 
     let ancestors: HashSet<_> = ancestors
         .iter()
-        .map(|(desc, anc)| {
-            (
-                id_map.find_id_by_name(desc.as_bytes()).unwrap().unwrap(),
-                id_map.find_id_by_name(anc.as_bytes()).unwrap().unwrap(),
-            )
-        })
+        .map(|(desc, anc)| (v(desc), v(anc)))
         .collect();
-    let missing: HashSet<_> = missing
+    let missing: HashSet<_> = missing.iter().map(|s| v(s)).collect();
+
+    reserve
         .iter()
-        .map(|node| id_map.find_id_by_name(node.as_bytes()).unwrap().unwrap())
-        .collect();
+        .cloned()
+        .map(|s| v(s))
+        .for_each(|s| renderer.reserve(s));
 
-    for reserve in reserve.iter() {
-        let reserve_id = id_map.find_id_by_name(reserve.as_bytes()).unwrap().unwrap();
-        renderer.reserve(reserve_id);
-    }
-
-    let parents_by_id = id_map.build_get_parents_by_id(&parents_by_name);
     let messages: HashMap<_, _> = messages.iter().cloned().collect();
 
-    let iter = match order {
-        None => (0..=last_head).rev().collect::<Vec<_>>(),
-        Some(order) => order
+    let iter: Vec<_> = match order {
+        None => dag
+            .all()
+            .unwrap()
             .iter()
-            .map(|name| id_map.find_id_by_name(name.as_bytes()).unwrap().unwrap().0)
+            .unwrap()
+            .map(|v| v.unwrap())
             .collect(),
+        Some(order) => order.iter().map(|name| v(name)).collect(),
     };
 
     let mut out = String::new();
-    for id in iter {
-        let node = Id(id);
+    for node in iter {
         if missing.contains(&node) {
             continue;
         }
-        let parents = parents_by_id(node)
+        let parents = dag
+            .parent_names(node.clone())
             .unwrap()
             .into_iter()
-            .map(|parent_id| {
-                if missing.contains(&parent_id) {
+            .map(|parent| {
+                if missing.contains(&parent) {
                     Ancestor::Anonymous
-                } else if ancestors.contains(&(node, parent_id)) {
-                    Ancestor::Ancestor(parent_id)
+                } else if ancestors.contains(&(node.clone(), parent.clone())) {
+                    Ancestor::Ancestor(parent)
                 } else {
-                    Ancestor::Parent(parent_id)
+                    Ancestor::Parent(parent)
                 }
             })
             .collect();
-        let name =
-            String::from_utf8(id_map.find_name_by_id(node).unwrap().unwrap().to_vec()).unwrap();
+        let name = String::from_utf8(node.as_ref().to_vec()).unwrap();
         let message = match messages.get(name.as_str()) {
             Some(message) => format!("{}\n{}", name, message),
             None => name.clone(),
