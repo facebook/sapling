@@ -15,6 +15,7 @@ use byteorder::{BigEndian, ReadBytesExt, WriteBytesExt};
 use fs2::FileExt;
 use indexedlog::log;
 use std::borrow::Cow;
+use std::collections::HashMap;
 use std::fmt;
 use std::fs::{self, File};
 use std::io::{Cursor, Read, Write};
@@ -23,11 +24,23 @@ use std::path::{Path, PathBuf};
 use std::sync::atomic::{self, AtomicU64};
 
 /// Bi-directional mapping between an integer id and a name (`[u8]`).
+///
+/// Backed by the filesystem.
 pub struct IdMap {
     log: log::Log,
     path: PathBuf,
     cached_next_free_ids: [AtomicU64; Group::COUNT],
     pub(crate) need_rebuild_non_master: bool,
+}
+
+/// Bi-directional mapping between an integer id and a name (`[u8]`).
+///
+/// Private. Stored in memory.
+#[derive(Default)]
+pub struct MemIdMap {
+    id2name: HashMap<Id, VertexName>,
+    name2id: HashMap<VertexName, Id>,
+    cached_next_free_ids: [AtomicU64; Group::COUNT],
 }
 
 /// Guard to make sure [`IdMap`] on-disk writes are race-free.
@@ -39,6 +52,7 @@ pub struct SyncableIdMap<'a> {
     map: &'a mut IdMap,
     lock_file: File,
 }
+
 impl IdMap {
     const INDEX_ID_TO_NAME: usize = 0;
     const INDEX_NAME_TO_ID: usize = 1;
@@ -318,6 +332,26 @@ impl IdMap {
     }
 }
 
+impl MemIdMap {
+    /// Create an empty [`MemIdMap`].
+    pub fn new() -> Self {
+        Self::default()
+    }
+}
+
+impl Clone for MemIdMap {
+    fn clone(&self) -> Self {
+        Self {
+            id2name: self.id2name.clone(),
+            name2id: self.name2id.clone(),
+            cached_next_free_ids: [
+                AtomicU64::new(self.cached_next_free_ids[0].load(atomic::Ordering::SeqCst)),
+                AtomicU64::new(self.cached_next_free_ids[1].load(atomic::Ordering::SeqCst)),
+            ],
+        }
+    }
+}
+
 /// DAG-aware write operations.
 pub trait IdMapAssignHead: IdMapLike + IdMapWrite {
     /// Assign an id for a head in a DAG. This implies ancestors of the
@@ -555,6 +589,57 @@ impl IdMapWrite for IdMap {
     }
     fn next_free_id(&self, group: Group) -> Result<Id> {
         IdMap::next_free_id(self, group)
+    }
+}
+
+impl IdMapLike for MemIdMap {
+    fn vertex_id(&self, name: VertexName) -> Result<Id> {
+        let id = self
+            .name2id
+            .get(&name)
+            .ok_or_else(|| format_err!("{:?} not found", name))?;
+        Ok(*id)
+    }
+    fn vertex_id_with_max_group(&self, name: &VertexName, max_group: Group) -> Result<Option<Id>> {
+        let optional_id = self.name2id.get(name).and_then(|id| {
+            if id.group() <= max_group {
+                Some(*id)
+            } else {
+                None
+            }
+        });
+        Ok(optional_id)
+    }
+    fn vertex_name(&self, id: Id) -> Result<VertexName> {
+        let name = self
+            .id2name
+            .get(&id)
+            .ok_or_else(|| format_err!("{} not found", id))?;
+        Ok(name.clone())
+    }
+    fn contains_vertex_name(&self, name: &VertexName) -> Result<bool> {
+        Ok(self.name2id.contains_key(name))
+    }
+}
+
+impl IdMapWrite for MemIdMap {
+    fn insert(&mut self, id: Id, name: &[u8]) -> Result<()> {
+        let vertex_name = VertexName::copy_from(name);
+        self.name2id.insert(vertex_name.clone(), id);
+        self.id2name.insert(id, vertex_name);
+        let group = id.group();
+        // TODO: use fetch_max once stabilized.
+        // (https://github.com/rust-lang/rust/issues/4865)
+        let cached = self.cached_next_free_ids[group.0].load(atomic::Ordering::SeqCst);
+        if id.0 >= cached {
+            self.cached_next_free_ids[group.0].store(id.0 + 1, atomic::Ordering::SeqCst);
+        }
+        Ok(())
+    }
+    fn next_free_id(&self, group: Group) -> Result<Id> {
+        let cached = self.cached_next_free_ids[group.0].load(atomic::Ordering::SeqCst);
+        let id = Id(cached);
+        Ok(id)
     }
 }
 
