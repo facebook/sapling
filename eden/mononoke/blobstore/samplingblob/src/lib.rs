@@ -15,9 +15,30 @@ use mononoke_types::BlobstoreBytes;
 use std::sync::Arc;
 
 pub trait SamplingHandler: std::fmt::Debug + Send + Sync {
-    fn sample_get(&self, ctx: CoreContext, key: String, value: Option<&BlobstoreBytes>);
-    fn sample_put(&self, _ctx: &CoreContext, _key: &str, _value: &BlobstoreBytes) {}
-    fn sample_is_present(&self, _ctx: CoreContext, _key: String, _value: bool) {}
+    fn sample_get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: Option<&BlobstoreBytes>,
+    ) -> Result<(), Error>;
+
+    fn sample_put(
+        &self,
+        _ctx: &CoreContext,
+        _key: &str,
+        _value: &BlobstoreBytes,
+    ) -> Result<(), Error> {
+        Ok(())
+    }
+
+    fn sample_is_present(
+        &self,
+        _ctx: CoreContext,
+        _key: String,
+        _value: bool,
+    ) -> Result<(), Error> {
+        Ok(())
+    }
 }
 
 /// A layer over an existing blobstore that allows sampling of blobs, e.g. for
@@ -39,13 +60,12 @@ impl<T: Blobstore + Clone> Blobstore for SamplingBlobstore<T> {
     fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
         self.inner
             .get(ctx.clone(), key.clone())
-            .map({
+            .and_then({
                 cloned!(self.handler);
                 move |opt_blob| {
-                    opt_blob.map(|blob| {
-                        handler.sample_get(ctx, key, Some(blob.as_bytes()));
-                        blob
-                    })
+                    handler
+                        .sample_get(ctx, key, opt_blob.as_ref().map(|blob| blob.as_bytes()))
+                        .map(|()| opt_blob)
                 }
             })
             .boxify()
@@ -53,19 +73,23 @@ impl<T: Blobstore + Clone> Blobstore for SamplingBlobstore<T> {
 
     #[inline]
     fn put(&self, ctx: CoreContext, key: String, value: BlobstoreBytes) -> BoxFuture<(), Error> {
-        self.handler.sample_put(&ctx, &key, &value);
-        self.inner.put(ctx, key, value)
+        let sample_res = self.handler.sample_put(&ctx, &key, &value);
+        self.inner
+            .put(ctx, key, value)
+            .and_then(|()| sample_res)
+            .boxify()
     }
 
     #[inline]
     fn is_present(&self, ctx: CoreContext, key: String) -> BoxFuture<bool, Error> {
         self.inner
             .is_present(ctx.clone(), key.clone())
-            .map({
+            .and_then({
                 cloned!(self.handler);
                 move |is_present| {
-                    handler.sample_is_present(ctx, key, is_present);
-                    is_present
+                    handler
+                        .sample_is_present(ctx, key, is_present)
+                        .map(|()| is_present)
                 }
             })
             .boxify()
@@ -88,24 +112,40 @@ mod test {
         looking_for: SamplingKey,
     }
     impl TestSamplingHandler {
-        fn check_sample(&self, ctx: &CoreContext) {
+        fn check_sample(&self, ctx: &CoreContext) -> Result<(), Error> {
             ctx.sampling_key().map(|sampling_key| {
                 if sampling_key == &self.looking_for {
                     self.sampled.store(true, Ordering::Relaxed);
                 }
             });
+            Ok(())
         }
     }
 
     impl SamplingHandler for TestSamplingHandler {
-        fn sample_get(&self, ctx: CoreContext, _key: String, _value: Option<&BlobstoreBytes>) {
-            self.check_sample(&ctx);
+        fn sample_get(
+            &self,
+            ctx: CoreContext,
+            _key: String,
+            _value: Option<&BlobstoreBytes>,
+        ) -> Result<(), Error> {
+            self.check_sample(&ctx)
         }
-        fn sample_put(&self, ctx: &CoreContext, _key: &str, _value: &BlobstoreBytes) {
-            self.check_sample(ctx);
+        fn sample_put(
+            &self,
+            ctx: &CoreContext,
+            _key: &str,
+            _value: &BlobstoreBytes,
+        ) -> Result<(), Error> {
+            self.check_sample(ctx)
         }
-        fn sample_is_present(&self, ctx: CoreContext, _key: String, _value: bool) {
-            self.check_sample(&ctx);
+        fn sample_is_present(
+            &self,
+            ctx: CoreContext,
+            _key: String,
+            _value: bool,
+        ) -> Result<(), Error> {
+            self.check_sample(&ctx)
         }
     }
 

@@ -248,12 +248,18 @@ impl Default for SizingSample {
 }
 
 impl SamplingHandler for NodeSamplingHandler<SizingSample> {
-    fn sample_get(&self, ctx: CoreContext, key: String, value: Option<&BlobstoreBytes>) {
+    fn sample_get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: Option<&BlobstoreBytes>,
+    ) -> Result<(), Error> {
         ctx.sampling_key().map(|sampling_key| {
             self.inflight()
                 .get_mut(sampling_key)
                 .map(|mut guard| value.map(|value| guard.data.insert(key.clone(), value.clone())))
         });
+        Ok(())
     }
 }
 

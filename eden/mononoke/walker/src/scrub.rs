@@ -121,15 +121,19 @@ impl Default for ScrubSample {
 }
 
 impl SamplingHandler for NodeSamplingHandler<ScrubSample> {
-    fn sample_get(&self, ctx: CoreContext, key: String, value: Option<&BlobstoreBytes>) {
+    fn sample_get(
+        &self,
+        ctx: CoreContext,
+        key: String,
+        value: Option<&BlobstoreBytes>,
+    ) -> Result<(), Error> {
         ctx.sampling_key().map(|sampling_key| {
             self.inflight().get_mut(sampling_key).map(|mut guard| {
                 value.map(|value| guard.data.insert(key.clone(), value.len() as u64))
             })
         });
+        Ok(())
     }
-    fn sample_put(&self, _ctx: &CoreContext, _key: &str, _value: &BlobstoreBytes) {}
-    fn sample_is_present(&self, _ctx: CoreContext, _key: String, _value: bool) {}
 }
 
 impl ProgressStateCountByType<ScrubStats, ScrubStats> {
