@@ -58,6 +58,7 @@
 #include "eden/fs/store/ObjectStore.h"
 #include "eden/fs/telemetry/Tracing.h"
 #include "eden/fs/utils/Bug.h"
+#include "eden/fs/utils/Clock.h"
 #include "eden/fs/utils/FaultInjector.h"
 #include "eden/fs/utils/ProcUtil.h"
 #include "eden/fs/utils/StatTimes.h"
@@ -1482,6 +1483,12 @@ void EdenServiceHandler::getDaemonInfo(DaemonInfo& result) {
   result.pid = getpid();
   result.commandLine = originalCommandLine_;
   result.set_status(getStatus());
+
+#ifndef _WIN32
+  float uptime = UnixClock::getElapsedTimeInNs(
+      server_->getStartTime(), UnixClock().getRealtime());
+  result.set_uptime(uptime);
+#endif // !_WIN32
 }
 
 int64_t EdenServiceHandler::getPid() {

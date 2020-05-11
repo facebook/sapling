@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#pragma once
+
 #include <time.h>
 
 namespace facebook {
@@ -30,6 +32,7 @@ class UnixClock : public Clock {
  public:
   /// CLOCK_REALTIME
   timespec getRealtime() const override;
+  static float getElapsedTimeInNs(timespec startTime, timespec currTime);
 };
 
 } // namespace eden

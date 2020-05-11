@@ -207,7 +207,7 @@ class FakeEdenInstance:
         return 0
 
     def check_health(self) -> HealthStatus:
-        return HealthStatus(self._status, pid=None, detail="")
+        return HealthStatus(self._status, pid=None, uptime=None, detail="")
 
     def get_server_build_info(self) -> Dict[str, str]:
         return dict(self._build_info)

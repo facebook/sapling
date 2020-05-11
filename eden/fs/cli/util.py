@@ -53,18 +53,26 @@ class NotAnEdenMountError(Exception):
 
 
 class HealthStatus(object):
-    def __init__(self, status: fb303_status, pid: Optional[int], detail: str) -> None:
+    def __init__(
+        self,
+        status: fb303_status,
+        pid: Optional[int],
+        uptime: Optional[float],
+        detail: str,
+    ) -> None:
         self.status = status
         self.pid = pid  # The process ID, or None if not running
+        self.uptime = uptime
         self.detail = detail  # a human-readable message
 
     def is_healthy(self) -> bool:
         return self.status == fb303_status.ALIVE
 
     def __str__(self) -> str:
-        return "(%s, pid=%s, detail=%r)" % (
+        return "(%s, pid=%s, uptime=%s, detail=%r)" % (
             fb303_status._VALUES_TO_NAMES.get(self.status, str(self.status)),
             self.pid,
+            self.uptime,
             self.detail,
         )
 
@@ -140,16 +148,18 @@ def check_health_using_lockfile(config_dir: Path) -> HealthStatus:
         return HealthStatus(
             fb303_status.STOPPED,
             pid,
-            "Eden's Thrift server does not appear to be "
-            "running, but the process is still alive ("
-            "PID=%s)." % pid,
+            uptime=None,
+            detail="Eden's Thrift server does not appear to be "
+            "running, but the process is still alive (PID=%s)." % pid,
         )
     else:
         return _create_dead_health_status()
 
 
 def _create_dead_health_status() -> HealthStatus:
-    return HealthStatus(fb303_status.DEAD, pid=None, detail="edenfs not running")
+    return HealthStatus(
+        fb303_status.DEAD, pid=None, uptime=None, detail="edenfs not running"
+    )
 
 
 def check_health(
@@ -168,6 +178,7 @@ def check_health(
 
     pid = None
     status = fb303_status.DEAD
+    uptime = None
     try:
         with get_client() as client:
             client.set_timeout(timeout)
@@ -180,6 +191,7 @@ def check_health(
             # getDaemonInfo()
             assert status_value is not None
             status = status_value
+            uptime = info.uptime
     except (
         eden.thrift.EdenNotRunningError,
         thrift.transport.TTransport.TTransportException,
@@ -192,11 +204,11 @@ def check_health(
         return check_health_using_lockfile(config_dir)
     except Thrift.TException as ex:
         detail = "error talking to edenfs: " + str(ex)
-        return HealthStatus(status, pid, detail)
+        return HealthStatus(status, pid, uptime, detail)
 
     status_name = fb303_status._VALUES_TO_NAMES.get(status)
     detail = "edenfs running (pid {}); status is {}".format(pid, status_name)
-    return HealthStatus(status, pid, detail)
+    return HealthStatus(status, pid, uptime, detail)
 
 
 def wait_for_daemon_healthy(
@@ -566,7 +578,7 @@ def make_loaded_node(path: str, is_write: bool, file_size: Optional[int]) -> Loa
 
 
 def split_inodes_by_operation_type(
-    inode_results: typing.Sequence[TreeInodeDebugInfo]
+    inode_results: typing.Sequence[TreeInodeDebugInfo],
 ) -> typing.Tuple[
     typing.List[typing.Tuple[str, int]], typing.List[typing.Tuple[str, int]]
 ]:

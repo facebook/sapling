@@ -1619,12 +1619,19 @@ class UptimeCmd(Subcmd):
             print(f"edenfs (pid: {edenfs_pid}) is not healthy")
 
         try:
-            process_start_time = proc_utility.get_process_start_time(edenfs_pid)
-            edenfs_uptime = time.time() - process_start_time
-            print(
-                f"edenfs uptime (pid {edenfs_pid}): "
-                f"{datetime.timedelta(seconds=edenfs_uptime)}"
-            )
+            uptime = health_info.uptime
+            if uptime is None:
+                process_start_time = proc_utility.get_process_start_time(edenfs_pid)
+                edenfs_uptime = time.time() - process_start_time
+                print(
+                    f"edenfs uptime (pid {edenfs_pid}): "
+                    f"{datetime.timedelta(seconds=edenfs_uptime)}"
+                )
+            else:
+                print(
+                    f"edenfs uptime (pid {edenfs_pid}): "
+                    f"{datetime.timedelta(seconds=uptime)}"
+                )
         except Exception as ex:
             print(f"Error determining uptime of edenfs (pid: {edenfs_pid}): {ex}")
             return 1

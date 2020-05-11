@@ -9,6 +9,7 @@
 #include "folly/portability/Time.h"
 #endif
 
+#include <chrono>
 #include <system_error>
 #include "Clock.h"
 
@@ -22,6 +23,17 @@ timespec UnixClock::getRealtime() const {
         errno, std::generic_category(), "clock_gettime failed");
   }
   return rv;
+}
+
+float UnixClock::getElapsedTimeInNs(timespec startTime, timespec currTime) {
+  auto currDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(
+      std::chrono::seconds{currTime.tv_sec} +
+      std::chrono::nanoseconds{currTime.tv_nsec});
+  auto startDuration = std::chrono::duration_cast<std::chrono::nanoseconds>(
+      std::chrono::seconds{startTime.tv_sec} +
+      std::chrono::nanoseconds{startTime.tv_nsec});
+  float uptime = float((currDuration - startDuration).count()) / 1000000000L;
+  return uptime;
 }
 
 } // namespace eden
