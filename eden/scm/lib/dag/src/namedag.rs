@@ -266,13 +266,6 @@ impl NameDag {
         }
         Ok(parents_map)
     }
-
-    // TODO: Consider implementing these:
-    // - NamedSpanSet - SpanSet wrapper that only exposes "names".
-    //   - Potentially, it has to implement smartset-like interfaces.
-    // - On NameDag, methods wrapping dag algorithms that uses NamedSpanSet
-    //   as input and output.
-    // Before those APIs, LowLevelAccess might have to be used by callsites.
 }
 
 impl MemNameDag {
