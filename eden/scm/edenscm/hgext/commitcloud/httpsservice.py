@@ -129,7 +129,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
         rdata = None
         # print request if debugrequests and debug are both on
         if self.debugrequests:
-            self.ui.debug("%s\n" % json.dumps(cleandict(data), indent=4))
+            self.ui.debug("%s\n" % json.dumps(cleandict(data)))
         if self._getheader("Content-Encoding") == "gzip":
             buffer = util.stringio()
             with gzip.GzipFile(fileobj=buffer, mode="w") as compressed:
@@ -159,7 +159,7 @@ class HttpsCommitCloudService(baseservice.BaseService):
                 data = json.load(resp)
                 # print response if debugrequests and debug are both on
                 if self.debugrequests:
-                    self.ui.debug("%s\n" % json.dumps(cleandict(data), indent=4))
+                    self.ui.debug("%s\n" % json.dumps(cleandict(data)))
                 return data
             except httplib.HTTPException:
                 self.connection.close()
