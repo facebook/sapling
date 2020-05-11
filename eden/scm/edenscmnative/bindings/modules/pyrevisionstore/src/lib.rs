@@ -675,8 +675,12 @@ impl RemoteDataStore for PyRemoteDataStore {
 }
 
 impl HgIdDataStore for PyRemoteDataStore {
-    fn get(&self, _key: &Key) -> Result<Option<Vec<u8>>> {
-        unreachable!();
+    fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
+        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
+        match self.prefetch(&missing) {
+            Ok(()) => self.0.inner.read().datastore.as_ref().unwrap().get(key),
+            Err(_) => Ok(None),
+        }
     }
 
     fn get_meta(&self, key: &Key) -> Result<Option<Metadata>> {

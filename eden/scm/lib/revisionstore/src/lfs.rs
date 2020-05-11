@@ -1292,7 +1292,8 @@ impl RemoteDataStore for LfsRemoteStore {
 
 impl HgIdDataStore for LfsRemoteStore {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        match self.prefetch(&[StoreKey::from(key)]) {
+        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
+        match self.prefetch(&missing) {
             Ok(()) => self.store.get(key),
             Err(_) => Ok(None),
         }

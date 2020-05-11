@@ -116,7 +116,8 @@ impl RemoteDataStore for FakeRemoteDataStore {
 
 impl HgIdDataStore for FakeRemoteDataStore {
     fn get(&self, key: &Key) -> Result<Option<Vec<u8>>> {
-        match self.prefetch(&[StoreKey::hgid(key.clone())]) {
+        let missing = self.translate_lfs_missing(&[StoreKey::hgid(key.clone())])?;
+        match self.prefetch(&missing) {
             Err(_) => Ok(None),
             Ok(()) => self.store.get(key),
         }
