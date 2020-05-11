@@ -248,36 +248,6 @@ impl NameDag {
         Ok(())
     }
 
-    /// Sort a `NameSet` topologically.
-    pub fn sort(&self, set: &NameSet) -> Result<NameSet> {
-        if set.is_topo_sorted() {
-            Ok(set.clone())
-        } else {
-            let mut spans = SpanSet::empty();
-            for name in set.iter()? {
-                let id = self.snapshot_map.vertex_id(name?)?;
-                spans.push(id);
-            }
-            Ok(NameSet::from_spans_idmap(spans, self.snapshot_map.clone()))
-        }
-    }
-
-    /// Get ordered parent vertexes.
-    pub fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
-        let id = match self.map.find_id_by_name(name.as_ref())? {
-            Some(id) => id,
-            None => bail!("{:?} does not exist in DAG", name),
-        };
-        self.dag
-            .parent_ids(id)?
-            .into_iter()
-            .map(|id| match self.map.find_vertex_name_by_id(id)? {
-                Some(name) => Ok(name),
-                None => bail!("cannot resolve parent id {} to name", id),
-            })
-            .collect()
-    }
-
     /// Return parent relationship for non-master vertexes reachable from heads
     /// added by `add_heads`.
     fn pending_graph(&self) -> Result<HashMap<VertexName, Vec<VertexName>>> {
@@ -344,6 +314,30 @@ impl MemNameDag {
 
 /// DAG related read-only algorithms.
 pub trait NameDagAlgorithm: NameDagStorage {
+    /// Sort a `NameSet` topologically.
+    fn sort(&self, set: &NameSet) -> Result<NameSet> {
+        if set.is_topo_sorted() {
+            Ok(set.clone())
+        } else {
+            let mut spans = SpanSet::empty();
+            for name in set.iter()? {
+                let id = self.map().vertex_id(name?)?;
+                spans.push(id);
+            }
+            Ok(NameSet::from_spans_idmap(spans, self.clone_map()))
+        }
+    }
+
+    /// Get ordered parent vertexes.
+    fn parent_names(&self, name: VertexName) -> Result<Vec<VertexName>> {
+        let id = self.map().vertex_id(name)?;
+        self.dag()
+            .parent_ids(id)?
+            .into_iter()
+            .map(|id| self.map().vertex_name(id))
+            .collect()
+    }
+
     /// Returns a [`SpanSet`] that covers all vertexes tracked by this DAG.
     fn all(&self) -> Result<NameSet> {
         let spans = self.dag().all()?;
