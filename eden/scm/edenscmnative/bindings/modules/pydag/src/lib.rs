@@ -9,7 +9,7 @@
 
 use anyhow::Error;
 use cpython::*;
-use cpython_ext::{AnyhowResultExt, PyNone, PyPath, ResultPyErrExt};
+use cpython_ext::{AnyhowResultExt, PyNone, PyPath, ResultPyErrExt, Str};
 use dag::{
     id::{Id, VertexName},
     namedag::LowLevelAccess,
@@ -492,6 +492,24 @@ py_class!(class memnamedag |py| {
     def descendants(&self, set: Names) -> PyResult<Names> {
         let namedag = self.namedag(py).borrow();
         Ok(Names(namedag.descendants(set.0).map_pyerr(py)?))
+    }
+
+    /// Render the graph into an ASCII string.
+    def render(&self, getmessage: Option<PyObject> = None) -> PyResult<Str> {
+        let namedag = self.namedag(py).borrow();
+        let get_message = move |vertex: &VertexName| -> Option<String> {
+            if let Some(getmessage) = &getmessage {
+                if getmessage.is_callable(py) {
+                    if let Ok(message) = getmessage.call(py, (PyBytes::new(py, vertex.as_ref()),), None) {
+                        if let Ok(message) = message.extract::<String>(py) {
+                            return Some(message)
+                        }
+                    }
+                }
+            }
+            None
+        };
+        Ok(renderdag::render_namedag(namedag.deref(), get_message).map_pyerr(py)?.into())
     }
 });
 
