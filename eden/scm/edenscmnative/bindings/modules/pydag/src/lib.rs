@@ -383,7 +383,7 @@ py_class!(class namedag |py| {
     }
 });
 
-py_class!(class memnamedag |py| {
+py_class!(pub class memnamedag |py| {
     data namedag: RefCell<MemNameDag>;
 
     def __new__(_cls) -> PyResult<Self> {
@@ -512,6 +512,12 @@ py_class!(class memnamedag |py| {
         Ok(renderdag::render_namedag(namedag.deref(), get_message).map_pyerr(py)?.into())
     }
 });
+
+impl memnamedag {
+    pub fn from_memnamedag(py: Python, dag: MemNameDag) -> PyResult<Self> {
+        Self::create_instance(py, RefCell::new(dag))
+    }
+}
 
 /// Return the "parents" function that takes VertexName and returns
 /// VertexNames.
