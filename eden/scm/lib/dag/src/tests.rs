@@ -7,6 +7,7 @@
 
 use crate::id::{Group, Id, VertexName};
 use crate::iddag::FirstAncestorConstraint;
+use crate::namedag::MemNameDag;
 #[cfg(test)]
 use crate::namedag::NameDagAlgorithm;
 use crate::protocol::{Process, RequestLocationToName, RequestNameToLocation};
@@ -50,6 +51,19 @@ static ASCII_DAG5: &str = r#"
       A---C---E---G"#;
 
 #[test]
+fn test_mem_namedag() -> Result<()> {
+    let dag = build_mem_dag(ASCII_DAG1, "L");
+    assert_eq!(expand(dag.all()?), "L K J I H G F E D C B A");
+    assert_eq!(expand(dag.ancestors(nameset("H I"))?), "I H G F E D C B A");
+    assert_eq!(expand(dag.parents(nameset("H I E"))?), "G D B");
+    assert_eq!(expand(dag.children(nameset("G D L"))?), "I H E");
+    assert_eq!(expand(dag.roots(nameset("A B E F C D I J"))?), "I C A");
+    assert_eq!(expand(dag.heads(nameset("A B E F C D I J"))?), "J F");
+    assert_eq!(expand(dag.gca_all(nameset("J K H"))?), "G");
+    Ok(())
+}
+
+#[test]
 fn test_namedag() -> Result<()> {
     let ascii = r#"
             J K
@@ -61,22 +75,6 @@ fn test_namedag() -> Result<()> {
         A B C D"#;
     let result = build_segments(ascii, "J K", 2);
     let dag = &result.name_dag;
-
-    fn nameset(names: &str) -> NameSet {
-        let names: Vec<VertexName> = names
-            .split_whitespace()
-            .map(|n| VertexName::copy_from(n.as_bytes()))
-            .collect();
-        NameSet::from_static_names(names)
-    }
-
-    fn expand(set: NameSet) -> String {
-        set.iter()
-            .unwrap()
-            .map(|n| String::from_utf8_lossy(n.unwrap().as_ref()).to_string())
-            .collect::<Vec<String>>()
-            .join(" ")
-    }
 
     let v = |name: &str| -> VertexName { VertexName::copy_from(name.as_bytes()) };
 
@@ -822,6 +820,22 @@ Lv4: R0-9[]"#
 
 // Test utilities
 
+fn expand(set: NameSet) -> String {
+    set.iter()
+        .unwrap()
+        .map(|n| String::from_utf8_lossy(n.unwrap().as_ref()).to_string())
+        .collect::<Vec<String>>()
+        .join(" ")
+}
+
+fn nameset(names: &str) -> NameSet {
+    let names: Vec<VertexName> = names
+        .split_whitespace()
+        .map(|n| VertexName::copy_from(n.as_bytes()))
+        .collect();
+    NameSet::from_static_names(names)
+}
+
 fn format_set(set: SpanSet) -> String {
     format!("{:?}", set)
 }
@@ -849,6 +863,16 @@ impl IdMap {
     }
 }
 
+fn get_parents_func_from_ascii(text: &str) -> impl Fn(VertexName) -> Result<Vec<VertexName>> {
+    let parents = drawdag::parse(&text);
+    move |name: VertexName| -> Result<Vec<VertexName>> {
+        Ok(parents[&String::from_utf8(name.as_ref().to_vec()).unwrap()]
+            .iter()
+            .map(|p| VertexName::copy_from(p.as_bytes()))
+            .collect())
+    }
+}
+
 /// Result of `build_segments`.
 pub(crate) struct BuildSegmentResult {
     pub(crate) ascii: Vec<String>,
@@ -857,19 +881,13 @@ pub(crate) struct BuildSegmentResult {
 }
 
 /// Take an ASCII DAG, assign segments from given heads.
-/// Return the ASCII DAG and segments strings, together with the IdMap and IdDag.
+/// Return the ASCII DAG and the built NameDag.
 pub(crate) fn build_segments(text: &str, heads: &str, segment_size: usize) -> BuildSegmentResult {
     let dir = tempdir().unwrap();
     let mut name_dag = NameDag::open(dir.path().join("n")).unwrap();
     name_dag.dag.set_new_segment_size(segment_size);
 
-    let parents = drawdag::parse(&text);
-    let parents_by_name = |name: VertexName| -> Result<Vec<VertexName>> {
-        Ok(parents[&String::from_utf8(name.as_ref().to_vec()).unwrap()]
-            .iter()
-            .map(|p| VertexName::copy_from(p.as_bytes()))
-            .collect())
-    };
+    let parents_by_name = get_parents_func_from_ascii(text);
 
     let ascii = heads
         .split(' ')
@@ -898,4 +916,17 @@ pub(crate) fn build_segments(text: &str, heads: &str, segment_size: usize) -> Bu
         name_dag,
         dir,
     }
+}
+
+/// Take an ASCII DAG, assign segments from given heads.
+/// Return the ASCII DAG and the built MemNameDag.
+pub(crate) fn build_mem_dag(text: &str, heads: &str) -> MemNameDag {
+    let mut dag = MemNameDag::new();
+    let parents_by_name = get_parents_func_from_ascii(text);
+    let heads: Vec<_> = heads
+        .split(' ')
+        .map(|h| VertexName::copy_from(h.as_bytes()))
+        .collect();
+    dag.add_heads(&parents_by_name, &heads).unwrap();
+    dag
 }

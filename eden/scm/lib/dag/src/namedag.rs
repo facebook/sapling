@@ -14,11 +14,14 @@ use crate::id::VertexName;
 use crate::iddag::IdDag;
 use crate::iddag::SyncableIdDag;
 use crate::iddagstore::IdDagStore;
+use crate::iddagstore::InProcessStore;
 use crate::iddagstore::IndexedLogStore;
 use crate::idmap::IdMap;
 use crate::idmap::IdMapAssignHead;
 use crate::idmap::IdMapBuildParents;
 use crate::idmap::IdMapLike;
+use crate::idmap::IdMapWrite;
+use crate::idmap::MemIdMap;
 use crate::idmap::SyncableIdMap;
 use crate::nameset::dag::DagSet;
 use crate::nameset::NameSet;
@@ -52,6 +55,16 @@ pub struct NameDag {
 
     /// Heads added via `add_heads` that are not flushed yet.
     pending_heads: Vec<VertexName>,
+}
+
+/// In-memory version of [`NameDag`].
+///
+/// Does not support loading from or saving to the filesystem.
+/// The graph has to be built from scratch by `add_heads`.
+pub struct MemNameDag {
+    dag: IdDag<InProcessStore>,
+    map: MemIdMap,
+    snapshot_map: Arc<dyn IdMapLike + Send + Sync>,
 }
 
 impl NameDag {
@@ -290,6 +303,40 @@ impl NameDag {
     // - On NameDag, methods wrapping dag algorithms that uses NamedSpanSet
     //   as input and output.
     // Before those APIs, LowLevelAccess might have to be used by callsites.
+}
+
+impl MemNameDag {
+    /// Create an empty [`MemNameDag`].
+    pub fn new() -> Self {
+        Self {
+            dag: IdDag::new_in_process(),
+            map: MemIdMap::new(),
+            snapshot_map: Arc::new(MemIdMap::new()),
+        }
+    }
+
+    /// Add vertexes and their ancestors to the in-memory DAG.
+    pub fn add_heads<F>(&mut self, parents: F, heads: &[VertexName]) -> Result<()>
+    where
+        F: Fn(VertexName) -> Result<Vec<VertexName>>,
+    {
+        // For simplicity, just use the master group for now.
+        let group = Group::MASTER;
+        for head in heads.iter() {
+            if self.map.contains_vertex_name(head)? {
+                continue;
+            }
+            self.map.assign_head(head.clone(), &parents, group)?;
+        }
+
+        let parent_ids_func = self.map.build_get_parents_by_id(&parents);
+        let id = self.map.next_free_id(group)?;
+        if id > group.min_id() {
+            self.dag.build_segments_volatile(id - 1, &parent_ids_func)?;
+        }
+        self.snapshot_map = Arc::new(self.map.clone());
+        Ok(())
+    }
 }
 
 // Dag operations. Those are just simple wrappers around [`IdDag`].
@@ -579,6 +626,24 @@ pub trait NameDagStorage {
 impl NameDagStorage for NameDag {
     type IdDagStore = IndexedLogStore;
     type IdMap = IdMap;
+
+    fn dag(&self) -> &IdDag<Self::IdDagStore> {
+        &self.dag
+    }
+    fn map(&self) -> &Self::IdMap {
+        &self.map
+    }
+    fn clone_map(&self) -> Arc<dyn IdMapLike + Send + Sync> {
+        self.snapshot_map.clone()
+    }
+    fn is_map_compatible(&self, other: &Arc<dyn IdMapLike + Send + Sync>) -> bool {
+        Arc::ptr_eq(other, &self.snapshot_map)
+    }
+}
+
+impl NameDagStorage for MemNameDag {
+    type IdDagStore = InProcessStore;
+    type IdMap = MemIdMap;
 
     fn dag(&self) -> &IdDag<Self::IdDagStore> {
         &self.dag
