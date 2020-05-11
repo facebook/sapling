@@ -15,8 +15,8 @@ use crate::sampling::{NodeSamplingHandler, SamplingWalkVisitor};
 use crate::setup::{
     parse_node_types, setup_common, DEFAULT_INCLUDE_NODE_TYPES, EXCLUDE_SAMPLE_NODE_TYPE_ARG,
     INCLUDE_SAMPLE_NODE_TYPE_ARG, LIMIT_DATA_FETCH_ARG, PROGRESS_INTERVAL_ARG,
-    PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE, PROGRESS_SAMPLE_RATE_ARG, SAMPLE_RATE_ARG,
-    SCRUB,
+    PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE, PROGRESS_SAMPLE_RATE_ARG, SAMPLE_OFFSET_ARG,
+    SAMPLE_RATE_ARG, SCRUB,
 };
 use crate::tail::{walk_exact_tail, RepoWalkRun};
 use crate::validate::TOTAL;
@@ -301,6 +301,7 @@ pub async fn scrub_objects<'a>(
     let repo_stats_key = args::get_repo_name(fb, &matches)?;
 
     let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(1);
+    let sample_offset = args::get_u64_opt(&sub_m, SAMPLE_OFFSET_ARG).unwrap_or(0);
     let progress_interval_secs = args::get_u64_opt(&sub_m, PROGRESS_INTERVAL_ARG);
     let progress_sample_rate = args::get_u64_opt(&sub_m, PROGRESS_SAMPLE_RATE_ARG);
     let limit_data_fetch = sub_m.is_present(LIMIT_DATA_FETCH_ARG);
@@ -364,6 +365,7 @@ pub async fn scrub_objects<'a>(
         sampling_node_types,
         scrub_sampler,
         sample_rate,
+        sample_offset,
     ));
     walk_exact_tail::<_, _, _, _, _, ()>(
         fb,

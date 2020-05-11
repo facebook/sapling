@@ -83,6 +83,7 @@ pub const PROGRESS_INTERVAL_ARG: &str = "progress-interval";
 pub const LIMIT_DATA_FETCH_ARG: &str = "limit-data-fetch";
 pub const COMPRESSION_LEVEL_ARG: &str = "compression-level";
 pub const SAMPLE_RATE_ARG: &str = "sample-rate";
+pub const SAMPLE_OFFSET_ARG: &str = "sample-offset";
 pub const EXCLUDE_CHECK_TYPE_ARG: &str = "exclude-check-type";
 pub const INCLUDE_CHECK_TYPE_ARG: &str = "include-check-type";
 pub const EXCLUDE_SAMPLE_NODE_TYPE_ARG: &str = "exclude-sample-node-type";
@@ -247,44 +248,55 @@ lazy_static! {
     );
 }
 
+fn add_sampling_args<'a, 'b>(app: App<'a, 'b>) -> App<'a, 'b> {
+    app.arg(
+        Arg::with_name(LIMIT_DATA_FETCH_ARG)
+            .long(LIMIT_DATA_FETCH_ARG)
+            .takes_value(false)
+            .required(false)
+            .help("Limit the amount of data fetched from stores, by not streaming large files to the end."),
+    ).arg(
+        Arg::with_name(SAMPLE_RATE_ARG)
+            .long(SAMPLE_RATE_ARG)
+            .takes_value(true)
+            .required(false)
+            .help("Pass 1 to try all nodes, 120 to do 1 in 120, etc."),
+    )
+    .arg(
+        Arg::with_name(SAMPLE_OFFSET_ARG)
+            .long(SAMPLE_OFFSET_ARG)
+            .takes_value(true)
+            .required(false)
+            .help("Offset to apply to the sampling fingerprint for each node, can be used to cycle through an entire repo in N pieces. Default is 0."),
+    )
+    .arg(
+        Arg::with_name(EXCLUDE_SAMPLE_NODE_TYPE_ARG)
+            .long(EXCLUDE_SAMPLE_NODE_TYPE_ARG)
+            .short("S")
+            .takes_value(true)
+            .multiple(true)
+            .number_of_values(1)
+            .required(false)
+            .help("Node types to exclude from the sample"),
+    )
+    .arg(
+        Arg::with_name(INCLUDE_SAMPLE_NODE_TYPE_ARG)
+            .long(INCLUDE_SAMPLE_NODE_TYPE_ARG)
+            .short("s")
+            .takes_value(true)
+            .multiple(true)
+            .number_of_values(1)
+            .required(false)
+            .help("Node types to include in the sample, defaults to same as the walk."),
+    )
+}
+
 pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
     let app_template = args::MononokeApp::new(app_name).with_fb303_args();
 
     let scrub_objects =
-        setup_subcommand_args(SubCommand::with_name(SCRUB).about("scrub, checks data is present by reading it and counting it. Combine with --enable-scrub-blobstore to check across a multiplex"))
-        .arg(
-            Arg::with_name(LIMIT_DATA_FETCH_ARG)
-                .long(LIMIT_DATA_FETCH_ARG)
-                .takes_value(false)
-                .required(false)
-                .help("Limit the amount of data fetched from stores, by not streaming large files to the end."),
-        ).arg(
-            Arg::with_name(SAMPLE_RATE_ARG)
-                .long(SAMPLE_RATE_ARG)
-                .takes_value(true)
-                .required(false)
-                .help("How many nodes to sample for size. Pass 1 to try all, 120 to do 1 in 120, etc."),
-        )
-        .arg(
-            Arg::with_name(EXCLUDE_SAMPLE_NODE_TYPE_ARG)
-                .long(EXCLUDE_SAMPLE_NODE_TYPE_ARG)
-                .short("S")
-                .takes_value(true)
-                .multiple(true)
-                .number_of_values(1)
-                .required(false)
-                .help("Node types to exclude from sampling for size"),
-        )
-        .arg(
-            Arg::with_name(INCLUDE_SAMPLE_NODE_TYPE_ARG)
-                .long(INCLUDE_SAMPLE_NODE_TYPE_ARG)
-                .short("s")
-                .takes_value(true)
-                .multiple(true)
-                .number_of_values(1)
-                .required(false)
-                .help("Node types to sample for size"),
-        );
+        setup_subcommand_args(SubCommand::with_name(SCRUB).about("scrub, checks data is present by reading it and counting it. Combine with --enable-scrub-blobstore to check across a multiplex"));
+    let scrub_objects = add_sampling_args(scrub_objects);
 
     let compression_benefit = setup_subcommand_args(
         SubCommand::with_name(COMPRESSION_BENEFIT).about("estimate compression benefit"),
@@ -295,34 +307,8 @@ pub fn setup_toplevel_app<'a, 'b>(app_name: &str) -> App<'a, 'b> {
             .takes_value(true)
             .required(false)
             .help("Zstd compression level to use. 3 is the default"),
-    )
-    .arg(
-        Arg::with_name(SAMPLE_RATE_ARG)
-            .long(SAMPLE_RATE_ARG)
-            .takes_value(true)
-            .required(false)
-            .help("How many files to sample. Pass 1 to try all, 120 to do 1 in 120, etc."),
-    )
-    .arg(
-        Arg::with_name(EXCLUDE_SAMPLE_NODE_TYPE_ARG)
-            .long(EXCLUDE_SAMPLE_NODE_TYPE_ARG)
-            .short("S")
-            .takes_value(true)
-            .multiple(true)
-            .number_of_values(1)
-            .required(false)
-            .help("Node types to exclude from sampling for size"),
-    )
-    .arg(
-        Arg::with_name(INCLUDE_SAMPLE_NODE_TYPE_ARG)
-            .long(INCLUDE_SAMPLE_NODE_TYPE_ARG)
-            .short("s")
-            .takes_value(true)
-            .multiple(true)
-            .number_of_values(1)
-            .required(false)
-            .help("Node types to sample for size"),
     );
+    let compression_benefit = add_sampling_args(compression_benefit);
 
     let validate = setup_subcommand_args(
         SubCommand::with_name(VALIDATE).about("estimate compression benefit"),

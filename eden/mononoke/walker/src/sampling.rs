@@ -19,6 +19,7 @@ pub struct SamplingWalkVisitor<T> {
     sample_node_types: HashSet<NodeType>,
     sampler: Arc<NodeSamplingHandler<T>>,
     sample_rate: u64,
+    sample_offset: u64,
 }
 
 impl<T> SamplingWalkVisitor<T> {
@@ -28,12 +29,14 @@ impl<T> SamplingWalkVisitor<T> {
         sample_node_types: HashSet<NodeType>,
         sampler: Arc<NodeSamplingHandler<T>>,
         sample_rate: u64,
+        sample_offset: u64,
     ) -> Self {
         Self {
             inner: WalkStateCHashMap::new(include_node_types, include_edge_types),
             sample_node_types,
             sampler,
             sample_rate,
+            sample_offset,
         }
     }
 }
@@ -104,7 +107,9 @@ where
                         || step.target.sampling_fingerprint(),
                         |r| r.sampling_fingerprint(),
                     );
-                    sampling_fingerprint.map_or(true, |fp| fp % sample_rate == 0)
+                    sampling_fingerprint.map_or(self.sample_offset % sample_rate == 0, |fp| {
+                        (fp + self.sample_offset) % sample_rate == 0
+                    })
                 }
             };
 
@@ -156,7 +161,9 @@ where
                 sample_rate => step
                     .target
                     .sampling_fingerprint()
-                    .map_or(true, |fp| fp % sample_rate == 0),
+                    .map_or(self.sample_offset % sample_rate == 0, |fp| {
+                        (fp + self.sample_offset) % sample_rate == 0
+                    }),
             };
 
             if should_sample {

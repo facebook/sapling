@@ -15,7 +15,7 @@ use crate::setup::{
     parse_node_types, setup_common, COMPRESSION_BENEFIT, COMPRESSION_LEVEL_ARG,
     DEFAULT_INCLUDE_NODE_TYPES, EXCLUDE_SAMPLE_NODE_TYPE_ARG, INCLUDE_SAMPLE_NODE_TYPE_ARG,
     PROGRESS_INTERVAL_ARG, PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE,
-    PROGRESS_SAMPLE_RATE_ARG, SAMPLE_RATE_ARG,
+    PROGRESS_SAMPLE_RATE_ARG, SAMPLE_OFFSET_ARG, SAMPLE_RATE_ARG,
 };
 use crate::tail::{walk_exact_tail, RepoWalkRun};
 
@@ -279,6 +279,7 @@ pub async fn compression_benefit<'a>(
 
     let compression_level = args::get_i32_opt(&sub_m, COMPRESSION_LEVEL_ARG).unwrap_or(3);
     let sample_rate = args::get_u64_opt(&sub_m, SAMPLE_RATE_ARG).unwrap_or(100);
+    let sample_offset = args::get_u64_opt(&sub_m, SAMPLE_OFFSET_ARG).unwrap_or(0);
     let progress_interval_secs = args::get_u64_opt(&sub_m, PROGRESS_INTERVAL_ARG);
     let progress_sample_rate = args::get_u64_opt(&sub_m, PROGRESS_SAMPLE_RATE_ARG);
 
@@ -347,6 +348,7 @@ pub async fn compression_benefit<'a>(
         sampling_node_types,
         sizing_sampler,
         sample_rate,
+        sample_offset,
     ));
     walk_exact_tail::<_, _, _, _, _, PathTrackingRoute>(
         fb,
