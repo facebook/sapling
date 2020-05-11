@@ -178,7 +178,73 @@ pub fn create_runtime(
 ///
 /// Once `shutdown` returns, the `server` future is cancelled, and the process
 /// exits. If `shutdown_timeout` is exceeded, an error is returned.
+pub async fn serve_forever_async<Server, QuiesceFn, ShutdownFut>(
+    server: Server,
+    logger: &Logger,
+    quiesce: QuiesceFn,
+    shutdown_grace_period: Duration,
+    shutdown: ShutdownFut,
+    shutdown_timeout: Duration,
+) -> Result<(), Error>
+where
+    Server: Future<Output = Result<(), Error>> + Send + 'static,
+    QuiesceFn: FnOnce(),
+    ShutdownFut: Future<Output = ()>,
+{
+    // We want to prevent Folly's signal handlers overriding our
+    // intended action with a termination signal. Mononoke server,
+    // in particular, depends on this - otherwise our attempts to
+    // catch and handle SIGTERM turn into Folly backtracing and killing us.
+    unsafe {
+        libc::signal(libc::SIGTERM, libc::SIG_DFL);
+    }
 
+    let mut terminate = signal(SignalKind::terminate())?;
+    let mut interrupt = signal(SignalKind::interrupt())?;
+    // This future becomes ready when we receive a termination signal
+    let signalled = future::select(terminate.next(), interrupt.next());
+
+    let stats_agg = schedule_stats_aggregation_preview()
+        .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
+    // Note: this returns a JoinHandle, which we drop, thus detaching the task
+    // It thus does not count towards shutdown_on_idle below
+    tokio::task::spawn(stats_agg);
+
+    // Spawn the server onto its own task
+    let server_handle = tokio::task::spawn(server);
+
+    // Now wait for the termination signal, or a server exit.
+    let server_result: Result<(), Error> = match future::select(server_handle, signalled).await {
+        Either::Left((join_handle_res, _)) => {
+            error!(&logger, "Server has exited! Starting shutdown...");
+            join_handle_res.map_err(Error::from).and_then(|res| res)
+        }
+        Either::Right(..) => {
+            info!(&logger, "Signalled! Starting shutdown...");
+            Ok(())
+        }
+    };
+
+    // Shutting down: wait for the grace period.
+    quiesce();
+    info!(
+        &logger,
+        "Waiting {}s before shutting down server",
+        shutdown_grace_period.as_secs(),
+    );
+
+    time::delay_for(shutdown_grace_period).await;
+
+    info!(&logger, "Shutting down...");
+    let () = time::timeout(shutdown_timeout, shutdown)
+        .map_err(|_| Error::msg("Timed out shutting down server"))
+        .await?;
+
+    server_result
+}
+
+/// Same as "serve_forever_async", but blocks using the provided runtime,
+/// for compatibility with existing sync code using it.
 pub fn serve_forever<Server, QuiesceFn, ShutdownFut>(
     mut runtime: tokio_compat::runtime::Runtime,
     server: Server,
@@ -193,59 +259,14 @@ where
     QuiesceFn: FnOnce(),
     ShutdownFut: Future<Output = ()>,
 {
-    runtime.block_on_std(async {
-        // We want to prevent Folly's signal handlers overriding our
-        // intended action with a termination signal. Mononoke server,
-        // in particular, depends on this - otherwise our attempts to
-        // catch and handle SIGTERM turn into Folly backtracing and killing us.
-        unsafe {
-            libc::signal(libc::SIGTERM, libc::SIG_DFL);
-        }
-
-        let mut terminate = signal(SignalKind::terminate())?;
-        let mut interrupt = signal(SignalKind::interrupt())?;
-        // This future becomes ready when we receive a termination signal
-        let signalled = future::select(terminate.next(), interrupt.next());
-
-        let stats_agg = schedule_stats_aggregation_preview()
-            .map_err(|_| Error::msg("Failed to create stats aggregation worker"))?;
-        // Note: this returns a JoinHandle, which we drop, thus detaching the task
-        // It thus does not count towards shutdown_on_idle below
-        tokio::task::spawn(stats_agg);
-
-        // Spawn the server onto its own task
-        let server_handle = tokio::task::spawn(server);
-
-        // Now wait for the termination signal, or a server exit.
-        let server_result: Result<(), Error> = match future::select(server_handle, signalled).await
-        {
-            Either::Left((join_handle_res, _)) => {
-                error!(&logger, "Server has exited! Starting shutdown...");
-                join_handle_res.map_err(Error::from).and_then(|res| res)
-            }
-            Either::Right(..) => {
-                info!(&logger, "Signalled! Starting shutdown...");
-                Ok(())
-            }
-        };
-
-        // Shutting down: wait for the grace period.
-        quiesce();
-        info!(
-            &logger,
-            "Waiting {}s before shutting down server",
-            shutdown_grace_period.as_secs(),
-        );
-
-        time::delay_for(shutdown_grace_period).await;
-
-        info!(&logger, "Shutting down...");
-        let () = time::timeout(shutdown_timeout, shutdown)
-            .map_err(|_| Error::msg("Timed out shutting down server"))
-            .await?;
-
-        server_result
-    })
+    runtime.block_on_std(serve_forever_async(
+        server,
+        logger,
+        quiesce,
+        shutdown_grace_period,
+        shutdown,
+        shutdown_timeout,
+    ))
 }
 
 /// Executes the future and waits for it to finish.
