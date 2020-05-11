@@ -77,7 +77,8 @@ pub fn init_module(py: Python, package: &str) -> PyResult<PyModule> {
                 packpath: &PyPath,
                 stores: Option<(contentstore, metadatastore)>,
                 full: bool,
-                shared: bool
+                shared: bool,
+                config: config
             )
         ),
     )?;
@@ -90,6 +91,7 @@ fn repack_py(
     stores: Option<(contentstore, metadatastore)>,
     full: bool,
     shared: bool,
+    config: config,
 ) -> PyResult<PyNone> {
     let stores = stores.map(|(content, metadata)| (content.to_inner(py), metadata.to_inner(py)));
 
@@ -105,7 +107,14 @@ fn repack_py(
         RepackLocation::Local
     };
 
-    repack(packpath.to_path_buf(), stores, kind, location).map_pyerr(py)?;
+    repack(
+        packpath.to_path_buf(),
+        stores,
+        kind,
+        location,
+        &config.get_cfg(py),
+    )
+    .map_pyerr(py)?;
 
     Ok(PyNone)
 }

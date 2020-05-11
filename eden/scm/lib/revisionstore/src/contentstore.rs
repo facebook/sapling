@@ -806,6 +806,7 @@ mod tests {
             Some((store, metadata)),
             RepackKind::Full,
             RepackLocation::Local,
+            &config,
         )?;
 
         let store = Arc::new(ContentStore::new(&localdir, &config)?);

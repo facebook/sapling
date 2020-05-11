@@ -13,6 +13,7 @@ use std::{
 
 use anyhow::{format_err, Error, Result};
 use bytes::Bytes;
+use configparser::{config::ConfigSet, hg::ByteCount, hg::ConfigSetHgExt};
 use thiserror::Error;
 
 use types::Key;
@@ -210,17 +211,32 @@ fn list_packs(dir: &Path, extension: &str) -> Result<Vec<PathBuf>> {
 /// Select all the packs from `packs` that needs to be repacked during an incremental repack.
 ///
 /// The filtering is fairly basic and is intended to reduce the fragmentation of pack files.
-fn filter_incrementalpacks(packs: Vec<PathBuf>, extension: &str) -> Result<Vec<PathBuf>> {
-    // XXX: Read these from the configuration.
-    let repackmaxpacksize = if extension == "histpack" {
-        // Per 100MB of histpack size, the memory consumption is over 1GB, thus repacking 4GB
-        // would need over 40GB of RAM.
-        400 * 1024 * 1024
-    } else {
-        4 * 1024 * 1024 * 1024
-    };
-    let repacksizelimit = 100 * 1024 * 1024;
-    let min_packs = 50;
+fn filter_incrementalpacks(
+    packs: Vec<PathBuf>,
+    extension: &str,
+    config: &ConfigSet,
+) -> Result<Vec<PathBuf>> {
+    // The overall maximum pack size.
+    let max_pack_size: u64 = {
+        if extension == "histpack" {
+            config.get_or("repack", "maxhistpacksize", || {
+                // Per 100MB of histpack size, the memory consumption is over 1GB,
+                // thus repacking 4GB would need over 40GB of RAM.
+                ByteCount::from(400 * 1024 * 1024)
+            })?
+        } else {
+            config.get_or("repack", "maxdatapacksize", || {
+                ByteCount::from(4 * 1024 * 1024 * 1024)
+            })?
+        }
+    }
+    .value();
+    // The size limit for any individual pack.
+    let size_limit: u64 = config
+        .get_or("repack", "sizelimit", || ByteCount::from(100 * 1024 * 1024))?
+        .value();
+    // The maximum number of packs we want to have after repack (overrides `size_limit`).
+    let max_packs: usize = config.get_or("repack", "maxpacks", || 50)?;
 
     let mut packssizes = packs
         .into_iter()
@@ -242,11 +258,11 @@ fn filter_incrementalpacks(packs: Vec<PathBuf>, extension: &str) -> Result<Vec<P
     Ok(packssizes
         .into_iter()
         .take_while(|e| {
-            if e.1 + accumulated_sizes > repackmaxpacksize {
+            if e.1 + accumulated_sizes > max_pack_size {
                 return false;
             }
 
-            if e.1 > repacksizelimit && num_packs < min_packs {
+            if e.1 > size_limit && num_packs < max_packs {
                 false
             } else {
                 accumulated_sizes += e.1;
@@ -261,13 +277,13 @@ fn filter_incrementalpacks(packs: Vec<PathBuf>, extension: &str) -> Result<Vec<P
 
 /// Fallback for `repack` for when no `ContentStore`/`MetadataStore` were passed in. Will simply
 /// use the legacy code path to write the content of the packfiles to a packfile.
-fn repack_no_store(path: PathBuf, kind: RepackKind) -> Result<()> {
+fn repack_no_store(path: PathBuf, kind: RepackKind, config: &ConfigSet) -> Result<()> {
     let mut datapacks = list_packs(&path, "datapack")?;
     let mut histpacks = list_packs(&path, "histpack")?;
 
     if kind == RepackKind::Incremental {
-        datapacks = filter_incrementalpacks(datapacks, "datapack")?;
-        histpacks = filter_incrementalpacks(histpacks, "histpack")?;
+        datapacks = filter_incrementalpacks(datapacks, "datapack", config)?;
+        histpacks = filter_incrementalpacks(histpacks, "histpack", config)?;
     }
 
     let datapack_res = repack_datapacks(datapacks, &path).map(|_| ());
@@ -408,10 +424,11 @@ pub fn repack(
     stores: Option<(Arc<ContentStore>, Arc<MetadataStore>)>,
     kind: RepackKind,
     location: RepackLocation,
+    config: &ConfigSet,
 ) -> Result<()> {
     let (content, metadata) = match stores {
         Some((content, metadata)) => (content, metadata),
-        None => return repack_no_store(path, kind),
+        None => return repack_no_store(path, kind, config),
     };
 
     let mut datapacks = list_packs(&path, "datapack")?;
@@ -421,8 +438,8 @@ pub fn repack(
         // We may be filtering out packfiles that contain LFS pointers, reducing the effectiveness
         // of the secondary goal of repack. To fully perform this secondary goal, a full repack
         // will be necessary, to keep incremental repacks simple.
-        datapacks = filter_incrementalpacks(datapacks, "datapack")?;
-        histpacks = filter_incrementalpacks(histpacks, "histpack")?;
+        datapacks = filter_incrementalpacks(datapacks, "datapack", config)?;
+        histpacks = filter_incrementalpacks(histpacks, "histpack", config)?;
     }
 
     if !datapacks.is_empty() {
@@ -443,6 +460,7 @@ mod tests {
     use bytes::Bytes;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
+    use std::fs::File;
     use tempfile::TempDir;
 
     use types::testutil::*;
@@ -456,6 +474,77 @@ mod tests {
     use crate::datapack::tests::make_datapack;
     use crate::datastore::Delta;
     use crate::historypack::tests::{get_nodes, make_historypack};
+
+    #[test]
+    fn test_repack_filter_incremental() -> Result<()> {
+        let tempdir = TempDir::new()?;
+        let get_packfile_path = |size: usize| tempdir.path().join(format!("{}.datapack", size));
+        let get_packfile_paths = |sizes: &[usize]| {
+            sizes
+                .iter()
+                .map(|size| get_packfile_path(*size))
+                .collect::<Vec<PathBuf>>()
+        };
+
+        let packs: Vec<PathBuf> = [100, 200, 300, 400, 500]
+            .iter()
+            .map(|size| {
+                let path = get_packfile_path(*size);
+                let mut file = File::create(&path).unwrap();
+                let bytes = vec![0; *size];
+                file.write_all(&bytes).unwrap();
+                path
+            })
+            .collect();
+
+        let config = ConfigSet::new();
+        assert_eq!(
+            filter_incrementalpacks(packs.clone(), "datapack", &config)?,
+            get_packfile_paths(&[100, 200, 300, 400, 500])
+        );
+
+        let config = {
+            let mut config = ConfigSet::new();
+            config.set("repack", "sizelimit", Some("300"), &Default::default());
+            config
+        };
+        assert_eq!(
+            filter_incrementalpacks(packs.clone(), "datapack", &config)?,
+            get_packfile_paths(&[100, 200, 300])
+        );
+
+        let config = {
+            let mut config = ConfigSet::new();
+            config.set("repack", "maxdatapacksize", Some("1k"), &Default::default());
+            config
+        };
+        assert_eq!(
+            filter_incrementalpacks(packs.clone(), "datapack", &config)?,
+            get_packfile_paths(&[100, 200, 300, 400])
+        );
+
+        let config = {
+            let mut config = ConfigSet::new();
+            config.set("repack", "maxhistpacksize", Some("1k"), &Default::default());
+            config
+        };
+        assert!(filter_incrementalpacks(packs.clone(), "histpack", &config)?.is_empty());
+
+        // We have 5 packs pre-repack and we want to make sure we have no more
+        // than 2 packs post-repack.
+        let config = {
+            let mut config = ConfigSet::new();
+            config.set("repack", "sizelimit", Some("300"), &Default::default());
+            config.set("repack", "maxpacks", Some("2"), &Default::default());
+            config
+        };
+        assert_eq!(
+            filter_incrementalpacks(packs, "datapack", &config)?,
+            get_packfile_paths(&[100, 200, 300, 400])
+        );
+
+        Ok(())
+    }
 
     #[test]
     fn test_repack_no_datapack() {
