@@ -285,7 +285,7 @@ Show all commands + options
   branch: force, clean, new
   bundle: force, rev, base, all, type, ssh, remotecmd, insecure
   cat: output, rev, decode, include, exclude, template
-  clone: noupdate, updaterev, rev, pull, uncompressed, stream, ssh, remotecmd, insecure
+  clone: noupdate, updaterev, rev, pull, uncompressed, stream, shallow, ssh, remotecmd, insecure
   commit: addremove, amend, edit, interactive, reuse-message, include, exclude, message, logfile, date, user
   config: untrusted, edit, local, global, template
   continue: 

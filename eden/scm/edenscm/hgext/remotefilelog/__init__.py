@@ -276,16 +276,7 @@ def uisetup(ui):
     """
     hg.wirepeersetupfuncs.append(fileserverclient.peersetup)
 
-    entry = extensions.wrapcommand(commands.table, "clone", cloneshallow)
-    entry[1].append(
-        (
-            "",
-            "shallow",
-            None,
-            _("create a shallow clone which uses remote file " "history"),
-        )
-    )
-
+    extensions.wrapcommand(commands.table, "clone", cloneshallow)
     extensions.wrapcommand(commands.table, "debugindex", debugcommands.debugindex)
     extensions.wrapcommand(commands.table, "debugindexdot", debugcommands.debugindexdot)
     extensions.wrapcommand(commands.table, "log", log)

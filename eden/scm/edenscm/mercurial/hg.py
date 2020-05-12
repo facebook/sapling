@@ -513,6 +513,7 @@ def clone(
     update=True,
     stream=False,
     shareopts=None,
+    shallow=False,
 ):
     """Make a copy of an existing repository.
 
@@ -737,8 +738,17 @@ def clone(
                         # disabling selectivepull allows to run a streamclone
                         ("remotenames", "selectivepull"): False,
                     }
+                    opargs = {}
+                    if shallow:
+                        opargs["extras"] = {"shallow": True}
                     with local.ui.configoverride(overrides, "clone"):
-                        exchange.pull(local, srcpeer, revs, streamclonerequested=stream)
+                        exchange.pull(
+                            local,
+                            srcpeer,
+                            revs,
+                            streamclonerequested=stream,
+                            opargs=opargs,
+                        )
             elif srcrepo:
                 exchange.push(
                     srcrepo, destpeer, revs=revs, bookmarks=srcrepo._bookmarks.keys()

@@ -1497,6 +1497,12 @@ def cat(ui, repo, file1, *pats, **opts):
         ("", "pull", None, _("use pull protocol to copy metadata")),
         ("", "uncompressed", None, _("an alias to --stream (DEPRECATED)")),
         ("", "stream", None, _("clone with minimal data processing")),
+        (
+            "",
+            "shallow",
+            False,
+            _("create a shallow clone which uses remote file history"),
+        ),
     ]
     + remoteopts,
     _("[OPTION]... SOURCE [DEST]"),
@@ -1621,6 +1627,7 @@ def clone(ui, source, dest=None, **opts):
         rev=opts.get("rev"),
         update=opts.get("updaterev") or not opts.get("noupdate"),
         shareopts=shareopts,
+        shallow=opts.get("shallow"),
     )
 
     return r is None
