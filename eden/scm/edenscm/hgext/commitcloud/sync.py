@@ -302,6 +302,7 @@ def logsyncop(
             }
         }
     )
+    util.info("commit-cloud-sync", op=op, version=version)
 
 
 def _maybeupdateworkingcopy(repo, currentnode):

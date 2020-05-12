@@ -111,6 +111,7 @@ def _peersetup(ui, peer):
         peername = decodeutf8(peer._call("clienttelemetry", **logargs))
         peer._realhostname = peername
         blackbox.log({"clienttelemetry": {"peername": peername}})
+        util.info("client-telemetry", peername=peername)
         ann = ui.configbool("clienttelemetry", "announceremotehostname", None)
         if ann is None:
             ann = not ui.plain() and ui._isatty(ui.ferr)
