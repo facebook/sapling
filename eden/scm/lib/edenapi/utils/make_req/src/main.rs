@@ -14,12 +14,13 @@
 
 #![deny(warnings)]
 
+use std::convert::TryFrom;
 use std::fs::File;
 use std::io::{prelude::*, stdin, stdout};
 use std::path::PathBuf;
 use std::str::FromStr;
 
-use anyhow::{anyhow, Result};
+use anyhow::{anyhow, ensure, Result};
 use serde_json::Value;
 use structopt::StructOpt;
 
@@ -63,15 +64,31 @@ fn main() -> Result<()> {
 }
 
 fn parse_data_req(json: &Value) -> Result<DataRequest> {
-    let json = json
-        .as_object()
-        .ok_or_else(|| anyhow!("input must be a JSON object"))?;
+    let arr = json
+        .as_array()
+        .ok_or_else(|| anyhow!("input must be a JSON array"))?;
 
     let mut keys = Vec::new();
-    for (path, hash) in json.iter() {
+    for i in arr.iter() {
+        let json_key = i
+            .as_array()
+            .ok_or_else(|| anyhow!("array items must be [path, hash] arrays"))?;
+
+        ensure!(
+            json_key.len() == 2,
+            "array items must be [path, hash] arrays"
+        );
+
+        // Cast slice into 2-element array reference so we can destructure it.
+        let [path, hash] = <&[_; 2]>::try_from(&json_key[..2])?;
+
+        let path = path
+            .as_str()
+            .ok_or_else(|| anyhow!("path must be a string"))?;
         let hash = hash
             .as_str()
             .ok_or_else(|| anyhow!("hash must be a string"))?;
+
         let key = make_key(&path, hash)?;
         keys.push(key);
     }

@@ -41,25 +41,25 @@ List repos.
 
 Create and send file data request.
   $ edenapi_make_req data > req.cbor <<EOF
-  > {
-  >    "test.txt": "$TEST_FILENODE",
-  >    "copy.txt": "$COPY_FILENODE"
-  > }
+  > [
+  >    ["test.txt", "$TEST_FILENODE"],
+  >    ["copy.txt", "$COPY_FILENODE"]
+  > ]
   > EOF
   Reading from stdin
   Generated request: DataRequest {
       keys: [
           Key {
               path: RepoPathBuf(
-                  "copy.txt",
-              ),
-              hgid: HgId("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
-          },
-          Key {
-              path: RepoPathBuf(
                   "test.txt",
               ),
               hgid: HgId("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
+          },
+          Key {
+              path: RepoPathBuf(
+                  "copy.txt",
+              ),
+              hgid: HgId("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
           },
       ],
   }
@@ -68,8 +68,8 @@ Create and send file data request.
 Check files in response.
   $ edenapi_data_util ls res.cbor
   Reading from file: "res.cbor"
-  17b8d4e3bafd4ec4812ad7c930aace9bf07ab033 copy.txt
   186cafa3319c24956783383dc44c5cbc68c5a0ca test.txt
+  17b8d4e3bafd4ec4812ad7c930aace9bf07ab033 copy.txt
 
 Verify that filenode hashes match contents.
   $ edenapi_data_util check res.cbor
