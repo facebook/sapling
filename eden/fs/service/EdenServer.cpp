@@ -1059,8 +1059,8 @@ void EdenServer::addToMountPoints(std::shared_ptr<EdenMount> edenMount) {
 }
 
 void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
-#ifndef _WIN32
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
+#ifndef _WIN32
   counters->registerCallback(
       edenMount->getCounterName(CounterName::INODEMAP_LOADED), [edenMount] {
         auto counts = edenMount->getInodeMap()->getInodeCounts();
@@ -1070,6 +1070,7 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
       edenMount->getCounterName(CounterName::INODEMAP_UNLOADED), [edenMount] {
         return edenMount->getInodeMap()->getInodeCounts().unloadedInodeCount;
       });
+#endif
   counters->registerCallback(
       edenMount->getCounterName(CounterName::JOURNAL_MEMORY),
       [edenMount] { return edenMount->getJournal().estimateMemoryUsage(); });
@@ -1089,6 +1090,7 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
         auto stats = edenMount->getJournal().getStats();
         return stats ? stats->maxFilesAccumulated : 0;
       });
+#ifndef _WIN32
   for (auto metric : RequestMetricsScope::requestMetrics) {
     counters->registerCallback(
         getCounterNameForFuseRequests(
@@ -1097,6 +1099,7 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
           return edenMount->getFuseChannel()->getRequestMetric(metric);
         });
   }
+#endif
 #ifdef __linux__
   counters->registerCallback(
       getCounterNameForFuseRequests(
@@ -1111,18 +1114,16 @@ void EdenServer::registerStats(std::shared_ptr<EdenMount> edenMount) {
         }
       });
 #endif // __linux__
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 void EdenServer::unregisterStats(EdenMount* edenMount) {
-#ifndef _WIN32
   auto counters = fb303::ServiceData::get()->getDynamicCounters();
+#ifndef _WIN32
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::INODEMAP_LOADED));
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::INODEMAP_UNLOADED));
+#endif
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::JOURNAL_MEMORY));
   counters->unregisterCallback(
@@ -1131,19 +1132,18 @@ void EdenServer::unregisterStats(EdenMount* edenMount) {
       edenMount->getCounterName(CounterName::JOURNAL_DURATION));
   counters->unregisterCallback(
       edenMount->getCounterName(CounterName::JOURNAL_MAX_FILES_ACCUMULATED));
+#ifndef _WIN32
   for (auto metric : RequestMetricsScope::requestMetrics) {
     counters->unregisterCallback(getCounterNameForFuseRequests(
         RequestMetricsScope::RequestStage::LIVE, metric, edenMount));
   }
+#endif
 #ifdef __linux__
   counters->unregisterCallback(getCounterNameForFuseRequests(
       RequestMetricsScope::RequestStage::PENDING,
       RequestMetricsScope::RequestMetric::COUNT,
       edenMount));
 #endif // __linux__
-#else
-  NOT_IMPLEMENTED();
-#endif // !_WIN32
 }
 
 #ifndef _WIN32
@@ -1209,6 +1209,8 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
       std::move(journal));
   addToMountPoints(edenMount);
 
+  registerStats(edenMount);
+
 #ifdef _WIN32
   (void)
       mountStopWatch; // TODO: log to StructuredLogger once supported on Windows
@@ -1218,8 +1220,6 @@ folly::Future<std::shared_ptr<EdenMount>> EdenServer::mount(
         return edenMount;
       });
 #else
-  registerStats(edenMount);
-
   // Now actually begin starting the mount point
   const bool doTakeover = optionalTakeover.has_value();
   auto initFuture = edenMount->initialize(
@@ -1340,11 +1340,11 @@ Future<Unit> EdenServer::unmount(StringPiece mountPath) {
 void EdenServer::mountFinished(
     EdenMount* edenMount,
     std::optional<TakeoverData::MountInfo> takeover) {
-#ifndef _WIN32
   const auto mountPath = edenMount->getPath().stringPiece();
   XLOG(INFO) << "mount point \"" << mountPath << "\" stopped";
   unregisterStats(edenMount);
 
+#ifndef _WIN32
   // Save the unmount and takover Promises
   folly::SharedPromise<Unit> unmountPromise;
   std::optional<folly::Promise<TakeoverData::MountInfo>> takeoverPromise;
