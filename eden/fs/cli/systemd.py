@@ -19,7 +19,7 @@ pystemd_import_error = None
 try:
     import pystemd
     import pystemd.dbusexc  # pyre-ignore[21]: T32805591
-    import pystemd.dbuslib  # pyre-ignore[21]: T32805591
+    import pystemd.dbuslib
     import pystemd.systemd1.manager
     import pystemd.systemd1.unit
 except ModuleNotFoundError as e:
@@ -427,7 +427,6 @@ class SystemdUserBus:
     """
 
     _cleanups: contextlib.ExitStack
-    # pyre-fixme[11]: Type `DBus` is not defined.
     _dbus: "pystemd.dbuslib.DBus"
     _event_loop: asyncio.AbstractEventLoop
     _manager: "pystemd.SDManager"
@@ -445,9 +444,7 @@ class SystemdUserBus:
         self._manager = pystemd.systemd1.manager.Manager(bus=self._dbus)
 
     @staticmethod
-    def _get_dbus(
-        xdg_runtime_dir: str,
-    ) -> "pystemd.dbuslib.DBus":  # pyre-ignore[11]: T32805591
+    def _get_dbus(xdg_runtime_dir: str) -> "pystemd.dbuslib.DBus":
         # HACK(strager): pystemd.dbuslib.DBus(user_mode=True) fails with a
         # connection timeout. 'SYSTEMCTL_FORCE_BUS=1 systemctl --user ...' also
         # fails, and it seems to use the same C APIs as
@@ -457,7 +454,7 @@ class SystemdUserBus:
         #
         # [1] https://github.com/systemd/systemd/blob/78a562ee4bcbc7b0e8b58b475ff656f646e95e40/src/shared/bus-util.c#L594
         socket_path = pathlib.Path(xdg_runtime_dir) / "systemd" / "private"
-        return pystemd.dbuslib.DBusAddress(  # pyre-ignore[16]: T32805591
+        return pystemd.dbuslib.DBusAddress(
             b"unix:path=" + escape_dbus_address(bytes(socket_path)), peer_to_peer=True
         )
 
@@ -572,7 +569,7 @@ class SystemdUserBus:
         return await self._run_in_executor_async(go)
 
     async def subscribe_to_job_removed_async(
-        self
+        self,
     ) -> "SystemdSignalSubscription[JobRemovedSignal]":
         """Subscribe to org.freedesktop.systemd1.Manager.JobRemoved.
         """
@@ -596,7 +593,7 @@ class SystemdUserBus:
 
     @staticmethod
     def _on_job_removed(
-        msg: "pystemd.dbuslib.DbusMessage",  # pyre-ignore[11]: T32805591
+        msg: "pystemd.dbuslib.DbusMessage",
         error: typing.Optional[Exception],
         userdata: typing.Any,
     ) -> None:
