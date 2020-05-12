@@ -20,10 +20,11 @@ use gotham::{
 };
 
 use gotham_ext::response::build_response;
+use mercurial_types::HgFileNodeId;
 
 use crate::context::ServerContext;
 
-mod files;
+mod data;
 mod repos;
 mod util;
 
@@ -39,7 +40,7 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .to(repos_handler);
         route
             .post("/:repo/files")
-            .with_path_extractor::<files::FilesParams>()
+            .with_path_extractor::<data::DataParams>()
             .to(files_handler);
     })
 }
@@ -62,7 +63,7 @@ pub fn repos_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
 
 pub fn files_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     async move {
-        let res = files::files(&mut state).await;
+        let res = data::data::<HgFileNodeId>(&mut state).await;
         build_response(res, state)
     }
     .boxed()

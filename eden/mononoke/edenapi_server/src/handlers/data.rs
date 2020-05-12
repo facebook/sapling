@@ -16,8 +16,8 @@ use hyper::Body;
 use serde::Deserialize;
 
 use gotham_ext::{body_ext::BodyExt, error::HttpError, response::BytesBody};
-use mercurial_types::{HgFileNodeId, HgNodeHash};
-use mononoke_api::hg::{HgDataContext, HgRepoContext};
+use mercurial_types::HgNodeHash;
+use mononoke_api::hg::{HgDataContext, HgDataId, HgRepoContext};
 use types::{
     api::{DataRequest, DataResponse},
     DataEntry, Key,
@@ -29,14 +29,14 @@ use crate::middleware::RequestContext;
 use super::util::cbor_mime;
 
 #[derive(Debug, Deserialize, StateData, StaticResponseExtender)]
-pub struct FilesParams {
+pub struct DataParams {
     repo: String,
 }
 
-pub async fn files(state: &mut State) -> Result<BytesBody<Bytes>, HttpError> {
+pub async fn data<ID: HgDataId>(state: &mut State) -> Result<BytesBody<Bytes>, HttpError> {
     let rctx = RequestContext::borrow_from(state);
     let sctx = ServerContext::borrow_from(state);
-    let params = FilesParams::borrow_from(state);
+    let params = DataParams::borrow_from(state);
 
     let repo = sctx
         .mononoke_api()
@@ -56,7 +56,7 @@ pub async fn files(state: &mut State) -> Result<BytesBody<Bytes>, HttpError> {
         .map_err(HttpError::e400)?;
 
     let request = serde_cbor::from_slice(&payload).map_err(HttpError::e400)?;
-    let response = get_all_files(&hg_repo, request).await?;
+    let response = get_all_entries::<ID>(&hg_repo, request).await?;
     let bytes: Bytes = serde_cbor::to_vec(&response)
         .map_err(HttpError::e500)?
         .into();
@@ -64,31 +64,37 @@ pub async fn files(state: &mut State) -> Result<BytesBody<Bytes>, HttpError> {
     Ok(BytesBody::new(bytes, cbor_mime()))
 }
 
-/// Fetch data for all of the requested files concurrently.
-async fn get_all_files(
+/// Fetch data for all of the requested keys concurrently.
+async fn get_all_entries<ID: HgDataId>(
     hg_repo: &HgRepoContext,
     request: DataRequest,
 ) -> Result<DataResponse, HttpError> {
     let fetches = FuturesUnordered::new();
     for key in request.keys {
-        fetches.push(get_file(hg_repo, key));
+        fetches.push(get_data_entry::<ID>(hg_repo.clone(), key));
     }
     let entries = fetches.try_collect::<Vec<_>>().await?;
 
     Ok(DataResponse::new(entries))
 }
 
-/// Fetch requested data for a single file.
-async fn get_file(hg_repo: &HgRepoContext, key: Key) -> Result<DataEntry, HttpError> {
-    let filenode_id = HgFileNodeId::new(HgNodeHash::from(key.hgid));
-    let file = hg_repo
-        .file(filenode_id)
+/// Fetch requested data for a single key.
+/// Note that this function consumes the repo context in order
+/// to construct a file/tree context for the requested blob.
+async fn get_data_entry<ID: HgDataId>(
+    hg_repo: HgRepoContext,
+    key: Key,
+) -> Result<DataEntry, HttpError> {
+    let id = ID::from_node_hash(HgNodeHash::from(key.hgid));
+
+    let ctx = id
+        .context(hg_repo)
         .await
         .map_err(HttpError::e500)?
-        .ok_or_else(|| HttpError::e404(anyhow!("file does not exist: {:?}", &key)))?;
+        .ok_or_else(|| HttpError::e404(anyhow!("key not found: {:?}", &key)))?;
 
-    let data = file.content().await.map_err(HttpError::e500)?;
-    let parents = file.hg_parents().into();
+    let data = ctx.content().await.map_err(HttpError::e500)?;
+    let parents = ctx.hg_parents().into();
 
     Ok(DataEntry::new(key, data, parents))
 }
