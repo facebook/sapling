@@ -67,7 +67,7 @@ Make some non-conflicting commits in in the client repos.
   |
   o  first commit [draft:679b2ce82944]
   |
-  o  base [public:4ced94c0a443]
+  o  base [public:4ced94c0a443]  default/master
   
   $ hg push -q -r tip --to master
   $ log
@@ -75,7 +75,7 @@ Make some non-conflicting commits in in the client repos.
   |
   o  first commit [public:679b2ce82944]
   |
-  o  base [public:4ced94c0a443]
+  o  base [public:4ced94c0a443]  default/master
   
 
   $ cd ../client2
@@ -169,7 +169,7 @@ Push from client1 -> server1 and detach. The background job will wait for
   |
   o  first commit [public:679b2ce82944]
   |
-  o  base [public:4ced94c0a443]
+  o  base [public:4ced94c0a443]  default/master
   
   $ hg push --to master 2>&1 | \sed "s/^/[client1 push] /" &
 

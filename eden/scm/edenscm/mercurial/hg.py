@@ -557,6 +557,9 @@ def clone(
             # we need to re-init the repo after manually copying the data
             # into it
             destpeer = peer(srcrepo, peeropts, dest)
+            local = destpeer.local()
+            if local:
+                _writehgrc(local, abspath)
             srcrepo.hook("outgoing", source="clone", node=node.hex(node.nullid))
         else:
             try:
@@ -567,6 +570,10 @@ def clone(
                     cleandir = None
                     raise error.Abort(_("destination '%s' already exists") % dest)
                 raise
+            local = destpeer.local()
+            # Write [paths]. Code path below might use it.
+            if local:
+                _writehgrc(local, abspath)
 
             revs = None
             if rev:
@@ -580,7 +587,6 @@ def clone(
                     )
                 revs = [srcpeer.lookup(r) for r in rev]
                 checkout = revs[0]
-            local = destpeer.local()
             if local:
                 with local.wlock(), local.lock(), local.transaction("clone"):
                     if not stream:
@@ -620,15 +626,6 @@ def clone(
         destrepo = destpeer.local()
         if destrepo:
             with destrepo.wlock(), destrepo.lock(), destrepo.transaction("clone"):
-                template = uimod.samplehgrcs["cloned"]
-                fp = destrepo.localvfs("hgrc", "wb")
-                u = util.url(abspath)
-                u.passwd = None
-                defaulturl = str(u)
-                fp.write(pycompat.encodeutf8(util.tonativeeol(template % defaulturl)))
-                fp.close()
-
-                destrepo.ui.setconfig("paths", "default", defaulturl, "clone")
                 if destrepo.ui.configbool("format", "use-zstore-commit-data"):
                     destrepo._syncrevlogtozstore()
 
@@ -679,6 +676,17 @@ def clone(
         if cleandir is not None:
             shutil.rmtree(cleandir, True)
     return srcpeer, destpeer
+
+
+def _writehgrc(repo, abspath):
+    with repo.wlock(), repo.lock():
+        template = uimod.samplehgrcs["cloned"]
+        with repo.localvfs("hgrc", "wb") as fp:
+            u = util.url(abspath)
+            u.passwd = None
+            defaulturl = str(u)
+            fp.write(pycompat.encodeutf8(util.tonativeeol(template % defaulturl)))
+        repo.ui.setconfig("paths", "default", defaulturl, "clone")
 
 
 def clonepreclose(

@@ -106,7 +106,9 @@ Clone fresh repo and try to restore from backup
   $ hg sl --all
   @  changeset:   2:948715751816
   |  bookmark:    master
-  ~  user:        test
+  ~  bookmark:    default/master
+     hoistedname: master
+     user:        test
      date:        Thu Jan 01 00:00:00 1970 +0000
      summary:     add b
    (re)

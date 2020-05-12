@@ -99,7 +99,7 @@ Create a _third_ draft commit, push to the (behind) server1:
   $ log
   @  third commit [public:87df66bba286] master
   |
-  o  first [public:8585ef078134]
+  o  first [public:8585ef078134]  default/master
   |
   o  base [public:4ced94c0a443]
   
