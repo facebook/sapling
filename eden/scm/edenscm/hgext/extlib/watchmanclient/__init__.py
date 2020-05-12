@@ -13,7 +13,7 @@ import os
 import sys
 
 from bindings import tracing
-from edenscm.mercurial import blackbox, encoding, progress, pycompat, util
+from edenscm.mercurial import blackbox, encoding, json, progress, pycompat, util
 from edenscm.mercurial.node import hex
 
 from .. import pywatchman
@@ -128,6 +128,12 @@ class client(object):
             return None
 
     def _command(self, *args):
+        with util.traced("watchman-command", args=json.dumps(args[1:])) as span:
+            return self._retrycommand(span, 0, *args)
+
+    def _retrycommand(self, span, retry, *args):
+        if retry > 0:
+            span.record(retry=retry)
         watchmanargs = (args[0], self._resolved_root) + args[1:]
         error = None
         needretry = False
@@ -151,6 +157,7 @@ class client(object):
             return self._watchmanclient.query(*watchmanargs)
         except pywatchman.CommandError as ex:
             error = ex.msg
+            span.record(error=ex.msg)
             if "unable to resolve root" in ex.msg:
                 raise WatchmanNoRoot(self._resolved_root, ex.msg)
             raise Unavailable(ex.msg)
@@ -164,6 +171,7 @@ class client(object):
             # clear the pre-configured sockpath so that the client will probe
             # and start it up.
             if not self._ui.config("fsmonitor", "sockpath") or self._sockpath is None:
+                span.record(error=error)
                 # Either sockpath wasn't configured, or we already tried clearing
                 # it out, so let's propagate this error.
                 raise Unavailable(str(ex))
@@ -174,6 +182,7 @@ class client(object):
             needretry = True
         except pywatchman.WatchmanError as ex:
             error = str(ex)
+            span.record(error=error)
             raise Unavailable(str(ex))
         finally:
             event = {
@@ -186,7 +195,7 @@ class client(object):
                 event["watchman"]["result"] = {"error": error}
             blackbox.log(event)
         if needretry:
-            return self._command(*args)
+            return self._retrycommand(span, retry + 1, *args)
 
     @util.timefunction("watchmanquery", 0, "_ui")
     def command(self, *args, **kwargs):
