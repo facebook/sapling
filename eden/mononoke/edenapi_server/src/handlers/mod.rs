@@ -25,6 +25,7 @@ use mercurial_types::{HgFileNodeId, HgManifestId};
 use crate::context::ServerContext;
 
 mod data;
+mod history;
 mod repos;
 mod util;
 
@@ -46,6 +47,10 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .post("/:repo/trees")
             .with_path_extractor::<data::DataParams>()
             .to(trees_handler);
+        route
+            .post("/:repo/history")
+            .with_path_extractor::<history::HistoryParams>()
+            .to(history_handler);
     })
 }
 
@@ -76,6 +81,14 @@ pub fn files_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
 pub fn trees_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     async move {
         let res = data::data::<HgManifestId>(&mut state).await;
+        build_response(res, state)
+    }
+    .boxed()
+}
+
+pub fn history_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
+    async move {
+        let res = history::history(&mut state).await;
         build_response(res, state)
     }
     .boxed()
