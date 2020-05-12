@@ -406,93 +406,6 @@ def copystore(ui, srcrepo, destpath):
         raise
 
 
-def clonewithshare(
-    ui,
-    peeropts,
-    sharepath,
-    source,
-    srcpeer,
-    dest,
-    pull=False,
-    rev=None,
-    update=True,
-    stream=False,
-):
-    """Perform a clone using a shared repo.
-
-    The store for the repository will be located at <sharepath>/.hg. The
-    specified revisions will be cloned or pulled from "source". A shared repo
-    will be created at "dest" and a working copy will be created if "update" is
-    True.
-    """
-    revs = None
-    if rev:
-        if not srcpeer.capable("lookup"):
-            raise error.Abort(
-                _(
-                    "src repository does not support "
-                    "revision lookup and so doesn't "
-                    "support clone by revision"
-                )
-            )
-        revs = [srcpeer.lookup(r) for r in rev]
-
-    # Obtain a lock before checking for or cloning the pooled repo otherwise
-    # 2 clients may race creating or populating it.
-    pooldir = os.path.dirname(sharepath)
-    # lock class requires the directory to exist.
-    try:
-        util.makedir(pooldir, False)
-    except OSError as e:
-        if e.errno != errno.EEXIST:
-            raise
-
-    poolvfs = vfsmod.vfs(pooldir)
-    basename = os.path.basename(sharepath)
-
-    with lock.lock(poolvfs, "%s.lock" % basename):
-        if os.path.exists(sharepath):
-            ui.status(_("(sharing from existing pooled repository %s)\n") % basename)
-        else:
-            ui.status(_("(sharing from new pooled repository %s)\n") % basename)
-            # Always use pull mode because hardlinks in share mode don't work
-            # well. Never update because working copies aren't necessary in
-            # share mode.
-            clone(
-                ui,
-                peeropts,
-                source,
-                dest=sharepath,
-                pull=True,
-                rev=rev,
-                update=False,
-                stream=stream,
-            )
-
-    # Resolve the value to put in [paths] section for the source.
-    if islocal(source):
-        defaultpath = os.path.abspath(util.urllocalpath(source))
-    else:
-        defaultpath = source
-
-    sharerepo = repository(ui, path=sharepath)
-    share(
-        ui, sharerepo, dest=dest, update=False, bookmarks=False, defaultpath=defaultpath
-    )
-
-    # We need to perform a pull against the dest repo to fetch bookmarks
-    # and other non-store data that isn't shared by default. In the case of
-    # non-existing shared repo, this means we pull from the remote twice. This
-    # is a bit weird. But at the time it was implemented, there wasn't an easy
-    # way to pull just non-changegroup data.
-    destrepo = repository(ui, path=dest)
-    exchange.pull(destrepo, srcpeer, heads=revs)
-
-    _postshareupdate(destrepo, update)
-
-    return srcpeer, peer(ui, peeropts, dest)
-
-
 def _cachetocopy(srcrepo):
     """return the list of cache file valuable to copy during a clone"""
     # In local clones we're copying all nodes, not just served
@@ -512,7 +425,6 @@ def clone(
     rev=None,
     update=True,
     stream=False,
-    shareopts=None,
     shallow=False,
 ):
     """Make a copy of an existing repository.
@@ -547,13 +459,6 @@ def clone(
     update: update working directory after clone completes, if
     destination is local repository (True means update to default rev,
     anything else is treated as a revision)
-
-    shareopts: dict of options to control auto sharing behavior. The "pool" key
-    activates auto sharing mode and defines the directory for stores. The
-    "mode" key determines how to construct the directory name of the shared
-    repository. "identity" means the name is derived from the node of the first
-    changeset in the repository. "remote" means the name is derived from the
-    remote's path/URL. Defaults to "identity."
     """
 
     if isinstance(source, str):
@@ -588,52 +493,6 @@ def clone(
             raise error.Abort(_("destination '%s' already exists") % dest)
         elif destvfs.listdir():
             raise error.Abort(_("destination '%s' is not empty") % dest)
-
-    shareopts = shareopts or {}
-    sharepool = shareopts.get("pool")
-    sharenamemode = shareopts.get("mode")
-    if sharepool and islocal(dest):
-        sharepath = None
-        if sharenamemode == "identity":
-            # Resolve the name from the initial changeset in the remote
-            # repository. This returns nullid when the remote is empty. It
-            # raises RepoLookupError if revision 0 is filtered or otherwise
-            # not available. If we fail to resolve, sharing is not enabled.
-            try:
-                rootnode = srcpeer.lookup("0")
-                if rootnode != node.nullid:
-                    sharepath = os.path.join(sharepool, node.hex(rootnode))
-                else:
-                    ui.status(
-                        _("(not using pooled storage: " "remote appears to be empty)\n")
-                    )
-            except error.RepoLookupError:
-                ui.status(
-                    _(
-                        "(not using pooled storage: "
-                        "unable to resolve identity of remote)\n"
-                    )
-                )
-        elif sharenamemode == "remote":
-            sharepath = os.path.join(
-                sharepool, hashlib.sha1(encodeutf8(source)).hexdigest()
-            )
-        else:
-            raise error.Abort(_("unknown share naming mode: %s") % sharenamemode)
-
-        if sharepath:
-            return clonewithshare(
-                ui,
-                peeropts,
-                sharepath,
-                source,
-                srcpeer,
-                dest,
-                pull=pull,
-                rev=rev,
-                update=update,
-                stream=stream,
-            )
 
     srclock = destlock = destlockw = cleandir = None
     srcrepo = srcpeer.local()
@@ -809,17 +668,7 @@ def clone(
                     if update in destrepo._bookmarks:
                         bookmarks.activate(destrepo, update)
         clonepreclose(
-            ui,
-            peeropts,
-            source,
-            dest,
-            pull,
-            rev,
-            update,
-            stream,
-            shareopts,
-            srcpeer,
-            destpeer,
+            ui, peeropts, source, dest, pull, rev, update, stream, srcpeer, destpeer
         )
     finally:
         release(srclock, destlockw, destlock)
@@ -841,7 +690,6 @@ def clonepreclose(
     rev=None,
     update=True,
     stream=False,
-    shareopts=None,
     srcpeer=None,
     destpeer=None,
 ):
