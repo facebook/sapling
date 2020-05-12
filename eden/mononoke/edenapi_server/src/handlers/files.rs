@@ -17,7 +17,7 @@ use serde::Deserialize;
 
 use gotham_ext::{body_ext::BodyExt, error::HttpError, response::BytesBody};
 use mercurial_types::{HgFileNodeId, HgNodeHash};
-use mononoke_api::hg::HgRepoContext;
+use mononoke_api::hg::{HgDataContext, HgRepoContext};
 use types::{
     api::{DataRequest, DataResponse},
     DataEntry, Key,

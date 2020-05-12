@@ -7,10 +7,12 @@
 
 pub use mercurial_types::{HgFileNodeId, HgManifestId, HgParents};
 
+pub mod data;
 pub mod file;
 pub mod repo;
 pub mod tree;
 
+pub use data::{HgDataContext, HgDataId};
 pub use file::HgFileContext;
 pub use repo::HgRepoContext;
 pub use tree::HgTreeContext;

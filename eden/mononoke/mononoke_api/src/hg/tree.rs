@@ -5,16 +5,17 @@
  * GNU General Public License version 2.
  */
 
+use async_trait::async_trait;
 use bytes::Bytes;
 use futures::compat::Future01CompatExt;
 use mercurial_types::{
     fetch_manifest_envelope, fetch_manifest_envelope_opt, HgBlobEnvelope, HgManifestEnvelope,
-    HgManifestId, HgParents,
+    HgManifestId, HgNodeHash, HgParents,
 };
 
 use crate::errors::MononokeError;
 
-use super::HgRepoContext;
+use super::{HgDataContext, HgDataId, HgRepoContext};
 
 #[derive(Clone)]
 pub struct HgTreeContext {
@@ -51,11 +52,22 @@ impl HgTreeContext {
         Ok(envelope.map(move |envelope| Self { repo, envelope }))
     }
 
+    /// Get the content for this tree manifest node in the format expected
+    /// by Mercurial's data storage layer.
+    fn content_bytes(&self) -> Bytes {
+        self.envelope.contents().clone()
+    }
+}
+
+#[async_trait]
+impl HgDataContext for HgTreeContext {
+    type NodeId = HgManifestId;
+
     /// Get the manifest node hash (HgManifestId) for this tree.
     ///
     /// This should be same as the HgManifestId specified when this context was created,
     /// but the value returned here comes from the data loaded from Mononoke.
-    pub fn node_id(&self) -> HgManifestId {
+    fn node_id(&self) -> HgManifestId {
         HgManifestId::new(self.envelope.node_id())
     }
 
@@ -64,21 +76,36 @@ impl HgTreeContext {
     /// Useful for implementing anything that needs to traverse the history
     /// of tree nodes, or otherwise needs to use make further queries using
     /// the returned `HgManifestId`s.
-    pub fn parents(&self) -> (Option<HgManifestId>, Option<HgManifestId>) {
+    fn parents(&self) -> (Option<HgManifestId>, Option<HgManifestId>) {
         let (p1, p2) = self.envelope.parents();
         (p1.map(HgManifestId::new), p2.map(HgManifestId::new))
     }
 
     /// Get the parents of this tree node in a format that can be easily
     /// sent to the Mercurial client as part of a serialized response.
-    pub fn hg_parents(&self) -> HgParents {
+    fn hg_parents(&self) -> HgParents {
         self.envelope.get_parents()
     }
 
-    /// Get the content for this tree manifest node in the format expected
-    /// by Mercurial's data storage layer.
-    pub fn content(&self) -> Bytes {
-        self.envelope.contents().clone()
+    /// The manifest envelope actually contains the underlying
+    /// tree bytes inline, so they can be accessed synchronously
+    /// and infallibly with the `content_bytes` method. This method
+    /// just wraps the bytes in a TryFuture that immediately succeeds.
+    async fn content(&self) -> Result<Bytes, MononokeError> {
+        Ok(self.content_bytes())
+    }
+}
+
+#[async_trait]
+impl HgDataId for HgManifestId {
+    type Context = HgTreeContext;
+
+    fn from_node_hash(hash: HgNodeHash) -> Self {
+        HgManifestId::new(hash)
+    }
+
+    async fn context(self, repo: HgRepoContext) -> Result<Option<HgTreeContext>, MononokeError> {
+        HgTreeContext::new_check_exists(repo, self).await
     }
 }
 
@@ -119,7 +146,7 @@ mod tests {
         let tree = HgTreeContext::new(hg.clone(), manifest_id).await?;
         assert_eq!(manifest_id, tree.node_id());
 
-        let content = tree.content();
+        let content = tree.content_bytes();
 
         // The content here is the representation of the format in which
         // the Mercurial client would store a tree manifest node.

@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use async_trait::async_trait;
 use blobrepo::file_history::get_file_history;
 use blobstore::{Loadable, LoadableError};
 use bytes::Bytes;
@@ -12,13 +13,15 @@ use futures::{
     compat::{Future01CompatExt, Stream01CompatExt},
     TryStream, TryStreamExt,
 };
-use mercurial_types::{envelope::HgFileEnvelope, HgFileHistoryEntry, HgFileNodeId, HgParents};
+use mercurial_types::{
+    envelope::HgFileEnvelope, HgFileHistoryEntry, HgFileNodeId, HgNodeHash, HgParents,
+};
 use mononoke_types::MPath;
 use remotefilelog::create_getpack_v1_blob;
 
 use crate::errors::MononokeError;
 
-use super::HgRepoContext;
+use super::{HgDataContext, HgDataId, HgRepoContext};
 
 /// An abstraction around a Mercurial filenode.
 ///
@@ -63,50 +66,6 @@ impl HgFileContext {
         }
     }
 
-    /// Get the filenode hash (HgFileNodeId) for this file version.
-    ///
-    /// This should be same as the HgFileNodeId specified when this context was created,
-    /// but the value returned here comes from the data loaded from Mononoke.
-    pub fn node_id(&self) -> HgFileNodeId {
-        self.envelope.node_id()
-    }
-
-    /// Get the parents of this file version in a strongly typed way.
-    ///
-    /// Useful for implementing anything that needs to traverse the history
-    /// of file nodes, or otherwise needs to use make further queries using
-    /// the returned `HgFileNodeId`s.
-    pub fn parents(&self) -> (Option<HgFileNodeId>, Option<HgFileNodeId>) {
-        self.envelope.parents()
-    }
-
-    /// Get the parents of this file version in a format that can be easily
-    /// sent to the Mercurial client as part of a serialized response.
-    pub fn hg_parents(&self) -> HgParents {
-        self.envelope.hg_parents()
-    }
-
-    /// Get the content for this file in the format expected by Mercurial's data storage layer.
-    /// In particular, this returns the full content of the file, in some cases prefixed with
-    /// a small header. Callers should not assume that the data returned by this function
-    /// only contains file content.
-    pub async fn content(&self) -> Result<Bytes, MononokeError> {
-        let ctx = self.repo.ctx().clone();
-        let blob_repo = self.repo.blob_repo().clone();
-        let filenode_id = self.node_id();
-
-        // TODO(kulshrax): Update this to use getpack_v2, which supports LFS.
-        let (_size, content_fut) = create_getpack_v1_blob(ctx, blob_repo, filenode_id, false)
-            .compat()
-            .await?;
-
-        // TODO(kulshrax): Right now this buffers the entire file content in memory. It would
-        // probably be better for this method to return a stream of the file content instead.
-        let (_filenode, content) = content_fut.compat().await?;
-
-        Ok(content)
-    }
-
     /// Get the history of this file (at a particular path in the repo) as a stream of Mercurial
     /// file history entries.
     ///
@@ -125,6 +84,68 @@ impl HgFileContext {
         get_file_history(ctx, blob_repo, filenode_id, path, max_depth)
             .compat()
             .map_err(MononokeError::from)
+    }
+}
+
+#[async_trait]
+impl HgDataContext for HgFileContext {
+    type NodeId = HgFileNodeId;
+
+    /// Get the filenode hash (HgFileNodeId) for this file version.
+    ///
+    /// This should be same as the HgFileNodeId specified when this context was created,
+    /// but the value returned here comes from the data loaded from Mononoke.
+    fn node_id(&self) -> HgFileNodeId {
+        self.envelope.node_id()
+    }
+
+    /// Get the parents of this file version in a strongly typed way.
+    ///
+    /// Useful for implementing anything that needs to traverse the history
+    /// of file nodes, or otherwise needs to use make further queries using
+    /// the returned `HgFileNodeId`s.
+    fn parents(&self) -> (Option<HgFileNodeId>, Option<HgFileNodeId>) {
+        self.envelope.parents()
+    }
+
+    /// Get the parents of this file version in a format that can be easily
+    /// sent to the Mercurial client as part of a serialized response.
+    fn hg_parents(&self) -> HgParents {
+        self.envelope.hg_parents()
+    }
+
+    /// Get the content for this file in the format expected by Mercurial's data storage layer.
+    /// In particular, this returns the full content of the file, in some cases prefixed with
+    /// a small header. Callers should not assume that the data returned by this function
+    /// only contains file content.
+    async fn content(&self) -> Result<Bytes, MononokeError> {
+        let ctx = self.repo.ctx().clone();
+        let blob_repo = self.repo.blob_repo().clone();
+        let filenode_id = self.node_id();
+
+        // TODO(kulshrax): Update this to use getpack_v2, which supports LFS.
+        let (_size, content_fut) = create_getpack_v1_blob(ctx, blob_repo, filenode_id, false)
+            .compat()
+            .await?;
+
+        // TODO(kulshrax): Right now this buffers the entire file content in memory. It would
+        // probably be better for this method to return a stream of the file content instead.
+        let (_filenode, content) = content_fut.compat().await?;
+
+        Ok(content)
+    }
+}
+
+#[async_trait]
+impl HgDataId for HgFileNodeId {
+    type Context = HgFileContext;
+
+    fn from_node_hash(hash: HgNodeHash) -> Self {
+        HgFileNodeId::new(hash)
+    }
+
+    async fn context(self, repo: HgRepoContext) -> Result<Option<HgFileContext>, MononokeError> {
+        HgFileContext::new_check_exists(repo, self).await
     }
 }
 
