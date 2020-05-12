@@ -551,7 +551,7 @@ def chunkselector(ui, headerlist, operation=None):
     if util.safehasattr(signal, "SIGTSTP"):
         origsigtstp = signal.getsignal(signal.SIGTSTP)
     try:
-        with progress.suspend(), blackbox.logblocked("curses"):
+        with progress.suspend(), util.traced("crecord", cat="blocked"):
             curses.wrapper(chunkselector.main)
             if chunkselector.initerr is not None:
                 hint = _(

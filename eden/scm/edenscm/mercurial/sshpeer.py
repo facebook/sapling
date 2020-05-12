@@ -171,7 +171,9 @@ class sshpeer(wireproto.wirepeer):
             if res != 0:
                 self._abort(error.RepoError(_("could not create remote repo")))
 
-        with self.ui.timeblockedsection("sshsetup"), progress.suspend():
+        with self.ui.timeblockedsection("sshsetup"), progress.suspend(), util.traced(
+            "ssh_setup", cat="blocked"
+        ):
             self._validaterepo(sshcmd, args, remotecmd, sshenv)
 
     # Begin of _basepeer interface.

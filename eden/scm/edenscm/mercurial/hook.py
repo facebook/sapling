@@ -89,7 +89,8 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
     starttime = util.timer()
 
     try:
-        r = obj(ui=ui, repo=repo, hooktype=htype, **args)
+        with util.traced("pythonhook", hookname=hname, cat="blocked"):
+            r = obj(ui=ui, repo=repo, hooktype=htype, **args)
     except Exception as exc:
         if isinstance(exc, error.Abort):
             ui.warn(_("error: %s hook failed: %s\n") % (hname, exc.args[0]))
@@ -106,7 +107,6 @@ def _pythonhook(ui, repo, htype, hname, funcname, args, throw):
         return True, True
     finally:
         duration = util.timer() - starttime
-        blackbox.logblocked("pythonhook", duration, name=hname)
         ui.log(
             "pythonhook",
             "pythonhook-%s: %s finished in %0.2f seconds\n",
@@ -154,10 +154,10 @@ def _exthook(ui, repo, htype, name, cmd, args, throw):
         cwd = repo.root
     else:
         cwd = pycompat.getcwd()
+
     r = ui.system(cmd, environ=env, cwd=cwd, blockedtag="exthook")
 
     duration = util.timer() - starttime
-    blackbox.logblocked("exthook", duration, name=name)
     ui.log("exthook", "exthook-%s: %s finished in %0.2f seconds\n", name, cmd, duration)
     if r:
         desc, r = util.explainexit(r)

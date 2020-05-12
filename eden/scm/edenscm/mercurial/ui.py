@@ -659,8 +659,12 @@ class ui(object):
             finally:
                 # Assuming the only way to be blocked on stdout is the pager.
                 seconds = util.timer() - starttime
-                blackbox.logblocked("pager", seconds, ignorefast=True)
-                self._measuredtimes["stdio_blocked"] += seconds * 1000
+                # Using util.traced is in theory correct, but will generate too
+                # many (noisy) tracing events. Only log blocking events that
+                # takes some time (ex. 0.1s).
+                if seconds >= 0.1:
+                    util.info("stdio", cat="blocked-after", millis=int(seconds * 1000))
+                self._measuredtimes["stdio_blocked"] += (seconds) * 1000
 
     def writebytes(self, *args, **opts):
         """Like `write` but taking bytes instead of str as arguments.
@@ -690,9 +694,10 @@ class ui(object):
                 raise error.StdioError(err)
             finally:
                 # Assuming the only way to be blocked on stdout is the pager.
-                seconds = util.timer() - starttime
-                blackbox.logblocked("pager", seconds, ignorefast=True)
-                self._measuredtimes["stdio_blocked"] += seconds * 1000
+                millis = int((util.timer() - starttime) * 1000)
+                if millis >= 20:
+                    util.info("stdio", cat="blocked-after", millis=millis)
+                self._measuredtimes["stdio_blocked"] += millis
 
     def write_err(self, *args, **opts):
         with progress.suspend():
@@ -721,9 +726,10 @@ class ui(object):
                 raise error.StdioError(inst)
         finally:
             # Assuming the only way to be blocked on stdout is the pager.
-            seconds = util.timer() - starttime
-            blackbox.logblocked("pager", seconds, ignorefast=True)
-            self._measuredtimes["stdio_blocked"] += seconds * 1000
+            millis = int((util.timer() - starttime) * 1000)
+            if millis >= 20:
+                util.info("stdio", cat="blocked-after", millis=millis)
+            self._measuredtimes["stdio_blocked"] += millis
 
     def flush(self):
         # opencode timeblockedsection because this is a critical path
@@ -741,7 +747,10 @@ class ui(object):
                     if err.errno not in (errno.EPIPE, errno.EIO, errno.EBADF):
                         raise error.StdioError(err)
         finally:
-            self._measuredtimes["stdio_blocked"] += (util.timer() - starttime) * 1000
+            millis = int((util.timer() - starttime) * 1000)
+            self._measuredtimes["stdio_blocked"] += millis
+            if millis >= 20:
+                util.info("stdio", cat="blocked-after", millis=millis)
 
     def _isatty(self, fh):
         if self.configbool("ui", "nontty"):
@@ -1112,7 +1121,7 @@ class ui(object):
             self.write(msg, " ", default or "", "\n")
             return default
         try:
-            with progress.suspend(), blackbox.logblocked("prompt"):
+            with progress.suspend(), util.traced("prompt", cat="blocked"):
                 r = self._readline(self.label(msg, "ui.prompt"))
                 if not r:
                     r = default
@@ -1368,27 +1377,10 @@ class ui(object):
             suspend = progress.suspend
         else:
             suspend = util.nullcontextmanager
-        starttime = util.timer()
-        with self.timeblockedsection(blockedtag), suspend():
+        with self.timeblockedsection(blockedtag), suspend(), util.traced(
+            blockedtag, cat="blocked"
+        ):
             rc = self._runsystem(cmd, environ=environ, cwd=cwd, out=out)
-        seconds = util.timer() - starttime
-        # NOTE: The whitelist needs to be carefully chosen. Make sure they
-        # match the Rust Event enum, and do not overlap with other "blocked"
-        # events. For example, the curses interface might call ui.edit ->
-        # ui.system. But the entire duration of curses interaction is already
-        # recorded as a "blocked" event. So it's important to skip logging
-        # "blocked" for "edit" inside curses. See D15755288 for an example.
-        if blockedtag in {
-            "editor",
-            # exthook is logged at the callsite - hook.py:_exthook.
-            # "exthook",
-            "extdiff",
-            "pythonhook",
-            "bisect_check",
-            "histedit_exec",
-            "mergetool",
-        }:
-            blackbox.logblocked(blockedtag, seconds)
         if rc and onerr:
             errmsg = "%s %s" % (
                 os.path.basename(cmd.split(None, 1)[0]),
