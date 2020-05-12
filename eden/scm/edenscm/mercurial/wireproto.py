@@ -364,12 +364,22 @@ class wirepeer(repository.legacypeer):
             self.ui.status(_("remote: "), l)
         yield d
 
-    def stream_out(self):
+    def stream_out(self, shallow=False):
+        fullclone = self.ui.configbool("clone", "requestfullclone")
+        if shallow and fullclone:
+            raise error.Abort(
+                _("--shallow is incompatible with clone.requestfullclone")
+            )
+        if shallow and self.capable("remotefilelog"):
+            opts = {}
+            if self.ui.configbool("treemanifest", "treeonly"):
+                opts["noflatmanifest"] = "True"
+            return self._callstream("stream_out_shallow", **opts)
         if self.capable("stream_option"):
-            fullclone = self.ui.configbool("clone", "requestfullclone")
             args = {"fullclone": str(fullclone)}
             return self._callstream("stream_out_option", **args)
-        return self._callstream("stream_out")
+        else:
+            return self._callstream("stream_out")
 
     def getbundle(self, source, **kwargs):
         kwargs = kwargs
@@ -1179,6 +1189,41 @@ def stream(repo, proto):
         return streamres(gen=getstream(it))
     except error.LockError:
         return b"2\n"
+
+
+class streamstate(object):
+    shallowremote = False
+    noflatmf = False
+
+
+# XXX: Consider move this to another state.
+_streamstate = streamstate()
+
+
+@wireprotocommand("stream_out_shallow", "*")
+def stream_out_shallow(repo, proto, other):
+    oldshallow = _streamstate.shallowremote
+    oldnoflatmf = _streamstate.noflatmf
+    try:
+        _streamstate.shallowremote = True
+        _streamstate.noflatmf = other.get("noflatmanifest") == "True"
+        s = stream(repo, proto)
+
+        # Force the first value to execute, so the file list is computed
+        # within the try/finally scope
+        first = next(s.gen)
+        second = next(s.gen)
+
+        def gen():
+            yield first
+            yield second
+            for value in s.gen:
+                yield value
+
+        return streamres(gen())
+    finally:
+        _streamstate.shallowremote = oldshallow
+        _streamstate.noflatmf = oldnoflatmf
 
 
 @wireprotocommand("stream_out_option", "*")

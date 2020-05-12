@@ -172,7 +172,7 @@ class _basewirecommands(pycompat.ABC):
         """
 
     @abc.abstractmethod
-    def stream_out(self):
+    def stream_out(self, shallow=False):
         """Obtain streaming clone data.
 
         Successful result should be a generator of data chunks.

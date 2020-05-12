@@ -97,7 +97,7 @@ class gitrepo(peerrepository):
         def peer(self):
             return self
 
-        def stream_out(self):
+        def stream_out(self, shallow=False):
             raise NotImplementedError
 
         def unbundle(self):

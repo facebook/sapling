@@ -64,37 +64,7 @@ def onetimesetup(ui):
     wireproto.commands["getpackv1"] = (getpackv1, "*")
     wireproto.commands["getpackv2"] = (getpackv2, "*")
 
-    class streamstate(object):
-        shallowremote = False
-        noflatmf = False
-
-    state = streamstate()
-
-    def stream_out_shallow(repo, proto, other):
-        oldshallow = state.shallowremote
-        oldnoflatmf = state.noflatmf
-        try:
-            state.shallowremote = True
-            state.noflatmf = other.get("noflatmanifest") == "True"
-            streamres = wireproto.stream(repo, proto)
-
-            # Force the first value to execute, so the file list is computed
-            # within the try/finally scope
-            first = next(streamres.gen)
-            second = next(streamres.gen)
-
-            def gen():
-                yield first
-                yield second
-                for value in streamres.gen:
-                    yield value
-
-            return wireproto.streamres(gen())
-        finally:
-            state.shallowremote = oldshallow
-            state.noflatmf = oldnoflatmf
-
-    wireproto.commands["stream_out_shallow"] = (stream_out_shallow, "*")
+    state = wireproto._streamstate
 
     # don't clone filelogs to shallow clients
     def _walkstreamfiles(orig, repo):

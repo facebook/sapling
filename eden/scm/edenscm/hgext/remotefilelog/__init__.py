@@ -368,30 +368,7 @@ def cloneshallow(orig, ui, repo, *args, **opts):
 
         wrapfunction(exchange, "pull", pull_shallow)
 
-        # Wrap the stream logic to add requirements and to pass include/exclude
-        # patterns around.
-        def setup_streamout(repo, remote):
-            # Replace remote.stream_out with a version that sends file
-            # patterns.
-            def stream_out_shallow(orig):
-                caps = shallowutil.peercapabilities(remote)
-                if shallowrepo.requirement in caps:
-                    opts = {}
-                    if repo.ui.configbool("treemanifest", "treeonly"):
-                        opts["noflatmanifest"] = "True"
-                    return remote._callstream("stream_out_shallow", **opts)
-                else:
-                    return orig()
-
-            wrapfunction(remote, "stream_out", stream_out_shallow)
-
         if hasstreamclone:
-
-            def stream_wrap(orig, op):
-                setup_streamout(op.repo, op.remote)
-                return orig(op)
-
-            wrapfunction(streamclone, "maybeperformlegacystreamclone", stream_wrap)
 
             def canperformstreamclone(orig, *args, **kwargs):
                 supported, requirements = orig(*args, **kwargs)
@@ -403,7 +380,6 @@ def cloneshallow(orig, ui, repo, *args, **opts):
         else:
 
             def stream_in_shallow(orig, repo, remote, requirements):
-                setup_streamout(repo, remote)
                 requirements.add(shallowrepo.requirement)
                 return orig(repo, remote, requirements)
 

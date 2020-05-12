@@ -134,7 +134,9 @@ def maybeperformlegacystreamclone(pullop):
 
     repo.ui.status(_("streaming all changes\n"))
 
-    fp = remote.stream_out()
+    shallow = pullop.extras.get("shallow", False)
+
+    fp = remote.stream_out(shallow=shallow)
     l = fp.readline()
     try:
         resp = int(l)
