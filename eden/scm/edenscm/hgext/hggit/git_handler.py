@@ -308,7 +308,7 @@ class GitHandler(object):
 
             if remote_name:
                 self.update_remote_branches(remote_name, refs)
-            elif not self.paths:
+            elif getattr(self.repo.currenttransaction(), "desc", None) == "clone":
                 # intial cloning
                 self.update_remote_branches("default", refs)
 
