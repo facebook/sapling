@@ -525,6 +525,8 @@ def clone(
                 copy = False
 
         if copy:
+            clonecodepath = "copy"
+
             srcrepo.hook("preoutgoing", throw=True, source="clone")
             hgdir = os.path.realpath(os.path.join(dest, ".hg"))
             if not os.path.exists(dest):
@@ -563,6 +565,7 @@ def clone(
                 _writehgrc(local, abspath)
             srcrepo.hook("outgoing", source="clone", node=node.hex(node.nullid))
         else:
+            clonecodepath = "legacy-pull"
             try:
                 destpeer = peer(srcrepo or ui, peeropts, dest, create=True)
                 # only pass ui when no srcrepo
@@ -600,6 +603,7 @@ def clone(
                 and ui.configbool("experimental", "new-clone-path")
                 and ui.configbool("remotenames", "selectivepull")
             ):
+                clonecodepath = "modern"
                 clonemod.shallowclone(srcpeer.url(), local)
             elif local:
                 if ui.configbool("experimental", "new-clone-path"):
@@ -686,7 +690,17 @@ def clone(
                     if update in destrepo._bookmarks:
                         bookmarks.activate(destrepo, update)
         clonepreclose(
-            ui, peeropts, source, dest, pull, rev, update, stream, srcpeer, destpeer
+            ui,
+            peeropts,
+            source,
+            dest,
+            pull,
+            rev,
+            update,
+            stream,
+            srcpeer,
+            destpeer,
+            clonecodepath=clonecodepath,
         )
     finally:
         release(srclock, destlockw, destlock)
@@ -721,8 +735,16 @@ def clonepreclose(
     stream=False,
     srcpeer=None,
     destpeer=None,
+    clonecodepath=None,
 ):
-    """Wrapped by extensions like remotenames before closing the peers"""
+    """Wrapped by extensions like remotenames before closing the peers
+
+    clonecodepath is one of:
+    - "copy": The clone was done by copying local files.
+    - "legacy-pull": The clone was done by the (legacy) pull code path.
+    - "modern": The clone was done by the modern clone.streamclone code path,
+      which is less racy and writes remote bookmarks.
+    """
     return srcpeer, destpeer
 
 
