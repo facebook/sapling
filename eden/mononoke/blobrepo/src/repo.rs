@@ -1711,12 +1711,12 @@ impl CreateChangeset {
 
                         let p1_mf = parent_manifest_hashes.get(0).cloned();
                         let check_case_conflicts = if must_check_case_conflicts {
-                            check_case_conflicts(
-                                ctx.clone(),
-                                repo.clone(),
-                                root_mf_id.clone(),
-                                p1_mf,
-                            )
+                            cloned!(ctx, repo);
+                            async move {
+                                check_case_conflicts(&ctx, &repo, root_mf_id, p1_mf).await
+                            }
+                            .boxed()
+                            .compat()
                             .left_future()
                         } else {
                             future::ok(()).right_future()

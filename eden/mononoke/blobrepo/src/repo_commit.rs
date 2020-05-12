@@ -12,6 +12,11 @@ use std::sync::{Arc, Mutex};
 use anyhow::{format_err, Error, Result};
 use cloned::cloned;
 use failure_ext::{Compat, FutureFailureErrorExt, StreamFailureErrorExt};
+use futures::{
+    compat::{Future01CompatExt, Stream01CompatExt},
+    future::{FutureExt, TryFutureExt},
+    stream::{FuturesUnordered, StreamExt, TryStreamExt},
+};
 use futures_ext::{
     BoxFuture as OldBoxFuture, BoxStream as OldBoxStream, FutureExt as OldFutureExt,
     StreamExt as OldStreamExt,
@@ -19,13 +24,12 @@ use futures_ext::{
 use futures_old::future::{
     self as old_future, Future as OldFuture, Shared, SharedError, SharedItem,
 };
-use futures_old::stream::{self as old_stream, Stream as OldStream};
+use futures_old::stream::Stream as OldStream;
 use futures_old::sync::oneshot;
 use futures_old::IntoFuture;
 use futures_stats::Timed;
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use stats::prelude::*;
-use tracing::{trace_args, Traced};
 
 use ::manifest::{find_intersection_of_diffs, Diff, Entry, ManifestOps};
 use blobstore::{Blobstore, Loadable};
@@ -448,8 +452,18 @@ pub fn compute_changed_files(
                 .map(|(left, right)| left.intersection(&right).cloned().collect::<Vec<_>>());
 
             // Mercurial always includes removed files, we need to match this behaviour
-            let f2 = compute_removed_files(ctx.clone(), root, Some(p1), repo.clone());
-            let f3 = compute_removed_files(ctx.clone(), root, Some(p2), repo);
+            let f2 = {
+                cloned!(ctx, repo);
+                async move { compute_removed_files(&ctx, &repo, root, Some(p1)).await }
+            }
+            .boxed()
+            .compat();
+            let f3 = {
+                cloned!(ctx, repo);
+                async move { compute_removed_files(&ctx, &repo, root, Some(p2)).await }
+            }
+            .boxed()
+            .compat();
 
             f1.join3(f2, f3)
                 .map(|(ch1, ch2, ch3)| {
@@ -470,109 +484,105 @@ pub fn compute_changed_files(
     .boxify()
 }
 
-fn compute_removed_files(
-    ctx: CoreContext,
+async fn compute_removed_files(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     child: HgManifestId,
     parent: Option<HgManifestId>,
-    repo: BlobRepo,
-) -> impl OldFuture<Item = Vec<MPath>, Error = Error> {
-    compute_files_with_status(ctx, child, parent, repo, move |diff| match diff {
+) -> Result<Vec<MPath>, Error> {
+    compute_files_with_status(ctx, repo, child, parent, move |diff| match diff {
         Diff::Removed(path, entry) => match entry {
             Entry::Leaf(_) => path,
             Entry::Tree(_) => None,
         },
         _ => None,
     })
+    .await
 }
 
-fn compute_files_with_status(
-    ctx: CoreContext,
+async fn compute_files_with_status(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     child: HgManifestId,
     parent: Option<HgManifestId>,
-    repo: BlobRepo,
     filter_map: impl Fn(Diff<Entry<HgManifestId, (FileType, HgFileNodeId)>>) -> Option<MPath>,
-) -> impl OldFuture<Item = Vec<MPath>, Error = Error> {
+) -> Result<Vec<MPath>, Error> {
     let s = match parent {
         Some(parent) => parent
             .diff(ctx.clone(), repo.get_blobstore(), child)
-            .boxify(),
+            .compat()
+            .left_stream(),
         None => child
             .list_all_entries(ctx.clone(), repo.get_blobstore())
             .map(|(path, entry)| Diff::Added(path, entry))
-            .boxify(),
+            .compat()
+            .right_stream(),
     };
 
-    s.filter_map(filter_map).collect()
+    s.try_filter_map(|e| async { Ok(filter_map(e)) })
+        .try_collect()
+        .await
 }
 
 /// Checks if new commit (or to be precise, it's manifest) introduces any new case conflicts
 /// It does it in three stages:
 /// 1) Checks that there are no case conflicts between added files
 /// 2) Checks that added files do not create new case conflicts with already existing files
-pub fn check_case_conflicts(
-    ctx: CoreContext,
-    repo: BlobRepo,
+pub async fn check_case_conflicts(
+    ctx: &CoreContext,
+    repo: &BlobRepo,
     child_root_mf: HgManifestId,
     parent_root_mf: Option<HgManifestId>,
-) -> impl OldFuture<Item = (), Error = Error> {
-    compute_files_with_status(
-        ctx.clone(),
-        child_root_mf,
-        parent_root_mf,
-        repo.clone(),
-        |diff| match diff {
-            Diff::Added(path, _entry) => path,
-            _ => None,
-        },
-    )
-    .and_then(
-        |added_files| match mononoke_types::check_case_conflicts(added_files.iter()) {
-            Some(path) => Err(ErrorKind::CaseConflict(path).into()),
-            None => Ok(added_files),
-        },
-    )
-    .and_then({
-        cloned!(ctx);
-        move |added_files| match parent_root_mf {
-            Some(parent_root_mf) => {
-                let mut case_conflict_checks = old_stream::FuturesUnordered::new();
-                for f in added_files {
-                    case_conflict_checks.push(
-                        repo.check_case_conflict_in_manifest(
-                            ctx.clone(),
-                            parent_root_mf,
-                            child_root_mf,
-                            f.clone(),
-                        )
-                        .map(move |add_conflict| (add_conflict, f)),
-                    );
-                }
+) -> Result<(), Error> {
+    let added_files =
+        compute_files_with_status(
+            ctx,
+            repo,
+            child_root_mf,
+            parent_root_mf,
+            |diff| match diff {
+                Diff::Added(path, _entry) => path,
+                _ => None,
+            },
+        )
+        .await?;
 
-                case_conflict_checks
-                    .collect()
-                    .and_then(|results| {
-                        let maybe_conflict =
-                            results.into_iter().find(|(add_conflict, _f)| *add_conflict);
-                        match maybe_conflict {
-                            Some((_, path)) => Err(ErrorKind::CaseConflict(path).into()),
-                            None => Ok(()),
-                        }
-                    })
-                    .left_future()
-            }
-            None => Ok(()).into_future().right_future(),
+    if let Some(path) = mononoke_types::check_case_conflicts(added_files.iter()) {
+        return Err(ErrorKind::CaseConflict(path).into());
+    }
+
+    let parent_root_mf = match parent_root_mf {
+        Some(parent_root_mf) => parent_root_mf,
+        None => {
+            return Ok(());
         }
-    })
-    .traced(
-        ctx.trace(),
-        "check_case_conflicts",
-        trace_args! {
-            "child_manifest_id" => child_root_mf.to_string(),
-            "parent_manifest_id" => parent_root_mf
-                .map(|id| id.to_string())
-                .unwrap_or_else(|| "null".to_string()),
-        },
-    )
+    };
+
+    let mut case_conflict_checks = added_files
+        .into_iter()
+        .map(|f| async move {
+            let add_conflict = repo
+                .check_case_conflict_in_manifest(
+                    ctx.clone(),
+                    parent_root_mf,
+                    child_root_mf,
+                    f.clone(),
+                )
+                .compat()
+                .await?;
+
+            Result::<_, Error>::Ok((add_conflict, f))
+        })
+        .collect::<FuturesUnordered<_>>();
+
+    while let Some(element) = case_conflict_checks.next().await {
+        let (add_conflict, path) = element?;
+        if add_conflict {
+            return Err(ErrorKind::CaseConflict(path).into());
+        }
+    }
+
+    Ok(())
 }
 
 fn mercurial_mpath_comparator(a: &MPath, b: &MPath) -> ::std::cmp::Ordering {

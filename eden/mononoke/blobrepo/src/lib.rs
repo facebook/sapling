@@ -19,7 +19,7 @@ pub use crate::repo::{save_bonsai_changesets, BlobRepo, CreateChangeset};
 pub use crate::repo_commit::ChangesetHandle;
 pub use changeset_fetcher::ChangesetFetcher;
 // TODO: This is exported for testing - is this the right place for it?
-pub use crate::repo_commit::{compute_changed_files, UploadEntries};
+pub use crate::repo_commit::{check_case_conflicts, compute_changed_files, UploadEntries};
 pub use utils::DangerousOverride;
 
 pub mod errors {

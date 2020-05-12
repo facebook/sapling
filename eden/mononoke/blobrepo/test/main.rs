@@ -23,10 +23,7 @@ use fbinit::FacebookInit;
 use fixtures::{create_bonsai_changeset, many_files_dirs, merge_uneven};
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{Future, Stream};
-use futures_util::{
-    compat::Future01CompatExt,
-    future::{FutureExt as Futures02FutureExt, TryFutureExt},
-};
+use futures_util::compat::Future01CompatExt;
 use maplit::btreemap;
 use memblob::LazyMemblob;
 use mercurial_types::{
@@ -1469,623 +1466,642 @@ fn test_content_uploaded_filenode_id(fb: FacebookInit) -> Result<(), Error> {
     Ok(())
 }
 
+struct TestHelper {
+    ctx: CoreContext,
+    repo: BlobRepo,
+}
+
+impl TestHelper {
+    fn new(fb: FacebookInit) -> Result<Self, Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+        Ok(Self { ctx, repo })
+    }
+
+    fn new_commit(&self) -> CreateCommitContext<'_> {
+        CreateCommitContext::new_root(&self.ctx, &self.repo)
+    }
+
+    async fn lookup_changeset(&self, cs_id: ChangesetId) -> Result<HgBlobChangeset, Error> {
+        let hg_cs_id = self
+            .repo
+            .get_hg_from_bonsai_changeset(self.ctx.clone(), cs_id)
+            .compat()
+            .await?;
+
+        let hg_cs = hg_cs_id
+            .load(self.ctx.clone(), self.repo.blobstore())
+            .compat()
+            .await?;
+
+        Ok(hg_cs)
+    }
+
+    async fn root_manifest(&self, cs_id: ChangesetId) -> Result<BlobManifest, Error> {
+        let hg_cs = self.lookup_changeset(cs_id).await?;
+
+        let manifest = hg_cs
+            .manifestid()
+            .load(self.ctx.clone(), self.repo.blobstore())
+            .compat()
+            .await?;
+
+        Ok(manifest)
+    }
+
+    async fn lookup_entry(
+        &self,
+        cs_id: ChangesetId,
+        path: &str,
+    ) -> Result<Entry<HgManifestId, (FileType, HgFileNodeId)>, Error> {
+        let path = MPath::new(path)?;
+
+        let hg_cs = self.lookup_changeset(cs_id).await?;
+
+        let err = Error::msg(format!("Missing entry: {}", path));
+
+        let entry = hg_cs
+            .manifestid()
+            .find_entry(self.ctx.clone(), self.repo.get_blobstore(), Some(path))
+            .compat()
+            .await?
+            .ok_or(err)?;
+
+        Ok(entry)
+    }
+
+    async fn lookup_manifest(&self, cs_id: ChangesetId, path: &str) -> Result<BlobManifest, Error> {
+        let id = self
+            .lookup_entry(cs_id, path)
+            .await?
+            .into_tree()
+            .ok_or_else(|| Error::msg(format!("Not a manifest: {}", path)))?;
+
+        let manifest = id
+            .load(self.ctx.clone(), self.repo.blobstore())
+            .compat()
+            .await?;
+
+        Ok(manifest)
+    }
+
+    async fn lookup_filenode(
+        &self,
+        cs_id: ChangesetId,
+        path: &str,
+    ) -> Result<HgFileEnvelope, Error> {
+        let (_, filenode) = self
+            .lookup_entry(cs_id, path)
+            .await?
+            .into_leaf()
+            .ok_or_else(|| Error::msg(format!("Not a filenode: {}", path)))?;
+
+        let envelope = filenode
+            .load(self.ctx.clone(), self.repo.blobstore())
+            .compat()
+            .await?;
+
+        Ok(envelope)
+    }
+}
+
 mod octopus_merges {
     use super::*;
 
-    struct TestHelper {
-        ctx: CoreContext,
-        repo: BlobRepo,
+    #[fbinit::compat_test]
+    async fn test_basic(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = blobrepo_factory::new_memblob_empty(None)?;
+
+        let p1 = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("foo", "foo")
+            .commit()
+            .await?;
+
+        let p2 = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("bar", "bar")
+            .commit()
+            .await?;
+
+        let p3 = CreateCommitContext::new_root(&ctx, &repo)
+            .add_file("qux", "qux")
+            .commit()
+            .await?;
+
+        let commit = CreateCommitContext::new(&ctx, &repo, vec![p1, p2, p3])
+            .commit()
+            .await?;
+
+        let hg_cs_id = repo
+            .get_hg_from_bonsai_changeset(ctx.clone(), commit)
+            .compat()
+            .await?;
+
+        let hg_cs = hg_cs_id
+            .load(ctx.clone(), repo.blobstore())
+            .compat()
+            .await?;
+
+        let hg_manifest = hg_cs
+            .manifestid()
+            .load(ctx.clone(), repo.blobstore())
+            .compat()
+            .await?;
+
+        // Do we get the same files?
+        let files = Manifest::list(&hg_manifest);
+        assert_eq!(files.count(), 3);
+
+        Ok(())
     }
 
-    impl TestHelper {
-        fn new(fb: FacebookInit) -> Result<Self, Error> {
-            let ctx = CoreContext::test_mock(fb);
-            let repo = blobrepo_factory::new_memblob_empty(None)?;
-            Ok(Self { ctx, repo })
-        }
+    #[fbinit::compat_test]
+    async fn test_basic_filenode_parents(fb: FacebookInit) -> Result<(), Error> {
+        let helper = TestHelper::new(fb)?;
 
-        fn new_commit(&self) -> CreateCommitContext<'_> {
-            CreateCommitContext::new_root(&self.ctx, &self.repo)
-        }
+        let p1 = helper.new_commit().add_file("foo", "foo").commit().await?;
+        let p2 = helper.new_commit().add_file("bar", "bar").commit().await?;
+        let p3 = helper.new_commit().add_file("qux", "qux").commit().await?;
 
-        async fn lookup_changeset(&self, cs_id: ChangesetId) -> Result<HgBlobChangeset, Error> {
-            let hg_cs_id = self
-                .repo
-                .get_hg_from_bonsai_changeset(self.ctx.clone(), cs_id)
-                .compat()
-                .await?;
+        let commit = helper
+            .new_commit()
+            .add_parent(p1)
+            .add_parent(p2)
+            .add_parent(p3)
+            .add_file("foo", "foo2")
+            .add_file("bar", "bar2")
+            .add_file("qux", "qux2")
+            .commit()
+            .await?;
 
-            let hg_cs = hg_cs_id
-                .load(self.ctx.clone(), self.repo.blobstore())
-                .compat()
-                .await?;
+        let foo = helper.lookup_filenode(commit, "foo").await?;
+        let bar = helper.lookup_filenode(commit, "bar").await?;
+        let qux = helper.lookup_filenode(commit, "qux").await?;
 
-            Ok(hg_cs)
-        }
+        // We expect the parents for foo and bar to be present, but qux should have it parent
+        // dropped, because it's out of range for Mercurial.
+        assert_eq!(
+            foo.parents(),
+            (
+                Some(helper.lookup_filenode(p1, "foo").await?.node_id()),
+                None
+            )
+        );
 
-        async fn root_manifest(&self, cs_id: ChangesetId) -> Result<BlobManifest, Error> {
-            let hg_cs = self.lookup_changeset(cs_id).await?;
+        assert_eq!(
+            bar.parents(),
+            (
+                Some(helper.lookup_filenode(p2, "bar").await?.node_id()),
+                None
+            )
+        );
 
-            let manifest = hg_cs
-                .manifestid()
-                .load(self.ctx.clone(), self.repo.blobstore())
-                .compat()
-                .await?;
+        assert_eq!(qux.parents(), (None, None));
 
-            Ok(manifest)
-        }
-
-        async fn lookup_entry(
-            &self,
-            cs_id: ChangesetId,
-            path: &str,
-        ) -> Result<Entry<HgManifestId, (FileType, HgFileNodeId)>, Error> {
-            let path = MPath::new(path)?;
-
-            let hg_cs = self.lookup_changeset(cs_id).await?;
-
-            let err = Error::msg(format!("Missing entry: {}", path));
-
-            let entry = hg_cs
-                .manifestid()
-                .find_entry(self.ctx.clone(), self.repo.get_blobstore(), Some(path))
-                .compat()
-                .await?
-                .ok_or(err)?;
-
-            Ok(entry)
-        }
-
-        async fn lookup_manifest(
-            &self,
-            cs_id: ChangesetId,
-            path: &str,
-        ) -> Result<BlobManifest, Error> {
-            let id = self
-                .lookup_entry(cs_id, path)
-                .await?
-                .into_tree()
-                .ok_or(Error::msg(format!("Not a manifest: {}", path)))?;
-
-            let manifest = id
-                .load(self.ctx.clone(), self.repo.blobstore())
-                .compat()
-                .await?;
-
-            Ok(manifest)
-        }
-
-        async fn lookup_filenode(
-            &self,
-            cs_id: ChangesetId,
-            path: &str,
-        ) -> Result<HgFileEnvelope, Error> {
-            let (_, filenode) = self
-                .lookup_entry(cs_id, path)
-                .await?
-                .into_leaf()
-                .ok_or(Error::msg(format!("Not a filenode: {}", path)))?;
-
-            let envelope = filenode
-                .load(self.ctx.clone(), self.repo.blobstore())
-                .compat()
-                .await?;
-
-            Ok(envelope)
-        }
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_basic(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new()?;
+    #[fbinit::compat_test]
+    async fn test_many_filenode_parents(fb: FacebookInit) -> Result<(), Error> {
+        let helper = TestHelper::new(fb)?;
 
-        rt.block_on(
-            async move {
-                let ctx = CoreContext::test_mock(fb);
-                let repo = blobrepo_factory::new_memblob_empty(None)?;
+        let p1 = helper.new_commit().add_file("foo", "foo").commit().await?;
+        let p2 = helper.new_commit().add_file("foo", "bar").commit().await?;
+        let p3 = helper.new_commit().add_file("foo", "qux").commit().await?;
 
-                let p1 = CreateCommitContext::new_root(&ctx, &repo)
-                    .add_file("foo", "foo")
-                    .commit()
-                    .await?;
+        let commit = helper
+            .new_commit()
+            .add_parent(p1)
+            .add_parent(p2)
+            .add_parent(p3)
+            .add_file("foo", "foo2")
+            .commit()
+            .await?;
 
-                let p2 = CreateCommitContext::new_root(&ctx, &repo)
-                    .add_file("bar", "bar")
-                    .commit()
-                    .await?;
+        let foo = helper.lookup_filenode(commit, "foo").await?;
 
-                let p3 = CreateCommitContext::new_root(&ctx, &repo)
-                    .add_file("qux", "qux")
-                    .commit()
-                    .await?;
+        assert_eq!(
+            foo.parents(),
+            (
+                Some(helper.lookup_filenode(p1, "foo").await?.node_id()),
+                Some(helper.lookup_filenode(p2, "foo").await?.node_id())
+            )
+        );
 
-                let commit = CreateCommitContext::new(&ctx, &repo, vec![p1, p2, p3])
-                    .commit()
-                    .await?;
-
-                let hg_cs_id = repo
-                    .get_hg_from_bonsai_changeset(ctx.clone(), commit)
-                    .compat()
-                    .await?;
-
-                let hg_cs = hg_cs_id
-                    .load(ctx.clone(), repo.blobstore())
-                    .compat()
-                    .await?;
-
-                let hg_manifest = hg_cs
-                    .manifestid()
-                    .load(ctx.clone(), repo.blobstore())
-                    .compat()
-                    .await?;
-
-                // Do we get the same files?
-                let files = Manifest::list(&hg_manifest);
-                assert_eq!(files.collect::<Vec<_>>().len(), 3);
-
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_basic_filenode_parents(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new()?;
+    #[fbinit::compat_test]
+    async fn test_mixed_filenode_parents(fb: FacebookInit) -> Result<(), Error> {
+        let helper = TestHelper::new(fb)?;
 
-        rt.block_on(
-            async move {
-                let helper = TestHelper::new(fb)?;
+        let p1 = helper.new_commit().commit().await?;
+        let p2 = helper.new_commit().add_file("foo", "foo").commit().await?;
+        let p3 = helper.new_commit().add_file("foo", "bar").commit().await?;
 
-                let p1 = helper.new_commit().add_file("foo", "foo").commit().await?;
-                let p2 = helper.new_commit().add_file("bar", "bar").commit().await?;
-                let p3 = helper.new_commit().add_file("qux", "qux").commit().await?;
+        let commit = helper
+            .new_commit()
+            .add_parent(p1)
+            .add_parent(p2)
+            .add_parent(p3)
+            .add_file("foo", "foo2")
+            .commit()
+            .await?;
 
-                let commit = helper
-                    .new_commit()
-                    .add_parent(p1)
-                    .add_parent(p2)
-                    .add_parent(p3)
-                    .add_file("foo", "foo2")
-                    .add_file("bar", "bar2")
-                    .add_file("qux", "qux2")
-                    .commit()
-                    .await?;
+        let foo = helper.lookup_filenode(commit, "foo").await?;
 
-                let foo = helper.lookup_filenode(commit, "foo").await?;
-                let bar = helper.lookup_filenode(commit, "bar").await?;
-                let qux = helper.lookup_filenode(commit, "qux").await?;
+        assert_eq!(
+            foo.parents(),
+            (
+                Some(helper.lookup_filenode(p2, "foo").await?.node_id()),
+                None
+            )
+        );
 
-                // We expect the parents for foo and bar to be present, but qux should have it parent
-                // dropped, because it's out of range for Mercurial.
-                assert_eq!(
-                    foo.parents(),
-                    (
-                        Some(helper.lookup_filenode(p1, "foo").await?.node_id()),
-                        None
-                    )
-                );
-
-                assert_eq!(
-                    bar.parents(),
-                    (
-                        Some(helper.lookup_filenode(p2, "bar").await?.node_id()),
-                        None
-                    )
-                );
-
-                assert_eq!(qux.parents(), (None, None));
-
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_many_filenode_parents(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new()?;
+    #[fbinit::compat_test]
+    async fn test_strip_copy_from(fb: FacebookInit) -> Result<(), Error> {
+        let helper = TestHelper::new(fb)?;
 
-        rt.block_on(
-            async move {
-                let helper = TestHelper::new(fb)?;
+        let p1 = helper.new_commit().commit().await?;
+        let p2 = helper.new_commit().commit().await?;
+        let p3 = helper.new_commit().add_file("foo", "foo").commit().await?;
 
-                let p1 = helper.new_commit().add_file("foo", "foo").commit().await?;
-                let p2 = helper.new_commit().add_file("foo", "bar").commit().await?;
-                let p3 = helper.new_commit().add_file("foo", "qux").commit().await?;
+        let commit = helper
+            .new_commit()
+            .add_parent(p1)
+            .add_parent(p2)
+            .add_parent(p3)
+            .add_file_with_copy_info("foo", "bar", (p3, "foo"))?
+            .commit()
+            .await?;
 
-                let commit = helper
-                    .new_commit()
-                    .add_parent(p1)
-                    .add_parent(p2)
-                    .add_parent(p3)
-                    .add_file("foo", "foo2")
-                    .commit()
-                    .await?;
+        let foo = helper.lookup_filenode(commit, "foo").await?;
 
-                let foo = helper.lookup_filenode(commit, "foo").await?;
+        assert_eq!(foo.parents(), (None, None));
 
-                assert_eq!(
-                    foo.parents(),
-                    (
-                        Some(helper.lookup_filenode(p1, "foo").await?.node_id()),
-                        Some(helper.lookup_filenode(p2, "foo").await?.node_id())
-                    )
-                );
-
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_mixed_filenode_parents(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new()?;
+    #[fbinit::compat_test]
+    async fn test_mixed_manifest_parents(fb: FacebookInit) -> Result<(), Error> {
+        let helper = TestHelper::new(fb)?;
 
-        rt.block_on(
-            async move {
-                let helper = TestHelper::new(fb)?;
+        let p1 = helper
+            .new_commit()
+            .add_file("foo/p1", "p1")
+            .commit()
+            .await?;
 
-                let p1 = helper.new_commit().commit().await?;
-                let p2 = helper.new_commit().add_file("foo", "foo").commit().await?;
-                let p3 = helper.new_commit().add_file("foo", "bar").commit().await?;
+        let p2 = helper
+            .new_commit()
+            .add_file("foo/p2", "p2")
+            .add_file("bar/p2", "p2")
+            .commit()
+            .await?;
 
-                let commit = helper
-                    .new_commit()
-                    .add_parent(p1)
-                    .add_parent(p2)
-                    .add_parent(p3)
-                    .add_file("foo", "foo2")
-                    .commit()
-                    .await?;
+        let p3 = helper
+            .new_commit()
+            .add_file("foo/p3", "p3")
+            .add_file("bar/p3", "p3")
+            .commit()
+            .await?;
 
-                let foo = helper.lookup_filenode(commit, "foo").await?;
+        let commit = helper
+            .new_commit()
+            .add_parent(p1)
+            .add_parent(p2)
+            .add_parent(p3)
+            .commit()
+            .await?;
 
-                assert_eq!(
-                    foo.parents(),
-                    (
-                        Some(helper.lookup_filenode(p2, "foo").await?.node_id()),
-                        None
-                    )
-                );
+        let foo = helper.lookup_manifest(commit, "foo").await?;
+        let bar = helper.lookup_manifest(commit, "bar").await?;
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+        assert_eq!(
+            foo.p1(),
+            Some(helper.lookup_manifest(p1, "foo").await?.node_id())
+        );
+
+        assert_eq!(
+            foo.p2(),
+            Some(helper.lookup_manifest(p2, "foo").await?.node_id())
+        );
+
+        assert_eq!(
+            bar.p1(),
+            Some(helper.lookup_manifest(p2, "bar").await?.node_id())
+        );
+
+        assert_eq!(bar.p2(), None);
+
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_strip_copy_from(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new()?;
+    #[fbinit::compat_test]
+    async fn test_step_parents_metadata(fb: FacebookInit) -> Result<(), Error> {
+        let helper = TestHelper::new(fb)?;
 
-        rt.block_on(
-            async move {
-                let helper = TestHelper::new(fb)?;
+        let p1 = helper.new_commit().commit().await?;
+        let p2 = helper.new_commit().commit().await?;
+        let p3 = helper.new_commit().commit().await?;
+        let p4 = helper.new_commit().commit().await?;
 
-                let p1 = helper.new_commit().commit().await?;
-                let p2 = helper.new_commit().commit().await?;
-                let p3 = helper.new_commit().add_file("foo", "foo").commit().await?;
+        let commit = helper
+            .new_commit()
+            .add_parent(p1)
+            .add_parent(p2)
+            .add_parent(p3)
+            .add_parent(p4)
+            .commit()
+            .await?;
 
-                let commit = helper
-                    .new_commit()
-                    .add_parent(p1)
-                    .add_parent(p2)
-                    .add_parent(p3)
-                    .add_file_with_copy_info("foo", "bar", (p3, "foo"))?
-                    .commit()
-                    .await?;
+        let hg_cs = helper.lookup_changeset(commit).await?;
 
-                let foo = helper.lookup_filenode(commit, "foo").await?;
+        assert_eq!(
+            hg_cs.p1(),
+            Some(
+                helper
+                    .lookup_changeset(p1)
+                    .await?
+                    .get_changeset_id()
+                    .into_nodehash()
+            )
+        );
 
-                assert_eq!(foo.parents(), (None, None));
+        assert_eq!(
+            hg_cs.p2(),
+            Some(
+                helper
+                    .lookup_changeset(p2)
+                    .await?
+                    .get_changeset_id()
+                    .into_nodehash()
+            )
+        );
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+        let step_parents_key: Vec<u8> = "stepparents".into();
+        let step_parents = hg_cs
+            .extra()
+            .get(&step_parents_key)
+            .ok_or_else(|| Error::msg("stepparents are missing"))?;
+
+        assert_eq!(
+            std::str::from_utf8(step_parents)?,
+            format!(
+                "{},{}",
+                helper
+                    .lookup_changeset(p3)
+                    .await?
+                    .get_changeset_id()
+                    .to_hex(),
+                helper
+                    .lookup_changeset(p4)
+                    .await?
+                    .get_changeset_id()
+                    .to_hex()
+            )
+        );
+
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_mixed_manifest_parents(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new()?;
+    #[fbinit::compat_test]
+    async fn test_resolve_trivial_conflict(fb: FacebookInit) -> Result<(), Error> {
+        let helper = TestHelper::new(fb)?;
 
-        rt.block_on(
-            async move {
-                let helper = TestHelper::new(fb)?;
+        let p1 = helper.new_commit().commit().await?;
+        let p2 = helper.new_commit().add_file("foo", "foo").commit().await?;
+        let p3 = helper
+            .new_commit()
+            .add_file("foo", "foo")
+            .add_parent(helper.new_commit().add_file("foo", "bar").commit().await?)
+            .commit()
+            .await?;
 
-                let p1 = helper
-                    .new_commit()
-                    .add_file("foo/p1", "p1")
-                    .commit()
-                    .await?;
+        let commit = helper
+            .new_commit()
+            .add_parent(p1)
+            .add_parent(p2)
+            .add_parent(p3)
+            .commit()
+            .await?;
 
-                let p2 = helper
-                    .new_commit()
-                    .add_file("foo/p2", "p2")
-                    .add_file("bar/p2", "p2")
-                    .commit()
-                    .await?;
+        let foo = helper.lookup_filenode(commit, "foo").await?;
 
-                let p3 = helper
-                    .new_commit()
-                    .add_file("foo/p3", "p3")
-                    .add_file("bar/p3", "p3")
-                    .commit()
-                    .await?;
+        assert_eq!(
+            foo.parents(),
+            (
+                Some(helper.lookup_filenode(p2, "foo").await?.node_id()),
+                None
+            )
+        );
 
-                let commit = helper
-                    .new_commit()
-                    .add_parent(p1)
-                    .add_parent(p2)
-                    .add_parent(p3)
-                    .commit()
-                    .await?;
-
-                let foo = helper.lookup_manifest(commit, "foo").await?;
-                let bar = helper.lookup_manifest(commit, "bar").await?;
-
-                assert_eq!(
-                    foo.p1(),
-                    Some(helper.lookup_manifest(p1, "foo").await?.node_id())
-                );
-
-                assert_eq!(
-                    foo.p2(),
-                    Some(helper.lookup_manifest(p2, "foo").await?.node_id())
-                );
-
-                assert_eq!(
-                    bar.p1(),
-                    Some(helper.lookup_manifest(p2, "bar").await?.node_id())
-                );
-
-                assert_eq!(bar.p2(), None);
-
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_step_parents_metadata(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new()?;
+    #[fbinit::compat_test]
+    async fn test_fail_to_resolve_conflict_on_content(fb: FacebookInit) -> Result<(), Error> {
+        let helper = TestHelper::new(fb)?;
 
-        rt.block_on(
-            async move {
-                let helper = TestHelper::new(fb)?;
+        let p1 = helper.new_commit().commit().await?;
+        let p2 = helper.new_commit().add_file("foo", "foo").commit().await?;
+        let p3 = helper.new_commit().add_file("foo", "bar").commit().await?;
 
-                let p1 = helper.new_commit().commit().await?;
-                let p2 = helper.new_commit().commit().await?;
-                let p3 = helper.new_commit().commit().await?;
-                let p4 = helper.new_commit().commit().await?;
+        let commit = helper
+            .new_commit()
+            .add_parent(p1)
+            .add_parent(p2)
+            .add_parent(p3)
+            .commit()
+            .await?;
 
-                let commit = helper
-                    .new_commit()
-                    .add_parent(p1)
-                    .add_parent(p2)
-                    .add_parent(p3)
-                    .add_parent(p4)
-                    .commit()
-                    .await?;
+        let root = helper.root_manifest(commit).await;
 
-                let hg_cs = helper.lookup_changeset(commit).await?;
+        let err = root
+            .map(|_| ())
+            .expect_err("Derivation should fail on conflict");
 
-                assert_eq!(
-                    hg_cs.p1(),
-                    Some(
-                        helper
-                            .lookup_changeset(p1)
-                            .await?
-                            .get_changeset_id()
-                            .into_nodehash()
-                    )
-                );
+        assert_matches!(
+            err.downcast_ref::<ErrorKind>(),
+            Some(ErrorKind::UnresolvedConflicts(_, _))
+        );
 
-                assert_eq!(
-                    hg_cs.p2(),
-                    Some(
-                        helper
-                            .lookup_changeset(p2)
-                            .await?
-                            .get_changeset_id()
-                            .into_nodehash()
-                    )
-                );
-
-                let step_parents_key: Vec<u8> = "stepparents".into();
-                let step_parents = hg_cs
-                    .extra()
-                    .get(&step_parents_key)
-                    .ok_or(Error::msg("stepparents are missing"))?;
-
-                assert_eq!(
-                    std::str::from_utf8(step_parents)?,
-                    format!(
-                        "{},{}",
-                        helper
-                            .lookup_changeset(p3)
-                            .await?
-                            .get_changeset_id()
-                            .to_hex(),
-                        helper
-                            .lookup_changeset(p4)
-                            .await?
-                            .get_changeset_id()
-                            .to_hex()
-                    )
-                );
-
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_resolve_trivial_conflict(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new()?;
+    #[fbinit::compat_test]
+    async fn test_fail_to_resolve_conflict_on_type(fb: FacebookInit) -> Result<(), Error> {
+        let helper = TestHelper::new(fb)?;
 
-        rt.block_on(
-            async move {
-                let helper = TestHelper::new(fb)?;
+        let p1 = helper.new_commit().commit().await?;
+        let p2 = helper
+            .new_commit()
+            .add_file_with_type("foo", "foo", FileType::Regular)
+            .commit()
+            .await?;
+        let p3 = helper
+            .new_commit()
+            .add_file_with_type("foo", "foo", FileType::Executable)
+            .commit()
+            .await?;
 
-                let p1 = helper.new_commit().commit().await?;
-                let p2 = helper.new_commit().add_file("foo", "foo").commit().await?;
-                let p3 = helper
-                    .new_commit()
-                    .add_file("foo", "foo")
-                    .add_parent(helper.new_commit().add_file("foo", "bar").commit().await?)
-                    .commit()
-                    .await?;
+        let commit = helper
+            .new_commit()
+            .add_parent(p1)
+            .add_parent(p2)
+            .add_parent(p3)
+            .commit()
+            .await?;
 
-                let commit = helper
-                    .new_commit()
-                    .add_parent(p1)
-                    .add_parent(p2)
-                    .add_parent(p3)
-                    .commit()
-                    .await?;
+        let root = helper.root_manifest(commit).await;
 
-                let foo = helper.lookup_filenode(commit, "foo").await?;
+        let err = root
+            .map(|_| ())
+            .expect_err("Derivation should fail on conflict");
 
-                assert_eq!(
-                    foo.parents(),
-                    (
-                        Some(helper.lookup_filenode(p2, "foo").await?.node_id()),
-                        None
-                    )
-                );
+        assert_matches!(
+            err.downcast_ref::<ErrorKind>(),
+            Some(ErrorKind::UnresolvedConflicts(_, _))
+        );
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_fail_to_resolve_conflict_on_content(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new()?;
+    #[fbinit::compat_test]
+    async fn test_changeset_file_changes(fb: FacebookInit) -> Result<(), Error> {
+        let helper = TestHelper::new(fb)?;
 
-        rt.block_on(
-            async move {
-                let helper = TestHelper::new(fb)?;
+        let p1 = helper.new_commit().commit().await?;
+        let p2 = helper.new_commit().add_file("p2", "p2").commit().await?;
+        let p3 = helper.new_commit().add_file("p3", "p3").commit().await?;
+        let p4 = helper.new_commit().add_file("p4", "p4").commit().await?;
 
-                let p1 = helper.new_commit().commit().await?;
-                let p2 = helper.new_commit().add_file("foo", "foo").commit().await?;
-                let p3 = helper.new_commit().add_file("foo", "bar").commit().await?;
+        let commit = helper
+            .new_commit()
+            .add_parent(p1)
+            .add_parent(p2)
+            .add_parent(p3)
+            .add_parent(p4)
+            .commit()
+            .await?;
 
-                let commit = helper
-                    .new_commit()
-                    .add_parent(p1)
-                    .add_parent(p2)
-                    .add_parent(p3)
-                    .commit()
-                    .await?;
+        let cs = helper.lookup_changeset(commit).await?;
+        assert_eq!(cs.files(), &vec![MPath::new("p3")?, MPath::new("p4")?][..]);
 
-                let root = helper.root_manifest(commit).await;
+        Ok(())
+    }
+}
 
-                let err = root
-                    .map(|_| ())
-                    .expect_err("Derivation should fail on conflict");
+mod case_conflicts {
+    use super::*;
+    use blobrepo::check_case_conflicts;
 
-                assert_matches!(
-                    err.downcast_ref::<ErrorKind>(),
-                    Some(ErrorKind::UnresolvedConflicts(_, _))
-                );
+    #[fbinit::compat_test]
+    async fn test_internal_case_conflict(fb: FacebookInit) -> Result<(), Error> {
+        let helper = TestHelper::new(fb)?;
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+        let commit = helper
+            .new_commit()
+            .add_file("foo", "foo")
+            .add_file("FOO", "foo")
+            .commit()
+            .await?;
+
+        let id = helper.lookup_changeset(commit).await?.manifestid();
+
+        let res = check_case_conflicts(&helper.ctx, &helper.repo, id, None).await;
+
+        assert_matches!(
+            res.unwrap_err().downcast_ref::<ErrorKind>(),
+            Some(ErrorKind::CaseConflict(_))
+        );
+
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_fail_to_resolve_conflict_on_type(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new()?;
+    #[fbinit::compat_test]
+    async fn test_parent_case_conflict(fb: FacebookInit) -> Result<(), Error> {
+        let helper = TestHelper::new(fb)?;
 
-        rt.block_on(
-            async move {
-                let helper = TestHelper::new(fb)?;
+        let parent = helper
+            .new_commit()
+            .add_file("foo/bar", "foo")
+            .commit()
+            .await?;
 
-                let p1 = helper.new_commit().commit().await?;
-                let p2 = helper
-                    .new_commit()
-                    .add_file_with_type("foo", "foo", FileType::Regular)
-                    .commit()
-                    .await?;
-                let p3 = helper
-                    .new_commit()
-                    .add_file_with_type("foo", "foo", FileType::Executable)
-                    .commit()
-                    .await?;
+        let commit = helper
+            .new_commit()
+            .add_parent(parent)
+            .add_file("foo/BAR", "foo")
+            .commit()
+            .await?;
 
-                let commit = helper
-                    .new_commit()
-                    .add_parent(p1)
-                    .add_parent(p2)
-                    .add_parent(p3)
-                    .commit()
-                    .await?;
+        let parent_id = helper.lookup_changeset(parent).await?.manifestid();
+        let id = helper.lookup_changeset(commit).await?.manifestid();
 
-                let root = helper.root_manifest(commit).await;
+        let res = check_case_conflicts(&helper.ctx, &helper.repo, id, Some(parent_id)).await;
 
-                let err = root
-                    .map(|_| ())
-                    .expect_err("Derivation should fail on conflict");
+        assert_matches!(
+            res.unwrap_err().downcast_ref::<ErrorKind>(),
+            Some(ErrorKind::CaseConflict(_))
+        );
 
-                assert_matches!(
-                    err.downcast_ref::<ErrorKind>(),
-                    Some(ErrorKind::UnresolvedConflicts(_, _))
-                );
-
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+        Ok(())
     }
 
-    #[fbinit::test]
-    fn test_changeset_file_changes(fb: FacebookInit) -> Result<(), Error> {
-        let mut rt = Runtime::new()?;
+    #[fbinit::compat_test]
+    async fn test_add_remove_case_conflict(fb: FacebookInit) -> Result<(), Error> {
+        let helper = TestHelper::new(fb)?;
 
-        rt.block_on(
-            async move {
-                let helper = TestHelper::new(fb)?;
+        let parent = helper
+            .new_commit()
+            .add_file("foo/bar", "foo")
+            .commit()
+            .await?;
 
-                let p1 = helper.new_commit().commit().await?;
-                let p2 = helper.new_commit().add_file("p2", "p2").commit().await?;
-                let p3 = helper.new_commit().add_file("p3", "p3").commit().await?;
-                let p4 = helper.new_commit().add_file("p4", "p4").commit().await?;
+        let commit = helper
+            .new_commit()
+            .add_parent(parent)
+            .delete_file("foo/bar")
+            .add_file("FOO/bar", "foo")
+            .commit()
+            .await?;
 
-                let commit = helper
-                    .new_commit()
-                    .add_parent(p1)
-                    .add_parent(p2)
-                    .add_parent(p3)
-                    .add_parent(p4)
-                    .commit()
-                    .await?;
+        let parent_id = helper.lookup_changeset(parent).await?.manifestid();
+        let id = helper.lookup_changeset(commit).await?.manifestid();
 
-                let cs = helper.lookup_changeset(commit).await?;
-                assert_eq!(cs.files(), &vec![MPath::new("p3")?, MPath::new("p4")?][..]);
+        let res = check_case_conflicts(&helper.ctx, &helper.repo, id, Some(parent_id)).await;
+        assert!(res.is_ok());
 
-                Ok(())
-            }
-            .boxed()
-            .compat(),
-        )
+        Ok(())
+    }
+
+    #[fbinit::compat_test]
+    async fn test_no_case_conflict(fb: FacebookInit) -> Result<(), Error> {
+        let helper = TestHelper::new(fb)?;
+
+        let parent = helper
+            .new_commit()
+            .add_file("foo/bar", "foo")
+            .commit()
+            .await?;
+
+        let commit = helper
+            .new_commit()
+            .add_parent(parent)
+            .add_file("BAR/foo", "foo")
+            .commit()
+            .await?;
+
+        let parent_id = helper.lookup_changeset(parent).await?.manifestid();
+        let id = helper.lookup_changeset(commit).await?.manifestid();
+
+        let res = check_case_conflicts(&helper.ctx, &helper.repo, id, Some(parent_id)).await;
+        assert!(res.is_ok());
+
+        Ok(())
     }
 }
