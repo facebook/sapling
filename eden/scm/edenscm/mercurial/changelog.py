@@ -406,6 +406,19 @@ class changelog(revlog.revlog):
             "do not use changelog.headrevs, use repo.headrevs instead"
         )
 
+    def rawheadrevs(self):
+        """Raw heads that exist in the changelog.
+        This bypasses the visibility layer.
+
+        This is currently only used by discovery. The revlog streamclone will
+        get the revlog changelog first without remote bookmarks, followed by a
+        pull. The pull needs to use all heads since remote bookmarks are not
+        available at that time. If streamclone can provide both the DAG and the
+        heads in a consistent way, then discovery can just use references as
+        heads isntead.
+        """
+        return self.index.headrevsfiltered(self.filteredrevs)
+
     def _headrevs(self, additionalheads, includepublic=True, includedraft=True):
         # This should only be used by repo.heads()
         if self._uiconfig.configbool("experimental", "narrow-heads"):

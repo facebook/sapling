@@ -685,7 +685,7 @@ class cg1packer(object):
         # type: (Sequence[int], Sequence[bytes], bool, Any) -> Iterable[bytes]
         """yield a sequence of changegroup chunks (strings)"""
         repo = self._repo
-        cl = repo.changelogwithrepoheads
+        cl = repo.changelog
 
         clrevorder = {}
         mfs = {}  # needed manifests

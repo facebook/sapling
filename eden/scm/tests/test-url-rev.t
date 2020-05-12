@@ -129,11 +129,9 @@ Changing original repo:
   repository tip rolled back to revision 1 (undo push)
 
   $ hg -q incoming
-  unknown reference in .hg/bookmarks: foo 7d4251d04d20dbc31ba80930dc39d0db4550506b
   2:7d4251d04d20
 
   $ hg -q pull
-  unknown reference in .hg/bookmarks: foo 7d4251d04d20dbc31ba80930dc39d0db4550506b
 
   $ hg heads
   changeset:   2:7d4251d04d20

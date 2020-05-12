@@ -168,7 +168,8 @@ class revlogdag(revlogbaseddag):
         self._heads = localsubset
 
     def _getheads(self):
-        return [r for r in self._revlog.headrevs() if r != nullrev]
+        # See docstring on rawheads about the use-case.
+        return [r for r in self._revlog.rawheadrevs() if r != nullrev]
 
     def parents(self, ix):
         rlog = self._revlog

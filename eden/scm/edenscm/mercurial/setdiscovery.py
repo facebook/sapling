@@ -243,7 +243,7 @@ def findcommonheads(
     start = util.timer()
 
     roundtrips = 0
-    cl = local.changelogwithrepoheads
+    cl = local.changelog
     localsubset = None
     if ancestorsof is not None:
         rev = local.changelog.rev

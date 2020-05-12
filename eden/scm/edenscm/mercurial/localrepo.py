@@ -1063,10 +1063,6 @@ class localrepository(object):
                     cl = loadchangelog(self)
         return cl
 
-    @property
-    def changelogwithrepoheads(self):
-        return changelogwithrepoheads(self)
-
     def _constructmanifest(self):
         # This is a temporary function while we migrate from manifest to
         # manifestlog. It allows bundlerepo to intercept the manifest creation.
@@ -2770,21 +2766,6 @@ class localrepository(object):
         Called at the end of pull if pull.automigrate is true
         """
         pass
-
-
-class changelogwithrepoheads(object):
-    """changelog, but replace head(rev)s with repo's.head(rev)s.
-
-    Only used for dagutil.revlogdag.
-    Avoid using this if it's not for dagutil.revlogdag.
-    """
-
-    def __init__(self, repo):
-        cl = repo.changelog
-        self.__dict__ = dict(cl.__dict__)  # make a copy
-        self.__class__ = cl.__class__
-        self.headrevs = repo.headrevs  # changes do not affect 'cl'
-        self.heads = repo.heads
 
 
 # used to avoid circular references so destructors work
