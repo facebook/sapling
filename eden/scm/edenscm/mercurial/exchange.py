@@ -1551,9 +1551,11 @@ def _pullbundle2(pullop):
         bookmarksrequested = True
 
     if "listkeys" in pullop.remotebundle2caps:
-        if "phases" not in pullop.stepsdone:
+        if "phases" not in pullop.stepsdone and pullop.extras.get("phases", True):
             kwargs["listkeys"] = ["phases"]
-        if "request-bookmarks" not in pullop.stepsdone:
+        if "request-bookmarks" not in pullop.stepsdone and pullop.extras.get(
+            "bookmarks", True
+        ):
             # make sure to always includes bookmark data when migrating
             # `hg incoming --bundle` to using this function.
             pullop.stepsdone.add("request-bookmarks")
