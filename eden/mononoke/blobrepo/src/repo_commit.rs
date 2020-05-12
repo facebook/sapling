@@ -521,7 +521,7 @@ pub fn check_case_conflicts(
         },
     )
     .and_then(
-        |added_files| match mononoke_types::check_case_conflicts(added_files.clone()) {
+        |added_files| match mononoke_types::check_case_conflicts(added_files.iter()) {
             Some(path) => Err(ErrorKind::CaseConflict(path).into()),
             None => Ok(added_files),
         },
