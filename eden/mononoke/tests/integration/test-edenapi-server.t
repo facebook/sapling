@@ -19,9 +19,11 @@ Populate test repo
   $ echo "test content" > test.txt
   $ hg commit -Aqm "add test.txt"
   $ TEST_FILENODE=$(hg manifest --debug | grep test.txt | awk '{print $1}')
+  $ ROOT_MFID_1=$(hg log -r . -T '{manifest}')
   $ hg cp test.txt copy.txt
   $ hg commit -Aqm "copy test.txt to test2.txt"
   $ COPY_FILENODE=$(hg manifest --debug | grep copy.txt | awk '{print $1}')
+  $ ROOT_MFID_2=$(hg log -r . -T '{manifest}')
 
 Blobimport test repo.
   $ cd ..
@@ -31,6 +33,9 @@ Start up EdenAPI server.
   $ setup_mononoke_config
   $ start_edenapi_server
 
+
+===== Basic =====
+
 Hit health check endpoint.
   $ sslcurl -s "$EDENAPI_URI/health_check"
   I_AM_ALIVE (no-eol)
@@ -38,6 +43,9 @@ Hit health check endpoint.
 List repos.
   $ sslcurl -s "$EDENAPI_URI/repos"
   {"repos":["repo"]} (no-eol)
+
+
+====== Files =====
 
 Create and send file data request.
   $ edenapi_make_req data > req.cbor <<EOF
@@ -88,3 +96,47 @@ Note that copyinfo header is present for the copied file.
   copyrev: 186cafa3319c24956783383dc44c5cbc68c5a0ca
   \x01 (esc)
   test content
+
+
+===== Trees =====
+
+Create and send tree request.
+  $ edenapi_make_req data > req.cbor <<EOF
+  > [
+  >    ["", "$ROOT_MFID_1"],
+  >    ["", "$ROOT_MFID_2"]
+  > ]
+  > EOF
+  Reading from stdin
+  Generated request: DataRequest {
+      keys: [
+          Key {
+              path: RepoPathBuf(
+                  "",
+              ),
+              hgid: HgId("15024c4dc4a27b572d623db342ae6a08d7f7adec"),
+          },
+          Key {
+              path: RepoPathBuf(
+                  "",
+              ),
+              hgid: HgId("c8743b14e0789cc546125213c18a18d813862db5"),
+          },
+      ],
+  }
+  $ sslcurl -s "$EDENAPI_URI/repo/trees" -d@req.cbor > res.cbor
+
+Check trees in response.
+  $ edenapi_data_util ls res.cbor
+  Reading from file: "res.cbor"
+  15024c4dc4a27b572d623db342ae6a08d7f7adec 
+  c8743b14e0789cc546125213c18a18d813862db5 
+
+  $ edenapi_data_util cat res.cbor -p '' -h $ROOT_MFID_1
+  Reading from file: "res.cbor"
+  test.txt\x00186cafa3319c24956783383dc44c5cbc68c5a0ca (esc)
+
+  $ edenapi_data_util cat res.cbor -p '' -h $ROOT_MFID_2
+  Reading from file: "res.cbor"
+  copy.txt\x0017b8d4e3bafd4ec4812ad7c930aace9bf07ab033 (esc)
+  test.txt\x00186cafa3319c24956783383dc44c5cbc68c5a0ca (esc)
