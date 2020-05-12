@@ -369,6 +369,8 @@ TEST(DiffTest, resetFileModified) {
   testResetFileModified(false);
 }
 
+// TODO: T66590035
+#ifndef _WIN32
 void testResetFileModeChanged(bool loadInodes) {
   SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));
 
@@ -387,6 +389,7 @@ TEST(DiffTest, resetFileModeChanged) {
   testResetFileModeChanged(true);
   testResetFileModeChanged(false);
 }
+#endif
 
 void testResetFileRemoved(bool loadInodes) {
   SCOPED_TRACE(folly::to<string>("loadInodes=", loadInodes));

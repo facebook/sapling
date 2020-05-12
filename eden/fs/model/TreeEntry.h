@@ -76,7 +76,20 @@ class TreeEntry {
   }
 
   TreeEntryType getType() const {
+#ifdef _WIN32
+    // XXX(T66590035): instead of doing this here, this should be done in the
+    // Windows specific code that interpret these.
+    switch (type_) {
+      case TreeEntryType::REGULAR_FILE:
+      case TreeEntryType::EXECUTABLE_FILE:
+      case TreeEntryType::SYMLINK:
+        return TreeEntryType::REGULAR_FILE;
+      default:
+        return type_;
+    }
+#else
     return type_;
+#endif
   }
 
   dtype_t getDType() const {

@@ -391,6 +391,9 @@ TEST_F(DiffTest, blockedFutures) {
 
   auto result = std::move(resultFuture).get();
   EXPECT_THAT(result->errors, UnorderedElementsAre());
+
+  // TODO: T66590035
+#ifndef _WIN32
   EXPECT_THAT(
       result->entries,
       UnorderedElementsAre(
@@ -401,6 +404,7 @@ TEST_F(DiffTest, blockedFutures) {
           Pair("src/newdir/a.txt", ScmFileStatus::ADDED),
           Pair("src/newdir/b/c.txt", ScmFileStatus::ADDED),
           Pair("src/newdir/b/d.txt", ScmFileStatus::ADDED)));
+#endif
 }
 
 TEST_F(DiffTest, loadTreeError) {

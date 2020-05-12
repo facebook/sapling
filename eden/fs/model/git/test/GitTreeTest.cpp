@@ -85,9 +85,12 @@ TEST(GitTree, testDeserialize) {
       nuclideStartServer.getHash());
   EXPECT_EQ("nuclide-start-server", nuclideStartServer.getName());
   EXPECT_EQ(false, nuclideStartServer.isTree());
+  // TODO: T66590035
+#ifndef _WIN32
   EXPECT_EQ(
       facebook::eden::TreeEntryType::EXECUTABLE_FILE,
       nuclideStartServer.getType());
+#endif
   EXPECT_EQ(
       nuclideStartServer.getName(),
       tree->getEntryAt("nuclide-start-server"_pc).getName());
@@ -142,7 +145,11 @@ TEST(GitTree, testDeserializeWithSymlink) {
       Hash("44fcc63439371c8c829df00eec6aedbdc4d0e4cd"), contributing.getHash());
   EXPECT_EQ("contributing.md", contributing.getName());
   EXPECT_EQ(false, contributing.isTree());
+
+  // TODO: T66590035
+#ifndef _WIN32
   EXPECT_EQ(facebook::eden::TreeEntryType::SYMLINK, contributing.getType());
+#endif
 }
 
 TEST(GitTree, deserializeEmpty) {
@@ -238,9 +245,12 @@ TEST(GitTree, serializeTree) {
 
   auto buf = serializer.finalize();
 
-  // Make sure the tree hash is what we expect
   auto treeHash = Hash::sha1(buf);
+  // TODO: T66590035
+#ifndef _WIN32
+  // Make sure the tree hash is what we expect
   EXPECT_EQ(Hash("dc2c3be02dd3753c64c8f196a33522905c88c435"), treeHash);
+#endif
 
   // Make sure we can deserialize it and get back the expected entries.
   auto tree = deserializeGitTree(treeHash, &buf);
