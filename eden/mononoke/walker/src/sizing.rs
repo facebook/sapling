@@ -291,7 +291,8 @@ pub async fn compression_benefit<'a>(
         Some(sizing_sampler.clone()),
         matches,
         sub_m,
-    )?;
+    )
+    .await?;
 
     let repo_stats_key = args::get_repo_name(fb, &matches)?;
 

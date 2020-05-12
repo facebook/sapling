@@ -14,7 +14,6 @@ use blobstore_factory::{
 };
 use context::CoreContext;
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
 use inlinable_string::InlinableString;
 use metaconfig_types::{BlobConfig, BlobstoreId, ScrubAction};
 use multiplexedblob::{LoggingScrubHandler, ScrubHandler};
@@ -200,13 +199,12 @@ pub async fn open_blobstore(
                 scuba_table,
                 scuba_sample_rate,
                 blobstores,
+                Some((scrub_handler, scrub_action)),
                 mysql_options,
                 readonly_storage,
-                Some((scrub_handler, scrub_action)),
-                blobstore_options,
-                logger,
+                &blobstore_options,
+                &logger,
             )
-            .compat()
             .await?
         }
         (
@@ -226,13 +224,12 @@ pub async fn open_blobstore(
                 scuba_table,
                 scuba_sample_rate,
                 blobstores,
+                None,
                 mysql_options,
                 readonly_storage,
-                None,
-                blobstore_options,
-                logger,
+                &blobstore_options,
+                &logger,
             )
-            .compat()
             .await?
         }
         (None, blobconfig) => {
@@ -241,10 +238,9 @@ pub async fn open_blobstore(
                 blobconfig,
                 mysql_options,
                 readonly_storage,
-                blobstore_options,
-                logger,
+                &blobstore_options,
+                &logger,
             )
-            .compat()
             .await?
         }
         (Some(_), _) => {

@@ -457,15 +457,22 @@ fn create_wireproto_logging(
                 ))
                 .right_future();
             }
-            make_blobstore(
-                fb,
-                storage_config.blobstore,
-                mysql_options,
-                readonly_storage,
-                Default::default(),
-                logger,
-            )
-            .map(move |blobstore| Some((blobstore, threshold)))
+
+            async move {
+                let blobstore = make_blobstore(
+                    fb,
+                    storage_config.blobstore,
+                    mysql_options,
+                    readonly_storage,
+                    &Default::default(),
+                    &logger,
+                )
+                .await?;
+
+                Ok(Some((blobstore, threshold)))
+            }
+            .boxed()
+            .compat()
             .left_future()
         }
         None => future::ok(None).right_future(),

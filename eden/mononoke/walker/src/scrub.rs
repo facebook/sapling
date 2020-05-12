@@ -300,7 +300,8 @@ pub async fn scrub_objects<'a>(
         Some(scrub_sampler.clone()),
         matches,
         sub_m,
-    )?;
+    )
+    .await?;
 
     let repo_stats_key = args::get_repo_name(fb, &matches)?;
 

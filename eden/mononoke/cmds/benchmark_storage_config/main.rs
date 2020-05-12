@@ -11,7 +11,6 @@ use std::{sync::Arc, time::Duration};
 
 use clap::Arg;
 use criterion::Criterion;
-use futures::compat::Future01CompatExt;
 use tokio_compat::runtime::Runtime;
 
 use blobrepo_factory::Caching;
@@ -115,10 +114,9 @@ fn main(fb: fbinit::FacebookInit) {
             storage_config.blobstore.clone(),
             mysql_options.clone(),
             blobstore_factory::ReadOnlyStorage(false),
-            blobstore_options.clone(),
-            logger.clone(),
+            &blobstore_options,
+            &logger,
         )
-        .compat()
         .await
         .expect("Could not make blobstore");
         match caching {

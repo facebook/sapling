@@ -20,7 +20,7 @@ use cmdlib::{args, monitoring::ReadyFlagService};
 use context::SessionContainer;
 use fbinit::FacebookInit;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
+    compat::Stream01CompatExt,
     future::{self, FutureExt},
     stream::{self, StreamExt, TryStreamExt},
 };
@@ -274,6 +274,8 @@ async fn bootstrap_repositories<'a>(
             // If we have remote args support for this repo, let's open it now. Note that
             // this requires using prod configs for Fastreplay since those are the ones with
             // wireproto logging config.
+            let remote_args_blobstore_options = &Default::default();
+
             let remote_args_blobstore = config
                 .wireproto_logging
                 .storage_config_and_threshold
@@ -284,10 +286,9 @@ async fn bootstrap_repositories<'a>(
                         storage.blobstore.clone(),
                         mysql_options,
                         readonly_storage,
-                        Default::default(),
-                        logger.clone(),
+                        remote_args_blobstore_options,
+                        &logger,
                     )
-                    .compat()
                 });
 
             // Set the Multiplexed blob sampling rate, if used.

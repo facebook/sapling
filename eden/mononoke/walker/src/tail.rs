@@ -41,7 +41,7 @@ where
     Route: 'static + Send + Clone,
 {
     let scuba_builder = datasources.scuba_builder;
-    let repo = datasources.blobrepo.await?;
+    let repo = datasources.blobrepo;
     let tail_secs = walk_params.tail_secs.clone();
     loop {
         cloned!(make_run, repo, mut scuba_builder, walk_state,);

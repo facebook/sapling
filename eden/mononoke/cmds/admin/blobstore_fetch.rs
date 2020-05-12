@@ -12,8 +12,11 @@ use std::sync::Arc;
 use anyhow::{format_err, Error, Result};
 use clap::{App, Arg, ArgMatches, SubCommand};
 use fbinit::FacebookInit;
-use futures::compat::Future01CompatExt;
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
+use futures::{
+    compat::Future01CompatExt,
+    future::{FutureExt as _, TryFutureExt},
+};
+use futures_ext::{BoxFuture, FutureExt};
 use futures_old::prelude::*;
 
 use blobstore::{Blobstore, BlobstoreGetData};
@@ -132,20 +135,23 @@ fn get_blobstore(
     readonly_storage: ReadOnlyStorage,
     blobstore_options: BlobstoreOptions,
 ) -> BoxFuture<Arc<dyn Blobstore>, Error> {
-    let blobconfig = try_boxfuture!(get_blobconfig(
-        storage_config.blobstore,
-        inner_blobstore_id,
-        scrub_action
-    ));
+    async move {
+        let blobconfig =
+            get_blobconfig(storage_config.blobstore, inner_blobstore_id, scrub_action)?;
 
-    make_blobstore(
-        fb,
-        blobconfig,
-        mysql_options,
-        readonly_storage,
-        blobstore_options,
-        logger,
-    )
+        make_blobstore(
+            fb,
+            blobconfig,
+            mysql_options,
+            readonly_storage,
+            &blobstore_options,
+            &logger,
+        )
+        .await
+    }
+    .boxed()
+    .compat()
+    .boxify()
 }
 
 pub async fn subcommand_blobstore_fetch<'a>(

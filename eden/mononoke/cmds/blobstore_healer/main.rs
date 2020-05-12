@@ -152,10 +152,9 @@ async fn maybe_schedule_healer_for_storage(
                 blobconfig,
                 mysql_options,
                 readonly_storage,
-                blobstore_options.clone(),
-                ctx.logger().clone(),
+                blobstore_options,
+                ctx.logger(),
             )
-            .compat()
             .await?;
 
             let blobstore: Arc<dyn Blobstore> = if dry_run {

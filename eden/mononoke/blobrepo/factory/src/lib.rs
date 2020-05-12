@@ -20,20 +20,17 @@ use cacheblob::{
 };
 use changeset_info::ChangesetInfo;
 use changesets::{CachingChangesets, SqlChangesets};
-use cloned::cloned;
 use dbbookmarks::SqlBookmarks;
 use deleted_files_manifest::RootDeletedManifestId;
 use derived_data::BonsaiDerived;
 use derived_data_filenodes::FilenodesOnlyPublic;
-use failure_ext::FutureFailureErrorExt;
 use fastlog::RootFastlog;
 use fbinit::FacebookInit;
 use filenodes::Filenodes;
 use filestore::FilestoreConfig;
 use fsnodes::RootFsnodeId;
-use futures::compat::Future01CompatExt;
-use futures_ext::{try_boxfuture, BoxFuture, FutureExt};
-use futures_old::{future::IntoFuture, Future};
+use futures::{compat::Future01CompatExt, future};
+use futures_util::try_join;
 use git_types::TreeHandle;
 use maplit::btreeset;
 use memblob::EagerMemblob;
@@ -51,7 +48,7 @@ use slog::Logger;
 use sql::{rusqlite::Connection as SqliteConnection, Connection};
 use sql_construct::SqlConstruct;
 use sql_ext::{facebook::MysqlOptions, SqlConnections};
-use std::{collections::HashMap, iter::FromIterator, sync::Arc, time::Duration};
+use std::{collections::HashMap, sync::Arc, time::Duration};
 use unodes::RootUnodeManifestId;
 
 pub use blobstore_factory::{BlobstoreOptions, ReadOnlyStorage};
@@ -149,18 +146,18 @@ impl<'a> BlobrepoBuilder<'a> {
             // FIXME: remove clone when make_metadata_sql_factory is async-await
             logger.clone(),
         )
-        .boxify();
+        .compat();
 
         let blobstore = make_blobstore(
             fb,
             storage_config.blobstore,
             mysql_options,
             readonly_storage,
-            blobstore_options,
-            // FIXME: remove clone when make_blobstore is async-await
-            logger.clone(),
-        )
-        .boxify();
+            &blobstore_options,
+            &logger,
+        );
+
+        let (sql_factory, blobstore) = future::try_join(sql_factory, blobstore).await?;
 
         open_blobrepo_given_datasources(
             fb,
@@ -176,16 +173,15 @@ impl<'a> BlobrepoBuilder<'a> {
             derived_data_config,
             reponame,
         )
-        .compat()
         .await
     }
 }
 
 /// Expose for graph walker that has storage open already
-pub fn open_blobrepo_given_datasources(
+pub async fn open_blobrepo_given_datasources(
     fb: FacebookInit,
-    unredacted_blobstore: BoxFuture<Arc<dyn Blobstore>, Error>,
-    sql_factory: BoxFuture<MetadataSqlFactory, Error>,
+    blobstore: Arc<dyn Blobstore>,
+    sql_factory: MetadataSqlFactory,
     repoid: RepositoryId,
     caching: Caching,
     bookmarks_cache_ttl: Option<Duration>,
@@ -195,76 +191,70 @@ pub fn open_blobrepo_given_datasources(
     readonly_storage: ReadOnlyStorage,
     derived_data_config: DerivedDataConfig,
     reponame: String,
-) -> impl Future<Item = BlobRepo, Error = Error> {
-    sql_factory.and_then(move |sql_factory| {
-        let redacted_blobs = match redaction {
-            Redaction::Enabled => sql_factory
+) -> Result<BlobRepo, Error> {
+    let redacted_blobs = match redaction {
+        Redaction::Enabled => {
+            let redacted_blobs = sql_factory
                 .open::<SqlRedactedContentStore>()
-                .and_then(move |redacted_store| {
-                    let redacted_blobs = redacted_store
-                        .get_all_redacted_blobs()
-                        .map_err(Error::from)
-                        .map(HashMap::from_iter);
-                    Some(redacted_blobs)
-                })
-                .left_future(),
-            Redaction::Disabled => Ok(None).into_future().right_future(),
+                .compat()
+                .await?
+                .get_all_redacted_blobs()
+                .compat()
+                .await?;
+            Some(redacted_blobs)
         }
-        .boxify();
+        Redaction::Disabled => None,
+    };
 
-        let filestore_config = filestore_params
-            .map(|params| {
-                let FilestoreParams {
-                    chunk_size,
-                    concurrency,
-                } = params;
+    let filestore_config = filestore_params
+        .map(|params| {
+            let FilestoreParams {
+                chunk_size,
+                concurrency,
+            } = params;
 
-                FilestoreConfig {
-                    chunk_size: Some(chunk_size),
-                    concurrency,
-                }
-            })
-            .unwrap_or(FilestoreConfig::default());
-
-        match caching {
-            Caching::Disabled | Caching::CachelibOnlyBlobstore => {
-                let blobstore = if caching == Caching::CachelibOnlyBlobstore {
-                    // Use cachelib
-                    let blob_pool = try_boxfuture!(get_cache_pool(BLOBSTORE_BLOBS_CACHE_POOL));
-                    let presence_pool =
-                        try_boxfuture!(get_cache_pool(BLOBSTORE_PRESENCE_CACHE_POOL));
-
-                    unredacted_blobstore
-                        .map(move |s| {
-                            let s: Arc<dyn Blobstore> = Arc::new(new_cachelib_blobstore_no_lease(
-                                s,
-                                Arc::new(blob_pool),
-                                Arc::new(presence_pool),
-                            ));
-                            s
-                        })
-                        .boxify()
-                } else {
-                    unredacted_blobstore
-                };
-
-                new_development(
-                    fb,
-                    &sql_factory,
-                    blobstore,
-                    redacted_blobs,
-                    scuba_censored_table,
-                    repoid,
-                    filestore_config,
-                    bookmarks_cache_ttl,
-                    derived_data_config,
-                    reponame,
-                )
+            FilestoreConfig {
+                chunk_size: Some(chunk_size),
+                concurrency,
             }
-            Caching::Enabled => new_production(
+        })
+        .unwrap_or_default();
+
+    let repo = match caching {
+        Caching::Disabled | Caching::CachelibOnlyBlobstore => {
+            let blobstore = if caching == Caching::CachelibOnlyBlobstore {
+                // Use cachelib
+                let blob_pool = get_cache_pool(BLOBSTORE_BLOBS_CACHE_POOL)?;
+                let presence_pool = get_cache_pool(BLOBSTORE_PRESENCE_CACHE_POOL)?;
+
+                Arc::new(new_cachelib_blobstore_no_lease(
+                    blobstore,
+                    Arc::new(blob_pool),
+                    Arc::new(presence_pool),
+                ))
+            } else {
+                blobstore
+            };
+
+            new_development(
                 fb,
                 &sql_factory,
-                unredacted_blobstore,
+                blobstore,
+                redacted_blobs,
+                scuba_censored_table,
+                repoid,
+                filestore_config,
+                bookmarks_cache_ttl,
+                derived_data_config,
+                reponame,
+            )
+            .await?
+        }
+        Caching::Enabled => {
+            new_production(
+                fb,
+                &sql_factory,
+                blobstore,
                 redacted_blobs,
                 scuba_censored_table,
                 repoid,
@@ -273,9 +263,12 @@ pub fn open_blobrepo_given_datasources(
                 readonly_storage,
                 derived_data_config,
                 reponame,
-            ),
+            )
+            .await?
         }
-    })
+    };
+
+    Ok(repo)
 }
 
 /// A helper to build test repositories.
@@ -459,118 +452,127 @@ pub fn new_memblob_with_connection_with_id(
     ))
 }
 
-fn new_development(
+async fn new_development(
     fb: FacebookInit,
     sql_factory: &MetadataSqlFactory,
-    unredacted_blobstore: BoxFuture<Arc<dyn Blobstore>, Error>,
-    redacted_blobs: BoxFuture<Option<HashMap<String, String>>, Error>,
+    blobstore: Arc<dyn Blobstore>,
+    redacted_blobs: Option<HashMap<String, String>>,
     scuba_censored_table: Option<String>,
     repoid: RepositoryId,
     filestore_config: FilestoreConfig,
     bookmarks_cache_ttl: Option<Duration>,
     derived_data_config: DerivedDataConfig,
     reponame: String,
-) -> BoxFuture<BlobRepo, Error> {
-    let bookmarks = sql_factory
-        .open::<SqlBookmarks>()
-        .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))
-        .from_err()
-        .map(move |bookmarks| {
-            let bookmarks: Arc<dyn Bookmarks> = if let Some(ttl) = bookmarks_cache_ttl {
-                Arc::new(CachedBookmarks::new(Arc::new(bookmarks), ttl))
-            } else {
-                Arc::new(bookmarks)
-            };
+) -> Result<BlobRepo, Error> {
+    let bookmarks = async {
+        let bookmarks = sql_factory
+            .open::<SqlBookmarks>()
+            .compat()
+            .await
+            .context(ErrorKind::StateOpen(StateOpenError::Bookmarks))?;
 
-            bookmarks
-        });
+        let bookmarks: Arc<dyn Bookmarks> = if let Some(ttl) = bookmarks_cache_ttl {
+            Arc::new(CachedBookmarks::new(Arc::new(bookmarks), ttl))
+        } else {
+            Arc::new(bookmarks)
+        };
 
-    let filenodes_builder = sql_factory
-        .open_shardable::<NewFilenodesBuilder>()
-        .context(ErrorKind::StateOpen(StateOpenError::Filenodes))
-        .from_err();
-
-    let changesets = sql_factory
-        .open::<SqlChangesets>()
-        .context(ErrorKind::StateOpen(StateOpenError::Changesets))
-        .from_err()
-        .map(Arc::new);
-
-    let bonsai_git_mapping = {
-        cloned!(repoid);
-        sql_factory
-            .open::<SqlBonsaiGitMappingConnection>()
-            .context(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))
-            .from_err()
-            .map(move |conn| Arc::new(conn.with_repo_id(repoid)))
+        Ok(bookmarks)
     };
 
-    let bonsai_globalrev_mapping = sql_factory
-        .open::<SqlBonsaiGlobalrevMapping>()
-        .context(ErrorKind::StateOpen(StateOpenError::BonsaiGlobalrevMapping))
-        .from_err()
-        .map(Arc::new);
+    let filenodes_builder = async {
+        sql_factory
+            .open_shardable::<NewFilenodesBuilder>()
+            .compat()
+            .await
+            .context(ErrorKind::StateOpen(StateOpenError::Filenodes))
+    };
 
-    let bonsai_hg_mapping = sql_factory
-        .open::<SqlBonsaiHgMapping>()
-        .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))
-        .from_err()
-        .map(Arc::new);
+    let changesets = async {
+        sql_factory
+            .open::<SqlChangesets>()
+            .compat()
+            .await
+            .context(ErrorKind::StateOpen(StateOpenError::Changesets))
+    };
 
-    let phases_factory = sql_factory
-        .open::<SqlPhasesFactory>()
-        .context(ErrorKind::StateOpen(StateOpenError::Phases))
-        .from_err();
+    let bonsai_git_mapping = async {
+        let conn = sql_factory
+            .open::<SqlBonsaiGitMappingConnection>()
+            .compat()
+            .await
+            .context(ErrorKind::StateOpen(StateOpenError::BonsaiGitMapping))?;
 
-    bookmarks
-        .join5(
-            unredacted_blobstore,
-            redacted_blobs,
-            phases_factory,
-            bonsai_git_mapping,
-        )
-        .join5(
-            filenodes_builder,
-            changesets,
-            bonsai_globalrev_mapping,
-            bonsai_hg_mapping,
-        )
-        .map({
-            move |(
-                (bookmarks, blobstore, redacted_blobs, phases_factory, bonsai_git_mapping),
-                filenodes_builder,
-                changesets,
-                bonsai_globalrev_mapping,
-                bonsai_hg_mapping,
-            )| {
-                let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
+        Ok(conn.with_repo_id(repoid))
+    };
 
-                BlobRepo::new(
-                    bookmarks,
-                    RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
-                    Arc::new(filenodes_builder.build()),
-                    changesets,
-                    bonsai_git_mapping,
-                    bonsai_globalrev_mapping,
-                    bonsai_hg_mapping,
-                    Arc::new(InProcessLease::new()),
-                    filestore_config,
-                    phases_factory,
-                    derived_data_config,
-                    reponame,
-                )
-            }
-        })
-        .boxify()
+    let bonsai_globalrev_mapping = async {
+        sql_factory
+            .open::<SqlBonsaiGlobalrevMapping>()
+            .compat()
+            .await
+            .context(ErrorKind::StateOpen(StateOpenError::BonsaiGlobalrevMapping))
+    };
+
+    let bonsai_hg_mapping = async {
+        sql_factory
+            .open::<SqlBonsaiHgMapping>()
+            .compat()
+            .await
+            .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))
+    };
+
+    let phases_factory = async {
+        sql_factory
+            .open::<SqlPhasesFactory>()
+            .compat()
+            .await
+            .context(ErrorKind::StateOpen(StateOpenError::Phases))
+    };
+
+    let (
+        bookmarks,
+        filenodes_builder,
+        changesets,
+        bonsai_git_mapping,
+        bonsai_globalrev_mapping,
+        bonsai_hg_mapping,
+        phases_factory,
+    ) = try_join!(
+        bookmarks,
+        filenodes_builder,
+        changesets,
+        bonsai_git_mapping,
+        bonsai_globalrev_mapping,
+        bonsai_hg_mapping,
+        phases_factory,
+    )?;
+
+    let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
+
+    Ok(BlobRepo::new(
+        bookmarks,
+        RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
+        Arc::new(filenodes_builder.build()),
+        Arc::new(changesets),
+        Arc::new(bonsai_git_mapping),
+        Arc::new(bonsai_globalrev_mapping),
+        Arc::new(bonsai_hg_mapping),
+        Arc::new(InProcessLease::new()),
+        filestore_config,
+        phases_factory,
+        derived_data_config,
+        reponame,
+    ))
 }
 
 /// If the DB is remote then set up for a full production configuration.
 /// In theory this could be with a local blobstore, but that would just be weird.
-fn new_production(
+async fn new_production(
     fb: FacebookInit,
     sql_factory: &MetadataSqlFactory,
-    blobstore: BoxFuture<Arc<dyn Blobstore>, Error>,
-    redacted_blobs: BoxFuture<Option<HashMap<String, String>>, Error>,
+    blobstore: Arc<dyn Blobstore>,
+    redacted_blobs: Option<HashMap<String, String>>,
     scuba_censored_table: Option<String>,
     repoid: RepositoryId,
     bookmarks_cache_ttl: Option<Duration>,
@@ -578,139 +580,116 @@ fn new_production(
     readonly_storage: ReadOnlyStorage,
     derived_data_config: DerivedDataConfig,
     reponame: String,
-) -> BoxFuture<BlobRepo, Error> {
-    fn get_volatile_pool(name: &str) -> Result<cachelib::VolatileLruCachePool> {
-        let err = Error::from(ErrorKind::MissingCachePool(name.to_string()));
-        cachelib::get_volatile_pool(name)?.ok_or(err)
-    }
+) -> Result<BlobRepo, Error> {
+    let blob_pool = get_cache_pool(BLOBSTORE_BLOBS_CACHE_POOL)?;
+    let presence_pool = get_cache_pool(BLOBSTORE_PRESENCE_CACHE_POOL)?;
 
-    let blob_pool = try_boxfuture!(get_cache_pool(BLOBSTORE_BLOBS_CACHE_POOL));
-    let presence_pool = try_boxfuture!(get_cache_pool(BLOBSTORE_PRESENCE_CACHE_POOL));
+    let blobstore = new_memcache_blobstore(fb, blobstore, "multiplexed", "")?;
+    let blobstore = Arc::new(new_cachelib_blobstore_no_lease(
+        blobstore,
+        Arc::new(blob_pool),
+        Arc::new(presence_pool),
+    )) as Arc<dyn Blobstore>;
 
-    let blobstore = blobstore
-        .and_then(move |blobstore| new_memcache_blobstore(fb, blobstore, "multiplexed", ""));
-    let blobstore = blobstore.map(|blobstore| {
-        Arc::new(new_cachelib_blobstore_no_lease(
-            blobstore,
-            Arc::new(blob_pool),
-            Arc::new(presence_pool),
-        )) as Arc<dyn Blobstore>
-    });
+    let filenodes_pool = get_volatile_pool("filenodes")?;
+    let filenodes_history_pool = get_volatile_pool("filenodes_history")?;
+    let changesets_cache_pool = get_volatile_pool("changesets")?;
+    let bonsai_hg_mapping_cache_pool = get_volatile_pool("bonsai_hg_mapping")?;
+    let phases_cache_pool = get_volatile_pool("phases")?;
+    let derive_data_lease = MemcacheOps::new(fb, "derived-data-lease", "")?;
 
-    let filenodes_pool = try_boxfuture!(get_volatile_pool("filenodes"));
-    let filenodes_history_pool = try_boxfuture!(get_volatile_pool("filenodes_history"));
-    let changesets_cache_pool = try_boxfuture!(get_volatile_pool("changesets"));
-    let bonsai_hg_mapping_cache_pool = try_boxfuture!(get_volatile_pool("bonsai_hg_mapping"));
-    let phases_cache_pool = try_boxfuture!(get_volatile_pool("phases"));
-
-    let derive_data_lease = try_boxfuture!(MemcacheOps::new(fb, "derived-data-lease", ""));
-
-    let filenodes_tier = sql_factory
-        .tier_name_shardable::<NewFilenodesBuilder>()
-        .into_future();
-    let filenodes_builder = sql_factory.open_shardable::<NewFilenodesBuilder>();
-    let filenodes_tier_and_builder = filenodes_tier.join(filenodes_builder);
-    let bookmarks = sql_factory.open::<SqlBookmarks>().map(Arc::new);
-    let changesets = sql_factory.open::<SqlChangesets>().map(Arc::new);
-    let bonsai_git_mapping = {
-        cloned!(repoid);
-        sql_factory
+    let filenodes_tier = sql_factory.tier_name_shardable::<NewFilenodesBuilder>()?;
+    let filenodes_builder = sql_factory.open_shardable::<NewFilenodesBuilder>().compat();
+    let bookmarks = sql_factory.open::<SqlBookmarks>().compat();
+    let changesets = sql_factory.open::<SqlChangesets>().compat();
+    let bonsai_git_mapping = async {
+        let conn = sql_factory
             .open::<SqlBonsaiGitMappingConnection>()
-            .map(move |conn| Arc::new(conn.with_repo_id(repoid)))
+            .compat()
+            .await?;
+
+        Ok(conn.with_repo_id(repoid))
     };
-    let bonsai_globalrev_mapping = sql_factory
-        .open::<SqlBonsaiGlobalrevMapping>()
-        .map(Arc::new);
-    let bonsai_hg_mapping = sql_factory.open::<SqlBonsaiHgMapping>().map(Arc::new);
-    let phases_factory = sql_factory.open::<SqlPhasesFactory>();
+    let bonsai_globalrev_mapping = sql_factory.open::<SqlBonsaiGlobalrevMapping>().compat();
+    let bonsai_hg_mapping = sql_factory.open::<SqlBonsaiHgMapping>().compat();
+    let phases_factory = sql_factory.open::<SqlPhasesFactory>().compat();
 
     // Wrap again to avoid any writes to memcache
     let blobstore = if readonly_storage.0 {
-        blobstore
-            .map(|inner| Arc::new(ReadOnlyBlobstore::new(inner)) as Arc<dyn Blobstore>)
-            .left_future()
+        Arc::new(ReadOnlyBlobstore::new(blobstore)) as Arc<dyn Blobstore>
     } else {
-        blobstore.right_future()
+        blobstore
     };
 
-    filenodes_tier_and_builder
-        .join5(
-            blobstore,
-            redacted_blobs,
-            phases_factory,
-            bonsai_git_mapping,
-        )
-        .join5(
-            bookmarks,
-            changesets,
-            bonsai_globalrev_mapping,
-            bonsai_hg_mapping,
-        )
-        .map(
-            move |(
-                (
-                    (filenodes_tier, mut filenodes_builder),
-                    blobstore,
-                    redacted_blobs,
-                    mut phases_factory,
-                    bonsai_git_mapping,
-                ),
-                bookmarks,
-                changesets,
-                bonsai_globalrev_mapping,
-                bonsai_hg_mapping,
-            )| {
-                filenodes_builder.enable_caching(
-                    fb,
-                    filenodes_pool,
-                    filenodes_history_pool,
-                    "newfilenodes",
-                    &filenodes_tier,
-                );
+    let (
+        mut filenodes_builder,
+        mut phases_factory,
+        bonsai_git_mapping,
+        bookmarks,
+        changesets,
+        bonsai_globalrev_mapping,
+        bonsai_hg_mapping,
+    ) = try_join!(
+        filenodes_builder,
+        phases_factory,
+        bonsai_git_mapping,
+        bookmarks,
+        changesets,
+        bonsai_globalrev_mapping,
+        bonsai_hg_mapping,
+    )?;
 
-                let bookmarks: Arc<dyn Bookmarks> = {
-                    if let Some(ttl) = bookmarks_cache_ttl {
-                        Arc::new(CachedBookmarks::new(bookmarks, ttl))
-                    } else {
-                        bookmarks
-                    }
-                };
+    filenodes_builder.enable_caching(
+        fb,
+        filenodes_pool,
+        filenodes_history_pool,
+        "newfilenodes",
+        &filenodes_tier,
+    );
 
-                let changesets = Arc::new(CachingChangesets::new(
-                    fb,
-                    changesets,
-                    changesets_cache_pool,
-                ));
+    let bookmarks: Arc<dyn Bookmarks> = if let Some(ttl) = bookmarks_cache_ttl {
+        Arc::new(CachedBookmarks::new(Arc::new(bookmarks), ttl))
+    } else {
+        Arc::new(bookmarks)
+    };
 
-                let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
-                    fb,
-                    bonsai_hg_mapping,
-                    bonsai_hg_mapping_cache_pool,
-                );
+    let changesets = Arc::new(CachingChangesets::new(
+        fb,
+        Arc::new(changesets),
+        changesets_cache_pool,
+    ));
 
-                phases_factory.enable_caching(fb, phases_cache_pool);
-                let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
+    let bonsai_hg_mapping = CachingBonsaiHgMapping::new(
+        fb,
+        Arc::new(bonsai_hg_mapping),
+        bonsai_hg_mapping_cache_pool,
+    );
 
-                BlobRepo::new(
-                    bookmarks,
-                    RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
-                    Arc::new(filenodes_builder.build()) as Arc<dyn Filenodes>,
-                    changesets,
-                    bonsai_git_mapping,
-                    bonsai_globalrev_mapping,
-                    Arc::new(bonsai_hg_mapping),
-                    Arc::new(derive_data_lease),
-                    filestore_config,
-                    phases_factory,
-                    derived_data_config,
-                    reponame,
-                )
-            },
-        )
-        .boxify()
+    phases_factory.enable_caching(fb, phases_cache_pool);
+    let scuba_builder = ScubaSampleBuilder::with_opt_table(fb, scuba_censored_table);
+
+    Ok(BlobRepo::new(
+        bookmarks,
+        RepoBlobstoreArgs::new(blobstore, redacted_blobs, repoid, scuba_builder),
+        Arc::new(filenodes_builder.build()) as Arc<dyn Filenodes>,
+        changesets,
+        Arc::new(bonsai_git_mapping),
+        Arc::new(bonsai_globalrev_mapping),
+        Arc::new(bonsai_hg_mapping),
+        Arc::new(derive_data_lease),
+        filestore_config,
+        phases_factory,
+        derived_data_config,
+        reponame,
+    ))
+}
+
+fn get_volatile_pool(name: &str) -> Result<cachelib::VolatileLruCachePool> {
+    cachelib::get_volatile_pool(name)?
+        .ok_or_else(|| Error::from(ErrorKind::MissingCachePool(name.to_string())))
 }
 
 fn get_cache_pool(name: &str) -> Result<cachelib::LruCachePool> {
-    let err = Error::from(ErrorKind::MissingCachePool(name.to_string()));
-    cachelib::get_pool(name).ok_or(err)
+    cachelib::get_pool(name)
+        .ok_or_else(|| Error::from(ErrorKind::MissingCachePool(name.to_string())))
 }
