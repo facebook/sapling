@@ -42,6 +42,7 @@ pub fn populate_module(py: Python<'_>, module: &PyModule) -> PyResult<PyNone> {
     m.add(py, "nodemap", pynodemap::init_module(py, &name)?)?;
     m.add(py, "pager", pypager::init_module(py, &name)?)?;
     m.add(py, "pathmatcher", pypathmatcher::init_module(py, &name)?)?;
+    m.add(py, "regex", pyregex::init_module(py, &name)?)?;
     m.add(py, "renderdag", pyrenderdag::init_module(py, &name)?)?;
     m.add(
         py,

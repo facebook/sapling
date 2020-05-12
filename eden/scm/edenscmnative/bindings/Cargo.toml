@@ -38,6 +38,7 @@ pymutationstore = { path = "modules/pymutationstore" }
 pynodemap = { path = "modules/pynodemap" }
 pypager = { path = "modules/pypager" }
 pypathmatcher = { path = "modules/pypathmatcher" }
+pyregex = { path = "modules/pyregex" }
 pyrenderdag = { path = "modules/pyrenderdag" }
 pyrevisionstore = { path = "modules/pyrevisionstore" }
 pyrevlogindex = { path = "modules/pyrevlogindex" }

@@ -1,0 +1,14 @@
+[package]
+name = "pyregex"
+version = "0.1.0"
+edition = "2018"
+
+[dependencies]
+cpython = { version = "0.5", default-features = false }
+cpython-ext = { path = "../../../../lib/cpython-ext", default-features = false }
+regex = "1"
+
+[features]
+default = []
+python2 = ["cpython/python27-sys", "cpython-ext/python2"]
+python3 = ["cpython/python3-sys", "cpython-ext/python3"]
