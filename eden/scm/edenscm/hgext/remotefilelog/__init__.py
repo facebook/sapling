@@ -377,10 +377,6 @@ def cloneshallow(orig, ui, repo, *args, **opts):
                 caps = shallowutil.peercapabilities(remote)
                 if shallowrepo.requirement in caps:
                     opts = {}
-                    if repo.includepattern:
-                        opts["includepattern"] = "\0".join(repo.includepattern)
-                    if repo.excludepattern:
-                        opts["excludepattern"] = "\0".join(repo.excludepattern)
                     if repo.ui.configbool("treemanifest", "treeonly"):
                         opts["noflatmanifest"] = "True"
                     return remote._callstream("stream_out_shallow", **opts)

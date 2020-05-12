@@ -65,33 +65,17 @@ def onetimesetup(ui):
     wireproto.commands["getpackv2"] = (getpackv2, "*")
 
     class streamstate(object):
-        match = None
         shallowremote = False
         noflatmf = False
 
     state = streamstate()
 
     def stream_out_shallow(repo, proto, other):
-        includepattern = None
-        excludepattern = None
-        raw = other.get("includepattern")
-        if raw:
-            includepattern = raw.split("\0")
-        raw = other.get("excludepattern")
-        if raw:
-            excludepattern = raw.split("\0")
-
         oldshallow = state.shallowremote
-        oldmatch = state.match
         oldnoflatmf = state.noflatmf
         try:
             state.shallowremote = True
-            state.match = match.always(repo.root, "")
             state.noflatmf = other.get("noflatmanifest") == "True"
-            if includepattern or excludepattern:
-                state.match = match.match(
-                    repo.root, "", None, includepattern, excludepattern
-                )
             streamres = wireproto.stream(repo, proto)
 
             # Force the first value to execute, so the file list is computed
@@ -108,7 +92,6 @@ def onetimesetup(ui):
             return wireproto.streamres(gen())
         finally:
             state.shallowremote = oldshallow
-            state.match = oldmatch
             state.noflatmf = oldnoflatmf
 
     wireproto.commands["stream_out_shallow"] = (stream_out_shallow, "*")
@@ -147,14 +130,6 @@ def onetimesetup(ui):
             if "treemanifest" in repo.requirements and not shallowtrees:
                 for (u, e, s) in repo.store.datafiles():
                     if u.startswith("meta/") and (u.endswith(".i") or u.endswith(".d")):
-                        yield (u, e, s)
-
-            # Return .d and .i files that do not match the shallow pattern
-            match = state.match
-            if match and not match.always():
-                for (u, e, s) in repo.store.datafiles():
-                    f = u[5:-2]  # trim data/...  and .i/.d
-                    if not state.match(f):
                         yield (u, e, s)
 
             for x in repo.store.topfiles():
