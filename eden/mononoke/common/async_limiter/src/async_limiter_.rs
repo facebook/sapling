@@ -55,12 +55,11 @@ impl AsyncLimiter {
     }
 
     /// access() returns a result of a future that returns once the rate limiter reports that it is
-    /// OK to let one client proceed. If calling form an async fn, consider access_flat, which has
-    /// a slightly simpler API. It may return an error if the runtime is shutting down.  Access is
-    /// granted on a first-come first-serve basis (based on the order in which access() was
-    /// called). If a caller doesnot await the future returned by access to completion, then the
-    /// rate limiter's internal state will be updated nonetheless. Memory usage is proportional to
-    /// the number of pending accesses. Note that this isn't an async fn so as to not capture a
+    /// OK to let one client proceed. It may return an error if the runtime is shutting down.
+    /// Access is granted on a first-come first-serve basis (based on the order in which access()
+    /// was called). If a caller doesnot await the future returned by access to completion, then
+    /// the rate limiter's internal state will be updated nonetheless. Memory usage is proportional
+    /// to the number of pending accesses. Note that this isn't an async fn so as to not capture a
     /// refernce to &self in the future returned by this method, which makes it more suitable for
     /// use in e.g. a futures 0.1 context.
     pub fn access(

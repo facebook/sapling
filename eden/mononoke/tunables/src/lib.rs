@@ -29,6 +29,8 @@ pub fn tunables() -> &'static MononokeTunables {
 pub struct MononokeTunables {
     warm_bookmark_cache_delay: AtomicI64,
     max_scuba_msg_length: AtomicI64,
+    wishlist_read_qps: AtomicI64,
+    wishlist_write_qps: AtomicI64,
 }
 
 pub fn init_tunables_worker(

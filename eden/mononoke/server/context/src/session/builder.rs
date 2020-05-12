@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
 use load_limiter::BoxLoadLimiter;
 use permission_checker::MononokeIdentitySet;
@@ -12,7 +13,6 @@ use rand::{self, distributions::Alphanumeric, thread_rng, Rng};
 use session_id::SessionId;
 use sshrelay::SshEnvVars;
 use std::sync::Arc;
-use tokio::sync::Semaphore;
 use tracing::TraceContext;
 
 use super::{SessionContainer, SessionContainerInner};
@@ -44,9 +44,10 @@ impl SessionContainerBuilder {
                 user_unix_name: None,
                 source_hostname: None,
                 ssh_env_vars: SshEnvVars::default(),
-                blobstore_semaphore: None,
                 identities: None,
                 load_limiter: None,
+                blobstore_write_limiter: None,
+                blobstore_read_limiter: None,
             },
         }
     }
@@ -76,11 +77,6 @@ impl SessionContainerBuilder {
         self
     }
 
-    pub fn blobstore_concurrency(mut self, concurrency: usize) -> Self {
-        self.inner.blobstore_semaphore = Some(Semaphore::new(concurrency));
-        self
-    }
-
     pub fn identities(mut self, value: impl Into<Option<MononokeIdentitySet>>) -> Self {
         self.inner.identities = value.into();
         self
@@ -89,5 +85,13 @@ impl SessionContainerBuilder {
     pub fn load_limiter(mut self, value: impl Into<Option<BoxLoadLimiter>>) -> Self {
         self.inner.load_limiter = value.into();
         self
+    }
+
+    pub fn blobstore_read_limiter(&mut self, limiter: AsyncLimiter) {
+        self.inner.blobstore_read_limiter = Some(limiter);
+    }
+
+    pub fn blobstore_write_limiter(&mut self, limiter: AsyncLimiter) {
+        self.inner.blobstore_write_limiter = Some(limiter);
     }
 }

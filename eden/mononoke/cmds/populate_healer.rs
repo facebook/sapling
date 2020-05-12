@@ -44,20 +44,20 @@ const INIT_COUNT_VALUE: usize = 0;
 
 const FLAT_NAMESPACE_PREFIX: &str = "flat/";
 
-#[derive(Debug)]
 struct ManifoldArgs {
     bucket: String,
+    #[allow(unused)]
     prefix: String,
 }
 
 /// Configuration options
-#[derive(Debug)]
 struct Config {
     db_address: String,
     myrouter_port: u16,
     manifold_args: ManifoldArgs,
     repo_id: RepositoryId,
     src_blobstore_id: BlobstoreId,
+    #[allow(unused)]
     dst_blobstore_id: BlobstoreId,
     multiplex_id: MultiplexId,
     start_key: Option<String>,

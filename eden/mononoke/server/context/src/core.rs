@@ -18,7 +18,7 @@ use crate::logging::{LoggingContainer, SamplingKey};
 use crate::perf_counters::PerfCounters;
 use crate::session::SessionContainer;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct CoreContext {
     pub fb: FacebookInit,
     session: SessionContainer,

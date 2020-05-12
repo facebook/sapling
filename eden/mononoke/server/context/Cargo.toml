@@ -15,6 +15,7 @@ path = "benchmark/main.rs"
 doc = false
 
 [dependencies]
+async_limiter = { path = "../../common/async_limiter" }
 load_limiter = { path = "../../load_limiter" }
 permission_checker = { path = "../../permission_checker" }
 scuba_ext = { path = "../../common/scuba_ext" }

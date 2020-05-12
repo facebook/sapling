@@ -48,10 +48,12 @@ macro_rules! define_perf_counters {
 define_perf_counters! {
     enum PerfCounterType {
         BlobGets,
+        BlobGetsAccessWait,
         BlobGetsMaxLatency,
         BlobPresenceChecks,
         BlobPresenceChecksMaxLatency,
         BlobPuts,
+        BlobPutsAccessWait,
         BlobPutsMaxLatency,
         BytesSent,
         CachelibHits,

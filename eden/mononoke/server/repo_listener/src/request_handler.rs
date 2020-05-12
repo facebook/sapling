@@ -5,38 +5,42 @@
  * GNU General Public License version 2.
  */
 
-use std::mem;
-use std::sync::{Arc, Mutex};
-use std::time::Instant;
-
 use anyhow::Error;
+use async_limiter::{AsyncLimiter, TokioFlavor};
 use cached_config::ConfigHandle;
-use context::{generate_session_id, SessionId};
+use context::{
+    generate_session_id, is_quicksand, LoggingContainer, SessionContainer, SessionContainerBuilder,
+    SessionId,
+};
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
 use futures::compat::Future01CompatExt;
 use futures_old::{Future, Sink, Stream};
 use futures_stats::TimedFutureExt;
+use hgproto::{sshproto, HgProtoHandler};
 use lazy_static::lazy_static;
 use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits, RateLimits};
+use load_limiter::{LoadLimiterBuilder, Metric};
 use maplit::{hashmap, hashset};
 use pushredirect_enable::types::MononokePushRedirectEnable;
+use ratelimit_meter::{algorithms::LeakyBucket, DirectRateLimiter};
+use repo_client::RepoClient;
+use scuba_ext::ScubaSampleBuilderExt;
 use slog::{self, error, info, o, warn, Drain, Level, Logger};
 use slog_ext::SimpleFormatWithError;
 use slog_kvfilter::KVFilter;
+use sshrelay::{Priority, SenderBytesWrite, SshEnvVars, Stdio};
 use stats::prelude::*;
+use std::convert::TryInto;
+use std::mem;
+use std::num::NonZeroU32;
+use std::sync::{Arc, Mutex};
+use std::time::Instant;
 use time_ext::DurationExt;
 use tracing::{trace_args, TraceContext, TraceId, Traced};
-
-use hgproto::{sshproto, HgProtoHandler};
-use repo_client::RepoClient;
-use scuba_ext::ScubaSampleBuilderExt;
-use sshrelay::{Priority, SenderBytesWrite, SshEnvVars, Stdio};
+use tunables::tunables;
 
 use crate::repo_handlers::RepoHandler;
-
-use context::{is_quicksand, LoggingContainer, SessionContainer};
-use load_limiter::{LoadLimiterBuilder, Metric};
 
 lazy_static! {
     static ref DATACENTER_REGION_PREFIX: String = {
@@ -64,6 +68,38 @@ define_stats! {
     request_success: timeseries(Rate, Sum),
     request_failure: timeseries(Rate, Sum),
     request_outcome_permille: timeseries(Average),
+}
+
+async fn set_blobstore_limiters(builder: &mut SessionContainerBuilder, priority: Priority) {
+    fn maybe_qps(tunable: i64) -> Option<NonZeroU32> {
+        let v = tunable.try_into().ok()?;
+        NonZeroU32::new(v)
+    }
+
+    match priority {
+        Priority::Wishlist => {
+            if let Some(qps) = maybe_qps(tunables().get_wishlist_read_qps()) {
+                builder.blobstore_read_limiter(
+                    AsyncLimiter::new(
+                        DirectRateLimiter::<LeakyBucket>::per_second(qps),
+                        TokioFlavor::V01,
+                    )
+                    .await,
+                );
+            }
+
+            if let Some(qps) = maybe_qps(tunables().get_wishlist_write_qps()) {
+                builder.blobstore_write_limiter(
+                    AsyncLimiter::new(
+                        DirectRateLimiter::<LeakyBucket>::per_second(qps),
+                        TokioFlavor::V01,
+                    )
+                    .await,
+                );
+            }
+        }
+        _ => {}
+    }
 }
 
 pub async fn request_handler(
@@ -156,11 +192,6 @@ pub async fn request_handler(
         .cloned()
         .unwrap_or("".to_string());
 
-    let blobstore_concurrency = match priority {
-        Priority::Wishlist => Some(1000),
-        _ => None,
-    };
-
     let ssh_env_vars = SshEnvVars::from_map(&preamble.misc);
     let load_limiter = load_limiting_config.map(|(config, category)| {
         let (throttle_limits, rate_limits) =
@@ -176,9 +207,7 @@ pub async fn request_handler(
         .ssh_env_vars(ssh_env_vars)
         .load_limiter(load_limiter);
 
-    if let Some(blobstore_concurrency) = blobstore_concurrency {
-        session_builder = session_builder.blobstore_concurrency(blobstore_concurrency);
-    }
+    set_blobstore_limiters(&mut session_builder, priority).await;
 
     let session = session_builder.build();
 

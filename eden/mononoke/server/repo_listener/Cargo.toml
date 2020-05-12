@@ -7,6 +7,7 @@ license = "GPLv2+"
 include = ["src/**/*.rs"]
 
 [dependencies]
+async_limiter = { path = "../../common/async_limiter" }
 backsyncer = { path = "../../backsyncer" }
 blobrepo_factory = { path = "../../blobrepo/factory" }
 blobstore_factory = { path = "../../blobstore/factory" }
@@ -31,6 +32,7 @@ sql_construct = { path = "../../common/sql_construct" }
 sql_ext = { path = "../../common/rust/sql_ext" }
 sshrelay = { path = "../../sshrelay" }
 synced_commit_mapping = { path = "../../commit_rewriting/synced_commit_mapping" }
+tunables = { path = "../../tunables" }
 cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 failure_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
@@ -48,6 +50,7 @@ itertools = "0.8"
 lazy_static = "1.0"
 maplit = "1.0"
 openssl = "0.10"
+ratelimit_meter = "5"
 slog = { version="2.5", features=["max_level_debug"] }
 slog-kvfilter = "0.7"
 slog-term = "2.4.2"

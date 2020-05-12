@@ -5,6 +5,7 @@
  * GNU General Public License version 2.
  */
 
+use async_limiter::AsyncLimiter;
 use fbinit::FacebookInit;
 use load_limiter::{BoxLoadLimiter, LoadCost, LoadLimiter, Metric};
 use permission_checker::MononokeIdentitySet;
@@ -14,7 +15,6 @@ use slog::Logger;
 use sshrelay::SshEnvVars;
 use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::Semaphore;
 use tracing::TraceContext;
 
 pub use self::builder::{generate_session_id, SessionContainerBuilder};
@@ -24,22 +24,22 @@ use crate::logging::LoggingContainer;
 
 mod builder;
 
-#[derive(Debug, Clone)]
+#[derive(Clone)]
 pub struct SessionContainer {
     fb: FacebookInit,
     inner: Arc<SessionContainerInner>,
 }
 
-#[derive(Debug)]
 struct SessionContainerInner {
     session_id: SessionId,
     trace: TraceContext,
     user_unix_name: Option<String>,
     source_hostname: Option<String>,
     ssh_env_vars: SshEnvVars,
-    blobstore_semaphore: Option<Semaphore>,
     identities: Option<MononokeIdentitySet>,
     load_limiter: Option<BoxLoadLimiter>,
+    blobstore_write_limiter: Option<AsyncLimiter>,
+    blobstore_read_limiter: Option<AsyncLimiter>,
 }
 
 impl SessionContainer {
@@ -81,10 +81,6 @@ impl SessionContainer {
         &self.inner.ssh_env_vars
     }
 
-    pub fn blobstore_semaphore(&self) -> Option<&Semaphore> {
-        self.inner.blobstore_semaphore.as_ref()
-    }
-
     pub fn identities(&self) -> Option<&MononokeIdentitySet> {
         self.inner.identities.as_ref()
     }
@@ -114,5 +110,13 @@ impl SessionContainer {
 
     pub fn is_quicksand(&self) -> bool {
         is_quicksand(self.ssh_env_vars())
+    }
+
+    pub fn blobstore_read_limiter(&self) -> &Option<AsyncLimiter> {
+        &self.inner.blobstore_read_limiter
+    }
+
+    pub fn blobstore_write_limiter(&self) -> &Option<AsyncLimiter> {
+        &self.inner.blobstore_write_limiter
     }
 }
