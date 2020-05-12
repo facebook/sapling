@@ -6,35 +6,9 @@
 
   $ . "${TEST_FIXTURES}/library.sh"
 
-Set up local hgrc and Mononoke config.
-  $ setup_common_config
-  $ cd $TESTTMP
-
-Initialize test repo.
-  $ hginit_treemanifest repo-hg
-  $ cd repo-hg
-  $ setup_hg_server
-
-Populate test repo
-  $ echo "test content" > test.txt
-  $ hg commit -Aqm "add test.txt"
-  $ TEST_FILENODE=$(hg manifest --debug | grep test.txt | awk '{print $1}')
-  $ ROOT_MFID_1=$(hg log -r . -T '{manifest}')
-  $ hg cp test.txt copy.txt
-  $ hg commit -Aqm "copy test.txt to test2.txt"
-  $ COPY_FILENODE=$(hg manifest --debug | grep copy.txt | awk '{print $1}')
-  $ ROOT_MFID_2=$(hg log -r . -T '{manifest}')
-
-Blobimport test repo.
-  $ cd ..
-  $ blobimport repo-hg/.hg repo
-
 Start up EdenAPI server.
   $ setup_mononoke_config
   $ start_edenapi_server
-
-
-===== Basic =====
 
 Hit health check endpoint.
   $ sslcurl -s "$EDENAPI_URI/health_check"
@@ -43,100 +17,3 @@ Hit health check endpoint.
 List repos.
   $ sslcurl -s "$EDENAPI_URI/repos"
   {"repos":["repo"]} (no-eol)
-
-
-====== Files =====
-
-Create and send file data request.
-  $ edenapi_make_req data > req.cbor <<EOF
-  > [
-  >    ["test.txt", "$TEST_FILENODE"],
-  >    ["copy.txt", "$COPY_FILENODE"]
-  > ]
-  > EOF
-  Reading from stdin
-  Generated request: DataRequest {
-      keys: [
-          Key {
-              path: RepoPathBuf(
-                  "test.txt",
-              ),
-              hgid: HgId("186cafa3319c24956783383dc44c5cbc68c5a0ca"),
-          },
-          Key {
-              path: RepoPathBuf(
-                  "copy.txt",
-              ),
-              hgid: HgId("17b8d4e3bafd4ec4812ad7c930aace9bf07ab033"),
-          },
-      ],
-  }
-  $ sslcurl -s "$EDENAPI_URI/repo/files" -d@req.cbor > res.cbor
-
-Check files in response.
-  $ edenapi_data_util ls res.cbor
-  Reading from file: "res.cbor"
-  186cafa3319c24956783383dc44c5cbc68c5a0ca test.txt
-  17b8d4e3bafd4ec4812ad7c930aace9bf07ab033 copy.txt
-
-Verify that filenode hashes match contents.
-  $ edenapi_data_util check res.cbor
-  Reading from file: "res.cbor"
-
-Examine file data.
-  $ edenapi_data_util cat res.cbor -p test.txt -h $TEST_FILENODE
-  Reading from file: "res.cbor"
-  test content
-
-Note that copyinfo header is present for the copied file.
-  $ edenapi_data_util cat res.cbor -p copy.txt -h $COPY_FILENODE
-  Reading from file: "res.cbor"
-  \x01 (esc)
-  copy: test.txt
-  copyrev: 186cafa3319c24956783383dc44c5cbc68c5a0ca
-  \x01 (esc)
-  test content
-
-
-===== Trees =====
-
-Create and send tree request.
-  $ edenapi_make_req data > req.cbor <<EOF
-  > [
-  >    ["", "$ROOT_MFID_1"],
-  >    ["", "$ROOT_MFID_2"]
-  > ]
-  > EOF
-  Reading from stdin
-  Generated request: DataRequest {
-      keys: [
-          Key {
-              path: RepoPathBuf(
-                  "",
-              ),
-              hgid: HgId("15024c4dc4a27b572d623db342ae6a08d7f7adec"),
-          },
-          Key {
-              path: RepoPathBuf(
-                  "",
-              ),
-              hgid: HgId("c8743b14e0789cc546125213c18a18d813862db5"),
-          },
-      ],
-  }
-  $ sslcurl -s "$EDENAPI_URI/repo/trees" -d@req.cbor > res.cbor
-
-Check trees in response.
-  $ edenapi_data_util ls res.cbor
-  Reading from file: "res.cbor"
-  15024c4dc4a27b572d623db342ae6a08d7f7adec 
-  c8743b14e0789cc546125213c18a18d813862db5 
-
-  $ edenapi_data_util cat res.cbor -p '' -h $ROOT_MFID_1
-  Reading from file: "res.cbor"
-  test.txt\x00186cafa3319c24956783383dc44c5cbc68c5a0ca (esc)
-
-  $ edenapi_data_util cat res.cbor -p '' -h $ROOT_MFID_2
-  Reading from file: "res.cbor"
-  copy.txt\x0017b8d4e3bafd4ec4812ad7c930aace9bf07ab033 (esc)
-  test.txt\x00186cafa3319c24956783383dc44c5cbc68c5a0ca (esc)
