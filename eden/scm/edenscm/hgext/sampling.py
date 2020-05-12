@@ -27,6 +27,8 @@ configitem = registrar.configitem(configtable)
 configitem("sampling", "filepath", default="")
 configitem("sampling", "debug", default=False)
 
+onehundredmb = 100 * 1024 * 1024
+
 
 def getrelativecwd(repo):
     """Returns the current directory relative to the working copy root, or
@@ -64,7 +66,8 @@ def telemetry(reporef):
         except Exception:
             pass
 
-        maxrss = util.getmaxrss()
+        # Round to the nearest 100MB megabyte to reduce our storage size
+        maxrss = int(util.getmaxrss() / onehundredmb) * onehundredmb
 
         # Log maxrss from within the hg process. The wrapper logs its own
         # value (which is incorrect if chg is used) so the column is
