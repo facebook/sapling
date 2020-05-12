@@ -23,7 +23,9 @@ use gotham_ext::response::build_response;
 
 use crate::context::ServerContext;
 
+mod files;
 mod repos;
+mod util;
 
 pub fn build_router(ctx: ServerContext) -> Router {
     let pipeline = new_pipeline().add(StateMiddleware::new(ctx)).build();
@@ -35,6 +37,10 @@ pub fn build_router(ctx: ServerContext) -> Router {
             .get("/repos")
             .with_query_string_extractor::<repos::ReposParams>()
             .to(repos_handler);
+        route
+            .post("/:repo/files")
+            .with_path_extractor::<files::FilesParams>()
+            .to(files_handler);
     })
 }
 
@@ -49,6 +55,14 @@ pub fn health_handler(state: State) -> (State, &'static str) {
 pub fn repos_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
     async move {
         let res = repos::repos(&mut state);
+        build_response(res, state)
+    }
+    .boxed()
+}
+
+pub fn files_handler(mut state: State) -> Pin<Box<HandlerFuture>> {
+    async move {
+        let res = files::files(&mut state).await;
         build_response(res, state)
     }
     .boxed()

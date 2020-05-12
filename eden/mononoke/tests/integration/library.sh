@@ -1009,6 +1009,14 @@ function start_edenapi_server {
   return 1
 }
 
+function edenapi_make_req {
+	"$EDENAPI_MAKE_REQ" "$@"
+}
+
+function edenapi_data_util {
+	"$EDENAPI_DATA_UTIL" "$@"
+}
+
 function lfs_server {
   local port uri log opts args proto poll lfs_server_pid
   port="$(get_free_socket)"

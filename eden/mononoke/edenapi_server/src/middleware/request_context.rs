@@ -29,6 +29,10 @@ impl RequestContext {
             repository: None,
         }
     }
+
+    pub fn core_context(&self) -> CoreContext {
+        self.ctx.clone()
+    }
 }
 
 #[derive(Clone)]
