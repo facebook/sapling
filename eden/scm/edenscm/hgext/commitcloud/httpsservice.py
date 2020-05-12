@@ -248,18 +248,27 @@ class HttpsCommitCloudService(baseservice.BaseService):
         reponame,
         workspace,
         version,
-        oldheads,
-        newheads,
-        oldbookmarks,
-        newbookmarks,
-        newobsmarkers,
-        oldremotebookmarks=[],
-        newremotebookmarks={},
-        oldsnapshots=[],
-        newsnapshots=[],
+        oldheads=None,
+        newheads=None,
+        oldbookmarks=None,
+        newbookmarks=None,
+        newobsmarkers=None,
+        oldremotebookmarks=None,
+        newremotebookmarks=None,
+        oldsnapshots=None,
+        newsnapshots=None,
         logopts={},
     ):
         self.ui.debug("sending 'update_references' request\n", component="commitcloud")
+        oldheads = oldheads or []
+        newheads = newheads or []
+        oldbookmarks = oldbookmarks or []
+        newbookmarks = newbookmarks or {}
+        newobsmarkers = newobsmarkers or []
+        oldremotebookmarks = oldremotebookmarks or []
+        newremotebookmarks = newremotebookmarks or {}
+        oldsnapshots = oldsnapshots or []
+        newsnapshots = newsnapshots or []
         self.ui.log(
             "commitcloud_updates",
             version=version,

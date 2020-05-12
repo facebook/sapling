@@ -21,6 +21,7 @@ from edenscm.mercurial import (
     pycompat,
     registrar,
     scmutil,
+    templatefilters,
     util,
 )
 from edenscm.mercurial.i18n import _, _n
@@ -314,6 +315,168 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
 def cloudsupersmartlog(ui, repo, **opts):
     """get super smartlog view for the given workspace"""
     cloudsmartlog(ui, repo, "ssl_cloud", **opts)
+
+
+@subcmd(
+    "hide",
+    [
+        ("r", "rev", [], _("revisions to hide (hash or prefix only)")),
+        ("B", "bookmark", [], _("bookmarks to remove")),
+        ("", "remotebookmark", [], _("remote bookmarks to remove")),
+    ]
+    + workspace.workspaceopts
+    + cmdutil.dryrunopts,
+)
+def cloudhide(ui, repo, *revs, **opts):
+    """remove commits or bookmarks from the cloud workspace"""
+    reponame = ccutil.getreponame(repo)
+    workspacename = workspace.parseworkspace(ui, opts)
+    if workspacename is None:
+        workspacename = workspace.currentworkspace(repo)
+    if workspacename is None:
+        workspacename = workspace.defaultworkspace(ui)
+
+    with progress.spinner(ui, _("fetching commit cloud workspace")):
+        serv = service.get(ui, tokenmod.TokenLocator(ui).token)
+        firstpublic, revdag = serv.getsmartlog(reponame, workspacename, repo, 0)
+        cloudrefs = serv.getreferences(reponame, workspacename, 0)
+
+    ctxs = {}
+    childmap = {}
+    drafts = set()
+    for (_r, _t, ctx, _p) in revdag:
+        ctxs[ctx.node()] = ctx
+        for p in ctx.parents():
+            childmap.setdefault(p, []).append(ctx.node())
+        if ctx.phasestr() == "draft":
+            drafts.add(ctx.node())
+
+    removenodes = set()
+
+    for rev in list(revs) + opts.get("rev", []):
+        if rev in drafts:
+            removenodes.add(rev)
+        else:
+            candidate = None
+            for draft in drafts:
+                if draft.startswith(rev):
+                    if candidate is None:
+                        candidate = draft
+                    else:
+                        raise error.Abort(_("ambiguous commit hash prefix: %s") % rev)
+            if candidate is None:
+                raise error.Abort(_("commit not in workspace: %s") % rev)
+            removenodes.add(candidate)
+
+    # Find the bookmarks we need to remove
+    removebookmarks = set()
+    for bookmark in opts.get("bookmark", []):
+        kind, pattern, matcher = util.stringmatcher(bookmark)
+        if kind == "literal":
+            if pattern not in cloudrefs.bookmarks:
+                raise error.Abort(_("bookmark not in workspace: %s") % pattern)
+            removebookmarks.add(pattern)
+        else:
+            for bookmark in cloudrefs.bookmarks:
+                if matcher(bookmark):
+                    removebookmarks.add(bookmark)
+
+    # Find the remote bookmarks we need to remove
+    removeremotes = set()
+    for remote in opts.get("remotebookmark", []):
+        kind, pattern, matcher = util.stringmatcher(remote)
+        if kind == "literal":
+            if pattern not in cloudrefs.remotebookmarks:
+                raise error.Abort(_("remote bookmark not in workspace: %s") % pattern)
+            removeremotes.add(remote)
+        else:
+            for remote in cloudrefs.remotebookmarks:
+                if matcher(remote):
+                    removeremotes.add(remote)
+
+    # Find the heads we need to remove
+    candidates = removenodes.copy()
+    removeheads = set()
+    seen = set()
+    while candidates:
+        candidate = candidates.pop()
+        seen.add(candidate)
+        removebookmarks.update(ctxs[candidate].bookmarks())
+        if candidate in cloudrefs.heads:
+            removeheads.add(candidate)
+        for child in childmap.get(candidate, []):
+            if child not in seen:
+                candidates.add(child)
+            removenodes.discard(child)
+    # Find the heads we need to add to keep other commits visible
+    addheads = set()
+    for hexnode in removenodes:
+        for parent in ctxs[hexnode].parents():
+            if parent in drafts:
+                descendants = set(child for child in childmap.get(parent, []))
+                descendants.discard(hexnode)
+                # This parent is a new head, unless one of its other descendants is
+                # a head that is not being removed.
+                newhead = True
+                while descendants:
+                    descendant = descendants.pop()
+                    if descendant in cloudrefs.heads and descendant not in removeheads:
+                        newhead = False
+                        break
+                    descendants.update(childmap.get(descendant, []))
+                if newhead:
+                    addheads.add(parent)
+
+    # Find the heads we need to remove because we are removing the last bookmark
+    # to it.
+    remainingheads = set(cloudrefs.heads) - removeheads
+    for bookmark in removebookmarks:
+        ctx = ctxs.get(cloudrefs.bookmarks[bookmark])
+        if ctx is not None and ctx.node() in remainingheads:
+            allbms = set(ctxs[cloudrefs.bookmarks[bookmark]].bookmarks())
+            if removebookmarks.issuperset(allbms):
+                removeheads.add(ctx.node())
+                remainingheads.discard(ctx.node())
+
+    if removeheads:
+        ui.status(_("removing heads:\n"))
+        for head in sorted(removeheads):
+            ui.status(
+                "    %s  %s\n"
+                % (head[:12], templatefilters.firstline(ctxs[head].description()))
+            )
+    if addheads:
+        ui.status(_("adding heads:\n"))
+        for head in sorted(addheads):
+            ui.status(
+                "    %s  %s\n"
+                % (head[:12], templatefilters.firstline(ctxs[head].description()))
+            )
+    if removebookmarks:
+        ui.status(_("removing bookmarks:\n"))
+        for bookmark in sorted(removebookmarks):
+            ui.status("    %s: %s\n" % (bookmark, cloudrefs.bookmarks[bookmark][:12]))
+    if removeremotes:
+        ui.status(_("removing remote bookmarks:\n"))
+        for remote in sorted(removeremotes):
+            ui.status("    %s: %s\n" % (remote, cloudrefs.remotebookmarks[remote][:12]))
+
+    if removeheads or addheads or removebookmarks or removeremotes:
+        if opts.get("dry_run"):
+            ui.status(_("not updating cloud workspace: --dry-run specified\n"))
+            return 0
+        with progress.spinner(ui, _("updating commit cloud workspace")):
+            serv.updatereferences(
+                reponame,
+                workspacename,
+                cloudrefs.version,
+                oldheads=list(removeheads),
+                newheads=list(addheads),
+                oldbookmarks=list(removebookmarks),
+                oldremotebookmarks=list(removeremotes),
+            )
+    else:
+        ui.status(_("nothing to change\n"))
 
 
 def authenticate(ui, repo, tokenlocator):

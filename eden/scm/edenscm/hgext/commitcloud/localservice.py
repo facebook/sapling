@@ -100,28 +100,61 @@ class LocalService(baseservice.BaseService):
         reponame,
         workspace,
         version,
-        oldheads,
-        newheads,
-        oldbookmarks,
-        newbookmarks,
-        newobsmarkers,
-        oldremotebookmarks=[],
-        newremotebookmarks={},
-        oldsnapshots=[],
-        newsnapshots=[],
+        oldheads=None,
+        newheads=None,
+        oldbookmarks=None,
+        newbookmarks=None,
+        newobsmarkers=None,
+        oldremotebookmarks=None,
+        newremotebookmarks=None,
+        oldsnapshots=None,
+        newsnapshots=None,
         logopts={},
     ):
         data = self._load()
         if version != data["version"]:
             return False, self._makereferences(self._filteredobsmarkers(data, version))
 
+        oldheads = set(oldheads or [])
+        newheads = newheads or []
+        oldbookmarks = set(oldbookmarks or [])
+        newbookmarks = newbookmarks or {}
+        newobsmarkers = newobsmarkers or []
+        oldremotebookmarks = set(oldremotebookmarks or [])
+        newremotebookmarks = newremotebookmarks or {}
+        oldsnapshots = set(oldsnapshots or [])
+        newsnapshots = newsnapshots or []
+
+        heads = [head for head in data["heads"] if head not in oldheads]
+        heads.extend(newheads)
+        bookmarks = {
+            name: node
+            for name, node in pycompat.iteritems(data["bookmarks"])
+            if name not in oldbookmarks
+        }
+        bookmarks.update(newbookmarks)
+        remotebookmarks = {
+            name: node
+            for name, node in pycompat.iteritems(
+                self._decoderemotebookmarks(data.get("remote_bookmarks", []))
+            )
+            if name not in oldremotebookmarks
+        }
+        remotebookmarks.update(newremotebookmarks)
+        snapshots = [
+            snapshot
+            for snapshot in data.get("snapshots", [])
+            if snapshot not in oldsnapshots
+        ]
+        snapshots.extend(newsnapshots)
+
         newversion = data["version"] + 1
         data["version"] = newversion
-        data["heads"] = newheads
-        data["bookmarks"] = newbookmarks
+        data["heads"] = heads
+        data["bookmarks"] = bookmarks
         data["obsmarkers"][str(newversion)] = self._encodedmarkers(newobsmarkers)
-        if not data.get("remote_bookmarks", {}) or newremotebookmarks:
-            data["remote_bookmarks"] = self._makeremotebookmarks(newremotebookmarks)
+        data["remote_bookmarks"] = self._makeremotebookmarks(remotebookmarks)
+        data["snapshots"] = snapshots
         self._ui.debug(
             "commitcloud local service: "
             "update_references to %s (%s heads, %s bookmarks, %s remote bookmarks)\n"
@@ -132,7 +165,6 @@ class LocalService(baseservice.BaseService):
                 len(data["remote_bookmarks"]),
             )
         )
-        data["snapshots"] = newsnapshots
         self._save(data)
         return (
             True,

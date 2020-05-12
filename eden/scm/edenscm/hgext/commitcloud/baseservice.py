@@ -46,6 +46,9 @@ class FakeCtx(object):
     def node(self):
         return self._nodeinfo.node
 
+    def parents(self):
+        return self._nodeinfo.parents
+
     def obsolete(self):
         return False
 
@@ -135,10 +138,9 @@ class BaseService(pycompat.ABC):
             for m in data["new_obsmarkers_data"]
         ]
         headdates = {h: d for h, d in data.get("head_dates", {}).items()}
-        newremotebookmarks = {
-            _joinremotename(book["remote"], book["name"]): book["node"]
-            for book in data.get("remote_bookmarks", [])
-        }
+        newremotebookmarks = self._decoderemotebookmarks(
+            data.get("remote_bookmarks", [])
+        )
         newsnapshots = [s for s in data["snapshots"]]
 
         return References(
@@ -189,6 +191,13 @@ class BaseService(pycompat.ABC):
             for remotename in remotebookmarks:
                 appendremotebook(remotename)
         return remotebookslist
+
+    def _decoderemotebookmarks(self, remotebookmarks):
+        """Turns a list of thrift remotebookmarks into a dictionary of remote bookmarks"""
+        return {
+            _joinremotename(book["remote"], book["name"]): book["node"]
+            for book in remotebookmarks
+        }
 
     @abstractmethod
     def requiresauthentication(self):
