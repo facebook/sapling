@@ -1521,6 +1521,7 @@ class localrepository(object):
             releasefn=releasefn,
             checkambigfiles=_cachedfiles,
             uiconfig=self.ui.uiconfig(),
+            desc=desc,
         )
         tr.changes["revs"] = range(0, 0)
         tr.changes["obsmarkers"] = set()

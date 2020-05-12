@@ -128,6 +128,7 @@ class transaction(util.transactional):
         releasefn=None,
         checkambigfiles=None,
         uiconfig=None,
+        desc=None,
     ):
         """Begin a new transaction
 
@@ -145,6 +146,7 @@ class transaction(util.transactional):
         self.count = 1
         self.usages = 1
         self.report = report
+        self.desc = desc
         # a vfs to the store content
         self.opener = opener
         # a map to access file in various {location -> vfs}
