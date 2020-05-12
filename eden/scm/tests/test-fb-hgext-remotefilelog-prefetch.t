@@ -110,9 +110,10 @@
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob) (?)
   updating bookmark foo
   prefetching file contents
-  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over *s (glob) (?)
+  3 files fetched over 1 fetches - (3 misses, 0.00% hit ratio) over 0.00s
 
   $ hg up tip
   3 files updated, 0 files merged, 0 files removed, 0 files unresolved

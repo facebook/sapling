@@ -1,6 +1,8 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ setconfig remotenames.selectivepull=1
+
   $ LFSPATH=$TESTTMP/lfs
   $ export LFSPATH
   $ mkdir $LFSPATH
@@ -36,11 +38,10 @@
 # prefetch a revision
 
   $ hgcloneshallowlfs ssh://user@dummy/master shallow file://$LFSPATH --noupdate
-  streaming all changes
+  fetching changelog
   3 files to transfer, * bytes of data (glob)
   transferred * bytes in * seconds (*) (glob)
-  searching for changes
-  no changes found
+  fetching selected remote bookmarks
   $ cd shallow
 
   $ hg prefetch -r 0
@@ -92,9 +93,10 @@
   adding manifests
   adding file changes
   added 1 changesets with 0 changes to 0 files
-  updating bookmark foo
-  prefetching file contents
   4 files fetched over * fetches - (4 misses, 0.00% hit ratio) over *s (glob) (?)
+  adding remote bookmark foo
+  prefetching file contents
+  4 files fetched over 2 fetches - (4 misses, 0.00% hit ratio) over 0.00s
 
   $ hg up tip
   4 files updated, 0 files merged, 0 files removed, 0 files unresolved

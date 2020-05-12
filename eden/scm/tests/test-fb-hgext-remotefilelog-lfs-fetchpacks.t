@@ -2,6 +2,7 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ setconfig remotenames.selectivepull=1
 
   $ . "$TESTDIR/library.sh"
 
@@ -24,10 +25,10 @@
 # Push an LFS blob to the server.
 
   $ hgcloneshallow ssh://user@dummy/master push --noupdate
-  streaming all changes
+  fetching changelog
   0 files to transfer, 0 bytes of data
   transferred 0 bytes in * seconds (*/sec) (glob)
-  no changes found
+  fetching selected remote bookmarks
   $ cd push
 
   $ cat >> .hg/hgrc <<EOF
@@ -53,11 +54,10 @@
   $TESTTMP/dummy-remote/80/2935f5411aa569948cd326115b3521107250019b5dbadf0f6ab2aa2d1e4639
 
   $ hgcloneshallow ssh://user@dummy/master shallowv1 --noupdate
-  streaming all changes
+  fetching changelog
   3 files to transfer, * of data (glob)
   transferred 231 bytes in * seconds (*/sec) (glob)
-  searching for changes
-  no changes found
+  fetching selected remote bookmarks
   $ cd shallowv1
 
   $ cat >> .hg/hgrc <<EOF
@@ -83,11 +83,10 @@
   $ clearcache
 
   $ hgcloneshallow ssh://user@dummy/master shallowv2 --noupdate
-  streaming all changes
+  fetching changelog
   3 files to transfer, * of data (glob)
   transferred 231 bytes in * seconds (*/sec) (glob)
-  searching for changes
-  no changes found
+  fetching selected remote bookmarks
   $ cd shallowv2
 
   $ cat >> .hg/hgrc <<EOF

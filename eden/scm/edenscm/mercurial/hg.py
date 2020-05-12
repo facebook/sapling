@@ -22,6 +22,7 @@ import weakref
 from . import (
     bookmarks,
     bundlerepo,
+    clone as clonemod,
     cmdutil,
     destutil,
     discovery,
@@ -587,7 +588,27 @@ def clone(
                     )
                 revs = [srcpeer.lookup(r) for r in rev]
                 checkout = revs[0]
-            if local:
+            # Can we use the new code path (stream clone + shallow + no
+            # update + selective pull)?
+            if (
+                local
+                and not pull
+                and not update
+                and not rev
+                and shallow
+                and stream is not False
+                and ui.configbool("experimental", "new-clone-path")
+                and ui.configbool("remotenames", "selectivepull")
+            ):
+                clonemod.shallowclone(srcpeer.url(), local)
+            elif local:
+                if ui.configbool("experimental", "new-clone-path"):
+                    ui.log(
+                        "features",
+                        fullargs=repr(pycompat.sysargv),
+                        feature="legacy-clone",
+                        traceback=util.smarttraceback(),
+                    )
                 with local.wlock(), local.lock(), local.transaction("clone"):
                     if not stream:
                         if pull:

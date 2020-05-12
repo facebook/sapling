@@ -1,6 +1,7 @@
 #chg-compatible
 
   $ disable treemanifest
+  $ setconfig remotenames.selectivepull=1
 
   $ . "$TESTDIR/library.sh"
 
@@ -18,11 +19,10 @@
 # shallow clone from full
 
   $ hgcloneshallow ssh://user@dummy/master shallow --noupdate
-  streaming all changes
+  fetching changelog
   3 files to transfer, * of data (glob)
   transferred 227 bytes in * seconds (*/sec) (glob)
-  searching for changes
-  no changes found
+  fetching selected remote bookmarks
   $ cd shallow
   $ cat .hg/requires
   dotencode
@@ -49,11 +49,10 @@
 # shallow clone from shallow
 
   $ hgcloneshallow ssh://user@dummy/shallow shallow2  --noupdate
-  streaming all changes
+  fetching changelog
   7 files to transfer, 2.76 KB of data
   transferred 2.76 KB in * seconds (*/sec) (glob)
-  searching for changes
-  no changes found
+  fetching selected remote bookmarks
   $ cd shallow2
   $ cat .hg/requires
   dotencode
