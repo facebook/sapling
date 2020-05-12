@@ -28,6 +28,7 @@ from . import (
     check_filesystems,
     check_hg,
     check_os,
+    check_redirections,
     check_rogue_edenfs,
     check_stale_mounts,
     check_watchman,
@@ -217,7 +218,13 @@ class EdenDoctorChecker:
         for path, checkout in sorted(checkouts.items()):
             self.out.writeln(f"Checking {path}")
             try:
-                check_mount(self.tracker, checkout, watchman_info)
+                check_mount(
+                    self.tracker,
+                    self.instance,
+                    checkout,
+                    self.mount_table,
+                    watchman_info,
+                )
             except Exception as ex:
                 self.tracker.add_problem(
                     Problem(f"unexpected error while checking {path}: {ex}")
@@ -347,14 +354,16 @@ class EdenfsUnexpectedStatus(Problem):
 
 def check_mount(
     tracker: ProblemTracker,
+    instance: EdenInstance,
     checkout: CheckoutInfo,
+    mount_table: mtab.MountTable,
     watchman_info: check_watchman.WatchmanCheckInfo,
 ) -> None:
     if checkout.state is None:
         # This checkout is configured but not currently running.
         tracker.add_problem(CheckoutNotMounted(checkout))
     elif checkout.state == MountState.RUNNING:
-        check_running_mount(tracker, checkout, watchman_info)
+        check_running_mount(tracker, instance, checkout, mount_table, watchman_info)
     elif checkout.state in (
         MountState.UNINITIALIZED,
         MountState.INITIALIZING,
@@ -399,7 +408,9 @@ def check_mount(
 
 def check_running_mount(
     tracker: ProblemTracker,
+    instance: EdenInstance,
     checkout_info: CheckoutInfo,
+    mount_table: mtab.MountTable,
     watchman_info: check_watchman.WatchmanCheckInfo,
 ) -> None:
     if checkout_info.configured_state_dir is None:
@@ -422,6 +433,7 @@ def check_running_mount(
 
     check_filesystems.check_using_nfs_path(tracker, checkout.path)
     check_watchman.check_active_mount(tracker, str(checkout.path), watchman_info)
+    check_redirections.check_redirections(tracker, instance, checkout, mount_table)
     if config.scm_type == "hg":
         check_hg.check_hg(tracker, checkout)
 
