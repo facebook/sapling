@@ -271,16 +271,34 @@ impl<'a> HookInstance<'a> {
             }
         };
 
-        if let Err(e) = result.as_ref() {
-            scuba.add("stderr", e.to_string());
+        let mut errorcode = 0;
+        let mut failed_hooks = 0;
+        let mut stderr = None;
+
+        match result.as_ref().map(HookOutcome::get_execution) {
+            Ok(HookExecution::Accepted) => {
+                // Nothing to do
+            }
+            Ok(HookExecution::Rejected(info)) => {
+                failed_hooks = 1;
+                stderr = Some(info.long_description.clone());
+            }
+            Err(e) => {
+                errorcode = 1;
+                stderr = Some(format!("{:?}", e));
+            }
+        };
+
+        if let Some(stderr) = stderr {
+            scuba.add("stderr", stderr);
         }
 
         let elapsed = stats.completion_time.as_millis() as i64;
         scuba
             .add("elapsed", elapsed)
             .add("total_time", elapsed)
-            .add("errorcode", result.is_err() as i32)
-            .add("failed_hooks", result.is_err() as i32)
+            .add("errorcode", errorcode)
+            .add("failed_hooks", failed_hooks)
             .log();
 
         result.map_err(|e| e.context(format!("while executing hook {}", hook_name)))
