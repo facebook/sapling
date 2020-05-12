@@ -1431,48 +1431,25 @@ def fscasesensitive(path):
         return True
 
 
-try:
-    from .thirdparty import pyre2 as re2
-
-    # pyre-fixme[16]: Module `edenscm.mercurial.thirdparty` has no attribute `pyre2`.
-    re2._re2.escape  # the C module might be missing
-    _re2 = None
-except ImportError:
-    try:
-        import re2
-
-        # pyre-fixme[18]: Global name `_re2` is undefined.
-        re2._re2.escape  # the C module might be missing
-        _re2 = None
-    except (AttributeError, ImportError):
-        _re2 = False
+_regex = bindings.regex
 
 
 class _re(object):
-    def _checkre2(self):
-        global _re2
-        try:
-            # check if match works, see issue3964
-            _re2 = bool(re2.match(r"\[([^\[]+)\]", "[ui]"))
-        except ImportError:
-            _re2 = False
-
     def compile(self, pat, flags=0):
-        """Compile a regular expression, using re2 if possible
+        """Compile a regular expression, using Rust regex if possible
 
-        For best performance, use only re2-compatible regexp features. The
-        only flags from the re module that are re2-compatible are
-        IGNORECASE and MULTILINE."""
-        if _re2 is None:
-            self._checkre2()
-        if _re2 and (flags & ~(remod.IGNORECASE | remod.MULTILINE)) == 0:
+        For best performance, use only Rust-regex-compatible regexp features.
+        The only flags from the re module that are Rust-regex-compatible are
+        IGNORECASE and MULTILINE.
+        """
+        if (flags & ~(remod.IGNORECASE | remod.MULTILINE)) == 0:
             if flags & remod.IGNORECASE:
                 pat = "(?i)" + pat
             if flags & remod.MULTILINE:
                 pat = "(?m)" + pat
             try:
-                return re2.compile(pat)
-            except re2.error:
+                return _regex.compile(pat)
+            except Exception:
                 pass
         return remod.compile(pat, flags)
 
@@ -1480,16 +1457,11 @@ class _re(object):
     def escape(self):
         """Return the version of escape corresponding to self.compile.
 
-        This is imperfect because whether re2 or re is used for a particular
-        function depends on the flags, etc, but it's the best we can do.
+        This is imperfect because whether Rust regex or re is used for a
+        particular function depends on the flags, etc, but it's the best we can
+        do.
         """
-        global _re2
-        if _re2 is None:
-            self._checkre2()
-        if _re2:
-            return re2.escape
-        else:
-            return remod.escape
+        return _regex.escape
 
 
 re = _re()

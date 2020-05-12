@@ -1551,11 +1551,6 @@ def debuginstall(ui, **opts):
             sep=", ",
         ),
     )
-    re2 = "missing"
-    if util._re2:
-        re2 = "available"
-    fm.plain(_('checking "re2" regexp engine (%s)\n') % re2)
-    fm.data(re2=bool(util._re2))
 
     # templates
     p = templater.templatepaths()

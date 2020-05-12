@@ -747,13 +747,6 @@ class fetchbuilddeps(Command):
     description = "download build depencencies"
     user_options = []
 
-    re2assets = [
-        asset(
-            name="re2-2018-04-01.tar.gz",
-            url="https://github.com/google/re2/archive/2018-04-01.tar.gz",
-        )
-    ]
-
     # To add a python package to this list, run "pip2 download PKG" and
     # add the URL here.  URLs are added to LFS by running eg:
     # ../../tools/lfs/lfs.py upload LOCAL-FILE
@@ -811,7 +804,7 @@ class fetchbuilddeps(Command):
         edenpythrift(name="eden-rust-deps-e0fd3d6d06542b491712b6e7fdedfae9b6e7ad15.zip")
     ]
 
-    assets = re2assets + pyassets
+    assets = pyassets
 
     if iswindows:
         # The file was created by installing vcpkg (4ad78224) to C:\vcpkg,
@@ -895,64 +888,6 @@ buildextnegops = dict(getattr(build_ext, "negative_options", {}))
 class hgbuildext(build_ext):
     def build_extensions(self):
         fetchbuilddeps(self.distribution).run()
-
-        re2path = "build/re2-2018-04-01"
-        self.extensions.append(
-            Extension(
-                "edenscmnative._re2",
-                sources=[
-                    "edenscm/mercurial/thirdparty/pyre2/_re2.cc",
-                    os.path.join(re2path, "re2/bitstate.cc"),
-                    os.path.join(re2path, "re2/compile.cc"),
-                    os.path.join(re2path, "re2/dfa.cc"),
-                    os.path.join(re2path, "re2/filtered_re2.cc"),
-                    os.path.join(re2path, "re2/mimics_pcre.cc"),
-                    os.path.join(re2path, "re2/nfa.cc"),
-                    os.path.join(re2path, "re2/onepass.cc"),
-                    os.path.join(re2path, "re2/parse.cc"),
-                    os.path.join(re2path, "re2/perl_groups.cc"),
-                    os.path.join(re2path, "re2/prefilter.cc"),
-                    os.path.join(re2path, "re2/prefilter_tree.cc"),
-                    os.path.join(re2path, "re2/prog.cc"),
-                    os.path.join(re2path, "re2/re2.cc"),
-                    os.path.join(re2path, "re2/regexp.cc"),
-                    os.path.join(re2path, "re2/set.cc"),
-                    os.path.join(re2path, "re2/simplify.cc"),
-                    os.path.join(re2path, "re2/stringpiece.cc"),
-                    os.path.join(re2path, "re2/tostring.cc"),
-                    os.path.join(re2path, "re2/unicode_casefold.cc"),
-                    os.path.join(re2path, "re2/unicode_groups.cc"),
-                    os.path.join(re2path, "util/rune.cc"),
-                    os.path.join(re2path, "util/strutil.cc"),
-                ],
-                include_dirs=[re2path] + include_dirs,
-                depends=common_depends
-                + [
-                    os.path.join(re2path, "re2/bitmap256.h"),
-                    os.path.join(re2path, "re2/filtered_re2.h"),
-                    os.path.join(re2path, "re2/prefilter.h"),
-                    os.path.join(re2path, "re2/prefilter_tree.h"),
-                    os.path.join(re2path, "re2/prog.h"),
-                    os.path.join(re2path, "re2/re2.h"),
-                    os.path.join(re2path, "re2/regexp.h"),
-                    os.path.join(re2path, "re2/set.h"),
-                    os.path.join(re2path, "re2/stringpiece.h"),
-                    os.path.join(re2path, "re2/unicode_casefold.h"),
-                    os.path.join(re2path, "re2/unicode_groups.h"),
-                    os.path.join(re2path, "re2/walker-inl.h"),
-                    os.path.join(re2path, "util/logging.h"),
-                    os.path.join(re2path, "util/mix.h"),
-                    os.path.join(re2path, "util/mutex.h"),
-                    os.path.join(re2path, "util/sparse_array.h"),
-                    os.path.join(re2path, "util/sparse_set.h"),
-                    os.path.join(re2path, "util/strutil.h"),
-                    os.path.join(re2path, "util/utf.h"),
-                    os.path.join(re2path, "util/util.h"),
-                ],
-                extra_compile_args=filter(None, [STDCPP11, PRODUCEDEBUGSYMBOLS]),
-            )
-        )
-
         return build_ext.build_extensions(self)
 
     def build_extension(self, ext):
@@ -1431,7 +1366,6 @@ packages = [
     "edenscm.mercurial.pure",
     "edenscm.mercurial.thirdparty",
     "edenscm.mercurial.thirdparty.attr",
-    "edenscm.mercurial.thirdparty.pyre2",
     "edenscm.mercurial.utils",
     "edenscmnative",
 ]

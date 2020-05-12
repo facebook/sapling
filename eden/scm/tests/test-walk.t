@@ -223,14 +223,14 @@
   f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
   f  mammals/skunk                   skunk
   $ hg debugwalk Procyonidae
-  matcher: <patternmatcher patterns='(?:mammals\\/Procyonidae(?:/|$))'>
+  matcher: <patternmatcher patterns='(?:mammals/Procyonidae(?:/|$))'>
   f  mammals/Procyonidae/cacomistle  Procyonidae/cacomistle
   f  mammals/Procyonidae/coatimundi  Procyonidae/coatimundi
   f  mammals/Procyonidae/raccoon     Procyonidae/raccoon
 
   $ cd Procyonidae
   $ hg debugwalk .
-  matcher: <patternmatcher patterns='(?:mammals\\/Procyonidae(?:/|$))'>
+  matcher: <patternmatcher patterns='(?:mammals/Procyonidae(?:/|$))'>
   f  mammals/Procyonidae/cacomistle  cacomistle
   f  mammals/Procyonidae/coatimundi  coatimundi
   f  mammals/Procyonidae/raccoon     raccoon
@@ -285,7 +285,7 @@
   matcher: <treematcher rules=['non-existent/**', 'beans/black/**']>
   f  beans/black  beans/black
   $ hg debugwalk -Ibeans beans/black
-  matcher: <intersectionmatcher m1=<patternmatcher patterns='(?:beans\\/black(?:/|$))'>, m2=<treematcher rules=['beans/**']>>
+  matcher: <intersectionmatcher m1=<patternmatcher patterns='(?:beans/black(?:/|$))'>, m2=<treematcher rules=['beans/**']>>
   f  beans/black  beans/black  exact
   $ hg debugwalk -Ibeans/black beans
   matcher: <intersectionmatcher m1=<patternmatcher patterns='(?:beans(?:/|$))'>, m2=<treematcher rules=['beans/black/**']>>
@@ -305,12 +305,12 @@
   f  beans/pinto     beans/pinto
   f  beans/turtle    beans/turtle
   $ hg debugwalk -Xbeans/black beans/black
-  matcher: <differencematcher m1=<patternmatcher patterns='(?:beans\\/black(?:/|$))'>, m2=<treematcher rules=['beans/black/**']>>
+  matcher: <differencematcher m1=<patternmatcher patterns='(?:beans/black(?:/|$))'>, m2=<treematcher rules=['beans/black/**']>>
   f  beans/black  beans/black  exact
   $ hg debugwalk -Xbeans/black -Ibeans/black
   matcher: <differencematcher m1=<treematcher rules=['beans/black/**']>, m2=<treematcher rules=['beans/black/**']>>
   $ hg debugwalk -Xbeans beans/black
-  matcher: <differencematcher m1=<patternmatcher patterns='(?:beans\\/black(?:/|$))'>, m2=<treematcher rules=['beans/**']>>
+  matcher: <differencematcher m1=<patternmatcher patterns='(?:beans/black(?:/|$))'>, m2=<treematcher rules=['beans/**']>>
   f  beans/black  beans/black  exact
   $ hg debugwalk -Xbeans -Ibeans/black
   matcher: <differencematcher m1=<treematcher rules=['beans/black/**']>, m2=<treematcher rules=['beans/**']>>
@@ -413,18 +413,18 @@ Test patterns:
   $ hg debugwalk relglob:Procyonidae
   matcher: <patternmatcher patterns='(?:(?:|.*/)Procyonidae$)'>
   $ hg debugwalk 'relglob:Procyonidae/**'
-  matcher: <patternmatcher patterns='(?:(?:|.*/)Procyonidae\\/.*$)'>
+  matcher: <patternmatcher patterns='(?:(?:|.*/)Procyonidae/.*$)'>
   f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
   f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
   f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
   $ hg debugwalk 'relglob:Procyonidae/**' fennel
-  matcher: <patternmatcher patterns='(?:(?:|.*/)Procyonidae\\/.*$|fennel(?:/|$))'>
+  matcher: <patternmatcher patterns='(?:(?:|.*/)Procyonidae/.*$|fennel(?:/|$))'>
   f  fennel                          fennel                          exact
   f  mammals/Procyonidae/cacomistle  mammals/Procyonidae/cacomistle
   f  mammals/Procyonidae/coatimundi  mammals/Procyonidae/coatimundi
   f  mammals/Procyonidae/raccoon     mammals/Procyonidae/raccoon
   $ hg debugwalk beans 'glob:beans/*'
-  matcher: <patternmatcher patterns='(?:beans(?:/|$)|beans\\/[^/]*$)'>
+  matcher: <patternmatcher patterns='(?:beans(?:/|$)|beans/[^/]*$)'>
   f  beans/black     beans/black
   f  beans/borlotti  beans/borlotti
   f  beans/kidney    beans/kidney
@@ -477,7 +477,7 @@ Test patterns:
   $ hg debugwalk ignored
   matcher: <patternmatcher patterns='(?:ignored(?:/|$))'>
   $ hg debugwalk ignored/file
-  matcher: <patternmatcher patterns='(?:ignored\\/file(?:/|$))'>
+  matcher: <patternmatcher patterns='(?:ignored/file(?:/|$))'>
   f  ignored/file  ignored/file  exact
 
 Test listfile and listfile0
@@ -496,15 +496,15 @@ Test listfile and listfile0
 
   $ cd ..
   $ hg debugwalk -R t t/mammals/skunk
-  matcher: <patternmatcher patterns='(?:mammals\\/skunk(?:/|$))'>
+  matcher: <patternmatcher patterns='(?:mammals/skunk(?:/|$))'>
   f  mammals/skunk  t/mammals/skunk  exact
   $ mkdir t2
   $ cd t2
   $ hg debugwalk -R ../t ../t/mammals/skunk
-  matcher: <patternmatcher patterns='(?:mammals\\/skunk(?:/|$))'>
+  matcher: <patternmatcher patterns='(?:mammals/skunk(?:/|$))'>
   f  mammals/skunk  ../t/mammals/skunk  exact
   $ hg debugwalk --cwd ../t mammals/skunk
-  matcher: <patternmatcher patterns='(?:mammals\\/skunk(?:/|$))'>
+  matcher: <patternmatcher patterns='(?:mammals/skunk(?:/|$))'>
   f  mammals/skunk  mammals/skunk  exact
 
   $ cd ..

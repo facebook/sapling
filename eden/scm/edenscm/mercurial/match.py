@@ -1299,7 +1299,7 @@ def _globre(pat):
     >>> bprint(_globre(br'**/a'))
     (?:.*/)?a
     >>> bprint(_globre(br'a/**/b'))
-    a\/(?:.*/)?b
+    a/(?:.*/)?b
     >>> bprint(_globre(br'[a*?!^][^b][!c]'))
     [a*?!^][\^b][^c]
     >>> bprint(_globre(br'{a,b}'))
