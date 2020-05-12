@@ -272,6 +272,9 @@ fn accept(
                                 load_limiting_config,
                                 pushredirect_config,
                             )
+                            .map(Ok)
+                            .boxed()
+                            .compat()
                             .left_future()
                         } else {
                             let err: Error = ErrorKind::AuthorizationFailed.into();

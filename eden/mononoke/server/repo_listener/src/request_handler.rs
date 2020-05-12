@@ -14,8 +14,9 @@ use cached_config::ConfigHandle;
 use context::{generate_session_id, SessionId};
 use failure_ext::SlogKVError;
 use fbinit::FacebookInit;
+use futures::compat::Future01CompatExt;
 use futures_old::{Future, Sink, Stream};
-use futures_stats::Timed;
+use futures_stats::TimedFutureExt;
 use lazy_static::lazy_static;
 use limits::types::{MononokeThrottleLimit, MononokeThrottleLimits, RateLimits};
 use maplit::{hashmap, hashset};
@@ -65,7 +66,7 @@ define_stats! {
     request_outcome_permille: timeseries(Average),
 }
 
-pub fn request_handler(
+pub async fn request_handler(
     fb: FacebookInit,
     RepoHandler {
         logger,
@@ -81,7 +82,7 @@ pub fn request_handler(
     stdio: Stdio,
     load_limiting_config: Option<(ConfigHandle<MononokeThrottleLimits>, String)>,
     pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
-) -> impl Future<Item = (), Error = ()> {
+) {
     let Stdio {
         stdin,
         stdout,
@@ -212,44 +213,52 @@ pub fn request_handler(
         .map(|_| ());
 
     // If we got an error at this point, then catch it and print a message
-    endres
+    let (stats, result) = endres
         .traced(&trace, "wireproto request", trace_args!())
-        .timed(move |stats, result| {
-            let mut wireproto_calls = wireproto_calls.lock().expect("lock poisoned");
-            let wireproto_calls = mem::replace(&mut *wireproto_calls, Vec::new());
+        .compat()
+        .timed()
+        .await;
 
-            STATS::wireproto_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
+    let wireproto_calls = {
+        let mut wireproto_calls = wireproto_calls.lock().expect("lock poisoned");
+        mem::replace(&mut *wireproto_calls, Vec::new())
+    };
 
-            let mut scuba = scuba.clone();
+    STATS::wireproto_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
 
-            scuba
-                .add_future_stats(&stats)
-                .add("wireproto_commands", wireproto_calls);
+    let mut scuba = scuba.clone();
 
-            // Populate stats no matter what to avoid dead detectors firing.
-            STATS::request_success.add_value(0);
-            STATS::request_failure.add_value(0);
+    scuba
+        .add_future_stats(&stats)
+        .add("wireproto_commands", wireproto_calls);
 
-            match result {
-                Ok(_) => {
-                    STATS::request_success.add_value(1);
-                    STATS::request_outcome_permille.add_value(1000);
-                    scuba.log_with_msg("Request finished - Success", None)
-                }
-                Err(err) => {
-                    STATS::request_failure.add_value(1);
-                    STATS::request_outcome_permille.add_value(0);
-                    scuba.log_with_msg("Request finished - Failure", format!("{:#?}", err));
-                }
-            }
-            scuba.log_with_trace(fb, &trace)
-        })
-        .map_err(move |err| {
-            error!(&conn_log, "Command failed";
-                SlogKVError(err),
-                "remote" => "true"
-            );
-        })
+    // Populate stats no matter what to avoid dead detectors firing.
+    STATS::request_success.add_value(0);
+    STATS::request_failure.add_value(0);
+
+    match &result {
+        Ok(_) => {
+            STATS::request_success.add_value(1);
+            STATS::request_outcome_permille.add_value(1000);
+            scuba.log_with_msg("Request finished - Success", None)
+        }
+        Err(err) => {
+            STATS::request_failure.add_value(1);
+            STATS::request_outcome_permille.add_value(0);
+            scuba.log_with_msg("Request finished - Failure", format!("{:#?}", err));
+        }
+    }
+
+    if let Err(err) = result {
+        error!(&conn_log, "Command failed";
+            SlogKVError(err),
+            "remote" => "true"
+        );
+    }
+
+    // NOTE: This results a Result that we ignore here. There isn't really anything we can (or
+    // should) do if this errors out.
+    let _ = scuba.log_with_trace(fb, &trace).compat().await;
 }
 
 fn loadlimiting_configs(
