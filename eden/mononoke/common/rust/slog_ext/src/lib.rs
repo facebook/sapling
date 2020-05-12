@@ -35,6 +35,7 @@ impl<D: Decorator> Drain for SimpleFormatWithError<D> {
                 root_cause: None,
                 backtrace: None,
                 causes: Vec::new(),
+                error_debug: None,
             };
             record.kv().serialize(record, &mut serializer)?;
             values.serialize(record, &mut serializer)?;
@@ -43,13 +44,16 @@ impl<D: Decorator> Drain for SimpleFormatWithError<D> {
                 write!(decorator, "  Error:\n    {}\n", fix_indentation(error))?;
 
                 if let Some(root_cause) = serializer.root_cause {
+                    write!(decorator, "\n")?;
                     write!(
                         decorator,
                         "  Root cause:\n    {}\n",
                         fix_indentation(root_cause)
                     )?;
                 }
+
                 if let Some(backtrace) = serializer.backtrace {
+                    write!(decorator, "\n")?;
                     write!(
                         decorator,
                         "  Backtrace:\n    {}\n",
@@ -57,8 +61,20 @@ impl<D: Decorator> Drain for SimpleFormatWithError<D> {
                     )?;
                 }
 
-                for cause in serializer.causes {
+                for (i, cause) in serializer.causes.into_iter().enumerate() {
+                    if i == 0 {
+                        write!(decorator, "\n")?;
+                    }
                     write!(decorator, "  Caused by:\n    {}\n", fix_indentation(cause))?;
+                }
+
+                if let Some(error_debug) = serializer.error_debug {
+                    write!(decorator, "\n")?;
+                    write!(
+                        decorator,
+                        "  Debug context:\n    {}\n",
+                        fix_indentation(error_debug)
+                    )?;
                 }
             }
 
@@ -73,6 +89,7 @@ struct ErrorSerializer {
     pub root_cause: Option<String>,
     pub backtrace: Option<String>,
     pub causes: Vec<String>,
+    pub error_debug: Option<String>,
 }
 
 impl Serializer for ErrorSerializer {
@@ -84,6 +101,7 @@ impl Serializer for ErrorSerializer {
                 RootCause => self.root_cause = non_empty_str_maybe(format!("{}", val)),
                 Backtrace => self.backtrace = non_empty_str_maybe(format!("{}", val)),
                 Cause => self.causes.push(format!("{}", val)),
+                ErrorDebug => self.error_debug = non_empty_str_maybe(format!("{}", val)),
             }
         }
 

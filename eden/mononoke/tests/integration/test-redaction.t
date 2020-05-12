@@ -228,7 +228,11 @@ As of the time of writing, updating redacted files throws an error - artifact of
   remote: Command failed
   remote:   Error:
   remote:     pushrebase failed Conflicts([PushrebaseConflict { left: MPath("c"), right: MPath("c") }])
+  remote: 
   remote:   Root cause:
+  remote:     pushrebase failed Conflicts([PushrebaseConflict { left: MPath("c"), right: MPath("c") }])
+  remote: 
+  remote:   Debug context:
   remote:     "pushrebase failed Conflicts([PushrebaseConflict { left: MPath(\"c\"), right: MPath(\"c\") }])"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

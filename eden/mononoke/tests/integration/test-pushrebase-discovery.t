@@ -84,7 +84,12 @@ Unsuccessful push creates a draft commit on the server
   remote:   Error:
   remote:     hooks failed:
   remote:     always_fail_changeset for 812eca0823f97743f8d85cdef5cf338b54cebb01: This hook always fails
+  remote: 
   remote:   Root cause:
+  remote:     hooks failed:
+  remote:     always_fail_changeset for 812eca0823f97743f8d85cdef5cf338b54cebb01: This hook always fails
+  remote: 
+  remote:   Debug context:
   remote:     "hooks failed:\nalways_fail_changeset for 812eca0823f97743f8d85cdef5cf338b54cebb01: This hook always fails"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

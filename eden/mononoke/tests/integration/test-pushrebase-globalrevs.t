@@ -44,9 +44,17 @@ Check that a force pushrebase it not allowed
   remote: Command failed
   remote:   Error:
   remote:     While doing a force pushrebase
+  remote: 
   remote:   Root cause:
-  remote:     "force_pushrebase is not allowed when assigning Globalrevs"
+  remote:     force_pushrebase is not allowed when assigning Globalrevs
+  remote: 
   remote:   Caused by:
   remote:     force_pushrebase is not allowed when assigning Globalrevs
+  remote: 
+  remote:   Debug context:
+  remote:     Error {
+  remote:         context: "While doing a force pushrebase",
+  remote:         source: "force_pushrebase is not allowed when assigning Globalrevs",
+  remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

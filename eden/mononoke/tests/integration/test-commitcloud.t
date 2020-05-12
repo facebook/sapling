@@ -283,14 +283,10 @@ Make one of the commits public when it shouldn't be.
   remote: Command failed
   remote:   Error:
   remote:     bundle2_resolver error
+  remote: 
   remote:   Root cause:
-  remote:     BonsaiMappingNotFound(
-  remote:         HgChangesetId(
-  remote:             HgNodeHash(
-  remote:                 Sha1(8d621fa1167779dffcefe5cb813fc11f2f272874),
-  remote:             ),
-  remote:         ),
-  remote:     )
+  remote:     Bonsai changeset not found for hg changeset 8d621fa1167779dffcefe5cb813fc11f2f272874
+  remote: 
   remote:   Caused by:
   remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))]
   remote:   Caused by:
@@ -299,6 +295,31 @@ Make one of the commits public when it shouldn't be.
   remote:     While waiting for parents to complete
   remote:   Caused by:
   remote:     Bonsai changeset not found for hg changeset 8d621fa1167779dffcefe5cb813fc11f2f272874
+  remote: 
+  remote:   Debug context:
+  remote:     Error {
+  remote:         context: "bundle2_resolver error",
+  remote:         source: Error {
+  remote:             context: "Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e)))]",
+  remote:             source: SharedError {
+  remote:                 error: Error {
+  remote:                     context: "While creating Changeset Some(HgNodeHash(Sha1(ec61bf312a03c1ae89f421ca46eba7fc8801129e))), uuid: *", (glob)
+  remote:                     source: Error {
+  remote:                         context: "While waiting for parents to complete",
+  remote:                         source: SharedError {
+  remote:                             error: BonsaiMappingNotFound(
+  remote:                                 HgChangesetId(
+  remote:                                     HgNodeHash(
+  remote:                                         Sha1(8d621fa1167779dffcefe5cb813fc11f2f272874),
+  remote:                                     ),
+  remote:                                 ),
+  remote:                             ),
+  remote:                         },
+  remote:                     },
+  remote:                 },
+  remote:             },
+  remote:         },
+  remote:     }
   push failed: stream ended unexpectedly (got 0 bytes, expected 4)
   retrying push with discovery
   searching for changes

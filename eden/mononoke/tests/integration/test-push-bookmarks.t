@@ -88,10 +88,18 @@ Try non fastforward moves (backwards and across branches)
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
+  remote: 
   remote:   Root cause:
-  remote:     "Non fastforward bookmark move from * to *" (glob)
-  remote:   Caused by:
   remote:     Non fastforward bookmark move from * to * (glob)
+  remote: 
+  remote:   Caused by:
+  remote:     Non fastforward bookmark move from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473
+  remote: 
+  remote:   Debug context:
+  remote:     Error {
+  remote:         context: "While doing a push",
+  remote:         source: "Non fastforward bookmark move from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473",
+  remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 66b9c137712a --to master_bookmark
@@ -101,10 +109,18 @@ Try non fastforward moves (backwards and across branches)
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
+  remote: 
   remote:   Root cause:
-  remote:     "Non fastforward bookmark move from * to *" (glob)
-  remote:   Caused by:
   remote:     Non fastforward bookmark move from * to * (glob)
+  remote: 
+  remote:   Caused by:
+  remote:     Non fastforward bookmark move from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to b1a2d38c877a990517a50f9bf928770dd7d3b5b9dbef412d7dafd2ccd2ede0fb
+  remote: 
+  remote:   Debug context:
+  remote:     Error {
+  remote:         context: "While doing a push",
+  remote:         source: "Non fastforward bookmark move from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to b1a2d38c877a990517a50f9bf928770dd7d3b5b9dbef412d7dafd2ccd2ede0fb",
+  remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ hgmn push --non-forward-move --pushvar NON_FAST_FORWARD=true -r 0e7ec5675652 --to withbook
@@ -129,10 +145,18 @@ Try non fastfoward moves on regex bookmark
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
+  remote: 
   remote:   Root cause:
-  remote:     "Non fastforward bookmark move from * to *" (glob)
-  remote:   Caused by:
   remote:     Non fastforward bookmark move from * to * (glob)
+  remote: 
+  remote:   Caused by:
+  remote:     Non fastforward bookmark move from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473
+  remote: 
+  remote:   Debug context:
+  remote:     Error {
+  remote:         context: "While doing a push",
+  remote:         source: "Non fastforward bookmark move from 29da74f8872f4ebf8d5221ad99c6684b24374922a8eb50b4b5bc4309602543b5 to 30c62517c166c69dc058930d510a6924d03d917d4e3a1354213faf4594d6e473",
+  remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
@@ -145,10 +169,18 @@ Try to delete master
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
+  remote: 
   remote:   Root cause:
-  remote:     "Deletion of bookmark master_bookmark is forbidden."
+  remote:     Deletion of bookmark master_bookmark is forbidden.
+  remote: 
   remote:   Caused by:
   remote:     Deletion of bookmark master_bookmark is forbidden.
+  remote: 
+  remote:   Debug context:
+  remote:     Error {
+  remote:         context: "While doing a push",
+  remote:         source: "Deletion of bookmark master_bookmark is forbidden.",
+  remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 

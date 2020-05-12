@@ -38,10 +38,18 @@ Check that a force pushrebase it not allowed
   remote: Command failed
   remote:   Error:
   remote:     While doing a force pushrebase
+  remote: 
   remote:   Root cause:
-  remote:     "force_pushrebase is not allowed as it would skip populating Git mappings"
+  remote:     force_pushrebase is not allowed as it would skip populating Git mappings
+  remote: 
   remote:   Caused by:
   remote:     force_pushrebase is not allowed as it would skip populating Git mappings
+  remote: 
+  remote:   Debug context:
+  remote:     Error {
+  remote:         context: "While doing a force pushrebase",
+  remote:         source: "force_pushrebase is not allowed as it would skip populating Git mappings",
+  remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ hg update -qC .^
@@ -55,7 +63,11 @@ Push another commit
   remote: Command failed
   remote:   Error:
   remote:     pushrebase failed Error(Conflict detected while inserting git mappings (tried inserting: [BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(3fa7acdeb82ac4f96a7bf1e7b5fa8f661c9921954a46164cbbfa828c0485595b)) }]))
+  remote: 
   remote:   Root cause:
+  remote:     pushrebase failed Error(Conflict detected while inserting git mappings (tried inserting: [BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(3fa7acdeb82ac4f96a7bf1e7b5fa8f661c9921954a46164cbbfa828c0485595b)) }]))
+  remote: 
+  remote:   Debug context:
   remote:     "pushrebase failed Error(Conflict detected while inserting git mappings (tried inserting: [BonsaiGitMappingEntry { git_sha1: GitSha1(2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b2b), bcs_id: ChangesetId(Blake2(3fa7acdeb82ac4f96a7bf1e7b5fa8f661c9921954a46164cbbfa828c0485595b)) }]))"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

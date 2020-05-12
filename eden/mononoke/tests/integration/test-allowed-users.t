@@ -64,10 +64,18 @@ push new bookmark
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
+  remote: 
   remote:   Root cause:
-  remote:     "[push] This user `Some(\"aslpavel\")` is not allowed to move `BookmarkName { bookmark: \"X/Y\" }`"
+  remote:     [push] This user `Some("aslpavel")` is not allowed to move `BookmarkName { bookmark: "X/Y" }`
+  remote: 
   remote:   Caused by:
   remote:     [push] This user `Some("aslpavel")` is not allowed to move `BookmarkName { bookmark: "X/Y" }`
+  remote: 
+  remote:   Debug context:
+  remote:     Error {
+  remote:         context: "While doing a push",
+  remote:         source: "[push] This user `Some(\"aslpavel\")` is not allowed to move `BookmarkName { bookmark: \"X/Y\" }`",
+  remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ MOCK_USERNAME="b" hgmn push -r . --create --to X/Y
@@ -86,10 +94,18 @@ push updates existing bookmark
   remote: Command failed
   remote:   Error:
   remote:     While doing a push
+  remote: 
   remote:   Root cause:
-  remote:     "[push] This user `Some(\"aslapvel\")` is not allowed to move `BookmarkName { bookmark: \"A\" }`"
+  remote:     [push] This user `Some("aslapvel")` is not allowed to move `BookmarkName { bookmark: "A" }`
+  remote: 
   remote:   Caused by:
   remote:     [push] This user `Some("aslapvel")` is not allowed to move `BookmarkName { bookmark: "A" }`
+  remote: 
+  remote:   Debug context:
+  remote:     Error {
+  remote:         context: "While doing a push",
+  remote:         source: "[push] This user `Some(\"aslapvel\")` is not allowed to move `BookmarkName { bookmark: \"A\" }`",
+  remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
   $ MOCK_USERNAME="a" hgmn push -r . --to A
@@ -113,7 +129,11 @@ pushrebase
   remote: Command failed
   remote:   Error:
   remote:     [pushrebase] This user `Some("a")` is not allowed to move `BookmarkName { bookmark: "C" }`
+  remote: 
   remote:   Root cause:
+  remote:     [pushrebase] This user `Some("a")` is not allowed to move `BookmarkName { bookmark: "C" }`
+  remote: 
+  remote:   Debug context:
   remote:     "[pushrebase] This user `Some(\"a\")` is not allowed to move `BookmarkName { bookmark: \"C\" }`"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

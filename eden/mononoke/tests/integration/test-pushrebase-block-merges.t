@@ -79,7 +79,13 @@ Try to push merge commit
   remote:     Pushrebase blocked because it contains a merge commit.
   remote:     If you need this for a specific use case please contact
   remote:     the Source Control team at https://fburl.com/27qnuyl2
+  remote: 
   remote:   Root cause:
+  remote:     Pushrebase blocked because it contains a merge commit.
+  remote:     If you need this for a specific use case please contact
+  remote:     the Source Control team at https://fburl.com/27qnuyl2
+  remote: 
+  remote:   Debug context:
   remote:     "Pushrebase blocked because it contains a merge commit.\nIf you need this for a specific use case please contact\nthe Source Control team at https://fburl.com/27qnuyl2"
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]

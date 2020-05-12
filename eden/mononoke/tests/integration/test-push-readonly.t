@@ -84,7 +84,11 @@ create new commit in repo2 and check that push fails
   remote: Command failed
   remote:   Error:
   remote:     Repo is marked as read-only: Set by config option
+  remote: 
   remote:   Root cause:
+  remote:     Repo is marked as read-only: Set by config option
+  remote: 
+  remote:   Debug context:
   remote:     RepoReadOnly(
   remote:         "Set by config option",
   remote:     )

@@ -66,12 +66,23 @@ Do infinitepush (aka commit cloud) push
   remote: Command failed
   remote:   Error:
   remote:     bundle2_resolver error
+  remote: 
   remote:   Root cause:
-  remote:     "Infinitepush is not enabled on this server. Contact Source Control @ FB."
+  remote:     Infinitepush is not enabled on this server. Contact Source Control @ FB.
+  remote: 
   remote:   Caused by:
   remote:     While resolving Changegroup
   remote:   Caused by:
   remote:     Infinitepush is not enabled on this server. Contact Source Control @ FB.
+  remote: 
+  remote:   Debug context:
+  remote:     Error {
+  remote:         context: "bundle2_resolver error",
+  remote:         source: Error {
+  remote:             context: "While resolving Changegroup",
+  remote:             source: "Infinitepush is not enabled on this server. Contact Source Control @ FB.",
+  remote:         },
+  remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 

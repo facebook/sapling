@@ -136,7 +136,11 @@ Exercise the limit (6 bookmarks should fail)
   remote: Command failed
   remote:   Error:
   remote:     Bookmark query was truncated after 6 results, use a more specific prefix search.
+  remote: 
   remote:   Root cause:
+  remote:     Bookmark query was truncated after 6 results, use a more specific prefix search.
+  remote: 
+  remote:   Debug context:
   remote:     "Bookmark query was truncated after 6 results, use a more specific prefix search."
   abort: unexpected response: empty string
   [255]

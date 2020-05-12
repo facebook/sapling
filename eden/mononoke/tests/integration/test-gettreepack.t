@@ -103,7 +103,11 @@ because everything has been already downloaded.
   remote: Command failed
   remote:   Error:
   remote:     Blob is missing: hgmanifest.sha1.1111111111111111111111111111111111111111
+  remote: 
   remote:   Root cause:
+  remote:     Blob is missing: hgmanifest.sha1.1111111111111111111111111111111111111111
+  remote: 
+  remote:   Debug context:
   remote:     Missing(
   remote:         "hgmanifest.sha1.1111111111111111111111111111111111111111",
   remote:     )

@@ -112,16 +112,30 @@ Verify that if we fail to upload LFS blobs first, the push fails
   remote: Command failed
   remote:   Error:
   remote:     While resolving Changegroup
+  remote: 
   remote:   Root cause:
-  remote:     Missing(
-  remote:         "alias.sha256.4200cad32a33c257258c559e80d19eedb89df109377863c6c16cf8416918b974",
-  remote:     )
+  remote:     Blob is missing: alias.sha256.4200cad32a33c257258c559e80d19eedb89df109377863c6c16cf8416918b974
+  remote: 
   remote:   Caused by:
   remote:     While uploading File Blobs
   remote:   Caused by:
   remote:     While decoding delta cache for file id ff714056cdbb88eef0578934980d740a05be8384, path f
   remote:   Caused by:
   remote:     Blob is missing: alias.sha256.4200cad32a33c257258c559e80d19eedb89df109377863c6c16cf8416918b974
+  remote: 
+  remote:   Debug context:
+  remote:     Error {
+  remote:         context: "While resolving Changegroup",
+  remote:         source: Error {
+  remote:             context: "While uploading File Blobs",
+  remote:             source: Error {
+  remote:                 context: "While decoding delta cache for file id ff714056cdbb88eef0578934980d740a05be8384, path f",
+  remote:                 source: Missing(
+  remote:                     "alias.sha256.4200cad32a33c257258c559e80d19eedb89df109377863c6c16cf8416918b974",
+  remote:                 ),
+  remote:             },
+  remote:         },
+  remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
@@ -194,18 +208,10 @@ Change "sha256:oid" to an another valid oid to check sha1 consisnency
   remote: Command failed
   remote:   Error:
   remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(77f499cb064550703c65d943b8ce1b982a1293cd)))]
+  remote: 
   remote:   Root cause:
-  remote:     InconsistentEntryHash(
-  remote:         FilePath(
-  remote:             MPath("inconsistent_file"),
-  remote:         ),
-  remote:         HgNodeHash(
-  remote:             Sha1(ef5953d600ca68bacb539eab8dffb415441213bb),
-  remote:         ),
-  remote:         HgNodeHash(
-  remote:             Sha1(232ec9b974a9df3d48c2b740396691fb8939976c),
-  remote:         ),
-  remote:     )
+  remote:     Inconsistent node hash for entry: path file 'inconsistent_file', provided: ef5953d600ca68bacb539eab8dffb415441213bb, computed: 232ec9b974a9df3d48c2b740396691fb8939976c
+  remote: 
   remote:   Caused by:
   remote:     While creating Changeset Some(HgNodeHash(Sha1(77f499cb064550703c65d943b8ce1b982a1293cd))), uuid: * (glob)
   remote:   Caused by:
@@ -216,6 +222,38 @@ Change "sha256:oid" to an another valid oid to check sha1 consisnency
   remote:     While walking dependencies of Root Manifest with id HgManifestId(HgNodeHash(Sha1(a1da9053000e0fb9217762d82ba5db793cfb26ce)))
   remote:   Caused by:
   remote:     Inconsistent node hash for entry: path file 'inconsistent_file', provided: ef5953d600ca68bacb539eab8dffb415441213bb, computed: 232ec9b974a9df3d48c2b740396691fb8939976c
+  remote: 
+  remote:   Debug context:
+  remote:     Error {
+  remote:         context: "Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(77f499cb064550703c65d943b8ce1b982a1293cd)))]",
+  remote:         source: SharedError {
+  remote:             error: Error {
+  remote:                 context: "While creating Changeset Some(HgNodeHash(Sha1(77f499cb064550703c65d943b8ce1b982a1293cd))), uuid: *", (glob)
+  remote:                 source: Error {
+  remote:                     context: "While processing entries",
+  remote:                     source: Error {
+  remote:                         context: "While uploading child entries",
+  remote:                         source: Error {
+  remote:                             context: "While walking dependencies of Root Manifest with id HgManifestId(HgNodeHash(Sha1(a1da9053000e0fb9217762d82ba5db793cfb26ce)))",
+  remote:                             source: SharedError {
+  remote:                                 error: InconsistentEntryHash(
+  remote:                                     FilePath(
+  remote:                                         MPath("inconsistent_file"),
+  remote:                                     ),
+  remote:                                     HgNodeHash(
+  remote:                                         Sha1(ef5953d600ca68bacb539eab8dffb415441213bb),
+  remote:                                     ),
+  remote:                                     HgNodeHash(
+  remote:                                         Sha1(232ec9b974a9df3d48c2b740396691fb8939976c),
+  remote:                                     ),
+  remote:                                 ),
+  remote:                             },
+  remote:                         },
+  remote:                     },
+  remote:                 },
+  remote:             },
+  remote:         },
+  remote:     }
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
 
