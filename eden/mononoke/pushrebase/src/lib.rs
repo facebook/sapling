@@ -114,7 +114,7 @@ pub enum ErrorKind {
 pub enum PushrebaseError {
     #[error("Conflicts while pushrebasing: {0:?}")]
     Conflicts(Vec<PushrebaseConflict>),
-    #[error("Potential case conflict while pushrebasing: {0:?}")]
+    #[error("PotentialCaseConflict: the change this commit introduces at {0} may conflict with other commits. Rebase and retry.")]
     PotentialCaseConflict(MPath),
     #[error("Pushrebase over merge")]
     RebaseOverMerge,

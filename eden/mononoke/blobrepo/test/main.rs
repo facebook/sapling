@@ -887,7 +887,8 @@ fn test_case_conflict_in_manifest(fb: FacebookInit) {
                 ))
                 .compat()
                 .await
-                .unwrap(),
+                .unwrap()
+                .is_some(),
                 *result,
                 "{} expected to {} cause conflict",
                 path,
@@ -2016,7 +2017,7 @@ mod case_conflicts {
 
         assert_matches!(
             res.unwrap_err().downcast_ref::<ErrorKind>(),
-            Some(ErrorKind::CaseConflict(_))
+            Some(ErrorKind::InternalCaseConflict(_))
         );
 
         Ok(())
@@ -2046,7 +2047,7 @@ mod case_conflicts {
 
         assert_matches!(
             res.unwrap_err().downcast_ref::<ErrorKind>(),
-            Some(ErrorKind::CaseConflict(_))
+            Some(ErrorKind::ExternalCaseConflict(_, _))
         );
 
         Ok(())

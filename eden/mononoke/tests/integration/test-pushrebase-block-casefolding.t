@@ -24,9 +24,21 @@ Create commit which only differs in case
   $ hg ci -Aqm commit1
 
 Push the commit
-  $ hgmn push -q -r . --to master_bookmark
+  $ hgmn push -r . --to master_bookmark
+  pushing rev 143fbdc73580 to destination ssh://user@dummy/repo bookmark master_bookmark
+  searching for changes
+  remote: Command failed
+  remote:   Error:
+  remote:     Error while uploading data for changesets, hashes: [HgChangesetId(HgNodeHash(Sha1(143fbdc73580e33c8432457df2a10e1038936a72)))]
+  remote:   Root cause:
+  remote:     InternalCaseConflict(
+  remote:         MPath("foo.txt"),
+  remote:     )
+  remote:   Caused by:
+  remote:     While creating Changeset Some(HgNodeHash(Sha1(143fbdc73580e33c8432457df2a10e1038936a72))), uuid: * (glob)
+  remote:   Caused by:
+  remote:     While computing changed files
+  remote:   Caused by:
+  remote:     CaseConflict: the changes introduced by this commit have conflicting case. The first offending path is 'foo.txt'. Resolve the conflict.
   abort: stream ended unexpectedly (got 0 bytes, expected 4)
   [255]
-
-Check that casefolding was reason for push block
-  $ grep -q "Caused by: Case conflict in a commit" "$TESTTMP"/mononoke.out

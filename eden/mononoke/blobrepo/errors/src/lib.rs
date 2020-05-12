@@ -117,6 +117,8 @@ pub enum ErrorKind {
         to_path: MPath,
         to_node: HgFileNodeId,
     },
-    #[error("Case conflict in a commit")]
-    CaseConflict(MPath),
+    #[error("CaseConflict: the changes introduced by this commit have conflicting case. The first offending path is '{0}'. Resolve the conflict.")]
+    InternalCaseConflict(MPath),
+    #[error("CaseConflict: the changes introduced by this commit conflict with existing files in the repository. The first conflicting path in this commit was '{0}', and conflicted with '{1}' in the repository. Resolve the conflict.")]
+    ExternalCaseConflict(MPath, MPath),
 }

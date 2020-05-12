@@ -889,7 +889,7 @@ impl BlobRepo {
         parent_mf_id: HgManifestId,
         child_mf_id: HgManifestId,
         path: MPath,
-    ) -> impl Future<Item = bool, Error = Error> {
+    ) -> impl Future<Item = Option<MPath>, Error = Error> {
         let repo = self.clone();
         let child_mf_id = child_mf_id.clone();
         parent_mf_id
@@ -900,7 +900,7 @@ impl BlobRepo {
                     (None, mf, path.into_iter()),
                     move |(cur_path, mf, mut elements): (Option<MPath>, _, _)| {
                         let element = match elements.next() {
-                            None => return future::ok(Loop::Break(false)).boxify(),
+                            None => return future::ok(Loop::Break(None)).boxify(),
                             Some(element) => element,
                         };
 
@@ -908,7 +908,7 @@ impl BlobRepo {
                             Some(entry) => {
                                 let cur_path = MPath::join_opt_element(cur_path.as_ref(), &element);
                                 match entry {
-                                    Entry::Leaf(..) => future::ok(Loop::Break(false)).boxify(),
+                                    Entry::Leaf(..) => future::ok(Loop::Break(None)).boxify(),
                                     Entry::Tree(manifest_id) => manifest_id
                                         .load(ctx.clone(), repo.blobstore())
                                         .from_err()
@@ -948,7 +948,11 @@ impl BlobRepo {
                                         potential_conflicts,
                                     )
                                     .collect()
-                                    .map(|entries| Loop::Break(!entries.is_empty()))
+                                    .map(|entries| {
+                                        // NOTE: We flatten here because we cannot have a conflict
+                                        // at the root.
+                                        Loop::Break(entries.into_iter().next().and_then(|x| x.0))
+                                    })
                                     .boxify()
                             }
                         }

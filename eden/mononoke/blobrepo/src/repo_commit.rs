@@ -547,8 +547,8 @@ pub async fn check_case_conflicts(
         )
         .await?;
 
-    if let Some(path) = mononoke_types::check_case_conflicts(added_files.iter()) {
-        return Err(ErrorKind::CaseConflict(path).into());
+    if let Some(conflict) = mononoke_types::check_case_conflicts(added_files.iter()) {
+        return Err(ErrorKind::InternalCaseConflict(conflict).into());
     }
 
     let parent_root_mf = match parent_root_mf {
@@ -560,25 +560,25 @@ pub async fn check_case_conflicts(
 
     let mut case_conflict_checks = added_files
         .into_iter()
-        .map(|f| async move {
-            let add_conflict = repo
+        .map(|path| async move {
+            let conflicting = repo
                 .check_case_conflict_in_manifest(
                     ctx.clone(),
                     parent_root_mf,
                     child_root_mf,
-                    f.clone(),
+                    path.clone(),
                 )
                 .compat()
                 .await?;
 
-            Result::<_, Error>::Ok((add_conflict, f))
+            Result::<_, Error>::Ok((path, conflicting))
         })
         .collect::<FuturesUnordered<_>>();
 
     while let Some(element) = case_conflict_checks.next().await {
-        let (add_conflict, path) = element?;
-        if add_conflict {
-            return Err(ErrorKind::CaseConflict(path).into());
+        let (path, conflicting) = element?;
+        if let Some(conflicting) = conflicting {
+            return Err(ErrorKind::ExternalCaseConflict(path, conflicting).into());
         }
     }
 
