@@ -23,7 +23,9 @@ pub struct AsyncLimiter {
 }
 
 impl AsyncLimiter {
-    pub fn new<A, C>(limiter: DirectRateLimiter<A, C>, flavor: TokioFlavor) -> Self
+    // NOTE: This function is async because it requires a Tokio runtme to spawn things. The best
+    // way to require a Tokio runtime to be present is to just make the function async.
+    pub async fn new<A, C>(limiter: DirectRateLimiter<A, C>, flavor: TokioFlavor) -> Self
     where
         A: Algorithm<C::Instant> + 'static,
         C: Clock + Send + 'static,
@@ -92,7 +94,7 @@ mod test {
     #[tokio::test]
     async fn test_access_enters_queue_lazily() -> Result<(), Error> {
         let limiter = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
-        let limiter = AsyncLimiter::new(limiter, TokioFlavor::V02);
+        let limiter = AsyncLimiter::new(limiter, TokioFlavor::V02).await;
 
         for _ in 0..10 {
             let _ = limiter.access()?;

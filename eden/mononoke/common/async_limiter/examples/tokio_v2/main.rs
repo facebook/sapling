@@ -16,7 +16,7 @@ use async_limiter::{AsyncLimiter, TokioFlavor};
 #[tokio::main]
 async fn main() -> Result<(), Error> {
     let limiter = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
-    let limiter = AsyncLimiter::new(limiter, TokioFlavor::V02);
+    let limiter = AsyncLimiter::new(limiter, TokioFlavor::V02).await;
 
     let futs = (0..10).map(|i| {
         let limiter = limiter.clone();

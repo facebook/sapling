@@ -50,22 +50,25 @@ pub struct ThrottledBlob<T: Blobstore + Clone> {
     options: ThrottleOptions,
 }
 
-fn limiter(qps: Option<NonZeroU32>) -> AsyncLimiter {
+async fn limiter(qps: Option<NonZeroU32>) -> AsyncLimiter {
     match qps {
-        Some(qps) => AsyncLimiter::new(
-            DirectRateLimiter::<LeakyBucket>::per_second(qps),
-            TokioFlavor::V01,
-        ),
-        None => AsyncLimiter::new(Allower::ratelimiter(), TokioFlavor::V01),
+        Some(qps) => {
+            AsyncLimiter::new(
+                DirectRateLimiter::<LeakyBucket>::per_second(qps),
+                TokioFlavor::V01,
+            )
+            .await
+        }
+        None => AsyncLimiter::new(Allower::ratelimiter(), TokioFlavor::V01).await,
     }
 }
 
 impl<T: Blobstore + Clone> ThrottledBlob<T> {
-    pub fn new(blobstore: T, options: ThrottleOptions) -> Self {
+    pub async fn new(blobstore: T, options: ThrottleOptions) -> Self {
         Self {
             blobstore,
-            read_limiter: limiter(options.read_qps),
-            write_limiter: limiter(options.write_qps),
+            read_limiter: limiter(options.read_qps).await,
+            write_limiter: limiter(options.write_qps).await,
             options,
         }
     }

@@ -24,22 +24,28 @@ fn main() -> Result<(), Error> {
 
     let fut = lazy(|| {
         let limiter = DirectRateLimiter::<LeakyBucket>::per_second(nonzero!(5u32));
-        let limiter = AsyncLimiter::new(limiter, TokioFlavor::V01);
-
-        let futs = (0..10)
-            .map(|i| {
-                let limiter = limiter.clone();
-                repeat(())
-                    .and_then(move |_| match limiter.access() {
-                        Ok(fut) => fut.boxed().compat().left_future(),
-                        Err(e) => Err(e).into_future().right_future(),
+        AsyncLimiter::new(limiter, TokioFlavor::V01)
+            .map(Ok)
+            .boxed()
+            .compat()
+            .and_then(|limiter| {
+                let futs = (0..10)
+                    .map(|i| {
+                        let limiter = limiter.clone();
+                        repeat(())
+                            .and_then(move |_| match limiter.access() {
+                                Ok(fut) => fut.boxed().compat().left_future(),
+                                Err(e) => Err(e).into_future().right_future(),
+                            })
+                            .map(move |()| {
+                                println!("[{}] {}", i, Local::now().format("%H:%M:%S%.3f"))
+                            })
+                            .for_each(|_| Ok(()))
                     })
-                    .map(move |()| println!("[{}] {}", i, Local::now().format("%H:%M:%S%.3f")))
-                    .for_each(|_| Ok(()))
-            })
-            .collect::<Vec<_>>();
+                    .collect::<Vec<_>>();
 
-        join_all(futs).map(|_| ())
+                join_all(futs).map(|_| ())
+            })
     });
 
     runtime.block_on(fut)?;

@@ -18,7 +18,6 @@ use fbinit::FacebookInit;
 use filestore::{self, FetchKey, FilestoreConfig, StoreRequest};
 use futures::{
     compat::Future01CompatExt,
-    future::lazy,
     stream::{self, StreamExt, TryStreamExt},
 };
 use futures_old::Stream;
@@ -264,13 +263,9 @@ async fn get_blob<'a>(
         .map(|v| v.parse())
         .transpose()?;
 
-    let blob: Arc<dyn Blobstore> = lazy(move |_| {
-        let blob = ThrottledBlob::new(blob, ThrottleOptions::new(read_qps, write_qps));
-        Arc::new(blob)
-    })
-    .await;
+    let blob = ThrottledBlob::new(blob, ThrottleOptions::new(read_qps, write_qps)).await;
 
-    Ok(blob)
+    Ok(Arc::new(blob))
 }
 
 #[fbinit::main]
