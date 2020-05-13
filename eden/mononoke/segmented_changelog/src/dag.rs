@@ -5,6 +5,8 @@
  * GNU General Public License version 2.
  */
 
+#![deny(warnings)]
+
 use std::sync::Arc;
 
 use anyhow::{format_err, Result};
@@ -20,10 +22,6 @@ use dag::{self, Id as Vertex, InProcessIdDag, Level};
 use blobrepo::ChangesetFetcher;
 use context::CoreContext;
 use mononoke_types::{ChangesetId, RepositoryId};
-use sql_construct::SqlConstruct;
-
-#[cfg(test)]
-use blobrepo::BlobRepo;
 
 use crate::idmap::IdMap;
 
@@ -145,16 +143,6 @@ impl Dag {
             Some(vertex) => Ok(vertex),
         }
     }
-
-    #[cfg(test)]
-    pub fn new_in_process(blobrepo: &BlobRepo) -> Result<Self> {
-        Ok(Dag {
-            repo_id: blobrepo.get_repoid(),
-            iddag: InProcessIdDag::new_in_process(),
-            idmap: Arc::new(IdMap::with_sqlite_in_memory()?),
-            changeset_fetcher: blobrepo.get_changeset_fetcher(),
-        })
-    }
 }
 
 #[cfg(test)]
@@ -163,11 +151,24 @@ mod tests {
 
     use fbinit::FacebookInit;
 
+    use blobrepo::BlobRepo;
     use fixtures::{linear, merge_even, merge_uneven};
     use futures::compat::{Future01CompatExt, Stream01CompatExt};
     use futures::StreamExt;
     use revset::AncestorsNodeStream;
+    use sql_construct::SqlConstruct;
     use tests_utils::resolve_cs_id;
+
+    impl Dag {
+        pub fn new_in_process(blobrepo: &BlobRepo) -> Result<Self> {
+            Ok(Dag {
+                repo_id: blobrepo.get_repoid(),
+                iddag: InProcessIdDag::new_in_process(),
+                idmap: Arc::new(IdMap::with_sqlite_in_memory()?),
+                changeset_fetcher: blobrepo.get_changeset_fetcher(),
+            })
+        }
+    }
 
     async fn validate_build_up_idmap(
         ctx: CoreContext,
