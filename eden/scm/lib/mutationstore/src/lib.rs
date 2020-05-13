@@ -28,10 +28,13 @@
 //! be ignored.
 
 use anyhow::Result;
+use dag::namedag::MemNameDag;
+use dag::VertexName;
 use indexedlog::{
     log::{self as ilog, IndexDef, IndexOutput, Log},
     DefaultOpenOptions,
 };
+use std::collections::HashSet;
 use std::io::Cursor;
 use std::path::Path;
 use types::mutation::MutationEntry;
@@ -157,11 +160,63 @@ impl MutationStore {
         };
         Ok(mutation_entry)
     }
+
+    /// Return a connected component that includes `nodes` and represents 1:1
+    /// commit replacement relations.  The returned graph supports graph
+    /// operations like common ancestors, heads, roots, etc. Parents in the
+    /// graph are predecessors.
+    ///
+    /// Non 1:1 relations like split or fold are ignored since the returned
+    /// graph cannot express them efficiently.
+    pub fn get_dag(&self, nodes: Vec<Node>) -> Result<MemNameDag> {
+        // Include successors recursively.
+        let mut to_visit = nodes;
+        let mut connected = HashSet::new();
+        while let Some(node) = to_visit.pop() {
+            if !connected.insert(node.clone()) {
+                continue;
+            }
+            for entry in self.log.lookup(INDEX_PRED, &node)? {
+                let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
+                // Visit successors for 1:1 relationships.
+                if entry.is_one_to_one() {
+                    to_visit.push(entry.succ);
+                }
+            }
+            for entry in self.log.lookup(INDEX_SUCC, &node)? {
+                let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
+                // Visit predecessors for 1:1 relationships.
+                if entry.is_one_to_one() {
+                    to_visit.push(entry.preds[0]);
+                }
+            }
+        }
+        let parent_func = |node| -> Result<Vec<VertexName>> {
+            let mut result = Vec::new();
+            for entry in self.log.lookup(INDEX_SUCC, &node)? {
+                let entry = MutationEntry::deserialize(&mut Cursor::new(entry?))?;
+                if entry.is_one_to_one() {
+                    result.push(VertexName::copy_from(entry.preds[0].as_ref()));
+                }
+            }
+            Ok(result)
+        };
+
+        let mut dag = MemNameDag::new();
+        let mut heads = connected
+            .into_iter()
+            .map(|s| VertexName::copy_from(s.as_ref()))
+            .collect::<Vec<_>>();
+        heads.sort();
+        dag.add_heads(parent_func, &heads)?;
+        Ok(dag)
+    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
+    use dag::namedag::NameDagAlgorithm;
     use rand::SeedableRng;
     use rand_chacha::ChaChaRng;
     use tempdir::TempDir;
@@ -261,5 +316,57 @@ mod tests {
                 &Box::from(&b"note about folding"[..])
             );
         }
+    }
+
+    #[test]
+    fn test_dag() -> Result<()> {
+        let dir = TempDir::new("mutationstore")?;
+        let mut ms = MutationStore::open(dir.path())?;
+        let parents = drawdag::parse(
+            r#"
+             D E Z
+             |\| |
+             B C Y
+             |/  |
+             A   X
+             "#,
+        );
+        // str (length 1) -> Node
+        let n = |s: &str| -> Node { Node::from_slice(s.repeat(Node::len()).as_bytes()).unwrap() };
+        let mut iter = parents.iter().collect::<Vec<_>>();
+        iter.sort();
+        for (name, parents) in iter {
+            let node = n(name);
+            for parent in parents {
+                let parent = n(parent);
+                ms.add(&MutationEntry {
+                    succ: node,
+                    preds: vec![parent],
+                    split: vec![],
+                    op: "rewrite".into(),
+                    user: "test".into(),
+                    time: 123456789,
+                    tz: -7200,
+                    extra: vec![],
+                })?;
+            }
+        }
+
+        let dag = ms.get_dag(vec![n("B")])?;
+        assert_eq!(dag.all()?.count()?, 5); // A B C D E
+        assert_eq!(
+            renderdag::render_namedag(&dag, |v| Some(format!("({})", v.as_ref()[0] as char)))?,
+            r#"
+            o  4545454545454545454545454545454545454545 (E)
+            │
+            │ o  4444444444444444444444444444444444444444 (D)
+            ╭─┤
+            o │  4343434343434343434343434343434343434343 (C)
+            │ │
+            │ o  4242424242424242424242424242424242424242 (B)
+            ├─╯
+            o  4141414141414141414141414141414141414141 (A)"#
+        );
+        Ok(())
     }
 }

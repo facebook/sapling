@@ -135,4 +135,16 @@ impl MutationEntry {
             extra,
         })
     }
+
+    /// Return true if this represents an 1:1 commit replacement.
+    /// A split or a fold are not 1:1 replacement.
+    ///
+    /// Note: Resolving divergence should use multiple 1:1 records
+    /// and are considered 1:1 replacements.
+    ///
+    /// If this function returns true, `preds` is ensured to only
+    /// have one item.
+    pub fn is_one_to_one(&self) -> bool {
+        self.split.is_empty() && self.preds.len() == 1
+    }
 }

@@ -5,13 +5,16 @@ edition = "2018"
 
 [dependencies]
 anyhow = "1.0.20"
+dag = { path = "../dag" }
 indexedlog = { path = "../indexedlog" }
 thiserror = "1.0.5"
 types = { path = "../types" }
 vlqencoding = { path = "../vlqencoding" }
 
 [dev-dependencies]
+drawdag = { path = "../drawdag" }
 rand = "0.7"
 rand_chacha = "0.2"
+renderdag = { path = "../renderdag" }
 tempdir = "0.3.7"
 types = { path = "../types", default-features = false, features = ["for-tests"] }
