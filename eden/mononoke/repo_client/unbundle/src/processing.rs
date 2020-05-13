@@ -32,6 +32,7 @@ use scuba_ext::ScubaSampleBuilderExt;
 use slog::{debug, o, warn};
 use stats::prelude::*;
 use std::collections::HashSet;
+use tunables::tunables;
 
 use crate::rate_limits::enforce_commit_rate_limits;
 use crate::response::{
@@ -139,10 +140,19 @@ async fn run_push(
     let PostResolvePush {
         changegroup_id,
         bookmark_pushes,
+        mutations,
         maybe_raw_bundle2_id,
         non_fast_forward_policy,
         uploaded_bonsais: _,
+        uploaded_hg_changeset_ids,
     } = action;
+
+    if tunables().get_mutation_accept_for_infinitepush() {
+        repo.hg_mutation_store()
+            .add_entries(ctx, uploaded_hg_changeset_ids, mutations)
+            .await
+            .context("Failed to store mutation data")?;
+    }
 
     let bookmark_ids = bookmark_pushes.iter().map(|bp| bp.part_id).collect();
     let reason = BookmarkUpdateReason::Push {
@@ -218,8 +228,10 @@ async fn run_infinitepush(
     let PostResolveInfinitePush {
         changegroup_id,
         maybe_bookmark_push,
+        mutations,
         maybe_raw_bundle2_id,
         uploaded_bonsais: _,
+        uploaded_hg_changeset_ids,
         is_cross_backend_sync,
     } = action;
 
@@ -231,6 +243,13 @@ async fn run_infinitepush(
             maybe_raw_bundle2_id,
         )
         .await?;
+    }
+
+    if tunables().get_mutation_accept_for_infinitepush() {
+        repo.hg_mutation_store()
+            .add_entries(ctx, uploaded_hg_changeset_ids, mutations)
+            .await
+            .context("Failed to store mutation data")?;
     }
 
     let bookmark_push = match maybe_bookmark_push {

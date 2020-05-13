@@ -13,7 +13,7 @@ use anyhow::Result;
 use cached_config::ConfigHandle;
 use once_cell::sync::OnceCell;
 use slog::{debug, warn, Logger};
-use std::sync::atomic::AtomicI64;
+use std::sync::atomic::{AtomicBool, AtomicI64};
 
 use tunables_derive::Tunables;
 use tunables_structs::Tunables as TunablesStruct;
@@ -27,6 +27,9 @@ pub fn tunables() -> &'static MononokeTunables {
 
 #[derive(Tunables, Default, Debug)]
 pub struct MononokeTunables {
+    mutation_advertise_for_infinitepush: AtomicBool,
+    mutation_accept_for_infinitepush: AtomicBool,
+    mutation_generate_for_draft: AtomicBool,
     warm_bookmark_cache_delay: AtomicI64,
     max_scuba_msg_length: AtomicI64,
     wishlist_read_qps: AtomicI64,

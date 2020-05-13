@@ -27,6 +27,7 @@ repo_read_write_status = { path = "repo_read_write_status" }
 revisionstore_types = { path = "../../scm/lib/revisionstore/types" }
 scuba_ext = { path = "../common/scuba_ext" }
 streaming_clone = { path = "streaming_clone" }
+tunables = { path = "../tunables" }
 unbundle = { path = "unbundle" }
 bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 cached_config = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

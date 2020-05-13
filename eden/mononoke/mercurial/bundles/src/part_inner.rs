@@ -46,6 +46,7 @@ lazy_static! {
         m.insert(PartHeaderType::B2xInfinitepush, hashset!{
             "pushbackbookmarks", "cgversion", "bookmark", "bookprevnode", "create", "force"});
         m.insert(PartHeaderType::B2xInfinitepushBookmarks, hashset!{});
+        m.insert(PartHeaderType::B2xInfinitepushMutation, hashset!{});
         m.insert(PartHeaderType::B2xCommonHeads, hashset!{});
         m.insert(PartHeaderType::B2xRebase, hashset!{"onto", "newhead", "cgversion", "obsmarkerversions"});
         m.insert(PartHeaderType::B2xRebasePack, hashset!{"version", "cache", "category"});
@@ -157,6 +158,11 @@ pub fn inner_stream<R: AsyncRead + BufRead + 'static + Send>(
             let bookmarks_stream =
                 wrapped_stream.decode(infinitepush::InfinitepushBookmarksUnpacker::new());
             Bundle2Item::B2xInfinitepushBookmarks(header, bookmarks_stream.boxify())
+        }
+        &PartHeaderType::B2xInfinitepushMutation => {
+            let mutation_stream =
+                wrapped_stream.decode(infinitepush::InfinitepushMutationUnpacker::new());
+            Bundle2Item::B2xInfinitepushMutation(header, mutation_stream.boxify())
         }
         &PartHeaderType::B2xTreegroup2 => {
             let wirepack_stream = wrapped_stream.decode(wirepack::unpacker::new(

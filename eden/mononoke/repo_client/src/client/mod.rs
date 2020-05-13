@@ -69,6 +69,7 @@ use time_ext::DurationExt;
 use tokio_old::timer::timeout::Error as TimeoutError;
 use tokio_old::util::FutureExt as TokioFutureExt;
 use tracing::{trace_args, Traced};
+use tunables::tunables;
 
 mod logging;
 
@@ -242,6 +243,11 @@ fn bundle2caps(support_bundle2_listkeys: bool) -> String {
         if support_bundle2_listkeys {
             caps.push(("listkeys", vec![]))
         }
+
+        if tunables().get_mutation_advertise_for_infinitepush() {
+            caps.push(("b2x:infinitepushmutation", vec![]));
+        }
+
         caps
     };
 

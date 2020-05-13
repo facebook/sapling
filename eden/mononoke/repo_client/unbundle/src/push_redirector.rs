@@ -162,9 +162,11 @@ impl PushRedirector {
         let PostResolvePush {
             changegroup_id,
             bookmark_pushes,
+            mutations: _,
             maybe_raw_bundle2_id,
             non_fast_forward_policy,
             uploaded_bonsais,
+            uploaded_hg_changeset_ids: _,
         } = orig;
 
         let uploaded_bonsais = self
@@ -179,9 +181,11 @@ impl PushRedirector {
         Ok(PostResolvePush {
             changegroup_id,
             bookmark_pushes,
+            mutations: Default::default(),
             maybe_raw_bundle2_id,
             non_fast_forward_policy,
             uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
+            uploaded_hg_changeset_ids: Default::default(),
         })
     }
 
@@ -264,8 +268,10 @@ impl PushRedirector {
         let PostResolveInfinitePush {
             changegroup_id,
             maybe_bookmark_push,
+            mutations: _,
             maybe_raw_bundle2_id,
             uploaded_bonsais,
+            uploaded_hg_changeset_ids: _,
             is_cross_backend_sync,
         } = orig;
         let uploaded_bonsais = self
@@ -282,8 +288,10 @@ impl PushRedirector {
         Ok(PostResolveInfinitePush {
             changegroup_id,
             maybe_bookmark_push,
+            mutations: Default::default(),
             maybe_raw_bundle2_id,
             uploaded_bonsais: uploaded_bonsais.values().cloned().map(|bcs| bcs).collect(),
+            uploaded_hg_changeset_ids: Default::default(),
             is_cross_backend_sync,
         })
     }

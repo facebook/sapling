@@ -14,7 +14,7 @@ fi
 
 REPOID=0
 REPONAME=repo
-COMMON_ARGS=(--skip-caching --mysql-master-only --disable-tunables)
+COMMON_ARGS=(--skip-caching --mysql-master-only --tunables-config "file:$TESTTMP/mononoke_tunables.json")
 TEST_CERTDIR="${HGTEST_CERTDIR:-"$TEST_CERTS"}"
 
 function get_free_socket {
@@ -468,6 +468,8 @@ EOF
     chmod a+x "$TESTTMP/mononoke_hgcli"
     MONONOKE_HGCLI="$TESTTMP/mononoke_hgcli"
   fi
+
+  echo "{}" > "$TESTTMP/mononoke_tunables.json"
 
   ALLOWED_USERNAME="${ALLOWED_USERNAME:-myusername0}"
 

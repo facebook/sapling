@@ -38,6 +38,7 @@ use limits::types::RateLimit;
 use mercurial_bundles::{
     Bundle2Item, PartHeader, PartHeaderInner, PartHeaderType, PartId, StreamHeader,
 };
+use mercurial_mutation::HgMutationEntry;
 use mercurial_revlog::changeset::RevlogChangeset;
 use mercurial_types::{
     blobs::{ContentBlobInfo, HgBlobEntry},
@@ -74,6 +75,7 @@ type Filelogs = HashMap<HgNodeKey, Shared<OldBoxFuture<(HgBlobEntry, RepoPath), 
 type ContentBlobs = HashMap<HgNodeKey, ContentBlobInfo>;
 type Manifests = HashMap<HgNodeKey, <TreemanifestEntry as UploadableHgBlob>::Value>;
 pub type UploadedBonsais = HashSet<BonsaiChangeset>;
+pub type UploadedHgChangesetIds = HashSet<HgChangesetId>;
 
 // This is to match the core hg behavior from https://fburl.com/jf3iyl7y
 // Mercurial substitutes the `onto` parameter with this bookmark name when
@@ -175,17 +177,21 @@ impl From<BundleResolverError> for Error {
 pub struct PostResolvePush {
     pub changegroup_id: Option<PartId>,
     pub bookmark_pushes: Vec<PlainBookmarkPush<ChangesetId>>,
+    pub mutations: Vec<HgMutationEntry>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
     pub non_fast_forward_policy: NonFastForwardPolicy,
     pub uploaded_bonsais: UploadedBonsais,
+    pub uploaded_hg_changeset_ids: UploadedHgChangesetIds,
 }
 
 /// Data, needed to perform post-resolve `InfinitePush` action
 pub struct PostResolveInfinitePush {
     pub changegroup_id: Option<PartId>,
     pub maybe_bookmark_push: Option<InfiniteBookmarkPush<ChangesetId>>,
+    pub mutations: Vec<HgMutationEntry>,
     pub maybe_raw_bundle2_id: Option<RawBundle2Id>,
     pub uploaded_bonsais: UploadedBonsais,
+    pub uploaded_hg_changeset_ids: UploadedHgChangesetIds,
     pub is_cross_backend_sync: bool,
 }
 
@@ -383,6 +389,11 @@ async fn resolve_push<'r>(
     let maybe_hg_bookmark_push =
         try_collect_all_bookmark_pushes(pushkeys, infinitepush_bp.cloned())?;
 
+    let (mutations, bundle2) = resolver
+        .maybe_resolve_infinitepush_mutation(bundle2)
+        .await
+        .context("While resolving InfinitepushMutation")?;
+
     let (cg_and_manifests, bundle2) = if let Some(cg_push) = cg_push {
         let (manifests, bundle2) = resolver
             .resolve_b2xtreegroup2(bundle2)
@@ -393,16 +404,16 @@ async fn resolve_push<'r>(
         (None, bundle2)
     };
 
-    let (changegroup_id, uploaded_bonsais) = if let Some((cg_push, manifests)) = cg_and_manifests {
-        let changegroup_id = Some(cg_push.part_id);
-        let uploaded_bonsais = resolver.upload_changesets(cg_push, manifests).await?;
-
-        // Note: we do not care about `_uploaded_hg_changesets`, as we currently
-        // do not run hooks on pure pushes. This probably has to be changed later.
-        (changegroup_id, uploaded_bonsais)
-    } else {
-        (None, UploadedBonsais::new())
-    };
+    let (changegroup_id, uploaded_bonsais, uploaded_hg_changeset_ids) =
+        if let Some((cg_push, manifests)) = cg_and_manifests {
+            let changegroup_id = Some(cg_push.part_id);
+            let (uploaded_bonsais, uploaded_hg_changeset_ids) =
+                resolver.upload_changesets(cg_push, manifests).await?;
+            // Note: we do not run hooks on pure pushes. This probably has to be changed later.
+            (changegroup_id, uploaded_bonsais, uploaded_hg_changeset_ids)
+        } else {
+            (None, UploadedBonsais::new(), UploadedHgChangesetIds::new())
+        };
 
     let ((), bundle2) = resolver
         .maybe_resolve_infinitepush_bookmarks(bundle2)
@@ -423,8 +434,10 @@ async fn resolve_push<'r>(
         get_post_resolve_infinitepush(
             changegroup_id,
             maybe_bonsai_bookmark_push,
+            mutations,
             maybe_raw_bundle2_id,
             uploaded_bonsais,
+            uploaded_hg_changeset_ids,
             is_cross_backend_sync,
         )
         .map(PostResolveAction::InfinitePush)
@@ -432,9 +445,11 @@ async fn resolve_push<'r>(
         get_post_resolve_push(
             changegroup_id,
             maybe_bonsai_bookmark_push,
+            mutations,
             maybe_raw_bundle2_id,
             non_fast_forward_policy,
             uploaded_bonsais,
+            uploaded_hg_changeset_ids,
         )
         .map(PostResolveAction::Push)
     }
@@ -443,8 +458,10 @@ async fn resolve_push<'r>(
 fn get_post_resolve_infinitepush(
     changegroup_id: Option<PartId>,
     maybe_bonsai_bookmark_push: Option<AllBookmarkPushes<ChangesetId>>,
+    mutations: Vec<HgMutationEntry>,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
     uploaded_bonsais: UploadedBonsais,
+    uploaded_hg_changeset_ids: UploadedHgChangesetIds,
     is_cross_backend_sync: bool,
 ) -> Result<PostResolveInfinitePush, Error> {
     let maybe_bookmark_push = match maybe_bonsai_bookmark_push {
@@ -460,8 +477,10 @@ fn get_post_resolve_infinitepush(
     Ok(PostResolveInfinitePush {
         changegroup_id,
         maybe_bookmark_push,
+        mutations,
         maybe_raw_bundle2_id,
         uploaded_bonsais,
+        uploaded_hg_changeset_ids,
         is_cross_backend_sync,
     })
 }
@@ -469,9 +488,11 @@ fn get_post_resolve_infinitepush(
 fn get_post_resolve_push(
     changegroup_id: Option<PartId>,
     maybe_bonsai_bookmark_push: Option<AllBookmarkPushes<ChangesetId>>,
+    mutations: Vec<HgMutationEntry>,
     maybe_raw_bundle2_id: Option<RawBundle2Id>,
     non_fast_forward_policy: NonFastForwardPolicy,
     uploaded_bonsais: UploadedBonsais,
+    uploaded_hg_changeset_ids: UploadedHgChangesetIds,
 ) -> Result<PostResolvePush, Error> {
     let bookmark_pushes = match maybe_bonsai_bookmark_push {
         Some(AllBookmarkPushes::Inifinitepush(_bookmark_push)) => {
@@ -486,9 +507,11 @@ fn get_post_resolve_push(
     Ok(PostResolvePush {
         changegroup_id,
         bookmark_pushes,
+        mutations,
         maybe_raw_bundle2_id,
         non_fast_forward_policy,
         uploaded_bonsais,
+        uploaded_hg_changeset_ids,
     })
 }
 
@@ -560,7 +583,8 @@ async fn resolve_pushrebase<'r>(
         }
     }
 
-    let uploaded_bonsais = resolver.upload_changesets(cg_push, manifests).await?;
+    let (uploaded_bonsais, _uploaded_hg_changeset_ids) =
+        resolver.upload_changesets(cg_push, manifests).await?;
 
     let (pushkeys, bundle2) = resolver
         .resolve_multiple_parts(bundle2, Bundle2Resolver::maybe_resolve_pushkey)
@@ -1011,6 +1035,26 @@ impl<'r> Bundle2Resolver<'r> {
         }
     }
 
+    /// Parse b2xinfinitepushmutation.
+    async fn maybe_resolve_infinitepush_mutation(
+        &self,
+        bundle2: OldBoxStream<Bundle2Item, Error>,
+    ) -> Result<(Vec<HgMutationEntry>, OldBoxStream<Bundle2Item, Error>), Error> {
+        let (infinitepushmutation, bundle2): (
+            Option<Bundle2Item>,
+            OldBoxStream<Bundle2Item, Error>,
+        ) = next_item(bundle2).await?;
+
+        match infinitepushmutation {
+            Some(Bundle2Item::B2xInfinitepushMutation(_, entries)) => {
+                let mutations = entries.concat2().compat().await?;
+                Ok((mutations, bundle2))
+            }
+            Some(part) => return_with_rest_of_bundle(Vec::new(), part, bundle2).await,
+            None => Ok((Vec::new(), bundle2)),
+        }
+    }
+
     /// Parse b2xtreegroup2.
     /// The Manifests should be scheduled for uploading to BlobRepo and the Future resolving in
     /// their upload as well as their parsed content should be used for uploading changesets.
@@ -1073,7 +1117,7 @@ impl<'r> Bundle2Resolver<'r> {
         &self,
         cg_push: ChangegroupPush,
         manifests: Manifests,
-    ) -> Result<UploadedBonsais, Error> {
+    ) -> Result<(UploadedBonsais, UploadedHgChangesetIds), Error> {
         let changesets = toposort_changesets(cg_push.changesets)?;
         let filelogs = cg_push.filelogs;
         let content_blobs = cg_push.content_blobs;
@@ -1111,6 +1155,7 @@ impl<'r> Bundle2Resolver<'r> {
         let chunk_size = 100;
 
         let mut bonsais = UploadedBonsais::new();
+        let mut hg_cs_ids = UploadedHgChangesetIds::new();
         for chunk in changesets.chunks(chunk_size) {
             let mut uploaded_changesets: HashMap<HgChangesetId, ChangesetHandle> = HashMap::new();
             for (node, revlog_cs) in chunk {
@@ -1130,8 +1175,8 @@ impl<'r> Bundle2Resolver<'r> {
                 .with_context(err_context)?;
             }
 
-            let uploaded: Vec<BonsaiChangeset> = stream::iter(uploaded_changesets)
-                .map(move |(_, handle)| async move {
+            let uploaded: Vec<(BonsaiChangeset, HgChangesetId)> = stream::iter(uploaded_changesets)
+                .map(move |(hg_cs_id, handle): (HgChangesetId, _)| async move {
                     let shared_item_bcs_and_something = handle
                         .get_completed_changeset()
                         .map_err(Error::from)
@@ -1139,17 +1184,22 @@ impl<'r> Bundle2Resolver<'r> {
                         .await?;
 
                     let bcs = shared_item_bcs_and_something.0.clone();
-                    Result::<_, Error>::Ok(bcs)
+                    Result::<_, Error>::Ok((bcs, hg_cs_id))
                 })
                 .buffered(chunk_size)
                 .try_collect()
                 .await
                 .with_context(err_context)?;
 
-            bonsais.extend(uploaded.into_iter());
+            bonsais.reserve(uploaded.len());
+            hg_cs_ids.reserve(uploaded.len());
+            for (bcs, hg_cs_id) in uploaded {
+                bonsais.insert(bcs);
+                hg_cs_ids.insert(hg_cs_id);
+            }
         }
 
-        Ok(bonsais)
+        Ok((bonsais, hg_cs_ids))
     }
 
     /// Ensures that the next item in stream is None

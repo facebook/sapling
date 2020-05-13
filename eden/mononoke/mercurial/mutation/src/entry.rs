@@ -6,11 +6,14 @@
  */
 
 use std::collections::{hash_map, HashMap, HashSet};
+use std::convert::TryFrom;
+use std::io::Read;
 
-use anyhow::{anyhow, Result};
-use mercurial_types::HgChangesetId;
+use anyhow::{anyhow, Error, Result};
+use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::DateTime;
 use smallvec::SmallVec;
+use types::mutation::MutationEntry;
 
 /// Record of a Mercurial mutation operation (e.g. amend or rebase).
 #[derive(Clone, Debug, PartialEq)]
@@ -55,6 +58,10 @@ impl HgMutationEntry {
             time,
             extra,
         }
+    }
+
+    pub fn deserialize(r: &mut dyn Read) -> Result<Self> {
+        Ok(HgMutationEntry::try_from(MutationEntry::deserialize(r)?)?)
     }
 
     pub fn successor(&self) -> &HgChangesetId {
@@ -133,6 +140,43 @@ impl HgMutationEntry {
             self.split.push(split);
         }
         Ok(())
+    }
+}
+
+// Conversion from client mutation entry
+impl TryFrom<MutationEntry> for HgMutationEntry {
+    type Error = Error;
+
+    fn try_from(entry: MutationEntry) -> Result<HgMutationEntry> {
+        let entry = HgMutationEntry {
+            successor: HgChangesetId::new(HgNodeHash::from(entry.succ)),
+            predecessors: entry
+                .preds
+                .into_iter()
+                .map(HgNodeHash::from)
+                .map(HgChangesetId::new)
+                .collect(),
+            split: entry
+                .split
+                .into_iter()
+                .map(HgNodeHash::from)
+                .map(HgChangesetId::new)
+                .collect(),
+            op: entry.op,
+            user: entry.user,
+            time: DateTime::from_timestamp(entry.time, entry.tz)?,
+            extra: entry
+                .extra
+                .into_iter()
+                .map(|(key, value)| -> Result<(String, String), Error> {
+                    Ok((
+                        String::from_utf8(key.into())?,
+                        String::from_utf8(value.into())?,
+                    ))
+                })
+                .collect::<Result<_>>()?,
+        };
+        Ok(entry)
     }
 }
 
