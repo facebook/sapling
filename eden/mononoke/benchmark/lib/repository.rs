@@ -310,6 +310,10 @@ impl<C: Changesets> Changesets for DelayedChangesets<C> {
     fn prime_cache(&self, ctx: &CoreContext, changesets: &[ChangesetEntry]) {
         self.inner.prime_cache(ctx, changesets)
     }
+
+    fn get_sql_changesets(&self) -> &SqlChangesets {
+        self.inner.get_sql_changesets()
+    }
 }
 
 struct DelayedBonsaiHgMapping<M> {

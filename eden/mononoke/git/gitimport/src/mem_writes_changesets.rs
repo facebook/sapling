@@ -6,7 +6,7 @@
  */
 
 use anyhow::Error;
-use changesets::{ChangesetEntry, ChangesetInsert, Changesets};
+use changesets::{ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
 use context::CoreContext;
 use futures::{
     compat::Future01CompatExt,
@@ -131,5 +131,9 @@ impl<T: Changesets + Clone + 'static> Changesets for MemWritesChangesets<T> {
 
     fn prime_cache(&self, ctx: &CoreContext, changesets: &[ChangesetEntry]) {
         self.inner.prime_cache(ctx, changesets)
+    }
+
+    fn get_sql_changesets(&self) -> &SqlChangesets {
+        self.inner.get_sql_changesets()
     }
 }

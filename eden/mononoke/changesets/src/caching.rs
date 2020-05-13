@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use super::{ChangesetEntry, ChangesetInsert, Changesets};
+use super::{ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
 use anyhow::Error;
 use bytes::Bytes;
 #[cfg(test)]
@@ -203,6 +203,10 @@ impl Changesets for CachingChangesets {
             let key = get_cache_key(cs.repo_id, &cs.cs_id);
             let _ = self.cachelib.set_cached(&key, &cs);
         }
+    }
+
+    fn get_sql_changesets(&self) -> &SqlChangesets {
+        self.changesets.get_sql_changesets()
     }
 }
 

@@ -16,7 +16,7 @@ use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepositoryId,
 };
 
-use crate::{ChangesetEntry, ChangesetInsert, Changesets};
+use crate::{ChangesetEntry, ChangesetInsert, Changesets, SqlChangesets};
 
 impl Changesets for Arc<dyn Changesets> {
     fn add(&self, ctx: CoreContext, cs: ChangesetInsert) -> BoxFuture<bool, Error> {
@@ -53,5 +53,9 @@ impl Changesets for Arc<dyn Changesets> {
 
     fn prime_cache(&self, ctx: &CoreContext, changesets: &[ChangesetEntry]) {
         (**self).prime_cache(ctx, changesets)
+    }
+
+    fn get_sql_changesets(&self) -> &SqlChangesets {
+        (**self).get_sql_changesets()
     }
 }

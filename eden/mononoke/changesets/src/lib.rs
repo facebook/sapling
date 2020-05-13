@@ -156,6 +156,8 @@ pub trait Changesets: Send + Sync {
     ) -> BoxFuture<ChangesetIdsResolvedFromPrefix, Error>;
 
     fn prime_cache(&self, ctx: &CoreContext, changesets: &[ChangesetEntry]);
+
+    fn get_sql_changesets(&self) -> &SqlChangesets;
 }
 
 #[derive(Clone)]
@@ -408,6 +410,10 @@ impl Changesets for SqlChangesets {
 
     fn prime_cache(&self, _ctx: &CoreContext, _changesets: &[ChangesetEntry]) {
         // No-op
+    }
+
+    fn get_sql_changesets(&self) -> &SqlChangesets {
+        self
     }
 }
 
