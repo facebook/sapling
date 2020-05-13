@@ -13,3 +13,12 @@ mononoke_types = { path = "../mononoke_types" }
 phases = { path = "../phases" }
 anyhow = "1.0"
 futures = { version = "0.3", features = ["async-await", "compat"] }
+
+[dev-dependencies]
+bookmarks = { path = "../bookmarks" }
+fixtures = { path = "../tests/fixtures" }
+revset = { path = "../revset" }
+tests_utils = { path = "../tests/utils" }
+fbinit = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
+futures-util = "0.3"
+tokio-compat = "0.1"

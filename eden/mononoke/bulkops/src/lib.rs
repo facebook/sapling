@@ -67,3 +67,43 @@ fn windows(start: u64, stop: u64, step: u64) -> impl Iterator<Item = (u64, u64)>
         .take_while(move |(low, _high)| *low < stop)
         .map(move |(low, high)| (low, std::cmp::min(stop, high)))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use fbinit::FacebookInit;
+
+    use bookmarks::BookmarkName;
+    use fixtures::branch_wide;
+    use phases::mark_reachable_as_public;
+
+    #[fbinit::compat_test]
+    async fn test_fetch_all_public_changesets(fb: FacebookInit) -> Result<()> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = branch_wide::getrepo(fb).await;
+
+        let phases = repo.get_phases();
+        let sql_phases = phases.get_sql_phases();
+        let changesets = repo.get_changesets_object();
+        let sql_changesets = changesets.get_sql_changesets();
+        let repo_id = repo.get_repoid();
+
+        // our function avoids derivation so we need to explicitly do the derivation for
+        // phases to have any data
+        let master = BookmarkName::new("master")?;
+        let master = repo
+            .get_bonsai_bookmark(ctx.clone(), &master)
+            .compat()
+            .await?
+            .unwrap();
+        mark_reachable_as_public(&ctx, sql_phases, &[master], false).await?;
+
+        let public_changesets: Vec<ChangesetEntry> =
+            fetch_all_public_changesets(&ctx, repo_id, sql_changesets, sql_phases)
+                .try_collect()
+                .await?;
+        assert_eq!(public_changesets.len(), 3);
+        Ok(())
+    }
+}
