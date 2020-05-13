@@ -12,11 +12,10 @@ use anyhow::{anyhow, format_err, Error};
 use blame::BlameRoot;
 use blobrepo::{BlobRepo, DangerousOverride};
 use bookmarks::{BookmarkPrefix, Freshness};
+use bulkops::fetch_all_public_changesets;
 use bytes::Bytes;
 use cacheblob::{dummy::DummyLease, LeaseOps};
-use changesets::{
-    deserialize_cs_entries, serialize_cs_entries, ChangesetEntry, Changesets, SqlChangesets,
-};
+use changesets::{deserialize_cs_entries, serialize_cs_entries, ChangesetEntry, SqlChangesets};
 use clap::{Arg, ArgMatches, SubCommand};
 use cloned::cloned;
 use cmdlib::{args, helpers};
@@ -28,10 +27,9 @@ use derived_data_utils::{
 use fbinit::FacebookInit;
 use fsnodes::RootFsnodeId;
 use futures::{
-    compat::{Future01CompatExt, Stream01CompatExt},
-    future::{self, try_join, TryFutureExt},
+    compat::Future01CompatExt,
+    future::{self, try_join},
     stream::{self, StreamExt, TryStreamExt},
-    Stream,
 };
 use futures_ext::FutureExt as OldFutureExt;
 use futures_old::{Future as OldFuture, Stream as OldStream};
@@ -39,8 +37,7 @@ use futures_stats::Timed;
 use futures_stats::TimedFutureExt;
 use lock_ext::LockExt;
 use metaconfig_types::DerivedDataConfig;
-use mononoke_types::{ChangesetId, DateTime, RepositoryId};
-use phases::SqlPhases;
+use mononoke_types::{ChangesetId, DateTime};
 use slog::{info, Logger};
 use stats::prelude::*;
 use std::{
@@ -357,51 +354,6 @@ async fn run_subcmd<'a>(
     }
 }
 
-fn windows(start: u64, stop: u64, step: u64) -> impl Iterator<Item = (u64, u64)> {
-    (0..)
-        .map(move |index| (start + index * step, start + (index + 1) * step))
-        .take_while(move |(low, _high)| *low < stop)
-        .map(move |(low, high)| (low, std::cmp::min(stop, high)))
-}
-
-// This function is not optimal since it could be made faster by doing more processing
-// on XDB side, but for the puprpose of this binary it is good enough
-fn fetch_all_public_changesets<'a>(
-    ctx: &'a CoreContext,
-    repo_id: RepositoryId,
-    changesets: &'a SqlChangesets,
-    phases: &'a SqlPhases,
-) -> impl Stream<Item = Result<ChangesetEntry, Error>> + 'a {
-    async move {
-        let (start, stop) = changesets
-            .get_changesets_ids_bounds(repo_id.clone())
-            .compat()
-            .await?;
-
-        let start = start.ok_or_else(|| Error::msg("changesets table is empty"))?;
-        let stop = stop.ok_or_else(|| Error::msg("changesets table is empty"))? + 1;
-        let step = 65536;
-        Ok(stream::iter(windows(start, stop, step)).map(Ok))
-    }
-    .try_flatten_stream()
-    .and_then(move |(lower_bound, upper_bound)| async move {
-        let ids = changesets
-            .get_list_bs_cs_id_in_range_exclusive(repo_id, lower_bound, upper_bound)
-            .compat()
-            .try_collect()
-            .await?;
-        let mut entries = changesets
-            .get_many(ctx.clone(), repo_id, ids)
-            .compat()
-            .await?;
-        let cs_ids = entries.iter().map(|entry| entry.cs_id).collect::<Vec<_>>();
-        let public = phases.get_public_raw(ctx, &cs_ids).await?;
-        entries.retain(|entry| public.contains(&entry.cs_id));
-        Ok::<_, Error>(stream::iter(entries).map(Ok))
-    })
-    .try_flatten()
-}
-
 fn parse_serialized_commits<P: AsRef<Path>>(file: P) -> Result<Vec<ChangesetEntry>, Error> {
     let data = fs::read(file).map_err(Error::from)?;
     deserialize_cs_entries(&Bytes::from(data))
@@ -612,7 +564,7 @@ mod tests {
     use super::*;
     use blobstore::{Blobstore, BlobstoreBytes, BlobstoreGetData};
     use fixtures::linear;
-    use futures::future::FutureExt;
+    use futures::future::{FutureExt, TryFutureExt};
     use futures_ext::BoxFuture;
     use mercurial_types::HgChangesetId;
     use std::str::FromStr;

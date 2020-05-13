@@ -39,6 +39,7 @@ members = [
     "bookmarks/bookmarks_types",
     "bookmarks/dbbookmarks",
     "bookmarks/warm_bookmarks_cache",
+    "bulkops",
     "cache_warmup",
     "changesets",
     "changesets/if",

@@ -1,0 +1,15 @@
+[package]
+name = "bulkops"
+edition = "2018"
+version = "0.1.0"
+authors = ['Facebook']
+license = "GPLv2+"
+include = ["src/**/*.rs"]
+
+[dependencies]
+changesets = { path = "../changesets" }
+context = { path = "../server/context" }
+mononoke_types = { path = "../mononoke_types" }
+phases = { path = "../phases" }
+anyhow = "1.0"
+futures = { version = "0.3", features = ["async-await", "compat"] }
