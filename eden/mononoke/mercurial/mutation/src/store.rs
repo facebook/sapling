@@ -225,6 +225,10 @@ impl SqlHgMutationStore {
         // Check if the replica is up-to-date with respect to all changesets we
         // are interested in.
         let changeset_ids: Vec<_> = changeset_ids.iter().collect();
+        if changeset_ids.is_empty() {
+            // There are no interesting changesets, so just use the replica.
+            return Ok(&self.connections.read_connection);
+        }
         let count = CountChangesets::query(
             &self.connections.read_connection,
             &self.repo_id,
@@ -337,10 +341,12 @@ impl SqlHgMutationStore {
             .iter()
             .filter(|hg_cs_id| !entry_set.entries.contains_key(hg_cs_id))
             .collect();
-        let rows = SelectBySuccessorRef::query(connection, &self.repo_id, to_fetch.as_slice())
-            .compat()
-            .await?;
-        self.collect_entries(connection, entry_set, rows).await?;
+        if !to_fetch.is_empty() {
+            let rows = SelectBySuccessorRef::query(connection, &self.repo_id, to_fetch.as_slice())
+                .compat()
+                .await?;
+            self.collect_entries(connection, entry_set, rows).await?;
+        }
         Ok(())
     }
 
@@ -575,7 +581,7 @@ queries! {
             COUNT(*)
         FROM
             hg_mutation_changesets
-        WHERE repo_id = {repo_id} AND changeset_id in {cs_id}"
+        WHERE repo_id = {repo_id} AND changeset_id IN {cs_id}"
     }
 
     read SelectBySuccessorRef(repo_id: RepositoryId, >list cs_id: &HgChangesetId) -> (
@@ -598,8 +604,8 @@ queries! {
             m.split_count,
             m.op, m.user, m.timestamp, m.tz, m.extra
         FROM
-            hg_mutation_info m
-            LEFT JOIN hg_mutation_preds p on m.successor = p.successor
+            hg_mutation_info m LEFT JOIN hg_mutation_preds p
+            ON m.repo_id = p.repo_id AND m.successor = p.successor
         WHERE m.repo_id = {repo_id} AND m.successor IN {cs_id}
         ORDER BY m.successor, p.seq ASC"
     }
@@ -624,8 +630,8 @@ queries! {
             m.split_count,
             m.op, m.user, m.timestamp, m.tz, m.extra
         FROM
-            hg_mutation_info m
-            LEFT JOIN hg_mutation_preds p on m.successor = p.successor
+            hg_mutation_info m LEFT JOIN hg_mutation_preds p
+            ON m.repo_id = p.repo_id AND m.successor = p.successor
         WHERE m.repo_id = {repo_id} AND m.primordial IN {cs_id}
         ORDER BY m.successor, p.seq ASC"
     }
