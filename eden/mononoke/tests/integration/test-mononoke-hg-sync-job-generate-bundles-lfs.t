@@ -206,7 +206,7 @@ Setup another client and update to latest commit from mercurial
   $ cat smallfile
   1
 
-Sync a pushrebase with lfs hg sync disabled
+Sync a pushrebase with lfs hg sync disabled in the config
   $ cd "$TESTTMP"
   $ rm -rf mononoke-config
   $ LFS_THRESHOLD="20" LFS_BLOB_HG_SYNC_JOB=false setup_common_config blob_files
@@ -218,3 +218,23 @@ Sync a pushrebase with lfs hg sync disabled
   b2a5e71d6d8d: add lfs-large files
    lfs-largefile: bin=0 lnk=0 flag=0 size=40 copied='' chain=860e3f333d61
     rawdata: 'A\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\nA\n'
+
+Now override lfs sync config option via command line
+  $ cd "$TESTTMP"
+  $ mononoke_hg_sync repo-hg-2 2 --generate-bundles --bookmark-regex-force-generate-lfs "master.+" 2>&1 | grep 'force generating lfs bundle'
+  * force generating lfs bundle for master_bookmark (glob)
+  $ cd "$TESTTMP/repo-hg-2"
+  $ hg debugfilerev lfs-largefile -v -r master_bookmark
+  0700ec892f3c: modify lfs-large file
+   lfs-largefile: bin=1 lnk=0 flag=2000 size=30 copied='' chain=82324eb7c94b
+    rawdata: 'version https://git-lfs.github.com/spec/v1\noid sha256:3c8bc2369a8a90ce1bd6ceb9883cfada7169dde4abe28d70034edea01c0c9a80\nsize 30\n'
+
+Now change the regex, make sure non-lfs push was used
+  $ cd "$TESTTMP"
+  $ mononoke_hg_sync repo-hg-2 3 --generate-bundles --bookmark-regex-force-generate-lfs "someotherregex" 2>&1 | grep 'force generating lfs bundle'
+  [1]
+  $ cd "$TESTTMP/repo-hg-2"
+  $ hg debugfilerev lfs-renamed-largefile -v -r master_bookmark
+  b75c987b6343: move lfs-large file
+   lfs-renamed-largefile: bin=0 lnk=0 flag=0 size=30 copied='lfs-largefile' chain=34b0e9a70540
+    rawdata: '\x01\ncopy: lfs-largefile\ncopyrev: 82324eb7c94b0000f0eb52d4f1933c3cac636066\n\x01\nB\nB\nB\nB\nB\nB\nB\nB\nB\nB\nB\nB\nB\nB\nB\n'
