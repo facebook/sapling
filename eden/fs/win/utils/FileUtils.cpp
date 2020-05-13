@@ -125,9 +125,9 @@ void writeFileAtomic(const wchar_t* filePath, const folly::ByteRange data) {
 }
 
 Hash getFileSha1(const wchar_t* filePath) {
-  std::string data;
+  std::vector<uint8_t> data;
   readFile(filePath, data);
-  return Hash::sha1(folly::StringPiece{data.c_str()});
+  return Hash::sha1(folly::ByteRange{data});
 }
 
 struct EnumerationHandleTraits {
