@@ -21,7 +21,7 @@ use std::{
     time::Duration,
 };
 
-use anyhow::{bail, ensure, format_err, Result};
+use anyhow::{bail, ensure, format_err, Context, Result};
 use bytes::{Bytes, BytesMut};
 use futures::stream::{iter, StreamExt};
 use parking_lot::{Mutex, RwLock};
@@ -41,7 +41,7 @@ use lfs_protocol::{
 };
 use mincode::{deserialize, serialize};
 use types::{HgId, Key, RepoPath, Sha256};
-use util::path::{create_dir, create_shared_dir};
+use util::path::{create_dir, create_shared_dir, remove_file};
 
 use crate::{
     datastore::{
@@ -96,6 +96,7 @@ pub struct LfsRemote {
     local: Option<Arc<LfsStore>>,
     shared: Arc<LfsStore>,
     remote: LfsRemoteInner,
+    move_after_upload: bool,
 }
 
 /// Main LFS store to be used within the `ContentStore`.
@@ -471,6 +472,19 @@ impl LfsBlobsStore {
             LfsBlobsStore::IndexedLog(log) => log.add(hash, blob)?,
 
             LfsBlobsStore::Union(first, _) => first.add(hash, blob)?,
+        }
+
+        Ok(())
+    }
+
+    pub fn remove(&self, hash: &Sha256) -> Result<()> {
+        match self {
+            LfsBlobsStore::Loose(path, _) => {
+                let path = LfsBlobsStore::path(&path, hash);
+                remove_file(path).with_context(|| format!("Cannot remove LFS blob {}", hash))?;
+            }
+
+            _ => (),
         }
 
         Ok(())
@@ -1211,8 +1225,9 @@ impl LfsRemote {
         // A trailing '/' needs to be present so that `Url::join` doesn't remove the reponame
         // present at the end of the config.
         url.push('/');
-
         let url = Url::parse(&url)?;
+
+        let move_after_upload = config.get_or("lfs", "moveafterupload", || false)?;
 
         if url.scheme() == "file" {
             let path = url.to_file_path().unwrap();
@@ -1221,6 +1236,7 @@ impl LfsRemote {
             Ok(Self {
                 shared,
                 local,
+                move_after_upload,
                 remote: LfsRemoteInner::File(file),
             })
         } else {
@@ -1242,6 +1258,7 @@ impl LfsRemote {
             Ok(Self {
                 shared,
                 local,
+                move_after_upload,
                 remote: LfsRemoteInner::Http(HttpLfsRemote {
                     url,
                     user_agent,
@@ -1290,6 +1307,32 @@ impl HgIdRemoteStore for LfsRemote {
     }
 }
 
+/// Move a blob contained in `from` to the store `to`.
+///
+/// After this succeeds, the blob's lifetime will be similar to any shared blob, it is the caller's
+/// responsability to ensure that the blob can be fetched from the LFS server.
+fn move_blob(hash: &Sha256, from: &LfsStore, to: &LfsStore) -> Result<()> {
+    (|| {
+        let blob = from
+            .blobs
+            .get(hash)?
+            .ok_or_else(|| format_err!("Cannot find blob for {}", hash))?;
+
+        to.blobs.add(hash, blob)?;
+        from.blobs.remove(hash)?;
+
+        (|| -> Result<()> {
+            let key = StoreKey::from(ContentHash::Sha256(*hash));
+            if let Some(pointer) = from.pointers.read().entry(&key)? {
+                to.pointers.write().add(pointer)?
+            }
+            Ok(())
+        })()
+        .with_context(|| format!("Cannot move pointer for {}", hash))
+    })()
+    .with_context(|| format!("Cannot move blob {}", hash))
+}
+
 struct LfsRemoteStore {
     store: Arc<dyn HgIdMutableDeltaStore>,
     remote: Arc<LfsRemote>,
@@ -1327,7 +1370,7 @@ impl RemoteDataStore for LfsRemoteStore {
             Some(local) => local,
         };
 
-        let mut not_uploaded = Vec::new();
+        let mut not_found = Vec::new();
 
         let objs = keys
             .iter()
@@ -1341,7 +1384,7 @@ impl RemoteDataStore for LfsRemoteStore {
                         ))),
                     }
                 } else {
-                    not_uploaded.push(k.clone());
+                    not_found.push(k.clone());
                     Ok(None)
                 }
             })
@@ -1358,7 +1401,16 @@ impl RemoteDataStore for LfsRemoteStore {
             })?;
         }
 
-        Ok(not_uploaded)
+        if self.remote.move_after_upload {
+            // All the blobs were successfully uploaded, we can move the blobs from the local store
+            // to the shared store. This is safe to do as blobs will never be collected from the
+            // server once uploaded.
+            for obj in objs {
+                move_blob(&obj.0, local_store, &self.remote.shared)?;
+            }
+        }
+
+        Ok(not_found)
     }
 }
 
@@ -2268,6 +2320,43 @@ mod tests {
 
         assert_eq!(remote_lfs_file_store.get(&blob1.0)?, Some(blob1.2));
         assert_eq!(remote_lfs_file_store.get(&blob2.0)?, Some(blob2.2));
+
+        Ok(())
+    }
+
+    #[test]
+    fn test_lfs_upload_move_to_shared() -> Result<()> {
+        let cachedir = TempDir::new()?;
+        let mut config = make_lfs_config(&cachedir);
+
+        let lfsdir = TempDir::new()?;
+        let shared_lfs = Arc::new(LfsStore::shared(&lfsdir, &config)?);
+        let local_lfs = Arc::new(LfsStore::local(&lfsdir, &config)?);
+
+        let k1 = key("a", "2");
+        let delta = Delta {
+            data: Bytes::from(&"THIS IS A LARGE BLOB"[..]),
+            base: None,
+            key: k1.clone(),
+        };
+
+        local_lfs.add(&delta, &Default::default())?;
+
+        let remote_dir = TempDir::new()?;
+        let url = Url::from_file_path(&remote_dir).unwrap();
+        config.set("lfs", "url", Some(url.as_str()), &Default::default());
+
+        let remote = Arc::new(LfsRemote::new(
+            shared_lfs.clone(),
+            Some(local_lfs.clone()),
+            &config,
+        )?);
+        let remote = remote.datastore(shared_lfs.clone());
+        remote.upload(&[StoreKey::from(&k1)])?;
+
+        // The blob was moved from the local store to the shared store.
+        assert_eq!(local_lfs.get(&k1)?, None);
+        assert_eq!(shared_lfs.get(&k1)?, Some(delta.data.to_vec()));
 
         Ok(())
     }

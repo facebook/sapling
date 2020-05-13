@@ -300,5 +300,7 @@ pub fn make_lfs_config(dir: impl AsRef<Path>) -> ConfigSet {
 
     config.set("remotefilelog", "lfs", Some("true"), &Default::default());
 
+    config.set("lfs", "moveafterupload", Some("true"), &Default::default());
+
     config
 }

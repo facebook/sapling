@@ -8,7 +8,7 @@
 
   $ clone master shallow --noupdate
   $ cd shallow
-  $ setconfig remotefilelog.useruststore=True worker.rustworkers=True remotefilelog.localdatarepack=True
+  $ setconfig remotefilelog.useruststore=True worker.rustworkers=True remotefilelog.localdatarepack=True lfs.moveafterupload=True
 
 # First, let's generate some LFS blobs on the server
   $ setconfig extensions.lfs= lfs.threshold=10B lfs.url=file:$TESTTMP/lfs-server/
@@ -45,10 +45,19 @@
   .hg/store/packs/manifests/da1b23b92928a4cf48dc85136fde02a3b90cc657.histidx
   .hg/store/packs/manifests/da1b23b92928a4cf48dc85136fde02a3b90cc657.histpack
 
+  $ findfilessorted .hg/store/lfs/objects
+  .hg/store/lfs/objects/e4/1d3fc42af9a3407f07926c75946c0aa433ccbd99c175b98474fa19b2ee5963
+  .hg/store/lfs/objects/f3/8ef89300956a8cf001746d6e4b015708c3d0d883d1a69bf00f4958090cbe21
+
   $ hg push -q --to master --create
   $ findfilessorted $TESTTMP/lfs-server
   $TESTTMP/lfs-server/e4/1d3fc42af9a3407f07926c75946c0aa433ccbd99c175b98474fa19b2ee5963
   $TESTTMP/lfs-server/f3/8ef89300956a8cf001746d6e4b015708c3d0d883d1a69bf00f4958090cbe21
+
+# Of the 2 blob, one is uploaded via the legacy LFS extension, and thus not
+# moved, while the other is properly moved to the shared store.
+  $ findfilessorted .hg/store/lfs/objects
+  .hg/store/lfs/objects/e4/1d3fc42af9a3407f07926c75946c0aa433ccbd99c175b98474fa19b2ee5963
 
 # Now let's repack to move the LFS pointer to the remotefilelog LFS pointer store.
   $ hg repack
@@ -77,7 +86,7 @@
 
   $ clone master shallow --noupdate
   $ cd shallow
-  $ setconfig remotefilelog.useruststore=True worker.rustworkers=True remotefilelog.localdatarepack=True
+  $ setconfig remotefilelog.useruststore=True worker.rustworkers=True remotefilelog.localdatarepack=True lfs.moveafterupload=True
 
 # Let's validate that both the LFS extension, and the remotefilelog LFS can co-exist when pulling blobs
   $ setconfig extensions.lfs= lfs.threshold=10B lfs.url=file:$TESTTMP/lfs-server/ remotefilelog.lfs=True
