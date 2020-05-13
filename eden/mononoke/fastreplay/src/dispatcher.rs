@@ -58,7 +58,6 @@ impl FastReplayDispatcher {
             self.hash_validation_percentage,
             false, // Don't preserve raw bundle 2 (we don't push)
             false, // Don't allow pushes (we don't push)
-            true,  // Support bundle2_listkeys
             self.wireproto_logging.clone(),
             None, // Don't push redirect (we don't push)
             None, // Don't push redirect (we don't push)

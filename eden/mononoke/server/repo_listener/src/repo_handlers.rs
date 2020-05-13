@@ -31,7 +31,6 @@ use metaconfig_types::{
     CommitSyncConfig, MetadataDatabaseConfig, RepoConfig, WireprotoLoggingConfig,
 };
 use mononoke_types::RepositoryId;
-use mutable_counters::{MutableCounters, SqlMutableCounters};
 use repo_client::{MononokeRepo, MononokeRepoBuilder, PushRedirector, WireprotoLogging};
 use scuba_ext::{ScubaSampleBuilder, ScubaSampleBuilderExt};
 use sql_construct::SqlConstructFromMetadataDatabaseConfig;
@@ -56,7 +55,6 @@ struct IncompleteRepoHandler {
     hash_validation_percentage: usize,
     preserve_raw_bundle2: bool,
     pure_push_allowed: bool,
-    support_bundle2_listkeys: bool,
 }
 
 impl IncompleteRepoHandler {
@@ -72,7 +70,6 @@ impl IncompleteRepoHandler {
             hash_validation_percentage,
             preserve_raw_bundle2,
             pure_push_allowed,
-            support_bundle2_listkeys,
         } = self;
         RepoHandler {
             logger,
@@ -82,7 +79,6 @@ impl IncompleteRepoHandler {
             hash_validation_percentage,
             preserve_raw_bundle2,
             pure_push_allowed,
-            support_bundle2_listkeys,
             maybe_push_redirector,
         }
     }
@@ -107,7 +103,6 @@ pub struct RepoHandler {
     pub hash_validation_percentage: usize,
     pub preserve_raw_bundle2: bool,
     pub pure_push_allowed: bool,
-    pub support_bundle2_listkeys: bool,
     pub maybe_push_redirector: Option<PushRedirector>,
 }
 
@@ -303,27 +298,6 @@ pub fn repo_handlers(
 
                 let repo = builder.finalize(Arc::new(hook_manager));
 
-                let support_bundle2_listkeys = async {
-                    let counters = SqlMutableCounters::with_metadata_database_config(
-                        fb,
-                        &db_config,
-                        mysql_options,
-                        readonly_storage.0,
-                    )
-                    .await?;
-
-                    let counter = counters
-                        .get_counter(
-                            ctx.clone(),
-                            blobrepo.get_repoid(),
-                            "support_bundle2_listkeys",
-                        )
-                        .compat()
-                        .await?
-                        .unwrap_or(1);
-                    Ok(counter != 0)
-                };
-
                 let sql_commit_sync_mapping = SqlSyncedCommitMapping::with_metadata_database_config(
                     fb,
                     &db_config,
@@ -341,14 +315,9 @@ pub fn repo_handlers(
                 )
                 .compat();
 
-                let (repo, support_bundle2_listkeys, sql_commit_sync_mapping, wireproto_logging) =
-                    futures::future::try_join4(
-                        repo,
-                        support_bundle2_listkeys,
-                        sql_commit_sync_mapping,
-                        wireproto_logging,
-                    )
-                    .await?;
+                let (repo, sql_commit_sync_mapping, wireproto_logging) =
+                    futures::future::try_join3(repo, sql_commit_sync_mapping, wireproto_logging)
+                        .await?;
 
                 let maybe_push_redirector_args =
                     commit_sync_config.map(move |commit_sync_config| PushRedirectorArgs {
@@ -372,7 +341,6 @@ pub fn repo_handlers(
                         hash_validation_percentage,
                         preserve_raw_bundle2,
                         pure_push_allowed,
-                        support_bundle2_listkeys,
                     },
                     maybe_push_redirector_args,
                 ))

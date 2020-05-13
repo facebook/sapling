@@ -225,7 +225,7 @@ fn wireprotocaps() -> Vec<String> {
     ]
 }
 
-fn bundle2caps(support_bundle2_listkeys: bool) -> String {
+fn bundle2caps() -> String {
     let caps = {
         let mut caps = vec![
             ("HG20", vec![]),
@@ -238,11 +238,8 @@ fn bundle2caps(support_bundle2_listkeys: bool) -> String {
             ("b2x:rebasepackpart", vec![]),
             ("phases", vec!["heads"]),
             ("obsmarkers", vec!["V1"]),
+            ("listkeys", vec![]),
         ];
-
-        if support_bundle2_listkeys {
-            caps.push(("listkeys", vec![]))
-        }
 
         if tunables().get_mutation_advertise_for_infinitepush() {
             caps.push(("b2x:infinitepushmutation", vec![]));
@@ -288,7 +285,6 @@ pub struct RepoClient {
     // We currently fix it by caching bookmarks at the beginning of discovery.
     // TODO: T45411456 Fix this by teaching the client to expect extra commits to correspond to the bookmarks.
     cached_pull_default_bookmarks_maybe_stale: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
-    support_bundle2_listkeys: bool,
     wireproto_logging: Arc<WireprotoLogging>,
     maybe_push_redirector: Option<PushRedirector>,
     pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
@@ -333,17 +329,10 @@ fn get_pull_default_bookmarks_maybe_stale_updating_cache(
     ctx: CoreContext,
     cache: Arc<Mutex<Option<HashMap<Vec<u8>, Vec<u8>>>>>,
     repo: BlobRepo,
-    update_cache: bool,
 ) -> impl Future<Item = HashMap<Vec<u8>, Vec<u8>>, Error = Error> {
-    if update_cache {
-        get_pull_default_bookmarks_maybe_stale_raw(ctx, repo)
-            .inspect(move |bookmarks| {
-                update_pull_default_bookmarks_maybe_stale_cache_raw(cache, bookmarks.clone())
-            })
-            .left_future()
-    } else {
-        get_pull_default_bookmarks_maybe_stale_raw(ctx, repo).right_future()
-    }
+    get_pull_default_bookmarks_maybe_stale_raw(ctx, repo).inspect(move |bookmarks| {
+        update_pull_default_bookmarks_maybe_stale_cache_raw(cache, bookmarks.clone())
+    })
 }
 
 impl RepoClient {
@@ -354,7 +343,6 @@ impl RepoClient {
         hash_validation_percentage: usize,
         preserve_raw_bundle2: bool,
         pure_push_allowed: bool,
-        support_bundle2_listkeys: bool,
         wireproto_logging: Arc<WireprotoLogging>,
         maybe_push_redirector: Option<PushRedirector>,
         pushredirect_config: Option<ConfigHandle<MononokePushRedirectEnable>>,
@@ -367,7 +355,6 @@ impl RepoClient {
             preserve_raw_bundle2,
             pure_push_allowed,
             cached_pull_default_bookmarks_maybe_stale: Arc::new(Mutex::new(None)),
-            support_bundle2_listkeys,
             wireproto_logging,
             maybe_push_redirector,
             pushredirect_config,
@@ -412,7 +399,6 @@ impl RepoClient {
                 ctx,
                 self.cached_pull_default_bookmarks_maybe_stale.clone(),
                 self.repo.blobrepo().clone(),
-                self.support_bundle2_listkeys,
             )
             .left_future(),
             Some(bookmarks) => future::ok(bookmarks).right_future(),
@@ -1280,10 +1266,7 @@ impl HgCommands for RepoClient {
 
         let mut res = HashMap::new();
         let mut caps = wireprotocaps();
-        caps.push(format!(
-            "bundle2={}",
-            bundle2caps(self.support_bundle2_listkeys)
-        ));
+        caps.push(format!("bundle2={}", bundle2caps()));
         res.insert("capabilities".to_string(), caps);
 
         future::ok(res)
@@ -1388,10 +1371,7 @@ impl HgCommands for RepoClient {
         let client = self.clone();
         let pure_push_allowed = self.pure_push_allowed;
         let reponame = self.repo.reponame().clone();
-        cloned!(
-            self.cached_pull_default_bookmarks_maybe_stale,
-            self.support_bundle2_listkeys
-        );
+        cloned!(self.cached_pull_default_bookmarks_maybe_stale);
 
         let hook_manager = self.repo.hook_manager();
 
@@ -1496,14 +1476,9 @@ impl HgCommands for RepoClient {
                     // depend on the reply part with a bookmark change in - T57874233
                     cloned!(ctx, blobrepo);
                     move |response| {
-                        if support_bundle2_listkeys {
-                            // If this fails, we end up with a cold cache - but that just means we see the race and/or error again later
-                            update_pull_default_bookmarks_maybe_stale_cache(ctx, cached_pull_default_bookmarks_maybe_stale, blobrepo)
-                                .then(|_| Ok(response))
-                                .left_future()
-                        } else {
-                            future::ok(response).right_future()
-                        }
+                        // If this fails, we end up with a cold cache - but that just means we see the race and/or error again later
+                        update_pull_default_bookmarks_maybe_stale_cache(ctx, cached_pull_default_bookmarks_maybe_stale, blobrepo)
+                            .then(|_| Ok(response))
                     }
                 }).and_then({
                     cloned!(ctx, reponame);
