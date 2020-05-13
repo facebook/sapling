@@ -56,6 +56,7 @@ use std::{
     iter::FromIterator,
     sync::Arc,
 };
+use tunables::tunables;
 
 mod errors;
 
@@ -125,9 +126,13 @@ pub async fn create_getbundle_response(
             drafts_in_bundles_policy == DraftsInBundlesPolicy::WithTreesAndFiles;
         let (maybe_manifests, maybe_filenodes): (Option<_>, Option<_>) =
             if should_include_trees_and_files {
-                let (manifests, filenodes) =
-                    get_manifests_and_filenodes(&ctx, &blobrepo, draft_commits, &lfs_params)
-                        .await?;
+                let (manifests, filenodes) = get_manifests_and_filenodes(
+                    &ctx,
+                    &blobrepo,
+                    draft_commits.clone(),
+                    &lfs_params,
+                )
+                .await?;
                 report_manifests_and_filenodes(&ctx, reponame, manifests.len(), filenodes.iter());
                 (Some(manifests), Some(filenodes))
             } else {
@@ -150,6 +155,22 @@ pub async fn create_getbundle_response(
             let tp_part = parts::treepack_part(manifests_stream)?;
 
             parts.push(tp_part);
+        }
+
+        if !draft_commits.is_empty() && tunables().get_mutation_generate_for_draft() {
+            let mutations_fut = {
+                cloned!(ctx);
+                let hg_mutation_store = blobrepo.hg_mutation_store().clone();
+                async move {
+                    hg_mutation_store
+                        .all_predecessors(&ctx, draft_commits)
+                        .await
+                }
+                .boxed()
+                .compat()
+            };
+            let mut_part = parts::infinitepush_mutation_part(mutations_fut)?;
+            parts.push(mut_part);
         }
     }
 

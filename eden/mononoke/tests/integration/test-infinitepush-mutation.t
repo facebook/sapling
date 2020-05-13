@@ -123,9 +123,99 @@ Pull the amended stack to the other repo
   o  0: df4f53cec30a public 'base' master_bookmark
   
 
-Check mutation metadata.  NOTE: Mutation metadata hasn't been provided by the server.
+Check mutation metadata.
   $ hg debugmutation -r "draft()"
-   *  a8543df036f16781d7f37d40d4f177056fc816a5
+   *  a8543df036f16781d7f37d40d4f177056fc816a5 amend by test at 1970-01-01T00:00:00 from:
+      9b5a540873ab29fbced488597365cf798918a356
   
-   *  a24671c3bce21e759d256fe69dedeb04d51c9895
+   *  a24671c3bce21e759d256fe69dedeb04d51c9895 rebase by test at 1970-01-01T00:00:00 from:
+      f99c737e05b52a0c08f95a8736581813ff58d8de
+  
+Amend the stack again.
+  $ cd $TESTTMP/repo-push
+  $ hg prev
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  [a8543d] A2
+  $ echo 3 > A
+  $ hg amend -qm A3 --rebase
+  $ hg next
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [647398] B1
+  $ hgmn push ssh://user@dummy/repo -r . --bundle-store --allow-anon
+  pushing to ssh://user@dummy/repo
+  searching for changes
+
+Pull the amended stack to the other repo.
+  $ cd $TESTTMP/repo-pull
+  $ hgmn pull -r 647398
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 0 changes to 0 files
+  $ tglogm
+  o  4: 6473983c899c 'B1'
+  |
+  o  3: 5326b832c149 'A3'
+  |
+  | x  2: a24671c3bce2 'B1'  (Rewritten using rebase into 6473983c899c)
+  | |
+  | x  1: a8543df036f1 'A2'  (Rewritten using amend into 5326b832c149)
+  |/
+  o  0: df4f53cec30a 'base' master_bookmark
+  
+
+Do some more complicated mutations
+  $ cd $TESTTMP/repo-push
+  $ hg prev
+  0 files updated, 0 files merged, 1 files removed, 0 files unresolved
+  [5326b8] A3
+  $ echo 1 > C
+  $ hg commit -Aqm C1
+  $ echo 2 > C
+  $ hg amend -qm C2
+  $ echo 3 > C
+  $ hg amend -qm C3
+  $ hg fold --from ".^"
+  2 changesets folded
+  0 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  rebasing 6473983c899c "B1"
+  $ hg next
+  1 files updated, 0 files merged, 0 files removed, 0 files unresolved
+  [853e5b] B1
+  $ tglogm
+  @  11: 853e5ba9bd35 'B1'
+  |
+  o  10: cdf849fe4126 'A3'
+  |
+  o  0: df4f53cec30a 'base' master_bookmark
+  
+  $ hgmn push ssh://user@dummy/repo -r . --bundle-store --allow-anon
+  pushing to ssh://user@dummy/repo
+  searching for changes
+
+Pull the modified stack to the other repo.
+  $ cd $TESTTMP/repo-pull
+  $ hgmn pull -r 853e5ba9bd35
+  pulling from ssh://user@dummy/repo
+  searching for changes
+  adding changesets
+  adding manifests
+  adding file changes
+  added 2 changesets with 0 changes to 0 files
+  $ tglogm
+  o  6: 853e5ba9bd35 'B1'
+  |
+  o  5: cdf849fe4126 'A3'
+  |
+  | x  4: 6473983c899c 'B1'  (Rewritten using rebase into 853e5ba9bd35)
+  | |
+  | x  3: 5326b832c149 'A3'  (Rewritten using fold into cdf849fe4126)
+  |/
+  | x  2: a24671c3bce2 'B1'  (Rewritten using rebase into 6473983c899c)
+  | |
+  | x  1: a8543df036f1 'A2'  (Rewritten using amend into 5326b832c149)
+  |/
+  o  0: df4f53cec30a 'base' master_bookmark
   

@@ -14,6 +14,7 @@ use mercurial_types::{HgChangesetId, HgNodeHash};
 use mononoke_types::DateTime;
 use smallvec::SmallVec;
 use types::mutation::MutationEntry;
+use types::HgId;
 
 /// Record of a Mercurial mutation operation (e.g. amend or rebase).
 #[derive(Clone, Debug, PartialEq)]
@@ -177,6 +178,41 @@ impl TryFrom<MutationEntry> for HgMutationEntry {
                 .collect::<Result<_>>()?,
         };
         Ok(entry)
+    }
+}
+
+// Conversion to client mutation entry
+impl Into<MutationEntry> for HgMutationEntry {
+    fn into(self: HgMutationEntry) -> MutationEntry {
+        MutationEntry {
+            succ: self.successor.into_nodehash().into(),
+            preds: self
+                .predecessors
+                .into_iter()
+                .map(HgChangesetId::into_nodehash)
+                .map(HgId::from)
+                .collect(),
+            split: self
+                .split
+                .into_iter()
+                .map(HgChangesetId::into_nodehash)
+                .map(HgId::from)
+                .collect(),
+            op: self.op,
+            user: self.user,
+            time: self.time.timestamp_secs(),
+            tz: self.time.tz_offset_secs(),
+            extra: self
+                .extra
+                .into_iter()
+                .map(|(key, value)| {
+                    (
+                        key.into_bytes().into_boxed_slice(),
+                        value.into_bytes().into_boxed_slice(),
+                    )
+                })
+                .collect(),
+        }
     }
 }
 

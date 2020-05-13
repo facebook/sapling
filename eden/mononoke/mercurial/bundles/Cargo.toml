@@ -13,6 +13,7 @@ mercurial_types = { path = "../types" }
 mononoke_types = { path = "../../mononoke_types" }
 revisionstore_types = { path = "../../../scm/lib/revisionstore/types" }
 scuba_ext = { path = "../../common/scuba_ext" }
+types = { path = "../../../scm/lib/types" }
 vlqencoding = { path = "../../../scm/lib/vlqencoding" }
 async_compression = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 bytes_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

@@ -23,6 +23,7 @@ phases = { path = "../../phases" }
 reachabilityindex = { path = "../../reachabilityindex" }
 repo_blobstore = { path = "../../blobrepo/repo_blobstore" }
 revset = { path = "../../revset" }
+tunables = { path = "../../tunables" }
 cloned = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 futures_ext = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }
 stats = { git = "https://github.com/facebookexperimental/rust-shed.git", branch = "master" }

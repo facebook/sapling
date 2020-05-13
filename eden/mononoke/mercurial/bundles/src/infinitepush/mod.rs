@@ -10,11 +10,12 @@
 use std::io::Cursor;
 
 use anyhow::{bail, Error, Result};
-use byteorder::ReadBytesExt;
+use byteorder::{ReadBytesExt, WriteBytesExt};
 use bytes_old::{Bytes, BytesMut};
 use mercurial_mutation::HgMutationEntry;
 use tokio_io::codec::Decoder;
-use vlqencoding::VLQDecode;
+use types::mutation::MutationEntry;
+use vlqencoding::{VLQDecode, VLQEncode};
 
 use crate::utils::BytesExt;
 
@@ -69,6 +70,8 @@ impl InfinitepushMutationUnpacker {
     }
 }
 
+const MUTATION_PART_VERSION: u8 = 1;
+
 /// Decoder for infinitepush mutation entries
 ///
 /// This decoder decodes all entries in one operation, so needs to wait for eof.
@@ -84,7 +87,7 @@ impl Decoder for InfinitepushMutationUnpacker {
         let mut entries = Vec::new();
         let mut cursor = Cursor::new(buf);
         let version = cursor.read_u8()?;
-        if version != 1 {
+        if version != MUTATION_PART_VERSION {
             bail!("Unsupported infinitepush mutation part format: {}", version);
         }
         let count = cursor.read_vlq()?;
@@ -97,4 +100,15 @@ impl Decoder for InfinitepushMutationUnpacker {
         cursor.into_inner().advance(size as usize);
         Ok(Some(entries))
     }
+}
+
+pub fn infinitepush_mutation_packer(entries: Vec<HgMutationEntry>) -> Result<Bytes> {
+    let mut buf = Vec::with_capacity(entries.len() * types::mutation::DEFAULT_ENTRY_SIZE);
+    buf.write_u8(MUTATION_PART_VERSION)?;
+    buf.write_vlq(entries.len())?;
+    for entry in entries {
+        let entry: MutationEntry = entry.into();
+        entry.serialize(&mut buf)?;
+    }
+    Ok(buf.into())
 }

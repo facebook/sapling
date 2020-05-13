@@ -8,6 +8,7 @@
 use super::changegroup::{packer::CgPacker, unpacker::CgVersion};
 use super::changegroup::{CgDeltaChunk, Part, Section};
 use super::chunk::Chunk;
+use super::infinitepush::infinitepush_mutation_packer;
 use super::obsmarkers::packer::obsmarkers_packer_stream;
 use super::obsmarkers::MetadataEntry;
 use super::wirepack;
@@ -24,6 +25,7 @@ use futures::stream::{iter_ok, once};
 use futures::{Future, Stream};
 use futures_ext::{BoxFuture, BoxStream, StreamExt};
 use futures_stats::Timed;
+use mercurial_mutation::HgMutationEntry;
 use mercurial_types::{
     Delta, HgBlobNode, HgChangesetId, HgFileNodeId, HgNodeHash, HgPhase, MPath, RepoPath, RevFlags,
     NULL_HASH,
@@ -432,5 +434,15 @@ where
 
     let mut builder = PartEncodeBuilder::mandatory(PartHeaderType::Obsmarkers)?;
     builder.set_data_generated(stream);
+    Ok(builder)
+}
+
+pub fn infinitepush_mutation_part<F>(entries: F) -> Result<PartEncodeBuilder>
+where
+    F: Future<Item = Vec<HgMutationEntry>, Error = Error> + Send + 'static,
+{
+    let mut builder = PartEncodeBuilder::advisory(PartHeaderType::B2xInfinitepushMutation)?;
+    let data = entries.and_then(infinitepush_mutation_packer);
+    builder.set_data_future(data);
     Ok(builder)
 }
