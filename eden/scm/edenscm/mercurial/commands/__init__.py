@@ -82,6 +82,7 @@ with hgdemandimport.deactivated():
         debugmutation,
         debugrunshell,
         debugmetalog,
+        debugsendunbundle,
         debugstatus,
         debugstrip,
         doctor,

@@ -1050,6 +1050,8 @@ Test list of internal help commands
    debugrevspec  parse and apply a revision specification
    debugrunshell
                  run a shell command
+   debugsendunbundle
+                 Send unbundle wireproto command to a given server
    debugsetparents
                  manually set the parents of the current working directory
    debugshell    (no help text available)
