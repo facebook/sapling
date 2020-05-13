@@ -34,6 +34,7 @@ use futures_util::try_join;
 use git_types::TreeHandle;
 use maplit::btreeset;
 use memblob::EagerMemblob;
+use mercurial_mutation::SqlHgMutationStoreBuilder;
 use metaconfig_types::{
     self, DerivedDataConfig, FilestoreParams, Redaction, RepoConfig, StorageConfig, UnodeVersion,
 };
@@ -350,6 +351,11 @@ impl TestRepoBuilder {
                 SqlBonsaiHgMapping::with_sqlite_in_memory()
                     .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))?,
             ),
+            Arc::new(
+                SqlHgMutationStoreBuilder::with_sqlite_in_memory()
+                    .context(ErrorKind::StateOpen(StateOpenError::HgMutationStore))?
+                    .with_repo_id(repo_id),
+            ),
             Arc::new(InProcessLease::new()),
             FilestoreConfig::default(),
             phases_factory,
@@ -403,6 +409,7 @@ pub fn new_memblob_with_sqlite_connection_with_id(
     con.execute_batch(SqlBonsaiGlobalrevMapping::CREATION_QUERY)?;
     con.execute_batch(SqlBonsaiHgMapping::CREATION_QUERY)?;
     con.execute_batch(SqlPhasesFactory::CREATION_QUERY)?;
+    con.execute_batch(SqlHgMutationStoreBuilder::CREATION_QUERY)?;
     let con = Connection::with_sqlite(con);
 
     new_memblob_with_connection_with_id(con.clone(), repo_id)
@@ -436,12 +443,18 @@ pub fn new_memblob_with_connection_with_id(
             Arc::new(SqlChangesets::from_sql_connections(sql_connections.clone())),
             Arc::new(
                 SqlBonsaiGitMappingConnection::from_sql_connections(sql_connections.clone())
-                    .with_repo_id(repo_id),
+                    .with_repo_id(repo_id.clone()),
             ),
             Arc::new(SqlBonsaiGlobalrevMapping::from_sql_connections(
                 sql_connections.clone(),
             )),
-            Arc::new(SqlBonsaiHgMapping::from_sql_connections(sql_connections)),
+            Arc::new(SqlBonsaiHgMapping::from_sql_connections(
+                sql_connections.clone(),
+            )),
+            Arc::new(
+                SqlHgMutationStoreBuilder::from_sql_connections(sql_connections)
+                    .with_repo_id(repo_id),
+            ),
             Arc::new(InProcessLease::new()),
             FilestoreConfig::default(),
             phases_factory,
@@ -522,6 +535,16 @@ async fn new_development(
             .context(ErrorKind::StateOpen(StateOpenError::BonsaiHgMapping))
     };
 
+    let hg_mutation_store = async {
+        let conn = sql_factory
+            .open::<SqlHgMutationStoreBuilder>()
+            .compat()
+            .await
+            .context(ErrorKind::StateOpen(StateOpenError::HgMutationStore))?;
+
+        Ok(conn.with_repo_id(repoid))
+    };
+
     let phases_factory = async {
         sql_factory
             .open::<SqlPhasesFactory>()
@@ -537,6 +560,7 @@ async fn new_development(
         bonsai_git_mapping,
         bonsai_globalrev_mapping,
         bonsai_hg_mapping,
+        hg_mutation_store,
         phases_factory,
     ) = try_join!(
         bookmarks,
@@ -545,6 +569,7 @@ async fn new_development(
         bonsai_git_mapping,
         bonsai_globalrev_mapping,
         bonsai_hg_mapping,
+        hg_mutation_store,
         phases_factory,
     )?;
 
@@ -558,6 +583,7 @@ async fn new_development(
         Arc::new(bonsai_git_mapping),
         Arc::new(bonsai_globalrev_mapping),
         Arc::new(bonsai_hg_mapping),
+        Arc::new(hg_mutation_store),
         Arc::new(InProcessLease::new()),
         filestore_config,
         phases_factory,
@@ -596,7 +622,7 @@ async fn new_production(
     let changesets_cache_pool = get_volatile_pool("changesets")?;
     let bonsai_hg_mapping_cache_pool = get_volatile_pool("bonsai_hg_mapping")?;
     let phases_cache_pool = get_volatile_pool("phases")?;
-    let derive_data_lease = MemcacheOps::new(fb, "derived-data-lease", "")?;
+    let derived_data_lease = MemcacheOps::new(fb, "derived-data-lease", "")?;
 
     let filenodes_tier = sql_factory.tier_name_shardable::<NewFilenodesBuilder>()?;
     let filenodes_builder = sql_factory.open_shardable::<NewFilenodesBuilder>().compat();
@@ -612,6 +638,14 @@ async fn new_production(
     };
     let bonsai_globalrev_mapping = sql_factory.open::<SqlBonsaiGlobalrevMapping>().compat();
     let bonsai_hg_mapping = sql_factory.open::<SqlBonsaiHgMapping>().compat();
+    let hg_mutation_store = async {
+        let conn = sql_factory
+            .open::<SqlHgMutationStoreBuilder>()
+            .compat()
+            .await?;
+
+        Ok(conn.with_repo_id(repoid))
+    };
     let phases_factory = sql_factory.open::<SqlPhasesFactory>().compat();
 
     // Wrap again to avoid any writes to memcache
@@ -629,6 +663,7 @@ async fn new_production(
         changesets,
         bonsai_globalrev_mapping,
         bonsai_hg_mapping,
+        hg_mutation_store,
     ) = try_join!(
         filenodes_builder,
         phases_factory,
@@ -637,6 +672,7 @@ async fn new_production(
         changesets,
         bonsai_globalrev_mapping,
         bonsai_hg_mapping,
+        hg_mutation_store,
     )?;
 
     filenodes_builder.enable_caching(
@@ -676,7 +712,8 @@ async fn new_production(
         Arc::new(bonsai_git_mapping),
         Arc::new(bonsai_globalrev_mapping),
         Arc::new(bonsai_hg_mapping),
-        Arc::new(derive_data_lease),
+        Arc::new(hg_mutation_store),
+        Arc::new(derived_data_lease),
         filestore_config,
         phases_factory,
         derived_data_config,

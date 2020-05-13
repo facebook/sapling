@@ -28,6 +28,7 @@ use filestore::FilestoreConfig;
 use futures_ext::{BoxFuture, FutureExt};
 use futures_old::{future, Future};
 use memblob::EagerMemblob;
+use mercurial_mutation::SqlHgMutationStoreBuilder;
 use mercurial_types::{HgChangesetIdPrefix, HgChangesetIdsResolvedFromPrefix, HgFileNodeId};
 use mononoke_types::{
     ChangesetId, ChangesetIdPrefix, ChangesetIdsResolvedFromPrefix, RepoPath, RepositoryId,
@@ -137,6 +138,9 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
 
     let phases_factory = SqlPhasesFactory::with_sqlite_in_memory()?;
 
+    let hg_mutation_store =
+        Arc::new(SqlHgMutationStoreBuilder::with_sqlite_in_memory()?.with_repo_id(repoid));
+
     let blobstore =
         RepoBlobstoreArgs::new(blobstore, None, repoid, ScubaSampleBuilder::with_discard());
     Ok(BlobRepo::new(
@@ -147,6 +151,7 @@ pub fn new_benchmark_repo(fb: FacebookInit, settings: DelaySettings) -> Result<B
         bonsai_git_mapping,
         bonsai_globalrev_mapping,
         bonsai_hg_mapping,
+        hg_mutation_store,
         Arc::new(DummyLease {}),
         FilestoreConfig::default(),
         phases_factory,

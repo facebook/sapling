@@ -29,6 +29,7 @@ filestore = { path = "../../filestore" }
 fsnodes = { path = "../../derived_data/fsnodes" }
 git_types = { path = "../../git/git_types" }
 memblob = { path = "../../blobstore/memblob" }
+mercurial_mutation = { path = "../../mercurial/mutation" }
 metaconfig_types = { path = "../../metaconfig/types" }
 mononoke_types = { path = "../../mononoke_types" }
 newfilenodes = { path = "../../newfilenodes" }

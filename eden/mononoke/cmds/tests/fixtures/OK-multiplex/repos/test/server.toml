@@ -4,6 +4,7 @@ storage_config = "multiplex"
 [storage.multiplex.metadata.remote]
 primary = { db_address="xdb.mononoke_production" }
 filenodes = { unsharded = { db_address="xdb.mononoke_production" } }
+mutation = { db_address="xdb.mononoke_mutation" }
 
 [storage.multiplex.blobstore.multiplexed]
 multiplex_id = 1

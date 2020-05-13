@@ -31,6 +31,7 @@ filenodes = { path = "../filenodes" }
 filestore = { path = "../filestore" }
 fsnodes = { path = "../derived_data/fsnodes" }
 memblob = { path = "../blobstore/memblob" }
+mercurial_mutation = { path = "../mercurial/mutation" }
 mercurial_types = { path = "../mercurial/types" }
 mononoke_types = { path = "../mononoke_types" }
 newfilenodes = { path = "../newfilenodes" }
