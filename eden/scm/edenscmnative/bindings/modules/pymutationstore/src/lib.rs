@@ -16,6 +16,7 @@ use cpython_ext::{PyNone, PyPath, ResultPyErrExt, Str};
 use thiserror::Error;
 
 use ::mutationstore::{MutationStore, Repair};
+use pydag::memnamedag;
 use types::mutation::MutationEntry;
 use types::node::Node;
 use vlqencoding::{VLQDecode, VLQEncode};
@@ -233,6 +234,20 @@ py_class!(class mutationstore |py| {
             pyssets.push(pysset);
         }
         Ok(pyssets)
+    }
+
+    /// Figure out connected components related to specified nodes.
+    /// The returned graph supports DAG related calculations like
+    /// ancestors, heads, roots, etc.
+    ///
+    /// Only 1:1 replacements are considered. Non 1:1 operations
+    /// like split, fold are ignored.
+    def getdag(&self, nodes: Vec<PyBytes>) -> PyResult<memnamedag> {
+        let nodes = nodes
+            .into_iter()
+            .map(|n| Node::from_slice(n.data(py))).collect::<Result<Vec<_>, _>>().map_pyerr(py)?;
+        let dag = self.mut_store(py).borrow().get_dag(nodes).map_pyerr(py)?;
+        memnamedag::from_memnamedag(py, dag)
     }
 
     @staticmethod
