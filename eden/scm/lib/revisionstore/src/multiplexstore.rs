@@ -7,7 +7,7 @@
 
 use std::path::PathBuf;
 
-use anyhow::{format_err, Result};
+use anyhow::Result;
 
 use types::{Key, NodeInfo};
 
