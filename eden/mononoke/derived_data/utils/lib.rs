@@ -108,7 +108,11 @@ where
         repo: BlobRepo,
         csid: ChangesetId,
     ) -> BoxFuture<String, Error> {
-        <M::Value as BonsaiDerived>::derive_with_mode(ctx.clone(), repo, csid, self.mode)
+        // We call derive_impl directly so that we can pass
+        // `self.mapping` there. This will allow us to
+        // e.g. regenerate derived data for the commit
+        // even if it was already generated (see RegenerateMapping call).
+        derive_impl::<M::Value, _>(ctx, repo, self.mapping.clone(), csid, self.mode)
             .map(|result| format!("{:?}", result))
             .from_err()
             .boxify()

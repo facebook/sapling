@@ -633,6 +633,28 @@ mod tests {
         Ok(())
     }
 
+    #[fbinit::compat_test]
+    async fn test_single(fb: FacebookInit) -> Result<(), Error> {
+        let ctx = CoreContext::test_mock(fb);
+        let repo = linear::getrepo(fb).await;
+
+        let mut counting_blobstore = None;
+        let repo = repo.dangerous_override(|blobstore| -> Arc<dyn Blobstore> {
+            let blobstore = Arc::new(CountingBlobstore::new(blobstore));
+            counting_blobstore = Some(blobstore.clone());
+            blobstore
+        });
+        let counting_blobstore = counting_blobstore.unwrap();
+
+        let master = resolve_cs_id(&ctx, &repo, "master").await?;
+        subcommand_single(&ctx, &repo, master, RootUnodeManifestId::NAME).await?;
+
+        let writes_count = counting_blobstore.writes_count();
+        subcommand_single(&ctx, &repo, master, RootUnodeManifestId::NAME).await?;
+        assert!(counting_blobstore.writes_count() > writes_count);
+        Ok(())
+    }
+
     #[fbinit::test]
     fn test_backfill_data_latest(fb: FacebookInit) -> Result<(), Error> {
         let mut runtime = Runtime::new()?;
@@ -749,6 +771,41 @@ mod tests {
             } else {
                 self.inner.put(ctx, key, value).boxify()
             }
+        }
+
+        fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
+            self.inner.get(ctx, key)
+        }
+    }
+
+    #[derive(Debug)]
+    struct CountingBlobstore {
+        count: AtomicUsize,
+        inner: Arc<dyn Blobstore>,
+    }
+
+    impl CountingBlobstore {
+        fn new(inner: Arc<dyn Blobstore>) -> Self {
+            Self {
+                count: AtomicUsize::new(0),
+                inner,
+            }
+        }
+
+        fn writes_count(&self) -> usize {
+            self.count.load(Ordering::Relaxed)
+        }
+    }
+
+    impl Blobstore for CountingBlobstore {
+        fn put(
+            &self,
+            ctx: CoreContext,
+            key: String,
+            value: BlobstoreBytes,
+        ) -> BoxFuture<(), Error> {
+            self.count.fetch_add(1, Ordering::Relaxed);
+            self.inner.put(ctx, key, value).boxify()
         }
 
         fn get(&self, ctx: CoreContext, key: String) -> BoxFuture<Option<BlobstoreGetData>, Error> {
