@@ -386,6 +386,11 @@ impl HgMutationStore for SqlHgMutationStore {
         new_changeset_ids: HashSet<HgChangesetId>,
         entries: Vec<HgMutationEntry>,
     ) -> Result<()> {
+        if new_changeset_ids.is_empty() {
+            // Nothing to do.
+            return Ok(());
+        }
+
         let mut entry_set = HgMutationEntrySet::new();
         let entries: HashMap<_, _> = entries
             .into_iter()
@@ -475,6 +480,11 @@ impl HgMutationStore for SqlHgMutationStore {
         ctx: &CoreContext,
         changeset_ids: HashSet<HgChangesetId>,
     ) -> Result<Vec<HgMutationEntry>> {
+        if changeset_ids.is_empty() {
+            // Nothing to fetch
+            return Ok(Vec::new());
+        }
+
         let mut entry_set = HgMutationEntrySet::new();
         let connection = self.read_connection_for_changesets(&changeset_ids).await?;
         self.fetch_by_successor(connection, &mut entry_set, &changeset_ids)
