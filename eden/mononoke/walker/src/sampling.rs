@@ -11,6 +11,7 @@ use crate::walk::{OutgoingEdge, WalkVisitor};
 
 use context::{CoreContext, SamplingKey};
 use dashmap::DashMap;
+use mononoke_types::datetime::DateTime;
 use std::{collections::HashSet, fmt, hash, sync::Arc};
 
 pub trait SampleTrigger<K> {
@@ -49,6 +50,9 @@ impl<T> SamplingWalkVisitor<T> {
 pub struct PathTrackingRoute {
     // The path we reached this by
     pub path: Option<WrappedPath>,
+    /// When did this route see this path was updated.
+    /// Taken from the last bonsai or hg changset stepped through.
+    pub mtime: Option<DateTime>,
 }
 
 // Only certain node types can have repo paths associated
@@ -95,12 +99,18 @@ impl PathTrackingRoute {
         }
     }
 
-    fn evolve(route: Option<Self>, path: Option<&WrappedPath>, target: &Node) -> Self {
+    fn evolve(
+        route: Option<Self>,
+        path: Option<&WrappedPath>,
+        target: &Node,
+        mtime: Option<&DateTime>,
+    ) -> Self {
         let existing_path = route.as_ref().and_then(|r| r.path.as_ref());
+        let existing_mtime = route.as_ref().and_then(|r| r.mtime.as_ref());
         let new_path = PathTrackingRoute::evolve_path(existing_path, path, target);
 
         // reuse same route if possible
-        if new_path == existing_path {
+        if new_path == existing_path && (mtime.is_none() || mtime == existing_mtime) {
             if let Some(route) = route {
                 return route;
             }
@@ -108,6 +118,11 @@ impl PathTrackingRoute {
 
         Self {
             path: new_path.cloned(),
+            mtime: if mtime.is_none() {
+                route.and_then(|r| r.mtime)
+            } else {
+                mtime.cloned()
+            },
         }
     }
 }
@@ -123,7 +138,7 @@ impl<T>
     WalkVisitor<
         (
             (Node, Option<WrappedPath>),
-            Option<NodeData>,
+            (Option<DateTime>, Option<NodeData>),
             Option<StepStats>,
         ),
         PathTrackingRoute,
@@ -177,19 +192,37 @@ where
     ) -> (
         (
             (Node, Option<WrappedPath>),
-            Option<NodeData>,
+            (Option<DateTime>, Option<NodeData>),
             Option<StepStats>,
         ),
         PathTrackingRoute,
         Vec<OutgoingEdge>,
     ) {
         let inner_route = route.as_ref().map(|_| ());
-        let route = PathTrackingRoute::evolve(route, resolved.path.as_ref(), &resolved.target);
+
+        let mtime = match &node_data {
+            Some(NodeData::BonsaiChangeset(bcs)) => {
+                if let Some(committer_date) = bcs.committer_date() {
+                    Some(committer_date)
+                } else {
+                    Some(bcs.author_date())
+                }
+            }
+            Some(NodeData::HgChangeset(hg_cs)) => Some(hg_cs.time()),
+            _ => None,
+        };
+
+        let route =
+            PathTrackingRoute::evolve(route, resolved.path.as_ref(), &resolved.target, mtime);
         let ((n, nd, stats), _inner_route, outgoing) =
             self.inner
                 .visit(ctx, resolved, node_data, inner_route, outgoing);
 
-        (((n, route.path.clone()), nd, stats), route, outgoing)
+        (
+            ((n, route.path.clone()), (route.mtime.clone(), nd), stats),
+            route,
+            outgoing,
+        )
     }
 }
 

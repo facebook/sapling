@@ -25,11 +25,12 @@ use cloned::cloned;
 use cmdlib::args;
 use context::{CoreContext, SamplingKey};
 use fbinit::FacebookInit;
+use filetime::{self, FileTime};
 use futures::{
     future::{self, FutureExt, TryFutureExt},
     stream::{Stream, TryStreamExt},
 };
-use mononoke_types::BlobstoreBytes;
+use mononoke_types::{datetime::DateTime, BlobstoreBytes};
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 use samplingblob::SamplingHandler;
 use slog::Logger;
@@ -58,11 +59,20 @@ fn corpus_stream<InStream, SS>(
     sampler: Arc<CorpusSamplingHandler<CorpusSample>>,
 ) -> impl Stream<Item = Result<(Node, Option<()>, Option<ScrubStats>), Error>>
 where
-    InStream: Stream<Item = Result<((Node, Option<WrappedPath>), Option<NodeData>, Option<SS>), Error>>
+    InStream: Stream<
+            Item = Result<
+                (
+                    (Node, Option<WrappedPath>),
+                    (Option<DateTime>, Option<NodeData>),
+                    Option<SS>,
+                ),
+                Error,
+            >,
+        >
         + 'static
         + Send,
 {
-    s.map_ok(move |(walk_key, nd, _progress_stats)| match nd {
+    s.map_ok(move |(walk_key, (mtime, nd), _progress_stats)| match nd {
         Some(NodeData::FileContent(FileContentData::ContentStream(file_bytes_stream))) => {
             cloned!(sampler);
             file_bytes_stream
@@ -73,20 +83,20 @@ where
                 .map_ok(move |_num_bytes| {
                     let sample = sampler.complete_step(&walk_key);
                     let size = ScrubStats::from(sample.as_ref());
-                    (walk_key, sample, Some(size))
+                    (walk_key, sample, mtime, Some(size))
                 })
                 .left_future()
         }
         _ => {
             let sample = sampler.complete_step(&walk_key);
             let size = ScrubStats::from(sample.as_ref());
-            future::ready(Ok((walk_key, sample, Some(size)))).right_future()
+            future::ready(Ok((walk_key, sample, mtime, Some(size)))).right_future()
         }
     })
     .try_buffer_unordered(scheduled_max)
     // Dump the data to disk
-    .map_ok(move |((n, path), sample, stats)| match sample {
-        Some(sample) => move_node_files(output_dir.clone(), n.clone(), path, sample).map_ok(move |()| (n, Some(()), stats)).left_future(),
+    .map_ok(move |((n, path), sample, mtime, stats)| match sample {
+        Some(sample) => move_node_files(output_dir.clone(), n.clone(), path, mtime, sample).map_ok(move |()| (n, Some(()), stats)).left_future(),
         None => future::ok((n, Some(()), stats)).right_future(),
     })
     .try_buffer_unordered(scheduled_max)
@@ -165,6 +175,7 @@ async fn move_node_files(
     output_dir: Option<String>,
     node: Node,
     repo_path: Option<WrappedPath>,
+    mtime: Option<DateTime>,
     sample: CorpusSample,
 ) -> Result<(), Error> {
     let hash_subset = node
@@ -195,6 +206,13 @@ async fn move_node_files(
         dest_path.push(&key_file);
         let mut source_path = inflight_dir.clone();
         source_path.push(&key_file);
+
+        if let Some(mtime) = mtime {
+            filetime::set_file_mtime(
+                source_path.clone(),
+                FileTime::from_unix_time(mtime.timestamp_secs(), 0),
+            )?;
+        }
 
         tkfs::rename(source_path, dest_path).await?;
     }

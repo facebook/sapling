@@ -388,13 +388,13 @@ impl<Inner> Clone for ProgressStateMutex<Inner> {
 }
 
 // Log some status update, passing on all data unchanged
-pub fn progress_stream<InStream, PS, ND, SS, K>(
+pub fn progress_stream<InStream, PS, Payload, SS, K>(
     quiet: bool,
     progress_state: &PS,
     s: InStream,
-) -> impl Stream<Item = Result<(K, Option<ND>, Option<SS>), Error>>
+) -> impl Stream<Item = Result<(K, Payload, Option<SS>), Error>>
 where
-    InStream: Stream<Item = Result<(K, Option<ND>, Option<SS>), Error>> + 'static + Send,
+    InStream: Stream<Item = Result<(K, Payload, Option<SS>), Error>> + 'static + Send,
     PS: 'static + Send + Clone + ProgressRecorder<SS> + ProgressReporter,
     K: 'static,
     // Make sure we can convert from K reference to Node reference
@@ -403,7 +403,7 @@ where
     s.map({
         let progress_state = progress_state.clone();
         move |r| {
-            r.and_then(|(key, data_opt, stats_opt)| {
+            r.and_then(|(key, payload, stats_opt)| {
                 {
                     let k: &K = &key;
                     let n: &Node = k.into();
@@ -412,7 +412,7 @@ where
                         progress_state.report_throttled();
                     }
                 }
-                Ok((key, data_opt, stats_opt))
+                Ok((key, payload, stats_opt))
             })
         }
     })

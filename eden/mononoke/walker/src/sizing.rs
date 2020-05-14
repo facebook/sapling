@@ -336,7 +336,9 @@ pub async fn compression_benefit<'a>(
             cloned!(run.ctx);
             async move |walk_output| {
                 cloned!(ctx, sizing_progress_state);
-                let walk_progress = progress_stream(quiet, &progress_state.clone(), walk_output);
+                // Sizing doesn't use mtime, so remove it from payload
+                let walk_progress = progress_stream(quiet, &progress_state.clone(), walk_output)
+                    .map_ok(|(key, (_mtime, node_data), stats)| (key, node_data, stats));
 
                 let compressor = size_sampling_stream(
                     scheduled_max,
