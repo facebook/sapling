@@ -361,6 +361,15 @@ impl RepoClient {
         }
     }
 
+    fn command_future<F, I, E, H>(&self, command: &str, handler: H) -> BoxFuture<I, E>
+    where
+        F: Future<Item = I, Error = E> + Send + 'static,
+        H: FnOnce(CoreContext, CommandLogger) -> F,
+    {
+        let (ctx, command_logger) = self.start_command(command);
+        handler(ctx, command_logger).boxify()
+    }
+
     fn start_command(&self, command: &str) -> (CoreContext, CommandLogger) {
         info!(self.logging.logger(), "{}", command);
 
@@ -884,108 +893,101 @@ impl HgCommands for RepoClient {
             }
         }
 
-        let (ctx, command_logger) = self.start_command(ops::BETWEEN);
-
-        // TODO(jsgf): do pairs in parallel?
-        // TODO: directly return stream of streams
-        cloned!(self.repo);
-        stream::iter_ok(pairs.into_iter())
-            .and_then({
-                cloned!(ctx);
-                move |(top, bottom)| {
-                    let mut f = 1;
-                    ParentStream::new(ctx.clone(), &repo, top, bottom)
-                        .enumerate()
-                        .filter(move |&(i, _)| {
-                            if i == f {
-                                f *= 2;
-                                true
-                            } else {
-                                false
-                            }
-                        })
-                        .map(|(_, v)| v)
-                        .collect()
-                }
-            })
-            .collect()
-            .timeout(*TIMEOUT)
-            .map_err(process_timeout_error)
-            .traced(self.session.trace(), ops::BETWEEN, trace_args!())
-            .timed(move |stats, _| {
-                command_logger.without_wireproto().finalize_command(&stats);
-                Ok(())
-            })
-            .boxify()
+        self.command_future(ops::BETWEEN, |ctx, command_logger| {
+            // TODO(jsgf): do pairs in parallel?
+            // TODO: directly return stream of streams
+            cloned!(self.repo);
+            stream::iter_ok(pairs.into_iter())
+                .and_then({
+                    cloned!(ctx);
+                    move |(top, bottom)| {
+                        let mut f = 1;
+                        ParentStream::new(ctx.clone(), &repo, top, bottom)
+                            .enumerate()
+                            .filter(move |&(i, _)| {
+                                if i == f {
+                                    f *= 2;
+                                    true
+                                } else {
+                                    false
+                                }
+                            })
+                            .map(|(_, v)| v)
+                            .collect()
+                    }
+                })
+                .collect()
+                .timeout(*TIMEOUT)
+                .map_err(process_timeout_error)
+                .traced(self.session.trace(), ops::BETWEEN, trace_args!())
+                .timed(move |stats, _| {
+                    command_logger.without_wireproto().finalize_command(&stats);
+                    Ok(())
+                })
+        })
     }
 
     // @wireprotocommand('clienttelemetry')
     fn clienttelemetry(&self, args: HashMap<Vec<u8>, Vec<u8>>) -> HgCommandRes<String> {
-        let hostname = get_hostname().unwrap_or_else(|_| "<no hostname found>".to_owned());
+        self.command_future(ops::CLIENTTELEMETRY, |_ctx, mut command_logger| {
+            let hostname = get_hostname().unwrap_or_else(|_| "<no hostname found>".to_owned());
 
-        let (_ctx, mut command_logger) = self.start_command(ops::CLIENTTELEMETRY);
+            if let Some(client_correlator) = args.get(b"correlator" as &[u8]) {
+                command_logger.add_scuba_extra(
+                    "client_correlator",
+                    String::from_utf8_lossy(client_correlator).into_owned(),
+                );
+            }
 
-        if let Some(client_correlator) = args.get(b"correlator" as &[u8]) {
-            command_logger.add_scuba_extra(
-                "client_correlator",
-                String::from_utf8_lossy(client_correlator).into_owned(),
-            );
-        }
+            if let Some(command) = args.get(b"command" as &[u8]) {
+                command_logger.add_scuba_extra(
+                    "hg_short_command",
+                    String::from_utf8_lossy(command).into_owned(),
+                );
+            }
 
-        if let Some(command) = args.get(b"command" as &[u8]) {
-            command_logger.add_scuba_extra(
-                "hg_short_command",
-                String::from_utf8_lossy(command).into_owned(),
-            );
-        }
-
-        future::ok(hostname)
-            .timeout(*TIMEOUT)
-            .map_err(process_timeout_error)
-            .traced(self.session.trace(), ops::CLIENTTELEMETRY, trace_args!())
-            .timed(move |stats, _| {
-                command_logger.without_wireproto().finalize_command(&stats);
-                Ok(())
-            })
-            .boxify()
+            future::ok(hostname)
+                .timeout(*TIMEOUT)
+                .map_err(process_timeout_error)
+                .traced(self.session.trace(), ops::CLIENTTELEMETRY, trace_args!())
+                .timed(move |stats, _| {
+                    command_logger.without_wireproto().finalize_command(&stats);
+                    Ok(())
+                })
+        })
     }
 
     // @wireprotocommand('heads')
     fn heads(&self) -> HgCommandRes<HashSet<HgChangesetId>> {
         // Get a stream of heads and collect them into a HashSet
         // TODO: directly return stream of heads
-        let (ctx, command_logger) = self.start_command(ops::HEADS);
-
-        // We get all bookmarks while handling heads to fix the race demonstrated in
-        // test-bookmark-race.t - this fixes bookmarks at the moment the client starts discovery
-        // NB: Getting bookmarks is only done here to ensure that they are cached at the beginning
-        // of discovery - this function is meant to get heads only.
-        self.get_pull_default_bookmarks_maybe_stale(ctx.clone())
-            .join(
-                self.repo
-                    .blobrepo()
-                    .get_heads_maybe_stale(ctx.clone())
-                    .collect()
-                    .map(|v| v.into_iter().collect())
-                    .from_err(),
-            )
-            .map(|(_, r)| r)
-            .timeout(*TIMEOUT)
-            .map_err(process_timeout_error)
-            .traced(self.session.trace(), ops::HEADS, trace_args!())
-            .timed(move |stats, _| {
-                command_logger.without_wireproto().finalize_command(&stats);
-                Ok(())
-            })
-            .boxify()
+        self.command_future(ops::HEADS, |ctx, command_logger| {
+            // We get all bookmarks while handling heads to fix the race demonstrated in
+            // test-bookmark-race.t - this fixes bookmarks at the moment the client starts discovery
+            // NB: Getting bookmarks is only done here to ensure that they are cached at the beginning
+            // of discovery - this function is meant to get heads only.
+            self.get_pull_default_bookmarks_maybe_stale(ctx.clone())
+                .join(
+                    self.repo
+                        .blobrepo()
+                        .get_heads_maybe_stale(ctx.clone())
+                        .collect()
+                        .map(|v| v.into_iter().collect())
+                        .from_err(),
+                )
+                .map(|(_, r)| r)
+                .timeout(*TIMEOUT)
+                .map_err(process_timeout_error)
+                .traced(self.session.trace(), ops::HEADS, trace_args!())
+                .timed(move |stats, _| {
+                    command_logger.without_wireproto().finalize_command(&stats);
+                    Ok(())
+                })
+        })
     }
 
     // @wireprotocommand('lookup', 'key')
     fn lookup(&self, key: String) -> HgCommandRes<BytesOld> {
-        let (ctx, command_logger) = self.start_command(ops::LOOKUP);
-
-        let repo = self.repo.blobrepo().clone();
-
         fn generate_resp_buf(success: bool, message: &[u8]) -> BytesOld {
             let mut buf = BytesMutOld::with_capacity(message.len() + 3);
             if success {
@@ -1040,192 +1042,199 @@ impl HgCommands for RepoClient {
         // Controls how many suggestions to fetch in case of ambiguous outcome of prefix lookup.
         const MAX_NUMBER_OF_SUGGESTIONS_TO_FETCH: usize = 10;
 
-        // Resolves changeset or set of suggestions from the key (full hex hash or a prefix) if exist.
-        // Note: `get_many_hg_by_prefix` works for the full hex hashes well but
-        //       `changeset_exists` has better caching and is preferable for the full length hex hashes.
-        let node_fut = match HgChangesetId::from_str(&key) {
-            Ok(csid) => repo
-                .changeset_exists(ctx.clone(), csid)
-                .map(move |exists| {
-                    if exists {
-                        HgChangesetIdsResolvedFromPrefix::Single(csid)
-                    } else {
-                        HgChangesetIdsResolvedFromPrefix::NoMatch
+        self.command_future(ops::LOOKUP, |ctx, command_logger| {
+            let repo = self.repo.blobrepo().clone();
+
+            // Resolves changeset or set of suggestions from the key (full hex hash or a prefix) if exist.
+            // Note: `get_many_hg_by_prefix` works for the full hex hashes well but
+            //       `changeset_exists` has better caching and is preferable for the full length hex hashes.
+            let node_fut = match HgChangesetId::from_str(&key) {
+                Ok(csid) => repo
+                    .changeset_exists(ctx.clone(), csid)
+                    .map(move |exists| {
+                        if exists {
+                            HgChangesetIdsResolvedFromPrefix::Single(csid)
+                        } else {
+                            HgChangesetIdsResolvedFromPrefix::NoMatch
+                        }
+                    })
+                    .boxify(),
+                Err(_) => match HgChangesetIdPrefix::from_str(&key) {
+                    Ok(cs_prefix) => repo
+                        .get_bonsai_hg_mapping()
+                        .get_many_hg_by_prefix(
+                            ctx.clone(),
+                            repo.get_repoid(),
+                            cs_prefix,
+                            MAX_NUMBER_OF_SUGGESTIONS_TO_FETCH,
+                        )
+                        .boxify(),
+                    Err(_) => ok(HgChangesetIdsResolvedFromPrefix::NoMatch).boxify(),
+                },
+            };
+
+            // The lookup order:
+            // If there is an exact commit match, return that even if the key is the prefix of the hash.
+            // If there is a bookmark match, return that.
+            // If there are suggestions, show them. This happens in case of ambiguous outcome of prefix lookup.
+            // Otherwise, show an error.
+
+            let bookmark = BookmarkName::new(&key).ok();
+            let lookup_fut = node_fut
+                .and_then(move |resolved_cids| {
+                    use HgChangesetIdsResolvedFromPrefix::*;
+
+                    // Describing the priority relative to bookmark presence for the key.
+                    enum LookupOutcome {
+                        HighPriority(HgCommandRes<BytesOld>),
+                        LowPriority(HgCommandRes<BytesOld>),
+                    };
+
+                    let outcome = match resolved_cids {
+                        Single(csid) => {
+                            LookupOutcome::HighPriority(generate_changeset_resp_buf(csid))
+                        }
+                        Multiple(suggestion_cids) => {
+                            LookupOutcome::LowPriority(generate_suggestions_resp_buf(
+                                ctx.clone(),
+                                repo.clone(),
+                                suggestion_cids,
+                            ))
+                        }
+                        TooMany(_) => LookupOutcome::LowPriority(
+                            Ok(generate_resp_buf(
+                                false,
+                                format!("ambiguous identifier '{}'", key).as_bytes(),
+                            ))
+                            .into_future()
+                            .boxify(),
+                        ),
+                        NoMatch => LookupOutcome::LowPriority(
+                            Ok(generate_resp_buf(
+                                false,
+                                format!("{} not found", key).as_bytes(),
+                            ))
+                            .into_future()
+                            .boxify(),
+                        ),
+                    };
+
+                    match (outcome, bookmark) {
+                        (LookupOutcome::HighPriority(res), _) => res,
+                        (LookupOutcome::LowPriority(res), Some(bookmark)) => repo
+                            .get_bookmark(ctx.clone(), &bookmark)
+                            .and_then(move |maybe_csid| {
+                                if let Some(csid) = maybe_csid {
+                                    generate_changeset_resp_buf(csid)
+                                } else {
+                                    res
+                                }
+                            })
+                            .boxify(),
+                        (LookupOutcome::LowPriority(res), None) => res,
                     }
                 })
-                .boxify(),
-            Err(_) => match HgChangesetIdPrefix::from_str(&key) {
-                Ok(cs_prefix) => repo
-                    .get_bonsai_hg_mapping()
-                    .get_many_hg_by_prefix(
-                        ctx.clone(),
-                        repo.get_repoid(),
-                        cs_prefix,
-                        MAX_NUMBER_OF_SUGGESTIONS_TO_FETCH,
-                    )
-                    .boxify(),
-                Err(_) => ok(HgChangesetIdsResolvedFromPrefix::NoMatch).boxify(),
-            },
-        };
+                .boxify();
 
-        // The lookup order:
-        // If there is an exact commit match, return that even if the key is the prefix of the hash.
-        // If there is a bookmark match, return that.
-        // If there are suggestions, show them. This happens in case of ambiguous outcome of prefix lookup.
-        // Otherwise, show an error.
-
-        let bookmark = BookmarkName::new(&key).ok();
-        let lookup_fut = node_fut
-            .and_then(move |resolved_cids| {
-                use HgChangesetIdsResolvedFromPrefix::*;
-
-                // Describing the priority relative to bookmark presence for the key.
-                enum LookupOutcome {
-                    HighPriority(HgCommandRes<BytesOld>),
-                    LowPriority(HgCommandRes<BytesOld>),
-                };
-
-                let outcome = match resolved_cids {
-                    Single(csid) => LookupOutcome::HighPriority(generate_changeset_resp_buf(csid)),
-                    Multiple(suggestion_cids) => LookupOutcome::LowPriority(
-                        generate_suggestions_resp_buf(ctx.clone(), repo.clone(), suggestion_cids),
-                    ),
-                    TooMany(_) => LookupOutcome::LowPriority(
-                        Ok(generate_resp_buf(
-                            false,
-                            format!("ambiguous identifier '{}'", key).as_bytes(),
-                        ))
-                        .into_future()
-                        .boxify(),
-                    ),
-                    NoMatch => LookupOutcome::LowPriority(
-                        Ok(generate_resp_buf(
-                            false,
-                            format!("{} not found", key).as_bytes(),
-                        ))
-                        .into_future()
-                        .boxify(),
-                    ),
-                };
-
-                match (outcome, bookmark) {
-                    (LookupOutcome::HighPriority(res), _) => res,
-                    (LookupOutcome::LowPriority(res), Some(bookmark)) => repo
-                        .get_bookmark(ctx.clone(), &bookmark)
-                        .and_then(move |maybe_csid| {
-                            if let Some(csid) = maybe_csid {
-                                generate_changeset_resp_buf(csid)
-                            } else {
-                                res
-                            }
-                        })
-                        .boxify(),
-                    (LookupOutcome::LowPriority(res), None) => res,
-                }
-            })
-            .boxify();
-
-        lookup_fut
-            .timeout(*TIMEOUT)
-            .map_err(process_timeout_error)
-            .traced(self.session.trace(), ops::LOOKUP, trace_args!())
-            .timed(move |stats, _| {
-                command_logger.without_wireproto().finalize_command(&stats);
-                Ok(())
-            })
-            .boxify()
+            lookup_fut
+                .timeout(*TIMEOUT)
+                .map_err(process_timeout_error)
+                .traced(self.session.trace(), ops::LOOKUP, trace_args!())
+                .timed(move |stats, _| {
+                    command_logger.without_wireproto().finalize_command(&stats);
+                    Ok(())
+                })
+        })
     }
 
     // @wireprotocommand('known', 'nodes *'), but the '*' is ignored
     fn known(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
-        let (ctx, command_logger) = self.start_command(ops::KNOWN);
+        self.command_future(ops::KNOWN, |ctx, command_logger| {
+            let blobrepo = self.repo.blobrepo().clone();
 
-        let blobrepo = self.repo.blobrepo().clone();
+            let nodes_len = nodes.len();
+            let phases_hint = blobrepo.get_phases().clone();
 
-        let nodes_len = nodes.len();
-        let phases_hint = blobrepo.get_phases().clone();
+            blobrepo
+                .get_hg_bonsai_mapping(ctx.clone(), nodes.clone())
+                .map(|hg_bcs_mapping| {
+                    let mut bcs_ids = vec![];
+                    let mut bcs_hg_mapping = hashmap! {};
 
-        blobrepo
-            .get_hg_bonsai_mapping(ctx.clone(), nodes.clone())
-            .map(|hg_bcs_mapping| {
-                let mut bcs_ids = vec![];
-                let mut bcs_hg_mapping = hashmap! {};
-
-                for (hg, bcs) in hg_bcs_mapping {
-                    bcs_ids.push(bcs);
-                    bcs_hg_mapping.insert(bcs, hg);
-                }
-                (bcs_ids, bcs_hg_mapping)
-            })
-            .and_then({
-                cloned!(ctx);
-                move |(bcs_ids, bcs_hg_mapping)| {
-                    phases_hint
-                        .get_public(ctx, bcs_ids, false)
-                        .map(move |public_csids| {
-                            public_csids
-                                .into_iter()
-                                .filter_map(|csid| bcs_hg_mapping.get(&csid).cloned())
-                                .collect::<HashSet<_>>()
-                        })
-                }
-            })
-            .map(move |found_hg_changesets| {
-                nodes
-                    .into_iter()
-                    .map(move |node| found_hg_changesets.contains(&node))
-                    .collect::<Vec<_>>()
-            })
-            .timeout(*TIMEOUT)
-            .map_err(process_timeout_error)
-            .traced(self.session.trace(), ops::KNOWN, trace_args!())
-            .timed(move |stats, known_nodes| {
-                if let Ok(known) = known_nodes {
-                    ctx.perf_counters()
-                        .add_to_counter(PerfCounterType::NumKnown, known.len() as i64);
-                    ctx.perf_counters().add_to_counter(
-                        PerfCounterType::NumUnknown,
-                        (nodes_len - known.len()) as i64,
-                    );
-                }
-                command_logger.without_wireproto().finalize_command(&stats);
-                Ok(())
-            })
-            .boxify()
+                    for (hg, bcs) in hg_bcs_mapping {
+                        bcs_ids.push(bcs);
+                        bcs_hg_mapping.insert(bcs, hg);
+                    }
+                    (bcs_ids, bcs_hg_mapping)
+                })
+                .and_then({
+                    cloned!(ctx);
+                    move |(bcs_ids, bcs_hg_mapping)| {
+                        phases_hint
+                            .get_public(ctx, bcs_ids, false)
+                            .map(move |public_csids| {
+                                public_csids
+                                    .into_iter()
+                                    .filter_map(|csid| bcs_hg_mapping.get(&csid).cloned())
+                                    .collect::<HashSet<_>>()
+                            })
+                    }
+                })
+                .map(move |found_hg_changesets| {
+                    nodes
+                        .into_iter()
+                        .map(move |node| found_hg_changesets.contains(&node))
+                        .collect::<Vec<_>>()
+                })
+                .timeout(*TIMEOUT)
+                .map_err(process_timeout_error)
+                .traced(self.session.trace(), ops::KNOWN, trace_args!())
+                .timed(move |stats, known_nodes| {
+                    if let Ok(known) = known_nodes {
+                        ctx.perf_counters()
+                            .add_to_counter(PerfCounterType::NumKnown, known.len() as i64);
+                        ctx.perf_counters().add_to_counter(
+                            PerfCounterType::NumUnknown,
+                            (nodes_len - known.len()) as i64,
+                        );
+                    }
+                    command_logger.without_wireproto().finalize_command(&stats);
+                    Ok(())
+                })
+        })
     }
 
     fn knownnodes(&self, nodes: Vec<HgChangesetId>) -> HgCommandRes<Vec<bool>> {
-        let (ctx, command_logger) = self.start_command(ops::KNOWNNODES);
+        self.command_future(ops::KNOWNNODES, |ctx, command_logger| {
+            let blobrepo = self.repo.blobrepo().clone();
 
-        let blobrepo = self.repo.blobrepo().clone();
+            let nodes_len = nodes.len();
 
-        let nodes_len = nodes.len();
-
-        blobrepo
-            .get_hg_bonsai_mapping(ctx.clone(), nodes.clone())
-            .map(|hg_bcs_mapping| {
-                let hg_bcs_mapping: HashMap<_, _> = hg_bcs_mapping.into_iter().collect();
-                nodes
-                    .into_iter()
-                    .map(move |node| hg_bcs_mapping.contains_key(&node))
-                    .collect::<Vec<_>>()
-            })
-            .timeout(*TIMEOUT)
-            .map_err(process_timeout_error)
-            .traced(self.session.trace(), ops::KNOWNNODES, trace_args!())
-            .timed(move |stats, known_nodes| {
-                if let Ok(known) = known_nodes {
-                    ctx.perf_counters()
-                        .add_to_counter(PerfCounterType::NumKnown, known.len() as i64);
-                    ctx.perf_counters().add_to_counter(
-                        PerfCounterType::NumUnknown,
-                        (nodes_len - known.len()) as i64,
-                    );
-                }
-                command_logger.without_wireproto().finalize_command(&stats);
-                Ok(())
-            })
-            .boxify()
+            blobrepo
+                .get_hg_bonsai_mapping(ctx.clone(), nodes.clone())
+                .map(|hg_bcs_mapping| {
+                    let hg_bcs_mapping: HashMap<_, _> = hg_bcs_mapping.into_iter().collect();
+                    nodes
+                        .into_iter()
+                        .map(move |node| hg_bcs_mapping.contains_key(&node))
+                        .collect::<Vec<_>>()
+                })
+                .timeout(*TIMEOUT)
+                .map_err(process_timeout_error)
+                .traced(self.session.trace(), ops::KNOWNNODES, trace_args!())
+                .timed(move |stats, known_nodes| {
+                    if let Ok(known) = known_nodes {
+                        ctx.perf_counters()
+                            .add_to_counter(PerfCounterType::NumKnown, known.len() as i64);
+                        ctx.perf_counters().add_to_counter(
+                            PerfCounterType::NumUnknown,
+                            (nodes_len - known.len()) as i64,
+                        );
+                    }
+                    command_logger.without_wireproto().finalize_command(&stats);
+                    Ok(())
+                })
+        })
     }
 
     // @wireprotocommand('getbundle', '*')
@@ -1262,36 +1271,34 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('hello')
     fn hello(&self) -> HgCommandRes<HashMap<String, Vec<String>>> {
-        let (_ctx, command_logger) = self.start_command(ops::HELLO);
+        self.command_future(ops::HELLO, |_ctx, command_logger| {
+            let mut res = HashMap::new();
+            let mut caps = wireprotocaps();
+            caps.push(format!("bundle2={}", bundle2caps()));
+            res.insert("capabilities".to_string(), caps);
 
-        let mut res = HashMap::new();
-        let mut caps = wireprotocaps();
-        caps.push(format!("bundle2={}", bundle2caps()));
-        res.insert("capabilities".to_string(), caps);
-
-        future::ok(res)
-            .timeout(*TIMEOUT)
-            .map_err(process_timeout_error)
-            .traced(self.session.trace(), ops::HELLO, trace_args!())
-            .timed(move |stats, _| {
-                command_logger.without_wireproto().finalize_command(&stats);
-                Ok(())
-            })
-            .boxify()
+            future::ok(res)
+                .timeout(*TIMEOUT)
+                .map_err(process_timeout_error)
+                .traced(self.session.trace(), ops::HELLO, trace_args!())
+                .timed(move |stats, _| {
+                    command_logger.without_wireproto().finalize_command(&stats);
+                    Ok(())
+                })
+        })
     }
 
     // @wireprotocommand('listkeys', 'namespace')
     fn listkeys(&self, namespace: String) -> HgCommandRes<HashMap<Vec<u8>, Vec<u8>>> {
         if namespace == "bookmarks" {
-            let (ctx, command_logger) = self.start_command(ops::LISTKEYS);
-
-            self.get_pull_default_bookmarks_maybe_stale(ctx.clone())
-                .traced(self.session.trace(), ops::LISTKEYS, trace_args!())
-                .timed(move |stats, _| {
-                    command_logger.without_wireproto().finalize_command(&stats);
-                    Ok(())
-                })
-                .boxify()
+            self.command_future(ops::LISTKEYS, |ctx, command_logger| {
+                self.get_pull_default_bookmarks_maybe_stale(ctx.clone())
+                    .traced(self.session.trace(), ops::LISTKEYS, trace_args!())
+                    .timed(move |stats, _| {
+                        command_logger.without_wireproto().finalize_command(&stats);
+                        Ok(())
+                    })
+            })
         } else {
             info!(
                 self.logging.logger(),
@@ -1319,46 +1326,46 @@ impl HgCommands for RepoClient {
             .boxify();
         }
 
-        let (ctx, command_logger) = self.start_command(ops::LISTKEYSPATTERNS);
-
-        let queries = patterns.into_iter().map({
-            cloned!(ctx);
-            let max = self.repo.list_keys_patterns_max();
-            let repo = self.repo.blobrepo();
-            move |pattern| {
-                if pattern.ends_with("*") {
-                    // prefix match
-                    let prefix = try_boxfuture!(BookmarkPrefix::new(&pattern[..pattern.len() - 1]));
-                    repo.get_bookmarks_by_prefix_maybe_stale(ctx.clone(), &prefix, max)
-                        .map(|(bookmark, cs_id): (Bookmark, HgChangesetId)| {
-                            (bookmark.into_name().to_string(), cs_id)
-                        })
-                        .collect()
-                        .boxify()
-                } else {
-                    // literal match
-                    let bookmark = try_boxfuture!(BookmarkName::new(&pattern));
-                    repo.get_bookmark(ctx.clone(), &bookmark)
-                        .map(move |cs_id| match cs_id {
-                            Some(cs_id) => vec![(pattern, cs_id)],
-                            None => Vec::new(),
-                        })
-                        .boxify()
+        self.command_future(ops::LISTKEYSPATTERNS, |ctx, command_logger| {
+            let queries = patterns.into_iter().map({
+                cloned!(ctx);
+                let max = self.repo.list_keys_patterns_max();
+                let repo = self.repo.blobrepo();
+                move |pattern| {
+                    if pattern.ends_with("*") {
+                        // prefix match
+                        let prefix =
+                            try_boxfuture!(BookmarkPrefix::new(&pattern[..pattern.len() - 1]));
+                        repo.get_bookmarks_by_prefix_maybe_stale(ctx.clone(), &prefix, max)
+                            .map(|(bookmark, cs_id): (Bookmark, HgChangesetId)| {
+                                (bookmark.into_name().to_string(), cs_id)
+                            })
+                            .collect()
+                            .boxify()
+                    } else {
+                        // literal match
+                        let bookmark = try_boxfuture!(BookmarkName::new(&pattern));
+                        repo.get_bookmark(ctx.clone(), &bookmark)
+                            .map(move |cs_id| match cs_id {
+                                Some(cs_id) => vec![(pattern, cs_id)],
+                                None => Vec::new(),
+                            })
+                            .boxify()
+                    }
                 }
-            }
-        });
+            });
 
-        stream::futures_unordered(queries)
-            .concat2()
-            .map(|bookmarks| bookmarks.into_iter().collect())
-            .timeout(*TIMEOUT)
-            .map_err(process_timeout_error)
-            .traced(self.session.trace(), ops::LISTKEYS, trace_args!())
-            .timed(move |stats, _| {
-                command_logger.without_wireproto().finalize_command(&stats);
-                Ok(())
-            })
-            .boxify()
+            stream::futures_unordered(queries)
+                .concat2()
+                .map(|bookmarks| bookmarks.into_iter().collect())
+                .timeout(*TIMEOUT)
+                .map_err(process_timeout_error)
+                .traced(self.session.trace(), ops::LISTKEYS, trace_args!())
+                .timed(move |stats, _| {
+                    command_logger.without_wireproto().finalize_command(&stats);
+                    Ok(())
+                })
+        })
     }
 
     // @wireprotocommand('unbundle')
@@ -1390,8 +1397,7 @@ impl HgCommands for RepoClient {
             .readonly()
             // Assume read only if we have an error.
             .or_else(|_| ok(RepoReadOnly::ReadOnly("Failed to fetch repo lock status".to_string())))
-            .and_then(move |read_write| {
-                let (ctx, command_logger) = client.start_command(ops::UNBUNDLE);
+            .and_then(move |read_write| client.command_future(ops::UNBUNDLE, |ctx, command_logger| {
                 let blobrepo = client.repo.blobrepo().clone();
                 let bookmark_attrs = client.repo.bookmark_attrs();
                 let lca_hint = client.repo.lca_hint().clone();
@@ -1532,7 +1538,7 @@ impl HgCommands for RepoClient {
                         command_logger.without_wireproto().finalize_command(&stats);
                         Ok(())
                     })
-            })
+            }))
             .boxify()
     }
 
