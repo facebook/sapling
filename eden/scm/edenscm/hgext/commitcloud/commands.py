@@ -305,10 +305,7 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
 
     # show all the nodes
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-    if ui.config("experimental", "graph.renderer") == "legacy":
-        cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
-    else:
-        cmdutil.rustdisplaygraph(ui, repo, revdag, displayer, reserved=firstpublic)
+    cmdutil.rustdisplaygraph(ui, repo, revdag, displayer, reserved=firstpublic)
 
 
 @subcmd("supersmartlog|ssl", workspace.workspaceopts)

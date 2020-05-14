@@ -6,6 +6,7 @@
   $ setconfig commitcloud.hostname=testhost
   $ setconfig experimental.graphstyle.grandparent=2.
   $ setconfig templatealias.sl_cloud="\"{truncatelonglines(node, 6)} {ifeq(phase, 'public', '(public)', '')} {ifeq(phase, 'draft', author, '')} {date|isodate} {bookmarks}\\n{desc|firstline}\\n \""
+  $ setconfig hint.ack=graph-renderer
 
   $ setconfig remotefilelog.reponame=server
 
@@ -106,164 +107,164 @@ Tests for hg cloud sl
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
-  o  b8d4ca  Test User 2018-07-19 23:03 +0000
-  |  some commit
-  |
-  o  b4a0b0  Test User 2018-07-19 21:47 +0000
-  |  some commit
-  |
-  o  67dd68  Test User 2018-07-19 20:53 +0000
-  |  some commit
-  |
-  o  1114f6  Test User 2018-07-19 20:53 +0000
-  |  some commit
-  |
-  o  ccbc70  Test User 2018-07-19 20:53 +0000
-  |  some commit
-  |
-  o  73238e  Test User 2018-07-19 20:53 +0000
-  |  some commit
-  |
-  o  44b320  Test User 2018-07-19 20:53 +0000
-  |  some commit
-  |
-  o  f238a8  Test User 2018-07-19 21:14 +0000
-  |  some commit
-  |
-  o  197156  Test User 2018-07-19 21:14 +0000
-  |  some commit
-  |
-  | o  53d3b5  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  fcd541  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  89e915  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  4bebf9  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  e248c6  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  a54c70  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  0c8dbc  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  3b2c64  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  f6c426  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  35ca84  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  669c33  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  f5428e  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  4c0aab  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  bdaee4  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  d84918  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  277a2f  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  0c7afd  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  2bb232  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  aefc18  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  7c0a61  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  334a42  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  63d3b0  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  193082  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  ea72aa  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  5ef0df  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  b02028  Test User 2018-07-19 20:53 +0000
-  | |  some commit
-  | |
-  | o  8a486e  Test User 2018-07-19 20:53 +0000
-  |/   some commit
-  |
-  o  f311da  Test User 2018-07-19 20:53 +0000
-  |  some commit
-  |
-  o  51ff4a  Test User 2018-07-19 20:46 +0000
-  |  some commit
+    o  b8d4ca  Test User 2018-07-19 23:03 +0000
+    |  some commit
+    |
+    o  b4a0b0  Test User 2018-07-19 21:47 +0000
+    |  some commit
+    |
+    o  67dd68  Test User 2018-07-19 20:53 +0000
+    |  some commit
+    |
+    o  1114f6  Test User 2018-07-19 20:53 +0000
+    |  some commit
+    |
+    o  ccbc70  Test User 2018-07-19 20:53 +0000
+    |  some commit
+    |
+    o  73238e  Test User 2018-07-19 20:53 +0000
+    |  some commit
+    |
+    o  44b320  Test User 2018-07-19 20:53 +0000
+    |  some commit
+    |
+    o  f238a8  Test User 2018-07-19 21:14 +0000
+    |  some commit
+    |
+    o  197156  Test User 2018-07-19 21:14 +0000
+    |  some commit
+    |
+    | o  53d3b5  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  fcd541  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  89e915  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  4bebf9  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  e248c6  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  a54c70  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  0c8dbc  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  3b2c64  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  f6c426  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  35ca84  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  669c33  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  f5428e  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  4c0aab  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  bdaee4  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  d84918  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  277a2f  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  0c7afd  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  2bb232  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  aefc18  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  7c0a61  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  334a42  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  63d3b0  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  193082  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  ea72aa  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  5ef0df  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  b02028  Test User 2018-07-19 20:53 +0000
+    | |  some commit
+    | |
+    | o  8a486e  Test User 2018-07-19 20:53 +0000
+    |/   some commit
+    |
+    o  f311da  Test User 2018-07-19 20:53 +0000
+    |  some commit
+    |
+    o  51ff4a  Test User 2018-07-19 20:46 +0000
+   /   some commit
   |
   o  efb6f7 (public)  2018-07-19 20:16 +0000
   .  some commit
   .
-  | o  907757  Test User 2018-07-19 19:45 +0000
-  |/   some commit
+  . o  907757  Test User 2018-07-19 19:45 +0000
+  ./   some commit
   |
   o  2c039c (public)  2018-07-19 16:20 +0000
   .  some commit
   .
-  | o  8ccfbe  Test User 2018-07-17 19:58 +0000
-  |/   some commit
+  . o  8ccfbe  Test User 2018-07-17 19:58 +0000
+  ./   some commit
   |
   o  72bcf5 (public)  2018-07-17 17:40 +0000
   .  some commit
   .
-  | o  5100bc  Test User 2018-07-18 19:44 +0000
-  |/   some commit
+  . o  5100bc  Test User 2018-07-18 19:44 +0000
+  ./   some commit
   |
   o  bdd634 (public)  2018-07-16 19:45 +0000
   .  some commit
   .
-  | o  4b8c26  Test User 2018-07-13 15:25 +0000
-  | |  some commit
-  | |
-  | o  b46364  Test User 2018-07-13 15:25 +0000
-  |/   some commit
+  . o  4b8c26  Test User 2018-07-13 15:25 +0000
+  . |  some commit
+  . |
+  . o  b46364  Test User 2018-07-13 15:25 +0000
+  ./   some commit
   |
   o  3ca9f5 (public)  2018-07-12 20:56 +0000
   .  some commit
   .
-  | o  ae5e6f  Test User 2018-06-28 17:45 +0000
-  |/   some commit
+  . o  ae5e6f  Test User 2018-06-28 17:45 +0000
+  ./   some commit
   |
   o  ff1ae4 (public)  2018-06-28 17:36 +0000
   .  some commit
   .
-  | o  ac628c  Test User 2018-06-05 16:36 +0000
-  |/   some commit
+  . o  ac628c  Test User 2018-06-05 16:36 +0000
+  ./   some commit
   |
   o  e0a850 (public)  2018-06-05 16:31 +0000
   .  some commit
   .
-  | o  d78d6e  Test User 2018-05-23 18:02 +0000
-  |/   some commit
+  . o  d78d6e  Test User 2018-05-23 18:02 +0000
+  ./   some commit
   |
   | o  834264  Test User 2018-05-23 18:02 +0000
   |/   some commit
@@ -403,326 +404,326 @@ Tests for hg cloud sl
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
-  o  d7c298  Test User 2018-07-24 23:58 +0000
-  |  some commit
+    o  d7c298  Test User 2018-07-24 23:58 +0000
+   /   some commit
   |
   o  098b6a (public)  2018-07-24 23:47 +0000
   .  some commit
   .
-  | o  616bf5  Test User 2018-07-24 05:41 +0000
-  | |  some commit
-  | |
-  | o  d12ab8  Test User 2018-07-24 04:40 +0000
-  | |  some commit
-  | |
-  | o  3d61c7  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  4b67b7  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  56436b  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  06b916  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  d965af  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  665b9e  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  61e66e  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  99509b  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  2cb52d  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  46590a  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  797790  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  ec9300  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  545c51  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  639f1b  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  f50cdb  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  43a3ea  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  083ccd  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  b020b9  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  95453e  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  acdbe0  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  206df5  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  758c97  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  fadcc6  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  f50dc4  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  b4b391  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  e62712  Test User 2018-07-24 04:36 +0000
-  | |  some commit
-  | |
-  | o  1fe6c7  Test User 2018-07-24 04:36 +0000
-  |/   some commit
+  . o  616bf5  Test User 2018-07-24 05:41 +0000
+  . |  some commit
+  . |
+  . o  d12ab8  Test User 2018-07-24 04:40 +0000
+  . |  some commit
+  . |
+  . o  3d61c7  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  4b67b7  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  56436b  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  06b916  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  d965af  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  665b9e  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  61e66e  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  99509b  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  2cb52d  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  46590a  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  797790  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  ec9300  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  545c51  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  639f1b  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  f50cdb  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  43a3ea  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  083ccd  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  b020b9  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  95453e  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  acdbe0  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  206df5  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  758c97  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  fadcc6  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  f50dc4  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  b4b391  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  e62712  Test User 2018-07-24 04:36 +0000
+  . |  some commit
+  . |
+  . o  1fe6c7  Test User 2018-07-24 04:36 +0000
+  ./   some commit
   |
   o  445c23 (public)  2018-07-24 04:34 +0000
   .  some commit
   .
-  | o  9ae2eb  Test User 2018-07-23 20:03 +0000
-  | |  some commit
-  | |
-  | o  75b546  Test User 2018-07-23 20:03 +0000
-  | |  some commit
-  | |
-  | o  eda0bc  Test User 2018-07-23 20:03 +0000
-  | |  some commit
-  | |
-  | o  65b8e6  Test User 2018-07-23 20:03 +0000
-  | |  some commit
-  | |
-  | o  b56685  Test User 2018-07-23 20:03 +0000
-  | |  some commit
-  | |
-  | o  89095b  Test User 2018-07-23 20:03 +0000
-  | |  some commit
-  | |
-  | o  f9d07a  Test User 2018-07-23 20:03 +0000
-  | |  some commit
-  | |
-  | o  17afae  Test User 2018-07-23 20:03 +0000
-  | |  some commit
-  | |
-  | o  eb200c  Test User 2018-07-23 20:03 +0000
-  | |  some commit
-  | |
-  | o  f5cfc1  Test User 2018-07-23 20:03 +0000
-  | |  some commit
-  | |
-  | o  bb57a8  Test User 2018-07-23 20:03 +0000
-  | |  some commit
-  | |
-  | o  b01f75  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  485b19  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  86b66e  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  6792bf  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  ca31bb  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  4ccaa1  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  bcf951  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  9d121d  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  cf25e1  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  953880  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  b6ac8e  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  7c3fe9  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  602227  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  3ac205  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  cfb3d2  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  50f177  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  9c13c1  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  ee3bd8  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  d911df  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  dce5e2  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  244df6  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  b1204f  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  f07c0c  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  183178  Test User 2018-07-23 19:45 +0000
-  | |  some commit
-  | |
-  | o  f6d061  Test User 2018-07-23 19:43 +0000
-  | |  some commit
-  | |
-  | o  932176  Test User 2018-07-23 19:43 +0000
-  | |  some commit
-  | |
-  | o  dfbb04  Test User 2018-07-23 19:43 +0000
-  |/   some commit
+  . o  9ae2eb  Test User 2018-07-23 20:03 +0000
+  . |  some commit
+  . |
+  . o  75b546  Test User 2018-07-23 20:03 +0000
+  . |  some commit
+  . |
+  . o  eda0bc  Test User 2018-07-23 20:03 +0000
+  . |  some commit
+  . |
+  . o  65b8e6  Test User 2018-07-23 20:03 +0000
+  . |  some commit
+  . |
+  . o  b56685  Test User 2018-07-23 20:03 +0000
+  . |  some commit
+  . |
+  . o  89095b  Test User 2018-07-23 20:03 +0000
+  . |  some commit
+  . |
+  . o  f9d07a  Test User 2018-07-23 20:03 +0000
+  . |  some commit
+  . |
+  . o  17afae  Test User 2018-07-23 20:03 +0000
+  . |  some commit
+  . |
+  . o  eb200c  Test User 2018-07-23 20:03 +0000
+  . |  some commit
+  . |
+  . o  f5cfc1  Test User 2018-07-23 20:03 +0000
+  . |  some commit
+  . |
+  . o  bb57a8  Test User 2018-07-23 20:03 +0000
+  . |  some commit
+  . |
+  . o  b01f75  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  485b19  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  86b66e  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  6792bf  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  ca31bb  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  4ccaa1  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  bcf951  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  9d121d  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  cf25e1  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  953880  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  b6ac8e  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  7c3fe9  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  602227  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  3ac205  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  cfb3d2  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  50f177  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  9c13c1  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  ee3bd8  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  d911df  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  dce5e2  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  244df6  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  b1204f  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  f07c0c  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  183178  Test User 2018-07-23 19:45 +0000
+  . |  some commit
+  . |
+  . o  f6d061  Test User 2018-07-23 19:43 +0000
+  . |  some commit
+  . |
+  . o  932176  Test User 2018-07-23 19:43 +0000
+  . |  some commit
+  . |
+  . o  dfbb04  Test User 2018-07-23 19:43 +0000
+  ./   some commit
   |
   o  55a0d6 (public)  2018-07-23 18:37 +0000
   .  some commit
   .
-  | o  5ff211  Test User 2018-07-19 00:25 +0000
-  | |  some commit
-  | |
-  | o  192d92  Test User 2018-07-19 00:17 +0000
-  | |  some commit
-  | |
-  | o  f36920  Test User 2018-07-19 00:17 +0000
-  | |  some commit
-  | |
-  | o  78503f  Test User 2018-07-19 00:17 +0000
-  | |  some commit
-  | |
-  | o  3a6604  Test User 2018-07-19 00:04 +0000
-  | |  some commit
-  | |
-  | o  b593fd  Test User 2018-07-18 23:56 +0000
-  | |  some commit
-  | |
-  | o  65cc49  Test User 2018-07-18 23:46 +0000
-  |/   some commit
+  . o  5ff211  Test User 2018-07-19 00:25 +0000
+  . |  some commit
+  . |
+  . o  192d92  Test User 2018-07-19 00:17 +0000
+  . |  some commit
+  . |
+  . o  f36920  Test User 2018-07-19 00:17 +0000
+  . |  some commit
+  . |
+  . o  78503f  Test User 2018-07-19 00:17 +0000
+  . |  some commit
+  . |
+  . o  3a6604  Test User 2018-07-19 00:04 +0000
+  . |  some commit
+  . |
+  . o  b593fd  Test User 2018-07-18 23:56 +0000
+  . |  some commit
+  . |
+  . o  65cc49  Test User 2018-07-18 23:46 +0000
+  ./   some commit
   |
   o  90d8c9 (public)  2018-07-18 23:44 +0000
   .  some commit
   .
-  | o  2582d5  Test User 2018-07-03 18:27 +0000
-  |/   some commit
+  . o  2582d5  Test User 2018-07-03 18:27 +0000
+  ./   some commit
   |
   o  5dd5b0 (public)  2018-07-03 18:26 +0000
   .  some commit
   .
-  | o  fda58c  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  5bba72  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  68315b  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  b20853  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  1f4c3f  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  366626  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  11492a  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  98994b  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  dc22fb  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  41b13a  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  1f074c  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  71b2a7  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  ebab1a  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  2e32be  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  18611b  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  05b701  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  3a54e4  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  094e36  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  ec877f  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  c012a1  Test User 2018-06-28 21:55 +0000
-  | |  some commit
-  | |
-  | o  5ef32b  Test User 2018-06-28 21:55 +0000
-  |/   some commit
+  . o  fda58c  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  5bba72  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  68315b  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  b20853  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  1f4c3f  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  366626  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  11492a  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  98994b  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  dc22fb  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  41b13a  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  1f074c  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  71b2a7  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  ebab1a  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  2e32be  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  18611b  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  05b701  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  3a54e4  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  094e36  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  ec877f  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  c012a1  Test User 2018-06-28 21:55 +0000
+  . |  some commit
+  . |
+  . o  5ef32b  Test User 2018-06-28 21:55 +0000
+  ./   some commit
   |
   o  89c451 (public)  2018-06-28 21:54 +0000
   .  some commit
   .
-  | o  d7de7d  Test User 2018-06-27 21:30 +0000
-  | |  some commit
-  | |
-  | o  a310c0  Test User 2018-06-27 21:30 +0000
-  |/   some commit
+  . o  d7de7d  Test User 2018-06-27 21:30 +0000
+  . |  some commit
+  . |
+  . o  a310c0  Test User 2018-06-27 21:30 +0000
+  ./   some commit
   |
   o  944f52 (public)  2018-06-27 21:05 +0000
   .  some commit
   .
-  | o  20917a  Test User 2018-06-27 23:47 +0000
-  |/   some commit
+  . o  20917a  Test User 2018-06-27 23:47 +0000
+  ./   some commit
   |
   | o  39dbb5  Test User 2018-06-28 00:03 +0000
   |/   some commit
@@ -730,8 +731,8 @@ Tests for hg cloud sl
   o  c64f72 (public)  2018-06-26 20:45 +0000
   .  some commit
   .
-  | o  d1f01a  Test User 2018-06-27 22:27 +0000
-  |/   some commit
+  . o  d1f01a  Test User 2018-06-27 22:27 +0000
+  ./   some commit
   |
   o  390b78 (public)  2018-06-26 16:53 +0000
   |  some commit
@@ -742,8 +743,8 @@ Tests for hg cloud sl
   o  0c157b (public)  2018-06-26 16:53 +0000
   .  some commit
   .
-  | o  d1de39  Test User 2018-06-25 19:12 +0000
-  |/   some commit
+  . o  d1de39  Test User 2018-06-25 19:12 +0000
+  ./   some commit
   |
   o  ae84d5 (public)  2018-06-25 17:51 +0000
      some commit
@@ -849,152 +850,152 @@ Tests for hg cloud sl
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
-  o  7544e6  Test User 2018-07-25 12:37 +0000
-  |  some commit
-  |
-  o  17ab2f  Test User 2018-07-25 12:37 +0000
-  |  some commit
-  |
-  | o  4cf07a  Test User 2018-07-25 12:37 +0000
-  |/   some commit
-  |
-  o  d464a3  Test User 2018-07-25 12:36 +0000
-  |  some commit
-  |
-  o  234abf  Test User 2018-07-25 12:36 +0000
-  |  some commit
-  |
-  o  e966ea  Test User 2018-07-25 12:36 +0000
-  |  some commit
-  |
-  o  f50344  Test User 2018-07-25 12:36 +0000
-  |  some commit
-  |
-  o  6423e0  Test User 2018-07-25 10:35 +0000
-  |  some commit
-  |
-  o  35704d  Test User 2018-07-25 10:35 +0000
-  |  some commit
+    o  7544e6  Test User 2018-07-25 12:37 +0000
+    |  some commit
+    |
+    o  17ab2f  Test User 2018-07-25 12:37 +0000
+    |  some commit
+    |
+    | o  4cf07a  Test User 2018-07-25 12:37 +0000
+    |/   some commit
+    |
+    o  d464a3  Test User 2018-07-25 12:36 +0000
+    |  some commit
+    |
+    o  234abf  Test User 2018-07-25 12:36 +0000
+    |  some commit
+    |
+    o  e966ea  Test User 2018-07-25 12:36 +0000
+    |  some commit
+    |
+    o  f50344  Test User 2018-07-25 12:36 +0000
+    |  some commit
+    |
+    o  6423e0  Test User 2018-07-25 10:35 +0000
+    |  some commit
+    |
+    o  35704d  Test User 2018-07-25 10:35 +0000
+   /   some commit
   |
   o  06dafa (public)  2018-07-25 10:33 +0000
   .  some commit
   .
-  | o  1cbc29  Test User 2018-07-25 10:30 +0000
-  | |  some commit
-  | |
-  | o  b2cafe  Test User 2018-07-25 10:30 +0000
-  | |  some commit
-  | |
-  | o  679da9  Test User 2018-07-25 10:30 +0000
-  | |  some commit
-  | |
-  | o  ac056f  Test User 2018-07-25 10:30 +0000
-  | |  some commit
-  | |
-  | o  7dc7d7  Test User 2018-07-25 10:30 +0000
-  | |  some commit
-  | |
-  | o  3922d3  Test User 2018-07-25 10:30 +0000
-  | |  some commit
-  | |
-  | o  39a093  Test User 2018-07-25 10:30 +0000
-  | |  some commit
-  | |
-  | o  e47fc9  Test User 2018-07-25 10:29 +0000
-  | |  some commit
-  | |
-  | o  113c7f  Test User 2018-07-25 10:29 +0000
-  | |  some commit
-  | |
-  | o  6278d2  Test User 2018-07-25 10:29 +0000
-  | |  some commit
-  | |
-  | o  63f68a  Test User 2018-07-25 10:29 +0000
-  | |  some commit
-  | |
-  | o  fd261a  Test User 2018-07-25 10:29 +0000
-  | |  some commit
-  | |
-  | o  825308  Test User 2018-07-25 10:29 +0000
-  | |  some commit
-  | |
-  | o  2d5f79  Test User 2018-07-25 10:29 +0000
-  |/   some commit
+  . o  1cbc29  Test User 2018-07-25 10:30 +0000
+  . |  some commit
+  . |
+  . o  b2cafe  Test User 2018-07-25 10:30 +0000
+  . |  some commit
+  . |
+  . o  679da9  Test User 2018-07-25 10:30 +0000
+  . |  some commit
+  . |
+  . o  ac056f  Test User 2018-07-25 10:30 +0000
+  . |  some commit
+  . |
+  . o  7dc7d7  Test User 2018-07-25 10:30 +0000
+  . |  some commit
+  . |
+  . o  3922d3  Test User 2018-07-25 10:30 +0000
+  . |  some commit
+  . |
+  . o  39a093  Test User 2018-07-25 10:30 +0000
+  . |  some commit
+  . |
+  . o  e47fc9  Test User 2018-07-25 10:29 +0000
+  . |  some commit
+  . |
+  . o  113c7f  Test User 2018-07-25 10:29 +0000
+  . |  some commit
+  . |
+  . o  6278d2  Test User 2018-07-25 10:29 +0000
+  . |  some commit
+  . |
+  . o  63f68a  Test User 2018-07-25 10:29 +0000
+  . |  some commit
+  . |
+  . o  fd261a  Test User 2018-07-25 10:29 +0000
+  . |  some commit
+  . |
+  . o  825308  Test User 2018-07-25 10:29 +0000
+  . |  some commit
+  . |
+  . o  2d5f79  Test User 2018-07-25 10:29 +0000
+  ./   some commit
   |
   o  8d0bb3 (public)  2018-07-25 07:32 +0000
   .  some commit
   .
-  | o  418bb9  Test User 2018-07-18 07:28 +0000
-  | |  some commit
-  | |
-  | o  f89701  Test User 2018-07-18 07:28 +0000
-  |/   some commit
+  . o  418bb9  Test User 2018-07-18 07:28 +0000
+  . |  some commit
+  . |
+  . o  f89701  Test User 2018-07-18 07:28 +0000
+  ./   some commit
   |
   o  51b718 (public)  2018-07-18 07:23 +0000
   .  some commit
   .
-  | o  c5a7b9  Test User 2018-07-17 07:41 +0000
-  | |  some commit
-  | |
-  | o  d239f7  Test User 2018-07-17 07:41 +0000
-  | |  some commit
-  | |
-  | o  883887  Test User 2018-07-17 06:51 +0000
-  |/   some commit
+  . o  c5a7b9  Test User 2018-07-17 07:41 +0000
+  . |  some commit
+  . |
+  . o  d239f7  Test User 2018-07-17 07:41 +0000
+  . |  some commit
+  . |
+  . o  883887  Test User 2018-07-17 06:51 +0000
+  ./   some commit
   |
   o  68c892 (public)  2018-07-17 06:48 +0000
   .  some commit
   .
-  | o  b0dfcd  Test User 2018-07-16 09:11 +0000
-  |/   some commit
+  . o  b0dfcd  Test User 2018-07-16 09:11 +0000
+  ./   some commit
   |
   o  fafa02 (public)  2018-07-16 08:25 +0000
   .  some commit
   .
-  | o  a8d0fb  Test User 2018-07-05 08:33 +0000
-  |/   some commit
+  . o  a8d0fb  Test User 2018-07-05 08:33 +0000
+  ./   some commit
   |
   o  d9495d (public)  2018-07-05 08:19 +0000
   .  some commit
   .
-  | o  5d3b94  Test User 2018-07-05 08:17 +0000
-  | |  some commit
-  | |
-  | o  73e136  Test User 2018-07-05 08:17 +0000
-  | |  some commit
-  | |
-  | o  0319f6  Test User 2018-07-05 08:17 +0000
-  | |  some commit
-  | |
-  | o  dde91f  Test User 2018-07-05 08:17 +0000
-  |/   some commit
+  . o  5d3b94  Test User 2018-07-05 08:17 +0000
+  . |  some commit
+  . |
+  . o  73e136  Test User 2018-07-05 08:17 +0000
+  . |  some commit
+  . |
+  . o  0319f6  Test User 2018-07-05 08:17 +0000
+  . |  some commit
+  . |
+  . o  dde91f  Test User 2018-07-05 08:17 +0000
+  ./   some commit
   |
   o  cc8cce (public)  2018-07-05 07:29 +0000
   .  some commit
   .
-  | o  b6d31f  Test User 2018-07-04 14:34 +0000
-  | |  some commit
-  | |
-  | o  812695  Test User 2018-07-04 14:34 +0000
-  | |  some commit
-  | |
-  | o  a4e918  Test User 2018-07-04 14:34 +0000
-  |/   some commit
+  . o  b6d31f  Test User 2018-07-04 14:34 +0000
+  . |  some commit
+  . |
+  . o  812695  Test User 2018-07-04 14:34 +0000
+  . |  some commit
+  . |
+  . o  a4e918  Test User 2018-07-04 14:34 +0000
+  ./   some commit
   |
   o  0e4f24 (public)  2018-07-04 10:47 +0000
   .  some commit
   .
-  | o  0ccf1a  Test User 2018-06-29 10:33 +0000
-  | |  some commit
-  | |
-  | o  11a73a  Test User 2018-06-29 10:33 +0000
-  | |  some commit
-  | |
-  | | o  472662  Test User 2018-06-29 10:33 +0000
-  | |/   some commit
-  | |
-  | o  2c008f  Test User 2018-06-29 10:33 +0000
-  |/   some commit
+  . o  0ccf1a  Test User 2018-06-29 10:33 +0000
+  . |  some commit
+  . |
+  . o  11a73a  Test User 2018-06-29 10:33 +0000
+  . |  some commit
+  . |
+  . | o  472662  Test User 2018-06-29 10:33 +0000
+  . |/   some commit
+  . |
+  . o  2c008f  Test User 2018-06-29 10:33 +0000
+  ./   some commit
   |
   | o  e65cc9  Test User 2018-06-29 14:51 +0000
   | |  some commit
@@ -1008,107 +1009,107 @@ Tests for hg cloud sl
   o  028179 (public)  2018-06-29 10:30 +0000
   .  some commit
   .
-  | o  7c2d07  Test User 2018-06-28 13:25 +0000
-  |/   some commit
+  . o  7c2d07  Test User 2018-06-28 13:25 +0000
+  ./   some commit
   |
   o  33254d (public)  2018-06-28 08:45 +0000
   .  some commit
   .
-  | o  026cdd  Test User 2018-06-26 09:23 +0000 somebookmark
-  | |  some commit
-  | |
-  | | o  9be605  Test User 2018-06-26 09:23 +0000
-  | | |  some commit
-  | | |
-  | | o  85930e  Test User 2018-06-26 09:23 +0000
-  | |/   some commit
-  | |
-  | o  1bae8c  Test User 2018-06-26 09:23 +0000
-  |/   some commit
+  . o  026cdd  Test User 2018-06-26 09:23 +0000 somebookmark
+  . |  some commit
+  . |
+  . | o  9be605  Test User 2018-06-26 09:23 +0000
+  . | |  some commit
+  . | |
+  . | o  85930e  Test User 2018-06-26 09:23 +0000
+  . |/   some commit
+  . |
+  . o  1bae8c  Test User 2018-06-26 09:23 +0000
+  ./   some commit
   |
   o  8dc9e3 (public)  2018-06-26 09:03 +0000
   .  some commit
   .
-  | o  7c08e4  Test User 2018-06-25 15:44 +0000
-  | |  some commit
-  | |
-  | o  8a3002  Test User 2018-06-25 15:44 +0000
-  |/   some commit
+  . o  7c08e4  Test User 2018-06-25 15:44 +0000
+  . |  some commit
+  . |
+  . o  8a3002  Test User 2018-06-25 15:44 +0000
+  ./   some commit
   |
   o  3fc21b (public)  2018-06-25 15:41 +0000
   .  some commit
   .
-  | o  e54f96  Test User 2018-06-23 03:03 +0000
-  | |  some commit
-  | |
-  | o  ea9638  Test User 2018-06-22 21:12 +0000
-  |/   some commit
+  . o  e54f96  Test User 2018-06-23 03:03 +0000
+  . |  some commit
+  . |
+  . o  ea9638  Test User 2018-06-22 21:12 +0000
+  ./   some commit
   |
   o  e0732c (public)  2018-06-22 20:44 +0000
   .  some commit
   .
-  | o  ff9138  Test User 2018-06-12 07:50 +0000
-  |/   some commit
+  . o  ff9138  Test User 2018-06-12 07:50 +0000
+  ./   some commit
   |
   o  2e2f42 (public)  2018-06-12 07:20 +0000
   .  some commit
   .
-  | o  331e5c  Test User 2018-06-06 16:19 +0000
-  | |  some commit
-  | |
-  | o  759459  Test User 2018-06-06 16:19 +0000
-  |/   some commit
+  . o  331e5c  Test User 2018-06-06 16:19 +0000
+  . |  some commit
+  . |
+  . o  759459  Test User 2018-06-06 16:19 +0000
+  ./   some commit
   |
   o  f33d9d (public)  2018-06-06 13:17 +0000
   .  some commit
   .
-  | o  3a9c0a  Test User 2018-06-04 17:13 +0000
-  |/   some commit
+  . o  3a9c0a  Test User 2018-06-04 17:13 +0000
+  ./   some commit
   |
   o  af4418 (public)  2018-06-04 16:49 +0000
   .  some commit
   .
-  | o  64c6ca  Test User 2018-06-04 15:45 +0000
-  |/   some commit
+  . o  64c6ca  Test User 2018-06-04 15:45 +0000
+  ./   some commit
   |
   o  20a451 (public)  2018-06-04 15:09 +0000
   .  some commit
   .
-  | o  21f3bf  Test User 2018-05-31 14:41 +0000
-  |/   some commit
+  . o  21f3bf  Test User 2018-05-31 14:41 +0000
+  ./   some commit
   |
   o  113c09 (public)  2018-05-31 13:47 +0000
   .  some commit
   .
-  | o  a81a0c  Test User 2018-04-30 17:22 +0000
-  | |  some commit
-  | |
-  | o  9d8668  Test User 2018-04-30 17:22 +0000
-  | |  some commit
-  | |
-  | o  d706d6  Test User 2018-04-30 17:22 +0000
-  |/   some commit
+  . o  a81a0c  Test User 2018-04-30 17:22 +0000
+  . |  some commit
+  . |
+  . o  9d8668  Test User 2018-04-30 17:22 +0000
+  . |  some commit
+  . |
+  . o  d706d6  Test User 2018-04-30 17:22 +0000
+  ./   some commit
   |
   o  32fff7 (public)  2018-04-30 17:05 +0000
   .  some commit
   .
-  | o  5c1b7e  Test User 2018-04-30 08:35 +0000
-  |/   some commit
+  . o  5c1b7e  Test User 2018-04-30 08:35 +0000
+  ./   some commit
   |
   o  28d132 (public)  2018-04-30 07:29 +0000
   .  some commit
   .
-  | o  743149  Test User 2018-04-29 12:24 +0000
-  |/   some commit
+  . o  743149  Test User 2018-04-29 12:24 +0000
+  ./   some commit
   |
   o  36b6d9 (public)  2018-04-28 19:47 +0000
   .  some commit
   .
-  | o  11b378  Test User 2018-03-29 17:59 +0000
-  | |  some commit
-  | |
-  | o  01c34a  Test User 2018-03-29 17:59 +0000
-  |/   some commit
+  . o  11b378  Test User 2018-03-29 17:59 +0000
+  . |  some commit
+  . |
+  . o  01c34a  Test User 2018-03-29 17:59 +0000
+  ./   some commit
   |
   o  346d06 (public)  2018-03-29 16:49 +0000
      some commit
@@ -1196,8 +1197,8 @@ Tests for hg cloud sl
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
-  o  2711a3  Test User 2018-07-24 20:53 +0000
-  |  some commit
+    o  2711a3  Test User 2018-07-24 20:53 +0000
+   /   some commit
   |
   | o  8acf52  Test User 2018-07-24 20:53 +0000
   |/   some commit
@@ -1205,23 +1206,23 @@ Tests for hg cloud sl
   o  3bfb42 (public)  2018-07-24 15:19 +0000
   .  some commit
   .
-  | o  b1663b  Test User 2018-07-23 18:23 +0000
-  |/   some commit
+  . o  b1663b  Test User 2018-07-23 18:23 +0000
+  ./   some commit
   |
   o  33e8c2 (public)  2018-07-23 18:03 +0000
   .  some commit
   .
-  | o  d2f740  Test User 2018-07-19 15:31 +0000
-  | |  some commit
-  | |
-  | o  1424fa  Test User 2018-07-19 15:31 +0000
-  |/   some commit
+  . o  d2f740  Test User 2018-07-19 15:31 +0000
+  . |  some commit
+  . |
+  . o  1424fa  Test User 2018-07-19 15:31 +0000
+  ./   some commit
   |
   o  91514f (public)  2018-07-19 15:13 +0000
   .  some commit
   .
-  | o  737b4b  Test User 2018-06-19 22:20 +0000
-  |/   some commit
+  . o  737b4b  Test User 2018-06-19 22:20 +0000
+  ./   some commit
   |
   | o  9a3e9e  Test User 2018-06-19 21:25 +0000
   |/   some commit
@@ -1229,179 +1230,179 @@ Tests for hg cloud sl
   o  f7b43d (public)  2018-06-18 23:35 +0000
   .  some commit
   .
-  | o  0e7cbe  Test User 2018-06-18 20:53 +0000
-  | |  some commit
-  | |
-  | o  b7f63b  Test User 2018-06-18 20:53 +0000
-  | |  some commit
-  | |
-  | o  77d290  Test User 2018-06-18 20:53 +0000
-  | |  some commit
-  | |
-  | o  17c3cc  Test User 2018-06-18 20:53 +0000
-  | |  some commit
-  | |
-  | o  79e251  Test User 2018-06-18 20:53 +0000
-  | |  some commit
-  | |
-  | o  b7998b  Test User 2018-06-18 20:53 +0000
-  | |  some commit
-  | |
-  | o  194b51  Test User 2018-06-18 20:53 +0000
-  | |  some commit
-  | |
-  | o  c2c53d  Test User 2018-06-18 20:53 +0000
-  | |  some commit
-  | |
-  | o  3395c3  Test User 2018-06-19 20:54 +0000
-  |/   some commit
+  . o  0e7cbe  Test User 2018-06-18 20:53 +0000
+  . |  some commit
+  . |
+  . o  b7f63b  Test User 2018-06-18 20:53 +0000
+  . |  some commit
+  . |
+  . o  77d290  Test User 2018-06-18 20:53 +0000
+  . |  some commit
+  . |
+  . o  17c3cc  Test User 2018-06-18 20:53 +0000
+  . |  some commit
+  . |
+  . o  79e251  Test User 2018-06-18 20:53 +0000
+  . |  some commit
+  . |
+  . o  b7998b  Test User 2018-06-18 20:53 +0000
+  . |  some commit
+  . |
+  . o  194b51  Test User 2018-06-18 20:53 +0000
+  . |  some commit
+  . |
+  . o  c2c53d  Test User 2018-06-18 20:53 +0000
+  . |  some commit
+  . |
+  . o  3395c3  Test User 2018-06-19 20:54 +0000
+  ./   some commit
   |
   o  9734e2 (public)  2018-06-18 20:33 +0000
   .  some commit
   .
-  | o  04d770  Test User 2018-06-11 06:26 +0000
-  |/   some commit
+  . o  04d770  Test User 2018-06-11 06:26 +0000
+  ./   some commit
   |
   o  dce9d2 (public)  2018-06-10 07:37 +0000
   .  some commit
   .
-  | o  cbc789  Test User 2018-05-29 16:46 +0000
-  |/   some commit
+  . o  cbc789  Test User 2018-05-29 16:46 +0000
+  ./   some commit
   |
   o  8fc9f7 (public)  2018-05-28 17:22 +0000
   .  some commit
   .
-  | o  389248  Test User 2018-05-25 21:27 +0000
-  |/   some commit
+  . o  389248  Test User 2018-05-25 21:27 +0000
+  ./   some commit
   |
   o  1b7f2f (public)  2018-05-25 21:06 +0000
   .  some commit
   .
-  | o  debd4d  Test User 2018-05-09 06:51 +0000
-  |/   some commit
+  . o  debd4d  Test User 2018-05-09 06:51 +0000
+  ./   some commit
   |
   o  305f0f (public)  2018-05-08 20:39 +0000
   .  some commit
   .
-  | o  3e75a9  Test User 2018-05-07 16:29 +0000
-  |/   some commit
+  . o  3e75a9  Test User 2018-05-07 16:29 +0000
+  ./   some commit
   |
   o  3076b0 (public)  2018-05-07 15:33 +0000
   .  some commit
   .
-  | o  6403af  Test User 2018-03-29 17:59 +0000
-  | |  some commit
-  | |
-  | o  11b378  Test User 2018-03-29 17:59 +0000
-  | |  some commit
-  | |
-  | o  01c34a  Test User 2018-03-29 17:59 +0000
-  |/   some commit
+  . o  6403af  Test User 2018-03-29 17:59 +0000
+  . |  some commit
+  . |
+  . o  11b378  Test User 2018-03-29 17:59 +0000
+  . |  some commit
+  . |
+  . o  01c34a  Test User 2018-03-29 17:59 +0000
+  ./   some commit
   |
   o  346d06 (public)  2018-03-29 16:49 +0000
   .  some commit
   .
-  | o  5bbb05  Test User 2018-03-22 11:23 +0000
-  | |  some commit
-  | |
-  | o  e62dca  Test User 2018-03-22 11:23 +0000
-  | |  some commit
-  | |
-  | o  e5dfd0  Test User 2018-03-22 11:23 +0000
-  | |  some commit
-  | |
-  | o  133633  Test User 2018-03-22 11:23 +0000
-  | |  some commit
-  | |
-  | o  11d372  Test User 2018-03-22 11:07 +0000
-  |/   some commit
+  . o  5bbb05  Test User 2018-03-22 11:23 +0000
+  . |  some commit
+  . |
+  . o  e62dca  Test User 2018-03-22 11:23 +0000
+  . |  some commit
+  . |
+  . o  e5dfd0  Test User 2018-03-22 11:23 +0000
+  . |  some commit
+  . |
+  . o  133633  Test User 2018-03-22 11:23 +0000
+  . |  some commit
+  . |
+  . o  11d372  Test User 2018-03-22 11:07 +0000
+  ./   some commit
   |
   o  d0fc06 (public)  2018-03-22 11:00 +0000
   .  some commit
   .
-  | o  af1895  Test User 2018-03-07 17:27 +0000
-  |/   some commit
+  . o  af1895  Test User 2018-03-07 17:27 +0000
+  ./   some commit
   |
   o  bc36d3 (public)  2018-03-05 22:53 +0000
   .  some commit
   .
-  | o  cba7a6  Test User 2018-02-27 19:12 +0000
-  |/   some commit
+  . o  cba7a6  Test User 2018-02-27 19:12 +0000
+  ./   some commit
   |
   o  a55ab5 (public)  2018-02-27 18:45 +0000
   .  some commit
   .
-  | o  7ea151  Test User 2018-01-17 18:08 +0000
-  | |  some commit
-  | |
-  | o  b0e7ae  Test User 2018-01-17 18:08 +0000
-  |/   some commit
+  . o  7ea151  Test User 2018-01-17 18:08 +0000
+  . |  some commit
+  . |
+  . o  b0e7ae  Test User 2018-01-17 18:08 +0000
+  ./   some commit
   |
   o  ae05a9 (public)  2018-01-17 18:07 +0000
   .  some commit
   .
-  | o  3f4905  Test User 2017-11-08 20:37 +0000
-  |/   some commit
+  . o  3f4905  Test User 2017-11-08 20:37 +0000
+  ./   some commit
   |
   o  a9a8d8 (public)  2017-11-08 20:36 +0000
   .  some commit
   .
-  | o  54b9cf  Test User 2017-11-04 00:10 +0000
-  |/   some commit
+  . o  54b9cf  Test User 2017-11-04 00:10 +0000
+  ./   some commit
   |
   o  9af6a3 (public)  2017-11-03 21:29 +0000
   .  some commit
   .
-  | o  31cac0  Test User 2017-09-27 22:24 +0000
-  |/   some commit
+  . o  31cac0  Test User 2017-09-27 22:24 +0000
+  ./   some commit
   |
   o  2c378c (public)  2017-09-27 18:26 +0000
   .  some commit
   .
-  | o  5c8bce  Test User 2017-09-14 03:48 +0000
-  |/   some commit
+  . o  5c8bce  Test User 2017-09-14 03:48 +0000
+  ./   some commit
   |
   o  009060 (public)  2017-09-14 03:44 +0000
   .  some commit
   .
-  | o  d5f813  Test User 2017-09-05 12:21 +0000
-  | |  some commit
-  | |
-  | o  78889e  Test User 2017-09-05 12:21 +0000
-  |/   some commit
+  . o  d5f813  Test User 2017-09-05 12:21 +0000
+  . |  some commit
+  . |
+  . o  78889e  Test User 2017-09-05 12:21 +0000
+  ./   some commit
   |
   o  0ed0d8 (public)  2017-09-05 11:49 +0000
   .  some commit
   .
-  | o  38b901  Test User 2017-09-04 14:46 +0000
-  |/   some commit
+  . o  38b901  Test User 2017-09-04 14:46 +0000
+  ./   some commit
   |
   o  428ae8 (public)  2017-09-04 12:10 +0000
   .  some commit
   .
-  | o  fe391c  Test User 2017-08-21 20:36 +0000
-  |/   some commit
+  . o  fe391c  Test User 2017-08-21 20:36 +0000
+  ./   some commit
   |
   o  b9f2b3 (public)  2017-08-21 19:54 +0000
   .  some commit
   .
-  | o  10f94c  Test User 2017-04-28 23:32 +0000
-  | |  some commit
-  | |
-  | o  708ef0  Test User 2017-04-28 23:32 +0000
-  | |  some commit
-  | |
-  | o  a74189  Test User 2017-04-28 23:32 +0000
-  | |  some commit
-  | |
-  | o  818195  Test User 2017-04-28 23:32 +0000
-  |/   some commit
+  . o  10f94c  Test User 2017-04-28 23:32 +0000
+  . |  some commit
+  . |
+  . o  708ef0  Test User 2017-04-28 23:32 +0000
+  . |  some commit
+  . |
+  . o  a74189  Test User 2017-04-28 23:32 +0000
+  . |  some commit
+  . |
+  . o  818195  Test User 2017-04-28 23:32 +0000
+  ./   some commit
   |
   o  030127 (public)  2017-04-28 23:21 +0000
   .  some commit
   .
-  | o  e9aebc  Test User 2017-04-15 21:35 +0000 somebookmark
-  |/   some commit
+  . o  e9aebc  Test User 2017-04-15 21:35 +0000 somebookmark
+  ./   some commit
   |
   o  dbc73d (public)  2017-04-13 22:53 +0000
      some commit
@@ -1428,29 +1429,29 @@ Tests for hg cloud sl
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
-  o  773bd8  Test User 2018-07-25 13:31 +0000 somebookmark
-  |  some commit
+    o  773bd8  Test User 2018-07-25 13:31 +0000 somebookmark
+   /   some commit
   |
   o  c609e6 (public)  2018-07-23 10:36 +0000
   .  some commit
   .
-  | o  685a62  Test User 2018-07-12 15:20 +0000
-  | |  some commit
-  | |
-  | o  aa84f0  Test User 2018-07-10 18:56 +0000
-  |/   some commit
+  . o  685a62  Test User 2018-07-12 15:20 +0000
+  . |  some commit
+  . |
+  . o  aa84f0  Test User 2018-07-10 18:56 +0000
+  ./   some commit
   |
   o  99d5fb (public)  2018-07-10 13:39 +0000
   .  some commit
   .
-  | o  717dcc  Test User 2018-06-20 21:02 +0000
-  |/   some commit
+  . o  717dcc  Test User 2018-06-20 21:02 +0000
+  ./   some commit
   |
   o  30443c (public)  2018-06-20 16:21 +0000
   .  some commit
   .
-  | o  0067e4  Test User 2018-05-29 20:36 +0000
-  |/   some commit
+  . o  0067e4  Test User 2018-05-29 20:36 +0000
+  ./   some commit
   |
   o  4b1141 (public)  2018-05-29 20:23 +0000
      some commit
@@ -1506,116 +1507,116 @@ Tests for hg cloud sl
   commitcloud: searching draft commits for the 'user/test/default' workspace for the 'server' repo
   Smartlog:
   
-  o  b545c3  Test User 2018-06-18 15:06 +0000
-  |  some commit
+    o  b545c3  Test User 2018-06-18 15:06 +0000
+   /   some commit
   |
   o  9ecb3e (public)  2018-06-18 14:16 +0000
   .  some commit
   .
-  | o  2b9a52  Test User 2018-06-17 15:13 +0000
-  | |  some commit
-  | |
-  | o  5c45cd  Test User 2018-06-17 15:13 +0000
-  | |  some commit
-  | |
-  | o  25d91f  Test User 2018-06-17 15:13 +0000
-  | |  some commit
-  | |
-  | | o  4ac122  Test User 2018-06-18 15:38 +0000
-  | | |  some commit
-  | | |
-  | | o  2ad8ad  Test User 2018-06-18 15:38 +0000
-  | | |  some commit
-  | | |
-  | | o  a35c2d  Test User 2018-06-18 15:38 +0000
-  | | |  some commit
-  | | |
-  | | o  18ead8  Test User 2018-06-18 15:38 +0000
-  | | |  some commit
-  | | |
-  | | o  343314  Test User 2018-06-18 15:38 +0000
-  | | |  some commit
-  | | |
-  | | o  d50e12  Test User 2018-06-18 15:38 +0000
-  | | |  some commit
-  | | |
-  | | o  192484  Test User 2018-06-18 15:38 +0000
-  | | |  some commit
-  | | |
-  | | o  d982aa  Test User 2018-06-18 15:38 +0000
-  | | |  some commit
-  | | |
-  | | o  5fdfe2  Test User 2018-06-18 15:38 +0000
-  | | |  some commit
-  | | |
-  | | o  7e8e6a  Test User 2018-06-18 15:38 +0000
-  | |/   some commit
-  | |
-  | o  c4e2cd  Test User 2018-06-17 15:13 +0000
-  | |  some commit
-  | |
-  | o  25321d  Test User 2018-06-17 15:13 +0000
-  | |  some commit
-  | |
-  | o  941218  Test User 2018-06-17 15:13 +0000
-  | |  some commit
-  | |
-  | o  e40617  Test User 2018-06-17 15:13 +0000
-  | |  some commit
-  | |
-  | o  22bc0f  Test User 2018-06-17 15:13 +0000
-  | |  some commit
-  | |
-  | o  05e828  Test User 2018-06-17 15:13 +0000
-  |/   some commit
+  . o  2b9a52  Test User 2018-06-17 15:13 +0000
+  . |  some commit
+  . |
+  . o  5c45cd  Test User 2018-06-17 15:13 +0000
+  . |  some commit
+  . |
+  . o  25d91f  Test User 2018-06-17 15:13 +0000
+  . |  some commit
+  . |
+  . | o  4ac122  Test User 2018-06-18 15:38 +0000
+  . | |  some commit
+  . | |
+  . | o  2ad8ad  Test User 2018-06-18 15:38 +0000
+  . | |  some commit
+  . | |
+  . | o  a35c2d  Test User 2018-06-18 15:38 +0000
+  . | |  some commit
+  . | |
+  . | o  18ead8  Test User 2018-06-18 15:38 +0000
+  . | |  some commit
+  . | |
+  . | o  343314  Test User 2018-06-18 15:38 +0000
+  . | |  some commit
+  . | |
+  . | o  d50e12  Test User 2018-06-18 15:38 +0000
+  . | |  some commit
+  . | |
+  . | o  192484  Test User 2018-06-18 15:38 +0000
+  . | |  some commit
+  . | |
+  . | o  d982aa  Test User 2018-06-18 15:38 +0000
+  . | |  some commit
+  . | |
+  . | o  5fdfe2  Test User 2018-06-18 15:38 +0000
+  . | |  some commit
+  . | |
+  . | o  7e8e6a  Test User 2018-06-18 15:38 +0000
+  . |/   some commit
+  . |
+  . o  c4e2cd  Test User 2018-06-17 15:13 +0000
+  . |  some commit
+  . |
+  . o  25321d  Test User 2018-06-17 15:13 +0000
+  . |  some commit
+  . |
+  . o  941218  Test User 2018-06-17 15:13 +0000
+  . |  some commit
+  . |
+  . o  e40617  Test User 2018-06-17 15:13 +0000
+  . |  some commit
+  . |
+  . o  22bc0f  Test User 2018-06-17 15:13 +0000
+  . |  some commit
+  . |
+  . o  05e828  Test User 2018-06-17 15:13 +0000
+  ./   some commit
   |
   o  098db6 (public)  2018-06-17 15:12 +0000
   .  some commit
   .
-  | o  a95856  Test User 2018-06-11 16:49 +0000
-  |/   some commit
+  . o  a95856  Test User 2018-06-11 16:49 +0000
+  ./   some commit
   |
   o  4c1ab4 (public)  2018-06-11 16:46 +0000
   .  some commit
   .
-  | o  506117  Test User 2018-06-13 14:57 +0000
-  |/   some commit
+  . o  506117  Test User 2018-06-13 14:57 +0000
+  ./   some commit
   |
   o  41c3c6 (public)  2018-06-07 14:41 +0000
   .  some commit
   .
-  | o  bbb2de  Test User 2018-05-22 09:25 +0000
-  |/   some commit
+  . o  bbb2de  Test User 2018-05-22 09:25 +0000
+  ./   some commit
   |
   o  43b76c (public)  2018-05-21 15:05 +0000
   .  some commit
   .
-  | o  adedd4  Test User 2018-05-22 09:42 +0000
-  |/   some commit
+  . o  adedd4  Test User 2018-05-22 09:42 +0000
+  ./   some commit
   |
   o  5c518c (public)  2018-05-21 14:57 +0000
   .  some commit
   .
-  | o  32f304  Test User 2018-03-02 22:55 +0000
-  |/   some commit
+  . o  32f304  Test User 2018-03-02 22:55 +0000
+  ./   some commit
   |
   o  76159c (public)  2018-03-02 22:43 +0000
   .  some commit
   .
-  | o  6e4d02  Test User 2018-02-12 14:22 +0000
-  |/   some commit
+  . o  6e4d02  Test User 2018-02-12 14:22 +0000
+  ./   some commit
   |
   o  81e4fb (public)  2018-02-12 10:21 +0000
   .  some commit
   .
-  | o  0f6762  Test User 2018-01-02 12:25 +0000
-  | |  some commit
-  | |
-  | o  ae48fa  Test User 2018-01-02 12:25 +0000
-  | |  some commit
-  | |
-  | o  97dbf0  Test User 2018-01-02 12:25 +0000
-  |/   some commit
+  . o  0f6762  Test User 2018-01-02 12:25 +0000
+  . |  some commit
+  . |
+  . o  ae48fa  Test User 2018-01-02 12:25 +0000
+  . |  some commit
+  . |
+  . o  97dbf0  Test User 2018-01-02 12:25 +0000
+  ./   some commit
   |
   o  073f98 (public)  2018-01-02 10:00 +0000
      some commit

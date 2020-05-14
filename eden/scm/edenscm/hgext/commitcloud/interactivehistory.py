@@ -80,12 +80,7 @@ def showhistory(ui, repo, reponame, workspacename, **opts):
                 )
 
             displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
-            if ui.config("experimental", "graph.renderer") == "legacy":
-                cmdutil.displaygraph(ui, repo, revdag, displayer, graphmod.asciiedges)
-            else:
-                cmdutil.rustdisplaygraph(
-                    ui, repo, revdag, displayer, reserved=firstpublic
-                )
+            cmdutil.rustdisplaygraph(ui, repo, revdag, displayer, reserved=firstpublic)
             repo.ui.status(
                 _(
                     "<-: newer  "
