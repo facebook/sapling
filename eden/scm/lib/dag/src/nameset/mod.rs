@@ -16,7 +16,7 @@ use anyhow::Result;
 use std::any::Any;
 use std::fmt;
 use std::fmt::Debug;
-use std::ops::Deref;
+use std::ops::{BitAnd, BitOr, Deref, Sub};
 use std::sync::Arc;
 
 pub mod dag;
@@ -127,6 +127,30 @@ impl NameSet {
         } else {
             Self::from_query(sorted::SortedSet::from_set(self.clone()))
         }
+    }
+}
+
+impl BitAnd for NameSet {
+    type Output = Self;
+
+    fn bitand(self, other: Self) -> Self {
+        self.intersection(&other)
+    }
+}
+
+impl BitOr for NameSet {
+    type Output = Self;
+
+    fn bitor(self, other: Self) -> Self {
+        self.union(&other)
+    }
+}
+
+impl Sub for NameSet {
+    type Output = Self;
+
+    fn sub(self, other: Self) -> Self {
+        self.difference(&other)
     }
 }
 
@@ -330,6 +354,16 @@ pub(crate) mod tests {
             format!("{:?}", set),
             "<difference <or <[0202]> <[0101]>> <and <[0303]> <[0202]>>>"
         );
+    }
+
+    #[test]
+    fn test_ops() {
+        let ab: NameSet = "a b".into();
+        let bc: NameSet = "b c".into();
+        let s = |set: NameSet| -> Vec<String> { shorten_iter(set.iter()) };
+        assert_eq!(s(ab.clone() | bc.clone()), ["61", "62", "63"]);
+        assert_eq!(s(ab.clone() & bc.clone()), ["62"]);
+        assert_eq!(s(ab.clone() - bc.clone()), ["61"]);
     }
 
     /// Check consistency of a `NameSetQuery`, such as `iter().nth(0)` matches
