@@ -59,7 +59,7 @@ pub use crate::repo::RepoContext;
 pub use crate::repo_write::{CreateChange, CreateCopyInfo, RepoWriteContext};
 pub use crate::specifiers::{
     ChangesetId, ChangesetIdPrefix, ChangesetPrefixSpecifier, ChangesetSpecifier,
-    ChangesetSpecifierPrefixResolution, HgChangesetId, HgChangesetIdPrefix,
+    ChangesetSpecifierPrefixResolution, Globalrev, HgChangesetId, HgChangesetIdPrefix,
 };
 pub use crate::tree::{TreeContext, TreeEntry, TreeId, TreeSummary};
 

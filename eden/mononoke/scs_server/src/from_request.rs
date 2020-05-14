@@ -116,6 +116,15 @@ impl FromRequest<thrift::RepoResolveCommitPrefixParams> for ChangesetPrefixSpeci
                 })?;
                 Ok(ChangesetPrefixSpecifier::from(prefix))
             }
+            thrift::CommitIdentityScheme::GLOBALREV => {
+                let rev = params.prefix.parse().map_err(|e| {
+                    errors::invalid_request(format!(
+                        "invalid commit id prefix (scheme={} {}): {}",
+                        params.prefix_scheme, params.prefix, e
+                    ))
+                })?;
+                Ok(ChangesetPrefixSpecifier::from(Globalrev::new(rev)))
+            }
             _ => Err(errors::invalid_request(format!(
                 "unsupported prefix identity scheme ({})",
                 params.prefix_scheme

@@ -43,6 +43,7 @@ pub type HgChangesetIdPrefix = mercurial_types::HgChangesetIdPrefix;
 pub enum ChangesetPrefixSpecifier {
     Bonsai(ChangesetIdPrefix),
     Hg(HgChangesetIdPrefix),
+    Globalrev(Globalrev),
 }
 
 impl From<HgChangesetIdPrefix> for ChangesetPrefixSpecifier {
@@ -54,6 +55,12 @@ impl From<HgChangesetIdPrefix> for ChangesetPrefixSpecifier {
 impl From<ChangesetIdPrefix> for ChangesetPrefixSpecifier {
     fn from(prefix: ChangesetIdPrefix) -> Self {
         Self::Bonsai(prefix)
+    }
+}
+
+impl From<Globalrev> for ChangesetPrefixSpecifier {
+    fn from(prefix: Globalrev) -> Self {
+        Self::Globalrev(prefix)
     }
 }
 
@@ -90,6 +97,16 @@ impl From<mononoke_types::ChangesetIdsResolvedFromPrefix> for ChangesetSpecifier
             Multiple(ids) => Self::Multiple(ids.into_iter().map(|id| Bonsai(id)).collect()),
             TooMany(ids) => Self::TooMany(ids.into_iter().map(|id| Bonsai(id)).collect()),
             NoMatch => Self::NoMatch,
+        }
+    }
+}
+
+impl From<Option<Globalrev>> for ChangesetSpecifierPrefixResolution {
+    fn from(resolved: Option<Globalrev>) -> Self {
+        use ChangesetSpecifier::*;
+        match resolved {
+            Some(globalrev) => Self::Single(Globalrev(globalrev)),
+            None => Self::NoMatch,
         }
     }
 }
