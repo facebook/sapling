@@ -29,6 +29,10 @@ impl SamplingKey {
         let v = NEXT_SAMPLING_KEY.fetch_add(1, Ordering::Relaxed);
         Self { inner_key: v }
     }
+
+    pub fn inner(&self) -> u32 {
+        self.inner_key
+    }
 }
 
 #[derive(Debug, Clone)]

@@ -5,7 +5,7 @@
  * GNU General Public License version 2.
  */
 
-use crate::graph::{FileContentData, Node, NodeData, WrappedPath};
+use crate::graph::{FileContentData, Node, NodeData, NodeType, WrappedPath};
 use crate::progress::{
     progress_stream, report_state, ProgressReporter, ProgressStateCountByType, ProgressStateMutex,
 };
@@ -17,7 +17,6 @@ use crate::setup::{
     PROGRESS_INTERVAL_ARG, PROGRESS_SAMPLE_DURATION_S, PROGRESS_SAMPLE_RATE,
     PROGRESS_SAMPLE_RATE_ARG, SAMPLE_OFFSET_ARG, SAMPLE_RATE_ARG,
 };
-use crate::sizing::SizingSample;
 use crate::tail::{walk_exact_tail, RepoWalkRun};
 
 use anyhow::Error;
@@ -34,11 +33,8 @@ use mononoke_types::BlobstoreBytes;
 use percent_encoding::{percent_encode, AsciiSet, CONTROLS};
 use samplingblob::SamplingHandler;
 use slog::Logger;
-use std::{path::PathBuf, sync::Arc, time::Duration};
-use tokio::{
-    fs::{self, File},
-    io::AsyncWriteExt,
-};
+use std::{collections::HashMap, io::Write, path::PathBuf, sync::Arc, time::Duration};
+use tokio::fs::{self as tkfs};
 
 /// https://url.spec.whatwg.org/#fragment-percent-encode-set
 const FRAGMENT: &AsciiSet = &CONTROLS.add(b' ').add(b'"').add(b'<').add(b'>').add(b'`');
@@ -50,13 +46,16 @@ const PATH: &AsciiSet = &FRAGMENT.add(b'#').add(b'?').add(b'{').add(b'}').add(b'
 // so that we can distiguish in-repo paths fron the hierarchy used for the blobs.
 const DUMP_DIR: &str = ".mononoke,";
 
+// A subdir used for temp files before they are moved to final location
+const INFLIGHT_DIR: &str = "Inflight";
+
 // Force load of leaf data like file contents that graph traversal did not need
 // Output is the samples
 fn corpus_stream<InStream, SS>(
     scheduled_max: usize,
     output_dir: Option<String>,
     s: InStream,
-    sampler: Arc<CorpusSamplingHandler<SizingSample>>,
+    sampler: Arc<CorpusSamplingHandler<CorpusSample>>,
 ) -> impl Stream<Item = Result<(Node, Option<()>, Option<ScrubStats>), Error>>
 where
     InStream: Stream<Item = Result<((Node, Option<WrappedPath>), Option<NodeData>, Option<SS>), Error>>
@@ -87,7 +86,7 @@ where
     .try_buffer_unordered(scheduled_max)
     // Dump the data to disk
     .map_ok(move |((n, path), sample, stats)| match sample {
-        Some(sample) => dump_node(output_dir.clone(), n.clone(), path, sample).map_ok(move |()| (n, Some(()), stats)).left_future(),
+        Some(sample) => move_node_files(output_dir.clone(), n.clone(), path, sample).map_ok(move |()| (n, Some(()), stats)).left_future(),
         None => future::ok((n, Some(()), stats)).right_future(),
     })
     .try_buffer_unordered(scheduled_max)
@@ -101,11 +100,23 @@ fn disk_node_dir(
     base_for_type: &PathBuf,
     path: Option<&WrappedPath>,
     hash_subset: &[u8],
+    dump_extension: bool,
 ) -> PathBuf {
     let mut o = base_for_type.clone();
     match path {
         Some(WrappedPath::NonRoot(path)) => {
             let path = PathBuf::from(percent_encode(&path.as_ref().to_vec(), PATH).to_string());
+            if dump_extension {
+                match path.extension() {
+                    Some(ext) => {
+                        o.push("byext");
+                        o.push(ext);
+                    }
+                    None => {
+                        o.push("noext");
+                    }
+                }
+            }
             o.push("root");
             o.push(path);
         }
@@ -116,10 +127,7 @@ fn disk_node_dir(
     };
 
     // Separate the dumped data from the repo dir structure
-    match path {
-        Some(_) => o.push(DUMP_DIR),
-        None => (),
-    };
+    o.push(DUMP_DIR);
 
     // 16777216 directories per path should be enough
     for d in 0..3 {
@@ -128,14 +136,37 @@ fn disk_node_dir(
     o
 }
 
-/// Write to disk
-async fn dump_node(
+fn dump_with_extension(node_type: NodeType) -> bool {
+    match node_type {
+        NodeType::Root => false,
+        // Bonsai
+        NodeType::Bookmark => false,
+        NodeType::BonsaiChangeset => false,
+        NodeType::BonsaiHgMapping => false,
+        NodeType::BonsaiPhaseMapping => false,
+        NodeType::PublishedBookmarks => false,
+        NodeType::BonsaiFsnodeMapping => false,
+        // Hg
+        NodeType::HgBonsaiMapping => false,
+        NodeType::HgChangeset => false,
+        NodeType::HgManifest => false,
+        NodeType::HgFileEnvelope => true,
+        NodeType::HgFileNode => true,
+        // Content
+        NodeType::FileContent => true,
+        NodeType::FileContentMetadata => true,
+        NodeType::AliasContentMapping => true,
+        // Derived Data
+        NodeType::Fsnode => false,
+    }
+}
+
+async fn move_node_files(
     output_dir: Option<String>,
     node: Node,
     repo_path: Option<WrappedPath>,
-    sample: SizingSample,
+    sample: CorpusSample,
 ) -> Result<(), Error> {
-    // Going to use this to create subdirs
     let hash_subset = node
         .sampling_fingerprint()
         .unwrap_or_default()
@@ -149,22 +180,32 @@ async fn dump_node(
     let mut base = PathBuf::from(output_dir);
     base.push(node.get_type().to_string());
 
-    for (k, v) in sample.data {
-        let mut disk_path = disk_node_dir(&base, repo_path.as_ref(), &hash_subset);
-        // Make all the dirs
-        fs::create_dir_all(&disk_path).await?;
-        // Finally add the blobstore key to the path
-        disk_path.push(percent_encode(k.as_bytes(), PATH).to_string());
-        // Write to the file
-        let mut f = File::create(disk_path).await?;
-        f.write_all(v.as_bytes()).await?;
+    let inflight_dir = match sample.inflight_dir {
+        Some(inflight_dir) => inflight_dir,
+        None => return Ok(()),
+    };
+
+    let dump_extension = dump_with_extension(node.get_type());
+
+    for (k, _) in sample.data {
+        let mut dest_path = disk_node_dir(&base, repo_path.as_ref(), &hash_subset, dump_extension);
+        tkfs::create_dir_all(&dest_path).await?;
+
+        let key_file = percent_encode(k.as_bytes(), PATH).to_string();
+        dest_path.push(&key_file);
+        let mut source_path = inflight_dir.clone();
+        source_path.push(&key_file);
+
+        tkfs::rename(source_path, dest_path).await?;
     }
+    tkfs::remove_dir(inflight_dir).await?;
     Ok(())
 }
 
 #[derive(Debug)]
 pub struct CorpusSamplingHandler<T> {
     inner: WalkSampleMapping<(Node, Option<WrappedPath>), T>,
+    output_dir: Option<String>,
 }
 
 impl<T> SampleTrigger<(Node, Option<WrappedPath>)> for CorpusSamplingHandler<T>
@@ -176,10 +217,12 @@ where
     }
 }
 
+// This exists so we can track output_dir
 impl<T> CorpusSamplingHandler<T> {
-    pub fn new() -> Self {
+    pub fn new(output_dir: Option<String>) -> Self {
         Self {
             inner: WalkSampleMapping::new(),
+            output_dir,
         }
     }
 
@@ -188,18 +231,63 @@ impl<T> CorpusSamplingHandler<T> {
     }
 }
 
-impl SamplingHandler for CorpusSamplingHandler<SizingSample> {
+#[derive(Debug)]
+pub struct CorpusSample {
+    pub inflight_dir: Option<PathBuf>,
+    pub data: HashMap<String, u64>,
+}
+
+impl Default for CorpusSample {
+    fn default() -> Self {
+        Self {
+            inflight_dir: None,
+            data: HashMap::with_capacity(1),
+        }
+    }
+}
+
+impl From<Option<&CorpusSample>> for ScrubStats {
+    fn from(sample: Option<&CorpusSample>) -> Self {
+        sample
+            .map(|sample| ScrubStats {
+                blobstore_keys: sample.data.values().len() as u64,
+                blobstore_bytes: sample.data.values().by_ref().sum(),
+            })
+            .unwrap_or_default()
+    }
+}
+
+impl SamplingHandler for CorpusSamplingHandler<CorpusSample> {
     fn sample_get(
         &self,
         ctx: CoreContext,
         key: String,
         value: Option<&BlobstoreBytes>,
     ) -> Result<(), Error> {
-        ctx.sampling_key().map(|sampling_key| {
-            self.inner.inflight().get_mut(sampling_key).map(|mut guard|
-                    // Use the path mapping to know file path
-                    value.map(|value| guard.data.insert(key.clone(), value.clone())))
-        });
+        let output_dir = match &self.output_dir {
+            Some(d) => d,
+            None => return Ok(()),
+        };
+
+        let sampling_key = match ctx.sampling_key() {
+            Some(s) => s,
+            None => return Ok(()),
+        };
+
+        let mut inflight_path = PathBuf::from(output_dir);
+        inflight_path.push(INFLIGHT_DIR);
+        inflight_path.push(sampling_key.inner().to_string());
+        if let Some(mut guard) = self.inner.inflight().get_mut(sampling_key) {
+            std::fs::create_dir_all(&inflight_path)?;
+            guard.inflight_dir = Some(inflight_path.clone());
+            inflight_path.push(percent_encode(key.as_bytes(), PATH).to_string());
+            let mut f = std::fs::File::create(inflight_path)?;
+            if let Some(value) = value {
+                f.write_all(value.as_bytes())?;
+            }
+            guard.data.insert(key, value.map_or(0, |v| v.len()) as u64);
+        }
+
         Ok(())
     }
 }
@@ -211,13 +299,16 @@ pub async fn corpus<'a>(
     matches: &'a ArgMatches<'a>,
     sub_m: &'a ArgMatches<'a>,
 ) -> Result<(), Error> {
-    let sizing_sampler = Arc::new(CorpusSamplingHandler::<SizingSample>::new());
+    let output_dir = sub_m.value_of(OUTPUT_DIR_ARG).map(|s| s.to_string());
+    let corpus_sampler = Arc::new(CorpusSamplingHandler::<CorpusSample>::new(
+        output_dir.clone(),
+    ));
 
     let (datasources, walk_params) = setup_common(
         CORPUS,
         fb,
         &logger,
-        Some(sizing_sampler.clone()),
+        Some(corpus_sampler.clone()),
         matches,
         sub_m,
     )
@@ -228,14 +319,12 @@ pub async fn corpus<'a>(
     let sample_offset = args::get_u64_opt(&sub_m, SAMPLE_OFFSET_ARG).unwrap_or(0);
     let progress_interval_secs = args::get_u64_opt(&sub_m, PROGRESS_INTERVAL_ARG);
     let progress_sample_rate = args::get_u64_opt(&sub_m, PROGRESS_SAMPLE_RATE_ARG);
-    let output_dir = sub_m.value_of(OUTPUT_DIR_ARG);
 
-    if let Some(output_dir) = output_dir {
+    if let Some(output_dir) = &output_dir {
         if !std::path::Path::new(output_dir).exists() {
             std::fs::create_dir(output_dir).map_err(Error::from)?
         }
     }
-    let output_dir = output_dir.map(|s| s.to_string());
 
     cloned!(
         walk_params.include_node_types,
@@ -265,7 +354,7 @@ pub async fn corpus<'a>(
             walk_params.progress_state,
             walk_params.quiet,
             walk_params.scheduled_max,
-            sizing_sampler
+            corpus_sampler
         );
         move |run: RepoWalkRun| {
             cloned!(run.ctx);
@@ -274,7 +363,7 @@ pub async fn corpus<'a>(
                 let walk_progress = progress_stream(quiet, &progress_state.clone(), walk_output);
 
                 let corpus =
-                    corpus_stream(scheduled_max, output_dir, walk_progress, sizing_sampler);
+                    corpus_stream(scheduled_max, output_dir, walk_progress, corpus_sampler);
                 let report_sizing = progress_stream(quiet, &sizing_progress_state.clone(), corpus);
                 report_state(ctx, sizing_progress_state, report_sizing)
                     .map({
@@ -293,7 +382,7 @@ pub async fn corpus<'a>(
         include_node_types,
         include_edge_types,
         sampling_node_types,
-        sizing_sampler,
+        corpus_sampler,
         sample_rate,
         sample_offset,
     ));

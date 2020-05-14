@@ -35,7 +35,7 @@ Base case, sample all in one go. Expeding WALKABLEBLOBCOUNT keys plus mappings a
   Walked/s,* (glob)
 
 Check the corpus dumped to disk agrees with the walk stats
-  $ for x in full/*; do echo -n "$x "; find $x -type f -exec du --bytes -c {} + | tail -1 | cut -f1; done
+  $ for x in full/*; do size=$(find $x -type f -exec du --bytes -c {} + | tail -1 | cut -f1); if [[ -n "$size" ]]; then echo "$x $size"; fi; done
   full/AliasContentMapping 333
   full/BonsaiChangeset 277
   full/BonsaiFsnodeMapping 96
@@ -69,7 +69,7 @@ Repeat but using the sample-offset to slice.  Offset zero will tend to be larger
   Walked/s,* (glob)
 
 See the breakdown
-  $ for x in slice/*/*; do echo -n "$x "; find $x -type f -exec du --bytes -c {} + | tail -1 | cut -f1; done
+  $ for x in slice/*/*; do size=$(find $x -type f -exec du --bytes -c {} + | tail -1 | cut -f1); if [[ -n "$size" ]]; then echo "$x $size"; fi; done
   slice/0/AliasContentMapping 111
   slice/0/BonsaiChangeset 104
   slice/0/BonsaiFsnodeMapping 32
