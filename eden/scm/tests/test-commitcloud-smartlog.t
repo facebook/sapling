@@ -735,10 +735,10 @@ Tests for hg cloud sl
   ./   some commit
   |
   o  390b78 (public)  2018-06-26 16:53 +0000
-  .  some commit
-  .
-  . o  b71712  Test User 2018-06-27 22:20 +0000
-  ./   some commit
+  |  some commit
+  |
+  | o  b71712  Test User 2018-06-27 22:20 +0000
+  |/   some commit
   |
   o  0c157b (public)  2018-06-26 16:53 +0000
   .  some commit

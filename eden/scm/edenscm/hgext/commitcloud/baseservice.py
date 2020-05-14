@@ -12,7 +12,7 @@ import collections
 import bindings
 from edenscm.mercurial import dagop, json, node as nodemod, pycompat
 from edenscm.mercurial.graphmod import CHANGESET, GRANDPARENT, MISSINGPARENT, PARENT
-from edenscm.mercurial.pycompat import ensurestr
+from edenscm.mercurial.pycompat import decodeutf8, encodeutf8, ensurestr
 
 
 def _joinremotename(remote, name):
@@ -296,24 +296,26 @@ class BaseService(pycompat.ABC):
         """
 
         public = smartloginfo.public
+        publicset = set(public)
         dag = smartloginfo.dag.beautify(public)
 
         def createctx(repo, node):
             return FakeCtx(repo, smartloginfo.nodeinfos[node], node)
 
+        def parentwithstyle(node, p):
+            if node not in publicset:
+                return (PARENT, p)
+            if p in smartloginfo.nodeinfos[node].parents:
+                return (PARENT, p)
+            return (GRANDPARENT, p)
+
         def dagwalker():
             for node in dag.all():
                 ctx = createctx(repo, node)
-                # XXX: This does not actually take the real parent information
-                # into consideration.
-                if node in public:
-                    parentstyle = GRANDPARENT
-                else:
-                    parentstyle = PARENT
-                parents = [(parentstyle, p) for p in dag.parentnames(node)]
+                parents = [parentwithstyle(node, p) for p in dag.parentnames(node)]
                 yield (node, CHANGESET, ctx, parents)
 
-        firstbranch = filter(None, [dag.sort(public).first()])
+        firstbranch = public[0:1]
         return firstbranch, dagwalker()
 
 
@@ -321,13 +323,15 @@ def _makenodes(data):
     nodes = {}
     for nodeinfo in data["nodes"]:
         node = ensurestr(nodeinfo["node"])
-        parents = [ensurestr(p) for p in nodeinfo["parents"]]
+        parents = [encodeutf8(ensurestr(p)) for p in nodeinfo["parents"]]
         bookmarks = [ensurestr(b) for b in nodeinfo["bookmarks"]]
         author = ensurestr(nodeinfo["author"])
         date = int(nodeinfo["date"])
         message = ensurestr(nodeinfo["message"])
         phase = ensurestr(nodeinfo["phase"])
-        nodes[node] = NodeInfo(node, bookmarks, parents, author, date, message, phase)
+        nodes[encodeutf8(node)] = NodeInfo(
+            node, bookmarks, parents, author, date, message, phase
+        )
     return nodes
 
 

@@ -343,19 +343,14 @@ def cloudhide(ui, repo, *revs, **opts):
         firstpublic, revdag = serv.makedagwalker(slinfo, repo)
         cloudrefs = serv.getreferences(reponame, workspacename, 0)
 
-    ctxs = {}
-    childmap = {}
-    drafts = set()
-    for (_r, _t, ctx, _p) in revdag:
-        ctxs[ctx.node()] = ctx
-        for p in ctx.parents():
-            childmap.setdefault(p, []).append(ctx.node())
-        if ctx.phasestr() == "draft":
-            drafts.add(ctx.node())
+    nodeinfos = slinfo.nodeinfos
+    dag = slinfo.dag
+    drafts = set(slinfo.draft)
 
     removenodes = set()
 
     for rev in list(revs) + opts.get("rev", []):
+        rev = pycompat.encodeutf8(rev)
         if rev in drafts:
             removenodes.add(rev)
         else:
@@ -396,63 +391,44 @@ def cloudhide(ui, repo, *revs, **opts):
                 if matcher(remote):
                     removeremotes.add(remote)
 
-    # Find the heads we need to remove
-    candidates = removenodes.copy()
-    removeheads = set()
-    seen = set()
-    while candidates:
-        candidate = candidates.pop()
-        seen.add(candidate)
-        removebookmarks.update(ctxs[candidate].bookmarks())
-        if candidate in cloudrefs.heads:
-            removeheads.add(candidate)
-        for child in childmap.get(candidate, []):
-            if child not in seen:
-                candidates.add(child)
-            removenodes.discard(child)
-    # Find the heads we need to add to keep other commits visible
-    addheads = set()
-    for hexnode in removenodes:
-        for parent in ctxs[hexnode].parents():
-            if parent in drafts:
-                descendants = set(child for child in childmap.get(parent, []))
-                descendants.discard(hexnode)
-                # This parent is a new head, unless one of its other descendants is
-                # a head that is not being removed.
-                newhead = True
-                while descendants:
-                    descendant = descendants.pop()
-                    if descendant in cloudrefs.heads and descendant not in removeheads:
-                        newhead = False
-                        break
-                    descendants.update(childmap.get(descendant, []))
-                if newhead:
-                    addheads.add(parent)
+    # Find the heads and bookmarks we need to remove
+    allremovenodes = dag.descendants(removenodes)
+    removeheads = set(allremovenodes & map(pycompat.encodeutf8, cloudrefs.heads))
+    for node in allremovenodes:
+        removebookmarks.update(nodeinfos[node].bookmarks)
 
     # Find the heads we need to remove because we are removing the last bookmark
     # to it.
-    remainingheads = set(cloudrefs.heads) - removeheads
+    remainingheads = set(map(pycompat.encodeutf8, cloudrefs.heads)) - removeheads
     for bookmark in removebookmarks:
-        ctx = ctxs.get(cloudrefs.bookmarks[bookmark])
-        if ctx is not None and ctx.node() in remainingheads:
-            allbms = set(ctxs[cloudrefs.bookmarks[bookmark]].bookmarks())
-            if removebookmarks.issuperset(allbms):
-                removeheads.add(ctx.node())
-                remainingheads.discard(ctx.node())
+        nodeutf8 = cloudrefs.bookmarks[bookmark]
+        node = pycompat.encodeutf8(nodeutf8)
+        info = nodeinfos.get(node)
+        if node in remainingheads and info:
+            if removebookmarks.issuperset(set(info.bookmarks)):
+                remainingheads.discard(node)
+                removeheads.add(node)
+
+    # Find the heads we need to add to keep other commits visible
+    addheads = (
+        dag.parents(removenodes) - allremovenodes - dag.ancestors(remainingheads)
+    ) & drafts
 
     if removeheads:
         ui.status(_("removing heads:\n"))
         for head in sorted(removeheads):
+            headutf8 = pycompat.decodeutf8(head)
             ui.status(
                 "    %s  %s\n"
-                % (head[:12], templatefilters.firstline(ctxs[head].description()))
+                % (headutf8[:12], templatefilters.firstline(nodeinfos[head].message))
             )
     if addheads:
         ui.status(_("adding heads:\n"))
         for head in sorted(addheads):
+            headutf8 = pycompat.decodeutf8(head)
             ui.status(
                 "    %s  %s\n"
-                % (head[:12], templatefilters.firstline(ctxs[head].description()))
+                % (headutf8[:12], templatefilters.firstline(nodeinfos[head].message))
             )
     if removebookmarks:
         ui.status(_("removing bookmarks:\n"))
@@ -462,6 +438,10 @@ def cloudhide(ui, repo, *revs, **opts):
         ui.status(_("removing remote bookmarks:\n"))
         for remote in sorted(removeremotes):
             ui.status("    %s: %s\n" % (remote, cloudrefs.remotebookmarks[remote][:12]))
+
+    # Normalize back to strings. (The DAG wants bytes, the cloudrefs wants str)
+    removeheads = list(map(pycompat.decodeutf8, removeheads))
+    addheads = list(map(pycompat.decodeutf8, addheads))
 
     if removeheads or addheads or removebookmarks or removeremotes:
         if opts.get("dry_run"):
