@@ -34,6 +34,9 @@ References = collections.namedtuple(
 NodeInfo = collections.namedtuple(
     "NodeInfo", "node bookmarks parents author date message phase"
 )
+SmartlogInfo = collections.namedtuple(
+    "SmartlogInfo", "dag public draft version timestamp nodeinfos"
+)
 
 PUBLICPHASE = "public"
 
@@ -247,12 +250,14 @@ class BaseService(pycompat.ABC):
         """
 
     @staticmethod
-    def builddag(nodeinfos):
-        """Returns a DAG that supports DAG operations like heads, parents,
+    def _makesmartloginfo(data):
+        """Returns a SmartlogInfo that supports DAG operations like heads, parents,
         roots, ancestors, descendants, etc.
-
-        nodeinfos is a dict: {hexnode: NodeInfo}
         """
+        nodeinfos = _makenodes(data)
+        version = data.get("version")
+        timestamp = data.get("timestamp")
+
         public = _getpublic(nodeinfos)
 
         # Sort public by date. Connect them. Assume they form a linear history.
@@ -272,9 +277,17 @@ class BaseService(pycompat.ABC):
 
         dag = bindings.dag.memnamedag()
         dag.addheads(sorted(nodeinfos.keys()), getparents)
-        return dag
+        return SmartlogInfo(
+            dag=dag,
+            public=public,
+            draft=list(dag.all() - public),
+            nodeinfos=nodeinfos,
+            version=version,
+            timestamp=timestamp,
+        )
 
-    def _makefakedag(self, nodeinfos, repo):
+    @staticmethod
+    def makedagwalker(smartloginfo, repo):
         """cset DAG generator yielding (id, CHANGESET, ctx, [parentids]) tuples
 
         This generator function walks the given fake nodes.
@@ -282,14 +295,11 @@ class BaseService(pycompat.ABC):
         Return firstbranch, dagwalker tuple.
         """
 
-        if not nodeinfos:
-            return [], []
-
-        public = _getpublic(nodeinfos)
-        dag = self.builddag(nodeinfos).beautify(public)
+        public = smartloginfo.public
+        dag = smartloginfo.dag.beautify(public)
 
         def createctx(repo, node):
-            return FakeCtx(repo, nodeinfos[node], node)
+            return FakeCtx(repo, smartloginfo.nodeinfos[node], node)
 
         def dagwalker():
             for node in dag.all():
@@ -303,23 +313,22 @@ class BaseService(pycompat.ABC):
                 parents = [(parentstyle, p) for p in dag.parentnames(node)]
                 yield (node, CHANGESET, ctx, parents)
 
-        firstbranch = [dag.sort(public).first()]
+        firstbranch = filter(None, [dag.sort(public).first()])
         return firstbranch, dagwalker()
 
-    def _makenodes(self, data):
-        nodes = {}
-        for nodeinfo in data["nodes"]:
-            node = ensurestr(nodeinfo["node"])
-            parents = [ensurestr(p) for p in nodeinfo["parents"]]
-            bookmarks = [ensurestr(b) for b in nodeinfo["bookmarks"]]
-            author = ensurestr(nodeinfo["author"])
-            date = int(nodeinfo["date"])
-            message = ensurestr(nodeinfo["message"])
-            phase = ensurestr(nodeinfo["phase"])
-            nodes[node] = NodeInfo(
-                node, bookmarks, parents, author, date, message, phase
-            )
-        return nodes
+
+def _makenodes(data):
+    nodes = {}
+    for nodeinfo in data["nodes"]:
+        node = ensurestr(nodeinfo["node"])
+        parents = [ensurestr(p) for p in nodeinfo["parents"]]
+        bookmarks = [ensurestr(b) for b in nodeinfo["bookmarks"]]
+        author = ensurestr(nodeinfo["author"])
+        date = int(nodeinfo["date"])
+        message = ensurestr(nodeinfo["message"])
+        phase = ensurestr(nodeinfo["phase"])
+        nodes[node] = NodeInfo(node, bookmarks, parents, author, date, message, phase)
+    return nodes
 
 
 def _getpublic(nodeinfos):

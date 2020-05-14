@@ -374,9 +374,8 @@ class HttpsCommitCloudService(baseservice.BaseService):
             component="commitcloud",
         )
 
-        nodes = self._makenodes(smartlog)
         try:
-            return self._makefakedag(nodes, repo)
+            return self._makesmartloginfo(smartlog)
         except Exception as e:
             raise ccerror.UnexpectedError(self.ui, e)
 
@@ -416,15 +415,8 @@ class HttpsCommitCloudService(baseservice.BaseService):
             component="commitcloud",
         )
 
-        nodes = self._makenodes(smartlog)
         try:
-            firstbranch, dag = self._makefakedag(nodes, repo)
-            return (
-                firstbranch,
-                dag,
-                response["smartlog"]["version"],
-                response["smartlog"]["timestamp"],
-            )
+            return self._makesmartloginfo(smartlog)
         except Exception as e:
             raise ccerror.UnexpectedError(self.ui, e)
 

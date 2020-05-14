@@ -178,9 +178,8 @@ class LocalService(baseservice.BaseService):
         else:
             with open(filename, "rb") as f:
                 data = json.load(f)
-                nodes = self._makenodes(data["smartlog"])
         try:
-            return self._makefakedag(nodes, repo)
+            return self._makesmartloginfo(data["smartlog"])
         except Exception as e:
             raise ccerror.UnexpectedError(self._ui, e)
 
@@ -191,10 +190,11 @@ class LocalService(baseservice.BaseService):
         else:
             with open(filename, "rb") as f:
                 data = json.load(f)
-                nodes = self._makenodes(data["smartlog"])
         try:
-            firstbranch, dag = self._makefakedag(nodes, repo)
-            return firstbranch, dag, 42, 1562690787
+            data = data["smartlog"]
+            data["version"] = 42
+            data["timestamp"] = 1562690787
+            return self._makesmartloginfo(data)
         except Exception as e:
             raise ccerror.UnexpectedError(self._ui, e)
 

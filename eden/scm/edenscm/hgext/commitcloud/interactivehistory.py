@@ -43,18 +43,11 @@ def showhistory(ui, repo, reponame, workspacename, **opts):
                 self.index = len(self.versions) - 1
             if self.index == -1:
                 with progress.spinner(ui, _("fetching")):
-                    firstpublic, revdag = serv.getsmartlog(
-                        reponame, workspacename, repo, limit
-                    )
+                    slinfo = serv.getsmartlog(reponame, workspacename, repo, limit)
                 ui.status(_("Current Smartlog:\n\n"))
             else:
                 with progress.spinner(ui, _("fetching")):
-                    (
-                        firstpublic,
-                        revdag,
-                        slversion,
-                        sltimestamp,
-                    ) = serv.getsmartlogbyversion(
+                    slinfo = serv.getsmartlogbyversion(
                         reponame,
                         workspacename,
                         repo,
@@ -63,11 +56,11 @@ def showhistory(ui, repo, reponame, workspacename, **opts):
                         limit,
                     )
                 formatteddate = time.strftime(
-                    "%Y-%m-%d %H:%M:%S", time.localtime(sltimestamp)
+                    "%Y-%m-%d %H:%M:%S", time.localtime(slinfo.sltimestamp)
                 )
                 ui.status(
                     _("Smartlog version %d \nsynced at %s\n\n")
-                    % (slversion, formatteddate)
+                    % (slinfo.version, formatteddate)
                 )
             template = "sl_cloud"
             smartlogstyle = ui.config("templatealias", template)
@@ -79,6 +72,7 @@ def showhistory(ui, repo, reponame, workspacename, **opts):
                     component="commitcloud",
                 )
 
+            firstpublic, revdag = serv.makedagwalker(slinfo, repo)
             displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
             cmdutil.rustdisplaygraph(ui, repo, revdag, displayer, reserved=firstpublic)
             repo.ui.status(

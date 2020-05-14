@@ -277,16 +277,19 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
     serv = service.get(ui, tokenmod.TokenLocator(ui).token)
     if parseddate is None and not version:
         with progress.spinner(ui, _("fetching")):
-            firstpublic, revdag = serv.getsmartlog(reponame, workspacename, repo, 0)
+            slinfo = serv.getsmartlog(reponame, workspacename, repo, 0)
     else:
         with progress.spinner(ui, _("fetching")):
-            firstpublic, revdag, slversion, sltimestamp = serv.getsmartlogbyversion(
+            slinfo = serv.getsmartlogbyversion(
                 reponame, workspacename, repo, parseddate, version, 0
             )
     if parseddate or version:
-        formatteddate = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(sltimestamp))
+        formatteddate = time.strftime(
+            "%Y-%m-%d %H:%M:%S", time.localtime(slinfo.timestamp)
+        )
         ui.status(
-            _("Smartlog version %d \nsynced at %s\n\n") % (slversion, formatteddate)
+            _("Smartlog version %d \nsynced at %s\n\n")
+            % (slinfo.version, formatteddate)
         )
     else:
         ui.status(_("Smartlog:\n\n"))
@@ -304,6 +307,7 @@ def cloudsmartlog(ui, repo, template="sl_cloud", **opts):
         )
 
     # show all the nodes
+    firstpublic, revdag = serv.makedagwalker(slinfo, repo)
     displayer = cmdutil.show_changeset(ui, repo, opts, buffered=True)
     cmdutil.rustdisplaygraph(ui, repo, revdag, displayer, reserved=firstpublic)
 
@@ -335,7 +339,8 @@ def cloudhide(ui, repo, *revs, **opts):
 
     with progress.spinner(ui, _("fetching commit cloud workspace")):
         serv = service.get(ui, tokenmod.TokenLocator(ui).token)
-        firstpublic, revdag = serv.getsmartlog(reponame, workspacename, repo, 0)
+        slinfo = serv.getsmartlog(reponame, workspacename, repo, 0)
+        firstpublic, revdag = serv.makedagwalker(slinfo, repo)
         cloudrefs = serv.getreferences(reponame, workspacename, 0)
 
     ctxs = {}
