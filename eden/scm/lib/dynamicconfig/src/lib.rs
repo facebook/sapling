@@ -62,6 +62,7 @@ pub enum Domain {
 pub enum Repo {
     Configerator,
     InstagramServer,
+    Ovrsource,
     Www,
     WwwMerge,
     Unknown(String),
@@ -73,6 +74,7 @@ impl AsRef<str> for Repo {
         match self {
             Configerator => "configerator",
             InstagramServer => "instagram-server",
+            Ovrsource => "ovrsource",
             Www => "www",
             WwwMerge => "www-merge",
             Unknown(name) => &name,
@@ -87,10 +89,17 @@ impl FromStr for Repo {
         Ok(match name {
             "configerator" => Configerator,
             "instagram-server" => InstagramServer,
+            "ovrsource" => Ovrsource,
             "www" => Www,
             "www-merge" => WwwMerge,
             _ => Unknown(name.to_string()),
         })
+    }
+}
+
+impl std::fmt::Display for Repo {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.write_str(self.as_ref())
     }
 }
 
