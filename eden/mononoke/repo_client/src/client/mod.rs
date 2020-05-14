@@ -370,6 +370,15 @@ impl RepoClient {
         handler(ctx, command_logger).boxify()
     }
 
+    fn command_stream<S, I, E, H>(&self, command: &str, handler: H) -> BoxStream<I, E>
+    where
+        S: Stream<Item = I, Error = E> + Send + 'static,
+        H: FnOnce(CoreContext, CommandLogger) -> S,
+    {
+        let (ctx, command_logger) = self.start_command(command);
+        handler(ctx, command_logger).boxify()
+    }
+
     fn start_command(&self, command: &str) -> (CoreContext, CommandLogger) {
         info!(self.logging.logger(), "{}", command);
 
@@ -547,218 +556,222 @@ impl RepoClient {
             + Send
             + 'static,
     {
-        let (ctx, command_logger) = self.start_command(name);
+        self.command_stream(name, |ctx, command_logger| {
+            // We buffer all parameters in memory so that we can log them.
+            // That shouldn't be a problem because requests are quite small
+            let getpack_params = Arc::new(Mutex::new(vec![]));
+            let repo = self.repo.blobrepo().clone();
 
-        // We buffer all parameters in memory so that we can log them.
-        // That shouldn't be a problem because requests are quite small
-        let getpack_params = Arc::new(Mutex::new(vec![]));
-        let repo = self.repo.blobrepo().clone();
+            let lfs_params = self
+                .repo
+                .lfs_params(ctx.session().source_hostname().as_deref());
 
-        let lfs_params = self
-            .repo
-            .lfs_params(ctx.session().source_hostname().as_deref());
-
-        let validate_hash =
-            rand::thread_rng().gen_ratio(self.hash_validation_percentage as u32, 100);
-        let getpack_buffer_size = 500;
-        // Let's fetch the whole request before responding.
-        // That's prevents deadlocks, because hg client doesn't start reading the response
-        // before all the arguments were sent.
-        let request_stream = move || {
-            cloned!(ctx);
-            let s = params
-                .collect()
-                .map({
-                    cloned!(ctx);
-                    move |params| {
-                        ctx.scuba()
-                            .clone()
-                            .add("getpack_paths", params.len())
-                            .log_with_msg("Getpack Params", None);
-                        stream::iter_ok(params.into_iter())
-                    }
-                })
-                .flatten_stream()
-                .map({
-                    cloned!(ctx, getpack_params, repo, lfs_params);
-                    move |(path, filenodes)| {
-                        {
-                            let mut getpack_params = getpack_params.lock().unwrap();
-                            getpack_params.push((path.clone(), filenodes.clone()));
+            let validate_hash =
+                rand::thread_rng().gen_ratio(self.hash_validation_percentage as u32, 100);
+            let getpack_buffer_size = 500;
+            // Let's fetch the whole request before responding.
+            // That's prevents deadlocks, because hg client doesn't start reading the response
+            // before all the arguments were sent.
+            let request_stream = move || {
+                cloned!(ctx);
+                let s = params
+                    .collect()
+                    .map({
+                        cloned!(ctx);
+                        move |params| {
+                            ctx.scuba()
+                                .clone()
+                                .add("getpack_paths", params.len())
+                                .log_with_msg("Getpack Params", None);
+                            stream::iter_ok(params.into_iter())
                         }
+                    })
+                    .flatten_stream()
+                    .map({
+                        cloned!(ctx, getpack_params, repo, lfs_params);
+                        move |(path, filenodes)| {
+                            {
+                                let mut getpack_params = getpack_params.lock().unwrap();
+                                getpack_params.push((path.clone(), filenodes.clone()));
+                            }
 
-                        ctx.session().bump_load(Metric::EgressGetpackFiles, 1.0);
+                            ctx.session().bump_load(Metric::EgressGetpackFiles, 1.0);
 
-                        let blob_futs: Vec<_> = filenodes
-                            .iter()
-                            .map(|filenode| {
-                                handler(
+                            let blob_futs: Vec<_> = filenodes
+                                .iter()
+                                .map(|filenode| {
+                                    handler(
+                                        ctx.clone(),
+                                        repo.clone(),
+                                        *filenode,
+                                        lfs_params.clone(),
+                                        validate_hash,
+                                    )
+                                })
+                                .collect();
+
+                            // NOTE: We don't otherwise await history_fut until we have the results
+                            // from blob_futs, so we need to spawn this to start fetching history
+                            // before we have resoved hg filenodes.
+                            let history_fut = spawn_future(
+                                get_unordered_file_history_for_multiple_nodes(
                                     ctx.clone(),
                                     repo.clone(),
-                                    *filenode,
-                                    lfs_params.clone(),
-                                    validate_hash,
+                                    filenodes.into_iter().collect(),
+                                    &path,
                                 )
+                                .collect(),
+                            );
+
+                            future::join_all(blob_futs.into_iter()).map(move |blobs| {
+                                let total_weight = blobs.iter().map(|(size, _)| size).sum();
+                                let content_futs = blobs.into_iter().map(|(_, fut)| fut);
+                                let contents_and_history = future::join_all(content_futs)
+                                    .join(history_fut)
+                                    .map(move |(contents, history)| (path, contents, history));
+
+                                (contents_and_history, total_weight)
                             })
-                            .collect();
+                        }
+                    })
+                    .buffered(getpack_buffer_size);
 
-                        // NOTE: We don't otherwise await history_fut until we have the results
-                        // from blob_futs, so we need to spawn this to start fetching history
-                        // before we have resoved hg filenodes.
-                        let history_fut = spawn_future(
-                            get_unordered_file_history_for_multiple_nodes(
-                                ctx.clone(),
-                                repo.clone(),
-                                filenodes.into_iter().collect(),
-                                &path,
-                            )
-                            .collect(),
-                        );
+                let params = BufferedParams {
+                    weight_limit: 100_000_000,
+                    buffer_size: getpack_buffer_size,
+                };
+                let s = s
+                    .buffered_weight_limited(params)
+                    .whole_stream_timeout(*GETFILES_TIMEOUT)
+                    .map_err(process_stream_timeout_error)
+                    .map({
+                        cloned!(ctx);
+                        move |(path, contents, history)| {
+                            let mut res = vec![wirepack::Part::HistoryMeta {
+                                path: RepoPath::FilePath(path.clone()),
+                                entry_count: history.len() as u32,
+                            }];
 
-                        future::join_all(blob_futs.into_iter()).map(move |blobs| {
-                            let total_weight = blobs.iter().map(|(size, _)| size).sum();
-                            let content_futs = blobs.into_iter().map(|(_, fut)| fut);
-                            let contents_and_history = future::join_all(content_futs)
-                                .join(history_fut)
-                                .map(move |(contents, history)| (path, contents, history));
+                            let history = history.into_iter().map(|history_entry| {
+                                let (p1, p2, copy_from) = convert_parents_to_remotefilelog_format(
+                                    history_entry.parents(),
+                                    history_entry.copyfrom().as_ref(),
+                                );
+                                let linknode = history_entry.linknode().into_nodehash();
+                                if linknode == NULL_HASH {
+                                    ctx.perf_counters()
+                                        .increment_counter(PerfCounterType::NullLinknode);
+                                    STATS::null_linknode_getpack.add_value(1);
+                                }
 
-                            (contents_and_history, total_weight)
-                        })
-                    }
-                })
-                .buffered(getpack_buffer_size);
+                                wirepack::Part::History(wirepack::HistoryEntry {
+                                    node: history_entry.filenode().into_nodehash(),
+                                    p1: p1.into_nodehash(),
+                                    p2: p2.into_nodehash(),
+                                    linknode,
+                                    copy_from: copy_from.cloned().map(RepoPath::FilePath),
+                                })
+                            });
+                            res.extend(history);
 
-            let params = BufferedParams {
-                weight_limit: 100_000_000,
-                buffer_size: getpack_buffer_size,
+                            res.push(wirepack::Part::DataMeta {
+                                path: RepoPath::FilePath(path),
+                                entry_count: contents.len() as u32,
+                            });
+                            for (filenode, content, metadata) in contents {
+                                let content = content.to_vec();
+                                let length = content.len() as u64;
+
+                                ctx.perf_counters().set_max_counter(
+                                    PerfCounterType::GetpackMaxFileSize,
+                                    length as i64,
+                                );
+
+                                if let Some(lfs_threshold) = lfs_params.threshold {
+                                    if length >= lfs_threshold {
+                                        ctx.perf_counters().add_to_counter(
+                                            PerfCounterType::GetpackPossibleLFSFilesSumSize,
+                                            length as i64,
+                                        );
+
+                                        ctx.perf_counters().increment_counter(
+                                            PerfCounterType::GetpackNumPossibleLFSFiles,
+                                        );
+                                    }
+                                }
+
+                                res.push(wirepack::Part::Data(wirepack::DataEntry {
+                                    node: filenode.into_nodehash(),
+                                    delta_base: NULL_HASH,
+                                    delta: Delta::new_fulltext(content),
+                                    metadata,
+                                }));
+                            }
+                            stream::iter_ok(res.into_iter())
+                        }
+                    })
+                    .flatten()
+                    .chain(stream::once(Ok(wirepack::Part::End)));
+
+                wirepack::packer::WirePackPacker::new(s, wirepack::Kind::File)
+                    .and_then(|chunk| chunk.into_bytes())
+                    .inspect({
+                        cloned!(ctx);
+                        move |bytes| {
+                            let len = bytes.len() as i64;
+                            ctx.perf_counters()
+                                .add_to_counter(PerfCounterType::GetpackResponseSize, len);
+
+                            STATS::total_fetched_file_size.add_value(len as i64);
+                            if ctx.session().is_quicksand() {
+                                STATS::quicksand_fetched_file_size.add_value(len as i64);
+                            }
+                        }
+                    })
+                    .timed({
+                        cloned!(ctx);
+                        move |stats, _| {
+                            STATS::getpack_ms
+                                .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                            let encoded_params = {
+                                let getpack_params = getpack_params.lock().unwrap();
+                                let mut encoded_params = vec![];
+                                for (path, filenodes) in getpack_params.iter() {
+                                    let mut encoded_filenodes = vec![];
+                                    for filenode in filenodes {
+                                        encoded_filenodes.push(format!("{}", filenode));
+                                    }
+                                    encoded_params.push((
+                                        String::from_utf8_lossy(&path.to_vec()).to_string(),
+                                        encoded_filenodes,
+                                    ));
+                                }
+                                encoded_params
+                            };
+
+                            ctx.perf_counters().add_to_counter(
+                                PerfCounterType::GetpackNumFiles,
+                                encoded_params.len() as i64,
+                            );
+
+                            command_logger.finalize_command(
+                                ctx,
+                                &stats,
+                                Some(&json! {encoded_params}),
+                            );
+
+                            Ok(())
+                        }
+                    })
             };
-            let s = s
-                .buffered_weight_limited(params)
-                .whole_stream_timeout(*GETFILES_TIMEOUT)
-                .map_err(process_stream_timeout_error)
-                .map({
-                    cloned!(ctx);
-                    move |(path, contents, history)| {
-                        let mut res = vec![wirepack::Part::HistoryMeta {
-                            path: RepoPath::FilePath(path.clone()),
-                            entry_count: history.len() as u32,
-                        }];
 
-                        let history = history.into_iter().map(|history_entry| {
-                            let (p1, p2, copy_from) = convert_parents_to_remotefilelog_format(
-                                history_entry.parents(),
-                                history_entry.copyfrom().as_ref(),
-                            );
-                            let linknode = history_entry.linknode().into_nodehash();
-                            if linknode == NULL_HASH {
-                                ctx.perf_counters()
-                                    .increment_counter(PerfCounterType::NullLinknode);
-                                STATS::null_linknode_getpack.add_value(1);
-                            }
-
-                            wirepack::Part::History(wirepack::HistoryEntry {
-                                node: history_entry.filenode().into_nodehash(),
-                                p1: p1.into_nodehash(),
-                                p2: p2.into_nodehash(),
-                                linknode,
-                                copy_from: copy_from.cloned().map(RepoPath::FilePath),
-                            })
-                        });
-                        res.extend(history);
-
-                        res.push(wirepack::Part::DataMeta {
-                            path: RepoPath::FilePath(path),
-                            entry_count: contents.len() as u32,
-                        });
-                        for (filenode, content, metadata) in contents {
-                            let content = content.to_vec();
-                            let length = content.len() as u64;
-
-                            ctx.perf_counters().set_max_counter(
-                                PerfCounterType::GetpackMaxFileSize,
-                                length as i64,
-                            );
-
-                            if let Some(lfs_threshold) = lfs_params.threshold {
-                                if length >= lfs_threshold {
-                                    ctx.perf_counters().add_to_counter(
-                                        PerfCounterType::GetpackPossibleLFSFilesSumSize,
-                                        length as i64,
-                                    );
-
-                                    ctx.perf_counters().increment_counter(
-                                        PerfCounterType::GetpackNumPossibleLFSFiles,
-                                    );
-                                }
-                            }
-
-                            res.push(wirepack::Part::Data(wirepack::DataEntry {
-                                node: filenode.into_nodehash(),
-                                delta_base: NULL_HASH,
-                                delta: Delta::new_fulltext(content),
-                                metadata,
-                            }));
-                        }
-                        stream::iter_ok(res.into_iter())
-                    }
-                })
-                .flatten()
-                .chain(stream::once(Ok(wirepack::Part::End)));
-
-            wirepack::packer::WirePackPacker::new(s, wirepack::Kind::File)
-                .and_then(|chunk| chunk.into_bytes())
-                .inspect({
-                    cloned!(ctx);
-                    move |bytes| {
-                        let len = bytes.len() as i64;
-                        ctx.perf_counters()
-                            .add_to_counter(PerfCounterType::GetpackResponseSize, len);
-
-                        STATS::total_fetched_file_size.add_value(len as i64);
-                        if ctx.session().is_quicksand() {
-                            STATS::quicksand_fetched_file_size.add_value(len as i64);
-                        }
-                    }
-                })
-                .timed({
-                    cloned!(ctx);
-                    move |stats, _| {
-                        STATS::getpack_ms
-                            .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                        let encoded_params = {
-                            let getpack_params = getpack_params.lock().unwrap();
-                            let mut encoded_params = vec![];
-                            for (path, filenodes) in getpack_params.iter() {
-                                let mut encoded_filenodes = vec![];
-                                for filenode in filenodes {
-                                    encoded_filenodes.push(format!("{}", filenode));
-                                }
-                                encoded_params.push((
-                                    String::from_utf8_lossy(&path.to_vec()).to_string(),
-                                    encoded_filenodes,
-                                ));
-                            }
-                            encoded_params
-                        };
-
-                        ctx.perf_counters().add_to_counter(
-                            PerfCounterType::GetpackNumFiles,
-                            encoded_params.len() as i64,
-                        );
-
-                        command_logger.finalize_command(ctx, &stats, Some(&json! {encoded_params}));
-
-                        Ok(())
-                    }
-                })
-        };
-
-        throttle_stream(
-            &self.session,
-            Metric::EgressGetpackFiles,
-            name,
-            request_stream,
-        )
+            throttle_stream(
+                &self.session,
+                Metric::EgressGetpackFiles,
+                name,
+                request_stream,
+            )
+        })
     }
 
     /// Returns Some(push_redirector) if pushredirect should redirect this push
@@ -808,7 +821,7 @@ fn throttle_stream<F, S, V>(
     metric: Metric,
     name: &'static str,
     func: F,
-) -> BoxStream<V, Error>
+) -> impl Stream<Item = V, Error = Error>
 where
     F: FnOnce() -> S + Send + 'static,
     S: Stream<Item = V, Error = Error> + Send + 'static,
@@ -832,7 +845,6 @@ where
             Err(never_type) => never_type,
         })
         .flatten_stream()
-        .boxify()
 }
 
 impl HgCommands for RepoClient {
@@ -1239,34 +1251,35 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('getbundle', '*')
     fn getbundle(&self, args: GetbundleArgs) -> BoxStream<BytesOld, Error> {
-        let (ctx, command_logger) = self.start_command(ops::GETBUNDLE);
+        self.command_stream(ops::GETBUNDLE, |ctx, command_logger| {
+            let value = json!({
+                "bundlecaps": format_utf8_bytes_list(&args.bundlecaps),
+                "common": debug_format_nodes(&args.common),
+                "heads": debug_format_nodes(&args.heads),
+                "listkeys": format_utf8_bytes_list(&args.listkeys),
+            });
+            let value = json!(vec![value]);
 
-        let value = json!({
-            "bundlecaps": format_utf8_bytes_list(&args.bundlecaps),
-            "common": debug_format_nodes(&args.common),
-            "heads": debug_format_nodes(&args.heads),
-            "listkeys": format_utf8_bytes_list(&args.listkeys),
-        });
-        let value = json!(vec![value]);
+            let s = self
+                .create_bundle(ctx.clone(), args)
+                .whole_stream_timeout(*GETBUNDLE_TIMEOUT)
+                .map_err(process_stream_timeout_error)
+                .traced(self.session.trace(), ops::GETBUNDLE, trace_args!())
+                .timed(move |stats, _| {
+                    STATS::getbundle_ms
+                        .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                    command_logger.finalize_command(ctx, &stats, Some(&value));
+                    Ok(())
+                })
+                .boxify();
 
-        let s = self
-            .create_bundle(ctx.clone(), args)
-            .whole_stream_timeout(*GETBUNDLE_TIMEOUT)
-            .map_err(process_stream_timeout_error)
-            .traced(self.session.trace(), ops::GETBUNDLE, trace_args!())
-            .timed(move |stats, _| {
-                STATS::getbundle_ms.add_value(stats.completion_time.as_millis_unchecked() as i64);
-                command_logger.finalize_command(ctx, &stats, Some(&value));
-                Ok(())
-            })
-            .boxify();
-
-        throttle_stream(
-            &self.session,
-            Metric::EgressCommits,
-            ops::GETBUNDLE,
-            move || s,
-        )
+            throttle_stream(
+                &self.session,
+                Metric::EgressCommits,
+                ops::GETBUNDLE,
+                move || s,
+            )
+        })
     }
 
     // @wireprotocommand('hello')
@@ -1544,72 +1557,73 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('gettreepack', 'rootdir mfnodes basemfnodes directories')
     fn gettreepack(&self, params: GettreepackArgs) -> BoxStream<BytesOld, Error> {
-        let mut args = serde_json::Map::new();
-        args.insert(
-            "rootdir".to_string(),
-            debug_format_path(&params.rootdir).into(),
-        );
-        args.insert(
-            "mfnodes".to_string(),
-            debug_format_manifests(&params.mfnodes).into(),
-        );
-        args.insert(
-            "basemfnodes".to_string(),
-            debug_format_manifests(&params.basemfnodes).into(),
-        );
-        args.insert(
-            "directories".to_string(),
-            debug_format_directories(&params.directories).into(),
-        );
-        if let Some(depth) = params.depth {
-            args.insert("depth".to_string(), depth.to_string().into());
-        }
+        self.command_stream(ops::GETTREEPACK, |ctx, mut command_logger| {
+            let mut args = serde_json::Map::new();
+            args.insert(
+                "rootdir".to_string(),
+                debug_format_path(&params.rootdir).into(),
+            );
+            args.insert(
+                "mfnodes".to_string(),
+                debug_format_manifests(&params.mfnodes).into(),
+            );
+            args.insert(
+                "basemfnodes".to_string(),
+                debug_format_manifests(&params.basemfnodes).into(),
+            );
+            args.insert(
+                "directories".to_string(),
+                debug_format_directories(&params.directories).into(),
+            );
+            if let Some(depth) = params.depth {
+                args.insert("depth".to_string(), depth.to_string().into());
+            }
 
-        let args = json!(vec![args]);
-        let (ctx, mut command_logger) = self.start_command(ops::GETTREEPACK);
+            let args = json!(vec![args]);
 
-        ctx.scuba()
-            .clone()
-            .add("gettreepack_mfnodes", params.mfnodes.len())
-            .add("gettreepack_directories", params.directories.len())
-            .log_with_msg("Gettreepack Params", None);
+            ctx.scuba()
+                .clone()
+                .add("gettreepack_mfnodes", params.mfnodes.len())
+                .add("gettreepack_directories", params.directories.len())
+                .log_with_msg("Gettreepack Params", None);
 
-        let s = self
-            .gettreepack_untimed(ctx.clone(), params)
-            .whole_stream_timeout(*TIMEOUT)
-            .map_err(process_stream_timeout_error)
-            .traced(self.session.trace(), ops::GETTREEPACK, trace_args!())
-            .inspect({
-                cloned!(ctx);
-                move |bytes| {
-                    ctx.perf_counters().add_to_counter(
-                        PerfCounterType::GettreepackResponseSize,
-                        bytes.len() as i64,
-                    );
-                    STATS::total_tree_size.add_value(bytes.len() as i64);
-                    if ctx.session().is_quicksand() {
-                        STATS::quicksand_tree_size.add_value(bytes.len() as i64);
+            let s = self
+                .gettreepack_untimed(ctx.clone(), params)
+                .whole_stream_timeout(*TIMEOUT)
+                .map_err(process_stream_timeout_error)
+                .traced(self.session.trace(), ops::GETTREEPACK, trace_args!())
+                .inspect({
+                    cloned!(ctx);
+                    move |bytes| {
+                        ctx.perf_counters().add_to_counter(
+                            PerfCounterType::GettreepackResponseSize,
+                            bytes.len() as i64,
+                        );
+                        STATS::total_tree_size.add_value(bytes.len() as i64);
+                        if ctx.session().is_quicksand() {
+                            STATS::quicksand_tree_size.add_value(bytes.len() as i64);
+                        }
                     }
-                }
-            })
-            .timed({
-                move |stats, _| {
-                    if stats.completion_time > *SLOW_REQUEST_THRESHOLD {
-                        command_logger.add_trimmed_scuba_extra("command_args", &args);
+                })
+                .timed({
+                    move |stats, _| {
+                        if stats.completion_time > *SLOW_REQUEST_THRESHOLD {
+                            command_logger.add_trimmed_scuba_extra("command_args", &args);
+                        }
+                        STATS::gettreepack_ms
+                            .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                        command_logger.finalize_command(ctx, &stats, Some(&args));
+                        Ok(())
                     }
-                    STATS::gettreepack_ms
-                        .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                    command_logger.finalize_command(ctx, &stats, Some(&args));
-                    Ok(())
-                }
-            });
+                });
 
-        throttle_stream(
-            &self.session,
-            Metric::EgressTotalManifests,
-            ops::GETTREEPACK,
-            move || s,
-        )
+            throttle_stream(
+                &self.session,
+                Metric::EgressTotalManifests,
+                ops::GETTREEPACK,
+                move || s,
+            )
+        })
     }
 
     // @wireprotocommand('getfiles', 'files*')
@@ -1617,36 +1631,36 @@ impl HgCommands for RepoClient {
         &self,
         params: BoxStream<(HgFileNodeId, MPath), Error>,
     ) -> BoxStream<BytesOld, Error> {
-        let (ctx, command_logger) = self.start_command(ops::GETFILES);
-        let this = self.clone();
-        // TODO(stash): make it configurable
-        let getfiles_buffer_size = 100;
-        // We buffer all parameters in memory so that we can log them.
-        // That shouldn't be a problem because requests are quite small
-        let getfiles_params = Arc::new(Mutex::new(vec![]));
+        self.command_stream(ops::GETFILES, |ctx, command_logger| {
+            let this = self.clone();
+            // TODO(stash): make it configurable
+            let getfiles_buffer_size = 100;
+            // We buffer all parameters in memory so that we can log them.
+            // That shouldn't be a problem because requests are quite small
+            let getfiles_params = Arc::new(Mutex::new(vec![]));
 
-        let validate_hash = rand::random::<usize>() % 100 < self.hash_validation_percentage;
-        let lfs_params = self
-            .repo
-            .lfs_params(ctx.session().source_hostname().as_deref());
+            let validate_hash = rand::random::<usize>() % 100 < self.hash_validation_percentage;
+            let lfs_params = self
+                .repo
+                .lfs_params(ctx.session().source_hostname().as_deref());
 
-        let request_stream = move || {
-            cloned!(ctx);
-            params
-                .map({
-                    cloned!(getfiles_params);
-                    move |param| {
-                        let mut getfiles_params = getfiles_params.lock().unwrap();
-                        getfiles_params.push(param.clone());
-                        param
-                    }
-                })
-                .map({
-                    cloned!(ctx);
-                    move |(node, path)| {
-                        let repo = this.repo.clone();
-                        ctx.session().bump_load(Metric::EgressGetfilesFiles, 1.0);
-                        create_getfiles_blob(
+            let request_stream = move || {
+                cloned!(ctx);
+                params
+                    .map({
+                        cloned!(getfiles_params);
+                        move |param| {
+                            let mut getfiles_params = getfiles_params.lock().unwrap();
+                            getfiles_params.push(param.clone());
+                            param
+                        }
+                    })
+                    .map({
+                        cloned!(ctx);
+                        move |(node, path)| {
+                            let repo = this.repo.clone();
+                            ctx.session().bump_load(Metric::EgressGetfilesFiles, 1.0);
+                            create_getfiles_blob(
                             ctx.clone(),
                             repo.blobrepo().clone(),
                             node,
@@ -1673,188 +1687,196 @@ impl HgCommands for RepoClient {
                                 Ok(())
                             }
                         })
-                    }
-                })
-                .buffered(getfiles_buffer_size)
-                .inspect({
-                    cloned!(ctx);
-                    move |bytes| {
-                        let len = bytes.len() as i64;
-                        ctx.perf_counters()
-                            .add_to_counter(PerfCounterType::GetfilesResponseSize, len);
-                        ctx.perf_counters()
-                            .set_max_counter(PerfCounterType::GetfilesMaxFileSize, len);
-
-                        STATS::total_fetched_file_size.add_value(len as i64);
-                        if ctx.session().is_quicksand() {
-                            STATS::quicksand_fetched_file_size.add_value(len as i64);
                         }
-                    }
-                })
-                .whole_stream_timeout(*GETFILES_TIMEOUT)
-                .map_err(process_stream_timeout_error)
-                .timed({
-                    cloned!(ctx);
-                    move |stats, _| {
-                        let encoded_params = {
-                            let getfiles_params = getfiles_params.lock().unwrap();
-                            let mut encoded_params = vec![];
-                            for (node, path) in getfiles_params.iter() {
-                                encoded_params.push(vec![
-                                    format!("{}", node),
-                                    String::from_utf8_lossy(&path.to_vec()).to_string(),
-                                ]);
+                    })
+                    .buffered(getfiles_buffer_size)
+                    .inspect({
+                        cloned!(ctx);
+                        move |bytes| {
+                            let len = bytes.len() as i64;
+                            ctx.perf_counters()
+                                .add_to_counter(PerfCounterType::GetfilesResponseSize, len);
+                            ctx.perf_counters()
+                                .set_max_counter(PerfCounterType::GetfilesMaxFileSize, len);
+
+                            STATS::total_fetched_file_size.add_value(len as i64);
+                            if ctx.session().is_quicksand() {
+                                STATS::quicksand_fetched_file_size.add_value(len as i64);
                             }
-                            encoded_params
-                        };
+                        }
+                    })
+                    .whole_stream_timeout(*GETFILES_TIMEOUT)
+                    .map_err(process_stream_timeout_error)
+                    .timed({
+                        cloned!(ctx);
+                        move |stats, _| {
+                            let encoded_params = {
+                                let getfiles_params = getfiles_params.lock().unwrap();
+                                let mut encoded_params = vec![];
+                                for (node, path) in getfiles_params.iter() {
+                                    encoded_params.push(vec![
+                                        format!("{}", node),
+                                        String::from_utf8_lossy(&path.to_vec()).to_string(),
+                                    ]);
+                                }
+                                encoded_params
+                            };
 
-                        ctx.perf_counters()
-                            .add_to_counter(PerfCounterType::GetfilesNumFiles, stats.count as i64);
+                            ctx.perf_counters().add_to_counter(
+                                PerfCounterType::GetfilesNumFiles,
+                                stats.count as i64,
+                            );
 
-                        command_logger.finalize_command(ctx, &stats, Some(&json! {encoded_params}));
+                            command_logger.finalize_command(
+                                ctx,
+                                &stats,
+                                Some(&json! {encoded_params}),
+                            );
 
-                        Ok(())
-                    }
-                })
-                .map(bytes_ext::copy_from_new)
-                .boxify()
-        };
+                            Ok(())
+                        }
+                    })
+                    .map(bytes_ext::copy_from_new)
+                    .boxify()
+            };
 
-        throttle_stream(
-            &self.session,
-            Metric::EgressGetfilesFiles,
-            ops::GETFILES,
-            request_stream,
-        )
+            throttle_stream(
+                &self.session,
+                Metric::EgressGetfilesFiles,
+                ops::GETFILES,
+                request_stream,
+            )
+        })
     }
 
     // @wireprotocommand('stream_out_shallow')
     fn stream_out_shallow(&self) -> BoxStream<BytesOld, Error> {
-        let (ctx, command_logger) = self.start_command(ops::STREAMOUTSHALLOW);
-        let changelog = match self.repo.streaming_clone() {
-            None => Ok(RevlogStreamingChunks::new()).into_future().left_future(),
-            Some(SqlStreamingCloneConfig {
-                blobstore,
-                fetcher,
-                repoid,
-            }) => fetcher
-                .fetch_changelog(ctx.clone(), *repoid, blobstore.clone())
-                .right_future(),
-        };
+        self.command_stream(ops::STREAMOUTSHALLOW, |ctx, command_logger| {
+            let changelog = match self.repo.streaming_clone() {
+                None => Ok(RevlogStreamingChunks::new()).into_future().left_future(),
+                Some(SqlStreamingCloneConfig {
+                    blobstore,
+                    fetcher,
+                    repoid,
+                }) => fetcher
+                    .fetch_changelog(ctx.clone(), *repoid, blobstore.clone())
+                    .right_future(),
+            };
 
-        changelog
-            .map({
-                cloned!(ctx);
-                move |chunk| {
-                    let data_blobs = chunk
-                        .data_blobs
-                        .into_iter()
-                        .map(|fut| {
-                            fut.timed({
-                                let ctx = ctx.clone();
-                                move |stats, blob| {
-                                    ctx.perf_counters().add_to_counter(
-                                        PerfCounterType::SumManifoldPollTime,
-                                        stats.poll_time.as_nanos_unchecked() as i64,
-                                    );
-                                    if let Ok(bytes) = blob {
+            changelog
+                .map({
+                    cloned!(ctx);
+                    move |chunk| {
+                        let data_blobs = chunk
+                            .data_blobs
+                            .into_iter()
+                            .map(|fut| {
+                                fut.timed({
+                                    let ctx = ctx.clone();
+                                    move |stats, blob| {
                                         ctx.perf_counters().add_to_counter(
-                                            PerfCounterType::BytesSent,
-                                            bytes.len() as i64,
-                                        )
+                                            PerfCounterType::SumManifoldPollTime,
+                                            stats.poll_time.as_nanos_unchecked() as i64,
+                                        );
+                                        if let Ok(bytes) = blob {
+                                            ctx.perf_counters().add_to_counter(
+                                                PerfCounterType::BytesSent,
+                                                bytes.len() as i64,
+                                            )
+                                        }
+                                        Ok(())
                                     }
-                                    Ok(())
-                                }
+                                })
                             })
-                        })
-                        .collect();
+                            .collect();
 
-                    let index_blobs = chunk
-                        .index_blobs
-                        .into_iter()
-                        .map(|fut| {
-                            fut.timed({
-                                let ctx = ctx.clone();
-                                move |stats, blob| {
-                                    ctx.perf_counters().add_to_counter(
-                                        PerfCounterType::SumManifoldPollTime,
-                                        stats.poll_time.as_nanos_unchecked() as i64,
-                                    );
-                                    if let Ok(bytes) = blob {
+                        let index_blobs = chunk
+                            .index_blobs
+                            .into_iter()
+                            .map(|fut| {
+                                fut.timed({
+                                    let ctx = ctx.clone();
+                                    move |stats, blob| {
                                         ctx.perf_counters().add_to_counter(
-                                            PerfCounterType::BytesSent,
-                                            bytes.len() as i64,
-                                        )
+                                            PerfCounterType::SumManifoldPollTime,
+                                            stats.poll_time.as_nanos_unchecked() as i64,
+                                        );
+                                        if let Ok(bytes) = blob {
+                                            ctx.perf_counters().add_to_counter(
+                                                PerfCounterType::BytesSent,
+                                                bytes.len() as i64,
+                                            )
+                                        }
+                                        Ok(())
                                     }
-                                    Ok(())
-                                }
+                                })
                             })
-                        })
-                        .collect();
+                            .collect();
 
-                    RevlogStreamingChunks {
-                        data_size: chunk.data_size,
-                        index_size: chunk.index_size,
-                        data_blobs,
-                        index_blobs,
+                        RevlogStreamingChunks {
+                            data_size: chunk.data_size,
+                            index_size: chunk.index_size,
+                            data_blobs,
+                            index_blobs,
+                        }
                     }
-                }
-            })
-            .map({
-                cloned!(ctx);
-                move |changelog_chunks| {
-                    debug!(
-                        ctx.logger(),
-                        "streaming changelog {} index bytes, {} data bytes",
-                        changelog_chunks.index_size,
-                        changelog_chunks.data_size
-                    );
-                    let mut response_header = Vec::new();
-                    // TODO(t34058163): actually send a real streaming response, not an empty one
-                    // Send OK response.
-                    response_header.push(Bytes::from_static(b"0\n"));
-                    // send header.
-                    let total_size = changelog_chunks.index_size + changelog_chunks.data_size;
-                    let file_count = 2;
-                    let header = format!("{} {}\n", file_count, total_size);
-                    response_header.push(header.into_bytes().into());
-                    let response = stream::iter_ok(response_header);
-
-                    fn build_file_stream(
-                        name: &str,
-                        size: usize,
-                        data: Vec<BoxFuture<Bytes, Error>>,
-                    ) -> impl Stream<Item = Bytes, Error = Error> + Send {
-                        let header = format!("{}\0{}\n", name, size);
-
-                        stream::once(Ok(header.into_bytes().into()))
-                            .chain(stream::iter_ok(data.into_iter()).buffered(100))
-                    }
-
-                    response
-                        .chain(build_file_stream(
-                            "00changelog.i",
+                })
+                .map({
+                    cloned!(ctx);
+                    move |changelog_chunks| {
+                        debug!(
+                            ctx.logger(),
+                            "streaming changelog {} index bytes, {} data bytes",
                             changelog_chunks.index_size,
-                            changelog_chunks.index_blobs,
-                        ))
-                        .chain(build_file_stream(
-                            "00changelog.d",
-                            changelog_chunks.data_size,
-                            changelog_chunks.data_blobs,
-                        ))
-                }
-            })
-            .flatten_stream()
-            .whole_stream_timeout(*CLONE_TIMEOUT)
-            .map(bytes_ext::copy_from_new)
-            .map_err(process_stream_timeout_error)
-            .timed({
-                move |stats, _| {
-                    command_logger.finalize_command(ctx, &stats, None);
-                    Ok(())
-                }
-            })
-            .boxify()
+                            changelog_chunks.data_size
+                        );
+                        let mut response_header = Vec::new();
+                        // TODO(t34058163): actually send a real streaming response, not an empty one
+                        // Send OK response.
+                        response_header.push(Bytes::from_static(b"0\n"));
+                        // send header.
+                        let total_size = changelog_chunks.index_size + changelog_chunks.data_size;
+                        let file_count = 2;
+                        let header = format!("{} {}\n", file_count, total_size);
+                        response_header.push(header.into_bytes().into());
+                        let response = stream::iter_ok(response_header);
+
+                        fn build_file_stream(
+                            name: &str,
+                            size: usize,
+                            data: Vec<BoxFuture<Bytes, Error>>,
+                        ) -> impl Stream<Item = Bytes, Error = Error> + Send
+                        {
+                            let header = format!("{}\0{}\n", name, size);
+
+                            stream::once(Ok(header.into_bytes().into()))
+                                .chain(stream::iter_ok(data.into_iter()).buffered(100))
+                        }
+
+                        response
+                            .chain(build_file_stream(
+                                "00changelog.i",
+                                changelog_chunks.index_size,
+                                changelog_chunks.index_blobs,
+                            ))
+                            .chain(build_file_stream(
+                                "00changelog.d",
+                                changelog_chunks.data_size,
+                                changelog_chunks.data_blobs,
+                            ))
+                    }
+                })
+                .flatten_stream()
+                .whole_stream_timeout(*CLONE_TIMEOUT)
+                .map(bytes_ext::copy_from_new)
+                .map_err(process_stream_timeout_error)
+                .timed({
+                    move |stats, _| {
+                        command_logger.finalize_command(ctx, &stats, None);
+                        Ok(())
+                    }
+                })
+        })
     }
 
     // @wireprotocommand('getpackv1')
@@ -1897,54 +1919,55 @@ impl HgCommands for RepoClient {
 
     // @wireprotocommand('getcommitdata', 'nodes *'), but the * is ignored
     fn getcommitdata(&self, nodes: Vec<HgChangesetId>) -> BoxStream<BytesOld, Error> {
-        let args = json!(nodes);
-        let (ctx, mut command_logger) = self.start_command(ops::GETCOMMITDATA);
-        let blobrepo = self.repo.blobrepo().clone();
-        ctx.scuba()
-            .clone()
-            .add("getcommitdata_nodes", nodes.len())
-            .log_with_msg("GetCommitData Params", None);
-        let s = stream::iter_ok::<_, Error>(nodes.into_iter())
-            .map({
-                cloned!(ctx);
-                move |hg_cs_id| {
-                    RevlogChangeset::load(ctx.clone(), blobrepo.blobstore(), hg_cs_id)
-                        .and_then(move |revlog_cs| serialize_getcommitdata(hg_cs_id, revlog_cs))
-                }
-            })
-            .buffered(100)
-            .whole_stream_timeout(*TIMEOUT)
-            .map_err(process_stream_timeout_error)
-            .inspect({
-                cloned!(ctx);
-                move |bytes| {
-                    ctx.perf_counters().add_to_counter(
-                        PerfCounterType::GetcommitdataResponseSize,
-                        bytes.len() as i64,
-                    );
-                    ctx.perf_counters()
-                        .increment_counter(PerfCounterType::GetcommitdataNumCommits);
-                    STATS::getcommitdata_commit_count.add_value(1);
-                }
-            })
-            .timed({
-                move |stats, _| {
-                    if stats.completion_time > *SLOW_REQUEST_THRESHOLD {
-                        command_logger.add_trimmed_scuba_extra("command_args", &args);
+        self.command_stream(ops::GETCOMMITDATA, |ctx, mut command_logger| {
+            let args = json!(nodes);
+            let blobrepo = self.repo.blobrepo().clone();
+            ctx.scuba()
+                .clone()
+                .add("getcommitdata_nodes", nodes.len())
+                .log_with_msg("GetCommitData Params", None);
+            let s = stream::iter_ok::<_, Error>(nodes.into_iter())
+                .map({
+                    cloned!(ctx);
+                    move |hg_cs_id| {
+                        RevlogChangeset::load(ctx.clone(), blobrepo.blobstore(), hg_cs_id)
+                            .and_then(move |revlog_cs| serialize_getcommitdata(hg_cs_id, revlog_cs))
                     }
-                    STATS::getcommitdata_ms
-                        .add_value(stats.completion_time.as_millis_unchecked() as i64);
-                    command_logger.finalize_command(ctx, &stats, Some(&args));
-                    Ok(())
-                }
-            });
+                })
+                .buffered(100)
+                .whole_stream_timeout(*TIMEOUT)
+                .map_err(process_stream_timeout_error)
+                .inspect({
+                    cloned!(ctx);
+                    move |bytes| {
+                        ctx.perf_counters().add_to_counter(
+                            PerfCounterType::GetcommitdataResponseSize,
+                            bytes.len() as i64,
+                        );
+                        ctx.perf_counters()
+                            .increment_counter(PerfCounterType::GetcommitdataNumCommits);
+                        STATS::getcommitdata_commit_count.add_value(1);
+                    }
+                })
+                .timed({
+                    move |stats, _| {
+                        if stats.completion_time > *SLOW_REQUEST_THRESHOLD {
+                            command_logger.add_trimmed_scuba_extra("command_args", &args);
+                        }
+                        STATS::getcommitdata_ms
+                            .add_value(stats.completion_time.as_millis_unchecked() as i64);
+                        command_logger.finalize_command(ctx, &stats, Some(&args));
+                        Ok(())
+                    }
+                });
 
-        throttle_stream(
-            &self.session,
-            Metric::EgressCommits,
-            ops::GETCOMMITDATA,
-            move || s,
-        )
+            throttle_stream(
+                &self.session,
+                Metric::EgressCommits,
+                ops::GETCOMMITDATA,
+                move || s,
+            )
+        })
     }
 
     // whether raw bundle2 contents should be preverved in the blobstore
