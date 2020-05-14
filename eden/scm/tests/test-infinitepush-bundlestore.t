@@ -664,42 +664,23 @@ Strip scratchontopofpublic commit and do hg update
   c70aee6da07d7cdb9897375473690df3a8563339
   $ hg debugstrip -q tip
   $ hg up c70aee6da07d7cdb9897375473690df3a8563339
-  'c70aee6da07d7cdb9897375473690df3a8563339' does not exist locally - looking for it remotely...
-  pulling from ssh://user@dummy/repo
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 1 files
-  'c70aee6da07d7cdb9897375473690df3a8563339' found remotely
-  pull finished in * sec (glob)
+  pulling 'c70aee6da07d7cdb9897375473690df3a8563339' from 'ssh://user@dummy/repo'
   2 files updated, 0 files merged, 2 files removed, 0 files unresolved
 
 Trying to pull from bad path
   $ hg debugstrip -q tip
   $ hg --config paths.default=badpath up c70aee6da07d7cdb9897375473690df3a8563339
-  'c70aee6da07d7cdb9897375473690df3a8563339' does not exist locally - looking for it remotely...
-  pulling from $TESTTMP/client2/badpath (glob)
-  pull failed: repository $TESTTMP/client2/badpath not found
   pulling 'c70aee6da07d7cdb9897375473690df3a8563339' from '$TESTTMP/client2/badpath'
   pull failed: repository $TESTTMP/client2/badpath not found
   abort: unknown revision 'c70aee6da07d7cdb9897375473690df3a8563339'!
   [255]
 
 Strip commit and pull it using hg update with bookmark name
+  $ setconfig 'remotenames.autopullhoistpattern=re:.*/.*' 'remotenames.hoist=default'
   $ hg debugstrip -q d8fde0ddfc96
   $ hg up scratch/mybranch
-  'scratch/mybranch' does not exist locally - looking for it remotely...
-  pulling from ssh://user@dummy/repo
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 1 changes to 2 files
-  'scratch/mybranch' found remotely
-  pull finished in * sec (glob)
+  pulling 'scratch/mybranch' from 'ssh://user@dummy/repo'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
-  (activating bookmark scratch/mybranch)
   $ hg log -r scratch/mybranch -T '{node}'
   d8fde0ddfc962183977f92d2bc52d303b8840f9d (no-eol)
 
@@ -717,15 +698,7 @@ Test debugfillinfinitepushmetadata
 
   $ cd ../client
   $ hg up d8fde0ddfc962183977f92d2bc52d303b8840f9d
-  'd8fde0ddfc962183977f92d2bc52d303b8840f9d' does not exist locally - looking for it remotely...
-  pulling from ssh://user@dummy/repo
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 2 changesets with 2 changes to 2 files
-  'd8fde0ddfc962183977f92d2bc52d303b8840f9d' found remotely
-  pull finished in * sec (glob)
+  pulling 'd8fde0ddfc962183977f92d2bc52d303b8840f9d' from 'ssh://user@dummy/repo'
   2 files updated, 0 files merged, 1 files removed, 0 files unresolved
   $ echo file > file
   $ hg add file

@@ -205,12 +205,6 @@ utestpats = [
         ),
         (uprefix + r"set -e", "don't use set -e"),
         (uprefix + r"(\s|fi\b|done\b)", "use > for continued lines"),
-        (
-            uprefix + r".*:\.\S*/",
-            "x:.y in a path does not work on msys, rewrite "
-            "as x://.y, or see `hg log -k msys` for alternatives",
-            r"-\S+:\.|" "# no-msys",  # -Rxxx
-        ),  # in test-pull.t which is skipped on windows
         (r"^  [^$>].*27\.0\.0\.1", "use $LOCALIP not an explicit loopback address"),
         (
             r"^  (?![>$] ).*\$LOCALIP.*[^)]$",

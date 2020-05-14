@@ -95,15 +95,7 @@ test publishing
   $ hgmn up 907767d421e4cb28c7978bedef8ccac7242b155e
   2 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ hgmn up b2d646f64a9978717516887968786c6b7a33edf9
-  'b2d646f64a9978717516887968786c6b7a33edf9' does not exist locally - looking for it remotely...
-  pulling from ssh://user@dummy/repo
-  searching for changes
-  adding changesets
-  adding manifests
-  adding file changes
-  added 1 changesets with 0 changes to 0 files
-  'b2d646f64a9978717516887968786c6b7a33edf9' found remotely
-  pull finished in * (glob)
+  pulling 'b2d646f64a9978717516887968786c6b7a33edf9' from 'ssh://user@dummy/repo'
   1 files updated, 0 files merged, 0 files removed, 0 files unresolved
   $ tglogpnr
   @  b2d646f64a99 draft 'add c'

@@ -85,11 +85,6 @@ def extsetup(ui):
     )
 
     extensions.wrapcommand(commands.table, "pull", _pull)
-    if not ui.configbool("ui", "autopullcommits") or not ui.config(
-        "remotenames", "autopullhoistpattern"
-    ):
-        extensions.wrapcommand(commands.table, "update", _update)
-
     extensions.wrapfunction(bundle2, "_addpartsfromopts", _addpartsfromopts)
 
     wireproto.wirepeer.knownnodes = knownnodes
@@ -505,79 +500,6 @@ def _dopull(orig, ui, repo, source="default", **opts):
 def _findcommonincoming(orig, *args, **kwargs):
     common, inc, remoteheads = orig(*args, **kwargs)
     return common, True, remoteheads
-
-
-def _update(orig, ui, repo, node=None, rev=None, **opts):
-    """commit cloud (infinitepush) extension for hg up
-    `hg up` will access:
-    * local repo
-    * hidden commits
-    * remote commits
-    * commit cloud (infinitepush) storage
-    """
-    if rev and node:
-        raise error.Abort(_("please specify just one revision"))
-
-    unfi = repo.unfiltered()
-    if not opts.get("date") and (rev or node) not in unfi:
-        mayberemote = rev or node
-        mayberemote = _tryhoist(ui, mayberemote)
-        dopull = False
-        kwargs = {}
-        if repo._scratchbranchmatcher.match(mayberemote):
-            dopull = True
-            kwargs["bookmark"] = [mayberemote]
-        elif _maybehash(mayberemote):
-            dopull = True
-            kwargs["rev"] = [mayberemote]
-
-        if dopull:
-            ui.warn(
-                _("'%s' does not exist locally - looking for it remotely...\n")
-                % mayberemote
-            )
-            # Try pulling node from remote repo
-            pullstarttime = time.time()
-
-            try:
-                (pullcmd, pullopts) = cmdutil.getcmdanddefaultopts(
-                    "pull", commands.table
-                )
-                pullopts.update(kwargs)
-                # Prefer to pull from 'infinitepush' path if it exists.
-                # 'infinitepush' path has both infinitepush and non-infinitepush
-                # revisions, so pulling from it is safer.
-                # This is useful for dogfooding other hg backend that stores
-                # only public commits (e.g. Mononoke)
-                with _resetinfinitepushpath(ui, **pullopts):
-                    pullcmd(ui, unfi, **pullopts)
-            except Exception:
-                remoteerror = str(sys.exc_info()[1])
-                replacements = {
-                    "commitcloud.changeset": ("changeset:",),
-                    "commitcloud.meta": ("date:", "summary:", "author:"),
-                    "commitcloud.commitcloud": ("#commitcloud",),
-                }
-                for label, keywords in pycompat.iteritems(replacements):
-                    for kw in keywords:
-                        remoteerror = remoteerror.replace(kw, ui.label(kw, label))
-
-                ui.warn(_("pull failed: %s\n") % remoteerror)
-
-                # User updates to own commit from Commit Cloud
-                if ui.username() in remoteerror:
-                    hintutil.trigger("commitcloud-sync-education", ui)
-            else:
-                ui.warn(_("'%s' found remotely\n") % mayberemote)
-                pulltime = time.time() - pullstarttime
-                ui.warn(_("pull finished in %.3f sec\n") % pulltime)
-
-    try:
-        return orig(ui, repo, node, rev, **opts)
-    except Exception:
-        # Show the triggered hints anyway
-        hintutil.show(ui)
-        raise
 
 
 def _tryhoist(ui, remotebookmark):
