@@ -219,30 +219,6 @@ def _listremotebookmarks(remote, bookmarks):
     return result
 
 
-def _trypullremotebookmark(mayberemotebookmark, repo, ui):
-    ui.warn(
-        _("`%s` not found: assuming it is a remote bookmark " "and trying to pull it\n")
-        % mayberemotebookmark
-    )
-    sourcerenames = dict((v, k) for k, v in pycompat.iteritems(_getrenames(ui)))
-    remote, bookmarkname = splitremotename(mayberemotebookmark)
-    paths = dict((path, url) for path, url in ui.configitems("paths"))
-    if remote in sourcerenames:
-        source = sourcerenames[remote]
-    elif remote in paths:
-        source = remote
-    else:
-        source = "default"
-        bookmarkname = mayberemotebookmark
-
-    try:
-        commands.pull(ui, repo, source=source, bookmark=[bookmarkname])
-    except Exception:
-        ui.warn(_("pull failed: %s\n") % sys.exc_info()[1])
-    else:
-        ui.warn(_("`%s` found remotely\n") % mayberemotebookmark)
-
-
 def _reportaccessedbookmarks(ui, accessedremotenames):
     ui.log("accessedremotenames", accessedremotenames_totalnum=len(accessedremotenames))
 
@@ -521,18 +497,6 @@ def exconvertbookmarks(orig, source):
 def updatecmd(orig, ui, repo, node=None, rev=None, **kwargs):
     if rev and node:
         raise error.Abort(_("please specify just one revision"))
-
-    if (
-        _isselectivepull(repo.ui)
-        and not kwargs.get("date")
-        and not ui.config("remotenames", "autopullhoistpattern")
-    ):
-        # Make sure that rev or node is present in the repo.
-        # Otherwise pull it from remote
-        try:
-            scmutil.revsingle(repo, rev or node)
-        except (error.RepoLookupError, error.Abort):
-            _trypullremotebookmark(rev or node, repo, ui)
 
     book = kwargs.get("bookmark")
     if book:
